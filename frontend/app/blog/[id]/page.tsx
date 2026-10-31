@@ -1,5 +1,6 @@
 import {Avatar, Container, Group, Stack, Text, Title} from "@mantine/core";
 import ReactMarkdown from "react-markdown";
+import {useLoaderData} from "react-router-dom";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -9,34 +10,23 @@ import "katex/dist/katex.min.css";
 import {DefaultLayout} from "@/components/shared";
 import {api, unwrap} from "@/lib/api";
 import {formatDate} from "@/lib/lib";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 
 import classes from "./styles.module.css";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadPage = async ({params}: Props) => {
-  const {id} = params;
+export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
+  const {id} = routeParams as {id: string};
   const post = await getPost(id);
-  return {id, post};
-};
-
-type Params = {
-  id: string;
-};
-
-type Props = {
-  params: Params;
-};
+  return {post};
+}) satisfies LoaderFunction;
 
 const getPost = unwrap(api.getPostById);
 
-const Page = ({params}: Props): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/blog/[id]/page.tsx", params], () => loadPage({params}));
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {post} = routeQuery.data;
+const Page = (): ReactNode => {
+  const data = useLoaderData<typeof loader>();
+  const {post} = data;
   return (
     <DefaultLayout>
       <Container size="md" py="xl">

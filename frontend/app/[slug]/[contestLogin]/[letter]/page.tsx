@@ -1,12 +1,13 @@
+import {useParams, Navigate} from "react-router-dom";
+
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
+import {QueryState} from "@/components/shared/QueryState";
 import {Task} from "@/components/shared/Task";
 import {useGetContestProblem, useListContestSubmissions} from "@/contracts/core/v1/api";
 import {useContestData} from "@/hooks/useContestData";
 import {env} from "@/lib/env";
 import {lettersToNumber, numberToLetters} from "@/lib/lib";
-import {PageQueryState} from "@/lib/pageQuery";
 import {PermissionChecker} from "@/lib/permissions";
-import {redirect} from "@/lib/routeErrors";
 
 import type {ReactNode} from "react";
 
@@ -18,8 +19,8 @@ type Props = {
   };
 };
 
-const Page = (props: Props): ReactNode => {
-  const params = props.params;
+const Page = (): ReactNode => {
+  const params = useParams() as Props["params"];
   const {slug, contestLogin, letter} = params;
   const contest = useContestData(slug, contestLogin);
   const user = contest.data?.user ?? null;
@@ -34,13 +35,13 @@ const Page = (props: Props): ReactNode => {
     userId: user?.id, problemId: targetProblem?.problem_id, page: 1, pageSize: 5, sortOrder: 'desc',
   }, {query: {enabled: Boolean(user && targetProblem)}});
   if (!contest.data) {
-    return <PageQueryState query={contest} />;
+    return <QueryState error={contest.error} />;
   }
   if (targetPosition <= 0 || !targetProblem) {
     return <ErrorDisplay error={{status: 404, message: 'Задача не найдена'}} />;
   }
   if (!problemQuery.data) {
-    return <PageQueryState query={problemQuery} />;
+    return <QueryState error={problemQuery.error} />;
   }
   const {response: contestResponse, contestRole} = contest.data;
   const problemResponse = problemQuery.data;
@@ -55,7 +56,7 @@ const Page = (props: Props): ReactNode => {
   const hasStarted =
     !contestResponse.contest.start_time || new Date(contestResponse.contest.start_time) <= new Date();
   if (!checker.canViewProblems(contestResponse.contest) || (!isManager && !hasStarted)) {
-    redirect(`/${params.slug}/${params.contestLogin}`);
+    return <Navigate to={`/${params.slug}/${params.contestLogin}`} replace />;
   }
   const submissions = [...(submissionsResponse?.submissions || [])];
   const wsBaseUrl = env.getWebSocketUrl();

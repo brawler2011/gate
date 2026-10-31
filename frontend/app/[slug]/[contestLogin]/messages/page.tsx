@@ -1,16 +1,16 @@
 import {Container} from "@mantine/core";
+import {useLoaderData, redirect} from "react-router-dom";
 
 import {ContestMessagesClient} from "@/components/contests/messages/ContestMessagesClient";
 import {api, unwrap} from "@/lib/api";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
-import {redirect} from "@/lib/routeErrors";
 
 import type {ContestClarificationModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadPage = async ({params}: PageProps) => {
-  const {slug, contestLogin} = params;
+export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
+  const {slug, contestLogin} = routeParams as {slug: string; contestLogin: string};
 
   const [contestResponse, [, me]] = await Promise.all([
     unwrap(api.getContest)(slug, contestLogin),
@@ -32,7 +32,7 @@ const loadPage = async ({params}: PageProps) => {
   );
 
   if (!checker.canViewContest(contestResponse.contest)) {
-    redirect(`/${slug}/${contestLogin}`);
+    throw redirect(`/${slug}/${contestLogin}`);
   }
 
   const isModerator =
@@ -49,33 +49,13 @@ const loadPage = async ({params}: PageProps) => {
     });
     initialClarifications = clarificationsRes?.clarifications || [];
   }
-  return {
-    slug,
-    contestLogin,
-    contestResponse,
-    me,
-    user,
-    contestRole,
-    checker,
-    isModerator,
-    announcementsRes,
-    initialClarifications,
-  };
-};
+  return {slug, contestLogin, contestResponse, user, isModerator, announcementsRes, initialClarifications};
+}) satisfies LoaderFunction;
 
-type PageProps = {
-  params: { slug: string; contestLogin: string };
-};
-
-const Page = ({params}: PageProps): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/[slug]/[contestLogin]/messages/page.tsx", params], () =>
-    loadPage({params}),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
+const Page = (): ReactNode => {
+  const data = useLoaderData<typeof loader>();
   const {slug, contestLogin, contestResponse, user, isModerator, announcementsRes, initialClarifications} =
-    routeQuery.data;
+    data;
   const initialAnnouncements = announcementsRes?.announcements || [];
   const problems = contestResponse.problems || [];
   return (

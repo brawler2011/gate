@@ -2,16 +2,19 @@ import {MantineProvider} from "@mantine/core";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {render, type RenderOptions, type RenderResult} from "@testing-library/react";
 import React, {type ReactElement, type ReactNode} from "react";
-import {MemoryRouter} from "react-router-dom";
+import {createMemoryRouter, RouterProvider} from "react-router-dom";
 
-import {RouteBoundary} from "@/components/shared/RouteBoundary";
+import {QueryState} from "@/components/shared/QueryState";
+import {RouteError} from "@/components/shared/RouteError";
 import {SessionContext} from "@/contexts/SessionContext";
 
 import {setupDOMEnvironment} from "./setup-dom";
 
+import type {RouteObject} from "react-router-dom";
+
 export {setupDOMEnvironment};
 
-const AllTheProviders = ({children, route}: { children: ReactNode; route?: string }) => {
+const AllTheProviders = ({children}: { children: ReactNode }) => {
   const [client] = React.useState(
     () =>
       new QueryClient({
@@ -19,34 +22,40 @@ const AllTheProviders = ({children, route}: { children: ReactNode; route?: strin
       }),
   );
   return (
-    <MemoryRouter initialEntries={route ? [route] : undefined}>
-      <QueryClientProvider client={client}>
-        <SessionContext.Provider
-          value={{
-            user: null,
-            isLoading: false,
-            isAuthenticated: false,
-            isAdmin: false,
-            setUser: () => {},
-            refetchUser: async () => {},
-          }}
-        >
-          <MantineProvider>
-            <RouteBoundary>{children}</RouteBoundary>
-          </MantineProvider>
-        </SessionContext.Provider>
-      </QueryClientProvider>
-    </MemoryRouter>
+    <QueryClientProvider client={client}>
+      <SessionContext.Provider
+        value={{
+          user: null,
+          isLoading: false,
+          isAuthenticated: false,
+          isAdmin: false,
+          setUser: () => {},
+          refetchUser: async () => {},
+        }}
+      >
+        <MantineProvider>
+          {children}
+        </MantineProvider>
+      </SessionContext.Provider>
+    </QueryClientProvider>
   );
 };
 
 export const renderWithProviders = (
   ui: ReactElement,
-  options?: Omit<RenderOptions, "wrapper"> & {route?: string},
-): RenderResult => {
-  const {route, ...renderOptions} = options ?? {};
-  return render(ui, {wrapper: ({children}) => <AllTheProviders route={route}>{children}</AllTheProviders>,
-    ...renderOptions});
+  options?: Omit<RenderOptions, "wrapper"> & {route?: string; routes?: RouteObject[]},
+): RenderResult & {router: ReturnType<typeof createMemoryRouter>} => {
+  const {route = "/", routes, ...renderOptions} = options ?? {};
+  const router = createMemoryRouter(routes ?? [{path: "*", element: ui}], {initialEntries: [route]});
+  return {...render(<RouterProvider router={router} />, {
+    wrapper: AllTheProviders,
+    ...renderOptions,
+  }), router};
 };
+
+export const renderRoute = (
+  ui: ReactElement, path: string, loader: RouteObject["loader"], route: string,
+): RenderResult => renderWithProviders(ui, {route, routes: [{path, element: ui, loader,
+  errorElement: <RouteError />, hydrateFallbackElement: <QueryState />} ]});
 
 export * from "@testing-library/react";

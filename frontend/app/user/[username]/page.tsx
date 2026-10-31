@@ -1,53 +1,39 @@
 import {Suspense} from "react";
+import {useLoaderData, redirect} from "react-router-dom";
 
 import {DefaultLayout} from "@/components/shared";
 import {ClaimTemporaryAccountSection, ProfileContainer, ProfileHeader, UserContestsSection, UserContestsSkeleton} from "@/components/users";
 import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
-import {notFound, redirect} from "@/lib/routeErrors";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadPage = async ({params, searchParams}: Props) => {
-  const {username} = params;
+export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs) => {
+  const searchParams = Object.fromEntries(new URL(request.url).searchParams);
+  const {username} = routeParams as {username: string};
   const {contestsPage} = searchParams;
 
-  let cleanUsername = "";
-  try {
-    cleanUsername = decodeURIComponent(username);
-  } catch {
-    notFound();
-  }
+  const cleanUsername = username;
 
   if (!cleanUsername) {
-    notFound();
+    throw new Response("Страница не найдена", {status: 404});
   }
 
   const userPage = parsePage(contestsPage);
   if (!userPage) {
-    redirect(`/@${cleanUsername}`);
+    throw redirect(`/@${cleanUsername}`);
   }
 
   const [[, me], userData] = await Promise.all([api.getMe(), getUser(cleanUsername)]);
-  return {username, contestsPage, cleanUsername, userPage, me, userData};
-};
-
-type Props = {
-  params: { username: string };
-  searchParams: { contestsPage?: string };
-};
+  return {cleanUsername, userPage, me, userData};
+}) satisfies LoaderFunction;
 
 const getUser = unwrap(api.getUser);
 
-const Page = ({params, searchParams}: Props): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/user/[username]/page.tsx", params, searchParams], () =>
-    loadPage({params, searchParams}),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {cleanUsername, userPage, me, userData} = routeQuery.data;
+const Page = (): ReactNode => {
+  const data = useLoaderData<typeof loader>();
+  const {cleanUsername, userPage, me, userData} = data;
   const currentUser = me?.user ?? null;
   const user = userData.user;
   return (

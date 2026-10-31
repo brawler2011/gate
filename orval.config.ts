@@ -18,6 +18,7 @@ export default defineConfig(
           {
             input,
             output: {
+              baseUrl: "/api",
               target: `frontend/contracts/${name}/api.ts`,
               schemas: `frontend/contracts/${name}/models`,
               client: "react-query",
@@ -25,9 +26,9 @@ export default defineConfig(
               clean: true,
               urlEncodeParameters: true,
               override: {
-                mutator: {path: "./frontend/lib/fetch.ts", name: "apiFetch"},
+                requestOptions: {credentials: "include"},
                 query: {version: 5},
-                fetch: {includeHttpResponseReturnType: false},
+                fetch: {includeHttpResponseReturnType: false, forceSuccessResponse: true},
               },
             },
           },

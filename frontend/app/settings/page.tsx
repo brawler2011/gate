@@ -1,23 +1,21 @@
+import {Navigate, useLoaderData} from "react-router-dom";
+
 import {UserSettingsContent} from "@/components/settings";
 import {api} from "@/lib/api";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
-import {redirect} from "@/lib/routeErrors";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction} from "react-router-dom";
 
-const loadSettingsPage = async () => {
+export const loader = (async () => {
   const [error, data] = await api.getMe();
   return {error, data};
-};
+}) satisfies LoaderFunction;
 
 const SettingsPage = (): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/settings/page.tsx"], () => loadSettingsPage());
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {error, data} = routeQuery.data;
+  const loaded = useLoaderData<typeof loader>();
+  const {error, data} = loaded;
   if (error || !data?.user || data.user.role === "guest") {
-    redirect("/auth/login?return_to=/settings");
+    return <Navigate to="/auth/login?return_to=/settings" replace />;
   }
   return <UserSettingsContent initialUser={data.user} />;
 };

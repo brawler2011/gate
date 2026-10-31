@@ -1,47 +1,34 @@
 import {Container} from "@mantine/core";
+import {useLoaderData, redirect} from "react-router-dom";
 
+import NotFound from "@/app/not-found";
 import {AdminUserEditContent} from "@/components/admin";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api} from "@/lib/api";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
-import {notFound, redirect} from "@/lib/routeErrors";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadAdminUserEditPage = async ({params}: Props) => {
-  const {username} = params;
-  let decoded = "";
-  try {
-    decoded = decodeURIComponent(username);
-  } catch {
-    notFound();
-  }
+export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
+  const {username} = routeParams as {username: string};
+  const decoded = username;
 
   // Check admin rights
   const [meError, meData] = await api.getMe();
   if (meError || !meData?.user || meData.user.role !== "admin") {
-    redirect("/auth/login?return_to=/admin/users/" + encodeURIComponent(decoded));
+    throw redirect("/auth/login?return_to=/admin/users/" + encodeURIComponent(decoded));
   }
 
   const [error, data] = await api.getUser(decoded);
-  return {username, decoded, meError, meData, error, data};
-};
+  return {error, data};
+}) satisfies LoaderFunction;
 
-type Props = {
-  params: { username: string };
-};
-
-const AdminUserEditPage = ({params}: Props): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/admin/users/[username]/page.tsx", params], () =>
-    loadAdminUserEditPage({params}),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {error, data} = routeQuery.data;
+const AdminUserEditPage = (): ReactNode => {
+  const loaded = useLoaderData<typeof loader>();
+  const {error, data} = loaded;
   if (error) {
     if (error.status === 404) {
-      notFound();
+      return <NotFound />;
     }
     return (
       <Container size="sm" py="lg">

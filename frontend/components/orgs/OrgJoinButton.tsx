@@ -1,14 +1,13 @@
-"use client";
-
 import {Badge, Button, Group, Modal, Stack, Text, Textarea} from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconCheck, IconUserPlus, IconX} from "@tabler/icons-react";
+import {useQueryClient} from "@tanstack/react-query";
 import {useCallback, useEffect, useState, type ReactNode} from "react";
+import {useRevalidator} from "react-router-dom";
 
 import {dispatchNotificationsUpdated} from "@/hooks/useUnreadNotificationsCount";
 import {api} from "@/lib/api";
-import {useRouter} from "@/lib/navigation";
 
 import type {OrganizationJoinRequestModel, OrganizationModel} from "@/contracts/core/v1/models";
 
@@ -23,7 +22,8 @@ export const OrgJoinButton = ({
   isAuthenticated,
   isMember,
 }: Props): ReactNode => {
-  const router = useRouter();
+  const revalidator = useRevalidator();
+  const queryClient = useQueryClient();
   const [pendingRequest, setPendingRequest] = useState<OrganizationJoinRequestModel | null>(null);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -77,7 +77,8 @@ export const OrgJoinButton = ({
         message: `Вы успешно вступили в организацию ${org.name}!`,
         color: "green",
       });
-      router.refresh();
+      void queryClient.invalidateQueries({queryKey: ["org-members-permission", org.login]});
+      void revalidator.revalidate();
     }
   };
 
@@ -104,7 +105,8 @@ export const OrgJoinButton = ({
         message: `Вы вступили в организацию ${org.name}!`,
         color: "green",
       });
-      router.refresh();
+      void queryClient.invalidateQueries({queryKey: ["org-members-permission", org.login]});
+      void revalidator.revalidate();
     } else if (data?.request) {
       notifications.show({
         message: "Заявка отправлена администраторам организации",

@@ -1,9 +1,9 @@
 import {Container, Skeleton, Stack} from "@mantine/core";
 import {Suspense} from "react";
+import {useSearchParams, Navigate} from "react-router-dom";
 
 import {AdminOrgsContent} from "@/components/admin";
 import {parsePage} from "@/lib/lib";
-import {redirect} from "@/lib/routeErrors";
 
 import type {ReactNode} from "react";
 
@@ -24,18 +24,13 @@ const AdminOrgsContentSkeleton = () => {
   );
 };
 
-type PageProps = {
-  searchParams: {
-    page?: string;
-    search?: string;
-  };
-};
-
-const AdminOrgsPage = ({searchParams}: PageProps): ReactNode => {
+const AdminOrgsPage = (): ReactNode => {
+  const [urlSearch] = useSearchParams();
+  const searchParams = Object.fromEntries(urlSearch);
   const resolvedSearchParams = searchParams;
   const page = parsePage(resolvedSearchParams.page);
   if (!page) {
-    redirect("/admin/orgs");
+    return <Navigate to="/admin/orgs" replace />;
   }
   const search = resolvedSearchParams.search || undefined;
 

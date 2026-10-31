@@ -1,27 +1,25 @@
 import {Container, Group, Stack, Title} from "@mantine/core";
 import {IconNews} from "@tabler/icons-react";
-import {Navigate} from "react-router-dom";
+import {useSearchParams, Navigate} from "react-router-dom";
 
 import {BlogList} from "@/components/blog";
 import {DefaultLayout} from "@/components/shared";
+import {QueryState} from "@/components/shared/QueryState";
 import {useListPosts} from "@/contracts/core/v1/api";
 import {parsePage} from "@/lib/lib";
-import {PageQueryState} from "@/lib/pageQuery";
 
 import type {ReactNode} from "react";
 
-type Props = {
-  searchParams: { page?: string };
-};
-
-const Page = ({searchParams}: Props): ReactNode => {
+const Page = (): ReactNode => {
+  const [search] = useSearchParams();
+  const searchParams = Object.fromEntries(search);
   const page = parsePage(searchParams.page);
   const routeQuery = useListPosts({page: page ?? 1, pageSize: 5}, {query: {enabled: Boolean(page)}});
   if (!page) {
     return <Navigate to="/blog" replace />;
   }
   if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
+    return <QueryState error={routeQuery.error} />;
   }
   const data = routeQuery.data;
   return (

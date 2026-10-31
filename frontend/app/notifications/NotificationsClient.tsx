@@ -1,11 +1,9 @@
-"use client";
-
 import {ActionIcon, Badge, Button, Card, Center, Container, Group, Loader, Pagination, SegmentedControl, Stack, Text, Title, Tooltip} from "@mantine/core";
 import {notifications as mantineNotifications} from "@mantine/notifications";
 import {IconBell, IconBuilding, IconCheck, IconChecks, IconExternalLink, IconTrophy, IconX} from "@tabler/icons-react";
 import {useCallback, useEffect, useState, type ReactNode} from "react";
+import {Link} from "react-router-dom";
 
-import Link from "@/components/shared/RouterLink";
 import {dispatchNotificationsUpdated} from "@/hooks/useUnreadNotificationsCount";
 import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
@@ -465,7 +463,7 @@ export const NotificationsClient = (): ReactNode => {
                           {notif.link && (
                             <Button
                               component={Link}
-                              href={notif.link}
+                              to={notif.link}
                               size="xs"
                               variant="subtle"
                               color="blue"

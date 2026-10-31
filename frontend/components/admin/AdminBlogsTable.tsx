@@ -1,12 +1,10 @@
-"use client";
-
 import {ActionIcon, Avatar, Badge, Box, Group, Table, Text} from "@mantine/core";
 import {IconEdit, IconTrash} from "@tabler/icons-react";
 import {useState} from "react";
+import {useNavigate} from "react-router-dom";
 
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {formatDate} from "@/lib/lib";
-import {useRouter} from "@/lib/navigation";
 
 import classes from "./AdminPage.module.css";
 import {DeleteBlogPostModal} from "./DeleteBlogPostModal";
@@ -21,13 +19,13 @@ type AdminBlogsTableProps = {
 };
 
 export const AdminBlogsTable = ({posts, onDeletePost, onEditPost}: AdminBlogsTableProps): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [postToDelete, setPostToDelete] = useState<PostModel | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleRowClick = (postId: string) => {
-    router.push(`/blog/${postId}`);
+    navigate(`/blog/${postId}`);
   };
 
   const handleEditClick = (e: React.MouseEvent, post: PostModel) => {
@@ -38,7 +36,7 @@ export const AdminBlogsTable = ({posts, onDeletePost, onEditPost}: AdminBlogsTab
   const handleAuthorClick = (e: React.MouseEvent, authorUsername: string) => {
     e.stopPropagation();
     if (authorUsername) {
-      router.push(`/@${authorUsername}`);
+      navigate(`/@${authorUsername}`);
     }
   };
 

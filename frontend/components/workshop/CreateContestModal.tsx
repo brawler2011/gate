@@ -1,11 +1,9 @@
-"use client";
-
 import {Button, Modal, Select, Stack, TextInput} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useEffect, useState} from "react";
+import {useNavigate} from "react-router-dom";
 
 import {api} from "@/lib/api";
-import {useRouter} from "@/lib/navigation";
 
 import type {OrganizationModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
@@ -36,7 +34,7 @@ export const CreateContestModal = ({
   defaultOrgId,
   lockOrganization = false,
 }: Props): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [title, setTitle] = useState("New Contest");
   const [login, setLogin] = useState("");
   const [orgId, setOrgId] = useState<string | null>(defaultOrgId ?? null);
@@ -84,7 +82,7 @@ export const CreateContestModal = ({
       }
       const orgSlug = selectedOrg.login;
       onClose();
-      router.push(`/${orgSlug}/${response.login}`);
+      navigate(`/${orgSlug}/${response.login}`);
     } catch (err) {
       notifications.show({
         title: "Ошибка",

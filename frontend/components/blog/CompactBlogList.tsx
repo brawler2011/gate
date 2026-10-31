@@ -1,9 +1,7 @@
-"use client";
-
 import {Stack, Text, Card, Title, Button, Group, Box} from "@mantine/core";
 import {IconChevronRight, IconNews} from "@tabler/icons-react";
+import {Link} from "react-router-dom";
 
-import Link from "@/components/shared/RouterLink";
 import {formatDate} from "@/lib/lib";
 
 import type {PostModel} from "@/contracts/core/v1/models";
@@ -49,7 +47,7 @@ export const CompactBlogList = ({posts, error}: CompactBlogListProps): ReactNode
             <Box
               key={post.id}
               component={Link}
-              href={`/blog/${post.id}`}
+              to={`/blog/${post.id}`}
               style={{
                 textDecoration: "none",
                 color: "inherit",
@@ -96,7 +94,7 @@ export const CompactBlogList = ({posts, error}: CompactBlogListProps): ReactNode
 
       <Button
         component={Link}
-        href="/blog"
+        to="/blog"
         variant="light"
         color="blue"
         size="xs"

@@ -1,14 +1,11 @@
-"use client";
-
 import {Alert, Anchor, Box, Button, Center, Group, Loader, Paper, PasswordInput, Stack, Text, TextInput, ThemeIcon, Title} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconAlertCircle, IconCheck, IconMailCheck} from "@tabler/icons-react";
 import {Suspense, useState, type ReactNode} from "react";
+import {useSearchParams, Link} from "react-router-dom";
 
 import Image from "@/components/shared/Image";
-import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
-import {useSearchParams} from "@/lib/navigation";
 
 const RegistrationPage = (): ReactNode => {
   return (
@@ -25,7 +22,7 @@ const RegistrationPage = (): ReactNode => {
 };
 
 const RegistrationPageContent = () => {
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
   const returnTo = searchParams.get("return_to") || "/";
 
   const [username, setUsername] = useState("");
@@ -95,7 +92,7 @@ const RegistrationPageContent = () => {
       }}
     >
       <Stack align="center" gap={32} style={{width: "min(550px, calc(100vw - 2rem))"}}>
-        <Link href="/" style={{textDecoration: "none", color: "inherit"}}>
+        <Link to="/" style={{textDecoration: "none", color: "inherit"}}>
           <Group justify="center" gap="md">
             <Image src="/gate_logo.svg" alt="Gate" width={56} height={56} priority />
             <Title order={1} fz={36}>
@@ -131,7 +128,7 @@ const RegistrationPageContent = () => {
 
                 <Button
                   component={Link}
-                  href={`/auth/login${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`}
+                  to={`/auth/login${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`}
                   variant="filled"
                   size="sm"
                 >
@@ -200,7 +197,7 @@ const RegistrationPageContent = () => {
                 Уже есть аккаунт?{" "}
                 <Anchor
                   component={Link}
-                  href={`/auth/login${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`}
+                  to={`/auth/login${returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""}`}
                   fz={14}
                   fw={600}
                   underline="hover"

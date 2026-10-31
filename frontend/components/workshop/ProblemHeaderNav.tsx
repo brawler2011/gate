@@ -1,9 +1,7 @@
-"use client";
-
 import {type ReactNode} from "react";
+import {useLocation} from "react-router-dom";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
-import {usePathname} from "@/lib/navigation";
 
 const GENERAL_TAB = "general";
 const WORKSHOP_FOLDER_TABS = [
@@ -37,7 +35,7 @@ export const ProblemHeaderNav = ({
   slug,
   problemId,
 }: ProblemHeaderNavProps): ReactNode => {
-  const pathname = usePathname();
+  const {pathname} = useLocation();
 
   const getActiveTabKey = (): string => {
     if (!pathname) {

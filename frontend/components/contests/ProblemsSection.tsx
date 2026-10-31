@@ -1,16 +1,16 @@
-"use client";
-
 import {ActionIcon, Autocomplete, Badge, Button, Center, Divider, Group, Loader, Modal, Select, Stack, Table, Text, Tooltip} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconDeviceFloppy, IconEdit, IconGripVertical, IconPlus, IconRefresh, IconRotate2, IconTrash} from "@tabler/icons-react";
+import {useQueryClient} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
+import {useRevalidator} from "react-router-dom";
 
 import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
+import {getGetContestQueryKey} from "@/contracts/core/v1/api";
 import {api} from "@/lib/api";
 import {numberToLetters} from "@/lib/lib";
-import {useRouter} from "@/lib/navigation";
 
 import classes from "./ProblemsSection.module.css";
 
@@ -47,7 +47,8 @@ export const ProblemsSection = ({
   contestLogin,
   initialProblems,
 }: ProblemsSectionProps): ReactNode => {
-  const router = useRouter();
+  const revalidator = useRevalidator();
+  const queryClient = useQueryClient();
   const [problems, setProblems] = useState(initialProblems);
   const [savedProblems, setSavedProblems] = useState(initialProblems);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -140,7 +141,8 @@ export const ProblemsSection = ({
 
     setSearchQuery("");
     setSelectedProblemId(null);
-    router.refresh();
+    void queryClient.invalidateQueries({queryKey: getGetContestQueryKey(orgLogin, contestLogin)});
+    void revalidator.revalidate();
   };
 
   const handleDeleteProblem = async (problemId: string) => {
@@ -167,7 +169,8 @@ export const ProblemsSection = ({
       message: "Задача удалена из контеста",
     });
 
-    router.refresh();
+    void queryClient.invalidateQueries({queryKey: getGetContestQueryKey(orgLogin, contestLogin)});
+    void revalidator.revalidate();
   };
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -262,7 +265,8 @@ export const ProblemsSection = ({
       message: "Порядок задач сохранён",
       color: "green",
     });
-    router.refresh();
+    void queryClient.invalidateQueries({queryKey: getGetContestQueryKey(orgLogin, contestLogin)});
+    void revalidator.revalidate();
   };
 
   const handleResetOrder = () => {
@@ -327,7 +331,8 @@ export const ProblemsSection = ({
     });
 
     setReplaceTarget(null);
-    router.refresh();
+    void queryClient.invalidateQueries({queryKey: getGetContestQueryKey(orgLogin, contestLogin)});
+    void revalidator.revalidate();
   };
 
   const autocompleteData = searchResults.map((p) => ({

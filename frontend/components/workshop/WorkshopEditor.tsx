@@ -1,9 +1,6 @@
-"use client";
-
 import {Stack} from "@mantine/core";
 import {useCallback} from "react";
-
-import {useRouter, useSearchParams, usePathname} from "@/lib/navigation";
+import {useNavigate, useSearchParams, useLocation} from "react-router-dom";
 
 import {WorkshopAccessTab} from "./WorkshopAccessTab";
 import {WorkshopCheckersTab} from "./WorkshopCheckersTab";
@@ -34,9 +31,9 @@ const PACKAGES_TAB = "packages";
 const IMPORT_TAB = "import";
 
 export const WorkshopEditor = ({problemId, activeTab}: Props): ReactNode => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const {pathname} = useLocation();
 
   const selectedFile = searchParams.get("file");
 
@@ -44,18 +41,18 @@ export const WorkshopEditor = ({problemId, activeTab}: Props): ReactNode => {
     (filePath: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("file", filePath);
-      router.push(`${pathname}?${params.toString()}`, {scroll: false});
+      navigate(`${pathname}?${params.toString()}`, {preventScrollReset: true});
     },
-    [router, searchParams, pathname],
+    [navigate, searchParams, pathname],
   );
 
   const handleFileCreated = useCallback(
     (filePath: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("file", filePath);
-      router.push(`${pathname}?${params.toString()}`, {scroll: false});
+      navigate(`${pathname}?${params.toString()}`, {preventScrollReset: true});
     },
-    [router, searchParams, pathname],
+    [navigate, searchParams, pathname],
   );
 
   const renderFolderTab = () => {

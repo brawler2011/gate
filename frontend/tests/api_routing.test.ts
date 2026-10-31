@@ -1,7 +1,7 @@
 import {afterEach, describe, expect, it, spyOn} from 'bun:test';
 
+import {getPostById} from "@/contracts/core/v1/api";
 import {api} from '@/lib/api';
-import {apiFetch, HttpError} from '@/lib/fetch';
 
 const originalFetch = globalThis.fetch;
 afterEach(() => {
@@ -12,8 +12,8 @@ describe('SPA API transport', () => {
   it('uses /api and session cookies while retaining request options', async () => {
     const fetch = spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ok: true}));
     const controller = new AbortController();
-    expect(await apiFetch('/posts?page=2', {signal: controller.signal})).toEqual({ok: true});
-    expect(fetch).toHaveBeenCalledWith('/api/posts?page=2', {credentials: 'include', signal: controller.signal});
+    expect(await getPostById('post', {signal: controller.signal})).toEqual(expect.objectContaining({ok: true}));
+    expect(fetch).toHaveBeenCalledWith('/api/posts/post', {credentials: 'include', signal: controller.signal, method: 'GET'});
     fetch.mockRestore();
   });
   it('encodes path parameters and uses contract query names', async () => {
@@ -83,12 +83,12 @@ describe('SPA API transport', () => {
   it('preserves status and request id on HTTP errors', async () => {
     globalThis.fetch = (async () => Response.json({message: 'Denied', request_id: 'req-1'}, {status: 403})) as unknown as typeof fetch;
     try {
-      await apiFetch('/private');
+      await getPostById('private');
       throw new Error('Expected HTTP failure');
     } catch (error) {
-      expect(error).toBeInstanceOf(HttpError);
-      expect((error as HttpError).status).toBe(403);
-      expect((error as HttpError).body.request_id).toBe('req-1');
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error & {status: number}).status).toBe(403);
+      expect((error as Error & {info: {request_id: string}}).info.request_id).toBe('req-1');
     }
   });
 });

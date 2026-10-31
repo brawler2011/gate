@@ -1,9 +1,7 @@
-"use client";
-
 import {Box, Button, Stack} from "@mantine/core";
+import {Link} from "react-router-dom";
 
 import {getOrgSettingsIcon, getOrgSettingsNavTabStyles, type OrgSettingsNavSection} from "@/components/orgs/OrgSettingsNavShared";
-import Link from "@/components/shared/RouterLink";
 
 import type {ReactNode} from "react";
 
@@ -35,7 +33,7 @@ export const OrgSettingsSidebarNav = ({
             <Button
               key={section.key}
               component={Link}
-              href={`/${orgLogin}/settings?section=${section.key}`}
+              to={`/${orgLogin}/settings?section=${section.key}`}
               style={{textDecoration: "none"}}
               variant="transparent"
               size="sm"

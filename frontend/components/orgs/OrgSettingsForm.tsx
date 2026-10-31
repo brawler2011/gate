@@ -1,13 +1,13 @@
-"use client";
-
 import {Button, Select, Stack, TextInput, Textarea} from '@mantine/core';
 import {useForm} from '@mantine/form';
 import {notifications} from '@mantine/notifications';
+import {useQueryClient} from "@tanstack/react-query";
 import {useState, type ReactNode} from 'react';
+import {useRevalidator, useNavigate} from "react-router-dom";
 
+import {getGetOrganizationQueryKey} from "@/contracts/core/v1/api";
 import {type UpdateOrganizationRequestModel, type OrganizationModel} from '@/contracts/core/v1/models';
 import {api} from '@/lib/api';
-import {useRouter} from '@/lib/navigation';
 
 type Props = { org: OrganizationModel };
 
@@ -18,7 +18,9 @@ const JOIN_POLICY_OPTIONS = [
 ];
 
 export const OrgSettingsForm = ({org}: Props): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
+  const revalidator = useRevalidator();
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
 
   const form = useForm({
@@ -69,9 +71,10 @@ export const OrgSettingsForm = ({org}: Props): ReactNode => {
     notifications.show({title: 'Готово', message: 'Настройки обновлены', color: 'green'});
     form.resetDirty(values);
     if (trimmedLogin !== org.login) {
-      router.push(`/${trimmedLogin}/settings`);
+      navigate(`/${trimmedLogin}/settings`);
     } else {
-      router.refresh();
+      void queryClient.invalidateQueries({queryKey: getGetOrganizationQueryKey(org.login)});
+      void revalidator.revalidate();
     }
   };
 

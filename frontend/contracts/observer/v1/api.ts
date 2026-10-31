@@ -25,11 +25,6 @@ import type {
   ObserveSubmissionsParams
 } from './models';
 
-import { apiFetch } from '../../../lib/fetch';
-type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
-
 const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
@@ -57,19 +52,34 @@ export const getObserveSubmissionsUrl = (params: ObserveSubmissionsParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/submissions?${stringifiedParams}` : `/submissions`
+  return stringifiedParams.length > 0 ? `/api/submissions?${stringifiedParams}` : `/api/submissions`
 }
 
-export const observeSubmissions = async (params: ObserveSubmissionsParams, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+export const observeSubmissions = async (params: ObserveSubmissionsParams, options?: RequestInit): Promise<unknown> => {
 
-  return apiFetch<unknown>(getObserveSubmissionsUrl(params),
+  const res = await fetch(getObserveSubmissionsUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -77,21 +87,21 @@ export const observeSubmissions = async (params: ObserveSubmissionsParams, optio
 
 export const getObserveSubmissionsQueryKey = (params?: ObserveSubmissionsParams,) => {
     return [
-    `/submissions`, ...(params ? [params] : [])
+    `/api/submissions`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getObserveSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof observeSubmissions>>, TError = void>(params: ObserveSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getObserveSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof observeSubmissions>>, TError = globalThis.Error & { info?: void; status?: number }>(params: ObserveSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeSubmissions>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getObserveSubmissionsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof observeSubmissions>>> = ({ signal }) => observeSubmissions(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof observeSubmissions>>> = ({ signal }) => observeSubmissions(params, { signal, ...fetchOptions });
 
 
 
@@ -101,36 +111,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ObserveSubmissionsQueryResult = NonNullable<Awaited<ReturnType<typeof observeSubmissions>>>
-export type ObserveSubmissionsQueryError = void
+export type ObserveSubmissionsQueryError = globalThis.Error & { info?: void; status?: number }
 
 
-export function useObserveSubmissions<TData = Awaited<ReturnType<typeof observeSubmissions>>, TError = void>(
+export function useObserveSubmissions<TData = Awaited<ReturnType<typeof observeSubmissions>>, TError = globalThis.Error & { info?: void; status?: number }>(
  params: ObserveSubmissionsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeSubmissions>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof observeSubmissions>>,
           TError,
           Awaited<ReturnType<typeof observeSubmissions>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useObserveSubmissions<TData = Awaited<ReturnType<typeof observeSubmissions>>, TError = void>(
+export function useObserveSubmissions<TData = Awaited<ReturnType<typeof observeSubmissions>>, TError = globalThis.Error & { info?: void; status?: number }>(
  params: ObserveSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeSubmissions>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof observeSubmissions>>,
           TError,
           Awaited<ReturnType<typeof observeSubmissions>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useObserveSubmissions<TData = Awaited<ReturnType<typeof observeSubmissions>>, TError = void>(
- params: ObserveSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useObserveSubmissions<TData = Awaited<ReturnType<typeof observeSubmissions>>, TError = globalThis.Error & { info?: void; status?: number }>(
+ params: ObserveSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeSubmissions>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useObserveSubmissions<TData = Awaited<ReturnType<typeof observeSubmissions>>, TError = void>(
- params: ObserveSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useObserveSubmissions<TData = Awaited<ReturnType<typeof observeSubmissions>>, TError = globalThis.Error & { info?: void; status?: number }>(
+ params: ObserveSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeSubmissions>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -159,19 +169,34 @@ export const getObserveContestsUrl = (params: ObserveContestsParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/contests?${stringifiedParams}` : `/contests`
+  return stringifiedParams.length > 0 ? `/api/contests?${stringifiedParams}` : `/api/contests`
 }
 
-export const observeContests = async (params: ObserveContestsParams, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+export const observeContests = async (params: ObserveContestsParams, options?: RequestInit): Promise<unknown> => {
 
-  return apiFetch<unknown>(getObserveContestsUrl(params),
+  const res = await fetch(getObserveContestsUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -179,21 +204,21 @@ export const observeContests = async (params: ObserveContestsParams, options?: P
 
 export const getObserveContestsQueryKey = (params?: ObserveContestsParams,) => {
     return [
-    `/contests`, ...(params ? [params] : [])
+    `/api/contests`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getObserveContestsQueryOptions = <TData = Awaited<ReturnType<typeof observeContests>>, TError = void>(params: ObserveContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getObserveContestsQueryOptions = <TData = Awaited<ReturnType<typeof observeContests>>, TError = globalThis.Error & { info?: void; status?: number }>(params: ObserveContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeContests>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getObserveContestsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof observeContests>>> = ({ signal }) => observeContests(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof observeContests>>> = ({ signal }) => observeContests(params, { signal, ...fetchOptions });
 
 
 
@@ -203,36 +228,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ObserveContestsQueryResult = NonNullable<Awaited<ReturnType<typeof observeContests>>>
-export type ObserveContestsQueryError = void
+export type ObserveContestsQueryError = globalThis.Error & { info?: void; status?: number }
 
 
-export function useObserveContests<TData = Awaited<ReturnType<typeof observeContests>>, TError = void>(
+export function useObserveContests<TData = Awaited<ReturnType<typeof observeContests>>, TError = globalThis.Error & { info?: void; status?: number }>(
  params: ObserveContestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeContests>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof observeContests>>,
           TError,
           Awaited<ReturnType<typeof observeContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useObserveContests<TData = Awaited<ReturnType<typeof observeContests>>, TError = void>(
+export function useObserveContests<TData = Awaited<ReturnType<typeof observeContests>>, TError = globalThis.Error & { info?: void; status?: number }>(
  params: ObserveContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeContests>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof observeContests>>,
           TError,
           Awaited<ReturnType<typeof observeContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useObserveContests<TData = Awaited<ReturnType<typeof observeContests>>, TError = void>(
- params: ObserveContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useObserveContests<TData = Awaited<ReturnType<typeof observeContests>>, TError = globalThis.Error & { info?: void; status?: number }>(
+ params: ObserveContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useObserveContests<TData = Awaited<ReturnType<typeof observeContests>>, TError = void>(
- params: ObserveContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useObserveContests<TData = Awaited<ReturnType<typeof observeContests>>, TError = globalThis.Error & { info?: void; status?: number }>(
+ params: ObserveContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof observeContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 

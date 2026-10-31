@@ -1,47 +1,36 @@
 import {Avatar, Badge, Container, Group, Paper, Stack, Tabs, Text, Title} from "@mantine/core";
 import {IconArrowLeft, IconFileCode, IconTrophy, IconUsers} from "@tabler/icons-react";
+import {useLoaderData} from "react-router-dom";
 
+import NotFound from "@/app/not-found";
 import {TeamContestsTab} from "@/components/orgs/TeamContestsTab";
 import {TeamMembersManagement} from "@/components/orgs/TeamMembersManagement";
 import {TeamProblemsTab} from "@/components/orgs/TeamProblemsTab";
 import {LinkAnchor} from "@/components/shared";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api} from "@/lib/api";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
-import {notFound} from "@/lib/routeErrors";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadTeamPage = async ({params}: Props) => {
-  const {slug, team_id} = params;
-  let decoded = "";
-  try {
-    decoded = decodeURIComponent(slug);
-  } catch {
-    notFound();
-  }
+export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
+  const {slug, team_id} = routeParams as {slug: string; team_id: string};
+  const decoded = slug;
 
   if (decoded.startsWith("@")) {
-    notFound();
+    throw new Response("Страница не найдена", {status: 404});
   }
 
   const [error, data] = await api.getTeam(team_id);
-  return {slug, team_id, decoded, error, data};
-};
+  return {team_id, decoded, error, data};
+}) satisfies LoaderFunction;
 
-type Props = { params: { slug: string; team_id: string } };
-
-const TeamPage = ({params}: Props): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/[slug]/(org)/teams/[team_id]/page.tsx", params], () =>
-    loadTeamPage({params}),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {team_id, decoded, error, data} = routeQuery.data;
+const TeamPage = (): ReactNode => {
+  const loaded = useLoaderData<typeof loader>();
+  const {team_id, decoded, error, data} = loaded;
   if (error) {
     if (error.status === 404) {
-      notFound();
+      return <NotFound />;
     }
     return (
       <Container size="sm" py="lg">

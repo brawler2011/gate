@@ -1,16 +1,16 @@
 import {Container} from "@mantine/core";
+import {useLoaderData, redirect} from "react-router-dom";
 
 import {api, unwrap} from "@/lib/api";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
-import {redirect} from "@/lib/routeErrors";
 
 import {DraftsClient} from "./DraftsClient";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadPage = async ({params}: PageProps) => {
-  const {slug, contestLogin} = params;
+export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
+  const {slug, contestLogin} = routeParams as {slug: string; contestLogin: string};
 
   const [contestResponse, [, me]] = await Promise.all([
     unwrap(api.getContest)(slug, contestLogin),
@@ -23,7 +23,7 @@ const loadPage = async ({params}: PageProps) => {
 
   const user = me?.user ?? null;
   if (!user?.id) {
-    redirect(`/${slug}/${contestLogin}`);
+    throw redirect(`/${slug}/${contestLogin}`);
   }
 
   const contestRole = await getMyContestRole(slug, contestLogin);
@@ -41,7 +41,7 @@ const loadPage = async ({params}: PageProps) => {
 
   const draftsDisabled = contestResponse.contest.enable_drafts === false;
   if (!checker.canViewProblems(contestResponse.contest) || (!isManager && (!hasStarted || draftsDisabled))) {
-    redirect(`/${slug}/${contestLogin}`);
+    throw redirect(`/${slug}/${contestLogin}`);
   }
 
   const isContestEnded = contestResponse.contest.end_time
@@ -51,34 +51,12 @@ const loadPage = async ({params}: PageProps) => {
   const [, draftsResponse] = await api.listContestDrafts(slug, contestLogin, {
     page: 1, pageSize: 50
   });
-  return {
-    slug,
-    contestLogin,
-    contestResponse,
-    me,
-    user,
-    contestRole,
-    checker,
-    isManager,
-    hasStarted,
-    draftsDisabled,
-    isContestEnded,
-    draftsResponse,
-  };
-};
+  return {contestResponse, isManager, isContestEnded, draftsResponse};
+}) satisfies LoaderFunction;
 
-type PageProps = {
-  params: { slug: string; contestLogin: string };
-};
-
-const Page = ({params}: PageProps): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/[slug]/[contestLogin]/drafts/page.tsx", params], () =>
-    loadPage({params}),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {contestResponse, isManager, isContestEnded, draftsResponse} = routeQuery.data;
+const Page = (): ReactNode => {
+  const data = useLoaderData<typeof loader>();
+  const {contestResponse, isManager, isContestEnded, draftsResponse} = data;
   const initialDrafts = draftsResponse?.drafts || [];
   return (
     <Container size="lg" pb={{base: "md", sm: "lg", md: "xl"}} pt="md">

@@ -1,11 +1,9 @@
-"use client";
-
 import {Badge, Box, Group, Switch, Table, Text, TextInput, Title, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconSearch} from "@tabler/icons-react";
 import React, {useEffect, useState, useMemo} from "react";
+import {Link} from "react-router-dom";
 
-import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
 import {env} from "@/lib/env";
 import {numberToLetters} from "@/lib/lib";
@@ -205,7 +203,7 @@ export const ContestMonitorTable = ({
                   <Table.Th key={p.problem_id} className={classes.thCenter} style={{width: "70px"}}>
                     <Tooltip label={p.title} withArrow>
                       <Link
-                        href={`/${orgLogin}/${contestLogin}/${letter}`}
+                        to={`/${orgLogin}/${contestLogin}/${letter}`}
                         style={{color: "inherit", textDecoration: "none"}}
                       >
                         <span>{letter}</span>

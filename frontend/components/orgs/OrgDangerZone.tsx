@@ -1,13 +1,11 @@
-"use client";
-
 import {Alert, Button, Group, Modal, Stack, Text, TextInput} from '@mantine/core';
 import {useDisclosure} from '@mantine/hooks';
 import {notifications} from '@mantine/notifications';
 import {IconAlertTriangle} from '@tabler/icons-react';
 import {useState} from 'react';
+import {useNavigate} from "react-router-dom";
 
 import {api} from '@/lib/api';
-import {useRouter} from '@/lib/navigation';
 
 import type {ReactNode} from "react";
 
@@ -17,7 +15,7 @@ export const OrgDangerZone = ({orgLogin, orgName}: Props): ReactNode => {
   const [opened, {open, close}] = useDisclosure(false);
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const handleDelete = async () => {
     setLoading(true);
@@ -27,7 +25,7 @@ export const OrgDangerZone = ({orgLogin, orgName}: Props): ReactNode => {
       notifications.show({title: 'Ошибка', message: error.message, color: 'red'});
       return;
     }
-    router.push('/orgs');
+    navigate('/orgs');
   };
 
   return (

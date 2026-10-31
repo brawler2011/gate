@@ -1,10 +1,8 @@
-"use client";
-
 import {IconBuilding, IconFileText, IconLayoutDashboard, IconNews, IconPuzzle, IconTrophy, IconUsers} from "@tabler/icons-react";
 import {type ReactNode} from "react";
+import {useLocation} from "react-router-dom";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
-import {usePathname} from "@/lib/navigation";
 
 const ADMIN_NAV_ITEMS: AdaptiveTabItem[] = [
   {
@@ -52,7 +50,7 @@ const ADMIN_NAV_ITEMS: AdaptiveTabItem[] = [
 ];
 
 export const AdminHeaderNav = (): ReactNode => {
-  const pathname = usePathname();
+  const {pathname} = useLocation();
 
   const getActiveKey = (): string => {
     if (pathname?.includes("/admin/contests")) {

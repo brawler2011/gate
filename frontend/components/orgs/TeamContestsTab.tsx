@@ -1,11 +1,9 @@
-"use client";
-
 import {Badge, Card, Center, Skeleton, Stack, Table, Text} from "@mantine/core";
 import {IconTrophy} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
+import {Link} from "react-router-dom";
 
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
-import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
 
 import type {ContestModel} from "@/contracts/core/v1/models";
@@ -79,7 +77,7 @@ export const TeamContestsTab = ({teamId}: TeamContestsTabProps): ReactNode => {
               <Table.Td>
                 <Text
                   component={Link}
-                  href={`/${c.organization_login}/${c.login || c.id}`}
+                  to={`/${c.organization_login}/${c.login || c.id}`}
                   size="sm"
                   fw={500}
                   c="blue"

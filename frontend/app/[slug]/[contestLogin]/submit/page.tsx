@@ -1,23 +1,20 @@
 import {Container} from "@mantine/core";
+import {useParams, Navigate} from "react-router-dom";
 
+import {QueryState} from "@/components/shared/QueryState";
 import {useContestData} from "@/hooks/useContestData";
-import {PageQueryState} from "@/lib/pageQuery";
 import {PermissionChecker} from "@/lib/permissions";
-import {redirect} from "@/lib/routeErrors";
 
 import {SubmitSubmissionClient} from "./SubmitSubmissionClient";
 
 import type {ReactNode} from "react";
 
-type PageProps = {
-  params: { slug: string; contestLogin: string };
-};
-
-const Page = ({params}: PageProps): ReactNode => {
+const Page = (): ReactNode => {
+  const params = useParams() as {slug: string; contestLogin: string};
   const {slug, contestLogin} = params;
   const routeQuery = useContestData(slug, contestLogin);
   if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
+    return <QueryState error={routeQuery.error} />;
   }
   const {response, user, contestRole} = routeQuery.data;
   const checker = new PermissionChecker(
@@ -29,7 +26,7 @@ const Page = ({params}: PageProps): ReactNode => {
   const isManager = checker.canManageContest(response.contest);
   const hasStarted = !response.contest.start_time || new Date(response.contest.start_time) <= new Date();
   if (!checker.canSubmitSolution(response.contest) || (!isManager && !hasStarted)) {
-    redirect(`/${slug}/${contestLogin}`);
+    return <Navigate to={`/${slug}/${contestLogin}`} replace />;
   }
   return (
     <Container size="lg" pb={{base: "md", sm: "lg", md: "xl"}}>

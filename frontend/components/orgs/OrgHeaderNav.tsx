@@ -1,10 +1,8 @@
-"use client";
-
 import {IconPuzzle, IconSettings, IconTrophy, IconUsers, IconUsersGroup} from "@tabler/icons-react";
 import {type ReactNode} from "react";
+import {useLocation} from "react-router-dom";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
-import {usePathname} from "@/lib/navigation";
 
 export type OrgHeaderNavProps = {
   orgLogin: string;
@@ -17,7 +15,7 @@ export const OrgHeaderNav = ({
   showMembersTab = false,
   showSettingsTab,
 }: OrgHeaderNavProps): ReactNode => {
-  const pathname = usePathname();
+  const {pathname} = useLocation();
   const canManage = showSettingsTab !== undefined ? showSettingsTab : showMembersTab;
 
   const getActiveTabKey = (): string => {

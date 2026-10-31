@@ -1,32 +1,28 @@
 import {Container} from "@mantine/core";
+import {useLoaderData, redirect} from "react-router-dom";
 
 import {OrgTeamsTab} from "@/components/orgs/OrgTeamsTab";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 import {canManageOrgMembers} from "@/lib/permissions";
-import {notFound, redirect} from "@/lib/routeErrors";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadOrgTeamsPage = async ({params, searchParams}: Props) => {
-  const {slug} = params;
-  let decoded = "";
-  try {
-    decoded = decodeURIComponent(slug);
-  } catch {
-    notFound();
-  }
+export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs) => {
+  const searchParams = Object.fromEntries(new URL(request.url).searchParams);
+  const {slug} = routeParams as {slug: string};
+  const decoded = slug;
 
   if (decoded.startsWith("@")) {
-    notFound();
+    throw new Response("Страница не найдена", {status: 404});
   }
 
   const {page} = searchParams;
   const currentPage = parsePage(page);
   if (!currentPage) {
-    redirect(`/${decoded}/teams`);
+    throw redirect(`/${decoded}/teams`);
   }
 
   const orgData = await getOrganization(decoded);
@@ -37,34 +33,14 @@ const loadOrgTeamsPage = async ({params, searchParams}: Props) => {
     page: currentPage,
     pageSize: 20, organization_id: org.id
   });
-  return {
-    slug,
-    decoded,
-    page,
-    currentPage,
-    orgData,
-    org,
-    showMembersTab,
-    teamsError,
-    teamsData,
-  };
-};
-
-type Props = {
-  params: { slug: string };
-  searchParams: { page?: string };
-};
+  return {org, showMembersTab, teamsError, teamsData};
+}) satisfies LoaderFunction;
 
 const getOrganization = unwrap(api.getOrganization);
 
-const OrgTeamsPage = ({params, searchParams}: Props): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/[slug]/(org)/teams/page.tsx", params, searchParams], () =>
-    loadOrgTeamsPage({params, searchParams}),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {org, showMembersTab, teamsError, teamsData} = routeQuery.data;
+const OrgTeamsPage = (): ReactNode => {
+  const data = useLoaderData<typeof loader>();
+  const {org, showMembersTab, teamsError, teamsData} = data;
   const teams = teamsData?.teams ?? [];
   return (
     <Container size="lg" py="lg">

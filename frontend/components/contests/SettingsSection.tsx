@@ -1,14 +1,14 @@
-"use client";
-
 import {Button, Stack, TextInput, NumberInput, Badge, Combobox, useCombobox, InputBase, Input, Text, Divider, Switch, Group} from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {notifications} from "@mantine/notifications";
+import {useQueryClient} from "@tanstack/react-query";
 import {useState} from "react";
+import {useRevalidator, useNavigate} from "react-router-dom";
 
 import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
+import {getGetContestQueryKey} from "@/contracts/core/v1/api";
 import {api} from "@/lib/api";
-import {useRouter} from "@/lib/navigation";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import type * as corev1 from "@/contracts/core/v1/models";
@@ -113,7 +113,9 @@ const RESERVED_CONTEST_LOGINS = new Set([
 ]);
 
 export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
+  const revalidator = useRevalidator();
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
@@ -228,9 +230,10 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     });
 
     if (newLogin && newLogin !== contest.login) {
-      router.push(`/${contest.organization_login}/${newLogin}/settings`);
+      navigate(`/${contest.organization_login}/${newLogin}/settings`);
     } else {
-      router.refresh();
+      void queryClient.invalidateQueries({queryKey: getGetContestQueryKey(contest.organization_login, contest.login)});
+      void revalidator.revalidate();
     }
   };
 

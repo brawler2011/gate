@@ -1,13 +1,10 @@
-"use client";
-
 import {Alert, Box, Button, Center, Group, Loader, Paper, Stack, Text, ThemeIcon, Title} from "@mantine/core";
 import {IconAlertCircle, IconCheck} from "@tabler/icons-react";
 import {Suspense, useEffect, useState, type ReactNode} from "react";
+import {useSearchParams, Link} from "react-router-dom";
 
 import Image from "@/components/shared/Image";
-import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
-import {useSearchParams} from "@/lib/navigation";
 
 const ConfirmEmailChangePage = (): ReactNode => {
   return (
@@ -24,7 +21,7 @@ const ConfirmEmailChangePage = (): ReactNode => {
 };
 
 const ConfirmEmailChangeContent = () => {
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
   const token = searchParams.get("token") || "";
 
   const [loading, setLoading] = useState(true);
@@ -98,7 +95,7 @@ const ConfirmEmailChangeContent = () => {
             Ваш новый адрес электронной почты активирован и привязан к вашей учетной записи.
           </Text>
 
-          <Button component={Link} href="/settings" variant="filled" size="sm" mt="md">
+          <Button component={Link} to="/settings" variant="filled" size="sm" mt="md">
             Перейти в настройки
           </Button>
         </Stack>
@@ -128,7 +125,7 @@ const ConfirmEmailChangeContent = () => {
           </Alert>
         )}
 
-        <Button component={Link} href="/settings" variant="outline" size="sm" mt="md">
+        <Button component={Link} to="/settings" variant="outline" size="sm" mt="md">
           Вернуться в настройки
         </Button>
       </Stack>
@@ -146,7 +143,7 @@ const ConfirmEmailChangeContent = () => {
       }}
     >
       <Stack align="center" gap={32} style={{width: "min(550px, calc(100vw - 2rem))"}}>
-        <Link href="/" style={{textDecoration: "none", color: "inherit"}}>
+        <Link to="/" style={{textDecoration: "none", color: "inherit"}}>
           <Group justify="center" gap="md">
             <Image src="/gate_logo.svg" alt="Gate" width={56} height={56} priority />
             <Title order={1} fz={36}>

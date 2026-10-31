@@ -1,13 +1,10 @@
-"use client";
-
 import {Alert, Anchor, Box, Button, Center, Group, Loader, Paper, PasswordInput, Stack, Text, ThemeIcon, Title} from "@mantine/core";
 import {IconAlertCircle, IconCheck} from "@tabler/icons-react";
 import {Suspense, useState, type ReactNode} from "react";
+import {useSearchParams, Link} from "react-router-dom";
 
 import Image from "@/components/shared/Image";
-import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
-import {useSearchParams} from "@/lib/navigation";
 
 const ResetPasswordPage = (): ReactNode => {
   return (
@@ -24,7 +21,7 @@ const ResetPasswordPage = (): ReactNode => {
 };
 
 const ResetPasswordContent = () => {
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
   const token = searchParams.get("token") || "";
 
   const [password, setPassword] = useState("");
@@ -79,7 +76,7 @@ const ResetPasswordContent = () => {
       }}
     >
       <Stack align="center" gap={32} style={{width: "min(550px, calc(100vw - 2rem))"}}>
-        <Link href="/" style={{textDecoration: "none", color: "inherit"}}>
+        <Link to="/" style={{textDecoration: "none", color: "inherit"}}>
           <Group justify="center" gap="md">
             <Image src="/gate_logo.svg" alt="Gate" width={56} height={56} priority />
             <Title order={1} fz={36}>
@@ -103,7 +100,7 @@ const ResetPasswordContent = () => {
                 Теперь вы можете войти в свой аккаунт, используя новый пароль.
               </Text>
 
-              <Button component={Link} href="/auth/login" variant="filled" size="sm" mt="md">
+              <Button component={Link} to="/auth/login" variant="filled" size="sm" mt="md">
                 Перейти ко входу
               </Button>
             </Stack>
@@ -174,7 +171,7 @@ const ResetPasswordContent = () => {
 
               <Text c="dimmed" ta="center" mt={24} fz={14}>
                 Вспомнили старый пароль?{" "}
-                <Anchor component={Link} href="/auth/login" fz={14} fw={600} underline="hover">
+                <Anchor component={Link} to="/auth/login" fz={14} fw={600} underline="hover">
                   Войти
                 </Anchor>
               </Text>

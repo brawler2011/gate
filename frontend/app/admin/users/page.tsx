@@ -1,24 +1,18 @@
 import {Suspense} from "react";
+import {useSearchParams, Navigate} from "react-router-dom";
 
 import {UsersContent, UsersContentSkeleton} from "@/components/users";
 import {parsePage} from "@/lib/lib";
-import {redirect} from "@/lib/routeErrors";
 
 import type {ReactNode} from "react";
 
-type PageProps = {
-  searchParams: {
-    page?: string;
-    search?: string;
-    role?: string;
-  };
-};
-
-const AdminUsersPage = ({searchParams}: PageProps): ReactNode => {
+const AdminUsersPage = (): ReactNode => {
+  const [urlSearch] = useSearchParams();
+  const searchParams = Object.fromEntries(urlSearch);
   const resolvedSearchParams = searchParams;
   const page = parsePage(resolvedSearchParams.page);
   if (!page) {
-    redirect("/admin/users");
+    return <Navigate to="/admin/users" replace />;
   }
   const search = resolvedSearchParams.search || undefined;
   const role = resolvedSearchParams.role || undefined;

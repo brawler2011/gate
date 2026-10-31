@@ -1,30 +1,27 @@
 import {Box, Container, Stack} from "@mantine/core";
+import {useLoaderData} from "react-router-dom";
 
+import NotFound from "@/app/not-found";
 import {OrgDangerZone} from "@/components/orgs/OrgDangerZone";
 import {OrgSettingsForm} from "@/components/orgs/OrgSettingsForm";
 import {OrgSettingsMobileNav} from "@/components/orgs/OrgSettingsMobileNav";
 import {ORG_SETTINGS_NAV_SECTIONS} from "@/components/orgs/OrgSettingsNavShared";
 import {OrgSettingsSidebarNav} from "@/components/orgs/OrgSettingsSidebarNav";
 import {api} from "@/lib/api";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 import {canManageOrgMembers} from "@/lib/permissions";
-import {notFound} from "@/lib/routeErrors";
 
 import classes from "./styles.module.css";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadOrgSettingsPage = async ({params, searchParams}: Props) => {
-  const {slug} = params;
-  let decoded = "";
-  try {
-    decoded = decodeURIComponent(slug);
-  } catch {
-    notFound();
-  }
+export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs) => {
+  const searchParams = Object.fromEntries(new URL(request.url).searchParams);
+  const {slug} = routeParams as {slug: string};
+  const decoded = slug;
 
   if (decoded.startsWith("@")) {
-    notFound();
+    throw new Response("Страница не найдена", {status: 404});
   }
 
   const {section = "settings"} = searchParams;
@@ -32,15 +29,15 @@ const loadOrgSettingsPage = async ({params, searchParams}: Props) => {
   const [error, data] = await api.getOrganization(decoded);
   if (error) {
     if (error.status === 404) {
-      notFound();
+      throw new Response("Страница не найдена", {status: 404});
     }
     throw error;
   }
   const org = data!.organization;
 
   const canManage = await canManageOrgMembers(org.login);
-  return {slug, decoded, section, error, data, org, canManage};
-};
+  return {section, org, canManage};
+}) satisfies LoaderFunction;
 
 const SECTIONS = {
   SETTINGS: "settings",
@@ -49,21 +46,11 @@ const SECTIONS = {
 
 type Section = (typeof SECTIONS)[keyof typeof SECTIONS];
 
-type Props = {
-  params: { slug: string };
-  searchParams: { section?: string };
-};
-
-const OrgSettingsPage = ({params, searchParams}: Props): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/[slug]/(org)/settings/page.tsx", params, searchParams], () =>
-    loadOrgSettingsPage({params, searchParams}),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {section, org, canManage} = routeQuery.data;
+const OrgSettingsPage = (): ReactNode => {
+  const data = useLoaderData<typeof loader>();
+  const {section, org, canManage} = data;
   if (!canManage) {
-    notFound();
+    return <NotFound />;
   }
   const validSections = Object.values(SECTIONS);
   const activeSection = (validSections.includes(section as Section) ? section : SECTIONS.SETTINGS) as Section;

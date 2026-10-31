@@ -1,28 +1,26 @@
 import {Container, Group, SimpleGrid, Stack, Text, Title, Center} from "@mantine/core";
+import {useLoaderData} from "react-router-dom";
 
 import {CreateOrgButton, OrgCard} from "@/components/orgs";
 import {DefaultLayout} from "@/components/shared";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api} from "@/lib/api";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction} from "react-router-dom";
 
-const loadOrgsPage = async () => {
+export const loader = (async () => {
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
   const [error, data] = await api.listOrganizations({
     page: 1, pageSize: 50
   });
-  return {me, user, error, data};
-};
+  return {user, error, data};
+}) satisfies LoaderFunction;
 
 const OrgsPage = (): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/orgs/page.tsx"], () => loadOrgsPage());
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {user, error, data} = routeQuery.data;
+  const loaded = useLoaderData<typeof loader>();
+  const {user, error, data} = loaded;
   if (error) {
     return (
       <DefaultLayout headerUser={user}>

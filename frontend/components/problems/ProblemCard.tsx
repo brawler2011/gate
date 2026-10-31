@@ -1,10 +1,7 @@
-"use client";
-
 import {ActionIcon, Card, Group, Stack, Text, Title} from "@mantine/core";
 import {IconPencil} from "@tabler/icons-react";
+import {useNavigate, Link} from "react-router-dom";
 
-import Link from "@/components/shared/RouterLink";
-import {useRouter} from "@/lib/navigation";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import classes from "./ProblemCard.module.css";
@@ -18,11 +15,11 @@ type Props = {
 };
 
 export const ProblemCard = ({problem, showEditButton}: Props): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   return (
     <Link
-      href={`/${problem.organization_login}/problems/${problem.id}`}
+      to={`/${problem.organization_login}/problems/${problem.id}`}
       style={{
         textDecoration: "none",
         display: "block",
@@ -59,7 +56,7 @@ export const ProblemCard = ({problem, showEditButton}: Props): ReactNode => {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  router.push(`/${problem.organization_login}/problems/${problem.id}`);
+                  navigate(`/${problem.organization_login}/problems/${problem.id}`);
                 }}
                 style={{flexShrink: 0}}
               >

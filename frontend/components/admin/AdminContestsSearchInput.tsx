@@ -1,16 +1,13 @@
-"use client";
-
 import {TextInput} from "@mantine/core";
 import {IconSearch} from "@tabler/icons-react";
 import {useEffect, useRef, useState} from "react";
-
-import {useRouter, useSearchParams} from "@/lib/navigation";
+import {useNavigate, useSearchParams} from "react-router-dom";
 
 import type {ReactNode} from "react";
 
 export const AdminContestsSearchInput = (): ReactNode => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
   const [search, setSearch] = useState(initialSearch);
   const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -52,7 +49,7 @@ export const AdminContestsSearchInput = (): ReactNode => {
       }
 
       const query = params.toString();
-      router.push(`/admin/contests${query ? `?${query}` : ""}`);
+      navigate(`/admin/contests${query ? `?${query}` : ""}`);
     }, 300);
 
     return () => {
@@ -60,7 +57,7 @@ export const AdminContestsSearchInput = (): ReactNode => {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [search, router, searchParams]);
+  }, [search, navigate, searchParams]);
 
   return (
     <TextInput

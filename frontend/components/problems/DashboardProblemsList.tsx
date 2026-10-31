@@ -1,9 +1,7 @@
-"use client";
-
 import {Group, Stack, Text, Title, Card, ThemeIcon, ActionIcon} from "@mantine/core";
 import {IconPencil, IconCode} from "@tabler/icons-react";
+import {useNavigate} from "react-router-dom";
 
-import {useRouter} from "@/lib/navigation";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import type {DashboardProblemModel} from "@/contracts/core/v1/models";
@@ -14,7 +12,7 @@ type DashboardProblemsListProps = {
 };
 
 export const DashboardProblemsList = ({problems}: DashboardProblemsListProps): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   if (problems.length === 0) {
     return (
@@ -45,7 +43,7 @@ export const DashboardProblemsList = ({problems}: DashboardProblemsListProps): R
             cursor: "pointer",
             transition: "transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease",
           }}
-          onClick={() => router.push(`/${problem.organization_login}/problems/${problem.id}`)}
+          onClick={() => navigate(`/${problem.organization_login}/problems/${problem.id}`)}
           onMouseEnter={(e) => {
             const el = e.currentTarget;
             el.style.transform = "translateY(-2px)";
@@ -98,7 +96,7 @@ export const DashboardProblemsList = ({problems}: DashboardProblemsListProps): R
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                router.push(`/${problem.organization_login}/problems/${problem.id}`);
+                navigate(`/${problem.organization_login}/problems/${problem.id}`);
               }}
               style={{flexShrink: 0}}
             >

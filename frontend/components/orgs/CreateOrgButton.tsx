@@ -1,12 +1,10 @@
-"use client";
-
 import {Alert, Button, Modal, TextInput, Stack} from '@mantine/core';
 import {useDisclosure} from '@mantine/hooks';
 import {IconAlertCircle, IconPlus} from '@tabler/icons-react';
 import {useState} from 'react';
+import {useNavigate} from "react-router-dom";
 
 import {api} from '@/lib/api';
-import {useRouter} from '@/lib/navigation';
 
 import type {ReactNode} from "react";
 
@@ -49,7 +47,7 @@ export const CreateOrgButton = (): ReactNode => {
   const [nameError, setNameError] = useState<string | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const handleClose = () => {
     close();
@@ -115,7 +113,7 @@ export const CreateOrgButton = (): ReactNode => {
     }
 
     handleClose();
-    router.push(`/${response!.login}`);
+    navigate(`/${response!.login}`);
   };
 
   return (

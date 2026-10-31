@@ -2,9 +2,9 @@ import {Outlet, useParams} from "react-router-dom";
 
 import {ContestHeaderNav, ContestEventsListener} from "@/components/contests";
 import {DefaultLayout} from "@/components/shared";
+import {QueryState} from "@/components/shared/QueryState";
 import {useGetOrganization} from "@/contracts/core/v1/api";
 import {useContestData} from "@/hooks/useContestData";
-import {PageQueryState} from "@/lib/pageQuery";
 
 import type {ReactNode} from "react";
 
@@ -13,10 +13,10 @@ const ContestLayout = (): ReactNode => {
   const contest = useContestData(slug, contestLogin);
   const organization = useGetOrganization(slug);
   if (!contest.data) {
-    return <PageQueryState query={contest} />;
+    return <QueryState error={contest.error} />;
   }
   if (!organization.data) {
-    return <PageQueryState query={organization} />;
+    return <QueryState error={organization.error} />;
   }
   const {response, user, contestRole} = contest.data;
   const org = organization.data.organization;

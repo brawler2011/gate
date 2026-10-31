@@ -1,15 +1,14 @@
-"use client";
-
 import {Anchor, Badge, Button, Container, Divider, Group, Paper, PasswordInput, Select, Stack, Switch, Text, TextInput, ThemeIcon, Title} from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {notifications} from "@mantine/notifications";
 import {IconAlertCircle, IconArrowLeft, IconCheck, IconFileCode, IconKey, IconMail, IconShield, IconUser} from "@tabler/icons-react";
+import {useQueryClient} from "@tanstack/react-query";
 import {useState, type ReactNode} from "react";
+import {useRevalidator, Link} from "react-router-dom";
 
-import Link from "@/components/shared/RouterLink";
 import {TruncatedWithCopy} from "@/components/shared/TruncatedWithCopy";
+import {getGetUserQueryKey, getListUsersQueryKey, getGetMeQueryKey} from "@/contracts/core/v1/api";
 import {api} from "@/lib/api";
-import {useRouter} from "@/lib/navigation";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import type {UpdateUserRequestModel, UserModel} from "@/contracts/core/v1/models";
@@ -19,7 +18,8 @@ type Props = {
 };
 
 export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
-  const router = useRouter();
+  const revalidator = useRevalidator();
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<UserModel>(initialUser);
 
   // Role form
@@ -78,7 +78,10 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
         color: "green",
         icon: <IconCheck size={18} />,
       });
-      router.refresh();
+      void queryClient.invalidateQueries({queryKey: getGetUserQueryKey(user.username)});
+      void queryClient.invalidateQueries({queryKey: getListUsersQueryKey()});
+      void queryClient.invalidateQueries({queryKey: getGetMeQueryKey()});
+      void revalidator.revalidate();
     } catch {
       notifications.show({
         title: "Ошибка",
@@ -127,7 +130,10 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
           icon: <IconCheck size={18} />,
         });
       }
-      router.refresh();
+      void queryClient.invalidateQueries({queryKey: getGetUserQueryKey(user.username)});
+      void queryClient.invalidateQueries({queryKey: getListUsersQueryKey()});
+      void queryClient.invalidateQueries({queryKey: getGetMeQueryKey()});
+      void revalidator.revalidate();
     } catch {
       notifications.show({
         title: "Ошибка",
@@ -252,7 +258,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
         <Group justify="space-between" align="center">
           <Anchor
             component={Link}
-            href="/admin/users"
+            to="/admin/users"
             c="dimmed"
             fz={14}
             style={{display: "inline-flex", alignItems: "center", gap: 6}}
@@ -262,7 +268,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
 
           <Button
             component={Link}
-            href={`/admin/submissions?userId=${user.id}`}
+            to={`/admin/submissions?userId=${user.id}`}
             variant="light"
             size="xs"
             leftSection={<IconFileCode size={16} />}
@@ -276,7 +282,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
             <Title order={1} fz={26}>
               @{user.username}
             </Title>
-            <Anchor component={Link} href={`/@${user.username}`} fz={13} c="dimmed">
+            <Anchor component={Link} to={`/@${user.username}`} fz={13} c="dimmed">
               (открыть профиль)
             </Anchor>
           </Group>

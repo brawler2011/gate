@@ -1,17 +1,16 @@
-import {Outlet} from "react-router-dom";
-import {Navigate} from "react-router-dom";
+import {Outlet, Navigate} from "react-router-dom";
 
 import {AdminHeaderNav} from "@/components/admin";
 import {DefaultLayout} from "@/components/shared";
+import {QueryState} from "@/components/shared/QueryState";
 import {useSession} from "@/contexts/SessionContext";
-import {PageQueryState} from "@/lib/pageQuery";
 
 import type {ReactNode} from "react";
 
 const AdminLayout = (): ReactNode => {
   const {user, isLoading} = useSession();
   if (isLoading) {
-    return <PageQueryState query={{error: null}} />;
+    return <QueryState />;
   }
   if (user?.role !== "admin") {
     return <Navigate to="/" replace />;

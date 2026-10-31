@@ -1,12 +1,10 @@
-"use client";
-
 import {ActionIcon, Box, Group, Table, Text, Tooltip} from "@mantine/core";
 import {IconEdit} from "@tabler/icons-react";
+import {useNavigate} from "react-router-dom";
 
 import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {CONTEST_CONTENT_MAX_WIDTH} from "@/lib/constants";
 import {numberToLetters} from "@/lib/lib";
-import {useRouter} from "@/lib/navigation";
 
 import classes from "./ContestProblemsTable.module.css";
 
@@ -39,7 +37,7 @@ export const ContestProblemsTable = ({
   isManager,
   hideStatements,
 }: ContestProblemsTableProps): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   return (
     <Box style={{width: "100%", maxWidth: CONTEST_CONTENT_MAX_WIDTH, margin: "0 auto"}}>
@@ -72,7 +70,7 @@ export const ContestProblemsTable = ({
               return (
                 <Table.Tr
                   key={problem.problem_id}
-                  onClick={() => router.push(problemUrl)}
+                  onClick={() => navigate(problemUrl)}
                 >
                   <Table.Td className={classes.positionCell}>
                     {numberToLetters(problem.position)}

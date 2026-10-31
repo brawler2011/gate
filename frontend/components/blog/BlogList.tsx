@@ -3,7 +3,7 @@
 import {Stack, Text} from "@mantine/core";
 
 import {BlogPost} from '@/components/blog/BlogPost';
-import {NextPagination} from '@/components/shared/Pagination';
+import {RoutePagination} from '@/components/shared/Pagination';
 
 import type {PostModel, PaginationModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
@@ -37,7 +37,7 @@ export const BlogList = ({posts, pagination}: Props): ReactNode => {
       ))}
       {pagination.total > 1 && (
         <Stack align="center" gap="md">
-          <NextPagination
+          <RoutePagination
             pagination={pagination}
             baseUrl="/"
           />

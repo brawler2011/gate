@@ -3,9 +3,9 @@ import "./setup-dom";
 import {afterAll, afterEach, beforeAll, describe, expect, it, spyOn} from "bun:test";
 import React from "react";
 
-import Page from "@/app/[slug]/(org)/page";
+import Page, {loader} from "@/app/[slug]/(org)/page";
 
-import {cleanup, renderWithProviders, setupDOMEnvironment, waitFor} from "./test-utils";
+import {cleanup, renderRoute, setupDOMEnvironment, waitFor} from "./test-utils";
 
 import type {OrganizationJoinRequestModel, OrganizationModel, UserModel} from "@/contracts/core/v1/models";
 
@@ -66,13 +66,8 @@ describe("Organization join status through the organization page", () => {
       throw new Error(`Unexpected API request: ${url.pathname}`);
     }, {preconnect: () => {}}));
     restoreFetch = () => fetch.mockRestore();
-    const page = <Page params={{slug: org.login}} searchParams={{}} />;
-    const view = renderWithProviders(
-      <>
-        <>{page}</>
-      </>
-    );
-    await waitFor(() => expect(view.container.querySelector(".mantine-Loader-root")).toBeNull());
+    const view = renderRoute(<Page />, "/:slug", loader, "/school");
+    await waitFor(() => expect(Boolean(view.container.querySelector(".mantine-Loader-root"))).toBe(false));
     await waitFor(() => expect(view.container.textContent).not.toBe(""));
     return {view, fetch};
   };

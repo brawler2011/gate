@@ -1,31 +1,27 @@
 import {Container} from "@mantine/core";
+import {useLoaderData, redirect} from "react-router-dom";
 
 import {OrgProblemsTab} from "@/components/orgs/OrgProblemsTab";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
-import {notFound, redirect} from "@/lib/routeErrors";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadOrgProblemsPage = async ({params, searchParams}: Props) => {
-  const {slug} = params;
-  let decoded = "";
-  try {
-    decoded = decodeURIComponent(slug);
-  } catch {
-    notFound();
-  }
+export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs) => {
+  const searchParams = Object.fromEntries(new URL(request.url).searchParams);
+  const {slug} = routeParams as {slug: string};
+  const decoded = slug;
 
   if (decoded.startsWith("@")) {
-    notFound();
+    throw new Response("Страница не найдена", {status: 404});
   }
 
   const {page} = searchParams;
   const currentPage = parsePage(page);
   if (!currentPage) {
-    redirect(`/${decoded}/problems`);
+    throw redirect(`/${decoded}/problems`);
   }
 
   const orgData = await getOrganization(decoded);
@@ -38,33 +34,14 @@ const loadOrgProblemsPage = async ({params, searchParams}: Props) => {
     }),
     api.getMe(),
   ]);
-  return {
-    slug,
-    decoded,
-    page,
-    currentPage,
-    orgData,
-    problemsError,
-    problemsData,
-    me,
-  };
-};
-
-type Props = {
-  params: { slug: string };
-  searchParams: { page?: string };
-};
+  return {orgData, problemsError, problemsData, me};
+}) satisfies LoaderFunction;
 
 const getOrganization = unwrap(api.getOrganization);
 
-const OrgProblemsPage = ({params, searchParams}: Props): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/[slug]/(org)/problems/page.tsx", params, searchParams], () =>
-    loadOrgProblemsPage({params, searchParams}),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {orgData, problemsError, problemsData, me} = routeQuery.data;
+const OrgProblemsPage = (): ReactNode => {
+  const data = useLoaderData<typeof loader>();
+  const {orgData, problemsError, problemsData, me} = data;
   const currentUser = me?.user ?? null;
   const org = orgData.organization;
   const problems = problemsData?.problems ?? [];

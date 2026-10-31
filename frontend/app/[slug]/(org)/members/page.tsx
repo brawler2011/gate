@@ -1,43 +1,30 @@
 import {Container} from "@mantine/core";
+import {useLoaderData} from "react-router-dom";
 
+import NotFound from "@/app/not-found";
 import {OrgMembersManagement} from "@/components/orgs/OrgMembersManagement";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 import {canManageOrgMembers} from "@/lib/permissions";
-import {notFound} from "@/lib/routeErrors";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadOrgMembersPage = async ({params}: Props) => {
-  const {slug} = params;
-  let decoded = "";
-  try {
-    decoded = decodeURIComponent(slug);
-  } catch {
-    notFound();
-  }
+export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
+  const {slug} = routeParams as {slug: string};
+  const decoded = slug;
 
   if (decoded.startsWith("@")) {
-    notFound();
+    throw new Response("Страница не найдена", {status: 404});
   }
 
   const canManage = await canManageOrgMembers(decoded);
-  return {slug, decoded, canManage};
-};
+  return {decoded, canManage};
+}) satisfies LoaderFunction;
 
-type Props = {
-  params: { slug: string };
-};
-
-const OrgMembersPage = ({params}: Props): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/[slug]/(org)/members/page.tsx", params], () =>
-    loadOrgMembersPage({params}),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {decoded, canManage} = routeQuery.data;
+const OrgMembersPage = (): ReactNode => {
+  const data = useLoaderData<typeof loader>();
+  const {decoded, canManage} = data;
   if (!canManage) {
-    notFound();
+    return <NotFound />;
   }
   return (
     <Container size="lg" py="lg">

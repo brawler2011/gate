@@ -1,16 +1,14 @@
-"use client";
-
 import {ActionIcon, Badge, Box, Center, Container, Group, Skeleton, Stack, Table, Text, TextInput, Title, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconFileCode, IconSearch, IconTrash} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
 import {useEffect, useRef, useState} from "react";
+import {useNavigate, useSearchParams} from "react-router-dom";
 
-import {NextPagination} from '@/components/shared/Pagination';
+import {RoutePagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {api} from "@/lib/api";
 import {formatDate} from "@/lib/lib";
-import {useRouter, useSearchParams} from "@/lib/navigation";
 
 import classes from "./AdminPage.module.css";
 import {DeleteProblemModal} from "./DeleteProblemModal";
@@ -24,8 +22,8 @@ type AdminProblemsContentProps = {
 };
 
 export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps): ReactNode => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // Search input state
   const [searchInput, setSearchInput] = useState(search || "");
@@ -61,7 +59,7 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
       } else {
         params.delete("search");
       }
-      router.push(`/admin/problems?${params.toString()}`);
+      navigate(`/admin/problems?${params.toString()}`);
     }, 300);
 
     return () => {
@@ -69,7 +67,7 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchInput, router, searchParams]);
+  }, [searchInput, navigate, searchParams]);
 
   // Fetch problems
   const {data, error, isLoading, refetch: mutate} = useQuery({queryKey: ["admin-problems", page, search], queryFn: async () => {
@@ -185,7 +183,7 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
                   {problems.map((problem: ProblemsListItemModel) => (
                     <Table.Tr
                       key={problem.id}
-                      onClick={() => router.push(`/${problem.organization_login}/problems/${problem.id}`)}
+                      onClick={() => navigate(`/${problem.organization_login}/problems/${problem.id}`)}
                     >
                       <Table.Td>
                         <Text className={classes.titleCell} lineClamp={1}>
@@ -219,7 +217,7 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
                             <ActionIcon
                               color="indigo"
                               variant="subtle"
-                              onClick={() => router.push(`/admin/submissions?problemId=${problem.id}`)}
+                              onClick={() => navigate(`/admin/submissions?problemId=${problem.id}`)}
                             >
                               <IconFileCode size={16} />
                             </ActionIcon>
@@ -244,7 +242,7 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
 
             {totalPages > 1 && (
               <Stack align="center" gap="md">
-                <NextPagination
+                <RoutePagination
                   pagination={{
                     page: page,
                     total: totalPages,

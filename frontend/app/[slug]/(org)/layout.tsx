@@ -3,9 +3,9 @@ import {Outlet, useParams} from "react-router-dom";
 
 import {OrgHeaderNav} from "@/components/orgs";
 import {DefaultLayout} from "@/components/shared";
+import {QueryState} from "@/components/shared/QueryState";
 import {useSession} from "@/contexts/SessionContext";
 import {useGetOrganization} from "@/contracts/core/v1/api";
-import {PageQueryState} from "@/lib/pageQuery";
 import {canManageOrgMembers} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
@@ -23,7 +23,7 @@ const OrgLayout = (): ReactNode => {
     return <Outlet />;
   }
   if (!organization.data) {
-    return <PageQueryState query={organization} />;
+    return <QueryState error={organization.error} />;
   }
   const org = organization.data.organization;
   return (

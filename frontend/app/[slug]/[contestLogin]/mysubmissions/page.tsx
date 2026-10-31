@@ -1,24 +1,25 @@
 import {Container, Group, Paper, Stack} from "@mantine/core";
+import {useLoaderData, redirect, Navigate} from "react-router-dom";
 
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
-import {NextPagination} from "@/components/shared/Pagination";
+import {RoutePagination} from "@/components/shared/Pagination";
 import {SubmissionsListClient} from "@/components/submissions";
 import {api, unwrap} from "@/lib/api";
 import {env} from "@/lib/env";
 import {parsePage} from "@/lib/lib";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
-import {redirect} from "@/lib/routeErrors";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadPage = async ({params, searchParams}: PageProps) => {
-  const {slug, contestLogin} = params;
+export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs) => {
+  const searchParams = Object.fromEntries(new URL(request.url).searchParams);
+  const {slug, contestLogin} = routeParams as {slug: string; contestLogin: string};
   const queryParams = searchParams;
 
   const page = parsePage(queryParams.page);
   if (!page) {
-    redirect(`/${slug}/${contestLogin}/mysubmissions`);
+    throw redirect(`/${slug}/${contestLogin}/mysubmissions`);
   }
 
   const parsedParams: {
@@ -78,46 +79,14 @@ const loadPage = async ({params, searchParams}: PageProps) => {
   const user = me?.user ?? null;
   const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
   return {
-    slug,
-    contestLogin,
-    queryParams,
-    page,
-    parsedParams,
-    error,
-    submissionsData,
-    nextQueryParams,
-    wsBaseUrl,
-    contestData,
-    me,
-    user,
-    contestRole,
+    slug, contestLogin, parsedParams, submissionsData, nextQueryParams, wsBaseUrl, contestData, user, contestRole,
   };
-};
-
-interface SearchParams {
-  page?: string;
-  userId?: string;
-  problemId?: string;
-  state?: string;
-  order?: string;
-  language?: string;
-}
-
-interface PageProps {
-  params: { slug: string; contestLogin: string };
-  searchParams: SearchParams;
-}
+}) satisfies LoaderFunction;
 
 const PAGE_SIZE = 20;
 
-const Page = ({params, searchParams}: PageProps): ReactNode => {
-  const routeQuery = usePageQuery(
-    ["frontend/app/[slug]/[contestLogin]/mysubmissions/page.tsx", params, searchParams],
-    () => loadPage({params, searchParams}),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
+const Page = (): ReactNode => {
+  const data = useLoaderData<typeof loader>();
   const {
     slug,
     contestLogin,
@@ -128,7 +97,7 @@ const Page = ({params, searchParams}: PageProps): ReactNode => {
     contestData,
     user,
     contestRole,
-  } = routeQuery.data;
+  } = data;
   if (contestData?.contest) {
     const checker = new PermissionChecker(
       user,
@@ -141,7 +110,7 @@ const Page = ({params, searchParams}: PageProps): ReactNode => {
       !contestData.contest.start_time || new Date(contestData.contest.start_time) <= new Date();
 
     if (!checker.canViewMySubmissions(contestData.contest) || (!isManager && !hasStarted)) {
-      redirect(`/${slug}/${contestLogin}`);
+      return <Navigate to={`/${slug}/${contestLogin}`} replace />;
     }
   }
   return (
@@ -175,7 +144,7 @@ const Page = ({params, searchParams}: PageProps): ReactNode => {
               sortOrder={parsedParams.sortOrder}
             />
             <Group justify="center">
-              <NextPagination
+              <RoutePagination
                 pagination={submissionsData.pagination}
                 baseUrl={`/${slug}/${contestLogin}/mysubmissions`}
                 queryParams={nextQueryParams}

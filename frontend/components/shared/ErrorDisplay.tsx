@@ -1,9 +1,5 @@
-"use client";
-
 import {Container, Title, Text, Button, Stack, Paper, Code, Group} from "@mantine/core";
-
-import Link from "@/components/shared/RouterLink";
-import {usePathname} from "@/lib/navigation";
+import {useLocation, Link} from "react-router-dom";
 
 import {RefreshButton} from "./RefreshButton";
 
@@ -46,7 +42,7 @@ const getErrorDisplay = (status: number): { title: string; description: string }
 
 export const ErrorDisplay = ({error}: Props): ReactNode => {
   const display = getErrorDisplay(error.status);
-  const pathname = usePathname();
+  const {pathname} = useLocation();
   const getReturnUrl = () => {
     if (!pathname || pathname === '/' || pathname.startsWith('/auth')) {
       return null;
@@ -72,7 +68,7 @@ export const ErrorDisplay = ({error}: Props): ReactNode => {
 
           <Group>
             {error.status === 401 ? (
-              <Link href={`/auth/login${returnTo}`} style={{textDecoration: 'none'}}>
+              <Link to={`/auth/login${returnTo}`} style={{textDecoration: 'none'}}>
                 <Button variant="filled">
                   Войти
                 </Button>
@@ -80,7 +76,7 @@ export const ErrorDisplay = ({error}: Props): ReactNode => {
             ) : (
               <RefreshButton />
             )}
-            <Link href="/" style={{textDecoration: 'none'}}>
+            <Link to="/" style={{textDecoration: 'none'}}>
               <Button variant="light">
                 На главную
               </Button>

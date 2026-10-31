@@ -1,13 +1,11 @@
-"use client";
-
 import {Box, Paper, Select, Stack} from "@mantine/core";
 import {useState} from "react";
+import {useNavigate} from "react-router-dom";
 
 import {CreateSubmissionForm} from "@/components/submissions/CreateSubmissionForm";
 import {api} from "@/lib/api";
 import {LANGUAGE_MAP} from "@/lib/constants";
 import {numberToLetters} from "@/lib/lib";
-import {useRouter} from "@/lib/navigation";
 
 import classes from "./SubmitSubmissionClient.module.css";
 
@@ -21,7 +19,7 @@ type Props = {
 };
 
 export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [selectedProblemId, setSelectedProblemId] = useState<string | null>(
     problems.length > 0 ? problems[0].problem_id : null,
   );
@@ -70,7 +68,7 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
       // Mark as submitted to disable form
       setIsSubmitted(true);
       // Redirect to "Мои посылки" page after successful submission
-      router.push(
+      navigate(
         `/${contest.organization_login}/${contest.login}/mysubmissions?order=desc&userId=${user?.id}`,
       );
     }

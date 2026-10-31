@@ -1,15 +1,15 @@
 import {Container} from "@mantine/core";
+import {useLoaderData, Navigate} from "react-router-dom";
 
 import {ContestMonitorTable} from "@/components/contests";
 import {api, unwrap} from "@/lib/api";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
-import {redirect} from "@/lib/routeErrors";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadPage = async ({params}: PageProps) => {
-  const {slug, contestLogin} = params;
+export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
+  const {slug, contestLogin} = routeParams as {slug: string; contestLogin: string};
 
   // Fetch contest data and scoreboard
   const contestResponse = await unwrap(api.getContest)(slug, contestLogin);
@@ -17,29 +17,12 @@ const loadPage = async ({params}: PageProps) => {
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
   const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
-  return {
-    slug,
-    contestLogin,
-    contestResponse,
-    scoreboard,
-    me,
-    user,
-    contestRole,
-  };
-};
+  return {slug, contestLogin, contestResponse, scoreboard, user, contestRole};
+}) satisfies LoaderFunction;
 
-type PageProps = {
-  params: { slug: string; contestLogin: string };
-};
-
-const Page = ({params}: PageProps): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/[slug]/[contestLogin]/monitor/page.tsx", params], () =>
-    loadPage({params}),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {slug, contestLogin, contestResponse, scoreboard, user, contestRole} = routeQuery.data;
+const Page = (): ReactNode => {
+  const data = useLoaderData<typeof loader>();
+  const {slug, contestLogin, contestResponse, scoreboard, user, contestRole} = data;
   let isManager = false;
   if (contestResponse?.contest) {
     const checker = new PermissionChecker(
@@ -53,7 +36,7 @@ const Page = ({params}: PageProps): ReactNode => {
       !contestResponse.contest.start_time || new Date(contestResponse.contest.start_time) <= new Date();
 
     if (!checker.canViewMonitor(contestResponse.contest) || (!isManager && !hasStarted)) {
-      redirect(`/${slug}/${contestLogin}`);
+      return <Navigate to={`/${slug}/${contestLogin}`} replace />;
     }
   }
   return (

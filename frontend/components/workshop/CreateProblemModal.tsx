@@ -1,11 +1,9 @@
-"use client";
-
 import {Button, Modal, Select, Stack, Text, TextInput} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useEffect, useState} from "react";
+import {useNavigate} from "react-router-dom";
 
 import {api} from "@/lib/api";
-import {useRouter} from "@/lib/navigation";
 
 import type {OrganizationModel, ProblemTemplateModel} from "@/contracts/core/v1/models";
 import type {ComboboxItem, ComboboxItemGroup} from "@mantine/core";
@@ -26,7 +24,7 @@ export const CreateProblemModal = ({
   defaultOrgId,
   lockOrganization = false,
 }: Props): ReactNode => {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [title, setTitle] = useState("New Problem");
   const [orgId, setOrgId] = useState<string | null>(defaultOrgId ?? null);
   const [templateId, setTemplateId] = useState<string | null>("builtin:a-plus-b");
@@ -127,7 +125,7 @@ export const CreateProblemModal = ({
       const orgSlug = selectedOrg?.login || selectedOrg?.id || "org";
 
       onClose();
-      router.push(`/${orgSlug}/problems/${problemId}`);
+      navigate(`/${orgSlug}/problems/${problemId}`);
     } catch (err) {
       notifications.show({
         title: "Ошибка",

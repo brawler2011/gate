@@ -1,6 +1,6 @@
+import {redirect} from "react-router-dom";
+
 import * as operations from '@/contracts/core/v1/api';
-import {HttpError} from '@/lib/fetch';
-import {notFound, redirect} from '@/lib/routeErrors';
 
 export type ApiError = {status: number; message: string; requestId?: string};
 type ApiResult<R> = [error: ApiError, data: null] | [error: null, data: R];
@@ -16,14 +16,15 @@ export const api = new Proxy(operations, {
       const fn = target[operation] as (...args: unknown[]) => Promise<unknown>;
       return [null, await fn(...args)];
     } catch (error) {
-      if (error instanceof HttpError) {
-        const requestId = error.body.request_id;
+      if (error instanceof Error && "status" in error && typeof error.status === "number") {
+        const info = (error as Error & {info?: {message?: string; request_id?: string}}).info;
+        const requestId = info?.request_id;
         if (error.status !== 401) {
           console.error('API Error:', {operation, status: error.status,
             requestId: requestId && /^[A-Za-z0-9._:-]{1,128}$/.test(requestId) ? requestId : undefined,
             errorType: 'ApiError'});
         }
-        return [{status: error.status, message: error.message, requestId}, null];
+        return [{status: error.status, message: info?.message ?? error.message, requestId}, null];
       }
       console.error('Unknown API Error:', {operation, status: 500,
         errorType: error instanceof Error ? 'Error' : 'Unknown'});
@@ -37,10 +38,10 @@ export const unwrap = <A extends unknown[], R>(fn: (...args: A) => Promise<ApiRe
     const [error, data] = await fn(...args);
     if (error) {
       if (error.status === 404) {
-        notFound();
+        throw new Response(error.message, {status: 404});
       }
       if (error.status === 401) {
-        redirect('/auth/login');
+        throw redirect('/auth/login');
       }
       throw error;
     }

@@ -1,15 +1,16 @@
 import {Container, Stack, Title} from "@mantine/core";
+import {useLoaderData} from "react-router-dom";
 
 import {DefaultLayout} from "@/components/shared";
 import {SubmissionDetailsContent} from "@/components/submissions";
 import {api, unwrap} from "@/lib/api";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadPage = async (props: Props) => {
-  const solutionId = props.params.submission_id;
+export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
+  const solutionId = routeParams.submission_id!;
   const [error, resp] = await api.getSubmission(solutionId);
 
   if (error) {
@@ -31,30 +32,12 @@ const loadPage = async (props: Props) => {
     submission.organization_login && submission.contest_login
       ? await unwrap(api.getContest)(submission.organization_login, submission.contest_login)
       : null;
-  return {
-    solutionId,
-    error,
-    resp,
-    submission,
-    me,
-    user,
-    contestRole,
-    contestData,
-  };
-};
+  return {submission, user, contestRole, contestData};
+}) satisfies LoaderFunction;
 
-type Props = {
-  params: { submission_id: string };
-};
-
-const Page = (props: Props): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/submissions/[submission_id]/page.tsx", props], () =>
-    loadPage(props),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {submission, user, contestRole, contestData} = routeQuery.data;
+const Page = (): ReactNode => {
+  const data = useLoaderData<typeof loader>();
+  const {submission, user, contestRole, contestData} = data;
   const checker = contestData?.contest
     ? new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null)
     : null;

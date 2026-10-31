@@ -5,7 +5,7 @@ import {notifications} from "@mantine/notifications";
 import {useQuery} from "@tanstack/react-query";
 import {useState} from "react";
 
-import {NextPagination} from '@/components/shared/Pagination';
+import {RoutePagination} from '@/components/shared/Pagination';
 import {StatusMessage} from '@/components/shared/StatusMessage';
 import {api} from "@/lib/api";
 
@@ -112,7 +112,7 @@ export const AdminContestsContent = ({page, search}: AdminContestsContentProps):
             />
             {totalPages > 1 && (
               <Stack align="center" gap="md">
-                <NextPagination
+                <RoutePagination
                   pagination={{
                     page: page,
                     total: totalPages,

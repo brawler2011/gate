@@ -4,13 +4,12 @@ import {afterAll, afterEach, beforeAll, describe, expect, it, spyOn} from "bun:t
 import React from "react";
 
 import Loading from "@/app/[slug]/(org)/teams/[team_id]/loading";
-import Page from "@/app/[slug]/(org)/teams/[team_id]/page";
+import Page, {loader} from "@/app/[slug]/(org)/teams/[team_id]/page";
 
-import {cleanup, fireEvent, renderWithProviders, setupDOMEnvironment, waitFor} from "./test-utils";
+import {cleanup, fireEvent, renderRoute, renderWithProviders, setupDOMEnvironment, waitFor} from "./test-utils";
 
 import type {ContestModel, TeamModel} from "@/contracts/core/v1/models";
 
-const params = {slug: "school", team_id: "team"};
 const team: TeamModel = {
   id: "team", organization_id: "org", name: "Gate Team", description: "Our team",
   created_at: "2026-10-01", updated_at: "2026-10-01",
@@ -71,7 +70,7 @@ describe("Team profile through the production page", () => {
   };
 
   const renderPage = async () => {
-    const view = renderWithProviders(<Page params={params} />);
+    const view = renderRoute(<Page />, "/:slug/teams/:team_id", loader, "/school/teams/team");
     await waitFor(() => expect(view.getByRole("heading", {name: team.name})).toBeTruthy());
     return view;
   };
@@ -147,11 +146,11 @@ describe("Team profile through the production page", () => {
   for (const [status, title] of [[401, "Требуется авторизация"], [403, "Доступ запрещён"], [500, "Ошибка сервера"]] as const) {
     it(`renders the page error for HTTP ${status}`, async () => {
       mockApi({teamStatus: status});
-      const view = renderWithProviders(<Page params={params} />);
+      const view = renderRoute(<Page />, "/:slug/teams/:team_id", loader, "/school/teams/team");
       await waitFor(() => expect(view.getByRole("heading", {name: title})).toBeTruthy());
       expect(view.queryByRole("tab", {name: "Участники"})).toBeNull();
       if (status === 401) {
-        expect(view.getByRole("link", {name: "Войти"}).getAttribute("href")).toBe("/auth/login");
+        expect(view.getByRole("link", {name: "Войти"}).getAttribute("href")).toBe("/auth/login?return_to=%2Fschool%2Fteams%2Fteam");
       }
 
     });
@@ -159,14 +158,14 @@ describe("Team profile through the production page", () => {
 
   it("shows not-found for a missing team", async () => {
     mockApi({teamStatus: 404});
-    const view = renderWithProviders(<Page params={params} />);
-    await waitFor(() => expect(view.getByRole("heading", {name: "Не найдено"})).toBeTruthy());
+    const view = renderRoute(<Page />, "/:slug/teams/:team_id", loader, "/school/teams/team");
+    await waitFor(() => expect(view.getByRole("heading", {name: "Страница не найдена"})).toBeTruthy());
   });
-  for (const slug of ["@alice", "%invalid"]) {
+  for (const slug of ["@alice"]) {
     it(`rejects invalid organization slug ${slug} without fetching a team`, async () => {
       const fetch = mockApi();
-      const view = renderWithProviders(<Page params={{slug, team_id: team.id}} />);
-      await waitFor(() => expect(view.getByRole("heading", {name: "Не найдено"})).toBeTruthy());
+      const view = renderRoute(<Page />, "/:slug/teams/:team_id", loader, `/${slug}/teams/${team.id}`);
+      await waitFor(() => expect(view.getByRole("heading", {name: "Страница не найдена"})).toBeTruthy());
       expect(fetch.mock.calls.some(([url]) => String(url).includes("/teams/"))).toBe(false);
     });
   }

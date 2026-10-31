@@ -1,11 +1,11 @@
-"use client";
-
 import {Button, Checkbox, Group, Modal, Stack, Text, Textarea} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
+import {useQueryClient} from "@tanstack/react-query";
 import React, {useState, type ReactNode} from "react";
+import {useRevalidator} from "react-router-dom";
 
+import {getListContestSubmissionsQueryKey, getGetContestScoreboardQueryKey, getGetSubmissionQueryKey} from "@/contracts/core/v1/api";
 import {api} from "@/lib/api";
-import {useRouter} from "@/lib/navigation";
 
 export type SanctionActionType =
   | "block_submission"
@@ -41,7 +41,8 @@ export const SubmissionSanctionsModal = ({
   const [reason, setReason] = useState("");
   const [rejudgeSubmissions, setRejudgeSubmissions] = useState(false);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const revalidator = useRevalidator();
+  const queryClient = useQueryClient();
 
   if (!actionType) {
     return null;
@@ -103,7 +104,13 @@ export const SubmissionSanctionsModal = ({
       if (onSuccess) {
         onSuccess();
       }
-      router.refresh();
+      void queryClient.invalidateQueries({queryKey: getListContestSubmissionsQueryKey(orgLogin, contestLogin)});
+      void queryClient.invalidateQueries({queryKey: getGetContestScoreboardQueryKey(orgLogin, contestLogin)});
+      if (submissionId) {
+        void queryClient.invalidateQueries({queryKey: getGetSubmissionQueryKey(submissionId)});
+        void queryClient.invalidateQueries({queryKey: [["submission-details", submissionId]]});
+      }
+      void revalidator.revalidate();
     }
   };
 

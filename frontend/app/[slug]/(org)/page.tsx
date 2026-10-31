@@ -1,28 +1,24 @@
 import {Container} from "@mantine/core";
+import {useLoaderData, redirect} from "react-router-dom";
 
 import {OrgContestsTab} from "@/components/orgs/OrgContestsTab";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
-import {notFound, redirect} from "@/lib/routeErrors";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadPage = async ({params, searchParams}: Props) => {
-  const {slug} = params;
+export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs) => {
+  const searchParams = Object.fromEntries(new URL(request.url).searchParams);
+  const {slug} = routeParams as {slug: string};
   const {page, search} = searchParams;
 
-  let decoded = "";
-  try {
-    decoded = decodeURIComponent(slug);
-  } catch {
-    notFound();
-  }
+  const decoded = slug;
 
   const currentPage = parsePage(page);
   if (!currentPage) {
-    redirect(`/${decoded}`);
+    throw redirect(`/${decoded}`);
   }
 
   const orgData = await getOrganization(decoded);
@@ -52,41 +48,15 @@ const loadPage = async ({params, searchParams}: Props) => {
     }
     isMember = membersData?.members.some((member) => member.user_id === currentUser.id) ?? false;
   }
-  return {
-    slug,
-    page,
-    search,
-    decoded,
-    currentPage,
-    orgData,
-    org,
-    contestsError,
-    contestsData,
-    me,
-    currentUser,
-    contests,
-    contestsPagination,
-    isAuthenticated,
-    isMember,
-  };
-};
-
-type Props = {
-  params: { slug: string };
-  searchParams: { page?: string; search?: string };
-};
+  return {search, org, contestsError, contests, contestsPagination, isAuthenticated, isMember};
+}) satisfies LoaderFunction;
 
 const getOrganization = unwrap(api.getOrganization);
 
-const Page = ({params, searchParams}: Props): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/[slug]/(org)/page.tsx", params, searchParams], () =>
-    loadPage({params, searchParams}),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
+const Page = (): ReactNode => {
+  const data = useLoaderData<typeof loader>();
   const {search, org, contestsError, contests, contestsPagination, isAuthenticated, isMember} =
-    routeQuery.data;
+    data;
   return (
     <Container size="lg" py="lg">
       {contestsError ? (

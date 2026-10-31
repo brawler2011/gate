@@ -1,19 +1,16 @@
 import {Box, Center, Container, Stack, Text} from "@mantine/core";
+import {useParams} from "react-router-dom";
 
 import {ContestCountdown} from "@/components/contests/ContestCountdown";
 import {ContestJoinButton} from "@/components/contests/ContestJoinButton";
+import {QueryState} from "@/components/shared/QueryState";
 import {useContestData} from "@/hooks/useContestData";
-import {PageQueryState} from "@/lib/pageQuery";
 import {PermissionChecker} from "@/lib/permissions";
 
 import {ContestProblemsTable} from "./ContestProblemsTable";
 
 import type {ContestModel, ContestProblemListItemModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
-
-type Props = {
-  params: { slug: string; contestLogin: string };
-};
 
 type ContestProps = {
   contest: ContestModel;
@@ -62,11 +59,12 @@ const Contest = ({contest, orgLogin, problems, isManager, isAuthenticated, hasAc
   );
 };
 
-const Page = ({params}: Props): ReactNode => {
+const Page = (): ReactNode => {
+  const params = useParams() as {slug: string; contestLogin: string};
   const {slug, contestLogin} = params;
   const routeQuery = useContestData(slug, contestLogin);
   if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
+    return <QueryState error={routeQuery.error} />;
   }
   const {response, user, contestRole} = routeQuery.data;
   const checker = new PermissionChecker(

@@ -1,13 +1,12 @@
-"use client";
-
 import {Alert, Box, Button, FileInput, Group, Stack, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconInfoCircle, IconUpload} from "@tabler/icons-react";
+import {useQueryClient} from "@tanstack/react-query";
 import {useState, useTransition} from "react";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
+import {getGetProblemQueryKey} from "@/contracts/core/v1/api";
 import {api} from "@/lib/api";
-import {useRouter} from "@/lib/navigation";
 
 import type {ReactNode} from "react";
 
@@ -16,7 +15,7 @@ type Props = {
 };
 
 export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [packageFile, setPackageFile] = useState<File | null>(null);
   const [isImporting, startImport] = useTransition();
 
@@ -42,7 +41,11 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
         color: "green",
       });
       setPackageFile(null);
-      router.refresh();
+      void queryClient.invalidateQueries({queryKey: getGetProblemQueryKey(problemId)});
+      void queryClient.invalidateQueries({queryKey: ["problem", problemId]});
+      void queryClient.invalidateQueries({queryKey: ["problem-limits", problemId]});
+      void queryClient.invalidateQueries({queryKey: ["workshop-files", problemId]});
+      void queryClient.invalidateQueries({queryKey: ["workshop-single-component-files", problemId]});
     });
   };
 

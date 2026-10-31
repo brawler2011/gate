@@ -1,26 +1,24 @@
+import {Navigate, useLoaderData} from "react-router-dom";
+
 import {DefaultLayout} from "@/components/shared";
 import {api} from "@/lib/api";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
-import {redirect} from "@/lib/routeErrors";
 
 import {NotificationsClient} from "./NotificationsClient";
 
 import type {ReactNode} from "react";
+import type {LoaderFunction} from "react-router-dom";
 
-const loadNotificationsPage = async () => {
+export const loader = (async () => {
   const [, me] = await api.getMe();
   return {me};
-};
+}) satisfies LoaderFunction;
 
 const NotificationsPage = (): ReactNode => {
-  const routeQuery = usePageQuery(["frontend/app/notifications/page.tsx"], () => loadNotificationsPage());
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {me} = routeQuery.data;
+  const data = useLoaderData<typeof loader>();
+  const {me} = data;
   const user = me?.user ?? null;
   if (!user) {
-    redirect("/auth/login?return_to=/notifications");
+    return <Navigate to="/auth/login?return_to=/notifications" replace />;
   }
   return (
     <DefaultLayout headerUser={user}>

@@ -190,11 +190,6 @@ import type {
   WorkshopFileListResponse
 } from './models';
 
-import { apiFetch } from '../../../lib/fetch';
-type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
-
 const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
@@ -215,22 +210,37 @@ export const getGetLanguagesUrl = () => {
 
 
 
-  return `/languages`
+  return `/api/languages`
 }
 
 /**
  * @summary Get supported programming languages
  */
-export const getLanguages = async ( options?: Parameters<typeof apiFetch>[1]): Promise<SupportedLanguagesResponse> => {
+export const getLanguages = async ( options?: RequestInit): Promise<SupportedLanguagesResponse> => {
 
-  return apiFetch<SupportedLanguagesResponse>(getGetLanguagesUrl(),
+  const res = await fetch(getGetLanguagesUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: SupportedLanguagesResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -238,21 +248,21 @@ export const getLanguages = async ( options?: Parameters<typeof apiFetch>[1]): P
 
 export const getGetLanguagesQueryKey = () => {
     return [
-    `/languages`
+    `/api/languages`
     ] as const;
     }
 
 
-export const getGetLanguagesQueryOptions = <TData = Awaited<ReturnType<typeof getLanguages>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLanguages>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetLanguagesQueryOptions = <TData = Awaited<ReturnType<typeof getLanguages>>, TError = globalThis.Error & { info?: unknown; status?: number }>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLanguages>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetLanguagesQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLanguages>>> = ({ signal }) => getLanguages({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLanguages>>> = ({ signal }) => getLanguages({ signal, ...fetchOptions });
 
 
 
@@ -262,39 +272,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetLanguagesQueryResult = NonNullable<Awaited<ReturnType<typeof getLanguages>>>
-export type GetLanguagesQueryError = unknown
+export type GetLanguagesQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetLanguages<TData = Awaited<ReturnType<typeof getLanguages>>, TError = unknown>(
+export function useGetLanguages<TData = Awaited<ReturnType<typeof getLanguages>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLanguages>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getLanguages>>,
           TError,
           Awaited<ReturnType<typeof getLanguages>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetLanguages<TData = Awaited<ReturnType<typeof getLanguages>>, TError = unknown>(
+export function useGetLanguages<TData = Awaited<ReturnType<typeof getLanguages>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLanguages>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getLanguages>>,
           TError,
           Awaited<ReturnType<typeof getLanguages>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetLanguages<TData = Awaited<ReturnType<typeof getLanguages>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLanguages>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetLanguages<TData = Awaited<ReturnType<typeof getLanguages>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLanguages>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get supported programming languages
  */
 
-export function useGetLanguages<TData = Awaited<ReturnType<typeof getLanguages>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLanguages>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetLanguages<TData = Awaited<ReturnType<typeof getLanguages>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getLanguages>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -323,19 +333,34 @@ export const getListProblemsUrl = (params?: ListProblemsParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems?${stringifiedParams}` : `/problems`
+  return stringifiedParams.length > 0 ? `/api/problems?${stringifiedParams}` : `/api/problems`
 }
 
-export const listProblems = async (params?: ListProblemsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListProblemsResponseModel> => {
+export const listProblems = async (params?: ListProblemsParams, options?: RequestInit): Promise<ListProblemsResponseModel> => {
 
-  return apiFetch<ListProblemsResponseModel>(getListProblemsUrl(params),
+  const res = await fetch(getListProblemsUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListProblemsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -343,21 +368,21 @@ export const listProblems = async (params?: ListProblemsParams, options?: Parame
 
 export const getListProblemsQueryKey = (params?: ListProblemsParams,) => {
     return [
-    `/problems`, ...(params ? [params] : [])
+    `/api/problems`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListProblemsQueryOptions = <TData = Awaited<ReturnType<typeof listProblems>>, TError = unknown>(params?: ListProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblems>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListProblemsQueryOptions = <TData = Awaited<ReturnType<typeof listProblems>>, TError = globalThis.Error & { info?: unknown; status?: number }>(params?: ListProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblems>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListProblemsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblems>>> = ({ signal }) => listProblems(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblems>>> = ({ signal }) => listProblems(params, { signal, ...fetchOptions });
 
 
 
@@ -367,36 +392,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListProblemsQueryResult = NonNullable<Awaited<ReturnType<typeof listProblems>>>
-export type ListProblemsQueryError = unknown
+export type ListProblemsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListProblems<TData = Awaited<ReturnType<typeof listProblems>>, TError = unknown>(
+export function useListProblems<TData = Awaited<ReturnType<typeof listProblems>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params: undefined |  ListProblemsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblems>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblems>>,
           TError,
           Awaited<ReturnType<typeof listProblems>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblems<TData = Awaited<ReturnType<typeof listProblems>>, TError = unknown>(
+export function useListProblems<TData = Awaited<ReturnType<typeof listProblems>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params?: ListProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblems>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblems>>,
           TError,
           Awaited<ReturnType<typeof listProblems>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblems<TData = Awaited<ReturnType<typeof listProblems>>, TError = unknown>(
- params?: ListProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblems>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblems<TData = Awaited<ReturnType<typeof listProblems>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblems>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListProblems<TData = Awaited<ReturnType<typeof listProblems>>, TError = unknown>(
- params?: ListProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblems>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblems<TData = Awaited<ReturnType<typeof listProblems>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblems>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -425,19 +450,34 @@ export const getCreateProblemUrl = (params: CreateProblemParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems?${stringifiedParams}` : `/problems`
+  return stringifiedParams.length > 0 ? `/api/problems?${stringifiedParams}` : `/api/problems`
 }
 
-export const createProblem = async (params: CreateProblemParams, options?: Parameters<typeof apiFetch>[1]): Promise<CreationResponseModel> => {
+export const createProblem = async (params: CreateProblemParams, options?: RequestInit): Promise<CreationResponseModel> => {
 
-  return apiFetch<CreationResponseModel>(getCreateProblemUrl(params),
+  const res = await fetch(getCreateProblemUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: CreationResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -445,16 +485,16 @@ export const createProblem = async (params: CreateProblemParams, options?: Param
 
 export const getCreateProblemMutationKey = () => ['createProblem'] as const;
 
-export const getCreateProblemMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblem>>, TError,CreateProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateProblemMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblem>>, TError,CreateProblemMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createProblem>>, TError,CreateProblemMutationVariables, TContext> => {
 
 const mutationKey = getCreateProblemMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -462,7 +502,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProblem>>, CreateProblemMutationVariables> = (props) => {
           const {params} = props ?? {};
 
-          return  createProblem(params,requestOptions)
+          return  createProblem(params,fetchOptions)
         }
 
 
@@ -474,11 +514,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateProblemMutationResult = NonNullable<Awaited<ReturnType<typeof createProblem>>>
 
-    export type CreateProblemMutationError = unknown
+    export type CreateProblemMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateProblemMutationVariables = {params: CreateProblemParams}
 
-    export const useCreateProblem = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblem>>, TError,CreateProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useCreateProblem = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblem>>, TError,CreateProblemMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createProblem>>,
         TError,
@@ -500,19 +540,34 @@ export const getListProblemTemplatesUrl = (params?: ListProblemTemplatesParams,)
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problem-templates?${stringifiedParams}` : `/problem-templates`
+  return stringifiedParams.length > 0 ? `/api/problem-templates?${stringifiedParams}` : `/api/problem-templates`
 }
 
-export const listProblemTemplates = async (params?: ListProblemTemplatesParams, options?: Parameters<typeof apiFetch>[1]): Promise<ProblemTemplateModel[]> => {
+export const listProblemTemplates = async (params?: ListProblemTemplatesParams, options?: RequestInit): Promise<ProblemTemplateModel[]> => {
 
-  return apiFetch<ProblemTemplateModel[]>(getListProblemTemplatesUrl(params),
+  const res = await fetch(getListProblemTemplatesUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ProblemTemplateModel[] = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -520,21 +575,21 @@ export const listProblemTemplates = async (params?: ListProblemTemplatesParams, 
 
 export const getListProblemTemplatesQueryKey = (params?: ListProblemTemplatesParams,) => {
     return [
-    `/problem-templates`, ...(params ? [params] : [])
+    `/api/problem-templates`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListProblemTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof listProblemTemplates>>, TError = unknown>(params?: ListProblemTemplatesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTemplates>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListProblemTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof listProblemTemplates>>, TError = globalThis.Error & { info?: unknown; status?: number }>(params?: ListProblemTemplatesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTemplates>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListProblemTemplatesQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemTemplates>>> = ({ signal }) => listProblemTemplates(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemTemplates>>> = ({ signal }) => listProblemTemplates(params, { signal, ...fetchOptions });
 
 
 
@@ -544,36 +599,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListProblemTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof listProblemTemplates>>>
-export type ListProblemTemplatesQueryError = unknown
+export type ListProblemTemplatesQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListProblemTemplates<TData = Awaited<ReturnType<typeof listProblemTemplates>>, TError = unknown>(
+export function useListProblemTemplates<TData = Awaited<ReturnType<typeof listProblemTemplates>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params: undefined |  ListProblemTemplatesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTemplates>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemTemplates>>,
           TError,
           Awaited<ReturnType<typeof listProblemTemplates>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemTemplates<TData = Awaited<ReturnType<typeof listProblemTemplates>>, TError = unknown>(
+export function useListProblemTemplates<TData = Awaited<ReturnType<typeof listProblemTemplates>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params?: ListProblemTemplatesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTemplates>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemTemplates>>,
           TError,
           Awaited<ReturnType<typeof listProblemTemplates>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemTemplates<TData = Awaited<ReturnType<typeof listProblemTemplates>>, TError = unknown>(
- params?: ListProblemTemplatesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTemplates>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemTemplates<TData = Awaited<ReturnType<typeof listProblemTemplates>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListProblemTemplatesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTemplates>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListProblemTemplates<TData = Awaited<ReturnType<typeof listProblemTemplates>>, TError = unknown>(
- params?: ListProblemTemplatesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTemplates>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemTemplates<TData = Awaited<ReturnType<typeof listProblemTemplates>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListProblemTemplatesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTemplates>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -595,19 +650,34 @@ export const getGetProblemUrl = (id: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(id))}`
+  return `/api/problems/${encodeURIComponent(String(id))}`
 }
 
-export const getProblem = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<GetProblemResponseModel> => {
+export const getProblem = async (id: string, options?: RequestInit): Promise<GetProblemResponseModel> => {
 
-  return apiFetch<GetProblemResponseModel>(getGetProblemUrl(id),
+  const res = await fetch(getGetProblemUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: GetProblemResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -615,21 +685,21 @@ export const getProblem = async (id: string, options?: Parameters<typeof apiFetc
 
 export const getGetProblemQueryKey = (id: string,) => {
     return [
-    `/problems/${id}`
+    `/api/problems/${id}`
     ] as const;
     }
 
 
-export const getGetProblemQueryOptions = <TData = Awaited<ReturnType<typeof getProblem>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblem>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetProblemQueryOptions = <TData = Awaited<ReturnType<typeof getProblem>>, TError = globalThis.Error & { info?: unknown; status?: number }>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblem>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetProblemQueryKey(id);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblem>>> = ({ signal }) => getProblem(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblem>>> = ({ signal }) => getProblem(id, { signal, ...fetchOptions });
 
 
 
@@ -639,36 +709,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetProblemQueryResult = NonNullable<Awaited<ReturnType<typeof getProblem>>>
-export type GetProblemQueryError = unknown
+export type GetProblemQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetProblem<TData = Awaited<ReturnType<typeof getProblem>>, TError = unknown>(
+export function useGetProblem<TData = Awaited<ReturnType<typeof getProblem>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblem>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getProblem>>,
           TError,
           Awaited<ReturnType<typeof getProblem>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblem<TData = Awaited<ReturnType<typeof getProblem>>, TError = unknown>(
+export function useGetProblem<TData = Awaited<ReturnType<typeof getProblem>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblem>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getProblem>>,
           TError,
           Awaited<ReturnType<typeof getProblem>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblem<TData = Awaited<ReturnType<typeof getProblem>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblem>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetProblem<TData = Awaited<ReturnType<typeof getProblem>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblem>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetProblem<TData = Awaited<ReturnType<typeof getProblem>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblem>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetProblem<TData = Awaited<ReturnType<typeof getProblem>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblem>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -690,19 +760,34 @@ export const getDeleteProblemUrl = (id: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(id))}`
+  return `/api/problems/${encodeURIComponent(String(id))}`
 }
 
-export const deleteProblem = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+export const deleteProblem = async (id: string, options?: RequestInit): Promise<unknown> => {
 
-  return apiFetch<unknown>(getDeleteProblemUrl(id),
+  const res = await fetch(getDeleteProblemUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -710,16 +795,16 @@ export const deleteProblem = async (id: string, options?: Parameters<typeof apiF
 
 export const getDeleteProblemMutationKey = () => ['deleteProblem'] as const;
 
-export const getDeleteProblemMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblem>>, TError,DeleteProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteProblemMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblem>>, TError,DeleteProblemMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteProblem>>, TError,DeleteProblemMutationVariables, TContext> => {
 
 const mutationKey = getDeleteProblemMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -727,7 +812,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProblem>>, DeleteProblemMutationVariables> = (props) => {
           const {id} = props ?? {};
 
-          return  deleteProblem(id,requestOptions)
+          return  deleteProblem(id,fetchOptions)
         }
 
 
@@ -739,11 +824,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteProblemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProblem>>>
 
-    export type DeleteProblemMutationError = unknown
+    export type DeleteProblemMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteProblemMutationVariables = {id: string}
 
-    export const useDeleteProblem = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblem>>, TError,DeleteProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useDeleteProblem = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblem>>, TError,DeleteProblemMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteProblem>>,
         TError,
@@ -758,11 +843,11 @@ export const getUpdateProblemUrl = (id: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(id))}`
+  return `/api/problems/${encodeURIComponent(String(id))}`
 }
 
 export const updateProblem = async (id: string,
-    updateProblemRequestModel: UpdateProblemRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+    updateProblemRequestModel: UpdateProblemRequestModel, options?: RequestInit): Promise<unknown> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -778,14 +863,29 @@ export const updateProblem = async (id: string,
     }
     return headers;
   };
-return apiFetch<unknown>(getUpdateProblemUrl(id),
+const res = await fetch(getUpdateProblemUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateProblemRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -793,16 +893,16 @@ return apiFetch<unknown>(getUpdateProblemUrl(id),
 
 export const getUpdateProblemMutationKey = () => ['updateProblem'] as const;
 
-export const getUpdateProblemMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblem>>, TError,UpdateProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblem>>, TError,UpdateProblemMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblem>>, TError,UpdateProblemMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -810,7 +910,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblem>>, UpdateProblemMutationVariables> = (props) => {
           const {id,data} = props ?? {};
 
-          return  updateProblem(id,data,requestOptions)
+          return  updateProblem(id,data,fetchOptions)
         }
 
 
@@ -822,11 +922,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblem>>>
     export type UpdateProblemMutationBody = UpdateProblemRequestModel
-    export type UpdateProblemMutationError = unknown
+    export type UpdateProblemMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemMutationVariables = {id: string;data: UpdateProblemRequestModel}
 
-    export const useUpdateProblem = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblem>>, TError,UpdateProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useUpdateProblem = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblem>>, TError,UpdateProblemMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblem>>,
         TError,
@@ -848,19 +948,34 @@ export const getListAdminContestsUrl = (params?: ListAdminContestsParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/admin/contests?${stringifiedParams}` : `/admin/contests`
+  return stringifiedParams.length > 0 ? `/api/admin/contests?${stringifiedParams}` : `/api/admin/contests`
 }
 
-export const listAdminContests = async (params?: ListAdminContestsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListContestsResponseModel> => {
+export const listAdminContests = async (params?: ListAdminContestsParams, options?: RequestInit): Promise<ListContestsResponseModel> => {
 
-  return apiFetch<ListContestsResponseModel>(getListAdminContestsUrl(params),
+  const res = await fetch(getListAdminContestsUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListContestsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -868,21 +983,21 @@ export const listAdminContests = async (params?: ListAdminContestsParams, option
 
 export const getListAdminContestsQueryKey = (params?: ListAdminContestsParams,) => {
     return [
-    `/admin/contests`, ...(params ? [params] : [])
+    `/api/admin/contests`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListAdminContestsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminContests>>, TError = unknown>(params?: ListAdminContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListAdminContestsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(params?: ListAdminContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminContests>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListAdminContestsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminContests>>> = ({ signal }) => listAdminContests(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminContests>>> = ({ signal }) => listAdminContests(params, { signal, ...fetchOptions });
 
 
 
@@ -892,36 +1007,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListAdminContestsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminContests>>>
-export type ListAdminContestsQueryError = unknown
+export type ListAdminContestsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListAdminContests<TData = Awaited<ReturnType<typeof listAdminContests>>, TError = unknown>(
+export function useListAdminContests<TData = Awaited<ReturnType<typeof listAdminContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params: undefined |  ListAdminContestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminContests>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAdminContests>>,
           TError,
           Awaited<ReturnType<typeof listAdminContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAdminContests<TData = Awaited<ReturnType<typeof listAdminContests>>, TError = unknown>(
+export function useListAdminContests<TData = Awaited<ReturnType<typeof listAdminContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params?: ListAdminContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminContests>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAdminContests>>,
           TError,
           Awaited<ReturnType<typeof listAdminContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAdminContests<TData = Awaited<ReturnType<typeof listAdminContests>>, TError = unknown>(
- params?: ListAdminContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListAdminContests<TData = Awaited<ReturnType<typeof listAdminContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListAdminContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListAdminContests<TData = Awaited<ReturnType<typeof listAdminContests>>, TError = unknown>(
- params?: ListAdminContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListAdminContests<TData = Awaited<ReturnType<typeof listAdminContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListAdminContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -943,14 +1058,14 @@ export const getAdminChangeEmailUrl = (username: string,) => {
 
 
 
-  return `/admin/users/${encodeURIComponent(String(username))}/change-email`
+  return `/api/admin/users/${encodeURIComponent(String(username))}/change-email`
 }
 
 /**
  * @summary Change user email as admin (direct or with confirmation)
  */
 export const adminChangeEmail = async (username: string,
-    adminChangeEmailRequestModel: AdminChangeEmailRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+    adminChangeEmailRequestModel: AdminChangeEmailRequestModel, options?: RequestInit): Promise<unknown> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -966,14 +1081,29 @@ export const adminChangeEmail = async (username: string,
     }
     return headers;
   };
-return apiFetch<unknown>(getAdminChangeEmailUrl(username),
+const res = await fetch(getAdminChangeEmailUrl(username),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(adminChangeEmailRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -981,16 +1111,16 @@ return apiFetch<unknown>(getAdminChangeEmailUrl(username),
 
 export const getAdminChangeEmailMutationKey = () => ['adminChangeEmail'] as const;
 
-export const getAdminChangeEmailMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminChangeEmail>>, TError,AdminChangeEmailMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getAdminChangeEmailMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminChangeEmail>>, TError,AdminChangeEmailMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof adminChangeEmail>>, TError,AdminChangeEmailMutationVariables, TContext> => {
 
 const mutationKey = getAdminChangeEmailMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -998,7 +1128,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminChangeEmail>>, AdminChangeEmailMutationVariables> = (props) => {
           const {username,data} = props ?? {};
 
-          return  adminChangeEmail(username,data,requestOptions)
+          return  adminChangeEmail(username,data,fetchOptions)
         }
 
 
@@ -1010,14 +1140,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AdminChangeEmailMutationResult = NonNullable<Awaited<ReturnType<typeof adminChangeEmail>>>
     export type AdminChangeEmailMutationBody = AdminChangeEmailRequestModel
-    export type AdminChangeEmailMutationError = unknown
+    export type AdminChangeEmailMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type AdminChangeEmailMutationVariables = {username: string;data: AdminChangeEmailRequestModel}
 
     /**
  * @summary Change user email as admin (direct or with confirmation)
  */
-export const useAdminChangeEmail = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminChangeEmail>>, TError,AdminChangeEmailMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useAdminChangeEmail = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminChangeEmail>>, TError,AdminChangeEmailMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof adminChangeEmail>>,
         TError,
@@ -1032,14 +1162,14 @@ export const getAdminSetPasswordUrl = (username: string,) => {
 
 
 
-  return `/admin/users/${encodeURIComponent(String(username))}/set-password`
+  return `/api/admin/users/${encodeURIComponent(String(username))}/set-password`
 }
 
 /**
  * @summary Set user password directly as admin
  */
 export const adminSetPassword = async (username: string,
-    adminSetPasswordRequestModel: AdminSetPasswordRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+    adminSetPasswordRequestModel: AdminSetPasswordRequestModel, options?: RequestInit): Promise<unknown> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -1055,14 +1185,29 @@ export const adminSetPassword = async (username: string,
     }
     return headers;
   };
-return apiFetch<unknown>(getAdminSetPasswordUrl(username),
+const res = await fetch(getAdminSetPasswordUrl(username),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(adminSetPasswordRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -1070,16 +1215,16 @@ return apiFetch<unknown>(getAdminSetPasswordUrl(username),
 
 export const getAdminSetPasswordMutationKey = () => ['adminSetPassword'] as const;
 
-export const getAdminSetPasswordMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSetPassword>>, TError,AdminSetPasswordMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getAdminSetPasswordMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSetPassword>>, TError,AdminSetPasswordMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof adminSetPassword>>, TError,AdminSetPasswordMutationVariables, TContext> => {
 
 const mutationKey = getAdminSetPasswordMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -1087,7 +1232,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSetPassword>>, AdminSetPasswordMutationVariables> = (props) => {
           const {username,data} = props ?? {};
 
-          return  adminSetPassword(username,data,requestOptions)
+          return  adminSetPassword(username,data,fetchOptions)
         }
 
 
@@ -1099,14 +1244,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AdminSetPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof adminSetPassword>>>
     export type AdminSetPasswordMutationBody = AdminSetPasswordRequestModel
-    export type AdminSetPasswordMutationError = unknown
+    export type AdminSetPasswordMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type AdminSetPasswordMutationVariables = {username: string;data: AdminSetPasswordRequestModel}
 
     /**
  * @summary Set user password directly as admin
  */
-export const useAdminSetPassword = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSetPassword>>, TError,AdminSetPasswordMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useAdminSetPassword = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSetPassword>>, TError,AdminSetPasswordMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof adminSetPassword>>,
         TError,
@@ -1121,22 +1266,37 @@ export const getAdminSendPasswordResetUrl = (username: string,) => {
 
 
 
-  return `/admin/users/${encodeURIComponent(String(username))}/send-reset-password`
+  return `/api/admin/users/${encodeURIComponent(String(username))}/send-reset-password`
 }
 
 /**
  * @summary Send password reset link to user email
  */
-export const adminSendPasswordReset = async (username: string, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+export const adminSendPasswordReset = async (username: string, options?: RequestInit): Promise<unknown> => {
 
-  return apiFetch<unknown>(getAdminSendPasswordResetUrl(username),
+  const res = await fetch(getAdminSendPasswordResetUrl(username),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -1144,16 +1304,16 @@ export const adminSendPasswordReset = async (username: string, options?: Paramet
 
 export const getAdminSendPasswordResetMutationKey = () => ['adminSendPasswordReset'] as const;
 
-export const getAdminSendPasswordResetMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSendPasswordReset>>, TError,AdminSendPasswordResetMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getAdminSendPasswordResetMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSendPasswordReset>>, TError,AdminSendPasswordResetMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof adminSendPasswordReset>>, TError,AdminSendPasswordResetMutationVariables, TContext> => {
 
 const mutationKey = getAdminSendPasswordResetMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -1161,7 +1321,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSendPasswordReset>>, AdminSendPasswordResetMutationVariables> = (props) => {
           const {username} = props ?? {};
 
-          return  adminSendPasswordReset(username,requestOptions)
+          return  adminSendPasswordReset(username,fetchOptions)
         }
 
 
@@ -1173,14 +1333,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AdminSendPasswordResetMutationResult = NonNullable<Awaited<ReturnType<typeof adminSendPasswordReset>>>
 
-    export type AdminSendPasswordResetMutationError = unknown
+    export type AdminSendPasswordResetMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type AdminSendPasswordResetMutationVariables = {username: string}
 
     /**
  * @summary Send password reset link to user email
  */
-export const useAdminSendPasswordReset = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSendPasswordReset>>, TError,AdminSendPasswordResetMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useAdminSendPasswordReset = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSendPasswordReset>>, TError,AdminSendPasswordResetMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof adminSendPasswordReset>>,
         TError,
@@ -1195,22 +1355,37 @@ export const getAdminResendVerificationUrl = (username: string,) => {
 
 
 
-  return `/admin/users/${encodeURIComponent(String(username))}/resend-verification`
+  return `/api/admin/users/${encodeURIComponent(String(username))}/resend-verification`
 }
 
 /**
  * @summary Resend email verification link for user
  */
-export const adminResendVerification = async (username: string, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+export const adminResendVerification = async (username: string, options?: RequestInit): Promise<unknown> => {
 
-  return apiFetch<unknown>(getAdminResendVerificationUrl(username),
+  const res = await fetch(getAdminResendVerificationUrl(username),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -1218,16 +1393,16 @@ export const adminResendVerification = async (username: string, options?: Parame
 
 export const getAdminResendVerificationMutationKey = () => ['adminResendVerification'] as const;
 
-export const getAdminResendVerificationMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminResendVerification>>, TError,AdminResendVerificationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getAdminResendVerificationMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminResendVerification>>, TError,AdminResendVerificationMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof adminResendVerification>>, TError,AdminResendVerificationMutationVariables, TContext> => {
 
 const mutationKey = getAdminResendVerificationMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -1235,7 +1410,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminResendVerification>>, AdminResendVerificationMutationVariables> = (props) => {
           const {username} = props ?? {};
 
-          return  adminResendVerification(username,requestOptions)
+          return  adminResendVerification(username,fetchOptions)
         }
 
 
@@ -1247,14 +1422,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AdminResendVerificationMutationResult = NonNullable<Awaited<ReturnType<typeof adminResendVerification>>>
 
-    export type AdminResendVerificationMutationError = unknown
+    export type AdminResendVerificationMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type AdminResendVerificationMutationVariables = {username: string}
 
     /**
  * @summary Resend email verification link for user
  */
-export const useAdminResendVerification = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminResendVerification>>, TError,AdminResendVerificationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useAdminResendVerification = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminResendVerification>>, TError,AdminResendVerificationMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof adminResendVerification>>,
         TError,
@@ -1277,20 +1452,35 @@ export const getListUserContestsUrl = (username: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/users/${encodeURIComponent(String(username))}/contests?${stringifiedParams}` : `/users/${encodeURIComponent(String(username))}/contests`
+  return stringifiedParams.length > 0 ? `/api/users/${encodeURIComponent(String(username))}/contests?${stringifiedParams}` : `/api/users/${encodeURIComponent(String(username))}/contests`
 }
 
 export const listUserContests = async (username: string,
-    params?: ListUserContestsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListUserContestsResponseModel> => {
+    params?: ListUserContestsParams, options?: RequestInit): Promise<ListUserContestsResponseModel> => {
 
-  return apiFetch<ListUserContestsResponseModel>(getListUserContestsUrl(username,params),
+  const res = await fetch(getListUserContestsUrl(username,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListUserContestsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -1299,22 +1489,22 @@ export const listUserContests = async (username: string,
 export const getListUserContestsQueryKey = (username: string,
     params?: ListUserContestsParams,) => {
     return [
-    `/users/${username}/contests`, ...(params ? [params] : [])
+    `/api/users/${username}/contests`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListUserContestsQueryOptions = <TData = Awaited<ReturnType<typeof listUserContests>>, TError = unknown>(username: string,
-    params?: ListUserContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListUserContestsQueryOptions = <TData = Awaited<ReturnType<typeof listUserContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(username: string,
+    params?: ListUserContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserContests>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListUserContestsQueryKey(username,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUserContests>>> = ({ signal }) => listUserContests(username,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUserContests>>> = ({ signal }) => listUserContests(username,params, { signal, ...fetchOptions });
 
 
 
@@ -1324,10 +1514,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListUserContestsQueryResult = NonNullable<Awaited<ReturnType<typeof listUserContests>>>
-export type ListUserContestsQueryError = unknown
+export type ListUserContestsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListUserContests<TData = Awaited<ReturnType<typeof listUserContests>>, TError = unknown>(
+export function useListUserContests<TData = Awaited<ReturnType<typeof listUserContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  username: string,
     params: undefined |  ListUserContestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserContests>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -1335,10 +1525,10 @@ export function useListUserContests<TData = Awaited<ReturnType<typeof listUserCo
           TError,
           Awaited<ReturnType<typeof listUserContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListUserContests<TData = Awaited<ReturnType<typeof listUserContests>>, TError = unknown>(
+export function useListUserContests<TData = Awaited<ReturnType<typeof listUserContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  username: string,
     params?: ListUserContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserContests>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -1346,18 +1536,18 @@ export function useListUserContests<TData = Awaited<ReturnType<typeof listUserCo
           TError,
           Awaited<ReturnType<typeof listUserContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListUserContests<TData = Awaited<ReturnType<typeof listUserContests>>, TError = unknown>(
+export function useListUserContests<TData = Awaited<ReturnType<typeof listUserContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  username: string,
-    params?: ListUserContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListUserContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListUserContests<TData = Awaited<ReturnType<typeof listUserContests>>, TError = unknown>(
+export function useListUserContests<TData = Awaited<ReturnType<typeof listUserContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  username: string,
-    params?: ListUserContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListUserContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -1386,19 +1576,34 @@ export const getListWorkshopContestsUrl = (params?: ListWorkshopContestsParams,)
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/workshop/contests?${stringifiedParams}` : `/workshop/contests`
+  return stringifiedParams.length > 0 ? `/api/workshop/contests?${stringifiedParams}` : `/api/workshop/contests`
 }
 
-export const listWorkshopContests = async (params?: ListWorkshopContestsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListContestsResponseModel> => {
+export const listWorkshopContests = async (params?: ListWorkshopContestsParams, options?: RequestInit): Promise<ListContestsResponseModel> => {
 
-  return apiFetch<ListContestsResponseModel>(getListWorkshopContestsUrl(params),
+  const res = await fetch(getListWorkshopContestsUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListContestsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -1406,21 +1611,21 @@ export const listWorkshopContests = async (params?: ListWorkshopContestsParams, 
 
 export const getListWorkshopContestsQueryKey = (params?: ListWorkshopContestsParams,) => {
     return [
-    `/workshop/contests`, ...(params ? [params] : [])
+    `/api/workshop/contests`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListWorkshopContestsQueryOptions = <TData = Awaited<ReturnType<typeof listWorkshopContests>>, TError = unknown>(params?: ListWorkshopContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorkshopContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListWorkshopContestsQueryOptions = <TData = Awaited<ReturnType<typeof listWorkshopContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(params?: ListWorkshopContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorkshopContests>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListWorkshopContestsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkshopContests>>> = ({ signal }) => listWorkshopContests(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkshopContests>>> = ({ signal }) => listWorkshopContests(params, { signal, ...fetchOptions });
 
 
 
@@ -1430,36 +1635,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListWorkshopContestsQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkshopContests>>>
-export type ListWorkshopContestsQueryError = unknown
+export type ListWorkshopContestsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListWorkshopContests<TData = Awaited<ReturnType<typeof listWorkshopContests>>, TError = unknown>(
+export function useListWorkshopContests<TData = Awaited<ReturnType<typeof listWorkshopContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params: undefined |  ListWorkshopContestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorkshopContests>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listWorkshopContests>>,
           TError,
           Awaited<ReturnType<typeof listWorkshopContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListWorkshopContests<TData = Awaited<ReturnType<typeof listWorkshopContests>>, TError = unknown>(
+export function useListWorkshopContests<TData = Awaited<ReturnType<typeof listWorkshopContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params?: ListWorkshopContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorkshopContests>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listWorkshopContests>>,
           TError,
           Awaited<ReturnType<typeof listWorkshopContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListWorkshopContests<TData = Awaited<ReturnType<typeof listWorkshopContests>>, TError = unknown>(
- params?: ListWorkshopContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorkshopContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListWorkshopContests<TData = Awaited<ReturnType<typeof listWorkshopContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListWorkshopContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorkshopContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListWorkshopContests<TData = Awaited<ReturnType<typeof listWorkshopContests>>, TError = unknown>(
- params?: ListWorkshopContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorkshopContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListWorkshopContests<TData = Awaited<ReturnType<typeof listWorkshopContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListWorkshopContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorkshopContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -1488,19 +1693,34 @@ export const getListPublicContestsUrl = (params?: ListPublicContestsParams,) => 
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/public/contests?${stringifiedParams}` : `/public/contests`
+  return stringifiedParams.length > 0 ? `/api/public/contests?${stringifiedParams}` : `/api/public/contests`
 }
 
-export const listPublicContests = async (params?: ListPublicContestsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListContestsResponseModel> => {
+export const listPublicContests = async (params?: ListPublicContestsParams, options?: RequestInit): Promise<ListContestsResponseModel> => {
 
-  return apiFetch<ListContestsResponseModel>(getListPublicContestsUrl(params),
+  const res = await fetch(getListPublicContestsUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListContestsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -1508,21 +1728,21 @@ export const listPublicContests = async (params?: ListPublicContestsParams, opti
 
 export const getListPublicContestsQueryKey = (params?: ListPublicContestsParams,) => {
     return [
-    `/public/contests`, ...(params ? [params] : [])
+    `/api/public/contests`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListPublicContestsQueryOptions = <TData = Awaited<ReturnType<typeof listPublicContests>>, TError = unknown>(params?: ListPublicContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListPublicContestsQueryOptions = <TData = Awaited<ReturnType<typeof listPublicContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(params?: ListPublicContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicContests>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListPublicContestsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPublicContests>>> = ({ signal }) => listPublicContests(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPublicContests>>> = ({ signal }) => listPublicContests(params, { signal, ...fetchOptions });
 
 
 
@@ -1532,36 +1752,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListPublicContestsQueryResult = NonNullable<Awaited<ReturnType<typeof listPublicContests>>>
-export type ListPublicContestsQueryError = unknown
+export type ListPublicContestsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListPublicContests<TData = Awaited<ReturnType<typeof listPublicContests>>, TError = unknown>(
+export function useListPublicContests<TData = Awaited<ReturnType<typeof listPublicContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params: undefined |  ListPublicContestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicContests>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listPublicContests>>,
           TError,
           Awaited<ReturnType<typeof listPublicContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListPublicContests<TData = Awaited<ReturnType<typeof listPublicContests>>, TError = unknown>(
+export function useListPublicContests<TData = Awaited<ReturnType<typeof listPublicContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params?: ListPublicContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicContests>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listPublicContests>>,
           TError,
           Awaited<ReturnType<typeof listPublicContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListPublicContests<TData = Awaited<ReturnType<typeof listPublicContests>>, TError = unknown>(
- params?: ListPublicContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListPublicContests<TData = Awaited<ReturnType<typeof listPublicContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListPublicContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListPublicContests<TData = Awaited<ReturnType<typeof listPublicContests>>, TError = unknown>(
- params?: ListPublicContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListPublicContests<TData = Awaited<ReturnType<typeof listPublicContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListPublicContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -1591,20 +1811,35 @@ export const getCreateContestUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests`
 }
 
 export const createContest = async (orgLogin: string,
-    params: CreateContestParams, options?: Parameters<typeof apiFetch>[1]): Promise<CreationResponseModel> => {
+    params: CreateContestParams, options?: RequestInit): Promise<CreationResponseModel> => {
 
-  return apiFetch<CreationResponseModel>(getCreateContestUrl(orgLogin,params),
+  const res = await fetch(getCreateContestUrl(orgLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: CreationResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -1612,16 +1847,16 @@ export const createContest = async (orgLogin: string,
 
 export const getCreateContestMutationKey = () => ['createContest'] as const;
 
-export const getCreateContestMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContest>>, TError,CreateContestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateContestMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContest>>, TError,CreateContestMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createContest>>, TError,CreateContestMutationVariables, TContext> => {
 
 const mutationKey = getCreateContestMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -1629,7 +1864,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createContest>>, CreateContestMutationVariables> = (props) => {
           const {orgLogin,params} = props ?? {};
 
-          return  createContest(orgLogin,params,requestOptions)
+          return  createContest(orgLogin,params,fetchOptions)
         }
 
 
@@ -1641,11 +1876,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateContestMutationResult = NonNullable<Awaited<ReturnType<typeof createContest>>>
 
-    export type CreateContestMutationError = unknown
+    export type CreateContestMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateContestMutationVariables = {orgLogin: string;params: CreateContestParams}
 
-    export const useCreateContest = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContest>>, TError,CreateContestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useCreateContest = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContest>>, TError,CreateContestMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createContest>>,
         TError,
@@ -1668,20 +1903,35 @@ export const getListOrganizationContestsUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests`
 }
 
 export const listOrganizationContests = async (orgLogin: string,
-    params?: ListOrganizationContestsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListContestsResponseModel> => {
+    params?: ListOrganizationContestsParams, options?: RequestInit): Promise<ListContestsResponseModel> => {
 
-  return apiFetch<ListContestsResponseModel>(getListOrganizationContestsUrl(orgLogin,params),
+  const res = await fetch(getListOrganizationContestsUrl(orgLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListContestsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -1690,22 +1940,22 @@ export const listOrganizationContests = async (orgLogin: string,
 export const getListOrganizationContestsQueryKey = (orgLogin: string,
     params?: ListOrganizationContestsParams,) => {
     return [
-    `/organizations/${orgLogin}/contests`, ...(params ? [params] : [])
+    `/api/organizations/${orgLogin}/contests`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListOrganizationContestsQueryOptions = <TData = Awaited<ReturnType<typeof listOrganizationContests>>, TError = unknown>(orgLogin: string,
-    params?: ListOrganizationContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListOrganizationContestsQueryOptions = <TData = Awaited<ReturnType<typeof listOrganizationContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
+    params?: ListOrganizationContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationContests>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListOrganizationContestsQueryKey(orgLogin,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrganizationContests>>> = ({ signal }) => listOrganizationContests(orgLogin,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrganizationContests>>> = ({ signal }) => listOrganizationContests(orgLogin,params, { signal, ...fetchOptions });
 
 
 
@@ -1715,10 +1965,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListOrganizationContestsQueryResult = NonNullable<Awaited<ReturnType<typeof listOrganizationContests>>>
-export type ListOrganizationContestsQueryError = unknown
+export type ListOrganizationContestsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListOrganizationContests<TData = Awaited<ReturnType<typeof listOrganizationContests>>, TError = unknown>(
+export function useListOrganizationContests<TData = Awaited<ReturnType<typeof listOrganizationContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     params: undefined |  ListOrganizationContestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationContests>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -1726,10 +1976,10 @@ export function useListOrganizationContests<TData = Awaited<ReturnType<typeof li
           TError,
           Awaited<ReturnType<typeof listOrganizationContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOrganizationContests<TData = Awaited<ReturnType<typeof listOrganizationContests>>, TError = unknown>(
+export function useListOrganizationContests<TData = Awaited<ReturnType<typeof listOrganizationContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     params?: ListOrganizationContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationContests>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -1737,18 +1987,18 @@ export function useListOrganizationContests<TData = Awaited<ReturnType<typeof li
           TError,
           Awaited<ReturnType<typeof listOrganizationContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOrganizationContests<TData = Awaited<ReturnType<typeof listOrganizationContests>>, TError = unknown>(
+export function useListOrganizationContests<TData = Awaited<ReturnType<typeof listOrganizationContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
-    params?: ListOrganizationContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListOrganizationContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListOrganizationContests<TData = Awaited<ReturnType<typeof listOrganizationContests>>, TError = unknown>(
+export function useListOrganizationContests<TData = Awaited<ReturnType<typeof listOrganizationContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
-    params?: ListOrganizationContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListOrganizationContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -1771,20 +2021,35 @@ export const getGetContestUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}`
 }
 
 export const getContest = async (orgLogin: string,
-    contestLogin: string, options?: Parameters<typeof apiFetch>[1]): Promise<GetContestResponseModel> => {
+    contestLogin: string, options?: RequestInit): Promise<GetContestResponseModel> => {
 
-  return apiFetch<GetContestResponseModel>(getGetContestUrl(orgLogin,contestLogin),
+  const res = await fetch(getGetContestUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: GetContestResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -1793,22 +2058,22 @@ export const getContest = async (orgLogin: string,
 export const getGetContestQueryKey = (orgLogin: string,
     contestLogin: string,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}`
+    `/api/organizations/${orgLogin}/contests/${contestLogin}`
     ] as const;
     }
 
 
-export const getGetContestQueryOptions = <TData = Awaited<ReturnType<typeof getContest>>, TError = unknown>(orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContest>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetContestQueryOptions = <TData = Awaited<ReturnType<typeof getContest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContest>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetContestQueryKey(orgLogin,contestLogin);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getContest>>> = ({ signal }) => getContest(orgLogin,contestLogin, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getContest>>> = ({ signal }) => getContest(orgLogin,contestLogin, { signal, ...fetchOptions });
 
 
 
@@ -1818,10 +2083,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetContestQueryResult = NonNullable<Awaited<ReturnType<typeof getContest>>>
-export type GetContestQueryError = unknown
+export type GetContestQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetContest<TData = Awaited<ReturnType<typeof getContest>>, TError = unknown>(
+export function useGetContest<TData = Awaited<ReturnType<typeof getContest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContest>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -1829,10 +2094,10 @@ export function useGetContest<TData = Awaited<ReturnType<typeof getContest>>, TE
           TError,
           Awaited<ReturnType<typeof getContest>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetContest<TData = Awaited<ReturnType<typeof getContest>>, TError = unknown>(
+export function useGetContest<TData = Awaited<ReturnType<typeof getContest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContest>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -1840,18 +2105,18 @@ export function useGetContest<TData = Awaited<ReturnType<typeof getContest>>, TE
           TError,
           Awaited<ReturnType<typeof getContest>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetContest<TData = Awaited<ReturnType<typeof getContest>>, TError = unknown>(
+export function useGetContest<TData = Awaited<ReturnType<typeof getContest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContest>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContest>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetContest<TData = Awaited<ReturnType<typeof getContest>>, TError = unknown>(
+export function useGetContest<TData = Awaited<ReturnType<typeof getContest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContest>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContest>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -1874,20 +2139,35 @@ export const getDeleteContestUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}`
 }
 
 export const deleteContest = async (orgLogin: string,
-    contestLogin: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    contestLogin: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getDeleteContestUrl(orgLogin,contestLogin),
+  const res = await fetch(getDeleteContestUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -1895,16 +2175,16 @@ export const deleteContest = async (orgLogin: string,
 
 export const getDeleteContestMutationKey = () => ['deleteContest'] as const;
 
-export const getDeleteContestMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContest>>, TError,DeleteContestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteContestMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContest>>, TError,DeleteContestMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteContest>>, TError,DeleteContestMutationVariables, TContext> => {
 
 const mutationKey = getDeleteContestMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -1912,7 +2192,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteContest>>, DeleteContestMutationVariables> = (props) => {
           const {orgLogin,contestLogin} = props ?? {};
 
-          return  deleteContest(orgLogin,contestLogin,requestOptions)
+          return  deleteContest(orgLogin,contestLogin,fetchOptions)
         }
 
 
@@ -1924,11 +2204,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteContestMutationResult = NonNullable<Awaited<ReturnType<typeof deleteContest>>>
 
-    export type DeleteContestMutationError = unknown
+    export type DeleteContestMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteContestMutationVariables = {orgLogin: string;contestLogin: string}
 
-    export const useDeleteContest = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContest>>, TError,DeleteContestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useDeleteContest = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContest>>, TError,DeleteContestMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteContest>>,
         TError,
@@ -1944,12 +2224,12 @@ export const getUpdateContestUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}`
 }
 
 export const updateContest = async (orgLogin: string,
     contestLogin: string,
-    updateContestRequestModel: UpdateContestRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    updateContestRequestModel: UpdateContestRequestModel, options?: RequestInit): Promise<void> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -1965,14 +2245,29 @@ export const updateContest = async (orgLogin: string,
     }
     return headers;
   };
-return apiFetch<void>(getUpdateContestUrl(orgLogin,contestLogin),
+const res = await fetch(getUpdateContestUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateContestRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -1980,16 +2275,16 @@ return apiFetch<void>(getUpdateContestUrl(orgLogin,contestLogin),
 
 export const getUpdateContestMutationKey = () => ['updateContest'] as const;
 
-export const getUpdateContestMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContest>>, TError,UpdateContestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateContestMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContest>>, TError,UpdateContestMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateContest>>, TError,UpdateContestMutationVariables, TContext> => {
 
 const mutationKey = getUpdateContestMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -1997,7 +2292,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateContest>>, UpdateContestMutationVariables> = (props) => {
           const {orgLogin,contestLogin,data} = props ?? {};
 
-          return  updateContest(orgLogin,contestLogin,data,requestOptions)
+          return  updateContest(orgLogin,contestLogin,data,fetchOptions)
         }
 
 
@@ -2009,11 +2304,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateContestMutationResult = NonNullable<Awaited<ReturnType<typeof updateContest>>>
     export type UpdateContestMutationBody = UpdateContestRequestModel
-    export type UpdateContestMutationError = unknown
+    export type UpdateContestMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateContestMutationVariables = {orgLogin: string;contestLogin: string;data: UpdateContestRequestModel}
 
-    export const useUpdateContest = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContest>>, TError,UpdateContestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useUpdateContest = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContest>>, TError,UpdateContestMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateContest>>,
         TError,
@@ -2037,7 +2332,7 @@ export const getDownloadContestStatementsPdfUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/statements.pdf?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/statements.pdf`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/statements.pdf?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/statements.pdf`
 }
 
 /**
@@ -2045,16 +2340,31 @@ export const getDownloadContestStatementsPdfUrl = (orgLogin: string,
  */
 export const downloadContestStatementsPdf = async (orgLogin: string,
     contestLogin: string,
-    params?: DownloadContestStatementsPdfParams, options?: Parameters<typeof apiFetch>[1]): Promise<Blob> => {
+    params?: DownloadContestStatementsPdfParams, options?: RequestInit): Promise<Blob> => {
 
-  return apiFetch<Blob>(getDownloadContestStatementsPdfUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getDownloadContestStatementsPdfUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+  if (!res.ok) {
+    const errorBody = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = errorBody ? JSON.parse(errorBody) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const body = [204, 205, 304].includes(res.status) ? null : await res.blob();
+  const data: Blob = body as Blob
+  return data
+}
 
 
 
@@ -2064,23 +2374,23 @@ export const getDownloadContestStatementsPdfQueryKey = (orgLogin: string,
     contestLogin: string,
     params?: DownloadContestStatementsPdfParams,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}/statements.pdf`, ...(params ? [params] : [])
+    `/api/organizations/${orgLogin}/contests/${contestLogin}/statements.pdf`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getDownloadContestStatementsPdfQueryOptions = <TData = Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError = unknown>(orgLogin: string,
+export const getDownloadContestStatementsPdfQueryOptions = <TData = Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
     contestLogin: string,
-    params?: DownloadContestStatementsPdfParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: DownloadContestStatementsPdfParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getDownloadContestStatementsPdfQueryKey(orgLogin,contestLogin,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadContestStatementsPdf>>> = ({ signal }) => downloadContestStatementsPdf(orgLogin,contestLogin,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadContestStatementsPdf>>> = ({ signal }) => downloadContestStatementsPdf(orgLogin,contestLogin,params, { signal, ...fetchOptions });
 
 
 
@@ -2090,10 +2400,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type DownloadContestStatementsPdfQueryResult = NonNullable<Awaited<ReturnType<typeof downloadContestStatementsPdf>>>
-export type DownloadContestStatementsPdfQueryError = unknown
+export type DownloadContestStatementsPdfQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useDownloadContestStatementsPdf<TData = Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError = unknown>(
+export function useDownloadContestStatementsPdf<TData = Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params: undefined |  DownloadContestStatementsPdfParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError, TData>> & Pick<
@@ -2102,10 +2412,10 @@ export function useDownloadContestStatementsPdf<TData = Awaited<ReturnType<typeo
           TError,
           Awaited<ReturnType<typeof downloadContestStatementsPdf>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useDownloadContestStatementsPdf<TData = Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError = unknown>(
+export function useDownloadContestStatementsPdf<TData = Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params?: DownloadContestStatementsPdfParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError, TData>> & Pick<
@@ -2114,23 +2424,23 @@ export function useDownloadContestStatementsPdf<TData = Awaited<ReturnType<typeo
           TError,
           Awaited<ReturnType<typeof downloadContestStatementsPdf>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useDownloadContestStatementsPdf<TData = Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError = unknown>(
+export function useDownloadContestStatementsPdf<TData = Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: DownloadContestStatementsPdfParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: DownloadContestStatementsPdfParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Download PDF booklet with contest statements
  */
 
-export function useDownloadContestStatementsPdf<TData = Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError = unknown>(
+export function useDownloadContestStatementsPdf<TData = Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: DownloadContestStatementsPdfParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: DownloadContestStatementsPdfParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadContestStatementsPdf>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -2161,21 +2471,36 @@ export const getCreateContestProblemUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/problems?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/problems`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/problems?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/problems`
 }
 
 export const createContestProblem = async (orgLogin: string,
     contestLogin: string,
-    params: CreateContestProblemParams, options?: Parameters<typeof apiFetch>[1]): Promise<CreationResponseModel> => {
+    params: CreateContestProblemParams, options?: RequestInit): Promise<CreationResponseModel> => {
 
-  return apiFetch<CreationResponseModel>(getCreateContestProblemUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getCreateContestProblemUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: CreationResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -2183,16 +2508,16 @@ export const createContestProblem = async (orgLogin: string,
 
 export const getCreateContestProblemMutationKey = () => ['createContestProblem'] as const;
 
-export const getCreateContestProblemMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestProblem>>, TError,CreateContestProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateContestProblemMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestProblem>>, TError,CreateContestProblemMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createContestProblem>>, TError,CreateContestProblemMutationVariables, TContext> => {
 
 const mutationKey = getCreateContestProblemMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -2200,7 +2525,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createContestProblem>>, CreateContestProblemMutationVariables> = (props) => {
           const {orgLogin,contestLogin,params} = props ?? {};
 
-          return  createContestProblem(orgLogin,contestLogin,params,requestOptions)
+          return  createContestProblem(orgLogin,contestLogin,params,fetchOptions)
         }
 
 
@@ -2212,11 +2537,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateContestProblemMutationResult = NonNullable<Awaited<ReturnType<typeof createContestProblem>>>
 
-    export type CreateContestProblemMutationError = unknown
+    export type CreateContestProblemMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateContestProblemMutationVariables = {orgLogin: string;contestLogin: string;params: CreateContestProblemParams}
 
-    export const useCreateContestProblem = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestProblem>>, TError,CreateContestProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useCreateContestProblem = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestProblem>>, TError,CreateContestProblemMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createContestProblem>>,
         TError,
@@ -2232,12 +2557,12 @@ export const getReorderContestProblemsUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/problems/reorder`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/problems/reorder`
 }
 
 export const reorderContestProblems = async (orgLogin: string,
     contestLogin: string,
-    reorderContestProblemsRequestModel: ReorderContestProblemsRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    reorderContestProblemsRequestModel: ReorderContestProblemsRequestModel, options?: RequestInit): Promise<void> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -2253,14 +2578,29 @@ export const reorderContestProblems = async (orgLogin: string,
     }
     return headers;
   };
-return apiFetch<void>(getReorderContestProblemsUrl(orgLogin,contestLogin),
+const res = await fetch(getReorderContestProblemsUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(reorderContestProblemsRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -2268,16 +2608,16 @@ return apiFetch<void>(getReorderContestProblemsUrl(orgLogin,contestLogin),
 
 export const getReorderContestProblemsMutationKey = () => ['reorderContestProblems'] as const;
 
-export const getReorderContestProblemsMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderContestProblems>>, TError,ReorderContestProblemsMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getReorderContestProblemsMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderContestProblems>>, TError,ReorderContestProblemsMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof reorderContestProblems>>, TError,ReorderContestProblemsMutationVariables, TContext> => {
 
 const mutationKey = getReorderContestProblemsMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -2285,7 +2625,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof reorderContestProblems>>, ReorderContestProblemsMutationVariables> = (props) => {
           const {orgLogin,contestLogin,data} = props ?? {};
 
-          return  reorderContestProblems(orgLogin,contestLogin,data,requestOptions)
+          return  reorderContestProblems(orgLogin,contestLogin,data,fetchOptions)
         }
 
 
@@ -2297,11 +2637,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ReorderContestProblemsMutationResult = NonNullable<Awaited<ReturnType<typeof reorderContestProblems>>>
     export type ReorderContestProblemsMutationBody = ReorderContestProblemsRequestModel
-    export type ReorderContestProblemsMutationError = unknown
+    export type ReorderContestProblemsMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type ReorderContestProblemsMutationVariables = {orgLogin: string;contestLogin: string;data: ReorderContestProblemsRequestModel}
 
-    export const useReorderContestProblems = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderContestProblems>>, TError,ReorderContestProblemsMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useReorderContestProblems = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderContestProblems>>, TError,ReorderContestProblemsMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof reorderContestProblems>>,
         TError,
@@ -2318,21 +2658,36 @@ export const getGetContestProblemUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/problems/${encodeURIComponent(String(problemId))}`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/problems/${encodeURIComponent(String(problemId))}`
 }
 
 export const getContestProblem = async (orgLogin: string,
     contestLogin: string,
-    problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<GetContestProblemResponseModel> => {
+    problemId: string, options?: RequestInit): Promise<GetContestProblemResponseModel> => {
 
-  return apiFetch<GetContestProblemResponseModel>(getGetContestProblemUrl(orgLogin,contestLogin,problemId),
+  const res = await fetch(getGetContestProblemUrl(orgLogin,contestLogin,problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: GetContestProblemResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -2342,23 +2697,23 @@ export const getGetContestProblemQueryKey = (orgLogin: string,
     contestLogin: string,
     problemId: string,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}/problems/${problemId}`
+    `/api/organizations/${orgLogin}/contests/${contestLogin}/problems/${problemId}`
     ] as const;
     }
 
 
-export const getGetContestProblemQueryOptions = <TData = Awaited<ReturnType<typeof getContestProblem>>, TError = unknown>(orgLogin: string,
+export const getGetContestProblemQueryOptions = <TData = Awaited<ReturnType<typeof getContestProblem>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
     contestLogin: string,
-    problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestProblem>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestProblem>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetContestProblemQueryKey(orgLogin,contestLogin,problemId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getContestProblem>>> = ({ signal }) => getContestProblem(orgLogin,contestLogin,problemId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getContestProblem>>> = ({ signal }) => getContestProblem(orgLogin,contestLogin,problemId, { signal, ...fetchOptions });
 
 
 
@@ -2368,10 +2723,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetContestProblemQueryResult = NonNullable<Awaited<ReturnType<typeof getContestProblem>>>
-export type GetContestProblemQueryError = unknown
+export type GetContestProblemQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetContestProblem<TData = Awaited<ReturnType<typeof getContestProblem>>, TError = unknown>(
+export function useGetContestProblem<TData = Awaited<ReturnType<typeof getContestProblem>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     problemId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestProblem>>, TError, TData>> & Pick<
@@ -2380,10 +2735,10 @@ export function useGetContestProblem<TData = Awaited<ReturnType<typeof getContes
           TError,
           Awaited<ReturnType<typeof getContestProblem>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetContestProblem<TData = Awaited<ReturnType<typeof getContestProblem>>, TError = unknown>(
+export function useGetContestProblem<TData = Awaited<ReturnType<typeof getContestProblem>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestProblem>>, TError, TData>> & Pick<
@@ -2392,20 +2747,20 @@ export function useGetContestProblem<TData = Awaited<ReturnType<typeof getContes
           TError,
           Awaited<ReturnType<typeof getContestProblem>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetContestProblem<TData = Awaited<ReturnType<typeof getContestProblem>>, TError = unknown>(
+export function useGetContestProblem<TData = Awaited<ReturnType<typeof getContestProblem>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestProblem>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestProblem>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetContestProblem<TData = Awaited<ReturnType<typeof getContestProblem>>, TError = unknown>(
+export function useGetContestProblem<TData = Awaited<ReturnType<typeof getContestProblem>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestProblem>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestProblem>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -2429,21 +2784,36 @@ export const getDeleteContestProblemUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/problems/${encodeURIComponent(String(problemId))}`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/problems/${encodeURIComponent(String(problemId))}`
 }
 
 export const deleteContestProblem = async (orgLogin: string,
     contestLogin: string,
-    problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    problemId: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getDeleteContestProblemUrl(orgLogin,contestLogin,problemId),
+  const res = await fetch(getDeleteContestProblemUrl(orgLogin,contestLogin,problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -2451,16 +2821,16 @@ export const deleteContestProblem = async (orgLogin: string,
 
 export const getDeleteContestProblemMutationKey = () => ['deleteContestProblem'] as const;
 
-export const getDeleteContestProblemMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestProblem>>, TError,DeleteContestProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteContestProblemMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestProblem>>, TError,DeleteContestProblemMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteContestProblem>>, TError,DeleteContestProblemMutationVariables, TContext> => {
 
 const mutationKey = getDeleteContestProblemMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -2468,7 +2838,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteContestProblem>>, DeleteContestProblemMutationVariables> = (props) => {
           const {orgLogin,contestLogin,problemId} = props ?? {};
 
-          return  deleteContestProblem(orgLogin,contestLogin,problemId,requestOptions)
+          return  deleteContestProblem(orgLogin,contestLogin,problemId,fetchOptions)
         }
 
 
@@ -2480,11 +2850,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteContestProblemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteContestProblem>>>
 
-    export type DeleteContestProblemMutationError = unknown
+    export type DeleteContestProblemMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteContestProblemMutationVariables = {orgLogin: string;contestLogin: string;problemId: string}
 
-    export const useDeleteContestProblem = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestProblem>>, TError,DeleteContestProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useDeleteContestProblem = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestProblem>>, TError,DeleteContestProblemMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteContestProblem>>,
         TError,
@@ -2508,21 +2878,36 @@ export const getListContestMembersUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members`
 }
 
 export const listContestMembers = async (orgLogin: string,
     contestLogin: string,
-    params?: ListContestMembersParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListContestMembersResponseModel> => {
+    params?: ListContestMembersParams, options?: RequestInit): Promise<ListContestMembersResponseModel> => {
 
-  return apiFetch<ListContestMembersResponseModel>(getListContestMembersUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getListContestMembersUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListContestMembersResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -2532,23 +2917,23 @@ export const getListContestMembersQueryKey = (orgLogin: string,
     contestLogin: string,
     params?: ListContestMembersParams,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}/members`, ...(params ? [params] : [])
+    `/api/organizations/${orgLogin}/contests/${contestLogin}/members`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListContestMembersQueryOptions = <TData = Awaited<ReturnType<typeof listContestMembers>>, TError = unknown>(orgLogin: string,
+export const getListContestMembersQueryOptions = <TData = Awaited<ReturnType<typeof listContestMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
     contestLogin: string,
-    params?: ListContestMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestMembers>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListContestMembersQueryKey(orgLogin,contestLogin,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestMembers>>> = ({ signal }) => listContestMembers(orgLogin,contestLogin,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestMembers>>> = ({ signal }) => listContestMembers(orgLogin,contestLogin,params, { signal, ...fetchOptions });
 
 
 
@@ -2558,10 +2943,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListContestMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listContestMembers>>>
-export type ListContestMembersQueryError = unknown
+export type ListContestMembersQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListContestMembers<TData = Awaited<ReturnType<typeof listContestMembers>>, TError = unknown>(
+export function useListContestMembers<TData = Awaited<ReturnType<typeof listContestMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params: undefined |  ListContestMembersParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestMembers>>, TError, TData>> & Pick<
@@ -2570,10 +2955,10 @@ export function useListContestMembers<TData = Awaited<ReturnType<typeof listCont
           TError,
           Awaited<ReturnType<typeof listContestMembers>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestMembers<TData = Awaited<ReturnType<typeof listContestMembers>>, TError = unknown>(
+export function useListContestMembers<TData = Awaited<ReturnType<typeof listContestMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params?: ListContestMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestMembers>>, TError, TData>> & Pick<
@@ -2582,20 +2967,20 @@ export function useListContestMembers<TData = Awaited<ReturnType<typeof listCont
           TError,
           Awaited<ReturnType<typeof listContestMembers>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestMembers<TData = Awaited<ReturnType<typeof listContestMembers>>, TError = unknown>(
+export function useListContestMembers<TData = Awaited<ReturnType<typeof listContestMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: ListContestMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestMembers>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListContestMembers<TData = Awaited<ReturnType<typeof listContestMembers>>, TError = unknown>(
+export function useListContestMembers<TData = Awaited<ReturnType<typeof listContestMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: ListContestMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestMembers>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -2626,21 +3011,36 @@ export const getCreateContestMemberUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members`
 }
 
 export const createContestMember = async (orgLogin: string,
     contestLogin: string,
-    params: CreateContestMemberParams, options?: Parameters<typeof apiFetch>[1]): Promise<CreationResponseModel> => {
+    params: CreateContestMemberParams, options?: RequestInit): Promise<CreationResponseModel> => {
 
-  return apiFetch<CreationResponseModel>(getCreateContestMemberUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getCreateContestMemberUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: CreationResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -2648,16 +3048,16 @@ export const createContestMember = async (orgLogin: string,
 
 export const getCreateContestMemberMutationKey = () => ['createContestMember'] as const;
 
-export const getCreateContestMemberMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestMember>>, TError,CreateContestMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateContestMemberMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestMember>>, TError,CreateContestMemberMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createContestMember>>, TError,CreateContestMemberMutationVariables, TContext> => {
 
 const mutationKey = getCreateContestMemberMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -2665,7 +3065,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createContestMember>>, CreateContestMemberMutationVariables> = (props) => {
           const {orgLogin,contestLogin,params} = props ?? {};
 
-          return  createContestMember(orgLogin,contestLogin,params,requestOptions)
+          return  createContestMember(orgLogin,contestLogin,params,fetchOptions)
         }
 
 
@@ -2677,11 +3077,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateContestMemberMutationResult = NonNullable<Awaited<ReturnType<typeof createContestMember>>>
 
-    export type CreateContestMemberMutationError = unknown
+    export type CreateContestMemberMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateContestMemberMutationVariables = {orgLogin: string;contestLogin: string;params: CreateContestMemberParams}
 
-    export const useCreateContestMember = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestMember>>, TError,CreateContestMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useCreateContestMember = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestMember>>, TError,CreateContestMemberMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createContestMember>>,
         TError,
@@ -2705,21 +3105,36 @@ export const getDeleteContestMemberUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members`
 }
 
 export const deleteContestMember = async (orgLogin: string,
     contestLogin: string,
-    params: DeleteContestMemberParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: DeleteContestMemberParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getDeleteContestMemberUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getDeleteContestMemberUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -2727,16 +3142,16 @@ export const deleteContestMember = async (orgLogin: string,
 
 export const getDeleteContestMemberMutationKey = () => ['deleteContestMember'] as const;
 
-export const getDeleteContestMemberMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestMember>>, TError,DeleteContestMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteContestMemberMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestMember>>, TError,DeleteContestMemberMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteContestMember>>, TError,DeleteContestMemberMutationVariables, TContext> => {
 
 const mutationKey = getDeleteContestMemberMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -2744,7 +3159,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteContestMember>>, DeleteContestMemberMutationVariables> = (props) => {
           const {orgLogin,contestLogin,params} = props ?? {};
 
-          return  deleteContestMember(orgLogin,contestLogin,params,requestOptions)
+          return  deleteContestMember(orgLogin,contestLogin,params,fetchOptions)
         }
 
 
@@ -2756,11 +3171,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteContestMemberMutationResult = NonNullable<Awaited<ReturnType<typeof deleteContestMember>>>
 
-    export type DeleteContestMemberMutationError = unknown
+    export type DeleteContestMemberMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteContestMemberMutationVariables = {orgLogin: string;contestLogin: string;params: DeleteContestMemberParams}
 
-    export const useDeleteContestMember = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestMember>>, TError,DeleteContestMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useDeleteContestMember = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestMember>>, TError,DeleteContestMemberMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteContestMember>>,
         TError,
@@ -2784,21 +3199,36 @@ export const getUpdateContestMemberUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/members`
 }
 
 export const updateContestMember = async (orgLogin: string,
     contestLogin: string,
-    params: UpdateContestMemberParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: UpdateContestMemberParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getUpdateContestMemberUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getUpdateContestMemberUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -2806,16 +3236,16 @@ export const updateContestMember = async (orgLogin: string,
 
 export const getUpdateContestMemberMutationKey = () => ['updateContestMember'] as const;
 
-export const getUpdateContestMemberMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContestMember>>, TError,UpdateContestMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateContestMemberMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContestMember>>, TError,UpdateContestMemberMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateContestMember>>, TError,UpdateContestMemberMutationVariables, TContext> => {
 
 const mutationKey = getUpdateContestMemberMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -2823,7 +3253,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateContestMember>>, UpdateContestMemberMutationVariables> = (props) => {
           const {orgLogin,contestLogin,params} = props ?? {};
 
-          return  updateContestMember(orgLogin,contestLogin,params,requestOptions)
+          return  updateContestMember(orgLogin,contestLogin,params,fetchOptions)
         }
 
 
@@ -2835,11 +3265,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateContestMemberMutationResult = NonNullable<Awaited<ReturnType<typeof updateContestMember>>>
 
-    export type UpdateContestMemberMutationError = unknown
+    export type UpdateContestMemberMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateContestMemberMutationVariables = {orgLogin: string;contestLogin: string;params: UpdateContestMemberParams}
 
-    export const useUpdateContestMember = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContestMember>>, TError,UpdateContestMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useUpdateContestMember = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContestMember>>, TError,UpdateContestMemberMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateContestMember>>,
         TError,
@@ -2855,20 +3285,35 @@ export const getListContestTeamsUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams`
 }
 
 export const listContestTeams = async (orgLogin: string,
-    contestLogin: string, options?: Parameters<typeof apiFetch>[1]): Promise<ListContestTeamsResponseModel> => {
+    contestLogin: string, options?: RequestInit): Promise<ListContestTeamsResponseModel> => {
 
-  return apiFetch<ListContestTeamsResponseModel>(getListContestTeamsUrl(orgLogin,contestLogin),
+  const res = await fetch(getListContestTeamsUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListContestTeamsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -2877,22 +3322,22 @@ export const listContestTeams = async (orgLogin: string,
 export const getListContestTeamsQueryKey = (orgLogin: string,
     contestLogin: string,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}/teams`
+    `/api/organizations/${orgLogin}/contests/${contestLogin}/teams`
     ] as const;
     }
 
 
-export const getListContestTeamsQueryOptions = <TData = Awaited<ReturnType<typeof listContestTeams>>, TError = unknown>(orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestTeams>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListContestTeamsQueryOptions = <TData = Awaited<ReturnType<typeof listContestTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestTeams>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListContestTeamsQueryKey(orgLogin,contestLogin);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestTeams>>> = ({ signal }) => listContestTeams(orgLogin,contestLogin, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestTeams>>> = ({ signal }) => listContestTeams(orgLogin,contestLogin, { signal, ...fetchOptions });
 
 
 
@@ -2902,10 +3347,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListContestTeamsQueryResult = NonNullable<Awaited<ReturnType<typeof listContestTeams>>>
-export type ListContestTeamsQueryError = unknown
+export type ListContestTeamsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListContestTeams<TData = Awaited<ReturnType<typeof listContestTeams>>, TError = unknown>(
+export function useListContestTeams<TData = Awaited<ReturnType<typeof listContestTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestTeams>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -2913,10 +3358,10 @@ export function useListContestTeams<TData = Awaited<ReturnType<typeof listContes
           TError,
           Awaited<ReturnType<typeof listContestTeams>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestTeams<TData = Awaited<ReturnType<typeof listContestTeams>>, TError = unknown>(
+export function useListContestTeams<TData = Awaited<ReturnType<typeof listContestTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestTeams>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -2924,18 +3369,18 @@ export function useListContestTeams<TData = Awaited<ReturnType<typeof listContes
           TError,
           Awaited<ReturnType<typeof listContestTeams>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestTeams<TData = Awaited<ReturnType<typeof listContestTeams>>, TError = unknown>(
+export function useListContestTeams<TData = Awaited<ReturnType<typeof listContestTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestTeams>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestTeams>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListContestTeams<TData = Awaited<ReturnType<typeof listContestTeams>>, TError = unknown>(
+export function useListContestTeams<TData = Awaited<ReturnType<typeof listContestTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestTeams>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestTeams>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -2966,21 +3411,36 @@ export const getCreateContestTeamUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams`
 }
 
 export const createContestTeam = async (orgLogin: string,
     contestLogin: string,
-    params: CreateContestTeamParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: CreateContestTeamParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getCreateContestTeamUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getCreateContestTeamUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -2988,16 +3448,16 @@ export const createContestTeam = async (orgLogin: string,
 
 export const getCreateContestTeamMutationKey = () => ['createContestTeam'] as const;
 
-export const getCreateContestTeamMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestTeam>>, TError,CreateContestTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateContestTeamMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestTeam>>, TError,CreateContestTeamMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createContestTeam>>, TError,CreateContestTeamMutationVariables, TContext> => {
 
 const mutationKey = getCreateContestTeamMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -3005,7 +3465,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createContestTeam>>, CreateContestTeamMutationVariables> = (props) => {
           const {orgLogin,contestLogin,params} = props ?? {};
 
-          return  createContestTeam(orgLogin,contestLogin,params,requestOptions)
+          return  createContestTeam(orgLogin,contestLogin,params,fetchOptions)
         }
 
 
@@ -3017,11 +3477,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateContestTeamMutationResult = NonNullable<Awaited<ReturnType<typeof createContestTeam>>>
 
-    export type CreateContestTeamMutationError = unknown
+    export type CreateContestTeamMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateContestTeamMutationVariables = {orgLogin: string;contestLogin: string;params: CreateContestTeamParams}
 
-    export const useCreateContestTeam = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestTeam>>, TError,CreateContestTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useCreateContestTeam = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestTeam>>, TError,CreateContestTeamMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createContestTeam>>,
         TError,
@@ -3045,21 +3505,36 @@ export const getDeleteContestTeamUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams`
 }
 
 export const deleteContestTeam = async (orgLogin: string,
     contestLogin: string,
-    params: DeleteContestTeamParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: DeleteContestTeamParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getDeleteContestTeamUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getDeleteContestTeamUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -3067,16 +3542,16 @@ export const deleteContestTeam = async (orgLogin: string,
 
 export const getDeleteContestTeamMutationKey = () => ['deleteContestTeam'] as const;
 
-export const getDeleteContestTeamMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestTeam>>, TError,DeleteContestTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteContestTeamMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestTeam>>, TError,DeleteContestTeamMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteContestTeam>>, TError,DeleteContestTeamMutationVariables, TContext> => {
 
 const mutationKey = getDeleteContestTeamMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -3084,7 +3559,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteContestTeam>>, DeleteContestTeamMutationVariables> = (props) => {
           const {orgLogin,contestLogin,params} = props ?? {};
 
-          return  deleteContestTeam(orgLogin,contestLogin,params,requestOptions)
+          return  deleteContestTeam(orgLogin,contestLogin,params,fetchOptions)
         }
 
 
@@ -3096,11 +3571,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteContestTeamMutationResult = NonNullable<Awaited<ReturnType<typeof deleteContestTeam>>>
 
-    export type DeleteContestTeamMutationError = unknown
+    export type DeleteContestTeamMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteContestTeamMutationVariables = {orgLogin: string;contestLogin: string;params: DeleteContestTeamParams}
 
-    export const useDeleteContestTeam = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestTeam>>, TError,DeleteContestTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useDeleteContestTeam = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestTeam>>, TError,DeleteContestTeamMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteContestTeam>>,
         TError,
@@ -3124,21 +3599,36 @@ export const getUpdateContestTeamUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/teams`
 }
 
 export const updateContestTeam = async (orgLogin: string,
     contestLogin: string,
-    params: UpdateContestTeamParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: UpdateContestTeamParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getUpdateContestTeamUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getUpdateContestTeamUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -3146,16 +3636,16 @@ export const updateContestTeam = async (orgLogin: string,
 
 export const getUpdateContestTeamMutationKey = () => ['updateContestTeam'] as const;
 
-export const getUpdateContestTeamMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContestTeam>>, TError,UpdateContestTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateContestTeamMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContestTeam>>, TError,UpdateContestTeamMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateContestTeam>>, TError,UpdateContestTeamMutationVariables, TContext> => {
 
 const mutationKey = getUpdateContestTeamMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -3163,7 +3653,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateContestTeam>>, UpdateContestTeamMutationVariables> = (props) => {
           const {orgLogin,contestLogin,params} = props ?? {};
 
-          return  updateContestTeam(orgLogin,contestLogin,params,requestOptions)
+          return  updateContestTeam(orgLogin,contestLogin,params,fetchOptions)
         }
 
 
@@ -3175,11 +3665,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateContestTeamMutationResult = NonNullable<Awaited<ReturnType<typeof updateContestTeam>>>
 
-    export type UpdateContestTeamMutationError = unknown
+    export type UpdateContestTeamMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateContestTeamMutationVariables = {orgLogin: string;contestLogin: string;params: UpdateContestTeamParams}
 
-    export const useUpdateContestTeam = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContestTeam>>, TError,UpdateContestTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useUpdateContestTeam = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContestTeam>>, TError,UpdateContestTeamMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateContestTeam>>,
         TError,
@@ -3195,20 +3685,35 @@ export const getGetMyContestRoleUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/my-role`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/my-role`
 }
 
 export const getMyContestRole = async (orgLogin: string,
-    contestLogin: string, options?: Parameters<typeof apiFetch>[1]): Promise<GetMyContestRoleResponseModel> => {
+    contestLogin: string, options?: RequestInit): Promise<GetMyContestRoleResponseModel> => {
 
-  return apiFetch<GetMyContestRoleResponseModel>(getGetMyContestRoleUrl(orgLogin,contestLogin),
+  const res = await fetch(getGetMyContestRoleUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: GetMyContestRoleResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -3217,22 +3722,22 @@ export const getMyContestRole = async (orgLogin: string,
 export const getGetMyContestRoleQueryKey = (orgLogin: string,
     contestLogin: string,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}/my-role`
+    `/api/organizations/${orgLogin}/contests/${contestLogin}/my-role`
     ] as const;
     }
 
 
-export const getGetMyContestRoleQueryOptions = <TData = Awaited<ReturnType<typeof getMyContestRole>>, TError = unknown>(orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestRole>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetMyContestRoleQueryOptions = <TData = Awaited<ReturnType<typeof getMyContestRole>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestRole>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetMyContestRoleQueryKey(orgLogin,contestLogin);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyContestRole>>> = ({ signal }) => getMyContestRole(orgLogin,contestLogin, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyContestRole>>> = ({ signal }) => getMyContestRole(orgLogin,contestLogin, { signal, ...fetchOptions });
 
 
 
@@ -3242,10 +3747,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetMyContestRoleQueryResult = NonNullable<Awaited<ReturnType<typeof getMyContestRole>>>
-export type GetMyContestRoleQueryError = unknown
+export type GetMyContestRoleQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetMyContestRole<TData = Awaited<ReturnType<typeof getMyContestRole>>, TError = unknown>(
+export function useGetMyContestRole<TData = Awaited<ReturnType<typeof getMyContestRole>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestRole>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -3253,10 +3758,10 @@ export function useGetMyContestRole<TData = Awaited<ReturnType<typeof getMyConte
           TError,
           Awaited<ReturnType<typeof getMyContestRole>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyContestRole<TData = Awaited<ReturnType<typeof getMyContestRole>>, TError = unknown>(
+export function useGetMyContestRole<TData = Awaited<ReturnType<typeof getMyContestRole>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestRole>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -3264,18 +3769,18 @@ export function useGetMyContestRole<TData = Awaited<ReturnType<typeof getMyConte
           TError,
           Awaited<ReturnType<typeof getMyContestRole>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyContestRole<TData = Awaited<ReturnType<typeof getMyContestRole>>, TError = unknown>(
+export function useGetMyContestRole<TData = Awaited<ReturnType<typeof getMyContestRole>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestRole>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestRole>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetMyContestRole<TData = Awaited<ReturnType<typeof getMyContestRole>>, TError = unknown>(
+export function useGetMyContestRole<TData = Awaited<ReturnType<typeof getMyContestRole>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestRole>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestRole>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -3306,21 +3811,36 @@ export const getListContestSubmissionsUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/submissions?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/submissions`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/submissions?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/submissions`
 }
 
 export const listContestSubmissions = async (orgLogin: string,
     contestLogin: string,
-    params?: ListContestSubmissionsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListSubmissionsResponseModel> => {
+    params?: ListContestSubmissionsParams, options?: RequestInit): Promise<ListSubmissionsResponseModel> => {
 
-  return apiFetch<ListSubmissionsResponseModel>(getListContestSubmissionsUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getListContestSubmissionsUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListSubmissionsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -3330,23 +3850,23 @@ export const getListContestSubmissionsQueryKey = (orgLogin: string,
     contestLogin: string,
     params?: ListContestSubmissionsParams,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}/submissions`, ...(params ? [params] : [])
+    `/api/organizations/${orgLogin}/contests/${contestLogin}/submissions`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListContestSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof listContestSubmissions>>, TError = unknown>(orgLogin: string,
+export const getListContestSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof listContestSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
     contestLogin: string,
-    params?: ListContestSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestSubmissions>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListContestSubmissionsQueryKey(orgLogin,contestLogin,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestSubmissions>>> = ({ signal }) => listContestSubmissions(orgLogin,contestLogin,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestSubmissions>>> = ({ signal }) => listContestSubmissions(orgLogin,contestLogin,params, { signal, ...fetchOptions });
 
 
 
@@ -3356,10 +3876,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListContestSubmissionsQueryResult = NonNullable<Awaited<ReturnType<typeof listContestSubmissions>>>
-export type ListContestSubmissionsQueryError = unknown
+export type ListContestSubmissionsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListContestSubmissions<TData = Awaited<ReturnType<typeof listContestSubmissions>>, TError = unknown>(
+export function useListContestSubmissions<TData = Awaited<ReturnType<typeof listContestSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params: undefined |  ListContestSubmissionsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestSubmissions>>, TError, TData>> & Pick<
@@ -3368,10 +3888,10 @@ export function useListContestSubmissions<TData = Awaited<ReturnType<typeof list
           TError,
           Awaited<ReturnType<typeof listContestSubmissions>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestSubmissions<TData = Awaited<ReturnType<typeof listContestSubmissions>>, TError = unknown>(
+export function useListContestSubmissions<TData = Awaited<ReturnType<typeof listContestSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params?: ListContestSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestSubmissions>>, TError, TData>> & Pick<
@@ -3380,20 +3900,20 @@ export function useListContestSubmissions<TData = Awaited<ReturnType<typeof list
           TError,
           Awaited<ReturnType<typeof listContestSubmissions>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestSubmissions<TData = Awaited<ReturnType<typeof listContestSubmissions>>, TError = unknown>(
+export function useListContestSubmissions<TData = Awaited<ReturnType<typeof listContestSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: ListContestSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestSubmissions>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListContestSubmissions<TData = Awaited<ReturnType<typeof listContestSubmissions>>, TError = unknown>(
+export function useListContestSubmissions<TData = Awaited<ReturnType<typeof listContestSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: ListContestSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestSubmissions>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -3417,21 +3937,36 @@ export const getRejudgeSubmissionUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/submissions/${encodeURIComponent(String(submissionId))}/rejudge`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/submissions/${encodeURIComponent(String(submissionId))}/rejudge`
 }
 
 export const rejudgeSubmission = async (orgLogin: string,
     contestLogin: string,
-    submissionId: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    submissionId: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getRejudgeSubmissionUrl(orgLogin,contestLogin,submissionId),
+  const res = await fetch(getRejudgeSubmissionUrl(orgLogin,contestLogin,submissionId),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -3439,16 +3974,16 @@ export const rejudgeSubmission = async (orgLogin: string,
 
 export const getRejudgeSubmissionMutationKey = () => ['rejudgeSubmission'] as const;
 
-export const getRejudgeSubmissionMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejudgeSubmission>>, TError,RejudgeSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getRejudgeSubmissionMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejudgeSubmission>>, TError,RejudgeSubmissionMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof rejudgeSubmission>>, TError,RejudgeSubmissionMutationVariables, TContext> => {
 
 const mutationKey = getRejudgeSubmissionMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -3456,7 +3991,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejudgeSubmission>>, RejudgeSubmissionMutationVariables> = (props) => {
           const {orgLogin,contestLogin,submissionId} = props ?? {};
 
-          return  rejudgeSubmission(orgLogin,contestLogin,submissionId,requestOptions)
+          return  rejudgeSubmission(orgLogin,contestLogin,submissionId,fetchOptions)
         }
 
 
@@ -3468,11 +4003,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RejudgeSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof rejudgeSubmission>>>
 
-    export type RejudgeSubmissionMutationError = unknown
+    export type RejudgeSubmissionMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type RejudgeSubmissionMutationVariables = {orgLogin: string;contestLogin: string;submissionId: string}
 
-    export const useRejudgeSubmission = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejudgeSubmission>>, TError,RejudgeSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useRejudgeSubmission = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejudgeSubmission>>, TError,RejudgeSubmissionMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof rejudgeSubmission>>,
         TError,
@@ -3489,13 +4024,13 @@ export const getBlockSubmissionUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/submissions/${encodeURIComponent(String(submissionId))}/block`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/submissions/${encodeURIComponent(String(submissionId))}/block`
 }
 
 export const blockSubmission = async (orgLogin: string,
     contestLogin: string,
     submissionId: string,
-    blockSubmissionRequestModel?: BlockSubmissionRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    blockSubmissionRequestModel?: BlockSubmissionRequestModel, options?: RequestInit): Promise<void> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -3511,14 +4046,29 @@ export const blockSubmission = async (orgLogin: string,
     }
     return headers;
   };
-return apiFetch<void>(getBlockSubmissionUrl(orgLogin,contestLogin,submissionId),
+const res = await fetch(getBlockSubmissionUrl(orgLogin,contestLogin,submissionId),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(blockSubmissionRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -3526,16 +4076,16 @@ return apiFetch<void>(getBlockSubmissionUrl(orgLogin,contestLogin,submissionId),
 
 export const getBlockSubmissionMutationKey = () => ['blockSubmission'] as const;
 
-export const getBlockSubmissionMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof blockSubmission>>, TError,BlockSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getBlockSubmissionMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof blockSubmission>>, TError,BlockSubmissionMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof blockSubmission>>, TError,BlockSubmissionMutationVariables, TContext> => {
 
 const mutationKey = getBlockSubmissionMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -3543,7 +4093,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof blockSubmission>>, BlockSubmissionMutationVariables> = (props) => {
           const {orgLogin,contestLogin,submissionId,data} = props ?? {};
 
-          return  blockSubmission(orgLogin,contestLogin,submissionId,data,requestOptions)
+          return  blockSubmission(orgLogin,contestLogin,submissionId,data,fetchOptions)
         }
 
 
@@ -3555,11 +4105,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type BlockSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof blockSubmission>>>
     export type BlockSubmissionMutationBody = BlockSubmissionRequestModel | undefined
-    export type BlockSubmissionMutationError = unknown
+    export type BlockSubmissionMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type BlockSubmissionMutationVariables = {orgLogin: string;contestLogin: string;submissionId: string;data?: BlockSubmissionRequestModel}
 
-    export const useBlockSubmission = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof blockSubmission>>, TError,BlockSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useBlockSubmission = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof blockSubmission>>, TError,BlockSubmissionMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof blockSubmission>>,
         TError,
@@ -3576,21 +4126,36 @@ export const getUnblockSubmissionUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/submissions/${encodeURIComponent(String(submissionId))}/unblock`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/submissions/${encodeURIComponent(String(submissionId))}/unblock`
 }
 
 export const unblockSubmission = async (orgLogin: string,
     contestLogin: string,
-    submissionId: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    submissionId: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getUnblockSubmissionUrl(orgLogin,contestLogin,submissionId),
+  const res = await fetch(getUnblockSubmissionUrl(orgLogin,contestLogin,submissionId),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -3598,16 +4163,16 @@ export const unblockSubmission = async (orgLogin: string,
 
 export const getUnblockSubmissionMutationKey = () => ['unblockSubmission'] as const;
 
-export const getUnblockSubmissionMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unblockSubmission>>, TError,UnblockSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUnblockSubmissionMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unblockSubmission>>, TError,UnblockSubmissionMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof unblockSubmission>>, TError,UnblockSubmissionMutationVariables, TContext> => {
 
 const mutationKey = getUnblockSubmissionMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -3615,7 +4180,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof unblockSubmission>>, UnblockSubmissionMutationVariables> = (props) => {
           const {orgLogin,contestLogin,submissionId} = props ?? {};
 
-          return  unblockSubmission(orgLogin,contestLogin,submissionId,requestOptions)
+          return  unblockSubmission(orgLogin,contestLogin,submissionId,fetchOptions)
         }
 
 
@@ -3627,11 +4192,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UnblockSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof unblockSubmission>>>
 
-    export type UnblockSubmissionMutationError = unknown
+    export type UnblockSubmissionMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UnblockSubmissionMutationVariables = {orgLogin: string;contestLogin: string;submissionId: string}
 
-    export const useUnblockSubmission = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unblockSubmission>>, TError,UnblockSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useUnblockSubmission = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unblockSubmission>>, TError,UnblockSubmissionMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof unblockSubmission>>,
         TError,
@@ -3649,14 +4214,14 @@ export const getBlockProblemForUserUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/participants/${encodeURIComponent(String(userId))}/problems/${encodeURIComponent(String(problemId))}/block`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/participants/${encodeURIComponent(String(userId))}/problems/${encodeURIComponent(String(problemId))}/block`
 }
 
 export const blockProblemForUser = async (orgLogin: string,
     contestLogin: string,
     userId: string,
     problemId: string,
-    blockProblemRequestModel?: BlockProblemRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    blockProblemRequestModel?: BlockProblemRequestModel, options?: RequestInit): Promise<void> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -3672,14 +4237,29 @@ export const blockProblemForUser = async (orgLogin: string,
     }
     return headers;
   };
-return apiFetch<void>(getBlockProblemForUserUrl(orgLogin,contestLogin,userId,problemId),
+const res = await fetch(getBlockProblemForUserUrl(orgLogin,contestLogin,userId,problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(blockProblemRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -3687,16 +4267,16 @@ return apiFetch<void>(getBlockProblemForUserUrl(orgLogin,contestLogin,userId,pro
 
 export const getBlockProblemForUserMutationKey = () => ['blockProblemForUser'] as const;
 
-export const getBlockProblemForUserMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof blockProblemForUser>>, TError,BlockProblemForUserMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getBlockProblemForUserMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof blockProblemForUser>>, TError,BlockProblemForUserMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof blockProblemForUser>>, TError,BlockProblemForUserMutationVariables, TContext> => {
 
 const mutationKey = getBlockProblemForUserMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -3704,7 +4284,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof blockProblemForUser>>, BlockProblemForUserMutationVariables> = (props) => {
           const {orgLogin,contestLogin,userId,problemId,data} = props ?? {};
 
-          return  blockProblemForUser(orgLogin,contestLogin,userId,problemId,data,requestOptions)
+          return  blockProblemForUser(orgLogin,contestLogin,userId,problemId,data,fetchOptions)
         }
 
 
@@ -3716,11 +4296,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type BlockProblemForUserMutationResult = NonNullable<Awaited<ReturnType<typeof blockProblemForUser>>>
     export type BlockProblemForUserMutationBody = BlockProblemRequestModel | undefined
-    export type BlockProblemForUserMutationError = unknown
+    export type BlockProblemForUserMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type BlockProblemForUserMutationVariables = {orgLogin: string;contestLogin: string;userId: string;problemId: string;data?: BlockProblemRequestModel}
 
-    export const useBlockProblemForUser = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof blockProblemForUser>>, TError,BlockProblemForUserMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useBlockProblemForUser = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof blockProblemForUser>>, TError,BlockProblemForUserMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof blockProblemForUser>>,
         TError,
@@ -3746,23 +4326,38 @@ export const getUnblockProblemForUserUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/participants/${encodeURIComponent(String(userId))}/problems/${encodeURIComponent(String(problemId))}/block?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/participants/${encodeURIComponent(String(userId))}/problems/${encodeURIComponent(String(problemId))}/block`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/participants/${encodeURIComponent(String(userId))}/problems/${encodeURIComponent(String(problemId))}/block?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/participants/${encodeURIComponent(String(userId))}/problems/${encodeURIComponent(String(problemId))}/block`
 }
 
 export const unblockProblemForUser = async (orgLogin: string,
     contestLogin: string,
     userId: string,
     problemId: string,
-    params?: UnblockProblemForUserParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params?: UnblockProblemForUserParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getUnblockProblemForUserUrl(orgLogin,contestLogin,userId,problemId,params),
+  const res = await fetch(getUnblockProblemForUserUrl(orgLogin,contestLogin,userId,problemId,params),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -3770,16 +4365,16 @@ export const unblockProblemForUser = async (orgLogin: string,
 
 export const getUnblockProblemForUserMutationKey = () => ['unblockProblemForUser'] as const;
 
-export const getUnblockProblemForUserMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unblockProblemForUser>>, TError,UnblockProblemForUserMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUnblockProblemForUserMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unblockProblemForUser>>, TError,UnblockProblemForUserMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof unblockProblemForUser>>, TError,UnblockProblemForUserMutationVariables, TContext> => {
 
 const mutationKey = getUnblockProblemForUserMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -3787,7 +4382,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof unblockProblemForUser>>, UnblockProblemForUserMutationVariables> = (props) => {
           const {orgLogin,contestLogin,userId,problemId,params} = props ?? {};
 
-          return  unblockProblemForUser(orgLogin,contestLogin,userId,problemId,params,requestOptions)
+          return  unblockProblemForUser(orgLogin,contestLogin,userId,problemId,params,fetchOptions)
         }
 
 
@@ -3799,11 +4394,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UnblockProblemForUserMutationResult = NonNullable<Awaited<ReturnType<typeof unblockProblemForUser>>>
 
-    export type UnblockProblemForUserMutationError = unknown
+    export type UnblockProblemForUserMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UnblockProblemForUserMutationVariables = {orgLogin: string;contestLogin: string;userId: string;problemId: string;params?: UnblockProblemForUserParams}
 
-    export const useUnblockProblemForUser = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unblockProblemForUser>>, TError,UnblockProblemForUserMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useUnblockProblemForUser = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unblockProblemForUser>>, TError,UnblockProblemForUserMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof unblockProblemForUser>>,
         TError,
@@ -3821,22 +4416,37 @@ export const getGetProblemBlockStatusForUserUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/participants/${encodeURIComponent(String(userId))}/problems/${encodeURIComponent(String(problemId))}/block`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/participants/${encodeURIComponent(String(userId))}/problems/${encodeURIComponent(String(problemId))}/block`
 }
 
 export const getProblemBlockStatusForUser = async (orgLogin: string,
     contestLogin: string,
     userId: string,
-    problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<ProblemBlockStatusResponseModel> => {
+    problemId: string, options?: RequestInit): Promise<ProblemBlockStatusResponseModel> => {
 
-  return apiFetch<ProblemBlockStatusResponseModel>(getGetProblemBlockStatusForUserUrl(orgLogin,contestLogin,userId,problemId),
+  const res = await fetch(getGetProblemBlockStatusForUserUrl(orgLogin,contestLogin,userId,problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ProblemBlockStatusResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -3847,24 +4457,24 @@ export const getGetProblemBlockStatusForUserQueryKey = (orgLogin: string,
     userId: string,
     problemId: string,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}/participants/${userId}/problems/${problemId}/block`
+    `/api/organizations/${orgLogin}/contests/${contestLogin}/participants/${userId}/problems/${problemId}/block`
     ] as const;
     }
 
 
-export const getGetProblemBlockStatusForUserQueryOptions = <TData = Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError = unknown>(orgLogin: string,
+export const getGetProblemBlockStatusForUserQueryOptions = <TData = Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
     contestLogin: string,
     userId: string,
-    problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetProblemBlockStatusForUserQueryKey(orgLogin,contestLogin,userId,problemId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemBlockStatusForUser>>> = ({ signal }) => getProblemBlockStatusForUser(orgLogin,contestLogin,userId,problemId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemBlockStatusForUser>>> = ({ signal }) => getProblemBlockStatusForUser(orgLogin,contestLogin,userId,problemId, { signal, ...fetchOptions });
 
 
 
@@ -3874,10 +4484,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetProblemBlockStatusForUserQueryResult = NonNullable<Awaited<ReturnType<typeof getProblemBlockStatusForUser>>>
-export type GetProblemBlockStatusForUserQueryError = unknown
+export type GetProblemBlockStatusForUserQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetProblemBlockStatusForUser<TData = Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError = unknown>(
+export function useGetProblemBlockStatusForUser<TData = Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     userId: string,
@@ -3887,10 +4497,10 @@ export function useGetProblemBlockStatusForUser<TData = Awaited<ReturnType<typeo
           TError,
           Awaited<ReturnType<typeof getProblemBlockStatusForUser>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemBlockStatusForUser<TData = Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError = unknown>(
+export function useGetProblemBlockStatusForUser<TData = Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     userId: string,
@@ -3900,22 +4510,22 @@ export function useGetProblemBlockStatusForUser<TData = Awaited<ReturnType<typeo
           TError,
           Awaited<ReturnType<typeof getProblemBlockStatusForUser>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemBlockStatusForUser<TData = Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError = unknown>(
+export function useGetProblemBlockStatusForUser<TData = Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     userId: string,
-    problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetProblemBlockStatusForUser<TData = Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError = unknown>(
+export function useGetProblemBlockStatusForUser<TData = Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     userId: string,
-    problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemBlockStatusForUser>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -3939,21 +4549,36 @@ export const getRejudgeContestProblemUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/problems/${encodeURIComponent(String(problemId))}/rejudge`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/problems/${encodeURIComponent(String(problemId))}/rejudge`
 }
 
 export const rejudgeContestProblem = async (orgLogin: string,
     contestLogin: string,
-    problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    problemId: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getRejudgeContestProblemUrl(orgLogin,contestLogin,problemId),
+  const res = await fetch(getRejudgeContestProblemUrl(orgLogin,contestLogin,problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -3961,16 +4586,16 @@ export const rejudgeContestProblem = async (orgLogin: string,
 
 export const getRejudgeContestProblemMutationKey = () => ['rejudgeContestProblem'] as const;
 
-export const getRejudgeContestProblemMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejudgeContestProblem>>, TError,RejudgeContestProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getRejudgeContestProblemMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejudgeContestProblem>>, TError,RejudgeContestProblemMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof rejudgeContestProblem>>, TError,RejudgeContestProblemMutationVariables, TContext> => {
 
 const mutationKey = getRejudgeContestProblemMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -3978,7 +4603,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejudgeContestProblem>>, RejudgeContestProblemMutationVariables> = (props) => {
           const {orgLogin,contestLogin,problemId} = props ?? {};
 
-          return  rejudgeContestProblem(orgLogin,contestLogin,problemId,requestOptions)
+          return  rejudgeContestProblem(orgLogin,contestLogin,problemId,fetchOptions)
         }
 
 
@@ -3990,11 +4615,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RejudgeContestProblemMutationResult = NonNullable<Awaited<ReturnType<typeof rejudgeContestProblem>>>
 
-    export type RejudgeContestProblemMutationError = unknown
+    export type RejudgeContestProblemMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type RejudgeContestProblemMutationVariables = {orgLogin: string;contestLogin: string;problemId: string}
 
-    export const useRejudgeContestProblem = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejudgeContestProblem>>, TError,RejudgeContestProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useRejudgeContestProblem = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejudgeContestProblem>>, TError,RejudgeContestProblemMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof rejudgeContestProblem>>,
         TError,
@@ -4010,20 +4635,35 @@ export const getRejudgeContestUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/rejudge`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/rejudge`
 }
 
 export const rejudgeContest = async (orgLogin: string,
-    contestLogin: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    contestLogin: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getRejudgeContestUrl(orgLogin,contestLogin),
+  const res = await fetch(getRejudgeContestUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -4031,16 +4671,16 @@ export const rejudgeContest = async (orgLogin: string,
 
 export const getRejudgeContestMutationKey = () => ['rejudgeContest'] as const;
 
-export const getRejudgeContestMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejudgeContest>>, TError,RejudgeContestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getRejudgeContestMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejudgeContest>>, TError,RejudgeContestMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof rejudgeContest>>, TError,RejudgeContestMutationVariables, TContext> => {
 
 const mutationKey = getRejudgeContestMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -4048,7 +4688,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejudgeContest>>, RejudgeContestMutationVariables> = (props) => {
           const {orgLogin,contestLogin} = props ?? {};
 
-          return  rejudgeContest(orgLogin,contestLogin,requestOptions)
+          return  rejudgeContest(orgLogin,contestLogin,fetchOptions)
         }
 
 
@@ -4060,11 +4700,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RejudgeContestMutationResult = NonNullable<Awaited<ReturnType<typeof rejudgeContest>>>
 
-    export type RejudgeContestMutationError = unknown
+    export type RejudgeContestMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type RejudgeContestMutationVariables = {orgLogin: string;contestLogin: string}
 
-    export const useRejudgeContest = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejudgeContest>>, TError,RejudgeContestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useRejudgeContest = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejudgeContest>>, TError,RejudgeContestMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof rejudgeContest>>,
         TError,
@@ -4088,21 +4728,36 @@ export const getGetContestScoreboardUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/scoreboard?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/scoreboard`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/scoreboard?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/scoreboard`
 }
 
 export const getContestScoreboard = async (orgLogin: string,
     contestLogin: string,
-    params?: GetContestScoreboardParams, options?: Parameters<typeof apiFetch>[1]): Promise<ScoreboardResponseModel> => {
+    params?: GetContestScoreboardParams, options?: RequestInit): Promise<ScoreboardResponseModel> => {
 
-  return apiFetch<ScoreboardResponseModel>(getGetContestScoreboardUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getGetContestScoreboardUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ScoreboardResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -4112,23 +4767,23 @@ export const getGetContestScoreboardQueryKey = (orgLogin: string,
     contestLogin: string,
     params?: GetContestScoreboardParams,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}/scoreboard`, ...(params ? [params] : [])
+    `/api/organizations/${orgLogin}/contests/${contestLogin}/scoreboard`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetContestScoreboardQueryOptions = <TData = Awaited<ReturnType<typeof getContestScoreboard>>, TError = unknown>(orgLogin: string,
+export const getGetContestScoreboardQueryOptions = <TData = Awaited<ReturnType<typeof getContestScoreboard>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
     contestLogin: string,
-    params?: GetContestScoreboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestScoreboard>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: GetContestScoreboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestScoreboard>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetContestScoreboardQueryKey(orgLogin,contestLogin,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getContestScoreboard>>> = ({ signal }) => getContestScoreboard(orgLogin,contestLogin,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getContestScoreboard>>> = ({ signal }) => getContestScoreboard(orgLogin,contestLogin,params, { signal, ...fetchOptions });
 
 
 
@@ -4138,10 +4793,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetContestScoreboardQueryResult = NonNullable<Awaited<ReturnType<typeof getContestScoreboard>>>
-export type GetContestScoreboardQueryError = unknown
+export type GetContestScoreboardQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetContestScoreboard<TData = Awaited<ReturnType<typeof getContestScoreboard>>, TError = unknown>(
+export function useGetContestScoreboard<TData = Awaited<ReturnType<typeof getContestScoreboard>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params: undefined |  GetContestScoreboardParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestScoreboard>>, TError, TData>> & Pick<
@@ -4150,10 +4805,10 @@ export function useGetContestScoreboard<TData = Awaited<ReturnType<typeof getCon
           TError,
           Awaited<ReturnType<typeof getContestScoreboard>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetContestScoreboard<TData = Awaited<ReturnType<typeof getContestScoreboard>>, TError = unknown>(
+export function useGetContestScoreboard<TData = Awaited<ReturnType<typeof getContestScoreboard>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params?: GetContestScoreboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestScoreboard>>, TError, TData>> & Pick<
@@ -4162,20 +4817,20 @@ export function useGetContestScoreboard<TData = Awaited<ReturnType<typeof getCon
           TError,
           Awaited<ReturnType<typeof getContestScoreboard>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetContestScoreboard<TData = Awaited<ReturnType<typeof getContestScoreboard>>, TError = unknown>(
+export function useGetContestScoreboard<TData = Awaited<ReturnType<typeof getContestScoreboard>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: GetContestScoreboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestScoreboard>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: GetContestScoreboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestScoreboard>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetContestScoreboard<TData = Awaited<ReturnType<typeof getContestScoreboard>>, TError = unknown>(
+export function useGetContestScoreboard<TData = Awaited<ReturnType<typeof getContestScoreboard>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: GetContestScoreboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestScoreboard>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: GetContestScoreboardParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getContestScoreboard>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -4198,12 +4853,12 @@ export const getCreateContestDraftUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/drafts`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/drafts`
 }
 
 export const createContestDraft = async (orgLogin: string,
     contestLogin: string,
-    createContestDraftRequestModel: CreateContestDraftRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<CreationResponseModel> => {
+    createContestDraftRequestModel: CreateContestDraftRequestModel, options?: RequestInit): Promise<CreationResponseModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -4219,14 +4874,29 @@ export const createContestDraft = async (orgLogin: string,
     }
     return headers;
   };
-return apiFetch<CreationResponseModel>(getCreateContestDraftUrl(orgLogin,contestLogin),
+const res = await fetch(getCreateContestDraftUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createContestDraftRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: CreationResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -4234,16 +4904,16 @@ return apiFetch<CreationResponseModel>(getCreateContestDraftUrl(orgLogin,contest
 
 export const getCreateContestDraftMutationKey = () => ['createContestDraft'] as const;
 
-export const getCreateContestDraftMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestDraft>>, TError,CreateContestDraftMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateContestDraftMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestDraft>>, TError,CreateContestDraftMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createContestDraft>>, TError,CreateContestDraftMutationVariables, TContext> => {
 
 const mutationKey = getCreateContestDraftMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -4251,7 +4921,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createContestDraft>>, CreateContestDraftMutationVariables> = (props) => {
           const {orgLogin,contestLogin,data} = props ?? {};
 
-          return  createContestDraft(orgLogin,contestLogin,data,requestOptions)
+          return  createContestDraft(orgLogin,contestLogin,data,fetchOptions)
         }
 
 
@@ -4263,11 +4933,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateContestDraftMutationResult = NonNullable<Awaited<ReturnType<typeof createContestDraft>>>
     export type CreateContestDraftMutationBody = CreateContestDraftRequestModel
-    export type CreateContestDraftMutationError = unknown
+    export type CreateContestDraftMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateContestDraftMutationVariables = {orgLogin: string;contestLogin: string;data: CreateContestDraftRequestModel}
 
-    export const useCreateContestDraft = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestDraft>>, TError,CreateContestDraftMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useCreateContestDraft = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestDraft>>, TError,CreateContestDraftMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createContestDraft>>,
         TError,
@@ -4291,21 +4961,36 @@ export const getListContestDraftsUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/drafts?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/drafts`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/drafts?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/drafts`
 }
 
 export const listContestDrafts = async (orgLogin: string,
     contestLogin: string,
-    params?: ListContestDraftsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListContestDraftsResponseModel> => {
+    params?: ListContestDraftsParams, options?: RequestInit): Promise<ListContestDraftsResponseModel> => {
 
-  return apiFetch<ListContestDraftsResponseModel>(getListContestDraftsUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getListContestDraftsUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListContestDraftsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -4315,23 +5000,23 @@ export const getListContestDraftsQueryKey = (orgLogin: string,
     contestLogin: string,
     params?: ListContestDraftsParams,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}/drafts`, ...(params ? [params] : [])
+    `/api/organizations/${orgLogin}/contests/${contestLogin}/drafts`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListContestDraftsQueryOptions = <TData = Awaited<ReturnType<typeof listContestDrafts>>, TError = unknown>(orgLogin: string,
+export const getListContestDraftsQueryOptions = <TData = Awaited<ReturnType<typeof listContestDrafts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
     contestLogin: string,
-    params?: ListContestDraftsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestDrafts>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestDraftsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestDrafts>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListContestDraftsQueryKey(orgLogin,contestLogin,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestDrafts>>> = ({ signal }) => listContestDrafts(orgLogin,contestLogin,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestDrafts>>> = ({ signal }) => listContestDrafts(orgLogin,contestLogin,params, { signal, ...fetchOptions });
 
 
 
@@ -4341,10 +5026,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListContestDraftsQueryResult = NonNullable<Awaited<ReturnType<typeof listContestDrafts>>>
-export type ListContestDraftsQueryError = unknown
+export type ListContestDraftsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListContestDrafts<TData = Awaited<ReturnType<typeof listContestDrafts>>, TError = unknown>(
+export function useListContestDrafts<TData = Awaited<ReturnType<typeof listContestDrafts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params: undefined |  ListContestDraftsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestDrafts>>, TError, TData>> & Pick<
@@ -4353,10 +5038,10 @@ export function useListContestDrafts<TData = Awaited<ReturnType<typeof listConte
           TError,
           Awaited<ReturnType<typeof listContestDrafts>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestDrafts<TData = Awaited<ReturnType<typeof listContestDrafts>>, TError = unknown>(
+export function useListContestDrafts<TData = Awaited<ReturnType<typeof listContestDrafts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params?: ListContestDraftsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestDrafts>>, TError, TData>> & Pick<
@@ -4365,20 +5050,20 @@ export function useListContestDrafts<TData = Awaited<ReturnType<typeof listConte
           TError,
           Awaited<ReturnType<typeof listContestDrafts>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestDrafts<TData = Awaited<ReturnType<typeof listContestDrafts>>, TError = unknown>(
+export function useListContestDrafts<TData = Awaited<ReturnType<typeof listContestDrafts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: ListContestDraftsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestDrafts>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestDraftsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestDrafts>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListContestDrafts<TData = Awaited<ReturnType<typeof listContestDrafts>>, TError = unknown>(
+export function useListContestDrafts<TData = Awaited<ReturnType<typeof listContestDrafts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: ListContestDraftsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestDrafts>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestDraftsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestDrafts>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -4402,21 +5087,36 @@ export const getDeleteContestDraftUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/drafts/${encodeURIComponent(String(draftId))}`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/drafts/${encodeURIComponent(String(draftId))}`
 }
 
 export const deleteContestDraft = async (orgLogin: string,
     contestLogin: string,
-    draftId: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    draftId: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getDeleteContestDraftUrl(orgLogin,contestLogin,draftId),
+  const res = await fetch(getDeleteContestDraftUrl(orgLogin,contestLogin,draftId),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -4424,16 +5124,16 @@ export const deleteContestDraft = async (orgLogin: string,
 
 export const getDeleteContestDraftMutationKey = () => ['deleteContestDraft'] as const;
 
-export const getDeleteContestDraftMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestDraft>>, TError,DeleteContestDraftMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteContestDraftMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestDraft>>, TError,DeleteContestDraftMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteContestDraft>>, TError,DeleteContestDraftMutationVariables, TContext> => {
 
 const mutationKey = getDeleteContestDraftMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -4441,7 +5141,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteContestDraft>>, DeleteContestDraftMutationVariables> = (props) => {
           const {orgLogin,contestLogin,draftId} = props ?? {};
 
-          return  deleteContestDraft(orgLogin,contestLogin,draftId,requestOptions)
+          return  deleteContestDraft(orgLogin,contestLogin,draftId,fetchOptions)
         }
 
 
@@ -4453,11 +5153,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteContestDraftMutationResult = NonNullable<Awaited<ReturnType<typeof deleteContestDraft>>>
 
-    export type DeleteContestDraftMutationError = unknown
+    export type DeleteContestDraftMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteContestDraftMutationVariables = {orgLogin: string;contestLogin: string;draftId: string}
 
-    export const useDeleteContestDraft = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestDraft>>, TError,DeleteContestDraftMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useDeleteContestDraft = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestDraft>>, TError,DeleteContestDraftMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteContestDraft>>,
         TError,
@@ -4473,23 +5173,38 @@ export const getListContestJoinRequestsUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/requests`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/requests`
 }
 
 /**
  * @summary List pending contest join requests
  */
 export const listContestJoinRequests = async (orgLogin: string,
-    contestLogin: string, options?: Parameters<typeof apiFetch>[1]): Promise<ListContestJoinRequestsResponseModel> => {
+    contestLogin: string, options?: RequestInit): Promise<ListContestJoinRequestsResponseModel> => {
 
-  return apiFetch<ListContestJoinRequestsResponseModel>(getListContestJoinRequestsUrl(orgLogin,contestLogin),
+  const res = await fetch(getListContestJoinRequestsUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListContestJoinRequestsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -4498,22 +5213,22 @@ export const listContestJoinRequests = async (orgLogin: string,
 export const getListContestJoinRequestsQueryKey = (orgLogin: string,
     contestLogin: string,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}/requests`
+    `/api/organizations/${orgLogin}/contests/${contestLogin}/requests`
     ] as const;
     }
 
 
-export const getListContestJoinRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listContestJoinRequests>>, TError = unknown>(orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestJoinRequests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListContestJoinRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listContestJoinRequests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestJoinRequests>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListContestJoinRequestsQueryKey(orgLogin,contestLogin);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestJoinRequests>>> = ({ signal }) => listContestJoinRequests(orgLogin,contestLogin, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestJoinRequests>>> = ({ signal }) => listContestJoinRequests(orgLogin,contestLogin, { signal, ...fetchOptions });
 
 
 
@@ -4523,10 +5238,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListContestJoinRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listContestJoinRequests>>>
-export type ListContestJoinRequestsQueryError = unknown
+export type ListContestJoinRequestsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListContestJoinRequests<TData = Awaited<ReturnType<typeof listContestJoinRequests>>, TError = unknown>(
+export function useListContestJoinRequests<TData = Awaited<ReturnType<typeof listContestJoinRequests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestJoinRequests>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -4534,10 +5249,10 @@ export function useListContestJoinRequests<TData = Awaited<ReturnType<typeof lis
           TError,
           Awaited<ReturnType<typeof listContestJoinRequests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestJoinRequests<TData = Awaited<ReturnType<typeof listContestJoinRequests>>, TError = unknown>(
+export function useListContestJoinRequests<TData = Awaited<ReturnType<typeof listContestJoinRequests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestJoinRequests>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -4545,21 +5260,21 @@ export function useListContestJoinRequests<TData = Awaited<ReturnType<typeof lis
           TError,
           Awaited<ReturnType<typeof listContestJoinRequests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestJoinRequests<TData = Awaited<ReturnType<typeof listContestJoinRequests>>, TError = unknown>(
+export function useListContestJoinRequests<TData = Awaited<ReturnType<typeof listContestJoinRequests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestJoinRequests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestJoinRequests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List pending contest join requests
  */
 
-export function useListContestJoinRequests<TData = Awaited<ReturnType<typeof listContestJoinRequests>>, TError = unknown>(
+export function useListContestJoinRequests<TData = Awaited<ReturnType<typeof listContestJoinRequests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestJoinRequests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestJoinRequests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -4582,7 +5297,7 @@ export const getCreateContestJoinRequestUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/requests`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/requests`
 }
 
 /**
@@ -4590,7 +5305,7 @@ export const getCreateContestJoinRequestUrl = (orgLogin: string,
  */
 export const createContestJoinRequest = async (orgLogin: string,
     contestLogin: string,
-    createContestJoinRequestModel?: CreateContestJoinRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<ContestJoinRequestResponseModel> => {
+    createContestJoinRequestModel?: CreateContestJoinRequestModel, options?: RequestInit): Promise<ContestJoinRequestResponseModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -4606,14 +5321,29 @@ export const createContestJoinRequest = async (orgLogin: string,
     }
     return headers;
   };
-return apiFetch<ContestJoinRequestResponseModel>(getCreateContestJoinRequestUrl(orgLogin,contestLogin),
+const res = await fetch(getCreateContestJoinRequestUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createContestJoinRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ContestJoinRequestResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -4621,16 +5351,16 @@ return apiFetch<ContestJoinRequestResponseModel>(getCreateContestJoinRequestUrl(
 
 export const getCreateContestJoinRequestMutationKey = () => ['createContestJoinRequest'] as const;
 
-export const getCreateContestJoinRequestMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestJoinRequest>>, TError,CreateContestJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateContestJoinRequestMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestJoinRequest>>, TError,CreateContestJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createContestJoinRequest>>, TError,CreateContestJoinRequestMutationVariables, TContext> => {
 
 const mutationKey = getCreateContestJoinRequestMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -4638,7 +5368,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createContestJoinRequest>>, CreateContestJoinRequestMutationVariables> = (props) => {
           const {orgLogin,contestLogin,data} = props ?? {};
 
-          return  createContestJoinRequest(orgLogin,contestLogin,data,requestOptions)
+          return  createContestJoinRequest(orgLogin,contestLogin,data,fetchOptions)
         }
 
 
@@ -4650,14 +5380,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateContestJoinRequestMutationResult = NonNullable<Awaited<ReturnType<typeof createContestJoinRequest>>>
     export type CreateContestJoinRequestMutationBody = CreateContestJoinRequestModel | undefined
-    export type CreateContestJoinRequestMutationError = unknown
+    export type CreateContestJoinRequestMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateContestJoinRequestMutationVariables = {orgLogin: string;contestLogin: string;data?: CreateContestJoinRequestModel}
 
     /**
  * @summary Request to participate in contest
  */
-export const useCreateContestJoinRequest = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestJoinRequest>>, TError,CreateContestJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateContestJoinRequest = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestJoinRequest>>, TError,CreateContestJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createContestJoinRequest>>,
         TError,
@@ -4673,23 +5403,38 @@ export const getGetMyContestJoinRequestUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/requests/mine`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/requests/mine`
 }
 
 /**
  * @summary Get my pending contest join request
  */
 export const getMyContestJoinRequest = async (orgLogin: string,
-    contestLogin: string, options?: Parameters<typeof apiFetch>[1]): Promise<ContestJoinRequestNullableResponseModel> => {
+    contestLogin: string, options?: RequestInit): Promise<ContestJoinRequestNullableResponseModel> => {
 
-  return apiFetch<ContestJoinRequestNullableResponseModel>(getGetMyContestJoinRequestUrl(orgLogin,contestLogin),
+  const res = await fetch(getGetMyContestJoinRequestUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ContestJoinRequestNullableResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -4698,22 +5443,22 @@ export const getMyContestJoinRequest = async (orgLogin: string,
 export const getGetMyContestJoinRequestQueryKey = (orgLogin: string,
     contestLogin: string,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}/requests/mine`
+    `/api/organizations/${orgLogin}/contests/${contestLogin}/requests/mine`
     ] as const;
     }
 
 
-export const getGetMyContestJoinRequestQueryOptions = <TData = Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError = unknown>(orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetMyContestJoinRequestQueryOptions = <TData = Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetMyContestJoinRequestQueryKey(orgLogin,contestLogin);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyContestJoinRequest>>> = ({ signal }) => getMyContestJoinRequest(orgLogin,contestLogin, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyContestJoinRequest>>> = ({ signal }) => getMyContestJoinRequest(orgLogin,contestLogin, { signal, ...fetchOptions });
 
 
 
@@ -4723,10 +5468,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetMyContestJoinRequestQueryResult = NonNullable<Awaited<ReturnType<typeof getMyContestJoinRequest>>>
-export type GetMyContestJoinRequestQueryError = unknown
+export type GetMyContestJoinRequestQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetMyContestJoinRequest<TData = Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError = unknown>(
+export function useGetMyContestJoinRequest<TData = Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -4734,10 +5479,10 @@ export function useGetMyContestJoinRequest<TData = Awaited<ReturnType<typeof get
           TError,
           Awaited<ReturnType<typeof getMyContestJoinRequest>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyContestJoinRequest<TData = Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError = unknown>(
+export function useGetMyContestJoinRequest<TData = Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -4745,21 +5490,21 @@ export function useGetMyContestJoinRequest<TData = Awaited<ReturnType<typeof get
           TError,
           Awaited<ReturnType<typeof getMyContestJoinRequest>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyContestJoinRequest<TData = Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError = unknown>(
+export function useGetMyContestJoinRequest<TData = Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get my pending contest join request
  */
 
-export function useGetMyContestJoinRequest<TData = Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError = unknown>(
+export function useGetMyContestJoinRequest<TData = Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
-    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    contestLogin: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyContestJoinRequest>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -4782,23 +5527,38 @@ export const getCancelContestJoinRequestUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/requests/mine`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/requests/mine`
 }
 
 /**
  * @summary Cancel my contest join request
  */
 export const cancelContestJoinRequest = async (orgLogin: string,
-    contestLogin: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    contestLogin: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getCancelContestJoinRequestUrl(orgLogin,contestLogin),
+  const res = await fetch(getCancelContestJoinRequestUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -4806,16 +5566,16 @@ export const cancelContestJoinRequest = async (orgLogin: string,
 
 export const getCancelContestJoinRequestMutationKey = () => ['cancelContestJoinRequest'] as const;
 
-export const getCancelContestJoinRequestMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelContestJoinRequest>>, TError,CancelContestJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCancelContestJoinRequestMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelContestJoinRequest>>, TError,CancelContestJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof cancelContestJoinRequest>>, TError,CancelContestJoinRequestMutationVariables, TContext> => {
 
 const mutationKey = getCancelContestJoinRequestMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -4823,7 +5583,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelContestJoinRequest>>, CancelContestJoinRequestMutationVariables> = (props) => {
           const {orgLogin,contestLogin} = props ?? {};
 
-          return  cancelContestJoinRequest(orgLogin,contestLogin,requestOptions)
+          return  cancelContestJoinRequest(orgLogin,contestLogin,fetchOptions)
         }
 
 
@@ -4835,14 +5595,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CancelContestJoinRequestMutationResult = NonNullable<Awaited<ReturnType<typeof cancelContestJoinRequest>>>
 
-    export type CancelContestJoinRequestMutationError = unknown
+    export type CancelContestJoinRequestMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CancelContestJoinRequestMutationVariables = {orgLogin: string;contestLogin: string}
 
     /**
  * @summary Cancel my contest join request
  */
-export const useCancelContestJoinRequest = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelContestJoinRequest>>, TError,CancelContestJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCancelContestJoinRequest = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelContestJoinRequest>>, TError,CancelContestJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof cancelContestJoinRequest>>,
         TError,
@@ -4859,7 +5619,7 @@ export const getApproveContestJoinRequestUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/requests/${encodeURIComponent(String(id))}/approve`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/requests/${encodeURIComponent(String(id))}/approve`
 }
 
 /**
@@ -4867,16 +5627,31 @@ export const getApproveContestJoinRequestUrl = (orgLogin: string,
  */
 export const approveContestJoinRequest = async (orgLogin: string,
     contestLogin: string,
-    id: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    id: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getApproveContestJoinRequestUrl(orgLogin,contestLogin,id),
+  const res = await fetch(getApproveContestJoinRequestUrl(orgLogin,contestLogin,id),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -4884,16 +5659,16 @@ export const approveContestJoinRequest = async (orgLogin: string,
 
 export const getApproveContestJoinRequestMutationKey = () => ['approveContestJoinRequest'] as const;
 
-export const getApproveContestJoinRequestMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveContestJoinRequest>>, TError,ApproveContestJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getApproveContestJoinRequestMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveContestJoinRequest>>, TError,ApproveContestJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof approveContestJoinRequest>>, TError,ApproveContestJoinRequestMutationVariables, TContext> => {
 
 const mutationKey = getApproveContestJoinRequestMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -4901,7 +5676,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveContestJoinRequest>>, ApproveContestJoinRequestMutationVariables> = (props) => {
           const {orgLogin,contestLogin,id} = props ?? {};
 
-          return  approveContestJoinRequest(orgLogin,contestLogin,id,requestOptions)
+          return  approveContestJoinRequest(orgLogin,contestLogin,id,fetchOptions)
         }
 
 
@@ -4913,14 +5688,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ApproveContestJoinRequestMutationResult = NonNullable<Awaited<ReturnType<typeof approveContestJoinRequest>>>
 
-    export type ApproveContestJoinRequestMutationError = unknown
+    export type ApproveContestJoinRequestMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type ApproveContestJoinRequestMutationVariables = {orgLogin: string;contestLogin: string;id: string}
 
     /**
  * @summary Approve contest join request
  */
-export const useApproveContestJoinRequest = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveContestJoinRequest>>, TError,ApproveContestJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useApproveContestJoinRequest = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveContestJoinRequest>>, TError,ApproveContestJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof approveContestJoinRequest>>,
         TError,
@@ -4937,7 +5712,7 @@ export const getRejectContestJoinRequestUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/requests/${encodeURIComponent(String(id))}/reject`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/requests/${encodeURIComponent(String(id))}/reject`
 }
 
 /**
@@ -4945,16 +5720,31 @@ export const getRejectContestJoinRequestUrl = (orgLogin: string,
  */
 export const rejectContestJoinRequest = async (orgLogin: string,
     contestLogin: string,
-    id: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    id: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getRejectContestJoinRequestUrl(orgLogin,contestLogin,id),
+  const res = await fetch(getRejectContestJoinRequestUrl(orgLogin,contestLogin,id),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -4962,16 +5752,16 @@ export const rejectContestJoinRequest = async (orgLogin: string,
 
 export const getRejectContestJoinRequestMutationKey = () => ['rejectContestJoinRequest'] as const;
 
-export const getRejectContestJoinRequestMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectContestJoinRequest>>, TError,RejectContestJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getRejectContestJoinRequestMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectContestJoinRequest>>, TError,RejectContestJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof rejectContestJoinRequest>>, TError,RejectContestJoinRequestMutationVariables, TContext> => {
 
 const mutationKey = getRejectContestJoinRequestMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -4979,7 +5769,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejectContestJoinRequest>>, RejectContestJoinRequestMutationVariables> = (props) => {
           const {orgLogin,contestLogin,id} = props ?? {};
 
-          return  rejectContestJoinRequest(orgLogin,contestLogin,id,requestOptions)
+          return  rejectContestJoinRequest(orgLogin,contestLogin,id,fetchOptions)
         }
 
 
@@ -4991,14 +5781,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RejectContestJoinRequestMutationResult = NonNullable<Awaited<ReturnType<typeof rejectContestJoinRequest>>>
 
-    export type RejectContestJoinRequestMutationError = unknown
+    export type RejectContestJoinRequestMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type RejectContestJoinRequestMutationVariables = {orgLogin: string;contestLogin: string;id: string}
 
     /**
  * @summary Reject contest join request
  */
-export const useRejectContestJoinRequest = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectContestJoinRequest>>, TError,RejectContestJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useRejectContestJoinRequest = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectContestJoinRequest>>, TError,RejectContestJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof rejectContestJoinRequest>>,
         TError,
@@ -5022,7 +5812,7 @@ export const getListContestAnnouncementsUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/announcements?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/announcements`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/announcements?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/announcements`
 }
 
 /**
@@ -5030,16 +5820,31 @@ export const getListContestAnnouncementsUrl = (orgLogin: string,
  */
 export const listContestAnnouncements = async (orgLogin: string,
     contestLogin: string,
-    params?: ListContestAnnouncementsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListContestAnnouncementsResponseModel> => {
+    params?: ListContestAnnouncementsParams, options?: RequestInit): Promise<ListContestAnnouncementsResponseModel> => {
 
-  return apiFetch<ListContestAnnouncementsResponseModel>(getListContestAnnouncementsUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getListContestAnnouncementsUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListContestAnnouncementsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -5049,23 +5854,23 @@ export const getListContestAnnouncementsQueryKey = (orgLogin: string,
     contestLogin: string,
     params?: ListContestAnnouncementsParams,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}/announcements`, ...(params ? [params] : [])
+    `/api/organizations/${orgLogin}/contests/${contestLogin}/announcements`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListContestAnnouncementsQueryOptions = <TData = Awaited<ReturnType<typeof listContestAnnouncements>>, TError = unknown>(orgLogin: string,
+export const getListContestAnnouncementsQueryOptions = <TData = Awaited<ReturnType<typeof listContestAnnouncements>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
     contestLogin: string,
-    params?: ListContestAnnouncementsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestAnnouncements>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestAnnouncementsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestAnnouncements>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListContestAnnouncementsQueryKey(orgLogin,contestLogin,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestAnnouncements>>> = ({ signal }) => listContestAnnouncements(orgLogin,contestLogin,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestAnnouncements>>> = ({ signal }) => listContestAnnouncements(orgLogin,contestLogin,params, { signal, ...fetchOptions });
 
 
 
@@ -5075,10 +5880,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListContestAnnouncementsQueryResult = NonNullable<Awaited<ReturnType<typeof listContestAnnouncements>>>
-export type ListContestAnnouncementsQueryError = unknown
+export type ListContestAnnouncementsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListContestAnnouncements<TData = Awaited<ReturnType<typeof listContestAnnouncements>>, TError = unknown>(
+export function useListContestAnnouncements<TData = Awaited<ReturnType<typeof listContestAnnouncements>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params: undefined |  ListContestAnnouncementsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestAnnouncements>>, TError, TData>> & Pick<
@@ -5087,10 +5892,10 @@ export function useListContestAnnouncements<TData = Awaited<ReturnType<typeof li
           TError,
           Awaited<ReturnType<typeof listContestAnnouncements>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestAnnouncements<TData = Awaited<ReturnType<typeof listContestAnnouncements>>, TError = unknown>(
+export function useListContestAnnouncements<TData = Awaited<ReturnType<typeof listContestAnnouncements>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params?: ListContestAnnouncementsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestAnnouncements>>, TError, TData>> & Pick<
@@ -5099,23 +5904,23 @@ export function useListContestAnnouncements<TData = Awaited<ReturnType<typeof li
           TError,
           Awaited<ReturnType<typeof listContestAnnouncements>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestAnnouncements<TData = Awaited<ReturnType<typeof listContestAnnouncements>>, TError = unknown>(
+export function useListContestAnnouncements<TData = Awaited<ReturnType<typeof listContestAnnouncements>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: ListContestAnnouncementsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestAnnouncements>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestAnnouncementsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestAnnouncements>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List contest announcements
  */
 
-export function useListContestAnnouncements<TData = Awaited<ReturnType<typeof listContestAnnouncements>>, TError = unknown>(
+export function useListContestAnnouncements<TData = Awaited<ReturnType<typeof listContestAnnouncements>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: ListContestAnnouncementsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestAnnouncements>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestAnnouncementsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestAnnouncements>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -5138,7 +5943,7 @@ export const getCreateContestAnnouncementUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/announcements`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/announcements`
 }
 
 /**
@@ -5146,7 +5951,7 @@ export const getCreateContestAnnouncementUrl = (orgLogin: string,
  */
 export const createContestAnnouncement = async (orgLogin: string,
     contestLogin: string,
-    createContestAnnouncementRequestModel: CreateContestAnnouncementRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<ContestAnnouncementModel> => {
+    createContestAnnouncementRequestModel: CreateContestAnnouncementRequestModel, options?: RequestInit): Promise<ContestAnnouncementModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -5162,14 +5967,29 @@ export const createContestAnnouncement = async (orgLogin: string,
     }
     return headers;
   };
-return apiFetch<ContestAnnouncementModel>(getCreateContestAnnouncementUrl(orgLogin,contestLogin),
+const res = await fetch(getCreateContestAnnouncementUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createContestAnnouncementRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ContestAnnouncementModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -5177,16 +5997,16 @@ return apiFetch<ContestAnnouncementModel>(getCreateContestAnnouncementUrl(orgLog
 
 export const getCreateContestAnnouncementMutationKey = () => ['createContestAnnouncement'] as const;
 
-export const getCreateContestAnnouncementMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestAnnouncement>>, TError,CreateContestAnnouncementMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateContestAnnouncementMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestAnnouncement>>, TError,CreateContestAnnouncementMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createContestAnnouncement>>, TError,CreateContestAnnouncementMutationVariables, TContext> => {
 
 const mutationKey = getCreateContestAnnouncementMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -5194,7 +6014,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createContestAnnouncement>>, CreateContestAnnouncementMutationVariables> = (props) => {
           const {orgLogin,contestLogin,data} = props ?? {};
 
-          return  createContestAnnouncement(orgLogin,contestLogin,data,requestOptions)
+          return  createContestAnnouncement(orgLogin,contestLogin,data,fetchOptions)
         }
 
 
@@ -5206,14 +6026,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateContestAnnouncementMutationResult = NonNullable<Awaited<ReturnType<typeof createContestAnnouncement>>>
     export type CreateContestAnnouncementMutationBody = CreateContestAnnouncementRequestModel
-    export type CreateContestAnnouncementMutationError = unknown
+    export type CreateContestAnnouncementMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateContestAnnouncementMutationVariables = {orgLogin: string;contestLogin: string;data: CreateContestAnnouncementRequestModel}
 
     /**
  * @summary Create a contest announcement (jury only)
  */
-export const useCreateContestAnnouncement = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestAnnouncement>>, TError,CreateContestAnnouncementMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateContestAnnouncement = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestAnnouncement>>, TError,CreateContestAnnouncementMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createContestAnnouncement>>,
         TError,
@@ -5230,7 +6050,7 @@ export const getDeleteContestAnnouncementUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/announcements/${encodeURIComponent(String(announcementId))}`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/announcements/${encodeURIComponent(String(announcementId))}`
 }
 
 /**
@@ -5238,16 +6058,31 @@ export const getDeleteContestAnnouncementUrl = (orgLogin: string,
  */
 export const deleteContestAnnouncement = async (orgLogin: string,
     contestLogin: string,
-    announcementId: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    announcementId: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getDeleteContestAnnouncementUrl(orgLogin,contestLogin,announcementId),
+  const res = await fetch(getDeleteContestAnnouncementUrl(orgLogin,contestLogin,announcementId),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -5255,16 +6090,16 @@ export const deleteContestAnnouncement = async (orgLogin: string,
 
 export const getDeleteContestAnnouncementMutationKey = () => ['deleteContestAnnouncement'] as const;
 
-export const getDeleteContestAnnouncementMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestAnnouncement>>, TError,DeleteContestAnnouncementMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteContestAnnouncementMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestAnnouncement>>, TError,DeleteContestAnnouncementMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteContestAnnouncement>>, TError,DeleteContestAnnouncementMutationVariables, TContext> => {
 
 const mutationKey = getDeleteContestAnnouncementMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -5272,7 +6107,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteContestAnnouncement>>, DeleteContestAnnouncementMutationVariables> = (props) => {
           const {orgLogin,contestLogin,announcementId} = props ?? {};
 
-          return  deleteContestAnnouncement(orgLogin,contestLogin,announcementId,requestOptions)
+          return  deleteContestAnnouncement(orgLogin,contestLogin,announcementId,fetchOptions)
         }
 
 
@@ -5284,14 +6119,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteContestAnnouncementMutationResult = NonNullable<Awaited<ReturnType<typeof deleteContestAnnouncement>>>
 
-    export type DeleteContestAnnouncementMutationError = unknown
+    export type DeleteContestAnnouncementMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteContestAnnouncementMutationVariables = {orgLogin: string;contestLogin: string;announcementId: string}
 
     /**
  * @summary Delete a contest announcement (jury only)
  */
-export const useDeleteContestAnnouncement = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestAnnouncement>>, TError,DeleteContestAnnouncementMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeleteContestAnnouncement = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteContestAnnouncement>>, TError,DeleteContestAnnouncementMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteContestAnnouncement>>,
         TError,
@@ -5315,7 +6150,7 @@ export const getListContestClarificationsUrl = (orgLogin: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/clarifications?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/clarifications`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/clarifications?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/clarifications`
 }
 
 /**
@@ -5323,16 +6158,31 @@ export const getListContestClarificationsUrl = (orgLogin: string,
  */
 export const listContestClarifications = async (orgLogin: string,
     contestLogin: string,
-    params?: ListContestClarificationsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListContestClarificationsResponseModel> => {
+    params?: ListContestClarificationsParams, options?: RequestInit): Promise<ListContestClarificationsResponseModel> => {
 
-  return apiFetch<ListContestClarificationsResponseModel>(getListContestClarificationsUrl(orgLogin,contestLogin,params),
+  const res = await fetch(getListContestClarificationsUrl(orgLogin,contestLogin,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListContestClarificationsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -5342,23 +6192,23 @@ export const getListContestClarificationsQueryKey = (orgLogin: string,
     contestLogin: string,
     params?: ListContestClarificationsParams,) => {
     return [
-    `/organizations/${orgLogin}/contests/${contestLogin}/clarifications`, ...(params ? [params] : [])
+    `/api/organizations/${orgLogin}/contests/${contestLogin}/clarifications`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListContestClarificationsQueryOptions = <TData = Awaited<ReturnType<typeof listContestClarifications>>, TError = unknown>(orgLogin: string,
+export const getListContestClarificationsQueryOptions = <TData = Awaited<ReturnType<typeof listContestClarifications>>, TError = globalThis.Error & { info?: unknown; status?: number }>(orgLogin: string,
     contestLogin: string,
-    params?: ListContestClarificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestClarifications>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestClarificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestClarifications>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListContestClarificationsQueryKey(orgLogin,contestLogin,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestClarifications>>> = ({ signal }) => listContestClarifications(orgLogin,contestLogin,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContestClarifications>>> = ({ signal }) => listContestClarifications(orgLogin,contestLogin,params, { signal, ...fetchOptions });
 
 
 
@@ -5368,10 +6218,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListContestClarificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listContestClarifications>>>
-export type ListContestClarificationsQueryError = unknown
+export type ListContestClarificationsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListContestClarifications<TData = Awaited<ReturnType<typeof listContestClarifications>>, TError = unknown>(
+export function useListContestClarifications<TData = Awaited<ReturnType<typeof listContestClarifications>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params: undefined |  ListContestClarificationsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestClarifications>>, TError, TData>> & Pick<
@@ -5380,10 +6230,10 @@ export function useListContestClarifications<TData = Awaited<ReturnType<typeof l
           TError,
           Awaited<ReturnType<typeof listContestClarifications>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestClarifications<TData = Awaited<ReturnType<typeof listContestClarifications>>, TError = unknown>(
+export function useListContestClarifications<TData = Awaited<ReturnType<typeof listContestClarifications>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
     params?: ListContestClarificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestClarifications>>, TError, TData>> & Pick<
@@ -5392,23 +6242,23 @@ export function useListContestClarifications<TData = Awaited<ReturnType<typeof l
           TError,
           Awaited<ReturnType<typeof listContestClarifications>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListContestClarifications<TData = Awaited<ReturnType<typeof listContestClarifications>>, TError = unknown>(
+export function useListContestClarifications<TData = Awaited<ReturnType<typeof listContestClarifications>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: ListContestClarificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestClarifications>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestClarificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestClarifications>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List contest clarifications (for participant: own questions; for jury: all questions)
  */
 
-export function useListContestClarifications<TData = Awaited<ReturnType<typeof listContestClarifications>>, TError = unknown>(
+export function useListContestClarifications<TData = Awaited<ReturnType<typeof listContestClarifications>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  orgLogin: string,
     contestLogin: string,
-    params?: ListContestClarificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestClarifications>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListContestClarificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContestClarifications>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -5431,7 +6281,7 @@ export const getCreateContestClarificationUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/clarifications`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/clarifications`
 }
 
 /**
@@ -5439,7 +6289,7 @@ export const getCreateContestClarificationUrl = (orgLogin: string,
  */
 export const createContestClarification = async (orgLogin: string,
     contestLogin: string,
-    createContestClarificationRequestModel: CreateContestClarificationRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<ContestClarificationModel> => {
+    createContestClarificationRequestModel: CreateContestClarificationRequestModel, options?: RequestInit): Promise<ContestClarificationModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -5455,14 +6305,29 @@ export const createContestClarification = async (orgLogin: string,
     }
     return headers;
   };
-return apiFetch<ContestClarificationModel>(getCreateContestClarificationUrl(orgLogin,contestLogin),
+const res = await fetch(getCreateContestClarificationUrl(orgLogin,contestLogin),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createContestClarificationRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ContestClarificationModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -5470,16 +6335,16 @@ return apiFetch<ContestClarificationModel>(getCreateContestClarificationUrl(orgL
 
 export const getCreateContestClarificationMutationKey = () => ['createContestClarification'] as const;
 
-export const getCreateContestClarificationMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestClarification>>, TError,CreateContestClarificationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateContestClarificationMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestClarification>>, TError,CreateContestClarificationMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createContestClarification>>, TError,CreateContestClarificationMutationVariables, TContext> => {
 
 const mutationKey = getCreateContestClarificationMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -5487,7 +6352,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createContestClarification>>, CreateContestClarificationMutationVariables> = (props) => {
           const {orgLogin,contestLogin,data} = props ?? {};
 
-          return  createContestClarification(orgLogin,contestLogin,data,requestOptions)
+          return  createContestClarification(orgLogin,contestLogin,data,fetchOptions)
         }
 
 
@@ -5499,14 +6364,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateContestClarificationMutationResult = NonNullable<Awaited<ReturnType<typeof createContestClarification>>>
     export type CreateContestClarificationMutationBody = CreateContestClarificationRequestModel
-    export type CreateContestClarificationMutationError = unknown
+    export type CreateContestClarificationMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateContestClarificationMutationVariables = {orgLogin: string;contestLogin: string;data: CreateContestClarificationRequestModel}
 
     /**
  * @summary Submit a clarification question to the jury
  */
-export const useCreateContestClarification = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestClarification>>, TError,CreateContestClarificationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateContestClarification = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContestClarification>>, TError,CreateContestClarificationMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createContestClarification>>,
         TError,
@@ -5523,7 +6388,7 @@ export const getAnswerContestClarificationUrl = (orgLogin: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/clarifications/${encodeURIComponent(String(clarificationId))}/answer`
+  return `/api/organizations/${encodeURIComponent(String(orgLogin))}/contests/${encodeURIComponent(String(contestLogin))}/clarifications/${encodeURIComponent(String(clarificationId))}/answer`
 }
 
 /**
@@ -5532,7 +6397,7 @@ export const getAnswerContestClarificationUrl = (orgLogin: string,
 export const answerContestClarification = async (orgLogin: string,
     contestLogin: string,
     clarificationId: string,
-    answerContestClarificationRequestModel: AnswerContestClarificationRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<ContestClarificationModel> => {
+    answerContestClarificationRequestModel: AnswerContestClarificationRequestModel, options?: RequestInit): Promise<ContestClarificationModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -5548,14 +6413,29 @@ export const answerContestClarification = async (orgLogin: string,
     }
     return headers;
   };
-return apiFetch<ContestClarificationModel>(getAnswerContestClarificationUrl(orgLogin,contestLogin,clarificationId),
+const res = await fetch(getAnswerContestClarificationUrl(orgLogin,contestLogin,clarificationId),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(answerContestClarificationRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ContestClarificationModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -5563,16 +6443,16 @@ return apiFetch<ContestClarificationModel>(getAnswerContestClarificationUrl(orgL
 
 export const getAnswerContestClarificationMutationKey = () => ['answerContestClarification'] as const;
 
-export const getAnswerContestClarificationMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof answerContestClarification>>, TError,AnswerContestClarificationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getAnswerContestClarificationMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof answerContestClarification>>, TError,AnswerContestClarificationMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof answerContestClarification>>, TError,AnswerContestClarificationMutationVariables, TContext> => {
 
 const mutationKey = getAnswerContestClarificationMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -5580,7 +6460,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof answerContestClarification>>, AnswerContestClarificationMutationVariables> = (props) => {
           const {orgLogin,contestLogin,clarificationId,data} = props ?? {};
 
-          return  answerContestClarification(orgLogin,contestLogin,clarificationId,data,requestOptions)
+          return  answerContestClarification(orgLogin,contestLogin,clarificationId,data,fetchOptions)
         }
 
 
@@ -5592,14 +6472,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AnswerContestClarificationMutationResult = NonNullable<Awaited<ReturnType<typeof answerContestClarification>>>
     export type AnswerContestClarificationMutationBody = AnswerContestClarificationRequestModel
-    export type AnswerContestClarificationMutationError = unknown
+    export type AnswerContestClarificationMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type AnswerContestClarificationMutationVariables = {orgLogin: string;contestLogin: string;clarificationId: string;data: AnswerContestClarificationRequestModel}
 
     /**
  * @summary Answer a clarification question (jury only)
  */
-export const useAnswerContestClarification = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof answerContestClarification>>, TError,AnswerContestClarificationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useAnswerContestClarification = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof answerContestClarification>>, TError,AnswerContestClarificationMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof answerContestClarification>>,
         TError,
@@ -5621,11 +6501,11 @@ export const getCreateSubmissionUrl = (params: CreateSubmissionParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/submissions?${stringifiedParams}` : `/submissions`
+  return stringifiedParams.length > 0 ? `/api/submissions?${stringifiedParams}` : `/api/submissions`
 }
 
 export const createSubmission = async (createSubmissionRequestModel: CreateSubmissionRequestModel,
-    params: CreateSubmissionParams, options?: Parameters<typeof apiFetch>[1]): Promise<CreationResponseModel> => {
+    params: CreateSubmissionParams, options?: RequestInit): Promise<CreationResponseModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -5641,14 +6521,29 @@ export const createSubmission = async (createSubmissionRequestModel: CreateSubmi
     }
     return headers;
   };
-return apiFetch<CreationResponseModel>(getCreateSubmissionUrl(params),
+const res = await fetch(getCreateSubmissionUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createSubmissionRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: CreationResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -5656,16 +6551,16 @@ return apiFetch<CreationResponseModel>(getCreateSubmissionUrl(params),
 
 export const getCreateSubmissionMutationKey = () => ['createSubmission'] as const;
 
-export const getCreateSubmissionMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSubmission>>, TError,CreateSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateSubmissionMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSubmission>>, TError,CreateSubmissionMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createSubmission>>, TError,CreateSubmissionMutationVariables, TContext> => {
 
 const mutationKey = getCreateSubmissionMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -5673,7 +6568,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSubmission>>, CreateSubmissionMutationVariables> = (props) => {
           const {data,params} = props ?? {};
 
-          return  createSubmission(data,params,requestOptions)
+          return  createSubmission(data,params,fetchOptions)
         }
 
 
@@ -5685,11 +6580,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof createSubmission>>>
     export type CreateSubmissionMutationBody = CreateSubmissionRequestModel
-    export type CreateSubmissionMutationError = unknown
+    export type CreateSubmissionMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateSubmissionMutationVariables = {data: CreateSubmissionRequestModel;params: CreateSubmissionParams}
 
-    export const useCreateSubmission = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSubmission>>, TError,CreateSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useCreateSubmission = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSubmission>>, TError,CreateSubmissionMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createSubmission>>,
         TError,
@@ -5711,19 +6606,34 @@ export const getListSubmissionsUrl = (params?: ListSubmissionsParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/submissions?${stringifiedParams}` : `/submissions`
+  return stringifiedParams.length > 0 ? `/api/submissions?${stringifiedParams}` : `/api/submissions`
 }
 
-export const listSubmissions = async (params?: ListSubmissionsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListSubmissionsResponseModel> => {
+export const listSubmissions = async (params?: ListSubmissionsParams, options?: RequestInit): Promise<ListSubmissionsResponseModel> => {
 
-  return apiFetch<ListSubmissionsResponseModel>(getListSubmissionsUrl(params),
+  const res = await fetch(getListSubmissionsUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListSubmissionsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -5731,21 +6641,21 @@ export const listSubmissions = async (params?: ListSubmissionsParams, options?: 
 
 export const getListSubmissionsQueryKey = (params?: ListSubmissionsParams,) => {
     return [
-    `/submissions`, ...(params ? [params] : [])
+    `/api/submissions`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof listSubmissions>>, TError = unknown>(params?: ListSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof listSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(params?: ListSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSubmissions>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListSubmissionsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSubmissions>>> = ({ signal }) => listSubmissions(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSubmissions>>> = ({ signal }) => listSubmissions(params, { signal, ...fetchOptions });
 
 
 
@@ -5755,36 +6665,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListSubmissionsQueryResult = NonNullable<Awaited<ReturnType<typeof listSubmissions>>>
-export type ListSubmissionsQueryError = unknown
+export type ListSubmissionsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListSubmissions<TData = Awaited<ReturnType<typeof listSubmissions>>, TError = unknown>(
+export function useListSubmissions<TData = Awaited<ReturnType<typeof listSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params: undefined |  ListSubmissionsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSubmissions>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listSubmissions>>,
           TError,
           Awaited<ReturnType<typeof listSubmissions>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListSubmissions<TData = Awaited<ReturnType<typeof listSubmissions>>, TError = unknown>(
+export function useListSubmissions<TData = Awaited<ReturnType<typeof listSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params?: ListSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSubmissions>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listSubmissions>>,
           TError,
           Awaited<ReturnType<typeof listSubmissions>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListSubmissions<TData = Awaited<ReturnType<typeof listSubmissions>>, TError = unknown>(
- params?: ListSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListSubmissions<TData = Awaited<ReturnType<typeof listSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSubmissions>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListSubmissions<TData = Awaited<ReturnType<typeof listSubmissions>>, TError = unknown>(
- params?: ListSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListSubmissions<TData = Awaited<ReturnType<typeof listSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSubmissions>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -5806,19 +6716,34 @@ export const getGetSubmissionUrl = (submissionId: string,) => {
 
 
 
-  return `/submissions/${encodeURIComponent(String(submissionId))}`
+  return `/api/submissions/${encodeURIComponent(String(submissionId))}`
 }
 
-export const getSubmission = async (submissionId: string, options?: Parameters<typeof apiFetch>[1]): Promise<GetSubmissionResponseModel> => {
+export const getSubmission = async (submissionId: string, options?: RequestInit): Promise<GetSubmissionResponseModel> => {
 
-  return apiFetch<GetSubmissionResponseModel>(getGetSubmissionUrl(submissionId),
+  const res = await fetch(getGetSubmissionUrl(submissionId),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: GetSubmissionResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -5826,21 +6751,21 @@ export const getSubmission = async (submissionId: string, options?: Parameters<t
 
 export const getGetSubmissionQueryKey = (submissionId: string,) => {
     return [
-    `/submissions/${submissionId}`
+    `/api/submissions/${submissionId}`
     ] as const;
     }
 
 
-export const getGetSubmissionQueryOptions = <TData = Awaited<ReturnType<typeof getSubmission>>, TError = unknown>(submissionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSubmission>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetSubmissionQueryOptions = <TData = Awaited<ReturnType<typeof getSubmission>>, TError = globalThis.Error & { info?: unknown; status?: number }>(submissionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSubmission>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetSubmissionQueryKey(submissionId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSubmission>>> = ({ signal }) => getSubmission(submissionId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSubmission>>> = ({ signal }) => getSubmission(submissionId, { signal, ...fetchOptions });
 
 
 
@@ -5850,36 +6775,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetSubmissionQueryResult = NonNullable<Awaited<ReturnType<typeof getSubmission>>>
-export type GetSubmissionQueryError = unknown
+export type GetSubmissionQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetSubmission<TData = Awaited<ReturnType<typeof getSubmission>>, TError = unknown>(
+export function useGetSubmission<TData = Awaited<ReturnType<typeof getSubmission>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  submissionId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSubmission>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getSubmission>>,
           TError,
           Awaited<ReturnType<typeof getSubmission>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetSubmission<TData = Awaited<ReturnType<typeof getSubmission>>, TError = unknown>(
+export function useGetSubmission<TData = Awaited<ReturnType<typeof getSubmission>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  submissionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSubmission>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getSubmission>>,
           TError,
           Awaited<ReturnType<typeof getSubmission>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetSubmission<TData = Awaited<ReturnType<typeof getSubmission>>, TError = unknown>(
- submissionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSubmission>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetSubmission<TData = Awaited<ReturnType<typeof getSubmission>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ submissionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSubmission>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetSubmission<TData = Awaited<ReturnType<typeof getSubmission>>, TError = unknown>(
- submissionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSubmission>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetSubmission<TData = Awaited<ReturnType<typeof getSubmission>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ submissionId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSubmission>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -5901,19 +6826,34 @@ export const getGetHealthUrl = () => {
 
 
 
-  return `/health`
+  return `/api/health`
 }
 
-export const getHealth = async ( options?: Parameters<typeof apiFetch>[1]): Promise<GetHealthResponseModel> => {
+export const getHealth = async ( options?: RequestInit): Promise<GetHealthResponseModel> => {
 
-  return apiFetch<GetHealthResponseModel>(getGetHealthUrl(),
+  const res = await fetch(getGetHealthUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: GetHealthResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -5921,21 +6861,21 @@ export const getHealth = async ( options?: Parameters<typeof apiFetch>[1]): Prom
 
 export const getGetHealthQueryKey = () => {
     return [
-    `/health`
+    `/api/health`
     ] as const;
     }
 
 
-export const getGetHealthQueryOptions = <TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetHealthQueryOptions = <TData = Awaited<ReturnType<typeof getHealth>>, TError = globalThis.Error & { info?: unknown; status?: number }>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetHealthQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHealth>>> = ({ signal }) => getHealth({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHealth>>> = ({ signal }) => getHealth({ signal, ...fetchOptions });
 
 
 
@@ -5945,36 +6885,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getHealth>>>
-export type GetHealthQueryError = unknown
+export type GetHealthQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>(
+export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getHealth>>,
           TError,
           Awaited<ReturnType<typeof getHealth>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>(
+export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getHealth>>,
           TError,
           Awaited<ReturnType<typeof getHealth>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -6003,19 +6943,34 @@ export const getListUsersUrl = (params?: ListUsersParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/users?${stringifiedParams}` : `/users`
+  return stringifiedParams.length > 0 ? `/api/users?${stringifiedParams}` : `/api/users`
 }
 
-export const listUsers = async (params?: ListUsersParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListUsersResponseModel> => {
+export const listUsers = async (params?: ListUsersParams, options?: RequestInit): Promise<ListUsersResponseModel> => {
 
-  return apiFetch<ListUsersResponseModel>(getListUsersUrl(params),
+  const res = await fetch(getListUsersUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListUsersResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -6023,21 +6978,21 @@ export const listUsers = async (params?: ListUsersParams, options?: Parameters<t
 
 export const getListUsersQueryKey = (params?: ListUsersParams,) => {
     return [
-    `/users`, ...(params ? [params] : [])
+    `/api/users`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListUsersQueryOptions = <TData = Awaited<ReturnType<typeof listUsers>>, TError = unknown>(params?: ListUsersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListUsersQueryOptions = <TData = Awaited<ReturnType<typeof listUsers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(params?: ListUsersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListUsersQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsers>>> = ({ signal }) => listUsers(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsers>>> = ({ signal }) => listUsers(params, { signal, ...fetchOptions });
 
 
 
@@ -6047,36 +7002,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listUsers>>>
-export type ListUsersQueryError = unknown
+export type ListUsersQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TError = unknown>(
+export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params: undefined |  ListUsersParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listUsers>>,
           TError,
           Awaited<ReturnType<typeof listUsers>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TError = unknown>(
+export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params?: ListUsersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listUsers>>,
           TError,
           Awaited<ReturnType<typeof listUsers>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TError = unknown>(
- params?: ListUsersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListUsersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TError = unknown>(
- params?: ListUsersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListUsersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -6098,19 +7053,34 @@ export const getGetUserUrl = (username: string,) => {
 
 
 
-  return `/users/${encodeURIComponent(String(username))}`
+  return `/api/users/${encodeURIComponent(String(username))}`
 }
 
-export const getUser = async (username: string, options?: Parameters<typeof apiFetch>[1]): Promise<GetUserResponseModel> => {
+export const getUser = async (username: string, options?: RequestInit): Promise<GetUserResponseModel> => {
 
-  return apiFetch<GetUserResponseModel>(getGetUserUrl(username),
+  const res = await fetch(getGetUserUrl(username),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: GetUserResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -6118,21 +7088,21 @@ export const getUser = async (username: string, options?: Parameters<typeof apiF
 
 export const getGetUserQueryKey = (username: string,) => {
     return [
-    `/users/${username}`
+    `/api/users/${username}`
     ] as const;
     }
 
 
-export const getGetUserQueryOptions = <TData = Awaited<ReturnType<typeof getUser>>, TError = unknown>(username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetUserQueryOptions = <TData = Awaited<ReturnType<typeof getUser>>, TError = globalThis.Error & { info?: unknown; status?: number }>(username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetUserQueryKey(username);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUser>>> = ({ signal }) => getUser(username, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUser>>> = ({ signal }) => getUser(username, { signal, ...fetchOptions });
 
 
 
@@ -6142,36 +7112,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetUserQueryResult = NonNullable<Awaited<ReturnType<typeof getUser>>>
-export type GetUserQueryError = unknown
+export type GetUserQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetUser<TData = Awaited<ReturnType<typeof getUser>>, TError = unknown>(
+export function useGetUser<TData = Awaited<ReturnType<typeof getUser>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  username: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getUser>>,
           TError,
           Awaited<ReturnType<typeof getUser>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetUser<TData = Awaited<ReturnType<typeof getUser>>, TError = unknown>(
+export function useGetUser<TData = Awaited<ReturnType<typeof getUser>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getUser>>,
           TError,
           Awaited<ReturnType<typeof getUser>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetUser<TData = Awaited<ReturnType<typeof getUser>>, TError = unknown>(
- username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetUser<TData = Awaited<ReturnType<typeof getUser>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetUser<TData = Awaited<ReturnType<typeof getUser>>, TError = unknown>(
- username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetUser<TData = Awaited<ReturnType<typeof getUser>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -6193,11 +7163,11 @@ export const getUpdateUserUrl = (username: string,) => {
 
 
 
-  return `/users/${encodeURIComponent(String(username))}`
+  return `/api/users/${encodeURIComponent(String(username))}`
 }
 
 export const updateUser = async (username: string,
-    updateUserRequestModel: UpdateUserRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+    updateUserRequestModel: UpdateUserRequestModel, options?: RequestInit): Promise<unknown> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -6213,14 +7183,29 @@ export const updateUser = async (username: string,
     }
     return headers;
   };
-return apiFetch<unknown>(getUpdateUserUrl(username),
+const res = await fetch(getUpdateUserUrl(username),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateUserRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -6228,16 +7213,16 @@ return apiFetch<unknown>(getUpdateUserUrl(username),
 
 export const getUpdateUserMutationKey = () => ['updateUser'] as const;
 
-export const getUpdateUserMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUser>>, TError,UpdateUserMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateUserMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUser>>, TError,UpdateUserMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateUser>>, TError,UpdateUserMutationVariables, TContext> => {
 
 const mutationKey = getUpdateUserMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -6245,7 +7230,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateUser>>, UpdateUserMutationVariables> = (props) => {
           const {username,data} = props ?? {};
 
-          return  updateUser(username,data,requestOptions)
+          return  updateUser(username,data,fetchOptions)
         }
 
 
@@ -6257,11 +7242,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateUserMutationResult = NonNullable<Awaited<ReturnType<typeof updateUser>>>
     export type UpdateUserMutationBody = UpdateUserRequestModel
-    export type UpdateUserMutationError = unknown
+    export type UpdateUserMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateUserMutationVariables = {username: string;data: UpdateUserRequestModel}
 
-    export const useUpdateUser = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUser>>, TError,UpdateUserMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useUpdateUser = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUser>>, TError,UpdateUserMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateUser>>,
         TError,
@@ -6284,20 +7269,35 @@ export const getListUserSubmissionsUrl = (username: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/users/${encodeURIComponent(String(username))}/submissions?${stringifiedParams}` : `/users/${encodeURIComponent(String(username))}/submissions`
+  return stringifiedParams.length > 0 ? `/api/users/${encodeURIComponent(String(username))}/submissions?${stringifiedParams}` : `/api/users/${encodeURIComponent(String(username))}/submissions`
 }
 
 export const listUserSubmissions = async (username: string,
-    params?: ListUserSubmissionsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListSubmissionsResponseModel> => {
+    params?: ListUserSubmissionsParams, options?: RequestInit): Promise<ListSubmissionsResponseModel> => {
 
-  return apiFetch<ListSubmissionsResponseModel>(getListUserSubmissionsUrl(username,params),
+  const res = await fetch(getListUserSubmissionsUrl(username,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListSubmissionsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -6306,22 +7306,22 @@ export const listUserSubmissions = async (username: string,
 export const getListUserSubmissionsQueryKey = (username: string,
     params?: ListUserSubmissionsParams,) => {
     return [
-    `/users/${username}/submissions`, ...(params ? [params] : [])
+    `/api/users/${username}/submissions`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListUserSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof listUserSubmissions>>, TError = unknown>(username: string,
-    params?: ListUserSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListUserSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof listUserSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(username: string,
+    params?: ListUserSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserSubmissions>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListUserSubmissionsQueryKey(username,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUserSubmissions>>> = ({ signal }) => listUserSubmissions(username,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUserSubmissions>>> = ({ signal }) => listUserSubmissions(username,params, { signal, ...fetchOptions });
 
 
 
@@ -6331,10 +7331,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListUserSubmissionsQueryResult = NonNullable<Awaited<ReturnType<typeof listUserSubmissions>>>
-export type ListUserSubmissionsQueryError = unknown
+export type ListUserSubmissionsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListUserSubmissions<TData = Awaited<ReturnType<typeof listUserSubmissions>>, TError = unknown>(
+export function useListUserSubmissions<TData = Awaited<ReturnType<typeof listUserSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  username: string,
     params: undefined |  ListUserSubmissionsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserSubmissions>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -6342,10 +7342,10 @@ export function useListUserSubmissions<TData = Awaited<ReturnType<typeof listUse
           TError,
           Awaited<ReturnType<typeof listUserSubmissions>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListUserSubmissions<TData = Awaited<ReturnType<typeof listUserSubmissions>>, TError = unknown>(
+export function useListUserSubmissions<TData = Awaited<ReturnType<typeof listUserSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  username: string,
     params?: ListUserSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserSubmissions>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -6353,18 +7353,18 @@ export function useListUserSubmissions<TData = Awaited<ReturnType<typeof listUse
           TError,
           Awaited<ReturnType<typeof listUserSubmissions>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListUserSubmissions<TData = Awaited<ReturnType<typeof listUserSubmissions>>, TError = unknown>(
+export function useListUserSubmissions<TData = Awaited<ReturnType<typeof listUserSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  username: string,
-    params?: ListUserSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListUserSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserSubmissions>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListUserSubmissions<TData = Awaited<ReturnType<typeof listUserSubmissions>>, TError = unknown>(
+export function useListUserSubmissions<TData = Awaited<ReturnType<typeof listUserSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  username: string,
-    params?: ListUserSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListUserSubmissionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserSubmissions>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -6386,19 +7386,34 @@ export const getGetMeUrl = () => {
 
 
 
-  return `/users/me`
+  return `/api/users/me`
 }
 
-export const getMe = async ( options?: Parameters<typeof apiFetch>[1]): Promise<GetUserResponseModel> => {
+export const getMe = async ( options?: RequestInit): Promise<GetUserResponseModel> => {
 
-  return apiFetch<GetUserResponseModel>(getGetMeUrl(),
+  const res = await fetch(getGetMeUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: GetUserResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -6406,21 +7421,21 @@ export const getMe = async ( options?: Parameters<typeof apiFetch>[1]): Promise<
 
 export const getGetMeQueryKey = () => {
     return [
-    `/users/me`
+    `/api/users/me`
     ] as const;
     }
 
 
-export const getGetMeQueryOptions = <TData = Awaited<ReturnType<typeof getMe>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetMeQueryOptions = <TData = Awaited<ReturnType<typeof getMe>>, TError = globalThis.Error & { info?: unknown; status?: number }>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetMeQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMe>>> = ({ signal }) => getMe({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMe>>> = ({ signal }) => getMe({ signal, ...fetchOptions });
 
 
 
@@ -6430,36 +7445,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetMeQueryResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
-export type GetMeQueryError = unknown
+export type GetMeQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = unknown>(
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMe>>,
           TError,
           Awaited<ReturnType<typeof getMe>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = unknown>(
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMe>>,
           TError,
           Awaited<ReturnType<typeof getMe>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -6481,19 +7496,34 @@ export const getGetMyDashboardUrl = () => {
 
 
 
-  return `/users/me/dashboard`
+  return `/api/users/me/dashboard`
 }
 
-export const getMyDashboard = async ( options?: Parameters<typeof apiFetch>[1]): Promise<GetUserDashboardResponseModel> => {
+export const getMyDashboard = async ( options?: RequestInit): Promise<GetUserDashboardResponseModel> => {
 
-  return apiFetch<GetUserDashboardResponseModel>(getGetMyDashboardUrl(),
+  const res = await fetch(getGetMyDashboardUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: GetUserDashboardResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -6501,21 +7531,21 @@ export const getMyDashboard = async ( options?: Parameters<typeof apiFetch>[1]):
 
 export const getGetMyDashboardQueryKey = () => {
     return [
-    `/users/me/dashboard`
+    `/api/users/me/dashboard`
     ] as const;
     }
 
 
-export const getGetMyDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getMyDashboard>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyDashboard>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetMyDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getMyDashboard>>, TError = globalThis.Error & { info?: unknown; status?: number }>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyDashboard>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetMyDashboardQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyDashboard>>> = ({ signal }) => getMyDashboard({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyDashboard>>> = ({ signal }) => getMyDashboard({ signal, ...fetchOptions });
 
 
 
@@ -6525,36 +7555,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetMyDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getMyDashboard>>>
-export type GetMyDashboardQueryError = unknown
+export type GetMyDashboardQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetMyDashboard<TData = Awaited<ReturnType<typeof getMyDashboard>>, TError = unknown>(
+export function useGetMyDashboard<TData = Awaited<ReturnType<typeof getMyDashboard>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyDashboard>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMyDashboard>>,
           TError,
           Awaited<ReturnType<typeof getMyDashboard>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyDashboard<TData = Awaited<ReturnType<typeof getMyDashboard>>, TError = unknown>(
+export function useGetMyDashboard<TData = Awaited<ReturnType<typeof getMyDashboard>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyDashboard>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMyDashboard>>,
           TError,
           Awaited<ReturnType<typeof getMyDashboard>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyDashboard<TData = Awaited<ReturnType<typeof getMyDashboard>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyDashboard>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetMyDashboard<TData = Awaited<ReturnType<typeof getMyDashboard>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyDashboard>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetMyDashboard<TData = Awaited<ReturnType<typeof getMyDashboard>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyDashboard>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetMyDashboard<TData = Awaited<ReturnType<typeof getMyDashboard>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyDashboard>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -6576,13 +7606,13 @@ export const getClaimTemporaryUserUrl = () => {
 
 
 
-  return `/users/claim-temporary`
+  return `/api/users/claim-temporary`
 }
 
 /**
  * @summary Claim temporary user results into permanent account
  */
-export const claimTemporaryUser = async (claimTemporaryUserRequestModel: ClaimTemporaryUserRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<ClaimTemporaryUserResponseModel> => {
+export const claimTemporaryUser = async (claimTemporaryUserRequestModel: ClaimTemporaryUserRequestModel, options?: RequestInit): Promise<ClaimTemporaryUserResponseModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -6598,14 +7628,29 @@ export const claimTemporaryUser = async (claimTemporaryUserRequestModel: ClaimTe
     }
     return headers;
   };
-return apiFetch<ClaimTemporaryUserResponseModel>(getClaimTemporaryUserUrl(),
+const res = await fetch(getClaimTemporaryUserUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(claimTemporaryUserRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ClaimTemporaryUserResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -6613,16 +7658,16 @@ return apiFetch<ClaimTemporaryUserResponseModel>(getClaimTemporaryUserUrl(),
 
 export const getClaimTemporaryUserMutationKey = () => ['claimTemporaryUser'] as const;
 
-export const getClaimTemporaryUserMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimTemporaryUser>>, TError,ClaimTemporaryUserMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getClaimTemporaryUserMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimTemporaryUser>>, TError,ClaimTemporaryUserMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof claimTemporaryUser>>, TError,ClaimTemporaryUserMutationVariables, TContext> => {
 
 const mutationKey = getClaimTemporaryUserMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -6630,7 +7675,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof claimTemporaryUser>>, ClaimTemporaryUserMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  claimTemporaryUser(data,requestOptions)
+          return  claimTemporaryUser(data,fetchOptions)
         }
 
 
@@ -6642,14 +7687,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ClaimTemporaryUserMutationResult = NonNullable<Awaited<ReturnType<typeof claimTemporaryUser>>>
     export type ClaimTemporaryUserMutationBody = ClaimTemporaryUserRequestModel
-    export type ClaimTemporaryUserMutationError = unknown
+    export type ClaimTemporaryUserMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type ClaimTemporaryUserMutationVariables = {data: ClaimTemporaryUserRequestModel}
 
     /**
  * @summary Claim temporary user results into permanent account
  */
-export const useClaimTemporaryUser = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimTemporaryUser>>, TError,ClaimTemporaryUserMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useClaimTemporaryUser = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimTemporaryUser>>, TError,ClaimTemporaryUserMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof claimTemporaryUser>>,
         TError,
@@ -6664,22 +7709,37 @@ export const getListMyClaimedAccountsUrl = () => {
 
 
 
-  return `/users/me/claimed-accounts`
+  return `/api/users/me/claimed-accounts`
 }
 
 /**
  * @summary List claimed temporary accounts
  */
-export const listMyClaimedAccounts = async ( options?: Parameters<typeof apiFetch>[1]): Promise<ListClaimedAccountsResponseModel> => {
+export const listMyClaimedAccounts = async ( options?: RequestInit): Promise<ListClaimedAccountsResponseModel> => {
 
-  return apiFetch<ListClaimedAccountsResponseModel>(getListMyClaimedAccountsUrl(),
+  const res = await fetch(getListMyClaimedAccountsUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListClaimedAccountsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -6687,21 +7747,21 @@ export const listMyClaimedAccounts = async ( options?: Parameters<typeof apiFetc
 
 export const getListMyClaimedAccountsQueryKey = () => {
     return [
-    `/users/me/claimed-accounts`
+    `/api/users/me/claimed-accounts`
     ] as const;
     }
 
 
-export const getListMyClaimedAccountsQueryOptions = <TData = Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListMyClaimedAccountsQueryOptions = <TData = Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError = globalThis.Error & { info?: unknown; status?: number }>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListMyClaimedAccountsQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyClaimedAccounts>>> = ({ signal }) => listMyClaimedAccounts({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyClaimedAccounts>>> = ({ signal }) => listMyClaimedAccounts({ signal, ...fetchOptions });
 
 
 
@@ -6711,39 +7771,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListMyClaimedAccountsQueryResult = NonNullable<Awaited<ReturnType<typeof listMyClaimedAccounts>>>
-export type ListMyClaimedAccountsQueryError = unknown
+export type ListMyClaimedAccountsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListMyClaimedAccounts<TData = Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError = unknown>(
+export function useListMyClaimedAccounts<TData = Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listMyClaimedAccounts>>,
           TError,
           Awaited<ReturnType<typeof listMyClaimedAccounts>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyClaimedAccounts<TData = Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError = unknown>(
+export function useListMyClaimedAccounts<TData = Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listMyClaimedAccounts>>,
           TError,
           Awaited<ReturnType<typeof listMyClaimedAccounts>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyClaimedAccounts<TData = Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListMyClaimedAccounts<TData = Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List claimed temporary accounts
  */
 
-export function useListMyClaimedAccounts<TData = Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListMyClaimedAccounts<TData = Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyClaimedAccounts>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -6765,13 +7825,13 @@ export const getChangePasswordUrl = () => {
 
 
 
-  return `/users/me/change-password`
+  return `/api/users/me/change-password`
 }
 
 /**
  * @summary Change password for current user
  */
-export const changePassword = async (changePasswordRequestModel: ChangePasswordRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<AuthResponseModel> => {
+export const changePassword = async (changePasswordRequestModel: ChangePasswordRequestModel, options?: RequestInit): Promise<AuthResponseModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -6787,14 +7847,29 @@ export const changePassword = async (changePasswordRequestModel: ChangePasswordR
     }
     return headers;
   };
-return apiFetch<AuthResponseModel>(getChangePasswordUrl(),
+const res = await fetch(getChangePasswordUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(changePasswordRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: AuthResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -6802,16 +7877,16 @@ return apiFetch<AuthResponseModel>(getChangePasswordUrl(),
 
 export const getChangePasswordMutationKey = () => ['changePassword'] as const;
 
-export const getChangePasswordMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,ChangePasswordMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getChangePasswordMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,ChangePasswordMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,ChangePasswordMutationVariables, TContext> => {
 
 const mutationKey = getChangePasswordMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -6819,7 +7894,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof changePassword>>, ChangePasswordMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  changePassword(data,requestOptions)
+          return  changePassword(data,fetchOptions)
         }
 
 
@@ -6831,14 +7906,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ChangePasswordMutationResult = NonNullable<Awaited<ReturnType<typeof changePassword>>>
     export type ChangePasswordMutationBody = ChangePasswordRequestModel
-    export type ChangePasswordMutationError = unknown
+    export type ChangePasswordMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type ChangePasswordMutationVariables = {data: ChangePasswordRequestModel}
 
     /**
  * @summary Change password for current user
  */
-export const useChangePassword = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,ChangePasswordMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useChangePassword = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changePassword>>, TError,ChangePasswordMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof changePassword>>,
         TError,
@@ -6853,13 +7928,13 @@ export const getRequestEmailChangeUrl = () => {
 
 
 
-  return `/users/me/request-email-change`
+  return `/api/users/me/request-email-change`
 }
 
 /**
  * @summary Request email change for current user
  */
-export const requestEmailChange = async (requestEmailChangeRequestModel: RequestEmailChangeRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+export const requestEmailChange = async (requestEmailChangeRequestModel: RequestEmailChangeRequestModel, options?: RequestInit): Promise<unknown> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -6875,14 +7950,29 @@ export const requestEmailChange = async (requestEmailChangeRequestModel: Request
     }
     return headers;
   };
-return apiFetch<unknown>(getRequestEmailChangeUrl(),
+const res = await fetch(getRequestEmailChangeUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(requestEmailChangeRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -6890,16 +7980,16 @@ return apiFetch<unknown>(getRequestEmailChangeUrl(),
 
 export const getRequestEmailChangeMutationKey = () => ['requestEmailChange'] as const;
 
-export const getRequestEmailChangeMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestEmailChange>>, TError,RequestEmailChangeMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getRequestEmailChangeMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestEmailChange>>, TError,RequestEmailChangeMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof requestEmailChange>>, TError,RequestEmailChangeMutationVariables, TContext> => {
 
 const mutationKey = getRequestEmailChangeMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -6907,7 +7997,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestEmailChange>>, RequestEmailChangeMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  requestEmailChange(data,requestOptions)
+          return  requestEmailChange(data,fetchOptions)
         }
 
 
@@ -6919,14 +8009,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RequestEmailChangeMutationResult = NonNullable<Awaited<ReturnType<typeof requestEmailChange>>>
     export type RequestEmailChangeMutationBody = RequestEmailChangeRequestModel
-    export type RequestEmailChangeMutationError = unknown
+    export type RequestEmailChangeMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type RequestEmailChangeMutationVariables = {data: RequestEmailChangeRequestModel}
 
     /**
  * @summary Request email change for current user
  */
-export const useRequestEmailChange = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestEmailChange>>, TError,RequestEmailChangeMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useRequestEmailChange = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestEmailChange>>, TError,RequestEmailChangeMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof requestEmailChange>>,
         TError,
@@ -6941,22 +8031,37 @@ export const getGetUserAvatarUrl = (username: string,) => {
 
 
 
-  return `/users/${encodeURIComponent(String(username))}/avatar`
+  return `/api/users/${encodeURIComponent(String(username))}/avatar`
 }
 
 /**
  * @summary Get user avatar by username
  */
-export const getUserAvatar = async (username: string, options?: Parameters<typeof apiFetch>[1]): Promise<Blob> => {
+export const getUserAvatar = async (username: string, options?: RequestInit): Promise<Blob> => {
 
-  return apiFetch<Blob>(getGetUserAvatarUrl(username),
+  const res = await fetch(getGetUserAvatarUrl(username),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+  if (!res.ok) {
+    const errorBody = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const err: globalThis.Error & {info?: Blob, status?: number} = new globalThis.Error();
+    const data : Blob = errorBody ? JSON.parse(errorBody) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const body = [204, 205, 304].includes(res.status) ? null : await res.blob();
+  const data: Blob = body as Blob
+  return data
+}
 
 
 
@@ -6964,21 +8069,21 @@ export const getUserAvatar = async (username: string, options?: Parameters<typeo
 
 export const getGetUserAvatarQueryKey = (username: string,) => {
     return [
-    `/users/${username}/avatar`
+    `/api/users/${username}/avatar`
     ] as const;
     }
 
 
-export const getGetUserAvatarQueryOptions = <TData = Awaited<ReturnType<typeof getUserAvatar>>, TError = void | Error>(username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAvatar>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetUserAvatarQueryOptions = <TData = Awaited<ReturnType<typeof getUserAvatar>>, TError = globalThis.Error & { info?: void | Error; status?: number }>(username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAvatar>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetUserAvatarQueryKey(username);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserAvatar>>> = ({ signal }) => getUserAvatar(username, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserAvatar>>> = ({ signal }) => getUserAvatar(username, { signal, ...fetchOptions });
 
 
 
@@ -6988,39 +8093,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetUserAvatarQueryResult = NonNullable<Awaited<ReturnType<typeof getUserAvatar>>>
-export type GetUserAvatarQueryError = void | Error
+export type GetUserAvatarQueryError = globalThis.Error & { info?: void | Error; status?: number }
 
 
-export function useGetUserAvatar<TData = Awaited<ReturnType<typeof getUserAvatar>>, TError = void | Error>(
+export function useGetUserAvatar<TData = Awaited<ReturnType<typeof getUserAvatar>>, TError = globalThis.Error & { info?: void | Error; status?: number }>(
  username: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAvatar>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getUserAvatar>>,
           TError,
           Awaited<ReturnType<typeof getUserAvatar>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetUserAvatar<TData = Awaited<ReturnType<typeof getUserAvatar>>, TError = void | Error>(
+export function useGetUserAvatar<TData = Awaited<ReturnType<typeof getUserAvatar>>, TError = globalThis.Error & { info?: void | Error; status?: number }>(
  username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAvatar>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getUserAvatar>>,
           TError,
           Awaited<ReturnType<typeof getUserAvatar>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetUserAvatar<TData = Awaited<ReturnType<typeof getUserAvatar>>, TError = void | Error>(
- username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAvatar>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetUserAvatar<TData = Awaited<ReturnType<typeof getUserAvatar>>, TError = globalThis.Error & { info?: void | Error; status?: number }>(
+ username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAvatar>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get user avatar by username
  */
 
-export function useGetUserAvatar<TData = Awaited<ReturnType<typeof getUserAvatar>>, TError = void | Error>(
- username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAvatar>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetUserAvatar<TData = Awaited<ReturnType<typeof getUserAvatar>>, TError = globalThis.Error & { info?: void | Error; status?: number }>(
+ username: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserAvatar>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -7042,25 +8147,40 @@ export const getUploadAvatarUrl = (username: string,) => {
 
 
 
-  return `/users/${encodeURIComponent(String(username))}/avatar`
+  return `/api/users/${encodeURIComponent(String(username))}/avatar`
 }
 
 /**
  * @summary Upload user avatar
  */
 export const uploadAvatar = async (username: string,
-    uploadAvatarBody: UploadAvatarBody, options?: Parameters<typeof apiFetch>[1]): Promise<UploadAvatar200> => {
+    uploadAvatarBody: UploadAvatarBody, options?: RequestInit): Promise<UploadAvatar200> => {
     const formData = new FormData();
 formData.append(`avatar`, uploadAvatarBody.avatar);
 
-  return apiFetch<UploadAvatar200>(getUploadAvatarUrl(username),
+  const res = await fetch(getUploadAvatarUrl(username),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
     ,
     body: formData
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: UploadAvatar200 = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -7068,16 +8188,16 @@ formData.append(`avatar`, uploadAvatarBody.avatar);
 
 export const getUploadAvatarMutationKey = () => ['uploadAvatar'] as const;
 
-export const getUploadAvatarMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadAvatar>>, TError,UploadAvatarMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUploadAvatarMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadAvatar>>, TError,UploadAvatarMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof uploadAvatar>>, TError,UploadAvatarMutationVariables, TContext> => {
 
 const mutationKey = getUploadAvatarMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -7085,7 +8205,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadAvatar>>, UploadAvatarMutationVariables> = (props) => {
           const {username,data} = props ?? {};
 
-          return  uploadAvatar(username,data,requestOptions)
+          return  uploadAvatar(username,data,fetchOptions)
         }
 
 
@@ -7097,14 +8217,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UploadAvatarMutationResult = NonNullable<Awaited<ReturnType<typeof uploadAvatar>>>
     export type UploadAvatarMutationBody = UploadAvatarBody
-    export type UploadAvatarMutationError = unknown
+    export type UploadAvatarMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UploadAvatarMutationVariables = {username: string;data: UploadAvatarBody}
 
     /**
  * @summary Upload user avatar
  */
-export const useUploadAvatar = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadAvatar>>, TError,UploadAvatarMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUploadAvatar = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadAvatar>>, TError,UploadAvatarMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof uploadAvatar>>,
         TError,
@@ -7119,22 +8239,37 @@ export const getDeleteAvatarUrl = (username: string,) => {
 
 
 
-  return `/users/${encodeURIComponent(String(username))}/avatar`
+  return `/api/users/${encodeURIComponent(String(username))}/avatar`
 }
 
 /**
  * @summary Delete user avatar
  */
-export const deleteAvatar = async (username: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+export const deleteAvatar = async (username: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getDeleteAvatarUrl(username),
+  const res = await fetch(getDeleteAvatarUrl(username),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -7142,16 +8277,16 @@ export const deleteAvatar = async (username: string, options?: Parameters<typeof
 
 export const getDeleteAvatarMutationKey = () => ['deleteAvatar'] as const;
 
-export const getDeleteAvatarMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAvatar>>, TError,DeleteAvatarMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteAvatarMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAvatar>>, TError,DeleteAvatarMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteAvatar>>, TError,DeleteAvatarMutationVariables, TContext> => {
 
 const mutationKey = getDeleteAvatarMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -7159,7 +8294,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAvatar>>, DeleteAvatarMutationVariables> = (props) => {
           const {username} = props ?? {};
 
-          return  deleteAvatar(username,requestOptions)
+          return  deleteAvatar(username,fetchOptions)
         }
 
 
@@ -7171,14 +8306,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteAvatarMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAvatar>>>
 
-    export type DeleteAvatarMutationError = unknown
+    export type DeleteAvatarMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteAvatarMutationVariables = {username: string}
 
     /**
  * @summary Delete user avatar
  */
-export const useDeleteAvatar = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAvatar>>, TError,DeleteAvatarMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeleteAvatar = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAvatar>>, TError,DeleteAvatarMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteAvatar>>,
         TError,
@@ -7193,19 +8328,34 @@ export const getListProblemTeamsUrl = (id: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(id))}/teams`
+  return `/api/problems/${encodeURIComponent(String(id))}/teams`
 }
 
-export const listProblemTeams = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<ListProblemTeamsResponseModel> => {
+export const listProblemTeams = async (id: string, options?: RequestInit): Promise<ListProblemTeamsResponseModel> => {
 
-  return apiFetch<ListProblemTeamsResponseModel>(getListProblemTeamsUrl(id),
+  const res = await fetch(getListProblemTeamsUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListProblemTeamsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -7213,21 +8363,21 @@ export const listProblemTeams = async (id: string, options?: Parameters<typeof a
 
 export const getListProblemTeamsQueryKey = (id: string,) => {
     return [
-    `/problems/${id}/teams`
+    `/api/problems/${id}/teams`
     ] as const;
     }
 
 
-export const getListProblemTeamsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemTeams>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTeams>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListProblemTeamsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTeams>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListProblemTeamsQueryKey(id);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemTeams>>> = ({ signal }) => listProblemTeams(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemTeams>>> = ({ signal }) => listProblemTeams(id, { signal, ...fetchOptions });
 
 
 
@@ -7237,36 +8387,36 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListProblemTeamsQueryResult = NonNullable<Awaited<ReturnType<typeof listProblemTeams>>>
-export type ListProblemTeamsQueryError = unknown
+export type ListProblemTeamsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListProblemTeams<TData = Awaited<ReturnType<typeof listProblemTeams>>, TError = unknown>(
+export function useListProblemTeams<TData = Awaited<ReturnType<typeof listProblemTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTeams>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemTeams>>,
           TError,
           Awaited<ReturnType<typeof listProblemTeams>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemTeams<TData = Awaited<ReturnType<typeof listProblemTeams>>, TError = unknown>(
+export function useListProblemTeams<TData = Awaited<ReturnType<typeof listProblemTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTeams>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemTeams>>,
           TError,
           Awaited<ReturnType<typeof listProblemTeams>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemTeams<TData = Awaited<ReturnType<typeof listProblemTeams>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTeams>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemTeams<TData = Awaited<ReturnType<typeof listProblemTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTeams>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListProblemTeams<TData = Awaited<ReturnType<typeof listProblemTeams>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTeams>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemTeams<TData = Awaited<ReturnType<typeof listProblemTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTeams>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -7296,20 +8446,35 @@ export const getCreateProblemTeamUrl = (id: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(id))}/teams?${stringifiedParams}` : `/problems/${encodeURIComponent(String(id))}/teams`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(id))}/teams?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(id))}/teams`
 }
 
 export const createProblemTeam = async (id: string,
-    params: CreateProblemTeamParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: CreateProblemTeamParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getCreateProblemTeamUrl(id,params),
+  const res = await fetch(getCreateProblemTeamUrl(id,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -7317,16 +8482,16 @@ export const createProblemTeam = async (id: string,
 
 export const getCreateProblemTeamMutationKey = () => ['createProblemTeam'] as const;
 
-export const getCreateProblemTeamMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemTeam>>, TError,CreateProblemTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateProblemTeamMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemTeam>>, TError,CreateProblemTeamMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createProblemTeam>>, TError,CreateProblemTeamMutationVariables, TContext> => {
 
 const mutationKey = getCreateProblemTeamMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -7334,7 +8499,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProblemTeam>>, CreateProblemTeamMutationVariables> = (props) => {
           const {id,params} = props ?? {};
 
-          return  createProblemTeam(id,params,requestOptions)
+          return  createProblemTeam(id,params,fetchOptions)
         }
 
 
@@ -7346,11 +8511,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateProblemTeamMutationResult = NonNullable<Awaited<ReturnType<typeof createProblemTeam>>>
 
-    export type CreateProblemTeamMutationError = unknown
+    export type CreateProblemTeamMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateProblemTeamMutationVariables = {id: string;params: CreateProblemTeamParams}
 
-    export const useCreateProblemTeam = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemTeam>>, TError,CreateProblemTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useCreateProblemTeam = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemTeam>>, TError,CreateProblemTeamMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createProblemTeam>>,
         TError,
@@ -7373,20 +8538,35 @@ export const getDeleteProblemTeamUrl = (id: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(id))}/teams?${stringifiedParams}` : `/problems/${encodeURIComponent(String(id))}/teams`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(id))}/teams?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(id))}/teams`
 }
 
 export const deleteProblemTeam = async (id: string,
-    params: DeleteProblemTeamParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: DeleteProblemTeamParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getDeleteProblemTeamUrl(id,params),
+  const res = await fetch(getDeleteProblemTeamUrl(id,params),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -7394,16 +8574,16 @@ export const deleteProblemTeam = async (id: string,
 
 export const getDeleteProblemTeamMutationKey = () => ['deleteProblemTeam'] as const;
 
-export const getDeleteProblemTeamMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemTeam>>, TError,DeleteProblemTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteProblemTeamMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemTeam>>, TError,DeleteProblemTeamMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteProblemTeam>>, TError,DeleteProblemTeamMutationVariables, TContext> => {
 
 const mutationKey = getDeleteProblemTeamMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -7411,7 +8591,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProblemTeam>>, DeleteProblemTeamMutationVariables> = (props) => {
           const {id,params} = props ?? {};
 
-          return  deleteProblemTeam(id,params,requestOptions)
+          return  deleteProblemTeam(id,params,fetchOptions)
         }
 
 
@@ -7423,11 +8603,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteProblemTeamMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProblemTeam>>>
 
-    export type DeleteProblemTeamMutationError = unknown
+    export type DeleteProblemTeamMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteProblemTeamMutationVariables = {id: string;params: DeleteProblemTeamParams}
 
-    export const useDeleteProblemTeam = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemTeam>>, TError,DeleteProblemTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useDeleteProblemTeam = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemTeam>>, TError,DeleteProblemTeamMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteProblemTeam>>,
         TError,
@@ -7450,20 +8630,35 @@ export const getUpdateProblemTeamUrl = (id: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(id))}/teams?${stringifiedParams}` : `/problems/${encodeURIComponent(String(id))}/teams`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(id))}/teams?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(id))}/teams`
 }
 
 export const updateProblemTeam = async (id: string,
-    params: UpdateProblemTeamParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: UpdateProblemTeamParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getUpdateProblemTeamUrl(id,params),
+  const res = await fetch(getUpdateProblemTeamUrl(id,params),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -7471,16 +8666,16 @@ export const updateProblemTeam = async (id: string,
 
 export const getUpdateProblemTeamMutationKey = () => ['updateProblemTeam'] as const;
 
-export const getUpdateProblemTeamMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemTeam>>, TError,UpdateProblemTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemTeamMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemTeam>>, TError,UpdateProblemTeamMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblemTeam>>, TError,UpdateProblemTeamMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemTeamMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -7488,7 +8683,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblemTeam>>, UpdateProblemTeamMutationVariables> = (props) => {
           const {id,params} = props ?? {};
 
-          return  updateProblemTeam(id,params,requestOptions)
+          return  updateProblemTeam(id,params,fetchOptions)
         }
 
 
@@ -7500,11 +8695,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemTeamMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblemTeam>>>
 
-    export type UpdateProblemTeamMutationError = unknown
+    export type UpdateProblemTeamMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemTeamMutationVariables = {id: string;params: UpdateProblemTeamParams}
 
-    export const useUpdateProblemTeam = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemTeam>>, TError,UpdateProblemTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useUpdateProblemTeam = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemTeam>>, TError,UpdateProblemTeamMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblemTeam>>,
         TError,
@@ -7527,20 +8722,35 @@ export const getListProblemMembersUrl = (id: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/problems/${encodeURIComponent(String(id))}/members`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(id))}/members`
 }
 
 export const listProblemMembers = async (id: string,
-    params?: ListProblemMembersParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListProblemMembersResponseModel> => {
+    params?: ListProblemMembersParams, options?: RequestInit): Promise<ListProblemMembersResponseModel> => {
 
-  return apiFetch<ListProblemMembersResponseModel>(getListProblemMembersUrl(id,params),
+  const res = await fetch(getListProblemMembersUrl(id,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListProblemMembersResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -7549,22 +8759,22 @@ export const listProblemMembers = async (id: string,
 export const getListProblemMembersQueryKey = (id: string,
     params?: ListProblemMembersParams,) => {
     return [
-    `/problems/${id}/members`, ...(params ? [params] : [])
+    `/api/problems/${id}/members`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListProblemMembersQueryOptions = <TData = Awaited<ReturnType<typeof listProblemMembers>>, TError = unknown>(id: string,
-    params?: ListProblemMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListProblemMembersQueryOptions = <TData = Awaited<ReturnType<typeof listProblemMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(id: string,
+    params?: ListProblemMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMembers>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListProblemMembersQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemMembers>>> = ({ signal }) => listProblemMembers(id,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemMembers>>> = ({ signal }) => listProblemMembers(id,params, { signal, ...fetchOptions });
 
 
 
@@ -7574,10 +8784,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListProblemMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listProblemMembers>>>
-export type ListProblemMembersQueryError = unknown
+export type ListProblemMembersQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListProblemMembers<TData = Awaited<ReturnType<typeof listProblemMembers>>, TError = unknown>(
+export function useListProblemMembers<TData = Awaited<ReturnType<typeof listProblemMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
     params: undefined |  ListProblemMembersParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMembers>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -7585,10 +8795,10 @@ export function useListProblemMembers<TData = Awaited<ReturnType<typeof listProb
           TError,
           Awaited<ReturnType<typeof listProblemMembers>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemMembers<TData = Awaited<ReturnType<typeof listProblemMembers>>, TError = unknown>(
+export function useListProblemMembers<TData = Awaited<ReturnType<typeof listProblemMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
     params?: ListProblemMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMembers>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -7596,18 +8806,18 @@ export function useListProblemMembers<TData = Awaited<ReturnType<typeof listProb
           TError,
           Awaited<ReturnType<typeof listProblemMembers>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemMembers<TData = Awaited<ReturnType<typeof listProblemMembers>>, TError = unknown>(
+export function useListProblemMembers<TData = Awaited<ReturnType<typeof listProblemMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
-    params?: ListProblemMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListProblemMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMembers>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListProblemMembers<TData = Awaited<ReturnType<typeof listProblemMembers>>, TError = unknown>(
+export function useListProblemMembers<TData = Awaited<ReturnType<typeof listProblemMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
-    params?: ListProblemMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListProblemMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMembers>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -7637,20 +8847,35 @@ export const getCreateProblemMemberUrl = (id: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/problems/${encodeURIComponent(String(id))}/members`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(id))}/members`
 }
 
 export const createProblemMember = async (id: string,
-    params: CreateProblemMemberParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: CreateProblemMemberParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getCreateProblemMemberUrl(id,params),
+  const res = await fetch(getCreateProblemMemberUrl(id,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -7658,16 +8883,16 @@ export const createProblemMember = async (id: string,
 
 export const getCreateProblemMemberMutationKey = () => ['createProblemMember'] as const;
 
-export const getCreateProblemMemberMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemMember>>, TError,CreateProblemMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateProblemMemberMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemMember>>, TError,CreateProblemMemberMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createProblemMember>>, TError,CreateProblemMemberMutationVariables, TContext> => {
 
 const mutationKey = getCreateProblemMemberMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -7675,7 +8900,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProblemMember>>, CreateProblemMemberMutationVariables> = (props) => {
           const {id,params} = props ?? {};
 
-          return  createProblemMember(id,params,requestOptions)
+          return  createProblemMember(id,params,fetchOptions)
         }
 
 
@@ -7687,11 +8912,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateProblemMemberMutationResult = NonNullable<Awaited<ReturnType<typeof createProblemMember>>>
 
-    export type CreateProblemMemberMutationError = unknown
+    export type CreateProblemMemberMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateProblemMemberMutationVariables = {id: string;params: CreateProblemMemberParams}
 
-    export const useCreateProblemMember = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemMember>>, TError,CreateProblemMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useCreateProblemMember = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemMember>>, TError,CreateProblemMemberMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createProblemMember>>,
         TError,
@@ -7714,20 +8939,35 @@ export const getDeleteProblemMemberUrl = (id: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/problems/${encodeURIComponent(String(id))}/members`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(id))}/members`
 }
 
 export const deleteProblemMember = async (id: string,
-    params: DeleteProblemMemberParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: DeleteProblemMemberParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getDeleteProblemMemberUrl(id,params),
+  const res = await fetch(getDeleteProblemMemberUrl(id,params),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -7735,16 +8975,16 @@ export const deleteProblemMember = async (id: string,
 
 export const getDeleteProblemMemberMutationKey = () => ['deleteProblemMember'] as const;
 
-export const getDeleteProblemMemberMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemMember>>, TError,DeleteProblemMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteProblemMemberMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemMember>>, TError,DeleteProblemMemberMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteProblemMember>>, TError,DeleteProblemMemberMutationVariables, TContext> => {
 
 const mutationKey = getDeleteProblemMemberMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -7752,7 +8992,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProblemMember>>, DeleteProblemMemberMutationVariables> = (props) => {
           const {id,params} = props ?? {};
 
-          return  deleteProblemMember(id,params,requestOptions)
+          return  deleteProblemMember(id,params,fetchOptions)
         }
 
 
@@ -7764,11 +9004,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteProblemMemberMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProblemMember>>>
 
-    export type DeleteProblemMemberMutationError = unknown
+    export type DeleteProblemMemberMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteProblemMemberMutationVariables = {id: string;params: DeleteProblemMemberParams}
 
-    export const useDeleteProblemMember = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemMember>>, TError,DeleteProblemMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useDeleteProblemMember = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemMember>>, TError,DeleteProblemMemberMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteProblemMember>>,
         TError,
@@ -7791,20 +9031,35 @@ export const getUpdateProblemMemberUrl = (id: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/problems/${encodeURIComponent(String(id))}/members`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(id))}/members`
 }
 
 export const updateProblemMember = async (id: string,
-    params: UpdateProblemMemberParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: UpdateProblemMemberParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getUpdateProblemMemberUrl(id,params),
+  const res = await fetch(getUpdateProblemMemberUrl(id,params),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -7812,16 +9067,16 @@ export const updateProblemMember = async (id: string,
 
 export const getUpdateProblemMemberMutationKey = () => ['updateProblemMember'] as const;
 
-export const getUpdateProblemMemberMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemMember>>, TError,UpdateProblemMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemMemberMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemMember>>, TError,UpdateProblemMemberMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblemMember>>, TError,UpdateProblemMemberMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemMemberMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -7829,7 +9084,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblemMember>>, UpdateProblemMemberMutationVariables> = (props) => {
           const {id,params} = props ?? {};
 
-          return  updateProblemMember(id,params,requestOptions)
+          return  updateProblemMember(id,params,fetchOptions)
         }
 
 
@@ -7841,11 +9096,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemMemberMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblemMember>>>
 
-    export type UpdateProblemMemberMutationError = unknown
+    export type UpdateProblemMemberMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemMemberMutationVariables = {id: string;params: UpdateProblemMemberParams}
 
-    export const useUpdateProblemMember = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemMember>>, TError,UpdateProblemMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useUpdateProblemMember = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemMember>>, TError,UpdateProblemMemberMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblemMember>>,
         TError,
@@ -7860,27 +9115,42 @@ export const getImportProblemUrl = (id: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(id))}/import`
+  return `/api/problems/${encodeURIComponent(String(id))}/import`
 }
 
 /**
  * @summary Import package into existing problem
  */
 export const importProblem = async (id: string,
-    importProblemBody: ImportProblemBody, options?: Parameters<typeof apiFetch>[1]): Promise<ImportProblem200> => {
+    importProblemBody: ImportProblemBody, options?: RequestInit): Promise<ImportProblem200> => {
     const formData = new FormData();
 if(importProblemBody.package !== undefined) {
  formData.append(`package`, importProblemBody.package);
  }
 
-  return apiFetch<ImportProblem200>(getImportProblemUrl(id),
+  const res = await fetch(getImportProblemUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
     ,
     body: formData
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ImportProblem200 = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -7888,16 +9158,16 @@ if(importProblemBody.package !== undefined) {
 
 export const getImportProblemMutationKey = () => ['importProblem'] as const;
 
-export const getImportProblemMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importProblem>>, TError,ImportProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getImportProblemMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importProblem>>, TError,ImportProblemMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof importProblem>>, TError,ImportProblemMutationVariables, TContext> => {
 
 const mutationKey = getImportProblemMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -7905,7 +9175,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof importProblem>>, ImportProblemMutationVariables> = (props) => {
           const {id,data} = props ?? {};
 
-          return  importProblem(id,data,requestOptions)
+          return  importProblem(id,data,fetchOptions)
         }
 
 
@@ -7917,14 +9187,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ImportProblemMutationResult = NonNullable<Awaited<ReturnType<typeof importProblem>>>
     export type ImportProblemMutationBody = ImportProblemBody
-    export type ImportProblemMutationError = unknown
+    export type ImportProblemMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type ImportProblemMutationVariables = {id: string;data: ImportProblemBody}
 
     /**
  * @summary Import package into existing problem
  */
-export const useImportProblem = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importProblem>>, TError,ImportProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useImportProblem = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importProblem>>, TError,ImportProblemMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof importProblem>>,
         TError,
@@ -7939,22 +9209,37 @@ export const getPublishProblemUrl = (id: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(id))}/publish`
+  return `/api/problems/${encodeURIComponent(String(id))}/publish`
 }
 
 /**
  * @summary Publish problem package
  */
-export const publishProblem = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<PublishProblem200> => {
+export const publishProblem = async (id: string, options?: RequestInit): Promise<PublishProblem200> => {
 
-  return apiFetch<PublishProblem200>(getPublishProblemUrl(id),
+  const res = await fetch(getPublishProblemUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: PublishProblem200 = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -7962,16 +9247,16 @@ export const publishProblem = async (id: string, options?: Parameters<typeof api
 
 export const getPublishProblemMutationKey = () => ['publishProblem'] as const;
 
-export const getPublishProblemMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishProblem>>, TError,PublishProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getPublishProblemMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishProblem>>, TError,PublishProblemMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof publishProblem>>, TError,PublishProblemMutationVariables, TContext> => {
 
 const mutationKey = getPublishProblemMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -7979,7 +9264,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof publishProblem>>, PublishProblemMutationVariables> = (props) => {
           const {id} = props ?? {};
 
-          return  publishProblem(id,requestOptions)
+          return  publishProblem(id,fetchOptions)
         }
 
 
@@ -7991,14 +9276,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type PublishProblemMutationResult = NonNullable<Awaited<ReturnType<typeof publishProblem>>>
 
-    export type PublishProblemMutationError = unknown
+    export type PublishProblemMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type PublishProblemMutationVariables = {id: string}
 
     /**
  * @summary Publish problem package
  */
-export const usePublishProblem = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishProblem>>, TError,PublishProblemMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const usePublishProblem = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishProblem>>, TError,PublishProblemMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof publishProblem>>,
         TError,
@@ -8013,22 +9298,37 @@ export const getListProblemPackagesUrl = (id: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(id))}/packages`
+  return `/api/problems/${encodeURIComponent(String(id))}/packages`
 }
 
 /**
  * @summary List all packages for a problem
  */
-export const listProblemPackages = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<ListProblemPackages200> => {
+export const listProblemPackages = async (id: string, options?: RequestInit): Promise<ListProblemPackages200> => {
 
-  return apiFetch<ListProblemPackages200>(getListProblemPackagesUrl(id),
+  const res = await fetch(getListProblemPackagesUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListProblemPackages200 = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -8036,21 +9336,21 @@ export const listProblemPackages = async (id: string, options?: Parameters<typeo
 
 export const getListProblemPackagesQueryKey = (id: string,) => {
     return [
-    `/problems/${id}/packages`
+    `/api/problems/${id}/packages`
     ] as const;
     }
 
 
-export const getListProblemPackagesQueryOptions = <TData = Awaited<ReturnType<typeof listProblemPackages>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemPackages>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListProblemPackagesQueryOptions = <TData = Awaited<ReturnType<typeof listProblemPackages>>, TError = globalThis.Error & { info?: unknown; status?: number }>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemPackages>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListProblemPackagesQueryKey(id);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemPackages>>> = ({ signal }) => listProblemPackages(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemPackages>>> = ({ signal }) => listProblemPackages(id, { signal, ...fetchOptions });
 
 
 
@@ -8060,39 +9360,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListProblemPackagesQueryResult = NonNullable<Awaited<ReturnType<typeof listProblemPackages>>>
-export type ListProblemPackagesQueryError = unknown
+export type ListProblemPackagesQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListProblemPackages<TData = Awaited<ReturnType<typeof listProblemPackages>>, TError = unknown>(
+export function useListProblemPackages<TData = Awaited<ReturnType<typeof listProblemPackages>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemPackages>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemPackages>>,
           TError,
           Awaited<ReturnType<typeof listProblemPackages>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemPackages<TData = Awaited<ReturnType<typeof listProblemPackages>>, TError = unknown>(
+export function useListProblemPackages<TData = Awaited<ReturnType<typeof listProblemPackages>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemPackages>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemPackages>>,
           TError,
           Awaited<ReturnType<typeof listProblemPackages>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemPackages<TData = Awaited<ReturnType<typeof listProblemPackages>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemPackages>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemPackages<TData = Awaited<ReturnType<typeof listProblemPackages>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemPackages>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List all packages for a problem
  */
 
-export function useListProblemPackages<TData = Awaited<ReturnType<typeof listProblemPackages>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemPackages>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemPackages<TData = Awaited<ReturnType<typeof listProblemPackages>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemPackages>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -8115,23 +9415,38 @@ export const getGetPublishedPackageUrl = (id: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(id))}/package/${encodeURIComponent(String(version))}`
+  return `/api/problems/${encodeURIComponent(String(id))}/package/${encodeURIComponent(String(version))}`
 }
 
 /**
  * @summary Get redirect to published problem package
  */
 export const getPublishedPackage = async (id: string,
-    version: string, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+    version: string, options?: RequestInit): Promise<unknown> => {
 
-  return apiFetch<unknown>(getGetPublishedPackageUrl(id,version),
+  const res = await fetch(getGetPublishedPackageUrl(id,version),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -8140,22 +9455,22 @@ export const getPublishedPackage = async (id: string,
 export const getGetPublishedPackageQueryKey = (id: string,
     version: string,) => {
     return [
-    `/problems/${id}/package/${version}`
+    `/api/problems/${id}/package/${version}`
     ] as const;
     }
 
 
-export const getGetPublishedPackageQueryOptions = <TData = Awaited<ReturnType<typeof getPublishedPackage>>, TError = void>(id: string,
-    version: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublishedPackage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetPublishedPackageQueryOptions = <TData = Awaited<ReturnType<typeof getPublishedPackage>>, TError = globalThis.Error & { info?: void; status?: number }>(id: string,
+    version: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublishedPackage>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetPublishedPackageQueryKey(id,version);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPublishedPackage>>> = ({ signal }) => getPublishedPackage(id,version, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPublishedPackage>>> = ({ signal }) => getPublishedPackage(id,version, { signal, ...fetchOptions });
 
 
 
@@ -8165,10 +9480,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetPublishedPackageQueryResult = NonNullable<Awaited<ReturnType<typeof getPublishedPackage>>>
-export type GetPublishedPackageQueryError = void
+export type GetPublishedPackageQueryError = globalThis.Error & { info?: void; status?: number }
 
 
-export function useGetPublishedPackage<TData = Awaited<ReturnType<typeof getPublishedPackage>>, TError = void>(
+export function useGetPublishedPackage<TData = Awaited<ReturnType<typeof getPublishedPackage>>, TError = globalThis.Error & { info?: void; status?: number }>(
  id: string,
     version: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublishedPackage>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -8176,10 +9491,10 @@ export function useGetPublishedPackage<TData = Awaited<ReturnType<typeof getPubl
           TError,
           Awaited<ReturnType<typeof getPublishedPackage>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPublishedPackage<TData = Awaited<ReturnType<typeof getPublishedPackage>>, TError = void>(
+export function useGetPublishedPackage<TData = Awaited<ReturnType<typeof getPublishedPackage>>, TError = globalThis.Error & { info?: void; status?: number }>(
  id: string,
     version: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublishedPackage>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -8187,21 +9502,21 @@ export function useGetPublishedPackage<TData = Awaited<ReturnType<typeof getPubl
           TError,
           Awaited<ReturnType<typeof getPublishedPackage>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPublishedPackage<TData = Awaited<ReturnType<typeof getPublishedPackage>>, TError = void>(
+export function useGetPublishedPackage<TData = Awaited<ReturnType<typeof getPublishedPackage>>, TError = globalThis.Error & { info?: void; status?: number }>(
  id: string,
-    version: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublishedPackage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    version: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublishedPackage>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get redirect to published problem package
  */
 
-export function useGetPublishedPackage<TData = Awaited<ReturnType<typeof getPublishedPackage>>, TError = void>(
+export function useGetPublishedPackage<TData = Awaited<ReturnType<typeof getPublishedPackage>>, TError = globalThis.Error & { info?: void; status?: number }>(
  id: string,
-    version: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublishedPackage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    version: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublishedPackage>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -8223,22 +9538,37 @@ export const getGetProblemLimitsUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/limits`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/limits`
 }
 
 /**
  * @summary Get problem limits and type settings
  */
-export const getProblemLimits = async (problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<ProblemLimits> => {
+export const getProblemLimits = async (problemId: string, options?: RequestInit): Promise<ProblemLimits> => {
 
-  return apiFetch<ProblemLimits>(getGetProblemLimitsUrl(problemId),
+  const res = await fetch(getGetProblemLimitsUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ProblemLimits = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -8246,21 +9576,21 @@ export const getProblemLimits = async (problemId: string, options?: Parameters<t
 
 export const getGetProblemLimitsQueryKey = (problemId: string,) => {
     return [
-    `/problems/${problemId}/limits`
+    `/api/problems/${problemId}/limits`
     ] as const;
     }
 
 
-export const getGetProblemLimitsQueryOptions = <TData = Awaited<ReturnType<typeof getProblemLimits>>, TError = unknown>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLimits>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetProblemLimitsQueryOptions = <TData = Awaited<ReturnType<typeof getProblemLimits>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLimits>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetProblemLimitsQueryKey(problemId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemLimits>>> = ({ signal }) => getProblemLimits(problemId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemLimits>>> = ({ signal }) => getProblemLimits(problemId, { signal, ...fetchOptions });
 
 
 
@@ -8270,39 +9600,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetProblemLimitsQueryResult = NonNullable<Awaited<ReturnType<typeof getProblemLimits>>>
-export type GetProblemLimitsQueryError = unknown
+export type GetProblemLimitsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetProblemLimits<TData = Awaited<ReturnType<typeof getProblemLimits>>, TError = unknown>(
+export function useGetProblemLimits<TData = Awaited<ReturnType<typeof getProblemLimits>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLimits>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getProblemLimits>>,
           TError,
           Awaited<ReturnType<typeof getProblemLimits>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemLimits<TData = Awaited<ReturnType<typeof getProblemLimits>>, TError = unknown>(
+export function useGetProblemLimits<TData = Awaited<ReturnType<typeof getProblemLimits>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLimits>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getProblemLimits>>,
           TError,
           Awaited<ReturnType<typeof getProblemLimits>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemLimits<TData = Awaited<ReturnType<typeof getProblemLimits>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLimits>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetProblemLimits<TData = Awaited<ReturnType<typeof getProblemLimits>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLimits>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get problem limits and type settings
  */
 
-export function useGetProblemLimits<TData = Awaited<ReturnType<typeof getProblemLimits>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLimits>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetProblemLimits<TData = Awaited<ReturnType<typeof getProblemLimits>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLimits>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -8324,14 +9654,14 @@ export const getUpdateProblemLimitsUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/limits`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/limits`
 }
 
 /**
  * @summary Update problem limits and type settings
  */
 export const updateProblemLimits = async (problemId: string,
-    updateProblemLimitsRequest: UpdateProblemLimitsRequest, options?: Parameters<typeof apiFetch>[1]): Promise<ProblemLimits> => {
+    updateProblemLimitsRequest: UpdateProblemLimitsRequest, options?: RequestInit): Promise<ProblemLimits> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -8347,14 +9677,29 @@ export const updateProblemLimits = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<ProblemLimits>(getUpdateProblemLimitsUrl(problemId),
+const res = await fetch(getUpdateProblemLimitsUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateProblemLimitsRequest)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ProblemLimits = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -8362,16 +9707,16 @@ return apiFetch<ProblemLimits>(getUpdateProblemLimitsUrl(problemId),
 
 export const getUpdateProblemLimitsMutationKey = () => ['updateProblemLimits'] as const;
 
-export const getUpdateProblemLimitsMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemLimits>>, TError,UpdateProblemLimitsMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemLimitsMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemLimits>>, TError,UpdateProblemLimitsMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblemLimits>>, TError,UpdateProblemLimitsMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemLimitsMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -8379,7 +9724,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblemLimits>>, UpdateProblemLimitsMutationVariables> = (props) => {
           const {problemId,data} = props ?? {};
 
-          return  updateProblemLimits(problemId,data,requestOptions)
+          return  updateProblemLimits(problemId,data,fetchOptions)
         }
 
 
@@ -8391,14 +9736,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemLimitsMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblemLimits>>>
     export type UpdateProblemLimitsMutationBody = UpdateProblemLimitsRequest
-    export type UpdateProblemLimitsMutationError = unknown
+    export type UpdateProblemLimitsMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemLimitsMutationVariables = {problemId: string;data: UpdateProblemLimitsRequest}
 
     /**
  * @summary Update problem limits and type settings
  */
-export const useUpdateProblemLimits = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemLimits>>, TError,UpdateProblemLimitsMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateProblemLimits = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemLimits>>, TError,UpdateProblemLimitsMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblemLimits>>,
         TError,
@@ -8421,23 +9766,38 @@ export const getGetProblemStatementUrl = (problemId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(problemId))}/statement?${stringifiedParams}` : `/problems/${encodeURIComponent(String(problemId))}/statement`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(problemId))}/statement?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(problemId))}/statement`
 }
 
 /**
  * @summary Get problem statement
  */
 export const getProblemStatement = async (problemId: string,
-    params?: GetProblemStatementParams, options?: Parameters<typeof apiFetch>[1]): Promise<ProblemStatement> => {
+    params?: GetProblemStatementParams, options?: RequestInit): Promise<ProblemStatement> => {
 
-  return apiFetch<ProblemStatement>(getGetProblemStatementUrl(problemId,params),
+  const res = await fetch(getGetProblemStatementUrl(problemId,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ProblemStatement = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -8446,22 +9806,22 @@ export const getProblemStatement = async (problemId: string,
 export const getGetProblemStatementQueryKey = (problemId: string,
     params?: GetProblemStatementParams,) => {
     return [
-    `/problems/${problemId}/statement`, ...(params ? [params] : [])
+    `/api/problems/${problemId}/statement`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetProblemStatementQueryOptions = <TData = Awaited<ReturnType<typeof getProblemStatement>>, TError = unknown>(problemId: string,
-    params?: GetProblemStatementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemStatement>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetProblemStatementQueryOptions = <TData = Awaited<ReturnType<typeof getProblemStatement>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string,
+    params?: GetProblemStatementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemStatement>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetProblemStatementQueryKey(problemId,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemStatement>>> = ({ signal }) => getProblemStatement(problemId,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemStatement>>> = ({ signal }) => getProblemStatement(problemId,params, { signal, ...fetchOptions });
 
 
 
@@ -8471,10 +9831,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetProblemStatementQueryResult = NonNullable<Awaited<ReturnType<typeof getProblemStatement>>>
-export type GetProblemStatementQueryError = unknown
+export type GetProblemStatementQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetProblemStatement<TData = Awaited<ReturnType<typeof getProblemStatement>>, TError = unknown>(
+export function useGetProblemStatement<TData = Awaited<ReturnType<typeof getProblemStatement>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     params: undefined |  GetProblemStatementParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemStatement>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -8482,10 +9842,10 @@ export function useGetProblemStatement<TData = Awaited<ReturnType<typeof getProb
           TError,
           Awaited<ReturnType<typeof getProblemStatement>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemStatement<TData = Awaited<ReturnType<typeof getProblemStatement>>, TError = unknown>(
+export function useGetProblemStatement<TData = Awaited<ReturnType<typeof getProblemStatement>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     params?: GetProblemStatementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemStatement>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -8493,21 +9853,21 @@ export function useGetProblemStatement<TData = Awaited<ReturnType<typeof getProb
           TError,
           Awaited<ReturnType<typeof getProblemStatement>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemStatement<TData = Awaited<ReturnType<typeof getProblemStatement>>, TError = unknown>(
+export function useGetProblemStatement<TData = Awaited<ReturnType<typeof getProblemStatement>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    params?: GetProblemStatementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemStatement>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: GetProblemStatementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemStatement>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get problem statement
  */
 
-export function useGetProblemStatement<TData = Awaited<ReturnType<typeof getProblemStatement>>, TError = unknown>(
+export function useGetProblemStatement<TData = Awaited<ReturnType<typeof getProblemStatement>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    params?: GetProblemStatementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemStatement>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: GetProblemStatementParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemStatement>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -8537,7 +9897,7 @@ export const getUpdateProblemStatementUrl = (problemId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(problemId))}/statement?${stringifiedParams}` : `/problems/${encodeURIComponent(String(problemId))}/statement`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(problemId))}/statement?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(problemId))}/statement`
 }
 
 /**
@@ -8545,7 +9905,7 @@ export const getUpdateProblemStatementUrl = (problemId: string,
  */
 export const updateProblemStatement = async (problemId: string,
     updateProblemStatementRequest: UpdateProblemStatementRequest,
-    params?: UpdateProblemStatementParams, options?: Parameters<typeof apiFetch>[1]): Promise<ProblemStatement> => {
+    params?: UpdateProblemStatementParams, options?: RequestInit): Promise<ProblemStatement> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -8561,14 +9921,29 @@ export const updateProblemStatement = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<ProblemStatement>(getUpdateProblemStatementUrl(problemId,params),
+const res = await fetch(getUpdateProblemStatementUrl(problemId,params),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateProblemStatementRequest)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ProblemStatement = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -8576,16 +9951,16 @@ return apiFetch<ProblemStatement>(getUpdateProblemStatementUrl(problemId,params)
 
 export const getUpdateProblemStatementMutationKey = () => ['updateProblemStatement'] as const;
 
-export const getUpdateProblemStatementMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemStatement>>, TError,UpdateProblemStatementMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemStatementMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemStatement>>, TError,UpdateProblemStatementMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblemStatement>>, TError,UpdateProblemStatementMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemStatementMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -8593,7 +9968,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblemStatement>>, UpdateProblemStatementMutationVariables> = (props) => {
           const {problemId,data,params} = props ?? {};
 
-          return  updateProblemStatement(problemId,data,params,requestOptions)
+          return  updateProblemStatement(problemId,data,params,fetchOptions)
         }
 
 
@@ -8605,14 +9980,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemStatementMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblemStatement>>>
     export type UpdateProblemStatementMutationBody = UpdateProblemStatementRequest
-    export type UpdateProblemStatementMutationError = unknown
+    export type UpdateProblemStatementMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemStatementMutationVariables = {problemId: string;data: UpdateProblemStatementRequest;params?: UpdateProblemStatementParams}
 
     /**
  * @summary Update problem statement
  */
-export const useUpdateProblemStatement = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemStatement>>, TError,UpdateProblemStatementMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateProblemStatement = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemStatement>>, TError,UpdateProblemStatementMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblemStatement>>,
         TError,
@@ -8627,22 +10002,37 @@ export const getListProblemCheckersUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/checkers`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/checkers`
 }
 
 /**
  * @summary List checker files
  */
-export const listProblemCheckers = async (problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<WorkshopFileListResponse> => {
+export const listProblemCheckers = async (problemId: string, options?: RequestInit): Promise<WorkshopFileListResponse> => {
 
-  return apiFetch<WorkshopFileListResponse>(getListProblemCheckersUrl(problemId),
+  const res = await fetch(getListProblemCheckersUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: WorkshopFileListResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -8650,21 +10040,21 @@ export const listProblemCheckers = async (problemId: string, options?: Parameter
 
 export const getListProblemCheckersQueryKey = (problemId: string,) => {
     return [
-    `/problems/${problemId}/checkers`
+    `/api/problems/${problemId}/checkers`
     ] as const;
     }
 
 
-export const getListProblemCheckersQueryOptions = <TData = Awaited<ReturnType<typeof listProblemCheckers>>, TError = unknown>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemCheckers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListProblemCheckersQueryOptions = <TData = Awaited<ReturnType<typeof listProblemCheckers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemCheckers>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListProblemCheckersQueryKey(problemId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemCheckers>>> = ({ signal }) => listProblemCheckers(problemId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemCheckers>>> = ({ signal }) => listProblemCheckers(problemId, { signal, ...fetchOptions });
 
 
 
@@ -8674,39 +10064,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListProblemCheckersQueryResult = NonNullable<Awaited<ReturnType<typeof listProblemCheckers>>>
-export type ListProblemCheckersQueryError = unknown
+export type ListProblemCheckersQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListProblemCheckers<TData = Awaited<ReturnType<typeof listProblemCheckers>>, TError = unknown>(
+export function useListProblemCheckers<TData = Awaited<ReturnType<typeof listProblemCheckers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemCheckers>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemCheckers>>,
           TError,
           Awaited<ReturnType<typeof listProblemCheckers>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemCheckers<TData = Awaited<ReturnType<typeof listProblemCheckers>>, TError = unknown>(
+export function useListProblemCheckers<TData = Awaited<ReturnType<typeof listProblemCheckers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemCheckers>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemCheckers>>,
           TError,
           Awaited<ReturnType<typeof listProblemCheckers>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemCheckers<TData = Awaited<ReturnType<typeof listProblemCheckers>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemCheckers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemCheckers<TData = Awaited<ReturnType<typeof listProblemCheckers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemCheckers>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List checker files
  */
 
-export function useListProblemCheckers<TData = Awaited<ReturnType<typeof listProblemCheckers>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemCheckers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemCheckers<TData = Awaited<ReturnType<typeof listProblemCheckers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemCheckers>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -8736,7 +10126,7 @@ export const getCreateProblemCheckerUrl = (problemId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(problemId))}/checkers?${stringifiedParams}` : `/problems/${encodeURIComponent(String(problemId))}/checkers`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(problemId))}/checkers?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(problemId))}/checkers`
 }
 
 /**
@@ -8744,7 +10134,7 @@ export const getCreateProblemCheckerUrl = (problemId: string,
  */
 export const createProblemChecker = async (problemId: string,
     createProblemCheckerBody: string,
-    params: CreateProblemCheckerParams, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    params: CreateProblemCheckerParams, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -8760,14 +10150,29 @@ export const createProblemChecker = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getCreateProblemCheckerUrl(problemId,params),
+const res = await fetch(getCreateProblemCheckerUrl(problemId,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
     body: createProblemCheckerBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -8775,16 +10180,16 @@ return apiFetch<MessageResponse>(getCreateProblemCheckerUrl(problemId,params),
 
 export const getCreateProblemCheckerMutationKey = () => ['createProblemChecker'] as const;
 
-export const getCreateProblemCheckerMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemChecker>>, TError,CreateProblemCheckerMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateProblemCheckerMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemChecker>>, TError,CreateProblemCheckerMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createProblemChecker>>, TError,CreateProblemCheckerMutationVariables, TContext> => {
 
 const mutationKey = getCreateProblemCheckerMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -8792,7 +10197,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProblemChecker>>, CreateProblemCheckerMutationVariables> = (props) => {
           const {problemId,data,params} = props ?? {};
 
-          return  createProblemChecker(problemId,data,params,requestOptions)
+          return  createProblemChecker(problemId,data,params,fetchOptions)
         }
 
 
@@ -8804,14 +10209,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateProblemCheckerMutationResult = NonNullable<Awaited<ReturnType<typeof createProblemChecker>>>
     export type CreateProblemCheckerMutationBody = string
-    export type CreateProblemCheckerMutationError = unknown
+    export type CreateProblemCheckerMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateProblemCheckerMutationVariables = {problemId: string;data: string;params: CreateProblemCheckerParams}
 
     /**
  * @summary Create checker file
  */
-export const useCreateProblemChecker = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemChecker>>, TError,CreateProblemCheckerMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateProblemChecker = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemChecker>>, TError,CreateProblemCheckerMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createProblemChecker>>,
         TError,
@@ -8827,23 +10232,38 @@ export const getGetProblemCheckerUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/checkers/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/checkers/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Get checker file content
  */
 export const getProblemChecker = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<string> => {
+    name: string, options?: RequestInit): Promise<string> => {
 
-  return apiFetch<string>(getGetProblemCheckerUrl(problemId,name),
+  const res = await fetch(getGetProblemCheckerUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: string = body !== null ? body : ''
+  return data
+}
 
 
 
@@ -8852,22 +10272,22 @@ export const getProblemChecker = async (problemId: string,
 export const getGetProblemCheckerQueryKey = (problemId: string,
     name: string,) => {
     return [
-    `/problems/${problemId}/checkers/${name}`
+    `/api/problems/${problemId}/checkers/${name}`
     ] as const;
     }
 
 
-export const getGetProblemCheckerQueryOptions = <TData = Awaited<ReturnType<typeof getProblemChecker>>, TError = unknown>(problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemChecker>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetProblemCheckerQueryOptions = <TData = Awaited<ReturnType<typeof getProblemChecker>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string,
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemChecker>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetProblemCheckerQueryKey(problemId,name);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemChecker>>> = ({ signal }) => getProblemChecker(problemId,name, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemChecker>>> = ({ signal }) => getProblemChecker(problemId,name, { signal, ...fetchOptions });
 
 
 
@@ -8877,10 +10297,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetProblemCheckerQueryResult = NonNullable<Awaited<ReturnType<typeof getProblemChecker>>>
-export type GetProblemCheckerQueryError = unknown
+export type GetProblemCheckerQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetProblemChecker<TData = Awaited<ReturnType<typeof getProblemChecker>>, TError = unknown>(
+export function useGetProblemChecker<TData = Awaited<ReturnType<typeof getProblemChecker>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemChecker>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -8888,10 +10308,10 @@ export function useGetProblemChecker<TData = Awaited<ReturnType<typeof getProble
           TError,
           Awaited<ReturnType<typeof getProblemChecker>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemChecker<TData = Awaited<ReturnType<typeof getProblemChecker>>, TError = unknown>(
+export function useGetProblemChecker<TData = Awaited<ReturnType<typeof getProblemChecker>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemChecker>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -8899,21 +10319,21 @@ export function useGetProblemChecker<TData = Awaited<ReturnType<typeof getProble
           TError,
           Awaited<ReturnType<typeof getProblemChecker>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemChecker<TData = Awaited<ReturnType<typeof getProblemChecker>>, TError = unknown>(
+export function useGetProblemChecker<TData = Awaited<ReturnType<typeof getProblemChecker>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemChecker>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemChecker>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get checker file content
  */
 
-export function useGetProblemChecker<TData = Awaited<ReturnType<typeof getProblemChecker>>, TError = unknown>(
+export function useGetProblemChecker<TData = Awaited<ReturnType<typeof getProblemChecker>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemChecker>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemChecker>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -8936,7 +10356,7 @@ export const getUpdateProblemCheckerUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/checkers/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/checkers/${encodeURIComponent(String(name))}`
 }
 
 /**
@@ -8944,7 +10364,7 @@ export const getUpdateProblemCheckerUrl = (problemId: string,
  */
 export const updateProblemChecker = async (problemId: string,
     name: string,
-    updateProblemCheckerBody: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    updateProblemCheckerBody: string, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -8960,14 +10380,29 @@ export const updateProblemChecker = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getUpdateProblemCheckerUrl(problemId,name),
+const res = await fetch(getUpdateProblemCheckerUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
     body: updateProblemCheckerBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -8975,16 +10410,16 @@ return apiFetch<MessageResponse>(getUpdateProblemCheckerUrl(problemId,name),
 
 export const getUpdateProblemCheckerMutationKey = () => ['updateProblemChecker'] as const;
 
-export const getUpdateProblemCheckerMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemChecker>>, TError,UpdateProblemCheckerMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemCheckerMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemChecker>>, TError,UpdateProblemCheckerMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblemChecker>>, TError,UpdateProblemCheckerMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemCheckerMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -8992,7 +10427,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblemChecker>>, UpdateProblemCheckerMutationVariables> = (props) => {
           const {problemId,name,data} = props ?? {};
 
-          return  updateProblemChecker(problemId,name,data,requestOptions)
+          return  updateProblemChecker(problemId,name,data,fetchOptions)
         }
 
 
@@ -9004,14 +10439,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemCheckerMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblemChecker>>>
     export type UpdateProblemCheckerMutationBody = string
-    export type UpdateProblemCheckerMutationError = unknown
+    export type UpdateProblemCheckerMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemCheckerMutationVariables = {problemId: string;name: string;data: string}
 
     /**
  * @summary Update checker file
  */
-export const useUpdateProblemChecker = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemChecker>>, TError,UpdateProblemCheckerMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateProblemChecker = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemChecker>>, TError,UpdateProblemCheckerMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblemChecker>>,
         TError,
@@ -9027,23 +10462,38 @@ export const getDeleteProblemCheckerUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/checkers/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/checkers/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Delete checker file
  */
 export const deleteProblemChecker = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    name: string, options?: RequestInit): Promise<MessageResponse> => {
 
-  return apiFetch<MessageResponse>(getDeleteProblemCheckerUrl(problemId,name),
+  const res = await fetch(getDeleteProblemCheckerUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -9051,16 +10501,16 @@ export const deleteProblemChecker = async (problemId: string,
 
 export const getDeleteProblemCheckerMutationKey = () => ['deleteProblemChecker'] as const;
 
-export const getDeleteProblemCheckerMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemChecker>>, TError,DeleteProblemCheckerMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteProblemCheckerMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemChecker>>, TError,DeleteProblemCheckerMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteProblemChecker>>, TError,DeleteProblemCheckerMutationVariables, TContext> => {
 
 const mutationKey = getDeleteProblemCheckerMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -9068,7 +10518,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProblemChecker>>, DeleteProblemCheckerMutationVariables> = (props) => {
           const {problemId,name} = props ?? {};
 
-          return  deleteProblemChecker(problemId,name,requestOptions)
+          return  deleteProblemChecker(problemId,name,fetchOptions)
         }
 
 
@@ -9080,14 +10530,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteProblemCheckerMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProblemChecker>>>
 
-    export type DeleteProblemCheckerMutationError = unknown
+    export type DeleteProblemCheckerMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteProblemCheckerMutationVariables = {problemId: string;name: string}
 
     /**
  * @summary Delete checker file
  */
-export const useDeleteProblemChecker = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemChecker>>, TError,DeleteProblemCheckerMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeleteProblemChecker = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemChecker>>, TError,DeleteProblemCheckerMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteProblemChecker>>,
         TError,
@@ -9102,22 +10552,37 @@ export const getListProblemGeneratorsUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/generators`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/generators`
 }
 
 /**
  * @summary List generator files
  */
-export const listProblemGenerators = async (problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<WorkshopFileListResponse> => {
+export const listProblemGenerators = async (problemId: string, options?: RequestInit): Promise<WorkshopFileListResponse> => {
 
-  return apiFetch<WorkshopFileListResponse>(getListProblemGeneratorsUrl(problemId),
+  const res = await fetch(getListProblemGeneratorsUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: WorkshopFileListResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -9125,21 +10590,21 @@ export const listProblemGenerators = async (problemId: string, options?: Paramet
 
 export const getListProblemGeneratorsQueryKey = (problemId: string,) => {
     return [
-    `/problems/${problemId}/generators`
+    `/api/problems/${problemId}/generators`
     ] as const;
     }
 
 
-export const getListProblemGeneratorsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemGenerators>>, TError = unknown>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemGenerators>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListProblemGeneratorsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemGenerators>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemGenerators>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListProblemGeneratorsQueryKey(problemId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemGenerators>>> = ({ signal }) => listProblemGenerators(problemId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemGenerators>>> = ({ signal }) => listProblemGenerators(problemId, { signal, ...fetchOptions });
 
 
 
@@ -9149,39 +10614,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListProblemGeneratorsQueryResult = NonNullable<Awaited<ReturnType<typeof listProblemGenerators>>>
-export type ListProblemGeneratorsQueryError = unknown
+export type ListProblemGeneratorsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListProblemGenerators<TData = Awaited<ReturnType<typeof listProblemGenerators>>, TError = unknown>(
+export function useListProblemGenerators<TData = Awaited<ReturnType<typeof listProblemGenerators>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemGenerators>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemGenerators>>,
           TError,
           Awaited<ReturnType<typeof listProblemGenerators>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemGenerators<TData = Awaited<ReturnType<typeof listProblemGenerators>>, TError = unknown>(
+export function useListProblemGenerators<TData = Awaited<ReturnType<typeof listProblemGenerators>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemGenerators>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemGenerators>>,
           TError,
           Awaited<ReturnType<typeof listProblemGenerators>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemGenerators<TData = Awaited<ReturnType<typeof listProblemGenerators>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemGenerators>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemGenerators<TData = Awaited<ReturnType<typeof listProblemGenerators>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemGenerators>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List generator files
  */
 
-export function useListProblemGenerators<TData = Awaited<ReturnType<typeof listProblemGenerators>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemGenerators>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemGenerators<TData = Awaited<ReturnType<typeof listProblemGenerators>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemGenerators>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -9211,7 +10676,7 @@ export const getCreateProblemGeneratorUrl = (problemId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(problemId))}/generators?${stringifiedParams}` : `/problems/${encodeURIComponent(String(problemId))}/generators`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(problemId))}/generators?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(problemId))}/generators`
 }
 
 /**
@@ -9219,7 +10684,7 @@ export const getCreateProblemGeneratorUrl = (problemId: string,
  */
 export const createProblemGenerator = async (problemId: string,
     createProblemGeneratorBody: string,
-    params: CreateProblemGeneratorParams, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    params: CreateProblemGeneratorParams, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -9235,14 +10700,29 @@ export const createProblemGenerator = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getCreateProblemGeneratorUrl(problemId,params),
+const res = await fetch(getCreateProblemGeneratorUrl(problemId,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
     body: createProblemGeneratorBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -9250,16 +10730,16 @@ return apiFetch<MessageResponse>(getCreateProblemGeneratorUrl(problemId,params),
 
 export const getCreateProblemGeneratorMutationKey = () => ['createProblemGenerator'] as const;
 
-export const getCreateProblemGeneratorMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemGenerator>>, TError,CreateProblemGeneratorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateProblemGeneratorMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemGenerator>>, TError,CreateProblemGeneratorMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createProblemGenerator>>, TError,CreateProblemGeneratorMutationVariables, TContext> => {
 
 const mutationKey = getCreateProblemGeneratorMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -9267,7 +10747,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProblemGenerator>>, CreateProblemGeneratorMutationVariables> = (props) => {
           const {problemId,data,params} = props ?? {};
 
-          return  createProblemGenerator(problemId,data,params,requestOptions)
+          return  createProblemGenerator(problemId,data,params,fetchOptions)
         }
 
 
@@ -9279,14 +10759,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateProblemGeneratorMutationResult = NonNullable<Awaited<ReturnType<typeof createProblemGenerator>>>
     export type CreateProblemGeneratorMutationBody = string
-    export type CreateProblemGeneratorMutationError = unknown
+    export type CreateProblemGeneratorMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateProblemGeneratorMutationVariables = {problemId: string;data: string;params: CreateProblemGeneratorParams}
 
     /**
  * @summary Create generator file
  */
-export const useCreateProblemGenerator = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemGenerator>>, TError,CreateProblemGeneratorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateProblemGenerator = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemGenerator>>, TError,CreateProblemGeneratorMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createProblemGenerator>>,
         TError,
@@ -9302,23 +10782,38 @@ export const getGetProblemGeneratorUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/generators/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/generators/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Get generator file content
  */
 export const getProblemGenerator = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<string> => {
+    name: string, options?: RequestInit): Promise<string> => {
 
-  return apiFetch<string>(getGetProblemGeneratorUrl(problemId,name),
+  const res = await fetch(getGetProblemGeneratorUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: string = body !== null ? body : ''
+  return data
+}
 
 
 
@@ -9327,22 +10822,22 @@ export const getProblemGenerator = async (problemId: string,
 export const getGetProblemGeneratorQueryKey = (problemId: string,
     name: string,) => {
     return [
-    `/problems/${problemId}/generators/${name}`
+    `/api/problems/${problemId}/generators/${name}`
     ] as const;
     }
 
 
-export const getGetProblemGeneratorQueryOptions = <TData = Awaited<ReturnType<typeof getProblemGenerator>>, TError = unknown>(problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemGenerator>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetProblemGeneratorQueryOptions = <TData = Awaited<ReturnType<typeof getProblemGenerator>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string,
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemGenerator>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetProblemGeneratorQueryKey(problemId,name);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemGenerator>>> = ({ signal }) => getProblemGenerator(problemId,name, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemGenerator>>> = ({ signal }) => getProblemGenerator(problemId,name, { signal, ...fetchOptions });
 
 
 
@@ -9352,10 +10847,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetProblemGeneratorQueryResult = NonNullable<Awaited<ReturnType<typeof getProblemGenerator>>>
-export type GetProblemGeneratorQueryError = unknown
+export type GetProblemGeneratorQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetProblemGenerator<TData = Awaited<ReturnType<typeof getProblemGenerator>>, TError = unknown>(
+export function useGetProblemGenerator<TData = Awaited<ReturnType<typeof getProblemGenerator>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemGenerator>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -9363,10 +10858,10 @@ export function useGetProblemGenerator<TData = Awaited<ReturnType<typeof getProb
           TError,
           Awaited<ReturnType<typeof getProblemGenerator>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemGenerator<TData = Awaited<ReturnType<typeof getProblemGenerator>>, TError = unknown>(
+export function useGetProblemGenerator<TData = Awaited<ReturnType<typeof getProblemGenerator>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemGenerator>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -9374,21 +10869,21 @@ export function useGetProblemGenerator<TData = Awaited<ReturnType<typeof getProb
           TError,
           Awaited<ReturnType<typeof getProblemGenerator>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemGenerator<TData = Awaited<ReturnType<typeof getProblemGenerator>>, TError = unknown>(
+export function useGetProblemGenerator<TData = Awaited<ReturnType<typeof getProblemGenerator>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemGenerator>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemGenerator>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get generator file content
  */
 
-export function useGetProblemGenerator<TData = Awaited<ReturnType<typeof getProblemGenerator>>, TError = unknown>(
+export function useGetProblemGenerator<TData = Awaited<ReturnType<typeof getProblemGenerator>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemGenerator>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemGenerator>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -9411,7 +10906,7 @@ export const getUpdateProblemGeneratorUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/generators/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/generators/${encodeURIComponent(String(name))}`
 }
 
 /**
@@ -9419,7 +10914,7 @@ export const getUpdateProblemGeneratorUrl = (problemId: string,
  */
 export const updateProblemGenerator = async (problemId: string,
     name: string,
-    updateProblemGeneratorBody: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    updateProblemGeneratorBody: string, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -9435,14 +10930,29 @@ export const updateProblemGenerator = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getUpdateProblemGeneratorUrl(problemId,name),
+const res = await fetch(getUpdateProblemGeneratorUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
     body: updateProblemGeneratorBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -9450,16 +10960,16 @@ return apiFetch<MessageResponse>(getUpdateProblemGeneratorUrl(problemId,name),
 
 export const getUpdateProblemGeneratorMutationKey = () => ['updateProblemGenerator'] as const;
 
-export const getUpdateProblemGeneratorMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemGenerator>>, TError,UpdateProblemGeneratorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemGeneratorMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemGenerator>>, TError,UpdateProblemGeneratorMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblemGenerator>>, TError,UpdateProblemGeneratorMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemGeneratorMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -9467,7 +10977,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblemGenerator>>, UpdateProblemGeneratorMutationVariables> = (props) => {
           const {problemId,name,data} = props ?? {};
 
-          return  updateProblemGenerator(problemId,name,data,requestOptions)
+          return  updateProblemGenerator(problemId,name,data,fetchOptions)
         }
 
 
@@ -9479,14 +10989,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemGeneratorMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblemGenerator>>>
     export type UpdateProblemGeneratorMutationBody = string
-    export type UpdateProblemGeneratorMutationError = unknown
+    export type UpdateProblemGeneratorMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemGeneratorMutationVariables = {problemId: string;name: string;data: string}
 
     /**
  * @summary Update generator file
  */
-export const useUpdateProblemGenerator = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemGenerator>>, TError,UpdateProblemGeneratorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateProblemGenerator = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemGenerator>>, TError,UpdateProblemGeneratorMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblemGenerator>>,
         TError,
@@ -9502,23 +11012,38 @@ export const getDeleteProblemGeneratorUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/generators/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/generators/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Delete generator file
  */
 export const deleteProblemGenerator = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    name: string, options?: RequestInit): Promise<MessageResponse> => {
 
-  return apiFetch<MessageResponse>(getDeleteProblemGeneratorUrl(problemId,name),
+  const res = await fetch(getDeleteProblemGeneratorUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -9526,16 +11051,16 @@ export const deleteProblemGenerator = async (problemId: string,
 
 export const getDeleteProblemGeneratorMutationKey = () => ['deleteProblemGenerator'] as const;
 
-export const getDeleteProblemGeneratorMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemGenerator>>, TError,DeleteProblemGeneratorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteProblemGeneratorMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemGenerator>>, TError,DeleteProblemGeneratorMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteProblemGenerator>>, TError,DeleteProblemGeneratorMutationVariables, TContext> => {
 
 const mutationKey = getDeleteProblemGeneratorMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -9543,7 +11068,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProblemGenerator>>, DeleteProblemGeneratorMutationVariables> = (props) => {
           const {problemId,name} = props ?? {};
 
-          return  deleteProblemGenerator(problemId,name,requestOptions)
+          return  deleteProblemGenerator(problemId,name,fetchOptions)
         }
 
 
@@ -9555,14 +11080,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteProblemGeneratorMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProblemGenerator>>>
 
-    export type DeleteProblemGeneratorMutationError = unknown
+    export type DeleteProblemGeneratorMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteProblemGeneratorMutationVariables = {problemId: string;name: string}
 
     /**
  * @summary Delete generator file
  */
-export const useDeleteProblemGenerator = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemGenerator>>, TError,DeleteProblemGeneratorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeleteProblemGenerator = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemGenerator>>, TError,DeleteProblemGeneratorMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteProblemGenerator>>,
         TError,
@@ -9577,22 +11102,37 @@ export const getListProblemInteractorsUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/interactors`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/interactors`
 }
 
 /**
  * @summary List interactor files
  */
-export const listProblemInteractors = async (problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<WorkshopFileListResponse> => {
+export const listProblemInteractors = async (problemId: string, options?: RequestInit): Promise<WorkshopFileListResponse> => {
 
-  return apiFetch<WorkshopFileListResponse>(getListProblemInteractorsUrl(problemId),
+  const res = await fetch(getListProblemInteractorsUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: WorkshopFileListResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -9600,21 +11140,21 @@ export const listProblemInteractors = async (problemId: string, options?: Parame
 
 export const getListProblemInteractorsQueryKey = (problemId: string,) => {
     return [
-    `/problems/${problemId}/interactors`
+    `/api/problems/${problemId}/interactors`
     ] as const;
     }
 
 
-export const getListProblemInteractorsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemInteractors>>, TError = unknown>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemInteractors>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListProblemInteractorsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemInteractors>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemInteractors>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListProblemInteractorsQueryKey(problemId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemInteractors>>> = ({ signal }) => listProblemInteractors(problemId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemInteractors>>> = ({ signal }) => listProblemInteractors(problemId, { signal, ...fetchOptions });
 
 
 
@@ -9624,39 +11164,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListProblemInteractorsQueryResult = NonNullable<Awaited<ReturnType<typeof listProblemInteractors>>>
-export type ListProblemInteractorsQueryError = unknown
+export type ListProblemInteractorsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListProblemInteractors<TData = Awaited<ReturnType<typeof listProblemInteractors>>, TError = unknown>(
+export function useListProblemInteractors<TData = Awaited<ReturnType<typeof listProblemInteractors>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemInteractors>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemInteractors>>,
           TError,
           Awaited<ReturnType<typeof listProblemInteractors>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemInteractors<TData = Awaited<ReturnType<typeof listProblemInteractors>>, TError = unknown>(
+export function useListProblemInteractors<TData = Awaited<ReturnType<typeof listProblemInteractors>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemInteractors>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemInteractors>>,
           TError,
           Awaited<ReturnType<typeof listProblemInteractors>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemInteractors<TData = Awaited<ReturnType<typeof listProblemInteractors>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemInteractors>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemInteractors<TData = Awaited<ReturnType<typeof listProblemInteractors>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemInteractors>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List interactor files
  */
 
-export function useListProblemInteractors<TData = Awaited<ReturnType<typeof listProblemInteractors>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemInteractors>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemInteractors<TData = Awaited<ReturnType<typeof listProblemInteractors>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemInteractors>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -9686,7 +11226,7 @@ export const getCreateProblemInteractorUrl = (problemId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(problemId))}/interactors?${stringifiedParams}` : `/problems/${encodeURIComponent(String(problemId))}/interactors`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(problemId))}/interactors?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(problemId))}/interactors`
 }
 
 /**
@@ -9694,7 +11234,7 @@ export const getCreateProblemInteractorUrl = (problemId: string,
  */
 export const createProblemInteractor = async (problemId: string,
     createProblemInteractorBody: string,
-    params: CreateProblemInteractorParams, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    params: CreateProblemInteractorParams, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -9710,14 +11250,29 @@ export const createProblemInteractor = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getCreateProblemInteractorUrl(problemId,params),
+const res = await fetch(getCreateProblemInteractorUrl(problemId,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
     body: createProblemInteractorBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -9725,16 +11280,16 @@ return apiFetch<MessageResponse>(getCreateProblemInteractorUrl(problemId,params)
 
 export const getCreateProblemInteractorMutationKey = () => ['createProblemInteractor'] as const;
 
-export const getCreateProblemInteractorMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemInteractor>>, TError,CreateProblemInteractorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateProblemInteractorMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemInteractor>>, TError,CreateProblemInteractorMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createProblemInteractor>>, TError,CreateProblemInteractorMutationVariables, TContext> => {
 
 const mutationKey = getCreateProblemInteractorMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -9742,7 +11297,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProblemInteractor>>, CreateProblemInteractorMutationVariables> = (props) => {
           const {problemId,data,params} = props ?? {};
 
-          return  createProblemInteractor(problemId,data,params,requestOptions)
+          return  createProblemInteractor(problemId,data,params,fetchOptions)
         }
 
 
@@ -9754,14 +11309,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateProblemInteractorMutationResult = NonNullable<Awaited<ReturnType<typeof createProblemInteractor>>>
     export type CreateProblemInteractorMutationBody = string
-    export type CreateProblemInteractorMutationError = unknown
+    export type CreateProblemInteractorMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateProblemInteractorMutationVariables = {problemId: string;data: string;params: CreateProblemInteractorParams}
 
     /**
  * @summary Create interactor file
  */
-export const useCreateProblemInteractor = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemInteractor>>, TError,CreateProblemInteractorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateProblemInteractor = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemInteractor>>, TError,CreateProblemInteractorMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createProblemInteractor>>,
         TError,
@@ -9777,23 +11332,38 @@ export const getGetProblemInteractorUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/interactors/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/interactors/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Get interactor file content
  */
 export const getProblemInteractor = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<string> => {
+    name: string, options?: RequestInit): Promise<string> => {
 
-  return apiFetch<string>(getGetProblemInteractorUrl(problemId,name),
+  const res = await fetch(getGetProblemInteractorUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: string = body !== null ? body : ''
+  return data
+}
 
 
 
@@ -9802,22 +11372,22 @@ export const getProblemInteractor = async (problemId: string,
 export const getGetProblemInteractorQueryKey = (problemId: string,
     name: string,) => {
     return [
-    `/problems/${problemId}/interactors/${name}`
+    `/api/problems/${problemId}/interactors/${name}`
     ] as const;
     }
 
 
-export const getGetProblemInteractorQueryOptions = <TData = Awaited<ReturnType<typeof getProblemInteractor>>, TError = unknown>(problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemInteractor>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetProblemInteractorQueryOptions = <TData = Awaited<ReturnType<typeof getProblemInteractor>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string,
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemInteractor>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetProblemInteractorQueryKey(problemId,name);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemInteractor>>> = ({ signal }) => getProblemInteractor(problemId,name, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemInteractor>>> = ({ signal }) => getProblemInteractor(problemId,name, { signal, ...fetchOptions });
 
 
 
@@ -9827,10 +11397,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetProblemInteractorQueryResult = NonNullable<Awaited<ReturnType<typeof getProblemInteractor>>>
-export type GetProblemInteractorQueryError = unknown
+export type GetProblemInteractorQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetProblemInteractor<TData = Awaited<ReturnType<typeof getProblemInteractor>>, TError = unknown>(
+export function useGetProblemInteractor<TData = Awaited<ReturnType<typeof getProblemInteractor>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemInteractor>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -9838,10 +11408,10 @@ export function useGetProblemInteractor<TData = Awaited<ReturnType<typeof getPro
           TError,
           Awaited<ReturnType<typeof getProblemInteractor>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemInteractor<TData = Awaited<ReturnType<typeof getProblemInteractor>>, TError = unknown>(
+export function useGetProblemInteractor<TData = Awaited<ReturnType<typeof getProblemInteractor>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemInteractor>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -9849,21 +11419,21 @@ export function useGetProblemInteractor<TData = Awaited<ReturnType<typeof getPro
           TError,
           Awaited<ReturnType<typeof getProblemInteractor>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemInteractor<TData = Awaited<ReturnType<typeof getProblemInteractor>>, TError = unknown>(
+export function useGetProblemInteractor<TData = Awaited<ReturnType<typeof getProblemInteractor>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemInteractor>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemInteractor>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get interactor file content
  */
 
-export function useGetProblemInteractor<TData = Awaited<ReturnType<typeof getProblemInteractor>>, TError = unknown>(
+export function useGetProblemInteractor<TData = Awaited<ReturnType<typeof getProblemInteractor>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemInteractor>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemInteractor>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -9886,7 +11456,7 @@ export const getUpdateProblemInteractorUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/interactors/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/interactors/${encodeURIComponent(String(name))}`
 }
 
 /**
@@ -9894,7 +11464,7 @@ export const getUpdateProblemInteractorUrl = (problemId: string,
  */
 export const updateProblemInteractor = async (problemId: string,
     name: string,
-    updateProblemInteractorBody: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    updateProblemInteractorBody: string, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -9910,14 +11480,29 @@ export const updateProblemInteractor = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getUpdateProblemInteractorUrl(problemId,name),
+const res = await fetch(getUpdateProblemInteractorUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
     body: updateProblemInteractorBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -9925,16 +11510,16 @@ return apiFetch<MessageResponse>(getUpdateProblemInteractorUrl(problemId,name),
 
 export const getUpdateProblemInteractorMutationKey = () => ['updateProblemInteractor'] as const;
 
-export const getUpdateProblemInteractorMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemInteractor>>, TError,UpdateProblemInteractorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemInteractorMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemInteractor>>, TError,UpdateProblemInteractorMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblemInteractor>>, TError,UpdateProblemInteractorMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemInteractorMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -9942,7 +11527,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblemInteractor>>, UpdateProblemInteractorMutationVariables> = (props) => {
           const {problemId,name,data} = props ?? {};
 
-          return  updateProblemInteractor(problemId,name,data,requestOptions)
+          return  updateProblemInteractor(problemId,name,data,fetchOptions)
         }
 
 
@@ -9954,14 +11539,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemInteractorMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblemInteractor>>>
     export type UpdateProblemInteractorMutationBody = string
-    export type UpdateProblemInteractorMutationError = unknown
+    export type UpdateProblemInteractorMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemInteractorMutationVariables = {problemId: string;name: string;data: string}
 
     /**
  * @summary Update interactor file
  */
-export const useUpdateProblemInteractor = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemInteractor>>, TError,UpdateProblemInteractorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateProblemInteractor = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemInteractor>>, TError,UpdateProblemInteractorMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblemInteractor>>,
         TError,
@@ -9977,23 +11562,38 @@ export const getDeleteProblemInteractorUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/interactors/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/interactors/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Delete interactor file
  */
 export const deleteProblemInteractor = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    name: string, options?: RequestInit): Promise<MessageResponse> => {
 
-  return apiFetch<MessageResponse>(getDeleteProblemInteractorUrl(problemId,name),
+  const res = await fetch(getDeleteProblemInteractorUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -10001,16 +11601,16 @@ export const deleteProblemInteractor = async (problemId: string,
 
 export const getDeleteProblemInteractorMutationKey = () => ['deleteProblemInteractor'] as const;
 
-export const getDeleteProblemInteractorMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemInteractor>>, TError,DeleteProblemInteractorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteProblemInteractorMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemInteractor>>, TError,DeleteProblemInteractorMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteProblemInteractor>>, TError,DeleteProblemInteractorMutationVariables, TContext> => {
 
 const mutationKey = getDeleteProblemInteractorMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -10018,7 +11618,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProblemInteractor>>, DeleteProblemInteractorMutationVariables> = (props) => {
           const {problemId,name} = props ?? {};
 
-          return  deleteProblemInteractor(problemId,name,requestOptions)
+          return  deleteProblemInteractor(problemId,name,fetchOptions)
         }
 
 
@@ -10030,14 +11630,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteProblemInteractorMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProblemInteractor>>>
 
-    export type DeleteProblemInteractorMutationError = unknown
+    export type DeleteProblemInteractorMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteProblemInteractorMutationVariables = {problemId: string;name: string}
 
     /**
  * @summary Delete interactor file
  */
-export const useDeleteProblemInteractor = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemInteractor>>, TError,DeleteProblemInteractorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeleteProblemInteractor = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemInteractor>>, TError,DeleteProblemInteractorMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteProblemInteractor>>,
         TError,
@@ -10052,22 +11652,37 @@ export const getListProblemMediaFilesUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/media`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/media`
 }
 
 /**
  * @summary List media files
  */
-export const listProblemMediaFiles = async (problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<WorkshopFileListResponse> => {
+export const listProblemMediaFiles = async (problemId: string, options?: RequestInit): Promise<WorkshopFileListResponse> => {
 
-  return apiFetch<WorkshopFileListResponse>(getListProblemMediaFilesUrl(problemId),
+  const res = await fetch(getListProblemMediaFilesUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: WorkshopFileListResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -10075,21 +11690,21 @@ export const listProblemMediaFiles = async (problemId: string, options?: Paramet
 
 export const getListProblemMediaFilesQueryKey = (problemId: string,) => {
     return [
-    `/problems/${problemId}/media`
+    `/api/problems/${problemId}/media`
     ] as const;
     }
 
 
-export const getListProblemMediaFilesQueryOptions = <TData = Awaited<ReturnType<typeof listProblemMediaFiles>>, TError = unknown>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMediaFiles>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListProblemMediaFilesQueryOptions = <TData = Awaited<ReturnType<typeof listProblemMediaFiles>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMediaFiles>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListProblemMediaFilesQueryKey(problemId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemMediaFiles>>> = ({ signal }) => listProblemMediaFiles(problemId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemMediaFiles>>> = ({ signal }) => listProblemMediaFiles(problemId, { signal, ...fetchOptions });
 
 
 
@@ -10099,39 +11714,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListProblemMediaFilesQueryResult = NonNullable<Awaited<ReturnType<typeof listProblemMediaFiles>>>
-export type ListProblemMediaFilesQueryError = unknown
+export type ListProblemMediaFilesQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListProblemMediaFiles<TData = Awaited<ReturnType<typeof listProblemMediaFiles>>, TError = unknown>(
+export function useListProblemMediaFiles<TData = Awaited<ReturnType<typeof listProblemMediaFiles>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMediaFiles>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemMediaFiles>>,
           TError,
           Awaited<ReturnType<typeof listProblemMediaFiles>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemMediaFiles<TData = Awaited<ReturnType<typeof listProblemMediaFiles>>, TError = unknown>(
+export function useListProblemMediaFiles<TData = Awaited<ReturnType<typeof listProblemMediaFiles>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMediaFiles>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemMediaFiles>>,
           TError,
           Awaited<ReturnType<typeof listProblemMediaFiles>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemMediaFiles<TData = Awaited<ReturnType<typeof listProblemMediaFiles>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMediaFiles>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemMediaFiles<TData = Awaited<ReturnType<typeof listProblemMediaFiles>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMediaFiles>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List media files
  */
 
-export function useListProblemMediaFiles<TData = Awaited<ReturnType<typeof listProblemMediaFiles>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMediaFiles>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemMediaFiles<TData = Awaited<ReturnType<typeof listProblemMediaFiles>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemMediaFiles>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -10161,7 +11776,7 @@ export const getCreateProblemMediaFileUrl = (problemId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(problemId))}/media?${stringifiedParams}` : `/problems/${encodeURIComponent(String(problemId))}/media`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(problemId))}/media?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(problemId))}/media`
 }
 
 /**
@@ -10169,7 +11784,7 @@ export const getCreateProblemMediaFileUrl = (problemId: string,
  */
 export const createProblemMediaFile = async (problemId: string,
     createProblemMediaFileBody: Blob,
-    params: CreateProblemMediaFileParams, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    params: CreateProblemMediaFileParams, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -10185,14 +11800,29 @@ export const createProblemMediaFile = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getCreateProblemMediaFileUrl(problemId,params),
+const res = await fetch(getCreateProblemMediaFileUrl(problemId,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/octet-stream', ...getHeaders(options?.headers) },
     body: createProblemMediaFileBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -10200,16 +11830,16 @@ return apiFetch<MessageResponse>(getCreateProblemMediaFileUrl(problemId,params),
 
 export const getCreateProblemMediaFileMutationKey = () => ['createProblemMediaFile'] as const;
 
-export const getCreateProblemMediaFileMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemMediaFile>>, TError,CreateProblemMediaFileMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateProblemMediaFileMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemMediaFile>>, TError,CreateProblemMediaFileMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createProblemMediaFile>>, TError,CreateProblemMediaFileMutationVariables, TContext> => {
 
 const mutationKey = getCreateProblemMediaFileMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -10217,7 +11847,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProblemMediaFile>>, CreateProblemMediaFileMutationVariables> = (props) => {
           const {problemId,data,params} = props ?? {};
 
-          return  createProblemMediaFile(problemId,data,params,requestOptions)
+          return  createProblemMediaFile(problemId,data,params,fetchOptions)
         }
 
 
@@ -10229,14 +11859,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateProblemMediaFileMutationResult = NonNullable<Awaited<ReturnType<typeof createProblemMediaFile>>>
     export type CreateProblemMediaFileMutationBody = Blob
-    export type CreateProblemMediaFileMutationError = unknown
+    export type CreateProblemMediaFileMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateProblemMediaFileMutationVariables = {problemId: string;data: Blob;params: CreateProblemMediaFileParams}
 
     /**
  * @summary Create media file
  */
-export const useCreateProblemMediaFile = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemMediaFile>>, TError,CreateProblemMediaFileMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateProblemMediaFile = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemMediaFile>>, TError,CreateProblemMediaFileMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createProblemMediaFile>>,
         TError,
@@ -10252,23 +11882,38 @@ export const getGetProblemMediaFileUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/media/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/media/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Get media file content
  */
 export const getProblemMediaFile = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<Blob> => {
+    name: string, options?: RequestInit): Promise<Blob> => {
 
-  return apiFetch<Blob>(getGetProblemMediaFileUrl(problemId,name),
+  const res = await fetch(getGetProblemMediaFileUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+  if (!res.ok) {
+    const errorBody = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = errorBody ? JSON.parse(errorBody) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const body = [204, 205, 304].includes(res.status) ? null : await res.blob();
+  const data: Blob = body as Blob
+  return data
+}
 
 
 
@@ -10277,22 +11922,22 @@ export const getProblemMediaFile = async (problemId: string,
 export const getGetProblemMediaFileQueryKey = (problemId: string,
     name: string,) => {
     return [
-    `/problems/${problemId}/media/${name}`
+    `/api/problems/${problemId}/media/${name}`
     ] as const;
     }
 
 
-export const getGetProblemMediaFileQueryOptions = <TData = Awaited<ReturnType<typeof getProblemMediaFile>>, TError = unknown>(problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemMediaFile>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetProblemMediaFileQueryOptions = <TData = Awaited<ReturnType<typeof getProblemMediaFile>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string,
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemMediaFile>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetProblemMediaFileQueryKey(problemId,name);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemMediaFile>>> = ({ signal }) => getProblemMediaFile(problemId,name, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemMediaFile>>> = ({ signal }) => getProblemMediaFile(problemId,name, { signal, ...fetchOptions });
 
 
 
@@ -10302,10 +11947,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetProblemMediaFileQueryResult = NonNullable<Awaited<ReturnType<typeof getProblemMediaFile>>>
-export type GetProblemMediaFileQueryError = unknown
+export type GetProblemMediaFileQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetProblemMediaFile<TData = Awaited<ReturnType<typeof getProblemMediaFile>>, TError = unknown>(
+export function useGetProblemMediaFile<TData = Awaited<ReturnType<typeof getProblemMediaFile>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemMediaFile>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -10313,10 +11958,10 @@ export function useGetProblemMediaFile<TData = Awaited<ReturnType<typeof getProb
           TError,
           Awaited<ReturnType<typeof getProblemMediaFile>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemMediaFile<TData = Awaited<ReturnType<typeof getProblemMediaFile>>, TError = unknown>(
+export function useGetProblemMediaFile<TData = Awaited<ReturnType<typeof getProblemMediaFile>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemMediaFile>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -10324,21 +11969,21 @@ export function useGetProblemMediaFile<TData = Awaited<ReturnType<typeof getProb
           TError,
           Awaited<ReturnType<typeof getProblemMediaFile>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemMediaFile<TData = Awaited<ReturnType<typeof getProblemMediaFile>>, TError = unknown>(
+export function useGetProblemMediaFile<TData = Awaited<ReturnType<typeof getProblemMediaFile>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemMediaFile>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemMediaFile>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get media file content
  */
 
-export function useGetProblemMediaFile<TData = Awaited<ReturnType<typeof getProblemMediaFile>>, TError = unknown>(
+export function useGetProblemMediaFile<TData = Awaited<ReturnType<typeof getProblemMediaFile>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemMediaFile>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemMediaFile>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -10361,7 +12006,7 @@ export const getUpdateProblemMediaFileUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/media/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/media/${encodeURIComponent(String(name))}`
 }
 
 /**
@@ -10369,7 +12014,7 @@ export const getUpdateProblemMediaFileUrl = (problemId: string,
  */
 export const updateProblemMediaFile = async (problemId: string,
     name: string,
-    updateProblemMediaFileBody: Blob, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    updateProblemMediaFileBody: Blob, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -10385,14 +12030,29 @@ export const updateProblemMediaFile = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getUpdateProblemMediaFileUrl(problemId,name),
+const res = await fetch(getUpdateProblemMediaFileUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/octet-stream', ...getHeaders(options?.headers) },
     body: updateProblemMediaFileBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -10400,16 +12060,16 @@ return apiFetch<MessageResponse>(getUpdateProblemMediaFileUrl(problemId,name),
 
 export const getUpdateProblemMediaFileMutationKey = () => ['updateProblemMediaFile'] as const;
 
-export const getUpdateProblemMediaFileMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemMediaFile>>, TError,UpdateProblemMediaFileMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemMediaFileMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemMediaFile>>, TError,UpdateProblemMediaFileMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblemMediaFile>>, TError,UpdateProblemMediaFileMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemMediaFileMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -10417,7 +12077,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblemMediaFile>>, UpdateProblemMediaFileMutationVariables> = (props) => {
           const {problemId,name,data} = props ?? {};
 
-          return  updateProblemMediaFile(problemId,name,data,requestOptions)
+          return  updateProblemMediaFile(problemId,name,data,fetchOptions)
         }
 
 
@@ -10429,14 +12089,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemMediaFileMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblemMediaFile>>>
     export type UpdateProblemMediaFileMutationBody = Blob
-    export type UpdateProblemMediaFileMutationError = unknown
+    export type UpdateProblemMediaFileMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemMediaFileMutationVariables = {problemId: string;name: string;data: Blob}
 
     /**
  * @summary Update media file
  */
-export const useUpdateProblemMediaFile = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemMediaFile>>, TError,UpdateProblemMediaFileMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateProblemMediaFile = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemMediaFile>>, TError,UpdateProblemMediaFileMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblemMediaFile>>,
         TError,
@@ -10452,23 +12112,38 @@ export const getDeleteProblemMediaFileUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/media/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/media/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Delete media file
  */
 export const deleteProblemMediaFile = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    name: string, options?: RequestInit): Promise<MessageResponse> => {
 
-  return apiFetch<MessageResponse>(getDeleteProblemMediaFileUrl(problemId,name),
+  const res = await fetch(getDeleteProblemMediaFileUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -10476,16 +12151,16 @@ export const deleteProblemMediaFile = async (problemId: string,
 
 export const getDeleteProblemMediaFileMutationKey = () => ['deleteProblemMediaFile'] as const;
 
-export const getDeleteProblemMediaFileMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemMediaFile>>, TError,DeleteProblemMediaFileMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteProblemMediaFileMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemMediaFile>>, TError,DeleteProblemMediaFileMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteProblemMediaFile>>, TError,DeleteProblemMediaFileMutationVariables, TContext> => {
 
 const mutationKey = getDeleteProblemMediaFileMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -10493,7 +12168,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProblemMediaFile>>, DeleteProblemMediaFileMutationVariables> = (props) => {
           const {problemId,name} = props ?? {};
 
-          return  deleteProblemMediaFile(problemId,name,requestOptions)
+          return  deleteProblemMediaFile(problemId,name,fetchOptions)
         }
 
 
@@ -10505,14 +12180,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteProblemMediaFileMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProblemMediaFile>>>
 
-    export type DeleteProblemMediaFileMutationError = unknown
+    export type DeleteProblemMediaFileMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteProblemMediaFileMutationVariables = {problemId: string;name: string}
 
     /**
  * @summary Delete media file
  */
-export const useDeleteProblemMediaFile = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemMediaFile>>, TError,DeleteProblemMediaFileMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeleteProblemMediaFile = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemMediaFile>>, TError,DeleteProblemMediaFileMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteProblemMediaFile>>,
         TError,
@@ -10527,22 +12202,37 @@ export const getListProblemLibsUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/lib`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/lib`
 }
 
 /**
  * @summary List library files
  */
-export const listProblemLibs = async (problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<WorkshopFileListResponse> => {
+export const listProblemLibs = async (problemId: string, options?: RequestInit): Promise<WorkshopFileListResponse> => {
 
-  return apiFetch<WorkshopFileListResponse>(getListProblemLibsUrl(problemId),
+  const res = await fetch(getListProblemLibsUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: WorkshopFileListResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -10550,21 +12240,21 @@ export const listProblemLibs = async (problemId: string, options?: Parameters<ty
 
 export const getListProblemLibsQueryKey = (problemId: string,) => {
     return [
-    `/problems/${problemId}/lib`
+    `/api/problems/${problemId}/lib`
     ] as const;
     }
 
 
-export const getListProblemLibsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemLibs>>, TError = unknown>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemLibs>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListProblemLibsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemLibs>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemLibs>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListProblemLibsQueryKey(problemId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemLibs>>> = ({ signal }) => listProblemLibs(problemId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemLibs>>> = ({ signal }) => listProblemLibs(problemId, { signal, ...fetchOptions });
 
 
 
@@ -10574,39 +12264,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListProblemLibsQueryResult = NonNullable<Awaited<ReturnType<typeof listProblemLibs>>>
-export type ListProblemLibsQueryError = unknown
+export type ListProblemLibsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListProblemLibs<TData = Awaited<ReturnType<typeof listProblemLibs>>, TError = unknown>(
+export function useListProblemLibs<TData = Awaited<ReturnType<typeof listProblemLibs>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemLibs>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemLibs>>,
           TError,
           Awaited<ReturnType<typeof listProblemLibs>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemLibs<TData = Awaited<ReturnType<typeof listProblemLibs>>, TError = unknown>(
+export function useListProblemLibs<TData = Awaited<ReturnType<typeof listProblemLibs>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemLibs>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemLibs>>,
           TError,
           Awaited<ReturnType<typeof listProblemLibs>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemLibs<TData = Awaited<ReturnType<typeof listProblemLibs>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemLibs>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemLibs<TData = Awaited<ReturnType<typeof listProblemLibs>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemLibs>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List library files
  */
 
-export function useListProblemLibs<TData = Awaited<ReturnType<typeof listProblemLibs>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemLibs>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemLibs<TData = Awaited<ReturnType<typeof listProblemLibs>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemLibs>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -10636,7 +12326,7 @@ export const getCreateProblemLibUrl = (problemId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(problemId))}/lib?${stringifiedParams}` : `/problems/${encodeURIComponent(String(problemId))}/lib`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(problemId))}/lib?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(problemId))}/lib`
 }
 
 /**
@@ -10644,7 +12334,7 @@ export const getCreateProblemLibUrl = (problemId: string,
  */
 export const createProblemLib = async (problemId: string,
     createProblemLibBody: string,
-    params: CreateProblemLibParams, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    params: CreateProblemLibParams, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -10660,14 +12350,29 @@ export const createProblemLib = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getCreateProblemLibUrl(problemId,params),
+const res = await fetch(getCreateProblemLibUrl(problemId,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
     body: createProblemLibBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -10675,16 +12380,16 @@ return apiFetch<MessageResponse>(getCreateProblemLibUrl(problemId,params),
 
 export const getCreateProblemLibMutationKey = () => ['createProblemLib'] as const;
 
-export const getCreateProblemLibMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemLib>>, TError,CreateProblemLibMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateProblemLibMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemLib>>, TError,CreateProblemLibMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createProblemLib>>, TError,CreateProblemLibMutationVariables, TContext> => {
 
 const mutationKey = getCreateProblemLibMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -10692,7 +12397,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProblemLib>>, CreateProblemLibMutationVariables> = (props) => {
           const {problemId,data,params} = props ?? {};
 
-          return  createProblemLib(problemId,data,params,requestOptions)
+          return  createProblemLib(problemId,data,params,fetchOptions)
         }
 
 
@@ -10704,14 +12409,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateProblemLibMutationResult = NonNullable<Awaited<ReturnType<typeof createProblemLib>>>
     export type CreateProblemLibMutationBody = string
-    export type CreateProblemLibMutationError = unknown
+    export type CreateProblemLibMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateProblemLibMutationVariables = {problemId: string;data: string;params: CreateProblemLibParams}
 
     /**
  * @summary Create library file
  */
-export const useCreateProblemLib = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemLib>>, TError,CreateProblemLibMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateProblemLib = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemLib>>, TError,CreateProblemLibMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createProblemLib>>,
         TError,
@@ -10727,23 +12432,38 @@ export const getGetProblemLibUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/lib/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/lib/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Get library file content
  */
 export const getProblemLib = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<string> => {
+    name: string, options?: RequestInit): Promise<string> => {
 
-  return apiFetch<string>(getGetProblemLibUrl(problemId,name),
+  const res = await fetch(getGetProblemLibUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: string = body !== null ? body : ''
+  return data
+}
 
 
 
@@ -10752,22 +12472,22 @@ export const getProblemLib = async (problemId: string,
 export const getGetProblemLibQueryKey = (problemId: string,
     name: string,) => {
     return [
-    `/problems/${problemId}/lib/${name}`
+    `/api/problems/${problemId}/lib/${name}`
     ] as const;
     }
 
 
-export const getGetProblemLibQueryOptions = <TData = Awaited<ReturnType<typeof getProblemLib>>, TError = unknown>(problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLib>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetProblemLibQueryOptions = <TData = Awaited<ReturnType<typeof getProblemLib>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string,
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLib>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetProblemLibQueryKey(problemId,name);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemLib>>> = ({ signal }) => getProblemLib(problemId,name, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemLib>>> = ({ signal }) => getProblemLib(problemId,name, { signal, ...fetchOptions });
 
 
 
@@ -10777,10 +12497,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetProblemLibQueryResult = NonNullable<Awaited<ReturnType<typeof getProblemLib>>>
-export type GetProblemLibQueryError = unknown
+export type GetProblemLibQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetProblemLib<TData = Awaited<ReturnType<typeof getProblemLib>>, TError = unknown>(
+export function useGetProblemLib<TData = Awaited<ReturnType<typeof getProblemLib>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLib>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -10788,10 +12508,10 @@ export function useGetProblemLib<TData = Awaited<ReturnType<typeof getProblemLib
           TError,
           Awaited<ReturnType<typeof getProblemLib>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemLib<TData = Awaited<ReturnType<typeof getProblemLib>>, TError = unknown>(
+export function useGetProblemLib<TData = Awaited<ReturnType<typeof getProblemLib>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLib>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -10799,21 +12519,21 @@ export function useGetProblemLib<TData = Awaited<ReturnType<typeof getProblemLib
           TError,
           Awaited<ReturnType<typeof getProblemLib>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemLib<TData = Awaited<ReturnType<typeof getProblemLib>>, TError = unknown>(
+export function useGetProblemLib<TData = Awaited<ReturnType<typeof getProblemLib>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLib>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLib>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get library file content
  */
 
-export function useGetProblemLib<TData = Awaited<ReturnType<typeof getProblemLib>>, TError = unknown>(
+export function useGetProblemLib<TData = Awaited<ReturnType<typeof getProblemLib>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLib>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemLib>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -10836,7 +12556,7 @@ export const getUpdateProblemLibUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/lib/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/lib/${encodeURIComponent(String(name))}`
 }
 
 /**
@@ -10844,7 +12564,7 @@ export const getUpdateProblemLibUrl = (problemId: string,
  */
 export const updateProblemLib = async (problemId: string,
     name: string,
-    updateProblemLibBody: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    updateProblemLibBody: string, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -10860,14 +12580,29 @@ export const updateProblemLib = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getUpdateProblemLibUrl(problemId,name),
+const res = await fetch(getUpdateProblemLibUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
     body: updateProblemLibBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -10875,16 +12610,16 @@ return apiFetch<MessageResponse>(getUpdateProblemLibUrl(problemId,name),
 
 export const getUpdateProblemLibMutationKey = () => ['updateProblemLib'] as const;
 
-export const getUpdateProblemLibMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemLib>>, TError,UpdateProblemLibMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemLibMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemLib>>, TError,UpdateProblemLibMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblemLib>>, TError,UpdateProblemLibMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemLibMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -10892,7 +12627,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblemLib>>, UpdateProblemLibMutationVariables> = (props) => {
           const {problemId,name,data} = props ?? {};
 
-          return  updateProblemLib(problemId,name,data,requestOptions)
+          return  updateProblemLib(problemId,name,data,fetchOptions)
         }
 
 
@@ -10904,14 +12639,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemLibMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblemLib>>>
     export type UpdateProblemLibMutationBody = string
-    export type UpdateProblemLibMutationError = unknown
+    export type UpdateProblemLibMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemLibMutationVariables = {problemId: string;name: string;data: string}
 
     /**
  * @summary Update library file
  */
-export const useUpdateProblemLib = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemLib>>, TError,UpdateProblemLibMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateProblemLib = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemLib>>, TError,UpdateProblemLibMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblemLib>>,
         TError,
@@ -10927,23 +12662,38 @@ export const getDeleteProblemLibUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/lib/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/lib/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Delete library file
  */
 export const deleteProblemLib = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    name: string, options?: RequestInit): Promise<MessageResponse> => {
 
-  return apiFetch<MessageResponse>(getDeleteProblemLibUrl(problemId,name),
+  const res = await fetch(getDeleteProblemLibUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -10951,16 +12701,16 @@ export const deleteProblemLib = async (problemId: string,
 
 export const getDeleteProblemLibMutationKey = () => ['deleteProblemLib'] as const;
 
-export const getDeleteProblemLibMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemLib>>, TError,DeleteProblemLibMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteProblemLibMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemLib>>, TError,DeleteProblemLibMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteProblemLib>>, TError,DeleteProblemLibMutationVariables, TContext> => {
 
 const mutationKey = getDeleteProblemLibMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -10968,7 +12718,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProblemLib>>, DeleteProblemLibMutationVariables> = (props) => {
           const {problemId,name} = props ?? {};
 
-          return  deleteProblemLib(problemId,name,requestOptions)
+          return  deleteProblemLib(problemId,name,fetchOptions)
         }
 
 
@@ -10980,14 +12730,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteProblemLibMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProblemLib>>>
 
-    export type DeleteProblemLibMutationError = unknown
+    export type DeleteProblemLibMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteProblemLibMutationVariables = {problemId: string;name: string}
 
     /**
  * @summary Delete library file
  */
-export const useDeleteProblemLib = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemLib>>, TError,DeleteProblemLibMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeleteProblemLib = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemLib>>, TError,DeleteProblemLibMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteProblemLib>>,
         TError,
@@ -11002,22 +12752,37 @@ export const getListProblemWorkshopSubmissionsUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/submissions`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/submissions`
 }
 
 /**
  * @summary List author solution files
  */
-export const listProblemWorkshopSubmissions = async (problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<WorkshopFileListResponse> => {
+export const listProblemWorkshopSubmissions = async (problemId: string, options?: RequestInit): Promise<WorkshopFileListResponse> => {
 
-  return apiFetch<WorkshopFileListResponse>(getListProblemWorkshopSubmissionsUrl(problemId),
+  const res = await fetch(getListProblemWorkshopSubmissionsUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: WorkshopFileListResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -11025,21 +12790,21 @@ export const listProblemWorkshopSubmissions = async (problemId: string, options?
 
 export const getListProblemWorkshopSubmissionsQueryKey = (problemId: string,) => {
     return [
-    `/problems/${problemId}/submissions`
+    `/api/problems/${problemId}/submissions`
     ] as const;
     }
 
 
-export const getListProblemWorkshopSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError = unknown>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListProblemWorkshopSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListProblemWorkshopSubmissionsQueryKey(problemId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>> = ({ signal }) => listProblemWorkshopSubmissions(problemId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>> = ({ signal }) => listProblemWorkshopSubmissions(problemId, { signal, ...fetchOptions });
 
 
 
@@ -11049,39 +12814,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListProblemWorkshopSubmissionsQueryResult = NonNullable<Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>>
-export type ListProblemWorkshopSubmissionsQueryError = unknown
+export type ListProblemWorkshopSubmissionsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListProblemWorkshopSubmissions<TData = Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError = unknown>(
+export function useListProblemWorkshopSubmissions<TData = Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>,
           TError,
           Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemWorkshopSubmissions<TData = Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError = unknown>(
+export function useListProblemWorkshopSubmissions<TData = Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>,
           TError,
           Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemWorkshopSubmissions<TData = Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemWorkshopSubmissions<TData = Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List author solution files
  */
 
-export function useListProblemWorkshopSubmissions<TData = Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemWorkshopSubmissions<TData = Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemWorkshopSubmissions>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -11111,7 +12876,7 @@ export const getCreateProblemWorkshopSubmissionUrl = (problemId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(problemId))}/submissions?${stringifiedParams}` : `/problems/${encodeURIComponent(String(problemId))}/submissions`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(problemId))}/submissions?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(problemId))}/submissions`
 }
 
 /**
@@ -11119,7 +12884,7 @@ export const getCreateProblemWorkshopSubmissionUrl = (problemId: string,
  */
 export const createProblemWorkshopSubmission = async (problemId: string,
     createProblemWorkshopSubmissionBody: string,
-    params: CreateProblemWorkshopSubmissionParams, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    params: CreateProblemWorkshopSubmissionParams, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -11135,14 +12900,29 @@ export const createProblemWorkshopSubmission = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getCreateProblemWorkshopSubmissionUrl(problemId,params),
+const res = await fetch(getCreateProblemWorkshopSubmissionUrl(problemId,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
     body: createProblemWorkshopSubmissionBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -11150,16 +12930,16 @@ return apiFetch<MessageResponse>(getCreateProblemWorkshopSubmissionUrl(problemId
 
 export const getCreateProblemWorkshopSubmissionMutationKey = () => ['createProblemWorkshopSubmission'] as const;
 
-export const getCreateProblemWorkshopSubmissionMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemWorkshopSubmission>>, TError,CreateProblemWorkshopSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateProblemWorkshopSubmissionMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemWorkshopSubmission>>, TError,CreateProblemWorkshopSubmissionMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createProblemWorkshopSubmission>>, TError,CreateProblemWorkshopSubmissionMutationVariables, TContext> => {
 
 const mutationKey = getCreateProblemWorkshopSubmissionMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -11167,7 +12947,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProblemWorkshopSubmission>>, CreateProblemWorkshopSubmissionMutationVariables> = (props) => {
           const {problemId,data,params} = props ?? {};
 
-          return  createProblemWorkshopSubmission(problemId,data,params,requestOptions)
+          return  createProblemWorkshopSubmission(problemId,data,params,fetchOptions)
         }
 
 
@@ -11179,14 +12959,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateProblemWorkshopSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof createProblemWorkshopSubmission>>>
     export type CreateProblemWorkshopSubmissionMutationBody = string
-    export type CreateProblemWorkshopSubmissionMutationError = unknown
+    export type CreateProblemWorkshopSubmissionMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateProblemWorkshopSubmissionMutationVariables = {problemId: string;data: string;params: CreateProblemWorkshopSubmissionParams}
 
     /**
  * @summary Create author solution file
  */
-export const useCreateProblemWorkshopSubmission = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemWorkshopSubmission>>, TError,CreateProblemWorkshopSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateProblemWorkshopSubmission = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemWorkshopSubmission>>, TError,CreateProblemWorkshopSubmissionMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createProblemWorkshopSubmission>>,
         TError,
@@ -11202,23 +12982,38 @@ export const getGetProblemWorkshopSubmissionUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/submissions/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/submissions/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Get author solution file content
  */
 export const getProblemWorkshopSubmission = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<string> => {
+    name: string, options?: RequestInit): Promise<string> => {
 
-  return apiFetch<string>(getGetProblemWorkshopSubmissionUrl(problemId,name),
+  const res = await fetch(getGetProblemWorkshopSubmissionUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: string = body !== null ? body : ''
+  return data
+}
 
 
 
@@ -11227,22 +13022,22 @@ export const getProblemWorkshopSubmission = async (problemId: string,
 export const getGetProblemWorkshopSubmissionQueryKey = (problemId: string,
     name: string,) => {
     return [
-    `/problems/${problemId}/submissions/${name}`
+    `/api/problems/${problemId}/submissions/${name}`
     ] as const;
     }
 
 
-export const getGetProblemWorkshopSubmissionQueryOptions = <TData = Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError = unknown>(problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetProblemWorkshopSubmissionQueryOptions = <TData = Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string,
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetProblemWorkshopSubmissionQueryKey(problemId,name);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemWorkshopSubmission>>> = ({ signal }) => getProblemWorkshopSubmission(problemId,name, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemWorkshopSubmission>>> = ({ signal }) => getProblemWorkshopSubmission(problemId,name, { signal, ...fetchOptions });
 
 
 
@@ -11252,10 +13047,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetProblemWorkshopSubmissionQueryResult = NonNullable<Awaited<ReturnType<typeof getProblemWorkshopSubmission>>>
-export type GetProblemWorkshopSubmissionQueryError = unknown
+export type GetProblemWorkshopSubmissionQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetProblemWorkshopSubmission<TData = Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError = unknown>(
+export function useGetProblemWorkshopSubmission<TData = Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -11263,10 +13058,10 @@ export function useGetProblemWorkshopSubmission<TData = Awaited<ReturnType<typeo
           TError,
           Awaited<ReturnType<typeof getProblemWorkshopSubmission>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemWorkshopSubmission<TData = Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError = unknown>(
+export function useGetProblemWorkshopSubmission<TData = Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -11274,21 +13069,21 @@ export function useGetProblemWorkshopSubmission<TData = Awaited<ReturnType<typeo
           TError,
           Awaited<ReturnType<typeof getProblemWorkshopSubmission>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemWorkshopSubmission<TData = Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError = unknown>(
+export function useGetProblemWorkshopSubmission<TData = Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get author solution file content
  */
 
-export function useGetProblemWorkshopSubmission<TData = Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError = unknown>(
+export function useGetProblemWorkshopSubmission<TData = Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemWorkshopSubmission>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -11311,7 +13106,7 @@ export const getUpdateProblemWorkshopSubmissionUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/submissions/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/submissions/${encodeURIComponent(String(name))}`
 }
 
 /**
@@ -11319,7 +13114,7 @@ export const getUpdateProblemWorkshopSubmissionUrl = (problemId: string,
  */
 export const updateProblemWorkshopSubmission = async (problemId: string,
     name: string,
-    updateProblemWorkshopSubmissionBody: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    updateProblemWorkshopSubmissionBody: string, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -11335,14 +13130,29 @@ export const updateProblemWorkshopSubmission = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getUpdateProblemWorkshopSubmissionUrl(problemId,name),
+const res = await fetch(getUpdateProblemWorkshopSubmissionUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
     body: updateProblemWorkshopSubmissionBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -11350,16 +13160,16 @@ return apiFetch<MessageResponse>(getUpdateProblemWorkshopSubmissionUrl(problemId
 
 export const getUpdateProblemWorkshopSubmissionMutationKey = () => ['updateProblemWorkshopSubmission'] as const;
 
-export const getUpdateProblemWorkshopSubmissionMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemWorkshopSubmission>>, TError,UpdateProblemWorkshopSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemWorkshopSubmissionMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemWorkshopSubmission>>, TError,UpdateProblemWorkshopSubmissionMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblemWorkshopSubmission>>, TError,UpdateProblemWorkshopSubmissionMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemWorkshopSubmissionMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -11367,7 +13177,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblemWorkshopSubmission>>, UpdateProblemWorkshopSubmissionMutationVariables> = (props) => {
           const {problemId,name,data} = props ?? {};
 
-          return  updateProblemWorkshopSubmission(problemId,name,data,requestOptions)
+          return  updateProblemWorkshopSubmission(problemId,name,data,fetchOptions)
         }
 
 
@@ -11379,14 +13189,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemWorkshopSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblemWorkshopSubmission>>>
     export type UpdateProblemWorkshopSubmissionMutationBody = string
-    export type UpdateProblemWorkshopSubmissionMutationError = unknown
+    export type UpdateProblemWorkshopSubmissionMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemWorkshopSubmissionMutationVariables = {problemId: string;name: string;data: string}
 
     /**
  * @summary Update author solution file
  */
-export const useUpdateProblemWorkshopSubmission = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemWorkshopSubmission>>, TError,UpdateProblemWorkshopSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateProblemWorkshopSubmission = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemWorkshopSubmission>>, TError,UpdateProblemWorkshopSubmissionMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblemWorkshopSubmission>>,
         TError,
@@ -11402,23 +13212,38 @@ export const getDeleteProblemWorkshopSubmissionUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/submissions/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/submissions/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Delete author solution file
  */
 export const deleteProblemWorkshopSubmission = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    name: string, options?: RequestInit): Promise<MessageResponse> => {
 
-  return apiFetch<MessageResponse>(getDeleteProblemWorkshopSubmissionUrl(problemId,name),
+  const res = await fetch(getDeleteProblemWorkshopSubmissionUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -11426,16 +13251,16 @@ export const deleteProblemWorkshopSubmission = async (problemId: string,
 
 export const getDeleteProblemWorkshopSubmissionMutationKey = () => ['deleteProblemWorkshopSubmission'] as const;
 
-export const getDeleteProblemWorkshopSubmissionMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemWorkshopSubmission>>, TError,DeleteProblemWorkshopSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteProblemWorkshopSubmissionMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemWorkshopSubmission>>, TError,DeleteProblemWorkshopSubmissionMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteProblemWorkshopSubmission>>, TError,DeleteProblemWorkshopSubmissionMutationVariables, TContext> => {
 
 const mutationKey = getDeleteProblemWorkshopSubmissionMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -11443,7 +13268,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProblemWorkshopSubmission>>, DeleteProblemWorkshopSubmissionMutationVariables> = (props) => {
           const {problemId,name} = props ?? {};
 
-          return  deleteProblemWorkshopSubmission(problemId,name,requestOptions)
+          return  deleteProblemWorkshopSubmission(problemId,name,fetchOptions)
         }
 
 
@@ -11455,14 +13280,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteProblemWorkshopSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProblemWorkshopSubmission>>>
 
-    export type DeleteProblemWorkshopSubmissionMutationError = unknown
+    export type DeleteProblemWorkshopSubmissionMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteProblemWorkshopSubmissionMutationVariables = {problemId: string;name: string}
 
     /**
  * @summary Delete author solution file
  */
-export const useDeleteProblemWorkshopSubmission = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemWorkshopSubmission>>, TError,DeleteProblemWorkshopSubmissionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeleteProblemWorkshopSubmission = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemWorkshopSubmission>>, TError,DeleteProblemWorkshopSubmissionMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteProblemWorkshopSubmission>>,
         TError,
@@ -11477,22 +13302,37 @@ export const getListProblemTestsUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/tests`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/tests`
 }
 
 /**
  * @summary List test files
  */
-export const listProblemTests = async (problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<WorkshopFileListResponse> => {
+export const listProblemTests = async (problemId: string, options?: RequestInit): Promise<WorkshopFileListResponse> => {
 
-  return apiFetch<WorkshopFileListResponse>(getListProblemTestsUrl(problemId),
+  const res = await fetch(getListProblemTestsUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: WorkshopFileListResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -11500,21 +13340,21 @@ export const listProblemTests = async (problemId: string, options?: Parameters<t
 
 export const getListProblemTestsQueryKey = (problemId: string,) => {
     return [
-    `/problems/${problemId}/tests`
+    `/api/problems/${problemId}/tests`
     ] as const;
     }
 
 
-export const getListProblemTestsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemTests>>, TError = unknown>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListProblemTestsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemTests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTests>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListProblemTestsQueryKey(problemId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemTests>>> = ({ signal }) => listProblemTests(problemId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemTests>>> = ({ signal }) => listProblemTests(problemId, { signal, ...fetchOptions });
 
 
 
@@ -11524,39 +13364,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListProblemTestsQueryResult = NonNullable<Awaited<ReturnType<typeof listProblemTests>>>
-export type ListProblemTestsQueryError = unknown
+export type ListProblemTestsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListProblemTests<TData = Awaited<ReturnType<typeof listProblemTests>>, TError = unknown>(
+export function useListProblemTests<TData = Awaited<ReturnType<typeof listProblemTests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTests>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemTests>>,
           TError,
           Awaited<ReturnType<typeof listProblemTests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemTests<TData = Awaited<ReturnType<typeof listProblemTests>>, TError = unknown>(
+export function useListProblemTests<TData = Awaited<ReturnType<typeof listProblemTests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTests>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemTests>>,
           TError,
           Awaited<ReturnType<typeof listProblemTests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemTests<TData = Awaited<ReturnType<typeof listProblemTests>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemTests<TData = Awaited<ReturnType<typeof listProblemTests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List test files
  */
 
-export function useListProblemTests<TData = Awaited<ReturnType<typeof listProblemTests>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemTests<TData = Awaited<ReturnType<typeof listProblemTests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemTests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -11586,7 +13426,7 @@ export const getCreateProblemTestFileUrl = (problemId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(problemId))}/tests?${stringifiedParams}` : `/problems/${encodeURIComponent(String(problemId))}/tests`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(problemId))}/tests?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(problemId))}/tests`
 }
 
 /**
@@ -11594,7 +13434,7 @@ export const getCreateProblemTestFileUrl = (problemId: string,
  */
 export const createProblemTestFile = async (problemId: string,
     createProblemTestFileBody: Blob,
-    params: CreateProblemTestFileParams, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    params: CreateProblemTestFileParams, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -11610,14 +13450,29 @@ export const createProblemTestFile = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getCreateProblemTestFileUrl(problemId,params),
+const res = await fetch(getCreateProblemTestFileUrl(problemId,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/octet-stream', ...getHeaders(options?.headers) },
     body: createProblemTestFileBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -11625,16 +13480,16 @@ return apiFetch<MessageResponse>(getCreateProblemTestFileUrl(problemId,params),
 
 export const getCreateProblemTestFileMutationKey = () => ['createProblemTestFile'] as const;
 
-export const getCreateProblemTestFileMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemTestFile>>, TError,CreateProblemTestFileMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateProblemTestFileMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemTestFile>>, TError,CreateProblemTestFileMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createProblemTestFile>>, TError,CreateProblemTestFileMutationVariables, TContext> => {
 
 const mutationKey = getCreateProblemTestFileMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -11642,7 +13497,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProblemTestFile>>, CreateProblemTestFileMutationVariables> = (props) => {
           const {problemId,data,params} = props ?? {};
 
-          return  createProblemTestFile(problemId,data,params,requestOptions)
+          return  createProblemTestFile(problemId,data,params,fetchOptions)
         }
 
 
@@ -11654,14 +13509,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateProblemTestFileMutationResult = NonNullable<Awaited<ReturnType<typeof createProblemTestFile>>>
     export type CreateProblemTestFileMutationBody = Blob
-    export type CreateProblemTestFileMutationError = unknown
+    export type CreateProblemTestFileMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateProblemTestFileMutationVariables = {problemId: string;data: Blob;params: CreateProblemTestFileParams}
 
     /**
  * @summary Create test file
  */
-export const useCreateProblemTestFile = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemTestFile>>, TError,CreateProblemTestFileMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateProblemTestFile = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemTestFile>>, TError,CreateProblemTestFileMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createProblemTestFile>>,
         TError,
@@ -11676,14 +13531,14 @@ export const getUpdateProblemTestsConfigUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/tests/config`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/tests/config`
 }
 
 /**
  * @summary Update tests.json configuration
  */
 export const updateProblemTestsConfig = async (problemId: string,
-    updateProblemTestsConfigRequest: UpdateProblemTestsConfigRequest, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    updateProblemTestsConfigRequest: UpdateProblemTestsConfigRequest, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -11699,14 +13554,29 @@ export const updateProblemTestsConfig = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getUpdateProblemTestsConfigUrl(problemId),
+const res = await fetch(getUpdateProblemTestsConfigUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateProblemTestsConfigRequest)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -11714,16 +13584,16 @@ return apiFetch<MessageResponse>(getUpdateProblemTestsConfigUrl(problemId),
 
 export const getUpdateProblemTestsConfigMutationKey = () => ['updateProblemTestsConfig'] as const;
 
-export const getUpdateProblemTestsConfigMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemTestsConfig>>, TError,UpdateProblemTestsConfigMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemTestsConfigMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemTestsConfig>>, TError,UpdateProblemTestsConfigMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblemTestsConfig>>, TError,UpdateProblemTestsConfigMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemTestsConfigMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -11731,7 +13601,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblemTestsConfig>>, UpdateProblemTestsConfigMutationVariables> = (props) => {
           const {problemId,data} = props ?? {};
 
-          return  updateProblemTestsConfig(problemId,data,requestOptions)
+          return  updateProblemTestsConfig(problemId,data,fetchOptions)
         }
 
 
@@ -11743,14 +13613,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemTestsConfigMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblemTestsConfig>>>
     export type UpdateProblemTestsConfigMutationBody = UpdateProblemTestsConfigRequest
-    export type UpdateProblemTestsConfigMutationError = unknown
+    export type UpdateProblemTestsConfigMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemTestsConfigMutationVariables = {problemId: string;data: UpdateProblemTestsConfigRequest}
 
     /**
  * @summary Update tests.json configuration
  */
-export const useUpdateProblemTestsConfig = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemTestsConfig>>, TError,UpdateProblemTestsConfigMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateProblemTestsConfig = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemTestsConfig>>, TError,UpdateProblemTestsConfigMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblemTestsConfig>>,
         TError,
@@ -11766,23 +13636,38 @@ export const getGetProblemTestFileUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/tests/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/tests/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Get test file content
  */
 export const getProblemTestFile = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<Blob> => {
+    name: string, options?: RequestInit): Promise<Blob> => {
 
-  return apiFetch<Blob>(getGetProblemTestFileUrl(problemId,name),
+  const res = await fetch(getGetProblemTestFileUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+  if (!res.ok) {
+    const errorBody = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = errorBody ? JSON.parse(errorBody) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const body = [204, 205, 304].includes(res.status) ? null : await res.blob();
+  const data: Blob = body as Blob
+  return data
+}
 
 
 
@@ -11791,22 +13676,22 @@ export const getProblemTestFile = async (problemId: string,
 export const getGetProblemTestFileQueryKey = (problemId: string,
     name: string,) => {
     return [
-    `/problems/${problemId}/tests/${name}`
+    `/api/problems/${problemId}/tests/${name}`
     ] as const;
     }
 
 
-export const getGetProblemTestFileQueryOptions = <TData = Awaited<ReturnType<typeof getProblemTestFile>>, TError = unknown>(problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemTestFile>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetProblemTestFileQueryOptions = <TData = Awaited<ReturnType<typeof getProblemTestFile>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string,
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemTestFile>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetProblemTestFileQueryKey(problemId,name);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemTestFile>>> = ({ signal }) => getProblemTestFile(problemId,name, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemTestFile>>> = ({ signal }) => getProblemTestFile(problemId,name, { signal, ...fetchOptions });
 
 
 
@@ -11816,10 +13701,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetProblemTestFileQueryResult = NonNullable<Awaited<ReturnType<typeof getProblemTestFile>>>
-export type GetProblemTestFileQueryError = unknown
+export type GetProblemTestFileQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetProblemTestFile<TData = Awaited<ReturnType<typeof getProblemTestFile>>, TError = unknown>(
+export function useGetProblemTestFile<TData = Awaited<ReturnType<typeof getProblemTestFile>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemTestFile>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -11827,10 +13712,10 @@ export function useGetProblemTestFile<TData = Awaited<ReturnType<typeof getProbl
           TError,
           Awaited<ReturnType<typeof getProblemTestFile>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemTestFile<TData = Awaited<ReturnType<typeof getProblemTestFile>>, TError = unknown>(
+export function useGetProblemTestFile<TData = Awaited<ReturnType<typeof getProblemTestFile>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemTestFile>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -11838,21 +13723,21 @@ export function useGetProblemTestFile<TData = Awaited<ReturnType<typeof getProbl
           TError,
           Awaited<ReturnType<typeof getProblemTestFile>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemTestFile<TData = Awaited<ReturnType<typeof getProblemTestFile>>, TError = unknown>(
+export function useGetProblemTestFile<TData = Awaited<ReturnType<typeof getProblemTestFile>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemTestFile>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemTestFile>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get test file content
  */
 
-export function useGetProblemTestFile<TData = Awaited<ReturnType<typeof getProblemTestFile>>, TError = unknown>(
+export function useGetProblemTestFile<TData = Awaited<ReturnType<typeof getProblemTestFile>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemTestFile>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemTestFile>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -11875,7 +13760,7 @@ export const getUpdateProblemTestFileUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/tests/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/tests/${encodeURIComponent(String(name))}`
 }
 
 /**
@@ -11883,7 +13768,7 @@ export const getUpdateProblemTestFileUrl = (problemId: string,
  */
 export const updateProblemTestFile = async (problemId: string,
     name: string,
-    updateProblemTestFileBody: Blob, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    updateProblemTestFileBody: Blob, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -11899,14 +13784,29 @@ export const updateProblemTestFile = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getUpdateProblemTestFileUrl(problemId,name),
+const res = await fetch(getUpdateProblemTestFileUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/octet-stream', ...getHeaders(options?.headers) },
     body: updateProblemTestFileBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -11914,16 +13814,16 @@ return apiFetch<MessageResponse>(getUpdateProblemTestFileUrl(problemId,name),
 
 export const getUpdateProblemTestFileMutationKey = () => ['updateProblemTestFile'] as const;
 
-export const getUpdateProblemTestFileMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemTestFile>>, TError,UpdateProblemTestFileMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemTestFileMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemTestFile>>, TError,UpdateProblemTestFileMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblemTestFile>>, TError,UpdateProblemTestFileMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemTestFileMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -11931,7 +13831,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblemTestFile>>, UpdateProblemTestFileMutationVariables> = (props) => {
           const {problemId,name,data} = props ?? {};
 
-          return  updateProblemTestFile(problemId,name,data,requestOptions)
+          return  updateProblemTestFile(problemId,name,data,fetchOptions)
         }
 
 
@@ -11943,14 +13843,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemTestFileMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblemTestFile>>>
     export type UpdateProblemTestFileMutationBody = Blob
-    export type UpdateProblemTestFileMutationError = unknown
+    export type UpdateProblemTestFileMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemTestFileMutationVariables = {problemId: string;name: string;data: Blob}
 
     /**
  * @summary Update test file
  */
-export const useUpdateProblemTestFile = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemTestFile>>, TError,UpdateProblemTestFileMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateProblemTestFile = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemTestFile>>, TError,UpdateProblemTestFileMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblemTestFile>>,
         TError,
@@ -11966,23 +13866,38 @@ export const getDeleteProblemTestFileUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/tests/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/tests/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Delete test file
  */
 export const deleteProblemTestFile = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    name: string, options?: RequestInit): Promise<MessageResponse> => {
 
-  return apiFetch<MessageResponse>(getDeleteProblemTestFileUrl(problemId,name),
+  const res = await fetch(getDeleteProblemTestFileUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -11990,16 +13905,16 @@ export const deleteProblemTestFile = async (problemId: string,
 
 export const getDeleteProblemTestFileMutationKey = () => ['deleteProblemTestFile'] as const;
 
-export const getDeleteProblemTestFileMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemTestFile>>, TError,DeleteProblemTestFileMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteProblemTestFileMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemTestFile>>, TError,DeleteProblemTestFileMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteProblemTestFile>>, TError,DeleteProblemTestFileMutationVariables, TContext> => {
 
 const mutationKey = getDeleteProblemTestFileMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -12007,7 +13922,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProblemTestFile>>, DeleteProblemTestFileMutationVariables> = (props) => {
           const {problemId,name} = props ?? {};
 
-          return  deleteProblemTestFile(problemId,name,requestOptions)
+          return  deleteProblemTestFile(problemId,name,fetchOptions)
         }
 
 
@@ -12019,14 +13934,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteProblemTestFileMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProblemTestFile>>>
 
-    export type DeleteProblemTestFileMutationError = unknown
+    export type DeleteProblemTestFileMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteProblemTestFileMutationVariables = {problemId: string;name: string}
 
     /**
  * @summary Delete test file
  */
-export const useDeleteProblemTestFile = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemTestFile>>, TError,DeleteProblemTestFileMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeleteProblemTestFile = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemTestFile>>, TError,DeleteProblemTestFileMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteProblemTestFile>>,
         TError,
@@ -12041,22 +13956,37 @@ export const getListProblemValidatorsUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/validators`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/validators`
 }
 
 /**
  * @summary List validator files
  */
-export const listProblemValidators = async (problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<WorkshopFileListResponse> => {
+export const listProblemValidators = async (problemId: string, options?: RequestInit): Promise<WorkshopFileListResponse> => {
 
-  return apiFetch<WorkshopFileListResponse>(getListProblemValidatorsUrl(problemId),
+  const res = await fetch(getListProblemValidatorsUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: WorkshopFileListResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -12064,21 +13994,21 @@ export const listProblemValidators = async (problemId: string, options?: Paramet
 
 export const getListProblemValidatorsQueryKey = (problemId: string,) => {
     return [
-    `/problems/${problemId}/validators`
+    `/api/problems/${problemId}/validators`
     ] as const;
     }
 
 
-export const getListProblemValidatorsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemValidators>>, TError = unknown>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemValidators>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListProblemValidatorsQueryOptions = <TData = Awaited<ReturnType<typeof listProblemValidators>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemValidators>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListProblemValidatorsQueryKey(problemId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemValidators>>> = ({ signal }) => listProblemValidators(problemId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProblemValidators>>> = ({ signal }) => listProblemValidators(problemId, { signal, ...fetchOptions });
 
 
 
@@ -12088,39 +14018,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListProblemValidatorsQueryResult = NonNullable<Awaited<ReturnType<typeof listProblemValidators>>>
-export type ListProblemValidatorsQueryError = unknown
+export type ListProblemValidatorsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListProblemValidators<TData = Awaited<ReturnType<typeof listProblemValidators>>, TError = unknown>(
+export function useListProblemValidators<TData = Awaited<ReturnType<typeof listProblemValidators>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemValidators>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemValidators>>,
           TError,
           Awaited<ReturnType<typeof listProblemValidators>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemValidators<TData = Awaited<ReturnType<typeof listProblemValidators>>, TError = unknown>(
+export function useListProblemValidators<TData = Awaited<ReturnType<typeof listProblemValidators>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemValidators>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listProblemValidators>>,
           TError,
           Awaited<ReturnType<typeof listProblemValidators>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListProblemValidators<TData = Awaited<ReturnType<typeof listProblemValidators>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemValidators>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemValidators<TData = Awaited<ReturnType<typeof listProblemValidators>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemValidators>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List validator files
  */
 
-export function useListProblemValidators<TData = Awaited<ReturnType<typeof listProblemValidators>>, TError = unknown>(
- problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemValidators>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListProblemValidators<TData = Awaited<ReturnType<typeof listProblemValidators>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ problemId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProblemValidators>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -12150,7 +14080,7 @@ export const getCreateProblemValidatorUrl = (problemId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/problems/${encodeURIComponent(String(problemId))}/validators?${stringifiedParams}` : `/problems/${encodeURIComponent(String(problemId))}/validators`
+  return stringifiedParams.length > 0 ? `/api/problems/${encodeURIComponent(String(problemId))}/validators?${stringifiedParams}` : `/api/problems/${encodeURIComponent(String(problemId))}/validators`
 }
 
 /**
@@ -12158,7 +14088,7 @@ export const getCreateProblemValidatorUrl = (problemId: string,
  */
 export const createProblemValidator = async (problemId: string,
     createProblemValidatorBody: string,
-    params: CreateProblemValidatorParams, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    params: CreateProblemValidatorParams, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -12174,14 +14104,29 @@ export const createProblemValidator = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getCreateProblemValidatorUrl(problemId,params),
+const res = await fetch(getCreateProblemValidatorUrl(problemId,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
     body: createProblemValidatorBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -12189,16 +14134,16 @@ return apiFetch<MessageResponse>(getCreateProblemValidatorUrl(problemId,params),
 
 export const getCreateProblemValidatorMutationKey = () => ['createProblemValidator'] as const;
 
-export const getCreateProblemValidatorMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemValidator>>, TError,CreateProblemValidatorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateProblemValidatorMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemValidator>>, TError,CreateProblemValidatorMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createProblemValidator>>, TError,CreateProblemValidatorMutationVariables, TContext> => {
 
 const mutationKey = getCreateProblemValidatorMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -12206,7 +14151,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProblemValidator>>, CreateProblemValidatorMutationVariables> = (props) => {
           const {problemId,data,params} = props ?? {};
 
-          return  createProblemValidator(problemId,data,params,requestOptions)
+          return  createProblemValidator(problemId,data,params,fetchOptions)
         }
 
 
@@ -12218,14 +14163,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateProblemValidatorMutationResult = NonNullable<Awaited<ReturnType<typeof createProblemValidator>>>
     export type CreateProblemValidatorMutationBody = string
-    export type CreateProblemValidatorMutationError = unknown
+    export type CreateProblemValidatorMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateProblemValidatorMutationVariables = {problemId: string;data: string;params: CreateProblemValidatorParams}
 
     /**
  * @summary Create validator file
  */
-export const useCreateProblemValidator = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemValidator>>, TError,CreateProblemValidatorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateProblemValidator = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProblemValidator>>, TError,CreateProblemValidatorMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createProblemValidator>>,
         TError,
@@ -12241,23 +14186,38 @@ export const getGetProblemValidatorUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/validators/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/validators/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Get validator file content
  */
 export const getProblemValidator = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<string> => {
+    name: string, options?: RequestInit): Promise<string> => {
 
-  return apiFetch<string>(getGetProblemValidatorUrl(problemId,name),
+  const res = await fetch(getGetProblemValidatorUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: string = body !== null ? body : ''
+  return data
+}
 
 
 
@@ -12266,22 +14226,22 @@ export const getProblemValidator = async (problemId: string,
 export const getGetProblemValidatorQueryKey = (problemId: string,
     name: string,) => {
     return [
-    `/problems/${problemId}/validators/${name}`
+    `/api/problems/${problemId}/validators/${name}`
     ] as const;
     }
 
 
-export const getGetProblemValidatorQueryOptions = <TData = Awaited<ReturnType<typeof getProblemValidator>>, TError = unknown>(problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemValidator>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetProblemValidatorQueryOptions = <TData = Awaited<ReturnType<typeof getProblemValidator>>, TError = globalThis.Error & { info?: unknown; status?: number }>(problemId: string,
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemValidator>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetProblemValidatorQueryKey(problemId,name);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemValidator>>> = ({ signal }) => getProblemValidator(problemId,name, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProblemValidator>>> = ({ signal }) => getProblemValidator(problemId,name, { signal, ...fetchOptions });
 
 
 
@@ -12291,10 +14251,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetProblemValidatorQueryResult = NonNullable<Awaited<ReturnType<typeof getProblemValidator>>>
-export type GetProblemValidatorQueryError = unknown
+export type GetProblemValidatorQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetProblemValidator<TData = Awaited<ReturnType<typeof getProblemValidator>>, TError = unknown>(
+export function useGetProblemValidator<TData = Awaited<ReturnType<typeof getProblemValidator>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemValidator>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -12302,10 +14262,10 @@ export function useGetProblemValidator<TData = Awaited<ReturnType<typeof getProb
           TError,
           Awaited<ReturnType<typeof getProblemValidator>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemValidator<TData = Awaited<ReturnType<typeof getProblemValidator>>, TError = unknown>(
+export function useGetProblemValidator<TData = Awaited<ReturnType<typeof getProblemValidator>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
     name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemValidator>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -12313,21 +14273,21 @@ export function useGetProblemValidator<TData = Awaited<ReturnType<typeof getProb
           TError,
           Awaited<ReturnType<typeof getProblemValidator>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetProblemValidator<TData = Awaited<ReturnType<typeof getProblemValidator>>, TError = unknown>(
+export function useGetProblemValidator<TData = Awaited<ReturnType<typeof getProblemValidator>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemValidator>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemValidator>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get validator file content
  */
 
-export function useGetProblemValidator<TData = Awaited<ReturnType<typeof getProblemValidator>>, TError = unknown>(
+export function useGetProblemValidator<TData = Awaited<ReturnType<typeof getProblemValidator>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  problemId: string,
-    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemValidator>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    name: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProblemValidator>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -12350,7 +14310,7 @@ export const getUpdateProblemValidatorUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/validators/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/validators/${encodeURIComponent(String(name))}`
 }
 
 /**
@@ -12358,7 +14318,7 @@ export const getUpdateProblemValidatorUrl = (problemId: string,
  */
 export const updateProblemValidator = async (problemId: string,
     name: string,
-    updateProblemValidatorBody: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    updateProblemValidatorBody: string, options?: RequestInit): Promise<MessageResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -12374,14 +14334,29 @@ export const updateProblemValidator = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<MessageResponse>(getUpdateProblemValidatorUrl(problemId,name),
+const res = await fetch(getUpdateProblemValidatorUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'text/plain', ...getHeaders(options?.headers) },
     body: updateProblemValidatorBody
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -12389,16 +14364,16 @@ return apiFetch<MessageResponse>(getUpdateProblemValidatorUrl(problemId,name),
 
 export const getUpdateProblemValidatorMutationKey = () => ['updateProblemValidator'] as const;
 
-export const getUpdateProblemValidatorMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemValidator>>, TError,UpdateProblemValidatorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateProblemValidatorMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemValidator>>, TError,UpdateProblemValidatorMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateProblemValidator>>, TError,UpdateProblemValidatorMutationVariables, TContext> => {
 
 const mutationKey = getUpdateProblemValidatorMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -12406,7 +14381,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProblemValidator>>, UpdateProblemValidatorMutationVariables> = (props) => {
           const {problemId,name,data} = props ?? {};
 
-          return  updateProblemValidator(problemId,name,data,requestOptions)
+          return  updateProblemValidator(problemId,name,data,fetchOptions)
         }
 
 
@@ -12418,14 +14393,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateProblemValidatorMutationResult = NonNullable<Awaited<ReturnType<typeof updateProblemValidator>>>
     export type UpdateProblemValidatorMutationBody = string
-    export type UpdateProblemValidatorMutationError = unknown
+    export type UpdateProblemValidatorMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateProblemValidatorMutationVariables = {problemId: string;name: string;data: string}
 
     /**
  * @summary Update validator file
  */
-export const useUpdateProblemValidator = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemValidator>>, TError,UpdateProblemValidatorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateProblemValidator = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProblemValidator>>, TError,UpdateProblemValidatorMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateProblemValidator>>,
         TError,
@@ -12441,23 +14416,38 @@ export const getDeleteProblemValidatorUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/validators/${encodeURIComponent(String(name))}`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/validators/${encodeURIComponent(String(name))}`
 }
 
 /**
  * @summary Delete validator file
  */
 export const deleteProblemValidator = async (problemId: string,
-    name: string, options?: Parameters<typeof apiFetch>[1]): Promise<MessageResponse> => {
+    name: string, options?: RequestInit): Promise<MessageResponse> => {
 
-  return apiFetch<MessageResponse>(getDeleteProblemValidatorUrl(problemId,name),
+  const res = await fetch(getDeleteProblemValidatorUrl(problemId,name),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: MessageResponse = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -12465,16 +14455,16 @@ export const deleteProblemValidator = async (problemId: string,
 
 export const getDeleteProblemValidatorMutationKey = () => ['deleteProblemValidator'] as const;
 
-export const getDeleteProblemValidatorMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemValidator>>, TError,DeleteProblemValidatorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteProblemValidatorMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemValidator>>, TError,DeleteProblemValidatorMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteProblemValidator>>, TError,DeleteProblemValidatorMutationVariables, TContext> => {
 
 const mutationKey = getDeleteProblemValidatorMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -12482,7 +14472,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProblemValidator>>, DeleteProblemValidatorMutationVariables> = (props) => {
           const {problemId,name} = props ?? {};
 
-          return  deleteProblemValidator(problemId,name,requestOptions)
+          return  deleteProblemValidator(problemId,name,fetchOptions)
         }
 
 
@@ -12494,14 +14484,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteProblemValidatorMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProblemValidator>>>
 
-    export type DeleteProblemValidatorMutationError = unknown
+    export type DeleteProblemValidatorMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteProblemValidatorMutationVariables = {problemId: string;name: string}
 
     /**
  * @summary Delete validator file
  */
-export const useDeleteProblemValidator = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemValidator>>, TError,DeleteProblemValidatorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeleteProblemValidator = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProblemValidator>>, TError,DeleteProblemValidatorMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteProblemValidator>>,
         TError,
@@ -12517,23 +14507,38 @@ export const getCompileProblemComponentUrl = (problemId: string,
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/workshop/components/${encodeURIComponent(String(componentType))}/compile`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/workshop/components/${encodeURIComponent(String(componentType))}/compile`
 }
 
 /**
  * @summary Compile checker/validator/generator/interactor
  */
 export const compileProblemComponent = async (problemId: string,
-    componentType: 'checker' | 'validator' | 'generator' | 'interactor', options?: Parameters<typeof apiFetch>[1]): Promise<CompileResult> => {
+    componentType: 'checker' | 'validator' | 'generator' | 'interactor', options?: RequestInit): Promise<CompileResult> => {
 
-  return apiFetch<CompileResult>(getCompileProblemComponentUrl(problemId,componentType),
+  const res = await fetch(getCompileProblemComponentUrl(problemId,componentType),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: CompileResult = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -12541,16 +14546,16 @@ export const compileProblemComponent = async (problemId: string,
 
 export const getCompileProblemComponentMutationKey = () => ['compileProblemComponent'] as const;
 
-export const getCompileProblemComponentMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compileProblemComponent>>, TError,CompileProblemComponentMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCompileProblemComponentMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compileProblemComponent>>, TError,CompileProblemComponentMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof compileProblemComponent>>, TError,CompileProblemComponentMutationVariables, TContext> => {
 
 const mutationKey = getCompileProblemComponentMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -12558,7 +14563,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof compileProblemComponent>>, CompileProblemComponentMutationVariables> = (props) => {
           const {problemId,componentType} = props ?? {};
 
-          return  compileProblemComponent(problemId,componentType,requestOptions)
+          return  compileProblemComponent(problemId,componentType,fetchOptions)
         }
 
 
@@ -12570,14 +14575,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CompileProblemComponentMutationResult = NonNullable<Awaited<ReturnType<typeof compileProblemComponent>>>
 
-    export type CompileProblemComponentMutationError = unknown
+    export type CompileProblemComponentMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CompileProblemComponentMutationVariables = {problemId: string;componentType: 'checker' | 'validator' | 'generator' | 'interactor'}
 
     /**
  * @summary Compile checker/validator/generator/interactor
  */
-export const useCompileProblemComponent = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compileProblemComponent>>, TError,CompileProblemComponentMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCompileProblemComponent = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compileProblemComponent>>, TError,CompileProblemComponentMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof compileProblemComponent>>,
         TError,
@@ -12592,14 +14597,14 @@ export const getGenerateTestsUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/workshop/tests/generate`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/workshop/tests/generate`
 }
 
 /**
  * @summary Generate tests using generator
  */
 export const generateTests = async (problemId: string,
-    generateTestsBody: GenerateTestsBody, options?: Parameters<typeof apiFetch>[1]): Promise<GenerateTests200> => {
+    generateTestsBody: GenerateTestsBody, options?: RequestInit): Promise<GenerateTests200> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -12615,14 +14620,29 @@ export const generateTests = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<GenerateTests200>(getGenerateTestsUrl(problemId),
+const res = await fetch(getGenerateTestsUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(generateTestsBody)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: GenerateTests200 = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -12630,16 +14650,16 @@ return apiFetch<GenerateTests200>(getGenerateTestsUrl(problemId),
 
 export const getGenerateTestsMutationKey = () => ['generateTests'] as const;
 
-export const getGenerateTestsMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateTests>>, TError,GenerateTestsMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getGenerateTestsMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateTests>>, TError,GenerateTestsMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof generateTests>>, TError,GenerateTestsMutationVariables, TContext> => {
 
 const mutationKey = getGenerateTestsMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -12647,7 +14667,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateTests>>, GenerateTestsMutationVariables> = (props) => {
           const {problemId,data} = props ?? {};
 
-          return  generateTests(problemId,data,requestOptions)
+          return  generateTests(problemId,data,fetchOptions)
         }
 
 
@@ -12659,14 +14679,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type GenerateTestsMutationResult = NonNullable<Awaited<ReturnType<typeof generateTests>>>
     export type GenerateTestsMutationBody = GenerateTestsBody
-    export type GenerateTestsMutationError = unknown
+    export type GenerateTestsMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type GenerateTestsMutationVariables = {problemId: string;data: GenerateTestsBody}
 
     /**
  * @summary Generate tests using generator
  */
-export const useGenerateTests = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateTests>>, TError,GenerateTestsMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useGenerateTests = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateTests>>, TError,GenerateTestsMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof generateTests>>,
         TError,
@@ -12681,22 +14701,37 @@ export const getValidateAllTestsUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/workshop/tests/validate`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/workshop/tests/validate`
 }
 
 /**
  * @summary Validate all test inputs
  */
-export const validateAllTests = async (problemId: string, options?: Parameters<typeof apiFetch>[1]): Promise<ValidationReport> => {
+export const validateAllTests = async (problemId: string, options?: RequestInit): Promise<ValidationReport> => {
 
-  return apiFetch<ValidationReport>(getValidateAllTestsUrl(problemId),
+  const res = await fetch(getValidateAllTestsUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ValidationReport = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -12704,16 +14739,16 @@ export const validateAllTests = async (problemId: string, options?: Parameters<t
 
 export const getValidateAllTestsMutationKey = () => ['validateAllTests'] as const;
 
-export const getValidateAllTestsMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateAllTests>>, TError,ValidateAllTestsMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getValidateAllTestsMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateAllTests>>, TError,ValidateAllTestsMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof validateAllTests>>, TError,ValidateAllTestsMutationVariables, TContext> => {
 
 const mutationKey = getValidateAllTestsMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -12721,7 +14756,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof validateAllTests>>, ValidateAllTestsMutationVariables> = (props) => {
           const {problemId} = props ?? {};
 
-          return  validateAllTests(problemId,requestOptions)
+          return  validateAllTests(problemId,fetchOptions)
         }
 
 
@@ -12733,14 +14768,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ValidateAllTestsMutationResult = NonNullable<Awaited<ReturnType<typeof validateAllTests>>>
 
-    export type ValidateAllTestsMutationError = unknown
+    export type ValidateAllTestsMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type ValidateAllTestsMutationVariables = {problemId: string}
 
     /**
  * @summary Validate all test inputs
  */
-export const useValidateAllTests = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateAllTests>>, TError,ValidateAllTestsMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useValidateAllTests = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateAllTests>>, TError,ValidateAllTestsMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof validateAllTests>>,
         TError,
@@ -12755,14 +14790,14 @@ export const getTestSolutionUrl = (problemId: string,) => {
 
 
 
-  return `/problems/${encodeURIComponent(String(problemId))}/workshop/solutions/test`
+  return `/api/problems/${encodeURIComponent(String(problemId))}/workshop/solutions/test`
 }
 
 /**
  * @summary Test solution against tests
  */
 export const testSolution = async (problemId: string,
-    testSolutionBody: TestSolutionBody, options?: Parameters<typeof apiFetch>[1]): Promise<TestReport> => {
+    testSolutionBody: TestSolutionBody, options?: RequestInit): Promise<TestReport> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -12778,14 +14813,29 @@ export const testSolution = async (problemId: string,
     }
     return headers;
   };
-return apiFetch<TestReport>(getTestSolutionUrl(problemId),
+const res = await fetch(getTestSolutionUrl(problemId),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(testSolutionBody)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: TestReport = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -12793,16 +14843,16 @@ return apiFetch<TestReport>(getTestSolutionUrl(problemId),
 
 export const getTestSolutionMutationKey = () => ['testSolution'] as const;
 
-export const getTestSolutionMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testSolution>>, TError,TestSolutionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getTestSolutionMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testSolution>>, TError,TestSolutionMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof testSolution>>, TError,TestSolutionMutationVariables, TContext> => {
 
 const mutationKey = getTestSolutionMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -12810,7 +14860,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof testSolution>>, TestSolutionMutationVariables> = (props) => {
           const {problemId,data} = props ?? {};
 
-          return  testSolution(problemId,data,requestOptions)
+          return  testSolution(problemId,data,fetchOptions)
         }
 
 
@@ -12822,14 +14872,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type TestSolutionMutationResult = NonNullable<Awaited<ReturnType<typeof testSolution>>>
     export type TestSolutionMutationBody = TestSolutionBody
-    export type TestSolutionMutationError = unknown
+    export type TestSolutionMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type TestSolutionMutationVariables = {problemId: string;data: TestSolutionBody}
 
     /**
  * @summary Test solution against tests
  */
-export const useTestSolution = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testSolution>>, TError,TestSolutionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useTestSolution = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testSolution>>, TError,TestSolutionMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof testSolution>>,
         TError,
@@ -12851,22 +14901,37 @@ export const getListOrganizationsUrl = (params?: ListOrganizationsParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations?${stringifiedParams}` : `/organizations`
+  return stringifiedParams.length > 0 ? `/api/organizations?${stringifiedParams}` : `/api/organizations`
 }
 
 /**
  * @summary List organizations
  */
-export const listOrganizations = async (params?: ListOrganizationsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListOrganizationsResponseModel> => {
+export const listOrganizations = async (params?: ListOrganizationsParams, options?: RequestInit): Promise<ListOrganizationsResponseModel> => {
 
-  return apiFetch<ListOrganizationsResponseModel>(getListOrganizationsUrl(params),
+  const res = await fetch(getListOrganizationsUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListOrganizationsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -12874,21 +14939,21 @@ export const listOrganizations = async (params?: ListOrganizationsParams, option
 
 export const getListOrganizationsQueryKey = (params?: ListOrganizationsParams,) => {
     return [
-    `/organizations`, ...(params ? [params] : [])
+    `/api/organizations`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListOrganizationsQueryOptions = <TData = Awaited<ReturnType<typeof listOrganizations>>, TError = unknown>(params?: ListOrganizationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizations>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListOrganizationsQueryOptions = <TData = Awaited<ReturnType<typeof listOrganizations>>, TError = globalThis.Error & { info?: unknown; status?: number }>(params?: ListOrganizationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizations>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListOrganizationsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrganizations>>> = ({ signal }) => listOrganizations(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrganizations>>> = ({ signal }) => listOrganizations(params, { signal, ...fetchOptions });
 
 
 
@@ -12898,39 +14963,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListOrganizationsQueryResult = NonNullable<Awaited<ReturnType<typeof listOrganizations>>>
-export type ListOrganizationsQueryError = unknown
+export type ListOrganizationsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListOrganizations<TData = Awaited<ReturnType<typeof listOrganizations>>, TError = unknown>(
+export function useListOrganizations<TData = Awaited<ReturnType<typeof listOrganizations>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params: undefined |  ListOrganizationsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizations>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listOrganizations>>,
           TError,
           Awaited<ReturnType<typeof listOrganizations>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOrganizations<TData = Awaited<ReturnType<typeof listOrganizations>>, TError = unknown>(
+export function useListOrganizations<TData = Awaited<ReturnType<typeof listOrganizations>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params?: ListOrganizationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizations>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listOrganizations>>,
           TError,
           Awaited<ReturnType<typeof listOrganizations>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOrganizations<TData = Awaited<ReturnType<typeof listOrganizations>>, TError = unknown>(
- params?: ListOrganizationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizations>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListOrganizations<TData = Awaited<ReturnType<typeof listOrganizations>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListOrganizationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizations>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List organizations
  */
 
-export function useListOrganizations<TData = Awaited<ReturnType<typeof listOrganizations>>, TError = unknown>(
- params?: ListOrganizationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizations>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListOrganizations<TData = Awaited<ReturnType<typeof listOrganizations>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListOrganizationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizations>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -12959,22 +15024,37 @@ export const getCreateOrganizationUrl = (params: CreateOrganizationParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations?${stringifiedParams}` : `/organizations`
+  return stringifiedParams.length > 0 ? `/api/organizations?${stringifiedParams}` : `/api/organizations`
 }
 
 /**
  * @summary Create a new organization
  */
-export const createOrganization = async (params: CreateOrganizationParams, options?: Parameters<typeof apiFetch>[1]): Promise<CreateOrganizationResponseModel> => {
+export const createOrganization = async (params: CreateOrganizationParams, options?: RequestInit): Promise<CreateOrganizationResponseModel> => {
 
-  return apiFetch<CreateOrganizationResponseModel>(getCreateOrganizationUrl(params),
+  const res = await fetch(getCreateOrganizationUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: CreateOrganizationResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -12982,16 +15062,16 @@ export const createOrganization = async (params: CreateOrganizationParams, optio
 
 export const getCreateOrganizationMutationKey = () => ['createOrganization'] as const;
 
-export const getCreateOrganizationMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrganization>>, TError,CreateOrganizationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateOrganizationMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrganization>>, TError,CreateOrganizationMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createOrganization>>, TError,CreateOrganizationMutationVariables, TContext> => {
 
 const mutationKey = getCreateOrganizationMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -12999,7 +15079,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrganization>>, CreateOrganizationMutationVariables> = (props) => {
           const {params} = props ?? {};
 
-          return  createOrganization(params,requestOptions)
+          return  createOrganization(params,fetchOptions)
         }
 
 
@@ -13011,14 +15091,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateOrganizationMutationResult = NonNullable<Awaited<ReturnType<typeof createOrganization>>>
 
-    export type CreateOrganizationMutationError = unknown
+    export type CreateOrganizationMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateOrganizationMutationVariables = {params: CreateOrganizationParams}
 
     /**
  * @summary Create a new organization
  */
-export const useCreateOrganization = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrganization>>, TError,CreateOrganizationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateOrganization = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrganization>>, TError,CreateOrganizationMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createOrganization>>,
         TError,
@@ -13033,22 +15113,37 @@ export const getGetOrganizationUrl = (login: string,) => {
 
 
 
-  return `/organizations/${encodeURIComponent(String(login))}`
+  return `/api/organizations/${encodeURIComponent(String(login))}`
 }
 
 /**
  * @summary Get organization by login
  */
-export const getOrganization = async (login: string, options?: Parameters<typeof apiFetch>[1]): Promise<GetOrganizationResponseModel> => {
+export const getOrganization = async (login: string, options?: RequestInit): Promise<GetOrganizationResponseModel> => {
 
-  return apiFetch<GetOrganizationResponseModel>(getGetOrganizationUrl(login),
+  const res = await fetch(getGetOrganizationUrl(login),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: GetOrganizationResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -13056,21 +15151,21 @@ export const getOrganization = async (login: string, options?: Parameters<typeof
 
 export const getGetOrganizationQueryKey = (login: string,) => {
     return [
-    `/organizations/${login}`
+    `/api/organizations/${login}`
     ] as const;
     }
 
 
-export const getGetOrganizationQueryOptions = <TData = Awaited<ReturnType<typeof getOrganization>>, TError = unknown>(login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrganization>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetOrganizationQueryOptions = <TData = Awaited<ReturnType<typeof getOrganization>>, TError = globalThis.Error & { info?: unknown; status?: number }>(login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrganization>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetOrganizationQueryKey(login);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrganization>>> = ({ signal }) => getOrganization(login, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrganization>>> = ({ signal }) => getOrganization(login, { signal, ...fetchOptions });
 
 
 
@@ -13080,39 +15175,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetOrganizationQueryResult = NonNullable<Awaited<ReturnType<typeof getOrganization>>>
-export type GetOrganizationQueryError = unknown
+export type GetOrganizationQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetOrganization<TData = Awaited<ReturnType<typeof getOrganization>>, TError = unknown>(
+export function useGetOrganization<TData = Awaited<ReturnType<typeof getOrganization>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  login: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrganization>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getOrganization>>,
           TError,
           Awaited<ReturnType<typeof getOrganization>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetOrganization<TData = Awaited<ReturnType<typeof getOrganization>>, TError = unknown>(
+export function useGetOrganization<TData = Awaited<ReturnType<typeof getOrganization>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrganization>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getOrganization>>,
           TError,
           Awaited<ReturnType<typeof getOrganization>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetOrganization<TData = Awaited<ReturnType<typeof getOrganization>>, TError = unknown>(
- login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrganization>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetOrganization<TData = Awaited<ReturnType<typeof getOrganization>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrganization>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get organization by login
  */
 
-export function useGetOrganization<TData = Awaited<ReturnType<typeof getOrganization>>, TError = unknown>(
- login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrganization>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetOrganization<TData = Awaited<ReturnType<typeof getOrganization>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrganization>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -13134,14 +15229,14 @@ export const getUpdateOrganizationUrl = (login: string,) => {
 
 
 
-  return `/organizations/${encodeURIComponent(String(login))}`
+  return `/api/organizations/${encodeURIComponent(String(login))}`
 }
 
 /**
  * @summary Update organization
  */
 export const updateOrganization = async (login: string,
-    updateOrganizationRequestModel: UpdateOrganizationRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    updateOrganizationRequestModel: UpdateOrganizationRequestModel, options?: RequestInit): Promise<void> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -13157,14 +15252,29 @@ export const updateOrganization = async (login: string,
     }
     return headers;
   };
-return apiFetch<void>(getUpdateOrganizationUrl(login),
+const res = await fetch(getUpdateOrganizationUrl(login),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateOrganizationRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -13172,16 +15282,16 @@ return apiFetch<void>(getUpdateOrganizationUrl(login),
 
 export const getUpdateOrganizationMutationKey = () => ['updateOrganization'] as const;
 
-export const getUpdateOrganizationMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrganization>>, TError,UpdateOrganizationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateOrganizationMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrganization>>, TError,UpdateOrganizationMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateOrganization>>, TError,UpdateOrganizationMutationVariables, TContext> => {
 
 const mutationKey = getUpdateOrganizationMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -13189,7 +15299,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOrganization>>, UpdateOrganizationMutationVariables> = (props) => {
           const {login,data} = props ?? {};
 
-          return  updateOrganization(login,data,requestOptions)
+          return  updateOrganization(login,data,fetchOptions)
         }
 
 
@@ -13201,14 +15311,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateOrganizationMutationResult = NonNullable<Awaited<ReturnType<typeof updateOrganization>>>
     export type UpdateOrganizationMutationBody = UpdateOrganizationRequestModel
-    export type UpdateOrganizationMutationError = unknown
+    export type UpdateOrganizationMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateOrganizationMutationVariables = {login: string;data: UpdateOrganizationRequestModel}
 
     /**
  * @summary Update organization
  */
-export const useUpdateOrganization = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrganization>>, TError,UpdateOrganizationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateOrganization = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrganization>>, TError,UpdateOrganizationMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateOrganization>>,
         TError,
@@ -13223,22 +15333,37 @@ export const getDeleteOrganizationUrl = (login: string,) => {
 
 
 
-  return `/organizations/${encodeURIComponent(String(login))}`
+  return `/api/organizations/${encodeURIComponent(String(login))}`
 }
 
 /**
  * @summary Delete organization
  */
-export const deleteOrganization = async (login: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+export const deleteOrganization = async (login: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getDeleteOrganizationUrl(login),
+  const res = await fetch(getDeleteOrganizationUrl(login),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -13246,16 +15371,16 @@ export const deleteOrganization = async (login: string, options?: Parameters<typ
 
 export const getDeleteOrganizationMutationKey = () => ['deleteOrganization'] as const;
 
-export const getDeleteOrganizationMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOrganization>>, TError,DeleteOrganizationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteOrganizationMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOrganization>>, TError,DeleteOrganizationMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteOrganization>>, TError,DeleteOrganizationMutationVariables, TContext> => {
 
 const mutationKey = getDeleteOrganizationMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -13263,7 +15388,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOrganization>>, DeleteOrganizationMutationVariables> = (props) => {
           const {login} = props ?? {};
 
-          return  deleteOrganization(login,requestOptions)
+          return  deleteOrganization(login,fetchOptions)
         }
 
 
@@ -13275,14 +15400,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteOrganizationMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOrganization>>>
 
-    export type DeleteOrganizationMutationError = unknown
+    export type DeleteOrganizationMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteOrganizationMutationVariables = {login: string}
 
     /**
  * @summary Delete organization
  */
-export const useDeleteOrganization = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOrganization>>, TError,DeleteOrganizationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeleteOrganization = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOrganization>>, TError,DeleteOrganizationMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteOrganization>>,
         TError,
@@ -13305,23 +15430,38 @@ export const getListOrganizationMembersUrl = (login: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(login))}/members?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(login))}/members`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(login))}/members?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(login))}/members`
 }
 
 /**
  * @summary List organization members
  */
 export const listOrganizationMembers = async (login: string,
-    params?: ListOrganizationMembersParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListOrganizationMembersResponseModel> => {
+    params?: ListOrganizationMembersParams, options?: RequestInit): Promise<ListOrganizationMembersResponseModel> => {
 
-  return apiFetch<ListOrganizationMembersResponseModel>(getListOrganizationMembersUrl(login,params),
+  const res = await fetch(getListOrganizationMembersUrl(login,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListOrganizationMembersResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -13330,22 +15470,22 @@ export const listOrganizationMembers = async (login: string,
 export const getListOrganizationMembersQueryKey = (login: string,
     params?: ListOrganizationMembersParams,) => {
     return [
-    `/organizations/${login}/members`, ...(params ? [params] : [])
+    `/api/organizations/${login}/members`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListOrganizationMembersQueryOptions = <TData = Awaited<ReturnType<typeof listOrganizationMembers>>, TError = unknown>(login: string,
-    params?: ListOrganizationMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListOrganizationMembersQueryOptions = <TData = Awaited<ReturnType<typeof listOrganizationMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(login: string,
+    params?: ListOrganizationMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationMembers>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListOrganizationMembersQueryKey(login,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrganizationMembers>>> = ({ signal }) => listOrganizationMembers(login,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrganizationMembers>>> = ({ signal }) => listOrganizationMembers(login,params, { signal, ...fetchOptions });
 
 
 
@@ -13355,10 +15495,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListOrganizationMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listOrganizationMembers>>>
-export type ListOrganizationMembersQueryError = unknown
+export type ListOrganizationMembersQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListOrganizationMembers<TData = Awaited<ReturnType<typeof listOrganizationMembers>>, TError = unknown>(
+export function useListOrganizationMembers<TData = Awaited<ReturnType<typeof listOrganizationMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  login: string,
     params: undefined |  ListOrganizationMembersParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationMembers>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -13366,10 +15506,10 @@ export function useListOrganizationMembers<TData = Awaited<ReturnType<typeof lis
           TError,
           Awaited<ReturnType<typeof listOrganizationMembers>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOrganizationMembers<TData = Awaited<ReturnType<typeof listOrganizationMembers>>, TError = unknown>(
+export function useListOrganizationMembers<TData = Awaited<ReturnType<typeof listOrganizationMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  login: string,
     params?: ListOrganizationMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationMembers>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -13377,21 +15517,21 @@ export function useListOrganizationMembers<TData = Awaited<ReturnType<typeof lis
           TError,
           Awaited<ReturnType<typeof listOrganizationMembers>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOrganizationMembers<TData = Awaited<ReturnType<typeof listOrganizationMembers>>, TError = unknown>(
+export function useListOrganizationMembers<TData = Awaited<ReturnType<typeof listOrganizationMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  login: string,
-    params?: ListOrganizationMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListOrganizationMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationMembers>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List organization members
  */
 
-export function useListOrganizationMembers<TData = Awaited<ReturnType<typeof listOrganizationMembers>>, TError = unknown>(
+export function useListOrganizationMembers<TData = Awaited<ReturnType<typeof listOrganizationMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  login: string,
-    params?: ListOrganizationMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListOrganizationMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationMembers>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -13421,23 +15561,38 @@ export const getAddOrganizationMemberUrl = (login: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(login))}/members?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(login))}/members`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(login))}/members?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(login))}/members`
 }
 
 /**
  * @summary Add member to organization
  */
 export const addOrganizationMember = async (login: string,
-    params: AddOrganizationMemberParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: AddOrganizationMemberParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getAddOrganizationMemberUrl(login,params),
+  const res = await fetch(getAddOrganizationMemberUrl(login,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -13445,16 +15600,16 @@ export const addOrganizationMember = async (login: string,
 
 export const getAddOrganizationMemberMutationKey = () => ['addOrganizationMember'] as const;
 
-export const getAddOrganizationMemberMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addOrganizationMember>>, TError,AddOrganizationMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getAddOrganizationMemberMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addOrganizationMember>>, TError,AddOrganizationMemberMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof addOrganizationMember>>, TError,AddOrganizationMemberMutationVariables, TContext> => {
 
 const mutationKey = getAddOrganizationMemberMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -13462,7 +15617,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof addOrganizationMember>>, AddOrganizationMemberMutationVariables> = (props) => {
           const {login,params} = props ?? {};
 
-          return  addOrganizationMember(login,params,requestOptions)
+          return  addOrganizationMember(login,params,fetchOptions)
         }
 
 
@@ -13474,14 +15629,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AddOrganizationMemberMutationResult = NonNullable<Awaited<ReturnType<typeof addOrganizationMember>>>
 
-    export type AddOrganizationMemberMutationError = unknown
+    export type AddOrganizationMemberMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type AddOrganizationMemberMutationVariables = {login: string;params: AddOrganizationMemberParams}
 
     /**
  * @summary Add member to organization
  */
-export const useAddOrganizationMember = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addOrganizationMember>>, TError,AddOrganizationMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useAddOrganizationMember = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addOrganizationMember>>, TError,AddOrganizationMemberMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof addOrganizationMember>>,
         TError,
@@ -13504,23 +15659,38 @@ export const getRemoveOrganizationMemberUrl = (login: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/organizations/${encodeURIComponent(String(login))}/members?${stringifiedParams}` : `/organizations/${encodeURIComponent(String(login))}/members`
+  return stringifiedParams.length > 0 ? `/api/organizations/${encodeURIComponent(String(login))}/members?${stringifiedParams}` : `/api/organizations/${encodeURIComponent(String(login))}/members`
 }
 
 /**
  * @summary Remove member from organization
  */
 export const removeOrganizationMember = async (login: string,
-    params: RemoveOrganizationMemberParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: RemoveOrganizationMemberParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getRemoveOrganizationMemberUrl(login,params),
+  const res = await fetch(getRemoveOrganizationMemberUrl(login,params),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -13528,16 +15698,16 @@ export const removeOrganizationMember = async (login: string,
 
 export const getRemoveOrganizationMemberMutationKey = () => ['removeOrganizationMember'] as const;
 
-export const getRemoveOrganizationMemberMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeOrganizationMember>>, TError,RemoveOrganizationMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getRemoveOrganizationMemberMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeOrganizationMember>>, TError,RemoveOrganizationMemberMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof removeOrganizationMember>>, TError,RemoveOrganizationMemberMutationVariables, TContext> => {
 
 const mutationKey = getRemoveOrganizationMemberMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -13545,7 +15715,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeOrganizationMember>>, RemoveOrganizationMemberMutationVariables> = (props) => {
           const {login,params} = props ?? {};
 
-          return  removeOrganizationMember(login,params,requestOptions)
+          return  removeOrganizationMember(login,params,fetchOptions)
         }
 
 
@@ -13557,14 +15727,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RemoveOrganizationMemberMutationResult = NonNullable<Awaited<ReturnType<typeof removeOrganizationMember>>>
 
-    export type RemoveOrganizationMemberMutationError = unknown
+    export type RemoveOrganizationMemberMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type RemoveOrganizationMemberMutationVariables = {login: string;params: RemoveOrganizationMemberParams}
 
     /**
  * @summary Remove member from organization
  */
-export const useRemoveOrganizationMember = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeOrganizationMember>>, TError,RemoveOrganizationMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useRemoveOrganizationMember = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeOrganizationMember>>, TError,RemoveOrganizationMemberMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof removeOrganizationMember>>,
         TError,
@@ -13579,14 +15749,14 @@ export const getBatchCreateOrganizationUsersUrl = (login: string,) => {
 
 
 
-  return `/organizations/${encodeURIComponent(String(login))}/members/batch`
+  return `/api/organizations/${encodeURIComponent(String(login))}/members/batch`
 }
 
 /**
  * @summary Batch create users in organization
  */
 export const batchCreateOrganizationUsers = async (login: string,
-    batchCreateOrganizationUsersRequestModel: BatchCreateOrganizationUsersRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<BatchCreateOrganizationUsersResponseModel> => {
+    batchCreateOrganizationUsersRequestModel: BatchCreateOrganizationUsersRequestModel, options?: RequestInit): Promise<BatchCreateOrganizationUsersResponseModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -13602,14 +15772,29 @@ export const batchCreateOrganizationUsers = async (login: string,
     }
     return headers;
   };
-return apiFetch<BatchCreateOrganizationUsersResponseModel>(getBatchCreateOrganizationUsersUrl(login),
+const res = await fetch(getBatchCreateOrganizationUsersUrl(login),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(batchCreateOrganizationUsersRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: BatchCreateOrganizationUsersResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -13617,16 +15802,16 @@ return apiFetch<BatchCreateOrganizationUsersResponseModel>(getBatchCreateOrganiz
 
 export const getBatchCreateOrganizationUsersMutationKey = () => ['batchCreateOrganizationUsers'] as const;
 
-export const getBatchCreateOrganizationUsersMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof batchCreateOrganizationUsers>>, TError,BatchCreateOrganizationUsersMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getBatchCreateOrganizationUsersMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof batchCreateOrganizationUsers>>, TError,BatchCreateOrganizationUsersMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof batchCreateOrganizationUsers>>, TError,BatchCreateOrganizationUsersMutationVariables, TContext> => {
 
 const mutationKey = getBatchCreateOrganizationUsersMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -13634,7 +15819,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof batchCreateOrganizationUsers>>, BatchCreateOrganizationUsersMutationVariables> = (props) => {
           const {login,data} = props ?? {};
 
-          return  batchCreateOrganizationUsers(login,data,requestOptions)
+          return  batchCreateOrganizationUsers(login,data,fetchOptions)
         }
 
 
@@ -13646,14 +15831,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type BatchCreateOrganizationUsersMutationResult = NonNullable<Awaited<ReturnType<typeof batchCreateOrganizationUsers>>>
     export type BatchCreateOrganizationUsersMutationBody = BatchCreateOrganizationUsersRequestModel
-    export type BatchCreateOrganizationUsersMutationError = unknown
+    export type BatchCreateOrganizationUsersMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type BatchCreateOrganizationUsersMutationVariables = {login: string;data: BatchCreateOrganizationUsersRequestModel}
 
     /**
  * @summary Batch create users in organization
  */
-export const useBatchCreateOrganizationUsers = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof batchCreateOrganizationUsers>>, TError,BatchCreateOrganizationUsersMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useBatchCreateOrganizationUsers = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof batchCreateOrganizationUsers>>, TError,BatchCreateOrganizationUsersMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof batchCreateOrganizationUsers>>,
         TError,
@@ -13668,22 +15853,37 @@ export const getListOrganizationInvitationsUrl = (login: string,) => {
 
 
 
-  return `/organizations/${encodeURIComponent(String(login))}/invitations`
+  return `/api/organizations/${encodeURIComponent(String(login))}/invitations`
 }
 
 /**
  * @summary List pending organization invitations
  */
-export const listOrganizationInvitations = async (login: string, options?: Parameters<typeof apiFetch>[1]): Promise<ListOrganizationInvitationsResponseModel> => {
+export const listOrganizationInvitations = async (login: string, options?: RequestInit): Promise<ListOrganizationInvitationsResponseModel> => {
 
-  return apiFetch<ListOrganizationInvitationsResponseModel>(getListOrganizationInvitationsUrl(login),
+  const res = await fetch(getListOrganizationInvitationsUrl(login),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListOrganizationInvitationsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -13691,21 +15891,21 @@ export const listOrganizationInvitations = async (login: string, options?: Param
 
 export const getListOrganizationInvitationsQueryKey = (login: string,) => {
     return [
-    `/organizations/${login}/invitations`
+    `/api/organizations/${login}/invitations`
     ] as const;
     }
 
 
-export const getListOrganizationInvitationsQueryOptions = <TData = Awaited<ReturnType<typeof listOrganizationInvitations>>, TError = unknown>(login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationInvitations>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListOrganizationInvitationsQueryOptions = <TData = Awaited<ReturnType<typeof listOrganizationInvitations>>, TError = globalThis.Error & { info?: unknown; status?: number }>(login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationInvitations>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListOrganizationInvitationsQueryKey(login);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrganizationInvitations>>> = ({ signal }) => listOrganizationInvitations(login, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrganizationInvitations>>> = ({ signal }) => listOrganizationInvitations(login, { signal, ...fetchOptions });
 
 
 
@@ -13715,39 +15915,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListOrganizationInvitationsQueryResult = NonNullable<Awaited<ReturnType<typeof listOrganizationInvitations>>>
-export type ListOrganizationInvitationsQueryError = unknown
+export type ListOrganizationInvitationsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListOrganizationInvitations<TData = Awaited<ReturnType<typeof listOrganizationInvitations>>, TError = unknown>(
+export function useListOrganizationInvitations<TData = Awaited<ReturnType<typeof listOrganizationInvitations>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  login: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationInvitations>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listOrganizationInvitations>>,
           TError,
           Awaited<ReturnType<typeof listOrganizationInvitations>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOrganizationInvitations<TData = Awaited<ReturnType<typeof listOrganizationInvitations>>, TError = unknown>(
+export function useListOrganizationInvitations<TData = Awaited<ReturnType<typeof listOrganizationInvitations>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationInvitations>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listOrganizationInvitations>>,
           TError,
           Awaited<ReturnType<typeof listOrganizationInvitations>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOrganizationInvitations<TData = Awaited<ReturnType<typeof listOrganizationInvitations>>, TError = unknown>(
- login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationInvitations>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListOrganizationInvitations<TData = Awaited<ReturnType<typeof listOrganizationInvitations>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationInvitations>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List pending organization invitations
  */
 
-export function useListOrganizationInvitations<TData = Awaited<ReturnType<typeof listOrganizationInvitations>>, TError = unknown>(
- login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationInvitations>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListOrganizationInvitations<TData = Awaited<ReturnType<typeof listOrganizationInvitations>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationInvitations>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -13769,14 +15969,14 @@ export const getInviteOrganizationMemberUrl = (login: string,) => {
 
 
 
-  return `/organizations/${encodeURIComponent(String(login))}/invitations`
+  return `/api/organizations/${encodeURIComponent(String(login))}/invitations`
 }
 
 /**
  * @summary Invite user to organization
  */
 export const inviteOrganizationMember = async (login: string,
-    inviteOrganizationMemberRequestModel: InviteOrganizationMemberRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<OrganizationInvitationModel> => {
+    inviteOrganizationMemberRequestModel: InviteOrganizationMemberRequestModel, options?: RequestInit): Promise<OrganizationInvitationModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -13792,14 +15992,29 @@ export const inviteOrganizationMember = async (login: string,
     }
     return headers;
   };
-return apiFetch<OrganizationInvitationModel>(getInviteOrganizationMemberUrl(login),
+const res = await fetch(getInviteOrganizationMemberUrl(login),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(inviteOrganizationMemberRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: OrganizationInvitationModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -13807,16 +16022,16 @@ return apiFetch<OrganizationInvitationModel>(getInviteOrganizationMemberUrl(logi
 
 export const getInviteOrganizationMemberMutationKey = () => ['inviteOrganizationMember'] as const;
 
-export const getInviteOrganizationMemberMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inviteOrganizationMember>>, TError,InviteOrganizationMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getInviteOrganizationMemberMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inviteOrganizationMember>>, TError,InviteOrganizationMemberMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof inviteOrganizationMember>>, TError,InviteOrganizationMemberMutationVariables, TContext> => {
 
 const mutationKey = getInviteOrganizationMemberMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -13824,7 +16039,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof inviteOrganizationMember>>, InviteOrganizationMemberMutationVariables> = (props) => {
           const {login,data} = props ?? {};
 
-          return  inviteOrganizationMember(login,data,requestOptions)
+          return  inviteOrganizationMember(login,data,fetchOptions)
         }
 
 
@@ -13836,14 +16051,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type InviteOrganizationMemberMutationResult = NonNullable<Awaited<ReturnType<typeof inviteOrganizationMember>>>
     export type InviteOrganizationMemberMutationBody = InviteOrganizationMemberRequestModel
-    export type InviteOrganizationMemberMutationError = unknown
+    export type InviteOrganizationMemberMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type InviteOrganizationMemberMutationVariables = {login: string;data: InviteOrganizationMemberRequestModel}
 
     /**
  * @summary Invite user to organization
  */
-export const useInviteOrganizationMember = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inviteOrganizationMember>>, TError,InviteOrganizationMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useInviteOrganizationMember = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inviteOrganizationMember>>, TError,InviteOrganizationMemberMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof inviteOrganizationMember>>,
         TError,
@@ -13859,23 +16074,38 @@ export const getCancelOrganizationInvitationUrl = (login: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(login))}/invitations/${encodeURIComponent(String(id))}`
+  return `/api/organizations/${encodeURIComponent(String(login))}/invitations/${encodeURIComponent(String(id))}`
 }
 
 /**
  * @summary Cancel organization invitation
  */
 export const cancelOrganizationInvitation = async (login: string,
-    id: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    id: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getCancelOrganizationInvitationUrl(login,id),
+  const res = await fetch(getCancelOrganizationInvitationUrl(login,id),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -13883,16 +16113,16 @@ export const cancelOrganizationInvitation = async (login: string,
 
 export const getCancelOrganizationInvitationMutationKey = () => ['cancelOrganizationInvitation'] as const;
 
-export const getCancelOrganizationInvitationMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelOrganizationInvitation>>, TError,CancelOrganizationInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCancelOrganizationInvitationMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelOrganizationInvitation>>, TError,CancelOrganizationInvitationMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof cancelOrganizationInvitation>>, TError,CancelOrganizationInvitationMutationVariables, TContext> => {
 
 const mutationKey = getCancelOrganizationInvitationMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -13900,7 +16130,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelOrganizationInvitation>>, CancelOrganizationInvitationMutationVariables> = (props) => {
           const {login,id} = props ?? {};
 
-          return  cancelOrganizationInvitation(login,id,requestOptions)
+          return  cancelOrganizationInvitation(login,id,fetchOptions)
         }
 
 
@@ -13912,14 +16142,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CancelOrganizationInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof cancelOrganizationInvitation>>>
 
-    export type CancelOrganizationInvitationMutationError = unknown
+    export type CancelOrganizationInvitationMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CancelOrganizationInvitationMutationVariables = {login: string;id: string}
 
     /**
  * @summary Cancel organization invitation
  */
-export const useCancelOrganizationInvitation = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelOrganizationInvitation>>, TError,CancelOrganizationInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCancelOrganizationInvitation = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelOrganizationInvitation>>, TError,CancelOrganizationInvitationMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof cancelOrganizationInvitation>>,
         TError,
@@ -13934,22 +16164,37 @@ export const getAcceptOrganizationInvitationUrl = (id: string,) => {
 
 
 
-  return `/invitations/${encodeURIComponent(String(id))}/accept`
+  return `/api/invitations/${encodeURIComponent(String(id))}/accept`
 }
 
 /**
  * @summary Accept organization invitation
  */
-export const acceptOrganizationInvitation = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+export const acceptOrganizationInvitation = async (id: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getAcceptOrganizationInvitationUrl(id),
+  const res = await fetch(getAcceptOrganizationInvitationUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -13957,16 +16202,16 @@ export const acceptOrganizationInvitation = async (id: string, options?: Paramet
 
 export const getAcceptOrganizationInvitationMutationKey = () => ['acceptOrganizationInvitation'] as const;
 
-export const getAcceptOrganizationInvitationMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptOrganizationInvitation>>, TError,AcceptOrganizationInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getAcceptOrganizationInvitationMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptOrganizationInvitation>>, TError,AcceptOrganizationInvitationMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof acceptOrganizationInvitation>>, TError,AcceptOrganizationInvitationMutationVariables, TContext> => {
 
 const mutationKey = getAcceptOrganizationInvitationMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -13974,7 +16219,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof acceptOrganizationInvitation>>, AcceptOrganizationInvitationMutationVariables> = (props) => {
           const {id} = props ?? {};
 
-          return  acceptOrganizationInvitation(id,requestOptions)
+          return  acceptOrganizationInvitation(id,fetchOptions)
         }
 
 
@@ -13986,14 +16231,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AcceptOrganizationInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof acceptOrganizationInvitation>>>
 
-    export type AcceptOrganizationInvitationMutationError = unknown
+    export type AcceptOrganizationInvitationMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type AcceptOrganizationInvitationMutationVariables = {id: string}
 
     /**
  * @summary Accept organization invitation
  */
-export const useAcceptOrganizationInvitation = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptOrganizationInvitation>>, TError,AcceptOrganizationInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useAcceptOrganizationInvitation = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptOrganizationInvitation>>, TError,AcceptOrganizationInvitationMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof acceptOrganizationInvitation>>,
         TError,
@@ -14008,22 +16253,37 @@ export const getDeclineOrganizationInvitationUrl = (id: string,) => {
 
 
 
-  return `/invitations/${encodeURIComponent(String(id))}/decline`
+  return `/api/invitations/${encodeURIComponent(String(id))}/decline`
 }
 
 /**
  * @summary Decline organization invitation
  */
-export const declineOrganizationInvitation = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+export const declineOrganizationInvitation = async (id: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getDeclineOrganizationInvitationUrl(id),
+  const res = await fetch(getDeclineOrganizationInvitationUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -14031,16 +16291,16 @@ export const declineOrganizationInvitation = async (id: string, options?: Parame
 
 export const getDeclineOrganizationInvitationMutationKey = () => ['declineOrganizationInvitation'] as const;
 
-export const getDeclineOrganizationInvitationMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof declineOrganizationInvitation>>, TError,DeclineOrganizationInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeclineOrganizationInvitationMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof declineOrganizationInvitation>>, TError,DeclineOrganizationInvitationMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof declineOrganizationInvitation>>, TError,DeclineOrganizationInvitationMutationVariables, TContext> => {
 
 const mutationKey = getDeclineOrganizationInvitationMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -14048,7 +16308,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof declineOrganizationInvitation>>, DeclineOrganizationInvitationMutationVariables> = (props) => {
           const {id} = props ?? {};
 
-          return  declineOrganizationInvitation(id,requestOptions)
+          return  declineOrganizationInvitation(id,fetchOptions)
         }
 
 
@@ -14060,14 +16320,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeclineOrganizationInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof declineOrganizationInvitation>>>
 
-    export type DeclineOrganizationInvitationMutationError = unknown
+    export type DeclineOrganizationInvitationMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeclineOrganizationInvitationMutationVariables = {id: string}
 
     /**
  * @summary Decline organization invitation
  */
-export const useDeclineOrganizationInvitation = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof declineOrganizationInvitation>>, TError,DeclineOrganizationInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeclineOrganizationInvitation = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof declineOrganizationInvitation>>, TError,DeclineOrganizationInvitationMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof declineOrganizationInvitation>>,
         TError,
@@ -14082,22 +16342,37 @@ export const getListOrganizationJoinRequestsUrl = (login: string,) => {
 
 
 
-  return `/organizations/${encodeURIComponent(String(login))}/requests`
+  return `/api/organizations/${encodeURIComponent(String(login))}/requests`
 }
 
 /**
  * @summary List pending organization join requests
  */
-export const listOrganizationJoinRequests = async (login: string, options?: Parameters<typeof apiFetch>[1]): Promise<ListOrganizationJoinRequestsResponseModel> => {
+export const listOrganizationJoinRequests = async (login: string, options?: RequestInit): Promise<ListOrganizationJoinRequestsResponseModel> => {
 
-  return apiFetch<ListOrganizationJoinRequestsResponseModel>(getListOrganizationJoinRequestsUrl(login),
+  const res = await fetch(getListOrganizationJoinRequestsUrl(login),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListOrganizationJoinRequestsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -14105,21 +16380,21 @@ export const listOrganizationJoinRequests = async (login: string, options?: Para
 
 export const getListOrganizationJoinRequestsQueryKey = (login: string,) => {
     return [
-    `/organizations/${login}/requests`
+    `/api/organizations/${login}/requests`
     ] as const;
     }
 
 
-export const getListOrganizationJoinRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError = unknown>(login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListOrganizationJoinRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListOrganizationJoinRequestsQueryKey(login);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrganizationJoinRequests>>> = ({ signal }) => listOrganizationJoinRequests(login, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrganizationJoinRequests>>> = ({ signal }) => listOrganizationJoinRequests(login, { signal, ...fetchOptions });
 
 
 
@@ -14129,39 +16404,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListOrganizationJoinRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listOrganizationJoinRequests>>>
-export type ListOrganizationJoinRequestsQueryError = unknown
+export type ListOrganizationJoinRequestsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListOrganizationJoinRequests<TData = Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError = unknown>(
+export function useListOrganizationJoinRequests<TData = Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  login: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listOrganizationJoinRequests>>,
           TError,
           Awaited<ReturnType<typeof listOrganizationJoinRequests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOrganizationJoinRequests<TData = Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError = unknown>(
+export function useListOrganizationJoinRequests<TData = Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listOrganizationJoinRequests>>,
           TError,
           Awaited<ReturnType<typeof listOrganizationJoinRequests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOrganizationJoinRequests<TData = Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError = unknown>(
- login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListOrganizationJoinRequests<TData = Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List pending organization join requests
  */
 
-export function useListOrganizationJoinRequests<TData = Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError = unknown>(
- login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListOrganizationJoinRequests<TData = Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrganizationJoinRequests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -14183,14 +16458,14 @@ export const getCreateOrganizationJoinRequestUrl = (login: string,) => {
 
 
 
-  return `/organizations/${encodeURIComponent(String(login))}/requests`
+  return `/api/organizations/${encodeURIComponent(String(login))}/requests`
 }
 
 /**
  * @summary Request to join organization
  */
 export const createOrganizationJoinRequest = async (login: string,
-    createOrganizationJoinRequestModel?: CreateOrganizationJoinRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<OrganizationJoinRequestResponseModel> => {
+    createOrganizationJoinRequestModel?: CreateOrganizationJoinRequestModel, options?: RequestInit): Promise<OrganizationJoinRequestResponseModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -14206,14 +16481,29 @@ export const createOrganizationJoinRequest = async (login: string,
     }
     return headers;
   };
-return apiFetch<OrganizationJoinRequestResponseModel>(getCreateOrganizationJoinRequestUrl(login),
+const res = await fetch(getCreateOrganizationJoinRequestUrl(login),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createOrganizationJoinRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: OrganizationJoinRequestResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -14221,16 +16511,16 @@ return apiFetch<OrganizationJoinRequestResponseModel>(getCreateOrganizationJoinR
 
 export const getCreateOrganizationJoinRequestMutationKey = () => ['createOrganizationJoinRequest'] as const;
 
-export const getCreateOrganizationJoinRequestMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrganizationJoinRequest>>, TError,CreateOrganizationJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateOrganizationJoinRequestMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrganizationJoinRequest>>, TError,CreateOrganizationJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createOrganizationJoinRequest>>, TError,CreateOrganizationJoinRequestMutationVariables, TContext> => {
 
 const mutationKey = getCreateOrganizationJoinRequestMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -14238,7 +16528,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrganizationJoinRequest>>, CreateOrganizationJoinRequestMutationVariables> = (props) => {
           const {login,data} = props ?? {};
 
-          return  createOrganizationJoinRequest(login,data,requestOptions)
+          return  createOrganizationJoinRequest(login,data,fetchOptions)
         }
 
 
@@ -14250,14 +16540,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateOrganizationJoinRequestMutationResult = NonNullable<Awaited<ReturnType<typeof createOrganizationJoinRequest>>>
     export type CreateOrganizationJoinRequestMutationBody = CreateOrganizationJoinRequestModel | undefined
-    export type CreateOrganizationJoinRequestMutationError = unknown
+    export type CreateOrganizationJoinRequestMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateOrganizationJoinRequestMutationVariables = {login: string;data?: CreateOrganizationJoinRequestModel}
 
     /**
  * @summary Request to join organization
  */
-export const useCreateOrganizationJoinRequest = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrganizationJoinRequest>>, TError,CreateOrganizationJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateOrganizationJoinRequest = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrganizationJoinRequest>>, TError,CreateOrganizationJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createOrganizationJoinRequest>>,
         TError,
@@ -14272,22 +16562,37 @@ export const getGetMyOrganizationJoinRequestUrl = (login: string,) => {
 
 
 
-  return `/organizations/${encodeURIComponent(String(login))}/requests/mine`
+  return `/api/organizations/${encodeURIComponent(String(login))}/requests/mine`
 }
 
 /**
  * @summary Get my pending join request to organization
  */
-export const getMyOrganizationJoinRequest = async (login: string, options?: Parameters<typeof apiFetch>[1]): Promise<OrganizationJoinRequestNullableResponseModel> => {
+export const getMyOrganizationJoinRequest = async (login: string, options?: RequestInit): Promise<OrganizationJoinRequestNullableResponseModel> => {
 
-  return apiFetch<OrganizationJoinRequestNullableResponseModel>(getGetMyOrganizationJoinRequestUrl(login),
+  const res = await fetch(getGetMyOrganizationJoinRequestUrl(login),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: OrganizationJoinRequestNullableResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -14295,21 +16600,21 @@ export const getMyOrganizationJoinRequest = async (login: string, options?: Para
 
 export const getGetMyOrganizationJoinRequestQueryKey = (login: string,) => {
     return [
-    `/organizations/${login}/requests/mine`
+    `/api/organizations/${login}/requests/mine`
     ] as const;
     }
 
 
-export const getGetMyOrganizationJoinRequestQueryOptions = <TData = Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError = unknown>(login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetMyOrganizationJoinRequestQueryOptions = <TData = Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetMyOrganizationJoinRequestQueryKey(login);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>> = ({ signal }) => getMyOrganizationJoinRequest(login, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>> = ({ signal }) => getMyOrganizationJoinRequest(login, { signal, ...fetchOptions });
 
 
 
@@ -14319,39 +16624,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetMyOrganizationJoinRequestQueryResult = NonNullable<Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>>
-export type GetMyOrganizationJoinRequestQueryError = unknown
+export type GetMyOrganizationJoinRequestQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetMyOrganizationJoinRequest<TData = Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError = unknown>(
+export function useGetMyOrganizationJoinRequest<TData = Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  login: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>,
           TError,
           Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyOrganizationJoinRequest<TData = Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError = unknown>(
+export function useGetMyOrganizationJoinRequest<TData = Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>,
           TError,
           Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyOrganizationJoinRequest<TData = Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError = unknown>(
- login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetMyOrganizationJoinRequest<TData = Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get my pending join request to organization
  */
 
-export function useGetMyOrganizationJoinRequest<TData = Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError = unknown>(
- login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetMyOrganizationJoinRequest<TData = Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ login: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyOrganizationJoinRequest>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -14373,22 +16678,37 @@ export const getCancelOrganizationJoinRequestUrl = (login: string,) => {
 
 
 
-  return `/organizations/${encodeURIComponent(String(login))}/requests/mine`
+  return `/api/organizations/${encodeURIComponent(String(login))}/requests/mine`
 }
 
 /**
  * @summary Cancel my join request to organization
  */
-export const cancelOrganizationJoinRequest = async (login: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+export const cancelOrganizationJoinRequest = async (login: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getCancelOrganizationJoinRequestUrl(login),
+  const res = await fetch(getCancelOrganizationJoinRequestUrl(login),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -14396,16 +16716,16 @@ export const cancelOrganizationJoinRequest = async (login: string, options?: Par
 
 export const getCancelOrganizationJoinRequestMutationKey = () => ['cancelOrganizationJoinRequest'] as const;
 
-export const getCancelOrganizationJoinRequestMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelOrganizationJoinRequest>>, TError,CancelOrganizationJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCancelOrganizationJoinRequestMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelOrganizationJoinRequest>>, TError,CancelOrganizationJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof cancelOrganizationJoinRequest>>, TError,CancelOrganizationJoinRequestMutationVariables, TContext> => {
 
 const mutationKey = getCancelOrganizationJoinRequestMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -14413,7 +16733,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelOrganizationJoinRequest>>, CancelOrganizationJoinRequestMutationVariables> = (props) => {
           const {login} = props ?? {};
 
-          return  cancelOrganizationJoinRequest(login,requestOptions)
+          return  cancelOrganizationJoinRequest(login,fetchOptions)
         }
 
 
@@ -14425,14 +16745,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CancelOrganizationJoinRequestMutationResult = NonNullable<Awaited<ReturnType<typeof cancelOrganizationJoinRequest>>>
 
-    export type CancelOrganizationJoinRequestMutationError = unknown
+    export type CancelOrganizationJoinRequestMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CancelOrganizationJoinRequestMutationVariables = {login: string}
 
     /**
  * @summary Cancel my join request to organization
  */
-export const useCancelOrganizationJoinRequest = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelOrganizationJoinRequest>>, TError,CancelOrganizationJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCancelOrganizationJoinRequest = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelOrganizationJoinRequest>>, TError,CancelOrganizationJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof cancelOrganizationJoinRequest>>,
         TError,
@@ -14448,7 +16768,7 @@ export const getApproveOrganizationJoinRequestUrl = (login: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(login))}/requests/${encodeURIComponent(String(id))}/approve`
+  return `/api/organizations/${encodeURIComponent(String(login))}/requests/${encodeURIComponent(String(id))}/approve`
 }
 
 /**
@@ -14456,7 +16776,7 @@ export const getApproveOrganizationJoinRequestUrl = (login: string,
  */
 export const approveOrganizationJoinRequest = async (login: string,
     id: string,
-    approveOrganizationJoinRequestModel?: ApproveOrganizationJoinRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    approveOrganizationJoinRequestModel?: ApproveOrganizationJoinRequestModel, options?: RequestInit): Promise<void> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -14472,14 +16792,29 @@ export const approveOrganizationJoinRequest = async (login: string,
     }
     return headers;
   };
-return apiFetch<void>(getApproveOrganizationJoinRequestUrl(login,id),
+const res = await fetch(getApproveOrganizationJoinRequestUrl(login,id),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(approveOrganizationJoinRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -14487,16 +16822,16 @@ return apiFetch<void>(getApproveOrganizationJoinRequestUrl(login,id),
 
 export const getApproveOrganizationJoinRequestMutationKey = () => ['approveOrganizationJoinRequest'] as const;
 
-export const getApproveOrganizationJoinRequestMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveOrganizationJoinRequest>>, TError,ApproveOrganizationJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getApproveOrganizationJoinRequestMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveOrganizationJoinRequest>>, TError,ApproveOrganizationJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof approveOrganizationJoinRequest>>, TError,ApproveOrganizationJoinRequestMutationVariables, TContext> => {
 
 const mutationKey = getApproveOrganizationJoinRequestMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -14504,7 +16839,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveOrganizationJoinRequest>>, ApproveOrganizationJoinRequestMutationVariables> = (props) => {
           const {login,id,data} = props ?? {};
 
-          return  approveOrganizationJoinRequest(login,id,data,requestOptions)
+          return  approveOrganizationJoinRequest(login,id,data,fetchOptions)
         }
 
 
@@ -14516,14 +16851,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ApproveOrganizationJoinRequestMutationResult = NonNullable<Awaited<ReturnType<typeof approveOrganizationJoinRequest>>>
     export type ApproveOrganizationJoinRequestMutationBody = ApproveOrganizationJoinRequestModel | undefined
-    export type ApproveOrganizationJoinRequestMutationError = unknown
+    export type ApproveOrganizationJoinRequestMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type ApproveOrganizationJoinRequestMutationVariables = {login: string;id: string;data?: ApproveOrganizationJoinRequestModel}
 
     /**
  * @summary Approve organization join request
  */
-export const useApproveOrganizationJoinRequest = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveOrganizationJoinRequest>>, TError,ApproveOrganizationJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useApproveOrganizationJoinRequest = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveOrganizationJoinRequest>>, TError,ApproveOrganizationJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof approveOrganizationJoinRequest>>,
         TError,
@@ -14539,23 +16874,38 @@ export const getRejectOrganizationJoinRequestUrl = (login: string,
 
 
 
-  return `/organizations/${encodeURIComponent(String(login))}/requests/${encodeURIComponent(String(id))}/reject`
+  return `/api/organizations/${encodeURIComponent(String(login))}/requests/${encodeURIComponent(String(id))}/reject`
 }
 
 /**
  * @summary Reject organization join request
  */
 export const rejectOrganizationJoinRequest = async (login: string,
-    id: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    id: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getRejectOrganizationJoinRequestUrl(login,id),
+  const res = await fetch(getRejectOrganizationJoinRequestUrl(login,id),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -14563,16 +16913,16 @@ export const rejectOrganizationJoinRequest = async (login: string,
 
 export const getRejectOrganizationJoinRequestMutationKey = () => ['rejectOrganizationJoinRequest'] as const;
 
-export const getRejectOrganizationJoinRequestMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectOrganizationJoinRequest>>, TError,RejectOrganizationJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getRejectOrganizationJoinRequestMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectOrganizationJoinRequest>>, TError,RejectOrganizationJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof rejectOrganizationJoinRequest>>, TError,RejectOrganizationJoinRequestMutationVariables, TContext> => {
 
 const mutationKey = getRejectOrganizationJoinRequestMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -14580,7 +16930,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejectOrganizationJoinRequest>>, RejectOrganizationJoinRequestMutationVariables> = (props) => {
           const {login,id} = props ?? {};
 
-          return  rejectOrganizationJoinRequest(login,id,requestOptions)
+          return  rejectOrganizationJoinRequest(login,id,fetchOptions)
         }
 
 
@@ -14592,14 +16942,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RejectOrganizationJoinRequestMutationResult = NonNullable<Awaited<ReturnType<typeof rejectOrganizationJoinRequest>>>
 
-    export type RejectOrganizationJoinRequestMutationError = unknown
+    export type RejectOrganizationJoinRequestMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type RejectOrganizationJoinRequestMutationVariables = {login: string;id: string}
 
     /**
  * @summary Reject organization join request
  */
-export const useRejectOrganizationJoinRequest = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectOrganizationJoinRequest>>, TError,RejectOrganizationJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useRejectOrganizationJoinRequest = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectOrganizationJoinRequest>>, TError,RejectOrganizationJoinRequestMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof rejectOrganizationJoinRequest>>,
         TError,
@@ -14621,22 +16971,37 @@ export const getListNotificationsUrl = (params?: ListNotificationsParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/notifications?${stringifiedParams}` : `/notifications`
+  return stringifiedParams.length > 0 ? `/api/notifications?${stringifiedParams}` : `/api/notifications`
 }
 
 /**
  * @summary List user notifications
  */
-export const listNotifications = async (params?: ListNotificationsParams, options?: Parameters<typeof apiFetch>[1]): Promise<NotificationsListResponseModel> => {
+export const listNotifications = async (params?: ListNotificationsParams, options?: RequestInit): Promise<NotificationsListResponseModel> => {
 
-  return apiFetch<NotificationsListResponseModel>(getListNotificationsUrl(params),
+  const res = await fetch(getListNotificationsUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: NotificationsListResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -14644,21 +17009,21 @@ export const listNotifications = async (params?: ListNotificationsParams, option
 
 export const getListNotificationsQueryKey = (params?: ListNotificationsParams,) => {
     return [
-    `/notifications`, ...(params ? [params] : [])
+    `/api/notifications`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof listNotifications>>, TError = unknown>(params?: ListNotificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof listNotifications>>, TError = globalThis.Error & { info?: unknown; status?: number }>(params?: ListNotificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListNotificationsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNotifications>>> = ({ signal }) => listNotifications(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNotifications>>> = ({ signal }) => listNotifications(params, { signal, ...fetchOptions });
 
 
 
@@ -14668,39 +17033,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListNotificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listNotifications>>>
-export type ListNotificationsQueryError = unknown
+export type ListNotificationsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = unknown>(
+export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params: undefined |  ListNotificationsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listNotifications>>,
           TError,
           Awaited<ReturnType<typeof listNotifications>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = unknown>(
+export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params?: ListNotificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listNotifications>>,
           TError,
           Awaited<ReturnType<typeof listNotifications>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = unknown>(
- params?: ListNotificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListNotificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List user notifications
  */
 
-export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = unknown>(
- params?: ListNotificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListNotificationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -14722,22 +17087,37 @@ export const getGetUnreadNotificationsCountUrl = () => {
 
 
 
-  return `/notifications/unread-count`
+  return `/api/notifications/unread-count`
 }
 
 /**
  * @summary Get count of unread notifications
  */
-export const getUnreadNotificationsCount = async ( options?: Parameters<typeof apiFetch>[1]): Promise<UnreadNotificationsCountResponseModel> => {
+export const getUnreadNotificationsCount = async ( options?: RequestInit): Promise<UnreadNotificationsCountResponseModel> => {
 
-  return apiFetch<UnreadNotificationsCountResponseModel>(getGetUnreadNotificationsCountUrl(),
+  const res = await fetch(getGetUnreadNotificationsCountUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: UnreadNotificationsCountResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -14745,21 +17125,21 @@ export const getUnreadNotificationsCount = async ( options?: Parameters<typeof a
 
 export const getGetUnreadNotificationsCountQueryKey = () => {
     return [
-    `/notifications/unread-count`
+    `/api/notifications/unread-count`
     ] as const;
     }
 
 
-export const getGetUnreadNotificationsCountQueryOptions = <TData = Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetUnreadNotificationsCountQueryOptions = <TData = Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError = globalThis.Error & { info?: unknown; status?: number }>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetUnreadNotificationsCountQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUnreadNotificationsCount>>> = ({ signal }) => getUnreadNotificationsCount({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUnreadNotificationsCount>>> = ({ signal }) => getUnreadNotificationsCount({ signal, ...fetchOptions });
 
 
 
@@ -14769,39 +17149,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetUnreadNotificationsCountQueryResult = NonNullable<Awaited<ReturnType<typeof getUnreadNotificationsCount>>>
-export type GetUnreadNotificationsCountQueryError = unknown
+export type GetUnreadNotificationsCountQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetUnreadNotificationsCount<TData = Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError = unknown>(
+export function useGetUnreadNotificationsCount<TData = Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getUnreadNotificationsCount>>,
           TError,
           Awaited<ReturnType<typeof getUnreadNotificationsCount>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetUnreadNotificationsCount<TData = Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError = unknown>(
+export function useGetUnreadNotificationsCount<TData = Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getUnreadNotificationsCount>>,
           TError,
           Awaited<ReturnType<typeof getUnreadNotificationsCount>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetUnreadNotificationsCount<TData = Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetUnreadNotificationsCount<TData = Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get count of unread notifications
  */
 
-export function useGetUnreadNotificationsCount<TData = Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetUnreadNotificationsCount<TData = Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationsCount>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -14823,22 +17203,37 @@ export const getMarkNotificationAsReadUrl = (id: string,) => {
 
 
 
-  return `/notifications/${encodeURIComponent(String(id))}/read`
+  return `/api/notifications/${encodeURIComponent(String(id))}/read`
 }
 
 /**
  * @summary Mark a notification as read
  */
-export const markNotificationAsRead = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+export const markNotificationAsRead = async (id: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getMarkNotificationAsReadUrl(id),
+  const res = await fetch(getMarkNotificationAsReadUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -14846,16 +17241,16 @@ export const markNotificationAsRead = async (id: string, options?: Parameters<ty
 
 export const getMarkNotificationAsReadMutationKey = () => ['markNotificationAsRead'] as const;
 
-export const getMarkNotificationAsReadMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markNotificationAsRead>>, TError,MarkNotificationAsReadMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getMarkNotificationAsReadMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markNotificationAsRead>>, TError,MarkNotificationAsReadMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof markNotificationAsRead>>, TError,MarkNotificationAsReadMutationVariables, TContext> => {
 
 const mutationKey = getMarkNotificationAsReadMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -14863,7 +17258,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof markNotificationAsRead>>, MarkNotificationAsReadMutationVariables> = (props) => {
           const {id} = props ?? {};
 
-          return  markNotificationAsRead(id,requestOptions)
+          return  markNotificationAsRead(id,fetchOptions)
         }
 
 
@@ -14875,14 +17270,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type MarkNotificationAsReadMutationResult = NonNullable<Awaited<ReturnType<typeof markNotificationAsRead>>>
 
-    export type MarkNotificationAsReadMutationError = unknown
+    export type MarkNotificationAsReadMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type MarkNotificationAsReadMutationVariables = {id: string}
 
     /**
  * @summary Mark a notification as read
  */
-export const useMarkNotificationAsRead = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markNotificationAsRead>>, TError,MarkNotificationAsReadMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useMarkNotificationAsRead = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markNotificationAsRead>>, TError,MarkNotificationAsReadMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof markNotificationAsRead>>,
         TError,
@@ -14897,22 +17292,37 @@ export const getMarkAllNotificationsAsReadUrl = () => {
 
 
 
-  return `/notifications/read-all`
+  return `/api/notifications/read-all`
 }
 
 /**
  * @summary Mark all notifications as read
  */
-export const markAllNotificationsAsRead = async ( options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+export const markAllNotificationsAsRead = async ( options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getMarkAllNotificationsAsReadUrl(),
+  const res = await fetch(getMarkAllNotificationsAsReadUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -14920,16 +17330,16 @@ export const markAllNotificationsAsRead = async ( options?: Parameters<typeof ap
 
 export const getMarkAllNotificationsAsReadMutationKey = () => ['markAllNotificationsAsRead'] as const;
 
-export const getMarkAllNotificationsAsReadMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAllNotificationsAsRead>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getMarkAllNotificationsAsReadMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAllNotificationsAsRead>>, TError,void, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof markAllNotificationsAsRead>>, TError,void, TContext> => {
 
 const mutationKey = getMarkAllNotificationsAsReadMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -14937,7 +17347,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof markAllNotificationsAsRead>>, void> = () => {
 
 
-          return  markAllNotificationsAsRead(requestOptions)
+          return  markAllNotificationsAsRead(fetchOptions)
         }
 
 
@@ -14949,14 +17359,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type MarkAllNotificationsAsReadMutationResult = NonNullable<Awaited<ReturnType<typeof markAllNotificationsAsRead>>>
 
-    export type MarkAllNotificationsAsReadMutationError = unknown
+    export type MarkAllNotificationsAsReadMutationError = globalThis.Error & { info?: unknown; status?: number }
 
 
     /**
  * @summary Mark all notifications as read
  */
-export const useMarkAllNotificationsAsRead = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAllNotificationsAsRead>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useMarkAllNotificationsAsRead = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAllNotificationsAsRead>>, TError,void, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof markAllNotificationsAsRead>>,
         TError,
@@ -14978,22 +17388,37 @@ export const getListTeamsUrl = (params?: ListTeamsParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/teams?${stringifiedParams}` : `/teams`
+  return stringifiedParams.length > 0 ? `/api/teams?${stringifiedParams}` : `/api/teams`
 }
 
 /**
  * @summary List teams
  */
-export const listTeams = async (params?: ListTeamsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListTeamsResponseModel> => {
+export const listTeams = async (params?: ListTeamsParams, options?: RequestInit): Promise<ListTeamsResponseModel> => {
 
-  return apiFetch<ListTeamsResponseModel>(getListTeamsUrl(params),
+  const res = await fetch(getListTeamsUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListTeamsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -15001,21 +17426,21 @@ export const listTeams = async (params?: ListTeamsParams, options?: Parameters<t
 
 export const getListTeamsQueryKey = (params?: ListTeamsParams,) => {
     return [
-    `/teams`, ...(params ? [params] : [])
+    `/api/teams`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListTeamsQueryOptions = <TData = Awaited<ReturnType<typeof listTeams>>, TError = unknown>(params?: ListTeamsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListTeamsQueryOptions = <TData = Awaited<ReturnType<typeof listTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(params?: ListTeamsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListTeamsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeams>>> = ({ signal }) => listTeams(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeams>>> = ({ signal }) => listTeams(params, { signal, ...fetchOptions });
 
 
 
@@ -15025,39 +17450,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListTeamsQueryResult = NonNullable<Awaited<ReturnType<typeof listTeams>>>
-export type ListTeamsQueryError = unknown
+export type ListTeamsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = unknown>(
+export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params: undefined |  ListTeamsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listTeams>>,
           TError,
           Awaited<ReturnType<typeof listTeams>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = unknown>(
+export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params?: ListTeamsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listTeams>>,
           TError,
           Awaited<ReturnType<typeof listTeams>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = unknown>(
- params?: ListTeamsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListTeamsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List teams
  */
 
-export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = unknown>(
- params?: ListTeamsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListTeamsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -15079,13 +17504,13 @@ export const getCreateTeamUrl = () => {
 
 
 
-  return `/teams`
+  return `/api/teams`
 }
 
 /**
  * @summary Create a new team
  */
-export const createTeam = async (createTeamBody: CreateTeamBody, options?: Parameters<typeof apiFetch>[1]): Promise<CreationResponseModel> => {
+export const createTeam = async (createTeamBody: CreateTeamBody, options?: RequestInit): Promise<CreationResponseModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -15101,14 +17526,29 @@ export const createTeam = async (createTeamBody: CreateTeamBody, options?: Param
     }
     return headers;
   };
-return apiFetch<CreationResponseModel>(getCreateTeamUrl(),
+const res = await fetch(getCreateTeamUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createTeamBody)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: CreationResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -15116,16 +17556,16 @@ return apiFetch<CreationResponseModel>(getCreateTeamUrl(),
 
 export const getCreateTeamMutationKey = () => ['createTeam'] as const;
 
-export const getCreateTeamMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTeam>>, TError,CreateTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreateTeamMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTeam>>, TError,CreateTeamMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createTeam>>, TError,CreateTeamMutationVariables, TContext> => {
 
 const mutationKey = getCreateTeamMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -15133,7 +17573,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTeam>>, CreateTeamMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  createTeam(data,requestOptions)
+          return  createTeam(data,fetchOptions)
         }
 
 
@@ -15145,14 +17585,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateTeamMutationResult = NonNullable<Awaited<ReturnType<typeof createTeam>>>
     export type CreateTeamMutationBody = CreateTeamBody
-    export type CreateTeamMutationError = unknown
+    export type CreateTeamMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type CreateTeamMutationVariables = {data: CreateTeamBody}
 
     /**
  * @summary Create a new team
  */
-export const useCreateTeam = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTeam>>, TError,CreateTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreateTeam = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTeam>>, TError,CreateTeamMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createTeam>>,
         TError,
@@ -15167,22 +17607,37 @@ export const getGetTeamUrl = (id: string,) => {
 
 
 
-  return `/teams/${encodeURIComponent(String(id))}`
+  return `/api/teams/${encodeURIComponent(String(id))}`
 }
 
 /**
  * @summary Get team by ID
  */
-export const getTeam = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<GetTeamResponseModel> => {
+export const getTeam = async (id: string, options?: RequestInit): Promise<GetTeamResponseModel> => {
 
-  return apiFetch<GetTeamResponseModel>(getGetTeamUrl(id),
+  const res = await fetch(getGetTeamUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: GetTeamResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -15190,21 +17645,21 @@ export const getTeam = async (id: string, options?: Parameters<typeof apiFetch>[
 
 export const getGetTeamQueryKey = (id: string,) => {
     return [
-    `/teams/${id}`
+    `/api/teams/${id}`
     ] as const;
     }
 
 
-export const getGetTeamQueryOptions = <TData = Awaited<ReturnType<typeof getTeam>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTeam>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetTeamQueryOptions = <TData = Awaited<ReturnType<typeof getTeam>>, TError = globalThis.Error & { info?: unknown; status?: number }>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTeam>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetTeamQueryKey(id);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTeam>>> = ({ signal }) => getTeam(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTeam>>> = ({ signal }) => getTeam(id, { signal, ...fetchOptions });
 
 
 
@@ -15214,39 +17669,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetTeamQueryResult = NonNullable<Awaited<ReturnType<typeof getTeam>>>
-export type GetTeamQueryError = unknown
+export type GetTeamQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useGetTeam<TData = Awaited<ReturnType<typeof getTeam>>, TError = unknown>(
+export function useGetTeam<TData = Awaited<ReturnType<typeof getTeam>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTeam>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getTeam>>,
           TError,
           Awaited<ReturnType<typeof getTeam>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetTeam<TData = Awaited<ReturnType<typeof getTeam>>, TError = unknown>(
+export function useGetTeam<TData = Awaited<ReturnType<typeof getTeam>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTeam>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getTeam>>,
           TError,
           Awaited<ReturnType<typeof getTeam>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetTeam<TData = Awaited<ReturnType<typeof getTeam>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTeam>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetTeam<TData = Awaited<ReturnType<typeof getTeam>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTeam>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get team by ID
  */
 
-export function useGetTeam<TData = Awaited<ReturnType<typeof getTeam>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTeam>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetTeam<TData = Awaited<ReturnType<typeof getTeam>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTeam>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -15268,14 +17723,14 @@ export const getUpdateTeamUrl = (id: string,) => {
 
 
 
-  return `/teams/${encodeURIComponent(String(id))}`
+  return `/api/teams/${encodeURIComponent(String(id))}`
 }
 
 /**
  * @summary Update team
  */
 export const updateTeam = async (id: string,
-    updateTeamRequestModel: UpdateTeamRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    updateTeamRequestModel: UpdateTeamRequestModel, options?: RequestInit): Promise<void> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -15291,14 +17746,29 @@ export const updateTeam = async (id: string,
     }
     return headers;
   };
-return apiFetch<void>(getUpdateTeamUrl(id),
+const res = await fetch(getUpdateTeamUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateTeamRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -15306,16 +17776,16 @@ return apiFetch<void>(getUpdateTeamUrl(id),
 
 export const getUpdateTeamMutationKey = () => ['updateTeam'] as const;
 
-export const getUpdateTeamMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeam>>, TError,UpdateTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateTeamMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeam>>, TError,UpdateTeamMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateTeam>>, TError,UpdateTeamMutationVariables, TContext> => {
 
 const mutationKey = getUpdateTeamMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -15323,7 +17793,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateTeam>>, UpdateTeamMutationVariables> = (props) => {
           const {id,data} = props ?? {};
 
-          return  updateTeam(id,data,requestOptions)
+          return  updateTeam(id,data,fetchOptions)
         }
 
 
@@ -15335,14 +17805,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateTeamMutationResult = NonNullable<Awaited<ReturnType<typeof updateTeam>>>
     export type UpdateTeamMutationBody = UpdateTeamRequestModel
-    export type UpdateTeamMutationError = unknown
+    export type UpdateTeamMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateTeamMutationVariables = {id: string;data: UpdateTeamRequestModel}
 
     /**
  * @summary Update team
  */
-export const useUpdateTeam = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeam>>, TError,UpdateTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateTeam = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeam>>, TError,UpdateTeamMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateTeam>>,
         TError,
@@ -15357,22 +17827,37 @@ export const getDeleteTeamUrl = (id: string,) => {
 
 
 
-  return `/teams/${encodeURIComponent(String(id))}`
+  return `/api/teams/${encodeURIComponent(String(id))}`
 }
 
 /**
  * @summary Delete team
  */
-export const deleteTeam = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+export const deleteTeam = async (id: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getDeleteTeamUrl(id),
+  const res = await fetch(getDeleteTeamUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -15380,16 +17865,16 @@ export const deleteTeam = async (id: string, options?: Parameters<typeof apiFetc
 
 export const getDeleteTeamMutationKey = () => ['deleteTeam'] as const;
 
-export const getDeleteTeamMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTeam>>, TError,DeleteTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeleteTeamMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTeam>>, TError,DeleteTeamMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteTeam>>, TError,DeleteTeamMutationVariables, TContext> => {
 
 const mutationKey = getDeleteTeamMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -15397,7 +17882,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTeam>>, DeleteTeamMutationVariables> = (props) => {
           const {id} = props ?? {};
 
-          return  deleteTeam(id,requestOptions)
+          return  deleteTeam(id,fetchOptions)
         }
 
 
@@ -15409,14 +17894,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteTeamMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTeam>>>
 
-    export type DeleteTeamMutationError = unknown
+    export type DeleteTeamMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type DeleteTeamMutationVariables = {id: string}
 
     /**
  * @summary Delete team
  */
-export const useDeleteTeam = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTeam>>, TError,DeleteTeamMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeleteTeam = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTeam>>, TError,DeleteTeamMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteTeam>>,
         TError,
@@ -15439,23 +17924,38 @@ export const getListTeamMembersUrl = (id: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/teams/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/teams/${encodeURIComponent(String(id))}/members`
+  return stringifiedParams.length > 0 ? `/api/teams/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/api/teams/${encodeURIComponent(String(id))}/members`
 }
 
 /**
  * @summary List team members
  */
 export const listTeamMembers = async (id: string,
-    params?: ListTeamMembersParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListTeamMembersResponseModel> => {
+    params?: ListTeamMembersParams, options?: RequestInit): Promise<ListTeamMembersResponseModel> => {
 
-  return apiFetch<ListTeamMembersResponseModel>(getListTeamMembersUrl(id,params),
+  const res = await fetch(getListTeamMembersUrl(id,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListTeamMembersResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -15464,22 +17964,22 @@ export const listTeamMembers = async (id: string,
 export const getListTeamMembersQueryKey = (id: string,
     params?: ListTeamMembersParams,) => {
     return [
-    `/teams/${id}/members`, ...(params ? [params] : [])
+    `/api/teams/${id}/members`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListTeamMembersQueryOptions = <TData = Awaited<ReturnType<typeof listTeamMembers>>, TError = unknown>(id: string,
-    params?: ListTeamMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListTeamMembersQueryOptions = <TData = Awaited<ReturnType<typeof listTeamMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(id: string,
+    params?: ListTeamMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamMembers>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListTeamMembersQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamMembers>>> = ({ signal }) => listTeamMembers(id,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamMembers>>> = ({ signal }) => listTeamMembers(id,params, { signal, ...fetchOptions });
 
 
 
@@ -15489,10 +17989,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListTeamMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listTeamMembers>>>
-export type ListTeamMembersQueryError = unknown
+export type ListTeamMembersQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListTeamMembers<TData = Awaited<ReturnType<typeof listTeamMembers>>, TError = unknown>(
+export function useListTeamMembers<TData = Awaited<ReturnType<typeof listTeamMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
     params: undefined |  ListTeamMembersParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamMembers>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -15500,10 +18000,10 @@ export function useListTeamMembers<TData = Awaited<ReturnType<typeof listTeamMem
           TError,
           Awaited<ReturnType<typeof listTeamMembers>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListTeamMembers<TData = Awaited<ReturnType<typeof listTeamMembers>>, TError = unknown>(
+export function useListTeamMembers<TData = Awaited<ReturnType<typeof listTeamMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
     params?: ListTeamMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamMembers>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -15511,21 +18011,21 @@ export function useListTeamMembers<TData = Awaited<ReturnType<typeof listTeamMem
           TError,
           Awaited<ReturnType<typeof listTeamMembers>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListTeamMembers<TData = Awaited<ReturnType<typeof listTeamMembers>>, TError = unknown>(
+export function useListTeamMembers<TData = Awaited<ReturnType<typeof listTeamMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
-    params?: ListTeamMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListTeamMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamMembers>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List team members
  */
 
-export function useListTeamMembers<TData = Awaited<ReturnType<typeof listTeamMembers>>, TError = unknown>(
+export function useListTeamMembers<TData = Awaited<ReturnType<typeof listTeamMembers>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
-    params?: ListTeamMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListTeamMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamMembers>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -15555,23 +18055,38 @@ export const getAddTeamMemberUrl = (id: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/teams/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/teams/${encodeURIComponent(String(id))}/members`
+  return stringifiedParams.length > 0 ? `/api/teams/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/api/teams/${encodeURIComponent(String(id))}/members`
 }
 
 /**
  * @summary Add member to team
  */
 export const addTeamMember = async (id: string,
-    params: AddTeamMemberParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: AddTeamMemberParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getAddTeamMemberUrl(id,params),
+  const res = await fetch(getAddTeamMemberUrl(id,params),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -15579,16 +18094,16 @@ export const addTeamMember = async (id: string,
 
 export const getAddTeamMemberMutationKey = () => ['addTeamMember'] as const;
 
-export const getAddTeamMemberMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addTeamMember>>, TError,AddTeamMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getAddTeamMemberMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addTeamMember>>, TError,AddTeamMemberMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof addTeamMember>>, TError,AddTeamMemberMutationVariables, TContext> => {
 
 const mutationKey = getAddTeamMemberMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -15596,7 +18111,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof addTeamMember>>, AddTeamMemberMutationVariables> = (props) => {
           const {id,params} = props ?? {};
 
-          return  addTeamMember(id,params,requestOptions)
+          return  addTeamMember(id,params,fetchOptions)
         }
 
 
@@ -15608,14 +18123,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AddTeamMemberMutationResult = NonNullable<Awaited<ReturnType<typeof addTeamMember>>>
 
-    export type AddTeamMemberMutationError = unknown
+    export type AddTeamMemberMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type AddTeamMemberMutationVariables = {id: string;params: AddTeamMemberParams}
 
     /**
  * @summary Add member to team
  */
-export const useAddTeamMember = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addTeamMember>>, TError,AddTeamMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useAddTeamMember = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addTeamMember>>, TError,AddTeamMemberMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof addTeamMember>>,
         TError,
@@ -15638,23 +18153,38 @@ export const getUpdateTeamMemberRoleUrl = (id: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/teams/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/teams/${encodeURIComponent(String(id))}/members`
+  return stringifiedParams.length > 0 ? `/api/teams/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/api/teams/${encodeURIComponent(String(id))}/members`
 }
 
 /**
  * @summary Update member role in team
  */
 export const updateTeamMemberRole = async (id: string,
-    params: UpdateTeamMemberRoleParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: UpdateTeamMemberRoleParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getUpdateTeamMemberRoleUrl(id,params),
+  const res = await fetch(getUpdateTeamMemberRoleUrl(id,params),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -15662,16 +18192,16 @@ export const updateTeamMemberRole = async (id: string,
 
 export const getUpdateTeamMemberRoleMutationKey = () => ['updateTeamMemberRole'] as const;
 
-export const getUpdateTeamMemberRoleMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeamMemberRole>>, TError,UpdateTeamMemberRoleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getUpdateTeamMemberRoleMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeamMemberRole>>, TError,UpdateTeamMemberRoleMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateTeamMemberRole>>, TError,UpdateTeamMemberRoleMutationVariables, TContext> => {
 
 const mutationKey = getUpdateTeamMemberRoleMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -15679,7 +18209,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateTeamMemberRole>>, UpdateTeamMemberRoleMutationVariables> = (props) => {
           const {id,params} = props ?? {};
 
-          return  updateTeamMemberRole(id,params,requestOptions)
+          return  updateTeamMemberRole(id,params,fetchOptions)
         }
 
 
@@ -15691,14 +18221,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateTeamMemberRoleMutationResult = NonNullable<Awaited<ReturnType<typeof updateTeamMemberRole>>>
 
-    export type UpdateTeamMemberRoleMutationError = unknown
+    export type UpdateTeamMemberRoleMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type UpdateTeamMemberRoleMutationVariables = {id: string;params: UpdateTeamMemberRoleParams}
 
     /**
  * @summary Update member role in team
  */
-export const useUpdateTeamMemberRole = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeamMemberRole>>, TError,UpdateTeamMemberRoleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useUpdateTeamMemberRole = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeamMemberRole>>, TError,UpdateTeamMemberRoleMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateTeamMemberRole>>,
         TError,
@@ -15721,23 +18251,38 @@ export const getRemoveTeamMemberUrl = (id: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/teams/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/teams/${encodeURIComponent(String(id))}/members`
+  return stringifiedParams.length > 0 ? `/api/teams/${encodeURIComponent(String(id))}/members?${stringifiedParams}` : `/api/teams/${encodeURIComponent(String(id))}/members`
 }
 
 /**
  * @summary Remove member from team
  */
 export const removeTeamMember = async (id: string,
-    params: RemoveTeamMemberParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    params: RemoveTeamMemberParams, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getRemoveTeamMemberUrl(id,params),
+  const res = await fetch(getRemoveTeamMemberUrl(id,params),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -15745,16 +18290,16 @@ export const removeTeamMember = async (id: string,
 
 export const getRemoveTeamMemberMutationKey = () => ['removeTeamMember'] as const;
 
-export const getRemoveTeamMemberMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeTeamMember>>, TError,RemoveTeamMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getRemoveTeamMemberMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeTeamMember>>, TError,RemoveTeamMemberMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof removeTeamMember>>, TError,RemoveTeamMemberMutationVariables, TContext> => {
 
 const mutationKey = getRemoveTeamMemberMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -15762,7 +18307,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeTeamMember>>, RemoveTeamMemberMutationVariables> = (props) => {
           const {id,params} = props ?? {};
 
-          return  removeTeamMember(id,params,requestOptions)
+          return  removeTeamMember(id,params,fetchOptions)
         }
 
 
@@ -15774,14 +18319,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RemoveTeamMemberMutationResult = NonNullable<Awaited<ReturnType<typeof removeTeamMember>>>
 
-    export type RemoveTeamMemberMutationError = unknown
+    export type RemoveTeamMemberMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type RemoveTeamMemberMutationVariables = {id: string;params: RemoveTeamMemberParams}
 
     /**
  * @summary Remove member from team
  */
-export const useRemoveTeamMember = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeTeamMember>>, TError,RemoveTeamMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useRemoveTeamMember = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeTeamMember>>, TError,RemoveTeamMemberMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof removeTeamMember>>,
         TError,
@@ -15804,23 +18349,38 @@ export const getListTeamContestsUrl = (id: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/teams/${encodeURIComponent(String(id))}/contests?${stringifiedParams}` : `/teams/${encodeURIComponent(String(id))}/contests`
+  return stringifiedParams.length > 0 ? `/api/teams/${encodeURIComponent(String(id))}/contests?${stringifiedParams}` : `/api/teams/${encodeURIComponent(String(id))}/contests`
 }
 
 /**
  * @summary List contests accessible by team
  */
 export const listTeamContests = async (id: string,
-    params?: ListTeamContestsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListContestsResponseModel> => {
+    params?: ListTeamContestsParams, options?: RequestInit): Promise<ListContestsResponseModel> => {
 
-  return apiFetch<ListContestsResponseModel>(getListTeamContestsUrl(id,params),
+  const res = await fetch(getListTeamContestsUrl(id,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListContestsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -15829,22 +18389,22 @@ export const listTeamContests = async (id: string,
 export const getListTeamContestsQueryKey = (id: string,
     params?: ListTeamContestsParams,) => {
     return [
-    `/teams/${id}/contests`, ...(params ? [params] : [])
+    `/api/teams/${id}/contests`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListTeamContestsQueryOptions = <TData = Awaited<ReturnType<typeof listTeamContests>>, TError = unknown>(id: string,
-    params?: ListTeamContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListTeamContestsQueryOptions = <TData = Awaited<ReturnType<typeof listTeamContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(id: string,
+    params?: ListTeamContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamContests>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListTeamContestsQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamContests>>> = ({ signal }) => listTeamContests(id,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamContests>>> = ({ signal }) => listTeamContests(id,params, { signal, ...fetchOptions });
 
 
 
@@ -15854,10 +18414,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListTeamContestsQueryResult = NonNullable<Awaited<ReturnType<typeof listTeamContests>>>
-export type ListTeamContestsQueryError = unknown
+export type ListTeamContestsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListTeamContests<TData = Awaited<ReturnType<typeof listTeamContests>>, TError = unknown>(
+export function useListTeamContests<TData = Awaited<ReturnType<typeof listTeamContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
     params: undefined |  ListTeamContestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamContests>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -15865,10 +18425,10 @@ export function useListTeamContests<TData = Awaited<ReturnType<typeof listTeamCo
           TError,
           Awaited<ReturnType<typeof listTeamContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListTeamContests<TData = Awaited<ReturnType<typeof listTeamContests>>, TError = unknown>(
+export function useListTeamContests<TData = Awaited<ReturnType<typeof listTeamContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
     params?: ListTeamContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamContests>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -15876,21 +18436,21 @@ export function useListTeamContests<TData = Awaited<ReturnType<typeof listTeamCo
           TError,
           Awaited<ReturnType<typeof listTeamContests>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListTeamContests<TData = Awaited<ReturnType<typeof listTeamContests>>, TError = unknown>(
+export function useListTeamContests<TData = Awaited<ReturnType<typeof listTeamContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
-    params?: ListTeamContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListTeamContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List contests accessible by team
  */
 
-export function useListTeamContests<TData = Awaited<ReturnType<typeof listTeamContests>>, TError = unknown>(
+export function useListTeamContests<TData = Awaited<ReturnType<typeof listTeamContests>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
-    params?: ListTeamContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamContests>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListTeamContestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamContests>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -15920,23 +18480,38 @@ export const getListTeamProblemsUrl = (id: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/teams/${encodeURIComponent(String(id))}/problems?${stringifiedParams}` : `/teams/${encodeURIComponent(String(id))}/problems`
+  return stringifiedParams.length > 0 ? `/api/teams/${encodeURIComponent(String(id))}/problems?${stringifiedParams}` : `/api/teams/${encodeURIComponent(String(id))}/problems`
 }
 
 /**
  * @summary List problems accessible by team
  */
 export const listTeamProblems = async (id: string,
-    params?: ListTeamProblemsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListProblemsResponseModel> => {
+    params?: ListTeamProblemsParams, options?: RequestInit): Promise<ListProblemsResponseModel> => {
 
-  return apiFetch<ListProblemsResponseModel>(getListTeamProblemsUrl(id,params),
+  const res = await fetch(getListTeamProblemsUrl(id,params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListProblemsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -15945,22 +18520,22 @@ export const listTeamProblems = async (id: string,
 export const getListTeamProblemsQueryKey = (id: string,
     params?: ListTeamProblemsParams,) => {
     return [
-    `/teams/${id}/problems`, ...(params ? [params] : [])
+    `/api/teams/${id}/problems`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListTeamProblemsQueryOptions = <TData = Awaited<ReturnType<typeof listTeamProblems>>, TError = unknown>(id: string,
-    params?: ListTeamProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamProblems>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListTeamProblemsQueryOptions = <TData = Awaited<ReturnType<typeof listTeamProblems>>, TError = globalThis.Error & { info?: unknown; status?: number }>(id: string,
+    params?: ListTeamProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamProblems>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListTeamProblemsQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamProblems>>> = ({ signal }) => listTeamProblems(id,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamProblems>>> = ({ signal }) => listTeamProblems(id,params, { signal, ...fetchOptions });
 
 
 
@@ -15970,10 +18545,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListTeamProblemsQueryResult = NonNullable<Awaited<ReturnType<typeof listTeamProblems>>>
-export type ListTeamProblemsQueryError = unknown
+export type ListTeamProblemsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListTeamProblems<TData = Awaited<ReturnType<typeof listTeamProblems>>, TError = unknown>(
+export function useListTeamProblems<TData = Awaited<ReturnType<typeof listTeamProblems>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
     params: undefined |  ListTeamProblemsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamProblems>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
@@ -15981,10 +18556,10 @@ export function useListTeamProblems<TData = Awaited<ReturnType<typeof listTeamPr
           TError,
           Awaited<ReturnType<typeof listTeamProblems>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListTeamProblems<TData = Awaited<ReturnType<typeof listTeamProblems>>, TError = unknown>(
+export function useListTeamProblems<TData = Awaited<ReturnType<typeof listTeamProblems>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
     params?: ListTeamProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamProblems>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
@@ -15992,21 +18567,21 @@ export function useListTeamProblems<TData = Awaited<ReturnType<typeof listTeamPr
           TError,
           Awaited<ReturnType<typeof listTeamProblems>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListTeamProblems<TData = Awaited<ReturnType<typeof listTeamProblems>>, TError = unknown>(
+export function useListTeamProblems<TData = Awaited<ReturnType<typeof listTeamProblems>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
-    params?: ListTeamProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamProblems>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListTeamProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamProblems>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List problems accessible by team
  */
 
-export function useListTeamProblems<TData = Awaited<ReturnType<typeof listTeamProblems>>, TError = unknown>(
+export function useListTeamProblems<TData = Awaited<ReturnType<typeof listTeamProblems>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  id: string,
-    params?: ListTeamProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamProblems>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+    params?: ListTeamProblemsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTeamProblems>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -16035,22 +18610,37 @@ export const getListPostsUrl = (params?: ListPostsParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/posts?${stringifiedParams}` : `/posts`
+  return stringifiedParams.length > 0 ? `/api/posts?${stringifiedParams}` : `/api/posts`
 }
 
 /**
  * @summary Get a list of posts
  */
-export const listPosts = async (params?: ListPostsParams, options?: Parameters<typeof apiFetch>[1]): Promise<ListPostsResponseModel> => {
+export const listPosts = async (params?: ListPostsParams, options?: RequestInit): Promise<ListPostsResponseModel> => {
 
-  return apiFetch<ListPostsResponseModel>(getListPostsUrl(params),
+  const res = await fetch(getListPostsUrl(params),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: ListPostsResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -16058,21 +18648,21 @@ export const listPosts = async (params?: ListPostsParams, options?: Parameters<t
 
 export const getListPostsQueryKey = (params?: ListPostsParams,) => {
     return [
-    `/posts`, ...(params ? [params] : [])
+    `/api/posts`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListPostsQueryOptions = <TData = Awaited<ReturnType<typeof listPosts>>, TError = unknown>(params?: ListPostsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPosts>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListPostsQueryOptions = <TData = Awaited<ReturnType<typeof listPosts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(params?: ListPostsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPosts>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListPostsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPosts>>> = ({ signal }) => listPosts(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPosts>>> = ({ signal }) => listPosts(params, { signal, ...fetchOptions });
 
 
 
@@ -16082,39 +18672,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListPostsQueryResult = NonNullable<Awaited<ReturnType<typeof listPosts>>>
-export type ListPostsQueryError = unknown
+export type ListPostsQueryError = globalThis.Error & { info?: unknown; status?: number }
 
 
-export function useListPosts<TData = Awaited<ReturnType<typeof listPosts>>, TError = unknown>(
+export function useListPosts<TData = Awaited<ReturnType<typeof listPosts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params: undefined |  ListPostsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPosts>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listPosts>>,
           TError,
           Awaited<ReturnType<typeof listPosts>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListPosts<TData = Awaited<ReturnType<typeof listPosts>>, TError = unknown>(
+export function useListPosts<TData = Awaited<ReturnType<typeof listPosts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
  params?: ListPostsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPosts>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listPosts>>,
           TError,
           Awaited<ReturnType<typeof listPosts>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListPosts<TData = Awaited<ReturnType<typeof listPosts>>, TError = unknown>(
- params?: ListPostsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPosts>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListPosts<TData = Awaited<ReturnType<typeof listPosts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListPostsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPosts>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get a list of posts
  */
 
-export function useListPosts<TData = Awaited<ReturnType<typeof listPosts>>, TError = unknown>(
- params?: ListPostsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPosts>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useListPosts<TData = Awaited<ReturnType<typeof listPosts>>, TError = globalThis.Error & { info?: unknown; status?: number }>(
+ params?: ListPostsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPosts>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -16136,13 +18726,13 @@ export const getCreatePostUrl = () => {
 
 
 
-  return `/posts`
+  return `/api/posts`
 }
 
 /**
  * @summary Create a new post
  */
-export const createPost = async (createPostBody: CreatePostBody, options?: Parameters<typeof apiFetch>[1]): Promise<CreatedPost> => {
+export const createPost = async (createPostBody: CreatePostBody, options?: RequestInit): Promise<CreatedPost> => {
     const formData = new FormData();
 if(createPostBody.title !== undefined) {
  formData.append(`title`, createPostBody.title);
@@ -16157,14 +18747,29 @@ if(createPostBody.preview_image !== undefined) {
  formData.append(`preview_image`, createPostBody.preview_image);
  }
 
-  return apiFetch<CreatedPost>(getCreatePostUrl(),
+  const res = await fetch(getCreatePostUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
     ,
     body: formData
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: CreatedPost, status?: number} = new globalThis.Error();
+    const data : CreatedPost = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: CreatedPost = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -16172,16 +18777,16 @@ if(createPostBody.preview_image !== undefined) {
 
 export const getCreatePostMutationKey = () => ['createPost'] as const;
 
-export const getCreatePostMutationOptions = <TError = Error,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,CreatePostMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getCreatePostMutationOptions = <TError = globalThis.Error & { info?: Error; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,CreatePostMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,CreatePostMutationVariables, TContext> => {
 
 const mutationKey = getCreatePostMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -16189,7 +18794,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPost>>, CreatePostMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  createPost(data,requestOptions)
+          return  createPost(data,fetchOptions)
         }
 
 
@@ -16201,14 +18806,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreatePostMutationResult = NonNullable<Awaited<ReturnType<typeof createPost>>>
     export type CreatePostMutationBody = CreatePostBody
-    export type CreatePostMutationError = Error
+    export type CreatePostMutationError = globalThis.Error & { info?: Error; status?: number }
     export type CreatePostMutationVariables = {data: CreatePostBody}
 
     /**
  * @summary Create a new post
  */
-export const useCreatePost = <TError = Error,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,CreatePostMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useCreatePost = <TError = globalThis.Error & { info?: Error; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,CreatePostMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createPost>>,
         TError,
@@ -16223,22 +18828,37 @@ export const getGetPostByIdUrl = (id: string,) => {
 
 
 
-  return `/posts/${encodeURIComponent(String(id))}`
+  return `/api/posts/${encodeURIComponent(String(id))}`
 }
 
 /**
  * @summary Get a single post by ID
  */
-export const getPostById = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<PostModel> => {
+export const getPostById = async (id: string, options?: RequestInit): Promise<PostModel> => {
 
-  return apiFetch<PostModel>(getGetPostByIdUrl(id),
+  const res = await fetch(getGetPostByIdUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: PostModel, status?: number} = new globalThis.Error();
+    const data : PostModel = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: PostModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -16246,21 +18866,21 @@ export const getPostById = async (id: string, options?: Parameters<typeof apiFet
 
 export const getGetPostByIdQueryKey = (id: string,) => {
     return [
-    `/posts/${id}`
+    `/api/posts/${id}`
     ] as const;
     }
 
 
-export const getGetPostByIdQueryOptions = <TData = Awaited<ReturnType<typeof getPostById>>, TError = Error>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostById>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetPostByIdQueryOptions = <TData = Awaited<ReturnType<typeof getPostById>>, TError = globalThis.Error & { info?: Error; status?: number }>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostById>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetPostByIdQueryKey(id);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPostById>>> = ({ signal }) => getPostById(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPostById>>> = ({ signal }) => getPostById(id, { signal, ...fetchOptions });
 
 
 
@@ -16270,39 +18890,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetPostByIdQueryResult = NonNullable<Awaited<ReturnType<typeof getPostById>>>
-export type GetPostByIdQueryError = Error
+export type GetPostByIdQueryError = globalThis.Error & { info?: Error; status?: number }
 
 
-export function useGetPostById<TData = Awaited<ReturnType<typeof getPostById>>, TError = Error>(
+export function useGetPostById<TData = Awaited<ReturnType<typeof getPostById>>, TError = globalThis.Error & { info?: Error; status?: number }>(
  id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostById>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getPostById>>,
           TError,
           Awaited<ReturnType<typeof getPostById>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPostById<TData = Awaited<ReturnType<typeof getPostById>>, TError = Error>(
+export function useGetPostById<TData = Awaited<ReturnType<typeof getPostById>>, TError = globalThis.Error & { info?: Error; status?: number }>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostById>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getPostById>>,
           TError,
           Awaited<ReturnType<typeof getPostById>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPostById<TData = Awaited<ReturnType<typeof getPostById>>, TError = Error>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostById>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetPostById<TData = Awaited<ReturnType<typeof getPostById>>, TError = globalThis.Error & { info?: Error; status?: number }>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostById>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get a single post by ID
  */
 
-export function useGetPostById<TData = Awaited<ReturnType<typeof getPostById>>, TError = Error>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostById>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetPostById<TData = Awaited<ReturnType<typeof getPostById>>, TError = globalThis.Error & { info?: Error; status?: number }>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostById>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -16324,14 +18944,14 @@ export const getPatchPostByIdUrl = (id: string,) => {
 
 
 
-  return `/posts/${encodeURIComponent(String(id))}`
+  return `/api/posts/${encodeURIComponent(String(id))}`
 }
 
 /**
  * @summary Partially update a post by ID
  */
 export const patchPostById = async (id: string,
-    patchPostByIdBody?: PatchPostByIdBody, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+    patchPostByIdBody?: PatchPostByIdBody, options?: RequestInit): Promise<void> => {
     const formData = new FormData();
 if(patchPostByIdBody?.title !== undefined) {
  formData.append(`title`, patchPostByIdBody.title);
@@ -16346,14 +18966,29 @@ if(patchPostByIdBody?.preview_image !== undefined) {
  formData.append(`preview_image`, patchPostByIdBody.preview_image);
  }
 
-  return apiFetch<void>(getPatchPostByIdUrl(id),
+  const res = await fetch(getPatchPostByIdUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'PATCH'
     ,
     body: formData
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: void, status?: number} = new globalThis.Error();
+    const data : void = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -16361,16 +18996,16 @@ if(patchPostByIdBody?.preview_image !== undefined) {
 
 export const getPatchPostByIdMutationKey = () => ['patchPostById'] as const;
 
-export const getPatchPostByIdMutationOptions = <TError = Error,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchPostById>>, TError,PatchPostByIdMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getPatchPostByIdMutationOptions = <TError = globalThis.Error & { info?: Error; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchPostById>>, TError,PatchPostByIdMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof patchPostById>>, TError,PatchPostByIdMutationVariables, TContext> => {
 
 const mutationKey = getPatchPostByIdMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -16378,7 +19013,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchPostById>>, PatchPostByIdMutationVariables> = (props) => {
           const {id,data} = props ?? {};
 
-          return  patchPostById(id,data,requestOptions)
+          return  patchPostById(id,data,fetchOptions)
         }
 
 
@@ -16390,14 +19025,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type PatchPostByIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchPostById>>>
     export type PatchPostByIdMutationBody = PatchPostByIdBody | undefined
-    export type PatchPostByIdMutationError = Error
+    export type PatchPostByIdMutationError = globalThis.Error & { info?: Error; status?: number }
     export type PatchPostByIdMutationVariables = {id: string;data?: PatchPostByIdBody}
 
     /**
  * @summary Partially update a post by ID
  */
-export const usePatchPostById = <TError = Error,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchPostById>>, TError,PatchPostByIdMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const usePatchPostById = <TError = globalThis.Error & { info?: Error; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchPostById>>, TError,PatchPostByIdMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof patchPostById>>,
         TError,
@@ -16412,22 +19047,37 @@ export const getDeletePostByIdUrl = (id: string,) => {
 
 
 
-  return `/posts/${encodeURIComponent(String(id))}`
+  return `/api/posts/${encodeURIComponent(String(id))}`
 }
 
 /**
  * @summary Delete a post by ID
  */
-export const deletePostById = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+export const deletePostById = async (id: string, options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getDeletePostByIdUrl(id),
+  const res = await fetch(getDeletePostByIdUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'DELETE'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: void, status?: number} = new globalThis.Error();
+    const data : void = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -16435,16 +19085,16 @@ export const deletePostById = async (id: string, options?: Parameters<typeof api
 
 export const getDeletePostByIdMutationKey = () => ['deletePostById'] as const;
 
-export const getDeletePostByIdMutationOptions = <TError = Error,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePostById>>, TError,DeletePostByIdMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getDeletePostByIdMutationOptions = <TError = globalThis.Error & { info?: Error; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePostById>>, TError,DeletePostByIdMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof deletePostById>>, TError,DeletePostByIdMutationVariables, TContext> => {
 
 const mutationKey = getDeletePostByIdMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -16452,7 +19102,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePostById>>, DeletePostByIdMutationVariables> = (props) => {
           const {id} = props ?? {};
 
-          return  deletePostById(id,requestOptions)
+          return  deletePostById(id,fetchOptions)
         }
 
 
@@ -16464,14 +19114,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeletePostByIdMutationResult = NonNullable<Awaited<ReturnType<typeof deletePostById>>>
 
-    export type DeletePostByIdMutationError = Error
+    export type DeletePostByIdMutationError = globalThis.Error & { info?: Error; status?: number }
     export type DeletePostByIdMutationVariables = {id: string}
 
     /**
  * @summary Delete a post by ID
  */
-export const useDeletePostById = <TError = Error,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePostById>>, TError,DeletePostByIdMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const useDeletePostById = <TError = globalThis.Error & { info?: Error; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePostById>>, TError,DeletePostByIdMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deletePostById>>,
         TError,
@@ -16486,22 +19136,37 @@ export const getGetPostImageUrl = (id: string,) => {
 
 
 
-  return `/posts/${encodeURIComponent(String(id))}/image`
+  return `/api/posts/${encodeURIComponent(String(id))}/image`
 }
 
 /**
  * @summary Get image of the post by ID
  */
-export const getPostImage = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<Blob> => {
+export const getPostImage = async (id: string, options?: RequestInit): Promise<Blob> => {
 
-  return apiFetch<Blob>(getGetPostImageUrl(id),
+  const res = await fetch(getGetPostImageUrl(id),
   {
+      credentials: 'include',
     ...options,
     method: 'GET'
 
 
   }
-);}
+)
+
+  if (!res.ok) {
+    const errorBody = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const err: globalThis.Error & {info?: Blob, status?: number} = new globalThis.Error();
+    const data : Blob = errorBody ? JSON.parse(errorBody) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const body = [204, 205, 304].includes(res.status) ? null : await res.blob();
+  const data: Blob = body as Blob
+  return data
+}
 
 
 
@@ -16509,21 +19174,21 @@ export const getPostImage = async (id: string, options?: Parameters<typeof apiFe
 
 export const getGetPostImageQueryKey = (id: string,) => {
     return [
-    `/posts/${id}/image`
+    `/api/posts/${id}/image`
     ] as const;
     }
 
 
-export const getGetPostImageQueryOptions = <TData = Awaited<ReturnType<typeof getPostImage>>, TError = void | Error>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostImage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetPostImageQueryOptions = <TData = Awaited<ReturnType<typeof getPostImage>>, TError = globalThis.Error & { info?: void | Error; status?: number }>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostImage>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetPostImageQueryKey(id);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPostImage>>> = ({ signal }) => getPostImage(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPostImage>>> = ({ signal }) => getPostImage(id, { signal, ...fetchOptions });
 
 
 
@@ -16533,39 +19198,39 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetPostImageQueryResult = NonNullable<Awaited<ReturnType<typeof getPostImage>>>
-export type GetPostImageQueryError = void | Error
+export type GetPostImageQueryError = globalThis.Error & { info?: void | Error; status?: number }
 
 
-export function useGetPostImage<TData = Awaited<ReturnType<typeof getPostImage>>, TError = void | Error>(
+export function useGetPostImage<TData = Awaited<ReturnType<typeof getPostImage>>, TError = globalThis.Error & { info?: void | Error; status?: number }>(
  id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostImage>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getPostImage>>,
           TError,
           Awaited<ReturnType<typeof getPostImage>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPostImage<TData = Awaited<ReturnType<typeof getPostImage>>, TError = void | Error>(
+export function useGetPostImage<TData = Awaited<ReturnType<typeof getPostImage>>, TError = globalThis.Error & { info?: void | Error; status?: number }>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostImage>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getPostImage>>,
           TError,
           Awaited<ReturnType<typeof getPostImage>>
         > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
+      >, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPostImage<TData = Awaited<ReturnType<typeof getPostImage>>, TError = void | Error>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostImage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetPostImage<TData = Awaited<ReturnType<typeof getPostImage>>, TError = globalThis.Error & { info?: void | Error; status?: number }>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostImage>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get image of the post by ID
  */
 
-export function useGetPostImage<TData = Awaited<ReturnType<typeof getPostImage>>, TError = void | Error>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostImage>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useGetPostImage<TData = Awaited<ReturnType<typeof getPostImage>>, TError = globalThis.Error & { info?: void | Error; status?: number }>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostImage>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -16587,10 +19252,10 @@ export const getRegisterUrl = () => {
 
 
 
-  return `/auth/register`
+  return `/api/auth/register`
 }
 
-export const register = async (registerRequestModel: RegisterRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<AuthResponseModel> => {
+export const register = async (registerRequestModel: RegisterRequestModel, options?: RequestInit): Promise<AuthResponseModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -16606,14 +19271,29 @@ export const register = async (registerRequestModel: RegisterRequestModel, optio
     }
     return headers;
   };
-return apiFetch<AuthResponseModel>(getRegisterUrl(),
+const res = await fetch(getRegisterUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(registerRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: AuthResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -16621,16 +19301,16 @@ return apiFetch<AuthResponseModel>(getRegisterUrl(),
 
 export const getRegisterMutationKey = () => ['register'] as const;
 
-export const getRegisterMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,RegisterMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getRegisterMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,RegisterMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,RegisterMutationVariables, TContext> => {
 
 const mutationKey = getRegisterMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -16638,7 +19318,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof register>>, RegisterMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  register(data,requestOptions)
+          return  register(data,fetchOptions)
         }
 
 
@@ -16650,11 +19330,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type RegisterMutationResult = NonNullable<Awaited<ReturnType<typeof register>>>
     export type RegisterMutationBody = RegisterRequestModel
-    export type RegisterMutationError = unknown
+    export type RegisterMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type RegisterMutationVariables = {data: RegisterRequestModel}
 
-    export const useRegister = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,RegisterMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useRegister = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register>>, TError,RegisterMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof register>>,
         TError,
@@ -16669,10 +19349,10 @@ export const getLoginUrl = () => {
 
 
 
-  return `/auth/login`
+  return `/api/auth/login`
 }
 
-export const login = async (loginRequestModel: LoginRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<AuthResponseModel> => {
+export const login = async (loginRequestModel: LoginRequestModel, options?: RequestInit): Promise<AuthResponseModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -16688,14 +19368,29 @@ export const login = async (loginRequestModel: LoginRequestModel, options?: Para
     }
     return headers;
   };
-return apiFetch<AuthResponseModel>(getLoginUrl(),
+const res = await fetch(getLoginUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(loginRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: AuthResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -16703,16 +19398,16 @@ return apiFetch<AuthResponseModel>(getLoginUrl(),
 
 export const getLoginMutationKey = () => ['login'] as const;
 
-export const getLoginMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,LoginMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getLoginMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,LoginMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,LoginMutationVariables, TContext> => {
 
 const mutationKey = getLoginMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -16720,7 +19415,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof login>>, LoginMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  login(data,requestOptions)
+          return  login(data,fetchOptions)
         }
 
 
@@ -16732,11 +19427,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type LoginMutationResult = NonNullable<Awaited<ReturnType<typeof login>>>
     export type LoginMutationBody = LoginRequestModel
-    export type LoginMutationError = unknown
+    export type LoginMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type LoginMutationVariables = {data: LoginRequestModel}
 
-    export const useLogin = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,LoginMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useLogin = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,LoginMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof login>>,
         TError,
@@ -16751,19 +19446,34 @@ export const getLogoutUrl = () => {
 
 
 
-  return `/auth/logout`
+  return `/api/auth/logout`
 }
 
-export const logout = async ( options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+export const logout = async ( options?: RequestInit): Promise<void> => {
 
-  return apiFetch<void>(getLogoutUrl(),
+  const res = await fetch(getLogoutUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST'
 
 
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
 
 
 
@@ -16771,16 +19481,16 @@ export const logout = async ( options?: Parameters<typeof apiFetch>[1]): Promise
 
 export const getLogoutMutationKey = () => ['logout'] as const;
 
-export const getLogoutMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getLogoutMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext> => {
 
 const mutationKey = getLogoutMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -16788,7 +19498,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof logout>>, void> = () => {
 
 
-          return  logout(requestOptions)
+          return  logout(fetchOptions)
         }
 
 
@@ -16800,11 +19510,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type LogoutMutationResult = NonNullable<Awaited<ReturnType<typeof logout>>>
 
-    export type LogoutMutationError = unknown
+    export type LogoutMutationError = globalThis.Error & { info?: unknown; status?: number }
 
 
-    export const useLogout = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useLogout = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof logout>>,
         TError,
@@ -16819,10 +19529,10 @@ export const getVerifyEmailUrl = () => {
 
 
 
-  return `/auth/verify-email`
+  return `/api/auth/verify-email`
 }
 
-export const verifyEmail = async (verifyEmailRequestModel: VerifyEmailRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<AuthResponseModel> => {
+export const verifyEmail = async (verifyEmailRequestModel: VerifyEmailRequestModel, options?: RequestInit): Promise<AuthResponseModel> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -16838,14 +19548,29 @@ export const verifyEmail = async (verifyEmailRequestModel: VerifyEmailRequestMod
     }
     return headers;
   };
-return apiFetch<AuthResponseModel>(getVerifyEmailUrl(),
+const res = await fetch(getVerifyEmailUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(verifyEmailRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: any, status?: number} = new globalThis.Error();
+    const data  = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: AuthResponseModel = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -16853,16 +19578,16 @@ return apiFetch<AuthResponseModel>(getVerifyEmailUrl(),
 
 export const getVerifyEmailMutationKey = () => ['verifyEmail'] as const;
 
-export const getVerifyEmailMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyEmail>>, TError,VerifyEmailMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getVerifyEmailMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyEmail>>, TError,VerifyEmailMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof verifyEmail>>, TError,VerifyEmailMutationVariables, TContext> => {
 
 const mutationKey = getVerifyEmailMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -16870,7 +19595,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyEmail>>, VerifyEmailMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  verifyEmail(data,requestOptions)
+          return  verifyEmail(data,fetchOptions)
         }
 
 
@@ -16882,11 +19607,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type VerifyEmailMutationResult = NonNullable<Awaited<ReturnType<typeof verifyEmail>>>
     export type VerifyEmailMutationBody = VerifyEmailRequestModel
-    export type VerifyEmailMutationError = unknown
+    export type VerifyEmailMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type VerifyEmailMutationVariables = {data: VerifyEmailRequestModel}
 
-    export const useVerifyEmail = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyEmail>>, TError,VerifyEmailMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useVerifyEmail = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyEmail>>, TError,VerifyEmailMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof verifyEmail>>,
         TError,
@@ -16901,10 +19626,10 @@ export const getResendVerificationUrl = () => {
 
 
 
-  return `/auth/resend-verification`
+  return `/api/auth/resend-verification`
 }
 
-export const resendVerification = async (resendVerificationRequestModel: ResendVerificationRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+export const resendVerification = async (resendVerificationRequestModel: ResendVerificationRequestModel, options?: RequestInit): Promise<unknown> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -16920,14 +19645,29 @@ export const resendVerification = async (resendVerificationRequestModel: ResendV
     }
     return headers;
   };
-return apiFetch<unknown>(getResendVerificationUrl(),
+const res = await fetch(getResendVerificationUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(resendVerificationRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -16935,16 +19675,16 @@ return apiFetch<unknown>(getResendVerificationUrl(),
 
 export const getResendVerificationMutationKey = () => ['resendVerification'] as const;
 
-export const getResendVerificationMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendVerification>>, TError,ResendVerificationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getResendVerificationMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendVerification>>, TError,ResendVerificationMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof resendVerification>>, TError,ResendVerificationMutationVariables, TContext> => {
 
 const mutationKey = getResendVerificationMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -16952,7 +19692,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof resendVerification>>, ResendVerificationMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  resendVerification(data,requestOptions)
+          return  resendVerification(data,fetchOptions)
         }
 
 
@@ -16964,11 +19704,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ResendVerificationMutationResult = NonNullable<Awaited<ReturnType<typeof resendVerification>>>
     export type ResendVerificationMutationBody = ResendVerificationRequestModel
-    export type ResendVerificationMutationError = unknown
+    export type ResendVerificationMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type ResendVerificationMutationVariables = {data: ResendVerificationRequestModel}
 
-    export const useResendVerification = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendVerification>>, TError,ResendVerificationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useResendVerification = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendVerification>>, TError,ResendVerificationMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof resendVerification>>,
         TError,
@@ -16983,10 +19723,10 @@ export const getForgotPasswordUrl = () => {
 
 
 
-  return `/auth/forgot-password`
+  return `/api/auth/forgot-password`
 }
 
-export const forgotPassword = async (forgotPasswordRequestModel: ForgotPasswordRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+export const forgotPassword = async (forgotPasswordRequestModel: ForgotPasswordRequestModel, options?: RequestInit): Promise<unknown> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -17002,14 +19742,29 @@ export const forgotPassword = async (forgotPasswordRequestModel: ForgotPasswordR
     }
     return headers;
   };
-return apiFetch<unknown>(getForgotPasswordUrl(),
+const res = await fetch(getForgotPasswordUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(forgotPasswordRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -17017,16 +19772,16 @@ return apiFetch<unknown>(getForgotPasswordUrl(),
 
 export const getForgotPasswordMutationKey = () => ['forgotPassword'] as const;
 
-export const getForgotPasswordMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof forgotPassword>>, TError,ForgotPasswordMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getForgotPasswordMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof forgotPassword>>, TError,ForgotPasswordMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof forgotPassword>>, TError,ForgotPasswordMutationVariables, TContext> => {
 
 const mutationKey = getForgotPasswordMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -17034,7 +19789,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof forgotPassword>>, ForgotPasswordMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  forgotPassword(data,requestOptions)
+          return  forgotPassword(data,fetchOptions)
         }
 
 
@@ -17046,11 +19801,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ForgotPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof forgotPassword>>>
     export type ForgotPasswordMutationBody = ForgotPasswordRequestModel
-    export type ForgotPasswordMutationError = unknown
+    export type ForgotPasswordMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type ForgotPasswordMutationVariables = {data: ForgotPasswordRequestModel}
 
-    export const useForgotPassword = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof forgotPassword>>, TError,ForgotPasswordMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useForgotPassword = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof forgotPassword>>, TError,ForgotPasswordMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof forgotPassword>>,
         TError,
@@ -17065,10 +19820,10 @@ export const getResetPasswordUrl = () => {
 
 
 
-  return `/auth/reset-password`
+  return `/api/auth/reset-password`
 }
 
-export const resetPassword = async (resetPasswordRequestModel: ResetPasswordRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+export const resetPassword = async (resetPasswordRequestModel: ResetPasswordRequestModel, options?: RequestInit): Promise<unknown> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -17084,14 +19839,29 @@ export const resetPassword = async (resetPasswordRequestModel: ResetPasswordRequ
     }
     return headers;
   };
-return apiFetch<unknown>(getResetPasswordUrl(),
+const res = await fetch(getResetPasswordUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(resetPasswordRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -17099,16 +19869,16 @@ return apiFetch<unknown>(getResetPasswordUrl(),
 
 export const getResetPasswordMutationKey = () => ['resetPassword'] as const;
 
-export const getResetPasswordMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPassword>>, TError,ResetPasswordMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getResetPasswordMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPassword>>, TError,ResetPasswordMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof resetPassword>>, TError,ResetPasswordMutationVariables, TContext> => {
 
 const mutationKey = getResetPasswordMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -17116,7 +19886,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetPassword>>, ResetPasswordMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  resetPassword(data,requestOptions)
+          return  resetPassword(data,fetchOptions)
         }
 
 
@@ -17128,11 +19898,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ResetPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof resetPassword>>>
     export type ResetPasswordMutationBody = ResetPasswordRequestModel
-    export type ResetPasswordMutationError = unknown
+    export type ResetPasswordMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type ResetPasswordMutationVariables = {data: ResetPasswordRequestModel}
 
-    export const useResetPassword = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPassword>>, TError,ResetPasswordMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useResetPassword = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPassword>>, TError,ResetPasswordMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof resetPassword>>,
         TError,
@@ -17147,10 +19917,10 @@ export const getConfirmEmailChangeUrl = () => {
 
 
 
-  return `/auth/confirm-email-change`
+  return `/api/auth/confirm-email-change`
 }
 
-export const confirmEmailChange = async (confirmEmailChangeRequestModel: ConfirmEmailChangeRequestModel, options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+export const confirmEmailChange = async (confirmEmailChangeRequestModel: ConfirmEmailChangeRequestModel, options?: RequestInit): Promise<unknown> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -17166,14 +19936,29 @@ export const confirmEmailChange = async (confirmEmailChangeRequestModel: Confirm
     }
     return headers;
   };
-return apiFetch<unknown>(getConfirmEmailChangeUrl(),
+const res = await fetch(getConfirmEmailChangeUrl(),
   {
+      credentials: 'include',
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(confirmEmailChangeRequestModel)
   }
-);}
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: unknown, status?: number} = new globalThis.Error();
+    const data : unknown = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: unknown = body ? JSON.parse(body) : {}
+  return data
+}
 
 
 
@@ -17181,16 +19966,16 @@ return apiFetch<unknown>(getConfirmEmailChangeUrl(),
 
 export const getConfirmEmailChangeMutationKey = () => ['confirmEmailChange'] as const;
 
-export const getConfirmEmailChangeMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmEmailChange>>, TError,ConfirmEmailChangeMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+export const getConfirmEmailChangeMutationOptions = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmEmailChange>>, TError,ConfirmEmailChangeMutationVariables, TContext>, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof confirmEmailChange>>, TError,ConfirmEmailChangeMutationVariables, TContext> => {
 
 const mutationKey = getConfirmEmailChangeMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+      : {mutation: { mutationKey, }, fetch: undefined};
 
 
 
@@ -17198,7 +19983,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmEmailChange>>, ConfirmEmailChangeMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  confirmEmailChange(data,requestOptions)
+          return  confirmEmailChange(data,fetchOptions)
         }
 
 
@@ -17210,11 +19995,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ConfirmEmailChangeMutationResult = NonNullable<Awaited<ReturnType<typeof confirmEmailChange>>>
     export type ConfirmEmailChangeMutationBody = ConfirmEmailChangeRequestModel
-    export type ConfirmEmailChangeMutationError = unknown
+    export type ConfirmEmailChangeMutationError = globalThis.Error & { info?: unknown; status?: number }
     export type ConfirmEmailChangeMutationVariables = {data: ConfirmEmailChangeRequestModel}
 
-    export const useConfirmEmailChange = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmEmailChange>>, TError,ConfirmEmailChangeMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+    export const useConfirmEmailChange = <TError = globalThis.Error & { info?: unknown; status?: number },
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmEmailChange>>, TError,ConfirmEmailChangeMutationVariables, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof confirmEmailChange>>,
         TError,

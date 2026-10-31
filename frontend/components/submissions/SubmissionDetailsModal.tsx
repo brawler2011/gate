@@ -1,11 +1,9 @@
-"use client";
-
 import {Button, Center, Group, Loader, Modal, Stack, Text, Tooltip} from "@mantine/core";
 import {IconExternalLink} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
 import React from "react";
+import {Link} from "react-router-dom";
 
-import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
 
 import {SubmissionDetailsContent} from "./SubmissionDetailsContent";
@@ -54,7 +52,7 @@ export const SubmissionDetailsModal = ({
             <Tooltip label="Открыть на отдельной странице">
               <Button
                 component={Link}
-                href={`/submissions/${submissionId}`}
+                to={`/submissions/${submissionId}`}
                 target="_blank"
                 size="xs"
                 variant="subtle"

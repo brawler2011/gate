@@ -1,9 +1,7 @@
-"use client";
-
 import {Avatar, Card, Group, Image, Stack, Text, Title} from "@mantine/core";
+import {Link} from "react-router-dom";
 
 import NextImage from "@/components/shared/Image";
-import Link from "@/components/shared/RouterLink";
 import {formatDate} from "@/lib/lib";
 
 import classes from "./BlogPost.module.css";
@@ -33,7 +31,7 @@ export const BlogPost = ({
 
   return (
     <Link
-      href={`/blog/${id}`}
+      to={`/blog/${id}`}
       style={{textDecoration: "none", color: "inherit", display: "block"}}
     >
       <Card shadow="sm" padding={0} radius="lg" className={classes.card}>

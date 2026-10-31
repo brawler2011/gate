@@ -1,6 +1,5 @@
 import {Container, Title, Text, Button, Stack, Paper} from "@mantine/core";
-
-import Link from "@/components/shared/RouterLink";
+import {Link} from "react-router-dom";
 
 import type {ReactNode} from "react";
 
@@ -16,7 +15,7 @@ const NotFound = (): ReactNode => {
             Запрашиваемая страница не существует или была удалена.
           </Text>
 
-          <Link href="/" style={{textDecoration: 'none'}}>
+          <Link to="/" style={{textDecoration: 'none'}}>
             <Button variant="filled">
               Вернуться на главную
             </Button>

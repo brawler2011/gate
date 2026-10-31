@@ -1,7 +1,6 @@
 import {Box, Button, Group} from "@mantine/core";
 import React from "react";
-
-import Link from "@/components/shared/RouterLink";
+import {Link} from "react-router-dom";
 
 import {getTabStyles} from "./get-tab-styles";
 
@@ -30,7 +29,7 @@ export const MobileNav = ({
           return (
             <Link
               key={section.key}
-              href={`?section=${section.key}`}
+              to={`?section=${section.key}`}
               style={{textDecoration: "none"}}
             >
               <Button

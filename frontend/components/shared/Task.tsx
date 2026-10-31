@@ -1,10 +1,8 @@
-"use client";
-
 import {Box, Container, NavLink, Paper, Stack, Title} from "@mantine/core";
 import React, {type ReactNode} from "react";
+import {Link} from "react-router-dom";
 
 import {Problem} from "@/components/problems/Problem";
-import Link from "@/components/shared/RouterLink";
 import {CreateSubmissionForm} from "@/components/submissions/CreateSubmissionForm";
 import {RecentSubmissionsTable} from "@/components/submissions/RecentSubmissionsTable";
 import {api} from "@/lib/api";
@@ -113,7 +111,7 @@ const Task = ({
                     <NavLink
                       key={t.problem_id || index}
                       component={Link}
-                      href={`/${contest.organization_login}/${contest.login}/${letter}`}
+                      to={`/${contest.organization_login}/${contest.login}/${letter}`}
                       label={`${letter}. ${t.title}`}
                       active={isActive}
                       styles={{

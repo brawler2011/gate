@@ -1,10 +1,8 @@
-"use client";
-
 import {Badge, Card, Center, Loader, Stack, Table, Text} from "@mantine/core";
 import {IconFileCode} from "@tabler/icons-react";
 import {useCallback, useEffect, useState} from "react";
+import {Link} from "react-router-dom";
 
-import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
 
 import type * as corev1 from "@/contracts/core/v1/models";
@@ -74,7 +72,7 @@ export const TeamProblemsTab = ({teamId}: TeamProblemsTabProps): ReactNode => {
               <Table.Td>
                 <Text
                   component={Link}
-                  href={`/${p.organization_login}/problems/${p.id}`}
+                  to={`/${p.organization_login}/problems/${p.id}`}
                   size="sm"
                   fw={500}
                   c="blue"

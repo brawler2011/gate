@@ -1,25 +1,27 @@
 import {Box, Container} from "@mantine/core";
 import {IconPuzzle, IconSettings, IconUsers} from "@tabler/icons-react";
+import {useLoaderData} from "react-router-dom";
 
 import {MobileNav, SidebarNav} from "@/components/contests";
 import {ParticipantsSection} from "@/components/contests/ParticipantsSection";
 import {ProblemsSection} from "@/components/contests/ProblemsSection";
 import {SettingsSection} from "@/components/contests/SettingsSection";
 import {api, unwrap} from "@/lib/api";
-import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 
 import classes from "./styles.module.css";
 
 import type {ContestProblemListItemModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
+import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
-const loadContestManagePage = async ({params, searchParams}: Props) => {
-  const {slug, contestLogin} = params;
+export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs) => {
+  const searchParams = Object.fromEntries(new URL(request.url).searchParams);
+  const {slug, contestLogin} = routeParams as {slug: string; contestLogin: string};
   const {section = "settings"} = searchParams;
 
   const response = await unwrap(api.getContest)(slug, contestLogin);
   return {slug, contestLogin, section, response};
-};
+}) satisfies LoaderFunction;
 
 // Constants for sections
 const SECTIONS = {
@@ -49,20 +51,9 @@ const NAV_SECTIONS = [
   },
 ] as const;
 
-type Props = {
-  params: { slug: string; contestLogin: string };
-  searchParams: { section?: string };
-};
-
-const ContestManagePage = ({params, searchParams}: Props): ReactNode => {
-  const routeQuery = usePageQuery(
-    ["frontend/app/[slug]/[contestLogin]/settings/page.tsx", params, searchParams],
-    () => loadContestManagePage({params, searchParams}),
-  );
-  if (!routeQuery.data) {
-    return <PageQueryState query={routeQuery} />;
-  }
-  const {slug, contestLogin, section, response} = routeQuery.data;
+const ContestManagePage = (): ReactNode => {
+  const data = useLoaderData<typeof loader>();
+  const {slug, contestLogin, section, response} = data;
   const contest = response.contest;
   const problems: Array<ContestProblemListItemModel> = response.problems || [];
   const validSections = Object.values(SECTIONS);

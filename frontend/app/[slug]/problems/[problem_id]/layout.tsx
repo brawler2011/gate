@@ -1,10 +1,10 @@
 import {Outlet, useParams} from "react-router-dom";
 
 import {DefaultLayout} from "@/components/shared";
+import {QueryState} from "@/components/shared/QueryState";
 import {ProblemHeaderNav} from "@/components/workshop";
 import {useSession} from "@/contexts/SessionContext";
 import {useGetOrganization, useGetProblem} from "@/contracts/core/v1/api";
-import {PageQueryState} from "@/lib/pageQuery";
 
 import type {ReactNode} from "react";
 
@@ -16,7 +16,7 @@ const ProblemLayout = (): ReactNode => {
   if (!problem.data) {
     return (
       <DefaultLayout headerUser={user}>
-        <PageQueryState query={problem} />
+        <QueryState error={problem.error} />
       </DefaultLayout>
     );
   }

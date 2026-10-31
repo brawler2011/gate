@@ -1,17 +1,14 @@
-"use client";
-
 import {ActionIcon, Badge, Box, Center, Container, Group, Select, Skeleton, Stack, Table, Text, TextInput, Title, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconRefresh, IconSearch, IconX} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
 import {useState} from "react";
+import {useLocation, useNavigate, useSearchParams, Link} from "react-router-dom";
 
-import {NextPagination} from '@/components/shared/Pagination';
-import Link from "@/components/shared/RouterLink";
+import {RoutePagination} from '@/components/shared/Pagination';
 import {SubmissionDetailsModal} from '@/components/submissions';
 import {api} from "@/lib/api";
 import {LangString, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
-import {usePathname, useRouter, useSearchParams} from "@/lib/navigation";
 
 import classes from "./AdminPage.module.css";
 
@@ -35,9 +32,9 @@ export const AdminSubmissionsContent = ({
   problemId,
   userId,
 }: AdminSubmissionsContentProps): ReactNode => {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate();
+  const {pathname} = useLocation();
+  const [searchParams] = useSearchParams();
   const [rejudgingId, setRejudgingId] = useState<string | null>(null);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
 
@@ -60,7 +57,7 @@ export const AdminSubmissionsContent = ({
       }
     });
 
-    router.push(`${pathname}?${params.toString()}`);
+    navigate(`${pathname}?${params.toString()}`);
   };
 
   const handleClearFilters = () => {
@@ -69,7 +66,7 @@ export const AdminSubmissionsContent = ({
     setContestFilter("");
     setProblemFilter("");
     setUserFilter("");
-    router.push(pathname);
+    navigate(pathname);
   };
 
   // Fetch submissions
@@ -317,7 +314,7 @@ export const AdminSubmissionsContent = ({
                       </Table.Td>
                       <Table.Td>
                         <Link
-                          href={
+                          to={
                             submission.organization_login
                               ? `/${submission.organization_login}/problems/${submission.problem_id}`
                               : `/problems/${submission.problem_id}`
@@ -332,7 +329,7 @@ export const AdminSubmissionsContent = ({
                       <Table.Td>
                         {submission.contest_login ? (
                           <Link
-                            href={
+                            to={
                               submission.organization_login
                                 ? `/${submission.organization_login}/${submission.contest_login}`
                                 : `/${submission.contest_login}`
@@ -348,7 +345,7 @@ export const AdminSubmissionsContent = ({
                         )}
                       </Table.Td>
                       <Table.Td>
-                        <Link href={`/@${submission.username}`} style={{textDecoration: "none"}}>
+                        <Link to={`/@${submission.username}`} style={{textDecoration: "none"}}>
                           <Text c="blue" lineClamp={1}>
                             {submission.username}
                           </Text>
@@ -396,7 +393,7 @@ export const AdminSubmissionsContent = ({
 
             {totalPages > 1 && (
               <Stack align="center" gap="md">
-                <NextPagination
+                <RoutePagination
                   pagination={{
                     page: page,
                     total: totalPages,
