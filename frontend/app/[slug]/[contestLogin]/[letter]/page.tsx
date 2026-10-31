@@ -86,6 +86,9 @@ const Page = (): ReactNode => {
   if (!checker.canViewProblems(contestResponse.contest) || (!isManager && !hasStarted)) {
     return <Navigate to={`/${params.slug}/${params.contestLogin}`} replace />;
   }
+  if (user && submissionsQuery.isPending) {
+    return <QueryState />;
+  }
   const submissions = [...(submissionsResponse?.submissions || [])];
   const wsBaseUrl = env.getWebSocketUrl();
   const wsUrl = wsBaseUrl ? `${wsBaseUrl}/submissions` : undefined;
