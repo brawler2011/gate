@@ -36,6 +36,7 @@ const AdminOrgsPage = (): ReactNode => {
 
   return (
     <Suspense fallback={<AdminOrgsContentSkeleton />}>
+      <title>Организации</title>
       <AdminOrgsContent page={page} search={search} />
     </Suspense>
   );

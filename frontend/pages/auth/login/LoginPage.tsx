@@ -17,6 +17,7 @@ const LoginPage = (): ReactNode => {
         </Center>
       }
     >
+      <title>Вход</title>
       <LoginPageContent />
     </Suspense>
   );

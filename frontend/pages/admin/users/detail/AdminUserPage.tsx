@@ -44,7 +44,12 @@ const AdminUserEditPage = (): ReactNode => {
       </Container>
     );
   }
-  return <AdminUserEditContent user={data!.user} />;
+  return (
+    <>
+      <title>{data!.user.username}</title>
+      <AdminUserEditContent user={data!.user} />
+    </>
+  );
 };
 
 export default AdminUserEditPage;

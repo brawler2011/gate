@@ -30,6 +30,7 @@ const OrgsPage = (): ReactNode => {
   if (error) {
     return (
       <DefaultLayout headerUser={user}>
+        <title>Организации</title>
         <Container size="lg" py="lg">
           <ErrorDisplay error={error} />
         </Container>
@@ -39,6 +40,7 @@ const OrgsPage = (): ReactNode => {
   const orgs = data!.organizations;
   return (
     <DefaultLayout headerUser={user}>
+      <title>Организации</title>
       <Container size="lg" py="lg">
         <Stack gap="md">
           <Group justify="space-between" align="flex-end">

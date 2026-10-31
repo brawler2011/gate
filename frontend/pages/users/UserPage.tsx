@@ -42,6 +42,7 @@ const Page = (): ReactNode => {
   const user = userData.user;
   return (
     <DefaultLayout headerUser={currentUser}>
+      <title>{user.username}</title>
       <ProfileContainer>
         <ProfileHeader
           username={user.username}

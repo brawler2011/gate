@@ -76,14 +76,17 @@ const Page = (): ReactNode => {
   const isManager = checker.canManageContest(response.contest);
   const hasAccess = Boolean(contestRole?.role);
   return (
-    <Contest
-      contest={response.contest}
-      orgLogin={slug}
-      problems={response.problems || []}
-      isManager={isManager}
-      isAuthenticated={Boolean(user)}
-      hasAccess={hasAccess}
-    />
+    <>
+      <title>{response.contest.title}</title>
+      <Contest
+        contest={response.contest}
+        orgLogin={slug}
+        problems={response.problems || []}
+        isManager={isManager}
+        isAuthenticated={Boolean(user)}
+        hasAccess={hasAccess}
+      />
+    </>
   );
 };
 

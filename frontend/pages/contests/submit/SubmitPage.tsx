@@ -30,6 +30,7 @@ const Page = (): ReactNode => {
   }
   return (
     <Container size="lg" pb={{base: "md", sm: "lg", md: "xl"}}>
+      <title>Отправить решение</title>
       <SubmitSubmissionClient contest={response.contest} problems={response.problems || []} user={user} />
     </Container>
   );

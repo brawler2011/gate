@@ -51,6 +51,7 @@ const Page = (): ReactNode => {
   }
   return (
     <Container size="lg" py="md">
+      <title>Монитор</title>
       {scoreboard && (
         <ContestMonitorTable
           contestId={contestResponse.contest.id}

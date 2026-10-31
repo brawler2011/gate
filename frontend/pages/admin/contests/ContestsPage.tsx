@@ -36,6 +36,7 @@ const AdminContestsPage = (): ReactNode => {
 
   return (
     <Suspense fallback={<AdminContestsContentSkeleton />}>
+      <title>Контесты</title>
       <AdminContestsContent page={page} search={search} />
     </Suspense>
   );

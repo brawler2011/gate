@@ -35,6 +35,7 @@ const AdminSubmissionsPage = (): ReactNode => {
 
   return (
     <Suspense fallback={<AdminSubmissionsContentSkeleton />}>
+      <title>Посылки</title>
       <AdminSubmissionsContent
         page={page}
         state={resolvedSearchParams.state}

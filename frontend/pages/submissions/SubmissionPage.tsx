@@ -51,6 +51,7 @@ const Page = (): ReactNode => {
     contestData?.contest && checker ? checker.canRejudgeSubmissions(contestData.contest) : false;
   return (
     <DefaultLayout headerUser={user}>
+      <title>{`Посылка #${submission.id.slice(0, 8)}`}</title>
       <Container size="lg" pt="md" pb="xl" px={{base: "xs", sm: "md"}}>
         <Stack gap="lg" align="flex-start" w="100%">
           <Title order={2}>Посылка #{submission.id.slice(0, 8)}...</Title>

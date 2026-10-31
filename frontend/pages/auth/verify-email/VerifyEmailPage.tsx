@@ -16,6 +16,7 @@ const VerifyEmailPage = (): ReactNode => {
         </Center>
       }
     >
+      <title>Подтверждение email</title>
       <VerifyEmailContent />
     </Suspense>
   );

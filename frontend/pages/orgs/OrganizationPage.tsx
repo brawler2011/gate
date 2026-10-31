@@ -77,6 +77,7 @@ const Page = (): ReactNode => {
     data;
   return (
     <Container size="lg" py="lg">
+      <title>{org.name}</title>
       {contestsError ? (
         <ErrorDisplay error={contestsError} />
       ) : (

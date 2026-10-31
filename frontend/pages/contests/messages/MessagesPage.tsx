@@ -76,6 +76,7 @@ const Page = (): ReactNode => {
   const problems = contestResponse.problems || [];
   return (
     <Container size="lg" pb={{base: "md", sm: "lg", md: "xl"}} pt="md">
+      <title>Сообщения</title>
       <ContestMessagesClient
         contest={contestResponse.contest}
         orgLogin={slug}

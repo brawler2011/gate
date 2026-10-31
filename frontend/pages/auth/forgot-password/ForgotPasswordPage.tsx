@@ -43,6 +43,7 @@ const ForgotPasswordPage = (): ReactNode => {
         padding: "1rem",
       }}
     >
+      <title>Восстановление пароля</title>
       <Stack align="center" gap={32} style={{width: "min(550px, calc(100vw - 2rem))"}}>
         <Link to="/" style={{textDecoration: "none", color: "inherit"}}>
           <Group justify="center" gap="md">

@@ -61,6 +61,7 @@ const OrgProblemsPage = (): ReactNode => {
   const isAuthenticated = currentUser !== null;
   return (
     <Container size="lg" py="lg">
+      <title>Задачи</title>
       {problemsError ? (
         <ErrorDisplay error={problemsError} />
       ) : (

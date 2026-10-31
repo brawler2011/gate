@@ -15,6 +15,7 @@ const ResetPasswordPage = (): ReactNode => {
         </Center>
       }
     >
+      <title>Сброс пароля</title>
       <ResetPasswordContent />
     </Suspense>
   );

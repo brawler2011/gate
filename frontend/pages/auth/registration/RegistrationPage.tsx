@@ -16,6 +16,7 @@ const RegistrationPage = (): ReactNode => {
         </Center>
       }
     >
+      <title>Регистрация</title>
       <RegistrationPageContent />
     </Suspense>
   );

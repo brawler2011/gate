@@ -17,7 +17,12 @@ const SettingsPage = (): ReactNode => {
   if (error || !data?.user || data.user.role === "guest") {
     return <Navigate to="/auth/login?return_to=/settings" replace />;
   }
-  return <UserSettingsContent initialUser={data.user} />;
+  return (
+    <>
+      <title>Настройки</title>
+      <UserSettingsContent initialUser={data.user} />
+    </>
+  );
 };
 
 export default SettingsPage;

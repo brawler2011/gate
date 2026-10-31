@@ -57,6 +57,7 @@ const OrgTeamsPage = (): ReactNode => {
   const teams = teamsData?.teams ?? [];
   return (
     <Container size="lg" py="lg">
+      <title>Команды</title>
       {teamsError ? (
         <ErrorDisplay error={teamsError} />
       ) : (

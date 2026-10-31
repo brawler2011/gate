@@ -93,18 +93,21 @@ const Page = (): ReactNode => {
   const wsBaseUrl = env.getWebSocketUrl();
   const wsUrl = wsBaseUrl ? `${wsBaseUrl}/submissions` : undefined;
   return (
-    <Task
-      task={problemResponse.problem}
-      contest={contestResponse.contest}
-      tasks={contestResponse.problems || []}
-      submissions={submissions}
-      problemId={targetProblem.problem_id}
-      contestId={contestResponse.contest.id}
-      user={user}
-      wsUrl={wsUrl}
-      since={submissionsResponse?.since}
-      isManager={isManager}
-    />
+    <>
+      <title>{problemResponse.problem.title}</title>
+      <Task
+        task={problemResponse.problem}
+        contest={contestResponse.contest}
+        tasks={contestResponse.problems || []}
+        submissions={submissions}
+        problemId={targetProblem.problem_id}
+        contestId={contestResponse.contest.id}
+        user={user}
+        wsUrl={wsUrl}
+        since={submissionsResponse?.since}
+        isManager={isManager}
+      />
+    </>
   );
 };
 

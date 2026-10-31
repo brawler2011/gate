@@ -128,6 +128,7 @@ const Page = (): ReactNode => {
   }
   return (
     <Container size="lg" pb="xl">
+      <title>Мои посылки</title>
       {contestData?.contest ? (
         <Paper
           withBorder

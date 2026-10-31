@@ -19,6 +19,7 @@ const AdminUsersPage = (): ReactNode => {
 
   return (
     <Suspense fallback={<UsersContentSkeleton />}>
+      <title>Пользователи</title>
       <UsersContent page={page} search={search} role={role} />
     </Suspense>
   );

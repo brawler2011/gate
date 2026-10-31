@@ -22,6 +22,7 @@ const NotificationsPage = (): ReactNode => {
   }
   return (
     <DefaultLayout headerUser={user}>
+      <title>Уведомления</title>
       <NotificationsClient />
     </DefaultLayout>
   );

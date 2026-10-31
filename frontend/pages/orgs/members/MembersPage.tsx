@@ -28,6 +28,7 @@ const OrgMembersPage = (): ReactNode => {
   }
   return (
     <Container size="lg" py="lg">
+      <title>Участники</title>
       <OrgMembersManagement orgLogin={decoded} />
     </Container>
   );

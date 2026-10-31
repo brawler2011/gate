@@ -6,6 +6,7 @@ import type {ReactNode} from "react";
 const NotFound = (): ReactNode => {
   return (
     <Container size="sm" py="xl">
+      <title>Страница не найдена</title>
       <Paper p="xl" radius="md" withBorder>
         <Stack align="center" gap="lg">
           <Title order={1} c="dimmed">404</Title>

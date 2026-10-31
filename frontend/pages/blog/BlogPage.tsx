@@ -24,11 +24,17 @@ const Page = (): ReactNode => {
     return <Navigate to="/blog" replace />;
   }
   if (!routeQuery.data) {
-    return <QueryState error={routeQuery.error} />;
+    return (
+      <>
+        <title>Блог</title>
+        <QueryState error={routeQuery.error} />
+      </>
+    );
   }
   const data = routeQuery.data;
   return (
     <DefaultLayout>
+      <title>Блог</title>
       <Container size="md" py="xl">
         <Stack gap="xl">
           <Group gap="xs">

@@ -64,6 +64,7 @@ const ContestManagePage = (): ReactNode => {
   const activeSection = (validSections.includes(section as Section) ? section : SECTIONS.SETTINGS) as Section;
   return (
     <Container size="lg" pb={{base: "md", sm: "lg", md: "xl"}}>
+      <title>Настройки</title>
       <Box className={classes.manageLayout}>
         <SidebarNav activeSection={activeSection} sections={NAV_SECTIONS} />
 

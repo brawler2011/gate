@@ -49,6 +49,7 @@ const TeamPage = (): ReactNode => {
   const team = data!.team;
   return (
     <Container size="md" py="lg">
+      <title>{team.name}</title>
       <Stack gap="xl">
         <LinkAnchor href={`/${decoded}`} size="sm">
           <IconArrowLeft size={14} style={{marginRight: 4}} />

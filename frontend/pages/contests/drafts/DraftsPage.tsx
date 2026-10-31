@@ -70,6 +70,7 @@ const Page = (): ReactNode => {
   const initialDrafts = draftsResponse?.drafts || [];
   return (
     <Container size="lg" pb={{base: "md", sm: "lg", md: "xl"}} pt="md">
+      <title>Черновики</title>
       <DraftsClient
         contest={contestResponse.contest}
         isManager={isManager}

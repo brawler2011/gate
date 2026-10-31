@@ -128,6 +128,7 @@ const Page = (): ReactNode => {
   const wsBaseUrl = env.getWebSocketUrl();
   return (
     <Container size="lg" pb="xl">
+      <title>Посылки</title>
       {contestData?.contest ? (
         <Paper
           withBorder

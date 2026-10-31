@@ -28,6 +28,7 @@ const Page = (): ReactNode => {
 
     return (
       <DefaultLayout headerUser={user}>
+        <title>Главная</title>
         <Container size="lg" py="xl">
           <Grid gutter="xl">
             <GridCol span={{base: 12, md: 8}}>
@@ -73,6 +74,7 @@ const Page = (): ReactNode => {
 
   return (
     <DefaultLayout headerUser={null}>
+      <title>Главная</title>
       <Container size="md" py="xl">
         <Stack gap="xl">
           <Stack gap="md">

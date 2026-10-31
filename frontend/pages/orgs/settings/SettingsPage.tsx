@@ -54,6 +54,7 @@ const OrgSettingsPage = (): ReactNode => {
   const activeSection = (validSections.includes(section as Section) ? section : SECTIONS.SETTINGS) as Section;
   return (
     <Container size="lg" py="lg">
+      <title>Настройки</title>
       <Stack gap="md">
         <Box className={classes.manageLayout}>
           <OrgSettingsSidebarNav

@@ -11,11 +11,21 @@ export const RouteError = (): ReactNode => {
     if (error.status === 404) {
       return <NotFound />;
     }
-    return <ErrorDisplay error={{status: error.status, message: error.statusText}} />;
+    return (
+      <>
+        <title>Ошибка</title>
+        <ErrorDisplay error={{status: error.status, message: error.statusText}} />
+      </>
+    );
   }
   const failure = error as {status?: number; message?: string};
   if (failure?.status === 404) {
     return <NotFound />;
   }
-  return <ErrorDisplay error={{status: failure?.status ?? 500, message: failure?.message ?? "Ошибка загрузки"}} />;
+  return (
+    <>
+      <title>Ошибка</title>
+      <ErrorDisplay error={{status: failure?.status ?? 500, message: failure?.message ?? "Ошибка загрузки"}} />
+    </>
+  );
 };

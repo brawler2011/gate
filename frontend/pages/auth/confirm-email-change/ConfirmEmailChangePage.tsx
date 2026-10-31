@@ -15,6 +15,7 @@ const ConfirmEmailChangePage = (): ReactNode => {
         </Center>
       }
     >
+      <title>Смена email</title>
       <ConfirmEmailChangeContent />
     </Suspense>
   );

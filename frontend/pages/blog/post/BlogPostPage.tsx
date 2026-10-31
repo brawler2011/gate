@@ -27,6 +27,7 @@ const Page = (): ReactNode => {
   const {post} = data;
   return (
     <DefaultLayout>
+      <title>{post.title}</title>
       <Container size="md" py="xl">
         <article className={classes.article}>
           <Stack gap="xl">
