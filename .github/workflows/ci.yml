@@ -29,9 +29,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: backend/go.mod
+          go-version-file: go.mod
           cache: true
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: go.sum
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -39,7 +39,6 @@ jobs:
           bun-version: 1.4
 
       - name: Install dependencies
-        working-directory: frontend
         run: bun install --frozen-lockfile
 
       - name: Validate OpenAPI contracts
@@ -59,7 +58,6 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.12.2
-          working-directory: backend
 
   backend-unit-tests:
     name: Backend Unit Tests
@@ -76,9 +74,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: backend/go.mod
+          go-version-file: go.mod
           cache: true
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: go.sum
 
       - name: Run unit tests
         run: task be:test
@@ -101,9 +99,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: backend/go.mod
+          go-version-file: go.mod
           cache: true
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: go.sum
 
       - name: Run integration tests
         run: task be:test-integration
@@ -126,7 +124,6 @@ jobs:
           bun-version: 1.4
 
       - name: Install dependencies
-        working-directory: frontend
         run: bun install --frozen-lockfile
 
       - name: Run typecheck
@@ -139,49 +136,21 @@ jobs:
         run: task fe:knip
 
       - name: Run frontend tests
-        working-directory: frontend
         run: bun run test
 
       - name: Run production build check
         run: task fe:build
         env:
           NODE_ENV: production
-          BACKEND_API_URL: http://localhost:8080
-          NEXT_PUBLIC_BACKEND_API_URL: /api
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
-          NEXT_PUBLIC_WEBSOCKET_URL: ws://localhost:8080/ws
 
-  frontend-docker-build:
-    name: Frontend Docker Build
+  app-docker-build:
+    name: Application Docker Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-
-      - name: Build clean frontend image
-        run: |
-          docker build --no-cache --progress=plain \
-            --build-arg BACKEND_API_URL=http://backend:8080 \
-            --build-arg NEXT_PUBLIC_BACKEND_API_URL=/api \
-            --build-arg NEXT_PUBLIC_APP_URL=http://localhost:3000 \
-            --build-arg NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:8080/ws \
-            --tag gate-frontend:ci frontend
-
-      - name: Verify frontend runtime configuration
-        run: |
-          docker run --detach --name frontend-config-check \
-            --publish 127.0.0.1:3000:3000 \
-            --env BACKEND_API_URL=http://runtime-backend:8080 \
-            --env NEXT_PUBLIC_APP_URL=http://runtime-override.invalid \
-            gate-frontend:ci
-          trap 'docker logs frontend-config-check; docker rm --force frontend-config-check' EXIT
-          curl --fail --silent --retry 15 --retry-all-errors --retry-delay 1 \
-            http://127.0.0.1:3000/robots.txt > /tmp/frontend-robots.txt
-          grep --fixed-strings 'Sitemap: http://localhost:3000/sitemap.xml' /tmp/frontend-robots.txt
-          if grep --fixed-strings 'runtime-override.invalid' /tmp/frontend-robots.txt; then
-            echo 'Public configuration must stay bound to the built image'
-            exit 1
-          fi
+      - name: Build Go application with static SPA
+        run: docker build --progress=plain --file backend/Dockerfile --tag gate:ci .
 
   ci-status:
     name: All CI Checks Passed
@@ -191,7 +160,7 @@ jobs:
       - backend-unit-tests
       - backend-integration-tests
       - frontend-checks
-      - frontend-docker-build
+      - app-docker-build
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -202,14 +171,14 @@ jobs:
           echo "Backend Unit Tests: ${{ needs.backend-unit-tests.result }}"
           echo "Backend Integration Tests: ${{ needs.backend-integration-tests.result }}"
           echo "Frontend Checks: ${{ needs.frontend-checks.result }}"
-          echo "Frontend Docker Build: ${{ needs.frontend-docker-build.result }}"
+          echo "Frontend Docker Build: ${{ needs.app-docker-build.result }}"
 
           if [[ "${{ needs.codegen-check.result }}" != "success" || \
                 "${{ needs.backend-lint.result }}" != "success" || \
                 "${{ needs.backend-unit-tests.result }}" != "success" || \
                 "${{ needs.backend-integration-tests.result }}" != "success" || \
                 "${{ needs.frontend-checks.result }}" != "success" || \
-                "${{ needs.frontend-docker-build.result }}" != "success" ]]; then
+                "${{ needs.app-docker-build.result }}" != "success" ]]; then
             echo "ERROR: One or more CI checks failed!"
             exit 1
           fi

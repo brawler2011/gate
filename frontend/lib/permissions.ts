@@ -1,4 +1,4 @@
-import type {ContestModel, ProblemModel, UserModel} from "@/contracts/core/v1";
+import type {ContestModel, ProblemModel, UserModel} from "@/contracts/core/v1/models";
 
 /**
  * Contest role types
@@ -16,7 +16,7 @@ type ContestRoleApiResponse = {
   permissions_mask?: unknown;
 };
 
-const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
+export const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
   if (!response || typeof response !== "object") {
     return null;
   }
@@ -43,7 +43,7 @@ const parseContestRoleResponse = (response: unknown): ContestRoleResponse => {
  */
 export const getMyContestRole = async (orgLogin: string, contestLogin: string): Promise<ContestRoleResponse> => {
   const {api} = await import("@/lib/api");
-  const [error, response] = await api.getMyContestRole({orgLogin, contestLogin});
+  const [error, response] = await api.getMyContestRole(orgLogin, contestLogin);
   if (error || !response) {
     // User is not a participant or not authenticated
     return null;
@@ -372,7 +372,10 @@ export const canManageOrgMembers = async (orgLogin: string): Promise<boolean> =>
   let page = 1;
   const pageSize = 100;
   while (page <= 20) {
-    const [error, data] = await api.listOrganizationMembers({login: orgLogin, page, pageSize});
+    const [error, data] = await api.listOrganizationMembers(orgLogin, {
+      page,
+      pageSize
+    });
     if (error || !data || !data.members) {
       return false;
     }

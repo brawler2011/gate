@@ -2,8 +2,9 @@
 
 import {Input} from "@mantine/core";
 import {IconSearch} from "@tabler/icons-react";
-import {useRouter, useSearchParams} from "next/navigation";
 import {useEffect, useRef, useState} from "react";
+
+import {useRouter, useSearchParams} from "@/lib/navigation";
 
 import type {ReactNode} from "react";
 
@@ -12,7 +13,7 @@ export const UsersSearchInput = (): ReactNode => {
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
   const [search, setSearch] = useState(initialSearch);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isFirstRender = useRef(true);
 
   // Sync state with URL when searchParams change externally

@@ -1,34 +1,17 @@
 "use client";
 
-import {
-  Box,
-  Container,
-  NavLink,
-  Paper,
-  Stack,
-  Title,
-} from "@mantine/core";
-import Link from "next/link";
+import {Box, Container, NavLink, Paper, Stack, Title} from "@mantine/core";
 import React, {type ReactNode} from "react";
 
 import {Problem} from "@/components/problems/Problem";
+import Link from "@/components/shared/RouterLink";
 import {CreateSubmissionForm} from "@/components/submissions/CreateSubmissionForm";
 import {RecentSubmissionsTable} from "@/components/submissions/RecentSubmissionsTable";
 import {api} from "@/lib/api";
-import {
-  CONTEST_SIDEBAR_LEFT_WIDTH,
-  CONTEST_SIDEBAR_RIGHT_WIDTH,
-  LANGUAGE_MAP,
-} from "@/lib/constants";
+import {CONTEST_SIDEBAR_LEFT_WIDTH, CONTEST_SIDEBAR_RIGHT_WIDTH, LANGUAGE_MAP} from "@/lib/constants";
 import {numberToLetters} from "@/lib/lib";
 
-import type {
-  ContestModel,
-  ContestProblemListItemModel,
-  ContestProblemModel,
-  SubmissionsListItemModel,
-  UserModel,
-} from "@/contracts/core/v1";
+import type {ContestModel, ContestProblemListItemModel, ContestProblemModel, SubmissionsListItemModel, UserModel} from "@/contracts/core/v1/models";
 
 type PageProps = {
   tasks: ContestProblemListItemModel[];
@@ -74,13 +57,10 @@ const Task = ({
     }
 
     const [error, response] = await api.createSubmission({
-      problemId,
-      organizationLogin: contest.organization_login,
-      contestLogin: contest.login,
-      language: languageCode,
-      requestBody: {
-        submission: submissionContent,
-      },
+      submission: submissionContent
+    }, {
+      problem_id: problemId, organization_login: contest.organization_login, contest_login: contest.login,
+      language: languageCode
     });
 
     if (error) {

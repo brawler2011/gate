@@ -2,15 +2,15 @@
 
 import {ActionIcon, Box, Group, Table, Text, Tooltip} from "@mantine/core";
 import {IconEdit} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
 
 import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {CONTEST_CONTENT_MAX_WIDTH} from "@/lib/constants";
 import {numberToLetters} from "@/lib/lib";
+import {useRouter} from "@/lib/navigation";
 
 import classes from "./ContestProblemsTable.module.css";
 
-import type {ContestProblemListItemModel} from "@/contracts/core/v1";
+import type {ContestProblemListItemModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type ContestProblemsTableProps = {

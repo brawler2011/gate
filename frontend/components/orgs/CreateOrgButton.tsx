@@ -3,10 +3,10 @@
 import {Alert, Button, Modal, TextInput, Stack} from '@mantine/core';
 import {useDisclosure} from '@mantine/hooks';
 import {IconAlertCircle, IconPlus} from '@tabler/icons-react';
-import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 
 import {api} from '@/lib/api';
+import {useRouter} from '@/lib/navigation';
 
 import type {ReactNode} from "react";
 
@@ -105,7 +105,7 @@ export const CreateOrgButton = (): ReactNode => {
     setLoading(true);
     const [error, response] = await api.createOrganization({
       name: trimmedName,
-      login: trimmedLogin || undefined,
+      login: trimmedLogin || undefined
     });
     setLoading(false);
 

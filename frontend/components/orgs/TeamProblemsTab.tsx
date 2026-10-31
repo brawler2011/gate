@@ -2,12 +2,12 @@
 
 import {Badge, Card, Center, Loader, Stack, Table, Text} from "@mantine/core";
 import {IconFileCode} from "@tabler/icons-react";
-import Link from "next/link";
 import {useCallback, useEffect, useState} from "react";
 
+import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
 
-import type * as corev1 from "@/contracts/core/v1";
+import type * as corev1 from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 interface TeamProblemsTabProps {
@@ -20,7 +20,7 @@ export const TeamProblemsTab = ({teamId}: TeamProblemsTabProps): ReactNode => {
 
   const loadProblems = useCallback(async () => {
     setLoading(true);
-    const [error, response] = await api.listTeamProblems({id: teamId});
+    const [error, response] = await api.listTeamProblems(teamId, {});
     setLoading(false);
 
     if (error || !response) {

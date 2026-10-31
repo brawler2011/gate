@@ -3,9 +3,10 @@
 import {Menu} from "@mantine/core";
 import {IconChevronDown} from "@tabler/icons-react";
 import cx from "clsx";
-import Link from "next/link";
-import {usePathname} from "next/navigation";
 import {useState, type ReactNode} from "react";
+
+import Link from "@/components/shared/RouterLink";
+import {usePathname} from "@/lib/navigation";
 
 import classes from "./AdaptiveTabs.module.css";
 import {type AdaptiveTabItem, useAdaptiveTabs} from "./useAdaptiveTabs";

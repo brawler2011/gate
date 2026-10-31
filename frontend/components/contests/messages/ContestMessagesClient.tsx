@@ -1,30 +1,8 @@
 "use client";
 
-import {
-  ActionIcon,
-  Badge,
-  Button,
-  Card,
-  Center,
-  Group,
-  Paper,
-  Select,
-  Stack,
-  Tabs,
-  Text,
-  Title,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Badge, Button, Card, Center, Group, Paper, Select, Stack, Tabs, Text, Title, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {
-  IconCheck,
-  IconClock,
-  IconHelpCircle,
-  IconMessagePlus,
-  IconPlus,
-  IconSpeakerphone,
-  IconTrash,
-} from "@tabler/icons-react";
+import {IconCheck, IconClock, IconHelpCircle, IconMessagePlus, IconPlus, IconSpeakerphone, IconTrash} from "@tabler/icons-react";
 import {useCallback, useEffect, useState, type ReactNode} from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -37,13 +15,7 @@ import {AskClarificationModal} from "./AskClarificationModal";
 import classes from "./ContestMessagesClient.module.css";
 import {CreateAnnouncementModal} from "./CreateAnnouncementModal";
 
-import type {
-  ContestAnnouncementModel,
-  ContestClarificationModel,
-  ContestModel,
-  ContestProblemListItemModel,
-  UserModel,
-} from "@/contracts/core/v1";
+import type {ContestAnnouncementModel, ContestClarificationModel, ContestModel, ContestProblemListItemModel, UserModel} from "@/contracts/core/v1/models";
 
 export interface ContestMessagesClientProps {
   contest: ContestModel;
@@ -87,11 +59,8 @@ export const ContestMessagesClient = ({
 
   const refreshAnnouncements = useCallback(async () => {
     setAnnouncementsLoading(true);
-    const [err, res] = await api.listContestAnnouncements({
-      orgLogin,
-      contestLogin,
-      page: 1,
-      pageSize: 100,
+    const [err, res] = await api.listContestAnnouncements(orgLogin, contestLogin, {
+      page: 1, pageSize: 100
     });
     setAnnouncementsLoading(false);
     if (!err && res) {
@@ -104,13 +73,8 @@ export const ContestMessagesClient = ({
       return;
     }
     setClarificationsLoading(true);
-    const [err, res] = await api.listContestClarifications({
-      orgLogin,
-      contestLogin,
-      page: 1,
-      pageSize: 100,
-      status: statusFilter || undefined,
-      problemId: problemFilter || undefined,
+    const [err, res] = await api.listContestClarifications(orgLogin, contestLogin, {
+      problem_id: problemFilter || undefined, status: statusFilter || undefined, page: 1, pageSize: 100
     });
     setClarificationsLoading(false);
     if (!err && res) {
@@ -146,11 +110,7 @@ export const ContestMessagesClient = ({
       return;
     }
 
-    const [err] = await api.deleteContestAnnouncement({
-      orgLogin,
-      contestLogin,
-      announcementId: id,
-    });
+    const [err] = await api.deleteContestAnnouncement(orgLogin, contestLogin, id);
 
     if (err) {
       notifications.show({

@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Autocomplete,
-  Badge,
-  Button,
-  Card,
-  Group,
-  Loader,
-  Stack,
-  Text,
-} from "@mantine/core";
+import {Autocomplete, Badge, Button, Card, Group, Loader, Stack, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconPlus, IconUsersGroup} from "@tabler/icons-react";
 import {useCallback, useEffect, useState, type ReactNode} from "react";
@@ -20,7 +11,7 @@ import {StatusMessage} from "@/components/shared/StatusMessage";
 import {useEntitySearch} from "@/hooks/useEntitySearch";
 import {api} from "@/lib/api";
 
-import type * as corev1 from "@/contracts/core/v1";
+import type * as corev1 from "@/contracts/core/v1/models";
 
 const PROBLEM_PERMISSION_OPTIONS = [
   {label: "Чтение (read)", value: "read", color: "gray"},
@@ -57,7 +48,7 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
 
   const loadTeams = useCallback(async () => {
     setLoading(true);
-    const [error, response] = await api.listProblemTeams({id: problemId});
+    const [error, response] = await api.listProblemTeams(problemId);
     setLoading(false);
 
     if (error || !response) {
@@ -75,10 +66,9 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
   const searchTeamsFn = useCallback(
     async (query: string) => {
       const [error, response] = await api.listTeams({
-        organizationId: orgId,
+        page: 1, pageSize: 10,
         search: query,
-        page: 1,
-        pageSize: 10,
+        organization_id: orgId
       });
       if (error || !response) {
         return [];
@@ -113,10 +103,8 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
     }
 
     setAdding(true);
-    const [error] = await api.createProblemTeam({
-      id: problemId,
-      teamId: selectedTeamId,
-      permission: "read",
+    const [error] = await api.createProblemTeam(problemId, {
+      team_id: selectedTeamId, permission: "read"
     });
     setAdding(false);
 
@@ -144,7 +132,9 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
 
   const handleDeleteTeam = async (team: corev1.ProblemTeamModel) => {
     setDeletingId(team.team_id);
-    const [error] = await api.deleteProblemTeam({id: problemId, teamId: team.team_id});
+    const [error] = await api.deleteProblemTeam(problemId, {
+      team_id: team.team_id
+    });
     setDeletingId(null);
 
     if (error) {
@@ -182,10 +172,9 @@ export const ProblemTeamsManagement = ({problemId, orgId}: ProblemTeamsManagemen
       return;
     }
 
-    const [error] = await api.updateProblemTeam({
-      id: problemId,
-      teamId: editingTeam.teamId,
-      permission: newRole,
+    const [error] = await api.updateProblemTeam(problemId, {
+      team_id: editingTeam.teamId,
+      permission: newRole
     });
 
     setModalOpened(false);

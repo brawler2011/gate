@@ -1,34 +1,24 @@
 import {Container} from "@mantine/core";
-import {redirect} from "next/navigation";
 
 import {ContestMessagesClient} from "@/components/contests/messages/ContestMessagesClient";
-import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
-import {api, unwrapAndCache} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
+import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
+import {redirect} from "@/lib/routeErrors";
 
-import type {ContestClarificationModel} from "@/contracts/core/v1";
-import type {Metadata} from "next";
+import type {ContestClarificationModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
-export const metadata: Metadata = {
-  title: "Сообщения контеста",
-  description: "Объявления от жюри и вопросы по условиям задач",
-};
-
-type PageProps = {
-  params: Promise<{ slug: string; contestLogin: string }>;
-};
-
-const Page = async ({params}: PageProps): Promise<ReactNode> => {
-  const {slug, contestLogin} = await params;
+const loadPage = async ({params}: PageProps) => {
+  const {slug, contestLogin} = params;
 
   const [contestResponse, [, me]] = await Promise.all([
-    unwrapAndCache(api.getContest)({orgLogin: slug, contestLogin}),
+    unwrap(api.getContest)(slug, contestLogin),
     api.getMe(),
   ]);
 
   if (!contestResponse?.contest) {
-    return <ErrorDisplay error={{status: 404, message: "Контест не найден"}} />;
+    throw {status: 404, message: "Контест не найден"};
   }
 
   const user = me?.user ?? null;
@@ -46,31 +36,48 @@ const Page = async ({params}: PageProps): Promise<ReactNode> => {
   }
 
   const isModerator =
-    contestRole?.role === "moderator" ||
-    contestRole?.role === "owner" ||
-    user?.role === "admin";
+    contestRole?.role === "moderator" || contestRole?.role === "owner" || user?.role === "admin";
 
-  const [, announcementsRes] = await api.listContestAnnouncements({
-    orgLogin: slug,
-    contestLogin,
-    page: 1,
-    pageSize: 100,
+  const [, announcementsRes] = await api.listContestAnnouncements(slug, contestLogin, {
+    page: 1, pageSize: 100
   });
 
   let initialClarifications: ContestClarificationModel[] = [];
   if (user) {
-    const [, clarificationsRes] = await api.listContestClarifications({
-      orgLogin: slug,
-      contestLogin,
-      page: 1,
-      pageSize: 100,
+    const [, clarificationsRes] = await api.listContestClarifications(slug, contestLogin, {
+      page: 1, pageSize: 100
     });
     initialClarifications = clarificationsRes?.clarifications || [];
   }
+  return {
+    slug,
+    contestLogin,
+    contestResponse,
+    me,
+    user,
+    contestRole,
+    checker,
+    isModerator,
+    announcementsRes,
+    initialClarifications,
+  };
+};
 
+type PageProps = {
+  params: { slug: string; contestLogin: string };
+};
+
+const Page = ({params}: PageProps): ReactNode => {
+  const routeQuery = usePageQuery(["frontend/app/[slug]/[contestLogin]/messages/page.tsx", params], () =>
+    loadPage({params}),
+  );
+  if (!routeQuery.data) {
+    return <PageQueryState query={routeQuery} />;
+  }
+  const {slug, contestLogin, contestResponse, user, isModerator, announcementsRes, initialClarifications} =
+    routeQuery.data;
   const initialAnnouncements = announcementsRes?.announcements || [];
   const problems = contestResponse.problems || [];
-
   return (
     <Container size="lg" pb={{base: "md", sm: "lg", md: "xl"}} pt="md">
       <ContestMessagesClient

@@ -1,18 +1,11 @@
 import {Container, Skeleton, Stack} from "@mantine/core";
-import {redirect} from "next/navigation";
 import {Suspense} from "react";
 
 import {AdminSubmissionsContent} from "@/components/admin";
 import {parsePage} from "@/lib/lib";
+import {redirect} from "@/lib/routeErrors";
 
-import type {Metadata} from "next";
 import type {ReactNode} from "react";
-
-export const metadata: Metadata = {
-  title: "Админ | Посылки",
-};
-
-export const dynamic: string = "force-dynamic";
 
 const AdminSubmissionsContentSkeleton = () => {
   return (
@@ -32,18 +25,18 @@ const AdminSubmissionsContentSkeleton = () => {
 };
 
 type PageProps = {
-  searchParams: Promise<{
+  searchParams: {
     page?: string;
     state?: string;
     language?: string;
     contestId?: string;
     problemId?: string;
     userId?: string;
-  }>;
+  };
 };
 
-const AdminSubmissionsPage = async ({searchParams}: PageProps): Promise<ReactNode> => {
-  const resolvedSearchParams = await searchParams;
+const AdminSubmissionsPage = ({searchParams}: PageProps): ReactNode => {
+  const resolvedSearchParams = searchParams;
   const page = parsePage(resolvedSearchParams.page);
   if (!page) {
     redirect("/admin/submissions");

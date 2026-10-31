@@ -1,34 +1,22 @@
 "use client";
 
-import {
-  ActionIcon,
-  Box,
-  Center,
-  Container,
-  Group,
-  Skeleton,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
+import {ActionIcon, Box, Center, Container, Group, Skeleton, Stack, Table, Text, TextInput, Title} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconSearch, IconTrash} from "@tabler/icons-react";
-import {useRouter, useSearchParams} from "next/navigation";
+import {useQuery} from "@tanstack/react-query";
 import {useEffect, useRef, useState} from "react";
-import useSWR from "swr";
 
 import {NextPagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {api} from "@/lib/api";
 import {formatDate} from "@/lib/lib";
+import {useRouter, useSearchParams} from "@/lib/navigation";
 
 import classes from "./AdminPage.module.css";
 import {DeleteOrgModal} from "./DeleteOrgModal";
 import {CreateOrgButton} from "../orgs/CreateOrgButton";
 
-import type {OrganizationModel} from "@/contracts/core/v1";
+import type {OrganizationModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type AdminOrgsContentProps = {
@@ -42,7 +30,7 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
 
   // Search input state
   const [searchInput, setSearchInput] = useState(search || "");
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isFirstRender = useRef(true);
 
   // Delete modal state
@@ -85,16 +73,17 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
   }, [searchInput, router, searchParams]);
 
   // Fetch organizations
-  const {data, error, isLoading, mutate} = useSWR(
-    ["admin-orgs", page, search],
-    async () => {
-      const [err, res] = await api.listOrganizations({page, pageSize: 10, search});
-      if (err) {
-        throw new Error(err.message);
-      }
-      return res;
+  const {data, error, isLoading, refetch: mutate} = useQuery({queryKey: ["admin-orgs", page, search], queryFn: async () => {
+    const [err, res] = await api.listOrganizations({
+      page,
+      pageSize: 10,
+      search
+    });
+    if (err) {
+      throw new Error(err.message);
     }
-  );
+    return res;
+  }});
 
   const orgs = data?.organizations || [];
   const pagination = data?.pagination || {total: 0, page: page};
@@ -112,7 +101,7 @@ export const AdminOrgsContent = ({page, search}: AdminOrgsContentProps): ReactNo
 
     setDeletingId(orgToDelete.id);
     try {
-      const [err] = await api.deleteOrganization({login: orgToDelete.login});
+      const [err] = await api.deleteOrganization(orgToDelete.login);
       if (err) {
         notifications.show({
           title: "Ошибка",

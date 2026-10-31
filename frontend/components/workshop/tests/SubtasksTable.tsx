@@ -1,33 +1,13 @@
 "use client";
 
-import {
-  ActionIcon,
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Grid,
-  Group,
-  MultiSelect,
-  NumberInput,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Alert, Badge, Button, Card, Grid, Group, MultiSelect, NumberInput, Select, Stack, Text, TextInput, Tooltip} from "@mantine/core";
 import {IconPlus, IconTrash} from "@tabler/icons-react";
 import {useEffect, useState} from "react";
 
 import {SubtaskDeleteModal} from "./SubtaskDeleteModal";
-import {
-  formatOrdinalsToRanges,
-  parseOrdinalsFromRanges
-} from "./types";
+import {formatOrdinalsToRanges, parseOrdinalsFromRanges} from "./types";
 
-import type {
-  SubtaskItem,
-  TestItem} from "./types";
+import type {SubtaskItem, TestItem} from "./types";
 import type {ReactNode} from "react";
 
 type Props = {

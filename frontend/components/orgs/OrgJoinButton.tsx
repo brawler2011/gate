@@ -1,24 +1,16 @@
 "use client";
 
-import {
-  Badge,
-  Button,
-  Group,
-  Modal,
-  Stack,
-  Text,
-  Textarea,
-} from "@mantine/core";
+import {Badge, Button, Group, Modal, Stack, Text, Textarea} from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconCheck, IconUserPlus, IconX} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
 import {useCallback, useEffect, useState, type ReactNode} from "react";
 
 import {dispatchNotificationsUpdated} from "@/hooks/useUnreadNotificationsCount";
 import {api} from "@/lib/api";
+import {useRouter} from "@/lib/navigation";
 
-import type {OrganizationJoinRequestModel, OrganizationModel} from "@/contracts/core/v1";
+import type {OrganizationJoinRequestModel, OrganizationModel} from "@/contracts/core/v1/models";
 
 type Props = {
   org: OrganizationModel;
@@ -43,7 +35,7 @@ export const OrgJoinButton = ({
       return;
     }
     setLoading(true);
-    const [, data] = await api.getMyOrganizationJoinRequest({login: org.login});
+    const [, data] = await api.getMyOrganizationJoinRequest(org.login);
     setLoading(false);
     if (data?.request) {
       setPendingRequest(data.request);
@@ -70,9 +62,7 @@ export const OrgJoinButton = ({
 
   const handleJoinOpen = async () => {
     setActionLoading(true);
-    const [error, data] = await api.createOrganizationJoinRequest({
-      login: org.login,
-    });
+    const [error, data] = await api.createOrganizationJoinRequest(org.login);
     setActionLoading(false);
     if (error) {
       notifications.show({
@@ -93,11 +83,8 @@ export const OrgJoinButton = ({
 
   const handleRequestSubmit = async () => {
     setActionLoading(true);
-    const [error, data] = await api.createOrganizationJoinRequest({
-      login: org.login,
-      requestBody: {
-        message: message.trim() || undefined,
-      },
+    const [error, data] = await api.createOrganizationJoinRequest(org.login, {
+      message: message.trim() || undefined
     });
     setActionLoading(false);
     closeModal();
@@ -130,7 +117,7 @@ export const OrgJoinButton = ({
 
   const handleCancelRequest = async () => {
     setActionLoading(true);
-    const [error] = await api.cancelOrganizationJoinRequest({login: org.login});
+    const [error] = await api.cancelOrganizationJoinRequest(org.login);
     setActionLoading(false);
     if (error) {
       notifications.show({

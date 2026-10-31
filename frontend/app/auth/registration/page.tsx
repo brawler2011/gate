@@ -1,29 +1,14 @@
 "use client";
 
-import {
-  Alert,
-  Anchor,
-  Box,
-  Button,
-  Center,
-  Group,
-  Loader,
-  Paper,
-  PasswordInput,
-  Stack,
-  Text,
-  TextInput,
-  ThemeIcon,
-  Title,
-} from "@mantine/core";
+import {Alert, Anchor, Box, Button, Center, Group, Loader, Paper, PasswordInput, Stack, Text, TextInput, ThemeIcon, Title} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconAlertCircle, IconCheck, IconMailCheck} from "@tabler/icons-react";
-import Image from "next/image";
-import Link from "next/link";
-import {useSearchParams} from "next/navigation";
 import {Suspense, useState, type ReactNode} from "react";
 
+import Image from "@/components/shared/Image";
+import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
+import {useSearchParams} from "@/lib/navigation";
 
 const RegistrationPage = (): ReactNode => {
   return (
@@ -57,9 +42,7 @@ const RegistrationPageContent = () => {
     setLoading(true);
 
     try {
-      const [err] = await api.register({
-        requestBody: {username, email, password},
-      });
+      const [err] = await api.register({username, email, password});
       if (!err) {
         setIsSuccess(true);
       } else {
@@ -75,9 +58,7 @@ const RegistrationPageContent = () => {
   const handleResend = async () => {
     setResendLoading(true);
     try {
-      const [err] = await api.resendVerification({
-        requestBody: {identifier: email || username},
-      });
+      const [err] = await api.resendVerification({identifier: email || username});
       if (!err) {
         notifications.show({
           title: "Письмо отправлено",
@@ -113,33 +94,17 @@ const RegistrationPageContent = () => {
         padding: "1rem",
       }}
     >
-      <Stack
-        align="center"
-        gap={32}
-        style={{width: "min(550px, calc(100vw - 2rem))"}}
-      >
+      <Stack align="center" gap={32} style={{width: "min(550px, calc(100vw - 2rem))"}}>
         <Link href="/" style={{textDecoration: "none", color: "inherit"}}>
           <Group justify="center" gap="md">
-            <Image
-              src="/gate_logo.svg"
-              alt="Gate"
-              width={56}
-              height={56}
-              priority
-            />
+            <Image src="/gate_logo.svg" alt="Gate" width={56} height={56} priority />
             <Title order={1} fz={36}>
               Gate
             </Title>
           </Group>
         </Link>
 
-        <Paper
-          radius="md"
-          p={32}
-          withBorder
-          shadow="sm"
-          style={{width: "100%"}}
-        >
+        <Paper radius="md" p={32} withBorder shadow="sm" style={{width: "100%"}}>
           {isSuccess ? (
             <Stack align="center" gap="md" ta="center">
               <ThemeIcon size={64} radius="xl" color="blue" variant="light">
@@ -155,17 +120,12 @@ const RegistrationPageContent = () => {
               </Text>
 
               <Text c="dimmed" fz={13}>
-                Пожалуйста, проверьте папку «Входящие» (и «Спам») и перейдите по ссылке в письме
-                для завершения регистрации.
+                Пожалуйста, проверьте папку «Входящие» (и «Спам») и перейдите по ссылке в письме для
+                завершения регистрации.
               </Text>
 
               <Group justify="center" mt="md" gap="sm" w="100%">
-                <Button
-                  variant="outline"
-                  loading={resendLoading}
-                  onClick={handleResend}
-                  size="sm"
-                >
+                <Button variant="outline" loading={resendLoading} onClick={handleResend} size="sm">
                   Отправить письмо повторно
                 </Button>
 
@@ -230,14 +190,7 @@ const RegistrationPageContent = () => {
                     onChange={(e) => setPassword(e.currentTarget.value)}
                   />
 
-                  <Button
-                    type="submit"
-                    fullWidth
-                    size="md"
-                    radius="md"
-                    loading={loading}
-                    mt={8}
-                  >
+                  <Button type="submit" fullWidth size="md" radius="md" loading={loading} mt={8}>
                     Зарегистрироваться
                   </Button>
                 </Stack>

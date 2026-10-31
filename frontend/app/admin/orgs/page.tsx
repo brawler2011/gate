@@ -1,18 +1,11 @@
 import {Container, Skeleton, Stack} from "@mantine/core";
-import {redirect} from "next/navigation";
 import {Suspense} from "react";
 
 import {AdminOrgsContent} from "@/components/admin";
 import {parsePage} from "@/lib/lib";
+import {redirect} from "@/lib/routeErrors";
 
-import type {Metadata} from "next";
 import type {ReactNode} from "react";
-
-export const metadata: Metadata = {
-  title: "Админ | Организации",
-};
-
-export const dynamic: string = "force-dynamic";
 
 const AdminOrgsContentSkeleton = () => {
   return (
@@ -32,14 +25,14 @@ const AdminOrgsContentSkeleton = () => {
 };
 
 type PageProps = {
-  searchParams: Promise<{
+  searchParams: {
     page?: string;
     search?: string;
-  }>;
+  };
 };
 
-const AdminOrgsPage = async ({searchParams}: PageProps): Promise<ReactNode> => {
-  const resolvedSearchParams = await searchParams;
+const AdminOrgsPage = ({searchParams}: PageProps): ReactNode => {
+  const resolvedSearchParams = searchParams;
   const page = parsePage(resolvedSearchParams.page);
   if (!page) {
     redirect("/admin/orgs");

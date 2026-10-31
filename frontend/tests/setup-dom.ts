@@ -1,105 +1,35 @@
-import {GlobalWindow} from "happy-dom";
+import {notifyManager} from '@tanstack/react-query';
+import {cleanup} from '@testing-library/react';
+import {GlobalWindow} from 'happy-dom';
 
-if (!process.env.BACKEND_API_URL) {
-  process.env.BACKEND_API_URL = "http://localhost:8080";
-}
+notifyManager.setScheduler(queueMicrotask);
 
-const dummyDoc = {
-  getElementsByTagName: () => [],
-  head: null,
-  body: null,
-  createElement: () => ({}),
-  addEventListener: () => {},
-  removeEventListener: () => {},
-};
-
-const dummyLocation = {
-  href: "http://localhost/",
-  origin: "http://localhost",
-  protocol: "http:",
-  host: "localhost",
-  hostname: "localhost",
-  port: "",
-  pathname: "/",
-  search: "",
-  hash: "",
-};
-
-const dummyNavigator = {
-  userAgent: "Node",
-};
+// Keep a DOM installed between suites so React's queued scheduler work can finish.
+const win = new GlobalWindow();
+Object.defineProperty(win, 'matchMedia', {
+  value: (query: string) => ({matches: false, media: query, onchange: null,
+    addListener: () => {}, removeListener: () => {}, addEventListener: () => {},
+    removeEventListener: () => {}, dispatchEvent: () => false}),
+});
 
 export const setupDOMEnvironment = (): (() => void) => {
-  const win = new GlobalWindow();
-
-  // matchMedia mock
-  Object.defineProperty(win, "matchMedia", {
-    writable: true,
-    configurable: true,
-    value: (query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: () => {},
-      removeListener: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      dispatchEvent: () => false,
-    }),
-  });
-
-  const definedKeys: string[] = [];
-
-  // Register window properties
-  const winProps = Object.getOwnPropertyNames(win);
-  for (const prop of winProps) {
-    if (prop === "undefined" || prop === "NaN" || prop === "Infinity" || prop.startsWith("_")) {
+  for (const prop of Object.getOwnPropertyNames(win)) {
+    if (['undefined', 'NaN', 'Infinity'].includes(prop) || prop.startsWith('_')) {
       continue;
     }
-    if (!(prop in globalThis) || prop === "window" || prop === "document" || prop === "navigator" || prop === "location") {
+    if (!(prop in globalThis) || ['window', 'document', 'navigator', 'location'].includes(prop)) {
       try {
-        const val = (win as unknown as Record<string, unknown>)[prop];
+        const value = (win as unknown as Record<string, unknown>)[prop];
         Object.defineProperty(globalThis, prop, {
-          value: typeof val === "function" && !val.prototype ? (val as (...args: unknown[]) => unknown).bind(win) : val,
-          configurable: true,
-          writable: true,
+          value: typeof value === 'function' && !value.prototype ? value.bind(win) : value,
+          configurable: true, writable: true,
         });
-        definedKeys.push(prop);
       } catch {
-        // Skip unassignable properties
+        // Some runtime globals cannot be reassigned.
       }
     }
   }
-
   return () => {
-    for (const key of definedKeys) {
-      try {
-        if (key === "document") {
-          Object.defineProperty(globalThis, "document", {
-            value: dummyDoc,
-            configurable: true,
-            writable: true,
-          });
-        } else if (key === "location") {
-          Object.defineProperty(globalThis, "location", {
-            value: dummyLocation,
-            configurable: true,
-            writable: true,
-          });
-        } else if (key === "navigator") {
-          Object.defineProperty(globalThis, "navigator", {
-            value: dummyNavigator,
-            configurable: true,
-            writable: true,
-          });
-        } else if (key === "window") {
-          delete (globalThis as Record<string, unknown>).window;
-        } else {
-          delete (globalThis as Record<string, unknown>)[key];
-        }
-      } catch {
-        // Skip
-      }
-    }
+    cleanup(); win.document.body.innerHTML = '';
   };
 };

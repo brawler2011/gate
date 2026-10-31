@@ -4,10 +4,10 @@ import {Alert, Button, Group, Modal, Stack, Text, TextInput} from '@mantine/core
 import {useDisclosure} from '@mantine/hooks';
 import {notifications} from '@mantine/notifications';
 import {IconAlertTriangle} from '@tabler/icons-react';
-import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 
 import {api} from '@/lib/api';
+import {useRouter} from '@/lib/navigation';
 
 import type {ReactNode} from "react";
 
@@ -21,7 +21,7 @@ export const OrgDangerZone = ({orgLogin, orgName}: Props): ReactNode => {
 
   const handleDelete = async () => {
     setLoading(true);
-    const [error] = await api.deleteOrganization({login: orgLogin});
+    const [error] = await api.deleteOrganization(orgLogin);
     setLoading(false);
     if (error) {
       notifications.show({title: 'Ошибка', message: error.message, color: 'red'});

@@ -1,21 +1,17 @@
 "use client";
 
 import {Box, Paper, Select, Stack} from "@mantine/core";
-import {useRouter} from "next/navigation";
 import {useState} from "react";
 
 import {CreateSubmissionForm} from "@/components/submissions/CreateSubmissionForm";
 import {api} from "@/lib/api";
 import {LANGUAGE_MAP} from "@/lib/constants";
 import {numberToLetters} from "@/lib/lib";
+import {useRouter} from "@/lib/navigation";
 
 import classes from "./SubmitSubmissionClient.module.css";
 
-import type {
-  ContestModel,
-  ContestProblemListItemModel,
-  UserModel,
-} from "@/contracts/core/v1";
+import type {ContestModel, ContestProblemListItemModel, UserModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -57,13 +53,10 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
     }
 
     const [error, response] = await api.createSubmission({
-      problemId: selectedProblemId,
-      organizationLogin: contest.organization_login,
-      contestLogin: contest.login,
-      language: languageCode,
-      requestBody: {
-        submission: submissionContent,
-      },
+      submission: submissionContent
+    }, {
+      problem_id: selectedProblemId, organization_login: contest.organization_login, contest_login: contest.login,
+      language: languageCode
     });
 
     if (error) {

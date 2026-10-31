@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  Alert,
-  Box,
-  Button,
-  Group,
-  LoadingOverlay,
-  Modal,
-  Stack,
-  Text,
-  Textarea,
-} from "@mantine/core";
+import {Alert, Box, Button, Group, LoadingOverlay, Modal, Stack, Text, Textarea} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useEffect, useState, useTransition} from "react";
 
@@ -70,7 +60,7 @@ export const TestPreviewModal = ({
       } else {
         setIsTooLarge(false);
         setIsLoading(true);
-        api.getProblemTestFile({problemId, name: filename}).then(async ([err, blob]) => {
+        api.getProblemTestFile(problemId, filename).then(async ([err, blob]) => {
           setIsLoading(false);
           if (err || !blob) {
             setOriginalError(err?.message || "Файл отсутствует или пуст");
@@ -95,7 +85,7 @@ export const TestPreviewModal = ({
       return;
     }
     setIsLoading(true);
-    const [err, blob] = await api.getProblemTestFile({problemId, name: filename});
+    const [err, blob] = await api.getProblemTestFile(problemId, filename);
     setIsLoading(false);
     if (err || !blob) {
       setOriginalError(err?.message || "Ошибка загрузки файла");
@@ -115,7 +105,7 @@ export const TestPreviewModal = ({
 
     startSaving(async () => {
       const blob = new Blob([content], {type: "application/octet-stream"});
-      const [err] = await api.updateProblemTestFile({problemId, name: filename, requestBody: blob});
+      const [err] = await api.updateProblemTestFile(problemId, filename, blob);
       if (err) {
         notifications.show({
           title: "Ошибка сохранения",
@@ -140,7 +130,7 @@ export const TestPreviewModal = ({
       return;
     }
     setIsDownloading(true);
-    const [err, blob] = await api.getProblemTestFile({problemId, name: filename});
+    const [err, blob] = await api.getProblemTestFile(problemId, filename);
     setIsDownloading(false);
     if (err || !blob) {
       notifications.show({

@@ -1,48 +1,66 @@
-import {afterEach, describe, expect, it} from "bun:test";
-import {getPathMatch} from "next/dist/shared/lib/router/utils/path-match";
-import {NextRequest} from "next/server";
+import {afterEach, describe, expect, it, spyOn} from 'bun:test';
 
-import {config, proxy} from "../proxy";
+import {api} from '@/lib/api';
+import {apiFetch, HttpError} from '@/lib/fetch';
 
-const originalBackendUrl = process.env.BACKEND_API_URL;
+const originalFetch = globalThis.fetch;
 afterEach(() => {
-  if (originalBackendUrl === undefined) {
-    delete process.env.BACKEND_API_URL;
-  } else {
-    process.env.BACKEND_API_URL = originalBackendUrl;
-  }
+  globalThis.fetch = originalFetch;
 });
 
-describe("API routing", () => {
-  it("matches API paths including image extensions without matching unrelated assets", () => {
-    for (const url of ["/api", "/api/posts/123/image", "/api/files/cover.png"]) {
-      expect(config.matcher.some((pattern) => getPathMatch(pattern)(url))).toBe(true);
-    }
-    for (const url of ["/_next/image", "/_next/static/test.js", "/cover.png"]) {
-      expect(config.matcher.some((pattern) => getPathMatch(pattern)(url))).toBe(false);
+describe('SPA API transport', () => {
+  it('uses /api and session cookies while retaining request options', async () => {
+    const fetch = spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ok: true}));
+    const controller = new AbortController();
+    expect(await apiFetch('/posts?page=2', {signal: controller.signal})).toEqual({ok: true});
+    expect(fetch).toHaveBeenCalledWith('/api/posts?page=2', {credentials: 'include', signal: controller.signal});
+    fetch.mockRestore();
+  });
+  it('encodes path parameters and uses contract query names', async () => {
+    const urls: string[] = [];
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      urls.push(String(url));
+      return Response.json({});
+    }) as unknown as typeof fetch;
+    await api.getProblemTestFile('problem', 'nested/space #?.in');
+    await api.listProblems({
+      pageSize: 10,
+      organization_id: 'org'
+    });
+    expect(urls[0]).toBe('/api/problems/problem/tests/nested%2Fspace%20%23%3F.in');
+    expect(urls[1]).toContain('organization_id=org');
+    expect(urls[1]).toContain('pageSize=10');
+  });
+  it('passes path, body, query and request options through the facade', async () => {
+    const body = {title: 'Updated statement', legend: 'Statement text', input_format: '', output_format: ''};
+    const fetch = spyOn(globalThis, 'fetch').mockResolvedValue(Response.json(body));
+    try {
+      const controller = new AbortController();
+      const [error, data] = await api.updateProblemStatement(
+        'problem/id', body, {lang: 'ru'}, {signal: controller.signal}
+      );
+      expect(error).toBeNull();
+      expect(data).toEqual(body);
+      expect(fetch).toHaveBeenCalledWith('/api/problems/problem%2Fid/statement?lang=ru', {
+        credentials: 'include',
+        signal: controller.signal,
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body),
+      });
+    } finally {
+      fetch.mockRestore();
     }
   });
-
-  it("rewrites to the runtime backend URL, preserving paths and query parameters", () => {
-    for (const baseUrl of ["http://backend.test:8080", "http://backend.test:8080/"]) {
-      process.env.BACKEND_API_URL = baseUrl;
-      const response = proxy(new NextRequest("https://gate.test/api/posts/123/image?size=100&tag=a%2Fb&tag=c"));
-      expect(response.headers.get("x-middleware-rewrite")).toBe("http://backend.test:8080/posts/123/image?size=100&tag=a%2Fb&tag=c");
+  it('preserves status and request id on HTTP errors', async () => {
+    globalThis.fetch = (async () => Response.json({message: 'Denied', request_id: 'req-1'}, {status: 403})) as unknown as typeof fetch;
+    try {
+      await apiFetch('/private');
+      throw new Error('Expected HTTP failure');
+    } catch (error) {
+      expect(error).toBeInstanceOf(HttpError);
+      expect((error as HttpError).status).toBe(403);
+      expect((error as HttpError).body.request_id).toBe('req-1');
     }
-    process.env.BACKEND_API_URL = "http://other-backend.test/v1/";
-    expect(proxy(new NextRequest("https://gate.test/api/posts")).headers.get("x-middleware-rewrite"))
-      .toBe("http://other-backend.test/v1/posts");
-  });
-
-  it("requires backend configuration without redirecting API-like page paths", () => {
-    delete process.env.BACKEND_API_URL;
-    expect(() => proxy(new NextRequest("https://gate.test/api/posts"))).toThrow("BACKEND_API_URL");
-    expect(proxy(new NextRequest("https://gate.test/apiary")).headers.get("x-middleware-next")).toBe("1");
-  });
-
-  it("preserves profile rewrites and direct internal profile blocking", () => {
-    expect(proxy(new NextRequest("https://gate.test/@alice")).headers.get("x-middleware-rewrite"))
-      .toBe("https://gate.test/user/alice");
-    expect(proxy(new NextRequest("https://gate.test/user/alice")).status).toBe(404);
   });
 });

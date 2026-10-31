@@ -1,30 +1,16 @@
 "use client";
 
-import {
-  ActionIcon,
-  Button,
-  Center,
-  Code,
-  Group,
-  Loader,
-  Modal,
-  Paper,
-  Select,
-  Stack,
-  Text,
-  Textarea,
-  Title,
-} from "@mantine/core";
+import {ActionIcon, Button, Center, Code, Group, Loader, Modal, Paper, Select, Stack, Text, Textarea, Title} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconCheck, IconCode, IconPlayerPlay, IconTrash} from "@tabler/icons-react";
+import {useQuery} from "@tanstack/react-query";
 import {useEffect, useState, useTransition} from "react";
-import useSWR from "swr";
 
 import {api, type ApiError} from "@/lib/api";
 
 import classes from "./WorkshopFolderTab.module.css";
 
-import type {FileEntry} from "@/contracts/core/v1";
+import type {FileEntry} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type ListFilesResult = Promise<[ApiError | null, { files?: FileEntry[] } | null]>;
@@ -104,13 +90,13 @@ export const WorkshopSingleComponentTab = ({
   const getFileName = (path: string) => path.split("/").pop() ?? path;
 
   // Fetch languages dynamically from backend API (which reads languages.yaml)
-  const {data: languagesData} = useSWR("supported-languages", async () => {
+  const {data: languagesData} = useQuery({queryKey: ["supported-languages"], queryFn: async () => {
     const [err, res] = await api.getLanguages();
     if (err || !res?.languages) {
       return null;
     }
     return res.languages;
-  });
+  }});
 
   const languageOptions = languagesData?.length
     ? languagesData.map((lang) => {
@@ -131,16 +117,13 @@ export const WorkshopSingleComponentTab = ({
     }
   }, [languageOptions, selectedExt]);
 
-  const {data: filesData, isLoading: isLoadingFiles, mutate: mutateFiles} = useSWR(
-    ["workshop-single-component-files", problemId, componentType],
-    async () => {
-      const [err, res] = await listFiles(problemId);
-      if (err) {
-        throw new Error(err.message || "Не удалось загрузить компонент");
-      }
-      return res;
+  const {data: filesData, isLoading: isLoadingFiles, refetch: mutateFiles} = useQuery({queryKey: ["workshop-single-component-files", problemId, componentType], queryFn: async () => {
+    const [err, res] = await listFiles(problemId);
+    if (err) {
+      throw new Error(err.message || "Не удалось загрузить компонент");
     }
-  );
+    return res;
+  }});
 
   const leafFiles = (filesData?.files || []).filter(
     (f) => !f.is_directory && f.path && !getFileName(f.path).startsWith(".")
@@ -148,16 +131,13 @@ export const WorkshopSingleComponentTab = ({
   const activeFile = leafFiles.length > 0 ? leafFiles[0] : null;
   const activeFileName = activeFile?.path ? getFileName(activeFile.path) : null;
 
-  const {data: fileContent, isLoading: isLoadingContent, mutate: mutateContent} = useSWR(
-    activeFileName ? ["workshop-single-component-content", problemId, componentType, activeFileName] : null,
-    async () => {
-      const [err, res] = await getFile(problemId, activeFileName!);
-      if (err) {
-        throw new Error(err.message || "Не удалось загрузить содержимое компонента");
-      }
-      return res;
+  const {data: fileContent, isLoading: isLoadingContent, refetch: mutateContent} = useQuery({queryKey: [activeFileName ? ["workshop-single-component-content", problemId, componentType, activeFileName] : null], queryFn: async () => {
+    const [err, res] = await getFile(problemId, activeFileName!);
+    if (err) {
+      throw new Error(err.message || "Не удалось загрузить содержимое компонента");
     }
-  );
+    return res;
+  }, enabled: Boolean(activeFileName ? ["workshop-single-component-content", problemId, componentType, activeFileName] : null)});
 
   useEffect(() => {
     if (fileContent !== undefined && activeFileName) {
@@ -242,10 +222,7 @@ export const WorkshopSingleComponentTab = ({
 
   const handleCompile = () => {
     startCompiling(async () => {
-      const [error, res] = await api.compileProblemComponent({
-        problemId,
-        componentType,
-      });
+      const [error, res] = await api.compileProblemComponent(problemId, componentType);
 
       if (error) {
         notifications.show({

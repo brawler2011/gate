@@ -1,11 +1,11 @@
 "use client";
 
 import {Button} from "@mantine/core";
-import {useRouter} from "next/navigation";
 import {useState} from "react";
 
 import {useSession} from "@/contexts/SessionContext";
 import {api} from "@/lib/api";
+import {useRouter} from "@/lib/navigation";
 
 import type {ButtonProps} from "@mantine/core";
 import type {ReactNode} from "react";

@@ -1,8 +1,9 @@
 "use client";
 
 import {Container, Title, Text, Button, Stack, Paper, Code, Group} from "@mantine/core";
-import Link from "next/link";
-import {usePathname} from "next/navigation";
+
+import Link from "@/components/shared/RouterLink";
+import {usePathname} from "@/lib/navigation";
 
 import {RefreshButton} from "./RefreshButton";
 
@@ -60,7 +61,7 @@ export const ErrorDisplay = ({error}: Props): ReactNode => {
       <Paper p="xl" radius="md" withBorder>
         <Stack align="center" gap="lg">
           <Title order={1}>{display.title}</Title>
-          
+
           <Text c="dimmed" ta="center">
             {display.description}
           </Text>

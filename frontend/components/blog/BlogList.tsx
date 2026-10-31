@@ -5,7 +5,7 @@ import {Stack, Text} from "@mantine/core";
 import {BlogPost} from '@/components/blog/BlogPost';
 import {NextPagination} from '@/components/shared/Pagination';
 
-import type {PostModel, PaginationModel} from "@/contracts/core/v1";
+import type {PostModel, PaginationModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -14,7 +14,7 @@ type Props = {
 };
 
 export const BlogList = ({posts, pagination}: Props): ReactNode => {
-  if (posts.length === 0) { 
+  if (posts.length === 0) {
     return (
       <Text c="dimmed" ta="center" py="xl">
         Пока постов нет

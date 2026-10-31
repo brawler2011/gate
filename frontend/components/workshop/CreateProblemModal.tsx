@@ -1,20 +1,13 @@
 "use client";
 
-import {
-  Button,
-  Modal,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-} from "@mantine/core";
+import {Button, Modal, Select, Stack, Text, TextInput} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {useRouter} from "next/navigation";
 import {useEffect, useState} from "react";
 
 import {api} from "@/lib/api";
+import {useRouter} from "@/lib/navigation";
 
-import type {OrganizationModel, ProblemTemplateModel} from "@/contracts/core/v1";
+import type {OrganizationModel, ProblemTemplateModel} from "@/contracts/core/v1/models";
 import type {ComboboxItem, ComboboxItemGroup} from "@mantine/core";
 import type {ReactNode} from "react";
 
@@ -56,7 +49,9 @@ export const CreateProblemModal = ({
   useEffect(() => {
     if (opened && orgId) {
       setLoadingTemplates(true);
-      api.listProblemTemplates({organizationId: orgId})
+      api.listProblemTemplates({
+        organization_id: orgId
+      })
         .then(([err, res]) => {
           if (!err && res) {
             setTemplateList(res);
@@ -118,9 +113,7 @@ export const CreateProblemModal = ({
     setLoading(true);
     try {
       const [createError, createResponse] = await api.createProblem({
-        title: title.trim() || "New Problem",
-        organizationId: orgId,
-        templateId: templateId,
+        title: title.trim() || "New Problem", organization_id: orgId, template_id: templateId
       });
       if (createError) {
         throw new Error(createError.message);

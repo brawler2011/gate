@@ -1,16 +1,10 @@
 "use client";
 
-import {
-  IconPuzzle,
-  IconSettings,
-  IconTrophy,
-  IconUsers,
-  IconUsersGroup,
-} from "@tabler/icons-react";
-import {usePathname} from "next/navigation";
+import {IconPuzzle, IconSettings, IconTrophy, IconUsers, IconUsersGroup} from "@tabler/icons-react";
 import {type ReactNode} from "react";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
+import {usePathname} from "@/lib/navigation";
 
 export type OrgHeaderNavProps = {
   orgLogin: string;

@@ -1,16 +1,8 @@
 import {Container, Title, Text, Button, Stack, Paper} from "@mantine/core";
-import Link from "next/link";
 
-import type {Metadata} from "next";
+import Link from "@/components/shared/RouterLink";
+
 import type {ReactNode} from "react";
-
-// Next.js 15 автоматически кэширует not-found.tsx при билде
-// Эта страница статическая и будет отдаваться из кеша
-export const metadata: Metadata = {
-  title: '404 - Страница не найдена',
-  description: 'Запрашиваемая страница не существует',
-  robots: 'noindex, nofollow',
-};
 
 const NotFound = (): ReactNode => {
   return (
@@ -19,7 +11,7 @@ const NotFound = (): ReactNode => {
         <Stack align="center" gap="lg">
           <Title order={1} c="dimmed">404</Title>
           <Title order={2}>Страница не найдена</Title>
-          
+
           <Text c="dimmed" ta="center">
             Запрашиваемая страница не существует или была удалена.
           </Text>

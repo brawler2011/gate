@@ -1,15 +1,12 @@
 "use client";
 
-import {
-  Box,
-  Table,
-  Text,
-} from "@mantine/core";
-import {useRouter} from "next/navigation";
+import {Box, Table, Text} from "@mantine/core";
+
+import {useRouter} from "@/lib/navigation";
 
 import classes from "./ContestsTable.module.css";
 
-import type {ContestModel} from "@/contracts/core/v1";
+import type {ContestModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type ContestsTableProps = {

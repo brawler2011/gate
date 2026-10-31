@@ -1,43 +1,20 @@
 "use client";
 
-import {
-  ActionIcon,
-  Autocomplete,
-  Badge,
-  Button,
-  Center,
-  Divider,
-  Group,
-  Loader,
-  Modal,
-  Select,
-  Stack,
-  Table,
-  Text,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Autocomplete, Badge, Button, Center, Divider, Group, Loader, Modal, Select, Stack, Table, Text, Tooltip} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {
-  IconDeviceFloppy,
-  IconEdit,
-  IconGripVertical,
-  IconPlus,
-  IconRefresh,
-  IconRotate2,
-  IconTrash,
-} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
+import {IconDeviceFloppy, IconEdit, IconGripVertical, IconPlus, IconRefresh, IconRotate2, IconTrash} from "@tabler/icons-react";
 import {useEffect, useState} from "react";
 
 import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
 import {numberToLetters} from "@/lib/lib";
+import {useRouter} from "@/lib/navigation";
 
 import classes from "./ProblemsSection.module.css";
 
-import type * as corev1 from "@/contracts/core/v1";
+import type * as corev1 from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 interface ProblemsSectionProps {
@@ -113,7 +90,11 @@ export const ProblemsSection = ({
       }
 
       setSearching(true);
-      const [error, response] = await api.listProblems({page: 1, pageSize: 10, search: debouncedQuery, owner: true});
+      const [error, response] = await api.listProblems({
+        page: 1, pageSize: 10,
+        search: debouncedQuery,
+        owner: true
+      });
       setSearching(false);
 
       if (error) {
@@ -133,7 +114,9 @@ export const ProblemsSection = ({
     }
 
     setAdding(true);
-    const [error] = await api.createContestProblem({orgLogin, contestLogin, problemId: selectedProblemId});
+    const [error] = await api.createContestProblem(orgLogin, contestLogin, {
+      problem_id: selectedProblemId
+    });
     setAdding(false);
 
     if (error) {
@@ -162,7 +145,7 @@ export const ProblemsSection = ({
 
   const handleDeleteProblem = async (problemId: string) => {
     setDeletingId(problemId);
-    const [error] = await api.deleteContestProblem({orgLogin, contestLogin, problemId});
+    const [error] = await api.deleteContestProblem(orgLogin, contestLogin, problemId);
     setDeletingId(null);
 
     if (error) {
@@ -255,15 +238,11 @@ export const ProblemsSection = ({
 
   const handleSaveOrder = async () => {
     setSavingOrder(true);
-    const [error] = await api.reorderContestProblems({
-      orgLogin,
-      contestLogin,
-      requestBody: {
-        problems: problems.map((p) => ({
-          problem_id: p.problem_id,
-          position: p.position,
-        })),
-      },
+    const [error] = await api.reorderContestProblems(orgLogin, contestLogin, {
+      problems: problems.map((p) => ({
+        problem_id: p.problem_id,
+        position: p.position
+      }))
     });
     setSavingOrder(false);
 
@@ -296,7 +275,7 @@ export const ProblemsSection = ({
     setSelectedPackageId(null);
     setLoadingPackages(true);
 
-    const [error, response] = await api.listProblemPackages({id: problemId});
+    const [error, response] = await api.listProblemPackages(problemId);
     setLoadingPackages(false);
 
     if (error || !response?.packages) {
@@ -327,11 +306,8 @@ export const ProblemsSection = ({
     }
 
     setReplacing(true);
-    const [error] = await api.createContestProblem({
-      orgLogin,
-      contestLogin,
-      problemId: replaceTarget.problemId,
-      packageId: selectedPackageId,
+    const [error] = await api.createContestProblem(orgLogin, contestLogin, {
+      problem_id: replaceTarget.problemId, package_id: selectedPackageId
     });
     setReplacing(false);
 

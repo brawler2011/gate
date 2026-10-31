@@ -3,9 +3,9 @@
 import {Badge, Box, Group, Switch, Table, Text, TextInput, Title, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconSearch} from "@tabler/icons-react";
-import Link from "next/link";
 import React, {useEffect, useState, useMemo} from "react";
 
+import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
 import {env} from "@/lib/env";
 import {numberToLetters} from "@/lib/lib";
@@ -13,13 +13,8 @@ import {submissionsWsManager} from "@/lib/submissionsWsManager";
 
 import classes from "./ContestMonitorTable.module.css";
 
-import type {
-  ScoreboardResponseModel,
-  ScoreboardItemModel,
-  ScoreboardProblemResultModel,
-  ScoreboardProblemHeaderModel,
-} from "@/contracts/core/v1";
-import type {SubmissionsMessage, MessageSubmissionCompleted} from "@/contracts/observer/v1";
+import type {ScoreboardResponseModel, ScoreboardItemModel, ScoreboardProblemResultModel, ScoreboardProblemHeaderModel} from "@/contracts/core/v1/models";
+import type {SubmissionsMessage, MessageSubmissionCompleted} from "@/contracts/observer/v1/models";
 
 interface ContestMonitorTableProps {
   contestId: string;
@@ -58,10 +53,8 @@ export const ContestMonitorTable = ({
     const checked = e.currentTarget.checked;
     setShowRealMonitor(checked);
     setLoadingScoreboard(true);
-    const [err, res] = await api.getContestScoreboard({
-      orgLogin,
-      contestLogin,
-      unfrozen: checked,
+    const [err, res] = await api.getContestScoreboard(orgLogin, contestLogin, {
+      unfrozen: checked
     });
     setLoadingScoreboard(false);
     if (err) {
@@ -85,7 +78,9 @@ export const ContestMonitorTable = ({
     let requestVersion = 0;
     const refresh = async () => {
       const version = ++requestVersion;
-      const [err, res] = await api.getContestScoreboard({orgLogin, contestLogin, unfrozen: showRealMonitor});
+      const [err, res] = await api.getContestScoreboard(orgLogin, contestLogin, {
+        unfrozen: showRealMonitor
+      });
       if (err) {
         throw err;
       }

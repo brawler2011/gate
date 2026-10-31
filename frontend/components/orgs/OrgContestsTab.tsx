@@ -2,19 +2,15 @@
 
 import {Button, Center, Group, Input, Stack, Text} from "@mantine/core";
 import {IconPlus, IconSearch} from "@tabler/icons-react";
-import {useRouter, useSearchParams} from "next/navigation";
 import {useCallback, useEffect, useRef, useState} from "react";
 
 import {ContestsTable} from "@/components/contests/ContestsTable";
 import {OrgJoinButton} from "@/components/orgs/OrgJoinButton";
 import {NextPagination} from "@/components/shared/Pagination";
 import {CreateContestModal} from "@/components/workshop/CreateContestModal";
+import {useRouter, useSearchParams} from "@/lib/navigation";
 
-import type {
-  ContestModel,
-  OrganizationModel,
-  PaginationModel,
-} from "@/contracts/core/v1";
+import type {ContestModel, OrganizationModel, PaginationModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -36,7 +32,7 @@ export const OrgContestsTab = ({
 }: Props): ReactNode => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const [searchValue, setSearchValue] = useState(search);
   const [createOpened, setCreateOpened] = useState(false);
 

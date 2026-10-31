@@ -1,28 +1,15 @@
 import {Container} from "@mantine/core";
-import {notFound, redirect} from "next/navigation";
 
 import {AdminUserEditContent} from "@/components/admin";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api} from "@/lib/api";
+import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
+import {notFound, redirect} from "@/lib/routeErrors";
 
-import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
-type Props = {
-  params: Promise<{ username: string }>;
-};
-
-export const dynamic: string = "force-dynamic";
-
-export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
-  const {username} = await params;
-  return {
-    title: `Пользователь @${decodeURIComponent(username)} | Администрирование`,
-  };
-};
-
-const AdminUserEditPage = async ({params}: Props): Promise<ReactNode> => {
-  const {username} = await params;
+const loadAdminUserEditPage = async ({params}: Props) => {
+  const {username} = params;
   let decoded = "";
   try {
     decoded = decodeURIComponent(username);
@@ -36,7 +23,22 @@ const AdminUserEditPage = async ({params}: Props): Promise<ReactNode> => {
     redirect("/auth/login?return_to=/admin/users/" + encodeURIComponent(decoded));
   }
 
-  const [error, data] = await api.getUser({username: decoded});
+  const [error, data] = await api.getUser(decoded);
+  return {username, decoded, meError, meData, error, data};
+};
+
+type Props = {
+  params: { username: string };
+};
+
+const AdminUserEditPage = ({params}: Props): ReactNode => {
+  const routeQuery = usePageQuery(["frontend/app/admin/users/[username]/page.tsx", params], () =>
+    loadAdminUserEditPage({params}),
+  );
+  if (!routeQuery.data) {
+    return <PageQueryState query={routeQuery} />;
+  }
+  const {error, data} = routeQuery.data;
   if (error) {
     if (error.status === 404) {
       notFound();
@@ -47,7 +49,6 @@ const AdminUserEditPage = async ({params}: Props): Promise<ReactNode> => {
       </Container>
     );
   }
-
   return <AdminUserEditContent user={data!.user} />;
 };
 

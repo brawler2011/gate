@@ -1,18 +1,10 @@
 "use client";
 
-import {
-  IconBuilding,
-  IconFileText,
-  IconLayoutDashboard,
-  IconNews,
-  IconPuzzle,
-  IconTrophy,
-  IconUsers,
-} from "@tabler/icons-react";
-import {usePathname} from "next/navigation";
+import {IconBuilding, IconFileText, IconLayoutDashboard, IconNews, IconPuzzle, IconTrophy, IconUsers} from "@tabler/icons-react";
 import {type ReactNode} from "react";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
+import {usePathname} from "@/lib/navigation";
 
 const ADMIN_NAV_ITEMS: AdaptiveTabItem[] = [
   {

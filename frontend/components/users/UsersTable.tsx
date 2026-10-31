@@ -3,18 +3,14 @@
 import {ActionIcon, Group, Select, Stack, Table, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconFileCode, IconSettings} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
 import {useState} from "react";
 
 import {NextPagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {api} from "@/lib/api";
+import {useRouter} from "@/lib/navigation";
 
-import type {
-  PaginationModel as PaginationType,
-  UserModel,
-  UpdateUserRequestModel,
-} from "@/contracts/core/v1";
+import type {PaginationModel as PaginationType, UserModel, UpdateUserRequestModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -36,11 +32,8 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
   const handleRoleChange = async (user: UserModel, newRole: string) => {
     setUpdatingId(user.id);
     try {
-      const [err] = await api.updateUser({
-        username: user.username,
-        requestBody: {
-          role: newRole as UpdateUserRequestModel.role,
-        },
+      const [err] = await api.updateUser(user.username, {
+        role: newRole as UpdateUserRequestModel["role"]
       });
 
       if (err) {

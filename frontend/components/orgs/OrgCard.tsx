@@ -2,9 +2,10 @@
 
 import {Card, Text, Title, Group} from '@mantine/core';
 import {IconBuilding} from '@tabler/icons-react';
-import Link from 'next/link';
 
-import type {OrganizationModel} from '@/contracts/core/v1';
+import Link from '@/components/shared/RouterLink';
+
+import type {OrganizationModel} from '@/contracts/core/v1/models';
 import type {ReactNode} from "react";
 
 type Props = { org: OrganizationModel };

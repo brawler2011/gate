@@ -1,13 +1,9 @@
 "use client";
 
 import {Box, Button, Stack} from "@mantine/core";
-import Link from "next/link";
 
-import {
-  getOrgSettingsIcon,
-  getOrgSettingsNavTabStyles,
-  type OrgSettingsNavSection,
-} from "@/components/orgs/OrgSettingsNavShared";
+import {getOrgSettingsIcon, getOrgSettingsNavTabStyles, type OrgSettingsNavSection} from "@/components/orgs/OrgSettingsNavShared";
+import Link from "@/components/shared/RouterLink";
 
 import type {ReactNode} from "react";
 

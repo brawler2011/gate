@@ -2,13 +2,13 @@
 
 import {Badge, Card, Center, Skeleton, Stack, Table, Text} from "@mantine/core";
 import {IconTrophy} from "@tabler/icons-react";
-import Link from "next/link";
-import useSWR from "swr";
+import {useQuery} from "@tanstack/react-query";
 
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
+import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
 
-import type {ContestModel} from "@/contracts/core/v1";
+import type {ContestModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 interface TeamContestsTabProps {
@@ -26,10 +26,10 @@ const getContestStatus = (contest: ContestModel, now: number): string => {
 };
 
 export const TeamContestsTab = ({teamId}: TeamContestsTabProps): ReactNode => {
-  const {data, isLoading} = useSWR(["team-contests", teamId], async () => ({
-    result: await api.listTeamContests({id: teamId}),
+  const {data, isLoading} = useQuery({queryKey: ["team-contests", teamId], queryFn: async () => ({
+    result: await api.listTeamContests(teamId, {}),
     loadedAt: Date.now(),
-  }));
+  })});
 
   if (isLoading || !data) {
     return (

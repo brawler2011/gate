@@ -4,10 +4,10 @@ import {Alert, Button, Modal, Stack, TextInput} from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconAlertCircle, IconPlus} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
 import {useState} from "react";
 
 import {api} from "@/lib/api";
+import {useRouter} from "@/lib/navigation";
 
 import type {ReactNode} from "react";
 
@@ -43,10 +43,8 @@ export const CreateTeamModal = ({orgId}: Props): ReactNode => {
 
     setLoading(true);
     const [error] = await api.createTeam({
-      requestBody: {
-        name: trimmed,
-        organization_id: orgId,
-      },
+      name: trimmed,
+      organization_id: orgId
     });
     setLoading(false);
 

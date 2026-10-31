@@ -1,25 +1,13 @@
 "use client";
 
-import {
-  Alert,
-  Box,
-  Button,
-  Center,
-  Group,
-  Loader,
-  Paper,
-  Stack,
-  Text,
-  ThemeIcon,
-  Title,
-} from "@mantine/core";
+import {Alert, Box, Button, Center, Group, Loader, Paper, Stack, Text, ThemeIcon, Title} from "@mantine/core";
 import {IconAlertCircle, IconCheck} from "@tabler/icons-react";
-import Image from "next/image";
-import Link from "next/link";
-import {useSearchParams} from "next/navigation";
 import {Suspense, useEffect, useState, type ReactNode} from "react";
 
+import Image from "@/components/shared/Image";
+import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
+import {useSearchParams} from "@/lib/navigation";
 
 const ConfirmEmailChangePage = (): ReactNode => {
   return (
@@ -54,9 +42,7 @@ const ConfirmEmailChangeContent = () => {
 
     const confirm = async () => {
       try {
-        const [err] = await api.confirmEmailChange({
-          requestBody: {token},
-        });
+        const [err] = await api.confirmEmailChange({token});
 
         if (!isMounted) {
           return;
@@ -112,13 +98,7 @@ const ConfirmEmailChangeContent = () => {
             Ваш новый адрес электронной почты активирован и привязан к вашей учетной записи.
           </Text>
 
-          <Button
-            component={Link}
-            href="/settings"
-            variant="filled"
-            size="sm"
-            mt="md"
-          >
+          <Button component={Link} href="/settings" variant="filled" size="sm" mt="md">
             Перейти в настройки
           </Button>
         </Stack>
@@ -148,13 +128,7 @@ const ConfirmEmailChangeContent = () => {
           </Alert>
         )}
 
-        <Button
-          component={Link}
-          href="/settings"
-          variant="outline"
-          size="sm"
-          mt="md"
-        >
+        <Button component={Link} href="/settings" variant="outline" size="sm" mt="md">
           Вернуться в настройки
         </Button>
       </Stack>
@@ -171,33 +145,17 @@ const ConfirmEmailChangeContent = () => {
         padding: "1rem",
       }}
     >
-      <Stack
-        align="center"
-        gap={32}
-        style={{width: "min(550px, calc(100vw - 2rem))"}}
-      >
+      <Stack align="center" gap={32} style={{width: "min(550px, calc(100vw - 2rem))"}}>
         <Link href="/" style={{textDecoration: "none", color: "inherit"}}>
           <Group justify="center" gap="md">
-            <Image
-              src="/gate_logo.svg"
-              alt="Gate"
-              width={56}
-              height={56}
-              priority
-            />
+            <Image src="/gate_logo.svg" alt="Gate" width={56} height={56} priority />
             <Title order={1} fz={36}>
               Gate
             </Title>
           </Group>
         </Link>
 
-        <Paper
-          radius="md"
-          p={32}
-          withBorder
-          shadow="sm"
-          style={{width: "100%"}}
-        >
+        <Paper radius="md" p={32} withBorder shadow="sm" style={{width: "100%"}}>
           {renderContent()}
         </Paper>
       </Stack>

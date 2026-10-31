@@ -3,30 +3,30 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: 10m
+        max-file: '3'
     image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG:-prod}
     container_name: gate-backend-prod
     hostname: backend
     restart: unless-stopped
     environment:
-      - ENV=${ENV:-prod}
-      - ADDRESS=${BACKEND_ADDRESS:-:8080}
-      - PRIVATE_ADDRESS=${BACKEND_PRIVATE_ADDRESS:-:8081}
-      - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_APP_DB:-gate}?sslmode=disable
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/${REDIS_DB_INDEX:-0}
-      - NATS_URL=nats://${NATS_HOST:-nats}:${NATS_PORT:-4222}
-      - GOJUDGE_GRPC_ADDR=go-judge:5051
-      - S3_ENDPOINT=${S3_ENDPOINT:-http://s3:8333}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
-      - STORAGE_TYPE=${STORAGE_TYPE:-s3}
-      - RESEND_API_KEY=${RESEND_API_KEY}
-      - EMAIL_FROM=${EMAIL_FROM:-Gate <no-reply@${DOMAIN_NAME}>}
-      - APP_BASE_URL=${APP_BASE_URL:-https://${DOMAIN_NAME}}
+    - ENV=${ENV:-prod}
+    - ADDRESS=${BACKEND_ADDRESS:-:8080}
+    - PRIVATE_ADDRESS=${BACKEND_PRIVATE_ADDRESS:-:8081}
+    - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_APP_DB:-gate}?sslmode=disable
+    - REDIS_URL=redis://:${REDIS_PASSWORD}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/${REDIS_DB_INDEX:-0}
+    - NATS_URL=nats://${NATS_HOST:-nats}:${NATS_PORT:-4222}
+    - GOJUDGE_GRPC_ADDR=go-judge:5051
+    - S3_ENDPOINT=${S3_ENDPOINT:-http://s3:8333}
+    - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+    - S3_SECRET_KEY=${S3_SECRET_KEY}
+    - STORAGE_TYPE=${STORAGE_TYPE:-s3}
+    - RESEND_API_KEY=${RESEND_API_KEY}
+    - EMAIL_FROM=${EMAIL_FROM:-Gate <no-reply@${DOMAIN_NAME}>}
+    - APP_BASE_URL=${APP_BASE_URL:-https://${DOMAIN_NAME}}
     networks:
-      - gate-prod
-      - traefik-network
+    - gate-prod
+    - traefik-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,46 +47,52 @@ services:
       s3:
         condition: service_started
     labels:
-      - "traefik.enable=true"
-      # API router (/api)
-      - "traefik.http.routers.gate-backend-prod.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.gate-backend-prod.service=gate-backend-prod-svc"
-      - "traefik.http.routers.gate-backend-prod.entrypoints=websecure"
-      - "traefik.http.routers.gate-backend-prod.tls=true"
-      - "traefik.http.routers.gate-backend-prod.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.gate-backend-prod.middlewares=gate-api-strip@file,gate-api-ratelimit@file"
-      # WS router (/ws)
-      - "traefik.http.routers.gate-backend-prod-ws.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/ws`)"
-      - "traefik.http.routers.gate-backend-prod-ws.service=gate-backend-prod-svc"
-      - "traefik.http.routers.gate-backend-prod-ws.entrypoints=websecure"
-      - "traefik.http.routers.gate-backend-prod-ws.tls=true"
-      - "traefik.http.routers.gate-backend-prod-ws.tls.certresolver=letsencrypt"
-      # Health router (/health)
-      - "traefik.http.routers.gate-backend-prod-health.rule=Host(`${DOMAIN_NAME}`) && Path(`/health`)"
-      - "traefik.http.routers.gate-backend-prod-health.service=gate-backend-prod-svc"
-      - "traefik.http.routers.gate-backend-prod-health.entrypoints=websecure"
-      - "traefik.http.routers.gate-backend-prod-health.tls=true"
-      - "traefik.http.routers.gate-backend-prod-health.tls.certresolver=letsencrypt"
-      # Port configuration
-      - "traefik.http.services.gate-backend-prod-svc.loadbalancer.server.port=8080"
-
+    - traefik.enable=true
+    - traefik.http.routers.gate-backend-prod.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/api`)
+    - traefik.http.routers.gate-backend-prod.service=gate-backend-prod-svc
+    - traefik.http.routers.gate-backend-prod.entrypoints=websecure
+    - traefik.http.routers.gate-backend-prod.tls=true
+    - traefik.http.routers.gate-backend-prod.tls.certresolver=letsencrypt
+    - traefik.http.routers.gate-backend-prod.middlewares=gate-api-ratelimit@file
+    - traefik.http.routers.gate-backend-prod-ws.rule=Host(`${DOMAIN_NAME}`) && PathPrefix(`/ws`)
+    - traefik.http.routers.gate-backend-prod-ws.service=gate-backend-prod-svc
+    - traefik.http.routers.gate-backend-prod-ws.entrypoints=websecure
+    - traefik.http.routers.gate-backend-prod-ws.tls=true
+    - traefik.http.routers.gate-backend-prod-ws.tls.certresolver=letsencrypt
+    - traefik.http.routers.gate-backend-prod-health.rule=Host(`${DOMAIN_NAME}`) && Path(`/health`)
+    - traefik.http.routers.gate-backend-prod-health.service=gate-backend-prod-svc
+    - traefik.http.routers.gate-backend-prod-health.entrypoints=websecure
+    - traefik.http.routers.gate-backend-prod-health.tls=true
+    - traefik.http.routers.gate-backend-prod-health.tls.certresolver=letsencrypt
+    - traefik.http.services.gate-backend-prod-svc.loadbalancer.server.port=8080
+    - traefik.http.routers.gate-frontend-prod.rule=Host(`${DOMAIN_NAME}`)
+    - traefik.http.routers.gate-frontend-prod.service=gate-backend-prod-svc
+    - traefik.http.routers.gate-frontend-prod.entrypoints=websecure
+    - traefik.http.routers.gate-frontend-prod.tls=true
+    - traefik.http.routers.gate-frontend-prod.tls.certresolver=letsencrypt
+    - traefik.http.routers.gate-malicious-block.rule=Host(`${DOMAIN_NAME}`) && (PathRegexp(`^/(wp-admin|wp-content|phpmyadmin|webpack-dev|\.env|\.git)`) || PathRegexp(`.*\.php$$`))
+    - traefik.http.routers.gate-malicious-block.entrypoints=websecure
+    - traefik.http.routers.gate-malicious-block.tls=true
+    - traefik.http.routers.gate-malicious-block.middlewares=gate-block-ip@file
+    - traefik.http.routers.gate-malicious-block.service=gate-backend-prod-svc
   backend-migrate:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: 10m
+        max-file: '3'
     image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG:-prod}
     container_name: gate-backend-migrate-prod
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_APP_DB:-gate}?sslmode=disable
+    - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_APP_DB:-gate}?sslmode=disable
     networks:
-      - gate-prod
-    command: ["--migrate"]
-    restart: "no"
+    - gate-prod
+    command:
+    - --migrate
+    restart: 'no'
     deploy:
       resources:
         limits:
@@ -95,57 +101,12 @@ services:
         reservations:
           cpus: '0.1'
           memory: 64M
-
-  frontend:
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-    image: ghcr.io/brawler2011/gate-frontend:${IMAGE_TAG:-prod}
-    container_name: gate-frontend-prod
-    hostname: frontend
-    restart: unless-stopped
-    environment:
-      - BACKEND_API_URL=${BACKEND_API_URL:?Set BACKEND_API_URL for server-side API requests}
-    networks:
-      - gate-prod
-      - traefik-network
-    healthcheck:
-      test: ["CMD", "bun", "-e", "fetch('http://localhost:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.gate-frontend-prod.rule=Host(`${DOMAIN_NAME}`)"
-      - "traefik.http.routers.gate-frontend-prod.service=gate-frontend-prod-svc"
-      - "traefik.http.routers.gate-frontend-prod.entrypoints=websecure"
-      - "traefik.http.routers.gate-frontend-prod.tls=true"
-      - "traefik.http.routers.gate-frontend-prod.tls.certresolver=letsencrypt"
-      - "traefik.http.services.gate-frontend-prod-svc.loadbalancer.server.port=3000"
-      # Malicious requests block router
-      - "traefik.http.routers.gate-malicious-block.rule=Host(`${DOMAIN_NAME}`) && (PathRegexp(`^/(wp-admin|wp-content|phpmyadmin|webpack-dev|\\.env|\\.git)`) || PathRegexp(`.*\\.php$$`))"
-      - "traefik.http.routers.gate-malicious-block.entrypoints=websecure"
-      - "traefik.http.routers.gate-malicious-block.tls=true"
-      - "traefik.http.routers.gate-malicious-block.middlewares=gate-block-ip@file"
-      - "traefik.http.routers.gate-malicious-block.service=gate-frontend-prod-svc"
-
   postgres:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: 10m
+        max-file: '3'
     image: postgres:18-alpine
     container_name: gate-postgres-prod
     hostname: postgres
@@ -155,12 +116,14 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - postgres-data:/var/lib/postgresql
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    - postgres-data:/var/lib/postgresql
+    - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
-      - gate-prod
+    - gate-prod
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      test:
+      - CMD-SHELL
+      - pg_isready -U postgres -d postgres
       interval: 10s
       timeout: 3s
       retries: 5
@@ -172,29 +135,25 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-
   redis:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: 10m
+        max-file: '3'
     image: redis:7.2.4-alpine
     container_name: gate-redis-prod
     hostname: redis
     restart: unless-stopped
-    command: >
-      sh -c "redis-server
-      --requirepass $$REDIS_PASSWORD
-      --appendonly yes
-      --maxmemory 512mb
-      --maxmemory-policy allkeys-lru"
+    command: 'sh -c "redis-server --requirepass $$REDIS_PASSWORD --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru"
+
+      '
     environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
-      - redis-data:/data
+    - redis-data:/data
     networks:
-      - gate-prod
+    - gate-prod
     deploy:
       resources:
         limits:
@@ -203,22 +162,23 @@ services:
         reservations:
           cpus: '0.1'
           memory: 128M
-
   nats:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: 10m
+        max-file: '3'
     image: nats:2.10-alpine
     container_name: gate-nats-prod
     hostname: nats
     restart: unless-stopped
-    command: ["--js", "--store_dir=/data"]
+    command:
+    - --js
+    - --store_dir=/data
     volumes:
-      - nats-data:/data
+    - nats-data:/data
     networks:
-      - gate-prod
+    - gate-prod
     deploy:
       resources:
         limits:
@@ -227,25 +187,24 @@ services:
         reservations:
           cpus: '0.1'
           memory: 128M
-
   go-judge:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: 10m
+        max-file: '3'
     image: ghcr.io/brawler2011/gate-go-judge:${IMAGE_TAG:-prod}
     container_name: gate-go-judge-prod
     hostname: go-judge
     restart: unless-stopped
     command:
-      - "-enable-grpc"
-      - "-grpc-addr=0.0.0.0:5051"
+    - -enable-grpc
+    - -grpc-addr=0.0.0.0:5051
     privileged: true
     volumes:
-      - ./go-judge-data:/data
+    - ./go-judge-data:/data
     networks:
-      - gate-prod
+    - gate-prod
     deploy:
       resources:
         limits:
@@ -254,80 +213,75 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-
   master:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: 10m
+        max-file: '3'
     image: chrislusf/seaweedfs:3.77_full
     container_name: gate-seaweed-master-prod
     volumes:
-      - seaweedfs-master:/data
+    - seaweedfs-master:/data
     networks:
-      - gate-prod
-    command: "-v 9 master -ip=master -ip.bind=0.0.0.0"
+    - gate-prod
+    command: -v 9 master -ip=master -ip.bind=0.0.0.0
     restart: always
-
   volume:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: 10m
+        max-file: '3'
     image: chrislusf/seaweedfs:3.77_full
     container_name: gate-seaweed-volume-prod
     volumes:
-      - seaweedfs-volume:/data
+    - seaweedfs-volume:/data
     networks:
-      - gate-prod
-    command: '-v 9 volume -mserver="master:9333" -ip=volume -ip.bind=0.0.0.0 -port=2 -dir=/data -max=100'
+    - gate-prod
+    command: -v 9 volume -mserver="master:9333" -ip=volume -ip.bind=0.0.0.0 -port=2 -dir=/data -max=100
     depends_on:
-      - master
+    - master
     restart: always
-
   filer:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: 10m
+        max-file: '3'
     image: chrislusf/seaweedfs:3.77_full
     container_name: gate-seaweed-filer-prod
     volumes:
-      - seaweedfs-filer:/data
+    - seaweedfs-filer:/data
     networks:
-      - gate-prod
-    command: '-v 9 filer -master="master:9333" -ip.bind=0.0.0.0'
+    - gate-prod
+    command: -v 9 filer -master="master:9333" -ip.bind=0.0.0.0
     depends_on:
-      - master
-      - volume
+    - master
+    - volume
     restart: always
-
   s3:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: 10m
+        max-file: '3'
     image: chrislusf/seaweedfs:3.77_full
     container_name: gate-seaweed-s3-prod
     hostname: s3
     environment:
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
+    - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+    - S3_SECRET_KEY=${S3_SECRET_KEY}
     networks:
-      - gate-prod
-    command: '-v 9 s3 -filer="filer:8888" -ip.bind=0.0.0.0 -config=/etc/seaweedfs/s3.json'
+    - gate-prod
+    command: -v 9 s3 -filer="filer:8888" -ip.bind=0.0.0.0 -config=/etc/seaweedfs/s3.json
     volumes:
-      - ./s3.json:/etc/seaweedfs/s3.json
+    - ./s3.json:/etc/seaweedfs/s3.json
     depends_on:
-      - master
-      - volume
-      - filer
+    - master
+    - volume
+    - filer
     restart: always
-
 volumes:
   postgres-data:
     name: gate-postgres-data-prod

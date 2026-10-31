@@ -1,28 +1,9 @@
 "use client";
 
-import {
-  Alert,
-  Badge,
-  Button,
-  Container,
-  Divider,
-  Group,
-  Paper,
-  PasswordInput,
-  Stack,
-  Text,
-  TextInput,
-  ThemeIcon,
-  Title,
-} from "@mantine/core";
+import {Alert, Badge, Button, Container, Divider, Group, Paper, PasswordInput, Stack, Text, TextInput, ThemeIcon, Title} from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {notifications} from "@mantine/notifications";
-import {
-  IconCheck,
-  IconKey,
-  IconMail,
-  IconUser,
-} from "@tabler/icons-react";
+import {IconCheck, IconKey, IconMail, IconUser} from "@tabler/icons-react";
 import {useState, type ReactNode} from "react";
 
 import {ClaimTemporaryAccountSection} from "@/components/users/ClaimTemporaryAccountSection";
@@ -30,7 +11,7 @@ import {useSession} from "@/contexts/SessionContext";
 import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
 
-import type {UserModel} from "@/contracts/core/v1";
+import type {UserModel} from "@/contracts/core/v1/models";
 
 type Props = {
   initialUser: UserModel;
@@ -78,10 +59,8 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
     setPasswordLoading(true);
     try {
       const [error, data] = await api.changePassword({
-        requestBody: {
-          old_password: values.oldPassword,
-          new_password: values.newPassword,
-        },
+        old_password: values.oldPassword,
+        new_password: values.newPassword
       });
 
       if (error) {
@@ -120,10 +99,8 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
     setEmailChangeSuccess(null);
     try {
       const [error] = await api.requestEmailChange({
-        requestBody: {
-          password: values.currentPassword,
-          new_email: values.newEmail.trim(),
-        },
+        password: values.currentPassword,
+        new_email: values.newEmail.trim()
       });
 
       if (error) {
@@ -160,9 +137,7 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
     }
     setResendLoading(true);
     try {
-      const [error] = await api.resendVerification({
-        requestBody: {identifier: user.email},
-      });
+      const [error] = await api.resendVerification({identifier: user.email});
       if (!error) {
         notifications.show({
           title: "Письмо отправлено",

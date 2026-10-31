@@ -1,20 +1,14 @@
 import "./setup-dom";
 
 import {afterAll, afterEach, beforeAll, describe, expect, it, spyOn} from "bun:test";
-import {AppRouterContext} from "next/dist/shared/lib/app-router-context.shared-runtime";
-import {SearchParamsContext} from "next/dist/shared/lib/hooks-client-context.shared-runtime";
 import React from "react";
 
 import Page from "@/app/[slug]/(org)/page";
 
 import {cleanup, renderWithProviders, setupDOMEnvironment, waitFor} from "./test-utils";
 
-import type {OrganizationJoinRequestModel, OrganizationModel, UserModel} from "@/contracts/core/v1";
+import type {OrganizationJoinRequestModel, OrganizationModel, UserModel} from "@/contracts/core/v1/models";
 
-const router = {
-  back: () => {}, forward: () => {}, refresh: () => {},
-  push: () => {}, replace: () => {}, prefetch: () => {}, bfcacheId: "test",
-};
 const org: OrganizationModel = {
   id: "org", login: "school", name: "School", join_policy: "by_request" as OrganizationModel["join_policy"],
   created_at: "2026-10-01", updated_at: "2026-10-01",
@@ -44,7 +38,7 @@ describe("Organization join status through the organization page", () => {
 
   const renderPage = async ({member = false, pending = false, membersError = 403, authenticated = true} = {}) => {
     const fetch = spyOn(globalThis, "fetch").mockImplementation(Object.assign(async (input: RequestInfo | URL) => {
-      const url = new URL(String(input));
+      const url = new URL(String(input), "http://localhost");
       if (url.pathname.endsWith("/members")) {
         return member ? Response.json({
           members: [
@@ -60,7 +54,7 @@ describe("Organization join status through the organization page", () => {
       if (url.pathname.endsWith("/requests/mine")) {
         return Response.json({request: pending ? pendingRequest : null});
       }
-      if (url.pathname === "/organizations/school") {
+      if (url.pathname === "/api/organizations/school") {
         return Response.json({organization: org});
       }
       if (url.pathname.endsWith("/me")) {
@@ -72,12 +66,14 @@ describe("Organization join status through the organization page", () => {
       throw new Error(`Unexpected API request: ${url.pathname}`);
     }, {preconnect: () => {}}));
     restoreFetch = () => fetch.mockRestore();
-    const page = await Page({params: Promise.resolve({slug: org.login}), searchParams: Promise.resolve({})});
+    const page = <Page params={{slug: org.login}} searchParams={{}} />;
     const view = renderWithProviders(
-      <AppRouterContext.Provider value={router}>
-        <SearchParamsContext.Provider value={new URLSearchParams()}>{page}</SearchParamsContext.Provider>
-      </AppRouterContext.Provider>
+      <>
+        <>{page}</>
+      </>
     );
+    await waitFor(() => expect(view.container.querySelector(".mantine-Loader-root")).toBeNull());
+    await waitFor(() => expect(view.container.textContent).not.toBe(""));
     return {view, fetch};
   };
 

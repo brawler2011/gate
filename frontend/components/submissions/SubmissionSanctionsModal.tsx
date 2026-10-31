@@ -1,19 +1,11 @@
 "use client";
 
-import {
-  Button,
-  Checkbox,
-  Group,
-  Modal,
-  Stack,
-  Text,
-  Textarea,
-} from "@mantine/core";
+import {Button, Checkbox, Group, Modal, Stack, Text, Textarea} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {useRouter} from "next/navigation";
 import React, {useState, type ReactNode} from "react";
 
 import {api} from "@/lib/api";
+import {useRouter} from "@/lib/navigation";
 
 export type SanctionActionType =
   | "block_submission"
@@ -64,37 +56,18 @@ export const SubmissionSanctionsModal = ({
     let err = null;
 
     if (actionType === "block_submission" && submissionId) {
-      [err] = await api.blockSubmission({
-        orgLogin,
-        contestLogin,
-        submissionId,
-        requestBody: {
-          reason: reason.trim() ? reason.trim() : undefined,
-        },
+      [err] = await api.blockSubmission(orgLogin, contestLogin, submissionId, {
+        reason: reason.trim() ? reason.trim() : undefined
       });
     } else if (actionType === "unblock_submission" && submissionId) {
-      [err] = await api.unblockSubmission({
-        orgLogin,
-        contestLogin,
-        submissionId,
-      });
+      [err] = await api.unblockSubmission(orgLogin, contestLogin, submissionId);
     } else if (actionType === "block_problem" && userId && problemId) {
-      [err] = await api.blockProblemForUser({
-        orgLogin,
-        contestLogin,
-        userId,
-        problemId,
-        requestBody: {
-          reason: reason.trim() ? reason.trim() : undefined,
-        },
+      [err] = await api.blockProblemForUser(orgLogin, contestLogin, userId, problemId, {
+        reason: reason.trim() ? reason.trim() : undefined
       });
     } else if (actionType === "unblock_problem" && userId && problemId) {
-      [err] = await api.unblockProblemForUser({
-        orgLogin,
-        contestLogin,
-        userId,
-        problemId,
-        rejudgeSubmissions,
+      [err] = await api.unblockProblemForUser(orgLogin, contestLogin, userId, problemId, {
+        rejudge_submissions: rejudgeSubmissions
       });
     }
 

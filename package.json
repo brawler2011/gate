@@ -1,8 +1,23 @@
 {
-  "name": "gate-tooling",
+  "name": "gate",
   "private": true,
   "scripts": {
-    "commit:validate": "commitlint --strict"
+    "commit:validate": "commitlint --strict",
+    "dev": "bun --env-file=deploy/local/.env vite",
+    "build": "vite build",
+    "build:local": "bun --env-file=deploy/local/.env run build",
+    "build:prod": "bun --env-file=deploy/prod/.env run build",
+    "start": "vite preview",
+    "lint": "eslint frontend src vite.config.ts orval.config.ts && stylelint \"frontend/**/*.css\"",
+    "lint:fix": "bun run lint:ts:fix && bun run lint:css:fix",
+    "lint:ts": "eslint frontend src vite.config.ts orval.config.ts",
+    "lint:ts:fix": "eslint frontend src vite.config.ts orval.config.ts --fix",
+    "lint:css": "stylelint \"frontend/**/*.css\"",
+    "lint:css:fix": "stylelint \"frontend/**/*.css\" --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "knip": "knip",
+    "contracts:gen": "orval --config orval.config.ts"
   },
   "commitlint": {
     "extends": [
@@ -10,17 +25,85 @@
     ],
     "defaultIgnores": false,
     "rules": {
-      "header-max-length": [2, "always", 65],
-      "scope-case": [2, "always", "lower-case"],
-      "subject-case": [0],
-      "body-leading-blank": [2, "always"],
-      "footer-leading-blank": [2, "always"],
-      "body-max-line-length": [0],
-      "footer-max-line-length": [0]
+      "header-max-length": [
+        2,
+        "always",
+        65
+      ],
+      "scope-case": [
+        2,
+        "always",
+        "lower-case"
+      ],
+      "subject-case": [
+        0
+      ],
+      "body-leading-blank": [
+        2,
+        "always"
+      ],
+      "footer-leading-blank": [
+        2,
+        "always"
+      ],
+      "body-max-line-length": [
+        0
+      ],
+      "footer-max-line-length": [
+        0
+      ]
     }
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.4",
-    "@commitlint/config-conventional": "21.2.4"
+    "@commitlint/config-conventional": "21.2.4",
+    "@testing-library/react": "^16.3.2",
+    "@types/bun": "^1.4.0",
+    "@types/hast": "^3.0.5",
+    "@types/node": "^22.19.3",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "@vitejs/plugin-react": "^5.0.0",
+    "ajv": "^8.20.0",
+    "eslint": "9.39.1",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "happy-dom": "^20.11.6",
+    "knip": "^6.32.1",
+    "orval": "^8.46.0",
+    "postcss": "^8.5.6",
+    "postcss-preset-mantine": "^1.18.0",
+    "postcss-simple-vars": "^7.0.1",
+    "stylelint": "^17.14.1",
+    "stylelint-config-standard": "^40.0.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vite": "^7.1.0"
+  },
+  "version": "0.2.0",
+  "type": "module",
+  "packageManager": "bun@1.4.0",
+  "dependencies": {
+    "@mantine/core": "^8.3.10",
+    "@mantine/dropzone": "^8.3.10",
+    "@mantine/form": "^8.3.10",
+    "@mantine/hooks": "^8.3.10",
+    "@mantine/notifications": "^8.3.10",
+    "@tabler/icons-react": "^3.36.0",
+    "@tanstack/react-query": "^5.90.0",
+    "clsx": "^2.1.1",
+    "katex": "^0.16.27",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.9.0",
+    "react-simple-code-editor": "^0.14.1",
+    "react-syntax-highlighter": "^16.1.0",
+    "refractor": "^5.0.0",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0"
   }
 }

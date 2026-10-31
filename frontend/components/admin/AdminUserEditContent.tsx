@@ -1,43 +1,18 @@
 "use client";
 
-import {
-  Anchor,
-  Badge,
-  Button,
-  Container,
-  Divider,
-  Group,
-  Paper,
-  PasswordInput,
-  Select,
-  Stack,
-  Switch,
-  Text,
-  TextInput,
-  ThemeIcon,
-  Title,
-} from "@mantine/core";
+import {Anchor, Badge, Button, Container, Divider, Group, Paper, PasswordInput, Select, Stack, Switch, Text, TextInput, ThemeIcon, Title} from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {notifications} from "@mantine/notifications";
-import {
-  IconAlertCircle,
-  IconArrowLeft,
-  IconCheck,
-  IconFileCode,
-  IconKey,
-  IconMail,
-  IconShield,
-  IconUser,
-} from "@tabler/icons-react";
-import Link from "next/link";
-import {useRouter} from "next/navigation";
+import {IconAlertCircle, IconArrowLeft, IconCheck, IconFileCode, IconKey, IconMail, IconShield, IconUser} from "@tabler/icons-react";
 import {useState, type ReactNode} from "react";
 
+import Link from "@/components/shared/RouterLink";
 import {TruncatedWithCopy} from "@/components/shared/TruncatedWithCopy";
 import {api} from "@/lib/api";
+import {useRouter} from "@/lib/navigation";
 import {APP_COLORS} from "@/lib/theme/colors";
 
-import type {UpdateUserRequestModel, UserModel} from "@/contracts/core/v1";
+import type {UpdateUserRequestModel, UserModel} from "@/contracts/core/v1/models";
 
 type Props = {
   user: UserModel;
@@ -85,10 +60,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
     }
     setRoleLoading(true);
     try {
-      const [error] = await api.updateUser({
-        username: user.username,
-        requestBody: {role: role as UpdateUserRequestModel.role},
-      });
+      const [error] = await api.updateUser(user.username, {role: role as UpdateUserRequestModel["role"]});
 
       if (error) {
         notifications.show({
@@ -121,12 +93,9 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
   const handleChangeEmail = async (values: typeof emailForm.values) => {
     setEmailLoading(true);
     try {
-      const [error] = await api.adminChangeEmail({
-        username: user.username,
-        requestBody: {
-          email: values.email.trim(),
-          with_confirmation: values.withConfirmation,
-        },
+      const [error] = await api.adminChangeEmail(user.username, {
+        email: values.email.trim(),
+        with_confirmation: values.withConfirmation
       });
 
       if (error) {
@@ -173,10 +142,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
   const handleSetPassword = async (values: typeof passwordForm.values) => {
     setSetPasswordLoading(true);
     try {
-      const [error] = await api.adminSetPassword({
-        username: user.username,
-        requestBody: {password: values.password},
-      });
+      const [error] = await api.adminSetPassword(user.username, {password: values.password});
 
       if (error) {
         notifications.show({
@@ -217,9 +183,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
 
     setResetEmailLoading(true);
     try {
-      const [error] = await api.adminSendPasswordReset({
-        username: user.username,
-      });
+      const [error] = await api.adminSendPasswordReset(user.username);
 
       if (error) {
         notifications.show({
@@ -254,9 +218,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
 
     setResendVerificationLoading(true);
     try {
-      const [error] = await api.adminResendVerification({
-        username: user.username,
-      });
+      const [error] = await api.adminResendVerification(user.username);
 
       if (error) {
         notifications.show({

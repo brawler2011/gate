@@ -1,8 +1,9 @@
 "use client";
 
 import {Stack} from "@mantine/core";
-import {useRouter, useSearchParams, usePathname} from "next/navigation";
 import {useCallback} from "react";
+
+import {useRouter, useSearchParams, usePathname} from "@/lib/navigation";
 
 import {WorkshopAccessTab} from "./WorkshopAccessTab";
 import {WorkshopCheckersTab} from "./WorkshopCheckersTab";

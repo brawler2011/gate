@@ -1,7 +1,9 @@
 import {describe, it, expect} from "bun:test";
 
-import {ContestModel, type ProblemModel, type UserModel} from "@/contracts/core/v1";
+import {type ProblemModel, type UserModel} from "@/contracts/core/v1/models";
 import {PermissionChecker} from "@/lib/permissions";
+
+import type {ContestModel} from "@/contracts/core/v1/models";
 
 describe("PermissionChecker", () => {
   const globalAdmin: UserModel = {
@@ -32,7 +34,7 @@ describe("PermissionChecker", () => {
     submissions_list_scope: "moderator",
     submissions_review_scope: "moderator",
     submission_details_scope: "moderator",
-    freeze_status: ContestModel.freeze_status.AUTO,
+    freeze_status: 'auto',
     freeze_duration_minutes: 60,
     created_by: "creator-id",
     created_at: new Date().toISOString(),
@@ -42,7 +44,7 @@ describe("PermissionChecker", () => {
     enable_drafts: true,
     enable_upsolving: true,
     enable_virtual_contests: false,
-    participation_mode: ContestModel.participation_mode.OPEN,
+    participation_mode: 'open',
     ...overrides,
   });
 
@@ -124,7 +126,7 @@ describe("PermissionChecker", () => {
       const checker = new PermissionChecker(regularUser, null);
       const contest = createContest({
         visibility: "public",
-        participation_mode: ContestModel.participation_mode.OPEN,
+        participation_mode: 'open',
       });
 
       expect(checker.canViewContest(contest)).toBe(true);
@@ -135,7 +137,7 @@ describe("PermissionChecker", () => {
       const checker = new PermissionChecker(regularUser, null);
       const contest = createContest({
         visibility: "public",
-        participation_mode: ContestModel.participation_mode.INVITE_ONLY,
+        participation_mode: 'invite_only',
       });
 
       expect(checker.canViewContest(contest)).toBe(true);
@@ -146,7 +148,7 @@ describe("PermissionChecker", () => {
       const checker = new PermissionChecker(null, null);
       const contest = createContest({
         visibility: "public",
-        participation_mode: ContestModel.participation_mode.OPEN,
+        participation_mode: 'open',
       });
 
       expect(checker.canViewContest(contest)).toBe(true);

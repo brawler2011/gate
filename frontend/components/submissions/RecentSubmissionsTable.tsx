@@ -3,21 +3,13 @@
 import {Loader, Paper, Table, Text, Tooltip} from "@mantine/core";
 import {useState} from "react";
 
-import {
-  ShortVerdictString,
-  StateColor,
-  StateString,
-  TimeBeautify,
-} from "@/lib/lib";
-import {
-  useSubmissionsWebSocket,
-  type SubmissionWithProgress,
-} from "@/lib/useSubmissionsWebSocket";
+import {ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
+import {useSubmissionsWebSocket, type SubmissionWithProgress} from "@/lib/useSubmissionsWebSocket";
 
 import styles from "./RecentSubmissionsTable.module.css";
 import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
 
-import type {SubmissionsListItemModel} from "@/contracts/core/v1";
+import type {SubmissionsListItemModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 const RECENT_SUBMISSIONS_LIMIT = 5;

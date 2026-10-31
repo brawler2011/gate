@@ -1,31 +1,10 @@
 "use client";
 
-import {
-  ActionIcon,
-  Box,
-  Button,
-  Center,
-  Code,
-  CopyButton,
-  Group,
-  Loader,
-  Modal,
-  Paper,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+import {ActionIcon, Box, Button, Center, Code, CopyButton, Group, Loader, Modal, Paper, Stack, Text, Title} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {
-  IconCheck,
-  IconCopy,
-  IconPhoto,
-  IconRefresh,
-  IconTrash,
-  IconUpload,
-} from "@tabler/icons-react";
+import {IconCheck, IconCopy, IconPhoto, IconRefresh, IconTrash, IconUpload} from "@tabler/icons-react";
+import {useQuery} from "@tanstack/react-query";
 import {useState, useRef, useTransition} from "react";
-import useSWR from "swr";
 
 import {api} from "@/lib/api";
 
@@ -48,14 +27,14 @@ export const WorkshopMediaTab = ({
   const {
     data: filesData,
     isLoading,
-    mutate,
-  } = useSWR(["workshop-files", problemId, "media"], async () => {
-    const [err, res] = await api.listProblemMediaFiles({problemId});
+    refetch: mutate,
+  } = useQuery({queryKey: ["workshop-files", problemId, "media"], queryFn: async () => {
+    const [err, res] = await api.listProblemMediaFiles(problemId);
     if (err) {
       throw new Error(err.message || "Не удалось загрузить список медиафайлов");
     }
     return res;
-  });
+  }});
 
   const getFileName = (path: string) => path.split("/").pop() ?? path;
 
@@ -77,10 +56,8 @@ export const WorkshopMediaTab = ({
     startUploading(async () => {
       const arrayBuffer = await file.arrayBuffer();
       const blob = new Blob([arrayBuffer], {type: file.type || "application/octet-stream"});
-      const [err] = await api.createProblemMediaFile({
-        problemId,
-        name: file.name,
-        requestBody: blob,
+      const [err] = await api.createProblemMediaFile(problemId, blob, {
+        name: file.name
       });
       if (err) {
         notifications.show({
@@ -112,7 +89,7 @@ export const WorkshopMediaTab = ({
     }
 
     startDeleting(async () => {
-      const [err] = await api.deleteProblemMediaFile({problemId, name: currentFileName});
+      const [err] = await api.deleteProblemMediaFile(problemId, currentFileName);
       if (err) {
         notifications.show({
           title: "Ошибка удаления",
@@ -304,7 +281,6 @@ export const WorkshopMediaTab = ({
                   overflow: "hidden",
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={mediaUrl}
                   alt={currentFileName}

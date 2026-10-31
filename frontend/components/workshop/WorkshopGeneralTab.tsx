@@ -1,20 +1,9 @@
 "use client";
 
-import {
-  Box,
-  Button,
-  Divider,
-  Grid,
-  Group,
-  NumberInput,
-  Select,
-  Stack,
-  Switch,
-  Text,
-} from "@mantine/core";
+import {Box, Button, Divider, Grid, Group, NumberInput, Select, Stack, Switch, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
+import {useQuery, useQueryClient} from "@tanstack/react-query";
 import {useEffect, useState, useTransition} from "react";
-import useSWR, {useSWRConfig} from "swr";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {api} from "@/lib/api";
@@ -39,7 +28,7 @@ const PROBLEM_TYPE_OPTIONS = [
 ];
 
 export const WorkshopGeneralTab = ({problemId}: Props): ReactNode => {
-  const {mutate} = useSWRConfig();
+  const queryClient = useQueryClient();
   const [limits, setLimits] = useState<LimitsData>({
     problem_type: "pass-fail",
     max_score: null,
@@ -50,27 +39,21 @@ export const WorkshopGeneralTab = ({problemId}: Props): ReactNode => {
   const [isPending, startTransition] = useTransition();
   const [isDirty, setIsDirty] = useState(false);
 
-  const {data: problemData, isLoading: isLoadingProblem} = useSWR(
-    ["problem", problemId],
-    async () => {
-      const [err, res] = await api.getProblem({id: problemId});
-      if (err) {
-        throw new Error(err.message || "Не удалось загрузить задачу");
-      }
-      return res;
+  const {data: problemData, isLoading: isLoadingProblem} = useQuery({queryKey: ["problem", problemId], queryFn: async () => {
+    const [err, res] = await api.getProblem(problemId);
+    if (err) {
+      throw new Error(err.message || "Не удалось загрузить задачу");
     }
-  );
+    return res;
+  }});
 
-  const {data: limitsData, isLoading: isLoadingLimits} = useSWR(
-    ["problem-limits", problemId],
-    async () => {
-      const [err, res] = await api.getProblemLimits({problemId});
-      if (err) {
-        throw new Error(err.message || "Не удалось загрузить ограничения");
-      }
-      return res;
+  const {data: limitsData, isLoading: isLoadingLimits} = useQuery({queryKey: ["problem-limits", problemId], queryFn: async () => {
+    const [err, res] = await api.getProblemLimits(problemId);
+    if (err) {
+      throw new Error(err.message || "Не удалось загрузить ограничения");
     }
-  );
+    return res;
+  }});
 
   const isLoading = isLoadingProblem || isLoadingLimits;
 
@@ -98,14 +81,11 @@ export const WorkshopGeneralTab = ({problemId}: Props): ReactNode => {
 
   const handleSave = () => {
     startTransition(async () => {
-      const [limitsError] = await api.updateProblemLimits({
-        problemId,
-        requestBody: {
-          problem_type: limits.problem_type,
-          max_score: limits.problem_type === "scoring" ? limits.max_score : null,
-          time_limit_ms: limits.time_limit_ms,
-          memory_limit_mb: limits.memory_limit_mb,
-        },
+      const [limitsError] = await api.updateProblemLimits(problemId, {
+        problem_type: limits.problem_type,
+        max_score: limits.problem_type === "scoring" ? limits.max_score : null,
+        time_limit_ms: limits.time_limit_ms,
+        memory_limit_mb: limits.memory_limit_mb
       });
 
       if (limitsError) {
@@ -117,11 +97,8 @@ export const WorkshopGeneralTab = ({problemId}: Props): ReactNode => {
         return;
       }
 
-      const [problemError] = await api.updateProblem({
-        id: problemId,
-        requestBody: {
-          is_template: isTemplate,
-        },
+      const [problemError] = await api.updateProblem(problemId, {
+        is_template: isTemplate
       });
 
       if (problemError) {
@@ -140,8 +117,8 @@ export const WorkshopGeneralTab = ({problemId}: Props): ReactNode => {
         color: "green",
       });
 
-      mutate(["problem", problemId]);
-      mutate(["problem-limits", problemId]);
+      queryClient.invalidateQueries({queryKey: ["problem", problemId]});
+      queryClient.invalidateQueries({queryKey: ["problem-limits", problemId]});
     });
   };
 

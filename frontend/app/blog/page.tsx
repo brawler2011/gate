@@ -1,33 +1,29 @@
 import {Container, Group, Stack, Title} from "@mantine/core";
 import {IconNews} from "@tabler/icons-react";
-import {redirect} from "next/navigation";
+import {Navigate} from "react-router-dom";
 
-import {BlogList} from '@/components/blog';
-import {DefaultLayout} from '@/components/shared';
-import {api, unwrap} from "@/lib/api";
+import {BlogList} from "@/components/blog";
+import {DefaultLayout} from "@/components/shared";
+import {useListPosts} from "@/contracts/core/v1/api";
 import {parsePage} from "@/lib/lib";
+import {PageQueryState} from "@/lib/pageQuery";
 
-import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
-export const metadata: Metadata = {
-  title: "Блог",
-};
-
 type Props = {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: { page?: string };
 };
 
-const Page = async ({searchParams}: Props): Promise<ReactNode> => {
-  const params = await searchParams;
-  const page = parsePage(params.page);
+const Page = ({searchParams}: Props): ReactNode => {
+  const page = parsePage(searchParams.page);
+  const routeQuery = useListPosts({page: page ?? 1, pageSize: 5}, {query: {enabled: Boolean(page)}});
   if (!page) {
-    redirect("/blog");
+    return <Navigate to="/blog" replace />;
   }
-
-  // FIXME: page=109348 => error=null, posts=[]
-  const data = await unwrap(api.listPosts)({page, pageSize: 5});
-
+  if (!routeQuery.data) {
+    return <PageQueryState query={routeQuery} />;
+  }
+  const data = routeQuery.data;
   return (
     <DefaultLayout>
       <Container size="md" py="xl">
@@ -36,10 +32,7 @@ const Page = async ({searchParams}: Props): Promise<ReactNode> => {
             <IconNews size={32} color="var(--mantine-color-orange-6)" />
             <Title order={1}>Блог</Title>
           </Group>
-          <BlogList
-            posts={data.posts}
-            pagination={data.pagination}
-          />
+          <BlogList posts={data.posts} pagination={data.pagination} />
         </Stack>
       </Container>
     </DefaultLayout>

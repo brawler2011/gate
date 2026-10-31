@@ -1,28 +1,21 @@
-import {redirect} from "next/navigation";
 import {Suspense} from "react";
 
 import {UsersContent, UsersContentSkeleton} from "@/components/users";
 import {parsePage} from "@/lib/lib";
+import {redirect} from "@/lib/routeErrors";
 
-import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
-export const metadata: Metadata = {
-  title: "Админ | Пользователи",
-};
-
-export const dynamic: string = "force-dynamic";
-
 type PageProps = {
-  searchParams: Promise<{
+  searchParams: {
     page?: string;
     search?: string;
     role?: string;
-  }>;
+  };
 };
 
-const AdminUsersPage = async ({searchParams}: PageProps): Promise<ReactNode> => {
-  const resolvedSearchParams = await searchParams;
+const AdminUsersPage = ({searchParams}: PageProps): ReactNode => {
+  const resolvedSearchParams = searchParams;
   const page = parsePage(resolvedSearchParams.page);
   if (!page) {
     redirect("/admin/users");

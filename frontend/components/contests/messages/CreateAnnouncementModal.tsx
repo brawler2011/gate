@@ -1,17 +1,6 @@
 "use client";
 
-import {
-  Button,
-  Group,
-  Modal,
-  Select,
-  SegmentedControl,
-  Stack,
-  TextInput,
-  Textarea,
-  Paper,
-  Text,
-} from "@mantine/core";
+import {Button, Group, Modal, Select, SegmentedControl, Stack, TextInput, Textarea, Paper, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useState, type ReactNode} from "react";
 import ReactMarkdown from "react-markdown";
@@ -19,7 +8,7 @@ import remarkGfm from "remark-gfm";
 
 import {api} from "@/lib/api";
 
-import type {ContestProblemListItemModel} from "@/contracts/core/v1";
+import type {ContestProblemListItemModel} from "@/contracts/core/v1/models";
 
 interface CreateAnnouncementModalProps {
   opened: boolean;
@@ -74,14 +63,10 @@ export const CreateAnnouncementModal = ({
     }
 
     setLoading(true);
-    const [err] = await api.createContestAnnouncement({
-      orgLogin,
-      contestLogin,
-      requestBody: {
-        title: title.trim(),
-        body: body.trim(),
-        problem_id: problemId ? problemId : undefined,
-      },
+    const [err] = await api.createContestAnnouncement(orgLogin, contestLogin, {
+      title: title.trim(),
+      body: body.trim(),
+      problem_id: problemId ? problemId : undefined
     });
     setLoading(false);
 

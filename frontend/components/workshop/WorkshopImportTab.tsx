@@ -1,21 +1,13 @@
 "use client";
 
-import {
-  Alert,
-  Box,
-  Button,
-  FileInput,
-  Group,
-  Stack,
-  Text,
-} from "@mantine/core";
+import {Alert, Box, Button, FileInput, Group, Stack, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconInfoCircle, IconUpload} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
 import {useState, useTransition} from "react";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {api} from "@/lib/api";
+import {useRouter} from "@/lib/navigation";
 
 import type {ReactNode} from "react";
 
@@ -34,7 +26,7 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
     }
 
     startImport(async () => {
-      const [error] = await api.importProblem({id: problemId, formData: {package: packageFile}});
+      const [error] = await api.importProblem(problemId, {package: packageFile});
       if (error) {
         notifications.show({
           title: "Ошибка импорта",

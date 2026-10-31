@@ -1,7 +1,8 @@
 "use client";
 
 import {Badge, Select, Text} from "@mantine/core";
-import {useRouter, useSearchParams} from "next/navigation";
+
+import {useRouter, useSearchParams} from "@/lib/navigation";
 
 import type {ReactNode} from "react";
 

@@ -1,38 +1,21 @@
 import {Box, Container, Stack} from "@mantine/core";
-import {notFound} from "next/navigation";
 
 import {OrgDangerZone} from "@/components/orgs/OrgDangerZone";
 import {OrgSettingsForm} from "@/components/orgs/OrgSettingsForm";
 import {OrgSettingsMobileNav} from "@/components/orgs/OrgSettingsMobileNav";
 import {ORG_SETTINGS_NAV_SECTIONS} from "@/components/orgs/OrgSettingsNavShared";
 import {OrgSettingsSidebarNav} from "@/components/orgs/OrgSettingsSidebarNav";
-import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api} from "@/lib/api";
+import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 import {canManageOrgMembers} from "@/lib/permissions";
+import {notFound} from "@/lib/routeErrors";
 
 import classes from "./styles.module.css";
 
-const SECTIONS = {
-  SETTINGS: "settings",
-  DANGER: "danger",
-} as const;
-
-type Section = (typeof SECTIONS)[keyof typeof SECTIONS];
-
-import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
-type Props = {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ section?: string }>;
-};
-
-export const metadata: Metadata = {
-  title: "Настройки",
-};
-
-const OrgSettingsPage = async ({params, searchParams}: Props): Promise<ReactNode> => {
-  const {slug} = await params;
+const loadOrgSettingsPage = async ({params, searchParams}: Props) => {
+  const {slug} = params;
   let decoded = "";
   try {
     decoded = decodeURIComponent(slug);
@@ -44,31 +27,46 @@ const OrgSettingsPage = async ({params, searchParams}: Props): Promise<ReactNode
     notFound();
   }
 
-  const {section = "settings"} = await searchParams;
+  const {section = "settings"} = searchParams;
 
-  const [error, data] = await api.getOrganization({login: decoded});
+  const [error, data] = await api.getOrganization(decoded);
   if (error) {
     if (error.status === 404) {
       notFound();
     }
-    return (
-      <Container size="sm" py="lg">
-        <ErrorDisplay error={error} />
-      </Container>
-    );
+    throw error;
   }
   const org = data!.organization;
 
   const canManage = await canManageOrgMembers(org.login);
+  return {slug, decoded, section, error, data, org, canManage};
+};
+
+const SECTIONS = {
+  SETTINGS: "settings",
+  DANGER: "danger",
+} as const;
+
+type Section = (typeof SECTIONS)[keyof typeof SECTIONS];
+
+type Props = {
+  params: { slug: string };
+  searchParams: { section?: string };
+};
+
+const OrgSettingsPage = ({params, searchParams}: Props): ReactNode => {
+  const routeQuery = usePageQuery(["frontend/app/[slug]/(org)/settings/page.tsx", params, searchParams], () =>
+    loadOrgSettingsPage({params, searchParams}),
+  );
+  if (!routeQuery.data) {
+    return <PageQueryState query={routeQuery} />;
+  }
+  const {section, org, canManage} = routeQuery.data;
   if (!canManage) {
     notFound();
   }
-
   const validSections = Object.values(SECTIONS);
-  const activeSection = (
-    validSections.includes(section as Section) ? section : SECTIONS.SETTINGS
-  ) as Section;
-
+  const activeSection = (validSections.includes(section as Section) ? section : SECTIONS.SETTINGS) as Section;
   return (
     <Container size="lg" py="lg">
       <Stack gap="md">
@@ -87,12 +85,8 @@ const OrgSettingsPage = async ({params, searchParams}: Props): Promise<ReactNode
             />
 
             <Box className={classes.contentPanel}>
-              {activeSection === SECTIONS.SETTINGS && (
-                <OrgSettingsForm org={org} />
-              )}
-              {activeSection === SECTIONS.DANGER && (
-                <OrgDangerZone orgLogin={org.login} orgName={org.name} />
-              )}
+              {activeSection === SECTIONS.SETTINGS && <OrgSettingsForm org={org} />}
+              {activeSection === SECTIONS.DANGER && <OrgDangerZone orgLogin={org.login} orgName={org.name} />}
             </Box>
           </Box>
         </Box>

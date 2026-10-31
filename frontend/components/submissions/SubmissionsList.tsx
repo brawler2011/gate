@@ -1,48 +1,14 @@
 "use client";
 
-import {
-  ActionIcon,
-  Group,
-  Loader,
-  Menu,
-  MenuDropdown,
-  MenuItem,
-  MenuTarget,
-  Table,
-  TableScrollContainer,
-  TableTbody,
-  TableTd,
-  TableTh,
-  TableThead,
-  TableTr,
-  Text,
-  Tooltip,
-  Transition,
-} from "@mantine/core";
-import {
-  IconBan,
-  IconDots,
-  IconLockOpen,
-  IconRefresh,
-} from "@tabler/icons-react";
-import Link from "next/link";
+import {ActionIcon, Group, Loader, Menu, MenuDropdown, MenuItem, MenuTarget, Table, TableScrollContainer, TableTbody, TableTd, TableTh, TableThead, TableTr, Text, Tooltip, Transition} from "@mantine/core";
+import {IconBan, IconDots, IconLockOpen, IconRefresh} from "@tabler/icons-react";
 import React, {useEffect, useState, type ReactNode} from "react";
 
-import {
-  LangString,
-  numberToLetters,
-  ProblemTitle,
-  ShortVerdictString,
-  StateColor,
-  StateString,
-  TimeBeautify,
-} from "@/lib/lib";
+import Link from "@/components/shared/RouterLink";
+import {LangString, numberToLetters, ProblemTitle, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
-import {
-  SubmissionSanctionsModal,
-  type SanctionActionType,
-} from "./SubmissionSanctionsModal";
+import {SubmissionSanctionsModal, type SanctionActionType} from "./SubmissionSanctionsModal";
 import styles from "./SubmissionsList.module.css";
 
 import type {SubmissionWithProgress} from "@/lib/useSubmissionsWebSocket";

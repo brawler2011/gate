@@ -1,40 +1,16 @@
 "use client";
 
-import {
-  ActionIcon,
-  Badge,
-  Button,
-  Card,
-  Center,
-  Container,
-  Group,
-  Loader,
-  Pagination,
-  SegmentedControl,
-  Stack,
-  Text,
-  Title,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Badge, Button, Card, Center, Container, Group, Loader, Pagination, SegmentedControl, Stack, Text, Title, Tooltip} from "@mantine/core";
 import {notifications as mantineNotifications} from "@mantine/notifications";
-import {
-  IconBell,
-  IconBuilding,
-  IconCheck,
-  IconChecks,
-  IconExternalLink,
-  IconTrophy,
-  IconX,
-} from "@tabler/icons-react";
-import Link from "next/link";
+import {IconBell, IconBuilding, IconCheck, IconChecks, IconExternalLink, IconTrophy, IconX} from "@tabler/icons-react";
 import {useCallback, useEffect, useState, type ReactNode} from "react";
 
-import {ApproveOrganizationJoinRequestModel} from "@/contracts/core/v1";
+import Link from "@/components/shared/RouterLink";
 import {dispatchNotificationsUpdated} from "@/hooks/useUnreadNotificationsCount";
 import {api} from "@/lib/api";
 import {APP_COLORS} from "@/lib/theme/colors";
 
-import type {NotificationModel, PaginationModel} from "@/contracts/core/v1";
+import type {NotificationModel, PaginationModel} from "@/contracts/core/v1/models";
 
 const formatRelativeTime = (dateStr: string): string => {
   const date = new Date(dateStr);
@@ -72,8 +48,7 @@ export const NotificationsClient = (): ReactNode => {
     setLoading(true);
     const [error, data] = await api.listNotifications({
       page,
-      pageSize: 20,
-      unreadOnly: tab === "unread",
+      pageSize: 20, unread_only: tab === "unread"
     });
     setLoading(false);
     if (!error && data) {
@@ -88,7 +63,7 @@ export const NotificationsClient = (): ReactNode => {
 
   const handleMarkAsRead = async (id: string) => {
     setActionLoadingId(id);
-    const [error] = await api.markNotificationAsRead({id});
+    const [error] = await api.markNotificationAsRead(id);
     setActionLoadingId(null);
     if (!error) {
       setItems((prev) =>
@@ -121,7 +96,7 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const [error] = await api.acceptOrganizationInvitation({id: invitationId});
+    const [error] = await api.acceptOrganizationInvitation(invitationId);
     setActionLoadingId(null);
 
     if (error) {
@@ -148,7 +123,7 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const [error] = await api.declineOrganizationInvitation({id: invitationId});
+    const [error] = await api.declineOrganizationInvitation(invitationId);
     setActionLoadingId(null);
 
     if (error) {
@@ -177,11 +152,7 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const [error] = await api.approveOrganizationJoinRequest({
-      login: orgLogin,
-      id: requestId,
-      requestBody: {role: ApproveOrganizationJoinRequestModel.role.MEMBER},
-    });
+    const [error] = await api.approveOrganizationJoinRequest(orgLogin, requestId, {role: 'member'});
     setActionLoadingId(null);
 
     if (error) {
@@ -209,10 +180,7 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const [error] = await api.rejectOrganizationJoinRequest({
-      login: orgLogin,
-      id: requestId,
-    });
+    const [error] = await api.rejectOrganizationJoinRequest(orgLogin, requestId);
     setActionLoadingId(null);
 
     if (error) {
@@ -242,11 +210,7 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const [error] = await api.approveContestJoinRequest({
-      orgLogin,
-      contestLogin,
-      id: requestId,
-    });
+    const [error] = await api.approveContestJoinRequest(orgLogin, contestLogin, requestId);
     setActionLoadingId(null);
 
     if (error) {
@@ -275,11 +239,7 @@ export const NotificationsClient = (): ReactNode => {
     }
 
     setActionLoadingId(notif.id);
-    const [error] = await api.rejectContestJoinRequest({
-      orgLogin,
-      contestLogin,
-      id: requestId,
-    });
+    const [error] = await api.rejectContestJoinRequest(orgLogin, contestLogin, requestId);
     setActionLoadingId(null);
 
     if (error) {

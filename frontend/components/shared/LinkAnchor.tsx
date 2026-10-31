@@ -1,7 +1,8 @@
 "use client";
 
 import {Anchor, type AnchorProps} from '@mantine/core';
-import Link from 'next/link';
+
+import Link from '@/components/shared/RouterLink';
 
 import type {ReactNode} from "react";
 import type {PropsWithChildren} from 'react';

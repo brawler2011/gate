@@ -1,27 +1,27 @@
-import {redirect} from "next/navigation";
-
 import {DefaultLayout} from "@/components/shared";
 import {api} from "@/lib/api";
+import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
+import {redirect} from "@/lib/routeErrors";
 
 import {NotificationsClient} from "./NotificationsClient";
 
-import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
-export const metadata: Metadata = {
-  title: "Уведомления",
+const loadNotificationsPage = async () => {
+  const [, me] = await api.getMe();
+  return {me};
 };
 
-export const dynamic: string = "force-dynamic";
-
-const NotificationsPage = async (): Promise<ReactNode> => {
-  const [, me] = await api.getMe();
+const NotificationsPage = (): ReactNode => {
+  const routeQuery = usePageQuery(["frontend/app/notifications/page.tsx"], () => loadNotificationsPage());
+  if (!routeQuery.data) {
+    return <PageQueryState query={routeQuery} />;
+  }
+  const {me} = routeQuery.data;
   const user = me?.user ?? null;
-
   if (!user) {
     redirect("/auth/login?return_to=/notifications");
   }
-
   return (
     <DefaultLayout headerUser={user}>
       <NotificationsClient />

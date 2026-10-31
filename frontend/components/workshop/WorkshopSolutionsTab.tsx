@@ -12,11 +12,13 @@ export const WorkshopSolutionsTab = (props: WorkshopFileTabProps): ReactNode => 
     <WorkshopCollectionTab
       {...props}
       folderName="solutions"
-      listFiles={(problemId) => api.listProblemWorkshopSubmissions({problemId})}
-      getFile={(problemId, name) => api.getProblemWorkshopSubmission({problemId, name})}
-      createFile={(problemId, name, requestBody) => api.createProblemWorkshopSubmission({problemId, name, requestBody})}
-      updateFile={(problemId, name, requestBody) => api.updateProblemWorkshopSubmission({problemId, name, requestBody})}
-      deleteFile={(problemId, name) => api.deleteProblemWorkshopSubmission({problemId, name})}
+      listFiles={(problemId) => api.listProblemWorkshopSubmissions(problemId)}
+      getFile={(problemId, name) => api.getProblemWorkshopSubmission(problemId, name)}
+      createFile={(problemId, name, requestBody) => api.createProblemWorkshopSubmission(problemId, requestBody, {
+        name
+      })}
+      updateFile={(problemId, name, requestBody) => api.updateProblemWorkshopSubmission(problemId, name, requestBody)}
+      deleteFile={(problemId, name) => api.deleteProblemWorkshopSubmission(problemId, name)}
     />
   );
 };

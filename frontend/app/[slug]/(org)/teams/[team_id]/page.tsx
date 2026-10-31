@@ -1,6 +1,5 @@
 import {Avatar, Badge, Container, Group, Paper, Stack, Tabs, Text, Title} from "@mantine/core";
 import {IconArrowLeft, IconFileCode, IconTrophy, IconUsers} from "@tabler/icons-react";
-import {notFound} from "next/navigation";
 
 import {TeamContestsTab} from "@/components/orgs/TeamContestsTab";
 import {TeamMembersManagement} from "@/components/orgs/TeamMembersManagement";
@@ -8,23 +7,13 @@ import {TeamProblemsTab} from "@/components/orgs/TeamProblemsTab";
 import {LinkAnchor} from "@/components/shared";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {api} from "@/lib/api";
+import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
+import {notFound} from "@/lib/routeErrors";
 
-import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
-type Props = { params: Promise<{ slug: string; team_id: string }> };
-
-export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
-  const {team_id} = await params;
-  const [error, data] = await api.getTeam({id: team_id});
-  if (error || !data) {
-    return {title: "Команда"};
-  }
-  return {title: data.team.name};
-};
-
-const TeamPage = async ({params}: Props): Promise<ReactNode> => {
-  const {slug, team_id} = await params;
+const loadTeamPage = async ({params}: Props) => {
+  const {slug, team_id} = params;
   let decoded = "";
   try {
     decoded = decodeURIComponent(slug);
@@ -36,7 +25,20 @@ const TeamPage = async ({params}: Props): Promise<ReactNode> => {
     notFound();
   }
 
-  const [error, data] = await api.getTeam({id: team_id});
+  const [error, data] = await api.getTeam(team_id);
+  return {slug, team_id, decoded, error, data};
+};
+
+type Props = { params: { slug: string; team_id: string } };
+
+const TeamPage = ({params}: Props): ReactNode => {
+  const routeQuery = usePageQuery(["frontend/app/[slug]/(org)/teams/[team_id]/page.tsx", params], () =>
+    loadTeamPage({params}),
+  );
+  if (!routeQuery.data) {
+    return <PageQueryState query={routeQuery} />;
+  }
+  const {team_id, decoded, error, data} = routeQuery.data;
   if (error) {
     if (error.status === 404) {
       notFound();
@@ -48,7 +50,6 @@ const TeamPage = async ({params}: Props): Promise<ReactNode> => {
     );
   }
   const team = data!.team;
-
   return (
     <Container size="md" py="lg">
       <Stack gap="xl">

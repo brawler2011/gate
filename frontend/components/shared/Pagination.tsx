@@ -1,11 +1,12 @@
 "use client";
 
 import {Pagination} from "@mantine/core";
-import Link from "next/link";
-import {useRouter} from "next/navigation";
 import React, {type ReactNode} from "react";
 
-import type * as corev1 from "@/contracts/core/v1";
+import Link from "@/components/shared/RouterLink";
+import {useRouter} from "@/lib/navigation";
+
+import type * as corev1 from "@/contracts/core/v1/models";
 
 interface NextPaginationProps {
   pagination: corev1.PaginationModel;

@@ -10,7 +10,7 @@ import {useSubmissionsWebSocket} from "@/lib/useSubmissionsWebSocket";
 
 import {SubmissionsList} from "./SubmissionsList";
 
-import type {SubmissionsListItemModel} from "@/contracts/core/v1";
+import type {SubmissionsListItemModel} from "@/contracts/core/v1/models";
 
 interface SubmissionsListClientProps {
   initialSubmissions: SubmissionsListItemModel[];
@@ -72,22 +72,11 @@ export const SubmissionsListClient = ({
 
     if (modalState.type === "submission") {
       setRejudgingId(modalState.id);
-      [err] = await api.rejudgeSubmission({
-        orgLogin: filter.orgLogin,
-        contestLogin: filter.contestLogin,
-        submissionId: modalState.id,
-      });
+      [err] = await api.rejudgeSubmission(filter.orgLogin, filter.contestLogin, modalState.id);
     } else if (modalState.type === "problem") {
-      [err] = await api.rejudgeContestProblem({
-        orgLogin: filter.orgLogin,
-        contestLogin: filter.contestLogin,
-        problemId: modalState.problemId,
-      });
+      [err] = await api.rejudgeContestProblem(filter.orgLogin, filter.contestLogin, modalState.problemId);
     } else if (modalState.type === "all") {
-      [err] = await api.rejudgeContest({
-        orgLogin: filter.orgLogin,
-        contestLogin: filter.contestLogin,
-      });
+      [err] = await api.rejudgeContest(filter.orgLogin, filter.contestLogin);
     }
 
     setLoading(false);

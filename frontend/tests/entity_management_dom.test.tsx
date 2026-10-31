@@ -26,7 +26,7 @@ describe("Production entity management", () => {
 
   const mockFetch = (handler: (url: URL, init?: RequestInit) => Promise<Response>) => {
     const fetch = spyOn(globalThis, "fetch").mockImplementation(Object.assign(
-      (input: RequestInfo | URL, init?: RequestInit) => handler(new URL(String(input)), init), {preconnect: () => {}}
+      (input: RequestInfo | URL, init?: RequestInit) => handler(new URL(String(input).replace(/^\/api/, ""), "http://localhost"), init), {preconnect: () => {}}
     ));
     restoreFetch = () => fetch.mockRestore();
     return fetch;
@@ -128,7 +128,7 @@ describe("Production entity management", () => {
     });
     await waitFor(() => expect(fetch.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(true));
     const mutation = fetch.mock.calls.find(([, init]) => init?.method === "PATCH")!;
-    expect(new URL(String(mutation[0])).searchParams.get("role")).toBe("moderator");
+    expect(new URL(String(mutation[0]), "http://localhost").searchParams.get("role")).toBe("moderator");
     if (failure) {
       expect(notification).toHaveBeenCalledWith(expect.objectContaining({message: "Denied"}));
       expect(fetch.mock.calls).toHaveLength(2);
@@ -199,7 +199,7 @@ describe("Production entity management", () => {
     });
     await waitFor(() => expect(view.getByText("Team A")).toBeTruthy());
     const mutation = fetch.mock.calls.find(([, init]) => init?.method === "POST")!;
-    const url = new URL(String(mutation[0]));
+    const url = new URL(String(mutation[0]), "http://localhost");
     expect(url.searchParams.get("role")).toBe("participant");
     expect(url.searchParams.get("team_id")).toBe("team");
     expect((input as HTMLInputElement).value).toBe("");

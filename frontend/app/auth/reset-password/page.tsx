@@ -1,27 +1,13 @@
 "use client";
 
-import {
-  Alert,
-  Anchor,
-  Box,
-  Button,
-  Center,
-  Group,
-  Loader,
-  Paper,
-  PasswordInput,
-  Stack,
-  Text,
-  ThemeIcon,
-  Title,
-} from "@mantine/core";
+import {Alert, Anchor, Box, Button, Center, Group, Loader, Paper, PasswordInput, Stack, Text, ThemeIcon, Title} from "@mantine/core";
 import {IconAlertCircle, IconCheck} from "@tabler/icons-react";
-import Image from "next/image";
-import Link from "next/link";
-import {useSearchParams} from "next/navigation";
 import {Suspense, useState, type ReactNode} from "react";
 
+import Image from "@/components/shared/Image";
+import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
+import {useSearchParams} from "@/lib/navigation";
 
 const ResetPasswordPage = (): ReactNode => {
   return (
@@ -69,9 +55,7 @@ const ResetPasswordContent = () => {
     setLoading(true);
 
     try {
-      const [err] = await api.resetPassword({
-        requestBody: {token, password},
-      });
+      const [err] = await api.resetPassword({token, password});
       if (!err) {
         setSuccess(true);
       } else {
@@ -94,33 +78,17 @@ const ResetPasswordContent = () => {
         padding: "1rem",
       }}
     >
-      <Stack
-        align="center"
-        gap={32}
-        style={{width: "min(550px, calc(100vw - 2rem))"}}
-      >
+      <Stack align="center" gap={32} style={{width: "min(550px, calc(100vw - 2rem))"}}>
         <Link href="/" style={{textDecoration: "none", color: "inherit"}}>
           <Group justify="center" gap="md">
-            <Image
-              src="/gate_logo.svg"
-              alt="Gate"
-              width={56}
-              height={56}
-              priority
-            />
+            <Image src="/gate_logo.svg" alt="Gate" width={56} height={56} priority />
             <Title order={1} fz={36}>
               Gate
             </Title>
           </Group>
         </Link>
 
-        <Paper
-          radius="md"
-          p={32}
-          withBorder
-          shadow="sm"
-          style={{width: "100%"}}
-        >
+        <Paper radius="md" p={32} withBorder shadow="sm" style={{width: "100%"}}>
           {success ? (
             <Stack align="center" gap="md" ta="center">
               <ThemeIcon size={64} radius="xl" color="green" variant="light">
@@ -135,13 +103,7 @@ const ResetPasswordContent = () => {
                 Теперь вы можете войти в свой аккаунт, используя новый пароль.
               </Text>
 
-              <Button
-                component={Link}
-                href="/auth/login"
-                variant="filled"
-                size="sm"
-                mt="md"
-              >
+              <Button component={Link} href="/auth/login" variant="filled" size="sm" mt="md">
                 Перейти ко входу
               </Button>
             </Stack>
@@ -163,18 +125,13 @@ const ResetPasswordContent = () => {
                   title="Ссылка недействительна"
                   radius="md"
                 >
-                  Токен сброса пароля отсутствует в адресе страницы. Пожалуйста, запросите сброс пароля заново.
+                  Токен сброса пароля отсутствует в адресе страницы. Пожалуйста, запросите сброс пароля
+                  заново.
                 </Alert>
               )}
 
               {error && (
-                <Alert
-                  icon={<IconAlertCircle size={18} />}
-                  color="red"
-                  mb={20}
-                  title="Ошибка"
-                  radius="md"
-                >
+                <Alert icon={<IconAlertCircle size={18} />} color="red" mb={20} title="Ошибка" radius="md">
                   {error}
                 </Alert>
               )}
@@ -217,13 +174,7 @@ const ResetPasswordContent = () => {
 
               <Text c="dimmed" ta="center" mt={24} fz={14}>
                 Вспомнили старый пароль?{" "}
-                <Anchor
-                  component={Link}
-                  href="/auth/login"
-                  fz={14}
-                  fw={600}
-                  underline="hover"
-                >
+                <Anchor component={Link} href="/auth/login" fz={14} fw={600} underline="hover">
                   Войти
                 </Anchor>
               </Text>

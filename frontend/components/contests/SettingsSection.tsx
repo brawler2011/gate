@@ -1,31 +1,17 @@
 "use client";
 
-import {
-  Button,
-  Stack,
-  TextInput,
-  NumberInput,
-  Badge,
-  Combobox,
-  useCombobox,
-  InputBase,
-  Input,
-  Text,
-  Divider,
-  Switch,
-  Group,
-} from "@mantine/core";
+import {Button, Stack, TextInput, NumberInput, Badge, Combobox, useCombobox, InputBase, Input, Text, Divider, Switch, Group} from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {notifications} from "@mantine/notifications";
-import {useRouter} from "next/navigation";
 import {useState} from "react";
 
 import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
+import {useRouter} from "@/lib/navigation";
 import {APP_COLORS} from "@/lib/theme/colors";
 
-import type * as corev1 from "@/contracts/core/v1";
+import type * as corev1 from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 interface SettingsSectionProps {
@@ -73,7 +59,7 @@ const CustomSelect = ({label, value, onChange, options, description}: CustomSele
   return (
     <Input.Wrapper label={label} description={description}>
       <Combobox store={combobox} onOptionSubmit={(val) => {
-        onChange(val); combobox.closeDropdown(); 
+        onChange(val); combobox.closeDropdown();
       }}>
         <Combobox.Target>
           <InputBase
@@ -146,8 +132,8 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     start_time: string;
     end_time: string;
     freeze_duration_minutes: number | string | undefined | null;
-    freeze_status: corev1.UpdateContestRequestModel.freeze_status;
-    participation_mode: corev1.UpdateContestRequestModel.participation_mode;
+    freeze_status: corev1.UpdateContestRequestModel["freeze_status"];
+    participation_mode: corev1.UpdateContestRequestModel["participation_mode"];
     enable_drafts: boolean;
     enable_upsolving: boolean;
     enable_virtual_contests: boolean;
@@ -158,7 +144,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       title: contest.title,
       description: contest.description,
       visibility: contest.visibility,
-      participation_mode: (contest.participation_mode as corev1.UpdateContestRequestModel.participation_mode) || "open",
+      participation_mode: (contest.participation_mode as corev1.UpdateContestRequestModel["participation_mode"]) || "open",
       enable_drafts: contest.enable_drafts ?? true,
       enable_upsolving: contest.enable_upsolving ?? true,
       enable_virtual_contests: contest.enable_virtual_contests ?? false,
@@ -170,7 +156,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       start_time: toLocalDatetimeString(contest.start_time),
       end_time: toLocalDatetimeString(contest.end_time),
       freeze_duration_minutes: contest.freeze_duration_minutes ?? "",
-      freeze_status: (contest.freeze_status as corev1.UpdateContestRequestModel.freeze_status) || "auto",
+      freeze_status: (contest.freeze_status as corev1.UpdateContestRequestModel["freeze_status"]) || "auto",
     },
     validate: {
       login: (value) => {
@@ -212,18 +198,14 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       start_time: values.start_time ? new Date(values.start_time).toISOString() : null,
       end_time: values.end_time ? new Date(values.end_time).toISOString() : null,
       freeze_duration_minutes: freezeDuration,
-      freeze_status: values.freeze_status as corev1.UpdateContestRequestModel.freeze_status,
-      participation_mode: values.participation_mode as corev1.UpdateContestRequestModel.participation_mode,
+      freeze_status: values.freeze_status as corev1.UpdateContestRequestModel["freeze_status"],
+      participation_mode: values.participation_mode as corev1.UpdateContestRequestModel["participation_mode"],
       enable_drafts: values.enable_drafts,
       enable_upsolving: values.enable_upsolving,
       enable_virtual_contests: values.enable_virtual_contests,
       hide_statements: values.hide_statements,
     };
-    const [error] = await api.updateContest({
-      orgLogin: contest.organization_login,
-      contestLogin: contest.login,
-      requestBody: payload,
-    });
+    const [error] = await api.updateContest(contest.organization_login, contest.login, payload);
     setSaving(false);
 
     if (error) {
@@ -298,8 +280,8 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
 
           <CustomSelect
             label="Режим заморозки"
-            value={form.values.freeze_status}
-            onChange={(value) => form.setFieldValue("freeze_status", value as corev1.UpdateContestRequestModel.freeze_status)}
+            value={form.values.freeze_status ?? "auto"}
+            onChange={(value) => form.setFieldValue("freeze_status", value as corev1.UpdateContestRequestModel["freeze_status"])}
             options={FREEZE_STATUS_OPTIONS}
           />
 
@@ -312,8 +294,8 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
 
           <CustomSelect
             label="Режим участия"
-            value={form.values.participation_mode}
-            onChange={(value) => form.setFieldValue("participation_mode", value as corev1.UpdateContestRequestModel.participation_mode)}
+            value={form.values.participation_mode ?? "open"}
+            onChange={(value) => form.setFieldValue("participation_mode", value as corev1.UpdateContestRequestModel["participation_mode"])}
             options={PARTICIPATION_MODE_OPTIONS}
             description="В открытом контесте любой авторизованный пользователь может отправлять решения"
           />
@@ -371,7 +353,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
           </Group>
 
           <Divider my="sm" />
-          
+
           <Text size="sm" c="dimmed" mb="md">
             Следующие настройки определяют минимальную роль пользователя для доступа к различным функциям контеста
           </Text>

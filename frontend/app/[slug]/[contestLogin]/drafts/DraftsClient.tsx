@@ -1,38 +1,15 @@
 "use client";
 
-import {
-  ActionIcon,
-  Badge,
-  Box,
-  Button,
-  Card,
-  Divider,
-  Grid,
-  Group,
-  Loader,
-  Paper,
-  Stack,
-  Text,
-  Textarea,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Badge, Box, Button, Card, Divider, Grid, Group, Loader, Paper, Stack, Text, Textarea, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {
-  IconCheck,
-  IconCopy,
-  IconDeviceFloppy,
-  IconFileCode,
-  IconInfoCircle,
-  IconPencil,
-  IconTrash,
-} from "@tabler/icons-react";
+import {IconCheck, IconCopy, IconDeviceFloppy, IconFileCode, IconInfoCircle, IconPencil, IconTrash} from "@tabler/icons-react";
 import React, {useCallback, useState, useTransition, type ReactNode} from "react";
 
 import {api} from "@/lib/api";
 
 import classes from "./DraftsClient.module.css";
 
-import type {ContestDraftModel, ContestModel} from "@/contracts/core/v1";
+import type {ContestDraftModel, ContestModel} from "@/contracts/core/v1/models";
 
 type Props = {
   contest: ContestModel;
@@ -58,11 +35,8 @@ export const DraftsClient = ({
 
   const fetchDrafts = useCallback(async () => {
     setLoading(true);
-    const [error, data] = await api.listContestDrafts({
-      orgLogin: contest.organization_login,
-      contestLogin: contest.login,
-      page: 1,
-      pageSize: 50,
+    const [error, data] = await api.listContestDrafts(contest.organization_login, contest.login, {
+      page: 1, pageSize: 50
     });
     setLoading(false);
     if (!error && data?.drafts) {
@@ -89,12 +63,8 @@ export const DraftsClient = ({
     }
 
     startTransition(async () => {
-      const [error, response] = await api.createContestDraft({
-        orgLogin: contest.organization_login,
-        contestLogin: contest.login,
-        requestBody: {
-          code,
-        },
+      const [error, response] = await api.createContestDraft(contest.organization_login, contest.login, {
+        code
       });
 
       if (error) {
@@ -116,11 +86,7 @@ export const DraftsClient = ({
 
   const handleDeleteDraft = async (draftId: string) => {
     setDeletingId(draftId);
-    const [error] = await api.deleteContestDraft({
-      orgLogin: contest.organization_login,
-      contestLogin: contest.login,
-      draftId,
-    });
+    const [error] = await api.deleteContestDraft(contest.organization_login, contest.login, draftId);
     setDeletingId(null);
     if (!error) {
       setDrafts((prev) => prev.filter((d) => d.id !== draftId));

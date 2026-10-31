@@ -1,54 +1,24 @@
 "use client";
 
-import {
-  ActionIcon,
-  Anchor,
-  Avatar,
-  Badge,
-  Box,
-  Burger,
-  Button,
-  Center,
-  Divider,
-  Drawer,
-  Group,
-  Image,
-  Indicator,
-  Loader,
-  Menu,
-  ScrollArea,
-  Skeleton,
-  Stack,
-  Title,
-  useComputedColorScheme,
-  useMantineColorScheme,
-} from "@mantine/core";
+import {ActionIcon, Anchor, Avatar, Badge, Box, Burger, Button, Center, Divider, Drawer, Group, Image, Indicator, Loader, Menu, ScrollArea, Skeleton, Stack, Title, useComputedColorScheme, useMantineColorScheme} from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
-import {
-  IconBell,
-  IconBuilding,
-  IconLogout,
-  IconMoon,
-  IconSettings,
-  IconSun,
-  IconUser,
-} from "@tabler/icons-react";
+import {IconBell, IconBuilding, IconLogout, IconMoon, IconSettings, IconSun, IconUser} from "@tabler/icons-react";
 import cx from "clsx";
-import NextImage from "next/image";
-import Link from "next/link";
-import {usePathname, useRouter} from "next/navigation";
 import {useState, type ReactNode} from "react";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
+import NextImage from "@/components/shared/Image";
+import Link from "@/components/shared/RouterLink";
 import {useSession} from "@/contexts/SessionContext";
 import {useUnreadNotificationsCount} from "@/hooks/useUnreadNotificationsCount";
 import {api} from "@/lib/api";
+import {usePathname, useRouter} from "@/lib/navigation";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import classes from "./Header.module.css";
 import {LogoutLink} from "./LogoutLink";
 
-import type {UserModel} from "@/contracts/core/v1";
+import type {UserModel} from "@/contracts/core/v1/models";
 
 export type HeaderOrganization = {
   id: string;

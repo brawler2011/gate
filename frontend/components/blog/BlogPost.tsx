@@ -1,17 +1,9 @@
 "use client";
 
-import {
-  Avatar,
-  Card,
-  Group,
-  Image,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
-import NextImage from "next/image";
-import Link from "next/link";
+import {Avatar, Card, Group, Image, Stack, Text, Title} from "@mantine/core";
 
+import NextImage from "@/components/shared/Image";
+import Link from "@/components/shared/RouterLink";
 import {formatDate} from "@/lib/lib";
 
 import classes from "./BlogPost.module.css";

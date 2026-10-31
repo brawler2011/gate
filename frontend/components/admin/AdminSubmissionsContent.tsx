@@ -1,36 +1,21 @@
 "use client";
 
-import {
-  ActionIcon,
-  Badge,
-  Box,
-  Center,
-  Container,
-  Group,
-  Select,
-  Skeleton,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Title,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Badge, Box, Center, Container, Group, Select, Skeleton, Stack, Table, Text, TextInput, Title, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconRefresh, IconSearch, IconX} from "@tabler/icons-react";
-import Link from "next/link";
-import {usePathname, useRouter, useSearchParams} from "next/navigation";
+import {useQuery} from "@tanstack/react-query";
 import {useState} from "react";
-import useSWR from "swr";
 
 import {NextPagination} from '@/components/shared/Pagination';
+import Link from "@/components/shared/RouterLink";
 import {SubmissionDetailsModal} from '@/components/submissions';
 import {api} from "@/lib/api";
 import {LangString, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
+import {usePathname, useRouter, useSearchParams} from "@/lib/navigation";
 
 import classes from "./AdminPage.module.css";
 
-import type {SubmissionModel} from "@/contracts/core/v1";
+import type {SubmissionModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type AdminSubmissionsContentProps = {
@@ -88,24 +73,21 @@ export const AdminSubmissionsContent = ({
   };
 
   // Fetch submissions
-  const {data, error, isLoading, mutate} = useSWR(
-    ["admin-submissions", page, state, language, contestId, problemId, userId],
-    async () => {
-      const [err, res] = await api.listSubmissions({
-        page,
-        pageSize: 10,
-        state: state as Parameters<typeof api.listSubmissions>[0]["state"],
-        language: language as Parameters<typeof api.listSubmissions>[0]["language"],
-        contestId: contestId || undefined,
-        problemId: problemId || undefined,
-      });
+  const {data, error, isLoading, refetch: mutate} = useQuery({queryKey: ["admin-submissions", page, state, language, contestId, problemId, userId], queryFn: async () => {
+    const [err, res] = await api.listSubmissions({
+      page,
+      pageSize: 10,
+      contestId: contestId || undefined,
+      problemId: problemId || undefined,
+      state: state as NonNullable<Parameters<typeof api.listSubmissions>[0]>["state"],
+      language: language as NonNullable<Parameters<typeof api.listSubmissions>[0]>["language"]
+    });
 
-      if (err) {
-        throw new Error(err.message);
-      }
-      return res;
+    if (err) {
+      throw new Error(err.message);
     }
-  );
+    return res;
+  }});
 
   const submissions = (data?.submissions || []) as unknown as SubmissionModel[];
   const pagination = data?.pagination || {total: 0, page: page};
@@ -117,11 +99,7 @@ export const AdminSubmissionsContent = ({
     }
     setRejudgingId(submission.id);
     try {
-      const [err] = await api.rejudgeSubmission({
-        submissionId: submission.id,
-        orgLogin: submission.organization_login,
-        contestLogin: submission.contest_login,
-      });
+      const [err] = await api.rejudgeSubmission(submission.organization_login, submission.contest_login, submission.id);
 
       if (err) {
         notifications.show({

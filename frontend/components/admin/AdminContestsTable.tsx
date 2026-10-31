@@ -1,32 +1,18 @@
 "use client";
 
-import {
-  ActionIcon,
-  Badge,
-  Box,
-  Group,
-  Table,
-  Text,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Badge, Box, Group, Table, Text, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {
-  IconDeviceDesktop,
-  IconEdit,
-  IconFileCode,
-  IconRefresh,
-  IconTrash,
-} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
+import {IconDeviceDesktop, IconEdit, IconFileCode, IconRefresh, IconTrash} from "@tabler/icons-react";
 import {useState} from "react";
 
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {api} from "@/lib/api";
+import {useRouter} from "@/lib/navigation";
 
 import classes from "./AdminPage.module.css";
 import {DeleteContestModal} from "./DeleteContestModal";
 
-import type {ContestModel} from "@/contracts/core/v1";
+import type {ContestModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type AdminContestsTableProps = {
@@ -71,7 +57,7 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
     e.stopPropagation();
     setRejudgingId(contest.id);
     try {
-      const [err] = await api.rejudgeContest({orgLogin: contest.organization_login, contestLogin: contest.login});
+      const [err] = await api.rejudgeContest(contest.organization_login, contest.login);
       if (err) {
         notifications.show({
           title: "Ошибка",
@@ -107,7 +93,7 @@ export const AdminContestsTable = ({contests, onDeleteContest}: AdminContestsTab
     if (!contestToDelete) {
       return;
     }
-    
+
     setDeletingId(contestToDelete.id);
     try {
       await onDeleteContest(contestToDelete);

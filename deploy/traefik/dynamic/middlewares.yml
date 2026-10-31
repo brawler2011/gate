@@ -11,11 +11,6 @@ http:
           Referrer-Policy: "strict-origin-when-cross-origin"
 
     # API middleware
-    gate-api-strip:
-      stripPrefix:
-        prefixes:
-          - "/api"
-
     gate-api-ratelimit:
       rateLimit:
         average: 10

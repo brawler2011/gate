@@ -2,12 +2,13 @@
 
 import {Anchor, Center, Group, Input, Stack, Table, Text} from "@mantine/core";
 import {IconSearch} from "@tabler/icons-react";
-import Link from "next/link";
 import {useState} from "react";
+
+import Link from "@/components/shared/RouterLink";
 
 import {CreateTeamModal} from "./CreateTeamModal";
 
-import type {TeamModel} from "@/contracts/core/v1";
+import type {TeamModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type Props = {

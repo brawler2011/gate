@@ -1,9 +1,9 @@
 "use client";
 
-import {usePathname} from "next/navigation";
 import {type ReactNode} from "react";
 
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
+import {usePathname} from "@/lib/navigation";
 
 const GENERAL_TAB = "general";
 const WORKSHOP_FOLDER_TABS = [

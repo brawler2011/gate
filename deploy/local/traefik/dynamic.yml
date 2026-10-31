@@ -3,8 +3,6 @@ http:
     backend-api:
       rule: "PathPrefix(`/api`)"
       service: backend-service
-      middlewares:
-        - strip-api-prefix
     backend-ws:
       rule: "PathPrefix(`/ws`)"
       service: backend-service
@@ -22,8 +20,3 @@ http:
       loadBalancer:
         servers:
           - url: "http://host.docker.internal:3000"
-  middlewares:
-    strip-api-prefix:
-      stripPrefix:
-        prefixes:
-          - "/api"

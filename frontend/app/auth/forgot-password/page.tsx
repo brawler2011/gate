@@ -1,23 +1,11 @@
 "use client";
 
-import {
-  Alert,
-  Anchor,
-  Box,
-  Button,
-  Group,
-  Paper,
-  Stack,
-  Text,
-  TextInput,
-  ThemeIcon,
-  Title,
-} from "@mantine/core";
+import {Alert, Anchor, Box, Button, Group, Paper, Stack, Text, TextInput, ThemeIcon, Title} from "@mantine/core";
 import {IconAlertCircle, IconMailForward} from "@tabler/icons-react";
-import Image from "next/image";
-import Link from "next/link";
 import {useState, type ReactNode} from "react";
 
+import Image from "@/components/shared/Image";
+import Link from "@/components/shared/RouterLink";
 import {api} from "@/lib/api";
 
 const ForgotPasswordPage = (): ReactNode => {
@@ -32,9 +20,7 @@ const ForgotPasswordPage = (): ReactNode => {
     setLoading(true);
 
     try {
-      const [err] = await api.forgotPassword({
-        requestBody: {identifier},
-      });
+      const [err] = await api.forgotPassword({identifier});
       if (!err) {
         setSubmitted(true);
       } else {
@@ -57,33 +43,17 @@ const ForgotPasswordPage = (): ReactNode => {
         padding: "1rem",
       }}
     >
-      <Stack
-        align="center"
-        gap={32}
-        style={{width: "min(550px, calc(100vw - 2rem))"}}
-      >
+      <Stack align="center" gap={32} style={{width: "min(550px, calc(100vw - 2rem))"}}>
         <Link href="/" style={{textDecoration: "none", color: "inherit"}}>
           <Group justify="center" gap="md">
-            <Image
-              src="/gate_logo.svg"
-              alt="Gate"
-              width={56}
-              height={56}
-              priority
-            />
+            <Image src="/gate_logo.svg" alt="Gate" width={56} height={56} priority />
             <Title order={1} fz={36}>
               Gate
             </Title>
           </Group>
         </Link>
 
-        <Paper
-          radius="md"
-          p={32}
-          withBorder
-          shadow="sm"
-          style={{width: "100%"}}
-        >
+        <Paper radius="md" p={32} withBorder shadow="sm" style={{width: "100%"}}>
           {submitted ? (
             <Stack align="center" gap="md" ta="center">
               <ThemeIcon size={64} radius="xl" color="blue" variant="light">
@@ -95,21 +65,15 @@ const ForgotPasswordPage = (): ReactNode => {
               </Title>
 
               <Text c="dimmed" fz={15}>
-                Если аккаунт с указанным логином или email существует, мы отправили на него ссылку
-                для восстановления пароля.
+                Если аккаунт с указанным логином или email существует, мы отправили на него ссылку для
+                восстановления пароля.
               </Text>
 
               <Text c="dimmed" fz={13}>
                 Ссылка действительна в течение 1 часа.
               </Text>
 
-              <Button
-                component={Link}
-                href="/auth/login"
-                variant="filled"
-                size="sm"
-                mt="md"
-              >
+              <Button component={Link} href="/auth/login" variant="filled" size="sm" mt="md">
                 Вернуться ко входу
               </Button>
             </Stack>
@@ -120,17 +84,12 @@ const ForgotPasswordPage = (): ReactNode => {
               </Title>
 
               <Text c="dimmed" ta="center" mb={24} fz={14}>
-                Введите имя пользователя или email, указанный при регистрации, чтобы получить ссылку для сброса пароля.
+                Введите имя пользователя или email, указанный при регистрации, чтобы получить ссылку для
+                сброса пароля.
               </Text>
 
               {error && (
-                <Alert
-                  icon={<IconAlertCircle size={18} />}
-                  color="red"
-                  mb={20}
-                  title="Ошибка"
-                  radius="md"
-                >
+                <Alert icon={<IconAlertCircle size={18} />} color="red" mb={20} title="Ошибка" radius="md">
                   {error}
                 </Alert>
               )}
@@ -147,14 +106,7 @@ const ForgotPasswordPage = (): ReactNode => {
                     onChange={(e) => setIdentifier(e.currentTarget.value)}
                   />
 
-                  <Button
-                    type="submit"
-                    fullWidth
-                    size="md"
-                    radius="md"
-                    loading={loading}
-                    mt={8}
-                  >
+                  <Button type="submit" fullWidth size="md" radius="md" loading={loading} mt={8}>
                     Отправить ссылку для сброса
                   </Button>
                 </Stack>
@@ -162,13 +114,7 @@ const ForgotPasswordPage = (): ReactNode => {
 
               <Text c="dimmed" ta="center" mt={24} fz={14}>
                 Вспомнили пароль?{" "}
-                <Anchor
-                  component={Link}
-                  href="/auth/login"
-                  fz={14}
-                  fw={600}
-                  underline="hover"
-                >
+                <Anchor component={Link} href="/auth/login" fz={14} fw={600} underline="hover">
                   Войти
                 </Anchor>
               </Text>

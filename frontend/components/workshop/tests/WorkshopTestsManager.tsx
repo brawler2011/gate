@@ -1,24 +1,10 @@
 "use client";
 
-import {
-  Alert,
-  Box,
-  Button,
-  Group,
-  LoadingOverlay,
-  Paper,
-  Stack,
-} from "@mantine/core";
+import {Alert, Box, Button, Group, LoadingOverlay, Paper, Stack} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {
-  IconCheck,
-  IconDeviceFloppy,
-  IconPlayerPlay,
-  IconRefresh,
-  IconShieldCheck,
-} from "@tabler/icons-react";
+import {IconCheck, IconDeviceFloppy, IconPlayerPlay, IconRefresh, IconShieldCheck} from "@tabler/icons-react";
+import {useQuery} from "@tanstack/react-query";
 import {useEffect, useState, useTransition} from "react";
-import useSWR from "swr";
 
 import {api} from "@/lib/api";
 
@@ -27,9 +13,7 @@ import {TestRenumberModal} from "./TestRenumberModal";
 import {allocateTestFiles, loadTestState, renumberTests, serializeTestState} from "./testsConfig";
 import {TestsListTable} from "./TestsListTable";
 
-import type {
-  SubtaskItem,
-  TestItem} from "./types";
+import type {SubtaskItem, TestItem} from "./types";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -50,13 +34,13 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
   const [isBatchRunning, setIsBatchRunning] = useState(false);
 
   // Load problem limits to know problem_type and max_score
-  const {data: limitsData} = useSWR(["problem-limits", problemId], async () => {
-    const [err, res] = await api.getProblemLimits({problemId});
+  const {data: limitsData} = useQuery({queryKey: ["problem-limits", problemId], queryFn: async () => {
+    const [err, res] = await api.getProblemLimits(problemId);
     if (err) {
       return null;
     }
     return res;
-  });
+  }});
 
   const problemType = limitsData?.problem_type || "pass-fail";
   const maxScore = limitsData?.max_score ?? null;
@@ -65,17 +49,17 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [_genErr, genRes] = await api.listProblemGenerators({problemId});
+      const [_genErr, genRes] = await api.listProblemGenerators(problemId);
       if (genRes?.files) {
         setGenerators(genRes.files.map((f: { path?: string; name?: string }) => (f.path || f.name || "").split("/").pop() || ""));
       }
 
-      const [_solErr, solRes] = await api.listProblemWorkshopSubmissions({problemId});
+      const [_solErr, solRes] = await api.listProblemWorkshopSubmissions(problemId);
       if (solRes?.files) {
         setSolutions(solRes.files.map((f: { path?: string; name?: string }) => (f.path || f.name || "").split("/").pop() || ""));
       }
 
-      const [_filesErr, filesRes] = await api.listProblemTests({problemId});
+      const [_filesErr, filesRes] = await api.listProblemTests(problemId);
       const fileSizeMap = new Map<string, number>();
       const existingFiles = (filesRes?.files || []).map((f: { path?: string; name?: string; size?: number }) => {
         const name = (f.path || f.name || "").replace(/^tests\//, "");
@@ -86,7 +70,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
       }).filter(Boolean);
 
       // Fetch tests config
-      const [_configErr, configBlob] = await api.getProblemTestFile({problemId, name: "tests.json"});
+      const [_configErr, configBlob] = await api.getProblemTestFile(problemId, "tests.json");
       let configData: { groups?: Record<string, unknown>[]; tests?: Record<string, unknown>[] } = {};
       if (!_configErr && configBlob) {
         try {
@@ -153,7 +137,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
   const handleAddTest = async () => {
     const nextOrd = tests.length > 0 ? Math.max(...tests.map((t) => t.ordinal)) + 1 : 1;
     const newId = `test-id-${crypto.randomUUID()}`;
-    const [filesErr, filesRes] = await api.listProblemTests({problemId});
+    const [filesErr, filesRes] = await api.listProblemTests(problemId);
     if (filesErr || !filesRes) {
       notifications.show({title: "Ошибка создания теста", message: "Не удалось проверить существующие файлы", color: "red"});
       return;
@@ -163,8 +147,12 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
 
     // Automatically create empty .in and .out files for the manual test
     const emptyBlob = new Blob([""], {type: "application/octet-stream"});
-    await api.createProblemTestFile({problemId, name: inFilename, requestBody: emptyBlob});
-    await api.createProblemTestFile({problemId, name: outFilename, requestBody: emptyBlob});
+    await api.createProblemTestFile(problemId, emptyBlob, {
+      name: inFilename
+    });
+    await api.createProblemTestFile(problemId, emptyBlob, {
+      name: outFilename
+    });
 
     const newTest: TestItem = {
       id: newId,
@@ -230,7 +218,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
       try {
         const testsConfig = serializeTestState(tests, subtasks, problemType, maxScore);
 
-        const [err] = await api.updateProblemTestsConfig({problemId, requestBody: testsConfig});
+        const [err] = await api.updateProblemTestsConfig(problemId, testsConfig);
         if (err) {
           notifications.show({
             title: "Ошибка сохранения",
@@ -277,13 +265,10 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
         const genName = parts[0];
         const genArgs = parts.slice(1);
 
-        const [genErr] = await api.generateTests({
-          problemId,
-          requestBody: {
-            generator_name: genName,
-            test_numbers: [t.ordinal],
-            arguments: [genArgs],
-          },
+        const [genErr] = await api.generateTests(problemId, {
+          generator_name: genName,
+          test_numbers: [t.ordinal],
+          arguments: [genArgs]
         });
         if (genErr) {
           notifications.show({
@@ -325,11 +310,8 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
     setIsBatchRunning(true);
     try {
       const solutionPath = solutions[0];
-      const [err, report] = await api.testSolution({
-        problemId,
-        requestBody: {
-          solution_path: solutionPath,
-        },
+      const [err, report] = await api.testSolution(problemId, {
+        solution_path: solutionPath
       });
 
       if (err || !report) {
@@ -382,7 +364,7 @@ export const WorkshopTestsManager = ({problemId}: Props): ReactNode => {
   const handleRunValidatorBatch = async () => {
     setIsBatchRunning(true);
     try {
-      const [err, report] = await api.validateAllTests({problemId});
+      const [err, report] = await api.validateAllTests(problemId);
       if (err || !report) {
         notifications.show({
           title: "Ошибка валидации",

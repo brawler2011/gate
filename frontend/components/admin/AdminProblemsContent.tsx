@@ -1,35 +1,21 @@
 "use client";
 
-import {
-  ActionIcon,
-  Badge,
-  Box,
-  Center,
-  Container,
-  Group,
-  Skeleton,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Title,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Badge, Box, Center, Container, Group, Skeleton, Stack, Table, Text, TextInput, Title, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconFileCode, IconSearch, IconTrash} from "@tabler/icons-react";
-import {useRouter, useSearchParams} from "next/navigation";
+import {useQuery} from "@tanstack/react-query";
 import {useEffect, useRef, useState} from "react";
-import useSWR from "swr";
 
 import {NextPagination} from '@/components/shared/Pagination';
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {api} from "@/lib/api";
 import {formatDate} from "@/lib/lib";
+import {useRouter, useSearchParams} from "@/lib/navigation";
 
 import classes from "./AdminPage.module.css";
 import {DeleteProblemModal} from "./DeleteProblemModal";
 
-import type {ProblemsListItemModel} from "@/contracts/core/v1";
+import type {ProblemsListItemModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type AdminProblemsContentProps = {
@@ -43,7 +29,7 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
 
   // Search input state
   const [searchInput, setSearchInput] = useState(search || "");
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isFirstRender = useRef(true);
 
   // Delete modal state
@@ -86,16 +72,17 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
   }, [searchInput, router, searchParams]);
 
   // Fetch problems
-  const {data, error, isLoading, mutate} = useSWR(
-    ["admin-problems", page, search],
-    async () => {
-      const [err, res] = await api.listProblems({page, pageSize: 10, search});
-      if (err) {
-        throw new Error(err.message);
-      }
-      return res;
+  const {data, error, isLoading, refetch: mutate} = useQuery({queryKey: ["admin-problems", page, search], queryFn: async () => {
+    const [err, res] = await api.listProblems({
+      page,
+      pageSize: 10,
+      search
+    });
+    if (err) {
+      throw new Error(err.message);
     }
-  );
+    return res;
+  }});
 
   const problems = data?.problems || [];
   const pagination = data?.pagination || {total: 0, page: page};
@@ -113,7 +100,7 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
 
     setDeletingId(problemToDelete.id);
     try {
-      const [err] = await api.deleteProblem({id: problemToDelete.id});
+      const [err] = await api.deleteProblem(problemToDelete.id);
       if (err) {
         notifications.show({
           title: "Ошибка",

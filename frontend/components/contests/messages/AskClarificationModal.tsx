@@ -1,19 +1,12 @@
 "use client";
 
-import {
-  Button,
-  Group,
-  Modal,
-  Select,
-  Stack,
-  Textarea,
-} from "@mantine/core";
+import {Button, Group, Modal, Select, Stack, Textarea} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useState, type ReactNode} from "react";
 
 import {api} from "@/lib/api";
 
-import type {ContestProblemListItemModel} from "@/contracts/core/v1";
+import type {ContestProblemListItemModel} from "@/contracts/core/v1/models";
 
 interface AskClarificationModalProps {
   opened: boolean;
@@ -58,13 +51,9 @@ export const AskClarificationModal = ({
     }
 
     setLoading(true);
-    const [err] = await api.createContestClarification({
-      orgLogin,
-      contestLogin,
-      requestBody: {
-        question: question.trim(),
-        problem_id: problemId ? problemId : undefined,
-      },
+    const [err] = await api.createContestClarification(orgLogin, contestLogin, {
+      question: question.trim(),
+      problem_id: problemId ? problemId : undefined
     });
     setLoading(false);
 

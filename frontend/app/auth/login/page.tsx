@@ -1,29 +1,15 @@
 "use client";
 
-import {
-  Alert,
-  Anchor,
-  Box,
-  Button,
-  Center,
-  Group,
-  Loader,
-  Paper,
-  PasswordInput,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
+import {Alert, Anchor, Box, Button, Center, Group, Loader, Paper, PasswordInput, Stack, Text, TextInput, Title} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconAlertCircle, IconCheck} from "@tabler/icons-react";
-import Image from "next/image";
-import Link from "next/link";
-import {useRouter, useSearchParams} from "next/navigation";
 import {Suspense, useState, type ReactNode} from "react";
 
+import Image from "@/components/shared/Image";
+import Link from "@/components/shared/RouterLink";
 import {useSession} from "@/contexts/SessionContext";
 import {api} from "@/lib/api";
+import {useRouter, useSearchParams} from "@/lib/navigation";
 
 const LoginPage = (): ReactNode => {
   return (
@@ -59,16 +45,17 @@ const LoginPageContent = () => {
     setLoading(true);
 
     try {
-      const [err, data] = await api.login({
-        requestBody: {identifier, password},
-      });
+      const [err, data] = await api.login({identifier, password});
       if (!err && data) {
         setUser(data.user);
         router.push(returnTo);
         router.refresh();
       } else {
         const msg = err?.message || "Неверный логин или пароль";
-        if (msg.toLowerCase().includes("email not verified") || msg.toLowerCase().includes("не подтверждена")) {
+        if (
+          msg.toLowerCase().includes("email not verified") ||
+          msg.toLowerCase().includes("не подтверждена")
+        ) {
           setIsUnverified(true);
           setError("Почта для этого аккаунта ещё не подтверждена. Пожалуйста, проверьте ваш почтовый ящик.");
         } else {
@@ -88,9 +75,7 @@ const LoginPageContent = () => {
     }
     setResendLoading(true);
     try {
-      const [err] = await api.resendVerification({
-        requestBody: {identifier},
-      });
+      const [err] = await api.resendVerification({identifier});
       if (!err) {
         notifications.show({
           title: "Письмо отправлено",
@@ -126,33 +111,17 @@ const LoginPageContent = () => {
         padding: "1rem",
       }}
     >
-      <Stack
-        align="center"
-        gap={32}
-        style={{width: "min(550px, calc(100vw - 2rem))"}}
-      >
+      <Stack align="center" gap={32} style={{width: "min(550px, calc(100vw - 2rem))"}}>
         <Link href="/" style={{textDecoration: "none", color: "inherit"}}>
           <Group justify="center" gap="md">
-            <Image
-              src="/gate_logo.svg"
-              alt="Gate"
-              width={56}
-              height={56}
-              priority
-            />
+            <Image src="/gate_logo.svg" alt="Gate" width={56} height={56} priority />
             <Title order={1} fz={36}>
               Gate
             </Title>
           </Group>
         </Link>
 
-        <Paper
-          radius="md"
-          p={32}
-          withBorder
-          shadow="sm"
-          style={{width: "100%"}}
-        >
+        <Paper radius="md" p={32} withBorder shadow="sm" style={{width: "100%"}}>
           <Title order={2} ta="center" mb={24} fz={22}>
             Вход в аккаунт
           </Title>
@@ -204,26 +173,13 @@ const LoginPageContent = () => {
                   onChange={(e) => setPassword(e.currentTarget.value)}
                 />
                 <Group justify="flex-end" mt={6}>
-                  <Anchor
-                    component={Link}
-                    href="/auth/forgot-password"
-                    fz={13}
-                    c="dimmed"
-                    underline="hover"
-                  >
+                  <Anchor component={Link} href="/auth/forgot-password" fz={13} c="dimmed" underline="hover">
                     Забыли пароль?
                   </Anchor>
                 </Group>
               </div>
 
-              <Button
-                type="submit"
-                fullWidth
-                size="md"
-                radius="md"
-                loading={loading}
-                mt={8}
-              >
+              <Button type="submit" fullWidth size="md" radius="md" loading={loading} mt={8}>
                 Войти
               </Button>
             </Stack>

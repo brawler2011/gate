@@ -1,36 +1,22 @@
-import {
-  Container,
-  Stack,
-  Title,
-} from "@mantine/core";
+import {Container, Stack, Title} from "@mantine/core";
 
-import {DefaultLayout} from '@/components/shared';
-import {ErrorDisplay} from '@/components/shared/ErrorDisplay';
+import {DefaultLayout} from "@/components/shared";
 import {SubmissionDetailsContent} from "@/components/submissions";
-import {api, unwrapAndCache} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
+import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
-import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
-type Props = {
-  params: Promise<{ submission_id: string }>;
-};
-
-const metadata: Metadata = {
-  title: `Просмотр посылки`,
-  description: "Детали посылки и протокол тестирования",
-};
-
-const Page = async (props: Props): Promise<ReactNode> => {
-  const solutionId = (await props.params).submission_id;
-  const [error, resp] = await api.getSubmission({submissionId: solutionId});
+const loadPage = async (props: Props) => {
+  const solutionId = props.params.submission_id;
+  const [error, resp] = await api.getSubmission(solutionId);
 
   if (error) {
-    return <ErrorDisplay error={error} />;
+    throw error;
   }
   if (!resp) {
-    return <ErrorDisplay error={{status: 404, message: "Посылка не найдена"}} />;
+    throw {status: 404, message: "Посылка не найдена"};
   }
 
   const {submission} = resp;
@@ -43,33 +29,47 @@ const Page = async (props: Props): Promise<ReactNode> => {
       : null;
   const contestData =
     submission.organization_login && submission.contest_login
-      ? await unwrapAndCache(api.getContest)({
-        orgLogin: submission.organization_login,
-        contestLogin: submission.contest_login,
-      })
+      ? await unwrap(api.getContest)(submission.organization_login, submission.contest_login)
       : null;
+  return {
+    solutionId,
+    error,
+    resp,
+    submission,
+    me,
+    user,
+    contestRole,
+    contestData,
+  };
+};
 
+type Props = {
+  params: { submission_id: string };
+};
+
+const Page = (props: Props): ReactNode => {
+  const routeQuery = usePageQuery(["frontend/app/submissions/[submission_id]/page.tsx", props], () =>
+    loadPage(props),
+  );
+  if (!routeQuery.data) {
+    return <PageQueryState query={routeQuery} />;
+  }
+  const {submission, user, contestRole, contestData} = routeQuery.data;
   const checker = contestData?.contest
     ? new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null)
     : null;
-
-  const canRejudge = contestData?.contest && checker ? checker.canRejudgeSubmissions(contestData.contest) : false;
-
+  const canRejudge =
+    contestData?.contest && checker ? checker.canRejudgeSubmissions(contestData.contest) : false;
   return (
     <DefaultLayout headerUser={user}>
-      <Container size="lg" pt="md" pb="xl" px={{base: 'xs', sm: 'md'}}>
+      <Container size="lg" pt="md" pb="xl" px={{base: "xs", sm: "md"}}>
         <Stack gap="lg" align="flex-start" w="100%">
-          <Title order={2}>
-            Посылка #{submission.id.slice(0, 8)}...
-          </Title>
-          <SubmissionDetailsContent
-            submission={submission}
-            canRejudge={canRejudge}
-          />
+          <Title order={2}>Посылка #{submission.id.slice(0, 8)}...</Title>
+          <SubmissionDetailsContent submission={submission} canRejudge={canRejudge} />
         </Stack>
       </Container>
     </DefaultLayout>
   );
 };
 
-export {Page as default, metadata};
+export {Page as default};

@@ -1,16 +1,9 @@
 "use client";
 
-import {
-  Center,
-  Container,
-  Skeleton,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+import {Center, Container, Skeleton, Stack, Text, Title} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
+import {useQuery} from "@tanstack/react-query";
 import {useState} from "react";
-import useSWR from "swr";
 
 import {NextPagination} from '@/components/shared/Pagination';
 import {StatusMessage} from '@/components/shared/StatusMessage';
@@ -32,23 +25,24 @@ export const AdminContestsContent = ({page, search}: AdminContestsContentProps):
     message: string;
   } | null>(null);
 
-  const {data, error, isLoading, mutate} = useSWR(
-    ["admin-contests", page, search],
-    async () => {
-      const [err, res] = await api.listAdminContests({page, pageSize: 10, search});
-      if (err) {
-        throw new Error(err.message);
-      }
-      return res;
+  const {data, error, isLoading, refetch: mutate} = useQuery({queryKey: ["admin-contests", page, search], queryFn: async () => {
+    const [err, res] = await api.listAdminContests({
+      page,
+      pageSize: 10,
+      search
+    });
+    if (err) {
+      throw new Error(err.message);
     }
-  );
+    return res;
+  }});
 
   const contests = data?.contests || [];
   const pagination = data?.pagination || {total: 0, page: page};
 
   const handleDeleteContest = async (contest: {id: string; organization_login: string; login: string}) => {
-    const [err] = await api.deleteContest({orgLogin: contest.organization_login, contestLogin: contest.login});
-    
+    const [err] = await api.deleteContest(contest.organization_login, contest.login);
+
     if (err) {
       console.error("Error deleting contest:", err);
       notifications.show({

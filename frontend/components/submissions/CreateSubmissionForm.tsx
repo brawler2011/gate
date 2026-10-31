@@ -1,18 +1,10 @@
 "use client";
 
-import {
-  ActionIcon,
-  Button,
-  Center,
-  Group,
-  Select,
-  Stack,
-  Text,
-} from "@mantine/core";
+import {ActionIcon, Button, Center, Group, Select, Stack, Text} from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {IconPaperclip, IconTrash} from "@tabler/icons-react";
-import dynamic from "next/dynamic";
 import React, {useRef, useState, useTransition, type ReactNode} from "react";
+import Editor from "react-simple-code-editor";
 
 import {detectSubmissionLanguage} from "@/lib/detectSubmissionLanguage";
 import {highlightCode} from "@/lib/highlightCode";
@@ -26,11 +18,6 @@ import "./vsc-dark-plus.css";
 
 // Dynamic import to avoid hydration mismatch (autoCapitalize="off" vs "none")
 type CodeEditorProps = React.ComponentProps<typeof CodeEditor>;
-
-const Editor = dynamic(
-  () => import("react-simple-code-editor").then((mod) => mod.default),
-  {ssr: false},
-);
 
 const TypedEditor = Editor as React.ComponentType<CodeEditorProps>;
 

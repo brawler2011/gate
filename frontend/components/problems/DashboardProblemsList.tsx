@@ -2,11 +2,11 @@
 
 import {Group, Stack, Text, Title, Card, ThemeIcon, ActionIcon} from "@mantine/core";
 import {IconPencil, IconCode} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
 
+import {useRouter} from "@/lib/navigation";
 import {APP_COLORS} from "@/lib/theme/colors";
 
-import type {DashboardProblemModel} from "@/contracts/core/v1";
+import type {DashboardProblemModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type DashboardProblemsListProps = {

@@ -1,17 +1,6 @@
 "use client";
 
-import {
-  Badge,
-  Button,
-  Group,
-  Paper,
-  PasswordInput,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
+import {Badge, Button, Group, Paper, PasswordInput, Stack, Table, Text, TextInput, Title} from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {notifications} from "@mantine/notifications";
 import {IconCheck, IconLink} from "@tabler/icons-react";
@@ -19,7 +8,7 @@ import {useCallback, useEffect, useState} from "react";
 
 import {api} from "@/lib/api";
 
-import type {ClaimedAccountItem} from "@/contracts/core/v1";
+import type {ClaimedAccountItem} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 export const ClaimTemporaryAccountSection = (): ReactNode => {
@@ -54,10 +43,8 @@ export const ClaimTemporaryAccountSection = (): ReactNode => {
   const handleClaim = async (values: typeof form.values) => {
     setLoading(true);
     const [error, data] = await api.claimTemporaryUser({
-      requestBody: {
-        username: values.username.trim(),
-        password: values.password,
-      },
+      username: values.username.trim(),
+      password: values.password
     });
     setLoading(false);
 

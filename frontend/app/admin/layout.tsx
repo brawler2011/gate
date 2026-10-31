@@ -1,24 +1,25 @@
-import {redirect} from "next/navigation";
+import {Outlet} from "react-router-dom";
+import {Navigate} from "react-router-dom";
 
 import {AdminHeaderNav} from "@/components/admin";
 import {DefaultLayout} from "@/components/shared";
-import {api} from "@/lib/api";
+import {useSession} from "@/contexts/SessionContext";
+import {PageQueryState} from "@/lib/pageQuery";
 
 import type {ReactNode} from "react";
 
-const AdminLayout = async ({children}: { children: React.ReactNode }): Promise<ReactNode> => {
-  const [, me] = await api.getMe();
-  const user = me?.user ?? null;
-
-  if (!user || user.role !== "admin") {
-    redirect("/");
+const AdminLayout = (): ReactNode => {
+  const {user, isLoading} = useSession();
+  if (isLoading) {
+    return <PageQueryState query={{error: null}} />;
   }
-
+  if (user?.role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
   return (
     <DefaultLayout headerUser={user} headerSecondaryNav={<AdminHeaderNav />}>
-      {children}
+      <Outlet />
     </DefaultLayout>
   );
 };
-
 export default AdminLayout;

@@ -1,41 +1,17 @@
 import {Container} from "@mantine/core";
-import {notFound, redirect} from "next/navigation";
 
 import {OrgContestsTab} from "@/components/orgs/OrgContestsTab";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
-import {api, unwrapAndCache} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
+import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
+import {notFound, redirect} from "@/lib/routeErrors";
 
-import type {Metadata} from "next";
 import type {ReactNode} from "react";
 
-type Props = {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ page?: string; search?: string }>;
-};
-
-const getOrganization = unwrapAndCache(api.getOrganization);
-
-export const generateMetadata = async ({params}: Props): Promise<Metadata> => {
-  const {slug} = await params;
-  let decoded = "";
-  try {
-    decoded = decodeURIComponent(slug);
-  } catch {
-    notFound();
-  }
-
-  const [orgError, orgData] = await api.getOrganization({login: decoded});
-  if (orgError || !orgData) {
-    return {title: "Организация"};
-  }
-
-  return {title: orgData.organization.name};
-};
-
-const Page = async ({params, searchParams}: Props): Promise<ReactNode> => {
-  const {slug} = await params;
-  const {page, search} = await searchParams;
+const loadPage = async ({params, searchParams}: Props) => {
+  const {slug} = params;
+  const {page, search} = searchParams;
 
   let decoded = "";
   try {
@@ -49,14 +25,16 @@ const Page = async ({params, searchParams}: Props): Promise<ReactNode> => {
     redirect(`/${decoded}`);
   }
 
-  const orgData = await getOrganization({login: decoded});
+  const orgData = await getOrganization(decoded);
   const org = orgData.organization;
 
-  const [
-    [contestsError, contestsData],
-    [, me],
-  ] = await Promise.all([
-    api.listWorkshopContests({page: currentPage, pageSize: 10, search, organizationId: org.id}),
+  const [[contestsError, contestsData], [, me]] = await Promise.all([
+    api.listWorkshopContests({
+      page: currentPage,
+      pageSize: 10,
+      search,
+      organization_id: org.id
+    }),
     api.getMe(),
   ]);
 
@@ -68,13 +46,47 @@ const Page = async ({params, searchParams}: Props): Promise<ReactNode> => {
   let isMember = false;
   if (currentUser) {
     // The members endpoint returns the complete list, without server-side pagination.
-    const [membersError, membersData] = await api.listOrganizationMembers({login: org.login});
+    const [membersError, membersData] = await api.listOrganizationMembers(org.login, {});
     if (membersError && membersError.status !== 403) {
-      return <Container size="lg" py="lg"><ErrorDisplay error={membersError} /></Container>;
+      throw membersError;
     }
     isMember = membersData?.members.some((member) => member.user_id === currentUser.id) ?? false;
   }
+  return {
+    slug,
+    page,
+    search,
+    decoded,
+    currentPage,
+    orgData,
+    org,
+    contestsError,
+    contestsData,
+    me,
+    currentUser,
+    contests,
+    contestsPagination,
+    isAuthenticated,
+    isMember,
+  };
+};
 
+type Props = {
+  params: { slug: string };
+  searchParams: { page?: string; search?: string };
+};
+
+const getOrganization = unwrap(api.getOrganization);
+
+const Page = ({params, searchParams}: Props): ReactNode => {
+  const routeQuery = usePageQuery(["frontend/app/[slug]/(org)/page.tsx", params, searchParams], () =>
+    loadPage({params, searchParams}),
+  );
+  if (!routeQuery.data) {
+    return <PageQueryState query={routeQuery} />;
+  }
+  const {search, org, contestsError, contests, contestsPagination, isAuthenticated, isMember} =
+    routeQuery.data;
   return (
     <Container size="lg" py="lg">
       {contestsError ? (

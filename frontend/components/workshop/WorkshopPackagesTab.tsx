@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Badge,
-  Box,
-  Button,
-  Group,
-  Loader,
-  Stack,
-  Table,
-  Text,
-} from "@mantine/core";
+import {Badge, Box, Button, Group, Loader, Stack, Table, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useCallback, useEffect, useState, useTransition} from "react";
 
@@ -74,7 +65,7 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
 
   const fetchPackages = useCallback(async () => {
     setLoading(true);
-    const [error, data] = await api.listProblemPackages({id: problemId});
+    const [error, data] = await api.listProblemPackages(problemId);
     if (!error && data?.packages) {
       setPackages(data.packages as PackageItem[]);
     }
@@ -87,7 +78,7 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
 
   const handleBuild = () => {
     startBuilding(async () => {
-      const [error, data] = await api.publishProblem({id: problemId});
+      const [error, data] = await api.publishProblem(problemId);
       if (error) {
         notifications.show({
           title: "Ошибка сборки пакета",

@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Autocomplete,
-  Badge,
-  Button,
-  Card,
-  Group,
-  Loader,
-  Stack,
-  Text,
-} from "@mantine/core";
+import {Autocomplete, Badge, Button, Card, Group, Loader, Stack, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconPlus, IconUsersGroup} from "@tabler/icons-react";
 import {useCallback, useState, type ReactNode} from "react";
@@ -21,7 +12,7 @@ import {useEntityCollection, useEntityMutation} from "@/hooks/useEntityManagemen
 import {useEntitySearch} from "@/hooks/useEntitySearch";
 import {api} from "@/lib/api";
 
-import type * as corev1 from "@/contracts/core/v1";
+import type * as corev1 from "@/contracts/core/v1/models";
 
 const CONTEST_TEAM_ROLE_OPTIONS = [
   {label: "Участник", value: "participant", color: "gray"},
@@ -61,7 +52,7 @@ export const ContestTeamsManagement = ({
   } | null>(null);
 
   const fetchTeams = useCallback(async () => {
-    const [error, response] = await api.listContestTeams({orgLogin, contestLogin});
+    const [error, response] = await api.listContestTeams(orgLogin, contestLogin);
     if (error || !response) {
       console.error("Failed to load contest teams:", error);
       return;
@@ -73,10 +64,9 @@ export const ContestTeamsManagement = ({
   const searchTeamsFn = useCallback(
     async (query: string) => {
       const [error, response] = await api.listTeams({
-        organizationId: orgId,
+        page: 1, pageSize: 10,
         search: query,
-        page: 1,
-        pageSize: 10,
+        organization_id: orgId
       });
       if (error || !response) {
         return [];
@@ -110,11 +100,8 @@ export const ContestTeamsManagement = ({
       return;
     }
 
-    const [error] = await addTeam(selectedTeamId, () => api.createContestTeam({
-      orgLogin,
-      contestLogin,
-      teamId: selectedTeamId,
-      role: "participant",
+    const [error] = await addTeam(selectedTeamId, () => api.createContestTeam(orgLogin, contestLogin, {
+      team_id: selectedTeamId, role: "participant"
     }));
 
     if (error) {
@@ -141,7 +128,9 @@ export const ContestTeamsManagement = ({
 
   const handleDeleteTeam = async (team: corev1.ContestTeamModel) => {
     const [error] = await deleteTeam(team.team_id, () =>
-      api.deleteContestTeam({orgLogin, contestLogin, teamId: team.team_id})
+      api.deleteContestTeam(orgLogin, contestLogin, {
+        team_id: team.team_id
+      })
     );
 
     if (error) {
@@ -179,11 +168,9 @@ export const ContestTeamsManagement = ({
       return;
     }
 
-    const [error] = await api.updateContestTeam({
-      orgLogin,
-      contestLogin,
-      teamId: editingTeam.teamId,
-      role: newRole,
+    const [error] = await api.updateContestTeam(orgLogin, contestLogin, {
+      team_id: editingTeam.teamId,
+      role: newRole
     });
 
     setModalOpened(false);

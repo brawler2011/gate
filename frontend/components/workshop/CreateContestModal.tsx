@@ -2,12 +2,12 @@
 
 import {Button, Modal, Select, Stack, TextInput} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {useRouter} from "next/navigation";
 import {useEffect, useState} from "react";
 
 import {api} from "@/lib/api";
+import {useRouter} from "@/lib/navigation";
 
-import type {OrganizationModel} from "@/contracts/core/v1";
+import type {OrganizationModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -76,10 +76,8 @@ export const CreateContestModal = ({
       if (!selectedOrg) {
         return;
       }
-      const [error, response] = await api.createContest({
-        orgLogin: selectedOrg.login,
-        title: title.trim() || "New Contest",
-        login: trimmedLogin || undefined,
+      const [error, response] = await api.createContest(selectedOrg.login, {
+        title: title.trim() || "New Contest", login: trimmedLogin || undefined
       });
       if (error) {
         throw new Error(error.message);

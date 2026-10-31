@@ -9,7 +9,7 @@ import {submissionsWsManager} from "@/lib/submissionsWsManager";
 
 import {act, cleanup, fireEvent, renderWithProviders, setupDOMEnvironment, waitFor, within} from "./test-utils";
 
-import type {ScoreboardProblemResultModel, ScoreboardResponseModel} from "@/contracts/core/v1";
+import type {ScoreboardProblemResultModel, ScoreboardResponseModel} from "@/contracts/core/v1/models";
 
 const scoreboard = (results: ScoreboardProblemResultModel[]): ScoreboardResponseModel => ({
   contest_id: "contest", contest_login: "round", organization_login: "org", is_frozen: true,

@@ -3,14 +3,11 @@
 import {Button, Select, Stack, TextInput, Textarea} from '@mantine/core';
 import {useForm} from '@mantine/form';
 import {notifications} from '@mantine/notifications';
-import {useRouter} from 'next/navigation';
 import {useState, type ReactNode} from 'react';
 
-import {
-  type UpdateOrganizationRequestModel,
-  type OrganizationModel,
-} from '@/contracts/core/v1';
+import {type UpdateOrganizationRequestModel, type OrganizationModel} from '@/contracts/core/v1/models';
 import {api} from '@/lib/api';
+import {useRouter} from '@/lib/navigation';
 
 type Props = { org: OrganizationModel };
 
@@ -58,14 +55,11 @@ export const OrgSettingsForm = ({org}: Props): ReactNode => {
   const handleSave = async (values: typeof form.values) => {
     setSaving(true);
     const trimmedLogin = values.login.trim();
-    const [error] = await api.updateOrganization({
-      login: org.login,
-      requestBody: {
-        name: values.name.trim(),
-        login: trimmedLogin,
-        description: values.description,
-        join_policy: values.join_policy as UpdateOrganizationRequestModel.join_policy,
-      },
+    const [error] = await api.updateOrganization(org.login, {
+      name: values.name.trim(),
+      login: trimmedLogin,
+      description: values.description,
+      join_policy: values.join_policy as UpdateOrganizationRequestModel["join_policy"]
     });
     setSaving(false);
     if (error) {

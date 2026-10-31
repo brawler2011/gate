@@ -1,36 +1,14 @@
 "use client";
 
-import {
-  ActionIcon,
-  Alert,
-  Badge,
-  Button,
-  CopyButton,
-  Group,
-  Modal,
-  NumberInput,
-  ScrollArea,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Alert, Badge, Button, CopyButton, Group, Modal, NumberInput, ScrollArea, Stack, Table, Text, TextInput, Tooltip} from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {notifications} from "@mantine/notifications";
-import {
-  IconCheck,
-  IconCopy,
-  IconDownload,
-  IconInfoCircle,
-  IconPrinter,
-  IconUserPlus,
-} from "@tabler/icons-react";
+import {IconCheck, IconCopy, IconDownload, IconInfoCircle, IconPrinter, IconUserPlus} from "@tabler/icons-react";
 import {useState} from "react";
 
 import {api} from "@/lib/api";
 
-import type {BatchCreatedUserItem} from "@/contracts/core/v1";
+import type {BatchCreatedUserItem} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -88,13 +66,10 @@ export const BatchCreateUsersModal = ({
 
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
-    const [error, data] = await api.batchCreateOrganizationUsers({
-      login: orgLogin,
-      requestBody: {
-        prefix: values.prefix.trim(),
-        count: values.count,
-        ttl_days: values.ttlDays && values.ttlDays > 0 ? values.ttlDays : undefined,
-      },
+    const [error, data] = await api.batchCreateOrganizationUsers(orgLogin, {
+      prefix: values.prefix.trim(),
+      count: values.count,
+      ttl_days: values.ttlDays && values.ttlDays > 0 ? values.ttlDays : undefined
     });
     setLoading(false);
 

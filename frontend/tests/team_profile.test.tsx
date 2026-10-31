@@ -1,25 +1,19 @@
 import "./setup-dom";
 
 import {afterAll, afterEach, beforeAll, describe, expect, it, spyOn} from "bun:test";
-import {AppRouterContext} from "next/dist/shared/lib/app-router-context.shared-runtime";
 import React from "react";
-import {SWRConfig} from "swr";
 
 import Loading from "@/app/[slug]/(org)/teams/[team_id]/loading";
-import Page, {generateMetadata} from "@/app/[slug]/(org)/teams/[team_id]/page";
+import Page from "@/app/[slug]/(org)/teams/[team_id]/page";
 
 import {cleanup, fireEvent, renderWithProviders, setupDOMEnvironment, waitFor} from "./test-utils";
 
-import type {ContestModel, TeamModel} from "@/contracts/core/v1";
+import type {ContestModel, TeamModel} from "@/contracts/core/v1/models";
 
-const params = Promise.resolve({slug: "school", team_id: "team"});
+const params = {slug: "school", team_id: "team"};
 const team: TeamModel = {
   id: "team", organization_id: "org", name: "Gate Team", description: "Our team",
   created_at: "2026-10-01", updated_at: "2026-10-01",
-};
-const router = {
-  back: () => {}, forward: () => {}, refresh: () => {},
-  push: () => {}, replace: () => {}, prefetch: () => {}, bfcacheId: "test",
 };
 const contest = (id: string, schedule: Partial<ContestModel> = {}): ContestModel => ({
   id, login: id, organization_id: "org", organization_login: "school", title: id,
@@ -33,23 +27,26 @@ describe("Team profile through the production page", () => {
   let restoreFetch: (() => void) | undefined;
 
   beforeAll(() => {
-    cleanupDOM = setupDOMEnvironment(); 
+    cleanupDOM = setupDOMEnvironment();
   });
   afterEach(() => {
     cleanup();
     restoreFetch?.();
   });
   afterAll(() => {
-    cleanupDOM(); 
+    cleanupDOM();
   });
 
   const mockApi = ({
     teamStatus = 200, membersStatus = 200, contestsStatus = 200, contests = [] as ContestModel[], pending = false,
   } = {}) => {
     const fetch = spyOn(globalThis, "fetch").mockImplementation(Object.assign(async (input: RequestInfo | URL) => {
-      const url = new URL(String(input));
-      if (url.pathname === "/teams/team") {
+      const url = new URL(String(input), "http://localhost");
+      if (url.pathname === "/api/teams/team") {
         return teamStatus === 200 ? Response.json({team}) : Response.json({message: "Team unavailable"}, {status: teamStatus});
+      }
+      if (url.pathname.endsWith("/me")) {
+        return Response.json({user: null});
       }
       if (pending) {
         return new Promise<Response>(() => {});
@@ -73,13 +70,11 @@ describe("Team profile through the production page", () => {
     return fetch;
   };
 
-  const renderPage = async () => renderWithProviders(
-    <AppRouterContext.Provider value={router}>
-      <SWRConfig value={{provider: () => new Map(), revalidateOnFocus: false}}>
-        {await Page({params})}
-      </SWRConfig>
-    </AppRouterContext.Provider>
-  );
+  const renderPage = async () => {
+    const view = renderWithProviders(<Page params={params} />);
+    await waitFor(() => expect(view.getByRole("heading", {name: team.name})).toBeTruthy());
+    return view;
+  };
 
   it("renders the team badge, supported maintainer role and linked roster handles", async () => {
     const fetch = mockApi();
@@ -95,7 +90,7 @@ describe("Team profile through the production page", () => {
     expect(view.getByText("Участник (member)")).toBeTruthy();
     expect(view.queryByText(/Капитан/)).toBeNull();
     expect(fetch.mock.calls.some(([url]) => String(url).includes("/teams/team/members"))).toBe(true);
-    expect(await generateMetadata({params})).toEqual({title: team.name});
+
   });
 
   it("shows active, past, upcoming and unscheduled contests with their destination links", async () => {
@@ -152,26 +147,27 @@ describe("Team profile through the production page", () => {
   for (const [status, title] of [[401, "Требуется авторизация"], [403, "Доступ запрещён"], [500, "Ошибка сервера"]] as const) {
     it(`renders the page error for HTTP ${status}`, async () => {
       mockApi({teamStatus: status});
-      const view = await renderPage();
-      expect(view.getByRole("heading", {name: title})).toBeTruthy();
+      const view = renderWithProviders(<Page params={params} />);
+      await waitFor(() => expect(view.getByRole("heading", {name: title})).toBeTruthy());
       expect(view.queryByRole("tab", {name: "Участники"})).toBeNull();
       if (status === 401) {
         expect(view.getByRole("link", {name: "Войти"}).getAttribute("href")).toBe("/auth/login");
       }
-      expect(await generateMetadata({params})).toEqual({title: "Команда"});
+
     });
   }
 
-  it("uses Next not-found for a missing team", async () => {
+  it("shows not-found for a missing team", async () => {
     mockApi({teamStatus: 404});
-    await expect(Page({params})).rejects.toThrow("NEXT_HTTP_ERROR_FALLBACK;404");
+    const view = renderWithProviders(<Page params={params} />);
+    await waitFor(() => expect(view.getByRole("heading", {name: "Не найдено"})).toBeTruthy());
   });
-
   for (const slug of ["@alice", "%invalid"]) {
     it(`rejects invalid organization slug ${slug} without fetching a team`, async () => {
       const fetch = mockApi();
-      await expect(Page({params: Promise.resolve({slug, team_id: team.id})})).rejects.toThrow("NEXT_HTTP_ERROR_FALLBACK;404");
-      expect(fetch).not.toHaveBeenCalled();
+      const view = renderWithProviders(<Page params={{slug, team_id: team.id}} />);
+      await waitFor(() => expect(view.getByRole("heading", {name: "Не найдено"})).toBeTruthy());
+      expect(fetch.mock.calls.some(([url]) => String(url).includes("/teams/"))).toBe(false);
     });
   }
 });

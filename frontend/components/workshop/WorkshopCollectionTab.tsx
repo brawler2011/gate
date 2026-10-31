@@ -1,30 +1,16 @@
 "use client";
 
-import {
-  ActionIcon,
-  Button,
-  Center,
-  Code,
-  Group,
-  Loader,
-  Modal,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-  Textarea,
-  Title,
-} from "@mantine/core";
+import {ActionIcon, Button, Center, Code, Group, Loader, Modal, Select, Stack, Text, TextInput, Textarea, Title} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconFile, IconPlus, IconRefresh, IconTrash} from "@tabler/icons-react";
+import {useQuery} from "@tanstack/react-query";
 import {useEffect, useRef, useState, useTransition} from "react";
-import useSWR from "swr";
 
 import {api} from "@/lib/api";
 
 import classes from "./WorkshopFolderTab.module.css";
 
-import type {FileEntry} from "@/contracts/core/v1";
+import type {FileEntry} from "@/contracts/core/v1/models";
 import type {ApiError} from "@/lib/api";
 import type {ReactNode} from "react";
 
@@ -91,13 +77,13 @@ export const WorkshopCollectionTab = ({
   const getFileName = (path: string) => path.split("/").pop() ?? path;
 
   // Fetch languages dynamically from backend API
-  const {data: languagesData} = useSWR("supported-languages", async () => {
+  const {data: languagesData} = useQuery({queryKey: ["supported-languages"], queryFn: async () => {
     const [err, res] = await api.getLanguages();
     if (err || !res?.languages) {
       return null;
     }
     return res.languages;
-  });
+  }});
 
   const baseLangOptions = languagesData?.length
     ? languagesData.map((lang) => {
@@ -132,30 +118,24 @@ export const WorkshopCollectionTab = ({
 
   const allowedExtensions = uniqueExtensionOptions.map((o) => o.value);
 
-  const {data: filesData, isLoading: isLoadingFiles, mutate: mutateFiles} = useSWR(
-    ["workshop-files", problemId, folderName],
-    async () => {
-      const [err, res] = await listFiles(problemId);
-      if (err) {
-        throw new Error(err.message || "Не удалось загрузить список файлов");
-      }
-      return res;
+  const {data: filesData, isLoading: isLoadingFiles, refetch: mutateFiles} = useQuery({queryKey: ["workshop-files", problemId, folderName], queryFn: async () => {
+    const [err, res] = await listFiles(problemId);
+    if (err) {
+      throw new Error(err.message || "Не удалось загрузить список файлов");
     }
-  );
+    return res;
+  }});
 
   const files = filesData?.files || [];
 
   const fileName = selectedFile ? getFileName(selectedFile) : null;
-  const {data: fileContent, isLoading: isLoadingFile, mutate: mutateContent} = useSWR(
-    fileName ? ["workshop-file-content", problemId, folderName, fileName] : null,
-    async () => {
-      const [err, res] = await getFile(problemId, fileName!);
-      if (err) {
-        throw new Error(err.message || "Не удалось загрузить файл");
-      }
-      return res;
+  const {data: fileContent, isLoading: isLoadingFile, refetch: mutateContent} = useQuery({queryKey: [fileName ? ["workshop-file-content", problemId, folderName, fileName] : null], queryFn: async () => {
+    const [err, res] = await getFile(problemId, fileName!);
+    if (err) {
+      throw new Error(err.message || "Не удалось загрузить файл");
     }
-  );
+    return res;
+  }, enabled: Boolean(fileName ? ["workshop-file-content", problemId, folderName, fileName] : null)});
 
   const leafFiles = files.filter(
     (file) => !file.is_directory && file.path && file.path !== "tests.json" && !getFileName(file.path).startsWith(".")

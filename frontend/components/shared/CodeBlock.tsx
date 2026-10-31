@@ -2,11 +2,11 @@
 
 import {useComputedColorScheme} from '@mantine/core';
 import React, {useEffect, useState} from 'react';
-import cpp from 'react-syntax-highlighter/dist/esm/languages/prism/cpp';
-import go from 'react-syntax-highlighter/dist/esm/languages/prism/go';
-import python from 'react-syntax-highlighter/dist/esm/languages/prism/python';
-import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-light';
-import {oneDark, oneLight} from 'react-syntax-highlighter/dist/esm/styles/prism';
+import cpp from 'react-syntax-highlighter/dist/cjs/languages/prism/cpp';
+import go from 'react-syntax-highlighter/dist/cjs/languages/prism/go';
+import python from 'react-syntax-highlighter/dist/cjs/languages/prism/python';
+import SyntaxHighlighter from 'react-syntax-highlighter/dist/cjs/prism-light';
+import {oneDark, oneLight} from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 import type {ReactNode} from "react";
 

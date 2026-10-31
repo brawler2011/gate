@@ -1,55 +1,30 @@
-import {DefaultLayout} from "@/components/shared";
-import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
-import {ProblemHeaderNav} from "@/components/workshop";
-import {api} from "@/lib/api";
+import {Outlet, useParams} from "react-router-dom";
 
-import type {Metadata} from "next";
+import {DefaultLayout} from "@/components/shared";
+import {ProblemHeaderNav} from "@/components/workshop";
+import {useSession} from "@/contexts/SessionContext";
+import {useGetOrganization, useGetProblem} from "@/contracts/core/v1/api";
+import {PageQueryState} from "@/lib/pageQuery";
+
 import type {ReactNode} from "react";
 
-type Props = {
-  children: ReactNode;
-  params: Promise<{ slug: string; problem_id: string }>;
-};
-
-export const generateMetadata = async ({
-  params,
-}: {
-  params: Promise<{ slug: string; problem_id: string }>;
-}): Promise<Metadata> => {
-  const {problem_id} = await params;
-  const [error, response] = await api.getProblem({id: problem_id});
-  if (error || !response) {
-    return {title: "Редактор файлов"};
-  }
-  return {title: `Файлы — ${response.problem.title}`};
-};
-
-const ProblemLayout = async ({children, params}: Props): Promise<ReactNode> => {
-  const {slug, problem_id} = await params;
-
-  const [
-    [problemError, problemResponse],
-    [, orgResponse],
-    [, meResponse],
-  ] = await Promise.all([
-    api.getProblem({id: problem_id}),
-    api.getOrganization({login: slug}),
-    api.getMe(),
-  ]);
-
-  if (problemError) {
+const ProblemLayout = (): ReactNode => {
+  const {slug, problem_id} = useParams() as { slug: string; problem_id: string };
+  const {user} = useSession();
+  const problem = useGetProblem(problem_id);
+  const organization = useGetOrganization(slug);
+  if (!problem.data) {
     return (
-      <DefaultLayout headerUser={meResponse?.user ?? null}>
-        <ErrorDisplay error={problemError} />
+      <DefaultLayout headerUser={user}>
+        <PageQueryState query={problem} />
       </DefaultLayout>
     );
   }
-
-  const org = orgResponse?.organization;
-
+  const problemResponse = problem.data;
+  const org = organization.data?.organization;
   return (
     <DefaultLayout
-      headerUser={meResponse?.user ?? null}
+      headerUser={user}
       headerSecondaryNav={<ProblemHeaderNav slug={slug} problemId={problem_id} />}
       headerOrganization={org ? {id: org.id, login: org.login, name: org.name} : undefined}
       headerProblem={
@@ -76,7 +51,7 @@ const ProblemLayout = async ({children, params}: Props): Promise<ReactNode> => {
         },
       }}
     >
-      {children}
+      <Outlet />
     </DefaultLayout>
   );
 };

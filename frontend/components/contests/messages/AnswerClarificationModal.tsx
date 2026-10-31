@@ -1,23 +1,12 @@
 "use client";
 
-import {
-  Badge,
-  Button,
-  Checkbox,
-  Group,
-  Modal,
-  Paper,
-  Stack,
-  Text,
-  TextInput,
-  Textarea,
-} from "@mantine/core";
+import {Badge, Button, Checkbox, Group, Modal, Paper, Stack, Text, TextInput, Textarea} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useEffect, useState, type ReactNode} from "react";
 
 import {api} from "@/lib/api";
 
-import type {ContestClarificationModel} from "@/contracts/core/v1";
+import type {ContestClarificationModel} from "@/contracts/core/v1/models";
 
 interface AnswerClarificationModalProps {
   opened: boolean;
@@ -75,15 +64,10 @@ export const AnswerClarificationModal = ({
     }
 
     setLoading(true);
-    const [err] = await api.answerContestClarification({
-      orgLogin,
-      contestLogin,
-      clarificationId: clarification.id,
-      requestBody: {
-        answer: answer.trim(),
-        publish_as_announcement: publishAsAnnouncement,
-        announcement_title: publishAsAnnouncement ? announcementTitle.trim() : undefined,
-      },
+    const [err] = await api.answerContestClarification(orgLogin, contestLogin, clarification.id, {
+      answer: answer.trim(),
+      publish_as_announcement: publishAsAnnouncement,
+      announcement_title: publishAsAnnouncement ? announcementTitle.trim() : undefined
     });
     setLoading(false);
 

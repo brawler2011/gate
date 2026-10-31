@@ -1,21 +1,6 @@
 "use client";
 
-import {
-  ActionIcon,
-  Box,
-  Button,
-  Flex,
-  Group,
-  Modal,
-  Paper,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-  Textarea,
-  Title,
-  Tooltip,
-} from "@mantine/core";
+import {ActionIcon, Box, Button, Flex, Group, Modal, Paper, Select, Stack, Text, TextInput, Textarea, Title, Tooltip} from "@mantine/core";
 import {useClipboard} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconCheck, IconCopy} from "@tabler/icons-react";
@@ -30,8 +15,9 @@ import "katex/dist/katex.min.css";
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {api} from "@/lib/api";
 
-import "../problems/Problem.css";
 import classes from "./WorkshopStatementTab.module.css";
+
+import "../problems/Problem.css";
 
 type StatementData = {
   title: string;
@@ -152,7 +138,6 @@ const renderSafeImage = (problemId?: string) => {
     }
 
     return (
-      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={cleanSrc}
         alt={alt || ""}
@@ -358,9 +343,11 @@ export const WorkshopStatementTab = ({problemId}: Props): ReactNode => {
     startLoading(async () => {
       const [[limitsError, limits], [statementError, statementData], [problemError, problemData]] =
         await Promise.all([
-          api.getProblemLimits({problemId}),
-          api.getProblemStatement({problemId, lang}),
-          api.getProblem({id: problemId}),
+          api.getProblemLimits(problemId),
+          api.getProblemStatement(problemId, {
+            lang
+          }),
+          api.getProblem(problemId),
         ]);
 
       if (limitsError || !limits) {
@@ -483,18 +470,16 @@ export const WorkshopStatementTab = ({problemId}: Props): ReactNode => {
     }
 
     setIsAddingServerLang(true);
-    const [saveError] = await api.updateProblemStatement({
-      problemId,
-      requestBody: {
-        title: statement?.title ?? "",
-        legend: "",
-        input_format: "",
-        output_format: "",
-        notes: "",
-        interaction: "",
-        scoring: "",
-      },
-      lang: cleanLang,
+    const [saveError] = await api.updateProblemStatement(problemId, {
+      title: statement?.title ?? "",
+      legend: "",
+      input_format: "",
+      output_format: "",
+      notes: "",
+      interaction: "",
+      scoring: ""
+    }, {
+      lang: cleanLang
     });
 
     if (saveError) {
@@ -536,18 +521,16 @@ export const WorkshopStatementTab = ({problemId}: Props): ReactNode => {
         return;
       }
 
-      const [saveError] = await api.updateProblemStatement({
-        problemId,
-        requestBody: {
-          title: statement.title,
-          legend: statement.legend,
-          input_format: statement.input_format,
-          output_format: statement.output_format,
-          notes: statement.notes,
-          interaction: statement.interaction,
-          scoring: statement.scoring,
-        },
-        lang: activeLang,
+      const [saveError] = await api.updateProblemStatement(problemId, {
+        title: statement.title,
+        legend: statement.legend,
+        input_format: statement.input_format,
+        output_format: statement.output_format,
+        notes: statement.notes,
+        interaction: statement.interaction,
+        scoring: statement.scoring
+      }, {
+        lang: activeLang
       });
 
       if (saveError) {
@@ -760,7 +743,7 @@ export const WorkshopStatementTab = ({problemId}: Props): ReactNode => {
             Введите двухсимвольный ISO-код языка на английском (например, ru, en, de)
             или выберите из быстрых вариантов ниже.
           </Text>
-          
+
           <TextInput
             label="Код языка"
             placeholder="например: ru, en"

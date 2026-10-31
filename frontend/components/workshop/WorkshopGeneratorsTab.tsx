@@ -14,11 +14,13 @@ export const WorkshopGeneratorsTab = (props: WorkshopFileTabProps): ReactNode =>
       componentType="generator"
       componentTitle="Генератор"
       defaultFileName="generator"
-      listFiles={(problemId) => api.listProblemGenerators({problemId})}
-      getFile={(problemId, name) => api.getProblemGenerator({problemId, name})}
-      createFile={(problemId, name, requestBody) => api.createProblemGenerator({problemId, name, requestBody})}
-      updateFile={(problemId, name, requestBody) => api.updateProblemGenerator({problemId, name, requestBody})}
-      deleteFile={(problemId, name) => api.deleteProblemGenerator({problemId, name})}
+      listFiles={(problemId) => api.listProblemGenerators(problemId)}
+      getFile={(problemId, name) => api.getProblemGenerator(problemId, name)}
+      createFile={(problemId, name, requestBody) => api.createProblemGenerator(problemId, requestBody, {
+        name
+      })}
+      updateFile={(problemId, name, requestBody) => api.updateProblemGenerator(problemId, name, requestBody)}
+      deleteFile={(problemId, name) => api.deleteProblemGenerator(problemId, name)}
     />
   );
 };

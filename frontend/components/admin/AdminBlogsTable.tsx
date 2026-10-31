@@ -1,25 +1,17 @@
 "use client";
 
-import {
-  ActionIcon,
-  Avatar,
-  Badge,
-  Box,
-  Group,
-  Table,
-  Text,
-} from "@mantine/core";
+import {ActionIcon, Avatar, Badge, Box, Group, Table, Text} from "@mantine/core";
 import {IconEdit, IconTrash} from "@tabler/icons-react";
-import {useRouter} from "next/navigation";
 import {useState} from "react";
 
 import {TruncatedWithCopy} from '@/components/shared/TruncatedWithCopy';
 import {formatDate} from "@/lib/lib";
+import {useRouter} from "@/lib/navigation";
 
 import classes from "./AdminPage.module.css";
 import {DeleteBlogPostModal} from "./DeleteBlogPostModal";
 
-import type {PostModel} from "@/contracts/core/v1";
+import type {PostModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type AdminBlogsTableProps = {
@@ -60,7 +52,7 @@ export const AdminBlogsTable = ({posts, onDeletePost, onEditPost}: AdminBlogsTab
     if (!postToDelete) {
       return;
     }
-    
+
     setDeletingId(postToDelete.id);
     try {
       await onDeletePost(postToDelete.id);

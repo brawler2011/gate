@@ -1,24 +1,9 @@
 "use client";
 
-import {
-  Card,
-  Container,
-  Group,
-  SimpleGrid,
-  Stack,
-  Text,
-  ThemeIcon,
-  Title,
-} from "@mantine/core";
-import {
-  IconBuilding,
-  IconFileCode,
-  IconNews,
-  IconPuzzle,
-  IconTrophy,
-  IconUsers,
-} from "@tabler/icons-react";
-import Link from "next/link";
+import {Card, Container, Group, SimpleGrid, Stack, Text, ThemeIcon, Title} from "@mantine/core";
+import {IconBuilding, IconFileCode, IconNews, IconPuzzle, IconTrophy, IconUsers} from "@tabler/icons-react";
+
+import Link from "@/components/shared/RouterLink";
 
 import type {ReactNode} from "react";
 

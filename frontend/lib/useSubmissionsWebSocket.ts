@@ -3,22 +3,13 @@
 import {notifications} from '@mantine/notifications';
 import {useEffect, useRef, useState, useCallback, useMemo} from 'react';
 
-import {
-  SubmissionsEventType,
-  type SubmissionsMessage,
-  type MessageSubmissionCreated,
-  type MessageSubmissionQueued,
-  type MessageSubmissionCompilingStarted,
-  type MessageSubmissionTestingStarted,
-  type MessageSubmissionTestStarted,
-  type MessageSubmissionCompleted,
-} from '@/contracts/observer/v1';
+import {SubmissionsEventType, type SubmissionsMessage, type MessageSubmissionCreated, type MessageSubmissionQueued, type MessageSubmissionCompilingStarted, type MessageSubmissionTestingStarted, type MessageSubmissionTestStarted, type MessageSubmissionCompleted} from '@/contracts/observer/v1/models';
 
 import {api, type ApiError} from './api';
 import {env} from './env';
 import {submissionsWsManager, type WsManagerStatus} from './submissionsWsManager';
 
-import type {ListSubmissionsResponseModel, SubmissionsListItemModel} from '@/contracts/core/v1';
+import type {ListSubmissionsResponseModel, SubmissionsListItemModel} from '@/contracts/core/v1/models';
 
 // Progress info for a submission being tested
 interface TestProgress {
@@ -194,7 +185,7 @@ export const useSubmissionsWebSocket = ({
 }: UseSubmissionsWebSocketOptions): UseSubmissionsWebSocketReturn => {
   // Calculate filterKey first - used for initialization and change detection
   const filterKey = `${filter.orgLogin}-${filter.contestLogin}-${filter.contestId}-${filter.userId}-${filter.problemId}`;
-  
+
   const [submissions, setSubmissions] = useState<SubmissionWithProgress[]>(
     () => initialSubmissions.map(s => ({...s}))
   );
@@ -387,26 +378,16 @@ export const useSubmissionsWebSocket = ({
     let data: ListSubmissionsResponseModel | null = null;
 
     if (snapshotScope === 'mine') {
-      [error, data] = await api.listContestSubmissions({
-        orgLogin: params.orgLogin,
-        contestLogin: params.contestLogin,
-        userId: userId!,
-        problemId: params.problemId,
+      [error, data] = await api.listContestSubmissions(params.orgLogin, params.contestLogin, {
         page: 1,
         pageSize,
-        sortOrder: 'desc',
+        userId: userId!, problemId: params.problemId,
+        sortOrder: 'desc'
       });
     } else {
-      [error, data] = await api.listContestSubmissions({
-        orgLogin: params.orgLogin,
-        contestLogin: params.contestLogin,
-        problemId: params.problemId,
-        userId: params.userId,
-        state: params.state,
-        sortOrder: params.sortOrder,
-        language: params.language,
-        page: params.page,
-        pageSize: params.pageSize,
+      [error, data] = await api.listContestSubmissions(params.orgLogin, params.contestLogin, {
+        page: params.page, pageSize: params.pageSize, userId: params.userId, problemId: params.problemId,
+        state: params.state, sortOrder: params.sortOrder, language: params.language
       });
     }
 
@@ -464,7 +445,7 @@ export const useSubmissionsWebSocket = ({
     }
 
     switch (data.event_type) {
-      case SubmissionsEventType.SUBMISSIONS_CREATED: {
+      case SubmissionsEventType.submissionscreated: {
         const p = data.payload as MessageSubmissionCreated;
         const newSubmission = buildSubmissionFromCreated(p);
         setSubmissions(prev => {
@@ -479,18 +460,18 @@ export const useSubmissionsWebSocket = ({
         break;
       }
 
-      case SubmissionsEventType.SUBMISSIONS_QUEUED:
-      case SubmissionsEventType.SUBMISSIONS_COMPILING_STARTED:
-      case SubmissionsEventType.SUBMISSIONS_TESTING_STARTED: {
+      case SubmissionsEventType.submissionsqueued:
+      case SubmissionsEventType.submissionscompiling_started:
+      case SubmissionsEventType.submissionstesting_started: {
         type QueuedUnion =
           | MessageSubmissionQueued
           | MessageSubmissionCompilingStarted
           | MessageSubmissionTestingStarted;
         const p = data.payload as QueuedUnion;
         let phase: TestProgress['phase'];
-        if (data.event_type === SubmissionsEventType.SUBMISSIONS_QUEUED) {
+        if (data.event_type === SubmissionsEventType.submissionsqueued) {
           phase = 'queued';
-        } else if (data.event_type === SubmissionsEventType.SUBMISSIONS_COMPILING_STARTED) {
+        } else if (data.event_type === SubmissionsEventType.submissionscompiling_started) {
           phase = 'compiling';
         } else {
           phase = 'testing';
@@ -522,7 +503,7 @@ export const useSubmissionsWebSocket = ({
         break;
       }
 
-      case SubmissionsEventType.SUBMISSIONS_TEST_STARTED: {
+      case SubmissionsEventType.submissionstest_started: {
         const p = data.payload as MessageSubmissionTestStarted;
         const progress: TestProgress = {
           phase: 'testing',
@@ -554,7 +535,7 @@ export const useSubmissionsWebSocket = ({
         break;
       }
 
-      case SubmissionsEventType.SUBMISSIONS_COMPLETED: {
+      case SubmissionsEventType.submissionscompleted: {
         const p = data.payload as MessageSubmissionCompleted;
         progressMapRef.current.delete(p.id);
 

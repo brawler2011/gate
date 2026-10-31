@@ -1,6 +1,7 @@
 import {Box, Button, Stack} from "@mantine/core";
-import Link from "next/link";
 import React from "react";
+
+import Link from "@/components/shared/RouterLink";
 
 import {getTabStyles} from "./get-tab-styles";
 

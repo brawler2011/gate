@@ -1,9 +1,9 @@
 "use client";
 
-import {useParams} from "next/navigation";
 import {Suspense, type ReactNode} from "react";
 
 import {WorkshopEditor} from "@/components/workshop";
+import {useParams} from "@/lib/navigation";
 
 type ProblemPageProps = {
   activeTab: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import {Center, Container, Group, Skeleton, Stack, Text, Title} from "@mantine/core";
-import useSWR from "swr";
+import {useQuery} from "@tanstack/react-query";
 
 import {UsersRoleFilter} from '@/components/users/UsersRoleFilter';
 import {UsersSearchInput} from '@/components/users/UsersSearchInput';
@@ -16,17 +16,14 @@ type UsersContentProps = {
 };
 
 export const UsersContent = ({page, search, role}: UsersContentProps): ReactNode => {
-  const {data, error, isLoading, mutate} = useSWR(
-    `/api/users?page=${page}&pageSize=10${search ? `&search=${encodeURIComponent(search)}` : ""}${role ? `&role=${role}` : ""}`,
-    async (url) => {
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || "Не удалось загрузить пользователей");
-      }
-      return res.json();
+  const {data, error, isLoading, refetch: mutate} = useQuery({queryKey: [`/api/users?page=${page}&pageSize=10${search ? `&search=${encodeURIComponent(search)}` : ""}${role ? `&role=${role}` : ""}`], queryFn: () => (async (url) => {
+    const res = await fetch(url);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || "Не удалось загрузить пользователей");
     }
-  );
+    return res.json();
+  })(`/api/users?page=${page}&pageSize=10${search ? `&search=${encodeURIComponent(search)}` : ""}${role ? `&role=${role}` : ""}`)});
 
   const users = data?.users || [];
   const pagination = data?.pagination || {total: 0, page: page};

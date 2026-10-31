@@ -1,45 +1,18 @@
-import {
-  Box,
-  Center,
-  Container,
-  Stack,
-  Text,
-} from "@mantine/core";
+import {Box, Center, Container, Stack, Text} from "@mantine/core";
 
 import {ContestCountdown} from "@/components/contests/ContestCountdown";
 import {ContestJoinButton} from "@/components/contests/ContestJoinButton";
-import {api, unwrapAndCache} from "@/lib/api";
-import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
+import {useContestData} from "@/hooks/useContestData";
+import {PageQueryState} from "@/lib/pageQuery";
+import {PermissionChecker} from "@/lib/permissions";
 
 import {ContestProblemsTable} from "./ContestProblemsTable";
 
-import type {
-  ContestModel,
-  ContestProblemListItemModel,
-} from "@/contracts/core/v1";
-import type {Metadata} from "next";
+import type {ContestModel, ContestProblemListItemModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type Props = {
-  params: Promise<{ slug: string; contestLogin: string }>;
-};
-
-export const generateMetadata = async ({
-  params,
-}: Props): Promise<Metadata> => {
-  const {slug, contestLogin} = await params;
-
-  const [error, response] = await api.getContest({orgLogin: slug, contestLogin});
-  if (error || !response) {
-    return {
-      title: "Ошибка загрузки контеста",
-    };
-  }
-
-  return {
-    title: response.contest.title,
-    description: response.contest.title,
-  };
+  params: { slug: string; contestLogin: string };
 };
 
 type ContestProps = {
@@ -51,35 +24,19 @@ type ContestProps = {
   hasAccess: boolean;
 };
 
-const Contest = ({
-  contest,
-  orgLogin,
-  problems,
-  isManager,
-  isAuthenticated,
-  hasAccess,
-}: ContestProps) => {
+const Contest = ({contest, orgLogin, problems, isManager, isAuthenticated, hasAccess}: ContestProps) => {
   const hasStarted = !contest.start_time || new Date(contest.start_time) <= new Date();
   const showCountdown = !isManager && !hasStarted;
 
   return (
-    <Container
-      size="lg"
-      pt={0}
-      pb={{base: "md", sm: "lg", md: "xl"}}
-    >
+    <Container size="lg" pt={0} pb={{base: "md", sm: "lg", md: "xl"}}>
       <ContestJoinButton
         contest={contest}
         orgLogin={orgLogin}
         isAuthenticated={isAuthenticated}
         hasAccess={hasAccess || isManager}
       />
-      {showCountdown && (
-        <ContestCountdown
-          startTime={contest.start_time!}
-          title={contest.title}
-        />
-      )}
+      {showCountdown && <ContestCountdown startTime={contest.start_time!} title={contest.title} />}
       {!showCountdown && problems.length === 0 && (
         <Center py={{base: "xl", md: "3xl"}}>
           <Stack gap="md" align="center">
@@ -105,14 +62,13 @@ const Contest = ({
   );
 };
 
-const Page = async ({params}: Props): Promise<ReactNode> => {
-  const {slug, contestLogin} = await params;
-  const response = await unwrapAndCache(api.getContest)({orgLogin: slug, contestLogin});
-
-  const [, me] = await api.getMe();
-  const user = me?.user ?? null;
-  const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
-
+const Page = ({params}: Props): ReactNode => {
+  const {slug, contestLogin} = params;
+  const routeQuery = useContestData(slug, contestLogin);
+  if (!routeQuery.data) {
+    return <PageQueryState query={routeQuery} />;
+  }
+  const {response, user, contestRole} = routeQuery.data;
   const checker = new PermissionChecker(
     user,
     contestRole?.role ?? null,
@@ -121,7 +77,6 @@ const Page = async ({params}: Props): Promise<ReactNode> => {
   );
   const isManager = checker.canManageContest(response.contest);
   const hasAccess = Boolean(contestRole?.role);
-
   return (
     <Contest
       contest={response.contest}

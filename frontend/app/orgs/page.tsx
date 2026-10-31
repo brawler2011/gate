@@ -1,27 +1,38 @@
-import {Container, Group, SimpleGrid, Stack, Text, Title, Center} from '@mantine/core';
+import {Container, Group, SimpleGrid, Stack, Text, Title, Center} from "@mantine/core";
 
-import {CreateOrgButton, OrgCard} from '@/components/orgs';
-import {DefaultLayout} from '@/components/shared';
-import {ErrorDisplay} from '@/components/shared/ErrorDisplay';
-import {api} from '@/lib/api';
+import {CreateOrgButton, OrgCard} from "@/components/orgs";
+import {DefaultLayout} from "@/components/shared";
+import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
+import {api} from "@/lib/api";
+import {usePageQuery, PageQueryState} from "@/lib/pageQuery";
 
-import type {Metadata} from 'next';
 import type {ReactNode} from "react";
 
-export const metadata: Metadata = {title: 'Организации'};
-
-export const dynamic: string = "force-dynamic";
-
-const OrgsPage = async (): Promise<ReactNode> => {
+const loadOrgsPage = async () => {
   const [, me] = await api.getMe();
   const user = me?.user ?? null;
-  const [error, data] = await api.listOrganizations({page: 1, pageSize: 50});
-  if (error) {
-    return <DefaultLayout headerUser={user}><Container size="lg" py="lg"><ErrorDisplay error={error} /></Container></DefaultLayout>;
+  const [error, data] = await api.listOrganizations({
+    page: 1, pageSize: 50
+  });
+  return {me, user, error, data};
+};
+
+const OrgsPage = (): ReactNode => {
+  const routeQuery = usePageQuery(["frontend/app/orgs/page.tsx"], () => loadOrgsPage());
+  if (!routeQuery.data) {
+    return <PageQueryState query={routeQuery} />;
   }
-
+  const {user, error, data} = routeQuery.data;
+  if (error) {
+    return (
+      <DefaultLayout headerUser={user}>
+        <Container size="lg" py="lg">
+          <ErrorDisplay error={error} />
+        </Container>
+      </DefaultLayout>
+    );
+  }
   const orgs = data!.organizations;
-
   return (
     <DefaultLayout headerUser={user}>
       <Container size="lg" py="lg">
@@ -36,7 +47,9 @@ const OrgsPage = async (): Promise<ReactNode> => {
             </Center>
           ) : (
             <SimpleGrid cols={{base: 1, xs: 2, sm: 2, md: 3, lg: 4}} spacing="md">
-              {orgs.map((org) => <OrgCard key={org.id} org={org} />)}
+              {orgs.map((org) => (
+                <OrgCard key={org.id} org={org} />
+              ))}
             </SimpleGrid>
           )}
         </Stack>

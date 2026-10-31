@@ -1,19 +1,10 @@
 "use client";
 
-import {
-  Button,
-  Center,
-  Container,
-  Group,
-  Skeleton,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+import {Button, Center, Container, Group, Skeleton, Stack, Text, Title} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconPlus} from "@tabler/icons-react";
+import {useQuery} from "@tanstack/react-query";
 import {useState} from "react";
-import useSWR from "swr";
 
 import {NextPagination} from '@/components/shared/Pagination';
 import {StatusMessage} from '@/components/shared/StatusMessage';
@@ -23,7 +14,7 @@ import {AdminBlogsSearchInput} from "./AdminBlogsSearchInput";
 import {AdminBlogsTable} from "./AdminBlogsTable";
 import {BlogPostForm} from "./BlogPostForm";
 
-import type {PostModel} from "@/contracts/core/v1";
+import type {PostModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type AdminBlogsContentProps = {
@@ -43,19 +34,16 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
   const [_submitting, setSubmitting] = useState(false);
 
   // SWR for data fetching
-  const {data, error, mutate, isLoading} = useSWR(
-    ["admin-blogs", page, search],
-    async () => {
-      const [err, res] = await api.listPosts({
-        page,
-        pageSize: 10,
-      });
-      if (err) {
-        throw new Error(err.message);
-      }
-      return res;
+  const {data, error, refetch: mutate, isLoading} = useQuery({queryKey: ["admin-blogs", page, search], queryFn: async () => {
+    const [err, res] = await api.listPosts({
+      page,
+      pageSize: 10
+    });
+    if (err) {
+      throw new Error(err.message);
     }
-  );
+    return res;
+  }});
 
   const posts = data?.posts || [];
   const pagination = data?.pagination || {total: 0, page: page};
@@ -80,7 +68,7 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
     const formData = data as unknown as Record<string, unknown>;
     try {
       if (editingPost) {
-        const [err] = await api.patchPostById({id: editingPost.id || "", formData});
+        const [err] = await api.patchPostById(editingPost.id || "", formData);
         if (err) {
           notifications.show({
             title: "Ошибка",
@@ -95,7 +83,7 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
           color: "green",
         });
       } else {
-        const [err] = await api.createPost({formData});
+        const [err] = await api.createPost(formData);
         if (err) {
           notifications.show({
             title: "Ошибка",
@@ -125,8 +113,8 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
   };
 
   const handleDeletePost = async (postId: string) => {
-    const [err] = await api.deletePostById({id: postId});
-    
+    const [err] = await api.deletePostById(postId);
+
     if (err) {
       console.error("Error deleting post:", err);
       notifications.show({

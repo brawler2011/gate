@@ -1,134 +1,48 @@
-import {notFound, redirect} from "next/navigation";
-import * as React from "react";
+import * as operations from '@/contracts/core/v1/api';
+import {HttpError} from '@/lib/fetch';
+import {notFound, redirect} from '@/lib/routeErrors';
 
-import {core, type DefaultService} from "@/contracts/core/v1";
-import {ApiError as CoreApiError} from "@/contracts/core/v1/core/ApiError";
-import {env} from "@/lib/env";
-import {TestFilesHttpRequest} from "@/lib/testFilesHttpRequest";
-
-const cache = typeof (React as unknown as {cache?: <T>(fn: T) => T}).cache === "function"
-  ? (React as unknown as {cache: <T>(fn: T) => T}).cache
-  : <T>(fn: T): T => fn;
-
-const sessionCookieName = "session_id";
-
-const getBaseUrl = () => {
-  return env.getBackendApiUrl();
-};
-
-/**
- * API error info returned from methods
- */
-export type ApiError = {
-  status: number;
-  message: string;
-  requestId?: string;
-};
-
-export type ApiResult<R> = [error: ApiError, data: null] | [error: null, data: R];
-
+export type ApiError = {status: number; message: string; requestId?: string};
+type ApiResult<R> = [error: ApiError, data: null] | [error: null, data: R];
 export type ApiFacade = {
-  [K in keyof DefaultService]: DefaultService[K] extends (...args: infer A) => Promise<infer R>
-  ? (...args: A) => Promise<ApiResult<R>>
-  : DefaultService[K];
+  [K in keyof typeof operations as typeof operations[K] extends (...args: never[]) => Promise<unknown>
+    ? K : never]: typeof operations[K] extends (...args: infer A) => Promise<infer R>
+    ? (...args: A) => Promise<ApiResult<R>> : never;
 };
 
-const createApiFacade = (client: core): ApiFacade => {
-  return new Proxy(client, {
-    get: (target, prop: string) => {
-      const service = target.default as unknown as Record<string, unknown>;
-      const targetObj = target as unknown as Record<string, unknown>;
-      const fn = typeof service[prop] === "function" ? service[prop] : targetObj[prop];
-
-      if (typeof fn === "function") {
-        return async (...args: unknown[]) => {
-          try {
-            const data = await (fn as (...a: unknown[]) => unknown).apply(service || target, args);
-            return [null, data];
-          } catch (error) {
-            if (error instanceof CoreApiError) {
-              const body = error.body as { message?: string; request_id?: string } | undefined;
-              if (error.status !== 401) {
-                const requestId = typeof body?.request_id === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(body.request_id)
-                  ? body.request_id : undefined;
-                console.error("API Error:", {operation: prop, status: error.status, requestId, errorType: "ApiError"});
-              }
-              return [{
-                status: error.status,
-                message: body?.message || error.statusText,
-                requestId: body?.request_id,
-              }, null];
-            }
-            console.error("Unknown API Error:", {operation: prop, status: 500, errorType: error instanceof Error ? "Error" : "Unknown"});
-            return [{status: 500, message: "Неизвестная ошибка"}, null];
-          }
-        };
-      }
-      return fn;
-    },
-  }) as unknown as ApiFacade;
-};
-
-const rawAuthClient = new core({
-  BASE: getBaseUrl(),
-  ENCODE_PATH: encodeURIComponent,
-  CREDENTIALS: "include",
-  HEADERS: async (): Promise<Record<string, string>> => {
-    if (typeof window === "undefined") {
-      try {
-        const {cookies} = await import("next/headers");
-        const requestCookies = await cookies();
-        if (requestCookies.has(sessionCookieName)) {
-          const cookie = requestCookies.get(sessionCookieName);
-          if (cookie?.name && cookie?.value) {
-            return {Cookie: `${sessionCookieName}=${cookie.value}`};
-          }
+export const api = new Proxy(operations, {
+  get: (target, operation: keyof typeof operations) => async (...args: unknown[]) => {
+    try {
+      const fn = target[operation] as (...args: unknown[]) => Promise<unknown>;
+      return [null, await fn(...args)];
+    } catch (error) {
+      if (error instanceof HttpError) {
+        const requestId = error.body.request_id;
+        if (error.status !== 401) {
+          console.error('API Error:', {operation, status: error.status,
+            requestId: requestId && /^[A-Za-z0-9._:-]{1,128}$/.test(requestId) ? requestId : undefined,
+            errorType: 'ApiError'});
         }
-      } catch {
-        // Outside HTTP request context
+        return [{status: error.status, message: error.message, requestId}, null];
       }
+      console.error('Unknown API Error:', {operation, status: 500,
+        errorType: error instanceof Error ? 'Error' : 'Unknown'});
+      return [{status: 500, message: 'Неизвестная ошибка'}, null];
     }
-    return {};
   },
-}, TestFilesHttpRequest);
+}) as unknown as ApiFacade;
 
-const rawPublicClient = new core({
-  BASE: getBaseUrl(),
-  ENCODE_PATH: encodeURIComponent,
-  CREDENTIALS: "omit",
-}, TestFilesHttpRequest);
-
-/**
- * Primary authenticated API facade singleton.
- * Direct method access without .default or .auth, returning [error, data] tuples.
- */
-export const api = createApiFacade(rawAuthClient);
-
-/**
- * Public API facade singleton without session cookies for SSG / ISR.
- */
-export const publicApi = createApiFacade(rawPublicClient);
-
-export const unwrap = <A extends unknown[], R>(
-  fn: (...args: A) => Promise<ApiResult<R>>
-): ((...args: A) => Promise<R>) => {
-  return async (...args: A): Promise<R> => {
+export const unwrap = <A extends unknown[], R>(fn: (...args: A) => Promise<ApiResult<R>>) =>
+  async (...args: A): Promise<R> => {
     const [error, data] = await fn(...args);
     if (error) {
       if (error.status === 404) {
         notFound();
       }
       if (error.status === 401) {
-        redirect("/auth/login");
+        redirect('/auth/login');
       }
       throw error;
     }
     return data;
   };
-};
-
-export const unwrapAndCache = <A extends unknown[], R>(
-  fn: (...args: A) => Promise<ApiResult<R>>
-): ((...args: A) => Promise<R>) => {
-  return cache(unwrap(fn)) as (...args: A) => Promise<R>;
-};

@@ -2,9 +2,7 @@
 **/node_modules
 **/npm-debug.log*
 
-# Next.js build output
-**/.next/
-**/out/
+# Build output
 **/*.tsbuildinfo
 tsconfig.tsbuildinfo
 

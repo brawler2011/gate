@@ -14,11 +14,13 @@ export const WorkshopCheckersTab = (props: WorkshopFileTabProps): ReactNode => {
       componentType="checker"
       componentTitle="Чекер"
       defaultFileName="checker"
-      listFiles={(problemId) => api.listProblemCheckers({problemId})}
-      getFile={(problemId, name) => api.getProblemChecker({problemId, name})}
-      createFile={(problemId, name, requestBody) => api.createProblemChecker({problemId, name, requestBody})}
-      updateFile={(problemId, name, requestBody) => api.updateProblemChecker({problemId, name, requestBody})}
-      deleteFile={(problemId, name) => api.deleteProblemChecker({problemId, name})}
+      listFiles={(problemId) => api.listProblemCheckers(problemId)}
+      getFile={(problemId, name) => api.getProblemChecker(problemId, name)}
+      createFile={(problemId, name, requestBody) => api.createProblemChecker(problemId, requestBody, {
+        name
+      })}
+      updateFile={(problemId, name, requestBody) => api.updateProblemChecker(problemId, name, requestBody)}
+      deleteFile={(problemId, name) => api.deleteProblemChecker(problemId, name)}
     />
   );
 };

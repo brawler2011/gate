@@ -14,3 +14,6 @@ bin/
 poc
 
 node_modules/
+
+dist/
+*.tsbuildinfo

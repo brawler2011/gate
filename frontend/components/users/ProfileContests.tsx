@@ -2,12 +2,12 @@
 
 import {Anchor, Badge, Center, Stack, Table, Tabs, Text} from "@mantine/core";
 import {IconTrophy} from "@tabler/icons-react";
-import Link from "next/link";
 
 import {NextPagination} from "@/components/shared/Pagination";
+import Link from "@/components/shared/RouterLink";
 import {TimeBeautify} from "@/lib/lib";
 
-import type {ContestModel} from "@/contracts/core/v1";
+import type {ContestModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type ProfileContestsProps = {

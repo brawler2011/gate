@@ -2,14 +2,14 @@
 
 import {ActionIcon, Card, Group, Stack, Text, Title} from "@mantine/core";
 import {IconPencil} from "@tabler/icons-react";
-import Link from "next/link";
-import {useRouter} from "next/navigation";
 
+import Link from "@/components/shared/RouterLink";
+import {useRouter} from "@/lib/navigation";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import classes from "./ProblemCard.module.css";
 
-import type {ProblemsListItemModel} from "@/contracts/core/v1";
+import type {ProblemsListItemModel} from "@/contracts/core/v1/models";
 import type {ReactNode} from "react";
 
 type Props = {
