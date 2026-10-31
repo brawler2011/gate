@@ -43,6 +43,9 @@ const fetchClient = createFetchClient<paths>({
   credentials: "include",
   Request: ApiRequest as unknown as typeof Request,
   bodySerializer: (body) => {
+    if (typeof body === "string") {
+      return new Blob([body], {type: "text/plain"});
+    }
     if (
       (body as unknown) instanceof Blob ||
       (body as unknown) instanceof ArrayBuffer ||
@@ -90,15 +93,18 @@ fetchClient.use({
     }
   },
   onResponse: async ({response, schemaPath}) => {
-    if (!response.ok) {
-      let info: {message?: string; request_id?: string} | undefined;
+    if (response.status >= 400) {
+      let info: Record<string, unknown> | undefined;
       try {
         const cloned = response.clone();
-        info = await cloned.json();
+        const body: unknown = await cloned.json();
+        if (body && typeof body === "object" && !Array.isArray(body)) {
+          info = body as Record<string, unknown>;
+        }
       } catch {
         // ignore
       }
-      const requestId = info?.request_id;
+      const requestId = typeof info?.request_id === "string" ? info.request_id : undefined;
       if (response.status !== 401) {
         console.error("API Error:", {
           operation: schemaPath,
@@ -107,14 +113,23 @@ fetchClient.use({
           errorType: "ApiError",
         });
       }
+      const headers = new Headers(response.headers);
+      headers.delete("Content-Length");
+      headers.delete("Content-Encoding");
+      headers.set("Content-Type", "application/json");
+      return Response.json({
+        ...info,
+        status: response.status,
+        message: typeof info?.message === "string" ? info.message : response.statusText || "API Error",
+        requestId,
+      }, {status: response.status, statusText: response.statusText, headers});
     }
   },
-  onError: async ({error, schemaPath}) => {
-    console.error("Unknown API Error:", {
-      operation: schemaPath,
-      status: 500,
-      errorType: error instanceof Error ? "Error" : "Unknown",
-    });
+  onError: async ({error}) => {
+    if (error instanceof Error && error.name === "AbortError") {
+      return;
+    }
+    return Response.json({message: "Не удалось выполнить запрос"}, {status: 500});
   },
 });
 

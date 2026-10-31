@@ -60,6 +60,33 @@ const browserFetch = globalThis.fetch;
 globalThis.fetch = ((url, options) => browserFetch(new URL(String(url).slice(4), ${JSON.stringify(backendUrl)}), options));
 
 const problemId = ${JSON.stringify(problemId)};
+
+const originalSource = ${JSON.stringify('#include <iostream>\n// Привет "world"\nint main() { return 0; }\n')};
+for (const folder of ["checkers", "generators", "validators", "interactors", "submissions", "lib"]) {
+  const name = "source.cpp";
+  const collection = "/problems/{problemId}/" + folder;
+  const file = collection + "/{name}";
+  const {error: createError} = await api.POST(collection, {
+    params: {path: {problemId}, query: {name}}, body: originalSource,
+  });
+  assert.equal(createError, undefined);
+  const {data: created, error: readError} = await api.GET(file, {
+    params: {path: {problemId, name}}, parseAs: "text",
+  });
+  assert.equal(readError, undefined);
+  assert.equal(created, originalSource);
+  for (const source of [originalSource + "// updated", ""]) {
+    const {error: updateError} = await api.PUT(file, {
+      params: {path: {problemId, name}}, body: source,
+    });
+    assert.equal(updateError, undefined);
+    const {data: saved, response} = await api.GET(file, {
+      params: {path: {problemId, name}}, parseAs: "text",
+    });
+    assert.equal(saved ?? await response.text(), source);
+  }
+}
+
 for (const name of ["nested/edge.in", "nested/edge.ans", "nested/space #?.in"]) {
   let expected = new Uint8Array([0, 255, 128, 10]);
   for (const client of [api]) {

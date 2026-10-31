@@ -29,7 +29,7 @@ export const SessionProvider = ({
   const {data, isLoading, refetch} = api.useQuery(
     "get",
     "/users/me",
-    {},
+    undefined,
     {
       retry: false,
       staleTime: 5000,
@@ -39,7 +39,11 @@ export const SessionProvider = ({
   const user = data?.user ?? null;
   const setUser = useCallback(
     (nextUser: UserModel | null) => {
-      queryClient.clear();
+      void queryClient.cancelQueries({queryKey: api.queryOptions("get", "/users/me").queryKey});
+      queryClient.removeQueries({
+        predicate: ({queryKey}) => queryKey[0] !== "get" || queryKey[1] !== "/users/me",
+      });
+      queryClient.getMutationCache().clear();
       queryClient.setQueryData(api.queryOptions("get", "/users/me").queryKey, {user: nextUser});
     },
     [queryClient],
