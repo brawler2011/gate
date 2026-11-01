@@ -19,12 +19,13 @@ import type {SubmissionsSelection} from '@/lib/submissions';
 import type {ReactNode} from 'react';
 
 const submission = (id = 'initial'): SubmissionsListItemModel => ({
-  id, user_id: 'user', username: 'Alice', contest_id: 'contest', contest_login: 'round', contest_title: 'Round',
+  id, revision: 0, user_id: 'user', username: 'Alice', contest_id: 'contest', contest_login: 'round', contest_title: 'Round',
   problem_id: 'problem', problem_title: 'A+B', position: 1, language: 20, state: 200,
   created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
 });
 const data = (...rows: SubmissionsListItemModel[]): ListSubmissionsResponseModel => ({
-  submissions: rows, pagination: {page: 1, total: rows.length}, since: 7,
+  submissions: rows, pagination: {page: 1, total: Math.ceil(rows.length / 2)}, since: 7,
+  total_count: rows.length, revision: 7,
 });
 const submissionsQueryOptions = (selection: SubmissionsSelection) => api.queryOptions('get', SUBMISSIONS_PATH, submissionsParams(selection));
 const selection = (): SubmissionsSelection => ({
@@ -36,7 +37,7 @@ const advance = async (ms: number) => act(async () => {
 let sequence = 7;
 const message = (socket: TestWebSocket, type: string, payload: object = submission()) =>
   socket.message({event_type: `submissions.${type}`, sequence: ++sequence,
-    payload: {...(type === 'created' ? {is_new: true} : {previous_state: 1}), ...payload}});
+    payload: {...(type === 'created' ? {is_new: true} : {previous_state: 1}), ...payload, revision: ('revision' in payload && payload.revision) || sequence}});
 
 describe('Query-owned submission lists', () => {
   const originalSocket = globalThis.WebSocket;
@@ -80,6 +81,63 @@ describe('Query-owned submission lists', () => {
     });
     return socket;
   };
+
+  it('keeps one page when a second submission fits within pageSize', async () => {
+    const {result} = renderHook(useSubmissions, {initialProps: {...selection(), pageSize: 15}, wrapper: Wrapper});
+    const socket = await open(); const calls = fetch.mock.calls.length;
+    await act(async () => message(socket, 'created', submission('second')));
+    expect(result.current.data?.pagination.total).toBe(1);
+    expect(result.current.data?.total_count).toBe(2);
+    expect(fetch).toHaveBeenCalledTimes(calls);
+  });
+
+  it.each([true, false])('reconciles a snapshot that includes the concurrent completion: %s', async (included) => {
+    fetch.mockImplementation(Object.assign(async () => Response.json(data({...submission(), state: 1})),
+      {preconnect: () => {}}));
+    const {result} = renderHook(useSubmissions,
+      {initialProps: {...selection(), pageSize: 1, state: 1}, wrapper: Wrapper});
+    const socket = await open();
+    let finish!: (response: Response) => void;
+    fetch.mockImplementationOnce(Object.assign(() => new Promise<Response>(resolve => {
+      finish = resolve;
+    }),
+    {preconnect: () => {}}));
+    await act(async () => {
+      void client.invalidateQueries(); await flushMicrotasks();
+    });
+    const calls = fetch.mock.calls.length;
+    await act(async () => message(socket, 'completed', {...submission(), previous_state: 1}));
+    const snapshot = included ? {...data({...submission('remaining'), state: 1}), revision: 8}
+      : data({...submission(), state: 1});
+    await act(async () => {
+      finish(Response.json(snapshot)); await flushMicrotasks();
+    });
+    expect(result.current.data?.pagination.total).toBe(Number(included));
+    expect(result.current.data?.total_count).toBe(Number(included));
+    expect(result.current.submissions.map(s => s.id)).toEqual(included ? ['remaining'] : []);
+    expect(fetch).toHaveBeenCalledTimes(calls);
+  });
+
+  it('applies every row from one bulk rejudge revision once', async () => {
+    const {result} = view(); const socket = await open();
+    await act(async () => {
+      message(socket, 'created', {...submission('a'), revision: 8});
+      message(socket, 'created', {...submission('b'), revision: 8});
+    });
+    expect(result.current.data?.total_count).toBe(3);
+    expect(result.current.data?.pagination.total).toBe(2);
+  });
+
+  it('preserves a newer verdict if an older rejudge arrives later', async () => {
+    const {result} = view(); const socket = await open();
+    await act(async () => {
+      message(socket, 'completed', {...submission(), revision: 10, score: 42});
+      message(socket, 'created', {...submission(), revision: 9, is_new: false, previous_state: 200, state: 1});
+    });
+    expect(result.current.submissions[0].score).toBe(42);
+    expect(result.current.submissions[0].state).toBe(200);
+    expect(result.current.data?.total_count).toBe(1);
+  });
 
   it('passes the full selection to HTTP and scopes the single stream to its contest', async () => {
     renderHook(useSubmissions, {initialProps: {...selection(), userId: 'user', problemId: 'problem',
@@ -128,7 +186,7 @@ describe('Query-owned submission lists', () => {
     });
     expect(fetch).toHaveBeenCalledTimes(calls);
     expect(result.current.submissions.map(s => s.id)).toEqual(['third', 'second']);
-    expect(result.current.data?.pagination.total).toBe(3);
+    expect(result.current.data?.pagination.total).toBe(2);
     expect(result.current.submissions[0]).toMatchObject({state: 200, score: 0, failed_test: null});
   });
 
@@ -145,12 +203,12 @@ describe('Query-owned submission lists', () => {
 
   it('ignores repeated and older events using the snapshot cursor', async () => {
     const {result} = view(); const socket = await open();
-    const event = {event_type: 'submissions.created', sequence: 8, payload: {...submission('new'), is_new: true}};
+    const event = {event_type: 'submissions.created', sequence: 8, payload: {...submission('new'), revision: 8, is_new: true}};
     await act(async () => {
       socket.message(event); socket.message(event);
       socket.message({...event, sequence: 7, payload: {...event.payload, id: 'obsolete'}});
     });
-    expect(result.current.data?.pagination.total).toBe(2);
+    expect(result.current.data?.pagination.total).toBe(1);
     expect(result.current.submissions.map(s => s.id)).toEqual(['new', 'initial']);
   });
 

@@ -13,7 +13,7 @@ const metadataMatches = (row: SubmissionEvent['payload'], selection: Submissions
   && (selection.language === undefined || row.language === selection.language);
 
 const completeRow = (row: Partial<SubmissionsListItemModel>): row is SubmissionsListItemModel =>
-  typeof row.id === 'string' && typeof row.user_id === 'string' && typeof row.username === 'string'
+  typeof row.revision === 'number' && typeof row.id === 'string' && typeof row.user_id === 'string' && typeof row.username === 'string'
   && typeof row.contest_id === 'string' && typeof row.contest_login === 'string' && typeof row.contest_title === 'string'
   && typeof row.problem_id === 'string' && typeof row.problem_title === 'string' && typeof row.position === 'number'
   && typeof row.language === 'number' && typeof row.created_at === 'string' && typeof row.updated_at === 'string';
@@ -37,19 +37,25 @@ export const applySubmissionEvent = (data: LiveSubmissions | undefined, event: S
     default: break;
   }
   if (progress) {
+    if (existing && event.payload.revision < existing.revision) {
+      return {...data, since: event.sequence};
+    }
     return {...data, since: event.sequence,
       submissions: data.submissions.map(s => s.id === payload.id ? {...s, progress} : s)};
   }
   if (event.event_type !== 'submissions.created' && event.event_type !== 'submissions.completed') {
     return data;
   }
+  // Keep the snapshot watermark: a bulk update can emit several events with the same revision.
+  if (typeof event.payload.revision !== 'number' || event.payload.revision <= data.revision) {
+    return {...data, since: event.sequence};
+  }
   const live = selection.page === 1 && selection.sortOrder === 'desc';
   const p = event.payload;
   const isNew = event.event_type === 'submissions.created' && event.payload.is_new;
-  const before = existing !== undefined
-    || (!isNew && (selection.state === undefined || p.previous_state === selection.state));
+  const before = !isNew && (selection.state === undefined || p.previous_state === selection.state);
   const after = selection.state === undefined || p.state === selection.state;
-  const row = {...existing, id: p.id,
+  const row = {...existing, id: p.id, revision: p.revision,
     user_id: p.user_id ?? existing?.user_id, username: p.username ?? existing?.username,
     contest_id: p.contest_id ?? existing?.contest_id, contest_login: selection.contestLogin,
     contest_title: p.contest_title ?? existing?.contest_title,
@@ -64,15 +70,17 @@ export const applySubmissionEvent = (data: LiveSubmissions | undefined, event: S
     return data;
   }
   const replacement = after && completeRow(row) ? [row] : [];
-  const rows = data.submissions.flatMap(s => s.id === p.id ? replacement : [s]);
+  const stale = existing !== undefined && existing.revision >= p.revision;
+  const rows = data.submissions.flatMap(s => s.id === p.id && !stale ? replacement : [s]);
   if (!existing && live) {
     rows.unshift(...replacement);
   }
   if (live) {
     rows.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   }
-  return {...data, since: event.sequence, submissions: rows.slice(0, selection.pageSize),
-    pagination: {...data.pagination, total: Math.max(0, data.pagination.total + Number(after) - Number(before))}};
+  const total_count = data.total_count + Number(after) - Number(before);
+  return {...data, since: event.sequence, total_count, submissions: rows.slice(0, selection.pageSize),
+    pagination: {...data.pagination, total: Math.ceil(Math.max(0, total_count) / selection.pageSize)}};
 };
 
 export const applyScoreboardEvent = (data: LiveScoreboard | undefined, payload: MessageScoreboardUpdated,

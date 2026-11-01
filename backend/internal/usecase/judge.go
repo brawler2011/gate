@@ -140,6 +140,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 	}
 
 	meta := models.SubmissionEventMeta{
+		Revision:     submission.Revision,
 		UserId:       submission.CreatedBy,
 		Username:     submission.Username,
 		ContestId:    submission.ContestID,
@@ -222,7 +223,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		failedTest = &ft
 	}
 
-	err = uc.submissionsRepo.UpdateSubmission(ctx, submissionID, &models.SubmissionUpdate{
+	change, err := uc.submissionsRepo.UpdateSubmission(ctx, submissionID, &models.SubmissionUpdate{
 		State:       verdict.State,
 		Score:       verdict.Score,
 		TimeStat:    verdict.MaxTime,
@@ -234,6 +235,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		return fmt.Errorf("failed to update submission: %w", err)
 	}
 
+	meta.Revision = change.Revision
 	submission.State = verdict.State
 	if uc.contestsUC != nil {
 		if procErr := uc.contestsUC.ProcessSubmissionResult(ctx, &submission); procErr != nil {
@@ -250,6 +252,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		verdict.MaxMemory,
 		submission.Penalty,
 		failedTest,
+		change.PreviousState,
 		meta,
 	); err != nil {
 		logger.Error("failed to publish completed event", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))
@@ -272,7 +275,7 @@ func (uc *JudgeUseCase) markInternalError(ctx context.Context, submissionID uuid
 		logger = logger.With("event_id", meta.EventID)
 	}
 	logger.Error("judging failed with internal error", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))
-	updateErr := uc.submissionsRepo.UpdateSubmission(ctx, submissionID, &models.SubmissionUpdate{
+	change, updateErr := uc.submissionsRepo.UpdateSubmission(ctx, submissionID, &models.SubmissionUpdate{
 		State:      models.GotIE,
 		Score:      0,
 		TimeStat:   0,
@@ -280,9 +283,11 @@ func (uc *JudgeUseCase) markInternalError(ctx context.Context, submissionID uuid
 	})
 	if updateErr != nil {
 		logger.Error("failed to update submission with error", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", updateErr))
+		return
 	}
+	meta.Revision = change.Revision
 
-	if pubErr := uc.eventPublisher.PublishCompleted(ctx, submissionID, models.GotIE, 0, 0, 0, penalty, nil, meta); pubErr != nil {
+	if pubErr := uc.eventPublisher.PublishCompleted(ctx, submissionID, models.GotIE, 0, 0, 0, penalty, nil, change.PreviousState, meta); pubErr != nil {
 		logger.Error("failed to publish completed event", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", pubErr))
 	}
 }

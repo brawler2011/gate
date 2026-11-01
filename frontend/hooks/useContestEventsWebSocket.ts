@@ -13,6 +13,7 @@ export interface UseContestEventsWebSocketProps {
   currentUserId?: string;
   isModerator?: boolean;
   onEvent?: (event: ContestMessage) => void;
+  onConnected?: () => void;
 }
 
 export const useContestEventsWebSocket = ({
@@ -21,13 +22,14 @@ export const useContestEventsWebSocket = ({
   currentUserId,
   isModerator,
   onEvent,
+  onConnected,
 }: UseContestEventsWebSocketProps): void => {
   const reconnectAttemptsRef = useRef(0);
-  const latest = useRef({onEvent, currentUserId, isModerator});
+  const latest = useRef({onEvent, onConnected, currentUserId, isModerator});
 
   useEffect(() => {
-    latest.current = {onEvent, currentUserId, isModerator};
-  }, [onEvent, currentUserId, isModerator]);
+    latest.current = {onEvent, onConnected, currentUserId, isModerator};
+  }, [onEvent, onConnected, currentUserId, isModerator]);
 
   useEffect(() => {
     if (!enabled || !contestId) {
@@ -55,6 +57,7 @@ export const useContestEventsWebSocket = ({
             return;
           }
           reconnectAttemptsRef.current = 0;
+          latest.current.onConnected?.();
         };
 
         ws.onmessage = (event) => {

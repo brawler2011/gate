@@ -2235,12 +2235,18 @@ export interface components {
             submission: string;
         };
         ListSubmissionsResponseModel: {
+            /** Format: int32 */
+            total_count: number;
+            /** Format: int64 */
+            revision: number;
             /** Format: int64 */
             since?: number;
             submissions: components["schemas"]["SubmissionsListItemModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
         SubmissionsListItemModel: {
+            /** Format: int64 */
+            revision: number;
             frozen?: boolean;
             /** Format: uuid */
             id: string;

@@ -4985,7 +4985,17 @@ components:
       required:
         - submissions
         - pagination
+        - total_count
+        - revision
       properties:
+        total_count:
+          type: integer
+          format: int32
+          minimum: 0
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
         since:
           type: integer
           format: int64
@@ -4998,6 +5008,7 @@ components:
     SubmissionsListItemModel:
       type: object
       required:
+        - revision
         - id
         - user_id
         - username
@@ -5011,6 +5022,10 @@ components:
         - updated_at
         - created_at
       properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
         frozen:
           type: boolean
         id:

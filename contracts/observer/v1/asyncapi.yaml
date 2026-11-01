@@ -89,7 +89,13 @@ components:
       title: SubmissionsWsCloseReason
     SubmissionEventMeta:
       type: object
+      required:
+        - revision
       properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
         updated_at:
           type: string
           format: date-time

@@ -27,6 +27,14 @@ export const ContestEventsListener = ({
     enabled: !!currentUserId,
     currentUserId,
     isModerator,
+    onConnected: () => {
+      for (const resource of ['announcements', 'clarifications'] as const) {
+        void queryClient.invalidateQueries({queryKey: api.queryOptions('get',
+          `/organizations/{org_login}/contests/{contest_login}/${resource}`, {
+            params: {path: {org_login: orgLogin, contest_login: contestLogin}},
+          }).queryKey});
+      }
+    },
     onEvent: event => {
       const path = event.event_type === 'contest.announcement_created' || event.event_type === 'contest.announcement_deleted'
         ? '/organizations/{org_login}/contests/{contest_login}/announcements'

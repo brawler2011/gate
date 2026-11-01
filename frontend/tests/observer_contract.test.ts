@@ -17,20 +17,20 @@ describe("observer message contract", () => {
     for (const failedTest of [null, 0, 3]) {
       expect(submissions({
         sequence: 1, event_type: "submissions.completed",
-        payload: {id, score: 0, state: 0, failed_test: failedTest},
+        payload: {id, revision: 1, score: 0, state: 0, failed_test: failedTest},
       })).toBe(true);
     }
   });
 
   test("requires the payload belonging to the discriminator", () => {
     expect(submissions({sequence: 1, event_type: "submissions.test_started", payload: {id}})).toBe(false);
-    expect(submissions({sequence: 1, event_type: "submissions.test_started", payload: {id, number: 1}})).toBe(true);
+    expect(submissions({sequence: 1, event_type: "submissions.test_started", payload: {id, revision: 1, number: 1}})).toBe(true);
     expect(contests({event_type: "contest.announcement_deleted", payload: {id, contest_id: id}})).toBe(true);
     expect(contests({event_type: "contest.announcement_created", payload: {id, contest_id: id}})).toBe(false);
   });
 
   test("accepts frozen results without hidden fields", () => {
-    expect(submissions({sequence: 1, event_type: "submissions.completed", payload: {id, frozen: true}})).toBe(true);
+    expect(submissions({sequence: 1, event_type: "submissions.completed", payload: {id, revision: 1, frozen: true}})).toBe(true);
   });
 
   test("requires a sequence and validates authoritative scoreboard rows", () => {
@@ -47,7 +47,7 @@ describe("observer message contract", () => {
 
   test("rejects unknown events, wrong field types, and missing payloads", () => {
     expect(submissions({sequence: 1, event_type: "submissions.unknown", payload: {id}})).toBe(false);
-    expect(submissions({sequence: 1, event_type: "submissions.completed", payload: {id, score: "zero", failed_test: null}}))
+    expect(submissions({sequence: 1, event_type: "submissions.completed", payload: {id, revision: 1, score: "zero", failed_test: null}}))
       .toBe(false);
     expect(submissions({sequence: 1, event_type: "submissions.completed", payload: {score: 0}})).toBe(false);
     expect(submissions({sequence: 1, event_type: "submissions.completed"})).toBe(false);

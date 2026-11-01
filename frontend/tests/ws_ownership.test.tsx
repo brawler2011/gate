@@ -9,6 +9,7 @@ import {ContestEventsListener} from "@/components/contests/ContestEventsListener
 import {ContestMonitorTable} from "@/components/contests/ContestMonitorTable";
 import {ContestMessagesClient} from "@/components/contests/messages/ContestMessagesClient";
 import {SubmissionsProvider} from "@/contexts/SubmissionsProvider";
+import {api} from "@/lib/api";
 import {env} from "@/lib/env";
 
 import {Monitor} from "./monitor-test-utils";
@@ -58,7 +59,7 @@ it("uses one contest socket and one notification while refreshing only the affec
   expect(fetch).not.toHaveBeenCalled();
   const socket = TestWebSocket.instances[0];
   await act(async () => {
-    socket.open();
+    socket.open(); await flushMicrotasks(); fetch.mockClear();
     socket.message({event_type: "contest.announcement_created", payload: {id: "ann", title: "News"}});
   });
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
@@ -158,4 +159,29 @@ it("updates a cached monitor while its table is unmounted without HTTP", async (
   } finally {
     view.unmount(); client.clear();
   }
+});
+
+it("refreshes announcements and answers after reconnect without a replayed event", async () => {
+  const client = new QueryClient({defaultOptions: {queries: {retry: false, staleTime: Infinity}}});
+  const path = {org_login: "org", contest_login: "round"};
+  for (const resource of ["announcements", "clarifications"] as const) {
+    client.setQueryData(api.queryOptions("get", `/organizations/{org_login}/contests/{contest_login}/${resource}`,
+      {params: {path}}).queryKey, {[resource]: [], pagination});
+  }
+  renderWithProviders(<QueryClientProvider client={client}>
+    <ContestEventsListener contestId="contest" currentUserId="user" orgLogin="org" contestLogin="round" />
+  </QueryClientProvider>);
+  await act(flushMicrotasks);
+  await act(async () => TestWebSocket.instances[0].open());
+  expect(client.getQueryCache().getAll().every(q => q.state.isInvalidated)).toBe(true);
+  for (const query of client.getQueryCache().getAll()) {
+    client.setQueryData(query.queryKey, query.state.data);
+  }
+  await act(async () => TestWebSocket.instances[0].disconnect());
+  await act(async () => {
+    await new Promise(resolve => setTimeout(resolve, 1100));
+  });
+  await act(async () => TestWebSocket.instances.at(-1)!.open());
+  expect(client.getQueryCache().getAll().every(q => q.state.isInvalidated)).toBe(true);
+  client.clear();
 });

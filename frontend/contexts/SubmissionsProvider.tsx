@@ -89,7 +89,7 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
             }
           };
           apply();
-          // Reapply after an in-flight snapshot; its cursor excludes events it already contains.
+          // Reapply after an in-flight snapshot; DB revisions exclude changes already included.
           if (query.promise) {
             void query.promise.then(apply, () => {});
           }

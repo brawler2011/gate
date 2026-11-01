@@ -27,7 +27,7 @@ describe("Observer visibility in production components", () => {
   });
 
   const metadata: SubmissionsListItemModel = {
-    id: "sub", user_id: "user", username: "alice", language: 20,
+    id: "sub", revision: 0, user_id: "user", username: "alice", language: 20,
     problem_id: "problem", problem_title: "A+B", position: 1,
     contest_id: "contest", contest_login: "contest", contest_title: "Contest",
     created_at: "2026-10-11T10:00:00Z", updated_at: "2026-10-11T10:00:00Z",

@@ -455,18 +455,19 @@ type AuthToken struct {
 }
 
 type Contest struct {
-	ID             uuid.UUID                `json:"id"`
-	OrganizationID uuid.UUID                `json:"organization_id"`
-	OwnerID        pgtype.UUID              `json:"owner_id"`
-	Visibility     models.ContestVisibility `json:"visibility"`
-	Title          string                   `json:"title"`
-	Login          string                   `json:"login"`
-	Description    string                   `json:"description"`
-	Settings       []byte                   `json:"settings"`
-	StartTime      pgtype.Timestamptz       `json:"start_time"`
-	EndTime        pgtype.Timestamptz       `json:"end_time"`
-	CreatedAt      time.Time                `json:"created_at"`
-	UpdatedAt      time.Time                `json:"updated_at"`
+	ID                  uuid.UUID                `json:"id"`
+	OrganizationID      uuid.UUID                `json:"organization_id"`
+	OwnerID             pgtype.UUID              `json:"owner_id"`
+	Visibility          models.ContestVisibility `json:"visibility"`
+	Title               string                   `json:"title"`
+	Login               string                   `json:"login"`
+	Description         string                   `json:"description"`
+	Settings            []byte                   `json:"settings"`
+	StartTime           pgtype.Timestamptz       `json:"start_time"`
+	EndTime             pgtype.Timestamptz       `json:"end_time"`
+	CreatedAt           time.Time                `json:"created_at"`
+	UpdatedAt           time.Time                `json:"updated_at"`
+	SubmissionsRevision int64                    `json:"submissions_revision"`
 }
 
 type ContestAnnouncement struct {
@@ -698,6 +699,7 @@ type Submission struct {
 	UpdatedAt   time.Time           `json:"updated_at"`
 	TestDetails []byte              `json:"test_details"`
 	BanReason   *string             `json:"ban_reason"`
+	Revision    int64               `json:"revision"`
 }
 
 type Team struct {

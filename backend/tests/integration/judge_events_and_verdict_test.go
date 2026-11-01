@@ -55,7 +55,7 @@ func TestEventPublishing(t *testing.T) {
 	require.NoError(t, publisher.PublishCompilingStarted(ctx, submissionID, meta))
 	require.NoError(t, publisher.PublishTestingStarted(ctx, submissionID, meta))
 	require.NoError(t, publisher.PublishTestStarted(ctx, submissionID, 1, meta))
-	require.NoError(t, publisher.PublishCompleted(ctx, submissionID, models.Accepted, 100, 1000, 256, 20, nil, meta))
+	require.NoError(t, publisher.PublishCompleted(ctx, submissionID, models.Accepted, 100, 1000, 256, 20, nil, models.Saved, meta))
 
 	expectedSubjects := []string{
 		models.SubmissionEventQueued,

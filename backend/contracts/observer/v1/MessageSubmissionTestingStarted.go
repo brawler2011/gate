@@ -9,6 +9,7 @@ import (
 )
 
 type MessageSubmissionTestingStarted struct {
+	Revision             int64                  `json:"revision" binding:"required"`
 	UpdatedAt            *time.Time             `json:"updated_at,omitempty"`
 	UserId               *uuid.UUID             `json:"user_id,omitempty"`
 	Username             *string                `json:"username,omitempty"`

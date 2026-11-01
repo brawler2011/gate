@@ -115,6 +115,7 @@ func SubmissionCreatedDTO(e models.SubmissionCreatedEvent) observerv1.MessageSub
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
 		CreatedAt:    &e.CreatedAt,
+		Revision:     e.Revision,
 		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
 		Language:     int32PtrIfNonZero(e.Language),
@@ -133,6 +134,7 @@ func SubmissionQueuedDTO(e models.SubmissionQueuedEvent) observerv1.MessageSubmi
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
 		CreatedAt:    &e.CreatedAt,
+		Revision:     e.Revision,
 		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
 		Language:     int32PtrIfNonZero(e.Language),
@@ -149,6 +151,7 @@ func SubmissionCompilingStartedDTO(e models.SubmissionCompilingStartedEvent) obs
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
 		CreatedAt:    &e.CreatedAt,
+		Revision:     e.Revision,
 		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
 		Language:     int32PtrIfNonZero(e.Language),
@@ -165,6 +168,7 @@ func SubmissionTestingStartedDTO(e models.SubmissionTestingStartedEvent) observe
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
 		CreatedAt:    &e.CreatedAt,
+		Revision:     e.Revision,
 		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
 		Language:     int32PtrIfNonZero(e.Language),
@@ -181,6 +185,7 @@ func SubmissionTestStartedDTO(e models.SubmissionTestStartedEvent) observerv1.Me
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
 		CreatedAt:    &e.CreatedAt,
+		Revision:     e.Revision,
 		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
 		Language:     int32PtrIfNonZero(e.Language),
@@ -194,9 +199,10 @@ func SubmissionTestStartedDTO(e models.SubmissionTestStartedEvent) observerv1.Me
 }
 
 func SubmissionCompletedDTO(e models.SubmissionCompletedEvent) observerv1.MessageSubmissionCompleted {
-	previous := int32(models.Saved)
+	previous := e.PreviousState
 	return observerv1.MessageSubmissionCompleted{
 		PreviousState: &previous,
+		Revision:      e.Revision,
 		UpdatedAt:     &e.UpdatedAt,
 		ContestId:     e.ContestId,
 		ContestTitle:  strPtrIfNotEmpty(e.ContestTitle),

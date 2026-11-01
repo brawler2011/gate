@@ -151,6 +151,7 @@ func newOutboxEventParams(ctx context.Context, submission models.Submission, pre
 	submissionCreatedEvent := models.SubmissionCreatedEvent{
 		IsNew: previousState == nil, PreviousState: previousState,
 		SubmissionEventMeta: models.SubmissionEventMeta{
+			Revision:     submission.Revision,
 			UserId:       submission.CreatedBy,
 			Username:     submission.Username,
 			ContestId:    submission.ContestID,
@@ -187,17 +188,18 @@ func newOutboxEventParams(ctx context.Context, submission models.Submission, pre
 }
 
 func (uc *SubmissionsUseCase) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {
-	return uc.submissionsRepo.UpdateSubmission(ctx, id, update)
+	_, err := uc.submissionsRepo.UpdateSubmission(ctx, id, update)
+	return err
 }
 
 func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter models.SubmissionsFilter) (*models.SubmissionsList, error) {
-	submissions, total, err := uc.submissionsRepo.ListSubmissions(ctx, filter)
+	submissions, total, revision, err := uc.submissionsRepo.ListSubmissions(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 	return &models.SubmissionsList{
-		Submissions: submissions,
-		Pagination:  models.NewPagination(filter.Page, filter.PageSize, total),
+		Submissions: submissions, TotalCount: total, Revision: revision,
+		Pagination: models.NewPagination(filter.Page, filter.PageSize, total),
 	}, nil
 }
 
