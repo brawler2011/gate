@@ -155,6 +155,11 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 		subscriptionError(w, err)
 		return
 	}
+	if err := s.hub.trackScoreboard(ctx, filter.ContestId); err != nil {
+		subscriptionError(w, err)
+		return
+	}
+	defer s.hub.releaseScoreboard(filter.ContestId)
 	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Request-ID": w.Header().Values("X-Request-ID")})
 	if err != nil {
 		slog.Error("failed to upgrade connection", "error", err)
@@ -175,6 +180,9 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 	// Set the barrier and register as PAUSED atomically with broadcast.
 	s.hub.mu.Lock()
 	sub.barrierSeq = s.hub.ring.MaxSeq()
+	if !r.URL.Query().Has("since") {
+		filter.Since = sub.barrierSeq
+	}
 	s.hub.subscribers[sub.id] = sub
 	s.hub.mu.Unlock()
 
@@ -266,14 +274,14 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 func getClosingFrameData(err error) (int, []byte) {
 	switch {
 	case errors.Is(err, ErrBufferEmpty):
-		return int(observerv1.SubmissionsWsCloseCodeBufferEmpty),
-			[]byte(observerv1.SubmissionsWsCloseReasonBufferEmpty)
+		return observerv1.SubmissionsWsCloseCodeNumber_4408.Value().(int),
+			[]byte(observerv1.SubmissionsWsCloseReasonBufferEmpty.Value().(string))
 	case errors.Is(err, ErrInvalidRange):
-		return int(observerv1.SubmissionsWsCloseCodeInvalidRange),
-			[]byte(observerv1.SubmissionsWsCloseReasonInvalidRange)
+		return observerv1.SubmissionsWsCloseCodeNumber_4410.Value().(int),
+			[]byte(observerv1.SubmissionsWsCloseReasonInvalidRange.Value().(string))
 	case errors.Is(err, ErrHistoryLost):
-		return int(observerv1.SubmissionsWsCloseCodeHistoryLost),
-			[]byte(observerv1.SubmissionsWsCloseReasonHistoryLost)
+		return observerv1.SubmissionsWsCloseCodeNumber_4409.Value().(int),
+			[]byte(observerv1.SubmissionsWsCloseReasonHistoryLost.Value().(string))
 	default:
 		return websocket.CloseInternalServerErr,
 			[]byte(err.Error())
@@ -355,6 +363,9 @@ func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 
 	s.contestsHub.mu.Lock()
 	sub.barrierSeq = s.contestsHub.ring.MaxSeq()
+	if !r.URL.Query().Has("since") {
+		filter.Since = sub.barrierSeq
+	}
 	s.contestsHub.subscribers[sub.id] = sub
 	s.contestsHub.mu.Unlock()
 

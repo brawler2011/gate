@@ -934,6 +934,16 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "state filter is unavailable during freeze")
 	}
 
+	var since int64
+	if h.natsJS != nil {
+		lastSeq, seqErr := pkg.GetSubmissionsLastSequence(ctx, h.natsJS)
+		if seqErr != nil {
+			slog.Warn("failed to get submissions last sequence", "error", seqErr)
+		} else {
+			since = safeInt64(lastSeq)
+		}
+	}
+
 	submissionsList, err := h.submissionsUC.ListSubmissions(ctx, models.SubmissionsFilter{
 		ContestId: &contest.ID,
 		Page:      page,
@@ -950,16 +960,6 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 
 	for i, submission := range submissionsList.Submissions {
 		submissionsList.Submissions[i] = models.SubmissionView(&contest, submission.CreatedBy, submission.CreatedAt, user.Id, permissions, time.Now()).Apply(submission)
-	}
-
-	var since int64
-	if h.natsJS != nil {
-		lastSeq, seqErr := pkg.GetSubmissionsLastSequence(ctx, h.natsJS)
-		if seqErr != nil {
-			slog.Warn("failed to get submissions last sequence", "error", seqErr)
-		} else {
-			since = safeInt64(lastSeq)
-		}
 	}
 
 	resp := SubmissionsListToDTO(submissionsList)
@@ -1003,12 +1003,23 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, params corev1.Get
 		}
 	}
 
+	var since int64
+	if h.natsJS != nil {
+		lastSeq, seqErr := pkg.GetSubmissionsLastSequence(ctx, h.natsJS)
+		if seqErr != nil {
+			return nil, seqErr
+		}
+		since = safeInt64(lastSeq)
+	}
+
 	sb, err := h.contestsUC.GetContestScoreboard(ctx, contest.ID, user.Id, unfrozen)
 	if err != nil {
 		return nil, err
 	}
 
-	return GetScoreboardResponseDTO(sb), nil
+	response := GetScoreboardResponseDTO(sb)
+	response.Since = corev1.NewOptInt64(since)
+	return response, nil
 }
 
 func (h *CoreServer) ListContestTeams(ctx context.Context, params corev1.ListContestTeamsParams) (*corev1.ListContestTeamsResponseModel, error) {

@@ -9,7 +9,7 @@ import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
 import {SubmissionSanctionsModal, type SanctionActionType} from "./SubmissionSanctionsModal";
 import styles from "./SubmissionsList.module.css";
 
-import type {SubmissionWithProgress} from "@/lib/useSubmissionsWebSocket";
+import type {SubmissionWithProgress} from "@/lib/submissions";
 
 interface SubmissionsListProps {
   submissions: SubmissionWithProgress[];
@@ -126,11 +126,11 @@ const SubmissionRow = ({
             <Text>{TimeBeautify(submission.created_at)}</Text>
           </TableTd>
           <TableTd ta="center">
-            <Link to={`/@${submission.username}`} style={{color: 'inherit'}}>
-              <Text span td="underline">
-                {submission.username}
-              </Text>
-            </Link>
+            {submission.username && (
+              <Link to={`/@${submission.username}`} style={{color: 'inherit'}}>
+                <Text span td="underline">{submission.username}</Text>
+              </Link>
+            )}
           </TableTd>
           <TableTd ta="center">
             <Link

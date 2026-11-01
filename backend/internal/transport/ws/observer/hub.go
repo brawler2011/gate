@@ -7,16 +7,20 @@ import (
 	"log/slog"
 	"sync"
 
+	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
 type WrappedEvent struct {
-	Seq        uint64
-	EventType  string
-	RawEvent   any
-	DTOPayload []byte
+	Seq                     uint64
+	EventType               string
+	RawEvent                any
+	DTOPayload              []byte
+	scoreboardPublic        []byte
+	scoreboardUnfrozen      []byte
+	scoreboardConfiguration string
 }
 
 type SubscriberState int
@@ -38,9 +42,13 @@ type Subscriber struct {
 }
 
 type Hub struct {
-	subscribers map[uuid.UUID]*Subscriber
-	ring        *RingBuffer[*WrappedEvent]
-	mu          sync.RWMutex
+	contests                 interfaces.ContestsUC
+	scoreboardMu             sync.Mutex
+	scoreboardConfigurations map[uuid.UUID]string
+	scoreboardReferences     map[uuid.UUID]int
+	subscribers              map[uuid.UUID]*Subscriber
+	ring                     *RingBuffer[*WrappedEvent]
+	mu                       sync.RWMutex
 }
 
 func safeUint64(v int) uint64 {
@@ -50,8 +58,9 @@ func safeUint64(v int) uint64 {
 	return uint64(v)
 }
 
-func NewHub(ringSize int) *Hub {
+func NewHub(ringSize int, contests interfaces.ContestsUC) *Hub {
 	return &Hub{
+		contests: contests, scoreboardConfigurations: make(map[uuid.UUID]string), scoreboardReferences: make(map[uuid.UUID]int),
 		subscribers: make(map[uuid.UUID]*Subscriber),
 		ring:        NewRingBuffer[*WrappedEvent](safeUint64(ringSize)),
 	}
@@ -108,12 +117,16 @@ func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) erro
 		return nil
 	}
 
-	h.broadcast(&WrappedEvent{
+	wrapped := &WrappedEvent{
 		Seq:        seq,
 		EventType:  eventType,
 		RawEvent:   event,
 		DTOPayload: clientPayload,
-	})
+	}
+	if err := h.projectScoreboard(ctx, wrapped); err != nil {
+		return err
+	}
+	h.broadcast(wrapped)
 
 	return nil
 }

@@ -4,28 +4,19 @@ import {Button, Group, Modal, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconRefresh} from "@tabler/icons-react";
 import React, {useState, type ReactNode} from "react";
+import {useLocation} from "react-router-dom";
 
+import {RoutePagination} from "@/components/shared/Pagination";
+import {QueryState} from "@/components/shared/QueryState";
+import {useSubmissions} from "@/hooks/useSubmissions";
 import {api} from "@/lib/api";
-import {useSubmissionsWebSocket} from "@/lib/useSubmissionsWebSocket";
 
 import {SubmissionsList} from "./SubmissionsList";
 
-import type {SubmissionsListItemModel} from "@/contracts/core/v1/schema";
+import type {SubmissionsSelection} from "@/lib/submissions";
 
 interface SubmissionsListClientProps {
-  initialSubmissions: SubmissionsListItemModel[];
-  wsUrl: string;
-  since?: number;
-  snapshotScope?: "all" | "mine";
-  filter: {
-    orgLogin?: string;
-    contestLogin?: string;
-    userId?: string;
-    problemId?: string;
-  };
-  pageSize: number;
-  page: number;
-  sortOrder?: string;
+  selection: SubmissionsSelection;
   canRejudge?: boolean;
 }
 
@@ -36,31 +27,20 @@ type ModalState =
   | null;
 
 export const SubmissionsListClient = ({
-  initialSubmissions,
-  wsUrl,
-  since,
-  snapshotScope = "all",
-  filter,
-  pageSize,
-  page,
-  sortOrder,
+  selection,
   canRejudge = false,
 }: SubmissionsListClientProps): ReactNode => {
-  const enabled = page === 1 && (sortOrder === "desc" || sortOrder === undefined);
-
-  const {submissions, highlightedIds} = useSubmissionsWebSocket({
-    wsUrl,
-    since,
-    initialSubmissions,
-    snapshotScope,
-    filter,
-    pageSize,
-    enabled,
-  });
+  const {submissions, highlightedIds, data, error} = useSubmissions(selection);
+  const filter = selection;
+  const location = useLocation();
 
   const [modalState, setModalState] = useState<ModalState>(null);
   const [loading, setLoading] = useState(false);
   const [rejudgingId, setRejudgingId] = useState<string | null>(null);
+
+  if (!data) {
+    return <QueryState error={error} />;
+  }
 
   const handleRejudgeConfirm = async () => {
     if (!modalState || !filter.orgLogin || !filter.contestLogin) {
@@ -185,6 +165,14 @@ export const SubmissionsListClient = ({
         }}
         rejudgingId={rejudgingId}
       />
+
+      <Group justify="center">
+        <RoutePagination pagination={data.pagination} baseUrl={location.pathname} queryParams={{
+          page: selection.page, pageSize: selection.pageSize, userId: selection.userId,
+          problemId: selection.problemId, state: selection.state,
+          language: selection.language, order: selection.sortOrder,
+        }} />
+      </Group>
 
       <Modal
         opened={modalState !== null}

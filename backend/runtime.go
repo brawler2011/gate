@@ -242,7 +242,7 @@ func runApp(envFile string) error {
 	}
 
 	submissionDispatcher := outbox.NewEventDispatcher()
-	observerHub := wsobserver.NewHub(submissionsRingBufferSize)
+	observerHub := wsobserver.NewHub(submissionsRingBufferSize, contestsUC)
 
 	for _, event := range []models.SubmissionEventType{
 		models.SubmissionEventCreated,

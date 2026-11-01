@@ -17,10 +17,7 @@ type PageProps = {
   task: ContestProblemModel;
   submissions: SubmissionsListItemModel[];
   problemId: string;
-  contestId: string;
   user: UserModel | null;
-  wsUrl?: string;
-  since?: number;
   isManager?: boolean;
 };
 
@@ -30,10 +27,7 @@ const Task = ({
   task,
   submissions,
   problemId,
-  contestId: _contestId,
   user,
-  wsUrl,
-  since,
   isManager,
 }: PageProps): ReactNode => {
   const onSubmit = async (
@@ -182,13 +176,6 @@ const Task = ({
 
               <RecentSubmissionsTable
                 submissions={submissions}
-                orgLogin={contest.organization_login}
-                contestLogin={contest.login}
-                contestId={contest.id}
-                userId={user.id}
-                problemId={problemId}
-                wsUrl={wsUrl}
-                since={since}
               />
             </Stack>
           </Box>

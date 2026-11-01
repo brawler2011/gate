@@ -142,6 +142,7 @@ func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter
 	// Decode the contract envelope to remove fields rather than inventing result values.
 	var envelope struct {
 		EventType string                     `json:"event_type"`
+		Sequence  uint64                     `json:"sequence"`
 		Payload   map[string]json.RawMessage `json:"payload"`
 	}
 	if err := json.Unmarshal(event.DTOPayload, &envelope); err != nil {
@@ -151,16 +152,32 @@ func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter
 		delete(envelope.Payload, "source")
 	}
 	if view.Frozen {
-		for _, field := range []string{"state", "score", "penalty", "time_stat", "memory_stat", "failed_test", "test_details", "source"} {
+		for _, field := range []string{"state", "score", "penalty", "time_stat", "memory_stat", "failed_test", "test_details", "source", "previous_state"} {
 			delete(envelope.Payload, field)
 		}
 		envelope.Payload["frozen"] = json.RawMessage("true")
 	}
+	envelope.Sequence = event.Seq
 	payload, err := json.Marshal(envelope)
 	if err != nil {
 		return closeVerification(conn, err)
 	}
-	return writeEvent(conn, payload)
+	if err := writeEvent(conn, payload); err != nil {
+		return err
+	}
+	isManager := user.IsAdmin() || (contest.OwnerID != nil && *contest.OwnerID == user.Id)
+	if permissions.GetMonitor && event.scoreboardConfiguration == scoreboardConfiguration(contest) &&
+		(isManager || contest.StartTime == nil || !time.Now().Before(*contest.StartTime)) {
+		if len(event.scoreboardPublic) > 0 {
+			if err := writeEvent(conn, event.scoreboardPublic); err != nil {
+				return err
+			}
+		}
+		if permissions.ManageContest && len(event.scoreboardUnfrozen) > 0 {
+			return writeEvent(conn, event.scoreboardUnfrozen)
+		}
+	}
+	return nil
 }
 
 func (s *Observer) sendContest(ctx context.Context, filter *SubmissionsFilter, event *WrappedEvent, conn *websocket.Conn) error {

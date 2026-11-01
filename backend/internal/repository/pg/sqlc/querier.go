@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
@@ -107,7 +108,7 @@ type Querier interface {
 	GetContestByOrgLoginAndContestLogin(ctx context.Context, arg GetContestByOrgLoginAndContestLoginParams) (GetContestByOrgLoginAndContestLoginRow, error)
 	GetContestClarificationByID(ctx context.Context, id uuid.UUID) (GetContestClarificationByIDRow, error)
 	GetContestJoinRequestByID(ctx context.Context, id uuid.UUID) (GetContestJoinRequestByIDRow, error)
-	GetContestMember(ctx context.Context, arg GetContestMemberParams) (ContestMember, error)
+	GetContestMember(ctx context.Context, arg GetContestMemberParams) (GetContestMemberRow, error)
 	GetContestProblem(ctx context.Context, arg GetContestProblemParams) (GetContestProblemRow, error)
 	GetContestProblemResult(ctx context.Context, arg GetContestProblemResultParams) (ContestProblemResult, error)
 	GetContestScoreboardFromStandings(ctx context.Context, contestID uuid.UUID) ([]GetContestScoreboardFromStandingsRow, error)
@@ -138,6 +139,7 @@ type Querier interface {
 	GetSpecificUserOrganizationID(ctx context.Context, arg GetSpecificUserOrganizationIDParams) (uuid.UUID, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissionRow, error)
 	GetSubmissionsForScoreboard(ctx context.Context, arg GetSubmissionsForScoreboardParams) ([]GetSubmissionsForScoreboardRow, error)
+	GetSubmissionsRevision(ctx context.Context, contestID pgtype.UUID) (int64, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error)
 	GetTeamBySlug(ctx context.Context, arg GetTeamBySlugParams) (Team, error)
 	GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]Contest, error)
@@ -207,7 +209,7 @@ type Querier interface {
 	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
 	RemoveTeamMembersByOrgAndUser(ctx context.Context, arg RemoveTeamMembersByOrgAndUserParams) error
 	ResetFailedToPending(ctx context.Context, arg ResetFailedToPendingParams) error
-	ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]uuid.UUID, error)
+	ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]ResetSubmissionsStateRow, error)
 	SetUserEmailVerified(ctx context.Context, arg SetUserEmailVerifiedParams) error
 	UpdateContest(ctx context.Context, arg UpdateContestParams) error
 	UpdateContestJoinRequestStatus(ctx context.Context, arg UpdateContestJoinRequestStatusParams) error
@@ -225,7 +227,7 @@ type Querier interface {
 	UpdateProblemMemberRole(ctx context.Context, arg UpdateProblemMemberRoleParams) error
 	UpdateProblemTeamPermission(ctx context.Context, arg UpdateProblemTeamPermissionParams) error
 	UpdateSessionExpiry(ctx context.Context, arg UpdateSessionExpiryParams) error
-	UpdateSubmission(ctx context.Context, arg UpdateSubmissionParams) error
+	UpdateSubmission(ctx context.Context, arg UpdateSubmissionParams) (UpdateSubmissionRow, error)
 	UpdateTeam(ctx context.Context, arg UpdateTeamParams) error
 	UpdateTeamMemberRole(ctx context.Context, arg UpdateTeamMemberRoleParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) error

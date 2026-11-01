@@ -4985,7 +4985,17 @@ components:
       required:
         - submissions
         - pagination
+        - total_count
+        - revision
       properties:
+        total_count:
+          type: integer
+          format: int32
+          minimum: 0
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
         since:
           type: integer
           format: int64
@@ -4998,6 +5008,7 @@ components:
     SubmissionsListItemModel:
       type: object
       required:
+        - revision
         - id
         - user_id
         - username
@@ -5011,6 +5022,10 @@ components:
         - updated_at
         - created_at
       properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
         frozen:
           type: boolean
         id:
@@ -5497,6 +5512,7 @@ components:
           description: Effective permissions bitmask for the user in this contest, derived from direct membership and team-based access
           example: 255
     ScoreboardProblemResultModel:
+      title: ScoreboardProblemResultModel
       type: object
       required:
         - problem_id
@@ -5526,6 +5542,7 @@ components:
           type: integer
           format: int32
     ScoreboardItemModel:
+      title: ScoreboardItemModel
       type: object
       required:
         - user_id
@@ -5553,6 +5570,7 @@ components:
           items:
             $ref: "#/components/schemas/ScoreboardProblemResultModel"
     ScoreboardProblemHeaderModel:
+      title: ScoreboardProblemHeaderModel
       type: object
       required:
         - problem_id
@@ -5571,6 +5589,7 @@ components:
           type: integer
           format: int32
     ScoreboardResponseModel:
+      title: ScoreboardResponseModel
       type: object
       required:
         - contest_id
@@ -5581,6 +5600,10 @@ components:
         - problems
         - items
       properties:
+        since:
+          type: integer
+          format: int64
+          minimum: 0
         contest_id:
           type: string
           format: uuid

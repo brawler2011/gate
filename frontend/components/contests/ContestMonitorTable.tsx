@@ -1,26 +1,21 @@
 import {Badge, Box, Group, Switch, Table, Text, TextInput, Title, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconSearch} from "@tabler/icons-react";
+import {keepPreviousData} from "@tanstack/react-query";
 import React, {useEffect, useState, useMemo} from "react";
 import {Link} from "react-router-dom";
 
+import {QueryState} from "@/components/shared/QueryState";
 import {api} from "@/lib/api";
-import {env} from "@/lib/env";
 import {numberToLetters} from "@/lib/lib";
-import {submissionsWsManager} from "@/lib/submissionsWsManager";
 
 import classes from "./ContestMonitorTable.module.css";
 
-import type {ScoreboardResponseModel, ScoreboardItemModel, ScoreboardProblemResultModel, ScoreboardProblemHeaderModel} from "@/contracts/core/v1/schema";
-import type {SubmissionsMessage, MessageSubmissionCompleted} from "@/contracts/observer/v1/schema";
+import type {ScoreboardProblemResultModel} from "@/contracts/core/v1/schema";
 
 interface ContestMonitorTableProps {
-  contestId: string;
   orgLogin: string;
   contestLogin: string;
-  initialScoreboard: ScoreboardResponseModel;
-  startTime?: string | null;
-  endTime?: string | null;
   isManager?: boolean;
 }
 
@@ -34,114 +29,36 @@ const formatTimeMinutes = (timeMinutes?: number | null): string => {
 };
 
 export const ContestMonitorTable = ({
-  contestId,
   orgLogin,
   contestLogin,
-  initialScoreboard,
   isManager = false,
 }: ContestMonitorTableProps): React.ReactNode => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [items, setItems] = useState<ScoreboardItemModel[]>(initialScoreboard.items || []);
-  const [problems] = useState<ScoreboardProblemHeaderModel[]>(initialScoreboard.problems || []);
-  const [isFrozen, setIsFrozen] = useState<boolean>(initialScoreboard.is_frozen ?? false);
-  const [showRealMonitor, setShowRealMonitor] = useState<boolean>(false);
-  const [loadingScoreboard, setLoadingScoreboard] = useState<boolean>(false);
-
-  const handleToggleRealMonitor = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.currentTarget.checked;
-    setShowRealMonitor(checked);
-    setLoadingScoreboard(true);
-    const {data: res, error: err} = await api.GET(
-      "/organizations/{org_login}/contests/{contest_login}/scoreboard",
-      {
-        params: {
-          path: {org_login: orgLogin, contest_login: contestLogin},
-          query: {unfrozen: checked},
-        },
-      },
-    );
-    setLoadingScoreboard(false);
-    if (err) {
-      notifications.show({
-        title: "Ошибка",
-        message: err.message || "Не удалось загрузить таблицу",
-        color: "red",
-      });
-      return;
-    }
-    if (res) {
-      setItems(res.items || []);
-      if (!checked) {
-        setIsFrozen(res.is_frozen ?? false);
-      }
-    }
-  };
-
+  const [showRealMonitor, setShowRealMonitor] = useState(false);
+  const scoreboard = api.useQuery('get', '/organizations/{org_login}/contests/{contest_login}/scoreboard', {
+    params: {
+      path: {org_login: orgLogin, contest_login: contestLogin},
+      query: {unfrozen: showRealMonitor},
+    },
+  }, {placeholderData: keepPreviousData, meta: {unfrozen: showRealMonitor}});
   useEffect(() => {
-    let active = true;
-    let requestVersion = 0;
-    const refresh = async () => {
-      const version = ++requestVersion;
-      const {data: res, error: err} = await api.GET(
-        "/organizations/{org_login}/contests/{contest_login}/scoreboard",
-        {
-          params: {
-            path: {org_login: orgLogin, contest_login: contestLogin},
-            query: {unfrozen: showRealMonitor},
-          },
-        },
-      );
-      if (err) {
-        throw err;
-      }
-      if (active && version === requestVersion && res) {
-        setItems(res.items || []);
-        setIsFrozen(res.is_frozen ?? false);
-      }
-    };
-    const handleMessage = (event: MessageEvent) => {
-      try {
-        const msg: SubmissionsMessage = JSON.parse(event.data);
-        if (msg.event_type !== "submissions.completed") {
-          return;
-        }
-        const payload = msg.payload as MessageSubmissionCompleted;
-        if (payload.contest_id === contestId) {
-          void refresh().catch(() => {});
-        }
-      } catch {
-        // ignore parse error
-      }
-    };
-    const listenerId = submissionsWsManager.addListener({
-      key: `monitor-${contestId}-${showRealMonitor}`,
-      url: `${env.getWebSocketUrl()}/submissions?contestId=${contestId}`,
-      enabled: true,
-      onMessage: handleMessage,
-      onConnectionError: () => {},
-      onFatalConnectionError: () => {},
-      onStatusChange: (status) => {
-        if (status.phase === 'connected') {
-          void refresh().catch(() => {});
-        }
-      },
-      onResyncRequired: refresh,
-    });
-    return () => {
-      active = false;
-      submissionsWsManager.removeListener(listenerId);
-    };
-  }, [contestId, orgLogin, contestLogin, showRealMonitor]);
+    if (scoreboard.error) {
+      notifications.show({title: "Ошибка", message: "Не удалось загрузить таблицу", color: "red"});
+    }
+  }, [scoreboard.error]);
 
   const filteredItems = useMemo(() => {
+    const items = scoreboard.data?.items ?? [];
     if (!searchQuery.trim()) {
       return items;
     }
     const q = searchQuery.toLowerCase().trim();
     return items.filter((item) => item.username.toLowerCase().includes(q));
-  }, [items, searchQuery]);
+  }, [scoreboard.data, searchQuery]);
 
   const problemSummary = useMemo(() => {
+    const items = scoreboard.data?.items ?? [];
+    const problems = scoreboard.data?.problems ?? [];
     const solvedCounts: Record<string, number> = {};
     const attemptedCounts: Record<string, number> = {};
 
@@ -162,8 +79,12 @@ export const ContestMonitorTable = ({
     }
 
     return {solvedCounts, attemptedCounts};
-  }, [items, problems]);
+  }, [scoreboard.data]);
 
+  if (!scoreboard.data) {
+    return <QueryState error={scoreboard.error} />;
+  }
+  const {problems, is_frozen: isFrozen} = scoreboard.data;
   return (
     <Box className={classes.container}>
       <Group justify="space-between" align="center" className={classes.topBar}>
@@ -171,20 +92,20 @@ export const ContestMonitorTable = ({
           <Title order={2} className={classes.title}>
             Положение
           </Title>
-          {(isFrozen || initialScoreboard.is_frozen) && (
+          {isFrozen && (
             <Badge color="orange" variant="light" size="lg">
               Монитор заморожен
             </Badge>
           )}
         </Group>
         <Group align="center" gap="md">
-          {isManager && (initialScoreboard.is_frozen || isFrozen) && (
+          {isManager && (isFrozen || showRealMonitor || scoreboard.isPlaceholderData) && (
             <Switch
               size="sm"
               label={showRealMonitor ? "Реальный монитор" : "Замороженный вид"}
               checked={showRealMonitor}
-              onChange={handleToggleRealMonitor}
-              disabled={loadingScoreboard}
+              onChange={event => setShowRealMonitor(event.currentTarget.checked)}
+              disabled={scoreboard.isFetching}
             />
           )}
           <TextInput

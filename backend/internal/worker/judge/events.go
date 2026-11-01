@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
@@ -126,9 +127,12 @@ func (ep *EventPublisher) PublishCompleted(
 	memoryStat int32,
 	penalty int32,
 	failedTest *int32,
+	previousState models.State,
 	meta models.SubmissionEventMeta,
 ) error {
+	meta.UpdatedAt = time.Now()
 	event := models.SubmissionCompletedEvent{
+		PreviousState:       previousState,
 		SubmissionEventMeta: meta,
 		Id:                  submissionID,
 		State:               state,

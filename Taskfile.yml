@@ -7,7 +7,7 @@ vars:
   SQLC_VERSION: v1.27.0
   VACUUM_VERSION: v0.33.0
   OGEN_VERSION: v1.24.0
-  OAPI_CODEGEN_VERSION: v2.5.0
+  GOIMPORTS_VERSION: v0.52.0
   GENERATED_PATHS: >-
     backend/contracts
     frontend/contracts
@@ -108,15 +108,15 @@ tasks:
       - bun run lint
 
   lint:contracts:
-    desc: Validate OpenAPI contracts (correctness errors block, warnings are advisory)
-    dir: contracts
+    desc: Validate OpenAPI and AsyncAPI contracts
     cmds:
       - >-
         GOTOOLCHAIN=auto go run github.com/daveshanley/vacuum@{{.VACUUM_VERSION}}
-        lint core/v1/openapi.yaml observer/v1/openapi.yaml
-        --ruleset vacuum.yaml
+        lint contracts/core/v1/openapi.yaml
+        --ruleset contracts/vacuum.yaml
         --no-style --no-banner --no-update-check
         --details --errors --all-results --fail-severity error
+      - bun run contracts/observer/generate.ts --validate
 
   typecheck:fe:
     desc: Run TypeScript type check
@@ -129,14 +129,14 @@ tasks:
       - bun run knip
 
   gen:
-    desc: Generate all code (OpenAPI, SQLC, Mocks)
+    desc: Generate all code (contracts, SQLC, Mocks)
     cmds:
       - task: gen:contracts
       - task: gen:sqlc
       - task: gen:mocks
 
   gen:contracts:
-    desc: Generate OpenAPI Go handlers and TS clients
+    desc: Generate OpenAPI and AsyncAPI Go and TS contracts
     cmds:
       - mkdir -p backend/contracts/core/v1 backend/contracts/observer/v1
       - >-
@@ -145,13 +145,8 @@ tasks:
         --package corev1
         --target backend/contracts/core/v1
         --clean contracts/core/v1/openapi.yaml
-      - >-
-        go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@{{.OAPI_CODEGEN_VERSION}}
-        -generate std-http-server,models,strict-server,skip-prune
-        -package observerv1
-        -o backend/contracts/observer/v1/observer.go
-        contracts/observer/v1/openapi.yaml
       - bun run contracts:gen
+      - go run golang.org/x/tools/cmd/goimports@{{.GOIMPORTS_VERSION}} -w backend/contracts/observer/v1
 
   gen:sqlc:
     desc: Generate SQLC queries

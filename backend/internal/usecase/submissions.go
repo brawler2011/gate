@@ -95,7 +95,7 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *mo
 			return err
 		}
 
-		eventParams, err := newOutboxEventParams(ctx, submission)
+		eventParams, err := newOutboxEventParams(ctx, submission, nil)
 		if err != nil {
 			return err
 		}
@@ -147,9 +147,11 @@ func (uc *SubmissionsUseCase) UnblockSubmission(ctx context.Context, contestID, 
 	return err
 }
 
-func newOutboxEventParams(ctx context.Context, submission models.Submission) (*models.CreateOutboxEventParams, error) {
+func newOutboxEventParams(ctx context.Context, submission models.Submission, previousState *models.State) (*models.CreateOutboxEventParams, error) {
 	submissionCreatedEvent := models.SubmissionCreatedEvent{
+		IsNew: previousState == nil, PreviousState: previousState,
 		SubmissionEventMeta: models.SubmissionEventMeta{
+			Revision:     submission.Revision,
 			UserId:       submission.CreatedBy,
 			Username:     submission.Username,
 			ContestId:    submission.ContestID,
@@ -159,6 +161,7 @@ func newOutboxEventParams(ctx context.Context, submission models.Submission) (*m
 			Position:     submission.Position,
 			Language:     submission.Language,
 			CreatedAt:    submission.CreatedAt,
+			UpdatedAt:    submission.UpdatedAt,
 		},
 		Id:     submission.ID,
 		State:  submission.State,
@@ -185,17 +188,18 @@ func newOutboxEventParams(ctx context.Context, submission models.Submission) (*m
 }
 
 func (uc *SubmissionsUseCase) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {
-	return uc.submissionsRepo.UpdateSubmission(ctx, id, update)
+	_, err := uc.submissionsRepo.UpdateSubmission(ctx, id, update)
+	return err
 }
 
 func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter models.SubmissionsFilter) (*models.SubmissionsList, error) {
-	submissions, total, err := uc.submissionsRepo.ListSubmissions(ctx, filter)
+	submissions, total, revision, err := uc.submissionsRepo.ListSubmissions(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 	return &models.SubmissionsList{
-		Submissions: submissions,
-		Pagination:  models.NewPagination(filter.Page, filter.PageSize, total),
+		Submissions: submissions, TotalCount: total, Revision: revision,
+		Pagination: models.NewPagination(filter.Page, filter.PageSize, total),
 	}, nil
 }
 
@@ -238,13 +242,14 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter mod
 			return fmt.Errorf("failed to reset submissions state: %w", err)
 		}
 
-		for _, id := range resetIDs {
+		for _, reset := range resetIDs {
+			id := reset.ID
 			submission, err := txSubRepo.GetSubmission(ctx, id)
 			if err != nil {
 				return fmt.Errorf("failed to get submission %s for rejudge: %w", id, err)
 			}
 
-			eventParams, err := newOutboxEventParams(ctx, submission)
+			eventParams, err := newOutboxEventParams(ctx, submission, &reset.PreviousState)
 			if err != nil {
 				return fmt.Errorf("failed to create event params for submission %s: %w", id, err)
 			}
@@ -255,7 +260,9 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter mod
 		}
 
 		rejudgedCount = len(resetIDs)
-		rejudgedIDs = resetIDs
+		for _, reset := range resetIDs {
+			rejudgedIDs = append(rejudgedIDs, reset.ID)
+		}
 		return nil
 	})
 

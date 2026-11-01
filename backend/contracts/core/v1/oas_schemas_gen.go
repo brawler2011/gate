@@ -4254,9 +4254,21 @@ func (s *ListPublicContestsSortOrder) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/ListSubmissionsResponseModel
 type ListSubmissionsResponseModel struct {
+	TotalCount  int32                      `json:"total_count"`
+	Revision    int64                      `json:"revision"`
 	Since       OptInt64                   `json:"since"`
 	Submissions []SubmissionsListItemModel `json:"submissions"`
 	Pagination  PaginationModel            `json:"pagination"`
+}
+
+// GetTotalCount returns the value of TotalCount.
+func (s *ListSubmissionsResponseModel) GetTotalCount() int32 {
+	return s.TotalCount
+}
+
+// GetRevision returns the value of Revision.
+func (s *ListSubmissionsResponseModel) GetRevision() int64 {
+	return s.Revision
 }
 
 // GetSince returns the value of Since.
@@ -4272,6 +4284,16 @@ func (s *ListSubmissionsResponseModel) GetSubmissions() []SubmissionsListItemMod
 // GetPagination returns the value of Pagination.
 func (s *ListSubmissionsResponseModel) GetPagination() PaginationModel {
 	return s.Pagination
+}
+
+// SetTotalCount sets the value of TotalCount.
+func (s *ListSubmissionsResponseModel) SetTotalCount(val int32) {
+	s.TotalCount = val
+}
+
+// SetRevision sets the value of Revision.
+func (s *ListSubmissionsResponseModel) SetRevision(val int64) {
+	s.Revision = val
 }
 
 // SetSince sets the value of Since.
@@ -8836,6 +8858,7 @@ func (s *ScoreboardProblemResultModel) SetPenalty(val OptInt32) {
 
 // Ref: #/components/schemas/ScoreboardResponseModel
 type ScoreboardResponseModel struct {
+	Since             OptInt64  `json:"since"`
 	ContestID         uuid.UUID `json:"contest_id"`
 	ContestLogin      string    `json:"contest_login"`
 	OrganizationLogin string    `json:"organization_login"`
@@ -8846,6 +8869,11 @@ type ScoreboardResponseModel struct {
 	FreezeTime OptNilDateTime                 `json:"freeze_time"`
 	Problems   []ScoreboardProblemHeaderModel `json:"problems"`
 	Items      []ScoreboardItemModel          `json:"items"`
+}
+
+// GetSince returns the value of Since.
+func (s *ScoreboardResponseModel) GetSince() OptInt64 {
+	return s.Since
 }
 
 // GetContestID returns the value of ContestID.
@@ -8886,6 +8914,11 @@ func (s *ScoreboardResponseModel) GetProblems() []ScoreboardProblemHeaderModel {
 // GetItems returns the value of Items.
 func (s *ScoreboardResponseModel) GetItems() []ScoreboardItemModel {
 	return s.Items
+}
+
+// SetSince sets the value of Since.
+func (s *ScoreboardResponseModel) SetSince(val OptInt64) {
+	s.Since = val
 }
 
 // SetContestID sets the value of ContestID.
@@ -9235,6 +9268,7 @@ func (s *SubmissionTestDetailsModel) SetFailedTestDetails(val OptFailedTestDetai
 
 // Ref: #/components/schemas/SubmissionsListItemModel
 type SubmissionsListItemModel struct {
+	Revision          int64        `json:"revision"`
 	Frozen            OptBool      `json:"frozen"`
 	ID                uuid.UUID    `json:"id"`
 	UserID            uuid.UUID    `json:"user_id"`
@@ -9256,6 +9290,11 @@ type SubmissionsListItemModel struct {
 	BanReason         OptNilString `json:"ban_reason"`
 	UpdatedAt         time.Time    `json:"updated_at"`
 	CreatedAt         time.Time    `json:"created_at"`
+}
+
+// GetRevision returns the value of Revision.
+func (s *SubmissionsListItemModel) GetRevision() int64 {
+	return s.Revision
 }
 
 // GetFrozen returns the value of Frozen.
@@ -9361,6 +9400,11 @@ func (s *SubmissionsListItemModel) GetUpdatedAt() time.Time {
 // GetCreatedAt returns the value of CreatedAt.
 func (s *SubmissionsListItemModel) GetCreatedAt() time.Time {
 	return s.CreatedAt
+}
+
+// SetRevision sets the value of Revision.
+func (s *SubmissionsListItemModel) SetRevision(val int64) {
+	s.Revision = val
 }
 
 // SetFrozen sets the value of Frozen.

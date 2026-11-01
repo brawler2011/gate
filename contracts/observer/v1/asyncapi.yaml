@@ -1,0 +1,575 @@
+asyncapi: 3.0.0
+info:
+  description: Submission and contest events over WebSocket.
+  title: ObserverService API
+  version: 0.0.1
+channels:
+  submissions:
+    address: /ws/submissions
+    messages:
+      event:
+        payload:
+          $ref: "#/components/schemas/SubmissionsMessage"
+    bindings:
+      ws:
+        method: GET
+        query:
+          type: object
+          properties:
+            since:
+              description: Omit for live events; set for replay.
+              type: integer
+              format: int64
+              minimum: 0
+            contestId:
+              type: string
+              format: uuid
+            userId:
+              type: string
+              format: uuid
+            problemId:
+              type: string
+              format: uuid
+            language:
+              type: integer
+              format: int32
+        bindingVersion: 0.1.0
+    servers:
+      - $ref: "#/servers/observer"
+    description: Submission lifecycle events filtered by contest, user, problem, or language.
+  contests:
+    address: /ws/contests
+    messages:
+      event:
+        payload:
+          $ref: "#/components/schemas/ContestMessage"
+    bindings:
+      ws:
+        method: GET
+        query:
+          type: object
+          properties:
+            since:
+              description: Omit for live events; set for replay.
+              type: integer
+              format: int64
+              minimum: 0
+            contestId:
+              type: string
+              format: uuid
+          required:
+            - contestId
+        bindingVersion: 0.1.0
+    servers:
+      - $ref: "#/servers/observer"
+    description: Announcements and clarifications for the required contestId.
+operations:
+  sendSubmissions:
+    action: send
+    channel:
+      $ref: "#/channels/submissions"
+  sendContests:
+    action: send
+    channel:
+      $ref: "#/channels/contests"
+components:
+  schemas:
+    SubmissionsWsCloseCode:
+      type: integer
+      format: int32
+      enum:
+        - 4408
+        - 4409
+        - 4410
+      title: SubmissionsWsCloseCode
+    SubmissionsWsCloseReason:
+      type: string
+      enum:
+        - buffer_empty
+        - history_lost
+        - invalid_range
+      title: SubmissionsWsCloseReason
+    SubmissionEventMeta:
+      type: object
+      required:
+        - revision
+      properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
+        updated_at:
+          type: string
+          format: date-time
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        contest_id:
+          type: string
+          format: uuid
+        contest_title:
+          type: string
+        problem_id:
+          type: string
+          format: uuid
+        problem_title:
+          type: string
+        position:
+          type: integer
+          format: int32
+        language:
+          type: integer
+          format: int32
+        created_at:
+          type: string
+          format: date-time
+    SubmissionsMessage:
+      oneOf:
+        - $ref: "#/components/schemas/SubmissionCreatedMessage"
+        - $ref: "#/components/schemas/SubmissionQueuedMessage"
+        - $ref: "#/components/schemas/SubmissionCompilingStartedMessage"
+        - $ref: "#/components/schemas/SubmissionTestingStartedMessage"
+        - $ref: "#/components/schemas/SubmissionTestStartedMessage"
+        - $ref: "#/components/schemas/SubmissionCompletedMessage"
+        - $ref: "#/components/schemas/ScoreboardUpdatedMessage"
+      discriminator: event_type
+    MessageSubmissionCreated:
+      allOf:
+        - $ref: "#/components/schemas/SubmissionEventMeta"
+        - type: object
+          required:
+            - id
+            - is_new
+          properties:
+            is_new:
+              type: boolean
+            previous_state:
+              type: integer
+              format: int32
+            frozen:
+              type: boolean
+            id:
+              type: string
+              format: uuid
+            state:
+              type: integer
+              format: int32
+            source:
+              type: string
+    MessageSubmissionQueued:
+      allOf:
+        - $ref: "#/components/schemas/SubmissionEventMeta"
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              format: uuid
+    MessageSubmissionCompilingStarted:
+      allOf:
+        - $ref: "#/components/schemas/SubmissionEventMeta"
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              format: uuid
+    MessageSubmissionTestingStarted:
+      allOf:
+        - $ref: "#/components/schemas/SubmissionEventMeta"
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              format: uuid
+    MessageSubmissionTestStarted:
+      allOf:
+        - $ref: "#/components/schemas/SubmissionEventMeta"
+        - type: object
+          required:
+            - id
+            - number
+          properties:
+            id:
+              type: string
+              format: uuid
+            number:
+              type: integer
+              format: int32
+    MessageSubmissionCompleted:
+      allOf:
+        - $ref: "#/components/schemas/SubmissionEventMeta"
+        - type: object
+          required:
+            - id
+          properties:
+            previous_state:
+              type: integer
+              format: int32
+            frozen:
+              type: boolean
+            id:
+              type: string
+              format: uuid
+            state:
+              type: integer
+              format: int32
+            score:
+              type: integer
+              format: int32
+            penalty:
+              type: integer
+              format: int32
+            time_stat:
+              type: integer
+              format: int32
+            memory_stat:
+              type: integer
+              format: int32
+            failed_test:
+              type:
+                - integer
+                - "null"
+              format: int32
+    ContestMessage:
+      oneOf:
+        - $ref: "#/components/schemas/ContestAnnouncementCreatedMessage"
+        - $ref: "#/components/schemas/ContestAnnouncementDeletedMessage"
+        - $ref: "#/components/schemas/ContestClarificationCreatedMessage"
+        - $ref: "#/components/schemas/ContestClarificationAnsweredMessage"
+      discriminator: event_type
+    MessageContestAnnouncementCreated:
+      type: object
+      required:
+        - id
+        - contest_id
+        - title
+        - body
+        - author_username
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        contest_id:
+          type: string
+          format: uuid
+        problem_id:
+          type: string
+          format: uuid
+        problem_title:
+          type: string
+        problem_letter:
+          type: string
+        author_id:
+          type: string
+          format: uuid
+        author_username:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+    MessageContestAnnouncementDeleted:
+      type: object
+      required:
+        - id
+        - contest_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        contest_id:
+          type: string
+          format: uuid
+      additionalProperties: false
+    MessageContestClarificationCreated:
+      type: object
+      required:
+        - id
+        - contest_id
+        - user_id
+        - username
+        - question
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        contest_id:
+          type: string
+          format: uuid
+        problem_id:
+          type: string
+          format: uuid
+        problem_title:
+          type: string
+        problem_letter:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        question:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+    MessageContestClarificationAnswered:
+      type: object
+      required:
+        - id
+        - contest_id
+        - user_id
+        - username
+        - question
+        - answer
+        - answered_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        contest_id:
+          type: string
+          format: uuid
+        problem_id:
+          type: string
+          format: uuid
+        problem_title:
+          type: string
+        problem_letter:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        question:
+          type: string
+        answer:
+          type: string
+        answered_by:
+          type: string
+          format: uuid
+        answered_by_username:
+          type: string
+        answered_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+    SubmissionCreatedMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - event_type
+        - payload
+        - sequence
+      properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
+        event_type:
+          title: SubmissionCreatedMessageEventType
+          type: string
+          const: submissions.created
+        payload:
+          $ref: "#/components/schemas/MessageSubmissionCreated"
+    SubmissionQueuedMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - event_type
+        - payload
+        - sequence
+      properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
+        event_type:
+          title: SubmissionQueuedMessageEventType
+          type: string
+          const: submissions.queued
+        payload:
+          $ref: "#/components/schemas/MessageSubmissionQueued"
+    SubmissionCompilingStartedMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - event_type
+        - payload
+        - sequence
+      properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
+        event_type:
+          title: SubmissionCompilingStartedMessageEventType
+          type: string
+          const: submissions.compiling_started
+        payload:
+          $ref: "#/components/schemas/MessageSubmissionCompilingStarted"
+    SubmissionTestingStartedMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - event_type
+        - payload
+        - sequence
+      properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
+        event_type:
+          title: SubmissionTestingStartedMessageEventType
+          type: string
+          const: submissions.testing_started
+        payload:
+          $ref: "#/components/schemas/MessageSubmissionTestingStarted"
+    SubmissionTestStartedMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - event_type
+        - payload
+        - sequence
+      properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
+        event_type:
+          title: SubmissionTestStartedMessageEventType
+          type: string
+          const: submissions.test_started
+        payload:
+          $ref: "#/components/schemas/MessageSubmissionTestStarted"
+    SubmissionCompletedMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - event_type
+        - payload
+        - sequence
+      properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
+        event_type:
+          title: SubmissionCompletedMessageEventType
+          type: string
+          const: submissions.completed
+        payload:
+          $ref: "#/components/schemas/MessageSubmissionCompleted"
+    ContestAnnouncementCreatedMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - event_type
+        - payload
+      properties:
+        event_type:
+          title: ContestAnnouncementCreatedMessageEventType
+          type: string
+          const: contest.announcement_created
+        payload:
+          $ref: "#/components/schemas/MessageContestAnnouncementCreated"
+    ContestAnnouncementDeletedMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - event_type
+        - payload
+      properties:
+        event_type:
+          title: ContestAnnouncementDeletedMessageEventType
+          type: string
+          const: contest.announcement_deleted
+        payload:
+          $ref: "#/components/schemas/MessageContestAnnouncementDeleted"
+    ContestClarificationCreatedMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - event_type
+        - payload
+      properties:
+        event_type:
+          title: ContestClarificationCreatedMessageEventType
+          type: string
+          const: contest.clarification_created
+        payload:
+          $ref: "#/components/schemas/MessageContestClarificationCreated"
+    ContestClarificationAnsweredMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - event_type
+        - payload
+      properties:
+        event_type:
+          title: ContestClarificationAnsweredMessageEventType
+          type: string
+          const: contest.clarification_answered
+        payload:
+          $ref: "#/components/schemas/MessageContestClarificationAnswered"
+    ScoreboardUpdatedMessage:
+      type: object
+      additionalProperties: false
+      required: [event_type, payload, sequence]
+      properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
+        event_type:
+          title: ScoreboardUpdatedMessageEventType
+          type: string
+          const: scoreboard.updated
+        payload:
+          $ref: "#/components/schemas/MessageScoreboardUpdated"
+    MessageScoreboardUpdated:
+      type: object
+      required: [user_id, unfrozen, replace, scoreboard]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        unfrozen:
+          type: boolean
+        replace:
+          type: boolean
+        scoreboard:
+          $ref: "../../core/v1/openapi.yaml#/components/schemas/ScoreboardResponseModel"
+
+  securitySchemes:
+    session:
+      type: httpApiKey
+      in: cookie
+      name: session_id
+defaultContentType: application/json
+servers:
+  observer:
+    host: "{host}"
+    protocol: wss
+    variables:
+      host:
+        description: "Gate host, including the port if needed."
+    security:
+      - $ref: "#/components/securitySchemes/session"

@@ -180,6 +180,7 @@ func GetContestProblemResponseDTO(contestProblem models.ContestProblem, problem 
 
 func SubmissionsListToDTO(submissionsList *models.SubmissionsList) *corev1.ListSubmissionsResponseModel {
 	resp := corev1.ListSubmissionsResponseModel{
+		TotalCount: submissionsList.TotalCount, Revision: submissionsList.Revision,
 		Submissions: make([]corev1.SubmissionsListItemModel, len(submissionsList.Submissions)),
 		Pagination:  PaginationDTO(submissionsList.Pagination),
 	}
@@ -401,6 +402,7 @@ func statementField(statement *models.Statement, getter func(models.Statement) s
 
 func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel {
 	dto := corev1.SubmissionsListItemModel{
+		Revision: s.Revision,
 		ID:     s.ID,
 		UserID: uuidPtrToUUID(s.CreatedBy),
 

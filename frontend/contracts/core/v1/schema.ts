@@ -2235,12 +2235,18 @@ export interface components {
             submission: string;
         };
         ListSubmissionsResponseModel: {
+            /** Format: int32 */
+            total_count: number;
+            /** Format: int64 */
+            revision: number;
             /** Format: int64 */
             since?: number;
             submissions: components["schemas"]["SubmissionsListItemModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
         SubmissionsListItemModel: {
+            /** Format: int64 */
+            revision: number;
             frozen?: boolean;
             /** Format: uuid */
             id: string;
@@ -2544,6 +2550,7 @@ export interface components {
              */
             permissions_mask?: number;
         };
+        /** ScoreboardProblemResultModel */
         ScoreboardProblemResultModel: {
             /** Format: uuid */
             problem_id: string;
@@ -2562,6 +2569,7 @@ export interface components {
             /** Format: int32 */
             penalty?: number;
         };
+        /** ScoreboardItemModel */
         ScoreboardItemModel: {
             /** Format: uuid */
             user_id: string;
@@ -2574,6 +2582,7 @@ export interface components {
             last_accepted_at?: string;
             problem_results: components["schemas"]["ScoreboardProblemResultModel"][];
         };
+        /** ScoreboardProblemHeaderModel */
         ScoreboardProblemHeaderModel: {
             /** Format: uuid */
             problem_id: string;
@@ -2582,7 +2591,10 @@ export interface components {
             /** Format: int32 */
             ordinal: number;
         };
+        /** ScoreboardResponseModel */
         ScoreboardResponseModel: {
+            /** Format: int64 */
+            since?: number;
             /** Format: uuid */
             contest_id: string;
             /** @example contest-1 */

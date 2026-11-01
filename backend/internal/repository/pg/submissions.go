@@ -15,12 +15,13 @@ import (
 )
 
 type SubmissionsRepo struct {
+	pool    *pgxpool.Pool
 	queries *sqlc.Queries
 }
 
 func NewSubmissionsRepo(db *pgxpool.Pool) *SubmissionsRepo {
 	return &SubmissionsRepo{
-		queries: sqlc.New(db),
+		queries: sqlc.New(db), pool: db,
 	}
 }
 
@@ -33,7 +34,8 @@ func (r *SubmissionsRepo) WithTx(tx pgx.Tx) interfaces.SubmissionsRepo {
 func (r *SubmissionsRepo) GetSubmission(ctx context.Context, id uuid.UUID) (models.Submission, error) {
 	row, err := r.queries.GetSubmission(ctx, id)
 	if err != nil {
-		return models.Submission{}, HandlePgErr(err)
+		return models.Submission{
+			Revision: row.Revision}, HandlePgErr(err)
 	}
 	return mapGetSubmissionRow(row), nil
 }
@@ -55,7 +57,7 @@ func (r *SubmissionsRepo) CreateSubmission(ctx context.Context, creation *models
 	return id, nil
 }
 
-func (r *SubmissionsRepo) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {
+func (r *SubmissionsRepo) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) (models.SubmissionChange, error) {
 	var detailsBytes []byte
 
 	testDetails := update.TestDetails
@@ -75,19 +77,19 @@ func (r *SubmissionsRepo) UpdateSubmission(ctx context.Context, id uuid.UUID, up
 	var err error
 	detailsBytes, err = json.Marshal(testDetails)
 	if err != nil {
-		return fmt.Errorf("marshal test details: %w", err)
+		return models.SubmissionChange{}, fmt.Errorf("marshal test details: %w", err)
 	}
 
-	err = r.queries.UpdateSubmission(ctx, sqlc.UpdateSubmissionParams{
+	change, err := r.queries.UpdateSubmission(ctx, sqlc.UpdateSubmissionParams{
 		State:       update.State,
 		Score:       int32(update.Score),
 		TestDetails: detailsBytes,
 		ID:          id,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return models.SubmissionChange{}, HandlePgErr(err)
 	}
-	return nil
+	return models.SubmissionChange{Revision: change.Revision, PreviousState: change.PreviousState}, nil
 }
 
 func (r *SubmissionsRepo) BlockSubmission(ctx context.Context, id uuid.UUID, reason *string) error {
@@ -114,7 +116,26 @@ func (r *SubmissionsRepo) BlockUserProblemSubmissions(ctx context.Context, conte
 	return nil
 }
 
-func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter models.SubmissionsFilter) ([]models.Submission, int32, error) {
+func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter models.SubmissionsFilter) ([]models.Submission, int32, int64, error) {
+	if r.pool != nil {
+		tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
+		if err != nil {
+			return nil, 0, 0, HandlePgErr(err)
+		}
+		defer func() { _ = tx.Rollback(ctx) }()
+		rows, count, revision, err := r.WithTx(tx).ListSubmissions(ctx, filter)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return nil, 0, 0, HandlePgErr(err)
+		}
+		return rows, count, revision, nil
+	}
+	revision, err := r.queries.GetSubmissionsRevision(ctx, nullableUUIDToPgtype(filter.ContestId))
+	if err != nil {
+		return nil, 0, 0, HandlePgErr(err)
+	}
 	var sortOrder *int32
 	if filter.Order != nil {
 		val := int32(*filter.Order)
@@ -129,7 +150,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter models.Sub
 		State:     statePtrToInt32Ptr(filter.State),
 	})
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, 0, HandlePgErr(err)
 	}
 
 	rows, err := r.queries.ListSubmissions(ctx, sqlc.ListSubmissionsParams{
@@ -143,7 +164,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter models.Sub
 		SortOrder: sortOrder,
 	})
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, 0, HandlePgErr(err)
 	}
 
 	submissions := make([]models.Submission, len(rows))
@@ -151,7 +172,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter models.Sub
 		submissions[i] = mapListSubmissionsRow(row)
 	}
 
-	return submissions, safeInt32(totalCount), nil
+	return submissions, safeInt32(totalCount), revision, nil
 }
 
 func nullableUUIDToPgtype(id *uuid.UUID) pgtype.UUID {
@@ -240,6 +261,7 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 	}
 
 	return models.Submission{
+		Revision:          row.Revision,
 		ID:                row.ID,
 		CreatedBy:         createdBy,
 		Username:          username,
@@ -320,6 +342,7 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 	}
 
 	return models.Submission{
+		Revision:          row.Revision,
 		ID:                row.ID,
 		CreatedBy:         createdBy,
 		Username:          username,
@@ -344,11 +367,19 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 	}
 }
 
-func (r *SubmissionsRepo) ResetSubmissionsState(ctx context.Context, filter models.RejudgeFilter) ([]uuid.UUID, error) {
-	return r.queries.ResetSubmissionsState(ctx, sqlc.ResetSubmissionsStateParams{
+func (r *SubmissionsRepo) ResetSubmissionsState(ctx context.Context, filter models.RejudgeFilter) ([]models.SubmissionReset, error) {
+	rows, err := r.queries.ResetSubmissionsState(ctx, sqlc.ResetSubmissionsStateParams{
 		ContestID:    filter.ContestID,
 		ProblemID:    nullableUUIDToPgtype(filter.ProblemID),
 		SubmissionID: nullableUUIDToPgtype(filter.SubmissionID),
 		OwnerID:      nullableUUIDToPgtype(filter.UserID),
 	})
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+	result := make([]models.SubmissionReset, len(rows))
+	for i, row := range rows {
+		result[i] = models.SubmissionReset{ID: row.ID, PreviousState: row.PreviousState}
+	}
+	return result, nil
 }

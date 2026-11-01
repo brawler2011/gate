@@ -131,6 +131,7 @@ type SubmissionListItem struct {
 }
 
 type Submission struct {
+	Revision          int64                  `json:"revision"`
 	Frozen            bool                   `json:"-"`
 	SourceHidden      bool                   `json:"-"`
 	ID                uuid.UUID              `json:"id"`
@@ -158,6 +159,8 @@ type Submission struct {
 }
 
 type SubmissionsList struct {
+	TotalCount  int32        `json:"total_count"`
+	Revision    int64        `json:"revision"`
 	Submissions []Submission `json:"submissions"`
 	Pagination  Pagination   `json:"pagination"`
 }
@@ -174,8 +177,10 @@ const (
 )
 
 type SubmissionEventMeta struct {
-	UserId   *uuid.UUID `json:"user_id,omitempty"`
-	Username string     `json:"username"`
+	Revision  int64      `json:"revision"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	UserId    *uuid.UUID `json:"user_id,omitempty"`
+	Username  string     `json:"username"`
 
 	ContestId    *uuid.UUID `json:"contest_id,omitempty"`
 	ContestTitle string     `json:"contest_title"`
@@ -189,8 +194,15 @@ type SubmissionEventMeta struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type SubmissionReset struct {
+	ID            uuid.UUID
+	PreviousState State
+}
+
 type SubmissionCreatedEvent struct {
 	SubmissionEventMeta
+	IsNew         bool   `json:"is_new"`
+	PreviousState *State `json:"previous_state,omitempty"`
 
 	Id     uuid.UUID `json:"id"`
 	State  State     `json:"state"`
@@ -221,7 +233,13 @@ type SubmissionTestStartedEvent struct {
 	Number int32     `json:"number"`
 }
 
+type SubmissionChange struct {
+	Revision      int64
+	PreviousState State
+}
+
 type SubmissionCompletedEvent struct {
+	PreviousState State `json:"previous_state"`
 	SubmissionEventMeta
 
 	Id         uuid.UUID `json:"id"`

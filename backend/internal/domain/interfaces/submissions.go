@@ -11,11 +11,11 @@ import (
 type SubmissionsRepo interface {
 	CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (models.Submission, error)
-	ListSubmissions(ctx context.Context, filter models.SubmissionsFilter) ([]models.Submission, int32, error)
-	UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error
+	ListSubmissions(ctx context.Context, filter models.SubmissionsFilter) ([]models.Submission, int32, int64, error)
+	UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) (models.SubmissionChange, error)
 	BlockSubmission(ctx context.Context, id uuid.UUID, reason *string) error
 	BlockUserProblemSubmissions(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string) error
-	ResetSubmissionsState(ctx context.Context, filter models.RejudgeFilter) ([]uuid.UUID, error)
+	ResetSubmissionsState(ctx context.Context, filter models.RejudgeFilter) ([]models.SubmissionReset, error)
 	WithTx(tx pgx.Tx) SubmissionsRepo
 }
 

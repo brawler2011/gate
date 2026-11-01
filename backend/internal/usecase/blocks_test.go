@@ -73,16 +73,17 @@ func (r *blockingSubmissionsRepo) BlockUserProblemSubmissions(ctx context.Contex
 	}
 	return nil
 }
-func (r *blockingSubmissionsRepo) ResetSubmissionsState(_ context.Context, filter models.RejudgeFilter) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
+func (r *blockingSubmissionsRepo) ResetSubmissionsState(_ context.Context, filter models.RejudgeFilter) ([]models.SubmissionReset, error) {
+	var ids []models.SubmissionReset
 	for id, sub := range r.repo.submissions {
 		if sub.ContestID == nil || *sub.ContestID != filter.ContestID || filter.SubmissionID != nil && id != *filter.SubmissionID || filter.UserID != nil && (sub.CreatedBy == nil || *sub.CreatedBy != *filter.UserID) || filter.ProblemID != nil && (sub.ProblemID == nil || *sub.ProblemID != *filter.ProblemID) {
 			continue
 		}
+		previous := sub.State
 		sub.State = models.Saved
 		sub.BanReason = nil
 		r.repo.submissions[id] = sub
-		ids = append(ids, id)
+		ids = append(ids, models.SubmissionReset{ID: id, PreviousState: previous})
 	}
 	return ids, nil
 }

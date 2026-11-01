@@ -1,11 +1,9 @@
-import {Container, Group, Paper, Stack} from "@mantine/core";
+import {Container, Paper, Stack} from "@mantine/core";
 import {useLoaderData, redirect, Navigate} from "react-router-dom";
 
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
-import {RoutePagination} from "@/components/shared/Pagination";
 import {SubmissionsListClient} from "@/components/submissions";
 import {api, unwrap} from "@/lib/api";
-import {env} from "@/lib/env";
 import {parsePage} from "@/lib/lib";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
@@ -28,16 +26,14 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     userId?: string;
     problemId?: string;
     state?: number;
-    sortOrder?: "asc" | "desc";
+    sortOrder: "asc" | "desc";
     language?: number;
   } = {
     page,
     pageSize: PAGE_SIZE,
+    sortOrder: "desc",
   };
 
-  if (queryParams.userId) {
-    parsedParams.userId = queryParams.userId;
-  }
   if (queryParams.problemId) {
     parsedParams.problemId = queryParams.problemId;
   }
@@ -51,36 +47,6 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     parsedParams.language = Number(queryParams.language);
   }
 
-  const {data: submissionsData, error} = await api.GET(
-    "/organizations/{org_login}/contests/{contest_login}/submissions",
-    {
-      params: {
-        path: {org_login: slug, contest_login: contestLogin},
-        query: parsedParams,
-      },
-    },
-  );
-
-  if (error) {
-    throw error;
-  }
-
-  if (!submissionsData) {
-    throw {status: 404, message: "Страница не найдена"};
-  }
-
-  const nextQueryParams: Record<string, string | number | undefined> = {
-    page: parsedParams.page,
-    pageSize: parsedParams.pageSize,
-    userId: parsedParams.userId,
-    problemId: parsedParams.problemId,
-    state: parsedParams.state,
-    order: parsedParams.sortOrder,
-    language: parsedParams.language,
-  };
-
-  const wsBaseUrl = env.getWebSocketUrl();
-
   const [contestData, {data: me}] = await Promise.all([
     unwrap(
       api.GET("/organizations/{org_login}/contests/{contest_login}", {
@@ -90,9 +56,14 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     api.GET("/users/me"),
   ]);
   const user = me?.user ?? null;
-  const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
+  if (!user) {
+    throw redirect('/auth/login');
+  }
+  parsedParams.userId = user.id;
+  const selection = {orgLogin: slug, contestLogin, contestId: contestData.contest.id, ...parsedParams};
+  const contestRole = await getMyContestRole(slug, contestLogin);
   return {
-    slug, contestLogin, parsedParams, submissionsData, nextQueryParams, wsBaseUrl, contestData, user, contestRole,
+    slug, contestLogin, contestData, user, contestRole, selection,
   };
 }) satisfies LoaderFunction;
 
@@ -103,10 +74,7 @@ const Page = (): ReactNode => {
   const {
     slug,
     contestLogin,
-    parsedParams,
-    submissionsData,
-    nextQueryParams,
-    wsBaseUrl,
+    selection,
     contestData,
     user,
     contestRole,
@@ -143,27 +111,9 @@ const Page = (): ReactNode => {
         >
           <Stack gap="md">
             <SubmissionsListClient
-              initialSubmissions={submissionsData.submissions}
-              wsUrl={wsBaseUrl + "/submissions"}
-              since={submissionsData.since}
-              snapshotScope="mine"
-              filter={{
-                orgLogin: slug,
-                contestLogin,
-                userId: parsedParams.userId,
-                problemId: parsedParams.problemId,
-              }}
-              pageSize={PAGE_SIZE}
-              page={parsedParams.page}
-              sortOrder={parsedParams.sortOrder}
+              selection={selection}
             />
-            <Group justify="center">
-              <RoutePagination
-                pagination={submissionsData.pagination}
-                baseUrl={`/${slug}/${contestLogin}/mysubmissions`}
-                queryParams={nextQueryParams}
-              />
-            </Group>
+
           </Stack>
         </Paper>
       ) : (

@@ -34,7 +34,7 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 	auth := usecase.NewAuthUseCase(s.usersRepo, authRepo, tx)
 	permissions := usecase.NewPermissionsUseCase(s.contestsRepo, users, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
 	contests := usecase.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pg.NewSubmissionsRepo(s.dbPool))
-	hub := observer.NewHub(100)
+	hub := observer.NewHub(100, contests)
 	contestHub := observer.NewContestsHub(100)
 	server := httptest.NewServer(observer.NewObserver(hub, contestHub, middleware.AuthMiddleware(auth), auth, permissions, contests).Handler())
 	defer server.Close()
@@ -94,6 +94,16 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 				s.Require().NotContains(msg.Payload, "state")
 			} else {
 				s.Require().InDelta(200, msg.Payload["state"], 0)
+			}
+			access, accessErr := permissions.GetContestPermissions(s.ctx, contestID, user.Id)
+			s.Require().NoError(accessErr)
+			if access.GetMonitor {
+				s.Require().NoError(conn.ReadJSON(&msg))
+				s.Require().Equal(false, msg.Payload["unfrozen"])
+				if access.ManageContest {
+					s.Require().NoError(conn.ReadJSON(&msg))
+					s.Require().Equal(true, msg.Payload["unfrozen"])
+				}
 			}
 			s.Require().NoError(authRepo.DeleteSession(s.ctx, sessionID))
 			seq++

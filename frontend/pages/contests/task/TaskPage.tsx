@@ -5,9 +5,9 @@ import {QueryState} from "@/components/shared/QueryState";
 import {Task} from "@/components/shared/Task";
 import {useContestData} from "@/hooks/useContestData";
 import {api} from "@/lib/api";
-import {env} from "@/lib/env";
 import {lettersToNumber, numberToLetters} from "@/lib/lib";
 import {PermissionChecker} from "@/lib/permissions";
+import {SUBMISSIONS_PATH, submissionsParams} from "@/lib/submissions";
 
 import type {ReactNode} from "react";
 
@@ -42,26 +42,10 @@ const Page = (): ReactNode => {
     },
     {enabled: Boolean(targetProblem)},
   );
-  const submissionsQuery = api.useQuery(
-    "get",
-    "/organizations/{org_login}/contests/{contest_login}/submissions",
-    {
-      params: {
-        path: {
-          org_login: slug,
-          contest_login: contestLogin,
-        },
-        query: {
-          userId: user?.id,
-          problemId: targetProblem?.problem_id,
-          page: 1,
-          pageSize: 5,
-          sortOrder: "desc",
-        },
-      },
-    },
-    {enabled: Boolean(user && targetProblem)},
-  );
+  const submissionsSelection = {orgLogin: slug, contestLogin, contestId: contest.data?.response.contest.id ?? '',
+    userId: user?.id, problemId: targetProblem?.problem_id, page: 1, pageSize: 5, sortOrder: 'desc' as const};
+  const submissionsQuery = api.useQuery('get', SUBMISSIONS_PATH, submissionsParams(submissionsSelection),
+    {enabled: Boolean(user && targetProblem), meta: {selection: submissionsSelection}});
   if (!contest.data) {
     return <QueryState error={contest.error} />;
   }
@@ -90,8 +74,6 @@ const Page = (): ReactNode => {
     return <QueryState />;
   }
   const submissions = [...(submissionsResponse?.submissions || [])];
-  const wsBaseUrl = env.getWebSocketUrl();
-  const wsUrl = wsBaseUrl ? `${wsBaseUrl}/submissions` : undefined;
   return (
     <>
       <title>{problemResponse.problem.title}</title>
@@ -101,10 +83,7 @@ const Page = (): ReactNode => {
         tasks={contestResponse.problems || []}
         submissions={submissions}
         problemId={targetProblem.problem_id}
-        contestId={contestResponse.contest.id}
         user={user}
-        wsUrl={wsUrl}
-        since={submissionsResponse?.since}
         isManager={isManager}
       />
     </>

@@ -3,10 +3,10 @@ import "./setup-dom";
 import {afterAll, afterEach, beforeAll, describe, expect, it, spyOn} from "bun:test";
 import React from "react";
 
-import {ContestMonitorTable} from "@/components/contests/ContestMonitorTable";
 import {env} from "@/lib/env";
-import {submissionsWsManager} from "@/lib/submissionsWsManager";
+import * as submissionsConnection from "@/lib/submissionsConnection";
 
+import {Monitor} from "./monitor-test-utils";
 import {act, cleanup, fireEvent, renderWithProviders, setupDOMEnvironment, waitFor, within} from "./test-utils";
 
 import type {ScoreboardProblemResultModel, ScoreboardResponseModel} from "@/contracts/core/v1/schema";
@@ -27,18 +27,16 @@ const result = (solved: boolean, failed_attempts: number, pending_attempts: numb
 
 describe("Production scoreboard freeze presentation", () => {
   let cleanupDOM: () => void;
-  let remove: ReturnType<typeof spyOn>;
   let add: ReturnType<typeof spyOn>;
   let wsUrl: ReturnType<typeof spyOn>;
   beforeAll(() => {
     cleanupDOM = setupDOMEnvironment();
-    add = spyOn(submissionsWsManager, "addListener").mockReturnValue(1);
-    remove = spyOn(submissionsWsManager, "removeListener").mockImplementation(() => {});
+    add = spyOn(submissionsConnection, "connectSubmissions").mockReturnValue(() => {});
     wsUrl = spyOn(env, "getWebSocketUrl").mockReturnValue("ws://localhost/ws");
   });
   afterEach(cleanup);
   afterAll(() => {
-    add.mockRestore(); remove.mockRestore(); wsUrl.mockRestore(); cleanupDOM();
+    add.mockRestore(); wsUrl.mockRestore(); cleanupDOM();
   });
 
   it.each([
@@ -50,7 +48,7 @@ describe("Production scoreboard freeze presentation", () => {
     [true, 3, 0, "+3"],
     [false, 2, 0, "-2"],
   ])("renders solved=%s failed=%s pending=%s as %s", (solved, failed, pending, label) => {
-    const view = renderWithProviders(<ContestMonitorTable contestId="contest" orgLogin="org" contestLogin="round"
+    const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="round"
       initialScoreboard={scoreboard([result(solved as boolean, failed as number, pending as number)])} />);
     const cell = within(view.getAllByRole("row")[1]).getAllByRole("cell")[4];
     expect(cell.textContent).toBe(label as string);
@@ -58,7 +56,7 @@ describe("Production scoreboard freeze presentation", () => {
   });
 
   it("counts frozen attempts without inflating solved totals", () => {
-    const view = renderWithProviders(<ContestMonitorTable contestId="contest" orgLogin="org" contestLogin="round"
+    const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="round"
       initialScoreboard={scoreboard([result(true, 1, 2), result(false, 0, 3), result(false, 0, 0)])} />);
     const summary = (name: string) => within(view.getByText(name).closest("tr")!).getAllByRole("cell")[4].textContent;
     expect(summary("Сдали")).toBe("1");
@@ -69,14 +67,14 @@ describe("Production scoreboard freeze presentation", () => {
   it("renders unattempted and missing results as empty cells and hides manager controls", () => {
     const snapshot = scoreboard([result(false, 0, 0), result(false, 0, -1)]);
     snapshot.items[1].problem_results = [];
-    const view = renderWithProviders(<ContestMonitorTable contestId="contest" orgLogin="org" contestLogin="round" initialScoreboard={snapshot} />);
+    const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="round" initialScoreboard={snapshot} />);
     for (const row of view.getAllByRole("row").slice(1, 3)) {
       expect(within(row).getAllByRole("cell")[4].textContent).toBe("");
     }
     expect(view.queryByRole("switch")).toBeNull();
   });
 
-  it.each(["completion", "reconnect", "resync"])("preserves the manager's selected snapshot through %s and both toggles", async (trigger) => {
+  it.each(["completion", "reconnect"])("preserves the manager's selected snapshot through %s and both toggles", async (trigger) => {
     const frozen = scoreboard([result(false, 0, 1), result(false, 1, 1)]);
     frozen.items = frozen.items.map((item) => ({...item, total_penalty: 0}));
     const live = {...frozen, is_frozen: false, items: [
@@ -91,7 +89,7 @@ describe("Production scoreboard freeze presentation", () => {
     const fetch = spyOn(globalThis, "fetch").mockImplementation(Object.assign(
       async () => Response.json(response), {preconnect: () => {}}
     ));
-    const view = renderWithProviders(<ContestMonitorTable contestId="contest" orgLogin="org" contestLogin="round"
+    const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="round"
       initialScoreboard={frozen} isManager />);
     const rows = () => view.getAllByRole("row").slice(1, 3).map((row) =>
       within(row).getAllByRole("cell").map((cell) => cell.textContent)
@@ -100,7 +98,7 @@ describe("Production scoreboard freeze presentation", () => {
       ["1", "User 0", "0", "0", "?1"],
       ["2", "User 1", "0", "0", "-1 1?"],
     ];
-    const listener = () => add.mock.calls.at(-1)![0] as Parameters<typeof submissionsWsManager.addListener>[0];
+    const listener = () => add.mock.calls.at(-1)![0] as Parameters<typeof submissionsConnection.connectSubmissions>[0];
     const expectRequest = (unfrozen: boolean) => {
       expect(String(fetch.mock.calls.at(-1)![0])).toContain(
         `/organizations/org/contests/round/scoreboard?unfrozen=${unfrozen}`
@@ -125,20 +123,18 @@ describe("Production scoreboard freeze presentation", () => {
       const requestsBeforeRefresh = fetch.mock.calls.length;
       await act(async () => {
         if (trigger === "completion") {
-          listener().onMessage({data: JSON.stringify({event_type: "submissions.completed", payload: {
-            id: "submission", contest_id: "contest",
+          listener().onMessage({data: JSON.stringify({event_type: "scoreboard.updated", sequence: 8, payload: {
+            user_id: "u0", unfrozen: true, replace: false, scoreboard: {...recovered, items: [recovered.items[0]]},
           }})} as MessageEvent);
-        } else if (trigger === "reconnect") {
-          listener().onStatusChange({phase: "connected"});
         } else {
-          await listener().onResyncRequired();
+          listener().onStatusChange({phase: "connected"});
         }
       });
       await waitFor(() => expect(rows()).toEqual([
         ["1", "User 0", "1", "20", "+"],
         ["2", "User 1", "1", "40", "+1"],
       ]));
-      expect(fetch.mock.calls.length).toBe(requestsBeforeRefresh + 1);
+      expect(fetch.mock.calls.length).toBe(requestsBeforeRefresh + Number(trigger === "reconnect"));
       expectRequest(true);
 
       response = frozen;

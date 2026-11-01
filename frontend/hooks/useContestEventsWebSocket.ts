@@ -3,8 +3,9 @@
 import {notifications} from "@mantine/notifications";
 import {useEffect, useRef} from "react";
 
-import {ContestEventType, type ContestMessage, type MessageContestAnnouncementCreated, type MessageContestClarificationCreated, type MessageContestClarificationAnswered} from "@/contracts/observer/v1/schema";
 import {env} from "@/lib/env";
+
+import type ContestMessage from "@/contracts/observer/v1/ContestMessage";
 
 export interface UseContestEventsWebSocketProps {
   contestId?: string;
@@ -12,6 +13,7 @@ export interface UseContestEventsWebSocketProps {
   currentUserId?: string;
   isModerator?: boolean;
   onEvent?: (event: ContestMessage) => void;
+  onConnected?: () => void;
 }
 
 export const useContestEventsWebSocket = ({
@@ -20,31 +22,26 @@ export const useContestEventsWebSocket = ({
   currentUserId,
   isModerator,
   onEvent,
+  onConnected,
 }: UseContestEventsWebSocketProps): void => {
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
-  const isUnmountedRef = useRef(false);
-
-  const onEventRef = useRef(onEvent);
-  const currentUserIdRef = useRef(currentUserId);
-  const isModeratorRef = useRef(isModerator);
+  const latest = useRef({onEvent, onConnected, currentUserId, isModerator});
 
   useEffect(() => {
-    onEventRef.current = onEvent;
-    currentUserIdRef.current = currentUserId;
-    isModeratorRef.current = isModerator;
-  }, [onEvent, currentUserId, isModerator]);
+    latest.current = {onEvent, onConnected, currentUserId, isModerator};
+  }, [onEvent, onConnected, currentUserId, isModerator]);
 
   useEffect(() => {
-    isUnmountedRef.current = false;
-
     if (!enabled || !contestId) {
       return;
     }
 
+    let disposed = false;
+    let socket: WebSocket | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | undefined;
+
     const connect = () => {
-      if (isUnmountedRef.current) {
+      if (disposed) {
         return;
       }
 
@@ -53,26 +50,27 @@ export const useContestEventsWebSocket = ({
 
       try {
         const ws = new WebSocket(wsUrl);
-        wsRef.current = ws;
+        socket = ws;
 
         ws.onopen = () => {
-          if (wsRef.current !== ws || isUnmountedRef.current) {
+          if (socket !== ws || disposed) {
             return;
           }
           reconnectAttemptsRef.current = 0;
+          latest.current.onConnected?.();
         };
 
         ws.onmessage = (event) => {
-          if (wsRef.current !== ws || isUnmountedRef.current) {
+          if (socket !== ws || disposed) {
             return;
           }
           try {
             const data: ContestMessage = JSON.parse(event.data);
-            onEventRef.current?.(data);
+            latest.current.onEvent?.(data);
 
             switch (data.event_type) {
-              case ContestEventType.contest_announcement_created: {
-                const payload = data.payload as MessageContestAnnouncementCreated;
+              case "contest.announcement_created": {
+                const payload = data.payload;
                 const problemInfo = payload.problem_letter
                   ? ` [Задача ${payload.problem_letter}]`
                   : "";
@@ -87,9 +85,9 @@ export const useContestEventsWebSocket = ({
                 break;
               }
 
-              case ContestEventType.contest_clarification_created: {
-                const payload = data.payload as MessageContestClarificationCreated;
-                if (isModeratorRef.current && payload.user_id !== currentUserIdRef.current) {
+              case "contest.clarification_created": {
+                const payload = data.payload;
+                if (latest.current.isModerator && payload.user_id !== latest.current.currentUserId) {
                   const author = payload.username ? ` от ${payload.username}` : "";
                   const prob = payload.problem_letter
                     ? ` (Задача ${payload.problem_letter})`
@@ -106,9 +104,9 @@ export const useContestEventsWebSocket = ({
                 break;
               }
 
-              case ContestEventType.contest_clarification_answered: {
-                const payload = data.payload as MessageContestClarificationAnswered;
-                if (payload.user_id === currentUserIdRef.current) {
+              case "contest.clarification_answered": {
+                const payload = data.payload;
+                if (payload.user_id === latest.current.currentUserId) {
                   const prob = payload.problem_letter
                     ? ` (Задача ${payload.problem_letter})`
                     : "";
@@ -135,7 +133,7 @@ export const useContestEventsWebSocket = ({
         };
 
         ws.onclose = () => {
-          if (isUnmountedRef.current || wsRef.current !== ws) {
+          if (disposed || socket !== ws) {
             return;
           }
 
@@ -143,7 +141,7 @@ export const useContestEventsWebSocket = ({
           const delay = Math.min(1000 * Math.pow(1.5, attempts), 10000);
           reconnectAttemptsRef.current += 1;
 
-          reconnectTimeoutRef.current = setTimeout(() => {
+          reconnectTimeout = setTimeout(() => {
             connect();
           }, delay);
         };
@@ -163,19 +161,15 @@ export const useContestEventsWebSocket = ({
     connect();
 
     return () => {
-      isUnmountedRef.current = true;
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-      if (wsRef.current) {
-        const ws = wsRef.current;
-        wsRef.current = null;
-        ws.onopen = null;
-        ws.onmessage = null;
-        ws.onerror = null;
-        ws.onclose = null;
-        ws.close();
+      disposed = true;
+      clearTimeout(reconnectTimeout);
+      if (socket) {
+        socket.onopen = null;
+        socket.onmessage = null;
+        socket.onerror = null;
+        socket.onclose = null;
+        socket.close();
+        socket = null;
       }
     };
   }, [contestId, enabled]);

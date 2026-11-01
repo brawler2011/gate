@@ -54,7 +54,7 @@ func (q *Queries) GetContestTeam(ctx context.Context, arg GetContestTeamParams) 
 }
 
 const getTeamContests = `-- name: GetTeamContests :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision FROM contests c
 INNER JOIN contest_teams ct ON c.id = ct.contest_id
 WHERE ct.team_id = $1
 ORDER BY c.created_at DESC
@@ -82,6 +82,7 @@ func (q *Queries) GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]Cont
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SubmissionsRevision,
 		); err != nil {
 			return nil, err
 		}

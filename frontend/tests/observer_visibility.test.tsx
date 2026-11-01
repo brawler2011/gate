@@ -3,12 +3,12 @@ import "./setup-dom";
 import {afterAll, beforeAll, describe, expect, it, spyOn} from "bun:test";
 import React from "react";
 
-import {ContestMonitorTable} from "@/components/contests/ContestMonitorTable";
 import {SubmissionDetailsContent} from "@/components/submissions/SubmissionDetailsContent";
 import {SubmissionsList} from "@/components/submissions/SubmissionsList";
 import {env} from "@/lib/env";
-import {submissionsWsManager} from "@/lib/submissionsWsManager";
+import * as submissionsConnection from "@/lib/submissionsConnection";
 
+import {Monitor} from "./monitor-test-utils";
 import {act, renderWithProviders, setupDOMEnvironment, waitFor} from "./test-utils";
 
 import type {ScoreboardResponseModel, SubmissionModel, SubmissionsListItemModel} from "@/contracts/core/v1/schema";
@@ -27,7 +27,7 @@ describe("Observer visibility in production components", () => {
   });
 
   const metadata: SubmissionsListItemModel = {
-    id: "sub", user_id: "user", username: "alice", language: 20,
+    id: "sub", revision: 0, user_id: "user", username: "alice", language: 20,
     problem_id: "problem", problem_title: "A+B", position: 1,
     contest_id: "contest", contest_login: "contest", contest_title: "Contest",
     created_at: "2026-10-11T10:00:00Z", updated_at: "2026-10-11T10:00:00Z",
@@ -56,12 +56,11 @@ describe("Observer visibility in production components", () => {
     view.unmount();
   });
 
-  it("uses snapshots for frozen completion replay and reconnect recovery", async () => {
-    let listener: Parameters<typeof submissionsWsManager.addListener>[0] | undefined;
-    const add = spyOn(submissionsWsManager, "addListener").mockImplementation((params) => {
-      listener = params; return 1;
+  it("applies frozen scoreboard rows once without HTTP and recovers on reconnect", async () => {
+    let listener: Parameters<typeof submissionsConnection.connectSubmissions>[0] | undefined;
+    const add = spyOn(submissionsConnection, "connectSubmissions").mockImplementation((params) => {
+      listener = params; return () => {};
     });
-    const remove = spyOn(submissionsWsManager, "removeListener").mockImplementation(() => {});
     const wsUrl = spyOn(env, "getWebSocketUrl").mockReturnValue("ws://localhost/ws");
     const snapshot: ScoreboardResponseModel = {
       contest_id: "contest", contest_login: "contest", organization_login: "org", is_frozen: true, penalty_per_attempt: 20,
@@ -70,31 +69,34 @@ describe("Observer visibility in production components", () => {
         problem_results: [{problem_id: "problem", solved: false, failed_attempts: 0, pending_attempts: 1}]}],
     };
     const fetch = spyOn(globalThis, "fetch").mockImplementation(Object.assign(async () => Response.json(snapshot), {preconnect: () => {}}));
-    const view = renderWithProviders(<ContestMonitorTable contestId="contest" orgLogin="org" contestLogin="contest" initialScoreboard={snapshot} />);
+    const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="contest" initialScoreboard={snapshot} />);
     try {
-      expect(listener!.url).toContain("contestId=contest");
-      const event = {data: JSON.stringify({event_type: "submissions.completed", payload: {id: "sub", contest_id: "contest", frozen: true}})} as MessageEvent;
+      expect(listener!.url()).toContain("contestId=contest");
+      const event = {data: JSON.stringify({event_type: "scoreboard.updated", sequence: 8, payload: {
+        user_id: "user", unfrozen: false, replace: false, scoreboard: snapshot,
+      }})} as MessageEvent;
       await act(async () => {
- listener!.onMessage(event);
+        listener!.onMessage(event);
       });
       await act(async () => {
- listener!.onMessage(event);
+        listener!.onMessage(event);
       });
+      expect(fetch).not.toHaveBeenCalled();
       expect(view.container.textContent).toContain("?1");
       expect(view.container.textContent).not.toContain("?2");
       const recovered = {...snapshot, is_frozen: false, items: [{...snapshot.items[0], problems_solved: 1,
         problem_results: [{problem_id: "problem", solved: true, failed_attempts: 0, pending_attempts: 0}]}]};
       fetch.mockImplementation(Object.assign(async () => Response.json(recovered), {preconnect: () => {}}));
       await act(async () => {
- listener!.onStatusChange({phase: "connected"});
+        listener!.onStatusChange({phase: "connected"});
       });
       await waitFor(() => expect(view.container.textContent).not.toContain("?1"));
       expect(view.container.textContent).toContain("+");
       await act(async () => {
-        await listener!.onResyncRequired();
+        listener!.onStatusChange({phase: "connected"});
       });
     } finally {
-      view.unmount(); add.mockRestore(); remove.mockRestore(); wsUrl.mockRestore(); fetch.mockRestore();
+      view.unmount(); add.mockRestore(); wsUrl.mockRestore(); fetch.mockRestore();
     }
   });
 });
