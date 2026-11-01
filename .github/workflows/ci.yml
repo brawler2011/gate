@@ -41,8 +41,25 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Restore Vacuum binary
+        id: vacuum-cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.temp }}/vacuum-0.33.0
+          key: vacuum-0.33.0-${{ runner.os }}-${{ runner.arch }}-b4de4f93784194dc
+
+      - name: Install Vacuum binary
+        if: steps.vacuum-cache.outputs.cache-hit != 'true'
+        run: |
+          curl --fail --location --silent --show-error --retry 3 \
+            https://github.com/daveshanley/vacuum/releases/download/v0.33.0/vacuum_0.33.0_linux_x86_64.tar.gz \
+            --output "$RUNNER_TEMP/vacuum.tar.gz"
+          echo "b4de4f93784194dce3af3a554abca8abdefb9529e6d4ed1ad5eb26cfbb0298d7  $RUNNER_TEMP/vacuum.tar.gz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/vacuum-0.33.0"
+          tar -xzf "$RUNNER_TEMP/vacuum.tar.gz" -C "$RUNNER_TEMP/vacuum-0.33.0" vacuum
+
       - name: Validate OpenAPI contracts
-        run: task contracts:lint
+        run: task contracts:lint VACUUM="$RUNNER_TEMP/vacuum-0.33.0/vacuum"
 
       - name: Verify Codegen Freshness
         run: task verify-codegen
@@ -100,8 +117,23 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Prepare go-judge image
+        uses: docker/build-push-action@v7
+        with:
+          context: deploy/common/judge
+          file: deploy/common/judge/Dockerfile
+          tags: gate-gojudge:ci
+          load: true
+          cache-from: type=gha,scope=gojudge
+          cache-to: type=gha,scope=gojudge,mode=max
+
       - name: Run integration tests
         run: task be:test-integration
+        env:
+          GOJUDGE_TEST_IMAGE: gate-gojudge:ci
 
   frontend-checks:
     name: Frontend Typecheck & Lint

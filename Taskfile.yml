@@ -1,4 +1,6 @@
 version: '3'
+vars:
+  VACUUM: GOTOOLCHAIN=auto go run github.com/daveshanley/vacuum@v0.33.0
 tasks:
   default:
     cmds:
@@ -112,8 +114,8 @@ tasks:
   contracts:lint:
     desc: Validate OpenAPI contracts (correctness errors block, warnings are advisory)
     cmds:
-    - GOTOOLCHAIN=auto go run github.com/daveshanley/vacuum@v0.33.0 lint core/v1/openapi.yaml observer/v1/openapi.yaml --ruleset vacuum.yaml --no-style
-      --no-banner --no-update-check --details --errors --all-results --fail-severity error
+    - '{{.VACUUM}} lint core/v1/openapi.yaml observer/v1/openapi.yaml --ruleset vacuum.yaml --no-style
+      --no-banner --no-update-check --details --errors --all-results --fail-severity error'
     dir: contracts
   contracts:gen-openapi:
     desc: Generate OpenAPI Go handlers and TS clients
