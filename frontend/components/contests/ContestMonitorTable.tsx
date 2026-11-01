@@ -115,7 +115,7 @@ export const ContestMonitorTable = ({
     };
     const listenerId = submissionsWsManager.addListener({
       key: `monitor-${contestId}-${showRealMonitor}`,
-      url: `${env.getWebSocketUrl()}/submissions?contestId=${contestId}`,
+      url: () => `${env.getWebSocketUrl()}/submissions?contestId=${contestId}`,
       enabled: true,
       onMessage: handleMessage,
       onConnectionError: () => {},

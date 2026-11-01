@@ -6,7 +6,7 @@ import {flushMicrotasks, TestWebSocket} from "./websocket-test-utils";
 
 type Listener = Parameters<typeof submissionsWsManager.addListener>[0];
 const listener = (changes: Partial<Listener> = {}): Listener => ({
-  key: "contest", url: "ws://localhost/ws/submissions?contestId=contest", enabled: true,
+  key: "contest", url: () => "ws://localhost/ws/submissions?contestId=contest", enabled: true,
   onMessage: mock(() => {}), onConnectionError: mock(() => {}), onFatalConnectionError: mock(() => {}),
   onStatusChange: mock(() => {}), onResyncRequired: mock(async () => {}), ...changes,
 });
@@ -46,7 +46,7 @@ describe("WebSocket subscription lifecycle", () => {
     finish();
     await flushMicrotasks();
     expect(TestWebSocket.instances).toHaveLength(1);
-    expect(TestWebSocket.instances[0].url).toBe(params.url);
+    expect(TestWebSocket.instances[0].url).toBe(params.url());
     TestWebSocket.instances[0].open();
     expect(params.onStatusChange).toHaveBeenLastCalledWith({phase: "connected"});
   });
@@ -90,12 +90,12 @@ describe("WebSocket subscription lifecycle", () => {
   });
 
   it("reuses the socket when the newest listener changes only the replay cursor", async () => {
-    const first = listener({url: "ws://localhost/ws/submissions?contestId=contest&since=1"});
+    const first = listener({url: () => "ws://localhost/ws/submissions?contestId=contest&since=1"});
     add(first);
     await flushMicrotasks();
     const socket = TestWebSocket.instances[0];
     socket.open();
-    const second = listener({key: "cursor-2", url: "ws://localhost/ws/submissions?contestId=contest&since=2"});
+    const second = listener({key: "cursor-2", url: () => "ws://localhost/ws/submissions?contestId=contest&since=2"});
     const id = add(second);
     await flushMicrotasks();
     expect(TestWebSocket.instances).toHaveLength(1);
@@ -116,7 +116,7 @@ describe("WebSocket subscription lifecycle", () => {
     old.open();
     const oldMessage = old.onmessage;
     const oldClose = old.onclose;
-    const next = listener({key: "other", url: "ws://localhost/ws/submissions?contestId=other"});
+    const next = listener({key: "other", url: () => "ws://localhost/ws/submissions?contestId=other"});
     add(next);
     await flushMicrotasks();
     expect(old.closeCalls).toBe(1);
@@ -206,5 +206,22 @@ describe("WebSocket subscription lifecycle", () => {
     finish();
     await flushMicrotasks();
     expect(TestWebSocket.instances).toHaveLength(0);
+  });
+
+  it("keeps waiting for a snapshot when another listener joins", async () => {
+    let finish!: () => void;
+    const pending = new Promise<void>(resolve => {
+      finish = resolve;
+    });
+    add(listener({onResyncRequired: () => pending}));
+    add(listener());
+    try {
+      jest.advanceTimersByTime(5000);
+      await flushMicrotasks();
+      expect(TestWebSocket.instances).toHaveLength(0);
+    } finally {
+      finish();
+      await flushMicrotasks();
+    }
   });
 });

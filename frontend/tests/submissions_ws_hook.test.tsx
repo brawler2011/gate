@@ -237,4 +237,29 @@ describe("Submission WebSocket hook", () => {
     await act(flushMicrotasks);
     expect(TestWebSocket.instances.every(socket => socket.readyState === TestWebSocket.CLOSED)).toBe(true);
   });
+
+  it("ignores an old snapshot that finishes after changing contests", async () => {
+    let finish!: (response: Response) => void;
+    const pending = new Promise<Response>(resolve => {
+      finish = resolve;
+    });
+    fetch.mockImplementationOnce(Object.assign(() => pending, {preconnect: () => {}}));
+    const initial = options();
+    const {result, rerender} = renderHook(useSubmissionsWebSocket, {initialProps: initial});
+    await act(flushMicrotasks);
+    fetch.mockImplementation(Object.assign(async () => Response.json({submissions: [submission("latest")], since: 12}),
+      {preconnect: () => {}}));
+    rerender({...initial, filter: {...initial.filter, contestId: "other", contestLogin: "other"}});
+    try {
+      await act(flushMicrotasks);
+      expect(result.current.submissions[0].id).toBe("latest");
+    } finally {
+      await act(async () => {
+        finish(Response.json({submissions: [submission("obsolete")], since: 2}));
+        await flushMicrotasks();
+      });
+    }
+    expect(result.current.submissions[0].id).toBe("latest");
+    expect(TestWebSocket.instances.at(-1)!.url).toContain("since=12");
+  });
 });

@@ -1,13 +1,12 @@
 "use client";
 
 import {notifications} from '@mantine/notifications';
-import {useEffect, useRef, useState, useCallback, useMemo} from 'react';
+import {useEffect, useRef, useState, useCallback, useMemo, useId} from 'react';
 
 import {api} from './api';
-import {env} from './env';
 import {submissionsWsManager, type WsManagerStatus} from './submissionsWsManager';
 
-import type {ListSubmissionsResponseModel, SubmissionsListItemModel} from '@/contracts/core/v1/schema';
+import type {SubmissionsListItemModel} from '@/contracts/core/v1/schema';
 import type MessageSubmissionCompleted from '@/contracts/observer/v1/MessageSubmissionCompleted';
 import type MessageSubmissionCreated from '@/contracts/observer/v1/MessageSubmissionCreated';
 import type SubmissionsMessage from '@/contracts/observer/v1/SubmissionsMessage';
@@ -41,41 +40,6 @@ export interface UseSubmissionsWebSocketOptions {
   enabled: boolean;
 }
 
-type SnapshotParams = {
-  orgLogin?: string;
-  contestLogin?: string;
-  contestId?: string;
-  page: number;
-  pageSize: number;
-  userId?: string;
-  problemId?: string;
-  state?: number;
-  sortOrder?: "asc" | "desc";
-  language?: number;
-};
-
-type MySubmissionsData = ListSubmissionsResponseModel | null;
-
-const hasSince = (data: MySubmissionsData): data is NonNullable<MySubmissionsData> & { since?: number } => {
-  return typeof data === 'object' && data !== null;
-};
-
-const toSnapshotParams = (filter: UseSubmissionsWebSocketOptions['filter'], pageSize: number): SnapshotParams | null => {
-  if (!filter.orgLogin || !filter.contestLogin) {
-    return null;
-  }
-  return {
-    page: 1,
-    pageSize,
-    orgLogin: filter.orgLogin,
-    contestLogin: filter.contestLogin,
-    contestId: filter.contestId,
-    userId: filter.userId,
-    problemId: filter.problemId,
-    sortOrder: 'desc',
-  };
-};
-
 export interface UseSubmissionsWebSocketReturn {
   submissions: SubmissionWithProgress[];
   connectionError: boolean;
@@ -87,28 +51,9 @@ export interface UseSubmissionsWebSocketReturn {
   highlightedIds: Set<string>;
 }
 
-const HIGHLIGHT_DURATION = 2000; // 2s
-const INVALID_PAYLOAD_LOG_INTERVAL_MS = 3000;
-const INVALID_PAYLOAD_WINDOW_MS = 30000;
+const HIGHLIGHT_DURATION = 2000;
 const WS_STATUS_DEBOUNCE_MS = 400;
-const WS_DEBUG = false;
 const WS_RESTORED_TOAST_AUTO_CLOSE_MS = 2500;
-
-const isDev = env.isDevelopment();
-
-const log = (...args: unknown[]) => {
-  if (isDev && WS_DEBUG) {
-    // eslint-disable-next-line no-console
-    console.log('[WS]', ...args);
-  }
-};
-
-const makeWsNotificationId = (): string => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return `submissions-ws-status:${crypto.randomUUID()}`;
-  }
-  return `submissions-ws-status:${Date.now()}-${Math.random().toString(36).slice(2)}`;
-};
 
 const asMessage = (event: MessageEvent): SubmissionsMessage | null => {
   try {
@@ -192,17 +137,16 @@ export const useSubmissionsWebSocket = ({
   );
   const [connectionError, setConnectionError] = useState(false);
   const [fatalConnectionError, setFatalConnectionError] = useState(false);
-  const [wsPhase, setWsPhase] = useState<WsManagerStatus['phase']>('idle');
+  const [wsStatus, setWsStatus] = useState<WsManagerStatus>({phase: 'idle'});
+  const wsPhase = wsStatus.phase;
+  const reconnectAttempt = 'attempt' in wsStatus ? wsStatus.attempt : 0;
+  const reconnectMaxAttempts = 'maxAttempts' in wsStatus ? wsStatus.maxAttempts : 0;
   const [displayWsPhase, setDisplayWsPhase] = useState<WsManagerStatus['phase']>('idle');
-  const [reconnectAttempt, setReconnectAttempt] = useState(0);
-  const [reconnectMaxAttempts, setReconnectMaxAttempts] = useState(0);
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
-  const [sinceState, setSinceState] = useState<number | undefined>(since);
-  const invalidPayloadCountRef = useRef(0);
-  const invalidPayloadWindowStartRef = useRef(0);
-  const lastInvalidPayloadLogRef = useRef(0);
+  const sinceRef = useRef(since ?? 0);
+  const snapshotGenerationRef = useRef(0);
   const prevDisplayWsPhaseRef = useRef<WsManagerStatus['phase']>('idle');
-  const wsNotificationIdRef = useRef<string>(makeWsNotificationId());
+  const wsNotificationId = `submissions-ws-status:${useId()}`;
   const wsNotificationVisibleRef = useRef(false);
 
   const progressMapRef = useRef<Map<string, TestProgress>>(new Map());
@@ -211,8 +155,12 @@ export const useSubmissionsWebSocket = ({
   const initializedFilterRef = useRef<string>(filterKey);
 
   useEffect(() => {
-    setSinceState(since);
+    sinceRef.current = since ?? 0;
   }, [since]);
+
+  useEffect(() => {
+    snapshotGenerationRef.current++;
+  }, [filterKey, snapshotScope, pageSize]);
 
   useEffect(() => {
     if (wsPhase === 'fatal') {
@@ -234,7 +182,6 @@ export const useSubmissionsWebSocket = ({
 
   useEffect(() => {
     const prevPhase = prevDisplayWsPhaseRef.current;
-    const wsNotificationId = wsNotificationIdRef.current;
 
     const showOrUpdateNotification = (params: {
       title: string;
@@ -242,30 +189,19 @@ export const useSubmissionsWebSocket = ({
       color: string;
       autoClose: number | false;
     }) => {
-      if (wsNotificationVisibleRef.current) {
-        notifications.update({
-          id: wsNotificationId,
-          title: params.title,
-          message: params.message,
-          color: params.color,
-          autoClose: params.autoClose,
-          onClose: () => {
-            wsNotificationVisibleRef.current = false;
-          },
-        });
-        return;
-      }
-      notifications.show({
+      const notification = {
         id: wsNotificationId,
-        title: params.title,
-        message: params.message,
-        color: params.color,
-        autoClose: params.autoClose,
+        ...params,
         onClose: () => {
           wsNotificationVisibleRef.current = false;
         },
-      });
-      wsNotificationVisibleRef.current = true;
+      };
+      if (wsNotificationVisibleRef.current) {
+        notifications.update(notification);
+      } else {
+        notifications.show(notification);
+        wsNotificationVisibleRef.current = true;
+      }
     };
 
     if (!enabled || !wsUrl) {
@@ -299,15 +235,14 @@ export const useSubmissionsWebSocket = ({
     }
 
     prevDisplayWsPhaseRef.current = displayWsPhase;
-  }, [displayWsPhase, reconnectAttempt, reconnectMaxAttempts, enabled, wsUrl]);
+  }, [displayWsPhase, reconnectAttempt, reconnectMaxAttempts, enabled, wsUrl, wsNotificationId]);
 
   useEffect(() => {
-    const wsNotificationId = wsNotificationIdRef.current;
     return () => {
       notifications.hide(wsNotificationId);
       wsNotificationVisibleRef.current = false;
     };
-  }, []);
+  }, [wsNotificationId]);
 
   // Only reset submissions when filter actually changes (different problem/user/contest)
   // This prevents resetting when parent re-renders with same data
@@ -343,7 +278,7 @@ export const useSubmissionsWebSocket = ({
       return '';
     }
     const url = new URL(wsUrl);
-    url.searchParams.set('since', String(sinceState ?? 0));
+    url.searchParams.set('since', String(sinceRef.current));
     url.searchParams.set('sortOrder', 'desc');
     if (filter.contestId) {
       url.searchParams.set('contestId', filter.contestId);
@@ -352,11 +287,11 @@ export const useSubmissionsWebSocket = ({
       url.searchParams.set('userId', filter.userId);
     }
     return url.toString();
-  }, [wsUrl, sinceState, filter.contestId, filter.userId]);
+  }, [wsUrl, filter.contestId, filter.userId]);
 
   const connectionKey = useMemo(
-    () => `${wsUrl}|${sinceState ?? 0}|${filter.orgLogin ?? ''}|${filter.contestLogin ?? ''}|${filter.contestId ?? ''}|${filter.userId ?? ''}`,
-    [wsUrl, sinceState, filter.orgLogin, filter.contestLogin, filter.contestId, filter.userId],
+    () => `${wsUrl}|${filter.orgLogin ?? ''}|${filter.contestLogin ?? ''}|${filter.contestId ?? ''}|${filter.userId ?? ''}`,
+    [wsUrl, filter.orgLogin, filter.contestLogin, filter.contestId, filter.userId],
   );
 
   const orgLogin = filter.orgLogin;
@@ -366,92 +301,36 @@ export const useSubmissionsWebSocket = ({
   const problemId = filter.problemId;
 
   const resyncSnapshot = useCallback(async () => {
-    const params = toSnapshotParams({orgLogin, contestLogin, contestId, userId, problemId}, pageSize);
-    if (!params || !params.orgLogin || !params.contestLogin) {
+    if (!orgLogin || !contestLogin) {
       return;
     }
-
     if (snapshotScope === 'mine' && !userId) {
       throw new Error('snapshot scope "mine" requires userId');
     }
-
-    let error: {message?: string} | null | undefined = null;
-    let data: ListSubmissionsResponseModel | null | undefined = null;
-
-    if (snapshotScope === 'mine') {
-      const res = await api.GET(
-        "/organizations/{org_login}/contests/{contest_login}/submissions",
-        {
-          params: {
-            path: {org_login: params.orgLogin, contest_login: params.contestLogin},
-            query: {
-              page: 1,
-              pageSize,
-              userId: userId!,
-              problemId: params.problemId,
-              sortOrder: 'desc',
-            },
-          },
-        },
-      );
-      error = res.error;
-      data = res.data;
-    } else {
-      const res = await api.GET(
-        "/organizations/{org_login}/contests/{contest_login}/submissions",
-        {
-          params: {
-            path: {org_login: params.orgLogin, contest_login: params.contestLogin},
-            query: {
-              page: params.page,
-              pageSize: params.pageSize,
-              userId: params.userId,
-              problemId: params.problemId,
-              state: params.state,
-              sortOrder: params.sortOrder,
-              language: params.language,
-            },
-          },
-        },
-      );
-      error = res.error;
-      data = res.data;
+    const generation = snapshotGenerationRef.current;
+    const {data, error} = await api.GET(
+      "/organizations/{org_login}/contests/{contest_login}/submissions",
+      {params: {
+        path: {org_login: orgLogin, contest_login: contestLogin},
+        query: {page: 1, pageSize, userId, problemId, sortOrder: 'desc'},
+      }},
+    );
+    if (!mountedRef.current || generation !== snapshotGenerationRef.current) {
+      return;
     }
-
-    if (error || !data || !data.submissions) {
+    if (error || !data?.submissions) {
       throw new Error(error?.message || 'snapshot refetch failed');
     }
-
-    setSubmissions(data.submissions.map((s: SubmissionsListItemModel) => ({...s})));
-    setSinceState(hasSince(data) ? data.since ?? 0 : 0);
+    sinceRef.current = data.since ?? 0;
+    setSubmissions(data.submissions.map(s => ({...s})));
     setFatalConnectionError(false);
     setConnectionError(false);
-  }, [orgLogin, contestLogin, contestId, userId, problemId, pageSize, snapshotScope]);
+  }, [orgLogin, contestLogin, userId, problemId, pageSize, snapshotScope]);
 
   // Handle incoming WebSocket message
   const handleMessage = useCallback((event: MessageEvent) => {
     const data = asMessage(event);
     if (!data) {
-      const now = Date.now();
-      if (
-        invalidPayloadWindowStartRef.current === 0 ||
-        now - invalidPayloadWindowStartRef.current > INVALID_PAYLOAD_WINDOW_MS
-      ) {
-        invalidPayloadWindowStartRef.current = now;
-        invalidPayloadCountRef.current = 0;
-      }
-      invalidPayloadCountRef.current += 1;
-
-      if (now - lastInvalidPayloadLogRef.current > INVALID_PAYLOAD_LOG_INTERVAL_MS) {
-        const raw = typeof event.data === 'string' ? event.data.slice(0, 200) : String(event.data);
-        log('Error parsing message: invalid websocket payload', {
-          count: invalidPayloadCountRef.current,
-          dataType: typeof event.data,
-          sample: raw,
-          connectionKey,
-        });
-        lastInvalidPayloadLogRef.current = now;
-      }
       return;
     }
 
@@ -489,49 +368,18 @@ export const useSubmissionsWebSocket = ({
 
       case 'submissions.queued':
       case 'submissions.compiling_started':
-      case 'submissions.testing_started': {
-        const p = data.payload;
-        let phase: TestProgress['phase'];
-        if (data.event_type === 'submissions.queued') {
-          phase = 'queued';
-        } else if (data.event_type === 'submissions.compiling_started') {
-          phase = 'compiling';
-        } else {
-          phase = 'testing';
-        }
-        const progress: TestProgress = {phase};
-        progressMapRef.current.set(p.id, progress);
-
-        setSubmissions(prev => {
-          const index = prev.findIndex(s => s.id === p.id);
-          if (index === -1) {
-            const fallback = buildSubmissionFromCreated({
-              ...p,
-              id: p.id,
-              state: 1,
-              source: '',
-            });
-            fallback.progress = progress;
-            const updated = [fallback, ...prev];
-            if (updated.length > pageSize) {
-              updated.pop();
-            }
-            return updated;
-          }
-          const updated = [...prev];
-          updated[index] = {...updated[index], progress, isUpdated: true};
-          return updated;
-        });
-        addHighlight(p.id);
-        break;
-      }
-
+      case 'submissions.testing_started':
       case 'submissions.test_started': {
         const p = data.payload;
-        const progress: TestProgress = {
-          phase: 'testing',
-          testNumber: p.number,
-        };
+        const progress: TestProgress = {phase: ({
+          'submissions.queued': 'queued',
+          'submissions.compiling_started': 'compiling',
+          'submissions.testing_started': 'testing',
+          'submissions.test_started': 'testing',
+        } as const)[data.event_type]};
+        if (data.event_type === 'submissions.test_started') {
+          progress.testNumber = data.payload.number;
+        }
         progressMapRef.current.set(p.id, progress);
 
         setSubmissions(prev => {
@@ -579,95 +427,49 @@ export const useSubmissionsWebSocket = ({
         addHighlight(p.id);
         break;
       }
-
-      default:
-        log('Unknown websocket event type:', data);
     }
-  }, [pageSize, addHighlight, connectionKey, contestId, userId, problemId]);
+  }, [pageSize, addHighlight, contestId, userId, problemId]);
 
-  // Setup and cleanup WebSocket subscription
   const listenerIdRef = useRef<number | null>(null);
+  const listener = useMemo(() => ({
+    key: connectionKey,
+    url: buildWsUrl,
+    enabled: enabled && Boolean(wsUrl),
+    onMessage: handleMessage,
+    onResyncRequired: resyncSnapshot,
+    onConnectionError: (hasError: boolean) => {
+      if (mountedRef.current) {
+        setConnectionError(hasError);
+      }
+    },
+    onFatalConnectionError: (isFatal: boolean) => {
+      if (mountedRef.current) {
+        setFatalConnectionError(isFatal);
+      }
+    },
+    onStatusChange: (status: WsManagerStatus) => {
+      if (mountedRef.current) {
+        setWsStatus(status);
+      }
+    },
+  }), [connectionKey, buildWsUrl, enabled, wsUrl, handleMessage, resyncSnapshot]);
 
   useEffect(() => {
     mountedRef.current = true;
-
-    const id = submissionsWsManager.addListener({
-      key: connectionKey,
-      url: buildWsUrl(),
-      enabled: enabled && Boolean(wsUrl),
-      onMessage: handleMessage,
-      onResyncRequired: resyncSnapshot,
-      onConnectionError: (hasError) => {
-        if (mountedRef.current) {
-          setConnectionError(hasError);
-        }
-      },
-      onFatalConnectionError: (isFatal) => {
-        if (mountedRef.current) {
-          setFatalConnectionError(isFatal);
-        }
-      },
-      onStatusChange: (status) => {
-        if (!mountedRef.current) {
-          return;
-        }
-        setWsPhase(status.phase);
-        if (status.phase === 'reconnecting' || status.phase === 'fatal') {
-          setReconnectAttempt(status.attempt);
-          setReconnectMaxAttempts(status.maxAttempts);
-        } else {
-          setReconnectAttempt(0);
-          setReconnectMaxAttempts(0);
-        }
-      },
-    });
-    listenerIdRef.current = id;
-
-    return () => {
-      mountedRef.current = false;
-      if (listenerIdRef.current !== null) {
-        submissionsWsManager.removeListener(listenerIdRef.current);
-        listenerIdRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
     if (listenerIdRef.current === null) {
-      return;
+      listenerIdRef.current = submissionsWsManager.addListener(listener);
+    } else {
+      submissionsWsManager.updateListener(listenerIdRef.current, listener);
     }
-    submissionsWsManager.updateListener(listenerIdRef.current, {
-      key: connectionKey,
-      url: buildWsUrl(),
-      enabled: enabled && Boolean(wsUrl),
-      onMessage: handleMessage,
-      onResyncRequired: resyncSnapshot,
-      onConnectionError: (hasError) => {
-        if (mountedRef.current) {
-          setConnectionError(hasError);
-        }
-      },
-      onFatalConnectionError: (isFatal) => {
-        if (mountedRef.current) {
-          setFatalConnectionError(isFatal);
-        }
-      },
-      onStatusChange: (status) => {
-        if (!mountedRef.current) {
-          return;
-        }
-        setWsPhase(status.phase);
-        if (status.phase === 'reconnecting' || status.phase === 'fatal') {
-          setReconnectAttempt(status.attempt);
-          setReconnectMaxAttempts(status.maxAttempts);
-        } else {
-          setReconnectAttempt(0);
-          setReconnectMaxAttempts(0);
-        }
-      },
-    });
-  }, [connectionKey, buildWsUrl, enabled, wsUrl, handleMessage, resyncSnapshot]);
+  }, [listener]);
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+    if (listenerIdRef.current !== null) {
+      submissionsWsManager.removeListener(listenerIdRef.current);
+      listenerIdRef.current = null;
+    }
+  }, []);
 
   return {
     submissions,

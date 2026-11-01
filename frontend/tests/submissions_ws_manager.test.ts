@@ -2,36 +2,7 @@ import {describe, expect, it, jest, mock} from "bun:test";
 
 import {submissionsWsManager} from "@/lib/submissionsWsManager";
 
-class TestSocket {
-  static readonly CONNECTING = 0;
-  static readonly OPEN = 1;
-  static readonly CLOSING = 2;
-  static readonly CLOSED = 3;
-  static instances: TestSocket[] = [];
-  readyState = TestSocket.CONNECTING;
-  onopen: (() => void) | null = null;
-  onclose: ((event: {code: number; reason: string}) => void) | null = null;
-  constructor(_url: string) {
-    TestSocket.instances.push(this);
-  }
-  open() {
-    this.readyState = TestSocket.OPEN;
-    this.onopen?.();
-  }
-  close() {
-    this.readyState = TestSocket.CLOSED;
-  }
-  disconnect() {
-    this.close();
-    this.onclose?.({code: 1006, reason: "offline"});
-  }
-}
-
-const flushMicrotasks = async () => {
-  for (let i = 0; i < 10; i++) {
-    await Promise.resolve();
-  }
-};
+import {flushMicrotasks, TestWebSocket as TestSocket} from "./websocket-test-utils";
 
 describe("Production WebSocket manager reconnect backoff", () => {
   for (const recover of [true, false]) {
@@ -50,7 +21,7 @@ describe("Production WebSocket manager reconnect backoff", () => {
       const status = mock(() => {});
       const fatal = mock(() => {});
       const listenerId = submissionsWsManager.addListener({
-        key: `retry-${recover}`, url: "ws://localhost/ws/submissions?contestId=contest", enabled: true,
+        key: `retry-${recover}`, url: () => "ws://localhost/ws/submissions?contestId=contest", enabled: true,
         onMessage: () => {}, onConnectionError: () => {}, onFatalConnectionError: fatal,
         onStatusChange: status, onResyncRequired: resync,
       });

@@ -22,30 +22,24 @@ export const useContestEventsWebSocket = ({
   isModerator,
   onEvent,
 }: UseContestEventsWebSocketProps): void => {
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
-  const isUnmountedRef = useRef(false);
-
-  const onEventRef = useRef(onEvent);
-  const currentUserIdRef = useRef(currentUserId);
-  const isModeratorRef = useRef(isModerator);
+  const latest = useRef({onEvent, currentUserId, isModerator});
 
   useEffect(() => {
-    onEventRef.current = onEvent;
-    currentUserIdRef.current = currentUserId;
-    isModeratorRef.current = isModerator;
+    latest.current = {onEvent, currentUserId, isModerator};
   }, [onEvent, currentUserId, isModerator]);
 
   useEffect(() => {
-    isUnmountedRef.current = false;
-
     if (!enabled || !contestId) {
       return;
     }
 
+    let disposed = false;
+    let socket: WebSocket | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | undefined;
+
     const connect = () => {
-      if (isUnmountedRef.current) {
+      if (disposed) {
         return;
       }
 
@@ -54,22 +48,22 @@ export const useContestEventsWebSocket = ({
 
       try {
         const ws = new WebSocket(wsUrl);
-        wsRef.current = ws;
+        socket = ws;
 
         ws.onopen = () => {
-          if (wsRef.current !== ws || isUnmountedRef.current) {
+          if (socket !== ws || disposed) {
             return;
           }
           reconnectAttemptsRef.current = 0;
         };
 
         ws.onmessage = (event) => {
-          if (wsRef.current !== ws || isUnmountedRef.current) {
+          if (socket !== ws || disposed) {
             return;
           }
           try {
             const data: ContestMessage = JSON.parse(event.data);
-            onEventRef.current?.(data);
+            latest.current.onEvent?.(data);
 
             switch (data.event_type) {
               case "contest.announcement_created": {
@@ -90,7 +84,7 @@ export const useContestEventsWebSocket = ({
 
               case "contest.clarification_created": {
                 const payload = data.payload;
-                if (isModeratorRef.current && payload.user_id !== currentUserIdRef.current) {
+                if (latest.current.isModerator && payload.user_id !== latest.current.currentUserId) {
                   const author = payload.username ? ` от ${payload.username}` : "";
                   const prob = payload.problem_letter
                     ? ` (Задача ${payload.problem_letter})`
@@ -109,7 +103,7 @@ export const useContestEventsWebSocket = ({
 
               case "contest.clarification_answered": {
                 const payload = data.payload;
-                if (payload.user_id === currentUserIdRef.current) {
+                if (payload.user_id === latest.current.currentUserId) {
                   const prob = payload.problem_letter
                     ? ` (Задача ${payload.problem_letter})`
                     : "";
@@ -136,7 +130,7 @@ export const useContestEventsWebSocket = ({
         };
 
         ws.onclose = () => {
-          if (isUnmountedRef.current || wsRef.current !== ws) {
+          if (disposed || socket !== ws) {
             return;
           }
 
@@ -144,7 +138,7 @@ export const useContestEventsWebSocket = ({
           const delay = Math.min(1000 * Math.pow(1.5, attempts), 10000);
           reconnectAttemptsRef.current += 1;
 
-          reconnectTimeoutRef.current = setTimeout(() => {
+          reconnectTimeout = setTimeout(() => {
             connect();
           }, delay);
         };
@@ -164,19 +158,15 @@ export const useContestEventsWebSocket = ({
     connect();
 
     return () => {
-      isUnmountedRef.current = true;
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-      if (wsRef.current) {
-        const ws = wsRef.current;
-        wsRef.current = null;
-        ws.onopen = null;
-        ws.onmessage = null;
-        ws.onerror = null;
-        ws.onclose = null;
-        ws.close();
+      disposed = true;
+      clearTimeout(reconnectTimeout);
+      if (socket) {
+        socket.onopen = null;
+        socket.onmessage = null;
+        socket.onerror = null;
+        socket.onclose = null;
+        socket.close();
+        socket = null;
       }
     };
   }, [contestId, enabled]);

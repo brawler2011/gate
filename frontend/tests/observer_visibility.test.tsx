@@ -72,7 +72,7 @@ describe("Observer visibility in production components", () => {
     const fetch = spyOn(globalThis, "fetch").mockImplementation(Object.assign(async () => Response.json(snapshot), {preconnect: () => {}}));
     const view = renderWithProviders(<ContestMonitorTable contestId="contest" orgLogin="org" contestLogin="contest" initialScoreboard={snapshot} />);
     try {
-      expect(listener!.url).toContain("contestId=contest");
+      expect(listener!.url()).toContain("contestId=contest");
       const event = {data: JSON.stringify({event_type: "submissions.completed", payload: {id: "sub", contest_id: "contest", frozen: true}})} as MessageEvent;
       await act(async () => {
  listener!.onMessage(event);

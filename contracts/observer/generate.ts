@@ -41,7 +41,7 @@ const schemas = (Bun.YAML.parse(source) as {components: {schemas: Record<string,
 
 for (const [generator, directory, extension, options, closeSchemas] of [
   [go, 'backend/contracts/observer/v1', 'go', {packageName: 'observerv1'}, ['SubmissionsWsCloseCode', 'SubmissionsWsCloseReason']],
-  [ts, 'frontend/contracts/observer/v1', 'ts', {}, ['SubmissionsWsCloseCode']],
+  [ts, 'frontend/contracts/observer/v1', 'ts', {}, []],
 ] as const) {
   const models = await generator.generateCompleteModels(document, options);
   // Close frames are protocol metadata, rather than application message payloads.

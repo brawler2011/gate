@@ -77,7 +77,7 @@ it.each(['success', 'failure', 'guest'])('handles the initial submissions snapsh
       await waitFor(() => expect(view.queryByRole('heading', {name: 'A. Snapshot problem'})).toBeTruthy());
       if (outcome === 'success') {
         await waitFor(() => expect(view.queryByRole('cell', {name: '73'})).toBeTruthy());
-        expect(listener.mock.calls[0]?.[0].url).toContain('since=42');
+        expect(listener.mock.calls[0]?.[0].url()).toContain('since=42');
       }
     }
   } finally {
