@@ -16,7 +16,6 @@ interface SubmissionsListClientProps {
   initialSubmissions: SubmissionsListItemModel[];
   wsUrl: string;
   since?: number;
-  snapshotScope?: "all" | "mine";
   filter: {
     orgLogin?: string;
     contestLogin?: string;
@@ -39,7 +38,6 @@ export const SubmissionsListClient = ({
   initialSubmissions,
   wsUrl,
   since,
-  snapshotScope = "all",
   filter,
   pageSize,
   page,
@@ -52,7 +50,6 @@ export const SubmissionsListClient = ({
     wsUrl,
     since,
     initialSubmissions,
-    snapshotScope,
     filter,
     pageSize,
     enabled,

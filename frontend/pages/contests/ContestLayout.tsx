@@ -44,6 +44,8 @@ const ContestLayout = (): ReactNode => {
       }
     >
       <ContestEventsListener
+        orgLogin={slug}
+        contestLogin={contestLogin}
         contestId={response.contest.id}
         currentUserId={user?.id}
         isModerator={isModerator}

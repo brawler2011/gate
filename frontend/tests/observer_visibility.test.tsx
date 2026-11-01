@@ -7,7 +7,7 @@ import {ContestMonitorTable} from "@/components/contests/ContestMonitorTable";
 import {SubmissionDetailsContent} from "@/components/submissions/SubmissionDetailsContent";
 import {SubmissionsList} from "@/components/submissions/SubmissionsList";
 import {env} from "@/lib/env";
-import {submissionsWsManager} from "@/lib/submissionsWsManager";
+import * as submissionsConnection from "@/lib/submissionsConnection";
 
 import {act, renderWithProviders, setupDOMEnvironment, waitFor} from "./test-utils";
 
@@ -57,11 +57,10 @@ describe("Observer visibility in production components", () => {
   });
 
   it("uses snapshots for frozen completion replay and reconnect recovery", async () => {
-    let listener: Parameters<typeof submissionsWsManager.addListener>[0] | undefined;
-    const add = spyOn(submissionsWsManager, "addListener").mockImplementation((params) => {
-      listener = params; return 1;
+    let listener: Parameters<typeof submissionsConnection.connectSubmissions>[0] | undefined;
+    const add = spyOn(submissionsConnection, "connectSubmissions").mockImplementation((params) => {
+      listener = params; return () => {};
     });
-    const remove = spyOn(submissionsWsManager, "removeListener").mockImplementation(() => {});
     const wsUrl = spyOn(env, "getWebSocketUrl").mockReturnValue("ws://localhost/ws");
     const snapshot: ScoreboardResponseModel = {
       contest_id: "contest", contest_login: "contest", organization_login: "org", is_frozen: true, penalty_per_attempt: 20,
@@ -75,10 +74,10 @@ describe("Observer visibility in production components", () => {
       expect(listener!.url()).toContain("contestId=contest");
       const event = {data: JSON.stringify({event_type: "submissions.completed", payload: {id: "sub", contest_id: "contest", frozen: true}})} as MessageEvent;
       await act(async () => {
- listener!.onMessage(event);
+        listener!.onMessage(event);
       });
       await act(async () => {
- listener!.onMessage(event);
+        listener!.onMessage(event);
       });
       expect(view.container.textContent).toContain("?1");
       expect(view.container.textContent).not.toContain("?2");
@@ -86,15 +85,15 @@ describe("Observer visibility in production components", () => {
         problem_results: [{problem_id: "problem", solved: true, failed_attempts: 0, pending_attempts: 0}]}]};
       fetch.mockImplementation(Object.assign(async () => Response.json(recovered), {preconnect: () => {}}));
       await act(async () => {
- listener!.onStatusChange({phase: "connected"});
+        listener!.onStatusChange({phase: "connected"});
       });
       await waitFor(() => expect(view.container.textContent).not.toContain("?1"));
       expect(view.container.textContent).toContain("+");
       await act(async () => {
-        await listener!.onResyncRequired();
+        listener!.onStatusChange({phase: "connected"});
       });
     } finally {
-      view.unmount(); add.mockRestore(); remove.mockRestore(); wsUrl.mockRestore(); fetch.mockRestore();
+      view.unmount(); add.mockRestore(); wsUrl.mockRestore(); fetch.mockRestore();
     }
   });
 });

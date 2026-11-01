@@ -5,7 +5,7 @@ import React from "react";
 
 import {ContestMonitorTable} from "@/components/contests/ContestMonitorTable";
 import {env} from "@/lib/env";
-import {submissionsWsManager} from "@/lib/submissionsWsManager";
+import * as submissionsConnection from "@/lib/submissionsConnection";
 
 import {act, cleanup, fireEvent, renderWithProviders, setupDOMEnvironment, waitFor, within} from "./test-utils";
 
@@ -27,18 +27,16 @@ const result = (solved: boolean, failed_attempts: number, pending_attempts: numb
 
 describe("Production scoreboard freeze presentation", () => {
   let cleanupDOM: () => void;
-  let remove: ReturnType<typeof spyOn>;
   let add: ReturnType<typeof spyOn>;
   let wsUrl: ReturnType<typeof spyOn>;
   beforeAll(() => {
     cleanupDOM = setupDOMEnvironment();
-    add = spyOn(submissionsWsManager, "addListener").mockReturnValue(1);
-    remove = spyOn(submissionsWsManager, "removeListener").mockImplementation(() => {});
+    add = spyOn(submissionsConnection, "connectSubmissions").mockReturnValue(() => {});
     wsUrl = spyOn(env, "getWebSocketUrl").mockReturnValue("ws://localhost/ws");
   });
   afterEach(cleanup);
   afterAll(() => {
-    add.mockRestore(); remove.mockRestore(); wsUrl.mockRestore(); cleanupDOM();
+    add.mockRestore(); wsUrl.mockRestore(); cleanupDOM();
   });
 
   it.each([
@@ -76,7 +74,7 @@ describe("Production scoreboard freeze presentation", () => {
     expect(view.queryByRole("switch")).toBeNull();
   });
 
-  it.each(["completion", "reconnect", "resync"])("preserves the manager's selected snapshot through %s and both toggles", async (trigger) => {
+  it.each(["completion", "reconnect"])("preserves the manager's selected snapshot through %s and both toggles", async (trigger) => {
     const frozen = scoreboard([result(false, 0, 1), result(false, 1, 1)]);
     frozen.items = frozen.items.map((item) => ({...item, total_penalty: 0}));
     const live = {...frozen, is_frozen: false, items: [
@@ -100,7 +98,7 @@ describe("Production scoreboard freeze presentation", () => {
       ["1", "User 0", "0", "0", "?1"],
       ["2", "User 1", "0", "0", "-1 1?"],
     ];
-    const listener = () => add.mock.calls.at(-1)![0] as Parameters<typeof submissionsWsManager.addListener>[0];
+    const listener = () => add.mock.calls.at(-1)![0] as Parameters<typeof submissionsConnection.connectSubmissions>[0];
     const expectRequest = (unfrozen: boolean) => {
       expect(String(fetch.mock.calls.at(-1)![0])).toContain(
         `/organizations/org/contests/round/scoreboard?unfrozen=${unfrozen}`
@@ -128,10 +126,8 @@ describe("Production scoreboard freeze presentation", () => {
           listener().onMessage({data: JSON.stringify({event_type: "submissions.completed", payload: {
             id: "submission", contest_id: "contest",
           }})} as MessageEvent);
-        } else if (trigger === "reconnect") {
-          listener().onStatusChange({phase: "connected"});
         } else {
-          await listener().onResyncRequired();
+          listener().onStatusChange({phase: "connected"});
         }
       });
       await waitFor(() => expect(rows()).toEqual([

@@ -5,7 +5,7 @@ import {ContestMessagesClient} from "@/components/contests/messages/ContestMessa
 import {api, unwrap} from "@/lib/api";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
-import type {ContestClarificationModel} from "@/contracts/core/v1/schema";
+import type {ListContestClarificationsResponseModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
@@ -52,7 +52,7 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
     },
   );
 
-  let initialClarifications: ContestClarificationModel[] = [];
+  let initialClarifications: ListContestClarificationsResponseModel | undefined;
   if (user) {
     const {data: clarificationsRes} = await api.GET(
       "/organizations/{org_login}/contests/{contest_login}/clarifications",
@@ -63,7 +63,7 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
         },
       },
     );
-    initialClarifications = clarificationsRes?.clarifications || [];
+    initialClarifications = clarificationsRes;
   }
   return {slug, contestLogin, contestResponse, user, isModerator, announcementsRes, initialClarifications};
 }) satisfies LoaderFunction;
@@ -72,7 +72,6 @@ const Page = (): ReactNode => {
   const data = useLoaderData<typeof loader>();
   const {slug, contestLogin, contestResponse, user, isModerator, announcementsRes, initialClarifications} =
     data;
-  const initialAnnouncements = announcementsRes?.announcements || [];
   const problems = contestResponse.problems || [];
   return (
     <Container size="lg" pb={{base: "md", sm: "lg", md: "xl"}} pt="md">
@@ -84,7 +83,7 @@ const Page = (): ReactNode => {
         user={user}
         isModerator={isModerator}
         problems={problems}
-        initialAnnouncements={initialAnnouncements}
+        initialAnnouncements={announcementsRes}
         initialClarifications={initialClarifications}
       />
     </Container>

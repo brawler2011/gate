@@ -4,7 +4,7 @@ import {afterEach, expect, it, spyOn} from 'bun:test';
 
 import {SessionProvider} from '@/contexts/SessionContext';
 import {env} from '@/lib/env';
-import {submissionsWsManager} from '@/lib/submissionsWsManager';
+import * as submissionsConnection from '@/lib/submissionsConnection';
 import Page from '@/pages/contests/task/TaskPage';
 
 import {act, cleanup, renderWithProviders, setupDOMEnvironment, waitFor} from './test-utils';
@@ -21,9 +21,7 @@ afterEach(cleanup);
 it.each(['success', 'failure', 'guest'])('handles the initial submissions snapshot: %s', async (outcome) => {
   const closeDOM = setupDOMEnvironment();
   const wsUrl = spyOn(env, 'getWebSocketUrl').mockReturnValue('ws://localhost/ws');
-  const listener = spyOn(submissionsWsManager, 'addListener').mockReturnValue(1);
-  const updateListener = spyOn(submissionsWsManager, 'updateListener').mockImplementation(() => {});
-  const removeListener = spyOn(submissionsWsManager, 'removeListener').mockImplementation(() => {});
+  const listener = spyOn(submissionsConnection, 'connectSubmissions').mockReturnValue(() => {});
   let finishSubmissions!: (response: Response) => void;
   const pendingSubmissions = new Promise<Response>((resolve) => {
     finishSubmissions = resolve;
@@ -85,7 +83,5 @@ it.each(['success', 'failure', 'guest'])('handles the initial submissions snapsh
     fetch.mockRestore();
     wsUrl.mockRestore();
     listener.mockRestore();
-    updateListener.mockRestore();
-    removeListener.mockRestore();
   }
 });

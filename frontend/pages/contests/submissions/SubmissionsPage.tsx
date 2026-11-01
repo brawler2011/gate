@@ -146,7 +146,6 @@ const Page = (): ReactNode => {
               initialSubmissions={submissionsData.submissions}
               wsUrl={wsBaseUrl + "/submissions"}
               since={submissionsData.since}
-              snapshotScope="all"
               filter={{
                 orgLogin: slug,
                 contestLogin,

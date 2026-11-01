@@ -1,17 +1,17 @@
 import {Badge, Box, Group, Switch, Table, Text, TextInput, Title, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconSearch} from "@tabler/icons-react";
-import React, {useEffect, useState, useMemo} from "react";
+import React, {useEffect, useRef, useState, useMemo} from "react";
 import {Link} from "react-router-dom";
 
 import {api} from "@/lib/api";
 import {env} from "@/lib/env";
 import {numberToLetters} from "@/lib/lib";
-import {submissionsWsManager} from "@/lib/submissionsWsManager";
+import {connectSubmissions} from "@/lib/submissionsConnection";
 
 import classes from "./ContestMonitorTable.module.css";
 
-import type {ScoreboardResponseModel, ScoreboardItemModel, ScoreboardProblemResultModel, ScoreboardProblemHeaderModel} from "@/contracts/core/v1/schema";
+import type {ScoreboardResponseModel, ScoreboardProblemResultModel} from "@/contracts/core/v1/schema";
 import type SubmissionsMessage from "@/contracts/observer/v1/SubmissionsMessage";
 
 interface ContestMonitorTableProps {
@@ -41,97 +41,43 @@ export const ContestMonitorTable = ({
   isManager = false,
 }: ContestMonitorTableProps): React.ReactNode => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [items, setItems] = useState<ScoreboardItemModel[]>(initialScoreboard.items || []);
-  const [problems] = useState<ScoreboardProblemHeaderModel[]>(initialScoreboard.problems || []);
-  const [isFrozen, setIsFrozen] = useState<boolean>(initialScoreboard.is_frozen ?? false);
-  const [showRealMonitor, setShowRealMonitor] = useState<boolean>(false);
-  const [loadingScoreboard, setLoadingScoreboard] = useState<boolean>(false);
-
-  const handleToggleRealMonitor = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.currentTarget.checked;
-    setShowRealMonitor(checked);
-    setLoadingScoreboard(true);
-    const {data: res, error: err} = await api.GET(
-      "/organizations/{org_login}/contests/{contest_login}/scoreboard",
-      {
-        params: {
-          path: {org_login: orgLogin, contest_login: contestLogin},
-          query: {unfrozen: checked},
-        },
-      },
-    );
-    setLoadingScoreboard(false);
-    if (err) {
-      notifications.show({
-        title: "Ошибка",
-        message: err.message || "Не удалось загрузить таблицу",
-        color: "red",
-      });
-      return;
-    }
-    if (res) {
-      setItems(res.items || []);
-      if (!checked) {
-        setIsFrozen(res.is_frozen ?? false);
-      }
-    }
-  };
+  const [showRealMonitor, setShowRealMonitor] = useState(false);
+  const scoreboard = api.useQuery('get', '/organizations/{org_login}/contests/{contest_login}/scoreboard', {
+    params: {
+      path: {org_login: orgLogin, contest_login: contestLogin},
+      query: {unfrozen: showRealMonitor},
+    },
+  }, {initialData: showRealMonitor ? undefined : initialScoreboard, refetchOnMount: false});
+  const {items, problems, is_frozen: isFrozen} = scoreboard.data ?? initialScoreboard;
+  const refresh = useRef(scoreboard.refetch);
+  useEffect(() => {
+    refresh.current = scoreboard.refetch;
+  }, [scoreboard.refetch]);
 
   useEffect(() => {
-    let active = true;
-    let requestVersion = 0;
-    const refresh = async () => {
-      const version = ++requestVersion;
-      const {data: res, error: err} = await api.GET(
-        "/organizations/{org_login}/contests/{contest_login}/scoreboard",
-        {
-          params: {
-            path: {org_login: orgLogin, contest_login: contestLogin},
-            query: {unfrozen: showRealMonitor},
-          },
-        },
-      );
-      if (err) {
-        throw err;
-      }
-      if (active && version === requestVersion && res) {
-        setItems(res.items || []);
-        setIsFrozen(res.is_frozen ?? false);
-      }
-    };
-    const handleMessage = (event: MessageEvent) => {
+    if (scoreboard.error) {
+      notifications.show({title: "Ошибка", message: "Не удалось загрузить таблицу", color: "red"});
+    }
+  }, [scoreboard.error]);
+
+  useEffect(() => connectSubmissions({
+    url: () => `${env.getWebSocketUrl()}/submissions?contestId=${contestId}`,
+    onMessage: (event: MessageEvent) => {
       try {
         const msg: SubmissionsMessage = JSON.parse(event.data);
-        if (msg.event_type !== "submissions.completed") {
-          return;
-        }
-        const payload = msg.payload;
-        if (payload.contest_id === contestId) {
-          void refresh().catch(() => {});
+        if (msg.event_type === "submissions.completed" && msg.payload.contest_id === contestId) {
+          void refresh.current();
         }
       } catch {
         // ignore parse error
       }
-    };
-    const listenerId = submissionsWsManager.addListener({
-      key: `monitor-${contestId}-${showRealMonitor}`,
-      url: () => `${env.getWebSocketUrl()}/submissions?contestId=${contestId}`,
-      enabled: true,
-      onMessage: handleMessage,
-      onConnectionError: () => {},
-      onFatalConnectionError: () => {},
-      onStatusChange: (status) => {
-        if (status.phase === 'connected') {
-          void refresh().catch(() => {});
-        }
-      },
-      onResyncRequired: refresh,
-    });
-    return () => {
-      active = false;
-      submissionsWsManager.removeListener(listenerId);
-    };
-  }, [contestId, orgLogin, contestLogin, showRealMonitor]);
+    },
+    onStatusChange: status => {
+      if (status.phase === 'connected') {
+        void refresh.current();
+      }
+    },
+  }), [contestId, orgLogin, contestLogin]);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -183,8 +129,8 @@ export const ContestMonitorTable = ({
               size="sm"
               label={showRealMonitor ? "Реальный монитор" : "Замороженный вид"}
               checked={showRealMonitor}
-              onChange={handleToggleRealMonitor}
-              disabled={loadingScoreboard}
+              onChange={event => setShowRealMonitor(event.currentTarget.checked)}
+              disabled={scoreboard.isFetching}
             />
           )}
           <TextInput

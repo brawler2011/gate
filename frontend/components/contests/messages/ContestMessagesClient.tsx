@@ -3,11 +3,10 @@
 import {ActionIcon, Badge, Button, Card, Center, Group, Paper, Select, Stack, Tabs, Text, Title, Tooltip} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconCheck, IconClock, IconHelpCircle, IconMessagePlus, IconPlus, IconSpeakerphone, IconTrash} from "@tabler/icons-react";
-import {useCallback, useEffect, useState, type ReactNode} from "react";
+import {useState, type ReactNode} from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import {useContestEventsWebSocket} from "@/hooks/useContestEventsWebSocket";
 import {api} from "@/lib/api";
 
 import {AnswerClarificationModal} from "./AnswerClarificationModal";
@@ -15,7 +14,7 @@ import {AskClarificationModal} from "./AskClarificationModal";
 import classes from "./ContestMessagesClient.module.css";
 import {CreateAnnouncementModal} from "./CreateAnnouncementModal";
 
-import type {ContestAnnouncementModel, ContestClarificationModel, ContestModel, ContestProblemListItemModel, UserModel} from "@/contracts/core/v1/schema";
+import type {ContestAnnouncementModel, ContestClarificationModel, ListContestAnnouncementsResponseModel, ListContestClarificationsResponseModel, ContestModel, ContestProblemListItemModel, UserModel} from "@/contracts/core/v1/schema";
 
 export interface ContestMessagesClientProps {
   contest: ContestModel;
@@ -24,8 +23,8 @@ export interface ContestMessagesClientProps {
   user: UserModel | null;
   isModerator: boolean;
   problems?: ContestProblemListItemModel[];
-  initialAnnouncements?: ContestAnnouncementModel[];
-  initialClarifications?: ContestClarificationModel[];
+  initialAnnouncements?: ListContestAnnouncementsResponseModel;
+  initialClarifications?: ListContestClarificationsResponseModel;
 }
 
 export const ContestMessagesClient = ({
@@ -35,18 +34,10 @@ export const ContestMessagesClient = ({
   user,
   isModerator,
   problems = [],
-  initialAnnouncements = [],
-  initialClarifications = [],
+  initialAnnouncements,
+  initialClarifications,
 }: ContestMessagesClientProps): ReactNode => {
   const [activeTab, setActiveTab] = useState<string | null>("announcements");
-
-  // Announcements state
-  const [announcements, setAnnouncements] = useState<ContestAnnouncementModel[]>(initialAnnouncements);
-  const [announcementsLoading, setAnnouncementsLoading] = useState(false);
-
-  // Clarifications state
-  const [clarifications, setClarifications] = useState<ContestClarificationModel[]>(initialClarifications);
-  const [clarificationsLoading, setClarificationsLoading] = useState(false);
 
   // Modals
   const [createAnnOpened, setCreateAnnOpened] = useState(false);
@@ -57,64 +48,26 @@ export const ContestMessagesClient = ({
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [problemFilter, setProblemFilter] = useState<string>("");
 
-  const refreshAnnouncements = useCallback(async () => {
-    setAnnouncementsLoading(true);
-    const {data: res, error: err} = await api.GET(
-      "/organizations/{org_login}/contests/{contest_login}/announcements",
-      {
-        params: {
-          path: {org_login: orgLogin, contest_login: contestLogin},
-          query: {page: 1, pageSize: 100},
-        },
-      },
-    );
-    setAnnouncementsLoading(false);
-    if (!err && res) {
-      setAnnouncements(res.announcements);
-    }
-  }, [orgLogin, contestLogin]);
-
-  const refreshClarifications = useCallback(async () => {
-    if (!user?.id) {
-      return;
-    }
-    setClarificationsLoading(true);
-    const {data: res, error: err} = await api.GET(
-      "/organizations/{org_login}/contests/{contest_login}/clarifications",
-      {
-        params: {
-          path: {org_login: orgLogin, contest_login: contestLogin},
-          query: {
-            problem_id: problemFilter || undefined,
-            status: statusFilter || undefined,
-            page: 1,
-            pageSize: 100,
-          },
-        },
-      },
-    );
-    setClarificationsLoading(false);
-    if (!err && res) {
-      setClarifications(res.clarifications);
-    }
-  }, [orgLogin, contestLogin, user?.id, statusFilter, problemFilter]);
-
-  // Refetch clarifications when filters change
-  useEffect(() => {
-    refreshClarifications();
-  }, [refreshClarifications]);
-
-  // Real-time WebSocket listener
-  useContestEventsWebSocket({
-    contestId: contest.id,
-    enabled: !!user?.id,
-    currentUserId: user?.id,
-    isModerator,
-    onEvent: () => {
-      refreshAnnouncements();
-      refreshClarifications();
-    },
+  const path = {org_login: orgLogin, contest_login: contestLogin};
+  const announcementsQuery = api.useQuery('get', '/organizations/{org_login}/contests/{contest_login}/announcements', {
+    params: {path, query: {page: 1, pageSize: 100}},
+  }, {initialData: initialAnnouncements, refetchOnMount: false});
+  const clarificationsQuery = api.useQuery('get', '/organizations/{org_login}/contests/{contest_login}/clarifications', {
+    params: {path, query: {
+      problem_id: problemFilter || undefined, status: statusFilter || undefined, page: 1, pageSize: 100,
+    }},
+  }, {
+    enabled: Boolean(user?.id),
+    initialData: !problemFilter && !statusFilter
+      ? initialClarifications : undefined,
+    refetchOnMount: false,
   });
+  const announcements = announcementsQuery.data?.announcements ?? [];
+  const clarifications = clarificationsQuery.data?.clarifications ?? [];
+  const announcementsLoading = announcementsQuery.isFetching;
+  const clarificationsLoading = clarificationsQuery.isFetching;
+  const refreshAnnouncements = () => announcementsQuery.refetch();
+  const refreshClarifications = () => clarificationsQuery.refetch();
 
   const pendingClarificationsCount = clarifications.filter(
     (c: ContestClarificationModel) => c.status === "pending",

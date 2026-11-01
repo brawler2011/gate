@@ -19,7 +19,7 @@ const submission = (id: string): SubmissionsListItemModel => ({
 });
 const options = (): UseSubmissionsWebSocketOptions => ({
   wsUrl: "ws://localhost/ws/submissions", since: 1, initialSubmissions: [submission("initial")],
-  snapshotScope: "all", pageSize: 2, enabled: true,
+  pageSize: 2, enabled: true,
   filter: {orgLogin: "school", contestLogin: "round", contestId: "contest", userId: "user", problemId: "problem"},
 });
 const message = (socket: TestWebSocket, type: string, payload: object) => {
@@ -69,6 +69,24 @@ describe("Submission WebSocket hook", () => {
     return socket;
   };
 
+  it("keeps independent submission views subscribed at the same time", async () => {
+    const first = renderHook(useSubmissionsWebSocket, {initialProps: options()});
+    const firstSocket = await open();
+    const other = options();
+    other.filter = {...other.filter, contestId: "other", contestLogin: "other"};
+    const second = renderHook(useSubmissionsWebSocket, {initialProps: other});
+    const secondSocket = await open();
+    expect(firstSocket.readyState).toBe(TestWebSocket.OPEN);
+    await act(async () => {
+      message(firstSocket, "created", submission("first-live"));
+      message(secondSocket, "created", {...submission("second-live"), contest_id: "other"});
+    });
+    expect(first.result.current.submissions[0].id).toBe("first-live");
+    expect(second.result.current.submissions[0].id).toBe("second-live");
+    second.unmount();
+    expect(firstSocket.readyState).toBe(TestWebSocket.OPEN);
+  });
+
   it("loads the filtered snapshot and connects with its replay cursor", async () => {
     const {result} = renderHook(useSubmissionsWebSocket, {initialProps: options()});
     const socket = await open();
@@ -80,7 +98,6 @@ describe("Submission WebSocket hook", () => {
     const stream = new URL(socket.url);
     expect(Object.fromEntries(stream.searchParams)).toEqual({since: "7", sortOrder: "desc", contestId: "contest", userId: "user"});
     expect(result.current.submissions.map(item => item.id)).toEqual(["initial"]);
-    expect(result.current.wsPhase).toBe("connected");
     expect(show).not.toHaveBeenCalled();
   });
 
@@ -94,6 +111,7 @@ describe("Submission WebSocket hook", () => {
     });
     expect(result.current.submissions.map(item => item.id)).toEqual(["second", "third"]);
     expect(result.current.submissions[0].isNew).toBe(true);
+    expect(result.current.submissions[0].contest_login).toBe("round");
     expect(result.current.highlightedIds.has("second")).toBe(true);
     await advance(2000);
     expect(result.current.highlightedIds.size).toBe(0);
@@ -115,7 +133,7 @@ describe("Submission WebSocket hook", () => {
       message(socket, "completed", {...submission("initial"), state: 0, score: 0, failed_test: null});
     });
     expect(result.current.submissions.map(item => item.id)).toEqual(["newer", "initial"]);
-    expect(result.current.submissions[1]).toMatchObject({state: 0, score: 0, failed_test: null, isUpdated: true});
+    expect(result.current.submissions[1]).toMatchObject({state: 0, score: 0, failed_test: null});
     expect(result.current.submissions[1].progress).toBeUndefined();
   });
 
@@ -132,6 +150,22 @@ describe("Submission WebSocket hook", () => {
     expect(result.current.submissions[0].frozen).toBe(true);
     expect(result.current.submissions[0].score).toBeUndefined();
     expect(result.current.submissions[0].state).toBeUndefined();
+  });
+
+  it("preserves existing metadata when a completion omits it and does not fabricate missing fields", async () => {
+    const {result} = renderHook(useSubmissionsWebSocket, {initialProps: options()});
+    const socket = await open();
+    await act(async () => message(socket, "completed", {
+      id: "initial", user_id: "user", contest_id: "contest", problem_id: "problem", state: 200, score: 42,
+    }));
+    expect(result.current.submissions[0]).toMatchObject({username: "Alice", problem_title: "A+B",
+      contest_login: "round", organization_login: "school", score: 42});
+    await act(async () => message(socket, "completed", {
+      id: "missing", user_id: "user", contest_id: "contest", problem_id: "problem", state: 200,
+    }));
+    expect(result.current.submissions[0].username).toBeUndefined();
+    expect(result.current.submissions[0].language).toBeUndefined();
+    expect(result.current.submissions[0].created_at).toBeUndefined();
   });
 
   it("ignores malformed messages and events outside the current filter", async () => {
@@ -177,14 +211,12 @@ describe("Submission WebSocket hook", () => {
     expect(show).not.toHaveBeenCalled();
     await advance(1);
     expect(show).toHaveBeenLastCalledWith(expect.objectContaining({color: "orange", autoClose: false}));
-    expect(result.current.reconnectAttempt).toBe(1);
     fetch.mockImplementation(Object.assign(async () => Response.json({submissions: [submission("recovered")], since: 9}),
       {preconnect: () => {}}));
     await advance(1600);
     expect(result.current.submissions[0].id).toBe("recovered");
     expect(TestWebSocket.instances.at(-1)!.url).toContain("since=9");
     await act(async () => TestWebSocket.instances.at(-1)!.open());
-    expect(result.current.displayWsPhase).toBe("idle");
     expect(update).toHaveBeenLastCalledWith(expect.objectContaining({color: "green", autoClose: 2500}));
   });
 
@@ -198,9 +230,6 @@ describe("Submission WebSocket hook", () => {
       await advance(delay);
     }
     expect(result.current.submissions[0].id).toBe("initial");
-    expect(result.current.connectionError).toBe(true);
-    expect(result.current.fatalConnectionError).toBe(true);
-    expect(result.current.wsPhase).toBe("fatal");
     expect(update).toHaveBeenLastCalledWith(expect.objectContaining({color: "red", autoClose: false}));
   });
 
@@ -216,17 +245,6 @@ describe("Submission WebSocket hook", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(TestWebSocket.instances).toHaveLength(1);
     expect(hide).toHaveBeenCalled();
-  });
-
-  it("requires a user for the personal snapshot", async () => {
-    const props = options();
-    const {result} = renderHook(useSubmissionsWebSocket, {initialProps: {
-      ...props, snapshotScope: "mine", filter: {...props.filter, userId: undefined},
-    }});
-    await act(flushMicrotasks);
-    expect(fetch).not.toHaveBeenCalled();
-    expect(TestWebSocket.instances).toHaveLength(0);
-    expect(result.current.connectionError).toBe(true);
   });
 
   it("keeps one live stream through StrictMode replay and closes it on unmount", async () => {

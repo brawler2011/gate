@@ -126,11 +126,11 @@ const SubmissionRow = ({
             <Text>{TimeBeautify(submission.created_at)}</Text>
           </TableTd>
           <TableTd ta="center">
-            <Link to={`/@${submission.username}`} style={{color: 'inherit'}}>
-              <Text span td="underline">
-                {submission.username}
-              </Text>
-            </Link>
+            {submission.username && (
+              <Link to={`/@${submission.username}`} style={{color: 'inherit'}}>
+                <Text span td="underline">{submission.username}</Text>
+              </Link>
+            )}
           </TableTd>
           <TableTd ta="center">
             <Link

@@ -96,7 +96,6 @@ export const RecentSubmissionsTable = ({
     wsUrl,
     since,
     initialSubmissions,
-    snapshotScope: "mine",
     filter: {
       orgLogin,
       contestLogin,
@@ -152,7 +151,7 @@ export const RecentSubmissionsTable = ({
                 </Table.Td>
                 <Table.Td ta="center" className={styles.statusColumn}>
                   <StatusCell
-                    submission={submission as SubmissionWithProgress}
+                    submission={submission}
                     onOpenDetails={() => setSelectedSubmissionId(submission.id)}
                   />
                 </Table.Td>

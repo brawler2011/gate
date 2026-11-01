@@ -1,10 +1,10 @@
 import {describe, expect, it, jest, mock} from "bun:test";
 
-import {submissionsWsManager} from "@/lib/submissionsWsManager";
+import {connectSubmissions} from "@/lib/submissionsConnection";
 
 import {flushMicrotasks, TestWebSocket as TestSocket} from "./websocket-test-utils";
 
-describe("Production WebSocket manager reconnect backoff", () => {
+describe("Submission connection retry backoff", () => {
   for (const recover of [true, false]) {
     it(recover ? "retries failed snapshot and reconnects" : "reports fatal after bounded snapshot retries", async () => {
       const originalWebSocket = globalThis.WebSocket;
@@ -19,10 +19,9 @@ describe("Production WebSocket manager reconnect backoff", () => {
         }
       });
       const status = mock(() => {});
-      const fatal = mock(() => {});
-      const listenerId = submissionsWsManager.addListener({
-        key: `retry-${recover}`, url: () => "ws://localhost/ws/submissions?contestId=contest", enabled: true,
-        onMessage: () => {}, onConnectionError: () => {}, onFatalConnectionError: fatal,
+      const disconnect = connectSubmissions({
+        url: () => "ws://localhost/ws/submissions?contestId=contest",
+        onMessage: () => {},
         onStatusChange: status, onResyncRequired: resync,
       });
       try {
@@ -41,17 +40,15 @@ describe("Production WebSocket manager reconnect backoff", () => {
           expect(TestSocket.instances).toHaveLength(2);
           TestSocket.instances[1].open();
           expect(status).toHaveBeenLastCalledWith({phase: "connected"});
-          expect(fatal).toHaveBeenLastCalledWith(false);
         } else {
           jest.advanceTimersByTime(8000);
           await flushMicrotasks();
           expect(resync).toHaveBeenCalledTimes(4);
           expect(TestSocket.instances).toHaveLength(1);
-          expect(fatal).toHaveBeenLastCalledWith(true);
           expect(status).toHaveBeenLastCalledWith({phase: "fatal", attempt: 3, maxAttempts: 3});
         }
       } finally {
-        submissionsWsManager.removeListener(listenerId);
+        disconnect();
         jest.useRealTimers();
         globalThis.WebSocket = originalWebSocket;
       }
