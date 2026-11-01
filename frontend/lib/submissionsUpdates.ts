@@ -43,9 +43,7 @@ export const applySubmissionEvent = (data: LiveSubmissions | undefined, event: S
   if (event.event_type !== 'submissions.created' && event.event_type !== 'submissions.completed') {
     return data;
   }
-  if (selection.page !== 1 || selection.sortOrder !== 'desc') {
-    return data;
-  }
+  const live = selection.page === 1 && selection.sortOrder === 'desc';
   const p = event.payload;
   const isNew = event.event_type === 'submissions.created' && event.payload.is_new;
   const before = existing !== undefined
@@ -67,10 +65,12 @@ export const applySubmissionEvent = (data: LiveSubmissions | undefined, event: S
   }
   const replacement = after && completeRow(row) ? [row] : [];
   const rows = data.submissions.flatMap(s => s.id === p.id ? replacement : [s]);
-  if (!existing) {
+  if (!existing && live) {
     rows.unshift(...replacement);
   }
-  rows.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+  if (live) {
+    rows.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+  }
   return {...data, since: event.sequence, submissions: rows.slice(0, selection.pageSize),
     pagination: {...data.pagination, total: Math.max(0, data.pagination.total + Number(after) - Number(before))}};
 };

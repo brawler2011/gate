@@ -291,6 +291,19 @@ describe('Query-owned submission lists', () => {
     expect(fetch).toHaveBeenCalledTimes(calls);
   });
 
+  it.each([{page: 2, sortOrder: 'desc'}, {page: 1, sortOrder: 'asc'}] as const)(
+    'updates visible verdicts on page $page sorted $sortOrder without adding rows or HTTP', async (paging) => {
+      const {result} = renderHook(useSubmissions, {initialProps: {...selection(), ...paging}, wrapper: Wrapper});
+      const socket = await open(); const calls = fetch.mock.calls.length;
+      await act(async () => {
+        message(socket, 'completed', {...submission(), score: 42});
+        message(socket, 'created', submission('new'));
+      });
+      expect(result.current.submissions.map(s => s.id)).toEqual(['initial']);
+      expect(result.current.submissions[0].score).toBe(42);
+      expect(fetch).toHaveBeenCalledTimes(calls);
+    });
+
   it('cancels a request started before connection instead of restoring its stale result', async () => {
     let finish!: (response: Response) => void;
     fetch.mockImplementationOnce(Object.assign(() => new Promise<Response>(resolve => {
