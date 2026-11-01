@@ -83,7 +83,7 @@ func TestIntegrationSandbox(t *testing.T) {
 	defer client.Close()
 
 	// Load languages config
-	cfg, err := LoadConfig("../../languages.yaml")
+	cfg, err := LoadConfig("../../../languages.yaml")
 	if err != nil {
 		t.Fatalf("Failed to load languages config: %v", err)
 	}

@@ -194,7 +194,7 @@ func runApp(envFile string) error {
 	defer sandboxClient.Close()
 	logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudgeGRPCAddr))
 
-	sandboxCfg, err := sandbox.LoadConfig("backend/languages.yaml")
+	sandboxCfg, err := sandbox.LoadConfig("languages.yaml")
 	if err != nil {
 		return fmt.Errorf("failed to load sandbox config: %w", err)
 	}
