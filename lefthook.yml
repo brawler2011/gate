@@ -3,12 +3,12 @@ pre-commit:
   commands:
     backend-lint:
       glob: "backend/**/*.{go,sql}"
-      run: task be:lint
+      run: task lint:be
     frontend-lint:
       glob: "frontend/**/*.{ts,tsx,js,jsx}"
-      run: task fe:lint
+      run: task lint:fe
 
 commit-msg:
   commands:
     validate-commit-msg:
-      run: task commit:validate -- --edit "{1}"
+      run: task validate:commit -- --edit "{1}"
