@@ -12,15 +12,15 @@ body:
   - type: textarea
     id: outcome
     attributes:
-      label: Proposed outcome
+      label: Desired outcome
       description: Describe the desired observable result.
     validations:
       required: true
   - type: textarea
-    id: alternatives
+    id: acceptance
     attributes:
-      label: Alternatives
-  - type: textarea
-    id: context
-    attributes:
-      label: Additional context
+      label: Acceptance criteria
+      description: Use a Markdown checklist of observable, testable outcomes.
+      placeholder: "- [ ] A specific result is verified by a named check or scenario."
+    validations:
+      required: true

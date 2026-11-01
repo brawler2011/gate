@@ -3,17 +3,10 @@ description: Report incorrect behavior in Gate
 labels: [bug]
 body:
   - type: textarea
-    id: summary
-    attributes:
-      label: Summary
-      description: Describe the problem and its impact.
-    validations:
-      required: true
-  - type: textarea
     id: reproduction
     attributes:
       label: Steps to reproduce
-      description: List the steps, or describe the observed scenario if exact steps are not yet known.
+      description: List the steps or observed scenario. Include version and environment details only when relevant.
     validations:
       required: true
   - type: textarea
@@ -26,15 +19,6 @@ body:
     id: actual
     attributes:
       label: Actual behavior
+      description: Describe what happened. Include logs and links only when they help explain the problem; remove secrets.
     validations:
       required: true
-  - type: textarea
-    id: environment
-    attributes:
-      label: Environment
-      description: Version or commit, browser, operating system, and deployment details if relevant.
-  - type: textarea
-    id: context
-    attributes:
-      label: Additional context
-      description: Relevant logs, screenshots, or references. Remove secrets before submitting.
