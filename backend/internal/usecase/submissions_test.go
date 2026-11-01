@@ -39,8 +39,8 @@ func (r *diagnosticSubmissionsRepo) CreateSubmission(context.Context, *models.Su
 func (r *diagnosticSubmissionsRepo) GetSubmission(context.Context, uuid.UUID) (models.Submission, error) {
 	return r.submission, nil
 }
-func (r *diagnosticSubmissionsRepo) ResetSubmissionsState(context.Context, models.RejudgeFilter) ([]uuid.UUID, error) {
-	return []uuid.UUID{r.submission.ID}, nil
+func (r *diagnosticSubmissionsRepo) ResetSubmissionsState(context.Context, models.RejudgeFilter) ([]models.SubmissionReset, error) {
+	return []models.SubmissionReset{{ID: r.submission.ID, PreviousState: r.submission.State}}, nil
 }
 
 type diagnosticOutboxRepo struct {

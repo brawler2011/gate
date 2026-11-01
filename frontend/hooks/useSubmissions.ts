@@ -11,7 +11,7 @@ export const useSubmissions = (selection: SubmissionsSelection): {
   data?: ListSubmissionsResponseModel; error: unknown;
   submissions: SubmissionWithProgress[]; highlightedIds: Set<string>;
 } => {
-  const query = api.useQuery('get', SUBMISSIONS_PATH, submissionsParams(selection), {meta: {state: selection.state}});
+  const query = api.useQuery('get', SUBMISSIONS_PATH, submissionsParams(selection), {meta: {selection}});
   const highlights = useContext(SubmissionsHighlights);
   const submissions: SubmissionWithProgress[] = (query.data?.submissions ?? [])
     .map(s => ({...s, isNew: highlights.get(s.id)}));

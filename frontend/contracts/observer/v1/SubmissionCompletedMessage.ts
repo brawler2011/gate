@@ -2,6 +2,7 @@
 import SubmissionCompletedMessageEventType from './SubmissionCompletedMessageEventType';
 import MessageSubmissionCompleted from './MessageSubmissionCompleted';
 interface SubmissionCompletedMessage {
+  'sequence': number;
   'event_type': SubmissionCompletedMessageEventType.SUBMISSIONS_DOT_COMPLETED;
   'payload': MessageSubmissionCompleted;
 }

@@ -111,9 +111,11 @@ func SubmissionsEnvelopeDTO(eventType string, event any) ([]byte, error) {
 
 func SubmissionCreatedDTO(e models.SubmissionCreatedEvent) observerv1.MessageSubmissionCreated {
 	return observerv1.MessageSubmissionCreated{
+		IsNew: e.IsNew, PreviousState: e.PreviousState,
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
 		CreatedAt:    &e.CreatedAt,
+		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
 		Language:     int32PtrIfNonZero(e.Language),
 		Position:     int32Ptr(e.Position),
@@ -131,6 +133,7 @@ func SubmissionQueuedDTO(e models.SubmissionQueuedEvent) observerv1.MessageSubmi
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
 		CreatedAt:    &e.CreatedAt,
+		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
 		Language:     int32PtrIfNonZero(e.Language),
 		Position:     int32Ptr(e.Position),
@@ -146,6 +149,7 @@ func SubmissionCompilingStartedDTO(e models.SubmissionCompilingStartedEvent) obs
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
 		CreatedAt:    &e.CreatedAt,
+		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
 		Language:     int32PtrIfNonZero(e.Language),
 		Position:     int32Ptr(e.Position),
@@ -161,6 +165,7 @@ func SubmissionTestingStartedDTO(e models.SubmissionTestingStartedEvent) observe
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
 		CreatedAt:    &e.CreatedAt,
+		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
 		Language:     int32PtrIfNonZero(e.Language),
 		Position:     int32Ptr(e.Position),
@@ -176,6 +181,7 @@ func SubmissionTestStartedDTO(e models.SubmissionTestStartedEvent) observerv1.Me
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
 		CreatedAt:    &e.CreatedAt,
+		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
 		Language:     int32PtrIfNonZero(e.Language),
 		Number:       e.Number,
@@ -188,23 +194,26 @@ func SubmissionTestStartedDTO(e models.SubmissionTestStartedEvent) observerv1.Me
 }
 
 func SubmissionCompletedDTO(e models.SubmissionCompletedEvent) observerv1.MessageSubmissionCompleted {
+	previous := int32(models.Saved)
 	return observerv1.MessageSubmissionCompleted{
-		ContestId:    e.ContestId,
-		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
-		CreatedAt:    &e.CreatedAt,
-		Id:           e.Id,
-		Language:     int32PtrIfNonZero(e.Language),
-		MemoryStat:   &e.MemoryStat,
-		FailedTest:   e.FailedTest,
-		Penalty:      &e.Penalty,
-		Position:     int32Ptr(e.Position),
-		ProblemId:    e.ProblemId,
-		ProblemTitle: strPtrIfNotEmpty(e.ProblemTitle),
-		Score:        &e.Score,
-		State:        &e.State,
-		TimeStat:     &e.TimeStat,
-		UserId:       e.UserId,
-		Username:     strPtrIfNotEmpty(e.Username),
+		PreviousState: &previous,
+		UpdatedAt:     &e.UpdatedAt,
+		ContestId:     e.ContestId,
+		ContestTitle:  strPtrIfNotEmpty(e.ContestTitle),
+		CreatedAt:     &e.CreatedAt,
+		Id:            e.Id,
+		Language:      int32PtrIfNonZero(e.Language),
+		MemoryStat:    &e.MemoryStat,
+		FailedTest:    e.FailedTest,
+		Penalty:       &e.Penalty,
+		Position:      int32Ptr(e.Position),
+		ProblemId:     e.ProblemId,
+		ProblemTitle:  strPtrIfNotEmpty(e.ProblemTitle),
+		Score:         &e.Score,
+		State:         &e.State,
+		TimeStat:      &e.TimeStat,
+		UserId:        e.UserId,
+		Username:      strPtrIfNotEmpty(e.Username),
 	}
 }
 

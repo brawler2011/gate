@@ -149,6 +149,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		Position:     submission.Position,
 		Language:     submission.Language,
 		CreatedAt:    submission.CreatedAt,
+		UpdatedAt:    submission.UpdatedAt,
 	}
 
 	if err := uc.eventPublisher.PublishQueued(ctx, submissionID, meta); err != nil {

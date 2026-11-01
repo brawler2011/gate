@@ -90,6 +90,9 @@ components:
     SubmissionEventMeta:
       type: object
       properties:
+        updated_at:
+          type: string
+          format: date-time
         user_id:
           type: string
           format: uuid
@@ -122,6 +125,7 @@ components:
         - $ref: "#/components/schemas/SubmissionTestingStartedMessage"
         - $ref: "#/components/schemas/SubmissionTestStartedMessage"
         - $ref: "#/components/schemas/SubmissionCompletedMessage"
+        - $ref: "#/components/schemas/ScoreboardUpdatedMessage"
       discriminator: event_type
     MessageSubmissionCreated:
       allOf:
@@ -129,7 +133,13 @@ components:
         - type: object
           required:
             - id
+            - is_new
           properties:
+            is_new:
+              type: boolean
+            previous_state:
+              type: integer
+              format: int32
             frozen:
               type: boolean
             id:
@@ -191,6 +201,9 @@ components:
           required:
             - id
           properties:
+            previous_state:
+              type: integer
+              format: int32
             frozen:
               type: boolean
             id:
@@ -354,7 +367,12 @@ components:
       required:
         - event_type
         - payload
+        - sequence
       properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
         event_type:
           title: SubmissionCreatedMessageEventType
           type: string
@@ -367,7 +385,12 @@ components:
       required:
         - event_type
         - payload
+        - sequence
       properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
         event_type:
           title: SubmissionQueuedMessageEventType
           type: string
@@ -380,7 +403,12 @@ components:
       required:
         - event_type
         - payload
+        - sequence
       properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
         event_type:
           title: SubmissionCompilingStartedMessageEventType
           type: string
@@ -393,7 +421,12 @@ components:
       required:
         - event_type
         - payload
+        - sequence
       properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
         event_type:
           title: SubmissionTestingStartedMessageEventType
           type: string
@@ -406,7 +439,12 @@ components:
       required:
         - event_type
         - payload
+        - sequence
       properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
         event_type:
           title: SubmissionTestStartedMessageEventType
           type: string
@@ -419,7 +457,12 @@ components:
       required:
         - event_type
         - payload
+        - sequence
       properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
         event_type:
           title: SubmissionCompletedMessageEventType
           type: string
@@ -478,6 +521,35 @@ components:
           const: contest.clarification_answered
         payload:
           $ref: "#/components/schemas/MessageContestClarificationAnswered"
+    ScoreboardUpdatedMessage:
+      type: object
+      additionalProperties: false
+      required: [event_type, payload, sequence]
+      properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
+        event_type:
+          title: ScoreboardUpdatedMessageEventType
+          type: string
+          const: scoreboard.updated
+        payload:
+          $ref: "#/components/schemas/MessageScoreboardUpdated"
+    MessageScoreboardUpdated:
+      type: object
+      required: [user_id, unfrozen, replace, scoreboard]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        unfrozen:
+          type: boolean
+        replace:
+          type: boolean
+        scoreboard:
+          $ref: "../../core/v1/openapi.yaml#/components/schemas/ScoreboardResponseModel"
+
   securitySchemes:
     session:
       type: httpApiKey

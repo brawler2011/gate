@@ -5497,6 +5497,7 @@ components:
           description: Effective permissions bitmask for the user in this contest, derived from direct membership and team-based access
           example: 255
     ScoreboardProblemResultModel:
+      title: ScoreboardProblemResultModel
       type: object
       required:
         - problem_id
@@ -5526,6 +5527,7 @@ components:
           type: integer
           format: int32
     ScoreboardItemModel:
+      title: ScoreboardItemModel
       type: object
       required:
         - user_id
@@ -5553,6 +5555,7 @@ components:
           items:
             $ref: "#/components/schemas/ScoreboardProblemResultModel"
     ScoreboardProblemHeaderModel:
+      title: ScoreboardProblemHeaderModel
       type: object
       required:
         - problem_id
@@ -5571,6 +5574,7 @@ components:
           type: integer
           format: int32
     ScoreboardResponseModel:
+      title: ScoreboardResponseModel
       type: object
       required:
         - contest_id
@@ -5581,6 +5585,10 @@ components:
         - problems
         - items
       properties:
+        since:
+          type: integer
+          format: int64
+          minimum: 0
         contest_id:
           type: string
           format: uuid

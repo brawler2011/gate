@@ -42,10 +42,10 @@ const Page = (): ReactNode => {
     },
     {enabled: Boolean(targetProblem)},
   );
-  const submissionsQuery = api.useQuery('get', SUBMISSIONS_PATH, submissionsParams({orgLogin: slug, contestLogin, contestId: contest.data?.response.contest.id ?? '',
-    userId: user?.id, problemId: targetProblem?.problem_id, page: 1, pageSize: 5, sortOrder: 'desc'}),
-  {enabled: Boolean(user && targetProblem)},
-  );
+  const submissionsSelection = {orgLogin: slug, contestLogin, contestId: contest.data?.response.contest.id ?? '',
+    userId: user?.id, problemId: targetProblem?.problem_id, page: 1, pageSize: 5, sortOrder: 'desc' as const};
+  const submissionsQuery = api.useQuery('get', SUBMISSIONS_PATH, submissionsParams(submissionsSelection),
+    {enabled: Boolean(user && targetProblem), meta: {selection: submissionsSelection}});
   if (!contest.data) {
     return <QueryState error={contest.error} />;
   }

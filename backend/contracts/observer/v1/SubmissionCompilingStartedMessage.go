@@ -3,6 +3,7 @@
 package observerv1
 
 type SubmissionCompilingStartedMessage struct {
+	Sequence  int64                                       `json:"sequence" binding:"required"`
 	EventType *SubmissionCompilingStartedMessageEventType `json:"event_type" binding:"required"`
 	Payload   *MessageSubmissionCompilingStarted          `json:"payload" binding:"required"`
 }

@@ -124,7 +124,7 @@ it("keeps the monitor socket while loading each selected snapshot once", async (
   expect(socket.closeCalls).toBe(0);
 });
 
-it("reloads a monitor invalidated while its table was unmounted", async () => {
+it("updates a cached monitor while its table is unmounted without HTTP", async () => {
   const client = new QueryClient({defaultOptions: {queries: {retry: false, staleTime: Infinity, gcTime: Infinity}}});
   let username = "Original participant";
   fetch.mockImplementation(Object.assign(async () => Response.json({is_frozen: false, problems: [], items: [{
@@ -146,13 +146,14 @@ it("reloads a monitor invalidated while its table was unmounted", async () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
     fireEvent.click(view.getByRole('button', {name: 'Toggle monitor'}));
     username = "New participant";
-    await act(async () => TestWebSocket.instances[0].message({event_type: "submissions.completed",
-      payload: {id: "submission", contest_id: "contest"}}));
-    await waitFor(() => expect(client.getQueryCache().getAll().some(q => q.state.isInvalidated)).toBe(true));
+    await act(async () => TestWebSocket.instances[0].message({event_type: "scoreboard.updated", sequence: 8,
+      payload: {user_id: "user", unfrozen: false, replace: false, scoreboard: {contest_id: "contest",
+        is_frozen: false, problems: [], items: [{user_id: "user", username, problems_solved: 0,
+          total_penalty: 0, problem_results: []}]}}}));
     expect(fetch).toHaveBeenCalledTimes(2);
     fireEvent.click(view.getByRole('button', {name: 'Toggle monitor'}));
     await waitFor(() => expect(view.getByText(username)).toBeTruthy());
-    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(fetch).toHaveBeenCalledTimes(2);
     expect(TestWebSocket.instances).toHaveLength(1);
   } finally {
     view.unmount(); client.clear();

@@ -66,7 +66,6 @@ type ContestsRepo interface {
 	WithTx(tx pgx.Tx) ContestsRepo
 }
 
-
 type ContestsUC interface {
 	CreateContest(ctx context.Context, c *models.CreateContestInput) (uuid.UUID, error)
 	GetContest(ctx context.Context, id uuid.UUID) (models.Contest, error)
@@ -101,6 +100,7 @@ type ContestsUC interface {
 
 	ProcessSubmissionResult(ctx context.Context, submission *models.Submission) error
 	GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*models.ScoreboardResponse, error)
+	GetContestScoreboardUser(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*models.ScoreboardResponse, error)
 
 	BlockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string, operatorID uuid.UUID) error
 	UnblockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, rejudgeSubmissions bool) error

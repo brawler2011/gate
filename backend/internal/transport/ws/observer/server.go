@@ -155,6 +155,11 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 		subscriptionError(w, err)
 		return
 	}
+	if err := s.hub.trackScoreboard(ctx, filter.ContestId); err != nil {
+		subscriptionError(w, err)
+		return
+	}
+	defer s.hub.releaseScoreboard(filter.ContestId)
 	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Request-ID": w.Header().Values("X-Request-ID")})
 	if err != nil {
 		slog.Error("failed to upgrade connection", "error", err)
@@ -175,6 +180,9 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 	// Set the barrier and register as PAUSED atomically with broadcast.
 	s.hub.mu.Lock()
 	sub.barrierSeq = s.hub.ring.MaxSeq()
+	if !r.URL.Query().Has("since") {
+		filter.Since = sub.barrierSeq
+	}
 	s.hub.subscribers[sub.id] = sub
 	s.hub.mu.Unlock()
 

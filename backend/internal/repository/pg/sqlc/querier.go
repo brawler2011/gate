@@ -107,7 +107,7 @@ type Querier interface {
 	GetContestByOrgLoginAndContestLogin(ctx context.Context, arg GetContestByOrgLoginAndContestLoginParams) (GetContestByOrgLoginAndContestLoginRow, error)
 	GetContestClarificationByID(ctx context.Context, id uuid.UUID) (GetContestClarificationByIDRow, error)
 	GetContestJoinRequestByID(ctx context.Context, id uuid.UUID) (GetContestJoinRequestByIDRow, error)
-	GetContestMember(ctx context.Context, arg GetContestMemberParams) (ContestMember, error)
+	GetContestMember(ctx context.Context, arg GetContestMemberParams) (GetContestMemberRow, error)
 	GetContestProblem(ctx context.Context, arg GetContestProblemParams) (GetContestProblemRow, error)
 	GetContestProblemResult(ctx context.Context, arg GetContestProblemResultParams) (ContestProblemResult, error)
 	GetContestScoreboardFromStandings(ctx context.Context, contestID uuid.UUID) ([]GetContestScoreboardFromStandingsRow, error)
@@ -207,7 +207,7 @@ type Querier interface {
 	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
 	RemoveTeamMembersByOrgAndUser(ctx context.Context, arg RemoveTeamMembersByOrgAndUserParams) error
 	ResetFailedToPending(ctx context.Context, arg ResetFailedToPendingParams) error
-	ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]uuid.UUID, error)
+	ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]ResetSubmissionsStateRow, error)
 	SetUserEmailVerified(ctx context.Context, arg SetUserEmailVerifiedParams) error
 	UpdateContest(ctx context.Context, arg UpdateContestParams) error
 	UpdateContestJoinRequestStatus(ctx context.Context, arg UpdateContestJoinRequestStatusParams) error

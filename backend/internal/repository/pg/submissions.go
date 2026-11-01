@@ -344,11 +344,19 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 	}
 }
 
-func (r *SubmissionsRepo) ResetSubmissionsState(ctx context.Context, filter models.RejudgeFilter) ([]uuid.UUID, error) {
-	return r.queries.ResetSubmissionsState(ctx, sqlc.ResetSubmissionsStateParams{
+func (r *SubmissionsRepo) ResetSubmissionsState(ctx context.Context, filter models.RejudgeFilter) ([]models.SubmissionReset, error) {
+	rows, err := r.queries.ResetSubmissionsState(ctx, sqlc.ResetSubmissionsStateParams{
 		ContestID:    filter.ContestID,
 		ProblemID:    nullableUUIDToPgtype(filter.ProblemID),
 		SubmissionID: nullableUUIDToPgtype(filter.SubmissionID),
 		OwnerID:      nullableUUIDToPgtype(filter.UserID),
 	})
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+	result := make([]models.SubmissionReset, len(rows))
+	for i, row := range rows {
+		result[i] = models.SubmissionReset{ID: row.ID, PreviousState: row.PreviousState}
+	}
+	return result, nil
 }

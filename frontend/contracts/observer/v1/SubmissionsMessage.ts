@@ -5,5 +5,6 @@ import SubmissionCompilingStartedMessage from './SubmissionCompilingStartedMessa
 import SubmissionTestingStartedMessage from './SubmissionTestingStartedMessage';
 import SubmissionTestStartedMessage from './SubmissionTestStartedMessage';
 import SubmissionCompletedMessage from './SubmissionCompletedMessage';
-type SubmissionsMessage = SubmissionCreatedMessage | SubmissionQueuedMessage | SubmissionCompilingStartedMessage | SubmissionTestingStartedMessage | SubmissionTestStartedMessage | SubmissionCompletedMessage;
+import ScoreboardUpdatedMessage from './ScoreboardUpdatedMessage';
+type SubmissionsMessage = SubmissionCreatedMessage | SubmissionQueuedMessage | SubmissionCompilingStartedMessage | SubmissionTestingStartedMessage | SubmissionTestStartedMessage | SubmissionCompletedMessage | ScoreboardUpdatedMessage;
 export default SubmissionsMessage;

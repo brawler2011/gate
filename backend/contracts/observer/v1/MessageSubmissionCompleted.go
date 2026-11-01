@@ -9,6 +9,7 @@ import (
 )
 
 type MessageSubmissionCompleted struct {
+	UpdatedAt            *time.Time             `json:"updated_at,omitempty"`
 	UserId               *uuid.UUID             `json:"user_id,omitempty"`
 	Username             *string                `json:"username,omitempty"`
 	ContestId            *uuid.UUID             `json:"contest_id,omitempty"`
@@ -18,6 +19,7 @@ type MessageSubmissionCompleted struct {
 	Position             *int32                 `json:"position,omitempty"`
 	Language             *int32                 `json:"language,omitempty"`
 	CreatedAt            *time.Time             `json:"created_at,omitempty"`
+	PreviousState        *int32                 `json:"previous_state,omitempty"`
 	Frozen               *bool                  `json:"frozen,omitempty"`
 	Id                   uuid.UUID              `json:"id" binding:"required"`
 	State                *int32                 `json:"state,omitempty"`

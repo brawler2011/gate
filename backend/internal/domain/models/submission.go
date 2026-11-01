@@ -174,8 +174,9 @@ const (
 )
 
 type SubmissionEventMeta struct {
-	UserId   *uuid.UUID `json:"user_id,omitempty"`
-	Username string     `json:"username"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	UserId    *uuid.UUID `json:"user_id,omitempty"`
+	Username  string     `json:"username"`
 
 	ContestId    *uuid.UUID `json:"contest_id,omitempty"`
 	ContestTitle string     `json:"contest_title"`
@@ -189,8 +190,15 @@ type SubmissionEventMeta struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type SubmissionReset struct {
+	ID            uuid.UUID
+	PreviousState State
+}
+
 type SubmissionCreatedEvent struct {
 	SubmissionEventMeta
+	IsNew         bool   `json:"is_new"`
+	PreviousState *State `json:"previous_state,omitempty"`
 
 	Id     uuid.UUID `json:"id"`
 	State  State     `json:"state"`

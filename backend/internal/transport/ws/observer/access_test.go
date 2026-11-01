@@ -70,7 +70,7 @@ type wsFixture struct {
 func newWSFixture(t *testing.T) *wsFixture {
 	t.Helper()
 	stub := &accessStub{user: models.User{Id: uuid.New(), Role: models.UserRoleUser}, contest: models.Contest{ID: uuid.New()}, permissions: models.ContestPermissions{GetContest: true, ListOwnSubmissions: true}}
-	f := &wsFixture{stub: stub, hub: NewHub(100), contests: NewContestsHub(100), session: uuid.New()}
+	f := &wsFixture{stub: stub, hub: NewHub(100, nil), contests: NewContestsHub(100), session: uuid.New()}
 	observer := NewObserver(f.hub, f.contests, middleware.AuthMiddleware(stub), stub, stub, stub)
 	f.server = httptest.NewServer(observer.Handler())
 	t.Cleanup(f.server.Close)
@@ -101,7 +101,7 @@ func (f *wsFixture) connect(t *testing.T, path string) *websocket.Conn {
 	return conn
 }
 func (f *wsFixture) path(kind string) string {
-	return "/ws/" + kind + "?contestId=" + f.stub.contest.ID.String()
+	return "/ws/" + kind + "?contestId=" + f.stub.contest.ID.String() + "&since=0"
 }
 func (f *wsFixture) publish(t *testing.T, eventType string, event any) {
 	t.Helper()

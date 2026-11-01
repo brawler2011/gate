@@ -98,6 +98,10 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 	queuedAt, err := time.Parse(time.RFC3339Nano, msg.Headers().Get(queuecontext.QueuedAtHeader))
 	s.Require().NoError(err)
 	s.True(createdAt.Equal(queuedAt))
+	var createdEvent models.SubmissionCreatedEvent
+	s.Require().NoError(json.Unmarshal(msg.Data(), &createdEvent))
+	s.True(createdEvent.IsNew)
+	s.Nil(createdEvent.PreviousState)
 	s.Require().NoError(msg.Ack())
 	s.Eventually(func() bool {
 		var status string
@@ -107,7 +111,7 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 		return status == models.OutboxEventStatusCompleted
 	}, 5*time.Second, 20*time.Millisecond)
 	// Make the submission old, then request a new rejudge through HTTP.
-	_, err = s.dbPool.Exec(s.ctx, "UPDATE submissions SET created_at=NOW()-INTERVAL '1 day' WHERE id=$1", submissionID)
+	_, err = s.dbPool.Exec(s.ctx, "UPDATE submissions SET created_at=NOW()-INTERVAL '1 day', state=200 WHERE id=$1", submissionID)
 	s.Require().NoError(err)
 	err = s.client.RejudgeSubmission(withTestUser(s.ctx, adminID), corev1.RejudgeSubmissionParams{OrgLogin: orgLogin, ContestLogin: "submission-contest", SubmissionID: submissionID})
 	s.Require().NoError(err)
@@ -131,6 +135,11 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 	s.Require().NoError(err)
 	s.True(rejudgeCreatedAt.Equal(rejudgeQueuedAt))
 	s.WithinDuration(time.Now(), rejudgeQueuedAt, 30*time.Second)
+	var resetEvent models.SubmissionCreatedEvent
+	s.Require().NoError(json.Unmarshal(rejudgeMsg.Data(), &resetEvent))
+	s.False(resetEvent.IsNew)
+	s.Require().NotNil(resetEvent.PreviousState)
+	s.Equal(models.Accepted, *resetEvent.PreviousState)
 	s.Require().NoError(rejudgeMsg.Ack())
 
 }

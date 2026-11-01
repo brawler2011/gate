@@ -400,12 +400,9 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 }
 
 const resetSubmissionsState = `-- name: ResetSubmissionsState :many
-UPDATE submissions
-SET state = 1,
-  score = 0,
-  test_details = NULL,
-  ban_reason = NULL,
-  updated_at = NOW()
+WITH previous AS (
+  SELECT id, state
+  FROM submissions
 WHERE contest_id = $1::uuid
   AND (
     $2::uuid IS NULL
@@ -419,7 +416,13 @@ WHERE contest_id = $1::uuid
     $4::uuid IS NULL
     OR owner_id = $4::uuid
   )
-RETURNING id
+  FOR UPDATE
+)
+UPDATE submissions AS s
+SET state = 1, score = 0, test_details = NULL, ban_reason = NULL, updated_at = NOW()
+FROM previous
+WHERE s.id = previous.id
+RETURNING s.id, previous.state AS previous_state
 `
 
 type ResetSubmissionsStateParams struct {
@@ -429,7 +432,12 @@ type ResetSubmissionsStateParams struct {
 	OwnerID      pgtype.UUID `json:"owner_id"`
 }
 
-func (q *Queries) ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]uuid.UUID, error) {
+type ResetSubmissionsStateRow struct {
+	ID            uuid.UUID `json:"id"`
+	PreviousState int32     `json:"previous_state"`
+}
+
+func (q *Queries) ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]ResetSubmissionsStateRow, error) {
 	rows, err := q.db.Query(ctx, resetSubmissionsState,
 		arg.ContestID,
 		arg.ProblemID,
@@ -440,13 +448,13 @@ func (q *Queries) ResetSubmissionsState(ctx context.Context, arg ResetSubmission
 		return nil, err
 	}
 	defer rows.Close()
-	items := []uuid.UUID{}
+	items := []ResetSubmissionsStateRow{}
 	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
+		var i ResetSubmissionsStateRow
+		if err := rows.Scan(&i.ID, &i.PreviousState); err != nil {
 			return nil, err
 		}
-		items = append(items, id)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

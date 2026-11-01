@@ -2,6 +2,7 @@
 import SubmissionQueuedMessageEventType from './SubmissionQueuedMessageEventType';
 import MessageSubmissionQueued from './MessageSubmissionQueued';
 interface SubmissionQueuedMessage {
+  'sequence': number;
   'event_type': SubmissionQueuedMessageEventType.SUBMISSIONS_DOT_QUEUED;
   'payload': MessageSubmissionQueued;
 }

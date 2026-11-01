@@ -8836,6 +8836,7 @@ func (s *ScoreboardProblemResultModel) SetPenalty(val OptInt32) {
 
 // Ref: #/components/schemas/ScoreboardResponseModel
 type ScoreboardResponseModel struct {
+	Since             OptInt64  `json:"since"`
 	ContestID         uuid.UUID `json:"contest_id"`
 	ContestLogin      string    `json:"contest_login"`
 	OrganizationLogin string    `json:"organization_login"`
@@ -8846,6 +8847,11 @@ type ScoreboardResponseModel struct {
 	FreezeTime OptNilDateTime                 `json:"freeze_time"`
 	Problems   []ScoreboardProblemHeaderModel `json:"problems"`
 	Items      []ScoreboardItemModel          `json:"items"`
+}
+
+// GetSince returns the value of Since.
+func (s *ScoreboardResponseModel) GetSince() OptInt64 {
+	return s.Since
 }
 
 // GetContestID returns the value of ContestID.
@@ -8886,6 +8892,11 @@ func (s *ScoreboardResponseModel) GetProblems() []ScoreboardProblemHeaderModel {
 // GetItems returns the value of Items.
 func (s *ScoreboardResponseModel) GetItems() []ScoreboardItemModel {
 	return s.Items
+}
+
+// SetSince sets the value of Since.
+func (s *ScoreboardResponseModel) SetSince(val OptInt64) {
+	s.Since = val
 }
 
 // SetContestID sets the value of ContestID.

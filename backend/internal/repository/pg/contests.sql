@@ -75,8 +75,10 @@ INSERT INTO contest_members (contest_id, user_id, role)
 VALUES ($1, $2, $3);
 
 -- name: GetContestMember :one
-SELECT * FROM contest_members
-WHERE contest_id = $1 AND user_id = $2;
+SELECT cm.*, u.username
+FROM contest_members cm
+JOIN users u ON u.id = cm.user_id
+WHERE cm.contest_id = $1 AND cm.user_id = $2;
 
 -- name: ListContestMembers :many
 SELECT cm.*, u.username, u.email

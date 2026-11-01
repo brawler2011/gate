@@ -2,6 +2,7 @@
 import SubmissionCreatedMessageEventType from './SubmissionCreatedMessageEventType';
 import MessageSubmissionCreated from './MessageSubmissionCreated';
 interface SubmissionCreatedMessage {
+  'sequence': number;
   'event_type': SubmissionCreatedMessageEventType.SUBMISSIONS_DOT_CREATED;
   'payload': MessageSubmissionCreated;
 }

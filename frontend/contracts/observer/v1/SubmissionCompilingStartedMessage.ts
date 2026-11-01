@@ -2,6 +2,7 @@
 import SubmissionCompilingStartedMessageEventType from './SubmissionCompilingStartedMessageEventType';
 import MessageSubmissionCompilingStarted from './MessageSubmissionCompilingStarted';
 interface SubmissionCompilingStartedMessage {
+  'sequence': number;
   'event_type': SubmissionCompilingStartedMessageEventType.SUBMISSIONS_DOT_COMPILING_STARTED;
   'payload': MessageSubmissionCompilingStarted;
 }

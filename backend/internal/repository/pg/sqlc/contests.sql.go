@@ -401,8 +401,10 @@ func (q *Queries) GetContestByOrgLoginAndContestLogin(ctx context.Context, arg G
 }
 
 const getContestMember = `-- name: GetContestMember :one
-SELECT contest_id, user_id, role, created_at FROM contest_members
-WHERE contest_id = $1 AND user_id = $2
+SELECT cm.contest_id, cm.user_id, cm.role, cm.created_at, u.username
+FROM contest_members cm
+JOIN users u ON u.id = cm.user_id
+WHERE cm.contest_id = $1 AND cm.user_id = $2
 `
 
 type GetContestMemberParams struct {
@@ -410,14 +412,23 @@ type GetContestMemberParams struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
-func (q *Queries) GetContestMember(ctx context.Context, arg GetContestMemberParams) (ContestMember, error) {
+type GetContestMemberRow struct {
+	ContestID uuid.UUID          `json:"contest_id"`
+	UserID    uuid.UUID          `json:"user_id"`
+	Role      models.ContestRole `json:"role"`
+	CreatedAt time.Time          `json:"created_at"`
+	Username  string             `json:"username"`
+}
+
+func (q *Queries) GetContestMember(ctx context.Context, arg GetContestMemberParams) (GetContestMemberRow, error) {
 	row := q.db.QueryRow(ctx, getContestMember, arg.ContestID, arg.UserID)
-	var i ContestMember
+	var i GetContestMemberRow
 	err := row.Scan(
 		&i.ContestID,
 		&i.UserID,
 		&i.Role,
 		&i.CreatedAt,
+		&i.Username,
 	)
 	return i, err
 }

@@ -56,7 +56,7 @@ describe("Observer visibility in production components", () => {
     view.unmount();
   });
 
-  it("uses snapshots for frozen completion replay and reconnect recovery", async () => {
+  it("applies frozen scoreboard rows once without HTTP and recovers on reconnect", async () => {
     let listener: Parameters<typeof submissionsConnection.connectSubmissions>[0] | undefined;
     const add = spyOn(submissionsConnection, "connectSubmissions").mockImplementation((params) => {
       listener = params; return () => {};
@@ -72,13 +72,16 @@ describe("Observer visibility in production components", () => {
     const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="contest" initialScoreboard={snapshot} />);
     try {
       expect(listener!.url()).toContain("contestId=contest");
-      const event = {data: JSON.stringify({event_type: "submissions.completed", payload: {id: "sub", contest_id: "contest", frozen: true}})} as MessageEvent;
+      const event = {data: JSON.stringify({event_type: "scoreboard.updated", sequence: 8, payload: {
+        user_id: "user", unfrozen: false, replace: false, scoreboard: snapshot,
+      }})} as MessageEvent;
       await act(async () => {
         listener!.onMessage(event);
       });
       await act(async () => {
         listener!.onMessage(event);
       });
+      expect(fetch).not.toHaveBeenCalled();
       expect(view.container.textContent).toContain("?1");
       expect(view.container.textContent).not.toContain("?2");
       const recovered = {...snapshot, is_frozen: false, items: [{...snapshot.items[0], problems_solved: 1,

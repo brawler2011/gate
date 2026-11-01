@@ -15,7 +15,7 @@ type SubmissionsRepo interface {
 	UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error
 	BlockSubmission(ctx context.Context, id uuid.UUID, reason *string) error
 	BlockUserProblemSubmissions(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string) error
-	ResetSubmissionsState(ctx context.Context, filter models.RejudgeFilter) ([]uuid.UUID, error)
+	ResetSubmissionsState(ctx context.Context, filter models.RejudgeFilter) ([]models.SubmissionReset, error)
 	WithTx(tx pgx.Tx) SubmissionsRepo
 }
 

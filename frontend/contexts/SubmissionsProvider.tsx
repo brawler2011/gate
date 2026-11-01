@@ -5,14 +5,13 @@ import {useWebSocketNotifications} from '@/hooks/useWebSocketNotifications';
 import {api} from '@/lib/api';
 import {env} from '@/lib/env';
 import {connectSubmissions, type SubmissionsConnectionStatus} from '@/lib/submissionsConnection';
+import {applySubmissionEvent, applyScoreboardEvent} from '@/lib/submissionsUpdates';
 
-import type {ListSubmissionsResponseModel} from '@/contracts/core/v1/schema';
 import type SubmissionsMessage from '@/contracts/observer/v1/SubmissionsMessage';
-import type {SubmissionWithProgress} from '@/lib/submissions';
-import type {Query} from '@tanstack/react-query';
+import type {SubmissionsSelection} from '@/lib/submissions';
+import type {LiveSubmissions, LiveScoreboard} from '@/lib/submissionsUpdates';
 import type {ReactNode} from 'react';
 
-type LiveSubmissions = Omit<ListSubmissionsResponseModel, 'submissions'> & {submissions: SubmissionWithProgress[]};
 export const SubmissionsHighlights = createContext<ReadonlyMap<string, boolean>>(new Map());
 
 export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, children}: {
@@ -34,26 +33,11 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
       '/organizations/{org_login}/contests/{contest_login}/submissions', {params: {path}}).queryKey};
     const scoreboard = {queryKey: api.queryOptions('get',
       '/organizations/{org_login}/contests/{contest_login}/scoreboard', {params: {path}}).queryKey};
-    let refreshAll = false;
-    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    let disposed = false;
     const highlightTimers = new Map<string, ReturnType<typeof setTimeout>>();
-    const refresh = async (stateOnly = false) => {
-      const filters = {...submissions, predicate: (query: Query) => !stateOnly || query.meta?.state !== undefined};
-      await Promise.all([client.cancelQueries(filters), stateOnly ? undefined : client.cancelQueries(scoreboard)]);
-      await Promise.all([
-        client.invalidateQueries(filters), stateOnly ? undefined : client.invalidateQueries(scoreboard),
-      ]);
-    };
-    const scheduleRefresh = (all: boolean) => {
-      refreshAll ||= all;
-      if (refreshTimer === undefined) {
-        refreshTimer = setTimeout(() => {
-          refreshTimer = undefined;
-          const all = refreshAll;
-          refreshAll = false;
-          void refresh(!all);
-        }, 100);
-      }
+    const refresh = async () => {
+      await Promise.all([client.cancelQueries(submissions), client.cancelQueries(scoreboard)]);
+      await Promise.all([client.invalidateQueries(submissions), client.invalidateQueries(scoreboard)]);
     };
     const disconnect = connectSubmissions({
       url: () => `${env.getWebSocketUrl()}/submissions?contestId=${encodeURIComponent(contestId)}`,
@@ -70,28 +54,50 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
         } catch {
           return;
         }
-        if (!message?.payload || message.payload.contest_id !== contestId || typeof message.payload.id !== 'string') {
+        if (!message?.payload || typeof message.sequence !== 'number') {
+          return;
+        }
+        const isScoreboard = message.event_type === 'scoreboard.updated';
+        if (message.event_type === 'scoreboard.updated') {
+          if (message.payload.scoreboard?.contest_id !== contestId) {
+            return;
+          }
+        } else if (!['submissions.created', 'submissions.completed', 'submissions.queued',
+          'submissions.compiling_started', 'submissions.testing_started', 'submissions.test_started'].includes(message.event_type)
+          || message.payload.contest_id !== contestId || typeof message.payload.id !== 'string') {
+          return;
+        }
+        const queries = client.getQueryCache().findAll(isScoreboard ? scoreboard : submissions);
+        for (const query of queries) {
+          const apply = () => {
+            if (disposed) {
+              return;
+            }
+            if (message.event_type === 'scoreboard.updated') {
+              if (Boolean(query.meta?.unfrozen) !== message.payload.unfrozen) {
+                return;
+              }
+              client.setQueryData<LiveScoreboard>(query.queryKey,
+                data => applyScoreboardEvent(data, message.payload, message.sequence));
+            } else {
+              const selection = query.meta?.selection as SubmissionsSelection | undefined;
+              if (!selection) {
+                return;
+              }
+              client.setQueryData<LiveSubmissions>(query.queryKey,
+                data => applySubmissionEvent(data, message, selection));
+            }
+          };
+          apply();
+          // Reapply after an in-flight snapshot; its cursor excludes events it already contains.
+          if (query.promise) {
+            void query.promise.then(apply, () => {});
+          }
+        }
+        if (message.event_type === 'scoreboard.updated') {
           return;
         }
         const {id} = message.payload;
-        let progress: SubmissionWithProgress['progress'];
-        switch (message.event_type) {
-          case 'submissions.created':
-          case 'submissions.completed':
-            scheduleRefresh(true);
-            break;
-          case 'submissions.queued': progress = {phase: 'queued'}; break;
-          case 'submissions.compiling_started': progress = {phase: 'compiling'}; break;
-          case 'submissions.testing_started': progress = {phase: 'testing'}; break;
-          case 'submissions.test_started': progress = {phase: 'testing', testNumber: message.payload.number}; break;
-          default: return;
-        }
-        if (progress) {
-          scheduleRefresh(false);
-        }
-        client.setQueriesData<LiveSubmissions>(submissions, data => data && ({...data,
-          submissions: data.submissions.map(s => s.id === id ? {...s, progress} : s),
-        }));
         clearTimeout(highlightTimers.get(id));
         setHighlights(previous => new Map(previous).set(id, message.event_type === 'submissions.created' || previous.get(id) === true));
         highlightTimers.set(id, setTimeout(() => {
@@ -103,8 +109,8 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
       },
     });
     return () => {
+      disposed = true;
       disconnect();
-      clearTimeout(refreshTimer);
       highlightTimers.forEach(clearTimeout);
     };
   }, [client, contestId, orgLogin, contestLogin, userId]);

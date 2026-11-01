@@ -574,7 +574,6 @@ func (r *ContestsRepo) AddContestMemberIfNotExists(ctx context.Context, contestI
 	return nil
 }
 
-
 func mapContestFields(
 	id uuid.UUID,
 	orgID uuid.UUID,
@@ -678,8 +677,9 @@ func mapListContestMembersRow(c sqlc.ListContestMembersRow) models.ContestMember
 	}
 }
 
-func mapContestMember(c sqlc.ContestMember) models.ContestMember {
+func mapContestMember(c sqlc.GetContestMemberRow) models.ContestMember {
 	return models.ContestMember{
+		Username:    c.Username,
 		UserID:      c.UserID,
 		ContestID:   c.ContestID,
 		ContestRole: models.ContestRole(c.Role),
@@ -1140,7 +1140,3 @@ func (r *ContestsRepo) UpdateContestJoinRequestStatus(ctx context.Context, id uu
 	}
 	return nil
 }
-
-
-
-

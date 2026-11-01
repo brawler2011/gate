@@ -4,7 +4,7 @@ import {GoGenerator, GO_COMMON_PRESET, TypeScriptGenerator} from '@asyncapi/mode
 import {Parser} from '@asyncapi/parser';
 
 const source = await Bun.file('contracts/observer/v1/asyncapi.yaml').text();
-const {document, diagnostics} = await new Parser().parse(source);
+const {document, diagnostics} = await new Parser().parse(source, {source: new URL('./v1/asyncapi.yaml', import.meta.url).href});
 const errors = diagnostics.filter(diagnostic => diagnostic.severity === 0);
 if (!document || errors.length) {
   throw new Error(JSON.stringify(errors, null, 2));

@@ -165,12 +165,9 @@ WHERE (
   );
 
 -- name: ResetSubmissionsState :many
-UPDATE submissions
-SET state = 1,
-  score = 0,
-  test_details = NULL,
-  ban_reason = NULL,
-  updated_at = NOW()
+WITH previous AS (
+  SELECT id, state
+  FROM submissions
 WHERE contest_id = @contest_id::uuid
   AND (
     sqlc.narg('problem_id')::uuid IS NULL
@@ -184,5 +181,10 @@ WHERE contest_id = @contest_id::uuid
     sqlc.narg('owner_id')::uuid IS NULL
     OR owner_id = sqlc.narg('owner_id')::uuid
   )
-RETURNING id;
-
+  FOR UPDATE
+)
+UPDATE submissions AS s
+SET state = 1, score = 0, test_details = NULL, ban_reason = NULL, updated_at = NOW()
+FROM previous
+WHERE s.id = previous.id
+RETURNING s.id, previous.state AS previous_state;

@@ -38,7 +38,7 @@ func (r *scoreboardRepo) GetContestMember(_ context.Context, input *models.Conte
 	if !ok || input.ContestId != r.contest.ID {
 		return models.ContestMember{}, pkg.ErrNotFound
 	}
-	return models.ContestMember{ContestID: input.ContestId, UserID: input.UserId, ContestRole: role}, nil
+	return models.ContestMember{ContestID: input.ContestId, UserID: input.UserId, ContestRole: role, Username: r.users[input.UserId]}, nil
 }
 func (r *scoreboardRepo) GetContestProblems(context.Context, uuid.UUID) ([]models.ContestProblem, error) {
 	return r.problems, nil
@@ -283,4 +283,45 @@ func TestScoreboardCustomPenaltyAndTieBreaks(t *testing.T) {
 	require.Equal(t, "bob", sb.Items[0].Username)
 	require.EqualValues(t, 2, sb.Items[0].ProblemsSolved)
 	require.EqualValues(t, 55, sb.Items[0].TotalPenalty)
+}
+
+func TestScoreboardUserUpdateMatchesSnapshot(t *testing.T) {
+	f := newScoreboardFixture("alice", "bob", "charlie", "idle")
+	f.submit(t, "alice", 0, models.GotWA, 10*time.Minute)
+	accepted := f.submit(t, "alice", 0, models.Accepted, 80*time.Minute)
+	f.submit(t, "alice", 1, models.GotCE, 20*time.Minute)
+	f.submit(t, "bob", 0, models.Saved, 70*time.Minute)
+	f.submit(t, "charlie", 0, models.Accepted, -time.Minute)
+	check := func() {
+		t.Helper()
+		for _, frozen := range []string{models.FreezeStatusUnfrozen, models.FreezeStatusAuto, models.FreezeStatusFrozen} {
+			f.repo.contest.Settings["freeze_status"] = frozen
+			for _, unfrozen := range []bool{false, true} {
+				snapshot := f.scoreboard(t, unfrozen)
+				for _, item := range snapshot.Items {
+					update, err := f.uc.GetContestScoreboardUser(context.Background(), f.repo.contest.ID, item.UserID, unfrozen)
+					require.NoError(t, err)
+					require.Equal(t, snapshot.Problems, update.Problems)
+					require.Equal(t, snapshot.IsFrozen, update.IsFrozen)
+					require.Equal(t, snapshot.FreezeTime, update.FreezeTime)
+					require.Equal(t, snapshot.PenaltyPerAttempt, update.PenaltyPerAttempt)
+					require.Len(t, update.Items, 1)
+					actual := update.Items[0]
+					require.ElementsMatch(t, item.ProblemResults, actual.ProblemResults)
+					actual.ProblemResults = item.ProblemResults
+					require.Equal(t, item, actual)
+				}
+			}
+		}
+	}
+	check()
+	sub := f.repo.submissions[accepted]
+	sub.State = models.Saved
+	f.repo.submissions[accepted] = sub
+	require.NoError(t, f.uc.ProcessSubmissionResult(context.Background(), &sub))
+	check()
+	delete(f.repo.roles, f.users["alice"])
+	update, err := f.uc.GetContestScoreboardUser(context.Background(), f.repo.contest.ID, f.users["alice"], false)
+	require.NoError(t, err)
+	require.Empty(t, update.Items)
 }

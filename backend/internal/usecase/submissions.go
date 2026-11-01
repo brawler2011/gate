@@ -95,7 +95,7 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *mo
 			return err
 		}
 
-		eventParams, err := newOutboxEventParams(ctx, submission)
+		eventParams, err := newOutboxEventParams(ctx, submission, nil)
 		if err != nil {
 			return err
 		}
@@ -147,8 +147,9 @@ func (uc *SubmissionsUseCase) UnblockSubmission(ctx context.Context, contestID, 
 	return err
 }
 
-func newOutboxEventParams(ctx context.Context, submission models.Submission) (*models.CreateOutboxEventParams, error) {
+func newOutboxEventParams(ctx context.Context, submission models.Submission, previousState *models.State) (*models.CreateOutboxEventParams, error) {
 	submissionCreatedEvent := models.SubmissionCreatedEvent{
+		IsNew: previousState == nil, PreviousState: previousState,
 		SubmissionEventMeta: models.SubmissionEventMeta{
 			UserId:       submission.CreatedBy,
 			Username:     submission.Username,
@@ -159,6 +160,7 @@ func newOutboxEventParams(ctx context.Context, submission models.Submission) (*m
 			Position:     submission.Position,
 			Language:     submission.Language,
 			CreatedAt:    submission.CreatedAt,
+			UpdatedAt:    submission.UpdatedAt,
 		},
 		Id:     submission.ID,
 		State:  submission.State,
@@ -238,13 +240,14 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter mod
 			return fmt.Errorf("failed to reset submissions state: %w", err)
 		}
 
-		for _, id := range resetIDs {
+		for _, reset := range resetIDs {
+			id := reset.ID
 			submission, err := txSubRepo.GetSubmission(ctx, id)
 			if err != nil {
 				return fmt.Errorf("failed to get submission %s for rejudge: %w", id, err)
 			}
 
-			eventParams, err := newOutboxEventParams(ctx, submission)
+			eventParams, err := newOutboxEventParams(ctx, submission, &reset.PreviousState)
 			if err != nil {
 				return fmt.Errorf("failed to create event params for submission %s: %w", id, err)
 			}
@@ -255,7 +258,9 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter mod
 		}
 
 		rejudgedCount = len(resetIDs)
-		rejudgedIDs = resetIDs
+		for _, reset := range resetIDs {
+			rejudgedIDs = append(rejudgedIDs, reset.ID)
+		}
 		return nil
 	})
 

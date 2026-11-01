@@ -40,7 +40,7 @@ export const ContestMonitorTable = ({
       path: {org_login: orgLogin, contest_login: contestLogin},
       query: {unfrozen: showRealMonitor},
     },
-  }, {placeholderData: keepPreviousData});
+  }, {placeholderData: keepPreviousData, meta: {unfrozen: showRealMonitor}});
   useEffect(() => {
     if (scoreboard.error) {
       notifications.show({title: "Ошибка", message: "Не удалось загрузить таблицу", color: "red"});

@@ -33,8 +33,10 @@ const selection = (): SubmissionsSelection => ({
 const advance = async (ms: number) => act(async () => {
   jest.advanceTimersByTime(ms); await flushMicrotasks();
 });
+let sequence = 7;
 const message = (socket: TestWebSocket, type: string, payload: object = submission()) =>
-  socket.message({event_type: `submissions.${type}`, payload});
+  socket.message({event_type: `submissions.${type}`, sequence: ++sequence,
+    payload: {...(type === 'created' ? {is_new: true} : {previous_state: 1}), ...payload}});
 
 describe('Query-owned submission lists', () => {
   const originalSocket = globalThis.WebSocket;
@@ -46,6 +48,7 @@ describe('Query-owned submission lists', () => {
   let url: ReturnType<typeof spyOn<typeof env, 'getWebSocketUrl'>>;
   beforeEach(() => {
     jest.useFakeTimers();
+    sequence = 7;
     client = new QueryClient({defaultOptions: {queries: {retry: false, gcTime: 0}}});
     TestWebSocket.instances = [];
     TestWebSocket.failConnections = false;
@@ -116,23 +119,39 @@ describe('Query-owned submission lists', () => {
     expect(fetch).toHaveBeenCalledTimes(calls);
   });
 
-  it('uses server membership, order, pagination and hidden results after coalesced terminal events', async () => {
-    const {result} = view(); const socket = await open();
-    const calls = fetch.mock.calls.length;
-    const response = {...data({...submission('server-first'), frozen: true, state: undefined, score: undefined}),
-      pagination: {page: 1, total: 23}};
-    fetch.mockImplementation(Object.assign(async () => Response.json(response), {preconnect: () => {}}));
+  it('inserts and completes rows without HTTP, preserving totals, zero and null values', async () => {
+    const {result} = view(); const socket = await open(); const calls = fetch.mock.calls.length;
     await act(async () => {
-      message(socket, 'created', submission('second'));
-      message(socket, 'completed', {...submission(), score: 0, failed_test: null});
-      message(socket, 'completed', submission('third'));
+      message(socket, 'created', {...submission('second'), state: 1, created_at: '2026-01-01T00:01:00Z'});
+      message(socket, 'created', {...submission('third'), state: 1, created_at: '2026-01-01T00:02:00Z'});
+      message(socket, 'completed', {...submission('third'), created_at: '2026-01-01T00:02:00Z', score: 0, failed_test: null});
     });
-    await advance(100);
-    expect(fetch).toHaveBeenCalledTimes(calls + 1);
-    expect(result.current.submissions.map(s => s.id)).toEqual(['server-first']);
-    expect(result.current.data?.pagination.total).toBe(23);
+    expect(fetch).toHaveBeenCalledTimes(calls);
+    expect(result.current.submissions.map(s => s.id)).toEqual(['third', 'second']);
+    expect(result.current.data?.pagination.total).toBe(3);
+    expect(result.current.submissions[0]).toMatchObject({state: 200, score: 0, failed_test: null});
+  });
+
+  it('clears hidden results when the server marks a row frozen', async () => {
+    const {result} = view(); const socket = await open();
+    await act(async () => message(socket, 'completed', {...submission(), score: 100, time_stat: 12}));
+    const {state: _state, ...metadata} = submission();
+    await act(async () => message(socket, 'completed', {...metadata, frozen: true}));
+    expect(result.current.submissions[0]).toMatchObject({frozen: true});
     expect(result.current.submissions[0].state).toBeUndefined();
     expect(result.current.submissions[0].score).toBeUndefined();
+    expect(result.current.submissions[0].time_stat).toBeUndefined();
+  });
+
+  it('ignores repeated and older events using the snapshot cursor', async () => {
+    const {result} = view(); const socket = await open();
+    const event = {event_type: 'submissions.created', sequence: 8, payload: {...submission('new'), is_new: true}};
+    await act(async () => {
+      socket.message(event); socket.message(event);
+      socket.message({...event, sequence: 7, payload: {...event.payload, id: 'obsolete'}});
+    });
+    expect(result.current.data?.pagination.total).toBe(2);
+    expect(result.current.submissions.map(s => s.id)).toEqual(['new', 'initial']);
   });
 
   it('does not synthesize unknown progress rows or accept foreign and malformed events', async () => {
@@ -185,19 +204,21 @@ describe('Query-owned submission lists', () => {
   it('preserves cached rows on HTTP failure without killing the socket', async () => {
     const {result} = view(); const socket = await open();
     fetch.mockImplementation(Object.assign(async () => Response.json({message: 'unavailable'}, {status: 500}), {preconnect: () => {}}));
-    await act(async () => message(socket, 'completed')); await advance(100);
+    await act(async () => socket.disconnect()); await advance(2000); await open();
     expect(result.current.submissions[0].id).toBe('initial');
     expect(result.current.error).toBeTruthy();
-    expect(socket.readyState).toBe(TestWebSocket.OPEN);
+    expect(TestWebSocket.instances.at(-1)!.readyState).toBe(TestWebSocket.OPEN);
   });
 
   it('ignores an obsolete request when the selected problem changes', async () => {
-    const {result, rerender} = view(); const socket = await open();
+    const {result, rerender} = view(); await open();
     let finish!: (response: Response) => void;
     fetch.mockImplementationOnce(Object.assign(() => new Promise<Response>(resolve => {
       finish = resolve;
     }), {preconnect: () => {}}));
-    await act(async () => message(socket, 'completed')); await advance(100);
+    await act(async () => {
+      void client.invalidateQueries(); await flushMicrotasks();
+    });
     fetch.mockImplementation(Object.assign(async () => Response.json(data(submission('latest'))), {preconnect: () => {}}));
     rerender({...selection(), problemId: 'other'});
     await act(flushMicrotasks);
@@ -229,17 +250,45 @@ describe('Query-owned submission lists', () => {
     expect(TestWebSocket.instances.every(s => s.readyState === TestWebSocket.CLOSED)).toBe(true);
   });
 
-  it('refreshes state-filtered membership after progress without changing other selections', async () => {
+  it('moves a rejudged submission between state filters without HTTP or inflating totals', async () => {
     const {result} = renderHook(() => ({
       filtered: useSubmissions({...selection(), state: 200}), all: useSubmissions(selection()),
     }), {wrapper: Wrapper});
     const socket = await open(); const calls = fetch.mock.calls.length;
-    fetch.mockImplementation(Object.assign(async () => Response.json(data()), {preconnect: () => {}}));
-    await act(async () => message(socket, 'queued')); await advance(100);
-    expect(fetch).toHaveBeenCalledTimes(calls + 1);
-    expect(String(fetch.mock.calls.at(-1)![0])).toContain('state=200');
+    await act(async () => message(socket, 'created', {...submission(), state: 1, is_new: false, previous_state: 200}));
     expect(result.current.filtered.submissions).toHaveLength(0);
-    expect(result.current.all.submissions).toHaveLength(1);
+    expect(result.current.filtered.data?.pagination.total).toBe(0);
+    expect(result.current.all.data?.pagination.total).toBe(1);
+    await act(async () => message(socket, 'completed', {...submission(), previous_state: 1}));
+    expect(result.current.filtered.submissions).toHaveLength(1);
+    expect(result.current.filtered.data?.pagination.total).toBe(1);
+    expect(fetch).toHaveBeenCalledTimes(calls);
+  });
+
+  it('reapplies an event received while an HTTP snapshot is loading', async () => {
+    const {result} = view(); const socket = await open();
+    let finish!: (response: Response) => void;
+    fetch.mockImplementationOnce(Object.assign(() => new Promise<Response>(resolve => {
+      finish = resolve;
+    }), {preconnect: () => {}}));
+    await act(async () => {
+      void client.invalidateQueries(); await flushMicrotasks();
+    });
+    const calls = fetch.mock.calls.length;
+    await act(async () => message(socket, 'completed', {...submission(), score: 42}));
+    await act(async () => {
+      finish(Response.json(data(submission()))); await flushMicrotasks();
+    });
+    expect(result.current.submissions[0].score).toBe(42);
+    expect(fetch).toHaveBeenCalledTimes(calls);
+  });
+
+  it('keeps numbered pages and ascending lists stable when new rows arrive', async () => {
+    const {result} = renderHook(useSubmissions, {initialProps: {...selection(), page: 2}, wrapper: Wrapper});
+    const socket = await open(); const calls = fetch.mock.calls.length;
+    await act(async () => message(socket, 'created', submission('new')));
+    expect(result.current.submissions.map(s => s.id)).toEqual(['initial']);
+    expect(fetch).toHaveBeenCalledTimes(calls);
   });
 
   it('cancels a request started before connection instead of restoring its stale result', async () => {
