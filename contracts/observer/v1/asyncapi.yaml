@@ -17,6 +17,7 @@ channels:
           type: object
           properties:
             since:
+              description: Omit for live events; set for replay.
               type: integer
               format: int64
               minimum: 0
@@ -49,6 +50,7 @@ channels:
           type: object
           properties:
             since:
+              description: Omit for live events; set for replay.
               type: integer
               format: int64
               minimum: 0

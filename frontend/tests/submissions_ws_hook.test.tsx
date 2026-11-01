@@ -139,6 +139,21 @@ describe('Query-owned submission lists', () => {
     expect(result.current.data?.total_count).toBe(1);
   });
 
+  it('does not resurrect a removed row when an older rejudge arrives later', async () => {
+    fetch.mockImplementation(Object.assign(async () => Response.json(data({...submission(), state: 1})),
+      {preconnect: () => {}}));
+    const {result} = renderHook(useSubmissions, {initialProps: {...selection(), state: 1}, wrapper: Wrapper});
+    const socket = await open(); const calls = fetch.mock.calls.length;
+    await act(async () => {
+      message(socket, 'completed', {...submission(), revision: 9, previous_state: 1});
+      message(socket, 'created', {...submission(), revision: 8, is_new: false, previous_state: 1, state: 1});
+    });
+    expect(result.current.submissions).toHaveLength(0);
+    expect(result.current.data?.total_count).toBe(0);
+    expect(result.current.data?.pagination.total).toBe(0);
+    expect(fetch).toHaveBeenCalledTimes(calls);
+  });
+
   it('passes the full selection to HTTP and scopes the single stream to its contest', async () => {
     renderHook(useSubmissions, {initialProps: {...selection(), userId: 'user', problemId: 'problem',
       state: 200, language: 20, page: 3, sortOrder: 'asc'}, wrapper: Wrapper});

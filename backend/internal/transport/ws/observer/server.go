@@ -363,6 +363,9 @@ func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 
 	s.contestsHub.mu.Lock()
 	sub.barrierSeq = s.contestsHub.ring.MaxSeq()
+	if !r.URL.Query().Has("since") {
+		filter.Since = sub.barrierSeq
+	}
 	s.contestsHub.subscribers[sub.id] = sub
 	s.contestsHub.mu.Unlock()
 

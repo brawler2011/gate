@@ -135,3 +135,20 @@ func TestLiveSubscriptionSkipsOldHistoryWithoutCursor(t *testing.T) {
 	f.publish(t, models.SubmissionEventCreated, &models.SubmissionCreatedEvent{Id: newID, SubmissionEventMeta: f.meta(f.stub.user.Id)})
 	require.Equal(t, newID.String(), readPayload(t, conn)["id"])
 }
+
+func TestContestLiveSubscriptionSkipsLostHistoryWithoutCursor(t *testing.T) {
+	f := newWSFixture(t)
+	f.contests.ring = NewRingBuffer[*WrappedEvent](1)
+	oldID, newID := uuid.New(), uuid.New()
+	for i := 0; i < 2; i++ {
+		f.publish(t, models.ContestEventAnnouncementCreated, &models.ContestAnnouncementCreatedEvent{ID: oldID, ContestID: f.stub.contest.ID})
+	}
+	conn := f.connect(t, strings.TrimSuffix(f.path("contests"), "&since=0"))
+	require.Eventually(t, func() bool {
+		f.contests.mu.RLock()
+		defer f.contests.mu.RUnlock()
+		return len(f.contests.subscribers) == 1
+	}, time.Second, time.Millisecond)
+	f.publish(t, models.ContestEventAnnouncementCreated, &models.ContestAnnouncementCreatedEvent{ID: newID, ContestID: f.stub.contest.ID})
+	require.Equal(t, newID.String(), readPayload(t, conn)["id"])
+}

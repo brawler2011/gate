@@ -19,7 +19,7 @@ const completeRow = (row: Partial<SubmissionsListItemModel>): row is Submissions
   && typeof row.language === 'number' && typeof row.created_at === 'string' && typeof row.updated_at === 'string';
 
 export const applySubmissionEvent = (data: LiveSubmissions | undefined, event: SubmissionEvent,
-  selection: SubmissionsSelection): LiveSubmissions | undefined => {
+  selection: SubmissionsSelection, revisions: Map<string, number>): LiveSubmissions | undefined => {
   if (!data || event.sequence <= (data.since ?? 0)) {
     return data;
   }
@@ -28,6 +28,7 @@ export const applySubmissionEvent = (data: LiveSubmissions | undefined, event: S
     return {...data, since: event.sequence};
   }
   const existing = data.submissions.find(s => s.id === payload.id);
+  const latestRevision = Math.max(existing?.revision ?? 0, revisions.get(payload.id) ?? 0);
   let progress: SubmissionWithProgress['progress'];
   switch (event.event_type) {
     case 'submissions.queued': progress = {phase: 'queued'}; break;
@@ -37,7 +38,7 @@ export const applySubmissionEvent = (data: LiveSubmissions | undefined, event: S
     default: break;
   }
   if (progress) {
-    if (existing && event.payload.revision < existing.revision) {
+    if (event.payload.revision < latestRevision) {
       return {...data, since: event.sequence};
     }
     return {...data, since: event.sequence,
@@ -69,10 +70,11 @@ export const applySubmissionEvent = (data: LiveSubmissions | undefined, event: S
   if (after && !completeRow(row)) {
     return data;
   }
+  revisions.set(p.id, Math.max(latestRevision, p.revision));
   const replacement = after && completeRow(row) ? [row] : [];
-  const stale = existing !== undefined && existing.revision >= p.revision;
+  const stale = p.revision < latestRevision;
   const rows = data.submissions.flatMap(s => s.id === p.id && !stale ? replacement : [s]);
-  if (!existing && live) {
+  if (!existing && live && !stale) {
     rows.unshift(...replacement);
   }
   if (live) {

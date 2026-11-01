@@ -1,4 +1,4 @@
-import {useQueryClient} from '@tanstack/react-query';
+import {useQueryClient, type Query} from '@tanstack/react-query';
 import {createContext, useEffect, useState} from 'react';
 
 import {useWebSocketNotifications} from '@/hooks/useWebSocketNotifications';
@@ -34,6 +34,7 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
     const scoreboard = {queryKey: api.queryOptions('get',
       '/organizations/{org_login}/contests/{contest_login}/scoreboard', {params: {path}}).queryKey};
     let disposed = false;
+    const revisions = new WeakMap<Query, Map<string, number>>();
     const highlightTimers = new Map<string, ReturnType<typeof setTimeout>>();
     const refresh = async () => {
       await Promise.all([client.cancelQueries(submissions), client.cancelQueries(scoreboard)]);
@@ -84,8 +85,10 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
               if (!selection) {
                 return;
               }
+              const knownRevisions = revisions.get(query) ?? new Map<string, number>();
+              revisions.set(query, knownRevisions);
               client.setQueryData<LiveSubmissions>(query.queryKey,
-                data => applySubmissionEvent(data, message, selection));
+                data => applySubmissionEvent(data, message, selection, knownRevisions));
             }
           };
           apply();
