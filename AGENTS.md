@@ -117,21 +117,21 @@ When working with the backend codebase, adhere strictly to the following rules:
 
 - Use `task` instead of `go-task`. `task -a` lists available tasks.
 - Install JavaScript dependencies with `bun install --frozen-lockfile`.
-- Development: `task dev` runs the Go backend with Air and the Vite frontend; `task be:dev` and `task fe:dev` run them separately. Start required services separately using `deploy/local/docker-compose.yml`.
-- Database migrations: `task be:migrate` uses `deploy/local/.env`.
-- Checks: `task be:test`, `task be:lint`, `task fe:typecheck`, `task fe:lint`, `task fe:knip`, and `bun run test`. `task test` runs backend and frontend tests.
-- Integration tests: `task be:test-integration` requires Docker for Testcontainers.
-- Build: `task build` builds Go packages and the static SPA. `task fe:build:local` loads local environment settings; the application Docker image includes the Go binary and SPA bundle.
+- Development: `task dev` runs the Go backend with Air and the Vite frontend; `task dev:be` and `task dev:fe` run them separately. Start required services separately using `deploy/local/docker-compose.yml`.
+- Database migrations: `task migrate:be` uses `deploy/local/.env`.
+- Checks: `task test:be`, `task lint:be`, `task typecheck:fe`, `task lint:fe`, `task knip:fe`, and `bun run test`. `task test` runs backend and frontend tests.
+- Full backend test suite: `task test:be:integration` includes integration tests and requires Docker for Testcontainers.
+- Build: `task build` builds Go packages and the static SPA. `task build:fe:local` loads local environment settings; the application Docker image includes the Go binary and SPA bundle.
 - `task precommit` runs contract lint, codegen freshness, backend lint/tests, and frontend typecheck/lint. It does not include frontend tests, Knip, integration tests, or the production build; run relevant checks separately.
 
 ## Generated Code
 
-- Edit OpenAPI sources in `contracts/core/v1/openapi.yaml` and `contracts/observer/v1/openapi.yaml`, then run `task contracts:gen-openapi` to regenerate Go and TypeScript contracts.
-- `task contracts:lint` validates both specifications using the pinned Vacuum version and `contracts/vacuum.yaml`; correctness errors block changes, while style/documentation warnings are advisory.
-- Edit SQL queries in `backend/internal/repository/pg/*.sql` and migrations in `backend/migrations/`, then run `task be:gen-sqlc`.
-- `task be:gen-mocks` regenerates mocks; `task gen` runs all generators.
+- Edit OpenAPI sources in `contracts/core/v1/openapi.yaml` and `contracts/observer/v1/openapi.yaml`, then run `task gen:contracts` to regenerate Go and TypeScript contracts.
+- `task lint:contracts` validates both specifications using the pinned Vacuum version and `contracts/vacuum.yaml`; correctness errors block changes, while style/documentation warnings are advisory.
+- Edit SQL queries in `backend/internal/repository/pg/*.sql` and migrations in `backend/migrations/`, then run `task gen:sqlc`.
+- `task gen:mocks` regenerates mocks; `task gen` runs all generators.
 - Do not hand-edit generated files in `backend/contracts/core/v1/`, `backend/contracts/observer/v1/`, `frontend/contracts/`, `backend/internal/repository/pg/sqlc/`, or `backend/tests/mocks/`.
-- `task verify-codegen` regenerates code and fails if those generated paths have tracked or untracked changes.
+- `task diff:codegen` regenerates code and fails if those generated paths have tracked or untracked changes.
 
 ---
 
@@ -169,7 +169,7 @@ When working with the backend codebase, adhere strictly to the following rules:
 
 2. **PR Creation**
    - Run `task precommit` successfully before creating the PR.
-   - Validate the Conventional Commits title (<= 65 chars) with `printf '%s\n' '<title>' | task commit:validate`.
+   - Validate the Conventional Commits title (<= 65 chars) with `printf '%s\n' '<title>' | task validate:commit`.
    - Follow `.github/pull_request_template.md`, recording only checks actually performed and their results.
    - Push the issue branch and create the PR with `gh pr create --body-file <path>`.
 
@@ -200,4 +200,3 @@ When working with the backend codebase, adhere strictly to the following rules:
 1. **Breaking Changes (Default: Enabled)**
    - By default, tasks **ARE PERMITTED** to introduce breaking changes (API signature updates, contract modifications, DB schema changes) without maintaining backward compatibility layers.
    - If backward compatibility is required, the task will explicitly specify the **`backward-compatible`** issue label.
-
