@@ -203,6 +203,48 @@ describe("Submission WebSocket hook", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  it("preserves visible progress across a filter change and clears it after completion", async () => {
+    const initial = options();
+    const {result, rerender} = renderHook(useSubmissionsWebSocket, {initialProps: initial});
+    const socket = await open();
+    await act(async () => message(socket, "test_started", {...submission("initial"), number: 3}));
+    rerender({...initial, filter: {...initial.filter, problemId: undefined}});
+    expect(result.current.submissions[0].progress).toEqual({phase: "testing", testNumber: 3});
+    await act(async () => message(socket, "completed", {...submission("initial"), score: 100}));
+    rerender(initial);
+    expect(result.current.submissions[0].progress).toBeUndefined();
+    expect(TestWebSocket.instances).toHaveLength(1);
+  });
+
+  it("does not resurrect progress discarded by a recovery snapshot", async () => {
+    const initial = options();
+    const {result, rerender} = renderHook(useSubmissionsWebSocket, {initialProps: initial});
+    const socket = await open();
+    await act(async () => message(socket, "test_started", {...submission("initial"), number: 3}));
+    await act(async () => socket.disconnect());
+    await advance(2000);
+    await open();
+    expect(result.current.submissions[0].progress).toBeUndefined();
+    rerender({...initial, filter: {...initial.filter, problemId: undefined}});
+    expect(result.current.submissions[0].progress).toBeUndefined();
+  });
+
+  it("updates existing progress and completion rows without moving them to the front", async () => {
+    const {result} = renderHook(useSubmissionsWebSocket, {initialProps: options()});
+    const socket = await open();
+    await act(async () => {
+      message(socket, "created", submission("newer"));
+      message(socket, "test_started", {...submission("initial"), number: 2});
+    });
+    expect(result.current.submissions.map(item => item.id)).toEqual(["newer", "initial"]);
+    expect(result.current.submissions[1]).toMatchObject({username: "Alice", state: 200,
+      progress: {phase: "testing", testNumber: 2}});
+    await act(async () => message(socket, "completed", {...submission("initial"), score: 42}));
+    expect(result.current.submissions.map(item => item.id)).toEqual(["newer", "initial"]);
+    expect(result.current.submissions[1].score).toBe(42);
+    expect(result.current.submissions[1].progress).toBeUndefined();
+  });
+
   it("debounces the disconnect notice and reports snapshot recovery", async () => {
     const {result} = renderHook(useSubmissionsWebSocket, {initialProps: options()});
     const socket = await open();

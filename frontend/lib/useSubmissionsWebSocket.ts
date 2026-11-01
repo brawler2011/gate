@@ -89,7 +89,6 @@ export const useSubmissionsWebSocket = ({
   const wsNotificationId = `submissions-ws-status:${useId()}`;
   const wsNotificationVisibleRef = useRef(false);
 
-  const progressMapRef = useRef<Map<string, TestProgress>>(new Map());
   const mountedRef = useRef(true);
   // Initialize with current filterKey to prevent unnecessary reset on first mount
   const initializedFilterRef = useRef<string>(filterKey);
@@ -189,11 +188,9 @@ export const useSubmissionsWebSocket = ({
   useEffect(() => {
     if (initializedFilterRef.current !== filterKey) {
       initializedFilterRef.current = filterKey;
-      setSubmissions(initialSubmissions.map(s => {
-        const existingProgress = progressMapRef.current.get(s.id);
-        return existingProgress ? {...s, progress: existingProgress} : {...s};
-      }));
-      progressMapRef.current.clear();
+      setSubmissions(previous => initialSubmissions.map(s => ({
+        ...s, progress: previous.find(existing => existing.id === s.id)?.progress,
+      })));
     }
   }, [filterKey, initialSubmissions]);
 
@@ -210,6 +207,22 @@ export const useSubmissionsWebSocket = ({
       }
     }, HIGHLIGHT_DURATION);
   }, []);
+
+  const updateSubmission = useCallback((
+    id: string,
+    update: (existing?: SubmissionWithProgress) => SubmissionWithProgress,
+    prepend = false,
+  ) => {
+    setSubmissions(previous => {
+      const index = previous.findIndex(s => s.id === id);
+      const next = update(previous[index]);
+      if (prepend || index === -1) {
+        return [next, ...previous.filter(s => s.id !== id)].slice(0, pageSize);
+      }
+      return previous.map((s, i) => i === index ? next : s);
+    });
+    addHighlight(id);
+  }, [pageSize, addHighlight]);
 
   // Build WebSocket URL with filter params (without problemId to keep connection alive when switching tasks)
   // Use individual filter values as dependencies to prevent reconnection on every render
@@ -298,15 +311,7 @@ export const useSubmissionsWebSocket = ({
         const newSubmission = {...toSubmission(p), isNew: true,
           score: p.frozen ? undefined : 0, penalty: p.frozen ? undefined : 0,
           time_stat: p.frozen ? undefined : 0, memory_stat: p.frozen ? undefined : 0};
-        setSubmissions(prev => {
-          const filtered = prev.filter(s => s.id !== newSubmission.id);
-          const updated = [newSubmission, ...filtered];
-          if (updated.length > pageSize) {
-            updated.pop();
-          }
-          return updated;
-        });
-        addHighlight(p.id);
+        updateSubmission(p.id, () => newSubmission, true);
         break;
       }
 
@@ -324,52 +329,21 @@ export const useSubmissionsWebSocket = ({
         if (data.event_type === 'submissions.test_started') {
           progress.testNumber = data.payload.number;
         }
-        progressMapRef.current.set(p.id, progress);
-
-        setSubmissions(prev => {
-          const index = prev.findIndex(s => s.id === p.id);
-          if (index === -1) {
-            const fallback: SubmissionWithProgress = {
-              ...toSubmission(p), state: 1, score: 0, penalty: 0, time_stat: 0, memory_stat: 0,
-              progress, isNew: true,
-            };
-            const updated = [fallback, ...prev];
-            if (updated.length > pageSize) {
-              updated.pop();
-            }
-            return updated;
-          }
-          const updated = [...prev];
-          updated[index] = {...updated[index], progress};
-          return updated;
-        });
-        addHighlight(p.id);
+        updateSubmission(p.id, existing => ({
+          ...(existing ?? {...toSubmission(p), state: 1, score: 0, penalty: 0,
+            time_stat: 0, memory_stat: 0, isNew: true}),
+          progress,
+        }));
         break;
       }
 
       case 'submissions.completed': {
         const p = data.payload;
-        progressMapRef.current.delete(p.id);
-
-        setSubmissions(prev => {
-          const index = prev.findIndex(s => s.id === p.id);
-          const completed = toSubmission(p);
-          if (index === -1) {
-            const updated = [completed, ...prev];
-            if (updated.length > pageSize) {
-              updated.pop();
-            }
-            return updated;
-          }
-          const updated = [...prev];
-          updated[index] = {...updated[index], ...completed, progress: undefined};
-          return updated;
-        });
-        addHighlight(p.id);
+        updateSubmission(p.id, existing => ({...existing, ...toSubmission(p), progress: undefined}));
         break;
       }
     }
-  }, [pageSize, addHighlight, toSubmission, contestId, userId, problemId]);
+  }, [updateSubmission, toSubmission, contestId, userId, problemId]);
 
   const latest = useRef({handleMessage, resyncSnapshot});
   useEffect(() => {
