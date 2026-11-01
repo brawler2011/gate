@@ -1,13 +1,17 @@
 import "./setup-dom";
 
 import {notifications} from "@mantine/notifications";
+import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {afterEach, beforeEach, expect, it, spyOn} from "bun:test";
+import React from "react";
 
 import {ContestEventsListener} from "@/components/contests/ContestEventsListener";
 import {ContestMonitorTable} from "@/components/contests/ContestMonitorTable";
 import {ContestMessagesClient} from "@/components/contests/messages/ContestMessagesClient";
+import {SubmissionsProvider} from "@/contexts/SubmissionsProvider";
 import {env} from "@/lib/env";
 
+import {Monitor} from "./monitor-test-utils";
 import {act, cleanup, fireEvent, renderWithProviders, waitFor} from "./test-utils";
 import {flushMicrotasks, TestWebSocket} from "./websocket-test-utils";
 
@@ -70,7 +74,7 @@ it("uses one contest socket and one notification while refreshing only the affec
 });
 
 it("loads one scoreboard snapshot per socket connection", async () => {
-  renderWithProviders(<ContestMonitorTable contestId="contest" orgLogin="org" contestLogin="round"
+  renderWithProviders(<Monitor orgLogin="org" contestLogin="round"
     initialScoreboard={{contest_id: "contest", contest_login: "round", organization_login: "org", penalty_per_attempt: 20,
       items: [], problems: [], is_frozen: false}} />);
   await act(flushMicrotasks);
@@ -100,7 +104,9 @@ it("refreshes the active clarification filter without fetching announcements", a
 });
 
 it("keeps the monitor socket while loading each selected snapshot once", async () => {
-  const view = renderWithProviders(<ContestMonitorTable contestId="contest" orgLogin="org" contestLogin="round" isManager
+  fetch.mockImplementation(Object.assign(async () => Response.json({items: [], problems: [], is_frozen: true}),
+    {preconnect: () => {}}));
+  const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="round" isManager
     initialScoreboard={{contest_id: "contest", contest_login: "round", organization_login: "org", penalty_per_attempt: 20,
       items: [], problems: [], is_frozen: true}} />);
   await act(flushMicrotasks);
@@ -116,4 +122,39 @@ it("keeps the monitor socket while loading each selected snapshot once", async (
   expect(String(fetch.mock.calls[2][0])).toContain("unfrozen=false");
   expect(TestWebSocket.instances).toHaveLength(1);
   expect(socket.closeCalls).toBe(0);
+});
+
+it("reloads a monitor invalidated while its table was unmounted", async () => {
+  const client = new QueryClient({defaultOptions: {queries: {retry: false, staleTime: Infinity, gcTime: Infinity}}});
+  let username = "Original participant";
+  fetch.mockImplementation(Object.assign(async () => Response.json({is_frozen: false, problems: [], items: [{
+    user_id: "user", username, problems_solved: 0, total_penalty: 0, problem_results: [],
+  }]}), {preconnect: () => {}}));
+  const Screen = () => {
+    const [visible, setVisible] = React.useState(true);
+    return <QueryClientProvider client={client}>
+      <SubmissionsProvider contestId="contest" orgLogin="org" contestLogin="round" userId="user">
+        <button onClick={() => setVisible(!visible)}>Toggle monitor</button>
+        {visible && <ContestMonitorTable orgLogin="org" contestLogin="round" />}
+      </SubmissionsProvider>
+    </QueryClientProvider>;
+  };
+  const view = renderWithProviders(<Screen />);
+  try {
+    await waitFor(() => expect(view.getByText(username)).toBeTruthy());
+    await act(async () => TestWebSocket.instances[0].open());
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    fireEvent.click(view.getByRole('button', {name: 'Toggle monitor'}));
+    username = "New participant";
+    await act(async () => TestWebSocket.instances[0].message({event_type: "submissions.completed",
+      payload: {id: "submission", contest_id: "contest"}}));
+    await waitFor(() => expect(client.getQueryCache().getAll().some(q => q.state.isInvalidated)).toBe(true));
+    expect(fetch).toHaveBeenCalledTimes(2);
+    fireEvent.click(view.getByRole('button', {name: 'Toggle monitor'}));
+    await waitFor(() => expect(view.getByText(username)).toBeTruthy());
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(TestWebSocket.instances).toHaveLength(1);
+  } finally {
+    view.unmount(); client.clear();
+  }
 });

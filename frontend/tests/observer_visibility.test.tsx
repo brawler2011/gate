@@ -3,12 +3,12 @@ import "./setup-dom";
 import {afterAll, beforeAll, describe, expect, it, spyOn} from "bun:test";
 import React from "react";
 
-import {ContestMonitorTable} from "@/components/contests/ContestMonitorTable";
 import {SubmissionDetailsContent} from "@/components/submissions/SubmissionDetailsContent";
 import {SubmissionsList} from "@/components/submissions/SubmissionsList";
 import {env} from "@/lib/env";
 import * as submissionsConnection from "@/lib/submissionsConnection";
 
+import {Monitor} from "./monitor-test-utils";
 import {act, renderWithProviders, setupDOMEnvironment, waitFor} from "./test-utils";
 
 import type {ScoreboardResponseModel, SubmissionModel, SubmissionsListItemModel} from "@/contracts/core/v1/schema";
@@ -69,7 +69,7 @@ describe("Observer visibility in production components", () => {
         problem_results: [{problem_id: "problem", solved: false, failed_attempts: 0, pending_attempts: 1}]}],
     };
     const fetch = spyOn(globalThis, "fetch").mockImplementation(Object.assign(async () => Response.json(snapshot), {preconnect: () => {}}));
-    const view = renderWithProviders(<ContestMonitorTable contestId="contest" orgLogin="org" contestLogin="contest" initialScoreboard={snapshot} />);
+    const view = renderWithProviders(<Monitor orgLogin="org" contestLogin="contest" initialScoreboard={snapshot} />);
     try {
       expect(listener!.url()).toContain("contestId=contest");
       const event = {data: JSON.stringify({event_type: "submissions.completed", payload: {id: "sub", contest_id: "contest", frozen: true}})} as MessageEvent;

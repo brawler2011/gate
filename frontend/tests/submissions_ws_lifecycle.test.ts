@@ -8,7 +8,7 @@ type Listener = Required<Parameters<typeof connectSubmissions>[0]>;
 const listener = (changes: Partial<Listener> = {}): Listener => ({
   url: () => "ws://localhost/ws/submissions?contestId=contest",
   onMessage: mock(() => {}),
-  onStatusChange: mock(() => {}), onResyncRequired: mock(async () => {}), ...changes,
+  onStatusChange: mock(() => {}), ...changes,
 });
 
 describe("WebSocket subscription lifecycle", () => {
@@ -34,17 +34,9 @@ describe("WebSocket subscription lifecycle", () => {
     globalThis.WebSocket = originalSocket;
   });
 
-  it("loads a snapshot before opening the stream", async () => {
-    let finish!: () => void;
-    const pending = new Promise<void>(resolve => {
-      finish = resolve;
-    });
-    const params = listener({onResyncRequired: mock(() => pending)});
+  it("opens the stream and reports connection status", async () => {
+    const params = listener();
     add(params);
-    expect(params.onResyncRequired).toHaveBeenCalledTimes(1);
-    expect(TestWebSocket.instances).toHaveLength(0);
-    finish();
-    await flushMicrotasks();
     expect(TestWebSocket.instances).toHaveLength(1);
     expect(TestWebSocket.instances[0].url).toBe(params.url());
     TestWebSocket.instances[0].open();
@@ -73,7 +65,7 @@ describe("WebSocket subscription lifecycle", () => {
   });
 
   for (const code of [1000, 1006, 1008, 4408, 4409, 4410]) {
-    it(`resyncs and reconnects after close ${code}`, async () => {
+    it(`reconnects after close ${code}`, async () => {
       const params = listener();
       add(params);
       await flushMicrotasks();
@@ -82,10 +74,8 @@ describe("WebSocket subscription lifecycle", () => {
       expect(params.onStatusChange).toHaveBeenLastCalledWith({phase: "reconnecting", attempt: 1, maxAttempts: 3});
       jest.advanceTimersByTime(1999);
       await flushMicrotasks();
-      expect(params.onResyncRequired).toHaveBeenCalledTimes(1);
       jest.advanceTimersByTime(1);
       await flushMicrotasks();
-      expect(params.onResyncRequired).toHaveBeenCalledTimes(2);
       expect(TestWebSocket.instances).toHaveLength(2);
       TestWebSocket.instances[1].open();
     });
@@ -102,11 +92,10 @@ describe("WebSocket subscription lifecycle", () => {
     expect(TestWebSocket.instances[0].closeCalls).toBe(1);
     jest.advanceTimersByTime(2000);
     await flushMicrotasks();
-    expect(params.onResyncRequired).toHaveBeenCalledTimes(2);
     expect(TestWebSocket.instances).toHaveLength(2);
   });
 
-  it("bounds constructor retries without repeating the successful snapshot", async () => {
+  it("bounds constructor retries", async () => {
     TestWebSocket.failConnections = true;
     const params = listener();
     add(params);
@@ -115,7 +104,6 @@ describe("WebSocket subscription lifecycle", () => {
       jest.advanceTimersByTime(delay);
       await flushMicrotasks();
     }
-    expect(params.onResyncRequired).toHaveBeenCalledTimes(1);
     expect(params.onStatusChange).toHaveBeenLastCalledWith({phase: "fatal", attempt: 3, maxAttempts: 3});
   });
 
@@ -129,39 +117,6 @@ describe("WebSocket subscription lifecycle", () => {
     jest.advanceTimersByTime(30000);
     await flushMicrotasks();
     expect(TestWebSocket.instances).toHaveLength(1);
-    expect(params.onResyncRequired).toHaveBeenCalledTimes(1);
   });
 
-  it("does not open a socket after an unsubscribed snapshot completes", async () => {
-    let finish!: () => void;
-    const pending = new Promise<void>(resolve => {
-      finish = resolve;
-    });
-    const disconnect = add(listener({onResyncRequired: () => pending}));
-    disconnect();
-    finish();
-    await flushMicrotasks();
-    expect(TestWebSocket.instances).toHaveLength(0);
-  });
-
-  it("retries an initial snapshot failure and opens with the recovered cursor", async () => {
-    let cursor = 1;
-    let calls = 0;
-    const params = listener({
-      url: () => `ws://localhost/ws/submissions?since=${cursor}`,
-      onResyncRequired: async () => {
-        if (++calls === 1) {
-          throw new Error("unavailable");
-        }
-        cursor = 7;
-      },
-    });
-    add(params);
-    await flushMicrotasks();
-    expect(TestWebSocket.instances).toHaveLength(0);
-    expect(params.onStatusChange).toHaveBeenLastCalledWith({phase: "reconnecting", attempt: 1, maxAttempts: 3});
-    jest.advanceTimersByTime(2000);
-    await flushMicrotasks();
-    expect(TestWebSocket.instances[0].url).toContain("since=7");
-  });
 });

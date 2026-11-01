@@ -9,7 +9,7 @@ import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
 import {SubmissionSanctionsModal, type SanctionActionType} from "./SubmissionSanctionsModal";
 import styles from "./SubmissionsList.module.css";
 
-import type {SubmissionWithProgress} from "@/lib/useSubmissionsWebSocket";
+import type {SubmissionWithProgress} from "@/lib/submissions";
 
 interface SubmissionsListProps {
   submissions: SubmissionWithProgress[];

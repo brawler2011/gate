@@ -1,12 +1,9 @@
-import {Alert, Container, Group, Paper, Stack} from "@mantine/core";
-import {IconAlertCircle} from "@tabler/icons-react";
+import {Container, Paper, Stack} from "@mantine/core";
 import {useLoaderData, redirect} from "react-router-dom";
 
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
-import {RoutePagination} from "@/components/shared/Pagination";
 import {SubmissionsListClient} from "@/components/submissions";
 import {api, unwrap} from "@/lib/api";
-import {env} from "@/lib/env";
 import {parsePage} from "@/lib/lib";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
@@ -29,11 +26,12 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     userId?: string;
     problemId?: string;
     state?: number;
-    sortOrder?: "asc" | "desc";
+    sortOrder: "asc" | "desc";
     language?: number;
   } = {
     page,
     pageSize: PAGE_SIZE,
+    sortOrder: "desc",
   };
 
   if (queryParams.userId) {
@@ -80,52 +78,16 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   const canRejudge =
     contestData?.contest && checker ? checker.canRejudgeSubmissions(contestData.contest) : false;
 
-  const {data: submissionsData, error: submissionsErr, response: submissionsResponse} = await api.GET(
-    "/organizations/{org_login}/contests/{contest_login}/submissions",
-    {
-      params: {
-        path: {org_login: slug, contest_login: contestLogin},
-        query: parsedParams,
-      },
-    },
-  );
-  const error = submissionsErr
-    ? {
-      status: submissionsResponse.status,
-      message: submissionsErr.message || submissionsResponse.statusText,
-    }
-    : null;
-  return {slug, contestLogin, parsedParams, contestData, canRejudge, error, submissionsData};
+  const selection = {orgLogin: slug, contestLogin, contestId: contestData.contest.id, ...parsedParams};
+  return {slug, contestLogin, contestData, canRejudge, selection};
 }) satisfies LoaderFunction;
 
 const PAGE_SIZE = 15;
 
 const Page = (): ReactNode => {
   const data = useLoaderData<typeof loader>();
-  const {slug, contestLogin, parsedParams, contestData, canRejudge, error, submissionsData} =
+  const {contestData, canRejudge, selection} =
     data;
-  if (error) {
-    return <ErrorDisplay error={error} />;
-  }
-  if (!submissionsData) {
-    return (
-      <Container size="lg" py="xl">
-        <Alert icon={<IconAlertCircle size="1rem" />} title="Ошибка загрузки" color="red">
-          Не удалось загрузить список решений. Попробуйте обновить страницу.
-        </Alert>
-      </Container>
-    );
-  }
-  const nextQueryParams: Record<string, string | number | undefined> = {
-    page: parsedParams.page,
-    pageSize: parsedParams.pageSize,
-    userId: parsedParams.userId,
-    problemId: parsedParams.problemId,
-    state: parsedParams.state,
-    order: parsedParams.sortOrder,
-    language: parsedParams.language,
-  };
-  const wsBaseUrl = env.getWebSocketUrl();
   return (
     <Container size="lg" pb="xl">
       <title>Посылки</title>
@@ -143,27 +105,10 @@ const Page = (): ReactNode => {
         >
           <Stack gap="md">
             <SubmissionsListClient
-              initialSubmissions={submissionsData.submissions}
-              wsUrl={wsBaseUrl + "/submissions"}
-              since={submissionsData.since}
-              filter={{
-                orgLogin: slug,
-                contestLogin,
-                userId: parsedParams.userId,
-                problemId: parsedParams.problemId,
-              }}
-              pageSize={PAGE_SIZE}
-              page={parsedParams.page}
-              sortOrder={parsedParams.sortOrder}
+              selection={selection}
               canRejudge={canRejudge}
             />
-            <Group justify="center">
-              <RoutePagination
-                pagination={submissionsData.pagination}
-                baseUrl={`/${slug}/${contestLogin}/submissions`}
-                queryParams={nextQueryParams}
-              />
-            </Group>
+
           </Stack>
         </Paper>
       ) : (

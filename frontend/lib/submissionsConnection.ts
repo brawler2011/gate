@@ -2,7 +2,6 @@ type ConnectionOptions = {
   url: () => string;
   onMessage: (event: MessageEvent) => void;
   onStatusChange: (status: SubmissionsConnectionStatus) => void;
-  onResyncRequired?: () => Promise<void>;
 };
 
 export type SubmissionsConnectionStatus =
@@ -21,7 +20,7 @@ export const connectSubmissions = (options: ConnectionOptions): (() => void) => 
   let attempt = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
-  const retry = (resync: boolean) => {
+  const retry = () => {
     if (disposed) {
       return;
     }
@@ -31,18 +30,10 @@ export const connectSubmissions = (options: ConnectionOptions): (() => void) => 
     }
     const delay = RECONNECT_DELAYS[attempt++];
     options.onStatusChange({phase: 'reconnecting', attempt, maxAttempts: RECONNECT_DELAYS.length});
-    timer = setTimeout(() => void connect(resync), delay);
+    timer = setTimeout(connect, delay);
   };
 
-  const connect = async (resync: boolean) => {
-    if (resync) {
-      try {
-        await options.onResyncRequired?.();
-      } catch {
-        retry(true);
-        return;
-      }
-    }
+  const connect = () => {
     if (disposed) {
       return;
     }
@@ -67,16 +58,16 @@ export const connectSubmissions = (options: ConnectionOptions): (() => void) => 
         if (!disposed && socket === ws) {
           socket = null;
           clearTimeout(timer);
-          retry(true);
+          retry();
         }
       };
     } catch {
-      retry(false);
+      retry();
     }
   };
 
   options.onStatusChange({phase: 'connecting'});
-  void connect(true);
+  connect();
   return () => {
     disposed = true;
     clearTimeout(timer);

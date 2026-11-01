@@ -1,28 +1,20 @@
 "use client";
 
 import {Loader, Paper, Table, Text, Tooltip} from "@mantine/core";
-import {useState} from "react";
+import {useContext, useState} from "react";
 
+import {SubmissionsHighlights} from "@/contexts/SubmissionsProvider";
 import {ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
-import {useSubmissionsWebSocket, type SubmissionWithProgress} from "@/lib/useSubmissionsWebSocket";
 
 import styles from "./RecentSubmissionsTable.module.css";
 import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
 
 import type {SubmissionsListItemModel} from "@/contracts/core/v1/schema";
+import type {SubmissionWithProgress} from "@/lib/submissions";
 import type {ReactNode} from "react";
-
-const RECENT_SUBMISSIONS_LIMIT = 5;
 
 type RecentSubmissionsTableProps = {
   submissions: SubmissionsListItemModel[];
-  orgLogin?: string;
-  contestLogin?: string;
-  contestId: string;
-  userId?: string;
-  problemId?: string;
-  wsUrl?: string;
-  since?: number;
 };
 
 interface StatusCellProps {
@@ -78,41 +70,12 @@ const StatusCell = ({submission, onOpenDetails}: StatusCellProps) => {
 };
 
 export const RecentSubmissionsTable = ({
-  submissions: initialSubmissions,
-  orgLogin,
-  contestLogin,
-  contestId,
-  userId,
-  problemId,
-  wsUrl,
-  since,
+  submissions,
 }: RecentSubmissionsTableProps): ReactNode => {
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const highlights = useContext(SubmissionsHighlights);
 
-  // Enable WS only if wsUrl is provided and we have userId and problemId for filtering
-  const enabled = Boolean(wsUrl && userId && problemId);
-
-  const {submissions, highlightedIds} = useSubmissionsWebSocket({
-    wsUrl,
-    since,
-    initialSubmissions,
-    filter: {
-      orgLogin,
-      contestLogin,
-      contestId,
-      userId,
-      problemId,
-    },
-    pageSize: RECENT_SUBMISSIONS_LIMIT,
-    enabled,
-  });
-
-  // Use WS submissions if enabled, otherwise use initial submissions
-  const displaySubmissions = enabled
-    ? submissions.slice(0, RECENT_SUBMISSIONS_LIMIT)
-    : initialSubmissions.slice(0, RECENT_SUBMISSIONS_LIMIT);
-
-  if (displaySubmissions.length === 0) {
+  if (submissions.length === 0) {
     return null;
   }
 
@@ -137,11 +100,11 @@ export const RecentSubmissionsTable = ({
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {displaySubmissions.map((submission) => (
+            {submissions.map((submission) => (
               <Table.Tr
                 key={submission.id}
                 className={
-                  highlightedIds.has(submission.id)
+                  highlights.has(submission.id)
                     ? styles.rowHighlight
                     : undefined
                 }

@@ -4,8 +4,10 @@ import {ContestEventsListener} from "@/components/contests/ContestEventsListener
 import {ContestHeaderNav} from "@/components/contests/ContestHeaderNav";
 import {DefaultLayout} from "@/components/shared/DefaultLayout";
 import {QueryState} from "@/components/shared/QueryState";
+import {SubmissionsProvider} from "@/contexts/SubmissionsProvider";
 import {useContestData} from "@/hooks/useContestData";
 import {api} from "@/lib/api";
+import {PermissionChecker} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
 
@@ -25,6 +27,9 @@ const ContestLayout = (): ReactNode => {
   const org = organization.data.organization;
   const isModerator =
     contestRole?.role === "moderator" || contestRole?.role === "owner" || user?.role === "admin";
+  const checker = new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null);
+  const canSubscribe = checker.canViewMySubmissions(response.contest) || checker.canViewAllSubmissions(response.contest)
+    || checker.canViewMonitor(response.contest);
   return (
     <DefaultLayout
       headerUser={user}
@@ -50,7 +55,10 @@ const ContestLayout = (): ReactNode => {
         currentUserId={user?.id}
         isModerator={isModerator}
       />
-      <Outlet />
+      <SubmissionsProvider key={`${response.contest.id}:${user?.id}`} contestId={response.contest.id}
+        orgLogin={slug} contestLogin={contestLogin} userId={canSubscribe ? user?.id : undefined}>
+        <Outlet />
+      </SubmissionsProvider>
     </DefaultLayout>
   );
 };
