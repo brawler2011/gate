@@ -934,6 +934,16 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "state filter is unavailable during freeze")
 	}
 
+	var since int64
+	if h.natsJS != nil {
+		lastSeq, seqErr := pkg.GetSubmissionsLastSequence(ctx, h.natsJS)
+		if seqErr != nil {
+			slog.Warn("failed to get submissions last sequence", "error", seqErr)
+		} else {
+			since = safeInt64(lastSeq)
+		}
+	}
+
 	submissionsList, err := h.submissionsUC.ListSubmissions(ctx, models.SubmissionsFilter{
 		ContestId: &contest.ID,
 		Page:      page,
@@ -950,16 +960,6 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 
 	for i, submission := range submissionsList.Submissions {
 		submissionsList.Submissions[i] = models.SubmissionView(&contest, submission.CreatedBy, submission.CreatedAt, user.Id, permissions, time.Now()).Apply(submission)
-	}
-
-	var since int64
-	if h.natsJS != nil {
-		lastSeq, seqErr := pkg.GetSubmissionsLastSequence(ctx, h.natsJS)
-		if seqErr != nil {
-			slog.Warn("failed to get submissions last sequence", "error", seqErr)
-		} else {
-			since = safeInt64(lastSeq)
-		}
 	}
 
 	resp := SubmissionsListToDTO(submissionsList)
