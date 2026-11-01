@@ -14,7 +14,7 @@ import {AskClarificationModal} from "./AskClarificationModal";
 import classes from "./ContestMessagesClient.module.css";
 import {CreateAnnouncementModal} from "./CreateAnnouncementModal";
 
-import type {ContestAnnouncementModel, ContestClarificationModel, ListContestAnnouncementsResponseModel, ListContestClarificationsResponseModel, ContestModel, ContestProblemListItemModel, UserModel} from "@/contracts/core/v1/schema";
+import type {ContestAnnouncementModel, ContestClarificationModel, ContestModel, ContestProblemListItemModel, UserModel} from "@/contracts/core/v1/schema";
 
 export interface ContestMessagesClientProps {
   contest: ContestModel;
@@ -23,8 +23,6 @@ export interface ContestMessagesClientProps {
   user: UserModel | null;
   isModerator: boolean;
   problems?: ContestProblemListItemModel[];
-  initialAnnouncements?: ListContestAnnouncementsResponseModel;
-  initialClarifications?: ListContestClarificationsResponseModel;
 }
 
 export const ContestMessagesClient = ({
@@ -34,8 +32,6 @@ export const ContestMessagesClient = ({
   user,
   isModerator,
   problems = [],
-  initialAnnouncements,
-  initialClarifications,
 }: ContestMessagesClientProps): ReactNode => {
   const [activeTab, setActiveTab] = useState<string | null>("announcements");
 
@@ -51,16 +47,13 @@ export const ContestMessagesClient = ({
   const path = {org_login: orgLogin, contest_login: contestLogin};
   const announcementsQuery = api.useQuery('get', '/organizations/{org_login}/contests/{contest_login}/announcements', {
     params: {path, query: {page: 1, pageSize: 100}},
-  }, {initialData: initialAnnouncements, refetchOnMount: false});
+  });
   const clarificationsQuery = api.useQuery('get', '/organizations/{org_login}/contests/{contest_login}/clarifications', {
     params: {path, query: {
       problem_id: problemFilter || undefined, status: statusFilter || undefined, page: 1, pageSize: 100,
     }},
   }, {
     enabled: Boolean(user?.id),
-    initialData: !problemFilter && !statusFilter
-      ? initialClarifications : undefined,
-    refetchOnMount: false,
   });
   const announcements = announcementsQuery.data?.announcements ?? [];
   const clarifications = clarificationsQuery.data?.clarifications ?? [];

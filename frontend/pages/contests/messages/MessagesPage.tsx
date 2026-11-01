@@ -5,7 +5,6 @@ import {ContestMessagesClient} from "@/components/contests/messages/ContestMessa
 import {api, unwrap} from "@/lib/api";
 import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
 
-import type {ListContestClarificationsResponseModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
 
@@ -42,35 +41,12 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
   const isModerator =
     contestRole?.role === "moderator" || contestRole?.role === "owner" || user?.role === "admin";
 
-  const {data: announcementsRes} = await api.GET(
-    "/organizations/{org_login}/contests/{contest_login}/announcements",
-    {
-      params: {
-        path: {org_login: slug, contest_login: contestLogin},
-        query: {page: 1, pageSize: 100},
-      },
-    },
-  );
-
-  let initialClarifications: ListContestClarificationsResponseModel | undefined;
-  if (user) {
-    const {data: clarificationsRes} = await api.GET(
-      "/organizations/{org_login}/contests/{contest_login}/clarifications",
-      {
-        params: {
-          path: {org_login: slug, contest_login: contestLogin},
-          query: {page: 1, pageSize: 100},
-        },
-      },
-    );
-    initialClarifications = clarificationsRes;
-  }
-  return {slug, contestLogin, contestResponse, user, isModerator, announcementsRes, initialClarifications};
+  return {slug, contestLogin, contestResponse, user, isModerator};
 }) satisfies LoaderFunction;
 
 const Page = (): ReactNode => {
   const data = useLoaderData<typeof loader>();
-  const {slug, contestLogin, contestResponse, user, isModerator, announcementsRes, initialClarifications} =
+  const {slug, contestLogin, contestResponse, user, isModerator} =
     data;
   const problems = contestResponse.problems || [];
   return (
@@ -83,8 +59,6 @@ const Page = (): ReactNode => {
         user={user}
         isModerator={isModerator}
         problems={problems}
-        initialAnnouncements={announcementsRes}
-        initialClarifications={initialClarifications}
       />
     </Container>
   );
