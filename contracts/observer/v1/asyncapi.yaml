@@ -1,13 +1,6 @@
 asyncapi: 3.0.0
 info:
-  description: |
-    Server-to-client submission and contest events authenticated by session_id.
-    Invalid filters or access fail before upgrade with HTTP 400, 401, or 403.
-    Internal subscription errors return HTTP 500.
-    since is an optional replay cursor. Replay failures close with 4408
-    (buffer_empty), 4409 (history_lost), or 4410 (invalid_range).
-    Access is rechecked while streaming: revocation closes with 1008,
-    internal errors with 1011. Clients manage reconnection and resynchronization.
+  description: Submission and contest events over WebSocket.
   title: ObserverService API
   version: 0.0.1
 channels:
@@ -197,7 +190,6 @@ components:
         - type: object
           required:
             - id
-            - failed_test
           properties:
             frozen:
               type: boolean

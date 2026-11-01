@@ -48,7 +48,7 @@ func TestDiscriminatedEnvelopes(t *testing.T) {
 	}
 }
 
-func TestCompletedEnvelopePreservesZeroNullAndFormats(t *testing.T) {
+func TestCompletedEnvelopePreservesZeroAndFormats(t *testing.T) {
 	id := uuid.New()
 	created := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 	position := int32(0)
@@ -68,8 +68,7 @@ func TestCompletedEnvelopePreservesZeroNullAndFormats(t *testing.T) {
 		require.Contains(t, got.Payload, key)
 		require.InDelta(t, 0, got.Payload[key], 0)
 	}
-	require.Contains(t, got.Payload, "failed_test")
-	require.Nil(t, got.Payload["failed_test"])
+	require.NotContains(t, got.Payload, "failed_test")
 	require.Equal(t, id.String(), got.Payload["user_id"])
 	require.Equal(t, created.Format(time.RFC3339), got.Payload["created_at"])
 	for _, key := range []string{"contest_id", "problem_id", "language", "username", "frozen"} {

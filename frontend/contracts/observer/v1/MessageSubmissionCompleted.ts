@@ -17,7 +17,7 @@ interface MessageSubmissionCompleted {
   'penalty'?: number;
   'time_stat'?: number;
   'memory_stat'?: number;
-  'failed_test': number | null;
+  'failed_test'?: number | null;
   'additionalProperties'?: Map<string, any>;
 }
 export default MessageSubmissionCompleted;

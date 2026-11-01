@@ -25,6 +25,6 @@ type MessageSubmissionCompleted struct {
 	Penalty              *int32                 `json:"penalty,omitempty"`
 	TimeStat             *int32                 `json:"time_stat,omitempty"`
 	MemoryStat           *int32                 `json:"memory_stat,omitempty"`
-	FailedTest           *int32                 `json:"failed_test" binding:"required"`
+	FailedTest           *int32                 `json:"failed_test,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-,omitempty"`
 }

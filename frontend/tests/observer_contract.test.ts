@@ -27,11 +27,15 @@ describe("observer message contract", () => {
     expect(contests({event_type: "contest.announcement_created", payload: {id, contest_id: id}})).toBe(false);
   });
 
+  test("accepts frozen results without hidden fields", () => {
+    expect(submissions({event_type: "submissions.completed", payload: {id, frozen: true}})).toBe(true);
+  });
+
   test("rejects unknown events, wrong field types, and missing payloads", () => {
     expect(submissions({event_type: "submissions.unknown", payload: {id}})).toBe(false);
     expect(submissions({event_type: "submissions.completed", payload: {id, score: "zero", failed_test: null}}))
       .toBe(false);
-    expect(submissions({event_type: "submissions.completed", payload: {id}})).toBe(false);
+    expect(submissions({event_type: "submissions.completed", payload: {score: 0}})).toBe(false);
     expect(submissions({event_type: "submissions.completed"})).toBe(false);
   });
 });
