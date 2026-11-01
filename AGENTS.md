@@ -135,6 +135,12 @@ When working with the backend codebase, adhere strictly to the following rules:
 
 ---
 
+## GitHub Communication Guidelines
+
+- Include only information that helps readers understand the task, make a decision, or fix a problem. Let the complexity of the change determine the length.
+- Omit repetition, generic assurances of compliance, process narration, and empty sections. Do not create separate reports to replace removed template sections.
+- In PR descriptions and reviews, report only check failures and material verification gaps. Do not list successful checks or repeat the contents of `task precommit`.
+
 ## Issue Guidelines
 
 - GitHub Issues are the only task specification store. All issues, including those created by agents, MUST follow the appropriate form in `.github/ISSUE_TEMPLATE`.
@@ -170,19 +176,19 @@ When working with the backend codebase, adhere strictly to the following rules:
 2. **PR Creation**
    - Run `task precommit` successfully before creating the PR.
    - Validate the Conventional Commits title (<= 65 chars) with `printf '%s\n' '<title>' | task validate:commit`.
-   - Follow `.github/pull_request_template.md`, recording only checks actually performed and their results.
+   - Follow `.github/pull_request_template.md`: include the issue link, result, and non-obvious rationale. Describe material breaking changes alongside the result.
    - Push the issue branch and create the PR with `gh pr create --body-file <path>`.
 
 3. **Adversarial Code Review Workflow (Reviewer Agent)**
    - **Context Isolation**: Review in a fresh context and clean worktree at the PR head, without the author's conversation or claimed results.
-   - **Reviewer Inputs**: Issue description, `AGENTS.md`, and `git diff <base-sha>...<head-sha>`. Allow access to repository code and tests needed to verify the change. Record the full head SHA and current `main` base SHA; stop and report any failure to obtain the diff.
+   - **Reviewer Inputs**: Issue description, `AGENTS.md`, and `git diff <base-sha>...<head-sha>`. Allow access to repository code and tests needed to verify the change. Obtain the full PR head and current `main` base SHAs through GitHub and git to track the reviewed revision; publishing them is not required. Stop and report any failure to obtain the diff.
    - **Reviewer Audit Focus**:
      1. Acceptance Criteria: All items genuinely verified and tested.
      2. `AGENTS.md` compliance: `slog` only, no env fallback values, no Server Actions, React/Vite SPA architecture, no symlinks.
      3. Surgical changes: no unrelated edits, no leftover dead code.
      4. Test coverage and edge cases.
-   - **Evidence**: Record checks actually run and their results for the reviewed SHA pair; identify failures, skipped checks and modified files. Do not treat author claims as verification.
-   - **Verdict Format**: Output `APPROVE` or `REQUEST_CHANGES`, the reviewed head/base SHAs, and actionable file:line pointers. Post with `gh pr review --comment --body-file <path>`; `APPROVE` in a comment is an agent verdict, not a GitHub approval event.
+   - **Independent Verification**: Run the checks needed to verify the reviewed revision. Do not treat author claims as verification.
+   - **Verdict Format**: With no findings, output `APPROVE`. Otherwise, output `REQUEST_CHANGES` with concrete problems and actionable `file:line` pointers. Include material verification limitations when present. Post with `gh pr review --comment --body-file <path>`; `APPROVE` in a comment is an agent verdict, not a GitHub approval event.
    - Any head or base change invalidates prior review and check evidence; obtain a new diff, independent review and CI results.
 
 4. **Semi-Autonomous Merge Policy**
