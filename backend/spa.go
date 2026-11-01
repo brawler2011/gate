@@ -19,6 +19,10 @@ func spaHandler(directory string) http.Handler {
 		name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
 		info, err := fs.Stat(os.DirFS(directory), name)
 		if err == nil && !info.IsDir() {
+			w.Header().Set("Cache-Control", "no-cache")
+			if strings.HasPrefix(name, "assets/") && path.Ext(name) != ".html" {
+				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			}
 			files.ServeHTTP(w, r)
 			return
 		}

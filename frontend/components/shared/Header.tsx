@@ -5,6 +5,7 @@ import cx from "clsx";
 import {useState, type ReactNode} from "react";
 import {useLocation, useNavigate, Link} from "react-router-dom";
 
+import logoUrl from "@/assets/gate_logo.svg?no-inline";
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
 import NextImage from "@/components/shared/Image";
 import {useSession} from "@/contexts/SessionContext";
@@ -269,7 +270,7 @@ export const Header = ({
                 <Link to="/" className={classes.logoLink}>
                   <Image
                     component={NextImage}
-                    src="/gate_logo.svg"
+                    src={logoUrl}
                     alt="Gate logo"
                     width={40}
                     height={40}

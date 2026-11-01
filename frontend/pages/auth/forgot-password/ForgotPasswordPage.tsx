@@ -3,6 +3,7 @@ import {IconAlertCircle, IconMailForward} from "@tabler/icons-react";
 import {useState, type ReactNode} from "react";
 import {Link} from "react-router-dom";
 
+import logoUrl from "@/assets/gate_logo.svg?no-inline";
 import Image from "@/components/shared/Image";
 import {api} from "@/lib/api";
 
@@ -47,7 +48,7 @@ const ForgotPasswordPage = (): ReactNode => {
       <Stack align="center" gap={32} style={{width: "min(550px, calc(100vw - 2rem))"}}>
         <Link to="/" style={{textDecoration: "none", color: "inherit"}}>
           <Group justify="center" gap="md">
-            <Image src="/gate_logo.svg" alt="Gate" width={56} height={56} priority />
+            <Image src={logoUrl} alt="Gate" width={56} height={56} priority />
             <Title order={1} fz={36}>
               Gate
             </Title>
