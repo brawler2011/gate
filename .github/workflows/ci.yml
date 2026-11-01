@@ -29,9 +29,11 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: go.mod
+          go-version: 1.26.10
           cache: true
-          cache-dependency-path: go.sum
+          cache-dependency-path: |
+            go.sum
+            Taskfile.yml
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -100,8 +102,23 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Prepare go-judge image
+        uses: docker/build-push-action@v7
+        with:
+          context: deploy/common/judge
+          file: deploy/common/judge/Dockerfile
+          tags: gate-gojudge:ci
+          load: true
+          cache-from: type=gha,scope=gojudge
+          cache-to: type=gha,scope=gojudge,mode=max
+
       - name: Run integration tests
         run: task be:test-integration
+        env:
+          GOJUDGE_TEST_IMAGE: gate-gojudge:ci
 
   frontend-checks:
     name: Frontend Typecheck & Lint

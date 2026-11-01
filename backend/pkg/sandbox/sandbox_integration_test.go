@@ -34,15 +34,19 @@ func TestIntegrationSandbox(t *testing.T) {
 	// Spin up go-judge container using testcontainers-go and the unified Dockerfile
 	t.Log("Starting go-judge container...")
 	req := testcontainers.ContainerRequest{
-		FromDockerfile: testcontainers.FromDockerfile{
-			Context:    judgeContext,
-			Dockerfile: "Dockerfile",
-			KeepImage:  true,
-		},
 		ExposedPorts: []string{"5051/tcp"},
 		WaitingFor:   wait.ForListeningPort("5051/tcp"),
 		Privileged:   true,
 		Cmd:          []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051"},
+	}
+	if image := os.Getenv("GOJUDGE_TEST_IMAGE"); image != "" {
+		req.Image = image
+	} else {
+		req.FromDockerfile = testcontainers.FromDockerfile{
+			Context:    judgeContext,
+			Dockerfile: "Dockerfile",
+			KeepImage:  true,
+		}
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
