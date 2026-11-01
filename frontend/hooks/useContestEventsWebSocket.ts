@@ -3,8 +3,9 @@
 import {notifications} from "@mantine/notifications";
 import {useEffect, useRef} from "react";
 
-import {ContestEventType, type ContestMessage, type MessageContestAnnouncementCreated, type MessageContestClarificationCreated, type MessageContestClarificationAnswered} from "@/contracts/observer/v1/schema";
 import {env} from "@/lib/env";
+
+import type ContestMessage from "@/contracts/observer/v1/ContestMessage";
 
 export interface UseContestEventsWebSocketProps {
   contestId?: string;
@@ -71,8 +72,8 @@ export const useContestEventsWebSocket = ({
             onEventRef.current?.(data);
 
             switch (data.event_type) {
-              case ContestEventType.contest_announcement_created: {
-                const payload = data.payload as MessageContestAnnouncementCreated;
+              case "contest.announcement_created": {
+                const payload = data.payload;
                 const problemInfo = payload.problem_letter
                   ? ` [Задача ${payload.problem_letter}]`
                   : "";
@@ -87,8 +88,8 @@ export const useContestEventsWebSocket = ({
                 break;
               }
 
-              case ContestEventType.contest_clarification_created: {
-                const payload = data.payload as MessageContestClarificationCreated;
+              case "contest.clarification_created": {
+                const payload = data.payload;
                 if (isModeratorRef.current && payload.user_id !== currentUserIdRef.current) {
                   const author = payload.username ? ` от ${payload.username}` : "";
                   const prob = payload.problem_letter
@@ -106,8 +107,8 @@ export const useContestEventsWebSocket = ({
                 break;
               }
 
-              case ContestEventType.contest_clarification_answered: {
-                const payload = data.payload as MessageContestClarificationAnswered;
+              case "contest.clarification_answered": {
+                const payload = data.payload;
                 if (payload.user_id === currentUserIdRef.current) {
                   const prob = payload.problem_letter
                     ? ` (Задача ${payload.problem_letter})`

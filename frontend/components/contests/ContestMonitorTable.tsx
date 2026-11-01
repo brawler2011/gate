@@ -12,7 +12,7 @@ import {submissionsWsManager} from "@/lib/submissionsWsManager";
 import classes from "./ContestMonitorTable.module.css";
 
 import type {ScoreboardResponseModel, ScoreboardItemModel, ScoreboardProblemResultModel, ScoreboardProblemHeaderModel} from "@/contracts/core/v1/schema";
-import type {SubmissionsMessage, MessageSubmissionCompleted} from "@/contracts/observer/v1/schema";
+import type SubmissionsMessage from "@/contracts/observer/v1/SubmissionsMessage";
 
 interface ContestMonitorTableProps {
   contestId: string;
@@ -105,7 +105,7 @@ export const ContestMonitorTable = ({
         if (msg.event_type !== "submissions.completed") {
           return;
         }
-        const payload = msg.payload as MessageSubmissionCompleted;
+        const payload = msg.payload;
         if (payload.contest_id === contestId) {
           void refresh().catch(() => {});
         }

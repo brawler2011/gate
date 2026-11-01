@@ -266,14 +266,14 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 func getClosingFrameData(err error) (int, []byte) {
 	switch {
 	case errors.Is(err, ErrBufferEmpty):
-		return int(observerv1.SubmissionsWsCloseCodeBufferEmpty),
-			[]byte(observerv1.SubmissionsWsCloseReasonBufferEmpty)
+		return observerv1.SubmissionsWsCloseCodeNumber_4408.Value().(int),
+			[]byte(observerv1.SubmissionsWsCloseReasonBufferEmpty.Value().(string))
 	case errors.Is(err, ErrInvalidRange):
-		return int(observerv1.SubmissionsWsCloseCodeInvalidRange),
-			[]byte(observerv1.SubmissionsWsCloseReasonInvalidRange)
+		return observerv1.SubmissionsWsCloseCodeNumber_4410.Value().(int),
+			[]byte(observerv1.SubmissionsWsCloseReasonInvalidRange.Value().(string))
 	case errors.Is(err, ErrHistoryLost):
-		return int(observerv1.SubmissionsWsCloseCodeHistoryLost),
-			[]byte(observerv1.SubmissionsWsCloseReasonHistoryLost)
+		return observerv1.SubmissionsWsCloseCodeNumber_4409.Value().(int),
+			[]byte(observerv1.SubmissionsWsCloseReasonHistoryLost.Value().(string))
 	default:
 		return websocket.CloseInternalServerErr,
 			[]byte(err.Error())

@@ -1,6 +1,6 @@
 "use client";
 
-import {SubmissionsWsCloseCode} from '@/contracts/observer/v1/schema';
+import SubmissionsWsCloseCode from '@/contracts/observer/v1/SubmissionsWsCloseCode';
 
 import {env} from './env';
 
@@ -28,8 +28,8 @@ const RECONNECT_DELAYS = [2000, 4000, 8000];
 const MAX_RECONNECT_ATTEMPTS = 3;
 const CONNECTION_TIMEOUT = 10000;
 const RESYNC_CLOSE_CODES = new Set<number>([
-  SubmissionsWsCloseCode.history_lost,
-  SubmissionsWsCloseCode.invalid_range,
+  SubmissionsWsCloseCode.NUMBER_4409,
+  SubmissionsWsCloseCode.NUMBER_4410,
 ]);
 
 const isDev = env.isDevelopment();
