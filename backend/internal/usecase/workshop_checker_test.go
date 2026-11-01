@@ -58,7 +58,7 @@ func TestWorkshopTestSolution_CheckerCancellation(t *testing.T) {
 			client, err := sandbox.NewClient("127.0.0.1:1")
 			require.NoError(t, err)
 			t.Cleanup(func() { require.NoError(t, client.Close()) })
-			cfg, err := sandbox.LoadConfig("../../languages.yaml")
+			cfg, err := sandbox.LoadConfig("../../../languages.yaml")
 			require.NoError(t, err)
 			uc.sandbox = sandbox.NewSandbox(client, cfg)
 			ctx, cancel := context.WithCancel(context.Background())

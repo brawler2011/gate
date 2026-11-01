@@ -156,7 +156,7 @@ tasks:
   gen:sqlc:
     desc: Generate SQLC queries
     sources:
-      - backend/sqlc.yaml
+      - sqlc.yaml
       - backend/migrations/*.sql
       - backend/internal/repository/pg/*.sql
     generates:
@@ -164,7 +164,7 @@ tasks:
     cmds:
       - >-
         go run github.com/sqlc-dev/sqlc/cmd/sqlc@{{.SQLC_VERSION}}
-        generate -f backend/sqlc.yaml
+        generate -f sqlc.yaml
 
   gen:mocks:
     desc: Generate Go mocks

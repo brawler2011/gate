@@ -343,7 +343,7 @@ func newWorkshopSandbox(t *testing.T) *sandbox.Sandbox {
 		_ = client.Close()
 	})
 
-	cfg, err := sandbox.LoadConfig("../../languages.yaml")
+	cfg, err := sandbox.LoadConfig("../../../languages.yaml")
 	require.NoError(t, err)
 
 	sb := sandbox.NewSandbox(client, cfg)

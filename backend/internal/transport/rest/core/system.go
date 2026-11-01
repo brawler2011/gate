@@ -12,7 +12,7 @@ import (
 func (h *CoreServer) GetLanguages(ctx context.Context) (*corev1.SupportedLanguagesResponse, error) {
 	cfg, err := sandbox.LoadConfig("languages.yaml")
 	if err != nil {
-		cfg, _ = sandbox.LoadConfig("../../languages.yaml")
+		cfg, _ = sandbox.LoadConfig("../../../../../languages.yaml")
 	}
 
 	var langItems []corev1.SupportedLanguage
