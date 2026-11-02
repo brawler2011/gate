@@ -120,10 +120,10 @@ tasks:
       - >-
         GOTOOLCHAIN=auto go run github.com/daveshanley/vacuum@{{.VACUUM_VERSION}}
         lint contracts/core/v1/openapi.yaml
-        --ruleset contracts/vacuum.yaml
+        --ruleset vacuum.yaml
         --no-style --no-banner --no-update-check
         --details --errors --all-results --fail-severity error
-      - bun run contracts/observer/generate.ts --validate
+      - bun run tools/generate-observer.ts --validate
 
   typecheck:fe:
     desc: Run TypeScript type check
@@ -148,7 +148,7 @@ tasks:
       - mkdir -p backend/contracts/core/v1 backend/contracts/observer/v1
       - >-
         go run github.com/ogen-go/ogen/cmd/ogen@{{.OGEN_VERSION}}
-        --config contracts/ogen.yml
+        --config ogen.yaml
         --package corev1
         --target backend/contracts/core/v1
         --clean contracts/core/v1/openapi.yaml

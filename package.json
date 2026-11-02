@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "knip": "knip",
-    "contracts:gen": "openapi-typescript contracts/core/v1/openapi.yaml -o frontend/contracts/core/v1/schema.ts --root-types --root-types-no-schema-prefix && bun run contracts/observer/generate.ts"
+    "contracts:gen": "openapi-typescript contracts/core/v1/openapi.yaml -o frontend/contracts/core/v1/schema.ts --root-types --root-types-no-schema-prefix && bun run tools/generate-observer.ts"
   },
   "commitlint": {
     "extends": [
