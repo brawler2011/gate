@@ -51,13 +51,16 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (uuid.UU
 	return id, err
 }
 
-const deletePost = `-- name: DeletePost :exec
+const deletePost = `-- name: DeletePost :execrows
 DELETE FROM posts WHERE id = $1
 `
 
-func (q *Queries) DeletePost(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deletePost, id)
-	return err
+func (q *Queries) DeletePost(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deletePost, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getPostByID = `-- name: GetPostByID :one
@@ -167,7 +170,7 @@ func (q *Queries) ListPostsDesc(ctx context.Context, arg ListPostsDescParams) ([
 	return items, nil
 }
 
-const updatePost = `-- name: UpdatePost :exec
+const updatePost = `-- name: UpdatePost :execrows
 UPDATE posts
 SET title = COALESCE($2, title),
     text = COALESCE($3, text),
@@ -179,19 +182,22 @@ WHERE id = $1
 
 type UpdatePostParams struct {
 	ID          uuid.UUID `json:"id"`
-	Title       string    `json:"title"`
-	Text        string    `json:"text"`
-	Description string    `json:"description"`
-	ImageKey    string    `json:"image_key"`
+	Title       *string   `json:"title"`
+	Text        *string   `json:"text"`
+	Description *string   `json:"description"`
+	ImageKey    *string   `json:"image_key"`
 }
 
-func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) error {
-	_, err := q.db.Exec(ctx, updatePost,
+func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updatePost,
 		arg.ID,
 		arg.Title,
 		arg.Text,
 		arg.Description,
 		arg.ImageKey,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

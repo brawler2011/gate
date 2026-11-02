@@ -8,9 +8,6 @@ RETURNING *;
 -- name: GetProblemPackageByID :one
 SELECT * FROM problem_packages WHERE id = $1;
 
--- name: GetProblemPackageByHash :one
-SELECT * FROM problem_packages WHERE package_hash = $1;
-
 -- name: GetProblemPackageByVersion :one
 SELECT * FROM problem_packages WHERE problem_id = $1 AND version = $2;
 
@@ -27,9 +24,6 @@ SET status = $2,
     build_log = COALESCE(sqlc.narg('build_log'), build_log),
     compiled_at = CASE WHEN $2 = 'ready'::package_status THEN NOW() ELSE compiled_at END
 WHERE id = $1;
-
--- name: DeleteProblemPackage :exec
-DELETE FROM problem_packages WHERE id = $1;
 
 -- name: GetReadyPackage :one
 SELECT * FROM problem_packages

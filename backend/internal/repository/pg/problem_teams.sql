@@ -4,10 +4,6 @@
 INSERT INTO problem_teams (problem_id, team_id, permission)
 VALUES ($1, $2, $3);
 
--- name: GetProblemTeam :one
-SELECT * FROM problem_teams
-WHERE problem_id = $1 AND team_id = $2;
-
 -- name: ListProblemTeams :many
 SELECT pt.*, t.name as team_name, t.slug as team_slug
 FROM problem_teams pt

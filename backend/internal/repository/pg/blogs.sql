@@ -23,14 +23,14 @@ LIMIT $1 OFFSET $2;
 -- name: CountPosts :one
 SELECT COUNT(*) FROM posts;
 
--- name: UpdatePost :exec
+-- name: UpdatePost :execrows
 UPDATE posts
-SET title = COALESCE($2, title),
-    text = COALESCE($3, text),
-    description = COALESCE($4, description),
-    image_key = COALESCE($5, image_key),
+SET title = COALESCE(sqlc.narg('title'), title),
+    text = COALESCE(sqlc.narg('text'), text),
+    description = COALESCE(sqlc.narg('description'), description),
+    image_key = COALESCE(sqlc.narg('image_key'), image_key),
     updated_at = NOW()
 WHERE id = $1;
 
--- name: DeletePost :exec
+-- name: DeletePost :execrows
 DELETE FROM posts WHERE id = $1;

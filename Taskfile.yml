@@ -101,6 +101,13 @@ tasks:
     desc: Run golangci-lint
     cmds:
       - golangci-lint run ./backend/...
+      - task: lint:sql
+
+  lint:sql:
+    desc: Check for unused sqlc queries in production code
+    dir: tools
+    cmds:
+      - go run ./unusedsqlc -dir ..
 
   lint:fe:
     desc: Run ESLint and Stylelint

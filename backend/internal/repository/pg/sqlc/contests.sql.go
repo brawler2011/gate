@@ -73,40 +73,6 @@ func (q *Queries) AddContestProblem(ctx context.Context, arg AddContestProblemPa
 	return err
 }
 
-const checkUserHasContestAccess = `-- name: CheckUserHasContestAccess :one
-
-SELECT user_has_contest_access($1, $2) as has_access
-`
-
-type CheckUserHasContestAccessParams struct {
-	PUserID    uuid.UUID `json:"p_user_id"`
-	PContestID uuid.UUID `json:"p_contest_id"`
-}
-
-// Access check helpers
-func (q *Queries) CheckUserHasContestAccess(ctx context.Context, arg CheckUserHasContestAccessParams) (bool, error) {
-	row := q.db.QueryRow(ctx, checkUserHasContestAccess, arg.PUserID, arg.PContestID)
-	var has_access bool
-	err := row.Scan(&has_access)
-	return has_access, err
-}
-
-const checkUserIsContestModerator = `-- name: CheckUserIsContestModerator :one
-SELECT user_is_contest_moderator($1, $2) as is_moderator
-`
-
-type CheckUserIsContestModeratorParams struct {
-	PUserID    uuid.UUID `json:"p_user_id"`
-	PContestID uuid.UUID `json:"p_contest_id"`
-}
-
-func (q *Queries) CheckUserIsContestModerator(ctx context.Context, arg CheckUserIsContestModeratorParams) (bool, error) {
-	row := q.db.QueryRow(ctx, checkUserIsContestModerator, arg.PUserID, arg.PContestID)
-	var is_moderator bool
-	err := row.Scan(&is_moderator)
-	return is_moderator, err
-}
-
 const countAllContests = `-- name: CountAllContests :one
 SELECT COUNT(*) FROM contests c
 WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
@@ -995,6 +961,7 @@ func (q *Queries) ListDashboardContests(ctx context.Context, arg ListDashboardCo
 }
 
 const listUserAccessibleContests = `-- name: ListUserAccessibleContests :many
+
 SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
@@ -1027,6 +994,7 @@ type ListUserAccessibleContestsRow struct {
 	OrgName             string                   `json:"org_name"`
 }
 
+// Access check helpers
 func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAccessibleContestsParams) ([]ListUserAccessibleContestsRow, error) {
 	rows, err := q.db.Query(ctx, listUserAccessibleContests, arg.PUserID, arg.Limit, arg.Offset)
 	if err != nil {
