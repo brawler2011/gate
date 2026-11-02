@@ -7,7 +7,7 @@ import (
 	"math"
 	"time"
 
-	observerv1 "github.com/brawler2011/contracts/observer/v1"
+	observerv1 "github.com/brawler2011/gate/backend/contracts/observer/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
 )

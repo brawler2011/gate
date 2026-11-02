@@ -46,7 +46,7 @@ func newSeaweedBackedS3Storage(t *testing.T) (context.Context, storage.Storage) 
 			Image:        "chrislusf/seaweedfs:3.77_full",
 			ExposedPorts: []string{seaweedS3Port},
 			Cmd:          []string{"server", "-s3", "-filer", "-ip.bind=0.0.0.0", "-volume.max=100", "-master.volumeSizeLimitMB=32", "-dir=/data"},
-			WaitingFor:   wait.ForListeningPort(seaweedS3Port).WithStartupTimeout(60 * time.Second),
+			WaitingFor:   wait.ForHTTP("/").WithPort(seaweedS3Port).WithStartupTimeout(60 * time.Second),
 		},
 		Started: true,
 	})

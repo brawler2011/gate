@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	corev1 "github.com/brawler2011/contracts/core/v1"
+	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
