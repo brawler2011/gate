@@ -174,8 +174,9 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	assert.Equal(t, models.OutboxEventContestAnnouncementCreated, outboxRepo.events[2].EventType)
 
 	// Verify announcement was created in annRepo
-	annList, err := annRepo.ListAnnouncements(ctx, contestID, 1, 50)
-	require.NoError(t, err)
-	assert.Len(t, annList.Announcements, 1)
-	assert.Equal(t, "Уточнение по задаче B", annList.Announcements[0].Title)
+	require.Len(t, annRepo.announcements, 1)
+	for _, announcement := range annRepo.announcements {
+		assert.Equal(t, contestID, announcement.ContestID)
+		assert.Equal(t, "Уточнение по задаче B", announcement.Title)
+	}
 }

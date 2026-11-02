@@ -54,19 +54,6 @@ func (m *mockAnnouncementsRepo) GetAnnouncementByID(ctx context.Context, id uuid
 	return nil, nil
 }
 
-func (m *mockAnnouncementsRepo) ListAnnouncements(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*models.ContestAnnouncementsList, error) {
-	var list []models.ContestAnnouncement
-	for _, a := range m.announcements {
-		if a.ContestID == contestID {
-			list = append(list, a)
-		}
-	}
-	return &models.ContestAnnouncementsList{
-		Announcements: list,
-		Pagination:    models.NewPagination(page, pageSize, int32(len(list))), //nolint:gosec // test slice length
-	}, nil
-}
-
 func (m *mockAnnouncementsRepo) DeleteAnnouncement(ctx context.Context, id, contestID uuid.UUID) error {
 	delete(m.announcements, id)
 	return nil
@@ -111,7 +98,7 @@ func (m *mockOutboxRepo) ResetFailedToPending(ctx context.Context, maxRetries in
 	return nil
 }
 
-func TestAnnouncementsUseCase_CreateAndList(t *testing.T) {
+func TestAnnouncementsUseCase_CreateAndDelete(t *testing.T) {
 	ctx := context.Background()
 	repo := newMockAnnouncementsRepo()
 	outboxRepo := &mockOutboxRepo{}
@@ -144,10 +131,9 @@ func TestAnnouncementsUseCase_CreateAndList(t *testing.T) {
 	assert.Len(t, outboxRepo.events, 1)
 	assert.Equal(t, models.OutboxEventContestAnnouncementCreated, outboxRepo.events[0].EventType)
 
-	// 3. List announcements
-	list, err := uc.ListAnnouncements(ctx, contestID, 1, 50)
-	require.NoError(t, err)
-	assert.Len(t, list.Announcements, 1)
+	// 3. Verify the created record
+	require.Len(t, repo.announcements, 1)
+	assert.Equal(t, *ann, repo.announcements[ann.ID])
 
 	// 4. Delete announcement
 	err = uc.DeleteAnnouncement(ctx, ann.ID, contestID)
@@ -155,7 +141,5 @@ func TestAnnouncementsUseCase_CreateAndList(t *testing.T) {
 	assert.Len(t, outboxRepo.events, 2)
 	assert.Equal(t, models.OutboxEventContestAnnouncementDeleted, outboxRepo.events[1].EventType)
 
-	listAfter, err := uc.ListAnnouncements(ctx, contestID, 1, 50)
-	require.NoError(t, err)
-	assert.Empty(t, listAfter.Announcements)
+	assert.Empty(t, repo.announcements)
 }

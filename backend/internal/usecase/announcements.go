@@ -92,10 +92,6 @@ func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *m
 	return announcement, nil
 }
 
-func (uc *AnnouncementsUseCase) ListAnnouncements(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*models.ContestAnnouncementsList, error) {
-	return uc.announcementsRepo.ListAnnouncements(ctx, contestID, page, pageSize)
-}
-
 func (uc *AnnouncementsUseCase) DeleteAnnouncement(ctx context.Context, id, contestID uuid.UUID) error {
 	return uc.transactor.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		if err := uc.announcementsRepo.WithTx(tx).DeleteAnnouncement(ctx, id, contestID); err != nil {

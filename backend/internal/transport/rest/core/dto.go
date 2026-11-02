@@ -1051,25 +1051,6 @@ func ContestAnnouncementDTO(a *models.ContestAnnouncement) *corev1.ContestAnnoun
 	}
 }
 
-func ContestAnnouncementsListResponseDTO(list *models.ContestAnnouncementsList) *corev1.ListContestAnnouncementsResponseModel {
-	if list == nil {
-		return &corev1.ListContestAnnouncementsResponseModel{
-			Announcements: []corev1.ContestAnnouncementModel{},
-			Pagination:    corev1.PaginationModel{},
-		}
-	}
-
-	items := make([]corev1.ContestAnnouncementModel, len(list.Announcements))
-	for i, a := range list.Announcements {
-		items[i] = *ContestAnnouncementDTO(&a)
-	}
-
-	return &corev1.ListContestAnnouncementsResponseModel{
-		Announcements: items,
-		Pagination:    PaginationDTO(list.Pagination),
-	}
-}
-
 func ContestClarificationDTO(c *models.ContestClarification) *corev1.ContestClarificationModel {
 	if c == nil {
 		return nil
