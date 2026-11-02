@@ -83,7 +83,7 @@ During active discussion and planning:
 - `backend/`: Go application, migrations, SQL queries, and backend tests. The main Go module is at the repository root.
 - `src/main.tsx`: React SPA entry point; `src/App.tsx`: React Router route definitions.
 - `frontend/`: pages, components, hooks, API client, and Bun tests. The `@/` alias resolves here; `frontend/app/` filenames do not define routes automatically.
-- `contracts/`: core and observer OpenAPI specifications and generator configuration.
+- `contracts/`: core OpenAPI and observer AsyncAPI specifications.
 - `deploy/`: local and production configuration, Compose services, and environment examples.
 - `package.json`, `bun.lock`, `vite.config.ts`, and `Taskfile.yml` live at the repository root. Run commands from there.
 
@@ -127,7 +127,7 @@ When working with the backend codebase, adhere strictly to the following rules:
 ## Generated Code
 
 - Edit OpenAPI sources in `contracts/core/v1/openapi.yaml` and `contracts/observer/v1/openapi.yaml`, then run `task gen:contracts` to regenerate Go and TypeScript contracts.
-- `task lint:contracts` validates both specifications using the pinned Vacuum version and `contracts/vacuum.yaml`; correctness errors block changes, while style/documentation warnings are advisory.
+- `task lint:contracts` validates both specifications using the pinned Vacuum version and `vacuum.yaml`; correctness errors block changes, while style/documentation warnings are advisory.
 - Edit SQL queries in `backend/internal/repository/pg/*.sql` and migrations in `backend/migrations/`, then run `task gen:sqlc`.
 - `task gen:mocks` regenerates mocks; `task gen` runs all generators.
 - Do not hand-edit generated files in `backend/contracts/core/v1/`, `backend/contracts/observer/v1/`, `frontend/contracts/`, `backend/internal/repository/pg/sqlc/`, or `backend/tests/mocks/`.
