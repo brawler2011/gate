@@ -26,11 +26,6 @@ func UserRoleValidate(r UserRole) error {
 	return errors.New("role must be one of 'admin' or 'user'")
 }
 
-type UsersList struct {
-	Users      []User
-	Pagination Pagination
-}
-
 func (f UsersListFilter) Validate() error {
 	errs := make([]error, 0)
 
@@ -254,13 +249,6 @@ type ClaimTemporaryUserResult struct {
 	ClaimedUserID   uuid.UUID
 	ClaimedUsername string
 	ContestsGranted []uuid.UUID
-}
-
-type ClaimedAccountItem struct {
-	ID        uuid.UUID
-	Username  string
-	ClaimedAt time.Time
-	ExpiresAt *time.Time
 }
 
 type BatchCreateOrganizationUsersInput struct {

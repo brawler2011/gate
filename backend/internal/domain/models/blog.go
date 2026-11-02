@@ -37,17 +37,3 @@ type UpdatePostParams struct {
 	Description *string
 	ImageKey    *string
 }
-
-// ListPostsParams contains parameters for listing posts
-type ListPostsParams struct {
-	Page      int
-	PageSize  int
-	SortOrder string // "asc" or "desc"
-}
-
-// ListPostsResponse contains the response for listing posts
-type ListPostsResponse struct {
-	Posts      []Post
-	TotalPages int
-	Page       int
-}

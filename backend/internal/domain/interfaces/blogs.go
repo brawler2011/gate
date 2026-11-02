@@ -15,9 +15,6 @@ type BlogsRepo interface {
 	// GetPostByID retrieves a post by its ID
 	GetPostByID(ctx context.Context, id uuid.UUID) (*models.Post, error)
 
-	// ListPosts retrieves a paginated list of posts
-	ListPosts(ctx context.Context, params models.ListPostsParams) ([]models.Post, int, error)
-
 	// UpdatePost updates an existing post
 	UpdatePost(ctx context.Context, params models.UpdatePostParams) error
 

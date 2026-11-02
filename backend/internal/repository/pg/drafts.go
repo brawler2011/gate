@@ -3,6 +3,7 @@ package pg
 import (
 	"context"
 
+	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
@@ -72,13 +73,19 @@ func (r *DraftsRepo) GetDraftsCount(ctx context.Context, contestID, userID uuid.
 	return count, nil
 }
 
-func (r *DraftsRepo) ListDrafts(ctx context.Context, filter models.ContestDraftsFilter) ([]models.ContestDraft, int32, error) {
+func (r *DraftsRepo) ListDraftResponses(ctx context.Context, filter models.ContestDraftsFilter) (*corev1.ListContestDraftsResponseModel, error) {
+	if filter.Page <= 0 {
+		filter.Page = 1
+	}
+	if filter.PageSize <= 0 || filter.PageSize > 100 {
+		filter.PageSize = 20
+	}
 	totalCount, err := r.queries.CountDrafts(ctx, sqlc.CountDraftsParams{
 		ContestID: filter.ContestID,
 		UserID:    filter.UserID,
 	})
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, HandlePgErr(err)
 	}
 
 	rows, err := r.queries.ListDrafts(ctx, sqlc.ListDraftsParams{
@@ -88,28 +95,28 @@ func (r *DraftsRepo) ListDrafts(ctx context.Context, filter models.ContestDrafts
 		LimitVal:  filter.PageSize,
 	})
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, HandlePgErr(err)
 	}
 
-	drafts := make([]models.ContestDraft, 0, len(rows))
+	drafts := make([]corev1.ContestDraftModel, 0, len(rows))
 	for _, row := range rows {
 		var username string
 		if row.Username != nil {
 			username = *row.Username
 		}
 
-		drafts = append(drafts, models.ContestDraft{
+		drafts = append(drafts, corev1.ContestDraftModel{
 			ID:        row.ID,
 			ContestID: row.ContestID,
 			UserID:    row.UserID,
-			Username:  username,
+			Username:  corev1.OptString{Value: username, Set: username != ""},
 			Code:      row.Code,
 			CreatedAt: row.CreatedAt,
 			UpdatedAt: row.UpdatedAt,
 		})
 	}
 
-	return drafts, safeInt32(totalCount), nil
+	return &corev1.ListContestDraftsResponseModel{Drafts: drafts, Pagination: corev1.PaginationModel{Page: filter.Page, Total: safeInt32(totalCount)}}, nil
 }
 
 func (r *DraftsRepo) DeleteDraft(ctx context.Context, id uuid.UUID) error {

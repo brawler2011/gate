@@ -59,28 +59,6 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *models.Conte
 	return uc.draftsRepo.CreateDraft(ctx, creation)
 }
 
-func (uc *DraftsUseCase) ListDrafts(ctx context.Context, filter models.ContestDraftsFilter) (*models.ContestDraftsList, error) {
-	if filter.Page <= 0 {
-		filter.Page = 1
-	}
-	if filter.PageSize <= 0 || filter.PageSize > 100 {
-		filter.PageSize = 20
-	}
-
-	drafts, total, err := uc.draftsRepo.ListDrafts(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-
-	return &models.ContestDraftsList{
-		Drafts: drafts,
-		Pagination: models.Pagination{
-			Page:  filter.Page,
-			Total: total,
-		},
-	}, nil
-}
-
 func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, draftID, userID uuid.UUID, isManager bool) error {
 	draft, err := uc.draftsRepo.GetDraft(ctx, draftID)
 	if err != nil {

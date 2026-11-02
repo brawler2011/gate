@@ -3,11 +3,18 @@ package core
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 )
+
+type NotificationsReader interface {
+	ListNotificationResponses(ctx context.Context, userID uuid.UUID, filter *models.NotificationFilter) (*corev1.NotificationsListResponseModel, error)
+	GetUnreadCount(ctx context.Context, userID uuid.UUID) (int32, error)
+}
 
 func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNotificationsParams) (*corev1.NotificationsListResponseModel, error) {
 	user := middleware.GetUser(ctx)
@@ -19,7 +26,7 @@ func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNo
 	pageSize := params.PageSize.Or(20)
 	unreadOnly := params.UnreadOnly.Or(false)
 
-	list, err := h.notificationsUC.ListNotifications(ctx, user.Id, &models.NotificationFilter{
+	list, err := h.notificationsReader.ListNotificationResponses(ctx, user.Id, &models.NotificationFilter{
 		Page:       page,
 		PageSize:   pageSize,
 		UnreadOnly: unreadOnly,
@@ -28,7 +35,7 @@ func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNo
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list notifications")
 	}
 
-	return NotificationsListResponseDTO(list), nil
+	return list, nil
 }
 
 func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context) (*corev1.UnreadNotificationsCountResponseModel, error) {
@@ -37,7 +44,7 @@ func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context) (*corev1.U
 		return &corev1.UnreadNotificationsCountResponseModel{Count: 0}, nil
 	}
 
-	count, err := h.notificationsUC.GetUnreadCount(ctx, user.Id)
+	count, err := h.notificationsReader.GetUnreadCount(ctx, user.Id)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to get unread notifications count")
 	}

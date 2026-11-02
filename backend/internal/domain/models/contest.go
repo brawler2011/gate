@@ -325,25 +325,6 @@ type ContestMember struct {
 	UpdatedAt       time.Time
 }
 
-type ContestMembersList struct {
-	Members    []ContestMember
-	Pagination Pagination
-}
-
-type DashboardContest struct {
-	ID                 uuid.UUID
-	Login              string
-	Title              string
-	StartTime          *time.Time
-	EndTime            *time.Time
-	CreatedAt          time.Time
-	OrganizationID     uuid.UUID
-	OrganizationName   string
-	OrganizationLogin  string
-	UserRole           string
-	LastSubmissionTime *time.Time
-}
-
 type ContestParticipationMode = string
 
 const (

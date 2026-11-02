@@ -28,8 +28,3 @@ type ContestDraftsFilter struct {
 	Page      int32
 	PageSize  int32
 }
-
-type ContestDraftsList struct {
-	Drafts     []ContestDraft `json:"drafts"`
-	Pagination Pagination     `json:"pagination"`
-}

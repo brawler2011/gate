@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 
+	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
 	"github.com/google/uuid"
@@ -52,39 +53,48 @@ func (r *BlogsRepo) GetPostByID(ctx context.Context, id uuid.UUID) (*models.Post
 }
 
 // ListPosts retrieves a paginated list of posts
-func (r *BlogsRepo) ListPosts(ctx context.Context, params models.ListPostsParams) ([]models.Post, int, error) {
+func (r *BlogsRepo) ListPostResponses(ctx context.Context, page, pageSize int, sortOrder string) (*corev1.ListPostsResponseModel, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 10
+	}
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
 	// Get total count
 	totalCount, err := r.queries.CountPosts(ctx)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count posts: %w", err)
+		return nil, fmt.Errorf("failed to count posts: %w", err)
 	}
 
 	// Calculate total pages
-	totalPages := int(math.Ceil(float64(totalCount) / float64(params.PageSize)))
+	totalPages := int(math.Ceil(float64(totalCount) / float64(pageSize)))
 
 	// Build query based on sort order
-	offset := (params.Page - 1) * params.PageSize
+	offset := (page - 1) * pageSize
 	var rows []sqlc.Post
-	if params.SortOrder == "asc" {
+	if sortOrder == "asc" {
 		rows, err = r.queries.ListPostsAsc(ctx, sqlc.ListPostsAscParams{
-			Limit:  safeInt32(params.PageSize),
+			Limit:  safeInt32(pageSize),
 			Offset: safeInt32(offset),
 		})
 	} else {
 		rows, err = r.queries.ListPostsDesc(ctx, sqlc.ListPostsDescParams{
-			Limit:  safeInt32(params.PageSize),
+			Limit:  safeInt32(pageSize),
 			Offset: safeInt32(offset),
 		})
 	}
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to list posts: %w", err)
+		return nil, fmt.Errorf("failed to list posts: %w", err)
 	}
-	var posts []models.Post
-	for _, row := range rows {
-		posts = append(posts, postFromSQLC(row))
+	posts := make([]corev1.PostModel, len(rows))
+	for i, row := range rows {
+		posts[i] = postResponse(row)
 	}
 
-	return posts, totalPages, nil
+	return &corev1.ListPostsResponseModel{Posts: posts, Pagination: corev1.PaginationModel{Page: safeInt32(page), Total: safeInt32(totalPages)}}, nil
 }
 
 // UpdatePost updates an existing post
@@ -133,5 +143,28 @@ func postFromSQLC(row sqlc.Post) models.Post {
 		AuthorUUID:  row.AuthorUuid,
 		AuthorName:  row.AuthorName,
 		ImageKey:    row.ImageKey,
+	}
+}
+
+func (r *BlogsRepo) GetPostResponse(ctx context.Context, id uuid.UUID) (*corev1.PostModel, error) {
+	row, err := r.queries.GetPostByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get post: %w", err)
+	}
+	post := postResponse(row)
+	return &post, nil
+}
+
+func postResponse(row sqlc.Post) corev1.PostModel {
+	return corev1.PostModel{
+		ID:             row.ID,
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
+		Title:          row.Title,
+		Text:           row.Text,
+		Description:    row.Description,
+		AuthorID:       row.AuthorUuid,
+		AuthorUsername: row.AuthorName,
+		PreviewImageID: row.ImageKey,
 	}
 }

@@ -100,40 +100,6 @@ func (uc *BlogsUseCase) GetPost(ctx context.Context, id uuid.UUID) (*models.Post
 	return post, nil
 }
 
-// ListPosts retrieves a paginated list of posts
-func (uc *BlogsUseCase) ListPosts(
-	ctx context.Context,
-	page, pageSize int,
-	sortOrder string,
-) (*models.ListPostsResponse, error) {
-	// Validate parameters
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 10
-	}
-	if sortOrder != "asc" && sortOrder != "desc" {
-		sortOrder = "desc"
-	}
-
-	posts, totalPages, err := uc.blogsRepo.ListPosts(ctx, models.ListPostsParams{
-		Page:      page,
-		PageSize:  pageSize,
-		SortOrder: sortOrder,
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to list posts: %w", err)
-	}
-
-	return &models.ListPostsResponse{
-		Posts:      posts,
-		TotalPages: totalPages,
-		Page:       page,
-	}, nil
-}
-
 // UpdatePost updates an existing post
 func (uc *BlogsUseCase) UpdatePost(
 	ctx context.Context,

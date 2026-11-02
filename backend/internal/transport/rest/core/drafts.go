@@ -11,6 +11,10 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 )
 
+type DraftsReader interface {
+	ListDraftResponses(ctx context.Context, filter models.ContestDraftsFilter) (*corev1.ListContestDraftsResponseModel, error)
+}
+
 func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateContestDraftRequestModel, params corev1.CreateContestDraftParams) (*corev1.CreationResponseModel, error) {
 	user := middleware.GetUser(ctx)
 
@@ -66,7 +70,7 @@ func (h *CoreServer) ListContestDrafts(ctx context.Context, params corev1.ListCo
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(20)
 
-	draftsList, err := h.draftsUC.ListDrafts(ctx, models.ContestDraftsFilter{
+	draftsList, err := h.draftsReader.ListDraftResponses(ctx, models.ContestDraftsFilter{
 		ContestID: contest.ID,
 		UserID:    user.Id,
 		Page:      page,
@@ -76,7 +80,7 @@ func (h *CoreServer) ListContestDrafts(ctx context.Context, params corev1.ListCo
 		return nil, err
 	}
 
-	return ListContestDraftsResponseDTO(draftsList), nil
+	return draftsList, nil
 }
 
 func (h *CoreServer) DeleteContestDraft(ctx context.Context, params corev1.DeleteContestDraftParams) error {

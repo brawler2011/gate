@@ -99,66 +99,6 @@ func (uc *ContestsUseCase) GetContestByOrgLoginAndContestLogin(ctx context.Conte
 	return contest, nil
 }
 
-func (uc *ContestsUseCase) ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, visibility string, page, pageSize int32) (*models.ContestsList, error) {
-	contests, total, err := uc.contestRepo.ListOrganizationContests(ctx, orgID, search, visibility, page, pageSize)
-	if err != nil {
-		return nil, pkg.Wrap(err, nil, "can't list organization contests from database")
-	}
-
-	return &models.ContestsList{
-		Contests:   contests,
-		Pagination: models.NewPagination(page, pageSize, total),
-	}, nil
-}
-
-func (uc *ContestsUseCase) ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) (*models.ContestsList, error) {
-	contests, total, err := uc.contestRepo.ListAdminContests(ctx, filter)
-	if err != nil {
-		return nil, pkg.Wrap(err, nil, "can't list admin contests from database")
-	}
-
-	return &models.ContestsList{
-		Contests:   contests,
-		Pagination: models.NewPagination(filter.Page, filter.PageSize, total),
-	}, nil
-}
-
-func (uc *ContestsUseCase) ListUserContests(ctx context.Context, filter models.UserContestsFilter) (*models.ContestsList, error) {
-	contests, total, err := uc.contestRepo.ListUserContests(ctx, filter)
-	if err != nil {
-		return nil, pkg.Wrap(err, nil, "can't list user contests from database")
-	}
-
-	return &models.ContestsList{
-		Contests:   contests,
-		Pagination: models.NewPagination(filter.Page, filter.PageSize, total),
-	}, nil
-}
-
-func (uc *ContestsUseCase) ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) (*models.ContestsList, error) {
-	contests, total, err := uc.contestRepo.ListWorkshopContests(ctx, filter)
-	if err != nil {
-		return nil, pkg.Wrap(err, nil, "can't list workshop contests from database")
-	}
-
-	return &models.ContestsList{
-		Contests:   contests,
-		Pagination: models.NewPagination(filter.Page, filter.PageSize, total),
-	}, nil
-}
-
-func (uc *ContestsUseCase) ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) (*models.ContestsList, error) {
-	contests, total, err := uc.contestRepo.ListPublicContests(ctx, filter)
-	if err != nil {
-		return nil, pkg.Wrap(err, nil, "can't list public contests from database")
-	}
-
-	return &models.ContestsList{
-		Contests:   contests,
-		Pagination: models.NewPagination(filter.Page, filter.PageSize, total),
-	}, nil
-}
-
 func (uc *ContestsUseCase) UpdateContest(ctx context.Context, c models.ContestUpdateInput) error {
 	params := models.ContestUpdateParams(c)
 
@@ -216,18 +156,6 @@ func (uc *ContestsUseCase) DeleteParticipant(ctx context.Context, c models.Parti
 	return uc.contestRepo.DeleteContestMember(ctx, c.UserId, c.ContestId)
 }
 
-func (uc *ContestsUseCase) ListParticipants(ctx context.Context, filter models.ParticipantsFilter) (*models.ContestMembersList, error) {
-	members, total, err := uc.contestRepo.ListContestMembers(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-
-	return &models.ContestMembersList{
-		Members:    members,
-		Pagination: models.NewPagination(filter.Page, filter.PageSize, total),
-	}, nil
-}
-
 func (uc *ContestsUseCase) GetContestMember(ctx context.Context, c *models.ContestPermissionGet) (models.ContestMember, error) {
 	return uc.contestRepo.GetContestMember(ctx, c)
 }
@@ -259,14 +187,6 @@ func (uc *ContestsUseCase) UpdateContestMember(ctx context.Context, contestId uu
 	}
 
 	return nil
-}
-
-func (uc *ContestsUseCase) ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardContest, error) {
-	contests, err := uc.contestRepo.ListDashboardContests(ctx, userID, limit)
-	if err != nil {
-		return nil, pkg.Wrap(err, nil, "can't list dashboard contests")
-	}
-	return contests, nil
 }
 
 func (uc *ContestsUseCase) ProcessSubmissionResult(ctx context.Context, submission *models.Submission) error {
@@ -431,13 +351,6 @@ func (uc *ContestsUseCase) CreateContestTeam(
 	role models.ContestRole,
 ) error {
 	return uc.contestRepo.CreateContestTeam(ctx, contestID, teamID, role)
-}
-
-func (uc *ContestsUseCase) GetContestTeams(
-	ctx context.Context,
-	contestID, requestUserID uuid.UUID,
-) ([]models.ContestTeam, error) {
-	return uc.contestRepo.GetContestTeams(ctx, contestID)
 }
 
 func (uc *ContestsUseCase) UpdateContestTeamRole(

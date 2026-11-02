@@ -47,7 +47,16 @@ func (m *visibilityStub) ListSubmissions(context.Context, models.SubmissionsFilt
 func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 	viewer, author, contestID := uuid.New(), uuid.New(), uuid.New()
 	stub := &visibilityStub{contest: models.Contest{ID: contestID, Settings: map[string]any{"freeze_status": models.FreezeStatusFrozen}}, permissions: models.ContestPermissions{ListUsersSubmissions: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}, submission: models.Submission{ID: uuid.New(), ContestID: &contestID, CreatedBy: &author, CreatedAt: time.Now(), State: 200, Score: 100, TimeStat: 5, Submission: "secret", TestDetails: &models.SubmissionTestDetails{}, FailedTest: new(int32), BanReason: new(string)}}
-	h := NewCoreServer(nil, stub, stub, stub, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	h := NewCoreServer(nil, stub, stub, stub, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 	ctx := middleware.WithUser(context.Background(), models.User{Id: viewer, Role: models.UserRoleUser})
 	for _, own := range []bool{false, true} {
 		t.Run(map[bool]string{true: "own", false: "other"}[own], func(t *testing.T) {

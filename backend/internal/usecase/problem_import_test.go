@@ -6,9 +6,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"github.com/brawler2011/gate/backend/pkg"
 	"sync"
 	"testing"
+
+	"github.com/brawler2011/gate/backend/pkg"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
@@ -217,24 +218,12 @@ func (m *problemImportMockProblemsRepo) RemoveProblemTeam(_ context.Context, _, 
 	return nil
 }
 
-func (m *problemImportMockProblemsRepo) ListProblemMembers(_ context.Context, _ uuid.UUID) ([]models.ProblemMember, error) {
-	return nil, nil
-}
-
 func (m *problemImportMockProblemsRepo) UpdateProblemMemberRole(_ context.Context, _, _ uuid.UUID, _ models.ProblemRole) error {
 	return nil
 }
 
 func (m *problemImportMockProblemsRepo) RemoveProblemMember(_ context.Context, _, _ uuid.UUID) error {
 	return nil
-}
-
-func (m *problemImportMockProblemsRepo) ListProblems(_ context.Context, _ *models.ProblemsFilter) ([]models.Problem, int32, error) {
-	return nil, 0, nil
-}
-
-func (m *problemImportMockProblemsRepo) ListDashboardProblems(_ context.Context, _ uuid.UUID, _ int32) ([]models.DashboardProblem, error) {
-	return nil, nil
 }
 
 func (m *problemImportMockProblemsRepo) UpdateProblem(_ context.Context, _ uuid.UUID, _ *models.ProblemUpdate) error {

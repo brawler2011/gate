@@ -54,21 +54,6 @@ func (m *mockDraftsRepo) GetDraftsCount(ctx context.Context, contestID, userID u
 	return count, nil
 }
 
-func (m *mockDraftsRepo) ListDrafts(ctx context.Context, filter models.ContestDraftsFilter) ([]models.ContestDraft, int32, error) {
-	var result []models.ContestDraft
-	for _, d := range m.drafts {
-		if d.ContestID != filter.ContestID {
-			continue
-		}
-		if d.UserID != filter.UserID {
-			continue
-		}
-		result = append(result, d)
-	}
-	//nolint:gosec
-	return result, int32(len(result)), nil
-}
-
 func (m *mockDraftsRepo) DeleteDraft(ctx context.Context, id uuid.UUID) error {
 	if _, ok := m.drafts[id]; !ok {
 		return pkg.ErrNotFound

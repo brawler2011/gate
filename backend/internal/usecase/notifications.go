@@ -109,26 +109,6 @@ func (uc *NotificationsUseCase) Notify(ctx context.Context, input *models.Create
 	return notif, nil
 }
 
-func (uc *NotificationsUseCase) ListNotifications(ctx context.Context, userID uuid.UUID, filter *models.NotificationFilter) (*models.NotificationsList, error) {
-	if filter == nil {
-		filter = &models.NotificationFilter{
-			Page:     1,
-			PageSize: 20,
-		}
-	}
-	if filter.Page < 1 {
-		filter.Page = 1
-	}
-	if filter.PageSize < 1 || filter.PageSize > 100 {
-		filter.PageSize = 20
-	}
-	return uc.repo.ListNotifications(ctx, userID, filter)
-}
-
-func (uc *NotificationsUseCase) GetUnreadCount(ctx context.Context, userID uuid.UUID) (int32, error) {
-	return uc.repo.GetUnreadCount(ctx, userID)
-}
-
 func (uc *NotificationsUseCase) MarkAsRead(ctx context.Context, id, userID uuid.UUID) error {
 	return uc.repo.MarkAsRead(ctx, id, userID)
 }

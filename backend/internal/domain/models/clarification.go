@@ -54,11 +54,6 @@ type ContestClarificationsFilter struct {
 	PageSize  int32
 }
 
-type ContestClarificationsList struct {
-	Clarifications []ContestClarification
-	Pagination     Pagination
-}
-
 const (
 	ContestEventClarificationCreated  = "contest.clarification_created"
 	ContestEventClarificationAnswered = "contest.clarification_answered"

@@ -14,6 +14,13 @@ import (
 	"github.com/google/uuid"
 )
 
+type ProblemsReader interface {
+	ListProblemMemberResponses(ctx context.Context, problemID uuid.UUID, page int32) (*corev1.ListProblemMembersResponseModel, error)
+	ListProblemTeamResponses(ctx context.Context, problemID uuid.UUID) (*corev1.ListProblemTeamsResponseModel, error)
+	ListProblemResponses(ctx context.Context, filter *models.ProblemsFilter) (*corev1.ListProblemsResponseModel, error)
+	ListDashboardProblemResponses(ctx context.Context, userID uuid.UUID, limit int32) ([]corev1.DashboardProblemModel, error)
+}
+
 func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblemsParams) (*corev1.ListProblemsResponseModel, error) {
 	user := middleware.GetUser(ctx)
 	searchStr := params.Search.Or("")
@@ -39,20 +46,7 @@ func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblem
 		filter.IsTemplate = &isTmpl
 	}
 
-	problemsList, err := h.problemsUC.ListProblems(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := corev1.ListProblemsResponseModel{
-		Problems:   make([]corev1.ProblemsListItemModel, len(problemsList.Problems)),
-		Pagination: PaginationDTO(problemsList.Pagination),
-	}
-
-	for i, problem := range problemsList.Problems {
-		resp.Problems[i] = ProblemsListItemDTO(problem)
-	}
-	return &resp, nil
+	return h.problemsReader.ListProblemResponses(ctx, filter)
 }
 
 func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.ListProblemTemplatesParams) ([]corev1.ProblemTemplateModel, error) {
@@ -91,7 +85,7 @@ func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.Lis
 			OrganizationID: &orgID,
 			IsTemplate:     &isTemplate,
 		}
-		orgProblems, err := h.problemsUC.ListProblems(ctx, filter)
+		orgProblems, err := h.problemsReader.ListProblemResponses(ctx, filter)
 		if err == nil && orgProblems != nil {
 			for _, p := range orgProblems.Problems {
 				probType := "pass-fail"
@@ -339,14 +333,7 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 }
 
 func (h *CoreServer) ListProblemTeams(ctx context.Context, params corev1.ListProblemTeamsParams) (*corev1.ListProblemTeamsResponseModel, error) {
-	user := middleware.GetUser(ctx)
-
-	teams, err := h.problemsUC.GetProblemTeams(ctx, params.ID, user.Id)
-	if err != nil {
-		return nil, err
-	}
-
-	return listProblemTeamsDTO(teams), nil
+	return h.problemsReader.ListProblemTeamResponses(ctx, params.ID)
 }
 
 func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.CreateProblemTeamParams) error {
@@ -388,16 +375,7 @@ func (h *CoreServer) DeleteProblemTeam(ctx context.Context, params corev1.Delete
 }
 
 func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListProblemMembersParams) (*corev1.ListProblemMembersResponseModel, error) {
-	user := middleware.GetUser(ctx)
-
-	members, err := h.problemsUC.ListProblemMembers(ctx, params.ID, user.Id)
-	if err != nil {
-		return nil, err
-	}
-
-	total := safeInt32(len(members))
-	page := params.Page.Or(1)
-	return listProblemMembersDTO(members, page, total), nil
+	return h.problemsReader.ListProblemMemberResponses(ctx, params.ID, params.Page.Or(1))
 }
 
 func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.CreateProblemMemberParams) error {

@@ -53,35 +53,6 @@ func (m *mockClarificationsRepo) GetClarificationByID(ctx context.Context, id uu
 	return nil, nil
 }
 
-func (m *mockClarificationsRepo) ListClarificationsForUser(ctx context.Context, contestID, userID uuid.UUID, page, pageSize int32) (*models.ContestClarificationsList, error) {
-	var list []models.ContestClarification
-	for _, c := range m.clarifications {
-		if c.ContestID == contestID && c.UserID == userID {
-			list = append(list, c)
-		}
-	}
-	return &models.ContestClarificationsList{
-		Clarifications: list,
-		Pagination:     models.NewPagination(page, pageSize, int32(len(list))), //nolint:gosec // test slice length
-	}, nil
-}
-
-func (m *mockClarificationsRepo) ListClarificationsForModerator(ctx context.Context, contestID uuid.UUID, filter *models.ContestClarificationsFilter) (*models.ContestClarificationsList, error) {
-	var list []models.ContestClarification
-	for _, c := range m.clarifications {
-		if c.ContestID == contestID {
-			if filter != nil && filter.Status != nil && *filter.Status != "" && string(c.Status) != *filter.Status {
-				continue
-			}
-			list = append(list, c)
-		}
-	}
-	return &models.ContestClarificationsList{
-		Clarifications: list,
-		Pagination:     models.NewPagination(1, 50, int32(len(list))), //nolint:gosec // test slice length
-	}, nil
-}
-
 func (m *mockClarificationsRepo) AnswerClarification(ctx context.Context, id, contestID, answeredBy uuid.UUID, answer string) (*models.ContestClarification, error) {
 	c, ok := m.clarifications[id]
 	if !ok {
@@ -143,16 +114,6 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	assert.Equal(t, "Are arrays 1-indexed in problem B?", clar.Question)
 	assert.Len(t, outboxRepo.events, 1)
 	assert.Equal(t, models.OutboxEventContestClarificationCreated, outboxRepo.events[0].EventType)
-
-	// 2. Participant views own questions
-	userList, err := uc.ListClarificationsForUser(ctx, contestID, participantID, 1, 50)
-	require.NoError(t, err)
-	assert.Len(t, userList.Clarifications, 1)
-
-	// 3. Jury lists all moderator questions
-	modList, err := uc.ListClarificationsForModerator(ctx, contestID, nil)
-	require.NoError(t, err)
-	assert.Len(t, modList.Clarifications, 1)
 
 	// 4. Jury answers and publishes as announcement
 	answered, err := uc.AnswerClarification(ctx, &models.AnswerContestClarificationInput{

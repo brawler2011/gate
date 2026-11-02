@@ -229,7 +229,15 @@ func (s *IntegrationTestSuite) initApp() {
 		announcementsRepo,
 		clarificationsUC,
 		nil, // natsJS - not needed for integration tests
-		nil, // bookletCompiler - not needed for integration tests
+		nil, // bookletCompiler - not needed for integration tests,
+		s.usersRepo,
+		s.problemsRepo,
+		s.contestsRepo,
+		blogsRepo,
+		draftsRepo,
+		notificationsRepo,
+		clarificationsRepo,
+		packagesRepo,
 	)
 
 	// Server setup

@@ -10,6 +10,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type ClarificationsReader interface {
+	ListClarificationResponsesForUser(ctx context.Context, contestID, userID uuid.UUID, page, pageSize int32) (*corev1.ListContestClarificationsResponseModel, error)
+	ListClarificationResponsesForModerator(ctx context.Context, contestID uuid.UUID, filter *models.ContestClarificationsFilter) (*corev1.ListContestClarificationsResponseModel, error)
+}
+
 func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev1.ListContestClarificationsParams) (*corev1.ListContestClarificationsResponseModel, error) {
 	// FIXME: в middleware уже должно быть
 	user := middleware.GetUser(ctx)
@@ -32,7 +37,7 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(50)
 
-	var list *models.ContestClarificationsList
+	var list *corev1.ListContestClarificationsResponseModel
 
 	// FIXME: здесь происходит смешивание модераторского и юзерского эндпоинтов, так не должно быть
 	// возможно нужна какая-то декомпозиция
@@ -51,15 +56,15 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 			Page:      page,
 			PageSize:  pageSize,
 		}
-		list, err = h.clarificationsUC.ListClarificationsForModerator(ctx, contest.ID, filter)
+		list, err = h.clarificationsReader.ListClarificationResponsesForModerator(ctx, contest.ID, filter)
 	} else {
-		list, err = h.clarificationsUC.ListClarificationsForUser(ctx, contest.ID, user.Id, page, pageSize)
+		list, err = h.clarificationsReader.ListClarificationResponsesForUser(ctx, contest.ID, user.Id, page, pageSize)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	return ContestClarificationsListResponseDTO(list), nil
+	return list, nil
 }
 
 func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1.CreateContestClarificationRequestModel, params corev1.CreateContestClarificationParams) (*corev1.ContestClarificationModel, error) {

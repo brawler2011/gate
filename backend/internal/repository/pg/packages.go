@@ -3,6 +3,7 @@ package pg
 import (
 	"context"
 
+	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
 	"github.com/google/uuid"
@@ -119,4 +120,23 @@ func init() {
 		GetPackageByVersion(context.Context, uuid.UUID, int32) (models.ProblemPackage, error)
 		UpdatePackageStatus(context.Context, *models.UpdatePackageStatusParams) error
 	} = (*PackagesRepo)(nil)
+}
+
+func (r *PackagesRepo) ListPackageResponses(ctx context.Context, problemID uuid.UUID) (*corev1.ListProblemPackagesOK, error) {
+	rows, err := r.queries.ListProblemPackages(ctx, sqlc.ListProblemPackagesParams{ProblemID: problemID, Limit: 100, Offset: 0})
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+	packages := make([]corev1.ListProblemPackagesOKPackagesItem, len(rows))
+	for i, row := range rows {
+		packages[i] = corev1.ListProblemPackagesOKPackagesItem{
+			ID:          corev1.NewOptUUID(row.ID),
+			Version:     corev1.NewOptInt32(row.Version),
+			Status:      corev1.NewOptString(string(row.Status)),
+			PackageHash: corev1.NewOptString(row.PackageHash),
+			CreatedAt:   corev1.NewOptDateTime(row.CreatedAt),
+			CompiledAt:  corev1.OptDateTime{Value: row.CompiledAt.Time, Set: row.CompiledAt.Valid},
+		}
+	}
+	return &corev1.ListProblemPackagesOK{Packages: packages}, nil
 }

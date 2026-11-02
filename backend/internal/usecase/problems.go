@@ -5,13 +5,14 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/brawler2011/gate/backend/pkg/storage"
 	"io"
 	"math"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/brawler2011/gate/backend/pkg/storage"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -110,18 +111,6 @@ func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, prob
 
 func (uc *ProblemsUseCase) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 	return uc.repo.DeleteProblem(ctx, id)
-}
-
-func (uc *ProblemsUseCase) ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error) {
-	problems, total, err := uc.repo.ListProblems(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-
-	return &models.ProblemsList{
-		Problems:   problems,
-		Pagination: models.NewPagination(filter.Page, filter.PageSize, total),
-	}, nil
 }
 
 func (uc *ProblemsUseCase) GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (models.ProblemMember, error) {
@@ -254,20 +243,8 @@ func extractNumber(s string) string {
 	return numStr
 }
 
-func (uc *ProblemsUseCase) ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardProblem, error) {
-	problems, err := uc.repo.ListDashboardProblems(ctx, userID, limit)
-	if err != nil {
-		return nil, pkg.Wrap(err, nil, "can't list dashboard problems")
-	}
-	return problems, nil
-}
-
 func (uc *ProblemsUseCase) AddProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission models.ProblemPermission) error {
 	return uc.repo.AddProblemTeam(ctx, problemID, teamID, permission)
-}
-
-func (uc *ProblemsUseCase) GetProblemTeams(ctx context.Context, problemID, requestUserID uuid.UUID) ([]models.ProblemTeam, error) {
-	return uc.repo.GetProblemTeams(ctx, problemID)
 }
 
 func (uc *ProblemsUseCase) UpdateProblemTeamPermission(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission models.ProblemPermission) error {
@@ -295,10 +272,6 @@ func (uc *ProblemsUseCase) CreateProblemMember(ctx context.Context, problemID, u
 		UserID:    userID,
 		Role:      role,
 	})
-}
-
-func (uc *ProblemsUseCase) ListProblemMembers(ctx context.Context, problemID, requestUserID uuid.UUID) ([]models.ProblemMember, error) {
-	return uc.repo.ListProblemMembers(ctx, problemID)
 }
 
 func (uc *ProblemsUseCase) UpdateProblemMemberRole(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role models.ProblemRole) error {

@@ -48,11 +48,6 @@ type NotificationFilter struct {
 	UnreadOnly bool
 }
 
-type NotificationsList struct {
-	Notifications []Notification
-	Pagination    Pagination
-}
-
 func MarshalNotificationData(data map[string]interface{}) ([]byte, error) {
 	if data == nil {
 		return []byte("{}"), nil

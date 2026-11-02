@@ -99,9 +99,6 @@ func (m *mockUsersRepoForTemp) ClaimTemporaryUser(ctx context.Context, id, claim
 	return nil
 }
 
-func (m *mockUsersRepoForTemp) ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]models.User, error) {
-	return m.claimedUsers[claimedByUserID], nil
-}
 
 func (m *mockUsersRepoForTemp) WithTx(tx pgx.Tx) interfaces.UsersRepo {
 	return m
@@ -267,11 +264,6 @@ func TestClaimTemporaryUser_Success(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "already been claimed")
 
-	// Verify list claimed accounts
-	claimedList, err := usersUC.ListClaimedAccounts(ctx, permUser.Id)
-	require.NoError(t, err)
-	require.Len(t, claimedList, 1)
-	assert.Equal(t, "temp_olymp_01", claimedList[0].Username)
 }
 
 func TestClaimTemporaryUser_Rejections(t *testing.T) {
