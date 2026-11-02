@@ -31,14 +31,14 @@ const (
 type AuthUseCase struct {
 	usersRepo    interfaces.UsersRepo
 	authRepo     interfaces.AuthRepo
-	txManager    interfaces.Transactor
+	txManager    IdentityTransactions
 	emailService email.EmailService
 }
 
 func NewAuthUseCase(
 	usersRepo interfaces.UsersRepo,
 	authRepo interfaces.AuthRepo,
-	txManager interfaces.Transactor,
+	txManager IdentityTransactions,
 	emailService ...email.EmailService,
 ) *AuthUseCase {
 	var es email.EmailService

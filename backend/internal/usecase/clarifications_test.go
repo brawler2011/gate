@@ -84,7 +84,6 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	clarRepo := newMockClarificationsRepo()
 	annRepo := newMockAnnouncementsRepo()
 	outboxRepo := &mockOutboxRepo{}
-	transactor := &mockTransactor{}
 
 	mockContests := &mockContestsUCForClarifications{
 		contest: models.Contest{
@@ -95,7 +94,7 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 		},
 	}
 
-	uc := NewClarificationsUseCase(clarRepo, annRepo, mockContests, outboxRepo, transactor)
+	uc := NewClarificationsUseCase(clarRepo, annRepo, mockContests, outboxRepo, testTransactions[ContestEventsTxStore]{contestEventsTestStore{AnnouncementsRepo: annRepo, ClarificationsRepo: clarRepo, OutboxRepo: outboxRepo}})
 
 	contestID := mockContests.contest.ID
 	participantID := uuid.New()

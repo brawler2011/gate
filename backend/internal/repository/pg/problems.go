@@ -3,7 +3,6 @@ package pg
 import (
 	"context"
 
-	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/pkg"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -56,7 +55,7 @@ func (r *ProblemsRepo) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *ProblemsRepo) ListProblemResponses(ctx context.Context, filter *models.ProblemsFilter) (*corev1.ListProblemsResponseModel, error) {
+func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error) {
 	// Calculate offset
 	offset := (filter.Page - 1) * filter.PageSize
 
@@ -86,23 +85,12 @@ func (r *ProblemsRepo) ListProblemResponses(ctx context.Context, filter *models.
 		return nil, HandlePgErr(err)
 	}
 
-	problems := make([]corev1.ProblemsListItemModel, len(rows))
+	problems := make([]models.Problem, len(rows))
 	for i, row := range rows {
-		problems[i] = corev1.ProblemsListItemModel{
-			ID:                row.ID,
-			OrganizationID:    row.OrganizationID,
-			OrganizationLogin: row.OrgLogin,
-			Title:             row.Title,
-			Visibility:        corev1.OptString{Value: string(row.Visibility), Set: row.Visibility != ""},
-			TimeLimit:         row.TimeLimitMs,
-			MemoryLimit:       row.MemoryLimitMb,
-			IsTemplate:        row.IsTemplate,
-			CreatedAt:         row.CreatedAt,
-			UpdatedAt:         row.UpdatedAt,
-		}
+		problems[i] = mapListAllProblemsRow(row)
 	}
 
-	return &corev1.ListProblemsResponseModel{Problems: problems, Pagination: corev1.PaginationModel{Page: filter.Page, Total: models.Total(safeInt32(total), filter.PageSize)}}, nil
+	return &models.ProblemsList{Problems: problems, Pagination: models.NewPagination(filter.Page, filter.PageSize, safeInt32(total))}, nil
 }
 
 func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem *models.ProblemUpdate) error {
@@ -209,18 +197,18 @@ func (r *ProblemsRepo) RemoveProblemTeam(ctx context.Context, problemID, teamID 
 	return nil
 }
 
-func (r *ProblemsRepo) ListProblemMemberResponses(ctx context.Context, problemID uuid.UUID, page int32) (*corev1.ListProblemMembersResponseModel, error) {
+func (r *ProblemsRepo) ListProblemMembers(ctx context.Context, problemID uuid.UUID) ([]models.ProblemMember, error) {
 	rows, err := r.queries.ListProblemMembers(ctx, problemID)
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
 
-	members := make([]corev1.ProblemMemberModel, len(rows))
+	members := make([]models.ProblemMember, len(rows))
 	for i, row := range rows {
-		members[i] = corev1.ProblemMemberModel{ProblemID: row.ProblemID, UserID: row.UserID, Username: row.Username, Role: string(row.Role), CreatedAt: row.CreatedAt}
+		members[i] = mapListProblemMembersRow(row)
 	}
 
-	return &corev1.ListProblemMembersResponseModel{Members: members, Pagination: corev1.PaginationModel{Page: page, Total: safeInt32(len(members))}}, nil
+	return members, nil
 }
 
 func (r *ProblemsRepo) UpdateProblemMemberRole(ctx context.Context, problemID, userID uuid.UUID, role models.ProblemRole) error {
@@ -334,27 +322,18 @@ func mapProblemTeam(pt sqlc.ListProblemTeamsRow) models.ProblemTeam {
 	}
 }
 
-func (r *ProblemsRepo) ListDashboardProblemResponses(ctx context.Context, userID uuid.UUID, limit int32) ([]corev1.DashboardProblemModel, error) {
+func (r *ProblemsRepo) ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardProblem, error) {
 	rows, err := r.queries.ListDashboardProblems(ctx, sqlc.ListDashboardProblemsParams{
 		OwnerID: pgtype.UUID{Bytes: userID, Valid: true},
 		Limit:   limit,
 	})
 	if err != nil {
-		return nil, pkg.Wrap(HandlePgErr(err), nil, "can't list dashboard problems")
+		return nil, HandlePgErr(err)
 	}
 
-	problems := make([]corev1.DashboardProblemModel, len(rows))
+	problems := make([]models.DashboardProblem, len(rows))
 	for i, row := range rows {
-		problems[i] = corev1.DashboardProblemModel{
-			ID:                row.ProblemID,
-			Title:             row.ProblemTitle,
-			OrganizationID:    row.OrgID,
-			OrganizationName:  row.OrgName,
-			OrganizationLogin: row.OrgLogin,
-			TimeLimit:         row.TimeLimitMs,
-			MemoryLimit:       row.MemoryLimitMb,
-			UpdatedAt:         row.UpdatedAt,
-		}
+		problems[i] = mapDashboardProblem(row)
 	}
 
 	return problems, nil
@@ -372,14 +351,47 @@ func (r *ProblemsRepo) ListDashboardProblemResponses(ctx context.Context, userID
 // 	}
 // }
 
-func (r *ProblemsRepo) ListProblemTeamResponses(ctx context.Context, problemID uuid.UUID) (*corev1.ListProblemTeamsResponseModel, error) {
-	rows, err := r.queries.ListProblemTeams(ctx, problemID)
-	if err != nil {
-		return nil, HandlePgErr(err)
+func mapListAllProblemsRow(p sqlc.ListAllProblemsRow) models.Problem {
+	return models.Problem{
+		ID:                p.ID,
+		OrganizationID:    p.OrganizationID,
+		OrganizationLogin: p.OrgLogin,
+		OwnerID:           pgUUIDToUUIDPtr(p.OwnerID),
+		Visibility:        string(p.Visibility),
+		Title:             p.Title,
+		ShortName:         p.ShortName,
+		TimeLimitMs:       int(p.TimeLimitMs),
+		MemoryLimitMb:     int(p.MemoryLimitMb),
+		IsTemplate:        p.IsTemplate,
+		CreatedAt:         p.CreatedAt,
+		UpdatedAt:         p.UpdatedAt,
 	}
-	teams := make([]corev1.ProblemTeamModel, len(rows))
-	for i, row := range rows {
-		teams[i] = corev1.ProblemTeamModel{ProblemID: row.ProblemID, TeamID: row.TeamID, TeamName: row.TeamName, TeamSlug: row.TeamSlug, Permission: string(row.Permission), CreatedAt: row.CreatedAt}
+}
+
+func mapListProblemMembersRow(pm sqlc.ListProblemMembersRow) models.ProblemMember {
+	var email string
+	if pm.Email != nil {
+		email = *pm.Email
 	}
-	return &corev1.ListProblemTeamsResponseModel{Teams: teams}, nil
+	return models.ProblemMember{
+		ProblemID: pm.ProblemID,
+		UserID:    pm.UserID,
+		Role:      models.ProblemRole(pm.Role),
+		Username:  pm.Username,
+		Email:     email,
+		CreatedAt: pm.CreatedAt,
+	}
+}
+
+func mapDashboardProblem(row sqlc.ListDashboardProblemsRow) models.DashboardProblem {
+	return models.DashboardProblem{
+		ID:                row.ProblemID,
+		Title:             row.ProblemTitle,
+		OrganizationID:    row.OrgID,
+		OrganizationName:  row.OrgName,
+		OrganizationLogin: row.OrgLogin,
+		TimeLimitMs:       int(row.TimeLimitMs),
+		MemoryLimitMb:     int(row.MemoryLimitMb),
+		UpdatedAt:         row.UpdatedAt,
+	}
 }

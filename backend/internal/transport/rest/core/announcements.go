@@ -11,7 +11,7 @@ import (
 )
 
 type AnnouncementsReader interface {
-	ListAnnouncementResponses(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*corev1.ListContestAnnouncementsResponseModel, error)
+	ListAnnouncements(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*models.ContestAnnouncementsList, error)
 }
 
 func (h *CoreServer) ListContestAnnouncements(ctx context.Context, params corev1.ListContestAnnouncementsParams) (*corev1.ListContestAnnouncementsResponseModel, error) {
@@ -20,7 +20,12 @@ func (h *CoreServer) ListContestAnnouncements(ctx context.Context, params corev1
 		return nil, err
 	}
 
-	return h.announcementsReader.ListAnnouncementResponses(ctx, contest.ID, params.Page.Value, params.PageSize.Value)
+	list, err := h.announcementsReader.ListAnnouncements(ctx, contest.ID, params.Page.Value, params.PageSize.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	return ContestAnnouncementsListResponseDTO(list), nil
 }
 
 func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.CreateContestAnnouncementRequestModel, params corev1.CreateContestAnnouncementParams) (*corev1.ContestAnnouncementModel, error) {

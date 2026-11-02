@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"log/slog"
+	"testing"
+	"time"
+
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/pkg/logging"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
-	"log/slog"
-	"testing"
-	"time"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
@@ -76,10 +77,11 @@ type diagnosticTransactor struct {
 	commitErr error
 	buf       *bytes.Buffer
 	t         *testing.T
+	store     SubmissionTxStore
 }
 
-func (tx diagnosticTransactor) WithTx(ctx context.Context, fn func(context.Context, pgx.Tx) error) error {
-	if err := fn(ctx, nil); err != nil {
+func (tx diagnosticTransactor) Within(ctx context.Context, fn func(SubmissionTxStore) error) error {
+	if err := fn(tx.store); err != nil {
 		return err
 	}
 	require.Empty(tx.t, tx.buf.String(), "no acceptance log may precede commit")
@@ -97,7 +99,7 @@ func TestSubmissionDiagnosticEventsOnlyAfterCommit(t *testing.T) {
 			submissionID := uuid.New()
 			repo := &diagnosticSubmissionsRepo{submission: models.Submission{ID: submissionID, ContestID: &contestID, CreatedAt: time.Now().Add(-24 * time.Hour)}}
 			outbox := &diagnosticOutboxRepo{}
-			uc := NewSubmissionsUseCase(repo, diagnosticContests{}, diagnosticProblems{}, outbox, diagnosticTransactor{commitErr, &buf, t})
+			uc := NewSubmissionsUseCase(repo, diagnosticContests{}, diagnosticProblems{}, outbox, diagnosticTransactor{commitErr, &buf, t, submissionTestStore{repo, outbox}})
 			ctx := requestid.With(context.Background(), "request-123")
 			var err error
 			if rejudge {

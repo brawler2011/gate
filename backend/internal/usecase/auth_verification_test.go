@@ -327,9 +327,8 @@ func TestRegistrationAndEmailVerification(t *testing.T) {
 	usersRepo := newFullMockUsersRepo()
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
-	txManager := &mockTransactorNoop{}
 
-	authUC := NewAuthUseCase(usersRepo, authRepo, txManager, emailSvc)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, emailSvc)
 
 	// 1. Register new user
 	user, err := authUC.Register(ctx, "testuser", "test@example.com", "SecretPass123")
@@ -361,9 +360,8 @@ func TestRegistrationRetryUnverifiedUser(t *testing.T) {
 	usersRepo := newFullMockUsersRepo()
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
-	txManager := &mockTransactorNoop{}
 
-	authUC := NewAuthUseCase(usersRepo, authRepo, txManager, emailSvc)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, emailSvc)
 
 	// 1. Initial registration (email not verified yet)
 	user1, err := authUC.Register(ctx, "unverifieduser", "unverified@example.com", "FirstPassword123")
@@ -415,9 +413,8 @@ func TestPasswordResetFlow(t *testing.T) {
 	usersRepo := newFullMockUsersRepo()
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
-	txManager := &mockTransactorNoop{}
 
-	authUC := NewAuthUseCase(usersRepo, authRepo, txManager, emailSvc)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, emailSvc)
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("OldPassword123"), bcrypt.DefaultCost)
 	emailStr := "user@example.com"
@@ -465,9 +462,8 @@ func TestEmailChangeFlow(t *testing.T) {
 	usersRepo := newFullMockUsersRepo()
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
-	txManager := &mockTransactorNoop{}
 
-	authUC := NewAuthUseCase(usersRepo, authRepo, txManager, emailSvc)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, emailSvc)
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("MyPassword123"), bcrypt.DefaultCost)
 	oldEmail := "old@example.com"
@@ -510,9 +506,8 @@ func TestAdminUserManagement(t *testing.T) {
 	usersRepo := newFullMockUsersRepo()
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
-	txManager := &mockTransactorNoop{}
 
-	usersUC := NewUsersUseCase(usersRepo, nil, nil, txManager, authRepo, emailSvc)
+	usersUC := NewUsersUseCase(usersRepo, nil, nil, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, authRepo, emailSvc)
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("Pass12345"), bcrypt.DefaultCost)
 	emailStr := "adminmanaged@example.com"

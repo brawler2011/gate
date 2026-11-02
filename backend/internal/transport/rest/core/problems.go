@@ -15,10 +15,10 @@ import (
 )
 
 type ProblemsReader interface {
-	ListProblemMemberResponses(ctx context.Context, problemID uuid.UUID, page int32) (*corev1.ListProblemMembersResponseModel, error)
-	ListProblemTeamResponses(ctx context.Context, problemID uuid.UUID) (*corev1.ListProblemTeamsResponseModel, error)
-	ListProblemResponses(ctx context.Context, filter *models.ProblemsFilter) (*corev1.ListProblemsResponseModel, error)
-	ListDashboardProblemResponses(ctx context.Context, userID uuid.UUID, limit int32) ([]corev1.DashboardProblemModel, error)
+	ListProblemMembers(ctx context.Context, problemID uuid.UUID) ([]models.ProblemMember, error)
+	GetProblemTeams(ctx context.Context, problemId uuid.UUID) ([]models.ProblemTeam, error)
+	ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error)
+	ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardProblem, error)
 }
 
 func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblemsParams) (*corev1.ListProblemsResponseModel, error) {
@@ -46,7 +46,20 @@ func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblem
 		filter.IsTemplate = &isTmpl
 	}
 
-	return h.problemsReader.ListProblemResponses(ctx, filter)
+	problemsList, err := h.problemsReader.ListProblems(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := corev1.ListProblemsResponseModel{
+		Problems:   make([]corev1.ProblemsListItemModel, len(problemsList.Problems)),
+		Pagination: PaginationDTO(problemsList.Pagination),
+	}
+
+	for i, problem := range problemsList.Problems {
+		resp.Problems[i] = ProblemsListItemDTO(problem)
+	}
+	return &resp, nil
 }
 
 func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.ListProblemTemplatesParams) ([]corev1.ProblemTemplateModel, error) {
@@ -85,7 +98,7 @@ func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.Lis
 			OrganizationID: &orgID,
 			IsTemplate:     &isTemplate,
 		}
-		orgProblems, err := h.problemsReader.ListProblemResponses(ctx, filter)
+		orgProblems, err := h.problemsReader.ListProblems(ctx, filter)
 		if err == nil && orgProblems != nil {
 			for _, p := range orgProblems.Problems {
 				probType := "pass-fail"
@@ -333,7 +346,12 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 }
 
 func (h *CoreServer) ListProblemTeams(ctx context.Context, params corev1.ListProblemTeamsParams) (*corev1.ListProblemTeamsResponseModel, error) {
-	return h.problemsReader.ListProblemTeamResponses(ctx, params.ID)
+	teams, err := h.problemsReader.GetProblemTeams(ctx, params.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return listProblemTeamsDTO(teams), nil
 }
 
 func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.CreateProblemTeamParams) error {
@@ -375,7 +393,14 @@ func (h *CoreServer) DeleteProblemTeam(ctx context.Context, params corev1.Delete
 }
 
 func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListProblemMembersParams) (*corev1.ListProblemMembersResponseModel, error) {
-	return h.problemsReader.ListProblemMemberResponses(ctx, params.ID, params.Page.Or(1))
+	members, err := h.problemsReader.ListProblemMembers(ctx, params.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	total := safeInt32(len(members))
+	page := params.Page.Or(1)
+	return listProblemMembersDTO(members, page, total), nil
 }
 
 func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.CreateProblemMemberParams) error {

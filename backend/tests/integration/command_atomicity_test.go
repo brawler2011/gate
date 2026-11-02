@@ -3,8 +3,15 @@
 package integration
 
 import (
+	"context"
+	"errors"
+	"time"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/brawler2011/gate/backend/internal/repository/pg"
+	"github.com/brawler2011/gate/backend/internal/usecase"
+	"github.com/google/uuid"
 )
 
 func (s *IntegrationTestSuite) TestCreateTeamRollsBackMaintainerFailure() {
@@ -50,8 +57,48 @@ CREATE TRIGGER reject_problem_member BEFORE INSERT ON problem_members FOR EACH R
 func (s *IntegrationTestSuite) TestUsersPaginationDefaultsAndBounds() {
 	admin := s.createUser("pagination_admin", models.UserRoleAdmin)
 	s.readJSON("/users", admin.Id, 200)
-	for _, query := range []string{"page=0", "page_size=0", "page_size=101"} {
+	for _, query := range []string{"page=0", "pageSize=0", "pageSize=101"} {
 		s.readJSON("/users?"+query, admin.Id, 400)
 	}
-	s.readJSON("/users?page_size=100", admin.Id, 200)
+	s.readJSON("/users?pageSize=100", admin.Id, 200)
+}
+
+func (s *IntegrationTestSuite) TestTransactionRollbackLifecycle() {
+	owner := s.createUser("rollback_owner", models.UserRoleUser)
+	org := s.createOrganization("rollback-lifecycle", "Rollback", owner.Id)
+	provider := pg.NewProblemTransactions(s.dbPool)
+	failure := errors.New("injected callback failure")
+	for _, mode := range []string{"error", "panic", "canceled"} {
+		s.Run(mode, func() {
+			id := uuid.New()
+			ctx, cancel := context.WithCancel(s.ctx)
+			defer cancel()
+			callback := func(tx usecase.ProblemTxStore) error {
+				err := tx.CreateProblem(ctx, &models.CreateProblemParams{ID: id, OrganizationID: org.ID, Title: "Rollback", ShortName: mode, Visibility: models.ProblemVisibilityPrivate})
+				if err != nil {
+					return err
+				}
+				if mode == "panic" {
+					panic(failure)
+				}
+				if mode == "canceled" {
+					cancel()
+				}
+				return failure
+			}
+			if mode == "panic" {
+				s.PanicsWithValue(failure, func() { _ = provider.Within(ctx, callback) })
+			} else {
+				err := provider.Within(ctx, callback)
+				s.Same(failure, err, "preserve the original callback error")
+			}
+			checkCtx, stop := context.WithTimeout(s.ctx, time.Second)
+			defer stop()
+			var count int
+			err := s.dbPool.QueryRow(checkCtx, `SELECT count(*) FROM problems WHERE id=$1`, id).Scan(&count)
+			s.Require().NoError(err)
+			s.Zero(count)
+			s.Zero(s.dbPool.Stat().AcquiredConns(), "rollback must release the connection")
+		})
+	}
 }

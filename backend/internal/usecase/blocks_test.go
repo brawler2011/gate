@@ -99,10 +99,10 @@ func (r *blockingOutbox) CreateEvent(_ context.Context, p *models.CreateOutboxEv
 	return nil
 }
 
-type blockingTransactor struct{}
+type blockingTransactor struct{ usecase.SubmissionTxStore }
 
-func (blockingTransactor) WithTx(ctx context.Context, fn func(context.Context, pgx.Tx) error) error {
-	return fn(ctx, nil)
+func (t blockingTransactor) Within(_ context.Context, fn func(usecase.SubmissionTxStore) error) error {
+	return fn(t.SubmissionTxStore)
 }
 
 type blockingProblems struct{ interfaces.ProblemsUC }
@@ -116,7 +116,10 @@ func TestBlockSubmissionRemovesSolveAndUnblockQueuesRejudge(t *testing.T) {
 	id := f.submit(t, "alice", 0, models.Accepted, 10*time.Minute)
 	other := f.submit(t, "alice", 1, models.Accepted, 20*time.Minute)
 	repo, outbox := &blockingSubmissionsRepo{repo: f.repo}, &blockingOutbox{}
-	uc := usecase.NewSubmissionsUseCase(repo, f.uc, blockingProblems{}, outbox, blockingTransactor{})
+	uc := usecase.NewSubmissionsUseCase(repo, f.uc, blockingProblems{}, outbox, blockingTransactor{struct {
+		interfaces.SubmissionsRepo
+		interfaces.OutboxRepo
+	}{repo, outbox}})
 	ctx := context.Background()
 	reason := "Cheating"
 	require.NoError(t, uc.BlockSubmission(ctx, f.repo.contest.ID, id, &reason))
@@ -149,7 +152,10 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 	other := f.submit(t, "alice", 1, models.Accepted, 30*time.Minute)
 	repo, outbox := &blockingSubmissionsRepo{repo: f.repo}, &blockingOutbox{}
 	f.uc = usecase.NewContestsUseCase(f.repo, nil, repo)
-	uc := usecase.NewSubmissionsUseCase(repo, f.uc, blockingProblems{}, outbox, blockingTransactor{})
+	uc := usecase.NewSubmissionsUseCase(repo, f.uc, blockingProblems{}, outbox, blockingTransactor{struct {
+		interfaces.SubmissionsRepo
+		interfaces.OutboxRepo
+	}{repo, outbox}})
 	ctx := context.Background()
 	reason := "Banned from problem A"
 	contest, user, problem := f.repo.contest.ID, f.users["alice"], f.repo.problems[0].ProblemID

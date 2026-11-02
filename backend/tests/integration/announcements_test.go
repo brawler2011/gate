@@ -183,7 +183,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 		{3, 50, 3, 2, 0},
 	} {
 		s.Run(fmt.Sprintf("reader_page_%d_size_%d", tc.page, tc.pageSize), func() {
-			response, err := reader.ListAnnouncementResponses(s.ctx, contestID, tc.page, tc.pageSize)
+			response, err := reader.ListAnnouncements(s.ctx, contestID, tc.page, tc.pageSize)
 			s.Require().NoError(err)
 			s.Equal(corev1.PaginationModel{Page: tc.wantPage, Total: tc.wantTotal}, response.Pagination)
 			s.Len(response.Announcements, tc.wantLength)

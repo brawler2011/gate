@@ -8,8 +8,6 @@ import (
 	"math"
 	"time"
 
-	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
@@ -141,7 +139,7 @@ func (r *ContestsRepo) DeleteContest(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *ContestsRepo) ListOrganizationContestResponses(ctx context.Context, orgID uuid.UUID, search string, visibility string, page, pageSize int32) (*corev1.ListContestsResponseModel, error) {
+func (r *ContestsRepo) ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, visibility string, page, pageSize int32) (*models.ContestsList, error) {
 	rows, err := r.queries.ListContests(ctx, sqlc.ListContestsParams{
 		OrganizationID: orgID,
 		Column2:        search,
@@ -150,7 +148,7 @@ func (r *ContestsRepo) ListOrganizationContestResponses(ctx context.Context, org
 		Offset:         Offset(page, pageSize),
 	})
 	if err != nil {
-		return nil, pkg.Wrap(HandlePgErr(err), nil, "can't list organization contests from database")
+		return nil, HandlePgErr(err)
 	}
 
 	count, err := r.queries.CountContests(ctx, sqlc.CountContestsParams{
@@ -159,18 +157,18 @@ func (r *ContestsRepo) ListOrganizationContestResponses(ctx context.Context, org
 		Column3:        visibility,
 	})
 	if err != nil {
-		return nil, pkg.Wrap(HandlePgErr(err), nil, "can't list organization contests from database")
+		return nil, HandlePgErr(err)
 	}
 
-	contests := make([]corev1.ContestModel, len(rows))
+	contests := make([]models.Contest, len(rows))
 	for i, row := range rows {
-		contests[i] = core.ContestDTO(mapContestFields(row.ID, row.OrganizationID, row.OrgLogin, row.OwnerID, string(row.Visibility), row.Title, row.Login, row.Description, row.Settings, row.StartTime, row.EndTime, row.CreatedAt, row.UpdatedAt), nil)
+		contests[i] = mapListContestsRow(row)
 	}
 
-	return &corev1.ListContestsResponseModel{Contests: contests, Pagination: corev1.PaginationModel{Page: page, Total: models.Total(safeInt32(count), pageSize)}}, nil
+	return &models.ContestsList{Contests: contests, Pagination: models.NewPagination(page, pageSize, safeInt32(count))}, nil
 }
 
-func (r *ContestsRepo) ListAdminContestResponses(ctx context.Context, filter models.AdminContestsFilter) (*corev1.ListContestsResponseModel, error) {
+func (r *ContestsRepo) ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) (*models.ContestsList, error) {
 	var visStr string
 	if filter.Visibility != nil {
 		visStr = string(*filter.Visibility)
@@ -183,7 +181,7 @@ func (r *ContestsRepo) ListAdminContestResponses(ctx context.Context, filter mod
 		Offset:  Offset(filter.Page, filter.PageSize),
 	})
 	if err != nil {
-		return nil, pkg.Wrap(HandlePgErr(err), nil, "can't list admin contests from database")
+		return nil, HandlePgErr(err)
 	}
 
 	count, err := r.queries.CountAllContests(ctx, sqlc.CountAllContestsParams{
@@ -191,38 +189,38 @@ func (r *ContestsRepo) ListAdminContestResponses(ctx context.Context, filter mod
 		Column2: visStr,
 	})
 	if err != nil {
-		return nil, pkg.Wrap(HandlePgErr(err), nil, "can't list admin contests from database")
+		return nil, HandlePgErr(err)
 	}
 
-	contests := make([]corev1.ContestModel, len(rows))
+	contests := make([]models.Contest, len(rows))
 	for i, row := range rows {
-		contests[i] = core.ContestDTO(mapContestFields(row.ID, row.OrganizationID, row.OrgLogin, row.OwnerID, string(row.Visibility), row.Title, row.Login, row.Description, row.Settings, row.StartTime, row.EndTime, row.CreatedAt, row.UpdatedAt), nil)
+		contests[i] = mapListAllContestsRow(row)
 	}
 
-	return &corev1.ListContestsResponseModel{Contests: contests, Pagination: corev1.PaginationModel{Page: filter.Page, Total: models.Total(safeInt32(count), filter.PageSize)}}, nil
+	return &models.ContestsList{Contests: contests, Pagination: models.NewPagination(filter.Page, filter.PageSize, safeInt32(count))}, nil
 }
 
-func (r *ContestsRepo) ListUserContestResponses(ctx context.Context, filter models.UserContestsFilter) (*corev1.ListUserContestsResponseModel, error) {
+func (r *ContestsRepo) ListUserContests(ctx context.Context, filter models.UserContestsFilter) (*models.ContestsList, error) {
 	rows, err := r.queries.ListUserAccessibleContests(ctx, sqlc.ListUserAccessibleContestsParams{
 		PUserID: filter.UserId,
 		Limit:   filter.PageSize,
 		Offset:  Offset(filter.Page, filter.PageSize),
 	})
 	if err != nil {
-		return nil, pkg.Wrap(HandlePgErr(err), nil, "can't list user contests from database")
+		return nil, HandlePgErr(err)
 	}
 
 	count := int64(len(rows))
 
-	contests := make([]corev1.ContestModel, len(rows))
+	contests := make([]models.Contest, len(rows))
 	for i, row := range rows {
-		contests[i] = core.ContestDTO(mapContestFields(row.ID, row.OrganizationID, row.OrgLogin, row.OwnerID, string(row.Visibility), row.Title, row.Login, row.Description, row.Settings, row.StartTime, row.EndTime, row.CreatedAt, row.UpdatedAt), nil)
+		contests[i] = mapListUserAccessibleContestsRow(row)
 	}
 
-	return &corev1.ListUserContestsResponseModel{Contests: contests, Pagination: corev1.PaginationModel{Page: filter.Page, Total: models.Total(safeInt32(count), filter.PageSize)}}, nil
+	return &models.ContestsList{Contests: contests, Pagination: models.NewPagination(filter.Page, filter.PageSize, safeInt32(count))}, nil
 }
 
-func (r *ContestsRepo) ListWorkshopContestResponses(ctx context.Context, filter models.WorkshopContestsFilter) (*corev1.ListContestsResponseModel, error) {
+func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) (*models.ContestsList, error) {
 	if filter.OrganizationID != nil {
 		rows, err := r.queries.ListUserAccessibleContestsByOrg(ctx, sqlc.ListUserAccessibleContestsByOrgParams{
 			PUserID:        filter.UserId,
@@ -231,13 +229,13 @@ func (r *ContestsRepo) ListWorkshopContestResponses(ctx context.Context, filter 
 			Offset:         Offset(filter.Page, filter.PageSize),
 		})
 		if err != nil {
-			return nil, pkg.Wrap(HandlePgErr(err), nil, "can't list workshop contests from database")
+			return nil, HandlePgErr(err)
 		}
-		contests := make([]corev1.ContestModel, len(rows))
+		contests := make([]models.Contest, len(rows))
 		for i, row := range rows {
-			contests[i] = core.ContestDTO(mapContestFields(row.ID, row.OrganizationID, row.OrgLogin, row.OwnerID, string(row.Visibility), row.Title, row.Login, row.Description, row.Settings, row.StartTime, row.EndTime, row.CreatedAt, row.UpdatedAt), nil)
+			contests[i] = mapListUserAccessibleContestsByOrgRow(row)
 		}
-		return &corev1.ListContestsResponseModel{Contests: contests, Pagination: corev1.PaginationModel{Page: filter.Page, Total: models.Total(safeInt32(len(rows)), filter.PageSize)}}, nil
+		return &models.ContestsList{Contests: contests, Pagination: models.NewPagination(filter.Page, filter.PageSize, safeInt32(len(rows)))}, nil
 	}
 
 	rows, err := r.queries.ListUserAccessibleContests(ctx, sqlc.ListUserAccessibleContestsParams{
@@ -246,18 +244,18 @@ func (r *ContestsRepo) ListWorkshopContestResponses(ctx context.Context, filter 
 		Offset:  Offset(filter.Page, filter.PageSize),
 	})
 	if err != nil {
-		return nil, pkg.Wrap(HandlePgErr(err), nil, "can't list workshop contests from database")
+		return nil, HandlePgErr(err)
 	}
 
-	contests := make([]corev1.ContestModel, len(rows))
+	contests := make([]models.Contest, len(rows))
 	for i, row := range rows {
-		contests[i] = core.ContestDTO(mapContestFields(row.ID, row.OrganizationID, row.OrgLogin, row.OwnerID, string(row.Visibility), row.Title, row.Login, row.Description, row.Settings, row.StartTime, row.EndTime, row.CreatedAt, row.UpdatedAt), nil)
+		contests[i] = mapListUserAccessibleContestsRow(row)
 	}
 
-	return &corev1.ListContestsResponseModel{Contests: contests, Pagination: corev1.PaginationModel{Page: filter.Page, Total: models.Total(safeInt32(len(rows)), filter.PageSize)}}, nil
+	return &models.ContestsList{Contests: contests, Pagination: models.NewPagination(filter.Page, filter.PageSize, safeInt32(len(rows)))}, nil
 }
 
-func (r *ContestsRepo) ListPublicContestResponses(ctx context.Context, filter models.PublicContestsFilter) (*corev1.ListContestsResponseModel, error) {
+func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) (*models.ContestsList, error) {
 	rows, err := r.queries.ListAllContests(ctx, sqlc.ListAllContestsParams{
 		Column1: filter.Search,
 		Column2: string(models.ContestVisibilityPublic),
@@ -265,7 +263,7 @@ func (r *ContestsRepo) ListPublicContestResponses(ctx context.Context, filter mo
 		Offset:  Offset(filter.Page, filter.PageSize),
 	})
 	if err != nil {
-		return nil, pkg.Wrap(HandlePgErr(err), nil, "can't list public contests from database")
+		return nil, HandlePgErr(err)
 	}
 
 	count, err := r.queries.CountAllContests(ctx, sqlc.CountAllContestsParams{
@@ -273,15 +271,15 @@ func (r *ContestsRepo) ListPublicContestResponses(ctx context.Context, filter mo
 		Column2: string(models.ContestVisibilityPublic),
 	})
 	if err != nil {
-		return nil, pkg.Wrap(HandlePgErr(err), nil, "can't list public contests from database")
+		return nil, HandlePgErr(err)
 	}
 
-	contests := make([]corev1.ContestModel, len(rows))
+	contests := make([]models.Contest, len(rows))
 	for i, row := range rows {
-		contests[i] = core.ContestDTO(mapContestFields(row.ID, row.OrganizationID, row.OrgLogin, row.OwnerID, string(row.Visibility), row.Title, row.Login, row.Description, row.Settings, row.StartTime, row.EndTime, row.CreatedAt, row.UpdatedAt), nil)
+		contests[i] = mapListAllContestsRow(row)
 	}
 
-	return &corev1.ListContestsResponseModel{Contests: contests, Pagination: corev1.PaginationModel{Page: filter.Page, Total: models.Total(safeInt32(count), filter.PageSize)}}, nil
+	return &models.ContestsList{Contests: contests, Pagination: models.NewPagination(filter.Page, filter.PageSize, safeInt32(count))}, nil
 }
 
 func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c models.ContestProblemCreation) error {
@@ -482,7 +480,7 @@ func (r *ContestsRepo) DeleteContestTeam(
 	return nil
 }
 
-func (r *ContestsRepo) ListContestMemberResponses(ctx context.Context, filter models.ParticipantsFilter) (*corev1.ListContestMembersResponseModel, error) {
+func (r *ContestsRepo) ListContestMembers(ctx context.Context, filter models.ParticipantsFilter) (*models.ContestMembersList, error) {
 	rows, err := r.queries.ListContestMembers(ctx, filter.ContestId)
 	if err != nil {
 		return nil, HandlePgErr(err)
@@ -491,12 +489,12 @@ func (r *ContestsRepo) ListContestMemberResponses(ctx context.Context, filter mo
 	// No pagination support in the query - return all members
 	count := int64(len(rows))
 
-	members := make([]corev1.ContestMemberModel, len(rows))
+	members := make([]models.ContestMember, len(rows))
 	for i, row := range rows {
-		members[i] = corev1.ContestMemberModel{ContestID: filter.ContestId, UserID: row.UserID, Username: row.Username, ContestRole: row.Role, CreatedAt: row.CreatedAt}
+		members[i] = mapListContestMembersRow(row)
 	}
 
-	return &corev1.ListContestMembersResponseModel{Members: members, Pagination: corev1.PaginationModel{Page: filter.Page, Total: models.Total(safeInt32(count), filter.PageSize)}}, nil
+	return &models.ContestMembersList{Members: members, Pagination: models.NewPagination(filter.Page, filter.PageSize, safeInt32(count))}, nil
 }
 
 func (r *ContestsRepo) CreateContestMember(ctx context.Context, c *models.CreateContestMemberParams) error {
@@ -729,32 +727,18 @@ func marshalJSON(v interface{}) ([]byte, error) {
 	return data, nil
 }
 
-func (r *ContestsRepo) ListDashboardContestResponses(ctx context.Context, userID uuid.UUID, limit int32) ([]corev1.DashboardContestModel, error) {
+func (r *ContestsRepo) ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardContest, error) {
 	rows, err := r.queries.ListDashboardContests(ctx, sqlc.ListDashboardContestsParams{
 		UserID: userID,
 		Limit:  limit,
 	})
 	if err != nil {
-		return nil, pkg.Wrap(HandlePgErr(err), nil, "can't list dashboard contests")
+		return nil, HandlePgErr(err)
 	}
 
-	contests := make([]corev1.DashboardContestModel, len(rows))
+	contests := make([]models.DashboardContest, len(rows))
 	for i, row := range rows {
-		contests[i] = corev1.DashboardContestModel{
-			ID:                row.ContestID,
-			Login:             row.ContestLogin,
-			Title:             row.ContestTitle,
-			OrganizationID:    row.OrgID,
-			OrganizationName:  row.OrgName,
-			OrganizationLogin: row.OrgLogin,
-			UserRole:          row.UserRole,
-			CreatedAt:         row.ContestCreatedAt,
-			StartTime:         corev1.OptNilDateTime{Value: row.ContestStartTime.Time, Set: row.ContestStartTime.Valid},
-			EndTime:           corev1.OptNilDateTime{Value: row.ContestEndTime.Time, Set: row.ContestEndTime.Valid},
-		}
-		if t, ok := row.LastSubTime.(time.Time); ok {
-			contests[i].LastSubmissionTime = corev1.NewOptNilDateTime(t)
-		}
+		contests[i] = mapDashboardContest(row)
 	}
 
 	return contests, nil
@@ -1098,14 +1082,61 @@ func (r *ContestsRepo) UpdateContestJoinRequestStatus(ctx context.Context, id uu
 	return nil
 }
 
-func (r *ContestsRepo) ListContestTeamResponses(ctx context.Context, contestID uuid.UUID) (*corev1.ListContestTeamsResponseModel, error) {
-	rows, err := r.queries.ListContestTeams(ctx, contestID)
-	if err != nil {
-		return nil, HandlePgErr(err)
+func mapListContestsRow(c sqlc.ListContestsRow) models.Contest {
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+}
+
+func mapListAllContestsRow(c sqlc.ListAllContestsRow) models.Contest {
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+}
+
+func mapListUserAccessibleContestsRow(c sqlc.ListUserAccessibleContestsRow) models.Contest {
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+}
+
+func mapListUserAccessibleContestsByOrgRow(c sqlc.ListUserAccessibleContestsByOrgRow) models.Contest {
+	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
+}
+
+func mapListContestMembersRow(c sqlc.ListContestMembersRow) models.ContestMember {
+	return models.ContestMember{
+		UserID:      c.UserID,
+		ContestID:   c.ContestID,
+		Username:    c.Username,
+		ContestRole: c.Role,
+		CreatedAt:   c.CreatedAt,
 	}
-	teams := make([]corev1.ContestTeamModel, len(rows))
-	for i, row := range rows {
-		teams[i] = corev1.ContestTeamModel{ContestID: row.ContestID, TeamID: row.TeamID, TeamName: row.TeamName, TeamSlug: row.TeamSlug, ContestRole: row.Role, CreatedAt: row.CreatedAt}
+}
+
+func mapDashboardContest(row sqlc.ListDashboardContestsRow) models.DashboardContest {
+	var lastSubTime *time.Time
+	if row.LastSubTime != nil {
+		if t, ok := row.LastSubTime.(time.Time); ok {
+			lastSubTime = &t
+		}
 	}
-	return &corev1.ListContestTeamsResponseModel{Teams: teams}, nil
+
+	var startTime *time.Time
+	if row.ContestStartTime.Valid {
+		startTime = &row.ContestStartTime.Time
+	}
+
+	var endTime *time.Time
+	if row.ContestEndTime.Valid {
+		endTime = &row.ContestEndTime.Time
+	}
+
+	return models.DashboardContest{
+		ID:                 row.ContestID,
+		Login:              row.ContestLogin,
+		Title:              row.ContestTitle,
+		StartTime:          startTime,
+		EndTime:            endTime,
+		CreatedAt:          row.ContestCreatedAt,
+		OrganizationID:     row.OrgID,
+		OrganizationName:   row.OrgName,
+		OrganizationLogin:  row.OrgLogin,
+		UserRole:           row.UserRole,
+		LastSubmissionTime: lastSubTime,
+	}
 }

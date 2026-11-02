@@ -8,11 +8,12 @@ import (
 	"github.com/google/uuid"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg"
 )
 
 type PackagesReader interface {
-	ListPackageResponses(ctx context.Context, problemID uuid.UUID) (*corev1.ListProblemPackagesOK, error)
+	ListPackages(ctx context.Context, problemID uuid.UUID, limit, offset int32) ([]models.ProblemPackage, error)
 }
 
 // ImportProblem handles POST /problems/{id}/import
@@ -62,11 +63,25 @@ func (h *CoreServer) PublishProblem(ctx context.Context, params corev1.PublishPr
 
 // ListProblemPackages handles GET /problems/{id}/packages
 func (h *CoreServer) ListProblemPackages(ctx context.Context, params corev1.ListProblemPackagesParams) (*corev1.ListProblemPackagesOK, error) {
-	response, err := h.packagesReader.ListPackageResponses(ctx, params.ID)
+	packages, err := h.packagesReader.ListPackages(ctx, params.ID, 100, 0)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list packages")
 	}
-	return response, nil
+
+	items := make([]corev1.ListProblemPackagesOKPackagesItem, len(packages))
+	for i, p := range packages {
+		items[i] = corev1.ListProblemPackagesOKPackagesItem{
+			ID:          corev1.NewOptUUID(p.ID),
+			Version:     corev1.NewOptInt32(p.Version),
+			Status:      corev1.NewOptString(p.Status),
+			PackageHash: corev1.NewOptString(p.PackageHash),
+			CreatedAt:   corev1.NewOptDateTime(p.CreatedAt),
+		}
+		if p.CompiledAt != nil {
+			items[i].CompiledAt = corev1.NewOptDateTime(*p.CompiledAt)
+		}
+	}
+	return &corev1.ListProblemPackagesOK{Packages: items}, nil
 }
 
 // GetPublishedPackage handles GET /problems/{id}/package/{version}

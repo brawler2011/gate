@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/brawler2011/gate/backend/pkg/requestid"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 type ClarificationsUseCase struct {
@@ -18,7 +18,7 @@ type ClarificationsUseCase struct {
 	announcementsRepo  interfaces.AnnouncementsRepo
 	contestsUC         interfaces.ContestsUC
 	outboxRepo         interfaces.OutboxRepo
-	transactor         interfaces.Transactor
+	transactor         ContestEventsTransactions
 }
 
 func NewClarificationsUseCase(
@@ -26,7 +26,7 @@ func NewClarificationsUseCase(
 	announcementsRepo interfaces.AnnouncementsRepo,
 	contestsUC interfaces.ContestsUC,
 	outboxRepo interfaces.OutboxRepo,
-	transactor interfaces.Transactor,
+	transactor ContestEventsTransactions,
 ) *ClarificationsUseCase {
 	return &ClarificationsUseCase{
 		clarificationsRepo: clarificationsRepo,
@@ -54,9 +54,9 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 	}
 
 	var clarification *models.ContestClarification
-	err = uc.transactor.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+	err = uc.transactor.Within(ctx, func(tx ContestEventsTxStore) error {
 		var err error
-		clarification, err = uc.clarificationsRepo.WithTx(tx).CreateClarification(ctx, input)
+		clarification, err = tx.CreateClarification(ctx, input)
 		if err != nil {
 			return err
 		}
@@ -89,7 +89,7 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 			Headers:     headers,
 		}
 
-		return uc.outboxRepo.WithTx(tx).CreateEvent(ctx, outboxEvent)
+		return tx.CreateEvent(ctx, outboxEvent)
 	})
 	if err != nil {
 		return nil, err
@@ -104,9 +104,9 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 	}
 
 	var clarification *models.ContestClarification
-	err := uc.transactor.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+	err := uc.transactor.Within(ctx, func(tx ContestEventsTxStore) error {
 		var err error
-		clarification, err = uc.clarificationsRepo.WithTx(tx).AnswerClarification(
+		clarification, err = tx.AnswerClarification(
 			ctx,
 			input.ClarificationID,
 			input.ContestID,
@@ -157,7 +157,7 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 			Headers:     headers,
 		}
 
-		if err := uc.outboxRepo.WithTx(tx).CreateEvent(ctx, outboxEvent); err != nil {
+		if err := tx.CreateEvent(ctx, outboxEvent); err != nil {
 			return fmt.Errorf("create outbox event for clarification answered: %w", err)
 		}
 
@@ -172,7 +172,7 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 			}
 
 			body := fmt.Sprintf("**Вопрос:** %s\n\n**Ответ:** %s", clarification.Question, input.Answer)
-			announcement, err := uc.announcementsRepo.WithTx(tx).CreateAnnouncement(ctx, &models.CreateContestAnnouncementInput{
+			announcement, err := tx.CreateAnnouncement(ctx, &models.CreateContestAnnouncementInput{
 				ContestID: clarification.ContestID,
 				ProblemID: clarification.ProblemID,
 				AuthorID:  input.AnsweredBy,
@@ -212,7 +212,7 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 				Headers:     annHeaders,
 			}
 
-			if err := uc.outboxRepo.WithTx(tx).CreateEvent(ctx, annOutboxEvent); err != nil {
+			if err := tx.CreateEvent(ctx, annOutboxEvent); err != nil {
 				return fmt.Errorf("create outbox event for announcement: %w", err)
 			}
 		}

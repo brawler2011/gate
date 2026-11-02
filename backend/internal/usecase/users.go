@@ -12,7 +12,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -21,7 +21,7 @@ type UsersUseCase struct {
 	authRepo     interfaces.AuthRepo
 	contestsRepo interfaces.ContestsRepo
 	outboxRepo   interfaces.OutboxRepo
-	txManager    interfaces.Transactor
+	txManager    IdentityTransactions
 	emailService email.EmailService
 }
 
@@ -29,7 +29,7 @@ func NewUsersUseCase(
 	repo interfaces.UsersRepo,
 	contestsRepo interfaces.ContestsRepo,
 	outboxRepo interfaces.OutboxRepo,
-	txManager interfaces.Transactor,
+	txManager IdentityTransactions,
 	authRepo interfaces.AuthRepo,
 	emailService email.EmailService,
 ) *UsersUseCase {
@@ -123,9 +123,10 @@ func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller models.Use
 
 	var grantedContests []uuid.UUID
 
-	err = u.txManager.WithTx(ctx, func(txCtx context.Context, tx pgx.Tx) error {
-		txUsersRepo := u.usersRepo.WithTx(tx)
-		txContestsRepo := u.contestsRepo.WithTx(tx)
+	err = u.txManager.Within(ctx, func(tx IdentityTxStore) error {
+		txCtx := ctx
+		txUsersRepo := tx
+		txContestsRepo := tx
 
 		now := time.Now()
 		err := txUsersRepo.ClaimTemporaryUser(txCtx, tempUser.Id, caller.Id, now)

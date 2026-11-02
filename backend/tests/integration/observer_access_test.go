@@ -29,7 +29,7 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 	start := time.Now().Add(-time.Hour)
 	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{ID: contestID, OrganizationID: org.ID, OwnerID: &owner.Id, Login: "ws-" + suffix, Title: "Observer", Visibility: models.ContestVisibilityPrivate, StartTime: &start, Settings: map[string]any{"freeze_status": models.FreezeStatusFrozen}}))
 	authRepo := pg.NewAuthRepo(s.dbPool)
-	tx := pg.NewTransactor(s.dbPool)
+	tx := pg.NewIdentityTransactions(s.dbPool)
 	users := usecase.NewUsersUseCase(s.usersRepo, s.contestsRepo, pg.NewOutboxRepo(s.dbPool), tx, authRepo, nil)
 	auth := usecase.NewAuthUseCase(s.usersRepo, authRepo, tx)
 	permissions := usecase.NewPermissionsUseCase(s.contestsRepo, users, s.problemsRepo, s.teamsRepo, s.organizationsRepo)

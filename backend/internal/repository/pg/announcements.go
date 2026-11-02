@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
@@ -75,7 +74,7 @@ func (r *AnnouncementsRepo) GetAnnouncementByID(ctx context.Context, id uuid.UUI
 	}, nil
 }
 
-func (r *AnnouncementsRepo) ListAnnouncementResponses(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*corev1.ListContestAnnouncementsResponseModel, error) {
+func (r *AnnouncementsRepo) ListAnnouncements(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*models.ContestAnnouncementsList, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -98,11 +97,14 @@ func (r *AnnouncementsRepo) ListAnnouncementResponses(ctx context.Context, conte
 		return nil, fmt.Errorf("count contest announcements: %w", err)
 	}
 
-	announcements := make([]corev1.ContestAnnouncementModel, len(rows))
+	announcements := make([]models.ContestAnnouncement, len(rows))
 	for i, row := range rows {
-		announcement := corev1.ContestAnnouncementModel{
+		announcements[i] = models.ContestAnnouncement{
 			ID:             row.ID,
 			ContestID:      row.ContestID,
+			ProblemID:      pgtypeUUIDToPtr(row.ProblemID),
+			ProblemTitle:   row.ProblemTitle,
+			ProblemLetter:  ordinalToLetter(row.ProblemOrdinal),
 			AuthorID:       row.AuthorID,
 			AuthorUsername: row.AuthorUsername,
 			Title:          row.Title,
@@ -110,24 +112,11 @@ func (r *AnnouncementsRepo) ListAnnouncementResponses(ctx context.Context, conte
 			CreatedAt:      row.CreatedAt,
 			UpdatedAt:      row.UpdatedAt,
 		}
-		if row.ProblemID.Valid && uuid.UUID(row.ProblemID.Bytes) != uuid.Nil {
-			announcement.ProblemID = corev1.NewOptUUID(uuid.UUID(row.ProblemID.Bytes))
-		}
-		if row.ProblemTitle != nil {
-			announcement.ProblemTitle = corev1.NewOptString(*row.ProblemTitle)
-		}
-		if letter := ordinalToLetter(row.ProblemOrdinal); letter != nil {
-			announcement.ProblemLetter = corev1.NewOptString(*letter)
-		}
-		announcements[i] = announcement
 	}
 
-	return &corev1.ListContestAnnouncementsResponseModel{
+	return &models.ContestAnnouncementsList{
 		Announcements: announcements,
-		Pagination: corev1.PaginationModel{
-			Page:  page,
-			Total: models.Total(safeInt32(total), pageSize),
-		},
+		Pagination:    models.NewPagination(page, pageSize, safeInt32(total)),
 	}, nil
 }
 

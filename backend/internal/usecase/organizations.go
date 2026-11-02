@@ -11,7 +11,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -19,7 +19,7 @@ type OrganizationsUseCase struct {
 	repo            interfaces.OrganizationsRepo
 	usersRepo       interfaces.UsersRepo
 	permissionsUC   *PermissionsUseCase
-	transactor      interfaces.Transactor
+	transactor      OrganizationTransactions
 	notificationsUC interfaces.NotificationsUC
 }
 
@@ -27,7 +27,7 @@ func NewOrganizationsUseCase(
 	repo interfaces.OrganizationsRepo,
 	usersRepo interfaces.UsersRepo,
 	permissionsUC *PermissionsUseCase,
-	transactor interfaces.Transactor,
+	transactor OrganizationTransactions,
 	notificationsUC interfaces.NotificationsUC,
 ) *OrganizationsUseCase {
 	return &OrganizationsUseCase{
@@ -52,15 +52,16 @@ func (uc *OrganizationsUseCase) CreateOrganization(ctx context.Context, input *m
 	}
 
 	var org *models.Organization
-	err = uc.transactor.WithTx(ctx, func(txCtx context.Context, tx pgx.Tx) error {
+	err = uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
+		txCtx := ctx
 		// Create organization
-		org, err = uc.repo.WithTx(tx).CreateOrganization(txCtx, input)
+		org, err = tx.CreateOrganization(txCtx, input)
 		if err != nil {
 			return fmt.Errorf("create organization: %w", err)
 		}
 
 		// Add creator as owner
-		err = uc.repo.WithTx(tx).AddMember(txCtx, org.ID, input.CreatorID, models.OrgRoleOwner)
+		err = tx.AddMember(txCtx, org.ID, input.CreatorID, models.OrgRoleOwner)
 		if err != nil {
 			return fmt.Errorf("add creator as owner: %w", err)
 		}
@@ -384,9 +385,10 @@ func (uc *OrganizationsUseCase) BatchCreateUsers(
 	}
 
 	// Save all users and org members in a transaction
-	err = uc.transactor.WithTx(ctx, func(txCtx context.Context, tx pgx.Tx) error {
-		txUsersRepo := uc.usersRepo.WithTx(tx)
-		txOrgRepo := uc.repo.WithTx(tx)
+	err = uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
+		txCtx := ctx
+		txUsersRepo := tx
+		txOrgRepo := tx
 
 		for _, pu := range pendingUsers {
 			err := txUsersRepo.CreateUser(txCtx, models.CreateUserParams{
@@ -568,8 +570,9 @@ func (uc *OrganizationsUseCase) AcceptInvitation(ctx context.Context, invitation
 		return pkg.Wrap(pkg.ErrBadInput, nil, "приглашение уже не активно")
 	}
 
-	return uc.transactor.WithTx(ctx, func(txCtx context.Context, tx pgx.Tx) error {
-		txRepo := uc.repo.WithTx(tx)
+	return uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
+		txCtx := ctx
+		txRepo := tx
 
 		if err := txRepo.AddMember(txCtx, inv.OrganizationID, inv.UserID, inv.Role); err != nil {
 			return fmt.Errorf("add member: %w", err)
@@ -752,8 +755,9 @@ func (uc *OrganizationsUseCase) ApproveJoinRequest(
 		role = models.OrgRoleMember
 	}
 
-	err = uc.transactor.WithTx(ctx, func(txCtx context.Context, tx pgx.Tx) error {
-		txRepo := uc.repo.WithTx(tx)
+	err = uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
+		txCtx := ctx
+		txRepo := tx
 
 		if err := txRepo.AddMember(txCtx, req.OrganizationID, req.UserID, role); err != nil {
 			return fmt.Errorf("add member: %w", err)

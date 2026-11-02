@@ -50,3 +50,8 @@ type ContestAnnouncementDeletedEvent struct {
 	ID        uuid.UUID `json:"id"`
 	ContestID uuid.UUID `json:"contest_id"`
 }
+
+type ContestAnnouncementsList struct {
+	Announcements []ContestAnnouncement
+	Pagination    Pagination
+}

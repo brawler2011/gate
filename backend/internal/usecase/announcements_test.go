@@ -59,12 +59,6 @@ func (m *mockAnnouncementsRepo) DeleteAnnouncement(ctx context.Context, id, cont
 	return nil
 }
 
-type mockTransactor struct{}
-
-func (m *mockTransactor) WithTx(ctx context.Context, fn func(ctx context.Context, tx pgx.Tx) error) error {
-	return fn(ctx, nil)
-}
-
 type mockOutboxRepo struct {
 	events []*models.CreateOutboxEventParams
 }
@@ -102,9 +96,8 @@ func TestAnnouncementsUseCase_CreateAndDelete(t *testing.T) {
 	ctx := context.Background()
 	repo := newMockAnnouncementsRepo()
 	outboxRepo := &mockOutboxRepo{}
-	transactor := &mockTransactor{}
 
-	uc := NewAnnouncementsUseCase(repo, nil, outboxRepo, transactor)
+	uc := NewAnnouncementsUseCase(repo, nil, outboxRepo, testTransactions[ContestEventsTxStore]{contestEventsTestStore{AnnouncementsRepo: repo, OutboxRepo: outboxRepo}})
 
 	contestID := uuid.New()
 	authorID := uuid.New()

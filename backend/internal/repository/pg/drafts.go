@@ -3,7 +3,6 @@ package pg
 import (
 	"context"
 
-	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
@@ -73,13 +72,7 @@ func (r *DraftsRepo) GetDraftsCount(ctx context.Context, contestID, userID uuid.
 	return count, nil
 }
 
-func (r *DraftsRepo) ListDraftResponses(ctx context.Context, filter models.ContestDraftsFilter) (*corev1.ListContestDraftsResponseModel, error) {
-	if filter.Page <= 0 {
-		filter.Page = 1
-	}
-	if filter.PageSize <= 0 || filter.PageSize > 100 {
-		filter.PageSize = 20
-	}
+func (r *DraftsRepo) ListDrafts(ctx context.Context, filter models.ContestDraftsFilter) (*models.ContestDraftsList, error) {
 	totalCount, err := r.queries.CountDrafts(ctx, sqlc.CountDraftsParams{
 		ContestID: filter.ContestID,
 		UserID:    filter.UserID,
@@ -98,25 +91,25 @@ func (r *DraftsRepo) ListDraftResponses(ctx context.Context, filter models.Conte
 		return nil, HandlePgErr(err)
 	}
 
-	drafts := make([]corev1.ContestDraftModel, 0, len(rows))
+	drafts := make([]models.ContestDraft, 0, len(rows))
 	for _, row := range rows {
 		var username string
 		if row.Username != nil {
 			username = *row.Username
 		}
 
-		drafts = append(drafts, corev1.ContestDraftModel{
+		drafts = append(drafts, models.ContestDraft{
 			ID:        row.ID,
 			ContestID: row.ContestID,
 			UserID:    row.UserID,
-			Username:  corev1.OptString{Value: username, Set: username != ""},
+			Username:  username,
 			Code:      row.Code,
 			CreatedAt: row.CreatedAt,
 			UpdatedAt: row.UpdatedAt,
 		})
 	}
 
-	return &corev1.ListContestDraftsResponseModel{Drafts: drafts, Pagination: corev1.PaginationModel{Page: filter.Page, Total: safeInt32(totalCount)}}, nil
+	return &models.ContestDraftsList{Drafts: drafts, Pagination: models.NewPagination(filter.Page, filter.PageSize, safeInt32(totalCount))}, nil
 }
 
 func (r *DraftsRepo) DeleteDraft(ctx context.Context, id uuid.UUID) error {

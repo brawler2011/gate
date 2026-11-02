@@ -179,18 +179,18 @@ func (s *IntegrationTestSuite) initApp() {
 	emailService := &email.LogEmailService{}
 
 	// UseCases
-	usersUC := usecase.NewUsersUseCase(s.usersRepo, s.contestsRepo, outboxRepo, txManager, authRepo, emailService)
-	authUC := usecase.NewAuthUseCase(s.usersRepo, authRepo, txManager, emailService)
-	problemsUC := usecase.NewProblemsUseCase(s.problemsRepo, workspaceStorage, s.organizationsRepo)
+	usersUC := usecase.NewUsersUseCase(s.usersRepo, s.contestsRepo, outboxRepo, pg.NewIdentityTransactions(s.dbPool), authRepo, emailService)
+	authUC := usecase.NewAuthUseCase(s.usersRepo, authRepo, pg.NewIdentityTransactions(s.dbPool), emailService)
+	problemsUC := usecase.NewProblemsUseCase(s.problemsRepo, workspaceStorage, pg.NewProblemTransactions(s.dbPool), s.organizationsRepo)
 	contestsUC := usecase.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, submissionsRepo)
 	permissionsUC := usecase.NewPermissionsUseCase(s.contestsRepo, usersUC, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
-	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
+	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, pg.NewSubmissionTransactions(s.dbPool))
 	notificationsRepo := pg.NewNotificationsRepo(s.dbPool)
 	notificationsUC := usecase.NewNotificationsUseCase(notificationsRepo, s.usersRepo, emailService)
 	contestsUC.SetNotificationsUC(notificationsUC)
 	contestsUC.SetUsersRepo(s.usersRepo)
-	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, txManager, notificationsUC)
-	teamsUC := usecase.NewTeamsUseCase(s.teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
+	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, pg.NewOrganizationTransactions(s.dbPool), notificationsUC)
+	teamsUC := usecase.NewTeamsUseCase(s.teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, pg.NewTeamTransactions(s.dbPool))
 	blogsUC := usecase.NewBlogsUseCase(blogsRepo, nil, "")
 	workshopUC := usecase.NewWorkshopUseCase(workspaceStorage, nil)
 
@@ -204,9 +204,9 @@ func (s *IntegrationTestSuite) initApp() {
 	draftsUC := usecase.NewDraftsUseCase(draftsRepo, contestsUC, permissionsUC, txManager)
 
 	announcementsRepo := pg.NewAnnouncementsRepo(s.dbPool)
-	announcementsUC := usecase.NewAnnouncementsUseCase(announcementsRepo, contestsUC, outboxRepo, txManager)
+	announcementsUC := usecase.NewAnnouncementsUseCase(announcementsRepo, contestsUC, outboxRepo, pg.NewContestEventsTransactions(s.dbPool))
 	clarificationsRepo := pg.NewClarificationsRepo(s.dbPool)
-	clarificationsUC := usecase.NewClarificationsUseCase(clarificationsRepo, announcementsRepo, contestsUC, outboxRepo, txManager)
+	clarificationsUC := usecase.NewClarificationsUseCase(clarificationsRepo, announcementsRepo, contestsUC, outboxRepo, pg.NewContestEventsTransactions(s.dbPool))
 
 	// Handler
 	coreServer := handlers.NewCoreServer(

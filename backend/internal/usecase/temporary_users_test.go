@@ -99,15 +99,8 @@ func (m *mockUsersRepoForTemp) ClaimTemporaryUser(ctx context.Context, id, claim
 	return nil
 }
 
-
 func (m *mockUsersRepoForTemp) WithTx(tx pgx.Tx) interfaces.UsersRepo {
 	return m
-}
-
-type mockTransactorNoop struct{}
-
-func (m *mockTransactorNoop) WithTx(ctx context.Context, fn func(ctx context.Context, tx pgx.Tx) error) error {
-	return fn(ctx, nil)
 }
 
 func TestBatchCreateOrganizationUsers_Success(t *testing.T) {
@@ -115,7 +108,6 @@ func TestBatchCreateOrganizationUsers_Success(t *testing.T) {
 	f := setupPermissionsFixture()
 
 	usersRepo := newMockUsersRepoForTemp()
-	txManager := &mockTransactorNoop{}
 
 	adminUser := models.User{Id: uuid.New(), Username: "admin_user", Role: models.UserRoleUser}
 	usersRepo.users[adminUser.Id] = adminUser
@@ -128,7 +120,7 @@ func TestBatchCreateOrganizationUsers_Success(t *testing.T) {
 		Role:           models.OrgRoleOwner,
 	}
 
-	orgsUC := NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, txManager, nil)
+	orgsUC := NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, testTransactions[OrganizationTxStore]{organizationTestStore{OrganizationsRepo: f.orgs, UsersRepo: usersRepo}}, nil)
 
 	ttl := int32(30)
 	input := models.BatchCreateOrganizationUsersInput{
@@ -165,7 +157,6 @@ func TestBatchCreateOrganizationUsers_CollisionHandling(t *testing.T) {
 	f := setupPermissionsFixture()
 
 	usersRepo := newMockUsersRepoForTemp()
-	txManager := &mockTransactorNoop{}
 
 	adminUser := models.User{Id: uuid.New(), Username: "admin_user", Role: models.UserRoleUser}
 	usersRepo.users[adminUser.Id] = adminUser
@@ -185,7 +176,7 @@ func TestBatchCreateOrganizationUsers_CollisionHandling(t *testing.T) {
 		PasswordHash: "dummy",
 	})
 
-	orgsUC := NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, txManager, nil)
+	orgsUC := NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, testTransactions[OrganizationTxStore]{organizationTestStore{OrganizationsRepo: f.orgs, UsersRepo: usersRepo}}, nil)
 
 	input := models.BatchCreateOrganizationUsersInput{
 		OrgLogin: "test-org",
@@ -206,9 +197,7 @@ func TestClaimTemporaryUser_Success(t *testing.T) {
 	ctx := context.Background()
 	usersRepo := newMockUsersRepoForTemp()
 	contestsRepo := newMockContestsRepo()
-	txManager := &mockTransactorNoop{}
-	usersUC := NewUsersUseCase(usersRepo, contestsRepo, nil, txManager, nil, nil)
-
+	usersUC := NewUsersUseCase(usersRepo, contestsRepo, nil, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, ContestsRepo: contestsRepo}}, nil, nil)
 
 	// Permanent user
 	permUser := models.User{
@@ -270,8 +259,7 @@ func TestClaimTemporaryUser_Rejections(t *testing.T) {
 	ctx := context.Background()
 	usersRepo := newMockUsersRepoForTemp()
 	contestsRepo := newMockContestsRepo()
-	txManager := &mockTransactorNoop{}
-	usersUC := NewUsersUseCase(usersRepo, contestsRepo, nil, txManager, nil, nil)
+	usersUC := NewUsersUseCase(usersRepo, contestsRepo, nil, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, ContestsRepo: contestsRepo}}, nil, nil)
 
 	permUser := models.User{Id: uuid.New(), Username: "alice_perm", Role: models.UserRoleUser}
 	usersRepo.users[permUser.Id] = permUser
@@ -313,8 +301,7 @@ func TestAuth_ExpiredAccount(t *testing.T) {
 	ctx := context.Background()
 	usersRepo := newMockUsersRepoForTemp()
 	authRepo := &mockAuthRepo{sessions: make(map[uuid.UUID]models.Session)}
-	txManager := &mockTransactorNoop{}
-	authUC := NewAuthUseCase(usersRepo, authRepo, txManager)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}})
 
 	pastExpiry := time.Now().Add(-1 * time.Hour)
 	password := "GoodPassword1"

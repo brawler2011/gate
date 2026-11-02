@@ -23,10 +23,10 @@ func (s announcementsContestStub) GetContestByOrgLoginAndContestLogin(ctx contex
 }
 
 type announcementsReaderStub struct {
-	read func(context.Context, uuid.UUID, int32, int32) (*corev1.ListContestAnnouncementsResponseModel, error)
+	read func(context.Context, uuid.UUID, int32, int32) (*models.ContestAnnouncementsList, error)
 }
 
-func (s announcementsReaderStub) ListAnnouncementResponses(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*corev1.ListContestAnnouncementsResponseModel, error) {
+func (s announcementsReaderStub) ListAnnouncements(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*models.ContestAnnouncementsList, error) {
 	return s.read(ctx, contestID, page, pageSize)
 }
 
@@ -47,9 +47,9 @@ func TestListContestAnnouncementsReader(t *testing.T) {
 		{name: "missing contest", resolveErr: pkg.ErrNotFound},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			response := &corev1.ListContestAnnouncementsResponseModel{
-				Announcements: []corev1.ContestAnnouncementModel{{ID: uuid.New()}},
-				Pagination:    corev1.PaginationModel{Page: 3, Total: 4},
+			response := &models.ContestAnnouncementsList{
+				Announcements: []models.ContestAnnouncement{{ID: uuid.New()}},
+				Pagination:    models.Pagination{Page: 3, Total: 4},
 			}
 			contests := announcementsContestStub{resolve: func(gotCtx context.Context, orgLogin, contestLogin string) (models.Contest, error) {
 				require.Equal(t, ctx, gotCtx)
@@ -58,7 +58,7 @@ func TestListContestAnnouncementsReader(t *testing.T) {
 				return models.Contest{ID: contestID}, tc.resolveErr
 			}}
 			called := false
-			reader := announcementsReaderStub{read: func(gotCtx context.Context, id uuid.UUID, page, pageSize int32) (*corev1.ListContestAnnouncementsResponseModel, error) {
+			reader := announcementsReaderStub{read: func(gotCtx context.Context, id uuid.UUID, page, pageSize int32) (*models.ContestAnnouncementsList, error) {
 				called = true
 				require.Equal(t, ctx, gotCtx)
 				require.Equal(t, contestID, id)
@@ -92,7 +92,9 @@ func TestListContestAnnouncementsReader(t *testing.T) {
 			default:
 				require.NoError(t, err)
 				require.True(t, called)
-				require.Same(t, response, got)
+				require.Equal(t, response.Announcements[0].ID, got.Announcements[0].ID)
+				require.Equal(t, response.Pagination.Page, got.Pagination.Page)
+				require.Equal(t, response.Pagination.Total, got.Pagination.Total)
 			}
 		})
 	}

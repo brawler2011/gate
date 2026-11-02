@@ -220,3 +220,14 @@ type WorkspaceMetadata struct {
 	TimeLimitMs   int
 	MemoryLimitMb int
 }
+
+type DashboardProblem struct {
+	ID                uuid.UUID
+	Title             string
+	OrganizationID    uuid.UUID
+	OrganizationName  string
+	OrganizationLogin string
+	TimeLimitMs       int
+	MemoryLimitMb     int
+	UpdatedAt         time.Time
+}

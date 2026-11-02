@@ -85,3 +85,8 @@ type ContestClarificationAnsweredEvent struct {
 	AnsweredByUsername string     `json:"answered_by_username"`
 	AnsweredAt         time.Time  `json:"answered_at"`
 }
+
+type ContestClarificationsList struct {
+	Clarifications []ContestClarification
+	Pagination     Pagination
+}

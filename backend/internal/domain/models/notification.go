@@ -11,14 +11,14 @@ import (
 type NotificationType string
 
 const (
-	NotificationTypeOrgInvitation          NotificationType = "org_invitation"
-	NotificationTypeOrgJoinRequest         NotificationType = "org_join_request"
-	NotificationTypeOrgJoinApproved        NotificationType = "org_join_approved"
-	NotificationTypeOrgJoinRejected        NotificationType = "org_join_rejected"
-	NotificationTypeContestJoinRequest     NotificationType = "contest_join_request"
-	NotificationTypeContestJoinApproved    NotificationType = "contest_join_approved"
-	NotificationTypeContestJoinRejected    NotificationType = "contest_join_rejected"
-	NotificationTypeSystem                 NotificationType = "system"
+	NotificationTypeOrgInvitation       NotificationType = "org_invitation"
+	NotificationTypeOrgJoinRequest      NotificationType = "org_join_request"
+	NotificationTypeOrgJoinApproved     NotificationType = "org_join_approved"
+	NotificationTypeOrgJoinRejected     NotificationType = "org_join_rejected"
+	NotificationTypeContestJoinRequest  NotificationType = "contest_join_request"
+	NotificationTypeContestJoinApproved NotificationType = "contest_join_approved"
+	NotificationTypeContestJoinRejected NotificationType = "contest_join_rejected"
+	NotificationTypeSystem              NotificationType = "system"
 )
 
 type Notification struct {
@@ -68,4 +68,9 @@ func UnmarshalNotificationData(raw []byte) map[string]interface{} {
 		return make(map[string]interface{})
 	}
 	return res
+}
+
+type NotificationsList struct {
+	Notifications []Notification
+	Pagination    Pagination
 }

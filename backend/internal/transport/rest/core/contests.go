@@ -19,14 +19,14 @@ import (
 )
 
 type ContestsReader interface {
-	ListContestTeamResponses(ctx context.Context, contestID uuid.UUID) (*corev1.ListContestTeamsResponseModel, error)
-	ListPublicContestResponses(ctx context.Context, filter models.PublicContestsFilter) (*corev1.ListContestsResponseModel, error)
-	ListWorkshopContestResponses(ctx context.Context, filter models.WorkshopContestsFilter) (*corev1.ListContestsResponseModel, error)
-	ListUserContestResponses(ctx context.Context, filter models.UserContestsFilter) (*corev1.ListUserContestsResponseModel, error)
-	ListAdminContestResponses(ctx context.Context, filter models.AdminContestsFilter) (*corev1.ListContestsResponseModel, error)
-	ListOrganizationContestResponses(ctx context.Context, orgID uuid.UUID, search string, visibility string, page, pageSize int32) (*corev1.ListContestsResponseModel, error)
-	ListContestMemberResponses(ctx context.Context, filter models.ParticipantsFilter) (*corev1.ListContestMembersResponseModel, error)
-	ListDashboardContestResponses(ctx context.Context, userID uuid.UUID, limit int32) ([]corev1.DashboardContestModel, error)
+	GetContestTeams(ctx context.Context, contestId uuid.UUID) ([]models.ContestTeam, error)
+	ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) (*models.ContestsList, error)
+	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) (*models.ContestsList, error)
+	ListUserContests(ctx context.Context, filter models.UserContestsFilter) (*models.ContestsList, error)
+	ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) (*models.ContestsList, error)
+	ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, visibility string, page, pageSize int32) (*models.ContestsList, error)
+	ListContestMembers(ctx context.Context, filter models.ParticipantsFilter) (*models.ContestMembersList, error)
+	ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardContest, error)
 }
 
 // ----------------------------------------------------------------------------------
@@ -196,7 +196,12 @@ func (h *CoreServer) ListOrganizationContests(ctx context.Context, params corev1
 		visibility = "public"
 	}
 
-	return h.contestsReader.ListOrganizationContestResponses(ctx, org.ID, search, visibility, page, pageSize)
+	contestsList, err := h.contestsReader.ListOrganizationContests(ctx, org.ID, search, visibility, page, pageSize)
+	if err != nil {
+		return nil, err
+	}
+
+	return ListContestsResponseDTO(contestsList), nil
 }
 
 func (h *CoreServer) GetContest(ctx context.Context, params corev1.GetContestParams) (*corev1.GetContestResponseModel, error) {
@@ -409,7 +414,12 @@ func (h *CoreServer) ListAdminContests(ctx context.Context, params corev1.ListAd
 		SortOrder:  sortOrder,
 	}
 
-	return h.contestsReader.ListAdminContestResponses(ctx, filter)
+	contestsList, err := h.contestsReader.ListAdminContests(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return ListContestsResponseDTO(contestsList), nil
 }
 
 func (h *CoreServer) ListUserContests(ctx context.Context, params corev1.ListUserContestsParams) (*corev1.ListUserContestsResponseModel, error) {
@@ -426,7 +436,7 @@ func (h *CoreServer) ListUserContests(ctx context.Context, params corev1.ListUse
 		sortOrder = string(params.SortOrder.Value)
 	}
 
-	user, err := h.usersUC.GetUserByUsername(ctx, params.Username)
+	user, err := h.usersReader.GetUserByUsername(ctx, params.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -440,7 +450,12 @@ func (h *CoreServer) ListUserContests(ctx context.Context, params corev1.ListUse
 		SortOrder: sortOrder,
 	}
 
-	return h.contestsReader.ListUserContestResponses(ctx, filter)
+	contestsList, err := h.contestsReader.ListUserContests(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return ListUserContestsResponseDTO(contestsList), nil
 }
 
 func (h *CoreServer) ListWorkshopContests(ctx context.Context, params corev1.ListWorkshopContestsParams) (*corev1.ListContestsResponseModel, error) {
@@ -472,7 +487,12 @@ func (h *CoreServer) ListWorkshopContests(ctx context.Context, params corev1.Lis
 		filter.OrganizationID = &params.OrganizationID.Value
 	}
 
-	return h.contestsReader.ListWorkshopContestResponses(ctx, filter)
+	contestsList, err := h.contestsReader.ListWorkshopContests(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return ListContestsResponseDTO(contestsList), nil
 }
 
 func (h *CoreServer) ListPublicContests(ctx context.Context, params corev1.ListPublicContestsParams) (*corev1.ListContestsResponseModel, error) {
@@ -497,7 +517,12 @@ func (h *CoreServer) ListPublicContests(ctx context.Context, params corev1.ListP
 		SortOrder: sortOrder,
 	}
 
-	return h.contestsReader.ListPublicContestResponses(ctx, filter)
+	contestsList, err := h.contestsReader.ListPublicContests(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return ListContestsResponseDTO(contestsList), nil
 }
 
 func (h *CoreServer) CreateContestProblem(ctx context.Context, params corev1.CreateContestProblemParams) (*corev1.CreationResponseModel, error) {
@@ -814,7 +839,33 @@ func (h *CoreServer) ListContestMembers(ctx context.Context, params corev1.ListC
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(50)
 
-	return h.contestsReader.ListContestMemberResponses(ctx, models.ParticipantsFilter{Page: page, PageSize: pageSize, ContestId: contest.ID})
+	participantsList, err := h.contestsReader.ListContestMembers(ctx, models.ParticipantsFilter{
+		Page:      page,
+		PageSize:  pageSize,
+		ContestId: contest.ID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	resp := corev1.ListContestMembersResponseModel{
+		Members:    make([]corev1.ContestMemberModel, len(participantsList.Members)),
+		Pagination: PaginationDTO(participantsList.Pagination),
+	}
+
+	for i, user := range participantsList.Members {
+		resp.Members[i] = corev1.ContestMemberModel{
+			ContestID:   contest.ID,
+			ContestRole: user.ContestRole,
+			UserID:      user.UserID,
+			Username:    user.Username,
+			Role:        string(user.Role),
+			CreatedAt:   user.CreatedAt,
+			UpdatedAt:   user.UpdatedAt,
+		}
+	}
+
+	return &resp, nil
 }
 
 func (h *CoreServer) GetMyContestRole(ctx context.Context, params corev1.GetMyContestRoleParams) (*corev1.GetMyContestRoleResponseModel, error) {
@@ -988,7 +1039,12 @@ func (h *CoreServer) ListContestTeams(ctx context.Context, params corev1.ListCon
 		return nil, err
 	}
 
-	return h.contestsReader.ListContestTeamResponses(ctx, contest.ID)
+	teams, err := h.contestsReader.GetContestTeams(ctx, contest.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return listContestTeamsDTO(teams), nil
 }
 
 func (h *CoreServer) CreateContestTeam(ctx context.Context, params corev1.CreateContestTeamParams) error {

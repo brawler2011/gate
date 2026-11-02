@@ -8,7 +8,6 @@ import (
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 type TeamsUseCase struct {
@@ -16,7 +15,7 @@ type TeamsUseCase struct {
 	orgsRepo      interfaces.OrganizationsRepo
 	usersRepo     interfaces.UsersRepo
 	permissionsUC *PermissionsUseCase
-	transactor    interfaces.Transactor
+	transactor    TeamTransactions
 }
 
 func NewTeamsUseCase(
@@ -24,7 +23,7 @@ func NewTeamsUseCase(
 	orgsRepo interfaces.OrganizationsRepo,
 	usersRepo interfaces.UsersRepo,
 	permissionsUC *PermissionsUseCase,
-	transactor interfaces.Transactor,
+	transactor TeamTransactions,
 ) *TeamsUseCase {
 	return &TeamsUseCase{
 		repo:          repo,
@@ -46,15 +45,16 @@ func (uc *TeamsUseCase) CreateTeam(ctx context.Context, input *models.CreateTeam
 	}
 
 	var team *models.Team
-	err = uc.transactor.WithTx(ctx, func(txCtx context.Context, tx pgx.Tx) error {
+	err = uc.transactor.Within(ctx, func(tx TeamTxStore) error {
+		txCtx := ctx
 		// Create team
-		team, err = uc.repo.CreateTeam(txCtx, input)
+		team, err = tx.CreateTeam(txCtx, input)
 		if err != nil {
 			return fmt.Errorf("create team: %w", err)
 		}
 
 		// Add creator as maintainer
-		err = uc.repo.AddTeamMember(txCtx, team.ID, creatorID, models.TeamRoleMaintainer)
+		err = tx.AddTeamMember(txCtx, team.ID, creatorID, models.TeamRoleMaintainer)
 		if err != nil {
 			return fmt.Errorf("add creator as maintainer: %w", err)
 		}

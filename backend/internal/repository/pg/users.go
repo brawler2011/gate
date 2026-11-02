@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
@@ -100,7 +99,7 @@ func mapUserToModel(user sqlc.User) models.User {
 }
 
 func (r *UsersRepo) GetUserByUsername(ctx context.Context, username string) (models.User, error) {
-	user, err := r.queries.GetUserByUsername(ctx, username)
+	user, err := r.queries.GetUserByUsername(ctx, strings.TrimPrefix(username, "@"))
 	if err != nil {
 		return models.User{}, HandlePgErr(err)
 	}
@@ -115,9 +114,9 @@ func (r *UsersRepo) GetUserByUsernameOrEmail(ctx context.Context, identifier str
 	return mapUserToModel(user), nil
 }
 
-func (r *UsersRepo) ListUserResponses(ctx context.Context, filter models.UsersListFilter) (*corev1.ListUsersResponseModel, error) {
+func (r *UsersRepo) ListUsers(ctx context.Context, filter models.UsersListFilter) (models.UsersList, error) {
 	if err := filter.Validate(); err != nil {
-		return nil, err
+		return models.UsersList{}, err
 	}
 
 	total, err := r.queries.CountUsers(ctx, sqlc.CountUsersParams{
@@ -125,7 +124,7 @@ func (r *UsersRepo) ListUserResponses(ctx context.Context, filter models.UsersLi
 		Role:   filter.Role,
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return models.UsersList{}, HandlePgErr(err)
 	}
 
 	users, err := r.queries.ListUsers(ctx, sqlc.ListUsersParams{
@@ -135,17 +134,17 @@ func (r *UsersRepo) ListUserResponses(ctx context.Context, filter models.UsersLi
 		Role:   filter.Role,
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return models.UsersList{}, HandlePgErr(err)
 	}
 
-	userRecords := make([]corev1.UserModel, len(users))
+	userRecords := make([]models.User, len(users))
 	for i, u := range users {
-		userRecords[i] = userResponse(u)
+		userRecords[i] = mapUserToModel(u)
 	}
 
-	return &corev1.ListUsersResponseModel{
+	return models.UsersList{
 		Users:      userRecords,
-		Pagination: corev1.PaginationModel{Page: filter.Page, Total: models.Total(total, filter.PageSize)},
+		Pagination: models.NewPagination(filter.Page, filter.PageSize, total),
 	}, nil
 }
 
@@ -223,7 +222,6 @@ func (r *UsersRepo) UpdateUserEmail(ctx context.Context, id uuid.UUID, email str
 	return nil
 }
 
-
 func (r *UsersRepo) ClaimTemporaryUser(ctx context.Context, id, claimedByUserID uuid.UUID, claimedAt time.Time) error {
 	err := r.queries.ClaimTemporaryUser(ctx, sqlc.ClaimTemporaryUserParams{
 		ID:              id,
@@ -236,20 +234,17 @@ func (r *UsersRepo) ClaimTemporaryUser(ctx context.Context, id, claimedByUserID 
 	return nil
 }
 
-func (r *UsersRepo) ListClaimedAccountResponses(ctx context.Context, claimedByUserID uuid.UUID) (*corev1.ListClaimedAccountsResponseModel, error) {
+func (r *UsersRepo) ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]models.ClaimedAccountItem, error) {
 	users, err := r.queries.ListClaimedAccountsByUserId(ctx, claimedByUserID)
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
 
-	res := make([]corev1.ClaimedAccountItem, len(users))
+	res := make([]models.ClaimedAccountItem, len(users))
 	for i, u := range users {
-		res[i] = corev1.ClaimedAccountItem{ID: u.ID, Username: u.Username, ExpiresAt: corev1.OptDateTime{Value: u.ExpiresAt.Time, Set: u.ExpiresAt.Valid}}
-		if u.ClaimedAt.Valid {
-			res[i].ClaimedAt = u.ClaimedAt.Time
-		}
+		res[i] = models.ClaimedAccountItem{ID: u.ID, Username: u.Username, ClaimedAt: u.ClaimedAt.Time, ExpiresAt: pgtypeTimestamptzToPtr(u.ExpiresAt)}
 	}
-	return &corev1.ListClaimedAccountsResponseModel{Accounts: res}, nil
+	return res, nil
 }
 
 func (r *UsersRepo) ListExistingUsernamesByPrefix(ctx context.Context, prefix string) ([]string, error) {
@@ -258,35 +253,4 @@ func (r *UsersRepo) ListExistingUsernamesByPrefix(ctx context.Context, prefix st
 		return nil, HandlePgErr(err)
 	}
 	return usernames, nil
-}
-
-func userResponse(u sqlc.User) corev1.UserModel {
-	user := corev1.UserModel{
-		ID:              u.ID,
-		Username:        u.Username,
-		Role:            string(u.Role),
-		CreatedAt:       u.CreatedAt,
-		UpdatedAt:       u.UpdatedAt,
-		ExpiresAt:       corev1.OptDateTime{Value: u.ExpiresAt.Time, Set: u.ExpiresAt.Valid},
-		ClaimedAt:       corev1.OptDateTime{Value: u.ClaimedAt.Time, Set: u.ClaimedAt.Valid},
-		ClaimedByUserID: corev1.OptUUID{Value: uuid.UUID(u.ClaimedByUserID.Bytes), Set: u.ClaimedByUserID.Valid && uuid.UUID(u.ClaimedByUserID.Bytes) != uuid.Nil},
-		IsEmailVerified: corev1.NewOptBool(u.IsEmailVerified),
-	}
-	if u.Email != nil {
-		user.Email = corev1.NewOptString(*u.Email)
-	}
-	if u.AvatarUrl != nil && *u.AvatarUrl != "" {
-		if id, err := uuid.Parse(*u.AvatarUrl); err == nil {
-			user.ImgId = corev1.NewOptUUID(id)
-		}
-	}
-	return user
-}
-
-func (r *UsersRepo) GetUserResponse(ctx context.Context, username string) (*corev1.GetUserResponseModel, error) {
-	user, err := r.queries.GetUserByUsername(ctx, strings.TrimPrefix(username, "@"))
-	if err != nil {
-		return nil, HandlePgErr(err)
-	}
-	return &corev1.GetUserResponseModel{User: userResponse(user)}, nil
 }

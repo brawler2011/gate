@@ -31,20 +31,22 @@ func safeInt32[T ~int | ~int64](v T) int32 {
 }
 
 type ProblemsUseCase struct {
-	repo      interfaces.ProblemsRepo
-	orgsRepo  interfaces.OrganizationsRepo
-	workspace *WorkspaceStorage
+	repo         interfaces.ProblemsRepo
+	orgsRepo     interfaces.OrganizationsRepo
+	workspace    *WorkspaceStorage
+	transactions ProblemTransactions
 }
 
-func NewProblemsUseCase(repo interfaces.ProblemsRepo, workspace *WorkspaceStorage, orgsRepo ...interfaces.OrganizationsRepo) *ProblemsUseCase {
+func NewProblemsUseCase(repo interfaces.ProblemsRepo, workspace *WorkspaceStorage, transactions ProblemTransactions, orgsRepo ...interfaces.OrganizationsRepo) *ProblemsUseCase {
 	var orgRepo interfaces.OrganizationsRepo
 	if len(orgsRepo) > 0 {
 		orgRepo = orgsRepo[0]
 	}
 	return &ProblemsUseCase{
-		repo:      repo,
-		workspace: workspace,
-		orgsRepo:  orgRepo,
+		repo:         repo,
+		workspace:    workspace,
+		transactions: transactions,
+		orgsRepo:     orgRepo,
 	}
 }
 
@@ -60,21 +62,28 @@ func (uc *ProblemsUseCase) CreateProblem(ctx context.Context, input *models.Crea
 		OwnerID:        input.OwnerID,
 	}
 
-	if err := uc.repo.CreateProblem(ctx, params); err != nil {
+	err := uc.transactions.Within(ctx, func(tx ProblemTxStore) error {
+		if err := tx.CreateProblem(ctx, params); err != nil {
+			return err
+		}
+
+		// Add creator as owner
+		if input.OwnerID != nil {
+			memberParams := &models.CreateProblemMemberParams{
+				ProblemID: id,
+				UserID:    *input.OwnerID,
+				Role:      models.ProblemRoleOwner,
+			}
+
+			if err := tx.CreateProblemMember(ctx, memberParams); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
 		return uuid.Nil, err
-	}
-
-	// Add creator as owner
-	if input.OwnerID != nil {
-		memberParams := &models.CreateProblemMemberParams{
-			ProblemID: id,
-			UserID:    *input.OwnerID,
-			Role:      models.ProblemRoleOwner,
-		}
-
-		if err := uc.repo.CreateProblemMember(ctx, memberParams); err != nil {
-			return uuid.Nil, err
-		}
 	}
 
 	return id, nil

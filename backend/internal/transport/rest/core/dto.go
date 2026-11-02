@@ -1,12 +1,14 @@
 package core
 
 import (
+	"encoding/json"
 	"math"
 	"strings"
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
+	"github.com/go-faster/jx"
 	"github.com/google/uuid"
 )
 
@@ -388,8 +390,8 @@ func statementField(statement *models.Statement, getter func(models.Statement) s
 func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel {
 	dto := corev1.SubmissionsListItemModel{
 		Revision: s.Revision,
-		ID:     s.ID,
-		UserID: uuidPtrToUUID(s.CreatedBy),
+		ID:       s.ID,
+		UserID:   uuidPtrToUUID(s.CreatedBy),
 
 		Username: s.Username,
 
@@ -843,5 +845,269 @@ func ContestClarificationDTO(c *models.ContestClarification) *corev1.ContestClar
 		CreatedAt:          c.CreatedAt,
 		AnsweredAt:         timePtrToOptDateTime(c.AnsweredAt),
 		UpdatedAt:          c.UpdatedAt,
+	}
+}
+
+func ListUserContestsResponseDTO(contestsList *models.ContestsList) *corev1.ListUserContestsResponseModel {
+	resp := corev1.ListUserContestsResponseModel{
+		Contests:   make([]corev1.ContestModel, len(contestsList.Contests)),
+		Pagination: PaginationDTO(contestsList.Pagination),
+	}
+
+	for i, contest := range contestsList.Contests {
+		resp.Contests[i] = ContestDTO(contest, nil)
+	}
+
+	return &resp
+}
+
+func usersListDTO(ul *models.UsersList) corev1.ListUsersResponseModel {
+	userDTOs := make([]corev1.UserModel, len(ul.Users))
+	for i, user := range ul.Users {
+		userDTOs[i] = userDTO(user)
+	}
+
+	return corev1.ListUsersResponseModel{
+		Users: userDTOs,
+		Pagination: corev1.PaginationModel{
+			Page:  ul.Pagination.Page,
+			Total: ul.Pagination.Total,
+		},
+	}
+}
+
+func contestTeamDTO(ct models.ContestTeam) corev1.ContestTeamModel {
+	var mask corev1.OptInt64
+	if ct.PermissionsMask != nil {
+		mask = corev1.NewOptInt64(int64(*ct.PermissionsMask)) //nolint:gosec // bitmask conversion
+	}
+	return corev1.ContestTeamModel{
+		ContestID:       ct.ContestID,
+		TeamID:          ct.TeamID,
+		TeamName:        ct.TeamName,
+		TeamSlug:        ct.TeamSlug,
+		ContestRole:     string(ct.Role),
+		PermissionsMask: mask,
+		CreatedAt:       ct.CreatedAt,
+	}
+}
+
+func listContestTeamsDTO(teams []models.ContestTeam) *corev1.ListContestTeamsResponseModel {
+	resp := corev1.ListContestTeamsResponseModel{
+		Teams: make([]corev1.ContestTeamModel, len(teams)),
+	}
+	for i, team := range teams {
+		resp.Teams[i] = contestTeamDTO(team)
+	}
+	return &resp
+}
+
+func problemTeamDTO(pt models.ProblemTeam) corev1.ProblemTeamModel {
+	return corev1.ProblemTeamModel{
+		ProblemID:  pt.ProblemID,
+		TeamID:     pt.TeamID,
+		TeamName:   pt.TeamName,
+		TeamSlug:   pt.TeamSlug,
+		Permission: string(pt.Permission),
+		CreatedAt:  pt.CreatedAt,
+	}
+}
+
+func listProblemTeamsDTO(teams []models.ProblemTeam) *corev1.ListProblemTeamsResponseModel {
+	resp := corev1.ListProblemTeamsResponseModel{
+		Teams: make([]corev1.ProblemTeamModel, len(teams)),
+	}
+	for i, team := range teams {
+		resp.Teams[i] = problemTeamDTO(team)
+	}
+	return &resp
+}
+
+func problemMemberDTO(pm models.ProblemMember) corev1.ProblemMemberModel {
+	return corev1.ProblemMemberModel{
+		ProblemID: pm.ProblemID,
+		UserID:    pm.UserID,
+		Username:  pm.Username,
+		Role:      string(pm.Role),
+		CreatedAt: pm.CreatedAt,
+	}
+}
+
+func listProblemMembersDTO(members []models.ProblemMember, page, total int32) *corev1.ListProblemMembersResponseModel {
+	resp := corev1.ListProblemMembersResponseModel{
+		Members: make([]corev1.ProblemMemberModel, len(members)),
+		Pagination: corev1.PaginationModel{
+			Page:  page,
+			Total: total,
+		},
+	}
+	for i, member := range members {
+		resp.Members[i] = problemMemberDTO(member)
+	}
+	return &resp
+}
+
+func DashboardContestDTO(c models.DashboardContest) corev1.DashboardContestModel {
+	return corev1.DashboardContestModel{
+		ID:                 c.ID,
+		Login:              c.Login,
+		Title:              c.Title,
+		OrganizationID:     c.OrganizationID,
+		OrganizationName:   c.OrganizationName,
+		OrganizationLogin:  c.OrganizationLogin,
+		UserRole:           c.UserRole,
+		StartTime:          timePtrToOptNilDateTime(c.StartTime),
+		EndTime:            timePtrToOptNilDateTime(c.EndTime),
+		LastSubmissionTime: timePtrToOptNilDateTime(c.LastSubmissionTime),
+		CreatedAt:          c.CreatedAt,
+	}
+}
+
+func DashboardProblemDTO(p models.DashboardProblem) corev1.DashboardProblemModel {
+	return corev1.DashboardProblemModel{
+		ID:                p.ID,
+		Title:             p.Title,
+		OrganizationID:    p.OrganizationID,
+		OrganizationName:  p.OrganizationName,
+		OrganizationLogin: p.OrganizationLogin,
+		TimeLimit:         safeInt32(p.TimeLimitMs),
+		MemoryLimit:       safeInt32(p.MemoryLimitMb),
+		UpdatedAt:         p.UpdatedAt,
+	}
+}
+
+func DashboardResponseDTO(contests []models.DashboardContest, problems []models.DashboardProblem) corev1.GetUserDashboardResponseModel {
+	contestDTOs := make([]corev1.DashboardContestModel, len(contests))
+	for i, c := range contests {
+		contestDTOs[i] = DashboardContestDTO(c)
+	}
+
+	problemDTOs := make([]corev1.DashboardProblemModel, len(problems))
+	for i, p := range problems {
+		problemDTOs[i] = DashboardProblemDTO(p)
+	}
+
+	return corev1.GetUserDashboardResponseModel{
+		RecentContests: contestDTOs,
+		MyProblems:     problemDTOs,
+	}
+}
+
+func ContestDraftDTO(draft models.ContestDraft) corev1.ContestDraftModel {
+	return corev1.ContestDraftModel{
+		ID:        draft.ID,
+		UserID:    draft.UserID,
+		Username:  stringToOptString(draft.Username),
+		ContestID: draft.ContestID,
+		Code:      draft.Code,
+		CreatedAt: draft.CreatedAt,
+		UpdatedAt: draft.UpdatedAt,
+	}
+}
+
+func ListContestDraftsResponseDTO(list *models.ContestDraftsList) *corev1.ListContestDraftsResponseModel {
+	if list == nil {
+		return &corev1.ListContestDraftsResponseModel{
+			Drafts: []corev1.ContestDraftModel{},
+			Pagination: corev1.PaginationModel{
+				Page:  1,
+				Total: 0,
+			},
+		}
+	}
+
+	drafts := make([]corev1.ContestDraftModel, len(list.Drafts))
+	for i, d := range list.Drafts {
+		drafts[i] = ContestDraftDTO(d)
+	}
+
+	return &corev1.ListContestDraftsResponseModel{
+		Drafts:     drafts,
+		Pagination: PaginationDTO(list.Pagination),
+	}
+}
+
+func NotificationDTO(n models.Notification) corev1.NotificationModel {
+	var optData corev1.OptNotificationModelData
+	if len(n.Data) > 0 {
+		dataMap := make(corev1.NotificationModelData)
+		for k, v := range n.Data {
+			if b, err := json.Marshal(v); err == nil {
+				dataMap[k] = jx.Raw(b)
+			}
+		}
+		optData = corev1.NewOptNotificationModelData(dataMap)
+	}
+
+	return corev1.NotificationModel{
+		ID:        n.ID,
+		UserID:    n.UserID,
+		Type:      string(n.Type),
+		Title:     n.Title,
+		Body:      n.Body,
+		Link:      stringPtrToOptString(n.Link),
+		Data:      optData,
+		IsRead:    n.IsRead,
+		CreatedAt: n.CreatedAt,
+	}
+}
+
+func NotificationsListResponseDTO(list *models.NotificationsList) *corev1.NotificationsListResponseModel {
+	if list == nil {
+		return &corev1.NotificationsListResponseModel{
+			Notifications: []corev1.NotificationModel{},
+			Pagination: corev1.PaginationModel{
+				Page:  1,
+				Total: 0,
+			},
+		}
+	}
+
+	notifs := make([]corev1.NotificationModel, len(list.Notifications))
+	for i, n := range list.Notifications {
+		notifs[i] = NotificationDTO(n)
+	}
+
+	return &corev1.NotificationsListResponseModel{
+		Notifications: notifs,
+		Pagination:    PaginationDTO(list.Pagination),
+	}
+}
+
+func ContestAnnouncementsListResponseDTO(list *models.ContestAnnouncementsList) *corev1.ListContestAnnouncementsResponseModel {
+	if list == nil {
+		return &corev1.ListContestAnnouncementsResponseModel{
+			Announcements: []corev1.ContestAnnouncementModel{},
+			Pagination:    corev1.PaginationModel{},
+		}
+	}
+
+	items := make([]corev1.ContestAnnouncementModel, len(list.Announcements))
+	for i, a := range list.Announcements {
+		items[i] = *ContestAnnouncementDTO(&a)
+	}
+
+	return &corev1.ListContestAnnouncementsResponseModel{
+		Announcements: items,
+		Pagination:    PaginationDTO(list.Pagination),
+	}
+}
+
+func ContestClarificationsListResponseDTO(list *models.ContestClarificationsList) *corev1.ListContestClarificationsResponseModel {
+	if list == nil {
+		return &corev1.ListContestClarificationsResponseModel{
+			Clarifications: []corev1.ContestClarificationModel{},
+			Pagination:     corev1.PaginationModel{},
+		}
+	}
+
+	items := make([]corev1.ContestClarificationModel, len(list.Clarifications))
+	for i, c := range list.Clarifications {
+		items[i] = *ContestClarificationDTO(&c)
+	}
+
+	return &corev1.ListContestClarificationsResponseModel{
+		Clarifications: items,
+		Pagination:     PaginationDTO(list.Pagination),
 	}
 }

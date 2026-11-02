@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
@@ -79,7 +78,7 @@ func (r *ClarificationsRepo) GetClarificationByID(ctx context.Context, id uuid.U
 	}, nil
 }
 
-func (r *ClarificationsRepo) ListClarificationResponsesForUser(ctx context.Context, contestID, userID uuid.UUID, page, pageSize int32) (*corev1.ListContestClarificationsResponseModel, error) {
+func (r *ClarificationsRepo) ListClarificationsForUser(ctx context.Context, contestID, userID uuid.UUID, page, pageSize int32) (*models.ContestClarificationsList, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -106,18 +105,34 @@ func (r *ClarificationsRepo) ListClarificationResponsesForUser(ctx context.Conte
 		return nil, fmt.Errorf("count contest clarifications for user: %w", err)
 	}
 
-	clarifications := make([]corev1.ContestClarificationModel, len(rows))
+	clarifications := make([]models.ContestClarification, len(rows))
 	for i, row := range rows {
-		clarifications[i] = clarificationResponse(row)
+		clarifications[i] = models.ContestClarification{
+			ID:                 row.ID,
+			ContestID:          row.ContestID,
+			ProblemID:          pgtypeUUIDToPtr(row.ProblemID),
+			ProblemTitle:       row.ProblemTitle,
+			ProblemLetter:      ordinalToLetter(row.ProblemOrdinal),
+			UserID:             row.UserID,
+			Username:           row.Username,
+			Question:           row.Question,
+			Answer:             row.Answer,
+			AnsweredBy:         pgtypeUUIDToPtr(row.AnsweredBy),
+			AnsweredByUsername: row.AnsweredByUsername,
+			Status:             models.ClarificationStatus(row.Status),
+			CreatedAt:          row.CreatedAt,
+			AnsweredAt:         pgtypeTimestamptzToPtr(row.AnsweredAt),
+			UpdatedAt:          row.UpdatedAt,
+		}
 	}
 
-	return &corev1.ListContestClarificationsResponseModel{
+	return &models.ContestClarificationsList{
 		Clarifications: clarifications,
-		Pagination:     corev1.PaginationModel{Page: page, Total: models.Total(safeInt32(total), pageSize)},
+		Pagination:     models.NewPagination(page, pageSize, safeInt32(total)),
 	}, nil
 }
 
-func (r *ClarificationsRepo) ListClarificationResponsesForModerator(ctx context.Context, contestID uuid.UUID, filter *models.ContestClarificationsFilter) (*corev1.ListContestClarificationsResponseModel, error) {
+func (r *ClarificationsRepo) ListClarificationsForModerator(ctx context.Context, contestID uuid.UUID, filter *models.ContestClarificationsFilter) (*models.ContestClarificationsList, error) {
 	page := int32(1)
 	pageSize := int32(50)
 	if filter != nil {
@@ -160,14 +175,30 @@ func (r *ClarificationsRepo) ListClarificationResponsesForModerator(ctx context.
 		return nil, fmt.Errorf("count contest clarifications for moderator: %w", err)
 	}
 
-	clarifications := make([]corev1.ContestClarificationModel, len(rows))
+	clarifications := make([]models.ContestClarification, len(rows))
 	for i, row := range rows {
-		clarifications[i] = clarificationResponse(sqlc.ListContestClarificationsForUserRow(row))
+		clarifications[i] = models.ContestClarification{
+			ID:                 row.ID,
+			ContestID:          row.ContestID,
+			ProblemID:          pgtypeUUIDToPtr(row.ProblemID),
+			ProblemTitle:       row.ProblemTitle,
+			ProblemLetter:      ordinalToLetter(row.ProblemOrdinal),
+			UserID:             row.UserID,
+			Username:           row.Username,
+			Question:           row.Question,
+			Answer:             row.Answer,
+			AnsweredBy:         pgtypeUUIDToPtr(row.AnsweredBy),
+			AnsweredByUsername: row.AnsweredByUsername,
+			Status:             models.ClarificationStatus(row.Status),
+			CreatedAt:          row.CreatedAt,
+			AnsweredAt:         pgtypeTimestamptzToPtr(row.AnsweredAt),
+			UpdatedAt:          row.UpdatedAt,
+		}
 	}
 
-	return &corev1.ListContestClarificationsResponseModel{
+	return &models.ContestClarificationsList{
 		Clarifications: clarifications,
-		Pagination:     corev1.PaginationModel{Page: page, Total: models.Total(safeInt32(total), pageSize)},
+		Pagination:     models.NewPagination(page, pageSize, safeInt32(total)),
 	}, nil
 }
 
@@ -192,33 +223,4 @@ func (r *ClarificationsRepo) AnswerClarification(ctx context.Context, id, contes
 	}
 
 	return r.GetClarificationByID(ctx, id)
-}
-
-func clarificationResponse(row sqlc.ListContestClarificationsForUserRow) corev1.ContestClarificationModel {
-	clarification := corev1.ContestClarificationModel{
-		ID:         row.ID,
-		ContestID:  row.ContestID,
-		ProblemID:  corev1.OptUUID{Value: uuid.UUID(row.ProblemID.Bytes), Set: row.ProblemID.Valid && uuid.UUID(row.ProblemID.Bytes) != uuid.Nil},
-		UserID:     row.UserID,
-		Username:   row.Username,
-		Question:   row.Question,
-		AnsweredBy: corev1.OptUUID{Value: uuid.UUID(row.AnsweredBy.Bytes), Set: row.AnsweredBy.Valid && uuid.UUID(row.AnsweredBy.Bytes) != uuid.Nil},
-		Status:     row.Status,
-		CreatedAt:  row.CreatedAt,
-		AnsweredAt: corev1.OptDateTime{Value: row.AnsweredAt.Time, Set: row.AnsweredAt.Valid},
-		UpdatedAt:  row.UpdatedAt,
-	}
-	if row.ProblemTitle != nil {
-		clarification.ProblemTitle = corev1.NewOptString(*row.ProblemTitle)
-	}
-	if row.Answer != nil {
-		clarification.Answer = corev1.NewOptString(*row.Answer)
-	}
-	if row.AnsweredByUsername != nil {
-		clarification.AnsweredByUsername = corev1.NewOptString(*row.AnsweredByUsername)
-	}
-	if letter := ordinalToLetter(row.ProblemOrdinal); letter != nil {
-		clarification.ProblemLetter = corev1.NewOptString(*letter)
-	}
-	return clarification
 }

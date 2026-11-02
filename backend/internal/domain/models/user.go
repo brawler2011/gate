@@ -32,8 +32,8 @@ func (f UsersListFilter) Validate() error {
 	if f.Page < 1 {
 		errs = append(errs, errors.New("page must be >= 1"))
 	}
-	if !pkg.IsBetween(f.PageSize, 1, 20) {
-		errs = append(errs, errors.New("page size must be between 1 and 20"))
+	if !pkg.IsBetween(f.PageSize, 1, 100) {
+		errs = append(errs, errors.New("page size must be between 1 and 100"))
 	}
 	if !pkg.IsLengthBetween(f.Search, 0, 70) {
 		errs = append(errs, errors.New("search must be at most 70 characters"))
@@ -44,7 +44,10 @@ func (f UsersListFilter) Validate() error {
 		}
 	}
 
-	return errors.Join(errs...)
+	if err := errors.Join(errs...); err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, "invalid users filter")
+	}
+	return nil
 }
 
 type CreateUserParams struct {
@@ -210,7 +213,6 @@ type CreateAuthTokenParams struct {
 	ExpiresAt time.Time
 }
 
-
 var Guest = User{
 	Id:   uuid.Nil,
 	Role: UserRoleGuest,
@@ -269,3 +271,14 @@ type BatchCreateOrganizationUsersResult struct {
 	Users []BatchCreatedUserItem
 }
 
+type UsersList struct {
+	Users      []User
+	Pagination Pagination
+}
+
+type ClaimedAccountItem struct {
+	ID        uuid.UUID
+	Username  string
+	ClaimedAt time.Time
+	ExpiresAt *time.Time
+}

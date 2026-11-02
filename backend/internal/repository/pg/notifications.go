@@ -2,12 +2,8 @@ package pg
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-
-	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/go-faster/jx"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -71,16 +67,7 @@ func (r *NotificationsRepo) CreateNotification(ctx context.Context, input *model
 	}, nil
 }
 
-func (r *NotificationsRepo) ListNotificationResponses(ctx context.Context, userID uuid.UUID, filter *models.NotificationFilter) (*corev1.NotificationsListResponseModel, error) {
-	if filter == nil {
-		filter = &models.NotificationFilter{Page: 1, PageSize: 20}
-	}
-	if filter.Page < 1 {
-		filter.Page = 1
-	}
-	if filter.PageSize < 1 || filter.PageSize > 100 {
-		filter.PageSize = 20
-	}
+func (r *NotificationsRepo) ListNotifications(ctx context.Context, userID uuid.UUID, filter *models.NotificationFilter) (*models.NotificationsList, error) {
 	offset := (filter.Page - 1) * filter.PageSize
 	var unreadOnly *bool
 	if filter.UnreadOnly {
@@ -106,35 +93,24 @@ func (r *NotificationsRepo) ListNotificationResponses(ctx context.Context, userI
 		return nil, fmt.Errorf("count notifications: %w", err)
 	}
 
-	notifs := make([]corev1.NotificationModel, len(rows))
+	notifs := make([]models.Notification, len(rows))
 	for i, row := range rows {
-		notifs[i] = corev1.NotificationModel{
+		notifs[i] = models.Notification{
 			ID:        row.ID,
 			UserID:    row.UserID,
-			Type:      row.Type,
+			Type:      models.NotificationType(row.Type),
 			Title:     row.Title,
 			Body:      row.Body,
+			Link:      row.Link,
+			Data:      models.UnmarshalNotificationData(row.Data),
 			IsRead:    row.IsRead,
 			CreatedAt: row.CreatedAt,
 		}
-		if row.Link != nil {
-			notifs[i].Link = corev1.NewOptString(*row.Link)
-		}
-		data := models.UnmarshalNotificationData(row.Data)
-		if len(data) > 0 {
-			fields := make(corev1.NotificationModelData, len(data))
-			for k, v := range data {
-				if b, err := json.Marshal(v); err == nil {
-					fields[k] = jx.Raw(b)
-				}
-			}
-			notifs[i].Data = corev1.NewOptNotificationModelData(fields)
-		}
 	}
 
-	return &corev1.NotificationsListResponseModel{
+	return &models.NotificationsList{
 		Notifications: notifs,
-		Pagination:    corev1.PaginationModel{Page: filter.Page, Total: models.Total(safeInt32(total), filter.PageSize)},
+		Pagination:    models.NewPagination(filter.Page, filter.PageSize, safeInt32(total)),
 	}, nil
 }
 

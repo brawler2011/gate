@@ -11,7 +11,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 type SubmissionsUseCase struct {
@@ -19,7 +18,7 @@ type SubmissionsUseCase struct {
 	contestsUC      interfaces.ContestsUC
 	problemsUC      interfaces.ProblemsUC
 	outboxRepo      interfaces.OutboxRepo
-	transactor      interfaces.Transactor
+	transactor      SubmissionTransactions
 }
 
 func NewSubmissionsUseCase(
@@ -27,7 +26,7 @@ func NewSubmissionsUseCase(
 	contestsUC interfaces.ContestsUC,
 	problemsUC interfaces.ProblemsUC,
 	outboxRepo interfaces.OutboxRepo,
-	transactor interfaces.Transactor,
+	transactor SubmissionTransactions,
 ) *SubmissionsUseCase {
 	return &SubmissionsUseCase{
 		submissionsRepo: submissionsRepo,
@@ -84,13 +83,13 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *mo
 
 	var id uuid.UUID
 
-	err = uc.transactor.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		id, err = uc.submissionsRepo.WithTx(tx).CreateSubmission(ctx, creation)
+	err = uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
+		id, err = tx.CreateSubmission(ctx, creation)
 		if err != nil {
 			return err
 		}
 
-		submission, err := uc.submissionsRepo.WithTx(tx).GetSubmission(ctx, id)
+		submission, err := tx.GetSubmission(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -100,7 +99,7 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *mo
 			return err
 		}
 
-		if err := uc.outboxRepo.WithTx(tx).CreateEvent(ctx, eventParams); err != nil {
+		if err := tx.CreateEvent(ctx, eventParams); err != nil {
 			return err
 		}
 
@@ -233,9 +232,9 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter mod
 	var rejudgedCount int
 	var rejudgedIDs []uuid.UUID
 
-	err = uc.transactor.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		txSubRepo := uc.submissionsRepo.WithTx(tx)
-		txOutboxRepo := uc.outboxRepo.WithTx(tx)
+	err = uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
+		txSubRepo := tx
+		txOutboxRepo := tx
 
 		resetIDs, err := txSubRepo.ResetSubmissionsState(ctx, filter)
 		if err != nil {

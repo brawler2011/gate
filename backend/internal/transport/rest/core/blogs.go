@@ -9,14 +9,15 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 )
 
 type BlogsReader interface {
-	ListPostResponses(ctx context.Context, page, pageSize int, sortOrder string) (*corev1.ListPostsResponseModel, error)
-	GetPostResponse(ctx context.Context, id uuid.UUID) (*corev1.PostModel, error)
+	ListPosts(ctx context.Context, params models.ListPostsParams) ([]models.Post, int, error)
+	GetPostByID(ctx context.Context, id uuid.UUID) (*models.Post, error)
 }
 
 func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParams) (*corev1.ListPostsResponseModel, error) {
@@ -26,11 +27,34 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 	pageSize := int(params.PageSize.Or(10))
 	sortOrder := string(params.SortOrder.Or("desc"))
 
-	result, err := s.blogsReader.ListPostResponses(ctx, page, pageSize, sortOrder)
+	items, totalPages, err := s.blogsReader.ListPosts(ctx, models.ListPostsParams{Page: page, PageSize: pageSize, SortOrder: sortOrder})
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list posts")
 	}
-	return result, nil
+
+	// Convert to response model
+	posts := make([]corev1.PostModel, len(items))
+	for i, post := range items {
+		posts[i] = corev1.PostModel{
+			ID:             post.ID,
+			CreatedAt:      post.CreatedAt,
+			UpdatedAt:      post.UpdatedAt,
+			Title:          post.Title,
+			Text:           post.Text,
+			Description:    post.Description,
+			PreviewImageID: post.ImageKey,
+			AuthorID:       post.AuthorUUID,
+			AuthorUsername: post.AuthorName,
+		}
+	}
+
+	return &corev1.ListPostsResponseModel{
+		Pagination: corev1.PaginationModel{
+			Total: safeInt32(totalPages), // FIXME: разобраться где возникает проблема типов
+			Page:  safeInt32(page),       // FIXME: аналогично
+		},
+		Posts: posts,
+	}, nil
 }
 
 // CreatePost implements the CreatePost operation
@@ -65,7 +89,7 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 }
 
 func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdParams) (corev1.GetPostByIdRes, error) {
-	post, err := s.blogsReader.GetPostResponse(ctx, params.ID)
+	post, err := s.blogsReader.GetPostByID(ctx, params.ID)
 	if err != nil {
 
 		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
@@ -79,7 +103,17 @@ func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdP
 		}, nil
 	}
 
-	return post, nil
+	return &corev1.PostModel{
+		ID:             post.ID,
+		CreatedAt:      post.CreatedAt,
+		UpdatedAt:      post.UpdatedAt,
+		Title:          post.Title,
+		Text:           post.Text,
+		Description:    post.Description,
+		PreviewImageID: post.ImageKey,
+		AuthorID:       post.AuthorUUID,
+		AuthorUsername: post.AuthorName,
+	}, nil
 }
 
 func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostByIdReq, params corev1.PatchPostByIdParams) (corev1.PatchPostByIdRes, error) {

@@ -12,7 +12,7 @@ import (
 )
 
 type NotificationsReader interface {
-	ListNotificationResponses(ctx context.Context, userID uuid.UUID, filter *models.NotificationFilter) (*corev1.NotificationsListResponseModel, error)
+	ListNotifications(ctx context.Context, userID uuid.UUID, filter *models.NotificationFilter) (*models.NotificationsList, error)
 	GetUnreadCount(ctx context.Context, userID uuid.UUID) (int32, error)
 }
 
@@ -26,7 +26,7 @@ func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNo
 	pageSize := params.PageSize.Or(20)
 	unreadOnly := params.UnreadOnly.Or(false)
 
-	list, err := h.notificationsReader.ListNotificationResponses(ctx, user.Id, &models.NotificationFilter{
+	list, err := h.notificationsReader.ListNotifications(ctx, user.Id, &models.NotificationFilter{
 		Page:       page,
 		PageSize:   pageSize,
 		UnreadOnly: unreadOnly,
@@ -35,7 +35,7 @@ func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNo
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list notifications")
 	}
 
-	return list, nil
+	return NotificationsListResponseDTO(list), nil
 }
 
 func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context) (*corev1.UnreadNotificationsCountResponseModel, error) {

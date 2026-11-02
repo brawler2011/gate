@@ -4,27 +4,27 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/brawler2011/gate/backend/pkg/requestid"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 type AnnouncementsUseCase struct {
 	announcementsRepo interfaces.AnnouncementsRepo
 	contestsUC        interfaces.ContestsUC
 	outboxRepo        interfaces.OutboxRepo
-	transactor        interfaces.Transactor
+	transactor        ContestEventsTransactions
 }
 
 func NewAnnouncementsUseCase(
 	announcementsRepo interfaces.AnnouncementsRepo,
 	contestsUC interfaces.ContestsUC,
 	outboxRepo interfaces.OutboxRepo,
-	transactor interfaces.Transactor,
+	transactor ContestEventsTransactions,
 ) *AnnouncementsUseCase {
 	return &AnnouncementsUseCase{
 		announcementsRepo: announcementsRepo,
@@ -43,9 +43,9 @@ func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *m
 	}
 
 	var announcement *models.ContestAnnouncement
-	err := uc.transactor.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+	err := uc.transactor.Within(ctx, func(tx ContestEventsTxStore) error {
 		var err error
-		announcement, err = uc.announcementsRepo.WithTx(tx).CreateAnnouncement(ctx, input)
+		announcement, err = tx.CreateAnnouncement(ctx, input)
 		if err != nil {
 			return err
 		}
@@ -79,7 +79,7 @@ func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *m
 			Headers:     headers,
 		}
 
-		if err := uc.outboxRepo.WithTx(tx).CreateEvent(ctx, outboxEvent); err != nil {
+		if err := tx.CreateEvent(ctx, outboxEvent); err != nil {
 			return fmt.Errorf("create outbox event for announcement: %w", err)
 		}
 
@@ -93,8 +93,8 @@ func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *m
 }
 
 func (uc *AnnouncementsUseCase) DeleteAnnouncement(ctx context.Context, id, contestID uuid.UUID) error {
-	return uc.transactor.WithTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		if err := uc.announcementsRepo.WithTx(tx).DeleteAnnouncement(ctx, id, contestID); err != nil {
+	return uc.transactor.Within(ctx, func(tx ContestEventsTxStore) error {
+		if err := tx.DeleteAnnouncement(ctx, id, contestID); err != nil {
 			return err
 		}
 
@@ -119,6 +119,6 @@ func (uc *AnnouncementsUseCase) DeleteAnnouncement(ctx context.Context, id, cont
 			Headers:     headers,
 		}
 
-		return uc.outboxRepo.WithTx(tx).CreateEvent(ctx, outboxEvent)
+		return tx.CreateEvent(ctx, outboxEvent)
 	})
 }

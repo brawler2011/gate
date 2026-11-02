@@ -93,7 +93,7 @@ func (s *IntegrationTestSuite) TestReadQueries() {
 		s.NotEmpty(accounts[0]["expires_at"])
 		s.readJSON("/users/me/claimed-accounts", uuid.Nil, 401)
 		s.readJSON("/users?pageSize=1", participant.Id, 200)
-		s.readJSON("/users", owner.Id, 500)
+		s.readJSON("/users", owner.Id, 200)
 	})
 
 	s.Run("posts", func() {

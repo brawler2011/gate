@@ -214,7 +214,7 @@ func (s *IntegrationTestSuite) TestAuth() {
 
 		// Perform a request utilizing the session context to trigger sliding expiry update.
 		authRepo := pg.NewAuthRepo(s.dbPool)
-		txManager := pg.NewTransactor(s.dbPool)
+		txManager := pg.NewIdentityTransactions(s.dbPool)
 		authUC := usecase.NewAuthUseCase(s.usersRepo, authRepo, txManager)
 
 		// Call Authenticate
@@ -257,7 +257,7 @@ func (s *IntegrationTestSuite) TestAuth() {
 		userID := regResp.User.ID
 
 		authRepo := pg.NewAuthRepo(s.dbPool)
-		txManager := pg.NewTransactor(s.dbPool)
+		txManager := pg.NewIdentityTransactions(s.dbPool)
 		authUC := usecase.NewAuthUseCase(s.usersRepo, authRepo, txManager)
 
 		// Test Case A: Soft timeout (expires_at in past)
@@ -353,4 +353,3 @@ func (s *IntegrationTestSuite) TestAuth() {
 		s.Equal(1, count)
 	})
 }
-

@@ -28,7 +28,6 @@ type UserContestMembership struct {
 	Role      ContestRole
 }
 
-
 type ContestFreezeStatus = string
 
 const (
@@ -250,7 +249,6 @@ func RoleGraterOrEquals(r1 ContestRole, r2 ContestRole) bool {
 func RoleGreaterOrEquals(r1 ContestRole, r2 ContestRole) bool {
 	return RoleGraterOrEquals(r1, r2)
 }
-
 
 type CreateContestMemberInput struct {
 	ContestId uuid.UUID
@@ -691,4 +689,21 @@ type SubmissionForScoreboard struct {
 	CreatedAt time.Time
 }
 
+type ContestMembersList struct {
+	Members    []ContestMember
+	Pagination Pagination
+}
 
+type DashboardContest struct {
+	ID                 uuid.UUID
+	Login              string
+	Title              string
+	StartTime          *time.Time
+	EndTime            *time.Time
+	CreatedAt          time.Time
+	OrganizationID     uuid.UUID
+	OrganizationName   string
+	OrganizationLogin  string
+	UserRole           string
+	LastSubmissionTime *time.Time
+}
