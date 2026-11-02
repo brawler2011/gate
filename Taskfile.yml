@@ -2,12 +2,6 @@
 version: "3"
 
 vars:
-  AIR_VERSION: v1.64.5
-  LEFTHOOK_VERSION: v1.13.6
-  SQLC_VERSION: v1.27.0
-  VACUUM_VERSION: v0.33.0
-  OGEN_VERSION: v1.24.0
-  GOIMPORTS_VERSION: v0.52.0
   GENERATED_PATHS: >-
     backend/contracts
     frontend/contracts
@@ -48,7 +42,7 @@ tasks:
   dev:be:
     desc: Run Go backend server with live reload
     cmds:
-      - go run github.com/air-verse/air@{{.AIR_VERSION}} -c .air.toml
+      - air -c .air.toml
 
   dev:fe:
     desc: Run Vite dev server
@@ -105,9 +99,8 @@ tasks:
 
   lint:sql:
     desc: Check for unused sqlc queries in production code
-    dir: tools
     cmds:
-      - go run ./unusedsqlc -dir ..
+      - go run ./tools/unusedsqlc
 
   lint:fe:
     desc: Run ESLint and Stylelint
@@ -118,7 +111,7 @@ tasks:
     desc: Validate OpenAPI and AsyncAPI contracts
     cmds:
       - >-
-        GOTOOLCHAIN=auto go run github.com/daveshanley/vacuum@{{.VACUUM_VERSION}}
+        vacuum
         lint contracts/core/v1/openapi.yaml
         --ruleset vacuum.yaml
         --no-style --no-banner --no-update-check
@@ -147,13 +140,13 @@ tasks:
     cmds:
       - mkdir -p backend/contracts/core/v1 backend/contracts/observer/v1
       - >-
-        go run github.com/ogen-go/ogen/cmd/ogen@{{.OGEN_VERSION}}
+        ogen
         --config ogen.yaml
         --package corev1
         --target backend/contracts/core/v1
         --clean contracts/core/v1/openapi.yaml
       - bun run contracts:gen
-      - go run golang.org/x/tools/cmd/goimports@{{.GOIMPORTS_VERSION}} -w backend/contracts/observer/v1
+      - goimports -w backend/contracts/observer/v1
 
   gen:sqlc:
     desc: Generate SQLC queries
@@ -165,7 +158,7 @@ tasks:
       - backend/internal/repository/pg/sqlc/*.go
     cmds:
       - >-
-        go run github.com/sqlc-dev/sqlc/cmd/sqlc@{{.SQLC_VERSION}}
+        sqlc
         generate -f sqlc.yaml
 
   gen:mocks:
@@ -197,12 +190,7 @@ tasks:
   install:hooks:
     desc: Install Lefthook and setup git pre-commit hooks
     cmds:
-      - |
-        if ! command -v lefthook >/dev/null 2>&1; then
-          echo "Installing lefthook via go install..."
-          go install github.com/evilmartians/lefthook@{{.LEFTHOOK_VERSION}}
-        fi
-        PATH="$PATH:$(go env GOPATH)/bin" lefthook install
+      - lefthook install
 
   validate:commit:
     desc: Validate commit message or PR title format and length

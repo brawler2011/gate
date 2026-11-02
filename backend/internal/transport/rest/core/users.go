@@ -3,7 +3,7 @@ package core
 import (
 	"context"
 
-	corev1 "github.com/brawler2011/contracts/core/v1"
+	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"

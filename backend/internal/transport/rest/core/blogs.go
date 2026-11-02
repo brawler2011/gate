@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
-	corev1 "github.com/brawler2011/contracts/core/v1"
+	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"

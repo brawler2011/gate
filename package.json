@@ -87,7 +87,6 @@
   },
   "version": "0.2.0",
   "type": "module",
-  "packageManager": "bun@1.4.0",
   "dependencies": {
     "@mantine/core": "^8.3.10",
     "@mantine/dropzone": "^8.3.10",
