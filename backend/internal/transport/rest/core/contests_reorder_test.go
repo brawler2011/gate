@@ -10,7 +10,7 @@ import (
 )
 
 func TestReorderContestProblemsRejectsMissingBody(t *testing.T) {
-	server := core.NewCoreServer(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	server := core.NewCoreServer(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	err := server.ReorderContestProblems(context.Background(), nil, corev1.ReorderContestProblemsParams{OrgLogin: "org", ContestLogin: "round"})
 	require.Error(t, err)
 }

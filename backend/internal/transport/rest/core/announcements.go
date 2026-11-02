@@ -10,18 +10,17 @@ import (
 	"github.com/google/uuid"
 )
 
+type AnnouncementsReader interface {
+	ListAnnouncementResponses(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*corev1.ListContestAnnouncementsResponseModel, error)
+}
+
 func (h *CoreServer) ListContestAnnouncements(ctx context.Context, params corev1.ListContestAnnouncementsParams) (*corev1.ListContestAnnouncementsResponseModel, error) {
 	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
 
-	list, err := h.announcementsUC.ListAnnouncements(ctx, contest.ID, params.Page.Value, params.PageSize.Value)
-	if err != nil {
-		return nil, err
-	}
-
-	return ContestAnnouncementsListResponseDTO(list), nil
+	return h.announcementsReader.ListAnnouncementResponses(ctx, contest.ID, params.Page.Value, params.PageSize.Value)
 }
 
 func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.CreateContestAnnouncementRequestModel, params corev1.CreateContestAnnouncementParams) (*corev1.ContestAnnouncementModel, error) {

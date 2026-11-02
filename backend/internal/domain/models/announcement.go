@@ -28,11 +28,6 @@ type CreateContestAnnouncementInput struct {
 	Body      string
 }
 
-type ContestAnnouncementsList struct {
-	Announcements []ContestAnnouncement
-	Pagination    Pagination
-}
-
 const (
 	ContestEventAnnouncementCreated = "contest.announcement_created"
 	ContestEventAnnouncementDeleted = "contest.announcement_deleted"

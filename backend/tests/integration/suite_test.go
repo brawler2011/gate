@@ -226,6 +226,7 @@ func (s *IntegrationTestSuite) initApp() {
 		draftsUC,
 		notificationsUC,
 		announcementsUC,
+		announcementsRepo,
 		clarificationsUC,
 		nil, // natsJS - not needed for integration tests
 		nil, // bookletCompiler - not needed for integration tests

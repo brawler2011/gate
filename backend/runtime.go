@@ -303,6 +303,7 @@ func runApp(envFile string) error {
 		draftsUC,
 		notificationsUC,
 		announcementsUC,
+		announcementsRepo,
 		clarificationsUC,
 		natsJS,
 		sandboxInstance,
