@@ -31,24 +31,6 @@ func (q *Queries) AddProblemMember(ctx context.Context, arg AddProblemMemberPara
 	return err
 }
 
-const checkUserHasProblemAccess = `-- name: CheckUserHasProblemAccess :one
-
-SELECT user_has_problem_access($1, $2) as has_access
-`
-
-type CheckUserHasProblemAccessParams struct {
-	PUserID    uuid.UUID `json:"p_user_id"`
-	PProblemID uuid.UUID `json:"p_problem_id"`
-}
-
-// Access check helpers
-func (q *Queries) CheckUserHasProblemAccess(ctx context.Context, arg CheckUserHasProblemAccessParams) (bool, error) {
-	row := q.db.QueryRow(ctx, checkUserHasProblemAccess, arg.PUserID, arg.PProblemID)
-	var has_access bool
-	err := row.Scan(&has_access)
-	return has_access, err
-}
-
 const commitWorkspace = `-- name: CommitWorkspace :execrows
 UPDATE problems
 SET workspace_hash = $1,
@@ -212,55 +194,6 @@ type GetProblemByIDRow struct {
 func (q *Queries) GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemByIDRow, error) {
 	row := q.db.QueryRow(ctx, getProblemByID, id)
 	var i GetProblemByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.OrganizationID,
-		&i.OrgLogin,
-		&i.OrgName,
-		&i.OwnerID,
-		&i.Visibility,
-		&i.Title,
-		&i.ShortName,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.TimeLimitMs,
-		&i.MemoryLimitMb,
-		&i.IsTemplate,
-	)
-	return i, err
-}
-
-const getProblemByShortName = `-- name: GetProblemByShortName :one
-SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
-FROM problems p
-JOIN organizations o ON p.organization_id = o.id
-WHERE p.organization_id = $1 AND short_name = $2
-`
-
-type GetProblemByShortNameParams struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	ShortName      string    `json:"short_name"`
-}
-
-type GetProblemByShortNameRow struct {
-	ID             uuid.UUID         `json:"id"`
-	OrganizationID uuid.UUID         `json:"organization_id"`
-	OrgLogin       string            `json:"org_login"`
-	OrgName        string            `json:"org_name"`
-	OwnerID        pgtype.UUID       `json:"owner_id"`
-	Visibility     ProblemVisibility `json:"visibility"`
-	Title          string            `json:"title"`
-	ShortName      string            `json:"short_name"`
-	CreatedAt      time.Time         `json:"created_at"`
-	UpdatedAt      time.Time         `json:"updated_at"`
-	TimeLimitMs    int32             `json:"time_limit_ms"`
-	MemoryLimitMb  int32             `json:"memory_limit_mb"`
-	IsTemplate     bool              `json:"is_template"`
-}
-
-func (q *Queries) GetProblemByShortName(ctx context.Context, arg GetProblemByShortNameParams) (GetProblemByShortNameRow, error) {
-	row := q.db.QueryRow(ctx, getProblemByShortName, arg.OrganizationID, arg.ShortName)
-	var i GetProblemByShortNameRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrganizationID,
@@ -512,71 +445,6 @@ func (q *Queries) ListProblemMembers(ctx context.Context, problemID uuid.UUID) (
 			&i.CreatedAt,
 			&i.Username,
 			&i.Email,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listUserAccessibleProblems = `-- name: ListUserAccessibleProblems :many
-SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
-FROM problems p
-JOIN organizations o ON p.organization_id = o.id
-WHERE user_has_problem_access($1, p.id)
-ORDER BY p.created_at DESC
-LIMIT $2 OFFSET $3
-`
-
-type ListUserAccessibleProblemsParams struct {
-	PUserID uuid.UUID `json:"p_user_id"`
-	Limit   int32     `json:"limit"`
-	Offset  int32     `json:"offset"`
-}
-
-type ListUserAccessibleProblemsRow struct {
-	ID             uuid.UUID         `json:"id"`
-	OrganizationID uuid.UUID         `json:"organization_id"`
-	OrgLogin       string            `json:"org_login"`
-	OrgName        string            `json:"org_name"`
-	OwnerID        pgtype.UUID       `json:"owner_id"`
-	Visibility     ProblemVisibility `json:"visibility"`
-	Title          string            `json:"title"`
-	ShortName      string            `json:"short_name"`
-	CreatedAt      time.Time         `json:"created_at"`
-	UpdatedAt      time.Time         `json:"updated_at"`
-	TimeLimitMs    int32             `json:"time_limit_ms"`
-	MemoryLimitMb  int32             `json:"memory_limit_mb"`
-	IsTemplate     bool              `json:"is_template"`
-}
-
-func (q *Queries) ListUserAccessibleProblems(ctx context.Context, arg ListUserAccessibleProblemsParams) ([]ListUserAccessibleProblemsRow, error) {
-	rows, err := q.db.Query(ctx, listUserAccessibleProblems, arg.PUserID, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListUserAccessibleProblemsRow{}
-	for rows.Next() {
-		var i ListUserAccessibleProblemsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.OrganizationID,
-			&i.OrgLogin,
-			&i.OrgName,
-			&i.OwnerID,
-			&i.Visibility,
-			&i.Title,
-			&i.ShortName,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.TimeLimitMs,
-			&i.MemoryLimitMb,
-			&i.IsTemplate,
 		); err != nil {
 			return nil, err
 		}

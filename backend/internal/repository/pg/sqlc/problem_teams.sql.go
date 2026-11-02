@@ -30,28 +30,6 @@ func (q *Queries) AddProblemTeam(ctx context.Context, arg AddProblemTeamParams) 
 	return err
 }
 
-const getProblemTeam = `-- name: GetProblemTeam :one
-SELECT problem_id, team_id, permission, created_at FROM problem_teams
-WHERE problem_id = $1 AND team_id = $2
-`
-
-type GetProblemTeamParams struct {
-	ProblemID uuid.UUID `json:"problem_id"`
-	TeamID    uuid.UUID `json:"team_id"`
-}
-
-func (q *Queries) GetProblemTeam(ctx context.Context, arg GetProblemTeamParams) (ProblemTeam, error) {
-	row := q.db.QueryRow(ctx, getProblemTeam, arg.ProblemID, arg.TeamID)
-	var i ProblemTeam
-	err := row.Scan(
-		&i.ProblemID,
-		&i.TeamID,
-		&i.Permission,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const getTeamProblems = `-- name: GetTeamProblems :many
 SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.time_limit_ms, p.memory_limit_mb, p.created_at, p.updated_at, p.is_template, p.workspace_hash FROM problems p
 INNER JOIN problem_teams pt ON p.id = pt.problem_id

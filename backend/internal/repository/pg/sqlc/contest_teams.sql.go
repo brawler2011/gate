@@ -31,28 +31,6 @@ func (q *Queries) AddContestTeam(ctx context.Context, arg AddContestTeamParams) 
 	return err
 }
 
-const getContestTeam = `-- name: GetContestTeam :one
-SELECT contest_id, team_id, role, created_at FROM contest_teams
-WHERE contest_id = $1 AND team_id = $2
-`
-
-type GetContestTeamParams struct {
-	ContestID uuid.UUID `json:"contest_id"`
-	TeamID    uuid.UUID `json:"team_id"`
-}
-
-func (q *Queries) GetContestTeam(ctx context.Context, arg GetContestTeamParams) (ContestTeam, error) {
-	row := q.db.QueryRow(ctx, getContestTeam, arg.ContestID, arg.TeamID)
-	var i ContestTeam
-	err := row.Scan(
-		&i.ContestID,
-		&i.TeamID,
-		&i.Role,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const getTeamContests = `-- name: GetTeamContests :many
 SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision FROM contests c
 INNER JOIN contest_teams ct ON c.id = ct.contest_id

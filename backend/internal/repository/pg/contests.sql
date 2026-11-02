@@ -143,12 +143,6 @@ WHERE contest_id = $1 AND problem_id = $2;
 
 -- Access check helpers
 
--- name: CheckUserHasContestAccess :one
-SELECT user_has_contest_access($1, $2) as has_access;
-
--- name: CheckUserIsContestModerator :one
-SELECT user_is_contest_moderator($1, $2) as is_moderator;
-
 -- name: ListUserAccessibleContests :many
 SELECT c.*, o.login as org_login, o.name as org_name
 FROM contests c

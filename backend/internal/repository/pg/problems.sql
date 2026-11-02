@@ -11,12 +11,6 @@ FROM problems p
 JOIN organizations o ON p.organization_id = o.id
 WHERE p.id = $1;
 
--- name: GetProblemByShortName :one
-SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
-FROM problems p
-JOIN organizations o ON p.organization_id = o.id
-WHERE p.organization_id = $1 AND short_name = $2;
-
 -- name: ListAllProblems :many
 SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
 FROM problems p
@@ -110,19 +104,6 @@ WHERE problem_id = $1 AND user_id = $2;
 -- name: RemoveProblemMember :exec
 DELETE FROM problem_members
 WHERE problem_id = $1 AND user_id = $2;
-
--- Access check helpers
-
--- name: CheckUserHasProblemAccess :one
-SELECT user_has_problem_access($1, $2) as has_access;
-
--- name: ListUserAccessibleProblems :many
-SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
-FROM problems p
-JOIN organizations o ON p.organization_id = o.id
-WHERE user_has_problem_access($1, p.id)
-ORDER BY p.created_at DESC
-LIMIT $2 OFFSET $3;
 
 -- Workshop integration queries
 

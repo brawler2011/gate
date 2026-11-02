@@ -51,37 +51,6 @@ func (q *Queries) CreateProblemPackage(ctx context.Context, arg CreateProblemPac
 	return i, err
 }
 
-const deleteProblemPackage = `-- name: DeleteProblemPackage :exec
-DELETE FROM problem_packages WHERE id = $1
-`
-
-func (q *Queries) DeleteProblemPackage(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteProblemPackage, id)
-	return err
-}
-
-const getProblemPackageByHash = `-- name: GetProblemPackageByHash :one
-SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at FROM problem_packages WHERE package_hash = $1
-`
-
-func (q *Queries) GetProblemPackageByHash(ctx context.Context, packageHash string) (ProblemPackage, error) {
-	row := q.db.QueryRow(ctx, getProblemPackageByHash, packageHash)
-	var i ProblemPackage
-	err := row.Scan(
-		&i.ID,
-		&i.ProblemID,
-		&i.OrganizationID,
-		&i.Version,
-		&i.PackageHash,
-		&i.Url,
-		&i.Status,
-		&i.BuildLog,
-		&i.CreatedAt,
-		&i.CompiledAt,
-	)
-	return i, err
-}
-
 const getProblemPackageByID = `-- name: GetProblemPackageByID :one
 SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at FROM problem_packages WHERE id = $1
 `

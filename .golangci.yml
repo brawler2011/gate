@@ -17,11 +17,15 @@ linters:
     - wrapcheck
   settings:
     forbidigo:
+      analyze-types: true
       forbid:
         - pattern: ^fmt\.Print.*$
           msg: Do not use fmt.Print*, use slog instead.
         - pattern: ^log\.(Print|Fatal|Panic).*$
           msg: Do not use log package, use slog instead.
+        - pattern: ^(pgx|pgxpool|pgconn|sql|sqlc)\.[^.]+\.(Query|QueryRow|Exec|QueryContext|QueryRowContext|ExecContext|ExecParams|ExecPrepared|SendBatch|CopyFrom|Prepare|PrepareContext|Queue)$
+          pkg: ^(github\.com/jackc/pgx/v5(/pgxpool|/pgconn)?|database/sql|github\.com/brawler2011/gate/backend/internal/repository/pg/sqlc)$
+          msg: Do not execute raw SQL in application code; use generated sqlc queries.
     revive:
       rules:
         - name: var-naming
@@ -53,6 +57,10 @@ linters:
       - contracts
       - tests/mocks
     rules:
+      - linters:
+          - forbidigo
+        path: (_test\.go$|^backend/tests/)
+        text: Do not execute raw SQL
       - linters:
           - gosec
         text: "G124|G122|G703|G304|G301"
