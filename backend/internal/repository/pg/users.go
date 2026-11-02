@@ -2,8 +2,10 @@ package pg
 
 import (
 	"context"
+	"strings"
 	"time"
 
+	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
@@ -113,9 +115,9 @@ func (r *UsersRepo) GetUserByUsernameOrEmail(ctx context.Context, identifier str
 	return mapUserToModel(user), nil
 }
 
-func (r *UsersRepo) ListUsers(ctx context.Context, filter models.UsersListFilter) (models.UsersList, error) {
+func (r *UsersRepo) ListUserResponses(ctx context.Context, filter models.UsersListFilter) (*corev1.ListUsersResponseModel, error) {
 	if err := filter.Validate(); err != nil {
-		return models.UsersList{}, err
+		return nil, err
 	}
 
 	total, err := r.queries.CountUsers(ctx, sqlc.CountUsersParams{
@@ -123,7 +125,7 @@ func (r *UsersRepo) ListUsers(ctx context.Context, filter models.UsersListFilter
 		Role:   filter.Role,
 	})
 	if err != nil {
-		return models.UsersList{}, HandlePgErr(err)
+		return nil, HandlePgErr(err)
 	}
 
 	users, err := r.queries.ListUsers(ctx, sqlc.ListUsersParams{
@@ -133,17 +135,17 @@ func (r *UsersRepo) ListUsers(ctx context.Context, filter models.UsersListFilter
 		Role:   filter.Role,
 	})
 	if err != nil {
-		return models.UsersList{}, HandlePgErr(err)
+		return nil, HandlePgErr(err)
 	}
 
-	userRecords := make([]models.User, len(users))
+	userRecords := make([]corev1.UserModel, len(users))
 	for i, u := range users {
-		userRecords[i] = mapUserToModel(u)
+		userRecords[i] = userResponse(u)
 	}
 
-	return models.UsersList{
+	return &corev1.ListUsersResponseModel{
 		Users:      userRecords,
-		Pagination: models.NewPagination(filter.Page, filter.PageSize, total),
+		Pagination: corev1.PaginationModel{Page: filter.Page, Total: models.Total(total, filter.PageSize)},
 	}, nil
 }
 
@@ -234,17 +236,20 @@ func (r *UsersRepo) ClaimTemporaryUser(ctx context.Context, id, claimedByUserID 
 	return nil
 }
 
-func (r *UsersRepo) ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]models.User, error) {
+func (r *UsersRepo) ListClaimedAccountResponses(ctx context.Context, claimedByUserID uuid.UUID) (*corev1.ListClaimedAccountsResponseModel, error) {
 	users, err := r.queries.ListClaimedAccountsByUserId(ctx, claimedByUserID)
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
 
-	res := make([]models.User, len(users))
+	res := make([]corev1.ClaimedAccountItem, len(users))
 	for i, u := range users {
-		res[i] = mapUserToModel(u)
+		res[i] = corev1.ClaimedAccountItem{ID: u.ID, Username: u.Username, ExpiresAt: corev1.OptDateTime{Value: u.ExpiresAt.Time, Set: u.ExpiresAt.Valid}}
+		if u.ClaimedAt.Valid {
+			res[i].ClaimedAt = u.ClaimedAt.Time
+		}
 	}
-	return res, nil
+	return &corev1.ListClaimedAccountsResponseModel{Accounts: res}, nil
 }
 
 func (r *UsersRepo) ListExistingUsernamesByPrefix(ctx context.Context, prefix string) ([]string, error) {
@@ -255,3 +260,33 @@ func (r *UsersRepo) ListExistingUsernamesByPrefix(ctx context.Context, prefix st
 	return usernames, nil
 }
 
+func userResponse(u sqlc.User) corev1.UserModel {
+	user := corev1.UserModel{
+		ID:              u.ID,
+		Username:        u.Username,
+		Role:            string(u.Role),
+		CreatedAt:       u.CreatedAt,
+		UpdatedAt:       u.UpdatedAt,
+		ExpiresAt:       corev1.OptDateTime{Value: u.ExpiresAt.Time, Set: u.ExpiresAt.Valid},
+		ClaimedAt:       corev1.OptDateTime{Value: u.ClaimedAt.Time, Set: u.ClaimedAt.Valid},
+		ClaimedByUserID: corev1.OptUUID{Value: uuid.UUID(u.ClaimedByUserID.Bytes), Set: u.ClaimedByUserID.Valid && uuid.UUID(u.ClaimedByUserID.Bytes) != uuid.Nil},
+		IsEmailVerified: corev1.NewOptBool(u.IsEmailVerified),
+	}
+	if u.Email != nil {
+		user.Email = corev1.NewOptString(*u.Email)
+	}
+	if u.AvatarUrl != nil && *u.AvatarUrl != "" {
+		if id, err := uuid.Parse(*u.AvatarUrl); err == nil {
+			user.ImgId = corev1.NewOptUUID(id)
+		}
+	}
+	return user
+}
+
+func (r *UsersRepo) GetUserResponse(ctx context.Context, username string) (*corev1.GetUserResponseModel, error) {
+	user, err := r.queries.GetUserByUsername(ctx, strings.TrimPrefix(username, "@"))
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+	return &corev1.GetUserResponseModel{User: userResponse(user)}, nil
+}

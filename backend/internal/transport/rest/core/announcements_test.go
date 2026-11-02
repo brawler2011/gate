@@ -69,7 +69,16 @@ func TestListContestAnnouncementsReader(t *testing.T) {
 				}
 				return response, nil
 			}}
-			h := NewCoreServer(nil, contests, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, reader, nil, nil, nil)
+			h := NewCoreServer(nil, contests, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, reader, nil, nil, nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+			)
 			got, err := h.ListContestAnnouncements(ctx, params)
 			switch {
 			case tc.resolveErr != nil:

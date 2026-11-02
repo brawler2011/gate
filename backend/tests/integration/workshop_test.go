@@ -6,9 +6,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"github.com/brawler2011/gate/backend/pkg"
-	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
-	"gopkg.in/yaml.v3"
 	"net"
 	"os"
 	"path/filepath"
@@ -16,6 +13,10 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"gopkg.in/yaml.v3"
 
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/usecase"
@@ -448,20 +449,12 @@ func (m *mockProblemsRepo) RemoveProblemTeam(_ context.Context, _, _ uuid.UUID) 
 	return nil
 }
 
-func (m *mockProblemsRepo) ListProblemMembers(_ context.Context, _ uuid.UUID) ([]models.ProblemMember, error) {
-	return nil, nil
-}
-
 func (m *mockProblemsRepo) UpdateProblemMemberRole(_ context.Context, _, _ uuid.UUID, _ models.ProblemRole) error {
 	return nil
 }
 
 func (m *mockProblemsRepo) RemoveProblemMember(_ context.Context, _, _ uuid.UUID) error {
 	return nil
-}
-
-func (m *mockProblemsRepo) ListProblems(_ context.Context, _ *models.ProblemsFilter) ([]models.Problem, int32, error) {
-	return nil, 0, nil
 }
 
 func (m *mockProblemsRepo) UpdateProblem(_ context.Context, id uuid.UUID, update *models.ProblemUpdate) error {
@@ -471,10 +464,6 @@ func (m *mockProblemsRepo) UpdateProblem(_ context.Context, id uuid.UUID, update
 	}
 	m.problems[id] = problem
 	return nil
-}
-
-func (m *mockProblemsRepo) ListDashboardProblems(_ context.Context, _ uuid.UUID, _ int32) ([]models.DashboardProblem, error) {
-	return nil, nil
 }
 
 func (m *mockProblemsRepo) GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, error) {

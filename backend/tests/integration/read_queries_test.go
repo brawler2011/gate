@@ -39,6 +39,8 @@ func (s *IntegrationTestSuite) readItems(path string, userID uuid.UUID, key stri
 }
 
 func (s *IntegrationTestSuite) TestReadQueries() {
+	_, cleanupErr := s.dbPool.Exec(s.ctx, "TRUNCATE TABLE users, posts CASCADE")
+	s.Require().NoError(cleanupErr)
 	suffix := uuid.NewString()[:8]
 	owner := s.createUser("read_owner_"+suffix, models.UserRoleAdmin)
 	participant := s.createUser("read_user_"+suffix, models.UserRoleUser)
@@ -61,6 +63,11 @@ func (s *IntegrationTestSuite) TestReadQueries() {
 		s.JSONEq(`""`, string(items[0]["email"]))
 		s.JSONEq(`"`+uuid.Nil.String()+`"`, string(items[0]["imgId"]))
 		s.NotContains(items[0], "password_hash")
+		profile := s.readJSON("/users/@"+participant.Username, owner.Id, 200)
+		var profileUser map[string]json.RawMessage
+		s.Require().NoError(json.Unmarshal(profile["user"], &profileUser))
+		s.Equal(items[0], profileUser)
+		s.readJSON("/users/missing-user", owner.Id, 404)
 		s.NotEmpty(items[0]["expires_at"])
 		s.NotEmpty(items[0]["claimed_at"])
 		s.NotEmpty(items[0]["is_email_verified"])
@@ -222,4 +229,131 @@ func (s *IntegrationTestSuite) TestReadQueries() {
 		s.readJSON("/notifications", uuid.Nil, 401)
 		s.readJSON("/notifications/unread-count", uuid.Nil, 401)
 	})
+}
+
+func (s *IntegrationTestSuite) TestContestReadQueries() {
+	suffix := uuid.NewString()[:8]
+	admin := s.createUser("catalog_admin_"+suffix, models.UserRoleAdmin)
+	member := s.createUser("catalog_user_"+suffix, models.UserRoleUser)
+	outsider := s.createUser("catalog_other_"+suffix, models.UserRoleUser)
+	org := s.createOrganization("catalog-"+suffix, "Catalog", admin.Id)
+	ids := []uuid.UUID{uuid.New(), uuid.New(), uuid.New()}
+	for i, id := range ids {
+		visibility := models.ContestVisibilityPublic
+		if i == 1 {
+			visibility = models.ContestVisibilityPrivate
+		}
+		s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{ID: id, OrganizationID: org.ID, OwnerID: &admin.Id, Title: fmt.Sprintf("Catalog %d", i), Login: fmt.Sprintf("catalog-%d", i), Visibility: visibility, Settings: map[string]interface{}{"hide_statements": true, "freeze_duration_minutes": int32(15)}}))
+		s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &models.CreateContestMemberParams{ContestId: id, UserId: member.Id, Role: "participant"}))
+		_, err := s.dbPool.Exec(s.ctx, "UPDATE contests SET created_at=$2 WHERE id=$1", id, time.Date(2026, 1, i+1, 0, 0, 0, 0, time.UTC))
+		s.Require().NoError(err)
+	}
+	for _, tc := range []struct {
+		path  string
+		user  uuid.UUID
+		total int
+	}{
+		{"/public/contests?pageSize=1", uuid.Nil, 2},
+		{"/admin/contests?pageSize=1", admin.Id, 3},
+		{"/organizations/" + org.Login + "/contests?pageSize=1", admin.Id, 3},
+		{"/users/" + member.Username + "/contests?pageSize=1", member.Id, 1},
+		{"/workshop/contests?pageSize=1", member.Id, 1},
+		{"/workshop/contests?pageSize=1&organization_id=" + org.ID.String(), member.Id, 1},
+	} {
+		s.Run(tc.path, func() {
+			items := s.readItems(tc.path, tc.user, "contests", 1, tc.total)
+			s.Require().Len(items, 1)
+			s.JSONEq(`"`+ids[2].String()+`"`, string(items[0]["id"]))
+			s.JSONEq(`true`, string(items[0]["hide_statements"]))
+			for _, field := range []string{"start_time", "end_time", "owner"} {
+				s.NotContains(items[0], field)
+			}
+		})
+	}
+	team, err := s.teamsRepo.CreateTeam(s.ctx, &models.CreateTeamInput{OrganizationID: org.ID, Name: "Contest readers", Slug: "contest-readers", Privacy: models.TeamPrivacyClosed})
+	s.Require().NoError(err)
+	s.Require().NoError(s.contestsRepo.CreateContestTeam(s.ctx, ids[0], team.ID, models.ContestRoleParticipant))
+	teams := s.readJSON("/organizations/"+org.Login+"/contests/catalog-0/teams", admin.Id, 200)
+	var contestTeams []map[string]json.RawMessage
+	s.Require().NoError(json.Unmarshal(teams["teams"], &contestTeams))
+	s.Require().Len(contestTeams, 1)
+	s.JSONEq(`"Contest readers"`, string(contestTeams[0]["team_name"]))
+	s.NotContains(contestTeams[0], "permissions_mask")
+
+	s.Empty(s.readItems("/public/contests?search=NoSuchContest", uuid.Nil, "contests", 1, 0))
+	s.Empty(s.readItems("/public/contests?page=3&pageSize=1", uuid.Nil, "contests", 3, 2))
+	s.Empty(s.readItems("/users/"+member.Username+"/contests?page=4&pageSize=1", member.Id, "contests", 4, 0))
+	s.readJSON("/admin/contests", outsider.Id, 403)
+	s.readJSON("/organizations/missing/contests", admin.Id, 404)
+	s.readJSON("/users/missing-user/contests", admin.Id, 404)
+}
+
+func (s *IntegrationTestSuite) TestProblemAccessReadQueries() {
+	suffix := uuid.NewString()[:8]
+	admin := s.createUser("access_admin_"+suffix, models.UserRoleAdmin)
+	other := s.createUser("access_other_"+suffix, models.UserRoleUser)
+	org := s.createOrganization("access-"+suffix, "Access", admin.Id)
+	problemID := uuid.New()
+	s.Require().NoError(s.problemsRepo.CreateProblem(s.ctx, &models.CreateProblemParams{ID: problemID, OrganizationID: org.ID, OwnerID: &admin.Id, Title: "Private", ShortName: "access", Visibility: models.ProblemVisibilityPrivate}))
+	s.Require().NoError(s.problemsRepo.CreateProblemMember(s.ctx, &models.CreateProblemMemberParams{ProblemID: problemID, UserID: admin.Id, Role: models.ProblemRoleOwner}))
+	team, err := s.teamsRepo.CreateTeam(s.ctx, &models.CreateTeamInput{OrganizationID: org.ID, Name: "Readers", Slug: "readers", Privacy: models.TeamPrivacyClosed})
+	s.Require().NoError(err)
+	s.Require().NoError(s.problemsRepo.AddProblemTeam(s.ctx, problemID, team.ID, models.ProblemPermission("read")))
+	base := "/problems/" + problemID.String()
+	members := s.readItems(base+"/members?page=2&pageSize=1", admin.Id, "members", 2, 1)
+	s.Require().Len(members, 1)
+	s.JSONEq(`"owner"`, string(members[0]["role"]))
+	teams := s.readJSON(base+"/teams", admin.Id, 200)
+	var items []map[string]json.RawMessage
+	s.Require().NoError(json.Unmarshal(teams["teams"], &items))
+	s.Require().Len(items, 1)
+	s.JSONEq(`"Readers"`, string(items[0]["team_name"]))
+	s.JSONEq(`"read"`, string(items[0]["permission"]))
+	packagesRepo := pg.NewPackagesRepo(s.dbPool)
+	first, err := packagesRepo.CreatePackage(s.ctx, &models.CreatePackageParams{ID: uuid.New(), ProblemID: problemID, OrganizationID: org.ID, PackageHash: fmt.Sprintf("%064d", 1), Status: "pending"})
+	s.Require().NoError(err)
+	second, err := packagesRepo.CreatePackage(s.ctx, &models.CreatePackageParams{ID: uuid.New(), ProblemID: problemID, OrganizationID: org.ID, PackageHash: fmt.Sprintf("%064d", 2), Status: "ready"})
+	s.Require().NoError(err)
+	_, err = s.dbPool.Exec(s.ctx, "UPDATE problem_packages SET compiled_at=$2 WHERE id=$1", second.ID, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	s.Require().NoError(err)
+	packages := s.readJSON(base+"/packages", admin.Id, 200)
+	var versions []map[string]json.RawMessage
+	s.Require().NoError(json.Unmarshal(packages["packages"], &versions))
+	s.Require().Len(versions, 2)
+	s.JSONEq(`"`+second.ID.String()+`"`, string(versions[0]["id"]))
+	s.NotEmpty(versions[0]["compiled_at"])
+	s.JSONEq(`"`+first.ID.String()+`"`, string(versions[1]["id"]))
+	s.NotContains(versions[1], "compiled_at")
+	for _, suffix := range []string{"/members", "/teams", "/packages"} {
+		s.readJSON(base+suffix, uuid.Nil, 401)
+		s.readJSON(base+suffix, other.Id, 403)
+		s.readJSON("/problems/"+uuid.NewString()+suffix, admin.Id, 404)
+	}
+}
+
+func (s *IntegrationTestSuite) TestClarificationReadOptionalFields() {
+	suffix := uuid.NewString()[:8]
+	admin := s.createUser("optional_admin_"+suffix, models.UserRoleAdmin)
+	org := s.createOrganization("optional-"+suffix, "Optional fields", admin.Id)
+	contestID := uuid.New()
+	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{ID: contestID, OrganizationID: org.ID, OwnerID: &admin.Id, Title: "Optional", Login: "optional", Visibility: models.ContestVisibilityPublic, Settings: map[string]interface{}{}}))
+	for i, ordinal := range []int32{0, 25, 26} {
+		problemID, packageID := uuid.New(), uuid.New()
+		_, err := s.dbPool.Exec(s.ctx, "INSERT INTO problems(id,organization_id,owner_id,title,short_name,visibility) VALUES($1,$2,$3,'',$4,'private')", problemID, org.ID, admin.Id, fmt.Sprintf("optional-%d", i))
+		s.Require().NoError(err)
+		_, err = s.dbPool.Exec(s.ctx, "INSERT INTO problem_packages(id,problem_id,organization_id,package_hash,status,version) VALUES($1,$2,$3,$4,'ready',1)", packageID, problemID, org.ID, fmt.Sprintf("%064d", i+1))
+		s.Require().NoError(err)
+		_, err = s.dbPool.Exec(s.ctx, "INSERT INTO contest_problems(contest_id,problem_id,package_id,ordinal) VALUES($1,$2,$3,$4)", contestID, problemID, packageID, ordinal)
+		s.Require().NoError(err)
+		_, err = s.dbPool.Exec(s.ctx, "INSERT INTO contest_clarifications(id,contest_id,problem_id,user_id,question,answer,status) VALUES($1,$2,$3,$4,'Question','','answered')", uuid.New(), contestID, problemID, admin.Id)
+		s.Require().NoError(err)
+		items := s.readItems("/organizations/"+org.Login+"/contests/optional/clarifications?problem_id="+problemID.String(), admin.Id, "clarifications", 1, 1)
+		s.Require().Len(items, 1)
+		s.JSONEq(`""`, string(items[0]["problem_title"]))
+		s.JSONEq(`""`, string(items[0]["answer"]))
+		s.JSONEq(`"`+[]string{"A", "Z", "AA"}[i]+`"`, string(items[0]["problem_letter"]))
+		for _, field := range []string{"answered_by", "answered_by_username", "answered_at"} {
+			s.NotContains(items[0], field)
+		}
+	}
 }

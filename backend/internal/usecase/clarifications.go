@@ -98,14 +98,6 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 	return clarification, nil
 }
 
-func (uc *ClarificationsUseCase) ListClarificationsForUser(ctx context.Context, contestID, userID uuid.UUID, page, pageSize int32) (*models.ContestClarificationsList, error) {
-	return uc.clarificationsRepo.ListClarificationsForUser(ctx, contestID, userID, page, pageSize)
-}
-
-func (uc *ClarificationsUseCase) ListClarificationsForModerator(ctx context.Context, contestID uuid.UUID, filter *models.ContestClarificationsFilter) (*models.ContestClarificationsList, error) {
-	return uc.clarificationsRepo.ListClarificationsForModerator(ctx, contestID, filter)
-}
-
 func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input *models.AnswerContestClarificationInput) (*models.ContestClarification, error) {
 	if input.Answer == "" {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "answer cannot be empty")

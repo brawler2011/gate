@@ -213,17 +213,6 @@ type ProblemTest struct {
 
 type ProblemTests []ProblemTest
 
-type DashboardProblem struct {
-	ID                uuid.UUID
-	Title             string
-	OrganizationID    uuid.UUID
-	OrganizationName  string
-	OrganizationLogin string
-	TimeLimitMs       int
-	MemoryLimitMb     int
-	UpdatedAt         time.Time
-}
-
 // WorkspaceMetadata is the searchable catalog entry extracted from problem.yaml.
 // Package readers always use the referenced GFMT archive.
 type WorkspaceMetadata struct {

@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/config"
+	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg"
@@ -307,6 +307,14 @@ func runApp(envFile string) error {
 		clarificationsUC,
 		natsJS,
 		sandboxInstance,
+		usersRepo,
+		problemsRepo,
+		contestsRepo,
+		blogsRepo,
+		draftsRepo,
+		notificationsRepo,
+		clarificationsRepo,
+		packagesRepo,
 	)
 
 	secHandler := middleware.NewSecurityHandler()

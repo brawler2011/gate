@@ -83,22 +83,6 @@ func (u *UsersUseCase) GetUserByUsername(ctx context.Context, username string) (
 	return u.usersRepo.GetUserByUsername(ctx, username)
 }
 
-func (u *UsersUseCase) ListUsers(ctx context.Context, filter models.UsersListFilter) (models.UsersList, error) {
-	params := models.UsersListFilter{
-		Page:     filter.Page,
-		PageSize: filter.PageSize,
-		Search:   filter.Search,
-		Role:     filter.Role,
-	}
-
-	usersList, err := u.usersRepo.ListUsers(ctx, params)
-	if err != nil {
-		return models.UsersList{}, err
-	}
-
-	return usersList, nil
-}
-
 func (u *UsersUseCase) UpdateUser(ctx context.Context, input models.UpdateUserInput) error {
 	return u.usersRepo.UpdateUser(ctx, input)
 }
@@ -175,29 +159,6 @@ func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller models.Use
 		ClaimedUsername: tempUser.Username,
 		ContestsGranted: grantedContests,
 	}, nil
-}
-
-func (u *UsersUseCase) ListClaimedAccounts(ctx context.Context, userID uuid.UUID) ([]models.ClaimedAccountItem, error) {
-	users, err := u.usersRepo.ListClaimedAccountsByUserId(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]models.ClaimedAccountItem, 0, len(users))
-	for _, user := range users {
-		var claimedAt time.Time
-		if user.ClaimedAt != nil {
-			claimedAt = *user.ClaimedAt
-		}
-		items = append(items, models.ClaimedAccountItem{
-			ID:        user.Id,
-			Username:  user.Username,
-			ClaimedAt: claimedAt,
-			ExpiresAt: user.ExpiresAt,
-		})
-	}
-
-	return items, nil
 }
 
 func (u *UsersUseCase) AdminSetPassword(ctx context.Context, username, newPassword string) error {

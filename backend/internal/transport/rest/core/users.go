@@ -10,15 +10,14 @@ import (
 	"github.com/google/uuid"
 )
 
-func (h *CoreServer) GetUser(ctx context.Context, params corev1.GetUserParams) (*corev1.GetUserResponseModel, error) {
-	user, err := h.usersUC.GetUserByUsername(ctx, params.Username)
-	if err != nil {
-		return nil, err
-	}
+type UsersReader interface {
+	GetUserResponse(ctx context.Context, username string) (*corev1.GetUserResponseModel, error)
+	ListUserResponses(ctx context.Context, filter models.UsersListFilter) (*corev1.ListUsersResponseModel, error)
+	ListClaimedAccountResponses(ctx context.Context, userID uuid.UUID) (*corev1.ListClaimedAccountsResponseModel, error)
+}
 
-	return &corev1.GetUserResponseModel{
-		User: userDTO(user),
-	}, nil
+func (h *CoreServer) GetUser(ctx context.Context, params corev1.GetUserParams) (*corev1.GetUserResponseModel, error) {
+	return h.usersReader.GetUserResponse(ctx, params.Username)
 }
 
 func (h *CoreServer) GetMe(ctx context.Context) (*corev1.GetUserResponseModel, error) {
@@ -32,18 +31,17 @@ func (h *CoreServer) GetMe(ctx context.Context) (*corev1.GetUserResponseModel, e
 func (h *CoreServer) GetMyDashboard(ctx context.Context) (*corev1.GetUserDashboardResponseModel, error) {
 	user := middleware.GetUser(ctx)
 
-	contests, err := h.contestsUC.ListDashboardContests(ctx, user.Id, 5)
+	contests, err := h.contestsReader.ListDashboardContestResponses(ctx, user.Id, 5)
 	if err != nil {
 		return nil, err
 	}
 
-	problems, err := h.problemsUC.ListDashboardProblems(ctx, user.Id, 5)
+	problems, err := h.problemsReader.ListDashboardProblemResponses(ctx, user.Id, 5)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := DashboardResponseDTO(contests, problems)
-	return &resp, nil
+	return &corev1.GetUserDashboardResponseModel{RecentContests: contests, MyProblems: problems}, nil
 }
 
 func (h *CoreServer) ListUsers(ctx context.Context, params corev1.ListUsersParams) (*corev1.ListUsersResponseModel, error) {
@@ -59,13 +57,7 @@ func (h *CoreServer) ListUsers(ctx context.Context, params corev1.ListUsersParam
 		Role:     role,
 	}
 
-	users, err := h.usersUC.ListUsers(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := usersListDTO(&users)
-	return &resp, nil
+	return h.usersReader.ListUserResponses(ctx, filter)
 }
 
 func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.ListUserSubmissionsParams) (*corev1.ListSubmissionsResponseModel, error) {
@@ -187,24 +179,7 @@ func (h *CoreServer) ListMyClaimedAccounts(ctx context.Context) (*corev1.ListCla
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	accounts, err := h.usersUC.ListClaimedAccounts(ctx, user.Id)
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]corev1.ClaimedAccountItem, len(accounts))
-	for i, acc := range accounts {
-		items[i] = corev1.ClaimedAccountItem{
-			ID:        acc.ID,
-			Username:  acc.Username,
-			ClaimedAt: acc.ClaimedAt,
-			ExpiresAt: timePtrToOptDateTime(acc.ExpiresAt),
-		}
-	}
-
-	return &corev1.ListClaimedAccountsResponseModel{
-		Accounts: items,
-	}, nil
+	return h.usersReader.ListClaimedAccountResponses(ctx, user.Id)
 }
 
 func (h *CoreServer) ChangePassword(ctx context.Context, req *corev1.ChangePasswordRequestModel) (*corev1.AuthResponseModel, error) {
