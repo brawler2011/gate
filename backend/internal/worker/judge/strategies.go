@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/brawler2011/gate/backend/internal/judging"
+
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
@@ -25,15 +27,15 @@ type FlatTest struct {
 }
 
 type StandardStrategy struct {
-	sandbox            *sandbox.Sandbox
-	eventPublisher     *EventPublisher
+	sandbox            judging.Sandbox
+	eventPublisher     judging.Progress
 	pkg                *gfmt.GateFormat
 	compiledComponents map[string]sandbox.Executable
 }
 
 func NewStandardStrategy(
-	sandbox *sandbox.Sandbox,
-	eventPublisher *EventPublisher,
+	sandbox judging.Sandbox,
+	eventPublisher judging.Progress,
 	pkg *gfmt.GateFormat,
 	compiledComponents map[string]sandbox.Executable,
 ) *StandardStrategy {
@@ -51,6 +53,9 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 	// Compile user solution
 	solExec, err := s.sandbox.Compile(ctx, []byte(sourceCode), languageStr, nil)
 	if err != nil {
+		if judging.IsTemporary(err) {
+			return nil, fmt.Errorf("judging infrastructure: %w", err)
+		}
 		compilerOutput := err.Error()
 		errorLine := ParseErrorLine(language, compilerOutput)
 		return &FinalVerdict{
@@ -87,6 +92,9 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 
 		input, err := s.getTestInput(ctx, tc.Test)
 		if err != nil {
+			if judging.IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
 			results = append(results, TestResult{
 				TestNumber: tc.TestIndex,
 				Verdict:    "IE",
@@ -97,6 +105,9 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 
 		answer, err := s.getTestAnswer(ctx, tc.Test, input)
 		if err != nil {
+			if judging.IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
 			results = append(results, TestResult{
 				TestNumber: tc.TestIndex,
 				Verdict:    "IE",
@@ -109,6 +120,9 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 		// Run solution
 		runRes, err := s.sandbox.Test(ctx, solExec, languageStr, input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
 		if err != nil {
+			if judging.IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
 			results = append(results, TestResult{
 				TestNumber: tc.TestIndex,
 				Verdict:    "IE",
@@ -127,6 +141,9 @@ func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, so
 		if runRes.Status == sandbox.StatusOK {
 			chkRes, err := s.sandbox.Check(ctx, checkerExec, input, runRes.Stdout, answer)
 			if err != nil {
+				if judging.IsTemporary(err) {
+					return nil, fmt.Errorf("judging infrastructure: %w", err)
+				}
 				verdict = "IE"
 				message = fmt.Sprintf("Checker execution failed: %v", err)
 			} else {
@@ -184,6 +201,9 @@ func (s *StandardStrategy) getTestInput(ctx context.Context, test gfmt.Test) ([]
 			dir := filepath.Join(s.pkg.Path, "generators")
 			entries, err := os.ReadDir(dir)
 			if err != nil {
+				if judging.IsTemporary(err) {
+					return nil, fmt.Errorf("judging infrastructure: %w", err)
+				}
 				return nil, fmt.Errorf("failed to read generators dir: %w", err)
 			}
 			var filename string
@@ -198,12 +218,18 @@ func (s *StandardStrategy) getTestInput(ctx context.Context, test gfmt.Test) ([]
 			}
 			data, err := os.ReadFile(filepath.Join(dir, filename))
 			if err != nil {
+				if judging.IsTemporary(err) {
+					return nil, fmt.Errorf("judging infrastructure: %w", err)
+				}
 				return nil, fmt.Errorf("failed to read generator file %s: %w", filename, err)
 			}
 			deps, _ := loadLibDependencies(s.pkg.Path)
 			lang := detectLanguage(filepath.Ext(filename))
 			compiled, err := s.sandbox.Compile(ctx, data, lang, deps)
 			if err != nil {
+				if judging.IsTemporary(err) {
+					return nil, fmt.Errorf("judging infrastructure: %w", err)
+				}
 				return nil, err
 			}
 			genExec = compiled
@@ -249,11 +275,17 @@ func (s *StandardStrategy) getTestAnswer(ctx context.Context, test gfmt.Test, in
 	if !exists {
 		data, err := os.ReadFile(filepath.Join(s.pkg.Path, "solutions", okSol))
 		if err != nil {
+			if judging.IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
 			return nil, fmt.Errorf("failed to read solution file %s: %w", okSol, err)
 		}
 		lang := detectLanguage(filepath.Ext(okSol))
 		compiled, err := s.sandbox.Compile(ctx, data, lang, nil)
 		if err != nil {
+			if judging.IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
 			return nil, fmt.Errorf("failed to compile correct solution %s: %w", okSol, err)
 		}
 		solExec = compiled
@@ -262,6 +294,9 @@ func (s *StandardStrategy) getTestAnswer(ctx context.Context, test gfmt.Test, in
 
 	runRes, err := s.sandbox.Test(ctx, solExec, detectLanguage(filepath.Ext(okSol)), input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
 	if err != nil {
+		if judging.IsTemporary(err) {
+			return nil, fmt.Errorf("judging infrastructure: %w", err)
+		}
 		return nil, fmt.Errorf("failed to run correct solution: %w", err)
 	}
 	if runRes.Status != sandbox.StatusOK {
@@ -271,15 +306,15 @@ func (s *StandardStrategy) getTestAnswer(ctx context.Context, test gfmt.Test, in
 }
 
 type ScoringStrategy struct {
-	sandbox            *sandbox.Sandbox
-	eventPublisher     *EventPublisher
+	sandbox            judging.Sandbox
+	eventPublisher     judging.Progress
 	pkg                *gfmt.GateFormat
 	compiledComponents map[string]sandbox.Executable
 }
 
 func NewScoringStrategy(
-	sandbox *sandbox.Sandbox,
-	eventPublisher *EventPublisher,
+	sandbox judging.Sandbox,
+	eventPublisher judging.Progress,
 	pkg *gfmt.GateFormat,
 	compiledComponents map[string]sandbox.Executable,
 ) *ScoringStrategy {
@@ -296,6 +331,9 @@ func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sou
 
 	solExec, err := s.sandbox.Compile(ctx, []byte(sourceCode), languageStr, nil)
 	if err != nil {
+		if judging.IsTemporary(err) {
+			return nil, fmt.Errorf("judging infrastructure: %w", err)
+		}
 		compilerOutput := err.Error()
 		errorLine := ParseErrorLine(language, compilerOutput)
 		return &FinalVerdict{
@@ -337,6 +375,9 @@ func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sou
 
 		input, err := wrapper.getTestInput(ctx, tc.Test)
 		if err != nil {
+			if judging.IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
 			results = append(results, TestResult{
 				TestNumber: tc.TestIndex,
 				Verdict:    "IE",
@@ -347,6 +388,9 @@ func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sou
 
 		answer, err := wrapper.getTestAnswer(ctx, tc.Test, input)
 		if err != nil {
+			if judging.IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
 			results = append(results, TestResult{
 				TestNumber: tc.TestIndex,
 				Verdict:    "IE",
@@ -358,6 +402,9 @@ func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sou
 
 		runRes, err := s.sandbox.Test(ctx, solExec, languageStr, input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
 		if err != nil {
+			if judging.IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
 			results = append(results, TestResult{
 				TestNumber: tc.TestIndex,
 				Verdict:    "IE",
@@ -376,6 +423,9 @@ func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sou
 		if runRes.Status == sandbox.StatusOK {
 			chkRes, err := s.sandbox.Check(ctx, checkerExec, input, runRes.Stdout, answer)
 			if err != nil {
+				if judging.IsTemporary(err) {
+					return nil, fmt.Errorf("judging infrastructure: %w", err)
+				}
 				verdict = "IE"
 				message = fmt.Sprintf("Checker execution failed: %v", err)
 			} else {
@@ -412,15 +462,15 @@ func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sou
 }
 
 type InteractiveStrategy struct {
-	sandbox            *sandbox.Sandbox
-	eventPublisher     *EventPublisher
+	sandbox            judging.Sandbox
+	eventPublisher     judging.Progress
 	pkg                *gfmt.GateFormat
 	compiledComponents map[string]sandbox.Executable
 }
 
 func NewInteractiveStrategy(
-	sandbox *sandbox.Sandbox,
-	eventPublisher *EventPublisher,
+	sandbox judging.Sandbox,
+	eventPublisher judging.Progress,
 	pkg *gfmt.GateFormat,
 	compiledComponents map[string]sandbox.Executable,
 ) *InteractiveStrategy {
@@ -437,6 +487,9 @@ func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID,
 
 	solExec, err := s.sandbox.Compile(ctx, []byte(sourceCode), languageStr, nil)
 	if err != nil {
+		if judging.IsTemporary(err) {
+			return nil, fmt.Errorf("judging infrastructure: %w", err)
+		}
 		compilerOutput := err.Error()
 		errorLine := ParseErrorLine(language, compilerOutput)
 		return &FinalVerdict{
@@ -477,6 +530,9 @@ func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID,
 
 		input, err := wrapper.getTestInput(ctx, tc.Test)
 		if err != nil {
+			if judging.IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
 			results = append(results, TestResult{
 				TestNumber: tc.TestIndex,
 				Verdict:    "IE",
@@ -487,6 +543,9 @@ func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID,
 
 		interactRes, err := s.sandbox.Interact(ctx, solExec, languageStr, interactorExec, input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
 		if err != nil {
+			if judging.IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
 			results = append(results, TestResult{
 				TestNumber: tc.TestIndex,
 				Verdict:    "IE",
@@ -572,6 +631,9 @@ func loadLibDependencies(pkgPath string) (map[string][]byte, error) {
 	libDir := filepath.Join(pkgPath, "lib")
 	entries, err := os.ReadDir(libDir)
 	if err != nil {
+		if judging.IsTemporary(err) {
+			return nil, fmt.Errorf("judging infrastructure: %w", err)
+		}
 		if os.IsNotExist(err) {
 			return deps, nil
 		}
@@ -582,6 +644,9 @@ func loadLibDependencies(pkgPath string) (map[string][]byte, error) {
 		if !entry.IsDir() {
 			data, err := os.ReadFile(filepath.Join(libDir, entry.Name()))
 			if err != nil {
+				if judging.IsTemporary(err) {
+					return nil, fmt.Errorf("judging infrastructure: %w", err)
+				}
 				return nil, fmt.Errorf("failed to read lib file %s: %w", entry.Name(), err)
 			}
 			deps[entry.Name()] = data

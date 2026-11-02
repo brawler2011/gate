@@ -3,8 +3,13 @@ package usecase_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
+
+	"github.com/brawler2011/gate/backend/internal/judging"
+
+	"github.com/brawler2011/gate/backend/internal/events"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -117,7 +122,7 @@ func TestBlockSubmissionRemovesSolveAndUnblockQueuesRejudge(t *testing.T) {
 	other := f.submit(t, "alice", 1, models.Accepted, 20*time.Minute)
 	repo, outbox := &blockingSubmissionsRepo{repo: f.repo}, &blockingOutbox{}
 	uc := usecase.NewSubmissionsUseCase(repo, f.uc, blockingProblems{}, outbox, blockingTransactor{struct {
-		interfaces.SubmissionsRepo
+		*blockingSubmissionsRepo
 		interfaces.OutboxRepo
 	}{repo, outbox}})
 	ctx := context.Background()
@@ -153,7 +158,7 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 	repo, outbox := &blockingSubmissionsRepo{repo: f.repo}, &blockingOutbox{}
 	f.uc = usecase.NewContestsUseCase(f.repo, nil, repo)
 	uc := usecase.NewSubmissionsUseCase(repo, f.uc, blockingProblems{}, outbox, blockingTransactor{struct {
-		interfaces.SubmissionsRepo
+		*blockingSubmissionsRepo
 		interfaces.OutboxRepo
 	}{repo, outbox}})
 	ctx := context.Background()
@@ -190,4 +195,16 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 	require.Equal(t, models.Saved, allowed.State)
 	require.Len(t, outbox.events, 1)
 	require.Equal(t, allowedID, outbox.events[0].AggregateID)
+}
+
+func (r *blockingOutbox) Record(ctx context.Context, event events.Event) error {
+	data, err := json.Marshal(event.Payload)
+	if err != nil {
+		return fmt.Errorf("encode test event: %w", err)
+	}
+	return r.CreateEvent(ctx, &models.CreateOutboxEventParams{Id: uuid.New(), AggregateID: event.AggregateID, EventType: event.Type, Payload: data})
+}
+
+func (r *blockingSubmissionsRepo) ScheduleJob(_ context.Context, id uuid.UUID) (judging.Job, error) {
+	return judging.Job{ID: uuid.New(), SubmissionID: id, Generation: 1}, nil
 }

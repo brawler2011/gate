@@ -53,7 +53,7 @@ func (s *IntegrationTestSuite) TestOutbox_HeadersPersistence() {
 		s.Equal(headers["custom-header"], found.Headers["custom-header"])
 
 		// Clean up
-		err = outboxRepo.MarkAsCompleted(s.ctx, eventID)
+		err = outboxRepo.MarkAsCompleted(s.ctx, eventID, found.LeaseToken)
 		s.Require().NoError(err)
 	})
 
@@ -87,7 +87,7 @@ func (s *IntegrationTestSuite) TestOutbox_HeadersPersistence() {
 		s.Empty(found.Headers)
 
 		// Clean up
-		err = outboxRepo.MarkAsCompleted(s.ctx, eventID)
+		err = outboxRepo.MarkAsCompleted(s.ctx, eventID, found.LeaseToken)
 		s.Require().NoError(err)
 	})
 }
@@ -130,7 +130,7 @@ func (s *IntegrationTestSuite) TestOutboxSkipsLockedEventsAndRecoversExpiredClai
 	s.Require().NoError(err)
 	s.Require().Len(retry, 1)
 	s.Equal(first, retry[0].Id)
-	s.Require().NoError(repo.MarkAsCompleted(ctx, first))
+	s.Require().NoError(repo.MarkAsCompleted(ctx, first, retry[0].LeaseToken))
 	_, err = s.dbPool.Exec(ctx, "UPDATE outbox_events SET deadline_at=NOW()-INTERVAL '1 second' WHERE id=$1", second)
 	s.Require().NoError(err)
 	expired, err := repo.PickEvents(ctx, 1, 30)

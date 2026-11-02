@@ -18,22 +18,27 @@ const (
 type OutboxEventType = string
 
 const (
-	OutboxEventSubmissionCreated           OutboxEventType = "submission.created"
+	OutboxEventSubmissionCreated            OutboxEventType = "submission.created"
 	OutboxEventContestAnnouncementCreated   OutboxEventType = "contest.announcement_created"
 	OutboxEventContestAnnouncementDeleted   OutboxEventType = "contest.announcement_deleted"
 	OutboxEventContestClarificationCreated  OutboxEventType = "contest.clarification_created"
 	OutboxEventContestClarificationAnswered OutboxEventType = "contest.clarification_answered"
 )
 
+const OutboxEventSubmissionCompleted OutboxEventType = "submissions.completed"
+
 type OutboxEvent struct {
-	Id           uuid.UUID         `json:"id"`
-	AggregateID  uuid.UUID         `json:"aggregate_id"`
-	EventType    OutboxEventType   `json:"event_type"`
-	Payload      []byte            `json:"payload"`
-	Headers      map[string]string `json:"headers"`
-	Status       OutboxEventStatus `json:"status"`
-	RetryCount   int32             `json:"retry_count"`
-	ErrorMessage *string           `json:"error_message,omitempty"`
+	AggregateVersion int64
+	LeaseToken       uuid.UUID
+	NextAttemptAt    time.Time
+	Id               uuid.UUID         `json:"id"`
+	AggregateID      uuid.UUID         `json:"aggregate_id"`
+	EventType        OutboxEventType   `json:"event_type"`
+	Payload          []byte            `json:"payload"`
+	Headers          map[string]string `json:"headers"`
+	Status           OutboxEventStatus `json:"status"`
+	RetryCount       int32             `json:"retry_count"`
+	ErrorMessage     *string           `json:"error_message,omitempty"`
 
 	CreatedAt   time.Time  `json:"created_at"`
 	ProcessedAt *time.Time `json:"processed_at,omitempty"`

@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/internal/judging"
 )
 
 // CacheEntry represents a cached component
@@ -18,13 +18,13 @@ type CacheEntry struct {
 type ComponentCache struct {
 	cache   map[string]*CacheEntry
 	mu      sync.RWMutex
-	sandbox *sandbox.Sandbox
+	sandbox judging.Sandbox
 	maxSize int
 	ttl     time.Duration
 }
 
 // NewComponentCache creates a new component cache
-func NewComponentCache(sandbox *sandbox.Sandbox) *ComponentCache {
+func NewComponentCache(sandbox judging.Sandbox) *ComponentCache {
 	cache := &ComponentCache{
 		cache:   make(map[string]*CacheEntry),
 		sandbox: sandbox,
@@ -40,8 +40,8 @@ func NewComponentCache(sandbox *sandbox.Sandbox) *ComponentCache {
 
 // Get retrieves a cached component
 func (c *ComponentCache) Get(key string) (string, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	entry, exists := c.cache[key]
 	if !exists {

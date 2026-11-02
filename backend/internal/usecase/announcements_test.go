@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/events"
+
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
@@ -80,11 +82,11 @@ func (m *mockOutboxRepo) PickEvents(ctx context.Context, limit int32, timeoutSec
 	return nil, nil
 }
 
-func (m *mockOutboxRepo) MarkAsCompleted(ctx context.Context, id uuid.UUID) error {
+func (m *mockOutboxRepo) MarkAsCompleted(ctx context.Context, id, leaseToken uuid.UUID) error {
 	return nil
 }
 
-func (m *mockOutboxRepo) MarkAsFailed(ctx context.Context, id uuid.UUID, errorMsg string) error {
+func (m *mockOutboxRepo) MarkAsFailed(ctx context.Context, id, leaseToken uuid.UUID, errorMsg string, permanent bool) error {
 	return nil
 }
 
@@ -135,4 +137,8 @@ func TestAnnouncementsUseCase_CreateAndDelete(t *testing.T) {
 	assert.Equal(t, models.OutboxEventContestAnnouncementDeleted, outboxRepo.events[1].EventType)
 
 	assert.Empty(t, repo.announcements)
+}
+
+func (r *mockOutboxRepo) Record(ctx context.Context, event events.Event) error {
+	return recordTestEvent(ctx, event, r.CreateEvent)
 }

@@ -262,6 +262,7 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) models.Submission {
 
 	return models.Submission{
 		Revision:          row.Revision,
+		Generation:        row.Generation,
 		ID:                row.ID,
 		CreatedBy:         createdBy,
 		Username:          username,
@@ -343,6 +344,7 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) models.Submission {
 
 	return models.Submission{
 		Revision:          row.Revision,
+		Generation:        row.Generation,
 		ID:                row.ID,
 		CreatedBy:         createdBy,
 		Username:          username,

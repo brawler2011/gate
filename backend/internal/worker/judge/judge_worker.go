@@ -47,7 +47,7 @@ func NewJudgeWorker(
 		Durable:       durableName,
 		FilterSubject: filterSubject,
 		AckPolicy:     jetstream.AckExplicitPolicy,
-		MaxDeliver:    5,               // maximum 5 delivery attempts
+		MaxDeliver:    -1,
 		AckWait:       5 * time.Minute, // 5 minutes to process
 	})
 	if err != nil {
@@ -132,7 +132,7 @@ func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logger *slog.Logger) {
 	const handlerTimeout = 5 * time.Minute
 
-	judgeCtx, cancel := context.WithTimeout(requestid.With(context.WithoutCancel(ctx), msg.Headers().Get(requestid.Header)), handlerTimeout)
+	judgeCtx, cancel := context.WithTimeout(requestid.With(ctx, msg.Headers().Get(requestid.Header)), handlerTimeout)
 	logger = logger.With("request_id", requestid.Get(judgeCtx))
 	diagnosticMeta := queuecontext.Metadata{}
 	if id, err := uuid.Parse(msg.Headers().Get(queuecontext.EventIDHeader)); err == nil && id != uuid.Nil {
@@ -171,7 +171,7 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 
 	// Judge the submission
 	startTime := time.Now()
-	err := w.judgeUC.JudgeSubmission(judgeCtx, event.Id)
+	err := w.runJudge(judgeCtx, msg, event.Id)
 	duration := time.Since(startTime)
 
 	if err != nil {
@@ -183,8 +183,8 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 			"error_type", fmt.Sprintf("%T", err),
 			"duration_ms", duration.Milliseconds(),
 		)
-		if ackErr := msg.Ack(); ackErr != nil {
-			logger.Error("failed to ack message after judging failure", "operation", "nats_ack", "error_type", fmt.Sprintf("%T", ackErr))
+		if ackErr := msg.NakWithDelay(5 * time.Second); ackErr != nil {
+			logger.Error("failed to retry judging message", "operation", "nats_nak", "error_type", fmt.Sprintf("%T", ackErr))
 		}
 		return
 	}
@@ -210,4 +210,31 @@ func (w *JudgeWorker) Stop() {
 
 	w.logger.Info("stop signal received")
 	cancel()
+}
+
+func (w *JudgeWorker) runJudge(ctx context.Context, msg jetstream.Msg, id uuid.UUID) error {
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	done := make(chan struct{})
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-runCtx.Done():
+				return
+			case <-ticker.C:
+				if err := msg.InProgress(); err != nil {
+					cancel()
+					return
+				}
+			}
+		}
+	}()
+	defer func() { close(done); <-stopped }()
+	return w.judgeUC.JudgeSubmission(runCtx, id)
 }

@@ -8,6 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/judging"
+
+	"github.com/brawler2011/gate/backend/internal/events"
+
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/pkg/logging"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
@@ -123,4 +127,12 @@ func TestSubmissionDiagnosticEventsOnlyAfterCommit(t *testing.T) {
 			}
 		}
 	}
+}
+
+func (r *diagnosticOutboxRepo) Record(ctx context.Context, event events.Event) error {
+	return recordTestEvent(ctx, event, r.CreateEvent)
+}
+
+func (r *diagnosticSubmissionsRepo) ScheduleJob(_ context.Context, id uuid.UUID) (judging.Job, error) {
+	return judging.Job{ID: uuid.New(), SubmissionID: id, Generation: 1}, nil
 }

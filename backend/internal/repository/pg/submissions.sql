@@ -53,6 +53,7 @@ SELECT s.id,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.revision,
+  s.generation,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
@@ -89,7 +90,7 @@ WITH version AS (
   RETURNING submissions_revision
 )
 UPDATE submissions
-SET state = 300, score = 0, ban_reason = @ban_reason,
+SET generation = generation + 1, state = 300, score = 0, ban_reason = @ban_reason,
     updated_at = NOW(), revision = (SELECT submissions_revision FROM version)
 WHERE id = @id::uuid;
 
@@ -100,7 +101,7 @@ WITH version AS (
   RETURNING submissions_revision
 )
 UPDATE submissions
-SET state = 300, score = 0, ban_reason = @ban_reason,
+SET generation = generation + 1, state = 300, score = 0, ban_reason = @ban_reason,
     updated_at = NOW(), revision = (SELECT submissions_revision FROM version)
 WHERE contest_id = @contest_id::uuid AND owner_id = @owner_id::uuid AND problem_id = @problem_id::uuid;
 
@@ -127,6 +128,7 @@ SELECT s.id,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.revision,
+  s.generation,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
@@ -212,7 +214,7 @@ WHERE contest_id = @contest_id::uuid
   FOR UPDATE OF s
 )
 UPDATE submissions AS s
-SET state = 1, score = 0, test_details = NULL, ban_reason = NULL, updated_at = NOW(),
+SET generation = s.generation + 1, state = 1, score = 0, test_details = NULL, ban_reason = NULL, updated_at = NOW(),
     revision = previous.submissions_revision
 FROM previous
 WHERE s.id = previous.id

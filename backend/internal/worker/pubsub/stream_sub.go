@@ -3,10 +3,11 @@ package pubsub
 import (
 	"context"
 	"fmt"
-	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/brawler2011/gate/backend/pkg/requestid"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"

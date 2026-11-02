@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/brawler2011/gate/backend/internal/messaging"
+
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )
@@ -25,10 +26,7 @@ func (h *ContestEventsPublisher) Handle(ctx context.Context, eventType string, p
 		Subject: eventType,
 		Data:    payload,
 	}
-	msg.Header = nats.Header{}
-	if id := requestid.Get(ctx); id != "" {
-		msg.Header.Set(requestid.Header, id)
-	}
+	msg.Header = messaging.Headers(ctx)
 
 	_, err := h.natsJetStream.PublishMsg(ctx, msg)
 	if err != nil {

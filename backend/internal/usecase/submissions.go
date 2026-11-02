@@ -2,9 +2,12 @@ package usecase
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
+
+	"github.com/brawler2011/gate/backend/internal/judging"
+
+	"github.com/brawler2011/gate/backend/internal/events"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -94,12 +97,13 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *mo
 			return err
 		}
 
-		eventParams, err := newOutboxEventParams(ctx, submission, nil)
+		job, err := tx.ScheduleJob(ctx, id)
 		if err != nil {
 			return err
 		}
+		eventParams := newOutboxEventParams(submission, job, nil)
 
-		if err := tx.CreateEvent(ctx, eventParams); err != nil {
+		if err := tx.Record(ctx, eventParams); err != nil {
 			return err
 		}
 
@@ -146,8 +150,8 @@ func (uc *SubmissionsUseCase) UnblockSubmission(ctx context.Context, contestID, 
 	return err
 }
 
-func newOutboxEventParams(ctx context.Context, submission models.Submission, previousState *models.State) (*models.CreateOutboxEventParams, error) {
-	submissionCreatedEvent := models.SubmissionCreatedEvent{
+func newOutboxEventParams(submission models.Submission, job judging.Job, previousState *models.State) events.Event {
+	submissionCreatedEvent := models.SubmissionCreatedEvent{JobID: job.ID, Generation: job.Generation,
 		IsNew: previousState == nil, PreviousState: previousState,
 		SubmissionEventMeta: models.SubmissionEventMeta{
 			Revision:     submission.Revision,
@@ -167,23 +171,7 @@ func newOutboxEventParams(ctx context.Context, submission models.Submission, pre
 		Source: submission.Submission,
 	}
 
-	payload, err := json.Marshal(submissionCreatedEvent)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal: %w", err)
-	}
-
-	headers := make(map[string]string)
-	headers[requestid.Header] = requestid.Get(ctx)
-
-	eventParams := &models.CreateOutboxEventParams{
-		Id:          uuid.New(),
-		AggregateID: submission.ID,
-		EventType:   models.OutboxEventSubmissionCreated,
-		Payload:     payload,
-		Headers:     headers,
-	}
-
-	return eventParams, nil
+	return events.Event{AggregateID: submission.ID, Type: models.OutboxEventSubmissionCreated, Payload: submissionCreatedEvent}
 }
 
 func (uc *SubmissionsUseCase) UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) error {
@@ -248,12 +236,13 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter mod
 				return fmt.Errorf("failed to get submission %s for rejudge: %w", id, err)
 			}
 
-			eventParams, err := newOutboxEventParams(ctx, submission, &reset.PreviousState)
+			job, err := tx.ScheduleJob(ctx, id)
 			if err != nil {
-				return fmt.Errorf("failed to create event params for submission %s: %w", id, err)
+				return err
 			}
+			eventParams := newOutboxEventParams(submission, job, &reset.PreviousState)
 
-			if err := txOutboxRepo.CreateEvent(ctx, eventParams); err != nil {
+			if err := txOutboxRepo.Record(ctx, eventParams); err != nil {
 				return fmt.Errorf("failed to create outbox event for submission %s: %w", id, err)
 			}
 		}

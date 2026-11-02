@@ -9,6 +9,10 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
+
+	"github.com/brawler2011/gate/backend/internal/events"
+	"github.com/brawler2011/gate/backend/internal/judging"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -97,30 +101,28 @@ func (l *PackageLoader) LoadPackage(ctx context.Context, problemID string, packa
 }
 
 type JudgeUseCase struct {
+	jobs            judging.Jobs
+	transactions    JudgeTransactions
 	submissionsRepo interfaces.SubmissionsRepo
-	packagesRepo    interfaces.PackagesRepo
-	contestsUC      interfaces.ContestsUC
 	packageLoader   *PackageLoader
-	sandbox         *sandbox.Sandbox
-	eventPublisher  *judge.EventPublisher
+	sandbox         judging.Sandbox
+	eventPublisher  judging.Progress
 	componentCache  *judge.ComponentCache
 	logger          *slog.Logger
 }
 
 func NewJudgeUseCase(
+	jobs judging.Jobs,
+	transactions JudgeTransactions,
 	submissionsRepo interfaces.SubmissionsRepo,
-	packagesRepo interfaces.PackagesRepo,
-	contestsUC interfaces.ContestsUC,
 	storage storage.Storage,
 	packageBucket string,
 	tempDir string,
-	sandbox *sandbox.Sandbox,
-	eventPublisher *judge.EventPublisher,
+	sandbox judging.Sandbox,
+	eventPublisher judging.Progress,
 ) *JudgeUseCase {
-	return &JudgeUseCase{
+	return &JudgeUseCase{jobs: jobs, transactions: transactions,
 		submissionsRepo: submissionsRepo,
-		packagesRepo:    packagesRepo,
-		contestsUC:      contestsUC,
 		packageLoader:   NewPackageLoader(storage, packageBucket, tempDir),
 		sandbox:         sandbox,
 		eventPublisher:  eventPublisher,
@@ -130,6 +132,45 @@ func NewJudgeUseCase(
 }
 
 func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.UUID) error {
+	job, err := uc.jobs.Claim(ctx, submissionID)
+	if err != nil {
+		return err
+	}
+	if job.ID == uuid.Nil {
+		return nil
+	}
+	leaseCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stopped := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-leaseCtx.Done():
+				return
+			case <-ticker.C:
+				if err := uc.jobs.Renew(leaseCtx, job); err != nil {
+					cancel()
+					return
+				}
+			}
+		}
+	}()
+	defer func() {
+		close(done)
+		<-stopped
+		releaseCtx, stop := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer stop()
+		if err := uc.jobs.Release(releaseCtx, job); err != nil {
+			uc.logger.ErrorContext(releaseCtx, "release judge job", "error", err, "job_id", job.ID)
+		}
+	}()
+	ctx = leaseCtx
 	logger := uc.logger.With("submission_id", submissionID, "request_id", requestid.Get(ctx))
 	if meta := queuecontext.Get(ctx); meta.EventID != uuid.Nil {
 		logger = logger.With("event_id", meta.EventID)
@@ -161,33 +202,15 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		return fmt.Errorf("submission has no problem ID")
 	}
 
-	var targetPkg models.ProblemPackage
-	if submission.ContestID != nil {
-		contestProb, err := uc.contestsUC.GetContestProblem(ctx, models.ContestProblemGet{
-			ContestId: *submission.ContestID,
-			ProblemId: *submission.ProblemID,
-		})
-		if err == nil && contestProb.PackageID != uuid.Nil {
-			targetPkg, err = uc.packagesRepo.GetPackageByID(ctx, contestProb.PackageID)
-			if err != nil {
-				logger.Warn("failed to load contest problem package, falling back to ready package", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))
-			}
-		}
+	if job.PackageHash == "" {
+		return uc.markInternalError(ctx, job, fmt.Errorf("problem has no published version"))
 	}
-
-	if targetPkg.PackageHash == "" {
-		readyPackage, err := uc.packagesRepo.GetReadyPackage(ctx, *submission.ProblemID)
-		if err != nil {
-			uc.markInternalError(ctx, submissionID, submission.Penalty, meta, fmt.Errorf("problem has no published version: %w", err))
-			return fmt.Errorf("problem has no published version")
-		}
-		targetPkg = readyPackage
-	}
-
-	pkg, err := uc.packageLoader.LoadPackage(ctx, submission.ProblemID.String(), targetPkg.PackageHash)
+	pkg, err := uc.packageLoader.LoadPackage(ctx, submission.ProblemID.String(), job.PackageHash)
 	if err != nil {
-		uc.markInternalError(ctx, submissionID, submission.Penalty, meta, fmt.Errorf("failed to load problem package: %w", err))
-		return fmt.Errorf("failed to load problem package: %w", err)
+		if judging.IsTemporary(err) {
+			return err
+		}
+		return uc.markInternalError(ctx, job, fmt.Errorf("failed to load problem package: %w", err))
 	}
 	defer pkg.Cleanup()
 
@@ -197,8 +220,10 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 
 	compiledComponents, err := uc.compileComponents(ctx, pkg.Format, *submission.ProblemID)
 	if err != nil {
-		uc.markInternalError(ctx, submissionID, submission.Penalty, meta, fmt.Errorf("failed to compile components: %w", err))
-		return fmt.Errorf("failed to compile components: %w", err)
+		if judging.IsTemporary(err) {
+			return err
+		}
+		return uc.markInternalError(ctx, job, fmt.Errorf("failed to compile components: %w", err))
 	}
 
 	var strategy judge.JudgingStrategy
@@ -213,8 +238,10 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 
 	verdict, err := strategy.Judge(ctx, submissionID, submission.Submission, submission.Language, meta)
 	if err != nil {
-		uc.markInternalError(ctx, submissionID, submission.Penalty, meta, fmt.Errorf("strategy judging failed: %w", err))
-		return fmt.Errorf("judging failed: %w", err)
+		if judging.IsTemporary(err) {
+			return err
+		}
+		return uc.markInternalError(ctx, job, fmt.Errorf("strategy judging failed: %w", err))
 	}
 
 	var failedTest *int32
@@ -223,39 +250,8 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 		failedTest = &ft
 	}
 
-	change, err := uc.submissionsRepo.UpdateSubmission(ctx, submissionID, &models.SubmissionUpdate{
-		State:       verdict.State,
-		Score:       verdict.Score,
-		TimeStat:    verdict.MaxTime,
-		MemoryStat:  verdict.MaxMemory,
-		FailedTest:  failedTest,
-		TestDetails: verdict.TestDetails,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to update submission: %w", err)
-	}
-
-	meta.Revision = change.Revision
-	submission.State = verdict.State
-	if uc.contestsUC != nil {
-		if procErr := uc.contestsUC.ProcessSubmissionResult(ctx, &submission); procErr != nil {
-			logger.Error("failed to process contest submission result", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", procErr))
-		}
-	}
-
-	if err := uc.eventPublisher.PublishCompleted(
-		ctx,
-		submissionID,
-		verdict.State,
-		verdict.Score,
-		verdict.MaxTime,
-		verdict.MaxMemory,
-		submission.Penalty,
-		failedTest,
-		change.PreviousState,
-		meta,
-	); err != nil {
-		logger.Error("failed to publish completed event", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))
+	if err := uc.applyJudgeResult(ctx, job, &models.SubmissionUpdate{State: verdict.State, Score: verdict.Score, TimeStat: verdict.MaxTime, MemoryStat: verdict.MaxMemory, FailedTest: failedTest, TestDetails: verdict.TestDetails}); err != nil {
+		return err
 	}
 
 	logger.Info("submission_result", "event", "submission_result",
@@ -269,27 +265,34 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 	return nil
 }
 
-func (uc *JudgeUseCase) markInternalError(ctx context.Context, submissionID uuid.UUID, penalty int32, meta models.SubmissionEventMeta, err error) {
-	logger := uc.logger.With("submission_id", submissionID, "request_id", requestid.Get(ctx))
-	if meta := queuecontext.Get(ctx); meta.EventID != uuid.Nil {
-		logger = logger.With("event_id", meta.EventID)
-	}
-	logger.Error("judging failed with internal error", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))
-	change, updateErr := uc.submissionsRepo.UpdateSubmission(ctx, submissionID, &models.SubmissionUpdate{
-		State:      models.GotIE,
-		Score:      0,
-		TimeStat:   0,
-		MemoryStat: 0,
+func (uc *JudgeUseCase) markInternalError(ctx context.Context, job judging.Job, cause error) error {
+	uc.logger.ErrorContext(ctx, "judging terminal failure", "job_id", job.ID, "error", cause)
+	return uc.applyJudgeResult(ctx, job, &models.SubmissionUpdate{State: models.GotIE})
+}
+func (uc *JudgeUseCase) applyJudgeResult(ctx context.Context, job judging.Job, update *models.SubmissionUpdate) error {
+	return uc.transactions.Within(ctx, func(tx JudgeTxStore) error {
+		current, err := tx.CompleteJob(ctx, job)
+		if err != nil {
+			return err
+		}
+		if !current {
+			return nil
+		}
+		change, err := tx.UpdateSubmission(ctx, job.SubmissionID, update)
+		if err != nil {
+			return err
+		}
+		sub, err := tx.GetSubmission(ctx, job.SubmissionID)
+		if err != nil {
+			return err
+		}
+		if err := processSubmissionResult(ctx, tx, &sub); err != nil {
+			return err
+		}
+		event := models.SubmissionCompletedEvent{Id: sub.ID, PreviousState: change.PreviousState, State: sub.State, Score: sub.Score, Penalty: sub.Penalty, TimeStat: sub.TimeStat, MemoryStat: sub.MemoryStat, FailedTest: sub.FailedTest,
+			SubmissionEventMeta: models.SubmissionEventMeta{Revision: sub.Revision, UpdatedAt: sub.UpdatedAt, UserId: sub.CreatedBy, Username: sub.Username, ContestId: sub.ContestID, ContestTitle: sub.ContestTitle, ProblemId: sub.ProblemID, ProblemTitle: sub.ProblemTitle, Position: sub.Position, Language: sub.Language, CreatedAt: sub.CreatedAt}}
+		return tx.Record(ctx, events.Event{AggregateID: sub.ID, Type: models.OutboxEventSubmissionCompleted, Payload: event})
 	})
-	if updateErr != nil {
-		logger.Error("failed to update submission with error", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", updateErr))
-		return
-	}
-	meta.Revision = change.Revision
-
-	if pubErr := uc.eventPublisher.PublishCompleted(ctx, submissionID, models.GotIE, 0, 0, 0, penalty, nil, change.PreviousState, meta); pubErr != nil {
-		logger.Error("failed to publish completed event", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", pubErr))
-	}
 }
 
 func (uc *JudgeUseCase) compileComponents(ctx context.Context, g *gfmt.GateFormat, problemID uuid.UUID) (map[string]sandbox.Executable, error) {

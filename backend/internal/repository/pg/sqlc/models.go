@@ -557,6 +557,31 @@ type ContestUserProblemBlock struct {
 	CreatedAt time.Time   `json:"created_at"`
 }
 
+type EventAggregate struct {
+	AggregateID uuid.UUID `json:"aggregate_id"`
+	Version     int64     `json:"version"`
+}
+
+type InboxReceipt struct {
+	ConsumerName string    `json:"consumer_name"`
+	EventID      uuid.UUID `json:"event_id"`
+	ProcessedAt  time.Time `json:"processed_at"`
+}
+
+type JudgeJob struct {
+	ID           uuid.UUID          `json:"id"`
+	SubmissionID uuid.UUID          `json:"submission_id"`
+	Generation   int64              `json:"generation"`
+	PackageID    pgtype.UUID        `json:"package_id"`
+	PackageHash  string             `json:"package_hash"`
+	State        string             `json:"state"`
+	Attempt      int32              `json:"attempt"`
+	LeaseToken   pgtype.UUID        `json:"lease_token"`
+	DeadlineAt   pgtype.Timestamptz `json:"deadline_at"`
+	CreatedAt    time.Time          `json:"created_at"`
+	CompletedAt  pgtype.Timestamptz `json:"completed_at"`
+}
+
 type Notification struct {
 	ID        uuid.UUID `json:"id"`
 	UserID    uuid.UUID `json:"user_id"`
@@ -610,18 +635,21 @@ type OrganizationMember struct {
 }
 
 type OutboxEvent struct {
-	ID           uuid.UUID                `json:"id"`
-	AggregateID  uuid.UUID                `json:"aggregate_id"`
-	EventType    models.OutboxEventType   `json:"event_type"`
-	Payload      []byte                   `json:"payload"`
-	Status       models.OutboxEventStatus `json:"status"`
-	RetryCount   int32                    `json:"retry_count"`
-	ErrorMessage *string                  `json:"error_message"`
-	CreatedAt    time.Time                `json:"created_at"`
-	ProcessedAt  *time.Time               `json:"processed_at"`
-	LockedAt     *time.Time               `json:"locked_at"`
-	DeadlineAt   *time.Time               `json:"deadline_at"`
-	Headers      []byte                   `json:"headers"`
+	ID               uuid.UUID                `json:"id"`
+	AggregateID      uuid.UUID                `json:"aggregate_id"`
+	EventType        models.OutboxEventType   `json:"event_type"`
+	Payload          []byte                   `json:"payload"`
+	Status           models.OutboxEventStatus `json:"status"`
+	RetryCount       int32                    `json:"retry_count"`
+	ErrorMessage     *string                  `json:"error_message"`
+	CreatedAt        time.Time                `json:"created_at"`
+	ProcessedAt      *time.Time               `json:"processed_at"`
+	LockedAt         *time.Time               `json:"locked_at"`
+	DeadlineAt       *time.Time               `json:"deadline_at"`
+	Headers          []byte                   `json:"headers"`
+	AggregateVersion int64                    `json:"aggregate_version"`
+	LeaseToken       pgtype.UUID              `json:"lease_token"`
+	NextAttemptAt    time.Time                `json:"next_attempt_at"`
 }
 
 type Post struct {
@@ -700,6 +728,7 @@ type Submission struct {
 	TestDetails []byte              `json:"test_details"`
 	BanReason   *string             `json:"ban_reason"`
 	Revision    int64               `json:"revision"`
+	Generation  int64               `json:"generation"`
 }
 
 type Team struct {

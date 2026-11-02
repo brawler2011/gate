@@ -4,6 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/judging"
+
+	"github.com/brawler2011/gate/backend/internal/events"
+
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/google/uuid"
 )
@@ -67,9 +71,10 @@ type OrganizationTransactions interface {
 }
 
 type SubmissionTxStore interface {
+	ScheduleJob(context.Context, uuid.UUID) (judging.Job, error)
 	CreateSubmission(ctx context.Context, creation *models.SubmissionCreation) (uuid.UUID, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (models.Submission, error)
-	CreateEvent(ctx context.Context, event *models.CreateOutboxEventParams) error
+	Record(context.Context, events.Event) error
 	ResetSubmissionsState(ctx context.Context, filter models.RejudgeFilter) ([]models.SubmissionReset, error)
 	UpdateSubmission(ctx context.Context, id uuid.UUID, update *models.SubmissionUpdate) (models.SubmissionChange, error)
 	BlockSubmission(ctx context.Context, id uuid.UUID, reason *string) error
@@ -83,8 +88,25 @@ type ContestEventsTxStore interface {
 	DeleteAnnouncement(ctx context.Context, id, contestID uuid.UUID) error
 	CreateClarification(ctx context.Context, input *models.CreateContestClarificationInput) (*models.ContestClarification, error)
 	AnswerClarification(ctx context.Context, id, contestID, answeredBy uuid.UUID, answer string) (*models.ContestClarification, error)
-	CreateEvent(ctx context.Context, event *models.CreateOutboxEventParams) error
+	Record(context.Context, events.Event) error
 }
 type ContestEventsTransactions interface {
 	Within(context.Context, func(ContestEventsTxStore) error) error
+}
+
+type ScoreboardStore interface {
+	GetContest(context.Context, uuid.UUID) (models.Contest, error)
+	GetContestMember(context.Context, *models.ContestPermissionGet) (models.ContestMember, error)
+	GetSubmissionsForScoreboard(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) ([]models.SubmissionForScoreboard, error)
+	UpsertContestProblemResult(context.Context, *models.UpsertContestProblemResultParams) error
+}
+type JudgeTxStore interface {
+	ScoreboardStore
+	events.Writer
+	CompleteJob(context.Context, judging.Job) (bool, error)
+	GetSubmission(context.Context, uuid.UUID) (models.Submission, error)
+	UpdateSubmission(context.Context, uuid.UUID, *models.SubmissionUpdate) (models.SubmissionChange, error)
+}
+type JudgeTransactions interface {
+	Within(context.Context, func(JudgeTxStore) error) error
 }

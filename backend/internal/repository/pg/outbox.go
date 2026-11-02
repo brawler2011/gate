@@ -5,6 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/brawler2011/gate/backend/internal/events"
+	"github.com/brawler2011/gate/backend/pkg/requestid"
+
+	"github.com/brawler2011/gate/backend/pkg"
+
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
@@ -27,6 +32,14 @@ func (r *OutboxRepo) WithTx(tx pgx.Tx) interfaces.OutboxRepo {
 	return &OutboxRepo{
 		queries: sqlc.New(tx),
 	}
+}
+
+func (r *OutboxRepo) Record(ctx context.Context, event events.Event) error {
+	payload, err := json.Marshal(event.Payload)
+	if err != nil {
+		return fmt.Errorf("encode event %s: %w", event.Type, err)
+	}
+	return r.CreateEvent(ctx, &models.CreateOutboxEventParams{Id: uuid.New(), AggregateID: event.AggregateID, EventType: event.Type, Payload: payload, Headers: map[string]string{requestid.Header: requestid.Get(ctx)}})
 }
 
 func (r *OutboxRepo) CreateEvent(ctx context.Context, event *models.CreateOutboxEventParams) error {
@@ -59,6 +72,7 @@ func (r *OutboxRepo) PickEvents(ctx context.Context, limit int32, timeoutSec int
 	rows, err := r.queries.PickEvents(ctx, sqlc.PickEventsParams{
 		LimitCount: limit,
 		TimeoutSec: timeoutSec,
+		LeaseToken: uuid.New(),
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)
@@ -71,41 +85,26 @@ func (r *OutboxRepo) PickEvents(ctx context.Context, limit int32, timeoutSec int
 	return events, nil
 }
 
-func (r *OutboxRepo) MarkAsCompleted(ctx context.Context, id uuid.UUID) error {
-	err := r.queries.MarkAsCompleted(ctx, id)
+func (r *OutboxRepo) MarkAsCompleted(ctx context.Context, id, leaseToken uuid.UUID) error {
+	count, err := r.queries.MarkAsCompleted(ctx, sqlc.MarkAsCompletedParams{ID: id, LeaseToken: leaseToken})
+	return checkOutboxLease(count, err)
+}
+func (r *OutboxRepo) MarkAsFailed(ctx context.Context, id, leaseToken uuid.UUID, errorMsg string, permanent bool) error {
+	count, err := r.queries.MarkAsFailed(ctx, sqlc.MarkAsFailedParams{ID: id, LeaseToken: leaseToken, ErrorMessage: errorMsg, Permanent: permanent})
+	return checkOutboxLease(count, err)
+}
+func checkOutboxLease(count int64, err error) error {
 	if err != nil {
 		return HandlePgErr(err)
 	}
-	return nil
-}
-
-func (r *OutboxRepo) MarkAsFailed(ctx context.Context, id uuid.UUID, errorMsg string) error {
-	err := r.queries.MarkAsFailed(ctx, sqlc.MarkAsFailedParams{
-		ErrorMessage: errorMsg,
-		ID:           id,
-	})
-	if err != nil {
-		return HandlePgErr(err)
-	}
-	return nil
-}
-
-func (r *OutboxRepo) ResetFailedToPending(ctx context.Context, maxRetries int32, retryDelaySec int32) error {
-	err := r.queries.ResetFailedToPending(ctx, sqlc.ResetFailedToPendingParams{
-		MaxRetries:    maxRetries,
-		RetryDelaySec: retryDelaySec,
-	})
-	if err != nil {
-		return HandlePgErr(err)
+	if count == 0 {
+		return pkg.Wrap(pkg.ErrConflict, nil, "outbox lease no longer owned")
 	}
 	return nil
 }
 
 func (r *OutboxRepo) DeleteOldEvents(ctx context.Context, retentionDays int32) error {
-	err := r.queries.DeleteOldEvents(ctx, sqlc.DeleteOldEventsParams{
-		Status:        models.OutboxEventStatusCompleted,
-		RetentionDays: retentionDays,
-	})
+	err := r.queries.DeleteOldEvents(ctx, retentionDays)
 	if err != nil {
 		return HandlePgErr(err)
 	}
@@ -124,18 +123,20 @@ func mapOutboxEvent(e sqlc.OutboxEvent) models.OutboxEvent {
 	}
 
 	return models.OutboxEvent{
-		Id:           e.ID,
-		AggregateID:  e.AggregateID,
-		EventType:    e.EventType,
-		Payload:      e.Payload,
-		Headers:      headers,
-		Status:       e.Status,
-		RetryCount:   e.RetryCount,
-		ErrorMessage: e.ErrorMessage,
-		CreatedAt:    e.CreatedAt,
-		ProcessedAt:  e.ProcessedAt,
-		LockedAt:     e.LockedAt,
-		DeadlineAt:   e.DeadlineAt,
+		Id:               e.ID,
+		AggregateVersion: e.AggregateVersion,
+		LeaseToken:       uuid.UUID(e.LeaseToken.Bytes),
+		NextAttemptAt:    e.NextAttemptAt,
+		AggregateID:      e.AggregateID,
+		EventType:        e.EventType,
+		Payload:          e.Payload,
+		Headers:          headers,
+		Status:           e.Status,
+		RetryCount:       e.RetryCount,
+		ErrorMessage:     e.ErrorMessage,
+		CreatedAt:        e.CreatedAt,
+		ProcessedAt:      e.ProcessedAt,
+		LockedAt:         e.LockedAt,
+		DeadlineAt:       e.DeadlineAt,
 	}
 }
-

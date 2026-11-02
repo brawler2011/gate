@@ -190,43 +190,7 @@ func (uc *ContestsUseCase) UpdateContestMember(ctx context.Context, contestId uu
 }
 
 func (uc *ContestsUseCase) ProcessSubmissionResult(ctx context.Context, submission *models.Submission) error {
-	if submission == nil || submission.ContestID == nil || submission.CreatedBy == nil || submission.ProblemID == nil {
-		return nil
-	}
-
-	contestID := *submission.ContestID
-	userID := *submission.CreatedBy
-	problemID := *submission.ProblemID
-
-	member, err := uc.contestRepo.GetContestMember(ctx, &models.ContestPermissionGet{
-		ContestId: contestID,
-		UserId:    userID,
-	})
-	if err != nil {
-		return nil //nolint:nilerr // Non-members do not participate in scoreboard
-	}
-	if member.ContestRole != models.ContestRoleParticipant {
-		return nil
-	}
-
-	contest, err := uc.contestRepo.GetContest(ctx, contestID)
-	if err != nil {
-		return err
-	}
-
-	results, err := uc.scoreboardUserResults(ctx, contest, []models.ContestProblem{{ProblemID: problemID}}, userID, false)
-	if err != nil {
-		return err
-	}
-	var result models.ContestProblemResult
-	if len(results) > 0 {
-		result = results[0]
-	}
-	return uc.contestRepo.UpsertContestProblemResult(ctx, &models.UpsertContestProblemResultParams{
-		ContestID: contestID, UserID: userID, ProblemID: problemID,
-		Solved: result.Solved, FailedAttempts: result.FailedAttempts,
-		FirstACTime: result.FirstACTime, TimeMinutes: result.TimeMinutes,
-	})
+	return processSubmissionResult(ctx, uc.contestRepo, submission)
 }
 
 func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*models.ScoreboardResponse, error) {
@@ -701,12 +665,80 @@ func (uc *ContestsUseCase) GetMyPendingJoinRequest(
 }
 
 func (uc *ContestsUseCase) scoreboardUserResults(ctx context.Context, contest models.Contest, problems []models.ContestProblem, userID uuid.UUID, frozen bool) ([]models.ContestProblemResult, error) {
+	return scoreboardUserResults(ctx, uc.contestRepo, contest, problems, userID, frozen)
+}
+
+func scoreboardItem(userID uuid.UUID, username string, pResults []models.ContestProblemResult) models.ScoreboardItem {
+	var solvedCount int32
+	var totalPenalty int32
+	var lastAC *time.Time
+
+	for _, r := range pResults {
+		if r.Solved {
+			solvedCount++
+			var timeMins int32
+			if r.TimeMinutes != nil {
+				timeMins = *r.TimeMinutes
+			}
+			totalPenalty += timeMins + r.Penalty
+
+			if r.FirstACTime != nil {
+				if lastAC == nil || r.FirstACTime.After(*lastAC) {
+					lastAC = r.FirstACTime
+				}
+			}
+		}
+	}
+
+	return models.ScoreboardItem{
+		UserID:         userID,
+		Username:       username,
+		ProblemsSolved: solvedCount,
+		TotalPenalty:   totalPenalty,
+		LastAcceptedAt: lastAC,
+		ProblemResults: pResults,
+	}
+}
+
+func (uc *ContestsUseCase) GetContestScoreboardUser(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*models.ScoreboardResponse, error) {
+	contest, err := uc.contestRepo.GetContest(ctx, contestID)
+	if err != nil {
+		return nil, err
+	}
+	member, err := uc.contestRepo.GetContestMember(ctx, &models.ContestPermissionGet{ContestId: contestID, UserId: userID})
+	if err != nil && !errors.Is(err, pkg.ErrNotFound) {
+		return nil, err
+	}
+	problems, err := uc.contestRepo.GetContestProblems(ctx, contestID)
+	if err != nil {
+		return nil, err
+	}
+	response := &models.ScoreboardResponse{ContestID: contestID, ContestLogin: contest.Login, OrganizationLogin: contest.OrganizationLogin,
+		IsFrozen: contest.IsFrozenAt(time.Now()), FreezeTime: contest.GetFreezeTime(), PenaltyPerAttempt: contest.GetPenaltyPerAttempt(),
+		Items: []models.ScoreboardItem{}, Problems: make([]models.ScoreboardProblemHeader, len(problems))}
+	for i, problem := range problems {
+		response.Problems[i] = models.ScoreboardProblemHeader{ProblemID: problem.ProblemID, Title: problem.Title, ShortName: problem.ShortName, Ordinal: int32(problem.Ordinal)} // #nosec G115
+	}
+	if member.ContestRole != models.ContestRoleParticipant {
+		return response, nil
+	}
+	results, err := uc.scoreboardUserResults(ctx, contest, problems, userID, response.IsFrozen && !unfrozen)
+	if err != nil {
+		return nil, err
+	}
+	response.Items = append(response.Items, scoreboardItem(userID, member.Username, results))
+	return response, nil
+}
+
+func scoreboardUserResults(ctx context.Context, store interface {
+	GetSubmissionsForScoreboard(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) ([]models.SubmissionForScoreboard, error)
+}, contest models.Contest, problems []models.ContestProblem, userID uuid.UUID, frozen bool) ([]models.ContestProblemResult, error) {
 	freezeTime := contest.GetFreezeTime()
 	penaltyPerAttempt := contest.GetPenaltyPerAttempt()
 	pResults := make([]models.ContestProblemResult, 0, len(problems))
 
 	for _, p := range problems {
-		subs, err := uc.contestRepo.GetSubmissionsForScoreboard(ctx, contest.ID, userID, p.ProblemID)
+		subs, err := store.GetSubmissionsForScoreboard(ctx, contest.ID, userID, p.ProblemID)
 		if err != nil {
 			return nil, err
 		}
@@ -784,64 +816,45 @@ func (uc *ContestsUseCase) scoreboardUserResults(ctx context.Context, contest mo
 	return pResults, nil
 }
 
-func scoreboardItem(userID uuid.UUID, username string, pResults []models.ContestProblemResult) models.ScoreboardItem {
-	var solvedCount int32
-	var totalPenalty int32
-	var lastAC *time.Time
+func processSubmissionResult(ctx context.Context, store ScoreboardStore, submission *models.Submission) error {
+	if submission == nil || submission.ContestID == nil || submission.CreatedBy == nil || submission.ProblemID == nil {
+		return nil
+	}
 
-	for _, r := range pResults {
-		if r.Solved {
-			solvedCount++
-			var timeMins int32
-			if r.TimeMinutes != nil {
-				timeMins = *r.TimeMinutes
-			}
-			totalPenalty += timeMins + r.Penalty
+	contestID := *submission.ContestID
+	userID := *submission.CreatedBy
+	problemID := *submission.ProblemID
 
-			if r.FirstACTime != nil {
-				if lastAC == nil || r.FirstACTime.After(*lastAC) {
-					lastAC = r.FirstACTime
-				}
-			}
+	member, err := store.GetContestMember(ctx, &models.ContestPermissionGet{
+		ContestId: contestID,
+		UserId:    userID,
+	})
+	if err != nil {
+		if errors.Is(err, pkg.ErrNotFound) {
+			return nil
 		}
-	}
-
-	return models.ScoreboardItem{
-		UserID:         userID,
-		Username:       username,
-		ProblemsSolved: solvedCount,
-		TotalPenalty:   totalPenalty,
-		LastAcceptedAt: lastAC,
-		ProblemResults: pResults,
-	}
-}
-
-func (uc *ContestsUseCase) GetContestScoreboardUser(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*models.ScoreboardResponse, error) {
-	contest, err := uc.contestRepo.GetContest(ctx, contestID)
-	if err != nil {
-		return nil, err
-	}
-	member, err := uc.contestRepo.GetContestMember(ctx, &models.ContestPermissionGet{ContestId: contestID, UserId: userID})
-	if err != nil && !errors.Is(err, pkg.ErrNotFound) {
-		return nil, err
-	}
-	problems, err := uc.contestRepo.GetContestProblems(ctx, contestID)
-	if err != nil {
-		return nil, err
-	}
-	response := &models.ScoreboardResponse{ContestID: contestID, ContestLogin: contest.Login, OrganizationLogin: contest.OrganizationLogin,
-		IsFrozen: contest.IsFrozenAt(time.Now()), FreezeTime: contest.GetFreezeTime(), PenaltyPerAttempt: contest.GetPenaltyPerAttempt(),
-		Items: []models.ScoreboardItem{}, Problems: make([]models.ScoreboardProblemHeader, len(problems))}
-	for i, problem := range problems {
-		response.Problems[i] = models.ScoreboardProblemHeader{ProblemID: problem.ProblemID, Title: problem.Title, ShortName: problem.ShortName, Ordinal: int32(problem.Ordinal)} // #nosec G115
+		return err
 	}
 	if member.ContestRole != models.ContestRoleParticipant {
-		return response, nil
+		return nil
 	}
-	results, err := uc.scoreboardUserResults(ctx, contest, problems, userID, response.IsFrozen && !unfrozen)
+
+	contest, err := store.GetContest(ctx, contestID)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	response.Items = append(response.Items, scoreboardItem(userID, member.Username, results))
-	return response, nil
+
+	results, err := scoreboardUserResults(ctx, store, contest, []models.ContestProblem{{ProblemID: problemID}}, userID, false)
+	if err != nil {
+		return err
+	}
+	var result models.ContestProblemResult
+	if len(results) > 0 {
+		result = results[0]
+	}
+	return store.UpsertContestProblemResult(ctx, &models.UpsertContestProblemResultParams{
+		ContestID: contestID, UserID: userID, ProblemID: problemID,
+		Solved: result.Solved, FailedAttempts: result.FailedAttempts,
+		FirstACTime: result.FirstACTime, TimeMinutes: result.TimeMinutes,
+	})
 }

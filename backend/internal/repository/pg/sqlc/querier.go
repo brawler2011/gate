@@ -31,10 +31,12 @@ type Querier interface {
 	AnswerContestClarification(ctx context.Context, arg AnswerContestClarificationParams) (ContestClarification, error)
 	BlockSubmission(ctx context.Context, arg BlockSubmissionParams) error
 	BlockUserProblemSubmissions(ctx context.Context, arg BlockUserProblemSubmissionsParams) error
+	ClaimJudgeJob(ctx context.Context, arg ClaimJudgeJobParams) (JudgeJob, error)
 	ClaimTemporaryUser(ctx context.Context, arg ClaimTemporaryUserParams) error
 	CleanupExpiredAuthTokens(ctx context.Context) error
 	CleanupExpiredSessions(ctx context.Context, hardLimitCutoff time.Time) error
 	CommitWorkspace(ctx context.Context, arg CommitWorkspaceParams) (int64, error)
+	CompleteJudgeJob(ctx context.Context, arg CompleteJudgeJobParams) (int64, error)
 	CountAllContests(ctx context.Context, arg CountAllContestsParams) (int64, error)
 	CountAllProblems(ctx context.Context, arg CountAllProblemsParams) (int64, error)
 	CountContestAnnouncements(ctx context.Context, contestID uuid.UUID) (int64, error)
@@ -88,7 +90,7 @@ type Querier interface {
 	DeleteContestAnnouncement(ctx context.Context, arg DeleteContestAnnouncementParams) error
 	DeleteContestUserProblemBlock(ctx context.Context, arg DeleteContestUserProblemBlockParams) error
 	DeleteDraft(ctx context.Context, id uuid.UUID) error
-	DeleteOldEvents(ctx context.Context, arg DeleteOldEventsParams) error
+	DeleteOldEvents(ctx context.Context, retentionDays int32) error
 	DeleteOrganization(ctx context.Context, id uuid.UUID) error
 	DeletePost(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
@@ -145,6 +147,7 @@ type Querier interface {
 	// Workshop integration queries
 	GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, error)
 	InsertEvent(ctx context.Context, arg InsertEventParams) error
+	JudgeJobActive(ctx context.Context, submissionID uuid.UUID) (bool, error)
 	ListAllContests(ctx context.Context, arg ListAllContestsParams) ([]ListAllContestsRow, error)
 	ListAllProblems(ctx context.Context, arg ListAllProblemsParams) ([]ListAllProblemsRow, error)
 	ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]User, error)
@@ -183,11 +186,14 @@ type Querier interface {
 	ListUserOrganizationInvitations(ctx context.Context, arg ListUserOrganizationInvitationsParams) ([]ListUserOrganizationInvitationsRow, error)
 	ListUserOrganizationJoinRequests(ctx context.Context, userID uuid.UUID) ([]ListUserOrganizationJoinRequestsRow, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
+	LockJudgeContest(ctx context.Context, submissionID uuid.UUID) (uuid.UUID, error)
 	MarkAllNotificationsAsRead(ctx context.Context, userID uuid.UUID) error
-	MarkAsCompleted(ctx context.Context, id uuid.UUID) error
-	MarkAsFailed(ctx context.Context, arg MarkAsFailedParams) error
+	MarkAsCompleted(ctx context.Context, arg MarkAsCompletedParams) (int64, error)
+	MarkAsFailed(ctx context.Context, arg MarkAsFailedParams) (int64, error)
 	MarkNotificationAsRead(ctx context.Context, arg MarkNotificationAsReadParams) error
 	PickEvents(ctx context.Context, arg PickEventsParams) ([]OutboxEvent, error)
+	RecordInboxReceipt(ctx context.Context, arg RecordInboxReceiptParams) (uuid.UUID, error)
+	ReleaseJudgeJob(ctx context.Context, arg ReleaseJudgeJobParams) (int64, error)
 	RemoveContestMember(ctx context.Context, arg RemoveContestMemberParams) error
 	RemoveContestMembersByOrgAndUser(ctx context.Context, arg RemoveContestMembersByOrgAndUserParams) error
 	RemoveContestProblem(ctx context.Context, arg RemoveContestProblemParams) error
@@ -198,8 +204,9 @@ type Querier interface {
 	RemoveProblemTeam(ctx context.Context, arg RemoveProblemTeamParams) error
 	RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error
 	RemoveTeamMembersByOrgAndUser(ctx context.Context, arg RemoveTeamMembersByOrgAndUserParams) error
-	ResetFailedToPending(ctx context.Context, arg ResetFailedToPendingParams) error
+	RenewJudgeJob(ctx context.Context, arg RenewJudgeJobParams) (int64, error)
 	ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]ResetSubmissionsStateRow, error)
+	ScheduleJudgeJob(ctx context.Context, arg ScheduleJudgeJobParams) (JudgeJob, error)
 	SetUserEmailVerified(ctx context.Context, arg SetUserEmailVerifiedParams) error
 	UpdateContest(ctx context.Context, arg UpdateContestParams) error
 	UpdateContestJoinRequestStatus(ctx context.Context, arg UpdateContestJoinRequestStatusParams) error

@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"time"
+
+	"github.com/brawler2011/gate/backend/internal/messaging"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -29,22 +30,16 @@ func NewSubmissionCreatedPublisher(natsJetStream jetstream.JetStream) interfaces
 const subject = "submissions.created"
 
 func (h *SubmissionCreatedPublisher) Handle(ctx context.Context, eventType string, payload []byte) error {
+	if eventType == models.OutboxEventSubmissionCreated {
+		eventType = subject
+	}
 	msg := &nats.Msg{
-		Subject: subject,
+		Subject: eventType,
 		Data:    payload,
 	}
-	msg.Header = nats.Header{}
-	if id := requestid.Get(ctx); id != "" {
-		msg.Header.Set(requestid.Header, id)
-	}
-
+	msg.Header = messaging.Headers(ctx)
 	meta := queuecontext.Get(ctx)
-	if meta.EventID != uuid.Nil {
-		msg.Header.Set(queuecontext.EventIDHeader, meta.EventID.String())
-	}
-	if !meta.QueuedAt.IsZero() {
-		msg.Header.Set(queuecontext.QueuedAtHeader, meta.QueuedAt.Format(time.RFC3339Nano))
-	}
+
 	_, err := h.natsJetStream.PublishMsg(ctx, msg)
 	if err != nil {
 		return fmt.Errorf("failed to publish msg: %w", err)

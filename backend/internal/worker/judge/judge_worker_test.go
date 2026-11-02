@@ -31,10 +31,11 @@ type testMessage struct {
 	ackErr   error
 }
 
-func (m *testMessage) Headers() nats.Header { return m.header }
-func (m *testMessage) Data() []byte         { return m.data }
-func (m *testMessage) Ack() error           { m.ack++; return m.ackErr }
-func (m *testMessage) Nak() error           { m.nak++; return nil }
+func (m *testMessage) Headers() nats.Header             { return m.header }
+func (m *testMessage) Data() []byte                     { return m.data }
+func (m *testMessage) Ack() error                       { m.ack++; return m.ackErr }
+func (m *testMessage) NakWithDelay(time.Duration) error { m.nak++; return nil }
+func (m *testMessage) Nak() error                       { m.nak++; return nil }
 func (m *testMessage) Metadata() (*jetstream.MsgMetadata, error) {
 	return &jetstream.MsgMetadata{NumDelivered: 2}, nil
 }
@@ -72,11 +73,16 @@ func TestJudgeMessageDiagnosticsAndAcknowledgement(t *testing.T) {
 						return failure
 					})
 					ctx, cancel := context.WithCancel(context.Background())
-					cancel()
+					defer cancel()
 					w := JudgeWorker{judgeUC: uc}
 					w.handleMessage(ctx, msg, logging.New(&buf))
-					require.Equal(t, 1, msg.ack)
-					require.Zero(t, msg.nak)
+					if failure == nil {
+						require.Equal(t, 1, msg.ack)
+						require.Zero(t, msg.nak)
+					} else {
+						require.Zero(t, msg.ack)
+						require.Equal(t, 1, msg.nak)
+					}
 					require.Contains(t, buf.String(), id.String())
 					require.Contains(t, buf.String(), `"delivery_attempt":2`)
 					require.NotContains(t, buf.String(), "secret")

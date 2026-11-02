@@ -27,11 +27,11 @@ type outboxRepository struct {
 	markErr           error
 }
 
-func (r *outboxRepository) MarkAsCompleted(context.Context, uuid.UUID) error {
+func (r *outboxRepository) MarkAsCompleted(context.Context, uuid.UUID, uuid.UUID) error {
 	r.completed++
 	return r.markErr
 }
-func (r *outboxRepository) MarkAsFailed(context.Context, uuid.UUID, string) error {
+func (r *outboxRepository) MarkAsFailed(context.Context, uuid.UUID, uuid.UUID, string, bool) error {
 	r.failed++
 	return r.markErr
 }
@@ -86,6 +86,7 @@ func TestOutboxPublisherDiagnosticHeadersAndFailure(t *testing.T) {
 				worker.processEvent(ctx, &event)
 				require.NotNil(t, capture.msg)
 				require.Equal(t, event.Id.String(), capture.msg.Header.Get(queuecontext.EventIDHeader))
+				require.Equal(t, event.Id.String(), capture.msg.Header.Get("Nats-Msg-Id"))
 				require.Equal(t, event.CreatedAt.Format(time.RFC3339Nano), capture.msg.Header.Get(queuecontext.QueuedAtHeader))
 				if requestid.Valid(id) {
 					require.Equal(t, id, capture.msg.Header.Get(requestid.Header))
@@ -106,4 +107,13 @@ func TestOutboxPublisherDiagnosticHeadersAndFailure(t *testing.T) {
 			}
 		}
 	}
+}
+
+type panicEventHandler struct{}
+
+func (panicEventHandler) Handle(context.Context, string, []byte) error { panic("handler failure") }
+func TestDispatcherPanicIsFailure(t *testing.T) {
+	dispatcher := NewEventDispatcher()
+	dispatcher.Register("test", panicEventHandler{})
+	require.ErrorContains(t, dispatcher.Dispatch(context.Background(), "test", nil), "handler failure")
 }

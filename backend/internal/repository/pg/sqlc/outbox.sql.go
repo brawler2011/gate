@@ -14,23 +14,25 @@ import (
 
 const deleteOldEvents = `-- name: DeleteOldEvents :exec
 DELETE FROM outbox_events
-WHERE status = $1
-  AND created_at < NOW() - ($2::int * INTERVAL '1 day')
+WHERE status = 'completed'
+  AND processed_at < now() - ($1::int * INTERVAL '1 day')
 `
 
-type DeleteOldEventsParams struct {
-	Status        models.OutboxEventStatus `json:"status"`
-	RetentionDays int32                    `json:"retention_days"`
-}
-
-func (q *Queries) DeleteOldEvents(ctx context.Context, arg DeleteOldEventsParams) error {
-	_, err := q.db.Exec(ctx, deleteOldEvents, arg.Status, arg.RetentionDays)
+func (q *Queries) DeleteOldEvents(ctx context.Context, retentionDays int32) error {
+	_, err := q.db.Exec(ctx, deleteOldEvents, retentionDays)
 	return err
 }
 
 const insertEvent = `-- name: InsertEvent :exec
-INSERT INTO outbox_events (id, aggregate_id, event_type, payload, headers)
-VALUES ($1::uuid, $2::uuid, $3, $4, $5)
+WITH version AS (
+    INSERT INTO event_aggregates (aggregate_id, version)
+    VALUES ($2::uuid, 1)
+    ON CONFLICT (aggregate_id) DO UPDATE SET version = event_aggregates.version + 1
+    RETURNING version
+)
+INSERT INTO outbox_events (id, aggregate_id, aggregate_version, event_type, payload, headers)
+SELECT $1::uuid, $2::uuid, version, $3, $4, $5
+FROM version
 `
 
 type InsertEventParams struct {
@@ -52,61 +54,86 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error 
 	return err
 }
 
-const markAsCompleted = `-- name: MarkAsCompleted :exec
+const markAsCompleted = `-- name: MarkAsCompleted :execrows
 UPDATE outbox_events
-SET status       = 'completed',
-    processed_at = NOW()
-WHERE id = $1::uuid
+SET status = 'completed', processed_at = now(), lease_token = NULL, deadline_at = NULL
+WHERE id = $1::uuid AND lease_token = $2::uuid
+  AND status = 'processing' AND deadline_at > now()
 `
 
-func (q *Queries) MarkAsCompleted(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, markAsCompleted, id)
-	return err
+type MarkAsCompletedParams struct {
+	ID         uuid.UUID `json:"id"`
+	LeaseToken uuid.UUID `json:"lease_token"`
 }
 
-const markAsFailed = `-- name: MarkAsFailed :exec
+func (q *Queries) MarkAsCompleted(ctx context.Context, arg MarkAsCompletedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markAsCompleted, arg.ID, arg.LeaseToken)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const markAsFailed = `-- name: MarkAsFailed :execrows
 UPDATE outbox_events
-SET status        = 'failed',
-    retry_count   = retry_count + 1,
-    processed_at  = NOW(),
-    error_message = $1::text
-WHERE id = $2::uuid
+SET status = CASE WHEN $1::boolean THEN 'failed'::outbox_event_status ELSE 'pending'::outbox_event_status END,
+    retry_count = retry_count + 1, error_message = $2::text,
+    next_attempt_at = now() + LEAST(300, power(2, LEAST(retry_count, 9))) * INTERVAL '1 second',
+    processed_at = now(), lease_token = NULL, deadline_at = NULL
+WHERE id = $3::uuid AND lease_token = $4::uuid
+  AND status = 'processing' AND deadline_at > now()
 `
 
 type MarkAsFailedParams struct {
+	Permanent    bool      `json:"permanent"`
 	ErrorMessage string    `json:"error_message"`
 	ID           uuid.UUID `json:"id"`
+	LeaseToken   uuid.UUID `json:"lease_token"`
 }
 
-func (q *Queries) MarkAsFailed(ctx context.Context, arg MarkAsFailedParams) error {
-	_, err := q.db.Exec(ctx, markAsFailed, arg.ErrorMessage, arg.ID)
-	return err
+func (q *Queries) MarkAsFailed(ctx context.Context, arg MarkAsFailedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markAsFailed,
+		arg.Permanent,
+		arg.ErrorMessage,
+		arg.ID,
+		arg.LeaseToken,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const pickEvents = `-- name: PickEvents :many
-UPDATE outbox_events
-SET status = 'processing',
-    locked_at = NOW(),
-    deadline_at = NOW() + ($1::int * INTERVAL '1 second')
-WHERE id IN (
-    SELECT id
-    FROM outbox_events
-    WHERE status = 'pending' 
-       OR (status = 'processing' AND deadline_at < NOW())
-    ORDER BY created_at ASC
-    LIMIT $2::int
-    FOR UPDATE SKIP LOCKED
+WITH picked AS (
+    SELECT e.id FROM outbox_events e
+    WHERE ((e.status = 'pending' AND e.next_attempt_at <= now())
+       OR (e.status = 'processing' AND e.deadline_at < now()))
+      AND NOT EXISTS (
+          SELECT 1 FROM outbox_events earlier
+          WHERE earlier.aggregate_id = e.aggregate_id
+            AND earlier.aggregate_version < e.aggregate_version
+            AND earlier.status <> 'completed'
+      )
+    ORDER BY e.created_at, e.id
+    LIMIT $3::int
+    FOR UPDATE OF e SKIP LOCKED
 )
-RETURNING id, aggregate_id, event_type, payload, status, retry_count, error_message, created_at, processed_at, locked_at, deadline_at, headers
+UPDATE outbox_events e
+SET status = 'processing', lease_token = $1::uuid,
+    locked_at = now(), deadline_at = now() + ($2::int * INTERVAL '1 second')
+FROM picked WHERE e.id = picked.id
+RETURNING e.id, e.aggregate_id, e.event_type, e.payload, e.status, e.retry_count, e.error_message, e.created_at, e.processed_at, e.locked_at, e.deadline_at, e.headers, e.aggregate_version, e.lease_token, e.next_attempt_at
 `
 
 type PickEventsParams struct {
-	TimeoutSec int32 `json:"timeout_sec"`
-	LimitCount int32 `json:"limit_count"`
+	LeaseToken uuid.UUID `json:"lease_token"`
+	TimeoutSec int32     `json:"timeout_sec"`
+	LimitCount int32     `json:"limit_count"`
 }
 
 func (q *Queries) PickEvents(ctx context.Context, arg PickEventsParams) ([]OutboxEvent, error) {
-	rows, err := q.db.Query(ctx, pickEvents, arg.TimeoutSec, arg.LimitCount)
+	rows, err := q.db.Query(ctx, pickEvents, arg.LeaseToken, arg.TimeoutSec, arg.LimitCount)
 	if err != nil {
 		return nil, err
 	}
@@ -127,6 +154,9 @@ func (q *Queries) PickEvents(ctx context.Context, arg PickEventsParams) ([]Outbo
 			&i.LockedAt,
 			&i.DeadlineAt,
 			&i.Headers,
+			&i.AggregateVersion,
+			&i.LeaseToken,
+			&i.NextAttemptAt,
 		); err != nil {
 			return nil, err
 		}
@@ -138,20 +168,20 @@ func (q *Queries) PickEvents(ctx context.Context, arg PickEventsParams) ([]Outbo
 	return items, nil
 }
 
-const resetFailedToPending = `-- name: ResetFailedToPending :exec
-UPDATE outbox_events
-SET status = 'pending'
-WHERE status = 'failed' 
-  AND retry_count < $1::int 
-  AND processed_at < NOW() - ($2::int * INTERVAL '1 second')
+const recordInboxReceipt = `-- name: RecordInboxReceipt :one
+INSERT INTO inbox_receipts (consumer_name, event_id)
+VALUES ($1, $2::uuid)
+ON CONFLICT DO NOTHING RETURNING event_id
 `
 
-type ResetFailedToPendingParams struct {
-	MaxRetries    int32 `json:"max_retries"`
-	RetryDelaySec int32 `json:"retry_delay_sec"`
+type RecordInboxReceiptParams struct {
+	ConsumerName string    `json:"consumer_name"`
+	EventID      uuid.UUID `json:"event_id"`
 }
 
-func (q *Queries) ResetFailedToPending(ctx context.Context, arg ResetFailedToPendingParams) error {
-	_, err := q.db.Exec(ctx, resetFailedToPending, arg.MaxRetries, arg.RetryDelaySec)
-	return err
+func (q *Queries) RecordInboxReceipt(ctx context.Context, arg RecordInboxReceiptParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, recordInboxReceipt, arg.ConsumerName, arg.EventID)
+	var event_id uuid.UUID
+	err := row.Scan(&event_id)
+	return event_id, err
 }

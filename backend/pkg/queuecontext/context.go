@@ -3,8 +3,9 @@ package queuecontext
 
 import (
 	"context"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const EventIDHeader = "Gate-Outbox-Event-ID"
@@ -12,8 +13,10 @@ const QueuedAtHeader = "Gate-Queued-At"
 
 type key struct{}
 type Metadata struct {
-	EventID  uuid.UUID
-	QueuedAt time.Time
+	AggregateID      uuid.UUID
+	AggregateVersion int64
+	EventID          uuid.UUID
+	QueuedAt         time.Time
 }
 
 func With(ctx context.Context, meta Metadata) context.Context {

@@ -64,7 +64,8 @@ func NewSubmissionTransactions(pool *pgxpool.Pool) usecase.SubmissionTransaction
 		return struct {
 			*SubmissionsRepo
 			*OutboxRepo
-		}{&SubmissionsRepo{queries: q}, &OutboxRepo{queries: q}}
+			*JudgeJobs
+		}{&SubmissionsRepo{queries: q}, &OutboxRepo{queries: q}, &JudgeJobs{queries: q}}
 	}}
 }
 
@@ -75,5 +76,16 @@ func NewContestEventsTransactions(pool *pgxpool.Pool) usecase.ContestEventsTrans
 			*ClarificationsRepo
 			*OutboxRepo
 		}{&AnnouncementsRepo{queries: q}, &ClarificationsRepo{queries: q}, &OutboxRepo{queries: q}}
+	}}
+}
+
+func NewJudgeTransactions(pool *pgxpool.Pool) usecase.JudgeTransactions {
+	return transactions[usecase.JudgeTxStore]{pool: pool, bind: func(q *sqlc.Queries) usecase.JudgeTxStore {
+		return struct {
+			*JudgeJobs
+			*SubmissionsRepo
+			*ContestsRepo
+			*OutboxRepo
+		}{&JudgeJobs{q}, &SubmissionsRepo{queries: q}, &ContestsRepo{queries: q}, &OutboxRepo{queries: q}}
 	}}
 }

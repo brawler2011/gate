@@ -218,6 +218,7 @@ func runApp(envFile string) error {
 
 	outboxDispatcher := outbox.NewEventDispatcher()
 	outboxDispatcher.Register(models.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(natsJS))
+	outboxDispatcher.Register(models.OutboxEventSubmissionCompleted, pubsub.NewSubmissionCreatedPublisher(natsJS))
 	contestEventsPublisher := pubsub.NewContestEventsPublisher(natsJS)
 	outboxDispatcher.Register(models.OutboxEventContestAnnouncementCreated, contestEventsPublisher)
 	outboxDispatcher.Register(models.OutboxEventContestAnnouncementDeleted, contestEventsPublisher)
@@ -226,9 +227,8 @@ func runApp(envFile string) error {
 	outboxWorker := outbox.NewOutboxWorker(outboxDispatcher, outboxRepo)
 
 	judgeUC := usecase.NewJudgeUseCase(
+		pg.NewJudgeJobs(pool), pg.NewJudgeTransactions(pool),
 		submissionsRepo,
-		packagesRepo,
-		contestsUC,
 		store,
 		defaultS3PackageBucket,
 		judgeTempDir,

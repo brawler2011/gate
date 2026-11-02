@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/brawler2011/gate/backend/internal/events"
+
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 )
 
@@ -26,7 +28,7 @@ func (d *EventDispatcher) Register(eventType string, handler interfaces.EventHan
 	d.handlers[eventType] = handler
 }
 
-func (d *EventDispatcher) Dispatch(ctx context.Context, eventType string, payload []byte) error {
+func (d *EventDispatcher) Dispatch(ctx context.Context, eventType string, payload []byte) (err error) {
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("context cancelled before dispatch: %w", err)
 	}
@@ -34,15 +36,16 @@ func (d *EventDispatcher) Dispatch(ctx context.Context, eventType string, payloa
 	defer func() {
 		if r := recover(); r != nil {
 			slog.ErrorContext(ctx, "recovered from panic in event handler", "panic", r)
+			err = fmt.Errorf("event handler panic: %v", r)
 		}
 	}()
 
 	handler, ok := d.handlers[eventType]
 	if !ok {
-		return fmt.Errorf("no handler registered for event type: %s", eventType)
+		return &events.PermanentError{Cause: fmt.Errorf("no handler registered for event type: %s", eventType)}
 	}
 
-	err := handler.Handle(ctx, eventType, payload)
+	err = handler.Handle(ctx, eventType, payload)
 	if err != nil {
 		return err
 	}

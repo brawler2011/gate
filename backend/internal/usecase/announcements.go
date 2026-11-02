@@ -2,10 +2,9 @@ package usecase
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
-	"github.com/brawler2011/gate/backend/pkg/requestid"
+	"github.com/brawler2011/gate/backend/internal/events"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
@@ -63,23 +62,13 @@ func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *m
 			CreatedAt:      announcement.CreatedAt,
 		}
 
-		payload, err := json.Marshal(event)
-		if err != nil {
-			return fmt.Errorf("marshal announcement created event: %w", err)
-		}
-
-		headers := make(map[string]string)
-		headers[requestid.Header] = requestid.Get(ctx)
-
-		outboxEvent := &models.CreateOutboxEventParams{
-			Id:          uuid.New(),
+		outboxEvent := events.Event{
 			AggregateID: announcement.ContestID,
-			EventType:   models.OutboxEventContestAnnouncementCreated,
-			Payload:     payload,
-			Headers:     headers,
+			Type:        models.OutboxEventContestAnnouncementCreated,
+			Payload:     event,
 		}
 
-		if err := tx.CreateEvent(ctx, outboxEvent); err != nil {
+		if err := tx.Record(ctx, outboxEvent); err != nil {
 			return fmt.Errorf("create outbox event for announcement: %w", err)
 		}
 
@@ -103,22 +92,12 @@ func (uc *AnnouncementsUseCase) DeleteAnnouncement(ctx context.Context, id, cont
 			ContestID: contestID,
 		}
 
-		payload, err := json.Marshal(event)
-		if err != nil {
-			return fmt.Errorf("marshal announcement deleted event: %w", err)
-		}
-
-		headers := make(map[string]string)
-		headers[requestid.Header] = requestid.Get(ctx)
-
-		outboxEvent := &models.CreateOutboxEventParams{
-			Id:          uuid.New(),
+		outboxEvent := events.Event{
 			AggregateID: contestID,
-			EventType:   models.OutboxEventContestAnnouncementDeleted,
-			Payload:     payload,
-			Headers:     headers,
+			Type:        models.OutboxEventContestAnnouncementDeleted,
+			Payload:     event,
 		}
 
-		return tx.CreateEvent(ctx, outboxEvent)
+		return tx.Record(ctx, outboxEvent)
 	})
 }

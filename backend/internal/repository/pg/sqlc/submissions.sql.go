@@ -21,7 +21,7 @@ WITH version AS (
   RETURNING submissions_revision
 )
 UPDATE submissions
-SET state = 300, score = 0, ban_reason = $1,
+SET generation = generation + 1, state = 300, score = 0, ban_reason = $1,
     updated_at = NOW(), revision = (SELECT submissions_revision FROM version)
 WHERE id = $2::uuid
 `
@@ -43,7 +43,7 @@ WITH version AS (
   RETURNING submissions_revision
 )
 UPDATE submissions
-SET state = 300, score = 0, ban_reason = $1,
+SET generation = generation + 1, state = 300, score = 0, ban_reason = $1,
     updated_at = NOW(), revision = (SELECT submissions_revision FROM version)
 WHERE contest_id = $2::uuid AND owner_id = $3::uuid AND problem_id = $4::uuid
 `
@@ -194,6 +194,7 @@ SELECT s.id,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.revision,
+  s.generation,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
@@ -231,6 +232,7 @@ type GetSubmissionRow struct {
 	OrganizationLogin string                `json:"organization_login"`
 	UpdatedAt         time.Time             `json:"updated_at"`
 	Revision          int64                 `json:"revision"`
+	Generation        int64                 `json:"generation"`
 	CreatedAt         time.Time             `json:"created_at"`
 }
 
@@ -262,6 +264,7 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 		&i.OrganizationLogin,
 		&i.UpdatedAt,
 		&i.Revision,
+		&i.Generation,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -302,6 +305,7 @@ SELECT s.id,
   COALESCE(oc.login, op.login, '')::text AS organization_login,
   s.updated_at,
   s.revision,
+  s.generation,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
@@ -373,6 +377,7 @@ type ListSubmissionsRow struct {
 	OrganizationLogin string              `json:"organization_login"`
 	UpdatedAt         time.Time           `json:"updated_at"`
 	Revision          int64               `json:"revision"`
+	Generation        int64               `json:"generation"`
 	CreatedAt         time.Time           `json:"created_at"`
 }
 
@@ -417,6 +422,7 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 			&i.OrganizationLogin,
 			&i.UpdatedAt,
 			&i.Revision,
+			&i.Generation,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -453,7 +459,7 @@ WHERE contest_id = $1::uuid
   FOR UPDATE OF s
 )
 UPDATE submissions AS s
-SET state = 1, score = 0, test_details = NULL, ban_reason = NULL, updated_at = NOW(),
+SET generation = s.generation + 1, state = 1, score = 0, test_details = NULL, ban_reason = NULL, updated_at = NOW(),
     revision = previous.submissions_revision
 FROM previous
 WHERE s.id = previous.id

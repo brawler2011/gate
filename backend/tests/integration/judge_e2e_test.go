@@ -156,14 +156,12 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	workspaceStorage := usecase.NewWorkspaceStorage(s3Store, "problem-workspaces", problemsRepo)
 	workshopUC := usecase.NewWorkshopUseCase(workspaceStorage, sb)
 	publishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, s3Store, "problem-packages")
-	contestsUC := usecase.NewContestsUseCase(contestsRepo, nil)
 
 	eventPublisher := judge.NewEventPublisher(js)
 	tempDir := t.TempDir()
 	judgeUC := usecase.NewJudgeUseCase(
+		pg.NewJudgeJobs(dbPool), pg.NewJudgeTransactions(dbPool),
 		submissionsRepo,
-		packagesRepo,
-		contestsUC,
 		s3Store,
 		"problem-packages",
 		tempDir,
@@ -288,6 +286,8 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		_, err = pg.NewJudgeJobs(dbPool).ScheduleJob(ctx, subID)
+		require.NoError(t, err)
 		err = judgeUC.JudgeSubmission(ctx, subID)
 		require.NoError(t, err)
 
@@ -308,6 +308,8 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		_, err = pg.NewJudgeJobs(dbPool).ScheduleJob(ctx, subID)
+		require.NoError(t, err)
 		err = judgeUC.JudgeSubmission(ctx, subID)
 		require.NoError(t, err)
 
@@ -357,8 +359,10 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		_, err = pg.NewJudgeJobs(dbPool).ScheduleJob(ctx, subID)
+		require.NoError(t, err)
 		err = judgeUC.JudgeSubmission(ctx, subID)
-		assert.Error(t, err)
+		require.NoError(t, err)
 
 		sub, err := submissionsRepo.GetSubmission(ctx, subID)
 		require.NoError(t, err)

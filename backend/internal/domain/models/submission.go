@@ -131,6 +131,7 @@ type SubmissionListItem struct {
 }
 
 type Submission struct {
+	Generation        int64                  `json:"-"`
 	Revision          int64                  `json:"revision"`
 	Frozen            bool                   `json:"-"`
 	SourceHidden      bool                   `json:"-"`
@@ -200,6 +201,8 @@ type SubmissionReset struct {
 }
 
 type SubmissionCreatedEvent struct {
+	JobID      uuid.UUID `json:"job_id"`
+	Generation int64     `json:"generation"`
 	SubmissionEventMeta
 	IsNew         bool   `json:"is_new"`
 	PreviousState *State `json:"previous_state,omitempty"`

@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/events"
+
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg/queuecontext"
@@ -21,10 +23,6 @@ const (
 	batchSize = 10
 	// timeout for processing a single event (seconds)
 	eventTimeoutSec = 30
-	// maximum number of retries for a failed event
-	maxRetries = 5
-	// delay between retries (seconds)
-	retryDelaySec = 60
 	// number of days to keep completed events
 	retentionDays = 14
 )
@@ -62,14 +60,19 @@ func (w *OutboxWorker) Start(ctx context.Context) {
 }
 
 func (w *OutboxWorker) processBatch(ctx context.Context) {
-	events, err := w.outboxRepo.PickEvents(ctx, batchSize, eventTimeoutSec)
-	if err != nil {
-		slog.Error("failed to pick events", "operation", "outbox_pick", "error_type", fmt.Sprintf("%T", err))
-		return
-	}
-
-	for _, event := range events {
-		w.processEvent(ctx, &event)
+	for range batchSize {
+		if ctx.Err() != nil {
+			return
+		}
+		events, err := w.outboxRepo.PickEvents(ctx, 1, eventTimeoutSec)
+		if err != nil {
+			slog.ErrorContext(ctx, "failed to claim event", "error", err)
+			return
+		}
+		if len(events) == 0 {
+			return
+		}
+		w.processEvent(ctx, &events[0])
 	}
 }
 
@@ -78,7 +81,7 @@ func (w *OutboxWorker) processEvent(ctx context.Context, event *models.OutboxEve
 	defer cancel()
 
 	handlerCtx = requestid.With(handlerCtx, event.Headers[requestid.Header])
-	handlerCtx = queuecontext.With(handlerCtx, queuecontext.Metadata{EventID: event.Id, QueuedAt: event.CreatedAt})
+	handlerCtx = queuecontext.With(handlerCtx, queuecontext.Metadata{EventID: event.Id, QueuedAt: event.CreatedAt, AggregateID: event.AggregateID, AggregateVersion: event.AggregateVersion})
 	logger := slog.Default().With("event_id", event.Id, "aggregate_id", event.AggregateID, "request_id", requestid.Get(handlerCtx))
 
 	if event.EventType == models.OutboxEventSubmissionCreated {
@@ -87,21 +90,18 @@ func (w *OutboxWorker) processEvent(ctx context.Context, event *models.OutboxEve
 	err := w.dispatcher.Dispatch(handlerCtx, event.EventType, event.Payload)
 	if err != nil {
 		logger.Error("failed to dispatch event", "operation", "outbox_dispatch", "error_type", fmt.Sprintf("%T", err))
-		if markErr := w.outboxRepo.MarkAsFailed(handlerCtx, event.Id, err.Error()); markErr != nil {
+		if markErr := w.outboxRepo.MarkAsFailed(handlerCtx, event.Id, event.LeaseToken, err.Error(), events.IsPermanent(err)); markErr != nil {
 			logger.Error("failed to mark event as failed", "operation", "outbox_mark_failed", "error_type", fmt.Sprintf("%T", markErr))
 		}
 		return
 	}
 
-	if markErr := w.outboxRepo.MarkAsCompleted(handlerCtx, event.Id); markErr != nil {
+	if markErr := w.outboxRepo.MarkAsCompleted(handlerCtx, event.Id, event.LeaseToken); markErr != nil {
 		logger.Error("failed to mark event as completed", "operation", "outbox_mark_completed", "error_type", fmt.Sprintf("%T", markErr))
 	}
 }
 
 func (w *OutboxWorker) runMaintenance(ctx context.Context) {
-	if err := w.outboxRepo.ResetFailedToPending(ctx, maxRetries, retryDelaySec); err != nil {
-		slog.Error("failed to reset failed events", "operation", "outbox_reset", "error_type", fmt.Sprintf("%T", err))
-	}
 
 	if err := w.outboxRepo.DeleteOldEvents(ctx, retentionDays); err != nil {
 		slog.Error("failed to delete old events", "operation", "outbox_delete_old", "error_type", fmt.Sprintf("%T", err))

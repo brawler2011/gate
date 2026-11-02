@@ -2,15 +2,13 @@ package usecase
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
-	"github.com/brawler2011/gate/backend/pkg/requestid"
+	"github.com/brawler2011/gate/backend/internal/events"
 
 	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
 	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"github.com/brawler2011/gate/backend/pkg"
-	"github.com/google/uuid"
 )
 
 type ClarificationsUseCase struct {
@@ -73,23 +71,13 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 			CreatedAt:     clarification.CreatedAt,
 		}
 
-		payload, err := json.Marshal(event)
-		if err != nil {
-			return fmt.Errorf("marshal clarification created event: %w", err)
-		}
-
-		headers := make(map[string]string)
-		headers[requestid.Header] = requestid.Get(ctx)
-
-		outboxEvent := &models.CreateOutboxEventParams{
-			Id:          uuid.New(),
+		outboxEvent := events.Event{
 			AggregateID: clarification.ContestID,
-			EventType:   models.OutboxEventContestClarificationCreated,
-			Payload:     payload,
-			Headers:     headers,
+			Type:        models.OutboxEventContestClarificationCreated,
+			Payload:     event,
 		}
 
-		return tx.CreateEvent(ctx, outboxEvent)
+		return tx.Record(ctx, outboxEvent)
 	})
 	if err != nil {
 		return nil, err
@@ -141,23 +129,13 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 			AnsweredAt:         ansAt,
 		}
 
-		payload, err := json.Marshal(event)
-		if err != nil {
-			return fmt.Errorf("marshal clarification answered event: %w", err)
-		}
-
-		headers := make(map[string]string)
-		headers[requestid.Header] = requestid.Get(ctx)
-
-		outboxEvent := &models.CreateOutboxEventParams{
-			Id:          uuid.New(),
+		outboxEvent := events.Event{
 			AggregateID: clarification.ContestID,
-			EventType:   models.OutboxEventContestClarificationAnswered,
-			Payload:     payload,
-			Headers:     headers,
+			Type:        models.OutboxEventContestClarificationAnswered,
+			Payload:     event,
 		}
 
-		if err := tx.CreateEvent(ctx, outboxEvent); err != nil {
+		if err := tx.Record(ctx, outboxEvent); err != nil {
 			return fmt.Errorf("create outbox event for clarification answered: %w", err)
 		}
 
@@ -196,23 +174,13 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 				CreatedAt:      announcement.CreatedAt,
 			}
 
-			annPayload, err := json.Marshal(annEvent)
-			if err != nil {
-				return fmt.Errorf("marshal announcement event: %w", err)
-			}
-
-			annHeaders := make(map[string]string)
-			annHeaders[requestid.Header] = requestid.Get(ctx)
-
-			annOutboxEvent := &models.CreateOutboxEventParams{
-				Id:          uuid.New(),
+			annOutboxEvent := events.Event{
 				AggregateID: announcement.ContestID,
-				EventType:   models.OutboxEventContestAnnouncementCreated,
-				Payload:     annPayload,
-				Headers:     annHeaders,
+				Type:        models.OutboxEventContestAnnouncementCreated,
+				Payload:     annEvent,
 			}
 
-			if err := tx.CreateEvent(ctx, annOutboxEvent); err != nil {
+			if err := tx.Record(ctx, annOutboxEvent); err != nil {
 				return fmt.Errorf("create outbox event for announcement: %w", err)
 			}
 		}

@@ -1,0 +1,77 @@
+package pg
+
+import (
+	"context"
+	"errors"
+
+	"github.com/brawler2011/gate/backend/internal/judging"
+	"github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+type JudgeJobs struct{ queries *sqlc.Queries }
+
+func NewJudgeJobs(pool *pgxpool.Pool) *JudgeJobs { return &JudgeJobs{queries: sqlc.New(pool)} }
+func (r *JudgeJobs) ScheduleJob(ctx context.Context, id uuid.UUID) (judging.Job, error) {
+	row, err := r.queries.ScheduleJudgeJob(ctx, sqlc.ScheduleJudgeJobParams{ID: uuid.New(), SubmissionID: id})
+	if err != nil {
+		return judging.Job{}, HandlePgErr(err)
+	}
+	return mapJudgeJob(row), nil
+}
+func (r *JudgeJobs) Claim(ctx context.Context, submission uuid.UUID) (judging.Job, error) {
+	row, err := r.queries.ClaimJudgeJob(ctx, sqlc.ClaimJudgeJobParams{SubmissionID: submission, LeaseToken: uuid.New()})
+	if errors.Is(err, pgx.ErrNoRows) {
+		active, err := r.queries.JudgeJobActive(ctx, submission)
+		if err != nil {
+			return judging.Job{}, HandlePgErr(err)
+		}
+		if active {
+			return judging.Job{}, judging.ErrBusy
+		}
+		return judging.Job{}, nil
+	}
+	if err != nil {
+		return judging.Job{}, HandlePgErr(err)
+	}
+	return mapJudgeJob(row), nil
+}
+func (r *JudgeJobs) Renew(ctx context.Context, job judging.Job) error {
+	count, err := r.queries.RenewJudgeJob(ctx, sqlc.RenewJudgeJobParams{ID: job.ID, LeaseToken: job.LeaseToken})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	if count == 0 {
+		return judging.ErrLeaseLost
+	}
+	return nil
+}
+func (r *JudgeJobs) Release(ctx context.Context, job judging.Job) error {
+	_, err := r.queries.ReleaseJudgeJob(ctx, sqlc.ReleaseJudgeJobParams{ID: job.ID, LeaseToken: job.LeaseToken})
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	return nil
+}
+func (r *JudgeJobs) CompleteJob(ctx context.Context, job judging.Job) (bool, error) {
+	// Use the same contest-first lock order as submit/rejudge and revision writes.
+	_, err := r.queries.LockJudgeContest(ctx, job.SubmissionID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, HandlePgErr(err)
+	}
+	count, err := r.queries.CompleteJudgeJob(ctx, sqlc.CompleteJudgeJobParams{ID: job.ID, LeaseToken: job.LeaseToken})
+	if err != nil {
+		return false, HandlePgErr(err)
+	}
+	return count > 0, nil
+}
+func mapJudgeJob(row sqlc.JudgeJob) judging.Job {
+	return judging.Job{ID: row.ID, SubmissionID: row.SubmissionID, Generation: row.Generation,
+		PackageID: pgtypeUUIDToPtr(row.PackageID), PackageHash: row.PackageHash, Attempt: row.Attempt,
+		LeaseToken: uuid.UUID(row.LeaseToken.Bytes), Deadline: row.DeadlineAt.Time}
+}
