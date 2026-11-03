@@ -19,7 +19,8 @@ UPDATE judge_jobs j
 SET state='processing',attempt=j.attempt+1,lease_token=sqlc.arg(lease_token)::uuid,
     deadline_at=now()+interval '30 seconds'
 FROM submissions s
-WHERE s.id=sqlc.arg(submission_id)::uuid AND j.submission_id=s.id
+WHERE j.id=sqlc.arg(id)::uuid AND j.generation=sqlc.arg(generation)::bigint
+  AND s.id=sqlc.arg(submission_id)::uuid AND j.submission_id=s.id
   AND j.generation=s.generation AND s.state<>300
   AND (j.state='pending' OR (j.state='processing' AND j.deadline_at<now()))
 RETURNING j.*;
@@ -27,7 +28,8 @@ RETURNING j.*;
 -- name: JudgeJobActive :one
 SELECT EXISTS (
     SELECT 1 FROM judge_jobs j JOIN submissions s ON s.id=j.submission_id
-    WHERE s.id=sqlc.arg(submission_id)::uuid AND j.generation=s.generation AND s.state<>300
+    WHERE j.id=sqlc.arg(id)::uuid AND j.generation=sqlc.arg(generation)::bigint
+      AND s.id=sqlc.arg(submission_id)::uuid AND j.generation=s.generation AND s.state<>300
       AND j.state='processing' AND j.deadline_at>now()
 ) AS active;
 

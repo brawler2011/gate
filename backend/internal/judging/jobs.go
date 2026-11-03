@@ -15,7 +15,7 @@ var ErrBusy = errors.New("judge job is active")
 var ErrLeaseLost = errors.New("judge job lease lost")
 
 type Jobs interface {
-	Claim(context.Context, uuid.UUID) (judgingmodel.Job, error)
+	Claim(context.Context, judgingmodel.JobRef) (judgingmodel.Job, error)
 	Renew(context.Context, judgingmodel.Job) error
 	Release(context.Context, judgingmodel.Job) error
 }

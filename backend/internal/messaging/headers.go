@@ -32,3 +32,21 @@ func Headers(ctx context.Context) nats.Header {
 	}
 	return headers
 }
+
+func Context(ctx context.Context, headers nats.Header) context.Context {
+	ctx = requestid.With(ctx, headers.Get(requestid.Header))
+	meta := queuecontext.Metadata{}
+	if id, err := uuid.Parse(headers.Get(queuecontext.EventIDHeader)); err == nil {
+		meta.EventID = id
+	}
+	if id, err := uuid.Parse(headers.Get("Gate-Aggregate-ID")); err == nil {
+		meta.AggregateID = id
+	}
+	if version, err := strconv.ParseInt(headers.Get("Gate-Aggregate-Version"), 10, 64); err == nil && version > 0 {
+		meta.AggregateVersion = version
+	}
+	if queued, err := time.Parse(time.RFC3339Nano, headers.Get(queuecontext.QueuedAtHeader)); err == nil {
+		meta.QueuedAt = queued
+	}
+	return queuecontext.With(ctx, meta)
+}

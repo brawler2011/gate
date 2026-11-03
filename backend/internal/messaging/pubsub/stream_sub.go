@@ -7,8 +7,9 @@ import (
 	"sync"
 	"time"
 
+	messaging "github.com/brawler2011/gate/backend/internal/messaging"
+
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
-	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/nats-io/nats.go/jetstream"
 )
 
@@ -114,13 +115,13 @@ func (s *StreamSubscriber) handleMessage(parentCtx context.Context) jetstream.Me
 	return func(msg jetstream.Msg) {
 		const handlerTimeout = 30 * time.Second
 
-		ctx, cancel := context.WithTimeout(requestid.With(context.WithoutCancel(parentCtx), msg.Headers().Get(requestid.Header)), handlerTimeout)
+		ctx, cancel := context.WithTimeout(messaging.Context(context.WithoutCancel(parentCtx), msg.Headers()), handlerTimeout)
 		defer cancel()
 
 		meta, err := msg.Metadata()
 		if err != nil {
 			s.logger.Error("failed to get message metadata", "error", err, "subject", msg.Subject())
-			if err := msg.Nak(); err != nil {
+			if err := msg.NakWithDelay(5 * time.Second); err != nil {
 				s.logger.Error("failed to nak message", "error", err)
 			}
 			return
@@ -130,9 +131,14 @@ func (s *StreamSubscriber) handleMessage(parentCtx context.Context) jetstream.Me
 
 		if err := s.dispatcher.Dispatch(ctx, msg.Subject(), msg.Data()); err != nil {
 			s.logger.Error("failed to handle event", "error", err, "subject", msg.Subject())
-			if err := msg.Nak(); err != nil {
-				s.logger.Error("failed to nak message", "error", err)
+			if eventdata.IsPermanent(err) {
+				if err := msg.Term(); err != nil {
+					s.logger.Error("failed to terminate event delivery", "error", err)
+				}
+			} else if err := msg.NakWithDelay(5 * time.Second); err != nil {
+				s.logger.Error("failed to retry event delivery", "error", err)
 			}
+
 			return
 		}
 

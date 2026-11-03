@@ -16,7 +16,8 @@ UPDATE judge_jobs j
 SET state='processing',attempt=j.attempt+1,lease_token=$1::uuid,
     deadline_at=now()+interval '30 seconds'
 FROM submissions s
-WHERE s.id=$2::uuid AND j.submission_id=s.id
+WHERE j.id=$2::uuid AND j.generation=$3::bigint
+  AND s.id=$4::uuid AND j.submission_id=s.id
   AND j.generation=s.generation AND s.state<>300
   AND (j.state='pending' OR (j.state='processing' AND j.deadline_at<now()))
 RETURNING j.id, j.submission_id, j.generation, j.package_id, j.package_hash, j.state, j.attempt, j.lease_token, j.deadline_at, j.created_at, j.completed_at
@@ -24,11 +25,18 @@ RETURNING j.id, j.submission_id, j.generation, j.package_id, j.package_hash, j.s
 
 type ClaimJudgeJobParams struct {
 	LeaseToken   uuid.UUID `json:"lease_token"`
+	ID           uuid.UUID `json:"id"`
+	Generation   int64     `json:"generation"`
 	SubmissionID uuid.UUID `json:"submission_id"`
 }
 
 func (q *Queries) ClaimJudgeJob(ctx context.Context, arg ClaimJudgeJobParams) (JudgeJob, error) {
-	row := q.db.QueryRow(ctx, claimJudgeJob, arg.LeaseToken, arg.SubmissionID)
+	row := q.db.QueryRow(ctx, claimJudgeJob,
+		arg.LeaseToken,
+		arg.ID,
+		arg.Generation,
+		arg.SubmissionID,
+	)
 	var i JudgeJob
 	err := row.Scan(
 		&i.ID,
@@ -70,13 +78,20 @@ func (q *Queries) CompleteJudgeJob(ctx context.Context, arg CompleteJudgeJobPara
 const judgeJobActive = `-- name: JudgeJobActive :one
 SELECT EXISTS (
     SELECT 1 FROM judge_jobs j JOIN submissions s ON s.id=j.submission_id
-    WHERE s.id=$1::uuid AND j.generation=s.generation AND s.state<>300
+    WHERE j.id=$1::uuid AND j.generation=$2::bigint
+      AND s.id=$3::uuid AND j.generation=s.generation AND s.state<>300
       AND j.state='processing' AND j.deadline_at>now()
 ) AS active
 `
 
-func (q *Queries) JudgeJobActive(ctx context.Context, submissionID uuid.UUID) (bool, error) {
-	row := q.db.QueryRow(ctx, judgeJobActive, submissionID)
+type JudgeJobActiveParams struct {
+	ID           uuid.UUID `json:"id"`
+	Generation   int64     `json:"generation"`
+	SubmissionID uuid.UUID `json:"submission_id"`
+}
+
+func (q *Queries) JudgeJobActive(ctx context.Context, arg JudgeJobActiveParams) (bool, error) {
+	row := q.db.QueryRow(ctx, judgeJobActive, arg.ID, arg.Generation, arg.SubmissionID)
 	var active bool
 	err := row.Scan(&active)
 	return active, err

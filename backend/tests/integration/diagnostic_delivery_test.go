@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
@@ -26,14 +28,15 @@ import (
 )
 
 type diagnosticJudgingCall struct {
+	job       judgingmodel.JobRef
 	id        uuid.UUID
 	requestID string
 }
 
 type diagnosticJudge struct{ calls chan diagnosticJudgingCall }
 
-func (j diagnosticJudge) JudgeSubmission(ctx context.Context, id uuid.UUID) error {
-	j.calls <- diagnosticJudgingCall{id, requestid.Get(ctx)}
+func (j diagnosticJudge) JudgeSubmission(ctx context.Context, reference judgingmodel.JobRef) error {
+	j.calls <- diagnosticJudgingCall{id: reference.SubmissionID, requestID: requestid.Get(ctx), job: reference}
 	return nil
 }
 
@@ -89,6 +92,11 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 	select {
 	case call := <-calls:
 		s.Equal(submissionID, call.id)
+		var jobID uuid.UUID
+		var generation int64
+		s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT j.id,j.generation FROM judge_jobs j JOIN submissions s ON s.id=j.submission_id AND s.generation=j.generation WHERE s.id=$1", submissionID).Scan(&jobID, &generation))
+		s.Equal(jobID, call.job.ID)
+		s.Equal(generation, call.job.Generation)
 		s.Equal(requestID, call.requestID)
 	case <-time.After(15 * time.Second):
 		s.FailNow("HTTP-created submission did not reach judge worker")
@@ -126,6 +134,11 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 	select {
 	case call := <-calls:
 		s.Equal(submissionID, call.id)
+		var jobID uuid.UUID
+		var generation int64
+		s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT j.id,j.generation FROM judge_jobs j JOIN submissions s ON s.id=j.submission_id AND s.generation=j.generation WHERE s.id=$1", submissionID).Scan(&jobID, &generation))
+		s.Equal(jobID, call.job.ID)
+		s.Equal(generation, call.job.Generation)
 		s.Equal(rejudgeRequestID, call.requestID)
 	case <-time.After(15 * time.Second):
 		s.FailNow("rejudge did not reach worker")

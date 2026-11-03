@@ -296,9 +296,9 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		_, err = pgstore.NewJudgeJobs(dbPool).ScheduleJob(ctx, subID)
+		job, err := pgstore.NewJudgeJobs(dbPool).ScheduleJob(ctx, subID)
 		require.NoError(t, err)
-		err = judgeUC.JudgeSubmission(ctx, subID)
+		err = judgeUC.JudgeSubmission(ctx, job.Ref())
 		require.NoError(t, err)
 
 		sub, err := submissionsRepo.GetSubmission(ctx, subID)
@@ -318,9 +318,9 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		_, err = pgstore.NewJudgeJobs(dbPool).ScheduleJob(ctx, subID)
+		job, err := pgstore.NewJudgeJobs(dbPool).ScheduleJob(ctx, subID)
 		require.NoError(t, err)
-		err = judgeUC.JudgeSubmission(ctx, subID)
+		err = judgeUC.JudgeSubmission(ctx, job.Ref())
 		require.NoError(t, err)
 
 		sub, err := submissionsRepo.GetSubmission(ctx, subID)
@@ -369,9 +369,9 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		_, err = pgstore.NewJudgeJobs(dbPool).ScheduleJob(ctx, subID)
+		job, err := pgstore.NewJudgeJobs(dbPool).ScheduleJob(ctx, subID)
 		require.NoError(t, err)
-		err = judgeUC.JudgeSubmission(ctx, subID)
+		err = judgeUC.JudgeSubmission(ctx, job.Ref())
 		require.NoError(t, err)
 
 		sub, err := submissionsRepo.GetSubmission(ctx, subID)

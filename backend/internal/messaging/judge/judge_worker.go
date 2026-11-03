@@ -9,6 +9,10 @@ import (
 	"sync"
 	"time"
 
+	messaging "github.com/brawler2011/gate/backend/internal/messaging"
+
+	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
+
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/queuecontext"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
@@ -131,13 +135,13 @@ func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logger *slog.Logger) {
 	const handlerTimeout = 5 * time.Minute
 
-	judgeCtx, cancel := context.WithTimeout(requestid.With(ctx, msg.Headers().Get(requestid.Header)), handlerTimeout)
+	judgeCtx, cancel := context.WithTimeout(messaging.Context(ctx, msg.Headers()), handlerTimeout)
 	logger = logger.With("request_id", requestid.Get(judgeCtx))
-	diagnosticMeta := queuecontext.Metadata{}
-	if id, err := uuid.Parse(msg.Headers().Get(queuecontext.EventIDHeader)); err == nil && id != uuid.Nil {
-		logger = logger.With("event_id", id)
-		diagnosticMeta.EventID = id
+	diagnosticMeta := queuecontext.Get(judgeCtx)
+	if diagnosticMeta.EventID != uuid.Nil {
+		logger = logger.With("event_id", diagnosticMeta.EventID)
 	}
+
 	if meta, err := msg.Metadata(); err == nil {
 		logger = logger.With("delivery_attempt", meta.NumDelivered)
 	}
@@ -148,16 +152,28 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 	var event submissionsmodel.SubmissionCreatedEvent
 	if err := json.Unmarshal(msg.Data(), &event); err != nil {
 		logger.Error("failed to unmarshal event", "operation", "decode_submission", "error_type", fmt.Sprintf("%T", err))
-		if err := msg.Nak(); err != nil {
-			logger.Error("failed to nak message", "operation", "nats_nak", "error_type", fmt.Sprintf("%T", err))
+		if err := msg.Term(); err != nil {
+			logger.Error("failed to terminate message", "operation", "nats_term", "error_type", fmt.Sprintf("%T", err))
+		}
+		return
+	}
+
+	if event.Id == uuid.Nil || event.Generation < 1 || event.JobID == uuid.Nil {
+		if event.Id != uuid.Nil && event.Generation > 0 && event.JobID == uuid.Nil && event.State == submissionsmodel.Disqualified {
+			if err := msg.Ack(); err != nil {
+				logger.Error("failed to ack blocked submission event", "error_type", fmt.Sprintf("%T", err))
+			}
+		} else {
+			logger.Error("invalid judge job reference", "operation", "decode_submission")
+			if err := msg.Term(); err != nil {
+				logger.Error("failed to terminate invalid job event", "error_type", fmt.Sprintf("%T", err))
+			}
 		}
 		return
 	}
 
 	logger = logger.With("submission_id", event.Id)
 	queuedAt, parseErr := time.Parse(time.RFC3339Nano, msg.Headers().Get(queuecontext.QueuedAtHeader))
-	diagnosticMeta.QueuedAt = queuedAt
-	judgeCtx = queuecontext.With(judgeCtx, diagnosticMeta)
 	if parseErr == nil && !queuedAt.IsZero() && !queuedAt.After(time.Now()) {
 		logger.Info("submission_judging_started", "event", "submission_judging_started", "queue_wait_ms", time.Since(queuedAt).Milliseconds())
 	} else {
@@ -170,7 +186,7 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 
 	// Judge the submission
 	startTime := time.Now()
-	err := w.runJudge(judgeCtx, msg, event.Id)
+	err := w.runJudge(judgeCtx, msg, judgingmodel.JobRef{ID: event.JobID, SubmissionID: event.Id, Generation: event.Generation})
 	duration := time.Since(startTime)
 
 	if err != nil {
@@ -211,7 +227,12 @@ func (w *JudgeWorker) Stop() {
 	cancel()
 }
 
-func (w *JudgeWorker) runJudge(ctx context.Context, msg jetstream.Msg, id uuid.UUID) error {
+func (w *JudgeWorker) runJudge(ctx context.Context, msg jetstream.Msg, reference judgingmodel.JobRef) (resultErr error) {
+	defer func() {
+		if recover() != nil {
+			resultErr = fmt.Errorf("judging handler panicked")
+		}
+	}()
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	done := make(chan struct{})
@@ -235,5 +256,5 @@ func (w *JudgeWorker) runJudge(ctx context.Context, msg jetstream.Msg, id uuid.U
 		}
 	}()
 	defer func() { close(done); <-stopped }()
-	return w.judgeUC.JudgeSubmission(runCtx, id)
+	return w.judgeUC.JudgeSubmission(runCtx, reference)
 }

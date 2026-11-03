@@ -12,6 +12,8 @@ import (
 	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/queuecontext"
+	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -23,7 +25,7 @@ import (
 
 const natsPort = "4222/tcp"
 
-func TestEventPublishing(t *testing.T) {
+func TestJudgeProgressPublishing(t *testing.T) {
 	ctx := context.Background()
 	js, natsConn := newNATSJetStream(t)
 	defer natsConn.Close()
@@ -39,6 +41,9 @@ func TestEventPublishing(t *testing.T) {
 	require.NoError(t, err)
 
 	publisher := judgeworker.NewEventPublisher(js)
+	incoming := uuid.New()
+	ctx = requestid.With(ctx, "progress-123")
+	ctx = queuecontext.With(ctx, queuecontext.Metadata{EventID: incoming})
 
 	submissionID := uuid.New()
 	meta := submissionsmodel.SubmissionEventMeta{
@@ -55,21 +60,26 @@ func TestEventPublishing(t *testing.T) {
 	require.NoError(t, publisher.PublishCompilingStarted(ctx, submissionID, meta))
 	require.NoError(t, publisher.PublishTestingStarted(ctx, submissionID, meta))
 	require.NoError(t, publisher.PublishTestStarted(ctx, submissionID, 1, meta))
-	require.NoError(t, publisher.PublishCompleted(ctx, submissionID, submissionsmodel.Accepted, 100, 1000, 256, 20, nil, submissionsmodel.Saved, meta))
 
 	expectedSubjects := []string{
 		submissionsmodel.SubmissionEventQueued,
 		submissionsmodel.SubmissionEventCompilingStarted,
 		submissionsmodel.SubmissionEventTestingStarted,
 		submissionsmodel.SubmissionEventTestStarted,
-		submissionsmodel.SubmissionEventCompleted,
 	}
 
+	ids := map[string]bool{}
 	for _, subject := range expectedSubjects {
 		msg, err := sub.NextMsg(3 * time.Second)
 		require.NoError(t, err)
 		assert.Equal(t, subject, msg.Subject)
 		assert.NotEmpty(t, msg.Data)
+		id := msg.Header.Get(queuecontext.EventIDHeader)
+		require.NotEmpty(t, id)
+		require.NotEqual(t, incoming.String(), id, "progress must not reuse the incoming durable message ID")
+		require.False(t, ids[id])
+		ids[id] = true
+		require.Equal(t, "progress-123", msg.Header.Get(requestid.Header))
 	}
 }
 

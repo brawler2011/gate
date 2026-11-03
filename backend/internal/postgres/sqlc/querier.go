@@ -148,7 +148,7 @@ type Querier interface {
 	// Workshop integration queries
 	GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, error)
 	InsertEvent(ctx context.Context, arg InsertEventParams) error
-	JudgeJobActive(ctx context.Context, submissionID uuid.UUID) (bool, error)
+	JudgeJobActive(ctx context.Context, arg JudgeJobActiveParams) (bool, error)
 	ListAllContests(ctx context.Context, arg ListAllContestsParams) ([]ListAllContestsRow, error)
 	ListAllProblems(ctx context.Context, arg ListAllProblemsParams) ([]ListAllProblemsRow, error)
 	ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]User, error)

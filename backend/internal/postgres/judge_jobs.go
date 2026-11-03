@@ -25,10 +25,10 @@ func (r *JudgeJobs) ScheduleJob(ctx context.Context, id uuid.UUID) (judgingmodel
 	return mapJudgeJob(row), nil
 }
 
-func (r *JudgeJobs) Claim(ctx context.Context, submission uuid.UUID) (judgingmodel.Job, error) {
-	row, err := r.queries.ClaimJudgeJob(ctx, sqlc.ClaimJudgeJobParams{SubmissionID: submission, LeaseToken: uuid.New()})
+func (r *JudgeJobs) Claim(ctx context.Context, reference judgingmodel.JobRef) (judgingmodel.Job, error) {
+	row, err := r.queries.ClaimJudgeJob(ctx, sqlc.ClaimJudgeJobParams{ID: reference.ID, Generation: reference.Generation, SubmissionID: reference.SubmissionID, LeaseToken: uuid.New()})
 	if errors.Is(err, pgx.ErrNoRows) {
-		active, err := r.queries.JudgeJobActive(ctx, submission)
+		active, err := r.queries.JudgeJobActive(ctx, sqlc.JudgeJobActiveParams{ID: reference.ID, Generation: reference.Generation, SubmissionID: reference.SubmissionID})
 		if err != nil {
 			return judgingmodel.Job{}, HandlePgErr(err)
 		}

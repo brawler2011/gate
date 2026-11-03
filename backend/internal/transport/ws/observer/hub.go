@@ -69,7 +69,7 @@ func NewHub(ringSize int, contests ContestsUC) *Hub {
 func parseEvent[T any](payload []byte) (*T, error) {
 	var e T
 	if err := json.Unmarshal(payload, &e); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal event payload: %w", err)
+		return nil, &eventdata.PermanentError{Cause: fmt.Errorf("failed to unmarshal event payload: %w", err)}
 	}
 	return &e, nil
 }

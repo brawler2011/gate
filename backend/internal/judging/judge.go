@@ -16,6 +16,7 @@ import (
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/queuecontext"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
@@ -131,8 +132,12 @@ func NewJudgeUseCase(
 	}
 }
 
-func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.UUID) error {
-	job, err := uc.jobs.Claim(ctx, submissionID)
+func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmodel.JobRef) error {
+	if reference.ID == uuid.Nil || reference.SubmissionID == uuid.Nil || reference.Generation < 1 {
+		return pkg.ErrBadInput
+	}
+	submissionID := reference.SubmissionID
+	job, err := uc.jobs.Claim(ctx, reference)
 	if err != nil {
 		return err
 	}
