@@ -28,10 +28,6 @@ func NewUsersUseCase(
 	txManager IdentityTransactions,
 	emailService email.EmailService,
 ) *UsersUseCase {
-	if emailService == nil {
-		emailService = email.NewEmailService("local", "", "", "")
-	}
-
 	return &UsersUseCase{
 		usersRepo: repo,
 
@@ -62,7 +58,9 @@ func (u *UsersUseCase) CreateUser(ctx context.Context, input identitymodel.Creat
 		IsEmailVerified: true, // Created by admin or system, verified by default
 	}
 
-	err = u.usersRepo.CreateUser(ctx, params)
+	err = withinAccount(ctx, u.txManager, uuid.Nil, true, func(store IdentityTxStore) error {
+		return store.CreateUser(ctx, params)
+	})
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -83,10 +81,18 @@ func (u *UsersUseCase) UpdateUser(ctx context.Context, input identitymodel.Updat
 	if err := accessmodel.RequireSelfOrAdmin(ctx, input.Id); err != nil {
 		return err
 	}
-	return u.usersRepo.UpdateUser(ctx, input)
+	if err := input.Validate(); err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, "invalid user update")
+	}
+	return withinAccount(ctx, u.txManager, input.Id, input.Role != nil || input.ExpiresAt != nil || input.IsEmailVerified != nil, func(store IdentityTxStore) error {
+		return store.UpdateUser(ctx, input)
+	})
 }
 
 func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller accessmodel.User, input identitymodel.ClaimTemporaryUserInput) (identitymodel.ClaimTemporaryUserResult, error) {
+	if actor := accessmodel.UserFromContext(ctx); actor.IsGuest() || actor.Id != caller.Id {
+		return identitymodel.ClaimTemporaryUserResult{}, pkg.ErrUnauthenticated
+	}
 	if caller.IsGuest() {
 		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -123,24 +129,41 @@ func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller accessmode
 	var grantedContests []uuid.UUID
 
 	err = u.txManager.Within(ctx, func(tx IdentityTxStore) error {
-		txCtx := ctx
-		txUsersRepo := tx
-		txContestsRepo := tx
+		if err := lockAccounts(ctx, tx, caller.Id, tempUser.Id); err != nil {
+			return err
+		}
+		currentCaller, err := tx.GetUserById(ctx, caller.Id)
+		if err != nil {
+			return err
+		}
+		if currentCaller.IsExpired() {
+			return pkg.NoPermission
+		}
+		currentTemp, err := tx.GetUserById(ctx, tempUser.Id)
+		if err != nil {
+			return err
+		}
+		if !currentTemp.IsTemporary() || currentTemp.PasswordHash != tempUser.PasswordHash {
+			return pkg.ErrUnauthenticated
+		}
+		if currentTemp.IsClaimed() {
+			return pkg.Wrap(pkg.ErrConflict, nil, "temporary account has already been claimed")
+		}
 
 		now := time.Now()
-		err := txUsersRepo.ClaimTemporaryUser(txCtx, tempUser.Id, caller.Id, now)
+		err = tx.ClaimTemporaryUser(ctx, tempUser.Id, caller.Id, now)
 		if err != nil {
 			return err
 		}
 
 		// Find contests of tempUser and grant access to caller
-		memberships, err := txContestsRepo.ListUserContestMemberships(txCtx, tempUser.Id)
+		memberships, err := tx.ListUserContestMemberships(ctx, tempUser.Id)
 		if err != nil {
 			return err
 		}
 
 		for _, m := range memberships {
-			err = txContestsRepo.AddContestMemberIfNotExists(txCtx, m.ContestID, caller.Id, string(contestsmodel.ContestRoleParticipant))
+			err = tx.AddContestMemberIfNotExists(ctx, m.ContestID, caller.Id, string(contestsmodel.ContestRoleParticipant))
 			if err != nil {
 				return err
 			}
@@ -179,7 +202,7 @@ func (u *UsersUseCase) AdminSetPassword(ctx context.Context, username, newPasswo
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to hash password")
 	}
 
-	return u.txManager.Within(ctx, func(tx IdentityTxStore) error {
+	return withinAccount(ctx, u.txManager, user.Id, true, func(tx IdentityTxStore) error {
 		if err := tx.UpdateUserPassword(ctx, user.Id, string(hashed)); err != nil {
 			return err
 		}
@@ -205,7 +228,7 @@ func (u *UsersUseCase) AdminSendPasswordReset(ctx context.Context, username stri
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to generate token")
 	}
 
-	err = replaceAuthToken(ctx, u.txManager, identitymodel.CreateAuthTokenParams{
+	err = u.replaceAdminAuthToken(ctx, identitymodel.CreateAuthTokenParams{
 		ID:        uuid.New(),
 		UserID:    user.Id,
 		TokenType: identitymodel.AuthTokenTypePasswordReset,
@@ -237,7 +260,9 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 	}
 
 	if !withConfirmation {
-		return u.usersRepo.UpdateUserEmail(ctx, user.Id, newEmail, true)
+		return withinAccount(ctx, u.txManager, user.Id, true, func(store IdentityTxStore) error {
+			return store.UpdateUserEmail(ctx, user.Id, newEmail, true)
+		})
 	}
 
 	// With confirmation
@@ -252,7 +277,7 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to marshal payload")
 	}
 
-	err = replaceAuthToken(ctx, u.txManager, identitymodel.CreateAuthTokenParams{
+	err = u.replaceAdminAuthToken(ctx, identitymodel.CreateAuthTokenParams{
 		ID:        uuid.New(),
 		UserID:    user.Id,
 		TokenType: identitymodel.AuthTokenTypeEmailChange,
@@ -299,7 +324,7 @@ func (u *UsersUseCase) AdminResendVerification(ctx context.Context, username str
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to generate token")
 	}
 
-	err = replaceAuthToken(ctx, u.txManager, identitymodel.CreateAuthTokenParams{
+	err = u.replaceAdminAuthToken(ctx, identitymodel.CreateAuthTokenParams{
 		ID:        uuid.New(),
 		UserID:    user.Id,
 		TokenType: identitymodel.AuthTokenTypeEmailVerification,
@@ -311,4 +336,10 @@ func (u *UsersUseCase) AdminResendVerification(ctx context.Context, username str
 	}
 
 	return u.emailService.SendVerificationEmail(ctx, *user.Email, user.Username, token)
+}
+
+func (u *UsersUseCase) replaceAdminAuthToken(ctx context.Context, params identitymodel.CreateAuthTokenParams) error {
+	return withinAccount(ctx, u.txManager, params.UserID, true, func(store IdentityTxStore) error {
+		return replaceAuthTokenWithin(ctx, store, params)
+	})
 }

@@ -108,6 +108,29 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 	return err
 }
 
+const getAuthorizationUser = `-- name: GetAuthorizationUser :one
+SELECT id, username, role, expires_at FROM users WHERE id = $1::uuid FOR SHARE
+`
+
+type GetAuthorizationUserRow struct {
+	ID        uuid.UUID  `json:"id"`
+	Username  string     `json:"username"`
+	Role      string     `json:"role"`
+	ExpiresAt *time.Time `json:"expires_at"`
+}
+
+func (q *Queries) GetAuthorizationUser(ctx context.Context, id uuid.UUID) (GetAuthorizationUserRow, error) {
+	row := q.db.QueryRow(ctx, getAuthorizationUser, id)
+	var i GetAuthorizationUserRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Role,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
 const getUserById = `-- name: GetUserById :one
 SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at, is_email_verified
 FROM users

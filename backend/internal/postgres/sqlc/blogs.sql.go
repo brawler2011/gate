@@ -170,6 +170,16 @@ func (q *Queries) ListPostsDesc(ctx context.Context, arg ListPostsDescParams) ([
 	return items, nil
 }
 
+const lockPost = `-- name: LockPost :one
+SELECT id FROM posts WHERE id=$1 FOR UPDATE
+`
+
+func (q *Queries) LockPost(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockPost, id)
+	err := row.Scan(&id)
+	return id, err
+}
+
 const updatePost = `-- name: UpdatePost :execrows
 UPDATE posts
 SET title = COALESCE($2, title),

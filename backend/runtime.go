@@ -174,7 +174,7 @@ func runApp(envFile string) error {
 	authUC := identity.NewAuthUseCase(usersRepo, authRepo, pgstore.NewIdentityTransactions(pool), emailService)
 	notificationsUC := notifications.NewNotificationsUseCase(notificationsRepo, usersRepo, emailService)
 
-	avatarsUC := identity.NewAvatarsUseCase(usersRepo, store, defaultS3AvatarBucket)
+	avatarsUC := identity.NewAvatarsUseCase(usersRepo, pgstore.NewIdentityTransactions(pool), store, defaultS3AvatarBucket)
 	problemImportUC := problems.NewProblemImportUseCase(problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(pool))
 	problemPublishUC := problems.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, store, defaultS3PackageBucket, pgstore.NewProblemTransactions(pool))
 	problemsUC := problems.NewProblemsUseCase(problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(pool), problemPublishUC, orgsRepo)
@@ -182,7 +182,7 @@ func runApp(envFile string) error {
 	contestsUC := contests.NewContestsUseCase(contestsRepo, orgsRepo, pgstore.NewContestCommandTransactions(pool), permissionsUC)
 	contestsUC.SetNotificationsUC(notificationsUC)
 
-	blogsUC := blogs.NewBlogsUseCase(blogsRepo, store, defaultS3BlogBucket)
+	blogsUC := blogs.NewBlogsUseCase(pgstore.NewBlogTransactions(pool), store, defaultS3BlogBucket)
 	orgsUC := organizations.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(pool), notificationsUC)
 	teamsUC := organizations.NewTeamsUseCase(teamsRepo, permissionsUC, pgstore.NewTeamTransactions(pool))
 	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsRepo, pgstore.NewSubmissionTransactions(pool), permissionsUC)

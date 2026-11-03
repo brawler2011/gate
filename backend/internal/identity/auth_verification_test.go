@@ -522,7 +522,9 @@ func TestAdminUserManagement(t *testing.T) {
 	require.ErrorIs(t, usersUC.AdminSetPassword(ctx, "targetuser", "DeniedPassword99"), pkg.ErrUnauthenticated)
 	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
 	require.ErrorIs(t, usersUC.AdminSetPassword(ctx, "targetuser", "DeniedPassword99"), pkg.NoPermission)
-	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleAdmin})
+	admin := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleAdmin}
+	usersRepo.users[admin.Id] = admin
+	ctx = accessmodel.WithUser(ctx, admin)
 
 	err := usersUC.AdminChangeEmail(ctx, "targetuser", "direct@example.com", false)
 	require.NoError(t, err)
@@ -545,4 +547,42 @@ func TestAdminUserManagement(t *testing.T) {
 	err = usersUC.AdminSendPasswordReset(ctx, "targetuser")
 	require.NoError(t, err)
 	assert.Equal(t, "direct@example.com", emailSvc.lastPasswordResetEmail.ToEmail)
+}
+
+// The password can change while bcrypt runs outside the transaction.
+type changedPasswordStore struct{ identityTestStore }
+
+func (s changedPasswordStore) GetUserById(ctx context.Context, id uuid.UUID) (accessmodel.User, error) {
+	user, err := s.UsersRepo.GetUserById(ctx, id)
+	user.PasswordHash = "new password hash"
+	return user, err
+}
+func TestLoginRejectsPasswordChangedBeforeSessionCommit(t *testing.T) {
+	users, sessions := newFullMockUsersRepo(), newFullMockAuthRepo()
+	hash, err := bcrypt.GenerateFromPassword([]byte("OldPassword123"), bcrypt.MinCost)
+	require.NoError(t, err)
+	require.NoError(t, users.CreateUser(context.Background(), identitymodel.CreateUserParams{Id: uuid.New(), Username: "login_race", Role: accessmodel.UserRoleUser, PasswordHash: string(hash), IsEmailVerified: true}))
+	store := changedPasswordStore{identityTestStore{UsersRepo: users, AuthRepo: sessions}}
+	uc := NewAuthUseCase(users, sessions, testTransactions[IdentityTxStore]{store}, nil)
+	_, id, err := uc.Login(context.Background(), "login_race", "OldPassword123")
+	require.ErrorIs(t, err, pkg.ErrUnauthenticated)
+	require.Equal(t, uuid.Nil, id)
+	require.Empty(t, sessions.sessions)
+}
+
+func TestAccountCommandsRejectStaleAdministratorAndSelfPromotion(t *testing.T) {
+	users := newFullMockUsersRepo()
+	user := accessmodel.User{Id: uuid.New(), Username: "ordinary", Role: accessmodel.UserRoleUser}
+	users.users[user.Id] = user
+	uc := NewUsersUseCase(users, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: users}}, nil)
+	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: user.Id, Role: accessmodel.UserRoleAdmin})
+	_, err := uc.CreateUser(ctx, identitymodel.CreateUserInput{Username: "denied", Password: "Password123!", Role: accessmodel.UserRoleUser})
+	require.ErrorIs(t, err, pkg.NoPermission)
+	name := "renamed"
+	other := uuid.New()
+	require.ErrorIs(t, uc.UpdateUser(ctx, identitymodel.UpdateUserInput{Id: other, Username: &name}), pkg.NoPermission)
+	role := accessmodel.UserRoleAdmin
+	ctx = accessmodel.WithUser(ctx, user)
+	require.ErrorIs(t, uc.UpdateUser(ctx, identitymodel.UpdateUserInput{Id: user.Id, Role: &role}), pkg.NoPermission)
+	require.Equal(t, accessmodel.UserRoleUser, users.users[user.Id].Role)
 }

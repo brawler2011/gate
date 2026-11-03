@@ -97,6 +97,7 @@ type Querier interface {
 	DeleteSessionsByUserId(ctx context.Context, userID uuid.UUID) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
 	GetAuthTokenByHash(ctx context.Context, arg GetAuthTokenByHashParams) (AuthToken, error)
+	GetAuthorizationUser(ctx context.Context, id uuid.UUID) (GetAuthorizationUserRow, error)
 	GetContestAnnouncementByID(ctx context.Context, id uuid.UUID) (GetContestAnnouncementByIDRow, error)
 	GetContestByID(ctx context.Context, id uuid.UUID) (GetContestByIDRow, error)
 	GetContestByLogin(ctx context.Context, arg GetContestByLoginParams) (GetContestByLoginRow, error)
@@ -190,6 +191,7 @@ type Querier interface {
 	LockContest(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	LockJudgeContest(ctx context.Context, submissionID uuid.UUID) (uuid.UUID, error)
 	LockOrganization(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
+	LockPost(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	LockProblem(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	LockTeam(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	LockUser(ctx context.Context, id uuid.UUID) (uuid.UUID, error)

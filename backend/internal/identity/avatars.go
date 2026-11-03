@@ -10,23 +10,27 @@ import (
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 )
 
 type AvatarsUseCase struct {
 	usersRepo    UsersRepo
+	transactions IdentityTransactions
 	storage      storage.Storage
 	avatarBucket string
 }
 
 func NewAvatarsUseCase(
 	usersRepo UsersRepo,
+	transactions IdentityTransactions,
 	storage storage.Storage,
 	avatarBucket string,
 ) *AvatarsUseCase {
 	return &AvatarsUseCase{
 		usersRepo:    usersRepo,
+		transactions: transactions,
 		storage:      storage,
 		avatarBucket: avatarBucket,
 	}
@@ -73,7 +77,7 @@ func (uc *AvatarsUseCase) UploadAvatar(
 		".webp": true,
 	}
 	if !allowedExts[ext] {
-		return "", fmt.Errorf("invalid file extension: %s (allowed: jpg, jpeg, png, gif, webp)", ext)
+		return "", pkg.Wrap(pkg.ErrBadInput, nil, "invalid avatar file extension")
 	}
 
 	// Generate unique image ID
@@ -86,17 +90,25 @@ func (uc *AvatarsUseCase) UploadAvatar(
 		return "", fmt.Errorf("failed to upload avatar: %w", err)
 	}
 
-	// Update user record with avatar ID (stored in avatar_url column)
-	err = uc.usersRepo.UpdateUser(ctx, identitymodel.UpdateUserParams{
-		Id:        user.Id,
-		AvatarUrl: &imgID,
+	var oldAvatar *string
+	err = withinAccount(ctx, uc.transactions, user.Id, false, func(store IdentityTxStore) error {
+		current, err := store.GetUserById(ctx, user.Id)
+		if err != nil {
+			return err
+		}
+		oldAvatar = current.AvatarUrl
+		return store.UpdateUser(ctx, identitymodel.UpdateUserParams{Id: user.Id, AvatarUrl: &imgID})
 	})
+
 	if err != nil {
 		// Try to clean up uploaded file
-		_ = uc.storage.DeleteFile(ctx, uc.avatarBucket, key) // FIXME: dont ignore, join it
+		uc.deleteAvatarFile(ctx, key)
 		return "", fmt.Errorf("failed to update user avatar: %w", err)
 	}
 
+	if oldAvatar != nil && *oldAvatar != "" {
+		uc.deleteAvatarFile(ctx, *oldAvatar)
+	}
 	return imgID, nil
 }
 
@@ -112,27 +124,23 @@ func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, username string) err
 		return err
 	}
 
-	// FIXME: если в схеме бд пустая строка и null эквивалентны по логике, то значение стоит сделать NOT NULL
-	// FIXME: ну и название поля оч кривое, это же не url, а id
-	if user.AvatarUrl == nil || *user.AvatarUrl == "" {
-		return fmt.Errorf("user has no avatar")
-	}
-
-	// Update user record to remove avatar URL
-	emptyURL := ""
-	err = uc.usersRepo.UpdateUser(ctx, identitymodel.UpdateUserParams{
-		Id:        user.Id,
-		AvatarUrl: &emptyURL,
+	var oldAvatar string
+	err = withinAccount(ctx, uc.transactions, user.Id, false, func(store IdentityTxStore) error {
+		current, err := store.GetUserById(ctx, user.Id)
+		if err != nil {
+			return err
+		}
+		if current.AvatarUrl == nil || *current.AvatarUrl == "" {
+			return pkg.ErrNotFound
+		}
+		oldAvatar = *current.AvatarUrl
+		emptyURL := ""
+		return store.UpdateUser(ctx, identitymodel.UpdateUserParams{Id: user.Id, AvatarUrl: &emptyURL})
 	})
 	if err != nil {
-		return fmt.Errorf("failed to update user record: %w", err)
+		return err
 	}
-
-	// Delete the avatar file
-	err = uc.storage.DeleteFile(ctx, uc.avatarBucket, *user.AvatarUrl)
-	if err != nil {
-		slog.Debug("failed to delete old avatar file", "error", err)
-	}
+	uc.deleteAvatarFile(ctx, oldAvatar)
 
 	return nil
 }
@@ -159,4 +167,10 @@ func (uc *AvatarsUseCase) GetAvatar(ctx context.Context, username string, ifNone
 		readCloser: body,
 		etag:       etag,
 	}, nil
+}
+
+func (uc *AvatarsUseCase) deleteAvatarFile(ctx context.Context, key string) {
+	if err := uc.storage.DeleteFile(ctx, uc.avatarBucket, key); err != nil {
+		slog.Warn("failed to delete avatar file", "key", key, "error", err)
+	}
 }

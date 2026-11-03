@@ -1,7 +1,9 @@
 package identity
 
 import (
+	"bytes"
 	"context"
+	"github.com/brawler2011/gate/backend/pkg"
 	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -38,4 +40,48 @@ type IdentityTxStore interface {
 
 type IdentityTransactions interface {
 	Within(context.Context, func(IdentityTxStore) error) error
+}
+
+// Account commands lock both the actor and the target in a stable order.
+// Authorization is checked from these rows rather than the HTTP snapshot.
+func withinAccount(ctx context.Context, transactions IdentityTransactions, target uuid.UUID, adminOnly bool, fn func(IdentityTxStore) error) error {
+	actor := accessmodel.UserFromContext(ctx)
+	if actor.IsGuest() {
+		return pkg.ErrUnauthenticated
+	}
+	return transactions.Within(ctx, func(store IdentityTxStore) error {
+		if err := lockAccounts(ctx, store, actor.Id, target); err != nil {
+			return err
+		}
+		current, err := store.GetUserById(ctx, actor.Id)
+		if err != nil {
+			return err
+		}
+		if current.IsExpired() {
+			return pkg.ErrUnauthenticated
+		}
+		if adminOnly || target != actor.Id {
+			if !current.IsAdmin() {
+				return pkg.NoPermission
+			}
+		}
+		return fn(store)
+	})
+}
+
+func lockAccounts(ctx context.Context, store IdentityTxStore, actor, target uuid.UUID) error {
+	ids := []uuid.UUID{actor}
+	if target != uuid.Nil && target != actor {
+		if bytes.Compare(target[:], actor[:]) < 0 {
+			ids = []uuid.UUID{target, actor}
+		} else {
+			ids = append(ids, target)
+		}
+	}
+	for _, id := range ids {
+		if err := store.LockUser(ctx, id); err != nil {
+			return err
+		}
+	}
+	return nil
 }

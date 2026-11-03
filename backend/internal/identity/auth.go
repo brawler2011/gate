@@ -39,21 +39,9 @@ func NewAuthUseCase(
 	usersRepo UsersRepo,
 	authRepo AuthRepo,
 	txManager IdentityTransactions,
-	emailService ...email.EmailService,
+	emailService email.EmailService,
 ) *AuthUseCase {
-	var es email.EmailService
-	if len(emailService) > 0 && emailService[0] != nil {
-		es = emailService[0]
-	} else {
-		es = email.NewEmailService("local", "", "", "")
-	}
-
-	return &AuthUseCase{
-		usersRepo:    usersRepo,
-		authRepo:     authRepo,
-		txManager:    txManager,
-		emailService: es,
-	}
+	return &AuthUseCase{usersRepo: usersRepo, authRepo: authRepo, txManager: txManager, emailService: emailService}
 }
 
 func generateSecureToken() (string, string, error) {
@@ -238,7 +226,23 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 	sessionID := uuid.New()
 	expiresAt := time.Now().Add(sessionSoftLifetime)
 
-	err = uc.authRepo.CreateSession(ctx, sessionID, user.Id, expiresAt)
+	err = uc.txManager.Within(ctx, func(store IdentityTxStore) error {
+		if err := store.LockUser(ctx, user.Id); err != nil {
+			return err
+		}
+		current, err := store.GetUserById(ctx, user.Id)
+		if err != nil {
+			return err
+		}
+		if current.PasswordHash != user.PasswordHash || current.IsExpired() {
+			return pkg.Wrap(pkg.ErrUnauthenticated, nil, "credentials changed or account expired")
+		}
+		if !current.IsEmailVerified {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "email not verified")
+		}
+		user = current
+		return store.CreateSession(ctx, sessionID, user.Id, expiresAt)
+	})
 	if err != nil {
 		return accessmodel.User{}, uuid.Nil, err
 	}
@@ -466,56 +470,41 @@ func (uc *AuthUseCase) ChangePassword(ctx context.Context, userID uuid.UUID, old
 	if err := accessmodel.RequireSelfOrAdmin(ctx, userID); err != nil {
 		return uuid.Nil, err
 	}
-	var sessionID uuid.UUID
-	err := uc.txManager.Within(ctx, func(store IdentityTxStore) error {
-		var err error
-		sessionID, err = uc.changePasswordWithin(ctx, store, userID, oldPassword, newPassword)
-		return err
-	})
-	return sessionID, err
-}
-
-func (uc *AuthUseCase) changePasswordWithin(ctx context.Context, store IdentityTxStore, userID uuid.UUID, oldPassword, newPassword string) (uuid.UUID, error) {
 	if err := identitymodel.PasswordValidate(newPassword); err != nil {
 		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid password")
 	}
-
-	if err := store.LockUser(ctx, userID); err != nil {
+	user, err := uc.usersRepo.GetUserById(ctx, userID)
+	if err != nil {
 		return uuid.Nil, err
 	}
-
-	user, err := store.GetUserById(ctx, userID)
-	if err != nil {
-		return uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, err, "user not found")
-	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword))
-	if err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
 		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "incorrect current password")
 	}
-
 	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return uuid.Nil, pkg.Wrap(pkg.ErrInternal, err, "failed to hash password")
 	}
-
-	err = store.UpdateUserPassword(ctx, userID, string(hashed))
+	sessionID := uuid.New()
+	err = withinAccount(ctx, uc.txManager, userID, false, func(store IdentityTxStore) error {
+		current, err := store.GetUserById(ctx, userID)
+		if err != nil {
+			return err
+		}
+		if current.PasswordHash != user.PasswordHash {
+			return pkg.Wrap(pkg.ErrConflict, nil, "password changed concurrently")
+		}
+		if err := store.UpdateUserPassword(ctx, userID, string(hashed)); err != nil {
+			return err
+		}
+		if err := store.DeleteSessionsByUserID(ctx, userID); err != nil {
+			return err
+		}
+		return store.CreateSession(ctx, sessionID, userID, time.Now().Add(sessionSoftLifetime))
+	})
 	if err != nil {
 		return uuid.Nil, err
 	}
-
-	if err := store.DeleteSessionsByUserID(ctx, userID); err != nil {
-		return uuid.Nil, err
-	}
-
-	newSessionID := uuid.New()
-	expiresAt := time.Now().Add(sessionSoftLifetime)
-	err = store.CreateSession(ctx, newSessionID, userID, expiresAt)
-	if err != nil {
-		return uuid.Nil, err
-	}
-
-	return newSessionID, nil
+	return sessionID, nil
 }
 
 type emailChangePayload struct {
@@ -554,13 +543,23 @@ func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID,
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to marshal payload")
 	}
 
-	err = replaceAuthToken(ctx, uc.txManager, identitymodel.CreateAuthTokenParams{
-		ID:        uuid.New(),
-		UserID:    userID,
-		TokenType: identitymodel.AuthTokenTypeEmailChange,
-		TokenHash: tokenHash,
-		Payload:   payloadBytes,
-		ExpiresAt: time.Now().Add(emailChangeTokenTTL),
+	err = withinAccount(ctx, uc.txManager, userID, false, func(store IdentityTxStore) error {
+		current, err := store.GetUserById(ctx, userID)
+		if err != nil {
+			return err
+		}
+		if current.PasswordHash != user.PasswordHash {
+			return pkg.Wrap(pkg.ErrConflict, nil, "password changed concurrently")
+		}
+		user = current
+		return replaceAuthTokenWithin(ctx, store, identitymodel.CreateAuthTokenParams{
+			ID:        uuid.New(),
+			UserID:    userID,
+			TokenType: identitymodel.AuthTokenTypeEmailChange,
+			TokenHash: tokenHash,
+			Payload:   payloadBytes,
+			ExpiresAt: time.Now().Add(emailChangeTokenTTL),
+		})
 	})
 	if err != nil {
 		return err
@@ -623,9 +622,12 @@ func replaceAuthToken(ctx context.Context, transactions IdentityTransactions, pa
 		if err := store.LockUser(ctx, params.UserID); err != nil {
 			return err
 		}
-		if err := store.DeleteAuthTokensByUserIdAndType(ctx, params.UserID, params.TokenType); err != nil {
-			return err
-		}
-		return store.CreateAuthToken(ctx, params)
+		return replaceAuthTokenWithin(ctx, store, params)
 	})
+}
+func replaceAuthTokenWithin(ctx context.Context, store IdentityTxStore, params identitymodel.CreateAuthTokenParams) error {
+	if err := store.DeleteAuthTokensByUserIdAndType(ctx, params.UserID, params.TokenType); err != nil {
+		return err
+	}
+	return store.CreateAuthToken(ctx, params)
 }

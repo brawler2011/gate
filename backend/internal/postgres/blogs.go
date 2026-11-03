@@ -2,7 +2,7 @@ package postgres
 
 import (
 	"context"
-	"fmt"
+	"github.com/brawler2011/gate/backend/pkg"
 	"math"
 
 	blogsmodel "github.com/brawler2011/gate/backend/internal/blogs/model"
@@ -33,7 +33,7 @@ func (r *BlogsRepo) CreatePost(ctx context.Context, params blogsmodel.CreatePost
 	})
 
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to create post: %w", err)
+		return uuid.Nil, HandlePgErr(err)
 	}
 
 	return id, nil
@@ -44,7 +44,7 @@ func (r *BlogsRepo) GetPostByID(ctx context.Context, id uuid.UUID) (*blogsmodel.
 	row, err := r.queries.GetPostByID(ctx, id)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get post: %w", err)
+		return nil, HandlePgErr(err)
 	}
 
 	post := postFromSQLC(row)
@@ -56,7 +56,7 @@ func (r *BlogsRepo) ListPosts(ctx context.Context, params blogsmodel.ListPostsPa
 	// Get total count
 	totalCount, err := r.queries.CountPosts(ctx)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count posts: %w", err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	// Calculate total pages
@@ -77,7 +77,7 @@ func (r *BlogsRepo) ListPosts(ctx context.Context, params blogsmodel.ListPostsPa
 		})
 	}
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to list posts: %w", err)
+		return nil, 0, HandlePgErr(err)
 	}
 	var posts []blogsmodel.Post
 	for _, row := range rows {
@@ -98,11 +98,11 @@ func (r *BlogsRepo) UpdatePost(ctx context.Context, params blogsmodel.UpdatePost
 	})
 
 	if err != nil {
-		return fmt.Errorf("failed to update post: %w", err)
+		return HandlePgErr(err)
 	}
 
 	if affected == 0 {
-		return fmt.Errorf("post not found")
+		return pkg.ErrNotFound
 	}
 
 	return nil
@@ -112,11 +112,11 @@ func (r *BlogsRepo) UpdatePost(ctx context.Context, params blogsmodel.UpdatePost
 func (r *BlogsRepo) DeletePost(ctx context.Context, id uuid.UUID) error {
 	affected, err := r.queries.DeletePost(ctx, id)
 	if err != nil {
-		return fmt.Errorf("failed to delete post: %w", err)
+		return HandlePgErr(err)
 	}
 
 	if affected == 0 {
-		return fmt.Errorf("post not found")
+		return pkg.ErrNotFound
 	}
 
 	return nil
@@ -134,4 +134,9 @@ func postFromSQLC(row sqlc.Post) blogsmodel.Post {
 		AuthorName:  row.AuthorName,
 		ImageKey:    row.ImageKey,
 	}
+}
+
+func (r *BlogsRepo) LockPost(ctx context.Context, id uuid.UUID) error {
+	_, err := r.queries.LockPost(ctx, id)
+	return HandlePgErr(err)
 }

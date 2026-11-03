@@ -37,7 +37,7 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 	authRepo := pgstore.NewAuthRepo(s.dbPool)
 	tx := pgstore.NewIdentityTransactions(s.dbPool)
 	users := identity.NewUsersUseCase(s.usersRepo, tx, nil)
-	auth := identity.NewAuthUseCase(s.usersRepo, authRepo, tx)
+	auth := identity.NewAuthUseCase(s.usersRepo, authRepo, tx, nil)
 	permissions := access.NewPermissionsUseCase(s.contestsRepo, users, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
 	contests := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissions)
 	hub := observer.NewHub(100, contests)

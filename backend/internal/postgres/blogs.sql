@@ -34,3 +34,6 @@ WHERE id = $1;
 
 -- name: DeletePost :execrows
 DELETE FROM posts WHERE id = $1;
+
+-- name: LockPost :one
+SELECT id FROM posts WHERE id=$1 FOR UPDATE;

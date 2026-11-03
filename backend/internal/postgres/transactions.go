@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 
+	"github.com/brawler2011/gate/backend/internal/blogs"
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
 	judging "github.com/brawler2011/gate/backend/internal/judging"
@@ -132,5 +133,14 @@ func NewDraftTransactions(pool *pgxpool.Pool) contests.DraftTransactions {
 			*ContestsRepo
 			*authorization
 		}{&DraftsRepo{queries: q}, &ContestsRepo{queries: q}, bindAuthorization(q)}
+	}}
+}
+
+func NewBlogTransactions(pool *pgxpool.Pool) blogs.Transactions {
+	return transactions[blogs.TxStore]{pool: pool, bind: func(q *sqlc.Queries) blogs.TxStore {
+		return struct {
+			*BlogsRepo
+			authorizationUsers
+		}{&BlogsRepo{queries: q}, authorizationUsers{q}}
 	}}
 }

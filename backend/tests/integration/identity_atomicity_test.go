@@ -23,7 +23,7 @@ CREATE TRIGGER reject_auth_token BEFORE INSERT ON auth_tokens FOR EACH ROW EXECU
 		_, err := s.dbPool.Exec(s.ctx, `DROP TRIGGER reject_auth_token ON auth_tokens; DROP FUNCTION reject_auth_token()`)
 		s.Require().NoError(err)
 	}()
-	auth := identity.NewAuthUseCase(s.usersRepo, pgstore.NewAuthRepo(s.dbPool), pgstore.NewIdentityTransactions(s.dbPool))
+	auth := identity.NewAuthUseCase(s.usersRepo, pgstore.NewAuthRepo(s.dbPool), pgstore.NewIdentityTransactions(s.dbPool), nil)
 	_, err = auth.Register(s.ctx, "atomic_registration", "atomic@example.com", "Password123!")
 	s.Require().Error(err)
 	var count int
@@ -42,7 +42,7 @@ func (s *IntegrationTestSuite) TestVerificationRollsBackSessionFailureAndConsume
 	_, err := s.dbPool.Exec(s.ctx, `CREATE FUNCTION reject_auth_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected session failure'; END $$;
 CREATE TRIGGER reject_auth_session BEFORE INSERT ON sessions FOR EACH ROW EXECUTE FUNCTION reject_auth_session()`)
 	s.Require().NoError(err)
-	auth := identity.NewAuthUseCase(s.usersRepo, repo, pgstore.NewIdentityTransactions(s.dbPool))
+	auth := identity.NewAuthUseCase(s.usersRepo, repo, pgstore.NewIdentityTransactions(s.dbPool), nil)
 	_, _, err = auth.VerifyEmail(s.ctx, token)
 	_, cleanupErr := s.dbPool.Exec(s.ctx, `DROP TRIGGER reject_auth_session ON sessions; DROP FUNCTION reject_auth_session()`)
 	s.Require().NoError(cleanupErr)

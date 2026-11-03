@@ -229,7 +229,7 @@ func TestClaimTemporaryUser_Success(t *testing.T) {
 	}
 
 	// Claim temporary user
-	res, err := usersUC.ClaimTemporaryUser(ctx, permUser, identitymodel.ClaimTemporaryUserInput{
+	res, err := usersUC.ClaimTemporaryUser(accessmodel.WithUser(ctx, permUser), permUser, identitymodel.ClaimTemporaryUserInput{
 		Username: "temp_olymp_01",
 		Password: tempPassword,
 	})
@@ -244,7 +244,7 @@ func TestClaimTemporaryUser_Success(t *testing.T) {
 	assert.Equal(t, permUser.Id, *updatedTemp.ClaimedByUserID)
 
 	// Verify cannot claim twice
-	_, err = usersUC.ClaimTemporaryUser(ctx, permUser, identitymodel.ClaimTemporaryUserInput{
+	_, err = usersUC.ClaimTemporaryUser(accessmodel.WithUser(ctx, permUser), permUser, identitymodel.ClaimTemporaryUserInput{
 		Username: "temp_olymp_01",
 		Password: tempPassword,
 	})
@@ -268,7 +268,7 @@ func TestClaimTemporaryUser_Rejections(t *testing.T) {
 	usersRepo.users[permanentOther.Id] = permanentOther
 	usersRepo.usersByName[permanentOther.Username] = permanentOther
 
-	_, err := usersUC.ClaimTemporaryUser(ctx, permUser, identitymodel.ClaimTemporaryUserInput{
+	_, err := usersUC.ClaimTemporaryUser(accessmodel.WithUser(ctx, permUser), permUser, identitymodel.ClaimTemporaryUserInput{
 		Username: "bob_perm",
 		Password: "any",
 	})
@@ -287,7 +287,7 @@ func TestClaimTemporaryUser_Rejections(t *testing.T) {
 	usersRepo.users[tempUser.Id] = tempUser
 	usersRepo.usersByName[tempUser.Username] = tempUser
 
-	_, err = usersUC.ClaimTemporaryUser(ctx, permUser, identitymodel.ClaimTemporaryUserInput{
+	_, err = usersUC.ClaimTemporaryUser(accessmodel.WithUser(ctx, permUser), permUser, identitymodel.ClaimTemporaryUserInput{
 		Username: "temp_02",
 		Password: "wrong_password",
 	})
@@ -299,7 +299,7 @@ func TestAuth_ExpiredAccount(t *testing.T) {
 	ctx := context.Background()
 	usersRepo := newMockUsersRepoForTemp()
 	authRepo := &mockAuthRepo{sessions: make(map[uuid.UUID]identitymodel.Session)}
-	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}})
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, nil)
 
 	pastExpiry := time.Now().Add(-1 * time.Hour)
 	password := "GoodPassword1"

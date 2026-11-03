@@ -199,10 +199,10 @@ func (s *IntegrationTestSuite) initApp() {
 
 	organizationsUC := organizations.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(s.dbPool), notificationsUC)
 	teamsUC := organizations.NewTeamsUseCase(s.teamsRepo, permissionsUC, pgstore.NewTeamTransactions(s.dbPool))
-	blogsUC := blogs.NewBlogsUseCase(blogsRepo, nil, "")
+	blogsUC := blogs.NewBlogsUseCase(pgstore.NewBlogTransactions(s.dbPool), nil, "")
 	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, nil, permissionsUC)
 
-	avatarsUC := identity.NewAvatarsUseCase(s.usersRepo, testStorage, "avatars")
+	avatarsUC := identity.NewAvatarsUseCase(s.usersRepo, pgstore.NewIdentityTransactions(s.dbPool), testStorage, "avatars")
 
 	importUC := problems.NewProblemImportUseCase(s.problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(s.dbPool))
 

@@ -77,7 +77,7 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 	description := req.Description.Value
 	text := req.Text.Value
 
-	postID, err := s.blogsUC.CreatePost(ctx, title, text, description, user.Id, user.Username, file.File, file.Name)
+	postID, err := s.blogsUC.CreatePost(ctx, title, text, description, file.File, file.Name)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to create post")
 	}
@@ -174,7 +174,7 @@ func (s *CoreServer) DeletePostById(ctx context.Context, params corev1.DeletePos
 }
 
 func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImageParams) (corev1.GetPostImageRes, error) {
-	post, err := s.blogsUC.GetPost(ctx, params.ID)
+	post, err := s.blogsReader.GetPostByID(ctx, params.ID)
 	if err != nil {
 		// FIXME:
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
