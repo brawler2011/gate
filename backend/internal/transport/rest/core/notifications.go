@@ -32,7 +32,7 @@ func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNo
 		UnreadOnly: unreadOnly,
 	})
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list notifications")
+		return nil, err
 	}
 
 	return NotificationsListResponseDTO(list), nil
@@ -46,7 +46,7 @@ func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context) (*corev1.U
 
 	count, err := h.notificationsReader.GetUnreadCount(ctx, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to get unread notifications count")
+		return nil, err
 	}
 
 	return &corev1.UnreadNotificationsCountResponseModel{Count: count}, nil
@@ -60,7 +60,7 @@ func (h *CoreServer) MarkNotificationAsRead(ctx context.Context, params corev1.M
 
 	err := h.notificationsUC.MarkAsRead(ctx, params.ID, user.Id)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, "failed to mark notification as read")
+		return err
 	}
 
 	return nil
@@ -74,7 +74,7 @@ func (h *CoreServer) MarkAllNotificationsAsRead(ctx context.Context) error {
 
 	err := h.notificationsUC.MarkAllAsRead(ctx, user.Id)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, "failed to mark all notifications as read")
+		return err
 	}
 
 	return nil

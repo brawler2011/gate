@@ -97,6 +97,8 @@ func (s *IntegrationTestSuite) TestJudgeJobsFenceDuplicateLeasesAndGenerations()
 	s.EqualValues(2, replacement.Attempt)
 	s.NotEqual(active.LeaseToken, replacement.LeaseToken)
 	s.ErrorIs(jobs.Renew(s.ctx, active), judging.ErrLeaseLost)
+	s.Require().NoError(jobs.Release(s.ctx, active))
+	s.Require().NoError(jobs.Renew(s.ctx, replacement), "a stale release cannot clear the replacement lease")
 	txs := pgstore.NewJudgeTransactions(s.dbPool)
 	s.Require().NoError(txs.Within(s.ctx, func(tx judging.JudgeTxStore) error {
 		current, err := tx.CompleteJob(s.ctx, active)
@@ -265,4 +267,43 @@ func (s *IntegrationTestSuite) TestDurableJudgeCompletionThroughJetStream() {
 	s.Require().NoError(err)
 	s.Equal(completed.Revision, saved.Revision)
 	s.Equal(completed.State, saved.State)
+}
+
+func (s *IntegrationTestSuite) TestJudgeRecoversAfterRelatedEntityDeletion() {
+	for _, deleted := range []string{"problem", "contest", "both"} {
+		s.Run(deleted, func() {
+			sub, contest, problem, _ := s.newJobSubmission()
+			jobs := pgstore.NewJudgeJobs(s.dbPool)
+			scheduled, err := jobs.ScheduleJob(s.ctx, sub)
+			s.Require().NoError(err)
+			abandoned, err := jobs.Claim(s.ctx, scheduled.Ref())
+			s.Require().NoError(err)
+			s.Require().NotEqual(uuid.Nil, abandoned.ID)
+			if deleted == "problem" || deleted == "both" {
+				_, err = s.dbPool.Exec(s.ctx, "DELETE FROM problems WHERE id=$1", problem)
+				s.Require().NoError(err)
+			}
+			if deleted == "contest" || deleted == "both" {
+				_, err = s.dbPool.Exec(s.ctx, "DELETE FROM contests WHERE id=$1", contest)
+				s.Require().NoError(err)
+			}
+			_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET deadline_at=now()-interval '1 second' WHERE id=$1", abandoned.ID)
+			s.Require().NoError(err)
+			judge := judging.NewJudgeUseCase(jobs, pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), nil, "", "", nil, silentJudgeProgress{})
+			s.Require().NoError(judge.JudgeSubmission(s.ctx, scheduled.Ref()))
+			saved, err := pgstore.NewSubmissionsRepo(s.dbPool).GetSubmission(s.ctx, sub)
+			s.Require().NoError(err)
+			s.Equal(submissionsmodel.GotIE, saved.State)
+			s.EqualValues(2, saved.Revision)
+			var state string
+			var attempt int
+			s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT state,attempt FROM judge_jobs WHERE id=$1", scheduled.ID).Scan(&state, &attempt))
+			s.Equal("completed", state)
+			s.Equal(2, attempt)
+			s.Require().NoError(judge.JudgeSubmission(s.ctx, scheduled.Ref()))
+			var completedCount int
+			s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type='submissions.completed'", sub).Scan(&completedCount))
+			s.Equal(1, completedCount)
+		})
+	}
 }

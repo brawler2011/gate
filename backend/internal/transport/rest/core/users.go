@@ -13,6 +13,7 @@ import (
 )
 
 type UsersReader interface {
+	GetUserByUsername(context.Context, string) (accessmodel.User, error)
 	GetUserProfileByUsername(ctx context.Context, username string) (identitymodel.UserProfile, error)
 	ListUsers(ctx context.Context, filter identitymodel.UsersListFilter) (identitymodel.UsersList, error)
 	ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]identitymodel.ClaimedAccountItem, error)
@@ -77,7 +78,7 @@ func (h *CoreServer) ListUsers(ctx context.Context, params corev1.ListUsersParam
 }
 
 func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.ListUserSubmissionsParams) (*corev1.ListSubmissionsResponseModel, error) {
-	user, err := h.usersUC.GetUserByUsername(ctx, params.Username)
+	user, err := h.usersReader.GetUserByUsername(ctx, params.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +136,7 @@ func (h *CoreServer) UpdateUser(ctx context.Context, req *corev1.UpdateUserReque
 		return pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
 	}
 
-	user, err := h.usersUC.GetUserByUsername(ctx, params.Username)
+	user, err := h.usersReader.GetUserByUsername(ctx, params.Username)
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,7 @@ import (
 	"math"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
@@ -29,11 +30,13 @@ func safeInt32[T ~int | ~int64](v T) int32 {
 }
 
 type ContestsRepo struct {
+	pool    *pgxpool.Pool
 	queries *sqlc.Queries
 }
 
 func NewContestsRepo(db *pgxpool.Pool) *ContestsRepo {
 	return &ContestsRepo{
+		pool:    db,
 		queries: sqlc.New(db),
 	}
 }
@@ -130,54 +133,61 @@ func (r *ContestsRepo) DeleteContest(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *ContestsRepo) ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, visibility string, page, pageSize int32) (*contestsmodel.ContestsList, error) {
+func (r *ContestsRepo) ListOrganizationContests(ctx context.Context, orgLogin, search string, page, pageSize int32) (*contestsmodel.ContestsList, error) {
+	if r.pool != nil {
+		return readSnapshot(ctx, r.pool, func(q *sqlc.Queries) (*contestsmodel.ContestsList, error) {
+			return (&ContestsRepo{queries: q}).ListOrganizationContests(ctx, orgLogin, search, page, pageSize)
+		})
+	}
+
+	org, err := r.queries.GetOrganizationByLogin(ctx, orgLogin)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+	viewer := accessmodel.UserFromContext(ctx).Id
 	rows, err := r.queries.ListContests(ctx, sqlc.ListContestsParams{
-		OrganizationID: orgID,
-		Column2:        search,
-		Column3:        visibility,
-		Limit:          pageSize,
-		Offset:         Offset(page, pageSize),
+		OrganizationID: org.ID, Search: search, ViewerID: viewer, PageLimit: pageSize, PageOffset: Offset(page, pageSize),
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
-
-	count, err := r.queries.CountContests(ctx, sqlc.CountContestsParams{
-		OrganizationID: orgID,
-		Column2:        search,
-		Column3:        visibility,
-	})
+	count, err := r.queries.CountContests(ctx, sqlc.CountContestsParams{OrganizationID: org.ID, Search: search, ViewerID: viewer})
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
-
 	contests := make([]contestsmodel.Contest, len(rows))
 	for i, row := range rows {
 		contests[i] = mapListContestsRow(row)
 	}
-
 	return &contestsmodel.ContestsList{Contests: contests, Pagination: paging.NewPagination(page, pageSize, safeInt32(count))}, nil
 }
 
 func (r *ContestsRepo) ListAdminContests(ctx context.Context, filter contestsmodel.AdminContestsFilter) (*contestsmodel.ContestsList, error) {
+	if r.pool != nil {
+		return readSnapshot(ctx, r.pool, func(q *sqlc.Queries) (*contestsmodel.ContestsList, error) {
+			return (&ContestsRepo{queries: q}).ListAdminContests(ctx, filter)
+		})
+	}
+
 	var visStr string
 	if filter.Visibility != nil {
 		visStr = string(*filter.Visibility)
 	}
 
 	rows, err := r.queries.ListAllContests(ctx, sqlc.ListAllContestsParams{
-		Column1: filter.Search,
-		Column2: visStr,
-		Limit:   filter.PageSize,
-		Offset:  Offset(filter.Page, filter.PageSize),
+		Search:     filter.Search,
+		Visibility: visStr,
+		PageLimit:  filter.PageSize,
+		PageOffset: Offset(filter.Page, filter.PageSize),
+		SortBy:     filter.SortBy, SortOrder: filter.SortOrder,
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
 
 	count, err := r.queries.CountAllContests(ctx, sqlc.CountAllContestsParams{
-		Column1: filter.Search,
-		Column2: visStr,
+		Search:     filter.Search,
+		Visibility: visStr,
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)
@@ -192,16 +202,24 @@ func (r *ContestsRepo) ListAdminContests(ctx context.Context, filter contestsmod
 }
 
 func (r *ContestsRepo) ListUserContests(ctx context.Context, filter contestsmodel.UserContestsFilter) (*contestsmodel.ContestsList, error) {
+	if r.pool != nil {
+		return readSnapshot(ctx, r.pool, func(q *sqlc.Queries) (*contestsmodel.ContestsList, error) {
+			return (&ContestsRepo{queries: q}).ListUserContests(ctx, filter)
+		})
+	}
+
 	rows, err := r.queries.ListUserAccessibleContests(ctx, sqlc.ListUserAccessibleContestsParams{
-		PUserID: filter.UserId,
-		Limit:   filter.PageSize,
-		Offset:  Offset(filter.Page, filter.PageSize),
+		UserID:     filter.UserId,
+		PageLimit:  filter.PageSize,
+		PageOffset: Offset(filter.Page, filter.PageSize),
+		Search:     filter.Search,
+		SortBy:     filter.SortBy, SortOrder: filter.SortOrder,
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
 
-	count, err := r.queries.CountUserAccessibleContests(ctx, filter.UserId)
+	count, err := r.queries.CountUserAccessibleContests(ctx, sqlc.CountUserAccessibleContestsParams{UserID: filter.UserId, Search: filter.Search})
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
@@ -215,17 +233,25 @@ func (r *ContestsRepo) ListUserContests(ctx context.Context, filter contestsmode
 }
 
 func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter contestsmodel.WorkshopContestsFilter) (*contestsmodel.ContestsList, error) {
+	if r.pool != nil {
+		return readSnapshot(ctx, r.pool, func(q *sqlc.Queries) (*contestsmodel.ContestsList, error) {
+			return (&ContestsRepo{queries: q}).ListWorkshopContests(ctx, filter)
+		})
+	}
+
 	if filter.OrganizationID != nil {
 		rows, err := r.queries.ListUserAccessibleContestsByOrg(ctx, sqlc.ListUserAccessibleContestsByOrgParams{
-			PUserID:        filter.UserId,
+			UserID:         filter.UserId,
 			OrganizationID: *filter.OrganizationID,
-			Limit:          filter.PageSize,
-			Offset:         Offset(filter.Page, filter.PageSize),
+			PageLimit:      filter.PageSize,
+			PageOffset:     Offset(filter.Page, filter.PageSize),
+			Search:         filter.Search,
+			SortBy:         filter.SortBy, SortOrder: filter.SortOrder,
 		})
 		if err != nil {
 			return nil, HandlePgErr(err)
 		}
-		count, err := r.queries.CountUserAccessibleContestsByOrg(ctx, sqlc.CountUserAccessibleContestsByOrgParams{PUserID: filter.UserId, OrganizationID: *filter.OrganizationID})
+		count, err := r.queries.CountUserAccessibleContestsByOrg(ctx, sqlc.CountUserAccessibleContestsByOrgParams{UserID: filter.UserId, OrganizationID: *filter.OrganizationID, Search: filter.Search})
 		if err != nil {
 			return nil, HandlePgErr(err)
 		}
@@ -237,15 +263,17 @@ func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter contests
 	}
 
 	rows, err := r.queries.ListUserAccessibleContests(ctx, sqlc.ListUserAccessibleContestsParams{
-		PUserID: filter.UserId,
-		Limit:   filter.PageSize,
-		Offset:  Offset(filter.Page, filter.PageSize),
+		UserID:     filter.UserId,
+		PageLimit:  filter.PageSize,
+		PageOffset: Offset(filter.Page, filter.PageSize),
+		Search:     filter.Search,
+		SortBy:     filter.SortBy, SortOrder: filter.SortOrder,
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
 
-	count, err := r.queries.CountUserAccessibleContests(ctx, filter.UserId)
+	count, err := r.queries.CountUserAccessibleContests(ctx, sqlc.CountUserAccessibleContestsParams{UserID: filter.UserId, Search: filter.Search})
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
@@ -258,19 +286,36 @@ func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter contests
 }
 
 func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter contestsmodel.PublicContestsFilter) (*contestsmodel.ContestsList, error) {
+	if filter.Page == 0 {
+		filter.Page = 1
+	}
+	if filter.PageSize == 0 {
+		filter.PageSize = 50
+	}
+	if filter.Page < 1 || filter.PageSize < 1 || filter.PageSize > 100 {
+		return nil, pkg.ErrBadInput
+	}
+
+	if r.pool != nil {
+		return readSnapshot(ctx, r.pool, func(q *sqlc.Queries) (*contestsmodel.ContestsList, error) {
+			return (&ContestsRepo{queries: q}).ListPublicContests(ctx, filter)
+		})
+	}
+
 	rows, err := r.queries.ListAllContests(ctx, sqlc.ListAllContestsParams{
-		Column1: filter.Search,
-		Column2: string(contestsmodel.ContestVisibilityPublic),
-		Limit:   filter.PageSize,
-		Offset:  Offset(filter.Page, filter.PageSize),
+		Search:     filter.Search,
+		Visibility: string(contestsmodel.ContestVisibilityPublic),
+		PageLimit:  filter.PageSize,
+		PageOffset: Offset(filter.Page, filter.PageSize),
+		SortBy:     filter.SortBy, SortOrder: filter.SortOrder,
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
 
 	count, err := r.queries.CountAllContests(ctx, sqlc.CountAllContestsParams{
-		Column1: filter.Search,
-		Column2: string(contestsmodel.ContestVisibilityPublic),
+		Search:     filter.Search,
+		Visibility: string(contestsmodel.ContestVisibilityPublic),
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)
@@ -474,8 +519,10 @@ func (r *ContestsRepo) ListContestMembers(ctx context.Context, filter contestsmo
 		return nil, HandlePgErr(err)
 	}
 
-	// No pagination support in the query - return all members
 	count := int64(len(rows))
+	start := min(int64(Offset(filter.Page, filter.PageSize)), count)
+	end := min(start+int64(filter.PageSize), count)
+	rows = rows[start:end]
 
 	members := make([]contestsmodel.ContestMember, len(rows))
 	for i, row := range rows {

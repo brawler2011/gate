@@ -187,7 +187,7 @@ func (m *fullMockAuthRepo) CleanupExpiredAuthTokens(ctx context.Context) error {
 }
 
 type fullMockUsersRepo struct {
-	UsersRepo
+	identityUsersStore
 	users        map[uuid.UUID]accessmodel.User
 	usersByName  map[string]accessmodel.User
 	usersByEmail map[string]accessmodel.User
@@ -323,7 +323,7 @@ func TestRegistrationAndEmailVerification(t *testing.T) {
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
 
-	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, emailSvc)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc)
 
 	// 1. Register new user
 	user, err := authUC.Register(ctx, "testuser", "test@example.com", "SecretPass123")
@@ -356,7 +356,7 @@ func TestRegistrationRetryUnverifiedUser(t *testing.T) {
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
 
-	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, emailSvc)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc)
 
 	// 1. Initial registration (email not verified yet)
 	user1, err := authUC.Register(ctx, "unverifieduser", "unverified@example.com", "FirstPassword123")
@@ -409,7 +409,7 @@ func TestPasswordResetFlow(t *testing.T) {
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
 
-	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, emailSvc)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc)
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("OldPassword123"), bcrypt.DefaultCost)
 	emailStr := "user@example.com"
@@ -458,7 +458,7 @@ func TestEmailChangeFlow(t *testing.T) {
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
 
-	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, emailSvc)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc)
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("MyPassword123"), bcrypt.DefaultCost)
 	oldEmail := "old@example.com"
@@ -504,7 +504,7 @@ func TestAdminUserManagement(t *testing.T) {
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
 
-	usersUC := NewUsersUseCase(usersRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, emailSvc)
+	usersUC := NewUsersUseCase(usersRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc)
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("Pass12345"), bcrypt.DefaultCost)
 	emailStr := "adminmanaged@example.com"
@@ -553,7 +553,7 @@ func TestAdminUserManagement(t *testing.T) {
 type changedPasswordStore struct{ identityTestStore }
 
 func (s changedPasswordStore) GetUserById(ctx context.Context, id uuid.UUID) (accessmodel.User, error) {
-	user, err := s.UsersRepo.GetUserById(ctx, id)
+	user, err := s.identityUsersStore.GetUserById(ctx, id)
 	user.PasswordHash = "new password hash"
 	return user, err
 }
@@ -562,7 +562,7 @@ func TestLoginRejectsPasswordChangedBeforeSessionCommit(t *testing.T) {
 	hash, err := bcrypt.GenerateFromPassword([]byte("OldPassword123"), bcrypt.MinCost)
 	require.NoError(t, err)
 	require.NoError(t, users.CreateUser(context.Background(), identitymodel.CreateUserParams{Id: uuid.New(), Username: "login_race", Role: accessmodel.UserRoleUser, PasswordHash: string(hash), IsEmailVerified: true}))
-	store := changedPasswordStore{identityTestStore{UsersRepo: users, AuthRepo: sessions}}
+	store := changedPasswordStore{identityTestStore{identityUsersStore: users, identityAuthStore: sessions}}
 	uc := NewAuthUseCase(users, sessions, testTransactions[IdentityTxStore]{store}, nil)
 	_, id, err := uc.Login(context.Background(), "login_race", "OldPassword123")
 	require.ErrorIs(t, err, pkg.ErrUnauthenticated)
@@ -574,7 +574,7 @@ func TestAccountCommandsRejectStaleAdministratorAndSelfPromotion(t *testing.T) {
 	users := newFullMockUsersRepo()
 	user := accessmodel.User{Id: uuid.New(), Username: "ordinary", Role: accessmodel.UserRoleUser}
 	users.users[user.Id] = user
-	uc := NewUsersUseCase(users, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: users}}, nil)
+	uc := NewUsersUseCase(users, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: users}}, nil)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: user.Id, Role: accessmodel.UserRoleAdmin})
 	_, err := uc.CreateUser(ctx, identitymodel.CreateUserInput{Username: "denied", Password: "Password123!", Role: accessmodel.UserRoleUser})
 	require.ErrorIs(t, err, pkg.NoPermission)

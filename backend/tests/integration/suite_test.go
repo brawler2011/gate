@@ -206,7 +206,6 @@ func (s *IntegrationTestSuite) initApp() {
 
 	importUC := problems.NewProblemImportUseCase(s.problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(s.dbPool))
 
-	draftsRepo := pgstore.NewDraftsRepo(s.dbPool)
 	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(s.dbPool))
 
 	announcementsRepo := pgstore.NewAnnouncementsRepo(s.dbPool)
@@ -214,7 +213,7 @@ func (s *IntegrationTestSuite) initApp() {
 	clarificationsRepo := pgstore.NewClarificationsRepo(s.dbPool)
 	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(s.dbPool))
 	communicationReader := contests.NewCommunicationReader(announcementsRepo, clarificationsRepo, permissionsUC)
-	contestDetails := contests.NewDetailsReader(s.contestsRepo, s.problemsRepo, problems.NewStatementReader(workspaceStorage, publishUC), permissionsUC, nil, s.usersRepo)
+	contestDetails := contests.NewDetailsReader(s.contestsRepo, s.problemsRepo, problems.NewStatementReader(workspaceStorage, packagesRepo, publishUC), permissionsUC, nil, s.usersRepo)
 
 	// Handler
 	coreServer := handlers.NewCoreServer(
@@ -239,10 +238,10 @@ func (s *IntegrationTestSuite) initApp() {
 		nil, // natsJS - not needed for integration tests
 		contestDetails,
 		s.usersRepo,
-		s.problemsRepo,
-		s.contestsRepo,
+		problems.NewReader(s.problemsRepo, permissionsUC, s.organizationsRepo, workshopUC),
+		contests.NewReader(s.contestsRepo, permissionsUC),
 		blogsRepo,
-		draftsRepo,
+		draftsUC,
 		notificationsRepo,
 		communicationReader,
 		packagesRepo,
@@ -268,7 +267,7 @@ func (s *IntegrationTestSuite) initApp() {
 		return "unmatched"
 	})(
 		middleware.AuthMiddleware(authUC)(
-			middleware.UsersMiddleware(usersUC)(
+			middleware.UsersMiddleware(s.usersRepo)(
 				s.testMiddleware(
 					middleware.ResponseWriterMiddleware(server),
 				),

@@ -88,6 +88,9 @@ func (uc *ProblemsUseCase) templatePackage(ctx context.Context, orgID uuid.UUID,
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid template_id format")
 	}
+	if err := withinProblem(ctx, uc.transactions, id, accessmodel.ActionViewProblem, func(ProblemTxStore) error { return nil }); err != nil {
+		return nil, err
+	}
 	template, err := uc.repo.GetProblemById(ctx, id)
 	if err != nil {
 		return nil, err

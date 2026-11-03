@@ -194,6 +194,9 @@ func (r *UsersRepo) ClaimTemporaryUser(ctx context.Context, id, claimedByUserID 
 }
 
 func (r *UsersRepo) ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]identitymodel.ClaimedAccountItem, error) {
+	if err := accessmodel.RequireSelfOrAdmin(ctx, claimedByUserID); err != nil {
+		return nil, err
+	}
 	users, err := r.queries.ListClaimedAccountsByUserId(ctx, claimedByUserID)
 	if err != nil {
 		return nil, HandlePgErr(err)

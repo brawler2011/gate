@@ -18,7 +18,7 @@ import (
 )
 
 type mockUsersRepoForTemp struct {
-	UsersRepo
+	identityUsersStore
 	users        map[uuid.UUID]accessmodel.User
 	usersByName  map[string]accessmodel.User
 	usersByEmail map[string]accessmodel.User
@@ -118,7 +118,7 @@ func TestBatchCreateOrganizationUsers_Success(t *testing.T) {
 		Role:           organizationsmodel.OrgRoleOwner,
 	}
 
-	orgsUC := organizations.NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, testTransactions[organizations.OrganizationTxStore]{organizationTestStore{PermissionsUseCase: f.permUC, OrganizationsRepo: f.orgs, UsersRepo: usersRepo}}, nil)
+	orgsUC := organizations.NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, testTransactions[organizations.OrganizationTxStore]{organizationTestStore{PermissionsUseCase: f.permUC, OrganizationsRepo: f.orgs, identityUsersStore: usersRepo}}, nil)
 
 	ttl := int32(30)
 	input := organizationsmodel.BatchCreateOrganizationUsersInput{
@@ -174,7 +174,7 @@ func TestBatchCreateOrganizationUsers_CollisionHandling(t *testing.T) {
 		PasswordHash: "dummy",
 	})
 
-	orgsUC := organizations.NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, testTransactions[organizations.OrganizationTxStore]{organizationTestStore{PermissionsUseCase: f.permUC, OrganizationsRepo: f.orgs, UsersRepo: usersRepo}}, nil)
+	orgsUC := organizations.NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, testTransactions[organizations.OrganizationTxStore]{organizationTestStore{PermissionsUseCase: f.permUC, OrganizationsRepo: f.orgs, identityUsersStore: usersRepo}}, nil)
 
 	input := organizationsmodel.BatchCreateOrganizationUsersInput{
 		OrgLogin: "test-org",
@@ -195,7 +195,7 @@ func TestClaimTemporaryUser_Success(t *testing.T) {
 	ctx := context.Background()
 	usersRepo := newMockUsersRepoForTemp()
 	contestsRepo := newMockContestsRepo()
-	usersUC := NewUsersUseCase(usersRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, ContestsRepo: contestsRepo}}, nil)
+	usersUC := NewUsersUseCase(usersRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, ContestsRepo: contestsRepo}}, nil)
 
 	// Permanent user
 	permUser := accessmodel.User{
@@ -257,7 +257,7 @@ func TestClaimTemporaryUser_Rejections(t *testing.T) {
 	ctx := context.Background()
 	usersRepo := newMockUsersRepoForTemp()
 	contestsRepo := newMockContestsRepo()
-	usersUC := NewUsersUseCase(usersRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, ContestsRepo: contestsRepo}}, nil)
+	usersUC := NewUsersUseCase(usersRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, ContestsRepo: contestsRepo}}, nil)
 
 	permUser := accessmodel.User{Id: uuid.New(), Username: "alice_perm", Role: accessmodel.UserRoleUser}
 	usersRepo.users[permUser.Id] = permUser
@@ -299,7 +299,7 @@ func TestAuth_ExpiredAccount(t *testing.T) {
 	ctx := context.Background()
 	usersRepo := newMockUsersRepoForTemp()
 	authRepo := &mockAuthRepo{sessions: make(map[uuid.UUID]identitymodel.Session)}
-	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, nil)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, nil)
 
 	pastExpiry := time.Now().Add(-1 * time.Hour)
 	password := "GoodPassword1"
@@ -324,7 +324,7 @@ func TestAuth_ExpiredAccount(t *testing.T) {
 }
 
 type mockAuthRepo struct {
-	AuthRepo
+	identityAuthStore
 	sessions map[uuid.UUID]identitymodel.Session
 }
 

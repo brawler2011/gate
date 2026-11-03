@@ -25,7 +25,7 @@ func newMockContestsRepo() *mockContestsRepo {
 type organizationTestStore struct {
 	*access.PermissionsUseCase
 	OrganizationsRepo
-	UsersRepo
+	identityUsersStore
 }
 
 func setupPermissionsFixture() *permissionsFixture {

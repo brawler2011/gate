@@ -47,8 +47,6 @@ type ContestsUC interface {
 	DeleteContestTeam(ctx context.Context, contestID, teamID, requestUserID uuid.UUID) error
 
 	CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error
-	GetContestProblem(ctx context.Context, c contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error)
-	GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]contestsmodel.ContestProblem, error)
 
 	DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error
 	ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []contestsmodel.ContestProblemReorderItem) error
@@ -170,8 +168,6 @@ type TeamsUC interface {
 }
 
 type UsersUC interface {
-	GetUserById(ctx context.Context, id uuid.UUID) (accessmodel.User, error)
-	GetUserByUsername(ctx context.Context, username string) (accessmodel.User, error)
 	UpdateUser(ctx context.Context, input identitymodel.UpdateUserInput) error
 	ClaimTemporaryUser(ctx context.Context, caller accessmodel.User, input identitymodel.ClaimTemporaryUserInput) (identitymodel.ClaimTemporaryUserResult, error)
 	AdminSetPassword(ctx context.Context, username, newPassword string) error

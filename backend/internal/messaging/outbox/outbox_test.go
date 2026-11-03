@@ -119,3 +119,33 @@ func TestDispatcherPanicIsFailure(t *testing.T) {
 	dispatcher.Register("test", panicEventHandler{})
 	require.ErrorContains(t, dispatcher.Dispatch(context.Background(), "test", nil), "handler failure")
 }
+
+type sequentialOutbox struct {
+	OutboxRepo
+	t       *testing.T
+	claimed int
+	marked  int
+}
+
+func (r *sequentialOutbox) PickEvents(_ context.Context, limit, _ int32) ([]eventdata.OutboxEvent, error) {
+	require.EqualValues(r.t, 1, limit, "sequential dispatch must claim only its next event")
+	require.Equal(r.t, r.claimed, r.marked, "the previous lease must be processed before claiming another")
+	r.claimed++
+	return []eventdata.OutboxEvent{{Id: uuid.New(), LeaseToken: uuid.New(), EventType: "test"}}, nil
+}
+func (r *sequentialOutbox) MarkAsCompleted(context.Context, uuid.UUID, uuid.UUID) error {
+	r.marked++
+	return nil
+}
+
+type successEventHandler struct{}
+
+func (successEventHandler) Handle(context.Context, string, []byte) error { return nil }
+
+func TestOutboxClaimsEachLeaseImmediatelyBeforeDispatch(t *testing.T) {
+	repo := &sequentialOutbox{t: t}
+	worker := NewOutboxWorker(eventDispatcher{successEventHandler{}}, repo)
+	worker.processBatch(context.Background())
+	require.Equal(t, batchSize, repo.claimed)
+	require.Equal(t, repo.claimed, repo.marked)
+}

@@ -2,6 +2,7 @@ package contests
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -174,4 +175,40 @@ func (draftTestStore) GetContest(_ context.Context, id uuid.UUID) (contestsmodel
 }
 func (draftTestStore) HasContestPermission(ctx context.Context, _, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
 	return action == accessmodel.ActionGetContest || accessmodel.UserFromContext(ctx).IsAdmin(), nil
+}
+
+func (m *mockDraftsRepo) ListDrafts(_ context.Context, filter contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error) {
+	result := &contestsmodel.ContestDraftsList{}
+	for _, draft := range m.drafts {
+		if draft.ContestID == filter.ContestID && draft.UserID == filter.UserID {
+			result.Drafts = append(result.Drafts, draft)
+		}
+	}
+	return result, nil
+}
+
+func TestDraftListRejectsCallerSpoofingOutsideHTTP(t *testing.T) {
+	repo := newMockDraftsRepo()
+	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}})
+	owner, other, contest := uuid.New(), uuid.New(), uuid.New()
+	id, err := repo.CreateDraft(context.Background(), &contestsmodel.ContestDraftCreation{ContestID: contest, UserID: owner, Code: "private"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	filter := contestsmodel.ContestDraftsFilter{ContestID: contest, UserID: owner}
+	if _, err := uc.ListDrafts(context.Background(), filter); !errors.Is(err, pkg.ErrUnauthenticated) {
+		t.Fatalf("guest: %v", err)
+	}
+	otherCtx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: other, Role: accessmodel.UserRoleUser})
+	if _, err := uc.ListDrafts(otherCtx, filter); !errors.Is(err, pkg.NoPermission) {
+		t.Fatalf("other user: %v", err)
+	}
+	ownerCtx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: owner, Role: accessmodel.UserRoleUser})
+	list, err := uc.ListDrafts(ownerCtx, filter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Drafts) != 1 || list.Drafts[0].ID != id {
+		t.Fatalf("unexpected drafts: %+v", list)
+	}
 }

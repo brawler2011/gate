@@ -65,10 +65,7 @@ func (r *JudgeJobs) Release(ctx context.Context, job judgingmodel.Job) error {
 func (r *JudgeJobs) CompleteJob(ctx context.Context, job judgingmodel.Job) (bool, error) {
 	// Use the same contest-first lock order as submit/rejudge and revision writes.
 	_, err := r.queries.LockJudgeContest(ctx, job.SubmissionID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
-	if err != nil {
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return false, HandlePgErr(err)
 	}
 	count, err := r.queries.CompleteJudgeJob(ctx, sqlc.CompleteJudgeJobParams{ID: job.ID, LeaseToken: job.LeaseToken})

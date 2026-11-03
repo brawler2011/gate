@@ -134,7 +134,6 @@ func runApp(envFile string) error {
 	blogsRepo := pgstore.NewBlogsRepo(pool)
 	submissionsRepo := pgstore.NewSubmissionsRepo(pool)
 	packagesRepo := pgstore.NewPackagesRepo(pool)
-	draftsRepo := pgstore.NewDraftsRepo(pool)
 	notificationsRepo := pgstore.NewNotificationsRepo(pool)
 	announcementsRepo := pgstore.NewAnnouncementsRepo(pool)
 	clarificationsRepo := pgstore.NewClarificationsRepo(pool)
@@ -210,7 +209,7 @@ func runApp(envFile string) error {
 	}
 
 	sandboxInstance := sandbox.NewSandbox(sandboxClient, sandboxCfg)
-	contestDetails := contests.NewDetailsReader(contestsRepo, problemsRepo, problems.NewStatementReader(workspaceStorage, problemPublishUC), permissionsUC, sandboxInstance, usersRepo)
+	contestDetails := contests.NewDetailsReader(contestsRepo, problemsRepo, problems.NewStatementReader(workspaceStorage, packagesRepo, problemPublishUC), permissionsUC, sandboxInstance, usersRepo)
 	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sandboxInstance, permissionsUC)
 
 	natsJS, err := pkg.NewNatsJetStream(cfg.GetNatsURL())
@@ -288,7 +287,7 @@ func runApp(envFile string) error {
 		return fmt.Errorf("create contests subscriber: %w", err)
 	}
 
-	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersUC, authUC), authUC, permissionsUC, contestsUC)
+	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersRepo, authUC), authUC, permissionsUC, contestsUC)
 
 	publicMux := http.NewServeMux()
 	publicMux.Handle("/ws/", observer.Handler())
@@ -319,10 +318,10 @@ func runApp(envFile string) error {
 		natsJS,
 		contestDetails,
 		usersRepo,
-		problemsRepo,
-		contestsRepo,
+		problems.NewReader(problemsRepo, permissionsUC, orgsRepo, workshopUC),
+		contests.NewReader(contestsRepo, permissionsUC),
 		blogsRepo,
-		draftsRepo,
+		draftsUC,
 		notificationsRepo,
 		communicationReader,
 		packagesRepo,
@@ -341,7 +340,7 @@ func runApp(envFile string) error {
 	}
 
 	apiHandler := middleware.AuthMiddleware(authUC)(
-		middleware.UsersMiddleware(usersUC)(
+		middleware.UsersMiddleware(usersRepo)(
 			middleware.ResponseWriterMiddleware(apiServer),
 		),
 	)
@@ -453,10 +452,10 @@ func loadConfig(envFile string) (config.Config, error) {
 	return cfg, nil
 }
 
-func newObserverMiddleware(usersUC UsersUC, authUC AuthUC) func(http.Handler) http.Handler {
+func newObserverMiddleware(users middleware.UsersUC, authUC middleware.AuthUC) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return middleware.AuthMiddleware(authUC)(
-			middleware.UsersMiddleware(usersUC)(next),
+			middleware.UsersMiddleware(users)(next),
 		)
 	}
 }

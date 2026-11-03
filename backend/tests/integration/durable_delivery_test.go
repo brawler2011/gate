@@ -5,6 +5,8 @@ package integration
 import (
 	"context"
 	"errors"
+	"sync"
+	"sync/atomic"
 
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	pubsub "github.com/brawler2011/gate/backend/internal/messaging/pubsub"
@@ -126,4 +128,71 @@ func (s *IntegrationTestSuite) TestOutboxRetriesSameMessageAfterPubAckCrash() {
 	info, err := stream.Info(s.ctx)
 	s.Require().NoError(err)
 	s.EqualValues(1, info.State.Msgs, "republication must keep the stable Nats-Msg-Id")
+}
+
+func (s *IntegrationTestSuite) TestOutboxBoundsRetryAndRetainsPermanentFailures() {
+	s.resetDeliveryTables()
+	repo := pgstore.NewOutboxRepo(s.dbPool)
+	aggregate := uuid.New()
+	s.Require().NoError(repo.Record(s.ctx, eventdata.Event{AggregateID: aggregate, Type: "test.retry", Payload: struct{}{}}))
+	_, err := s.dbPool.Exec(s.ctx, "UPDATE outbox_events SET retry_count=100 WHERE aggregate_id=$1", aggregate)
+	s.Require().NoError(err)
+	picked, err := repo.PickEvents(s.ctx, 1, 30)
+	s.Require().NoError(err)
+	s.Require().Len(picked, 1)
+	s.Require().NoError(repo.MarkAsFailed(s.ctx, picked[0].Id, picked[0].LeaseToken, "temporary", false))
+	var delay float64
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT EXTRACT(EPOCH FROM next_attempt_at-processed_at)::float8 FROM outbox_events WHERE id=$1", picked[0].Id).Scan(&delay))
+	s.Equal(float64(300), delay, "large retry counts must keep a bounded delay")
+	_, err = s.dbPool.Exec(s.ctx, "UPDATE outbox_events SET next_attempt_at=now()-interval '1 second' WHERE id=$1", picked[0].Id)
+	s.Require().NoError(err)
+	picked, err = repo.PickEvents(s.ctx, 1, 30)
+	s.Require().NoError(err)
+	s.Require().Len(picked, 1)
+	s.Require().NoError(repo.MarkAsFailed(s.ctx, picked[0].Id, picked[0].LeaseToken, "permanent", true))
+	_, err = s.dbPool.Exec(s.ctx, "UPDATE outbox_events SET processed_at=now()-interval '30 days' WHERE id=$1", picked[0].Id)
+	s.Require().NoError(err)
+	s.Require().NoError(repo.Record(s.ctx, eventdata.Event{AggregateID: aggregate, Type: "test.later", Payload: struct{}{}}))
+	s.Require().NoError(repo.DeleteOldEvents(s.ctx, 14))
+	blocked, err := repo.PickEvents(s.ctx, 10, 30)
+	s.Require().NoError(err)
+	s.Empty(blocked, "retained permanent failures block later aggregate versions")
+	var count int
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events WHERE id=$1 AND status='failed' AND error_message='permanent'", picked[0].Id).Scan(&count))
+	s.Equal(1, count)
+}
+
+func (s *IntegrationTestSuite) TestInboxConcurrentRedeliveriesApplyOncePerConsumer() {
+	s.resetDeliveryTables()
+	inbox := pgstore.NewInbox(s.dbPool)
+	eventID := uuid.New()
+	var calls atomic.Int32
+	output := eventdata.Event{AggregateID: uuid.New(), Type: "test.effect", Payload: struct{}{}}
+	effect := func(writer eventdata.Writer) error {
+		calls.Add(1)
+		return writer.Record(s.ctx, output)
+	}
+	start := make(chan struct{})
+	results := make(chan error, 8)
+	var workers sync.WaitGroup
+	for range 8 {
+		workers.Go(func() {
+			<-start
+			results <- inbox.Within(s.ctx, "concurrent", eventID, effect)
+		})
+	}
+	close(start)
+	workers.Wait()
+	close(results)
+	for err := range results {
+		s.Require().NoError(err)
+	}
+	s.EqualValues(1, calls.Load())
+	s.Require().NoError(inbox.Within(s.ctx, "other-consumer", eventID, effect))
+	s.EqualValues(2, calls.Load(), "receipts are scoped to the consumer")
+	var count int
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM inbox_receipts WHERE event_id=$1", eventID).Scan(&count))
+	s.Equal(2, count)
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_id=$1", output.AggregateID).Scan(&count))
+	s.Equal(2, count)
 }

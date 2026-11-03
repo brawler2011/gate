@@ -1,0 +1,146 @@
+package problems
+
+import (
+	"context"
+
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
+	"github.com/brawler2011/gate/backend/internal/templates"
+	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/google/uuid"
+)
+
+type Reads interface {
+	ListProblemMembers(context.Context, uuid.UUID) ([]problemsmodel.ProblemMember, error)
+	GetProblemTeams(context.Context, uuid.UUID) ([]problemsmodel.ProblemTeam, error)
+	ListProblems(context.Context, *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error)
+	ListDashboardProblems(context.Context, uuid.UUID, int32) ([]problemsmodel.DashboardProblem, error)
+}
+
+type TemplateOrganizations interface {
+	GetUserOrganizations(context.Context, uuid.UUID) ([]organizationsmodel.Organization, error)
+}
+
+type TemplateManifests interface {
+	GetManifest(context.Context, uuid.UUID) (*problemsmodel.ProblemManifest, error)
+}
+
+type Template struct {
+	ID, Title, Description, ProblemType string
+	IsBuiltin                           bool
+}
+
+type Reader struct {
+	reads         Reads
+	permissions   ProblemPermissions
+	organizations TemplateOrganizations
+	manifests     TemplateManifests
+}
+
+func NewReader(reads Reads, permissions ProblemPermissions, organizations TemplateOrganizations, manifests TemplateManifests) *Reader {
+	return &Reader{reads: reads, permissions: permissions, organizations: organizations, manifests: manifests}
+}
+
+func (r *Reader) ListProblems(ctx context.Context, filter *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error) {
+	if filter == nil {
+		return nil, pkg.ErrBadInput
+	}
+	copy := *filter
+	if copy.Page == 0 {
+		copy.Page = 1
+	}
+	if copy.PageSize == 0 {
+		copy.PageSize = 50
+	}
+	if copy.Page < 1 || copy.PageSize < 1 || copy.PageSize > 100 {
+		return nil, pkg.ErrBadInput
+	}
+	user := accessmodel.UserFromContext(ctx)
+	copy.ViewerID = &user.Id
+	return r.reads.ListProblems(ctx, &copy)
+}
+
+func (r *Reader) authorize(ctx context.Context, id uuid.UUID) error {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return pkg.ErrUnauthenticated
+	}
+	allowed, err := r.permissions.HasProblemPermission(ctx, id, user.Id, accessmodel.ActionViewProblem)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return pkg.NoPermission
+	}
+	return nil
+}
+
+func (r *Reader) ListProblemMembers(ctx context.Context, id uuid.UUID) ([]problemsmodel.ProblemMember, error) {
+	if err := r.authorize(ctx, id); err != nil {
+		return nil, err
+	}
+	return r.reads.ListProblemMembers(ctx, id)
+}
+
+func (r *Reader) GetProblemTeams(ctx context.Context, id uuid.UUID) ([]problemsmodel.ProblemTeam, error) {
+	if err := r.authorize(ctx, id); err != nil {
+		return nil, err
+	}
+	return r.reads.GetProblemTeams(ctx, id)
+}
+
+func (r *Reader) ListDashboardProblems(ctx context.Context, user uuid.UUID, limit int32) ([]problemsmodel.DashboardProblem, error) {
+	if err := accessmodel.RequireSelfOrAdmin(ctx, user); err != nil {
+		return nil, err
+	}
+	if limit < 1 || limit > 100 {
+		return nil, pkg.ErrBadInput
+	}
+	return r.reads.ListDashboardProblems(ctx, user, limit)
+}
+
+func (r *Reader) ListTemplates(ctx context.Context, orgID uuid.UUID) ([]Template, error) {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return nil, pkg.ErrUnauthenticated
+	}
+	if orgID == uuid.Nil {
+		organizations, err := r.organizations.GetUserOrganizations(ctx, user.Id)
+		if err != nil {
+			return nil, err
+		}
+		if len(organizations) > 0 {
+			orgID = organizations[0].ID
+		}
+	}
+	result := make([]Template, 0)
+	for _, b := range templates.ListBuiltinTemplates() {
+		result = append(result, Template{ID: b.ID, Title: b.Title, Description: b.Description, ProblemType: b.ProblemType, IsBuiltin: true})
+	}
+	if orgID == uuid.Nil {
+		return result, nil
+	}
+	isTemplate := true
+	list, err := r.ListProblems(ctx, &problemsmodel.ProblemsFilter{Page: 1, PageSize: 100, OrganizationID: &orgID, IsTemplate: &isTemplate})
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range list.Problems {
+		template := Template{ID: p.ID.String(), Title: p.Title, Description: "Пользовательский шаблон организации", ProblemType: "pass-fail"}
+		manifest, err := r.manifests.GetManifest(ctx, p.ID)
+		if err != nil {
+			return nil, err
+		}
+		if manifest != nil {
+			if manifest.ProblemType != "" {
+				template.ProblemType = manifest.ProblemType
+			}
+			if manifest.Statement.Legend != "" {
+				template.Description = manifest.Statement.Legend
+			}
+		}
+		result = append(result, template)
+	}
+	return result, nil
+}

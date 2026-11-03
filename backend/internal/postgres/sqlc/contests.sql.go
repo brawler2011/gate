@@ -75,37 +75,40 @@ func (q *Queries) AddContestProblem(ctx context.Context, arg AddContestProblemPa
 
 const countAllContests = `-- name: CountAllContests :one
 SELECT COUNT(*) FROM contests c
-WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
+WHERE ($1::text = '' OR c.title ILIKE '%' || $1::text || '%')
   AND ($2::text = '' OR c.visibility = $2::contest_visibility)
 `
 
 type CountAllContestsParams struct {
-	Column1 string `json:"column_1"`
-	Column2 string `json:"column_2"`
+	Search     string `json:"search"`
+	Visibility string `json:"visibility"`
 }
 
 func (q *Queries) CountAllContests(ctx context.Context, arg CountAllContestsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countAllContests, arg.Column1, arg.Column2)
+	row := q.db.QueryRow(ctx, countAllContests, arg.Search, arg.Visibility)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const countContests = `-- name: CountContests :one
-SELECT COUNT(*) FROM contests
-WHERE organization_id = $1
-  AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
-  AND ($3::text = '' OR visibility = $3::contest_visibility)
+SELECT COUNT(*) FROM contests c
+WHERE c.organization_id = $1::uuid
+  AND ($2::text = '' OR c.title ILIKE '%' || $2::text || '%')
+  AND (c.visibility = 'public'
+    OR EXISTS (SELECT 1 FROM users u WHERE u.id = $3::uuid AND u.role = 'admin')
+    OR EXISTS (SELECT 1 FROM organization_members om
+               WHERE om.organization_id = c.organization_id AND om.user_id = $3::uuid))
 `
 
 type CountContestsParams struct {
 	OrganizationID uuid.UUID `json:"organization_id"`
-	Column2        string    `json:"column_2"`
-	Column3        string    `json:"column_3"`
+	Search         string    `json:"search"`
+	ViewerID       uuid.UUID `json:"viewer_id"`
 }
 
 func (q *Queries) CountContests(ctx context.Context, arg CountContestsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countContests, arg.OrganizationID, arg.Column2, arg.Column3)
+	row := q.db.QueryRow(ctx, countContests, arg.OrganizationID, arg.Search, arg.ViewerID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -113,11 +116,17 @@ func (q *Queries) CountContests(ctx context.Context, arg CountContestsParams) (i
 
 const countUserAccessibleContests = `-- name: CountUserAccessibleContests :one
 SELECT COUNT(*) FROM contests c
-WHERE user_has_contest_access($1, c.id)
+WHERE user_has_contest_access($1::uuid, c.id)
+  AND ($2::text = '' OR c.title ILIKE '%' || $2::text || '%')
 `
 
-func (q *Queries) CountUserAccessibleContests(ctx context.Context, pUserID uuid.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, countUserAccessibleContests, pUserID)
+type CountUserAccessibleContestsParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	Search string    `json:"search"`
+}
+
+func (q *Queries) CountUserAccessibleContests(ctx context.Context, arg CountUserAccessibleContestsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserAccessibleContests, arg.UserID, arg.Search)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -125,16 +134,19 @@ func (q *Queries) CountUserAccessibleContests(ctx context.Context, pUserID uuid.
 
 const countUserAccessibleContestsByOrg = `-- name: CountUserAccessibleContestsByOrg :one
 SELECT COUNT(*) FROM contests c
-WHERE user_has_contest_access($1, c.id) AND c.organization_id = $2
+WHERE user_has_contest_access($1::uuid, c.id)
+  AND ($2::text = '' OR c.title ILIKE '%' || $2::text || '%')
+  AND c.organization_id = $3::uuid
 `
 
 type CountUserAccessibleContestsByOrgParams struct {
-	PUserID        uuid.UUID `json:"p_user_id"`
+	UserID         uuid.UUID `json:"user_id"`
+	Search         string    `json:"search"`
 	OrganizationID uuid.UUID `json:"organization_id"`
 }
 
 func (q *Queries) CountUserAccessibleContestsByOrg(ctx context.Context, arg CountUserAccessibleContestsByOrgParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countUserAccessibleContestsByOrg, arg.PUserID, arg.OrganizationID)
+	row := q.db.QueryRow(ctx, countUserAccessibleContestsByOrg, arg.UserID, arg.Search, arg.OrganizationID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -629,17 +641,26 @@ const listAllContests = `-- name: ListAllContests :many
 SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
-WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
+WHERE ($1::text = '' OR c.title ILIKE '%' || $1::text || '%')
   AND ($2::text = '' OR c.visibility = $2::contest_visibility)
-ORDER BY c.created_at DESC
-LIMIT $3 OFFSET $4
+ORDER BY
+  CASE WHEN $3::text IN ('', 'created_at') AND $4::text = 'asc' THEN c.created_at END ASC,
+  CASE WHEN $3::text IN ('', 'created_at') AND $4::text <> 'asc' THEN c.created_at END DESC,
+  CASE WHEN $3::text = 'updated_at' AND $4::text = 'asc' THEN c.updated_at END ASC,
+  CASE WHEN $3::text = 'updated_at' AND $4::text <> 'asc' THEN c.updated_at END DESC,
+  CASE WHEN $3::text = 'title' AND $4::text = 'asc' THEN c.title END ASC,
+  CASE WHEN $3::text = 'title' AND $4::text <> 'asc' THEN c.title END DESC,
+  c.id DESC
+LIMIT $6 OFFSET $5
 `
 
 type ListAllContestsParams struct {
-	Column1 string `json:"column_1"`
-	Column2 string `json:"column_2"`
-	Limit   int32  `json:"limit"`
-	Offset  int32  `json:"offset"`
+	Search     string `json:"search"`
+	Visibility string `json:"visibility"`
+	SortBy     string `json:"sort_by"`
+	SortOrder  string `json:"sort_order"`
+	PageOffset int32  `json:"page_offset"`
+	PageLimit  int32  `json:"page_limit"`
 }
 
 type ListAllContestsRow struct {
@@ -662,10 +683,12 @@ type ListAllContestsRow struct {
 
 func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams) ([]ListAllContestsRow, error) {
 	rows, err := q.db.Query(ctx, listAllContests,
-		arg.Column1,
-		arg.Column2,
-		arg.Limit,
-		arg.Offset,
+		arg.Search,
+		arg.Visibility,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.PageOffset,
+		arg.PageLimit,
 	)
 	if err != nil {
 		return nil, err
@@ -706,7 +729,7 @@ SELECT cm.contest_id, cm.user_id, cm.role, cm.created_at, u.username, u.email
 FROM contest_members cm
 JOIN users u ON cm.user_id = u.id
 WHERE cm.contest_id = $1
-ORDER BY cm.created_at
+ORDER BY cm.created_at, cm.user_id
 `
 
 type ListContestMembersRow struct {
@@ -844,19 +867,22 @@ const listContests = `-- name: ListContests :many
 SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
-WHERE c.organization_id = $1
-  AND ($2::text = '' OR c.title ILIKE '%' || $2 || '%')
-  AND ($3::text = '' OR c.visibility = $3::contest_visibility)
-ORDER BY c.created_at DESC
-LIMIT $4 OFFSET $5
+WHERE c.organization_id = $1::uuid
+  AND ($2::text = '' OR c.title ILIKE '%' || $2::text || '%')
+  AND (c.visibility = 'public'
+    OR EXISTS (SELECT 1 FROM users u WHERE u.id = $3::uuid AND u.role = 'admin')
+    OR EXISTS (SELECT 1 FROM organization_members om
+               WHERE om.organization_id = c.organization_id AND om.user_id = $3::uuid))
+ORDER BY c.created_at DESC, c.id DESC
+LIMIT $5 OFFSET $4
 `
 
 type ListContestsParams struct {
 	OrganizationID uuid.UUID `json:"organization_id"`
-	Column2        string    `json:"column_2"`
-	Column3        string    `json:"column_3"`
-	Limit          int32     `json:"limit"`
-	Offset         int32     `json:"offset"`
+	Search         string    `json:"search"`
+	ViewerID       uuid.UUID `json:"viewer_id"`
+	PageOffset     int32     `json:"page_offset"`
+	PageLimit      int32     `json:"page_limit"`
 }
 
 type ListContestsRow struct {
@@ -880,10 +906,10 @@ type ListContestsRow struct {
 func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]ListContestsRow, error) {
 	rows, err := q.db.Query(ctx, listContests,
 		arg.OrganizationID,
-		arg.Column2,
-		arg.Column3,
-		arg.Limit,
-		arg.Offset,
+		arg.Search,
+		arg.ViewerID,
+		arg.PageOffset,
+		arg.PageLimit,
 	)
 	if err != nil {
 		return nil, err
@@ -1007,15 +1033,26 @@ const listUserAccessibleContests = `-- name: ListUserAccessibleContests :many
 SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
-WHERE user_has_contest_access($1, c.id)
-ORDER BY c.created_at DESC
-LIMIT $2 OFFSET $3
+WHERE user_has_contest_access($1::uuid, c.id)
+  AND ($2::text = '' OR c.title ILIKE '%' || $2::text || '%')
+ORDER BY
+  CASE WHEN $3::text IN ('', 'created_at') AND $4::text = 'asc' THEN c.created_at END ASC,
+  CASE WHEN $3::text IN ('', 'created_at') AND $4::text <> 'asc' THEN c.created_at END DESC,
+  CASE WHEN $3::text = 'updated_at' AND $4::text = 'asc' THEN c.updated_at END ASC,
+  CASE WHEN $3::text = 'updated_at' AND $4::text <> 'asc' THEN c.updated_at END DESC,
+  CASE WHEN $3::text = 'title' AND $4::text = 'asc' THEN c.title END ASC,
+  CASE WHEN $3::text = 'title' AND $4::text <> 'asc' THEN c.title END DESC,
+  c.id DESC
+LIMIT $6 OFFSET $5
 `
 
 type ListUserAccessibleContestsParams struct {
-	PUserID uuid.UUID `json:"p_user_id"`
-	Limit   int32     `json:"limit"`
-	Offset  int32     `json:"offset"`
+	UserID     uuid.UUID `json:"user_id"`
+	Search     string    `json:"search"`
+	SortBy     string    `json:"sort_by"`
+	SortOrder  string    `json:"sort_order"`
+	PageOffset int32     `json:"page_offset"`
+	PageLimit  int32     `json:"page_limit"`
 }
 
 type ListUserAccessibleContestsRow struct {
@@ -1038,7 +1075,14 @@ type ListUserAccessibleContestsRow struct {
 
 // Access check helpers
 func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAccessibleContestsParams) ([]ListUserAccessibleContestsRow, error) {
-	rows, err := q.db.Query(ctx, listUserAccessibleContests, arg.PUserID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listUserAccessibleContests,
+		arg.UserID,
+		arg.Search,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1077,17 +1121,28 @@ const listUserAccessibleContestsByOrg = `-- name: ListUserAccessibleContestsByOr
 SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
-WHERE user_has_contest_access($1, c.id)
-  AND c.organization_id = $2
-ORDER BY c.created_at DESC
-LIMIT $3 OFFSET $4
+WHERE user_has_contest_access($1::uuid, c.id)
+  AND ($2::text = '' OR c.title ILIKE '%' || $2::text || '%')
+  AND c.organization_id = $3::uuid
+ORDER BY
+  CASE WHEN $4::text IN ('', 'created_at') AND $5::text = 'asc' THEN c.created_at END ASC,
+  CASE WHEN $4::text IN ('', 'created_at') AND $5::text <> 'asc' THEN c.created_at END DESC,
+  CASE WHEN $4::text = 'updated_at' AND $5::text = 'asc' THEN c.updated_at END ASC,
+  CASE WHEN $4::text = 'updated_at' AND $5::text <> 'asc' THEN c.updated_at END DESC,
+  CASE WHEN $4::text = 'title' AND $5::text = 'asc' THEN c.title END ASC,
+  CASE WHEN $4::text = 'title' AND $5::text <> 'asc' THEN c.title END DESC,
+  c.id DESC
+LIMIT $7 OFFSET $6
 `
 
 type ListUserAccessibleContestsByOrgParams struct {
-	PUserID        uuid.UUID `json:"p_user_id"`
+	UserID         uuid.UUID `json:"user_id"`
+	Search         string    `json:"search"`
 	OrganizationID uuid.UUID `json:"organization_id"`
-	Limit          int32     `json:"limit"`
-	Offset         int32     `json:"offset"`
+	SortBy         string    `json:"sort_by"`
+	SortOrder      string    `json:"sort_order"`
+	PageOffset     int32     `json:"page_offset"`
+	PageLimit      int32     `json:"page_limit"`
 }
 
 type ListUserAccessibleContestsByOrgRow struct {
@@ -1110,10 +1165,13 @@ type ListUserAccessibleContestsByOrgRow struct {
 
 func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListUserAccessibleContestsByOrgParams) ([]ListUserAccessibleContestsByOrgRow, error) {
 	rows, err := q.db.Query(ctx, listUserAccessibleContestsByOrg,
-		arg.PUserID,
+		arg.UserID,
+		arg.Search,
 		arg.OrganizationID,
-		arg.Limit,
-		arg.Offset,
+		arg.SortBy,
+		arg.SortOrder,
+		arg.PageOffset,
+		arg.PageLimit,
 	)
 	if err != nil {
 		return nil, err
@@ -1226,7 +1284,7 @@ SET login = COALESCE($2, login),
     title = COALESCE($3, title),
     description = COALESCE($4, description),
     visibility = COALESCE($5, visibility),
-    settings = COALESCE(settings, '{}'::jsonb) || COALESCE($6::jsonb, '{}'::jsonb),
+    settings = jsonb_strip_nulls(COALESCE(settings, '{}'::jsonb) || COALESCE($6::jsonb, '{}'::jsonb)),
     start_time = CASE WHEN $7::boolean THEN $8::timestamptz ELSE start_time END,
     end_time = CASE WHEN $9::boolean THEN $10::timestamptz ELSE end_time END,
     owner_id = COALESCE($11, owner_id)

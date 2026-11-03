@@ -33,7 +33,7 @@ func (uc *ProblemsUseCase) GetProblemDetails(ctx context.Context, id uuid.UUID) 
 		result.Problem.Title = manifest.Statement.Title
 		result.Problem.TimeLimitMs = manifest.TimeLimitMs
 		result.Problem.MemoryLimitMb = manifest.MemoryLimitMb
-		source := NewStatementReader(uc.workspace, nil)
+		source := NewStatementReader(uc.workspace, nil, nil)
 		result.Statement, result.Samples = source.loadWorkspaceStatementAndSamples(ctx, id, "")
 		return nil
 	})

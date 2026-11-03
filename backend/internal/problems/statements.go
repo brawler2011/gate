@@ -119,7 +119,7 @@ func (r *StatementReader) loadPackageStatementAndSamplesWithLang(
 		return nil, nil
 	}
 
-	reader, err := r.packages.DownloadPackage(ctx, problemID, pkg.PackageHash)
+	reader, err := r.downloads.DownloadPackage(ctx, problemID, pkg.PackageHash)
 	if err != nil {
 		return nil, nil
 	}
@@ -217,16 +217,19 @@ func (r *StatementReader) loadWorkspaceStatementAndSamples(ctx context.Context, 
 // StatementReader composes immutable package content with the current workspace.
 // Callers apply problem or contest visibility before reading content.
 type StatementReader struct {
-	workshop *WorkshopUseCase
-	packages StatementPackages
+	workshop  *WorkshopUseCase
+	packages  StatementPackages
+	downloads PackageDownloads
 }
 type StatementPackages interface {
 	GetPackageByID(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
+}
+type PackageDownloads interface {
 	DownloadPackage(context.Context, uuid.UUID, string) (io.ReadCloser, error)
 }
 
-func NewStatementReader(workspace *WorkspaceStorage, packages StatementPackages) *StatementReader {
-	return &StatementReader{workshop: newWorkshop(workspace), packages: packages}
+func NewStatementReader(workspace *WorkspaceStorage, packages StatementPackages, downloads PackageDownloads) *StatementReader {
+	return &StatementReader{workshop: newWorkshop(workspace), packages: packages, downloads: downloads}
 }
 func (r *StatementReader) ReadStatement(ctx context.Context, problemID, packageID uuid.UUID, lang string) (*problemsmodel.Statement, []problemsmodel.Sample) {
 	var statement *problemsmodel.Statement

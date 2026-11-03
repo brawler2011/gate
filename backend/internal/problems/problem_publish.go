@@ -198,13 +198,6 @@ func (uc *ProblemPublishUseCase) GetReadyPackage(
 	return uc.packagesRepo.GetReadyPackage(ctx, problemID)
 }
 
-func (uc *ProblemPublishUseCase) GetPackageByID(
-	ctx context.Context,
-	packageID uuid.UUID,
-) (problemsmodel.ProblemPackage, error) {
-	return uc.packagesRepo.GetPackageByID(ctx, packageID)
-}
-
 func (uc *ProblemPublishUseCase) DownloadPackage(
 	ctx context.Context,
 	problemID uuid.UUID,

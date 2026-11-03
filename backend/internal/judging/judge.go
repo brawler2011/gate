@@ -204,7 +204,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmo
 	}
 
 	if submission.ProblemID == nil {
-		return fmt.Errorf("submission has no problem ID")
+		return uc.markInternalError(ctx, job, fmt.Errorf("submission has no problem ID"))
 	}
 
 	if job.PackageHash == "" {

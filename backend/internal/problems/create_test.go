@@ -99,3 +99,23 @@ func TestProblemCreationUploadsBeforeAtomicCatalogWrites(t *testing.T) {
 		})
 	}
 }
+
+type inaccessibleTemplate struct{ ProblemTxStore }
+
+func (s inaccessibleTemplate) Within(_ context.Context, fn func(ProblemTxStore) error) error {
+	return fn(s)
+}
+func (inaccessibleTemplate) GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error) {
+	return problemsmodel.Problem{OrganizationID: uuid.New()}, nil
+}
+func (inaccessibleTemplate) LockOrganization(context.Context, uuid.UUID) error { return nil }
+func (inaccessibleTemplate) LockProblem(context.Context, uuid.UUID) error      { return nil }
+func (inaccessibleTemplate) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+	return false, nil
+}
+
+func TestCreationRejectsInaccessibleTemplateBeforeLoadingPackage(t *testing.T) {
+	uc := &ProblemsUseCase{transactions: inaccessibleTemplate{}}
+	_, err := uc.templatePackage(problemActorContext(), uuid.New(), uuid.NewString())
+	require.ErrorIs(t, err, pkg.NoPermission)
+}

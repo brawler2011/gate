@@ -55,6 +55,12 @@ func (r *ProblemsRepo) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error) {
+	if r.pool != nil {
+		return readSnapshot(ctx, r.pool, func(q *sqlc.Queries) (*problemsmodel.ProblemsList, error) {
+			return (&ProblemsRepo{queries: q}).ListProblems(ctx, filter)
+		})
+	}
+
 	// Calculate offset
 	offset := Offset(filter.Page, filter.PageSize)
 

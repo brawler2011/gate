@@ -14,22 +14,14 @@ import (
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
-type ContestsReader interface {
-	GetContestTeams(ctx context.Context, contestId uuid.UUID) ([]contestsmodel.ContestTeam, error)
-	ListPublicContests(ctx context.Context, filter contestsmodel.PublicContestsFilter) (*contestsmodel.ContestsList, error)
-	ListWorkshopContests(ctx context.Context, filter contestsmodel.WorkshopContestsFilter) (*contestsmodel.ContestsList, error)
-	ListUserContests(ctx context.Context, filter contestsmodel.UserContestsFilter) (*contestsmodel.ContestsList, error)
-	ListAdminContests(ctx context.Context, filter contestsmodel.AdminContestsFilter) (*contestsmodel.ContestsList, error)
-	ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, visibility string, page, pageSize int32) (*contestsmodel.ContestsList, error)
-	ListContestMembers(ctx context.Context, filter contestsmodel.ParticipantsFilter) (*contestsmodel.ContestMembersList, error)
-	ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]contestsmodel.DashboardContest, error)
-}
+type ContestsReader = contests.Reads
 
 var nonAlphaNumRegex = regexp.MustCompile(`[^a-z0-9]+`)
 
@@ -152,40 +144,11 @@ func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateCont
 }
 
 func (h *CoreServer) ListOrganizationContests(ctx context.Context, params corev1.ListOrganizationContestsParams) (*corev1.ListContestsResponseModel, error) {
-	// FIXME: бойлерплейт
-	page := params.Page.Or(1)
-	pageSize := params.PageSize.Or(50)
-	search := params.Search.Or("")
-
-	user := accessmodel.UserFromContext(ctx)
-	org, err := h.organizationsUC.GetOrganizationByLogin(ctx, params.OrgLogin, user.Id)
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
-	}
-
-	// FIXME: это не зона отвественности транспортного слоя
-	isMember := false
-	if user.Role == accessmodel.UserRoleAdmin {
-		isMember = true
-	} else if user.Id != uuid.Nil {
-		_, err := h.organizationsUC.ListMembers(ctx, org.ID, user.Id)
-		if err == nil {
-			isMember = true
-		}
-	}
-
-	// FIXME: тоже не зона отвественности
-	visibility := ""
-	if !isMember {
-		visibility = "public"
-	}
-
-	contestsList, err := h.contestsReader.ListOrganizationContests(ctx, org.ID, search, visibility, page, pageSize)
+	list, err := h.contestsReader.ListOrganizationContests(ctx, params.OrgLogin, params.Search.Or(""), params.Page.Or(1), params.PageSize.Or(50))
 	if err != nil {
 		return nil, err
 	}
-
-	return ListContestsResponseDTO(contestsList), nil
+	return ListContestsResponseDTO(list), nil
 }
 
 func (h *CoreServer) GetContest(ctx context.Context, params corev1.GetContestParams) (*corev1.GetContestResponseModel, error) {
@@ -244,7 +207,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 	}
 	if req.FreezeDurationMinutes.IsSet() {
 		if req.FreezeDurationMinutes.Null {
-			delete(settingsMap, "freeze_duration_minutes")
+			settingsMap["freeze_duration_minutes"] = nil
 		} else {
 			settingsMap["freeze_duration_minutes"] = req.FreezeDurationMinutes.Value
 		}
@@ -347,7 +310,7 @@ func (h *CoreServer) ListAdminContests(ctx context.Context, params corev1.ListAd
 	if params.SortBy.IsSet() {
 		sortBy = string(params.SortBy.Value)
 	}
-	sortOrder := paging.SortOrderAsc
+	sortOrder := paging.SortOrderDesc
 	if params.SortOrder.IsSet() {
 		sortOrder = string(params.SortOrder.Value)
 	}
@@ -877,18 +840,6 @@ func (h *CoreServer) UnblockProblemForUser(ctx context.Context, params corev1.Un
 	err = h.contestsUC.UnblockProblemForUser(ctx, contest.ID, params.UserID, params.ProblemID, rejudgeSubmissions)
 	if err != nil {
 		return err
-	}
-
-	if rejudgeSubmissions {
-		filter := submissionsmodel.RejudgeFilter{
-			ContestID: contest.ID,
-			ProblemID: &params.ProblemID,
-			UserID:    &params.UserID,
-		}
-		_, err = h.submissionsUC.RejudgeSubmissions(ctx, filter)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

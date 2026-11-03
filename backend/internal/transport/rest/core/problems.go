@@ -6,17 +6,15 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/problems"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
-	"github.com/brawler2011/gate/backend/internal/templates"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
 type ProblemsReader interface {
-	ListProblemMembers(ctx context.Context, problemID uuid.UUID) ([]problemsmodel.ProblemMember, error)
-	GetProblemTeams(ctx context.Context, problemId uuid.UUID) ([]problemsmodel.ProblemTeam, error)
-	ListProblems(ctx context.Context, filter *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error)
-	ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]problemsmodel.DashboardProblem, error)
+	problems.Reads
+	ListTemplates(context.Context, uuid.UUID) ([]problems.Template, error)
 }
 
 func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblemsParams) (*corev1.ListProblemsResponseModel, error) {
@@ -61,66 +59,14 @@ func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblem
 }
 
 func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.ListProblemTemplatesParams) ([]corev1.ProblemTemplateModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-
-	var orgID uuid.UUID
-	if params.OrganizationID.IsSet() {
-		orgID = params.OrganizationID.Value
-	} else if user.Id != uuid.Nil {
-		orgs, err := h.organizationsUC.GetUserOrganizations(ctx, user.Id)
-		if err == nil && len(orgs) > 0 {
-			orgID = orgs[0].ID
-		}
+	templates, err := h.problemsReader.ListTemplates(ctx, params.OrganizationID.Or(uuid.Nil))
+	if err != nil {
+		return nil, err
 	}
-
-	result := make([]corev1.ProblemTemplateModel, 0)
-
-	// 1. Builtin templates
-	builtinList := templates.ListBuiltinTemplates()
-	for _, b := range builtinList {
-		result = append(result, corev1.ProblemTemplateModel{
-			ID:          b.ID,
-			Title:       b.Title,
-			Description: b.Description,
-			ProblemType: b.ProblemType,
-			IsBuiltin:   true,
-		})
+	result := make([]corev1.ProblemTemplateModel, len(templates))
+	for i, template := range templates {
+		result[i] = corev1.ProblemTemplateModel{ID: template.ID, Title: template.Title, Description: template.Description, ProblemType: template.ProblemType, IsBuiltin: template.IsBuiltin}
 	}
-
-	// 2. Organization templates
-	if orgID != uuid.Nil {
-		isTemplate := true
-		filter := &problemsmodel.ProblemsFilter{
-			Page:           1,
-			PageSize:       100,
-			OrganizationID: &orgID,
-			IsTemplate:     &isTemplate,
-		}
-		orgProblems, err := h.problemsReader.ListProblems(ctx, filter)
-		if err == nil && orgProblems != nil {
-			for _, p := range orgProblems.Problems {
-				probType := "pass-fail"
-				manifest, err := h.workshopUC.GetManifest(ctx, p.ID)
-				if err == nil && manifest != nil && manifest.ProblemType != "" {
-					probType = manifest.ProblemType
-				}
-
-				desc := "Пользовательский шаблон организации"
-				if manifest != nil && manifest.Statement.Legend != "" {
-					desc = manifest.Statement.Legend
-				}
-
-				result = append(result, corev1.ProblemTemplateModel{
-					ID:          p.ID.String(),
-					Title:       p.Title,
-					Description: desc,
-					ProblemType: probType,
-					IsBuiltin:   false,
-				})
-			}
-		}
-	}
-
 	return result, nil
 }
 

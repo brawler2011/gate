@@ -536,8 +536,8 @@ WITH version AS (
   WHERE id = (SELECT contest_id FROM submissions WHERE id = $4::uuid)
   RETURNING submissions_revision
 ), previous AS (
-  SELECT s.id, s.state, v.submissions_revision
-  FROM submissions s CROSS JOIN version v
+  SELECT s.id, s.state, COALESCE(v.submissions_revision, s.revision + 1)::bigint AS submissions_revision
+  FROM submissions s LEFT JOIN version v ON true
   WHERE s.id = $4::uuid
   FOR UPDATE OF s
 )

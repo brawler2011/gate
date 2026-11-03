@@ -169,8 +169,9 @@ func (s *IntegrationTestSuite) TestReadQueries() {
 		s.JSONEq(`"code1"`, string(items[0]["code"]))
 		s.JSONEq(`"`+participant.Username+`"`, string(items[0]["username"]))
 		s.Empty(s.readItems(base+"/drafts?page=4&pageSize=1", participant.Id, "drafts", 4, 3))
-		members := s.readItems(base+"/members?page=2&pageSize=1", owner.Id, "members", 2, 1)
-		s.Require().Len(members, 1) // query intentionally returns all members, regardless of page
+		members := s.readItems(base+"/members?page=1&pageSize=1", owner.Id, "members", 1, 1)
+		s.Require().Len(members, 1)
+		s.Empty(s.readItems(base+"/members?page=2&pageSize=1", owner.Id, "members", 2, 1))
 		s.JSONEq(`"participant"`, string(members[0]["contest_role"]))
 	})
 

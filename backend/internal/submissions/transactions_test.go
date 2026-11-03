@@ -3,6 +3,7 @@ package submissions
 import (
 	"context"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
@@ -15,7 +16,7 @@ import (
 )
 
 type submissionTestStore struct {
-	SubmissionsRepo
+	submissionCommandStore
 	OutboxRepo
 	contests.ScoreboardStore
 }
@@ -48,4 +49,13 @@ func (submissionTestStore) HasContestPermission(context.Context, uuid.UUID, uuid
 
 type OutboxRepo interface {
 	eventdata.Writer
+}
+
+type submissionCommandStore interface {
+	BlockSubmission(context.Context, uuid.UUID, *string) error
+	ResetSubmissionsState(context.Context, submissionsmodel.RejudgeFilter) ([]submissionsmodel.SubmissionReset, error)
+	CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error)
+	GetSubmission(ctx context.Context, id uuid.UUID) (submissionsmodel.Submission, error)
+	ListSubmissions(ctx context.Context, filter submissionsmodel.SubmissionsFilter) ([]submissionsmodel.Submission, int32, int64, error)
+	UpdateSubmission(ctx context.Context, id uuid.UUID, update *submissionsmodel.SubmissionUpdate) (submissionsmodel.SubmissionChange, error)
 }

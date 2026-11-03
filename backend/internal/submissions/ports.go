@@ -18,10 +18,6 @@ type ProblemsUC interface {
 }
 
 type SubmissionsRepo interface {
-	BlockSubmission(context.Context, uuid.UUID, *string) error
-	ResetSubmissionsState(context.Context, submissionsmodel.RejudgeFilter) ([]submissionsmodel.SubmissionReset, error)
-	CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (submissionsmodel.Submission, error)
 	ListSubmissions(ctx context.Context, filter submissionsmodel.SubmissionsFilter) ([]submissionsmodel.Submission, int32, int64, error)
-	UpdateSubmission(ctx context.Context, id uuid.UUID, update *submissionsmodel.SubmissionUpdate) (submissionsmodel.SubmissionChange, error)
 }

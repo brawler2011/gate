@@ -16,6 +16,7 @@ const (
 )
 
 type DraftTxStore interface {
+	ListDrafts(context.Context, contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error)
 	LockContest(context.Context, uuid.UUID) error
 	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error)
 	GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error)
@@ -121,4 +122,39 @@ func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, contestID, draftID uui
 		}
 		return tx.DeleteDraft(ctx, draftID)
 	})
+}
+
+func (uc *DraftsUseCase) ListDrafts(ctx context.Context, filter contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error) {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return nil, pkg.ErrUnauthenticated
+	}
+	if user.Id != filter.UserID {
+		return nil, pkg.NoPermission
+	}
+	if filter.Page == 0 {
+		filter.Page = 1
+	}
+	if filter.PageSize == 0 {
+		filter.PageSize = 20
+	}
+	if filter.Page < 1 || filter.PageSize < 1 || filter.PageSize > 100 {
+		return nil, pkg.ErrBadInput
+	}
+	var result *contestsmodel.ContestDraftsList
+	err := uc.transactions.Within(ctx, func(tx DraftTxStore) error {
+		if err := tx.LockContest(ctx, filter.ContestID); err != nil {
+			return err
+		}
+		allowed, err := tx.HasContestPermission(ctx, filter.ContestID, user.Id, accessmodel.ActionGetContest)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return pkg.NoPermission
+		}
+		result, err = tx.ListDrafts(ctx, filter)
+		return err
+	})
+	return result, err
 }

@@ -126,14 +126,6 @@ func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsm
 	})
 }
 
-func (uc *ContestsUseCase) GetContestProblem(ctx context.Context, c contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error) {
-	return uc.contestRepo.GetContestProblem(ctx, c)
-}
-
-func (uc *ContestsUseCase) GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]contestsmodel.ContestProblem, error) {
-	return uc.contestRepo.GetContestProblems(ctx, contestId)
-}
-
 func (uc *ContestsUseCase) UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error {
 	return uc.withinContest(ctx, contestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
 		return tx.UpdateContestProblemPackage(ctx, contestId, problemId, packageId)
@@ -177,10 +169,6 @@ func (uc *ContestsUseCase) DeleteParticipant(ctx context.Context, c contestsmode
 	return uc.withinContest(ctx, c.ContestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
 		return tx.DeleteContestMember(ctx, c.UserId, c.ContestId)
 	})
-}
-
-func (uc *ContestsUseCase) GetContestMember(ctx context.Context, c *contestsmodel.ContestPermissionGet) (contestsmodel.ContestMember, error) {
-	return uc.contestRepo.GetContestMember(ctx, c)
 }
 
 func (uc *ContestsUseCase) UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role string) error {
@@ -413,6 +401,19 @@ func (uc *ContestsUseCase) GetProblemBlockStatusForUser(
 	ctx context.Context,
 	contestID, userID, problemID uuid.UUID,
 ) (*contestsmodel.ContestUserProblemBlock, error) {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return nil, pkg.ErrUnauthenticated
+	}
+	if user.Id != userID && !user.IsAdmin() {
+		allowed, err := uc.permissions.HasContestPermission(ctx, contestID, user.Id, accessmodel.ActionManageContest)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
+			return nil, pkg.NoPermission
+		}
+	}
 	block, err := uc.contestRepo.GetContestUserProblemBlock(ctx, contestID, userID, problemID)
 	if err != nil {
 		if errors.Is(err, pkg.ErrNotFound) {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"strings"
 	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -66,15 +65,6 @@ func (u *UsersUseCase) CreateUser(ctx context.Context, input identitymodel.Creat
 	}
 
 	return id, nil
-}
-
-func (u *UsersUseCase) GetUserById(ctx context.Context, id uuid.UUID) (accessmodel.User, error) {
-	return u.usersRepo.GetUserById(ctx, id)
-}
-
-func (u *UsersUseCase) GetUserByUsername(ctx context.Context, username string) (accessmodel.User, error) {
-	username = strings.TrimPrefix(username, "@")
-	return u.usersRepo.GetUserByUsername(ctx, username)
 }
 
 func (u *UsersUseCase) UpdateUser(ctx context.Context, input identitymodel.UpdateUserInput) error {
@@ -192,7 +182,7 @@ func (u *UsersUseCase) AdminSetPassword(ctx context.Context, username, newPasswo
 		return pkg.Wrap(pkg.ErrBadInput, err, "invalid password")
 	}
 
-	user, err := u.GetUserByUsername(ctx, username)
+	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "user not found")
 	}
@@ -214,7 +204,7 @@ func (u *UsersUseCase) AdminSendPasswordReset(ctx context.Context, username stri
 	if err := accessmodel.RequireAdmin(ctx); err != nil {
 		return err
 	}
-	user, err := u.GetUserByUsername(ctx, username)
+	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "user not found")
 	}
@@ -250,7 +240,7 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 		return pkg.Wrap(pkg.ErrBadInput, err, "invalid email")
 	}
 
-	user, err := u.GetUserByUsername(ctx, username)
+	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "user not found")
 	}
@@ -306,7 +296,7 @@ func (u *UsersUseCase) AdminResendVerification(ctx context.Context, username str
 	if err := accessmodel.RequireAdmin(ctx); err != nil {
 		return err
 	}
-	user, err := u.GetUserByUsername(ctx, username)
+	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "user not found")
 	}

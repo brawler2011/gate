@@ -112,3 +112,46 @@ func (s *IntegrationTestSuite) TestUpdateContestDates() {
 		}
 	}
 }
+
+func (s *IntegrationTestSuite) TestContestPatchSettingsPresence() {
+	owner := s.createUser("settings_owner_"+uuid.NewString()[:8], accessmodel.UserRoleUser)
+	org := s.createOrganization("settings-"+uuid.NewString()[:8], "Settings", owner.Id)
+	for _, tc := range []struct {
+		name, body  string
+		freeze      any
+		drafts      bool
+		description string
+	}{
+		{"omitted", `{}`, float64(30), true, "Original"},
+		{"null", `{"freeze_duration_minutes":null}`, nil, true, "Original"},
+		{"zero", `{"freeze_duration_minutes":0}`, float64(0), true, "Original"},
+		{"false", `{"enable_drafts":false}`, float64(30), false, "Original"},
+		{"empty", `{"description":""}`, float64(30), true, ""},
+	} {
+		s.Run(tc.name, func() {
+			id := uuid.New()
+			login := "settings-" + tc.name
+			s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
+				ID: id, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Settings", Login: login,
+				Description: "Original", Visibility: contestsmodel.ContestVisibilityPublic,
+				Settings: map[string]interface{}{"freeze_duration_minutes": 30, "enable_drafts": true, "enable_upsolving": true},
+			}))
+			req := httptest.NewRequest(http.MethodPatch, "/organizations/"+org.Login+"/contests/"+login, strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Test-User-ID", owner.Id.String())
+			recorder := httptest.NewRecorder()
+			s.handler.ServeHTTP(recorder, req)
+			s.Equal(http.StatusOK, recorder.Code, recorder.Body.String())
+			got, err := s.contestsRepo.GetContest(s.ctx, id)
+			s.Require().NoError(err)
+			s.Equal(tc.freeze, got.Settings["freeze_duration_minutes"])
+			if tc.freeze == nil {
+				_, exists := got.Settings["freeze_duration_minutes"]
+				s.False(exists, "null clears the stored setting")
+			}
+			s.Equal(tc.drafts, got.Settings["enable_drafts"])
+			s.Equal(true, got.Settings["enable_upsolving"])
+			s.Equal(tc.description, got.Description)
+		})
+	}
+}

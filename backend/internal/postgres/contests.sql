@@ -27,31 +27,44 @@ WHERE LOWER(o.login) = LOWER($1) AND LOWER(c.login) = LOWER($2);
 SELECT c.*, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
-WHERE c.organization_id = $1
-  AND ($2::text = '' OR c.title ILIKE '%' || $2 || '%')
-  AND ($3::text = '' OR c.visibility = $3::contest_visibility)
-ORDER BY c.created_at DESC
-LIMIT $4 OFFSET $5;
+WHERE c.organization_id = sqlc.arg('organization_id')::uuid
+  AND (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
+  AND (c.visibility = 'public'
+    OR EXISTS (SELECT 1 FROM users u WHERE u.id = sqlc.arg('viewer_id')::uuid AND u.role = 'admin')
+    OR EXISTS (SELECT 1 FROM organization_members om
+               WHERE om.organization_id = c.organization_id AND om.user_id = sqlc.arg('viewer_id')::uuid))
+ORDER BY c.created_at DESC, c.id DESC
+LIMIT sqlc.arg('page_limit') OFFSET sqlc.arg('page_offset');
 
 -- name: CountContests :one
-SELECT COUNT(*) FROM contests
-WHERE organization_id = $1
-  AND ($2::text = '' OR title ILIKE '%' || $2 || '%')
-  AND ($3::text = '' OR visibility = $3::contest_visibility);
+SELECT COUNT(*) FROM contests c
+WHERE c.organization_id = sqlc.arg('organization_id')::uuid
+  AND (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
+  AND (c.visibility = 'public'
+    OR EXISTS (SELECT 1 FROM users u WHERE u.id = sqlc.arg('viewer_id')::uuid AND u.role = 'admin')
+    OR EXISTS (SELECT 1 FROM organization_members om
+               WHERE om.organization_id = c.organization_id AND om.user_id = sqlc.arg('viewer_id')::uuid));
 
 -- name: ListAllContests :many
 SELECT c.*, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
-WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
-  AND ($2::text = '' OR c.visibility = $2::contest_visibility)
-ORDER BY c.created_at DESC
-LIMIT $3 OFFSET $4;
+WHERE (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
+  AND (sqlc.arg('visibility')::text = '' OR c.visibility = sqlc.arg('visibility')::contest_visibility)
+ORDER BY
+  CASE WHEN sqlc.arg('sort_by')::text IN ('', 'created_at') AND sqlc.arg('sort_order')::text = 'asc' THEN c.created_at END ASC,
+  CASE WHEN sqlc.arg('sort_by')::text IN ('', 'created_at') AND sqlc.arg('sort_order')::text <> 'asc' THEN c.created_at END DESC,
+  CASE WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text = 'asc' THEN c.updated_at END ASC,
+  CASE WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text <> 'asc' THEN c.updated_at END DESC,
+  CASE WHEN sqlc.arg('sort_by')::text = 'title' AND sqlc.arg('sort_order')::text = 'asc' THEN c.title END ASC,
+  CASE WHEN sqlc.arg('sort_by')::text = 'title' AND sqlc.arg('sort_order')::text <> 'asc' THEN c.title END DESC,
+  c.id DESC
+LIMIT sqlc.arg('page_limit') OFFSET sqlc.arg('page_offset');
 
 -- name: CountAllContests :one
 SELECT COUNT(*) FROM contests c
-WHERE ($1::text = '' OR c.title ILIKE '%' || $1 || '%')
-  AND ($2::text = '' OR c.visibility = $2::contest_visibility);
+WHERE (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
+  AND (sqlc.arg('visibility')::text = '' OR c.visibility = sqlc.arg('visibility')::contest_visibility);
 
 -- name: UpdateContest :exec
 UPDATE contests
@@ -59,7 +72,7 @@ SET login = COALESCE(sqlc.narg('login'), login),
     title = COALESCE(sqlc.narg('title'), title),
     description = COALESCE(sqlc.narg('description'), description),
     visibility = COALESCE(sqlc.narg('visibility'), visibility),
-    settings = COALESCE(settings, '{}'::jsonb) || COALESCE(sqlc.narg('settings')::jsonb, '{}'::jsonb),
+    settings = jsonb_strip_nulls(COALESCE(settings, '{}'::jsonb) || COALESCE(sqlc.narg('settings')::jsonb, '{}'::jsonb)),
     start_time = CASE WHEN sqlc.arg('start_time_set')::boolean THEN sqlc.narg('start_time')::timestamptz ELSE start_time END,
     end_time = CASE WHEN sqlc.arg('end_time_set')::boolean THEN sqlc.narg('end_time')::timestamptz ELSE end_time END,
     owner_id = COALESCE(sqlc.narg('owner_id'), owner_id)
@@ -86,7 +99,7 @@ SELECT cm.*, u.username, u.email
 FROM contest_members cm
 JOIN users u ON cm.user_id = u.id
 WHERE cm.contest_id = $1
-ORDER BY cm.created_at;
+ORDER BY cm.created_at, cm.user_id;
 
 -- name: UpdateContestMemberRole :exec
 UPDATE contest_members
@@ -148,18 +161,34 @@ WHERE contest_id = $1 AND problem_id = $2;
 SELECT c.*, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
-WHERE user_has_contest_access($1, c.id)
-ORDER BY c.created_at DESC
-LIMIT $2 OFFSET $3;
+WHERE user_has_contest_access(sqlc.arg('user_id')::uuid, c.id)
+  AND (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
+ORDER BY
+  CASE WHEN sqlc.arg('sort_by')::text IN ('', 'created_at') AND sqlc.arg('sort_order')::text = 'asc' THEN c.created_at END ASC,
+  CASE WHEN sqlc.arg('sort_by')::text IN ('', 'created_at') AND sqlc.arg('sort_order')::text <> 'asc' THEN c.created_at END DESC,
+  CASE WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text = 'asc' THEN c.updated_at END ASC,
+  CASE WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text <> 'asc' THEN c.updated_at END DESC,
+  CASE WHEN sqlc.arg('sort_by')::text = 'title' AND sqlc.arg('sort_order')::text = 'asc' THEN c.title END ASC,
+  CASE WHEN sqlc.arg('sort_by')::text = 'title' AND sqlc.arg('sort_order')::text <> 'asc' THEN c.title END DESC,
+  c.id DESC
+LIMIT sqlc.arg('page_limit') OFFSET sqlc.arg('page_offset');
 
 -- name: ListUserAccessibleContestsByOrg :many
 SELECT c.*, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
-WHERE user_has_contest_access($1, c.id)
-  AND c.organization_id = $2
-ORDER BY c.created_at DESC
-LIMIT $3 OFFSET $4;
+WHERE user_has_contest_access(sqlc.arg('user_id')::uuid, c.id)
+  AND (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
+  AND c.organization_id = sqlc.arg('organization_id')::uuid
+ORDER BY
+  CASE WHEN sqlc.arg('sort_by')::text IN ('', 'created_at') AND sqlc.arg('sort_order')::text = 'asc' THEN c.created_at END ASC,
+  CASE WHEN sqlc.arg('sort_by')::text IN ('', 'created_at') AND sqlc.arg('sort_order')::text <> 'asc' THEN c.created_at END DESC,
+  CASE WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text = 'asc' THEN c.updated_at END ASC,
+  CASE WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text <> 'asc' THEN c.updated_at END DESC,
+  CASE WHEN sqlc.arg('sort_by')::text = 'title' AND sqlc.arg('sort_order')::text = 'asc' THEN c.title END ASC,
+  CASE WHEN sqlc.arg('sort_by')::text = 'title' AND sqlc.arg('sort_order')::text <> 'asc' THEN c.title END DESC,
+  c.id DESC
+LIMIT sqlc.arg('page_limit') OFFSET sqlc.arg('page_offset');
 
 -- name: ListDashboardContests :many
 SELECT 
@@ -261,8 +290,11 @@ SELECT id FROM contests WHERE id = @id::uuid FOR UPDATE;
 
 -- name: CountUserAccessibleContests :one
 SELECT COUNT(*) FROM contests c
-WHERE user_has_contest_access($1, c.id);
+WHERE user_has_contest_access(sqlc.arg('user_id')::uuid, c.id)
+  AND (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%');
 
 -- name: CountUserAccessibleContestsByOrg :one
 SELECT COUNT(*) FROM contests c
-WHERE user_has_contest_access($1, c.id) AND c.organization_id = $2;
+WHERE user_has_contest_access(sqlc.arg('user_id')::uuid, c.id)
+  AND (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
+  AND c.organization_id = sqlc.arg('organization_id')::uuid;

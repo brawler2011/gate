@@ -33,7 +33,7 @@ func TestRejudgeSubmissions_NilContestID(t *testing.T) {
 }
 
 type diagnosticSubmissionsRepo struct {
-	SubmissionsRepo
+	submissionCommandStore
 	submission submissionsmodel.Submission
 }
 
@@ -105,7 +105,7 @@ func TestSubmissionDiagnosticEventsOnlyAfterCommit(t *testing.T) {
 			submissionID := uuid.New()
 			repo := &diagnosticSubmissionsRepo{submission: submissionsmodel.Submission{ID: submissionID, ContestID: &contestID, CreatedAt: time.Now().Add(-24 * time.Hour)}}
 			outbox := &diagnosticOutboxRepo{}
-			uc := NewSubmissionsUseCase(repo, diagnosticContests{}, diagnosticProblems{}, diagnosticTransactor{commitErr, &buf, t, submissionTestStore{SubmissionsRepo: repo, OutboxRepo: outbox}}, allowSubmissionPermissions{})
+			uc := NewSubmissionsUseCase(repo, diagnosticContests{}, diagnosticProblems{}, diagnosticTransactor{commitErr, &buf, t, submissionTestStore{submissionCommandStore: repo, OutboxRepo: outbox}}, allowSubmissionPermissions{})
 			viewerID := uuid.New()
 			ctx := accessmodel.WithUser(requestid.With(context.Background(), "request-123"), accessmodel.User{Id: viewerID, Role: accessmodel.UserRoleUser})
 			var err error
