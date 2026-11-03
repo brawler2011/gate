@@ -2,6 +2,7 @@ package contests
 
 import (
 	"context"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"testing"
 	"time"
 
@@ -92,6 +93,7 @@ func TestAnnouncementsUseCase_CreateAndDelete(t *testing.T) {
 
 	contestID := uuid.New()
 	authorID := uuid.New()
+	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: authorID, Role: accessmodel.UserRoleUser})
 
 	// 1. Validation error on empty title
 	_, err := uc.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{

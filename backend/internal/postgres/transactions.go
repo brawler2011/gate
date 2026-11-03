@@ -88,7 +88,9 @@ func NewContestEventsTransactions(pool *pgxpool.Pool) contests.ContestEventsTran
 			*AnnouncementsRepo
 			*ClarificationsRepo
 			*OutboxRepo
-		}{&AnnouncementsRepo{queries: q}, &ClarificationsRepo{queries: q}, &OutboxRepo{queries: q}}
+			*ContestsRepo
+			*authorization
+		}{&AnnouncementsRepo{queries: q}, &ClarificationsRepo{queries: q}, &OutboxRepo{queries: q}, &ContestsRepo{queries: q}, bindAuthorization(q)}
 	}}
 }
 

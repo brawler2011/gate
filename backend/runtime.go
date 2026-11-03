@@ -188,7 +188,8 @@ func runApp(envFile string) error {
 	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, pgstore.NewSubmissionTransactions(pool), permissionsUC)
 	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(pool))
 	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(pool))
-	clarificationsUC := contests.NewClarificationsUseCase(contestsUC, pgstore.NewContestEventsTransactions(pool))
+	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(pool))
+	communicationReader := contests.NewCommunicationReader(announcementsRepo, clarificationsRepo, permissionsUC)
 	logger.Info("successfully initialized use cases")
 
 	judgeTempDir, err := prepareJudgeTempDir(cfg.JudgeTempDir)
@@ -312,7 +313,7 @@ func runApp(envFile string) error {
 		draftsUC,
 		notificationsUC,
 		announcementsUC,
-		announcementsRepo,
+		communicationReader,
 		clarificationsUC,
 		natsJS,
 		sandboxInstance,
@@ -322,7 +323,7 @@ func runApp(envFile string) error {
 		blogsRepo,
 		draftsRepo,
 		notificationsRepo,
-		clarificationsRepo,
+		communicationReader,
 		packagesRepo,
 	)
 

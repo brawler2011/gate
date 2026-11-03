@@ -2,6 +2,7 @@ package contests
 
 import (
 	"context"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"testing"
 	"time"
 
@@ -65,39 +66,21 @@ func (m *mockClarificationsRepo) AnswerClarification(ctx context.Context, id, co
 	return &c, nil
 }
 
-type mockContestsUCForClarifications struct {
-	ContestsUC
-	contest contestsmodel.Contest
-}
-
-func (m *mockContestsUCForClarifications) GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error) {
-	return m.contest, nil
-}
-
 func TestClarificationsUseCase_Flow(t *testing.T) {
 	ctx := context.Background()
 	clarRepo := newMockClarificationsRepo()
 	annRepo := newMockAnnouncementsRepo()
 	outboxRepo := &mockOutboxRepo{}
 
-	mockContests := &mockContestsUCForClarifications{
-		contest: contestsmodel.Contest{
-			ID: uuid.New(),
-			Settings: map[string]interface{}{
-				"allow_clarifications": true,
-			},
-		},
-	}
+	contestID := uuid.New()
+	uc := NewClarificationsUseCase(testTransactions[ContestEventsTxStore]{contestEventsTestStore{AnnouncementsRepo: annRepo, ClarificationsRepo: clarRepo, OutboxRepo: outboxRepo, Contest: contestsmodel.Contest{ID: contestID, Settings: map[string]interface{}{"allow_clarifications": true}}}})
 
-	uc := NewClarificationsUseCase(mockContests, testTransactions[ContestEventsTxStore]{contestEventsTestStore{AnnouncementsRepo: annRepo, ClarificationsRepo: clarRepo, OutboxRepo: outboxRepo}})
-
-	contestID := mockContests.contest.ID
 	participantID := uuid.New()
 	juryID := uuid.New()
 	probID := uuid.New()
 
 	// 1. Participant asks a question
-	clar, err := uc.CreateClarification(ctx, &contestsmodel.CreateContestClarificationInput{
+	clar, err := uc.CreateClarification(accessmodel.WithUser(ctx, accessmodel.User{Id: participantID, Role: accessmodel.UserRoleUser}), &contestsmodel.CreateContestClarificationInput{
 		ContestID: contestID,
 		ProblemID: &probID,
 		UserID:    participantID,
@@ -110,7 +93,7 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	assert.Equal(t, eventdata.OutboxEventContestClarificationCreated, outboxRepo.events[0].EventType)
 
 	// 4. Jury answers and publishes as announcement
-	answered, err := uc.AnswerClarification(ctx, &contestsmodel.AnswerContestClarificationInput{
+	answered, err := uc.AnswerClarification(accessmodel.WithUser(ctx, accessmodel.User{Id: juryID, Role: accessmodel.UserRoleUser}), &contestsmodel.AnswerContestClarificationInput{
 		ClarificationID:       clar.ID,
 		ContestID:             contestID,
 		Answer:                "Yes, arrays are 1-indexed.",

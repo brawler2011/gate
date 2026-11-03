@@ -3,6 +3,7 @@ package contests
 import (
 	"context"
 	"fmt"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
@@ -30,8 +31,15 @@ func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *c
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "body cannot be empty")
 	}
 
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return nil, pkg.ErrUnauthenticated
+	}
+	if input.AuthorID != user.Id {
+		return nil, pkg.NoPermission
+	}
 	var announcement *contestsmodel.ContestAnnouncement
-	err := uc.transactor.Within(ctx, func(tx ContestEventsTxStore) error {
+	err := withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionManageContest, func(tx ContestEventsTxStore) error {
 		var err error
 		announcement, err = tx.CreateAnnouncement(ctx, input)
 		if err != nil {
@@ -71,7 +79,7 @@ func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *c
 }
 
 func (uc *AnnouncementsUseCase) DeleteAnnouncement(ctx context.Context, id, contestID uuid.UUID) error {
-	return uc.transactor.Within(ctx, func(tx ContestEventsTxStore) error {
+	return withinContestEvents(ctx, uc.transactor, contestID, accessmodel.ActionManageContest, func(tx ContestEventsTxStore) error {
 		if err := tx.DeleteAnnouncement(ctx, id, contestID); err != nil {
 			return err
 		}

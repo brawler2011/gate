@@ -17,6 +17,9 @@ import (
 )
 
 type ContestEventsTxStore interface {
+	LockContest(context.Context, uuid.UUID) error
+	GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error)
+	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error)
 	CreateAnnouncement(ctx context.Context, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error)
 	DeleteAnnouncement(ctx context.Context, id, contestID uuid.UUID) error
 	CreateClarification(ctx context.Context, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error)

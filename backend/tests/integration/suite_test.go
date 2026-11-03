@@ -212,7 +212,8 @@ func (s *IntegrationTestSuite) initApp() {
 	announcementsRepo := pgstore.NewAnnouncementsRepo(s.dbPool)
 	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(s.dbPool))
 	clarificationsRepo := pgstore.NewClarificationsRepo(s.dbPool)
-	clarificationsUC := contests.NewClarificationsUseCase(contestsUC, pgstore.NewContestEventsTransactions(s.dbPool))
+	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(s.dbPool))
+	communicationReader := contests.NewCommunicationReader(announcementsRepo, clarificationsRepo, permissionsUC)
 
 	// Handler
 	coreServer := handlers.NewCoreServer(
@@ -232,7 +233,7 @@ func (s *IntegrationTestSuite) initApp() {
 		draftsUC,
 		notificationsUC,
 		announcementsUC,
-		announcementsRepo,
+		communicationReader,
 		clarificationsUC,
 		nil, // natsJS - not needed for integration tests
 		nil, // bookletCompiler - not needed for integration tests,
@@ -242,7 +243,7 @@ func (s *IntegrationTestSuite) initApp() {
 		blogsRepo,
 		draftsRepo,
 		notificationsRepo,
-		clarificationsRepo,
+		communicationReader,
 		packagesRepo,
 	)
 

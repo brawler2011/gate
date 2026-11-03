@@ -11,8 +11,7 @@ import (
 )
 
 type ClarificationsReader interface {
-	ListClarificationsForUser(ctx context.Context, contestID, userID uuid.UUID, page, pageSize int32) (*contestsmodel.ContestClarificationsList, error)
-	ListClarificationsForModerator(ctx context.Context, contestID uuid.UUID, filter *contestsmodel.ContestClarificationsFilter) (*contestsmodel.ContestClarificationsList, error)
+	ListClarifications(context.Context, uuid.UUID, *contestsmodel.ContestClarificationsFilter) (*contestsmodel.ContestClarificationsList, error)
 }
 
 func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev1.ListContestClarificationsParams) (*corev1.ListContestClarificationsResponseModel, error) {
@@ -27,39 +26,17 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 		return nil, err
 	}
 
-	// FIXME: должно быть в middleware
-	isModerator, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
-	if err != nil {
-		return nil, err
+	var problemID *uuid.UUID
+	if params.ProblemID.IsSet() {
+		problemID = &params.ProblemID.Value
 	}
-
-	// FIXME: openapi defaults
-	page := params.Page.Or(1)
-	pageSize := params.PageSize.Or(50)
-
-	var list *contestsmodel.ContestClarificationsList
-
-	// FIXME: здесь происходит смешивание модераторского и юзерского эндпоинтов, так не должно быть
-	// возможно нужна какая-то декомпозиция
-	if isModerator {
-		var problemID *uuid.UUID
-		if params.ProblemID.IsSet() {
-			problemID = &params.ProblemID.Value
-		}
-		var status *string
-		if params.Status.IsSet() {
-			status = &params.Status.Value
-		}
-		filter := &contestsmodel.ContestClarificationsFilter{
-			ProblemID: problemID,
-			Status:    status,
-			Page:      page,
-			PageSize:  pageSize,
-		}
-		list, err = h.clarificationsReader.ListClarificationsForModerator(ctx, contest.ID, filter)
-	} else {
-		list, err = h.clarificationsReader.ListClarificationsForUser(ctx, contest.ID, user.Id, page, pageSize)
+	var status *string
+	if params.Status.IsSet() {
+		status = &params.Status.Value
 	}
+	list, err := h.clarificationsReader.ListClarifications(ctx, contest.ID, &contestsmodel.ContestClarificationsFilter{
+		ProblemID: problemID, Status: status, Page: params.Page.Or(1), PageSize: params.PageSize.Or(50),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +45,6 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 }
 
 func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1.CreateContestClarificationRequestModel, params corev1.CreateContestClarificationParams) (*corev1.ContestClarificationModel, error) {
-	// FIXME: должно быть в middleware
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
@@ -99,7 +75,6 @@ func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1
 }
 
 func (h *CoreServer) AnswerContestClarification(ctx context.Context, req *corev1.AnswerContestClarificationRequestModel, params corev1.AnswerContestClarificationParams) (*corev1.ContestClarificationModel, error) {
-	// FIXME: должно быть в middleware
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
@@ -108,15 +83,6 @@ func (h *CoreServer) AnswerContestClarification(ctx context.Context, req *corev1
 	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
-	}
-
-	// FIXME:
-	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
-	if err != nil {
-		return nil, err
-	}
-	if !allowed {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "permission denied: only contest moderators can answer clarifications")
 	}
 
 	publishAsAnnouncement := req.PublishAsAnnouncement.Or(false)

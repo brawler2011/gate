@@ -3,6 +3,7 @@ package contests
 import (
 	"context"
 	"fmt"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
@@ -10,18 +11,13 @@ import (
 )
 
 type ClarificationsUseCase struct {
-	contestsUC ContestsUC
-
 	transactor ContestEventsTransactions
 }
 
 func NewClarificationsUseCase(
-	contestsUC ContestsUC,
 	transactor ContestEventsTransactions,
 ) *ClarificationsUseCase {
 	return &ClarificationsUseCase{
-		contestsUC: contestsUC,
-
 		transactor: transactor,
 	}
 }
@@ -31,20 +27,27 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "question cannot be empty")
 	}
 
-	contest, err := uc.contestsUC.GetContest(ctx, input.ContestID)
-	if err != nil {
-		return nil, err
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return nil, pkg.ErrUnauthenticated
 	}
-
-	// Check if clarifications are allowed
-	settings := contestsmodel.MapToContestSettings(contest.Settings)
-	if settings.AllowClarifications != nil && !*settings.AllowClarifications {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "clarifications are disabled for this contest")
+	if user.Id != input.UserID {
+		return nil, pkg.NoPermission
 	}
 
 	var clarification *contestsmodel.ContestClarification
-	err = uc.transactor.Within(ctx, func(tx ContestEventsTxStore) error {
-		var err error
+	err := withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionGetContest, func(tx ContestEventsTxStore) error {
+		contest, err := tx.GetContest(ctx, input.ContestID)
+		if err != nil {
+			return err
+		}
+
+		// Check if clarifications are allowed
+		settings := contestsmodel.MapToContestSettings(contest.Settings)
+		if settings.AllowClarifications != nil && !*settings.AllowClarifications {
+			return pkg.Wrap(pkg.NoPermission, nil, "clarifications are disabled for this contest")
+		}
+
 		clarification, err = tx.CreateClarification(ctx, input)
 		if err != nil {
 			return err
@@ -82,8 +85,15 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "answer cannot be empty")
 	}
 
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return nil, pkg.ErrUnauthenticated
+	}
+	if user.Id != input.AnsweredBy {
+		return nil, pkg.NoPermission
+	}
 	var clarification *contestsmodel.ContestClarification
-	err := uc.transactor.Within(ctx, func(tx ContestEventsTxStore) error {
+	err := withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionManageContest, func(tx ContestEventsTxStore) error {
 		var err error
 		clarification, err = tx.AnswerClarification(
 			ctx,
