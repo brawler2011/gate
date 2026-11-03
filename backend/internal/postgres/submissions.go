@@ -157,7 +157,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 
 	rows, err := r.queries.ListSubmissions(ctx, sqlc.ListSubmissionsParams{
 		Limit:     int32(filter.PageSize),
-		Offset:    int32((filter.Page - 1) * filter.PageSize),
+		Offset:    Offset(filter.Page, filter.PageSize),
 		ContestID: filter.ContestId,
 		OwnerID:   filter.UserId,
 		ProblemID: filter.ProblemId,

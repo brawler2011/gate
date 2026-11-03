@@ -111,6 +111,35 @@ func (q *Queries) CountContests(ctx context.Context, arg CountContestsParams) (i
 	return count, err
 }
 
+const countUserAccessibleContests = `-- name: CountUserAccessibleContests :one
+SELECT COUNT(*) FROM contests c
+WHERE user_has_contest_access($1, c.id)
+`
+
+func (q *Queries) CountUserAccessibleContests(ctx context.Context, pUserID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserAccessibleContests, pUserID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUserAccessibleContestsByOrg = `-- name: CountUserAccessibleContestsByOrg :one
+SELECT COUNT(*) FROM contests c
+WHERE user_has_contest_access($1, c.id) AND c.organization_id = $2
+`
+
+type CountUserAccessibleContestsByOrgParams struct {
+	PUserID        uuid.UUID `json:"p_user_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+}
+
+func (q *Queries) CountUserAccessibleContestsByOrg(ctx context.Context, arg CountUserAccessibleContestsByOrgParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserAccessibleContestsByOrg, arg.PUserID, arg.OrganizationID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createContest = `-- name: CreateContest :one
 
 INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, description, settings, start_time, end_time)

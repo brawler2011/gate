@@ -16,7 +16,7 @@ import (
 
 type PermissionsUseCase struct {
 	contestsRepo ContestsRepo
-	usersUC      UsersUC
+	users        UsersReader
 	problemsRepo ProblemsRepo
 	teamsRepo    TeamsRepo
 	orgsRepo     OrganizationsRepo
@@ -24,14 +24,14 @@ type PermissionsUseCase struct {
 
 func NewPermissionsUseCase(
 	contestsRepo ContestsRepo,
-	usersUC UsersUC,
+	users UsersReader,
 	problemsRepo ProblemsRepo,
 	teamsRepo TeamsRepo,
 	orgsRepo OrganizationsRepo,
 ) *PermissionsUseCase {
 	return &PermissionsUseCase{
 		contestsRepo: contestsRepo,
-		usersUC:      usersUC,
+		users:        users,
 		problemsRepo: problemsRepo,
 		teamsRepo:    teamsRepo,
 		orgsRepo:     orgsRepo,
@@ -69,7 +69,7 @@ func (uc *PermissionsUseCase) HasContestPermission(
 	var user accessmodel.User
 	var err error
 	if userID != uuid.Nil {
-		user, err = uc.usersUC.GetUserById(ctx, userID)
+		user, err = uc.users.GetUserById(ctx, userID)
 		if err != nil {
 			return false, fmt.Errorf("get user: %w", err)
 		}
@@ -329,7 +329,7 @@ func (uc *PermissionsUseCase) HasProblemPermission(
 	var user accessmodel.User
 	var err error
 	if userID != uuid.Nil {
-		user, err = uc.usersUC.GetUserById(ctx, userID)
+		user, err = uc.users.GetUserById(ctx, userID)
 		if err != nil {
 			return false, fmt.Errorf("get user: %w", err)
 		}
@@ -419,7 +419,7 @@ func (uc *PermissionsUseCase) GetContestPermissions(
 	var user accessmodel.User
 	var err error
 	if userID != uuid.Nil {
-		user, err = uc.usersUC.GetUserById(ctx, userID)
+		user, err = uc.users.GetUserById(ctx, userID)
 		if err != nil {
 			return nil, fmt.Errorf("get user: %w", err)
 		}
@@ -488,7 +488,7 @@ func (uc *PermissionsUseCase) GetProblemPermissions(
 	var user accessmodel.User
 	var err error
 	if userID != uuid.Nil {
-		user, err = uc.usersUC.GetUserById(ctx, userID)
+		user, err = uc.users.GetUserById(ctx, userID)
 		if err != nil {
 			return nil, fmt.Errorf("get user: %w", err)
 		}
@@ -538,7 +538,7 @@ func (uc *PermissionsUseCase) HasOrganizationPermission(
 		return false, nil
 	}
 
-	user, err := uc.usersUC.GetUserById(ctx, userID)
+	user, err := uc.users.GetUserById(ctx, userID)
 	if err != nil {
 		return false, fmt.Errorf("get user: %w", err)
 	}
@@ -582,7 +582,7 @@ func (uc *PermissionsUseCase) resolveEffectiveContestRole(
 		return nil, nil
 	}
 
-	user, err := uc.usersUC.GetUserById(ctx, userID)
+	user, err := uc.users.GetUserById(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 	}
@@ -672,7 +672,7 @@ func (uc *PermissionsUseCase) resolveProblemPermission(
 		return nil, nil
 	}
 
-	user, err := uc.usersUC.GetUserById(ctx, userID)
+	user, err := uc.users.GetUserById(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 	}

@@ -15,16 +15,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockUsersUC struct {
-	UsersUC
+type mockUsersReader struct {
+	UsersReader
 	users map[uuid.UUID]accessmodel.User
 }
 
-func newMockUsersUC() *mockUsersUC {
-	return &mockUsersUC{users: make(map[uuid.UUID]accessmodel.User)}
+func newMockUsersReader() *mockUsersReader {
+	return &mockUsersReader{users: make(map[uuid.UUID]accessmodel.User)}
 }
 
-func (m *mockUsersUC) GetUserById(ctx context.Context, id uuid.UUID) (accessmodel.User, error) {
+func (m *mockUsersReader) GetUserById(ctx context.Context, id uuid.UUID) (accessmodel.User, error) {
 	if u, ok := m.users[id]; ok {
 		return u, nil
 	}
@@ -180,7 +180,7 @@ func (m *mockProblemsRepo) GetProblemTeams(ctx context.Context, problemID uuid.U
 }
 
 type permissionsFixture struct {
-	usersUC   *mockUsersUC
+	usersUC   *mockUsersReader
 	contests  *mockContestsRepo
 	orgs      *mockOrgsRepo
 	teams     *mockTeamsRepo
@@ -192,7 +192,7 @@ type permissionsFixture struct {
 }
 
 func setupPermissionsFixture() *permissionsFixture {
-	usersUC := newMockUsersUC()
+	usersUC := newMockUsersReader()
 	contestsRepo := newMockContestsRepo()
 	orgsRepo := newMockOrgsRepo()
 	teamsRepo := newMockTeamsRepo()

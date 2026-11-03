@@ -15,21 +15,12 @@ import (
 )
 
 type OrganizationsRepo struct {
-	db *pgxpool.Pool
-	q  *sqlc.Queries
+	q *sqlc.Queries
 }
 
 func NewOrganizationsRepo(db *pgxpool.Pool) *OrganizationsRepo {
 	return &OrganizationsRepo{
-		db: db,
-		q:  sqlc.New(db),
-	}
-}
-
-func (r *OrganizationsRepo) WithTx(tx pgx.Tx) *OrganizationsRepo {
-	return &OrganizationsRepo{
-		db: r.db,
-		q:  r.q.WithTx(tx),
+		q: sqlc.New(db),
 	}
 }
 
@@ -111,19 +102,10 @@ func (r *OrganizationsRepo) ListOrganizations(ctx context.Context, filter *organ
 		search = filter.Search
 	}
 
-	limit := int32(10)
-	offset := int32(0)
-	if filter.PageSize > 0 {
-		limit = filter.PageSize
-	}
-	if filter.Page > 1 {
-		offset = (filter.Page - 1) * limit
-	}
-
 	orgs, err := r.q.ListOrganizations(ctx, sqlc.ListOrganizationsParams{
 		Column1: search,
-		Limit:   limit,
-		Offset:  offset,
+		Limit:   filter.PageSize,
+		Offset:  Offset(filter.Page, filter.PageSize),
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list organizations: %w", HandlePgErr(err))

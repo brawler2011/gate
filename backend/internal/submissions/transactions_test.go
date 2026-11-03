@@ -2,6 +2,7 @@ package submissions
 
 import (
 	"context"
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
@@ -43,4 +44,8 @@ func (allowSubmissionPermissions) GetContestPermissions(context.Context, uuid.UU
 
 func (submissionTestStore) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
 	return true, nil
+}
+
+type OutboxRepo interface {
+	eventdata.Writer
 }

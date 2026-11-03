@@ -47,6 +47,8 @@ type Querier interface {
 	CountOrganizations(ctx context.Context, dollar_1 string) (int64, error)
 	CountPosts(ctx context.Context) (int64, error)
 	CountSubmissions(ctx context.Context, arg CountSubmissionsParams) (int64, error)
+	CountUserAccessibleContests(ctx context.Context, pUserID uuid.UUID) (int64, error)
+	CountUserAccessibleContestsByOrg(ctx context.Context, arg CountUserAccessibleContestsByOrgParams) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int32, error)
 	CreateAuthToken(ctx context.Context, arg CreateAuthTokenParams) error
 	// Contests queries (new schema with Organizations)

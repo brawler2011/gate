@@ -5,8 +5,6 @@ import (
 	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	"github.com/google/uuid"
 )
@@ -25,15 +23,6 @@ type AuthRepo interface {
 	CreateAuthToken(ctx context.Context, params identitymodel.CreateAuthTokenParams) error
 
 	DeleteAuthTokensByUserIdAndType(ctx context.Context, userID uuid.UUID, tokenType identitymodel.AuthTokenType) error
-}
-
-type ContestsRepo interface {
-	ListUserContestMemberships(context.Context, uuid.UUID) ([]contestsmodel.UserContestMembership, error)
-	AddContestMemberIfNotExists(context.Context, uuid.UUID, uuid.UUID, string) error
-}
-
-type OutboxRepo interface {
-	eventdata.Writer
 }
 
 type UsersRepo interface {

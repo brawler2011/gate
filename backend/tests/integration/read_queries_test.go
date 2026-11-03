@@ -260,15 +260,22 @@ func (s *IntegrationTestSuite) TestContestReadQueries() {
 		{"/public/contests?pageSize=1", uuid.Nil, 2},
 		{"/admin/contests?pageSize=1", admin.Id, 3},
 		{"/organizations/" + org.Login + "/contests?pageSize=1", admin.Id, 3},
-		{"/users/" + member.Username + "/contests?pageSize=1", member.Id, 1},
-		{"/workshop/contests?pageSize=1", member.Id, 1},
-		{"/workshop/contests?pageSize=1&organization_id=" + org.ID.String(), member.Id, 1},
+		{"/users/" + member.Username + "/contests?pageSize=1", member.Id, 3},
+		{"/workshop/contests?pageSize=1", member.Id, 3},
+		{"/workshop/contests?pageSize=1&organization_id=" + org.ID.String(), member.Id, 3},
 	} {
 		s.Run(tc.path, func() {
 			items := s.readItems(tc.path, tc.user, "contests", 1, tc.total)
 			s.Require().Len(items, 1)
 			s.JSONEq(`"`+ids[2].String()+`"`, string(items[0]["id"]))
 			s.JSONEq(`true`, string(items[0]["hide_statements"]))
+			second := s.readItems(tc.path+"&page=2", tc.user, "contests", 2, tc.total)
+			s.Require().Len(second, 1)
+			s.NotEqual(string(items[0]["id"]), string(second[0]["id"]))
+			last := s.readItems(tc.path+fmt.Sprintf("&page=%d", tc.total), tc.user, "contests", tc.total, tc.total)
+			s.Require().Len(last, 1)
+			s.JSONEq(`"`+ids[0].String()+`"`, string(last[0]["id"]))
+			s.Empty(s.readItems(tc.path+fmt.Sprintf("&page=%d", tc.total+1), tc.user, "contests", tc.total+1, tc.total))
 			for _, field := range []string{"start_time", "end_time", "owner"} {
 				s.NotContains(items[0], field)
 			}
@@ -286,7 +293,7 @@ func (s *IntegrationTestSuite) TestContestReadQueries() {
 
 	s.Empty(s.readItems("/public/contests?search=NoSuchContest", uuid.Nil, "contests", 1, 0))
 	s.Empty(s.readItems("/public/contests?page=3&pageSize=1", uuid.Nil, "contests", 3, 2))
-	s.Empty(s.readItems("/users/"+member.Username+"/contests?page=4&pageSize=1", member.Id, "contests", 4, 0))
+	s.Empty(s.readItems("/users/"+member.Username+"/contests?page=4&pageSize=1", member.Id, "contests", 4, 3))
 	s.readJSON("/admin/contests", outsider.Id, 403)
 	s.readJSON("/organizations/missing/contests", admin.Id, 404)
 	s.readJSON("/users/missing-user/contests", admin.Id, 404)

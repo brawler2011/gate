@@ -12,10 +12,12 @@ import (
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
@@ -159,7 +161,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 	get("/organizations/"+org.Login+"/contests/missing/announcements", owner.Id, http.StatusNotFound)
 	get("/organizations/missing/contests/ann-public/announcements", owner.Id, http.StatusNotFound)
 
-	// Cross the default page size to distinguish normalization to 50 from other limits.
+	// Cross the default page size to distinguish the default of 50 from other limits.
 	_, err = s.dbPool.Exec(s.ctx, `
 		INSERT INTO contest_announcements (contest_id, author_id, title, body)
 		SELECT $1, $2, 'Extra announcement', 'Body' FROM generate_series(1, 45)`, contestID, owner.Id)
@@ -172,16 +174,18 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 	s.Equal(corev1.PaginationModel{Page: 1, Total: 2}, pagination)
 
 	reader := pgstore.NewAnnouncementsRepo(s.dbPool)
+	protected := contests.NewCommunicationReader(reader, nil, nil)
+	for _, params := range [][2]int32{{0, 1}, {-3, 2}, {1, 0}, {1, -1}, {1, 101}, {2, 0}} {
+		_, err := protected.ListAnnouncements(s.ctx, contestID, params[0], params[1])
+		s.Require().ErrorIs(err, pkg.ErrBadInput)
+	}
+
 	for _, tc := range []struct {
 		page, pageSize, wantPage, wantTotal int32
 		wantLength                          int
 	}{
-		{0, 1, 1, 51, 1},
-		{-3, 2, 1, 26, 2},
-		{1, 0, 1, 2, 50},
-		{1, -1, 1, 2, 50},
-		{1, 101, 1, 2, 50},
-		{2, 0, 2, 2, 1},
+		{1, 50, 1, 2, 50},
+		{2, 50, 2, 2, 1},
 		{1, 100, 1, 1, 51},
 		{3, 50, 3, 2, 0},
 	} {

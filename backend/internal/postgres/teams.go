@@ -9,26 +9,16 @@ import (
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type TeamsRepo struct {
-	db *pgxpool.Pool
-	q  *sqlc.Queries
+	q *sqlc.Queries
 }
 
 func NewTeamsRepo(db *pgxpool.Pool) *TeamsRepo {
 	return &TeamsRepo{
-		db: db,
-		q:  sqlc.New(db),
-	}
-}
-
-func (r *TeamsRepo) WithTx(tx pgx.Tx) *TeamsRepo {
-	return &TeamsRepo{
-		db: r.db,
-		q:  r.q.WithTx(tx),
+		q: sqlc.New(db),
 	}
 }
 

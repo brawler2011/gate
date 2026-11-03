@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"github.com/brawler2011/gate/backend/pkg"
-	"math"
 
 	blogsmodel "github.com/brawler2011/gate/backend/internal/blogs/model"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
@@ -60,7 +59,7 @@ func (r *BlogsRepo) ListPosts(ctx context.Context, params blogsmodel.ListPostsPa
 	}
 
 	// Calculate total pages
-	totalPages := int(math.Ceil(float64(totalCount) / float64(params.PageSize)))
+	totalPages := int((totalCount + int64(params.PageSize) - 1) / int64(params.PageSize))
 
 	// Build query based on sort order
 	offset := (params.Page - 1) * params.PageSize

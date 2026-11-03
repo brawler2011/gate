@@ -11,7 +11,6 @@ import (
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -22,12 +21,6 @@ type UsersRepo struct {
 func NewUsersRepo(p *pgxpool.Pool) *UsersRepo {
 	return &UsersRepo{
 		queries: sqlc.New(p),
-	}
-}
-
-func (r *UsersRepo) WithTx(tx pgx.Tx) *UsersRepo {
-	return &UsersRepo{
-		queries: sqlc.New(tx),
 	}
 }
 

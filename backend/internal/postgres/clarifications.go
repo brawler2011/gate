@@ -16,21 +16,12 @@ import (
 )
 
 type ClarificationsRepo struct {
-	pool    *pgxpool.Pool
 	queries *sqlc.Queries
 }
 
 func NewClarificationsRepo(pool *pgxpool.Pool) *ClarificationsRepo {
 	return &ClarificationsRepo{
-		pool:    pool,
 		queries: sqlc.New(pool),
-	}
-}
-
-func (r *ClarificationsRepo) WithTx(tx pgx.Tx) *ClarificationsRepo {
-	return &ClarificationsRepo{
-		pool:    r.pool,
-		queries: r.queries.WithTx(tx),
 	}
 }
 
@@ -79,13 +70,7 @@ func (r *ClarificationsRepo) GetClarificationByID(ctx context.Context, id uuid.U
 }
 
 func (r *ClarificationsRepo) ListClarificationsForUser(ctx context.Context, contestID, userID uuid.UUID, page, pageSize int32) (*contestsmodel.ContestClarificationsList, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 50
-	}
-	offset := (page - 1) * pageSize
+	offset := Offset(page, pageSize)
 
 	rows, err := r.queries.ListContestClarificationsForUser(ctx, sqlc.ListContestClarificationsForUserParams{
 		ContestID: contestID,
@@ -133,25 +118,11 @@ func (r *ClarificationsRepo) ListClarificationsForUser(ctx context.Context, cont
 }
 
 func (r *ClarificationsRepo) ListClarificationsForModerator(ctx context.Context, contestID uuid.UUID, filter *contestsmodel.ContestClarificationsFilter) (*contestsmodel.ContestClarificationsList, error) {
-	page := int32(1)
-	pageSize := int32(50)
-	if filter != nil {
-		if filter.Page >= 1 {
-			page = filter.Page
-		}
-		if filter.PageSize >= 1 && filter.PageSize <= 100 {
-			pageSize = filter.PageSize
-		}
-	}
-	offset := (page - 1) * pageSize
-
-	var problemID *uuid.UUID
-	if filter != nil {
-		problemID = filter.ProblemID
-	}
-
+	page, pageSize := filter.Page, filter.PageSize
+	offset := Offset(page, pageSize)
+	problemID := filter.ProblemID
 	var status *string
-	if filter != nil && filter.Status != nil && *filter.Status != "" {
+	if filter.Status != nil && *filter.Status != "" {
 		status = filter.Status
 	}
 

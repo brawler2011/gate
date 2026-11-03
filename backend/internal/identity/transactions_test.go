@@ -2,6 +2,8 @@ package identity
 
 import (
 	"context"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
 
 	"github.com/google/uuid"
 )
@@ -17,3 +19,12 @@ type identityTestStore struct {
 }
 
 func (identityTestStore) LockUser(context.Context, uuid.UUID) error { return nil }
+
+type ContestsRepo interface {
+	ListUserContestMemberships(context.Context, uuid.UUID) ([]contestsmodel.UserContestMembership, error)
+	AddContestMemberIfNotExists(context.Context, uuid.UUID, uuid.UUID, string) error
+}
+
+type OutboxRepo interface {
+	eventdata.Writer
+}

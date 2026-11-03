@@ -7,7 +7,6 @@ import (
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -18,12 +17,6 @@ type DraftsRepo struct {
 func NewDraftsRepo(db *pgxpool.Pool) *DraftsRepo {
 	return &DraftsRepo{
 		queries: sqlc.New(db),
-	}
-}
-
-func (r *DraftsRepo) WithTx(tx pgx.Tx) *DraftsRepo {
-	return &DraftsRepo{
-		queries: sqlc.New(tx),
 	}
 }
 

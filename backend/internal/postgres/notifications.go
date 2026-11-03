@@ -15,21 +15,12 @@ import (
 )
 
 type NotificationsRepo struct {
-	pool    *pgxpool.Pool
 	queries *sqlc.Queries
 }
 
 func NewNotificationsRepo(pool *pgxpool.Pool) *NotificationsRepo {
 	return &NotificationsRepo{
-		pool:    pool,
 		queries: sqlc.New(pool),
-	}
-}
-
-func (r *NotificationsRepo) WithTx(tx pgx.Tx) *NotificationsRepo {
-	return &NotificationsRepo{
-		pool:    r.pool,
-		queries: r.queries.WithTx(tx),
 	}
 }
 
@@ -68,7 +59,7 @@ func (r *NotificationsRepo) CreateNotification(ctx context.Context, input *notif
 }
 
 func (r *NotificationsRepo) ListNotifications(ctx context.Context, userID uuid.UUID, filter *notificationsmodel.NotificationFilter) (*notificationsmodel.NotificationsList, error) {
-	offset := (filter.Page - 1) * filter.PageSize
+	offset := Offset(filter.Page, filter.PageSize)
 	var unreadOnly *bool
 	if filter.UnreadOnly {
 		t := true

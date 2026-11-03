@@ -74,6 +74,9 @@ func (uc *TeamsUseCase) CreateTeam(ctx context.Context, input *organizationsmode
 }
 
 func (uc *TeamsUseCase) GetTeam(ctx context.Context, teamID, userID uuid.UUID) (*organizationsmodel.Team, error) {
+	if accessmodel.UserFromContext(ctx).Id != userID {
+		return nil, pkg.NoPermission
+	}
 	team, err := uc.repo.GetTeamByID(ctx, teamID)
 	if err != nil {
 		return nil, err
@@ -84,19 +87,27 @@ func (uc *TeamsUseCase) GetTeam(ctx context.Context, teamID, userID uuid.UUID) (
 	// 1. They are org admin/owner
 	// 2. They are team member
 	// 3. Team is not secret
-	hasOrgAccess, _ := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, userID, accessmodel.ActionViewOrganization)
+	hasOrgAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, userID, accessmodel.ActionViewOrganization)
+	if err != nil {
+		return nil, err
+	}
 	if !hasOrgAccess {
-		return nil, errors.New("access denied: not a member of organization")
+		return nil, pkg.NoPermission
 	}
 
 	if team.Privacy == organizationsmodel.TeamPrivacySecret {
 		// For secret teams, must be a member
 		_, err := uc.repo.GetTeamMember(ctx, teamID, userID)
 		if err != nil {
-			// Not a team member, check if org admin
-			hasManageAccess, _ := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, userID, accessmodel.ActionManageOrganization)
+			if !errors.Is(err, pkg.ErrNotFound) {
+				return nil, err
+			}
+			hasManageAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, userID, accessmodel.ActionManageOrganization)
+			if err != nil {
+				return nil, err
+			}
 			if !hasManageAccess {
-				return nil, errors.New("access denied: team is secret")
+				return nil, pkg.NoPermission
 			}
 		}
 	}
@@ -105,13 +116,16 @@ func (uc *TeamsUseCase) GetTeam(ctx context.Context, teamID, userID uuid.UUID) (
 }
 
 func (uc *TeamsUseCase) ListOrganizationTeams(ctx context.Context, orgID, userID uuid.UUID) ([]organizationsmodel.Team, error) {
+	if accessmodel.UserFromContext(ctx).Id != userID {
+		return nil, pkg.NoPermission
+	}
 	// Check org access
 	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, orgID, userID, accessmodel.ActionViewOrganization)
 	if err != nil {
 		return nil, fmt.Errorf("check permissions: %w", err)
 	}
 	if !hasAccess {
-		return nil, errors.New("access denied")
+		return nil, pkg.NoPermission
 	}
 
 	teams, err := uc.repo.ListOrganizationTeams(ctx, orgID)
@@ -120,7 +134,10 @@ func (uc *TeamsUseCase) ListOrganizationTeams(ctx context.Context, orgID, userID
 	}
 
 	// Filter secret teams if user is not a member
-	hasManageAccess, _ := uc.permissionsUC.HasOrganizationPermission(ctx, orgID, userID, accessmodel.ActionManageOrganization)
+	hasManageAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, orgID, userID, accessmodel.ActionManageOrganization)
+	if err != nil {
+		return nil, err
+	}
 
 	visibleTeams := make([]organizationsmodel.Team, 0, len(teams))
 	for _, team := range teams {
@@ -128,6 +145,9 @@ func (uc *TeamsUseCase) ListOrganizationTeams(ctx context.Context, orgID, userID
 			// Check if user is team member
 			_, err := uc.repo.GetTeamMember(ctx, team.ID, userID)
 			if err != nil {
+				if !errors.Is(err, pkg.ErrNotFound) {
+					return nil, err
+				}
 				continue // Skip secret team
 			}
 		}
@@ -194,21 +214,9 @@ func (uc *TeamsUseCase) AddTeamMember(ctx context.Context, input *organizationsm
 }
 
 func (uc *TeamsUseCase) ListTeamMembers(ctx context.Context, teamID, requestUserID uuid.UUID) ([]organizationsmodel.TeamMember, error) {
-	team, err := uc.repo.GetTeamByID(ctx, teamID)
-	if err != nil {
+	if _, err := uc.GetTeam(ctx, teamID, requestUserID); err != nil {
 		return nil, err
 	}
-
-	// Check if user can view team members
-	hasOrgAccess, _ := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, accessmodel.ActionViewOrganization)
-
-	_, err = uc.repo.GetTeamMember(ctx, teamID, requestUserID)
-	isTeamMember := err == nil
-
-	if !hasOrgAccess && !isTeamMember {
-		return nil, errors.New("access denied")
-	}
-
 	return uc.repo.ListTeamMembers(ctx, teamID)
 }
 
@@ -254,34 +262,23 @@ func (uc *TeamsUseCase) RemoveTeamMember(ctx context.Context, teamID, userID, re
 }
 
 func (uc *TeamsUseCase) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]organizationsmodel.Team, error) {
+	if err := accessmodel.RequireSelfOrAdmin(ctx, userID); err != nil {
+		return nil, err
+	}
 	return uc.repo.GetUserTeams(ctx, userID)
 }
 
 func (uc *TeamsUseCase) GetTeamContests(ctx context.Context, teamID, requestUserID uuid.UUID) ([]contestsmodel.Contest, error) {
-	team, err := uc.repo.GetTeamByID(ctx, teamID)
-	if err != nil {
+	if _, err := uc.GetTeam(ctx, teamID, requestUserID); err != nil {
 		return nil, err
 	}
-
-	hasOrgAccess, _ := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, accessmodel.ActionViewOrganization)
-	if !hasOrgAccess {
-		return nil, errors.New("access denied")
-	}
-
 	return uc.repo.GetTeamContests(ctx, teamID)
 }
 
 func (uc *TeamsUseCase) GetTeamProblems(ctx context.Context, teamID, requestUserID uuid.UUID) ([]problemsmodel.Problem, error) {
-	team, err := uc.repo.GetTeamByID(ctx, teamID)
-	if err != nil {
+	if _, err := uc.GetTeam(ctx, teamID, requestUserID); err != nil {
 		return nil, err
 	}
-
-	hasOrgAccess, _ := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, accessmodel.ActionViewOrganization)
-	if !hasOrgAccess {
-		return nil, errors.New("access denied")
-	}
-
 	return uc.repo.GetTeamProblems(ctx, teamID)
 }
 

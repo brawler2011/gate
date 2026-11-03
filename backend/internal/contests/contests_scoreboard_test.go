@@ -117,7 +117,7 @@ func (f *scoreboardFixture) submit(t *testing.T, user string, problem int, state
 	id, contest, author, task := uuid.New(), f.repo.contest.ID, f.users[user], f.repo.problems[problem].ProblemID
 	sub := submissionsmodel.Submission{ID: id, ContestID: &contest, CreatedBy: &author, ProblemID: &task, State: state, CreatedAt: f.repo.contest.StartTime.Add(offset)}
 	f.repo.submissions[id] = sub
-	require.NoError(t, f.uc.ProcessSubmissionResult(context.Background(), &sub))
+	require.NoError(t, contests.ApplySubmissionResult(context.Background(), f.repo, &sub))
 	return id
 }
 
@@ -326,7 +326,7 @@ func TestScoreboardUserUpdateMatchesSnapshot(t *testing.T) {
 	sub := f.repo.submissions[accepted]
 	sub.State = submissionsmodel.Saved
 	f.repo.submissions[accepted] = sub
-	require.NoError(t, f.uc.ProcessSubmissionResult(context.Background(), &sub))
+	require.NoError(t, contests.ApplySubmissionResult(context.Background(), f.repo, &sub))
 	check()
 	delete(f.repo.roles, f.users["alice"])
 	update, err := f.uc.GetContestScoreboardUser(context.Background(), f.repo.contest.ID, f.users["alice"], false)

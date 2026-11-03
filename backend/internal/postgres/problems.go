@@ -56,7 +56,7 @@ func (r *ProblemsRepo) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 
 func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error) {
 	// Calculate offset
-	offset := (filter.Page - 1) * filter.PageSize
+	offset := Offset(filter.Page, filter.PageSize)
 
 	total, err := r.queries.CountAllProblems(ctx, sqlc.CountAllProblemsParams{
 		OrganizationID: filter.OrganizationID,

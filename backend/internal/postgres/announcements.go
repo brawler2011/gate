@@ -16,21 +16,12 @@ import (
 )
 
 type AnnouncementsRepo struct {
-	pool    *pgxpool.Pool
 	queries *sqlc.Queries
 }
 
 func NewAnnouncementsRepo(pool *pgxpool.Pool) *AnnouncementsRepo {
 	return &AnnouncementsRepo{
-		pool:    pool,
 		queries: sqlc.New(pool),
-	}
-}
-
-func (r *AnnouncementsRepo) WithTx(tx pgx.Tx) *AnnouncementsRepo {
-	return &AnnouncementsRepo{
-		pool:    r.pool,
-		queries: r.queries.WithTx(tx),
 	}
 }
 
@@ -76,13 +67,7 @@ func (r *AnnouncementsRepo) GetAnnouncementByID(ctx context.Context, id uuid.UUI
 }
 
 func (r *AnnouncementsRepo) ListAnnouncements(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*contestsmodel.ContestAnnouncementsList, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 50
-	}
-	offset := (page - 1) * pageSize
+	offset := Offset(page, pageSize)
 
 	rows, err := r.queries.ListContestAnnouncements(ctx, sqlc.ListContestAnnouncementsParams{
 		ContestID: contestID,

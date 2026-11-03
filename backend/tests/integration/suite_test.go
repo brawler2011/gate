@@ -190,7 +190,7 @@ func (s *IntegrationTestSuite) initApp() {
 	packagesRepo := pgstore.NewPackagesRepo(s.dbPool)
 	publishUC := problems.NewProblemPublishUseCase(s.problemsRepo, packagesRepo, workspaceStorage, testStorage, "packages", pgstore.NewProblemTransactions(s.dbPool))
 	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(s.dbPool), publishUC, s.organizationsRepo)
-	permissionsUC := access.NewPermissionsUseCase(s.contestsRepo, usersUC, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
+	permissionsUC := access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
 	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissionsUC)
 	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsUC, s.problemsRepo, pgstore.NewSubmissionTransactions(s.dbPool), permissionsUC)
 	notificationsRepo := pgstore.NewNotificationsRepo(s.dbPool)

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
@@ -12,10 +11,6 @@ import (
 
 type ContestsUC interface {
 	GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error)
-}
-
-type OutboxRepo interface {
-	eventdata.Writer
 }
 
 type ProblemsUC interface {

@@ -214,10 +214,6 @@ func (uc *ContestsUseCase) UpdateContestMember(ctx context.Context, contestId uu
 	})
 }
 
-func (uc *ContestsUseCase) ProcessSubmissionResult(ctx context.Context, submission *submissionsmodel.Submission) error {
-	return ApplySubmissionResult(ctx, uc.contestRepo, submission)
-}
-
 func (uc *ContestsUseCase) ProjectScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error) {
 	contest, err := uc.contestRepo.GetContest(ctx, contestID)
 	if err != nil {

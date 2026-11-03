@@ -38,12 +38,6 @@ func NewContestsRepo(db *pgxpool.Pool) *ContestsRepo {
 	}
 }
 
-func (r *ContestsRepo) WithTx(tx pgx.Tx) *ContestsRepo {
-	return &ContestsRepo{
-		queries: sqlc.New(tx),
-	}
-}
-
 func (r *ContestsRepo) CreateContest(ctx context.Context, params *contestsmodel.CreateContestParams) error {
 	settingsJSON, err := marshalJSON(params.Settings)
 	if err != nil {
@@ -207,7 +201,10 @@ func (r *ContestsRepo) ListUserContests(ctx context.Context, filter contestsmode
 		return nil, HandlePgErr(err)
 	}
 
-	count := int64(len(rows))
+	count, err := r.queries.CountUserAccessibleContests(ctx, filter.UserId)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
 
 	contests := make([]contestsmodel.Contest, len(rows))
 	for i, row := range rows {
@@ -228,11 +225,15 @@ func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter contests
 		if err != nil {
 			return nil, HandlePgErr(err)
 		}
+		count, err := r.queries.CountUserAccessibleContestsByOrg(ctx, sqlc.CountUserAccessibleContestsByOrgParams{PUserID: filter.UserId, OrganizationID: *filter.OrganizationID})
+		if err != nil {
+			return nil, HandlePgErr(err)
+		}
 		contests := make([]contestsmodel.Contest, len(rows))
 		for i, row := range rows {
 			contests[i] = mapListUserAccessibleContestsByOrgRow(row)
 		}
-		return &contestsmodel.ContestsList{Contests: contests, Pagination: paging.NewPagination(filter.Page, filter.PageSize, safeInt32(len(rows)))}, nil
+		return &contestsmodel.ContestsList{Contests: contests, Pagination: paging.NewPagination(filter.Page, filter.PageSize, safeInt32(count))}, nil
 	}
 
 	rows, err := r.queries.ListUserAccessibleContests(ctx, sqlc.ListUserAccessibleContestsParams{
@@ -244,12 +245,16 @@ func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter contests
 		return nil, HandlePgErr(err)
 	}
 
+	count, err := r.queries.CountUserAccessibleContests(ctx, filter.UserId)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
 	contests := make([]contestsmodel.Contest, len(rows))
 	for i, row := range rows {
 		contests[i] = mapListUserAccessibleContestsRow(row)
 	}
 
-	return &contestsmodel.ContestsList{Contests: contests, Pagination: paging.NewPagination(filter.Page, filter.PageSize, safeInt32(len(rows)))}, nil
+	return &contestsmodel.ContestsList{Contests: contests, Pagination: paging.NewPagination(filter.Page, filter.PageSize, safeInt32(count))}, nil
 }
 
 func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter contestsmodel.PublicContestsFilter) (*contestsmodel.ContestsList, error) {
