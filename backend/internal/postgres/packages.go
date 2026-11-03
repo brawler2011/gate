@@ -27,7 +27,7 @@ func (r *PackagesRepo) CreatePackage(ctx context.Context, params *problemsmodel.
 		ProblemID:      params.ProblemID,
 		OrganizationID: params.OrganizationID,
 		PackageHash:    params.PackageHash,
-		Status:         sqlc.PackageStatus(params.Status),
+		Status:         params.Status,
 	})
 	if err != nil {
 		return problemsmodel.ProblemPackage{}, HandlePgErr(err)
@@ -90,9 +90,6 @@ func mapPackage(p sqlc.ProblemPackage) problemsmodel.ProblemPackage {
 		BuildLog:       p.BuildLog,
 		CreatedAt:      p.CreatedAt,
 	}
-	if p.CompiledAt.Valid {
-		t := p.CompiledAt.Time
-		pkg.CompiledAt = &t
-	}
+	pkg.CompiledAt = p.CompiledAt
 	return pkg
 }

@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
 )
 
@@ -19,9 +20,9 @@ VALUES ($1, $2, $3)
 `
 
 type AddProblemTeamParams struct {
-	ProblemID  uuid.UUID         `json:"problem_id"`
-	TeamID     uuid.UUID         `json:"team_id"`
-	Permission ProblemPermission `json:"permission"`
+	ProblemID  uuid.UUID                       `json:"problem_id"`
+	TeamID     uuid.UUID                       `json:"team_id"`
+	Permission problemsmodel.ProblemPermission `json:"permission"`
 }
 
 // Problem Teams queries (team-based access control)
@@ -79,12 +80,12 @@ ORDER BY pt.created_at
 `
 
 type ListProblemTeamsRow struct {
-	ProblemID  uuid.UUID         `json:"problem_id"`
-	TeamID     uuid.UUID         `json:"team_id"`
-	Permission ProblemPermission `json:"permission"`
-	CreatedAt  time.Time         `json:"created_at"`
-	TeamName   string            `json:"team_name"`
-	TeamSlug   string            `json:"team_slug"`
+	ProblemID  uuid.UUID                       `json:"problem_id"`
+	TeamID     uuid.UUID                       `json:"team_id"`
+	Permission problemsmodel.ProblemPermission `json:"permission"`
+	CreatedAt  time.Time                       `json:"created_at"`
+	TeamName   string                          `json:"team_name"`
+	TeamSlug   string                          `json:"team_slug"`
 }
 
 func (q *Queries) ListProblemTeams(ctx context.Context, problemID uuid.UUID) ([]ListProblemTeamsRow, error) {
@@ -136,9 +137,9 @@ WHERE problem_id = $1 AND team_id = $2
 `
 
 type UpdateProblemTeamPermissionParams struct {
-	ProblemID  uuid.UUID         `json:"problem_id"`
-	TeamID     uuid.UUID         `json:"team_id"`
-	Permission ProblemPermission `json:"permission"`
+	ProblemID  uuid.UUID                       `json:"problem_id"`
+	TeamID     uuid.UUID                       `json:"team_id"`
+	Permission problemsmodel.ProblemPermission `json:"permission"`
 }
 
 func (q *Queries) UpdateProblemTeamPermission(ctx context.Context, arg UpdateProblemTeamPermissionParams) error {

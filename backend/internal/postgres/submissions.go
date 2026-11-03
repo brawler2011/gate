@@ -9,7 +9,6 @@ import (
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -135,7 +134,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 		}
 		return rows, count, revision, nil
 	}
-	revision, err := r.queries.GetSubmissionsRevision(ctx, nullableUUIDToPgtype(filter.ContestId))
+	revision, err := r.queries.GetSubmissionsRevision(ctx, filter.ContestId)
 	if err != nil {
 		return nil, 0, 0, HandlePgErr(err)
 	}
@@ -146,9 +145,9 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 	}
 
 	totalCount, err := r.queries.CountSubmissions(ctx, sqlc.CountSubmissionsParams{
-		ContestID: nullableUUIDToPgtype(filter.ContestId),
-		OwnerID:   nullableUUIDToPgtype(filter.UserId),
-		ProblemID: nullableUUIDToPgtype(filter.ProblemId),
+		ContestID: filter.ContestId,
+		OwnerID:   filter.UserId,
+		ProblemID: filter.ProblemId,
 		Language:  languagePtrToInt32Ptr(filter.Language),
 		State:     statePtrToInt32Ptr(filter.State),
 	})
@@ -159,9 +158,9 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 	rows, err := r.queries.ListSubmissions(ctx, sqlc.ListSubmissionsParams{
 		Limit:     int32(filter.PageSize),
 		Offset:    int32((filter.Page - 1) * filter.PageSize),
-		ContestID: nullableUUIDToPgtype(filter.ContestId),
-		OwnerID:   nullableUUIDToPgtype(filter.UserId),
-		ProblemID: nullableUUIDToPgtype(filter.ProblemId),
+		ContestID: filter.ContestId,
+		OwnerID:   filter.UserId,
+		ProblemID: filter.ProblemId,
 		Language:  languagePtrToInt32Ptr(filter.Language),
 		State:     statePtrToInt32Ptr(filter.State),
 		SortOrder: sortOrder,
@@ -176,13 +175,6 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 	}
 
 	return submissions, safeInt32(totalCount), revision, nil
-}
-
-func nullableUUIDToPgtype(id *uuid.UUID) pgtype.UUID {
-	if id == nil {
-		return pgtype.UUID{Valid: false}
-	}
-	return pgtype.UUID{Bytes: *id, Valid: true}
 }
 
 func languagePtrToInt32Ptr(l *submissionsmodel.LanguageName) *int32 {
@@ -202,23 +194,11 @@ func statePtrToInt32Ptr(s *submissionsmodel.State) *int32 {
 }
 
 func mapGetSubmissionRow(row sqlc.GetSubmissionRow) submissionsmodel.Submission {
-	var createdBy *uuid.UUID
-	if row.OwnerID.Valid {
-		cb := uuid.UUID(row.OwnerID.Bytes)
-		createdBy = &cb
-	}
+	createdBy := row.OwnerID
 
-	var problemID *uuid.UUID
-	if row.ProblemID.Valid {
-		pid := uuid.UUID(row.ProblemID.Bytes)
-		problemID = &pid
-	}
+	problemID := row.ProblemID
 
-	var contestID *uuid.UUID
-	if row.ContestID.Valid {
-		cid := uuid.UUID(row.ContestID.Bytes)
-		contestID = &cid
-	}
+	contestID := row.ContestID
 
 	var position *int32
 	if row.ProblemOrdinal != nil {
@@ -292,23 +272,11 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) submissionsmodel.Submission 
 }
 
 func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) submissionsmodel.Submission {
-	var createdBy *uuid.UUID
-	if row.OwnerID.Valid {
-		cb := uuid.UUID(row.OwnerID.Bytes)
-		createdBy = &cb
-	}
+	createdBy := row.OwnerID
 
-	var problemID *uuid.UUID
-	if row.ProblemID.Valid {
-		pid := uuid.UUID(row.ProblemID.Bytes)
-		problemID = &pid
-	}
+	problemID := row.ProblemID
 
-	var contestID *uuid.UUID
-	if row.ContestID.Valid {
-		cid := uuid.UUID(row.ContestID.Bytes)
-		contestID = &cid
-	}
+	contestID := row.ContestID
 
 	var position *int32
 	if row.ProblemOrdinal != nil {
@@ -375,9 +343,9 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) submissionsmodel.Submiss
 func (r *SubmissionsRepo) ResetSubmissionsState(ctx context.Context, filter submissionsmodel.RejudgeFilter) ([]submissionsmodel.SubmissionReset, error) {
 	rows, err := r.queries.ResetSubmissionsState(ctx, sqlc.ResetSubmissionsStateParams{
 		ContestID:    filter.ContestID,
-		ProblemID:    nullableUUIDToPgtype(filter.ProblemID),
-		SubmissionID: nullableUUIDToPgtype(filter.SubmissionID),
-		OwnerID:      nullableUUIDToPgtype(filter.UserID),
+		ProblemID:    filter.ProblemID,
+		SubmissionID: filter.SubmissionID,
+		OwnerID:      filter.UserID,
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)

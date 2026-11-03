@@ -15,7 +15,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -54,14 +53,14 @@ func (r *ContestsRepo) CreateContest(ctx context.Context, params *contestsmodel.
 	_, err = r.queries.CreateContest(ctx, sqlc.CreateContestParams{
 		ID:             params.ID,
 		OrganizationID: params.OrganizationID,
-		OwnerID:        uuidPtrToNullUUID(params.OwnerID),
+		OwnerID:        params.OwnerID,
 		Visibility:     params.Visibility,
 		Title:          params.Title,
 		Login:          params.Login,
 		Description:    params.Description,
 		Settings:       settingsJSON,
-		StartTime:      timePtrToNullTime(params.StartTime),
-		EndTime:        timePtrToNullTime(params.EndTime),
+		StartTime:      params.StartTime,
+		EndTime:        params.EndTime,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -115,13 +114,13 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c contestsmodel.Contes
 		Login:        c.Login,
 		Title:        c.Title,
 		Description:  c.Description,
-		Visibility:   stringToNullContestVisibility(c.Visibility),
+		Visibility:   c.Visibility,
 		Settings:     settingsJSON,
-		StartTime:    timePtrToNullTime(c.StartTime),
+		StartTime:    c.StartTime,
 		StartTimeSet: c.StartTimeSet,
-		EndTime:      timePtrToNullTime(c.EndTime),
+		EndTime:      c.EndTime,
 		EndTimeSet:   c.EndTimeSet,
-		OwnerID:      uuidPtrToNullUUID(c.OwnerID),
+		OwnerID:      c.OwnerID,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -562,14 +561,14 @@ func mapContestFields(
 	id uuid.UUID,
 	orgID uuid.UUID,
 	orgLogin string,
-	ownerID pgtype.UUID,
+	ownerID *uuid.UUID,
 	visibility string,
 	title string,
 	login string,
 	description string,
 	settingsBytes []byte,
-	startTime pgtype.Timestamptz,
-	endTime pgtype.Timestamptz,
+	startTime *time.Time,
+	endTime *time.Time,
 	createdAt time.Time,
 	updatedAt time.Time,
 ) contestsmodel.Contest {
@@ -583,14 +582,14 @@ func mapContestFields(
 		ID:                id,
 		OrganizationID:    orgID,
 		OrganizationLogin: orgLogin,
-		OwnerID:           pgUUIDToUUIDPtr(ownerID),
+		OwnerID:           ownerID,
 		Visibility:        visibility,
 		Title:             title,
 		Login:             login,
 		Description:       description,
 		Settings:          settings,
-		StartTime:         pgTimestamptzToTimePtr(startTime),
-		EndTime:           pgTimestamptzToTimePtr(endTime),
+		StartTime:         startTime,
+		EndTime:           endTime,
 		CreatedAt:         createdAt,
 		UpdatedAt:         updatedAt,
 	}
@@ -657,51 +656,6 @@ func mapContestTeam(c sqlc.ListContestTeamsRow) contestsmodel.ContestTeam {
 	}
 }
 
-func pgUUIDToUUIDPtr(p pgtype.UUID) *uuid.UUID {
-	if !p.Valid {
-		return nil
-	}
-	u := uuid.UUID(p.Bytes)
-	return &u
-}
-
-func pgTimestamptzToTimePtr(t pgtype.Timestamptz) *time.Time {
-	if !t.Valid {
-		return nil
-	}
-	return &t.Time
-}
-
-func stringToNullContestVisibility(s *contestsmodel.ContestVisibility) sqlc.NullContestVisibility {
-	if s == nil {
-		return sqlc.NullContestVisibility{Valid: false}
-	}
-	return sqlc.NullContestVisibility{
-		ContestVisibility: sqlc.ContestVisibility(*s),
-		Valid:             true,
-	}
-}
-
-func uuidPtrToNullUUID(u *uuid.UUID) pgtype.UUID {
-	if u == nil {
-		return pgtype.UUID{Valid: false}
-	}
-	return pgtype.UUID{
-		Bytes: *u,
-		Valid: true,
-	}
-}
-
-func timePtrToNullTime(t *time.Time) pgtype.Timestamptz {
-	if t == nil {
-		return pgtype.Timestamptz{Valid: false}
-	}
-	return pgtype.Timestamptz{
-		Time:  *t,
-		Valid: true,
-	}
-}
-
 func marshalJSON(v map[string]interface{}) ([]byte, error) {
 	if v == nil {
 		return []byte("{}"), nil
@@ -731,10 +685,7 @@ func (r *ContestsRepo) ListDashboardContests(ctx context.Context, userID uuid.UU
 }
 
 func (r *ContestsRepo) UpsertContestProblemResult(ctx context.Context, params *contestsmodel.UpsertContestProblemResultParams) error {
-	var firstACTime pgtype.Timestamptz
-	if params.FirstACTime != nil {
-		firstACTime = pgtype.Timestamptz{Time: *params.FirstACTime, Valid: true}
-	}
+	firstACTime := params.FirstACTime
 
 	err := r.queries.UpsertContestProblemResult(ctx, sqlc.UpsertContestProblemResultParams{
 		ContestID:      params.ContestID,
@@ -761,10 +712,7 @@ func (r *ContestsRepo) GetContestProblemResult(ctx context.Context, contestID, u
 		return nil, HandlePgErr(err)
 	}
 
-	var firstAC *time.Time
-	if row.FirstAcTime.Valid {
-		firstAC = &row.FirstAcTime.Time
-	}
+	firstAC := row.FirstAcTime
 
 	return &contestsmodel.ContestProblemResult{
 		ContestID:      row.ContestID,
@@ -788,8 +736,8 @@ func (r *ContestsRepo) GetContestScoreboardFromStandings(ctx context.Context, co
 
 	for _, row := range rows {
 		userMap[row.UserID] = row.Username
-		if row.ProblemID.Valid {
-			probID := uuid.UUID(row.ProblemID.Bytes)
+		if row.ProblemID != nil {
+			probID := *row.ProblemID
 			var solved bool
 			if row.Solved != nil {
 				solved = *row.Solved
@@ -798,10 +746,7 @@ func (r *ContestsRepo) GetContestScoreboardFromStandings(ctx context.Context, co
 			if row.FailedAttempts != nil {
 				failedAttempts = *row.FailedAttempts
 			}
-			var firstAC *time.Time
-			if row.FirstAcTime.Valid {
-				firstAC = &row.FirstAcTime.Time
-			}
+			firstAC := row.FirstAcTime
 
 			results = append(results, contestsmodel.ContestProblemResult{
 				ContestID:      contestID,
@@ -820,9 +765,9 @@ func (r *ContestsRepo) GetContestScoreboardFromStandings(ctx context.Context, co
 
 func (r *ContestsRepo) GetSubmissionsForScoreboard(ctx context.Context, contestID, userID, problemID uuid.UUID) ([]contestsmodel.SubmissionForScoreboard, error) {
 	rows, err := r.queries.GetSubmissionsForScoreboard(ctx, sqlc.GetSubmissionsForScoreboardParams{
-		ContestID: nullableUUIDToPgtype(&contestID),
-		OwnerID:   nullableUUIDToPgtype(&userID),
-		ProblemID: nullableUUIDToPgtype(&problemID),
+		ContestID: &contestID,
+		OwnerID:   &userID,
+		ProblemID: &problemID,
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)
@@ -839,10 +784,7 @@ func (r *ContestsRepo) GetSubmissionsForScoreboard(ctx context.Context, contestI
 }
 
 func (r *ContestsRepo) CreateContestUserProblemBlock(ctx context.Context, params *contestsmodel.CreateContestUserProblemBlockParams) error {
-	var createdBy pgtype.UUID
-	if params.CreatedBy != nil {
-		createdBy = pgtype.UUID{Bytes: *params.CreatedBy, Valid: true}
-	}
+	createdBy := params.CreatedBy
 
 	err := r.queries.CreateContestUserProblemBlock(ctx, sqlc.CreateContestUserProblemBlockParams{
 		ContestID: params.ContestID,
@@ -879,11 +821,7 @@ func (r *ContestsRepo) GetContestUserProblemBlock(ctx context.Context, contestID
 		return nil, HandlePgErr(err)
 	}
 
-	var createdBy *uuid.UUID
-	if row.CreatedBy.Valid {
-		cb := uuid.UUID(row.CreatedBy.Bytes)
-		createdBy = &cb
-	}
+	createdBy := row.CreatedBy
 
 	return &contestsmodel.ContestUserProblemBlock{
 		ContestID: row.ContestID,
@@ -898,7 +836,7 @@ func (r *ContestsRepo) GetContestUserProblemBlock(ctx context.Context, contestID
 func (r *ContestsRepo) ListContestUserProblemBlocks(ctx context.Context, contestID uuid.UUID, userID *uuid.UUID) ([]contestsmodel.ContestUserProblemBlock, error) {
 	rows, err := r.queries.ListContestUserProblemBlocks(ctx, sqlc.ListContestUserProblemBlocksParams{
 		ContestID: contestID,
-		UserID:    nullableUUIDToPgtype(userID),
+		UserID:    userID,
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)
@@ -906,11 +844,7 @@ func (r *ContestsRepo) ListContestUserProblemBlocks(ctx context.Context, contest
 
 	blocks := make([]contestsmodel.ContestUserProblemBlock, len(rows))
 	for i, row := range rows {
-		var createdBy *uuid.UUID
-		if row.CreatedBy.Valid {
-			cb := uuid.UUID(row.CreatedBy.Bytes)
-			createdBy = &cb
-		}
+		createdBy := row.CreatedBy
 		blocks[i] = contestsmodel.ContestUserProblemBlock{
 			ContestID: row.ContestID,
 			UserID:    row.UserID,
@@ -952,11 +886,7 @@ func (r *ContestsRepo) GetContestJoinRequestByID(ctx context.Context, id uuid.UU
 		email = *row.Email
 	}
 
-	var reviewedBy *uuid.UUID
-	if row.ReviewedBy.Valid {
-		id := uuid.UUID(row.ReviewedBy.Bytes)
-		reviewedBy = &id
-	}
+	reviewedBy := row.ReviewedBy
 
 	return &contestsmodel.ContestJoinRequest{
 		ID:                row.ID,
@@ -1006,11 +936,7 @@ func (r *ContestsRepo) ListContestJoinRequests(ctx context.Context, contestID uu
 		if row.Email != nil {
 			email = *row.Email
 		}
-		var reviewedBy *uuid.UUID
-		if row.ReviewedBy.Valid {
-			id := uuid.UUID(row.ReviewedBy.Bytes)
-			reviewedBy = &id
-		}
+		reviewedBy := row.ReviewedBy
 		requests[i] = contestsmodel.ContestJoinRequest{
 			ID:               row.ID,
 			ContestID:        row.ContestID,
@@ -1053,10 +979,7 @@ func (r *ContestsRepo) ListUserContestJoinRequests(ctx context.Context, userID u
 }
 
 func (r *ContestsRepo) UpdateContestJoinRequestStatus(ctx context.Context, id uuid.UUID, status organizationsmodel.RequestStatus, reviewedBy *uuid.UUID) error {
-	pgReviewedBy := pgtype.UUID{}
-	if reviewedBy != nil {
-		pgReviewedBy = pgtype.UUID{Bytes: *reviewedBy, Valid: true}
-	}
+	pgReviewedBy := reviewedBy
 	affected, err := r.queries.UpdateContestJoinRequestStatus(ctx, sqlc.UpdateContestJoinRequestStatusParams{
 		ID:         id,
 		Status:     string(status),
@@ -1105,15 +1028,9 @@ func mapDashboardContest(row sqlc.ListDashboardContestsRow) contestsmodel.Dashbo
 		}
 	}
 
-	var startTime *time.Time
-	if row.ContestStartTime.Valid {
-		startTime = &row.ContestStartTime.Time
-	}
+	startTime := row.ContestStartTime
 
-	var endTime *time.Time
-	if row.ContestEndTime.Valid {
-		endTime = &row.ContestEndTime.Time
-	}
+	endTime := row.ContestEndTime
 
 	return contestsmodel.DashboardContest{
 		ID:                 row.ContestID,

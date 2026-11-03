@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const claimTemporaryUser = `-- name: ClaimTemporaryUser :execrows
@@ -85,14 +84,14 @@ VALUES (
 `
 
 type CreateUserParams struct {
-	ID              uuid.UUID          `json:"id"`
-	Username        string             `json:"username"`
-	Role            UserRole           `json:"role"`
-	PasswordHash    string             `json:"password_hash"`
-	Email           *string            `json:"email"`
-	AvatarUrl       *string            `json:"avatar_url"`
-	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
-	IsEmailVerified bool               `json:"is_email_verified"`
+	ID              uuid.UUID  `json:"id"`
+	Username        string     `json:"username"`
+	Role            string     `json:"role"`
+	PasswordHash    string     `json:"password_hash"`
+	Email           *string    `json:"email"`
+	AvatarUrl       *string    `json:"avatar_url"`
+	ExpiresAt       *time.Time `json:"expires_at"`
+	IsEmailVerified bool       `json:"is_email_verified"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
@@ -196,17 +195,17 @@ FROM users WHERE id = $1
 `
 
 type GetUserProfileByIDRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Username        string             `json:"username"`
-	Role            UserRole           `json:"role"`
-	Email           *string            `json:"email"`
-	AvatarUrl       *string            `json:"avatar_url"`
-	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
-	IsEmailVerified bool               `json:"is_email_verified"`
-	ClaimedByUserID pgtype.UUID        `json:"claimed_by_user_id"`
-	ClaimedAt       pgtype.Timestamptz `json:"claimed_at"`
-	CreatedAt       time.Time          `json:"created_at"`
-	UpdatedAt       time.Time          `json:"updated_at"`
+	ID              uuid.UUID  `json:"id"`
+	Username        string     `json:"username"`
+	Role            string     `json:"role"`
+	Email           *string    `json:"email"`
+	AvatarUrl       *string    `json:"avatar_url"`
+	ExpiresAt       *time.Time `json:"expires_at"`
+	IsEmailVerified bool       `json:"is_email_verified"`
+	ClaimedByUserID *uuid.UUID `json:"claimed_by_user_id"`
+	ClaimedAt       *time.Time `json:"claimed_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 func (q *Queries) GetUserProfileByID(ctx context.Context, id uuid.UUID) (GetUserProfileByIDRow, error) {
@@ -234,17 +233,17 @@ FROM users WHERE LOWER(username)=LOWER($1) LIMIT 1
 `
 
 type GetUserProfileByUsernameRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Username        string             `json:"username"`
-	Role            UserRole           `json:"role"`
-	Email           *string            `json:"email"`
-	AvatarUrl       *string            `json:"avatar_url"`
-	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
-	IsEmailVerified bool               `json:"is_email_verified"`
-	ClaimedByUserID pgtype.UUID        `json:"claimed_by_user_id"`
-	ClaimedAt       pgtype.Timestamptz `json:"claimed_at"`
-	CreatedAt       time.Time          `json:"created_at"`
-	UpdatedAt       time.Time          `json:"updated_at"`
+	ID              uuid.UUID  `json:"id"`
+	Username        string     `json:"username"`
+	Role            string     `json:"role"`
+	Email           *string    `json:"email"`
+	AvatarUrl       *string    `json:"avatar_url"`
+	ExpiresAt       *time.Time `json:"expires_at"`
+	IsEmailVerified bool       `json:"is_email_verified"`
+	ClaimedByUserID *uuid.UUID `json:"claimed_by_user_id"`
+	ClaimedAt       *time.Time `json:"claimed_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 func (q *Queries) GetUserProfileByUsername(ctx context.Context, username string) (GetUserProfileByUsernameRow, error) {
@@ -358,17 +357,17 @@ type ListUsersParams struct {
 }
 
 type ListUsersRow struct {
-	ID              uuid.UUID          `json:"id"`
-	Username        string             `json:"username"`
-	Role            UserRole           `json:"role"`
-	Email           *string            `json:"email"`
-	AvatarUrl       *string            `json:"avatar_url"`
-	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
-	IsEmailVerified bool               `json:"is_email_verified"`
-	ClaimedByUserID pgtype.UUID        `json:"claimed_by_user_id"`
-	ClaimedAt       pgtype.Timestamptz `json:"claimed_at"`
-	CreatedAt       time.Time          `json:"created_at"`
-	UpdatedAt       time.Time          `json:"updated_at"`
+	ID              uuid.UUID  `json:"id"`
+	Username        string     `json:"username"`
+	Role            string     `json:"role"`
+	Email           *string    `json:"email"`
+	AvatarUrl       *string    `json:"avatar_url"`
+	ExpiresAt       *time.Time `json:"expires_at"`
+	IsEmailVerified bool       `json:"is_email_verified"`
+	ClaimedByUserID *uuid.UUID `json:"claimed_by_user_id"`
+	ClaimedAt       *time.Time `json:"claimed_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
@@ -446,13 +445,13 @@ WHERE id = $7::uuid
 `
 
 type UpdateUserParams struct {
-	Username        *string            `json:"username"`
-	Role            NullUserRole       `json:"role"`
-	Email           *string            `json:"email"`
-	AvatarUrl       *string            `json:"avatar_url"`
-	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
-	IsEmailVerified *bool              `json:"is_email_verified"`
-	ID              uuid.UUID          `json:"id"`
+	Username        *string    `json:"username"`
+	Role            *string    `json:"role"`
+	Email           *string    `json:"email"`
+	AvatarUrl       *string    `json:"avatar_url"`
+	ExpiresAt       *time.Time `json:"expires_at"`
+	IsEmailVerified *bool      `json:"is_email_verified"`
+	ID              uuid.UUID  `json:"id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {

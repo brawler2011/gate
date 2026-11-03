@@ -10,7 +10,6 @@ import (
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -41,7 +40,7 @@ func (r *TeamsRepo) CreateTeam(ctx context.Context, input *organizationsmodel.Cr
 		Slug:           input.Slug,
 		Description:    input.Description,
 		Privacy:        string(input.Privacy),
-		ParentTeamID:   nullableUUIDToPgtype(input.ParentTeamID),
+		ParentTeamID:   input.ParentTeamID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create team: %w", HandlePgErr(err))
@@ -54,7 +53,7 @@ func (r *TeamsRepo) CreateTeam(ctx context.Context, input *organizationsmodel.Cr
 		Slug:           team.Slug,
 		Description:    team.Description,
 		Privacy:        organizationsmodel.TeamPrivacy(team.Privacy),
-		ParentTeamID:   pgtypeToNullableUUID(team.ParentTeamID),
+		ParentTeamID:   team.ParentTeamID,
 		CreatedAt:      team.CreatedAt,
 		UpdatedAt:      team.UpdatedAt,
 	}, nil
@@ -73,7 +72,7 @@ func (r *TeamsRepo) GetTeamByID(ctx context.Context, id uuid.UUID) (*organizatio
 		Slug:           team.Slug,
 		Description:    team.Description,
 		Privacy:        organizationsmodel.TeamPrivacy(team.Privacy),
-		ParentTeamID:   pgtypeToNullableUUID(team.ParentTeamID),
+		ParentTeamID:   team.ParentTeamID,
 		CreatedAt:      team.CreatedAt,
 		UpdatedAt:      team.UpdatedAt,
 	}, nil
@@ -95,7 +94,7 @@ func (r *TeamsRepo) GetTeamBySlug(ctx context.Context, orgID uuid.UUID, slug str
 		Slug:           team.Slug,
 		Description:    team.Description,
 		Privacy:        organizationsmodel.TeamPrivacy(team.Privacy),
-		ParentTeamID:   pgtypeToNullableUUID(team.ParentTeamID),
+		ParentTeamID:   team.ParentTeamID,
 		CreatedAt:      team.CreatedAt,
 		UpdatedAt:      team.UpdatedAt,
 	}, nil
@@ -116,7 +115,7 @@ func (r *TeamsRepo) ListOrganizationTeams(ctx context.Context, orgID uuid.UUID) 
 			Slug:           t.Slug,
 			Description:    t.Description,
 			Privacy:        organizationsmodel.TeamPrivacy(t.Privacy),
-			ParentTeamID:   pgtypeToNullableUUID(t.ParentTeamID),
+			ParentTeamID:   t.ParentTeamID,
 			CreatedAt:      t.CreatedAt,
 			UpdatedAt:      t.UpdatedAt,
 		}
@@ -159,7 +158,7 @@ func (r *TeamsRepo) AddTeamMember(ctx context.Context, teamID, userID uuid.UUID,
 	if err := r.q.AddTeamMember(ctx, sqlc.AddTeamMemberParams{
 		TeamID: teamID,
 		UserID: userID,
-		Role:   sqlc.TeamRole(role),
+		Role:   role,
 	}); err != nil {
 		return fmt.Errorf("failed to add team member: %w", HandlePgErr(err))
 	}
@@ -212,7 +211,7 @@ func (r *TeamsRepo) UpdateTeamMemberRole(ctx context.Context, teamID, userID uui
 	if err := r.q.UpdateTeamMemberRole(ctx, sqlc.UpdateTeamMemberRoleParams{
 		TeamID: teamID,
 		UserID: userID,
-		Role:   sqlc.TeamRole(role),
+		Role:   role,
 	}); err != nil {
 		return fmt.Errorf("failed to update team member role: %w", HandlePgErr(err))
 	}
@@ -244,7 +243,7 @@ func (r *TeamsRepo) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]organ
 			Slug:           t.Slug,
 			Description:    t.Description,
 			Privacy:        organizationsmodel.TeamPrivacy(t.Privacy),
-			ParentTeamID:   pgtypeToNullableUUID(t.ParentTeamID),
+			ParentTeamID:   t.ParentTeamID,
 			CreatedAt:      t.CreatedAt,
 			UpdatedAt:      t.UpdatedAt,
 		}
@@ -271,7 +270,7 @@ func (r *TeamsRepo) GetUserTeamsByOrganization(ctx context.Context, userID, orgI
 			Slug:           t.Slug,
 			Description:    t.Description,
 			Privacy:        organizationsmodel.TeamPrivacy(t.Privacy),
-			ParentTeamID:   pgtypeToNullableUUID(t.ParentTeamID),
+			ParentTeamID:   t.ParentTeamID,
 			CreatedAt:      t.CreatedAt,
 			UpdatedAt:      t.UpdatedAt,
 		}
@@ -291,12 +290,12 @@ func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]co
 		result[i] = contestsmodel.Contest{
 			ID:             c.ID,
 			OrganizationID: c.OrganizationID,
-			OwnerID:        pgtypeToNullableUUID(c.OwnerID),
+			OwnerID:        c.OwnerID,
 			Visibility:     string(c.Visibility),
 			Title:          c.Title,
 			Description:    c.Description,
-			StartTime:      pgTimestamptzToTimePtr(c.StartTime),
-			EndTime:        pgTimestamptzToTimePtr(c.EndTime),
+			StartTime:      c.StartTime,
+			EndTime:        c.EndTime,
 			CreatedAt:      c.CreatedAt,
 			UpdatedAt:      c.UpdatedAt,
 		}
@@ -316,7 +315,7 @@ func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID uuid.UUID) ([]pr
 		result[i] = problemsmodel.Problem{
 			ID:             p.ID,
 			OrganizationID: p.OrganizationID,
-			OwnerID:        pgtypeToNullableUUID(p.OwnerID),
+			OwnerID:        p.OwnerID,
 			Visibility:     string(p.Visibility),
 			Title:          p.Title,
 			ShortName:      p.ShortName,
@@ -332,13 +331,6 @@ func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID uuid.UUID) ([]pr
 }
 
 // Helper functions
-func pgtypeToNullableUUID(pgu pgtype.UUID) *uuid.UUID {
-	if !pgu.Valid {
-		return nil
-	}
-	u := uuid.UUID(pgu.Bytes)
-	return &u
-}
 
 func (r *TeamsRepo) LockTeam(ctx context.Context, id uuid.UUID) error {
 	_, err := r.q.LockTeam(ctx, id)

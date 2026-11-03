@@ -8,7 +8,6 @@ import (
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -28,8 +27,8 @@ func (r *ProblemsRepo) CreateProblem(ctx context.Context, params *problemsmodel.
 	_, err := r.queries.CreateProblem(ctx, sqlc.CreateProblemParams{
 		ID:             params.ID,
 		OrganizationID: params.OrganizationID,
-		OwnerID:        uuidPtrToNullUUID(params.OwnerID),
-		Visibility:     sqlc.ProblemVisibility(params.Visibility),
+		OwnerID:        params.OwnerID,
+		Visibility:     params.Visibility,
 		Title:          params.Title,
 		ShortName:      params.ShortName,
 	})
@@ -60,9 +59,9 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *problemsmodel.P
 	offset := (filter.Page - 1) * filter.PageSize
 
 	total, err := r.queries.CountAllProblems(ctx, sqlc.CountAllProblemsParams{
-		OrganizationID: uuidPtrToNullUUID(filter.OrganizationID),
-		OwnerID:        uuidPtrToNullUUID(filter.OwnerID),
-		ViewerID:       uuidPtrToNullUUID(filter.ViewerID),
+		OrganizationID: filter.OrganizationID,
+		OwnerID:        filter.OwnerID,
+		ViewerID:       filter.ViewerID,
 		Search:         filter.Search,
 		Visibility:     filter.Visibility,
 		IsTemplate:     filter.IsTemplate,
@@ -72,9 +71,9 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *problemsmodel.P
 	}
 
 	rows, err := r.queries.ListAllProblems(ctx, sqlc.ListAllProblemsParams{
-		OrganizationID: uuidPtrToNullUUID(filter.OrganizationID),
-		OwnerID:        uuidPtrToNullUUID(filter.OwnerID),
-		ViewerID:       uuidPtrToNullUUID(filter.ViewerID),
+		OrganizationID: filter.OrganizationID,
+		OwnerID:        filter.OwnerID,
+		ViewerID:       filter.ViewerID,
 		Search:         filter.Search,
 		Visibility:     filter.Visibility,
 		IsTemplate:     filter.IsTemplate,
@@ -97,8 +96,8 @@ func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem 
 	err := r.queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
 		ID:         id,
 		Title:      problem.Title,
-		Visibility: stringToNullProblemVisibility(problem.Visibility),
-		OwnerID:    uuidPtrToNullUUID(problem.OwnerID),
+		Visibility: problem.Visibility,
+		OwnerID:    problem.OwnerID,
 		IsTemplate: problem.IsTemplate,
 	})
 	if err != nil {
@@ -111,7 +110,7 @@ func (r *ProblemsRepo) CreateProblemMember(ctx context.Context, params *problems
 	err := r.queries.AddProblemMember(ctx, sqlc.AddProblemMemberParams{
 		ProblemID: params.ProblemID,
 		UserID:    params.UserID,
-		Role:      sqlc.ProblemRole(params.Role),
+		Role:      params.Role,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -148,7 +147,7 @@ func (r *ProblemsRepo) AddProblemTeam(ctx context.Context, problemID, teamID uui
 	err := r.queries.AddProblemTeam(ctx, sqlc.AddProblemTeamParams{
 		ProblemID:  problemID,
 		TeamID:     teamID,
-		Permission: sqlc.ProblemPermission(permission),
+		Permission: permission,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -160,7 +159,7 @@ func (r *ProblemsRepo) UpdateProblemTeamPermission(ctx context.Context, problemI
 	err := r.queries.UpdateProblemTeamPermission(ctx, sqlc.UpdateProblemTeamPermissionParams{
 		ProblemID:  problemID,
 		TeamID:     teamID,
-		Permission: sqlc.ProblemPermission(permission),
+		Permission: permission,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -197,7 +196,7 @@ func (r *ProblemsRepo) UpdateProblemMemberRole(ctx context.Context, problemID, u
 	err := r.queries.UpdateProblemMemberRole(ctx, sqlc.UpdateProblemMemberRoleParams{
 		ProblemID: problemID,
 		UserID:    userID,
-		Role:      sqlc.ProblemRole(role),
+		Role:      role,
 	})
 	if err != nil {
 		return HandlePgErr(err)
@@ -216,22 +215,12 @@ func (r *ProblemsRepo) RemoveProblemMember(ctx context.Context, problemID, userI
 	return nil
 }
 
-func stringToNullProblemVisibility(s *string) sqlc.NullProblemVisibility {
-	if s == nil {
-		return sqlc.NullProblemVisibility{Valid: false}
-	}
-	return sqlc.NullProblemVisibility{
-		ProblemVisibility: sqlc.ProblemVisibility(*s),
-		Valid:             true,
-	}
-}
-
 func mapGetProblemByIDRow(p sqlc.GetProblemByIDRow) problemsmodel.Problem {
 	return problemsmodel.Problem{
 		ID:                p.ID,
 		OrganizationID:    p.OrganizationID,
 		OrganizationLogin: p.OrgLogin,
-		OwnerID:           pgUUIDToUUIDPtr(p.OwnerID),
+		OwnerID:           p.OwnerID,
 		Visibility:        string(p.Visibility),
 		Title:             p.Title,
 		ShortName:         p.ShortName,
@@ -294,7 +283,7 @@ func mapProblemTeam(pt sqlc.ListProblemTeamsRow) problemsmodel.ProblemTeam {
 
 func (r *ProblemsRepo) ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]problemsmodel.DashboardProblem, error) {
 	rows, err := r.queries.ListDashboardProblems(ctx, sqlc.ListDashboardProblemsParams{
-		OwnerID: pgtype.UUID{Bytes: userID, Valid: true},
+		OwnerID: &userID,
 		Limit:   limit,
 	})
 	if err != nil {
@@ -314,7 +303,7 @@ func mapListAllProblemsRow(p sqlc.ListAllProblemsRow) problemsmodel.Problem {
 		ID:                p.ID,
 		OrganizationID:    p.OrganizationID,
 		OrganizationLogin: p.OrgLogin,
-		OwnerID:           pgUUIDToUUIDPtr(p.OwnerID),
+		OwnerID:           p.OwnerID,
 		Visibility:        string(p.Visibility),
 		Title:             p.Title,
 		ShortName:         p.ShortName,

@@ -12,7 +12,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -37,22 +36,14 @@ func (r *UsersRepo) CreateUser(ctx context.Context, params identitymodel.CreateU
 		return err
 	}
 
-	var expiresAt pgtype.Timestamptz
-	if params.ExpiresAt != nil {
-		expiresAt = pgtype.Timestamptz{
-			Time:  *params.ExpiresAt,
-			Valid: true,
-		}
-	}
-
 	err := r.queries.CreateUser(ctx, sqlc.CreateUserParams{
 		ID:              params.Id,
 		Username:        params.Username,
-		Role:            sqlc.UserRole(params.Role),
+		Role:            params.Role,
 		PasswordHash:    params.PasswordHash,
 		Email:           params.Email,
 		AvatarUrl:       params.AvatarUrl,
-		ExpiresAt:       expiresAt,
+		ExpiresAt:       params.ExpiresAt,
 		IsEmailVerified: params.IsEmailVerified,
 	})
 	if err != nil {
@@ -70,20 +61,6 @@ func (r *UsersRepo) GetUserById(ctx context.Context, id uuid.UUID) (accessmodel.
 }
 
 func mapUserToModel(user sqlc.User) accessmodel.User {
-	var expiresAt *time.Time
-	if user.ExpiresAt.Valid {
-		expiresAt = &user.ExpiresAt.Time
-	}
-	var claimedByUserID *uuid.UUID
-	if user.ClaimedByUserID.Valid {
-		uid := uuid.UUID(user.ClaimedByUserID.Bytes)
-		claimedByUserID = &uid
-	}
-	var claimedAt *time.Time
-	if user.ClaimedAt.Valid {
-		claimedAt = &user.ClaimedAt.Time
-	}
-
 	return accessmodel.User{
 		Id:              user.ID,
 		Username:        user.Username,
@@ -91,10 +68,10 @@ func mapUserToModel(user sqlc.User) accessmodel.User {
 		PasswordHash:    user.PasswordHash,
 		Email:           user.Email,
 		AvatarUrl:       user.AvatarUrl,
-		ExpiresAt:       expiresAt,
+		ExpiresAt:       user.ExpiresAt,
 		IsEmailVerified: user.IsEmailVerified,
-		ClaimedByUserID: claimedByUserID,
-		ClaimedAt:       claimedAt,
+		ClaimedByUserID: user.ClaimedByUserID,
+		ClaimedAt:       user.ClaimedAt,
 		CreatedAt:       user.CreatedAt,
 		UpdatedAt:       user.UpdatedAt,
 	}
@@ -158,29 +135,13 @@ func (r *UsersRepo) UpdateUser(
 		return err
 	}
 
-	var role sqlc.NullUserRole
-	if params.Role != nil {
-		role = sqlc.NullUserRole{
-			UserRole: sqlc.UserRole(*params.Role),
-			Valid:    true,
-		}
-	}
-
-	var expiresAt pgtype.Timestamptz
-	if params.ExpiresAt != nil {
-		expiresAt = pgtype.Timestamptz{
-			Time:  *params.ExpiresAt,
-			Valid: true,
-		}
-	}
-
 	err := r.queries.UpdateUser(ctx, sqlc.UpdateUserParams{
 		ID:              params.Id,
 		Username:        params.Username,
-		Role:            role,
+		Role:            params.Role,
 		Email:           params.Email,
 		AvatarUrl:       params.AvatarUrl,
-		ExpiresAt:       expiresAt,
+		ExpiresAt:       params.ExpiresAt,
 		IsEmailVerified: params.IsEmailVerified,
 	})
 	if err != nil {
@@ -247,7 +208,11 @@ func (r *UsersRepo) ListClaimedAccountsByUserId(ctx context.Context, claimedByUs
 
 	res := make([]identitymodel.ClaimedAccountItem, len(users))
 	for i, u := range users {
-		res[i] = identitymodel.ClaimedAccountItem{ID: u.ID, Username: u.Username, ClaimedAt: u.ClaimedAt.Time, ExpiresAt: pgtypeTimestamptzToPtr(u.ExpiresAt)}
+		var claimedAt time.Time
+		if u.ClaimedAt != nil {
+			claimedAt = *u.ClaimedAt
+		}
+		res[i] = identitymodel.ClaimedAccountItem{ID: u.ID, Username: u.Username, ClaimedAt: claimedAt, ExpiresAt: u.ExpiresAt}
 	}
 	return res, nil
 }
@@ -266,7 +231,7 @@ func (r *UsersRepo) LockUser(ctx context.Context, id uuid.UUID) error {
 }
 
 func mapUserProfile(row sqlc.ListUsersRow) identitymodel.UserProfile {
-	return identitymodel.UserProfile{Id: row.ID, Username: row.Username, Role: accessmodel.UserRole(row.Role), Email: row.Email, AvatarUrl: row.AvatarUrl, ExpiresAt: pgtypeTimestamptzToPtr(row.ExpiresAt), IsEmailVerified: row.IsEmailVerified, ClaimedByUserID: pgtypeUUIDToPtr(row.ClaimedByUserID), ClaimedAt: pgtypeTimestamptzToPtr(row.ClaimedAt), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}
+	return identitymodel.UserProfile{Id: row.ID, Username: row.Username, Role: accessmodel.UserRole(row.Role), Email: row.Email, AvatarUrl: row.AvatarUrl, ExpiresAt: row.ExpiresAt, IsEmailVerified: row.IsEmailVerified, ClaimedByUserID: row.ClaimedByUserID, ClaimedAt: row.ClaimedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}
 }
 
 func (r *UsersRepo) GetUserProfileByUsername(ctx context.Context, username string) (identitymodel.UserProfile, error) {

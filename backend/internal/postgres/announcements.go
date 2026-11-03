@@ -39,7 +39,7 @@ func (r *AnnouncementsRepo) CreateAnnouncement(ctx context.Context, input *conte
 	row, err := r.queries.CreateContestAnnouncement(ctx, sqlc.CreateContestAnnouncementParams{
 		ID:        id,
 		ContestID: input.ContestID,
-		ProblemID: uuidPtrToPgtypeUUID(input.ProblemID),
+		ProblemID: input.ProblemID,
 		AuthorID:  input.AuthorID,
 		Title:     input.Title,
 		Body:      input.Body,
@@ -63,7 +63,7 @@ func (r *AnnouncementsRepo) GetAnnouncementByID(ctx context.Context, id uuid.UUI
 	return &contestsmodel.ContestAnnouncement{
 		ID:             row.ID,
 		ContestID:      row.ContestID,
-		ProblemID:      pgtypeUUIDToPtr(row.ProblemID),
+		ProblemID:      row.ProblemID,
 		ProblemTitle:   row.ProblemTitle,
 		ProblemLetter:  ordinalToLetter(row.ProblemOrdinal),
 		AuthorID:       row.AuthorID,
@@ -103,7 +103,7 @@ func (r *AnnouncementsRepo) ListAnnouncements(ctx context.Context, contestID uui
 		announcements[i] = contestsmodel.ContestAnnouncement{
 			ID:             row.ID,
 			ContestID:      row.ContestID,
-			ProblemID:      pgtypeUUIDToPtr(row.ProblemID),
+			ProblemID:      row.ProblemID,
 			ProblemTitle:   row.ProblemTitle,
 			ProblemLetter:  ordinalToLetter(row.ProblemOrdinal),
 			AuthorID:       row.AuthorID,

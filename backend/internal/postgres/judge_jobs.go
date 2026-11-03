@@ -79,7 +79,13 @@ func (r *JudgeJobs) CompleteJob(ctx context.Context, job judgingmodel.Job) (bool
 }
 
 func mapJudgeJob(row sqlc.JudgeJob) judgingmodel.Job {
-	return judgingmodel.Job{ID: row.ID, SubmissionID: row.SubmissionID, Generation: row.Generation,
-		PackageID: pgtypeUUIDToPtr(row.PackageID), PackageHash: row.PackageHash, Attempt: row.Attempt,
-		LeaseToken: uuid.UUID(row.LeaseToken.Bytes), Deadline: row.DeadlineAt.Time}
+	job := judgingmodel.Job{ID: row.ID, SubmissionID: row.SubmissionID, Generation: row.Generation,
+		PackageID: row.PackageID, PackageHash: row.PackageHash, Attempt: row.Attempt}
+	if row.LeaseToken != nil {
+		job.LeaseToken = *row.LeaseToken
+	}
+	if row.DeadlineAt != nil {
+		job.Deadline = *row.DeadlineAt
+	}
+	return job
 }

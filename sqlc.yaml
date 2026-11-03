@@ -27,6 +27,34 @@ sql:
           - db_type: "varchar"
             go_type: "string"
 
+          - db_type: "pg_catalog.uuid"
+            nullable: true
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+              pointer: true
+
+          - db_type: "uuid"
+            nullable: true
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+              pointer: true
+
+          - db_type: "timestamptz"
+            nullable: true
+            go_type:
+              import: "time"
+              type: "Time"
+              pointer: true
+
+          - db_type: "pg_catalog.timestamptz"
+            nullable: true
+            go_type:
+              import: "time"
+              type: "Time"
+              pointer: true
+
           - column: "submissions.language"
             go_type:
               import: "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -52,27 +80,6 @@ sql:
               import: "github.com/brawler2011/gate/backend/internal/events"
               package: "events"
               type: "OutboxEventType"
-          - column: "outbox_events.processed_at"
-            go_type:
-              import: "time"
-              type: "Time"
-              pointer: true
-          - column: "outbox_events.locked_at"
-            go_type:
-              import: "time"
-              type: "Time"
-              pointer: true
-          - column: "outbox_events.deadline_at"
-            go_type:
-              import: "time"
-              type: "Time"
-              pointer: true
-
-          - column: "images.id"
-            go_type: "github.com/google/uuid.UUID"
-          - column: "users.img_id"
-            go_type: "*github.com/google/uuid.UUID"
-
           - db_type: "contest_visibility"
             go_type:
               import: "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -103,3 +110,94 @@ sql:
               import: "github.com/brawler2011/gate/backend/internal/events"
               package: "events"
               type: "OutboxEventType"
+
+          - db_type: "problem_role"
+            nullable: false
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/problems/model"
+              package: "problemsmodel"
+              type: "ProblemRole"
+
+          - db_type: "problem_role"
+            nullable: true
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/problems/model"
+              package: "problemsmodel"
+              type: "ProblemRole"
+              pointer: true
+
+          - db_type: "problem_permission"
+            nullable: false
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/problems/model"
+              package: "problemsmodel"
+              type: "ProblemPermission"
+
+          - db_type: "problem_permission"
+            nullable: true
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/problems/model"
+              package: "problemsmodel"
+              type: "ProblemPermission"
+              pointer: true
+
+          - db_type: "organization_role"
+            nullable: false
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/organizations/model"
+              package: "organizationsmodel"
+              type: "OrganizationRole"
+
+          - db_type: "organization_role"
+            nullable: true
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/organizations/model"
+              package: "organizationsmodel"
+              type: "OrganizationRole"
+              pointer: true
+
+          - db_type: "team_role"
+            nullable: false
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/organizations/model"
+              package: "organizationsmodel"
+              type: "TeamRole"
+
+          - db_type: "team_role"
+            nullable: true
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/organizations/model"
+              package: "organizationsmodel"
+              type: "TeamRole"
+              pointer: true
+
+          - db_type: "contest_visibility"
+            nullable: true
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/contests/model"
+              package: "contestsmodel"
+              type: "ContestVisibility"
+              pointer: true
+          - db_type: "problem_visibility"
+            go_type: "string"
+          - db_type: "problem_visibility"
+            nullable: true
+            go_type:
+              type: "string"
+              pointer: true
+
+          - db_type: "user_role"
+            go_type: "string"
+          - db_type: "user_role"
+            nullable: true
+            go_type:
+              type: "string"
+              pointer: true
+
+          - db_type: "package_status"
+            go_type: "string"
+          - db_type: "package_status"
+            nullable: true
+            go_type:
+              type: "string"
+              pointer: true

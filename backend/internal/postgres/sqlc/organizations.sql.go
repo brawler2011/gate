@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/google/uuid"
 )
 
@@ -19,9 +20,9 @@ VALUES ($1, $2, $3)
 `
 
 type AddOrganizationMemberParams struct {
-	OrganizationID uuid.UUID        `json:"organization_id"`
-	UserID         uuid.UUID        `json:"user_id"`
-	Role           OrganizationRole `json:"role"`
+	OrganizationID uuid.UUID                           `json:"organization_id"`
+	UserID         uuid.UUID                           `json:"user_id"`
+	Role           organizationsmodel.OrganizationRole `json:"role"`
 }
 
 // Organization Members
@@ -234,12 +235,12 @@ ORDER BY om.created_at
 `
 
 type ListOrganizationMembersRow struct {
-	OrganizationID uuid.UUID        `json:"organization_id"`
-	UserID         uuid.UUID        `json:"user_id"`
-	Role           OrganizationRole `json:"role"`
-	CreatedAt      time.Time        `json:"created_at"`
-	Username       string           `json:"username"`
-	Email          *string          `json:"email"`
+	OrganizationID uuid.UUID                           `json:"organization_id"`
+	UserID         uuid.UUID                           `json:"user_id"`
+	Role           organizationsmodel.OrganizationRole `json:"role"`
+	CreatedAt      time.Time                           `json:"created_at"`
+	Username       string                              `json:"username"`
+	Email          *string                             `json:"email"`
 }
 
 func (q *Queries) ListOrganizationMembers(ctx context.Context, organizationID uuid.UUID) ([]ListOrganizationMembersRow, error) {
@@ -422,9 +423,9 @@ WHERE organization_id = $1 AND user_id = $2
 `
 
 type UpdateOrganizationMemberRoleParams struct {
-	OrganizationID uuid.UUID        `json:"organization_id"`
-	UserID         uuid.UUID        `json:"user_id"`
-	Role           OrganizationRole `json:"role"`
+	OrganizationID uuid.UUID                           `json:"organization_id"`
+	UserID         uuid.UUID                           `json:"user_id"`
+	Role           organizationsmodel.OrganizationRole `json:"role"`
 }
 
 func (q *Queries) UpdateOrganizationMemberRole(ctx context.Context, arg UpdateOrganizationMemberRoleParams) error {

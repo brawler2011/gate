@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createContestJoinRequest = `-- name: CreateContestJoinRequest :one
@@ -186,20 +185,20 @@ WHERE cjr.id = $1
 `
 
 type GetContestJoinRequestByIDRow struct {
-	ID                uuid.UUID   `json:"id"`
-	ContestID         uuid.UUID   `json:"contest_id"`
-	UserID            uuid.UUID   `json:"user_id"`
-	Message           *string     `json:"message"`
-	Status            string      `json:"status"`
-	ReviewedBy        pgtype.UUID `json:"reviewed_by"`
-	CreatedAt         time.Time   `json:"created_at"`
-	UpdatedAt         time.Time   `json:"updated_at"`
-	ContestTitle      string      `json:"contest_title"`
-	ContestLogin      string      `json:"contest_login"`
-	OrganizationLogin string      `json:"organization_login"`
-	Username          string      `json:"username"`
-	Email             *string     `json:"email"`
-	ReviewerUsername  *string     `json:"reviewer_username"`
+	ID                uuid.UUID  `json:"id"`
+	ContestID         uuid.UUID  `json:"contest_id"`
+	UserID            uuid.UUID  `json:"user_id"`
+	Message           *string    `json:"message"`
+	Status            string     `json:"status"`
+	ReviewedBy        *uuid.UUID `json:"reviewed_by"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	ContestTitle      string     `json:"contest_title"`
+	ContestLogin      string     `json:"contest_login"`
+	OrganizationLogin string     `json:"organization_login"`
+	Username          string     `json:"username"`
+	Email             *string    `json:"email"`
+	ReviewerUsername  *string    `json:"reviewer_username"`
 }
 
 func (q *Queries) GetContestJoinRequestByID(ctx context.Context, id uuid.UUID) (GetContestJoinRequestByIDRow, error) {
@@ -280,19 +279,19 @@ WHERE ojr.id = $1
 `
 
 type GetOrganizationJoinRequestByIDRow struct {
-	ID                uuid.UUID   `json:"id"`
-	OrganizationID    uuid.UUID   `json:"organization_id"`
-	UserID            uuid.UUID   `json:"user_id"`
-	Message           *string     `json:"message"`
-	Status            string      `json:"status"`
-	ReviewedBy        pgtype.UUID `json:"reviewed_by"`
-	CreatedAt         time.Time   `json:"created_at"`
-	UpdatedAt         time.Time   `json:"updated_at"`
-	OrganizationName  string      `json:"organization_name"`
-	OrganizationLogin string      `json:"organization_login"`
-	Username          string      `json:"username"`
-	Email             *string     `json:"email"`
-	ReviewerUsername  *string     `json:"reviewer_username"`
+	ID                uuid.UUID  `json:"id"`
+	OrganizationID    uuid.UUID  `json:"organization_id"`
+	UserID            uuid.UUID  `json:"user_id"`
+	Message           *string    `json:"message"`
+	Status            string     `json:"status"`
+	ReviewedBy        *uuid.UUID `json:"reviewed_by"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	OrganizationName  string     `json:"organization_name"`
+	OrganizationLogin string     `json:"organization_login"`
+	Username          string     `json:"username"`
+	Email             *string    `json:"email"`
+	ReviewerUsername  *string    `json:"reviewer_username"`
 }
 
 func (q *Queries) GetOrganizationJoinRequestByID(ctx context.Context, id uuid.UUID) (GetOrganizationJoinRequestByIDRow, error) {
@@ -413,17 +412,17 @@ type ListContestJoinRequestsParams struct {
 }
 
 type ListContestJoinRequestsRow struct {
-	ID               uuid.UUID   `json:"id"`
-	ContestID        uuid.UUID   `json:"contest_id"`
-	UserID           uuid.UUID   `json:"user_id"`
-	Message          *string     `json:"message"`
-	Status           string      `json:"status"`
-	ReviewedBy       pgtype.UUID `json:"reviewed_by"`
-	CreatedAt        time.Time   `json:"created_at"`
-	UpdatedAt        time.Time   `json:"updated_at"`
-	Username         string      `json:"username"`
-	Email            *string     `json:"email"`
-	ReviewerUsername *string     `json:"reviewer_username"`
+	ID               uuid.UUID  `json:"id"`
+	ContestID        uuid.UUID  `json:"contest_id"`
+	UserID           uuid.UUID  `json:"user_id"`
+	Message          *string    `json:"message"`
+	Status           string     `json:"status"`
+	ReviewedBy       *uuid.UUID `json:"reviewed_by"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	Username         string     `json:"username"`
+	Email            *string    `json:"email"`
+	ReviewerUsername *string    `json:"reviewer_username"`
 }
 
 func (q *Queries) ListContestJoinRequests(ctx context.Context, arg ListContestJoinRequestsParams) ([]ListContestJoinRequestsRow, error) {
@@ -535,17 +534,17 @@ type ListOrganizationJoinRequestsParams struct {
 }
 
 type ListOrganizationJoinRequestsRow struct {
-	ID               uuid.UUID   `json:"id"`
-	OrganizationID   uuid.UUID   `json:"organization_id"`
-	UserID           uuid.UUID   `json:"user_id"`
-	Message          *string     `json:"message"`
-	Status           string      `json:"status"`
-	ReviewedBy       pgtype.UUID `json:"reviewed_by"`
-	CreatedAt        time.Time   `json:"created_at"`
-	UpdatedAt        time.Time   `json:"updated_at"`
-	Username         string      `json:"username"`
-	Email            *string     `json:"email"`
-	ReviewerUsername *string     `json:"reviewer_username"`
+	ID               uuid.UUID  `json:"id"`
+	OrganizationID   uuid.UUID  `json:"organization_id"`
+	UserID           uuid.UUID  `json:"user_id"`
+	Message          *string    `json:"message"`
+	Status           string     `json:"status"`
+	ReviewedBy       *uuid.UUID `json:"reviewed_by"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	Username         string     `json:"username"`
+	Email            *string    `json:"email"`
+	ReviewerUsername *string    `json:"reviewer_username"`
 }
 
 func (q *Queries) ListOrganizationJoinRequests(ctx context.Context, arg ListOrganizationJoinRequestsParams) ([]ListOrganizationJoinRequestsRow, error) {
@@ -590,17 +589,17 @@ ORDER BY cjr.created_at DESC
 `
 
 type ListUserContestJoinRequestsRow struct {
-	ID                uuid.UUID   `json:"id"`
-	ContestID         uuid.UUID   `json:"contest_id"`
-	UserID            uuid.UUID   `json:"user_id"`
-	Message           *string     `json:"message"`
-	Status            string      `json:"status"`
-	ReviewedBy        pgtype.UUID `json:"reviewed_by"`
-	CreatedAt         time.Time   `json:"created_at"`
-	UpdatedAt         time.Time   `json:"updated_at"`
-	ContestTitle      string      `json:"contest_title"`
-	ContestLogin      string      `json:"contest_login"`
-	OrganizationLogin string      `json:"organization_login"`
+	ID                uuid.UUID  `json:"id"`
+	ContestID         uuid.UUID  `json:"contest_id"`
+	UserID            uuid.UUID  `json:"user_id"`
+	Message           *string    `json:"message"`
+	Status            string     `json:"status"`
+	ReviewedBy        *uuid.UUID `json:"reviewed_by"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	ContestTitle      string     `json:"contest_title"`
+	ContestLogin      string     `json:"contest_login"`
+	OrganizationLogin string     `json:"organization_login"`
 }
 
 func (q *Queries) ListUserContestJoinRequests(ctx context.Context, userID uuid.UUID) ([]ListUserContestJoinRequestsRow, error) {
@@ -707,16 +706,16 @@ ORDER BY ojr.created_at DESC
 `
 
 type ListUserOrganizationJoinRequestsRow struct {
-	ID                uuid.UUID   `json:"id"`
-	OrganizationID    uuid.UUID   `json:"organization_id"`
-	UserID            uuid.UUID   `json:"user_id"`
-	Message           *string     `json:"message"`
-	Status            string      `json:"status"`
-	ReviewedBy        pgtype.UUID `json:"reviewed_by"`
-	CreatedAt         time.Time   `json:"created_at"`
-	UpdatedAt         time.Time   `json:"updated_at"`
-	OrganizationName  string      `json:"organization_name"`
-	OrganizationLogin string      `json:"organization_login"`
+	ID                uuid.UUID  `json:"id"`
+	OrganizationID    uuid.UUID  `json:"organization_id"`
+	UserID            uuid.UUID  `json:"user_id"`
+	Message           *string    `json:"message"`
+	Status            string     `json:"status"`
+	ReviewedBy        *uuid.UUID `json:"reviewed_by"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	OrganizationName  string     `json:"organization_name"`
+	OrganizationLogin string     `json:"organization_login"`
 }
 
 func (q *Queries) ListUserOrganizationJoinRequests(ctx context.Context, userID uuid.UUID) ([]ListUserOrganizationJoinRequestsRow, error) {
@@ -757,9 +756,9 @@ WHERE id = $1 AND status = 'pending'
 `
 
 type UpdateContestJoinRequestStatusParams struct {
-	ID         uuid.UUID   `json:"id"`
-	Status     string      `json:"status"`
-	ReviewedBy pgtype.UUID `json:"reviewed_by"`
+	ID         uuid.UUID  `json:"id"`
+	Status     string     `json:"status"`
+	ReviewedBy *uuid.UUID `json:"reviewed_by"`
 }
 
 func (q *Queries) UpdateContestJoinRequestStatus(ctx context.Context, arg UpdateContestJoinRequestStatusParams) (int64, error) {
@@ -796,9 +795,9 @@ WHERE id = $1 AND status = 'pending'
 `
 
 type UpdateOrganizationJoinRequestStatusParams struct {
-	ID         uuid.UUID   `json:"id"`
-	Status     string      `json:"status"`
-	ReviewedBy pgtype.UUID `json:"reviewed_by"`
+	ID         uuid.UUID  `json:"id"`
+	Status     string     `json:"status"`
+	ReviewedBy *uuid.UUID `json:"reviewed_by"`
 }
 
 func (q *Queries) UpdateOrganizationJoinRequestStatus(ctx context.Context, arg UpdateOrganizationJoinRequestStatusParams) (int64, error) {

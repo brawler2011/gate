@@ -9,8 +9,8 @@ import (
 	"context"
 	"time"
 
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addTeamMember = `-- name: AddTeamMember :exec
@@ -20,9 +20,9 @@ VALUES ($1, $2, $3)
 `
 
 type AddTeamMemberParams struct {
-	TeamID uuid.UUID `json:"team_id"`
-	UserID uuid.UUID `json:"user_id"`
-	Role   TeamRole  `json:"role"`
+	TeamID uuid.UUID                   `json:"team_id"`
+	UserID uuid.UUID                   `json:"user_id"`
+	Role   organizationsmodel.TeamRole `json:"role"`
 }
 
 // Team Members
@@ -39,13 +39,13 @@ RETURNING id, organization_id, name, slug, description, privacy, parent_team_id,
 `
 
 type CreateTeamParams struct {
-	ID             uuid.UUID   `json:"id"`
-	OrganizationID uuid.UUID   `json:"organization_id"`
-	Name           string      `json:"name"`
-	Slug           string      `json:"slug"`
-	Description    string      `json:"description"`
-	Privacy        string      `json:"privacy"`
-	ParentTeamID   pgtype.UUID `json:"parent_team_id"`
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	Name           string     `json:"name"`
+	Slug           string     `json:"slug"`
+	Description    string     `json:"description"`
+	Privacy        string     `json:"privacy"`
+	ParentTeamID   *uuid.UUID `json:"parent_team_id"`
 }
 
 // Teams queries
@@ -278,12 +278,12 @@ ORDER BY tm.created_at
 `
 
 type ListTeamMembersRow struct {
-	TeamID    uuid.UUID `json:"team_id"`
-	UserID    uuid.UUID `json:"user_id"`
-	Role      TeamRole  `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
-	Username  string    `json:"username"`
-	Email     *string   `json:"email"`
+	TeamID    uuid.UUID                   `json:"team_id"`
+	UserID    uuid.UUID                   `json:"user_id"`
+	Role      organizationsmodel.TeamRole `json:"role"`
+	CreatedAt time.Time                   `json:"created_at"`
+	Username  string                      `json:"username"`
+	Email     *string                     `json:"email"`
 }
 
 func (q *Queries) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]ListTeamMembersRow, error) {
@@ -370,9 +370,9 @@ WHERE team_id = $1 AND user_id = $2
 `
 
 type UpdateTeamMemberRoleParams struct {
-	TeamID uuid.UUID `json:"team_id"`
-	UserID uuid.UUID `json:"user_id"`
-	Role   TeamRole  `json:"role"`
+	TeamID uuid.UUID                   `json:"team_id"`
+	UserID uuid.UUID                   `json:"user_id"`
+	Role   organizationsmodel.TeamRole `json:"role"`
 }
 
 func (q *Queries) UpdateTeamMemberRole(ctx context.Context, arg UpdateTeamMemberRoleParams) error {

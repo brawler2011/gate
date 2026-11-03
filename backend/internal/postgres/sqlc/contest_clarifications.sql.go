@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const answerContestClarification = `-- name: AnswerContestClarification :one
@@ -26,10 +25,10 @@ RETURNING id, contest_id, problem_id, user_id, question, answer, answered_by, st
 `
 
 type AnswerContestClarificationParams struct {
-	Answer     *string     `json:"answer"`
-	AnsweredBy pgtype.UUID `json:"answered_by"`
-	ID         uuid.UUID   `json:"id"`
-	ContestID  uuid.UUID   `json:"contest_id"`
+	Answer     *string    `json:"answer"`
+	AnsweredBy *uuid.UUID `json:"answered_by"`
+	ID         uuid.UUID  `json:"id"`
+	ContestID  uuid.UUID  `json:"contest_id"`
 }
 
 func (q *Queries) AnswerContestClarification(ctx context.Context, arg AnswerContestClarificationParams) (ContestClarification, error) {
@@ -64,9 +63,9 @@ WHERE contest_id = $1
 `
 
 type CountContestClarificationsForModeratorParams struct {
-	ContestID uuid.UUID   `json:"contest_id"`
-	ProblemID pgtype.UUID `json:"problem_id"`
-	Status    *string     `json:"status"`
+	ContestID uuid.UUID  `json:"contest_id"`
+	ProblemID *uuid.UUID `json:"problem_id"`
+	Status    *string    `json:"status"`
 }
 
 func (q *Queries) CountContestClarificationsForModerator(ctx context.Context, arg CountContestClarificationsForModeratorParams) (int64, error) {
@@ -116,11 +115,11 @@ INSERT INTO contest_clarifications (
 `
 
 type CreateContestClarificationParams struct {
-	ID        uuid.UUID   `json:"id"`
-	ContestID uuid.UUID   `json:"contest_id"`
-	ProblemID pgtype.UUID `json:"problem_id"`
-	UserID    uuid.UUID   `json:"user_id"`
-	Question  string      `json:"question"`
+	ID        uuid.UUID  `json:"id"`
+	ContestID uuid.UUID  `json:"contest_id"`
+	ProblemID *uuid.UUID `json:"problem_id"`
+	UserID    uuid.UUID  `json:"user_id"`
+	Question  string     `json:"question"`
 }
 
 func (q *Queries) CreateContestClarification(ctx context.Context, arg CreateContestClarificationParams) (ContestClarification, error) {
@@ -164,21 +163,21 @@ WHERE cc.id = $1
 `
 
 type GetContestClarificationByIDRow struct {
-	ID                 uuid.UUID          `json:"id"`
-	ContestID          uuid.UUID          `json:"contest_id"`
-	ProblemID          pgtype.UUID        `json:"problem_id"`
-	UserID             uuid.UUID          `json:"user_id"`
-	Question           string             `json:"question"`
-	Answer             *string            `json:"answer"`
-	AnsweredBy         pgtype.UUID        `json:"answered_by"`
-	Status             string             `json:"status"`
-	CreatedAt          time.Time          `json:"created_at"`
-	AnsweredAt         pgtype.Timestamptz `json:"answered_at"`
-	UpdatedAt          time.Time          `json:"updated_at"`
-	Username           string             `json:"username"`
-	AnsweredByUsername *string            `json:"answered_by_username"`
-	ProblemTitle       *string            `json:"problem_title"`
-	ProblemOrdinal     *int32             `json:"problem_ordinal"`
+	ID                 uuid.UUID  `json:"id"`
+	ContestID          uuid.UUID  `json:"contest_id"`
+	ProblemID          *uuid.UUID `json:"problem_id"`
+	UserID             uuid.UUID  `json:"user_id"`
+	Question           string     `json:"question"`
+	Answer             *string    `json:"answer"`
+	AnsweredBy         *uuid.UUID `json:"answered_by"`
+	Status             string     `json:"status"`
+	CreatedAt          time.Time  `json:"created_at"`
+	AnsweredAt         *time.Time `json:"answered_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+	Username           string     `json:"username"`
+	AnsweredByUsername *string    `json:"answered_by_username"`
+	ProblemTitle       *string    `json:"problem_title"`
+	ProblemOrdinal     *int32     `json:"problem_ordinal"`
 }
 
 func (q *Queries) GetContestClarificationByID(ctx context.Context, id uuid.UUID) (GetContestClarificationByIDRow, error) {
@@ -224,29 +223,29 @@ LIMIT $2 OFFSET $3
 `
 
 type ListContestClarificationsForModeratorParams struct {
-	ContestID uuid.UUID   `json:"contest_id"`
-	Limit     int32       `json:"limit"`
-	Offset    int32       `json:"offset"`
-	ProblemID pgtype.UUID `json:"problem_id"`
-	Status    *string     `json:"status"`
+	ContestID uuid.UUID  `json:"contest_id"`
+	Limit     int32      `json:"limit"`
+	Offset    int32      `json:"offset"`
+	ProblemID *uuid.UUID `json:"problem_id"`
+	Status    *string    `json:"status"`
 }
 
 type ListContestClarificationsForModeratorRow struct {
-	ID                 uuid.UUID          `json:"id"`
-	ContestID          uuid.UUID          `json:"contest_id"`
-	ProblemID          pgtype.UUID        `json:"problem_id"`
-	UserID             uuid.UUID          `json:"user_id"`
-	Question           string             `json:"question"`
-	Answer             *string            `json:"answer"`
-	AnsweredBy         pgtype.UUID        `json:"answered_by"`
-	Status             string             `json:"status"`
-	CreatedAt          time.Time          `json:"created_at"`
-	AnsweredAt         pgtype.Timestamptz `json:"answered_at"`
-	UpdatedAt          time.Time          `json:"updated_at"`
-	Username           string             `json:"username"`
-	AnsweredByUsername *string            `json:"answered_by_username"`
-	ProblemTitle       *string            `json:"problem_title"`
-	ProblemOrdinal     *int32             `json:"problem_ordinal"`
+	ID                 uuid.UUID  `json:"id"`
+	ContestID          uuid.UUID  `json:"contest_id"`
+	ProblemID          *uuid.UUID `json:"problem_id"`
+	UserID             uuid.UUID  `json:"user_id"`
+	Question           string     `json:"question"`
+	Answer             *string    `json:"answer"`
+	AnsweredBy         *uuid.UUID `json:"answered_by"`
+	Status             string     `json:"status"`
+	CreatedAt          time.Time  `json:"created_at"`
+	AnsweredAt         *time.Time `json:"answered_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+	Username           string     `json:"username"`
+	AnsweredByUsername *string    `json:"answered_by_username"`
+	ProblemTitle       *string    `json:"problem_title"`
+	ProblemOrdinal     *int32     `json:"problem_ordinal"`
 }
 
 func (q *Queries) ListContestClarificationsForModerator(ctx context.Context, arg ListContestClarificationsForModeratorParams) ([]ListContestClarificationsForModeratorRow, error) {
@@ -316,21 +315,21 @@ type ListContestClarificationsForUserParams struct {
 }
 
 type ListContestClarificationsForUserRow struct {
-	ID                 uuid.UUID          `json:"id"`
-	ContestID          uuid.UUID          `json:"contest_id"`
-	ProblemID          pgtype.UUID        `json:"problem_id"`
-	UserID             uuid.UUID          `json:"user_id"`
-	Question           string             `json:"question"`
-	Answer             *string            `json:"answer"`
-	AnsweredBy         pgtype.UUID        `json:"answered_by"`
-	Status             string             `json:"status"`
-	CreatedAt          time.Time          `json:"created_at"`
-	AnsweredAt         pgtype.Timestamptz `json:"answered_at"`
-	UpdatedAt          time.Time          `json:"updated_at"`
-	Username           string             `json:"username"`
-	AnsweredByUsername *string            `json:"answered_by_username"`
-	ProblemTitle       *string            `json:"problem_title"`
-	ProblemOrdinal     *int32             `json:"problem_ordinal"`
+	ID                 uuid.UUID  `json:"id"`
+	ContestID          uuid.UUID  `json:"contest_id"`
+	ProblemID          *uuid.UUID `json:"problem_id"`
+	UserID             uuid.UUID  `json:"user_id"`
+	Question           string     `json:"question"`
+	Answer             *string    `json:"answer"`
+	AnsweredBy         *uuid.UUID `json:"answered_by"`
+	Status             string     `json:"status"`
+	CreatedAt          time.Time  `json:"created_at"`
+	AnsweredAt         *time.Time `json:"answered_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+	Username           string     `json:"username"`
+	AnsweredByUsername *string    `json:"answered_by_username"`
+	ProblemTitle       *string    `json:"problem_title"`
+	ProblemOrdinal     *int32     `json:"problem_ordinal"`
 }
 
 func (q *Queries) ListContestClarificationsForUser(ctx context.Context, arg ListContestClarificationsForUserParams) ([]ListContestClarificationsForUserRow, error) {

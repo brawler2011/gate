@@ -9,8 +9,8 @@ import (
 	"context"
 	"time"
 
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addProblemMember = `-- name: AddProblemMember :exec
@@ -20,9 +20,9 @@ VALUES ($1, $2, $3)
 `
 
 type AddProblemMemberParams struct {
-	ProblemID uuid.UUID   `json:"problem_id"`
-	UserID    uuid.UUID   `json:"user_id"`
-	Role      ProblemRole `json:"role"`
+	ProblemID uuid.UUID                 `json:"problem_id"`
+	UserID    uuid.UUID                 `json:"user_id"`
+	Role      problemsmodel.ProblemRole `json:"role"`
 }
 
 // Problem Members (direct access control)
@@ -93,12 +93,12 @@ WHERE ($1::uuid IS NULL OR p.organization_id = $1::uuid)
 `
 
 type CountAllProblemsParams struct {
-	OrganizationID pgtype.UUID `json:"organization_id"`
-	OwnerID        pgtype.UUID `json:"owner_id"`
-	Search         string      `json:"search"`
-	Visibility     string      `json:"visibility"`
-	IsTemplate     *bool       `json:"is_template"`
-	ViewerID       pgtype.UUID `json:"viewer_id"`
+	OrganizationID *uuid.UUID `json:"organization_id"`
+	OwnerID        *uuid.UUID `json:"owner_id"`
+	Search         string     `json:"search"`
+	Visibility     string     `json:"visibility"`
+	IsTemplate     *bool      `json:"is_template"`
+	ViewerID       *uuid.UUID `json:"viewer_id"`
 }
 
 func (q *Queries) CountAllProblems(ctx context.Context, arg CountAllProblemsParams) (int64, error) {
@@ -123,12 +123,12 @@ RETURNING id, organization_id, owner_id, visibility, title, short_name, time_lim
 `
 
 type CreateProblemParams struct {
-	ID             uuid.UUID         `json:"id"`
-	OrganizationID uuid.UUID         `json:"organization_id"`
-	OwnerID        pgtype.UUID       `json:"owner_id"`
-	Visibility     ProblemVisibility `json:"visibility"`
-	Title          string            `json:"title"`
-	ShortName      string            `json:"short_name"`
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	OwnerID        *uuid.UUID `json:"owner_id"`
+	Visibility     string     `json:"visibility"`
+	Title          string     `json:"title"`
+	ShortName      string     `json:"short_name"`
 }
 
 // Problems queries (new schema with Organizations)
@@ -176,19 +176,19 @@ WHERE p.id = $1
 `
 
 type GetProblemByIDRow struct {
-	ID             uuid.UUID         `json:"id"`
-	OrganizationID uuid.UUID         `json:"organization_id"`
-	OrgLogin       string            `json:"org_login"`
-	OrgName        string            `json:"org_name"`
-	OwnerID        pgtype.UUID       `json:"owner_id"`
-	Visibility     ProblemVisibility `json:"visibility"`
-	Title          string            `json:"title"`
-	ShortName      string            `json:"short_name"`
-	CreatedAt      time.Time         `json:"created_at"`
-	UpdatedAt      time.Time         `json:"updated_at"`
-	TimeLimitMs    int32             `json:"time_limit_ms"`
-	MemoryLimitMb  int32             `json:"memory_limit_mb"`
-	IsTemplate     bool              `json:"is_template"`
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	OrgLogin       string     `json:"org_login"`
+	OrgName        string     `json:"org_name"`
+	OwnerID        *uuid.UUID `json:"owner_id"`
+	Visibility     string     `json:"visibility"`
+	Title          string     `json:"title"`
+	ShortName      string     `json:"short_name"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	TimeLimitMs    int32      `json:"time_limit_ms"`
+	MemoryLimitMb  int32      `json:"memory_limit_mb"`
+	IsTemplate     bool       `json:"is_template"`
 }
 
 func (q *Queries) GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemByIDRow, error) {
@@ -280,30 +280,30 @@ LIMIT $8 OFFSET $7
 `
 
 type ListAllProblemsParams struct {
-	OrganizationID pgtype.UUID `json:"organization_id"`
-	OwnerID        pgtype.UUID `json:"owner_id"`
-	Search         string      `json:"search"`
-	Visibility     string      `json:"visibility"`
-	IsTemplate     *bool       `json:"is_template"`
-	ViewerID       pgtype.UUID `json:"viewer_id"`
-	PageOffset     int32       `json:"page_offset"`
-	PageLimit      int32       `json:"page_limit"`
+	OrganizationID *uuid.UUID `json:"organization_id"`
+	OwnerID        *uuid.UUID `json:"owner_id"`
+	Search         string     `json:"search"`
+	Visibility     string     `json:"visibility"`
+	IsTemplate     *bool      `json:"is_template"`
+	ViewerID       *uuid.UUID `json:"viewer_id"`
+	PageOffset     int32      `json:"page_offset"`
+	PageLimit      int32      `json:"page_limit"`
 }
 
 type ListAllProblemsRow struct {
-	ID             uuid.UUID         `json:"id"`
-	OrganizationID uuid.UUID         `json:"organization_id"`
-	OrgLogin       string            `json:"org_login"`
-	OrgName        string            `json:"org_name"`
-	OwnerID        pgtype.UUID       `json:"owner_id"`
-	Visibility     ProblemVisibility `json:"visibility"`
-	Title          string            `json:"title"`
-	ShortName      string            `json:"short_name"`
-	CreatedAt      time.Time         `json:"created_at"`
-	UpdatedAt      time.Time         `json:"updated_at"`
-	TimeLimitMs    int32             `json:"time_limit_ms"`
-	MemoryLimitMb  int32             `json:"memory_limit_mb"`
-	IsTemplate     bool              `json:"is_template"`
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	OrgLogin       string     `json:"org_login"`
+	OrgName        string     `json:"org_name"`
+	OwnerID        *uuid.UUID `json:"owner_id"`
+	Visibility     string     `json:"visibility"`
+	Title          string     `json:"title"`
+	ShortName      string     `json:"short_name"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	TimeLimitMs    int32      `json:"time_limit_ms"`
+	MemoryLimitMb  int32      `json:"memory_limit_mb"`
+	IsTemplate     bool       `json:"is_template"`
 }
 
 func (q *Queries) ListAllProblems(ctx context.Context, arg ListAllProblemsParams) ([]ListAllProblemsRow, error) {
@@ -369,8 +369,8 @@ LIMIT $2
 `
 
 type ListDashboardProblemsParams struct {
-	OwnerID pgtype.UUID `json:"owner_id"`
-	Limit   int32       `json:"limit"`
+	OwnerID *uuid.UUID `json:"owner_id"`
+	Limit   int32      `json:"limit"`
 }
 
 type ListDashboardProblemsRow struct {
@@ -422,12 +422,12 @@ ORDER BY pm.created_at
 `
 
 type ListProblemMembersRow struct {
-	ProblemID uuid.UUID   `json:"problem_id"`
-	UserID    uuid.UUID   `json:"user_id"`
-	Role      ProblemRole `json:"role"`
-	CreatedAt time.Time   `json:"created_at"`
-	Username  string      `json:"username"`
-	Email     *string     `json:"email"`
+	ProblemID uuid.UUID                 `json:"problem_id"`
+	UserID    uuid.UUID                 `json:"user_id"`
+	Role      problemsmodel.ProblemRole `json:"role"`
+	CreatedAt time.Time                 `json:"created_at"`
+	Username  string                    `json:"username"`
+	Email     *string                   `json:"email"`
 }
 
 func (q *Queries) ListProblemMembers(ctx context.Context, problemID uuid.UUID) ([]ListProblemMembersRow, error) {
@@ -492,11 +492,11 @@ WHERE id = $1
 `
 
 type UpdateProblemParams struct {
-	ID         uuid.UUID             `json:"id"`
-	Title      *string               `json:"title"`
-	Visibility NullProblemVisibility `json:"visibility"`
-	OwnerID    pgtype.UUID           `json:"owner_id"`
-	IsTemplate *bool                 `json:"is_template"`
+	ID         uuid.UUID  `json:"id"`
+	Title      *string    `json:"title"`
+	Visibility *string    `json:"visibility"`
+	OwnerID    *uuid.UUID `json:"owner_id"`
+	IsTemplate *bool      `json:"is_template"`
 }
 
 func (q *Queries) UpdateProblem(ctx context.Context, arg UpdateProblemParams) error {
@@ -517,9 +517,9 @@ WHERE problem_id = $1 AND user_id = $2
 `
 
 type UpdateProblemMemberRoleParams struct {
-	ProblemID uuid.UUID   `json:"problem_id"`
-	UserID    uuid.UUID   `json:"user_id"`
-	Role      ProblemRole `json:"role"`
+	ProblemID uuid.UUID                 `json:"problem_id"`
+	UserID    uuid.UUID                 `json:"user_id"`
+	Role      problemsmodel.ProblemRole `json:"role"`
 }
 
 func (q *Queries) UpdateProblemMemberRole(ctx context.Context, arg UpdateProblemMemberRoleParams) error {

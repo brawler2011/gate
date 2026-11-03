@@ -12,7 +12,6 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addContestMember = `-- name: AddContestMember :exec
@@ -122,14 +121,14 @@ RETURNING id, organization_id, owner_id, visibility, title, login, description, 
 type CreateContestParams struct {
 	ID             uuid.UUID                       `json:"id"`
 	OrganizationID uuid.UUID                       `json:"organization_id"`
-	OwnerID        pgtype.UUID                     `json:"owner_id"`
+	OwnerID        *uuid.UUID                      `json:"owner_id"`
 	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
 	Title          string                          `json:"title"`
 	Login          string                          `json:"login"`
 	Description    string                          `json:"description"`
 	Settings       []byte                          `json:"settings"`
-	StartTime      pgtype.Timestamptz              `json:"start_time"`
-	EndTime        pgtype.Timestamptz              `json:"end_time"`
+	StartTime      *time.Time                      `json:"start_time"`
+	EndTime        *time.Time                      `json:"end_time"`
 }
 
 // Contests queries (new schema with Organizations)
@@ -176,11 +175,11 @@ DO UPDATE SET
 `
 
 type CreateContestUserProblemBlockParams struct {
-	ContestID uuid.UUID   `json:"contest_id"`
-	UserID    uuid.UUID   `json:"user_id"`
-	ProblemID uuid.UUID   `json:"problem_id"`
-	Reason    *string     `json:"reason"`
-	CreatedBy pgtype.UUID `json:"created_by"`
+	ContestID uuid.UUID  `json:"contest_id"`
+	UserID    uuid.UUID  `json:"user_id"`
+	ProblemID uuid.UUID  `json:"problem_id"`
+	Reason    *string    `json:"reason"`
+	CreatedBy *uuid.UUID `json:"created_by"`
 }
 
 // Contest User Problem Blocks
@@ -230,14 +229,14 @@ WHERE c.id = $1
 type GetContestByIDRow struct {
 	ID                  uuid.UUID                       `json:"id"`
 	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             pgtype.UUID                     `json:"owner_id"`
+	OwnerID             *uuid.UUID                      `json:"owner_id"`
 	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
 	Title               string                          `json:"title"`
 	Login               string                          `json:"login"`
 	Description         string                          `json:"description"`
 	Settings            []byte                          `json:"settings"`
-	StartTime           pgtype.Timestamptz              `json:"start_time"`
-	EndTime             pgtype.Timestamptz              `json:"end_time"`
+	StartTime           *time.Time                      `json:"start_time"`
+	EndTime             *time.Time                      `json:"end_time"`
 	CreatedAt           time.Time                       `json:"created_at"`
 	UpdatedAt           time.Time                       `json:"updated_at"`
 	SubmissionsRevision int64                           `json:"submissions_revision"`
@@ -283,14 +282,14 @@ type GetContestByLoginParams struct {
 type GetContestByLoginRow struct {
 	ID                  uuid.UUID                       `json:"id"`
 	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             pgtype.UUID                     `json:"owner_id"`
+	OwnerID             *uuid.UUID                      `json:"owner_id"`
 	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
 	Title               string                          `json:"title"`
 	Login               string                          `json:"login"`
 	Description         string                          `json:"description"`
 	Settings            []byte                          `json:"settings"`
-	StartTime           pgtype.Timestamptz              `json:"start_time"`
-	EndTime             pgtype.Timestamptz              `json:"end_time"`
+	StartTime           *time.Time                      `json:"start_time"`
+	EndTime             *time.Time                      `json:"end_time"`
 	CreatedAt           time.Time                       `json:"created_at"`
 	UpdatedAt           time.Time                       `json:"updated_at"`
 	SubmissionsRevision int64                           `json:"submissions_revision"`
@@ -336,14 +335,14 @@ type GetContestByOrgLoginAndContestLoginParams struct {
 type GetContestByOrgLoginAndContestLoginRow struct {
 	ID                  uuid.UUID                       `json:"id"`
 	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             pgtype.UUID                     `json:"owner_id"`
+	OwnerID             *uuid.UUID                      `json:"owner_id"`
 	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
 	Title               string                          `json:"title"`
 	Login               string                          `json:"login"`
 	Description         string                          `json:"description"`
 	Settings            []byte                          `json:"settings"`
-	StartTime           pgtype.Timestamptz              `json:"start_time"`
-	EndTime             pgtype.Timestamptz              `json:"end_time"`
+	StartTime           *time.Time                      `json:"start_time"`
+	EndTime             *time.Time                      `json:"end_time"`
 	CreatedAt           time.Time                       `json:"created_at"`
 	UpdatedAt           time.Time                       `json:"updated_at"`
 	SubmissionsRevision int64                           `json:"submissions_revision"`
@@ -421,17 +420,17 @@ type GetContestProblemParams struct {
 }
 
 type GetContestProblemRow struct {
-	ContestID        uuid.UUID         `json:"contest_id"`
-	ProblemID        uuid.UUID         `json:"problem_id"`
-	PackageID        uuid.UUID         `json:"package_id"`
-	Ordinal          int32             `json:"ordinal"`
-	CreatedAt        time.Time         `json:"created_at"`
-	Title            string            `json:"title"`
-	ShortName        string            `json:"short_name"`
-	Visibility       ProblemVisibility `json:"visibility"`
-	TimeLimitMs      int32             `json:"time_limit_ms"`
-	MemoryLimitMb    int32             `json:"memory_limit_mb"`
-	ProblemUpdatedAt time.Time         `json:"problem_updated_at"`
+	ContestID        uuid.UUID `json:"contest_id"`
+	ProblemID        uuid.UUID `json:"problem_id"`
+	PackageID        uuid.UUID `json:"package_id"`
+	Ordinal          int32     `json:"ordinal"`
+	CreatedAt        time.Time `json:"created_at"`
+	Title            string    `json:"title"`
+	ShortName        string    `json:"short_name"`
+	Visibility       string    `json:"visibility"`
+	TimeLimitMs      int32     `json:"time_limit_ms"`
+	MemoryLimitMb    int32     `json:"memory_limit_mb"`
+	ProblemUpdatedAt time.Time `json:"problem_updated_at"`
 }
 
 func (q *Queries) GetContestProblem(ctx context.Context, arg GetContestProblemParams) (GetContestProblemRow, error) {
@@ -496,13 +495,13 @@ WHERE cm.contest_id = $1 AND cm.role = 'participant'
 `
 
 type GetContestScoreboardFromStandingsRow struct {
-	UserID         uuid.UUID          `json:"user_id"`
-	Username       string             `json:"username"`
-	ProblemID      pgtype.UUID        `json:"problem_id"`
-	Solved         *bool              `json:"solved"`
-	FailedAttempts *int32             `json:"failed_attempts"`
-	FirstAcTime    pgtype.Timestamptz `json:"first_ac_time"`
-	TimeMinutes    *int32             `json:"time_minutes"`
+	UserID         uuid.UUID  `json:"user_id"`
+	Username       string     `json:"username"`
+	ProblemID      *uuid.UUID `json:"problem_id"`
+	Solved         *bool      `json:"solved"`
+	FailedAttempts *int32     `json:"failed_attempts"`
+	FirstAcTime    *time.Time `json:"first_ac_time"`
+	TimeMinutes    *int32     `json:"time_minutes"`
 }
 
 func (q *Queries) GetContestScoreboardFromStandings(ctx context.Context, contestID uuid.UUID) ([]GetContestScoreboardFromStandingsRow, error) {
@@ -567,9 +566,9 @@ ORDER BY created_at ASC
 `
 
 type GetSubmissionsForScoreboardParams struct {
-	ContestID pgtype.UUID `json:"contest_id"`
-	OwnerID   pgtype.UUID `json:"owner_id"`
-	ProblemID pgtype.UUID `json:"problem_id"`
+	ContestID *uuid.UUID `json:"contest_id"`
+	OwnerID   *uuid.UUID `json:"owner_id"`
+	ProblemID *uuid.UUID `json:"problem_id"`
 }
 
 type GetSubmissionsForScoreboardRow struct {
@@ -617,14 +616,14 @@ type ListAllContestsParams struct {
 type ListAllContestsRow struct {
 	ID                  uuid.UUID                       `json:"id"`
 	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             pgtype.UUID                     `json:"owner_id"`
+	OwnerID             *uuid.UUID                      `json:"owner_id"`
 	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
 	Title               string                          `json:"title"`
 	Login               string                          `json:"login"`
 	Description         string                          `json:"description"`
 	Settings            []byte                          `json:"settings"`
-	StartTime           pgtype.Timestamptz              `json:"start_time"`
-	EndTime             pgtype.Timestamptz              `json:"end_time"`
+	StartTime           *time.Time                      `json:"start_time"`
+	EndTime             *time.Time                      `json:"end_time"`
 	CreatedAt           time.Time                       `json:"created_at"`
 	UpdatedAt           time.Time                       `json:"updated_at"`
 	SubmissionsRevision int64                           `json:"submissions_revision"`
@@ -727,18 +726,18 @@ ORDER BY cp.ordinal
 `
 
 type ListContestProblemsRow struct {
-	ContestID        uuid.UUID         `json:"contest_id"`
-	ProblemID        uuid.UUID         `json:"problem_id"`
-	PackageID        uuid.UUID         `json:"package_id"`
-	Ordinal          int32             `json:"ordinal"`
-	CreatedAt        time.Time         `json:"created_at"`
-	Title            string            `json:"title"`
-	ShortName        string            `json:"short_name"`
-	Visibility       ProblemVisibility `json:"visibility"`
-	TimeLimitMs      int32             `json:"time_limit_ms"`
-	MemoryLimitMb    int32             `json:"memory_limit_mb"`
-	ProblemUpdatedAt time.Time         `json:"problem_updated_at"`
-	PackageUrl       *string           `json:"package_url"`
+	ContestID        uuid.UUID `json:"contest_id"`
+	ProblemID        uuid.UUID `json:"problem_id"`
+	PackageID        uuid.UUID `json:"package_id"`
+	Ordinal          int32     `json:"ordinal"`
+	CreatedAt        time.Time `json:"created_at"`
+	Title            string    `json:"title"`
+	ShortName        string    `json:"short_name"`
+	Visibility       string    `json:"visibility"`
+	TimeLimitMs      int32     `json:"time_limit_ms"`
+	MemoryLimitMb    int32     `json:"memory_limit_mb"`
+	ProblemUpdatedAt time.Time `json:"problem_updated_at"`
+	PackageUrl       *string   `json:"package_url"`
 }
 
 func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) ([]ListContestProblemsRow, error) {
@@ -781,8 +780,8 @@ WHERE contest_id = $1 AND ($2::uuid IS NULL OR user_id = $2::uuid)
 `
 
 type ListContestUserProblemBlocksParams struct {
-	ContestID uuid.UUID   `json:"contest_id"`
-	UserID    pgtype.UUID `json:"user_id"`
+	ContestID uuid.UUID  `json:"contest_id"`
+	UserID    *uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) ListContestUserProblemBlocks(ctx context.Context, arg ListContestUserProblemBlocksParams) ([]ContestUserProblemBlock, error) {
@@ -834,14 +833,14 @@ type ListContestsParams struct {
 type ListContestsRow struct {
 	ID                  uuid.UUID                       `json:"id"`
 	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             pgtype.UUID                     `json:"owner_id"`
+	OwnerID             *uuid.UUID                      `json:"owner_id"`
 	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
 	Title               string                          `json:"title"`
 	Login               string                          `json:"login"`
 	Description         string                          `json:"description"`
 	Settings            []byte                          `json:"settings"`
-	StartTime           pgtype.Timestamptz              `json:"start_time"`
-	EndTime             pgtype.Timestamptz              `json:"end_time"`
+	StartTime           *time.Time                      `json:"start_time"`
+	EndTime             *time.Time                      `json:"end_time"`
 	CreatedAt           time.Time                       `json:"created_at"`
 	UpdatedAt           time.Time                       `json:"updated_at"`
 	SubmissionsRevision int64                           `json:"submissions_revision"`
@@ -929,17 +928,17 @@ type ListDashboardContestsParams struct {
 }
 
 type ListDashboardContestsRow struct {
-	ContestID        uuid.UUID          `json:"contest_id"`
-	ContestLogin     string             `json:"contest_login"`
-	ContestTitle     string             `json:"contest_title"`
-	ContestStartTime pgtype.Timestamptz `json:"contest_start_time"`
-	ContestEndTime   pgtype.Timestamptz `json:"contest_end_time"`
-	ContestCreatedAt time.Time          `json:"contest_created_at"`
-	OrgID            uuid.UUID          `json:"org_id"`
-	OrgName          string             `json:"org_name"`
-	OrgLogin         string             `json:"org_login"`
-	UserRole         string             `json:"user_role"`
-	LastSubTime      interface{}        `json:"last_sub_time"`
+	ContestID        uuid.UUID   `json:"contest_id"`
+	ContestLogin     string      `json:"contest_login"`
+	ContestTitle     string      `json:"contest_title"`
+	ContestStartTime *time.Time  `json:"contest_start_time"`
+	ContestEndTime   *time.Time  `json:"contest_end_time"`
+	ContestCreatedAt time.Time   `json:"contest_created_at"`
+	OrgID            uuid.UUID   `json:"org_id"`
+	OrgName          string      `json:"org_name"`
+	OrgLogin         string      `json:"org_login"`
+	UserRole         string      `json:"user_role"`
+	LastSubTime      interface{} `json:"last_sub_time"`
 }
 
 func (q *Queries) ListDashboardContests(ctx context.Context, arg ListDashboardContestsParams) ([]ListDashboardContestsRow, error) {
@@ -993,14 +992,14 @@ type ListUserAccessibleContestsParams struct {
 type ListUserAccessibleContestsRow struct {
 	ID                  uuid.UUID                       `json:"id"`
 	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             pgtype.UUID                     `json:"owner_id"`
+	OwnerID             *uuid.UUID                      `json:"owner_id"`
 	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
 	Title               string                          `json:"title"`
 	Login               string                          `json:"login"`
 	Description         string                          `json:"description"`
 	Settings            []byte                          `json:"settings"`
-	StartTime           pgtype.Timestamptz              `json:"start_time"`
-	EndTime             pgtype.Timestamptz              `json:"end_time"`
+	StartTime           *time.Time                      `json:"start_time"`
+	EndTime             *time.Time                      `json:"end_time"`
 	CreatedAt           time.Time                       `json:"created_at"`
 	UpdatedAt           time.Time                       `json:"updated_at"`
 	SubmissionsRevision int64                           `json:"submissions_revision"`
@@ -1065,14 +1064,14 @@ type ListUserAccessibleContestsByOrgParams struct {
 type ListUserAccessibleContestsByOrgRow struct {
 	ID                  uuid.UUID                       `json:"id"`
 	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             pgtype.UUID                     `json:"owner_id"`
+	OwnerID             *uuid.UUID                      `json:"owner_id"`
 	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
 	Title               string                          `json:"title"`
 	Login               string                          `json:"login"`
 	Description         string                          `json:"description"`
 	Settings            []byte                          `json:"settings"`
-	StartTime           pgtype.Timestamptz              `json:"start_time"`
-	EndTime             pgtype.Timestamptz              `json:"end_time"`
+	StartTime           *time.Time                      `json:"start_time"`
+	EndTime             *time.Time                      `json:"end_time"`
 	CreatedAt           time.Time                       `json:"created_at"`
 	UpdatedAt           time.Time                       `json:"updated_at"`
 	SubmissionsRevision int64                           `json:"submissions_revision"`
@@ -1206,17 +1205,17 @@ WHERE id = $1
 `
 
 type UpdateContestParams struct {
-	ID           uuid.UUID             `json:"id"`
-	Login        *string               `json:"login"`
-	Title        *string               `json:"title"`
-	Description  *string               `json:"description"`
-	Visibility   NullContestVisibility `json:"visibility"`
-	Settings     []byte                `json:"settings"`
-	StartTimeSet bool                  `json:"start_time_set"`
-	StartTime    pgtype.Timestamptz    `json:"start_time"`
-	EndTimeSet   bool                  `json:"end_time_set"`
-	EndTime      pgtype.Timestamptz    `json:"end_time"`
-	OwnerID      pgtype.UUID           `json:"owner_id"`
+	ID           uuid.UUID                        `json:"id"`
+	Login        *string                          `json:"login"`
+	Title        *string                          `json:"title"`
+	Description  *string                          `json:"description"`
+	Visibility   *contestsmodel.ContestVisibility `json:"visibility"`
+	Settings     []byte                           `json:"settings"`
+	StartTimeSet bool                             `json:"start_time_set"`
+	StartTime    *time.Time                       `json:"start_time"`
+	EndTimeSet   bool                             `json:"end_time_set"`
+	EndTime      *time.Time                       `json:"end_time"`
+	OwnerID      *uuid.UUID                       `json:"owner_id"`
 }
 
 func (q *Queries) UpdateContest(ctx context.Context, arg UpdateContestParams) error {
@@ -1301,13 +1300,13 @@ DO UPDATE SET
 `
 
 type UpsertContestProblemResultParams struct {
-	ContestID      uuid.UUID          `json:"contest_id"`
-	UserID         uuid.UUID          `json:"user_id"`
-	ProblemID      uuid.UUID          `json:"problem_id"`
-	Solved         bool               `json:"solved"`
-	FailedAttempts int32              `json:"failed_attempts"`
-	FirstAcTime    pgtype.Timestamptz `json:"first_ac_time"`
-	TimeMinutes    *int32             `json:"time_minutes"`
+	ContestID      uuid.UUID  `json:"contest_id"`
+	UserID         uuid.UUID  `json:"user_id"`
+	ProblemID      uuid.UUID  `json:"problem_id"`
+	Solved         bool       `json:"solved"`
+	FailedAttempts int32      `json:"failed_attempts"`
+	FirstAcTime    *time.Time `json:"first_ac_time"`
+	TimeMinutes    *int32     `json:"time_minutes"`
 }
 
 // Contest Standings (Scoreboard)

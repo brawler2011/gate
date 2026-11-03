@@ -11,9 +11,10 @@ import (
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	events "github.com/brawler2011/gate/backend/internal/events"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type ContestRole string
@@ -459,42 +460,42 @@ type AuthToken struct {
 type Contest struct {
 	ID                  uuid.UUID                       `json:"id"`
 	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             pgtype.UUID                     `json:"owner_id"`
+	OwnerID             *uuid.UUID                      `json:"owner_id"`
 	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
 	Title               string                          `json:"title"`
 	Login               string                          `json:"login"`
 	Description         string                          `json:"description"`
 	Settings            []byte                          `json:"settings"`
-	StartTime           pgtype.Timestamptz              `json:"start_time"`
-	EndTime             pgtype.Timestamptz              `json:"end_time"`
+	StartTime           *time.Time                      `json:"start_time"`
+	EndTime             *time.Time                      `json:"end_time"`
 	CreatedAt           time.Time                       `json:"created_at"`
 	UpdatedAt           time.Time                       `json:"updated_at"`
 	SubmissionsRevision int64                           `json:"submissions_revision"`
 }
 
 type ContestAnnouncement struct {
-	ID        uuid.UUID   `json:"id"`
-	ContestID uuid.UUID   `json:"contest_id"`
-	ProblemID pgtype.UUID `json:"problem_id"`
-	AuthorID  uuid.UUID   `json:"author_id"`
-	Title     string      `json:"title"`
-	Body      string      `json:"body"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
+	ID        uuid.UUID  `json:"id"`
+	ContestID uuid.UUID  `json:"contest_id"`
+	ProblemID *uuid.UUID `json:"problem_id"`
+	AuthorID  uuid.UUID  `json:"author_id"`
+	Title     string     `json:"title"`
+	Body      string     `json:"body"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
 }
 
 type ContestClarification struct {
-	ID         uuid.UUID          `json:"id"`
-	ContestID  uuid.UUID          `json:"contest_id"`
-	ProblemID  pgtype.UUID        `json:"problem_id"`
-	UserID     uuid.UUID          `json:"user_id"`
-	Question   string             `json:"question"`
-	Answer     *string            `json:"answer"`
-	AnsweredBy pgtype.UUID        `json:"answered_by"`
-	Status     string             `json:"status"`
-	CreatedAt  time.Time          `json:"created_at"`
-	AnsweredAt pgtype.Timestamptz `json:"answered_at"`
-	UpdatedAt  time.Time          `json:"updated_at"`
+	ID         uuid.UUID  `json:"id"`
+	ContestID  uuid.UUID  `json:"contest_id"`
+	ProblemID  *uuid.UUID `json:"problem_id"`
+	UserID     uuid.UUID  `json:"user_id"`
+	Question   string     `json:"question"`
+	Answer     *string    `json:"answer"`
+	AnsweredBy *uuid.UUID `json:"answered_by"`
+	Status     string     `json:"status"`
+	CreatedAt  time.Time  `json:"created_at"`
+	AnsweredAt *time.Time `json:"answered_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
 }
 
 type ContestDraft struct {
@@ -507,14 +508,14 @@ type ContestDraft struct {
 }
 
 type ContestJoinRequest struct {
-	ID         uuid.UUID   `json:"id"`
-	ContestID  uuid.UUID   `json:"contest_id"`
-	UserID     uuid.UUID   `json:"user_id"`
-	Message    *string     `json:"message"`
-	Status     string      `json:"status"`
-	ReviewedBy pgtype.UUID `json:"reviewed_by"`
-	CreatedAt  time.Time   `json:"created_at"`
-	UpdatedAt  time.Time   `json:"updated_at"`
+	ID         uuid.UUID  `json:"id"`
+	ContestID  uuid.UUID  `json:"contest_id"`
+	UserID     uuid.UUID  `json:"user_id"`
+	Message    *string    `json:"message"`
+	Status     string     `json:"status"`
+	ReviewedBy *uuid.UUID `json:"reviewed_by"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
 }
 
 type ContestMember struct {
@@ -533,14 +534,14 @@ type ContestProblem struct {
 }
 
 type ContestProblemResult struct {
-	ContestID      uuid.UUID          `json:"contest_id"`
-	UserID         uuid.UUID          `json:"user_id"`
-	ProblemID      uuid.UUID          `json:"problem_id"`
-	Solved         bool               `json:"solved"`
-	FailedAttempts int32              `json:"failed_attempts"`
-	FirstAcTime    pgtype.Timestamptz `json:"first_ac_time"`
-	TimeMinutes    *int32             `json:"time_minutes"`
-	UpdatedAt      time.Time          `json:"updated_at"`
+	ContestID      uuid.UUID  `json:"contest_id"`
+	UserID         uuid.UUID  `json:"user_id"`
+	ProblemID      uuid.UUID  `json:"problem_id"`
+	Solved         bool       `json:"solved"`
+	FailedAttempts int32      `json:"failed_attempts"`
+	FirstAcTime    *time.Time `json:"first_ac_time"`
+	TimeMinutes    *int32     `json:"time_minutes"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 type ContestTeam struct {
@@ -551,12 +552,12 @@ type ContestTeam struct {
 }
 
 type ContestUserProblemBlock struct {
-	ContestID uuid.UUID   `json:"contest_id"`
-	UserID    uuid.UUID   `json:"user_id"`
-	ProblemID uuid.UUID   `json:"problem_id"`
-	Reason    *string     `json:"reason"`
-	CreatedBy pgtype.UUID `json:"created_by"`
-	CreatedAt time.Time   `json:"created_at"`
+	ContestID uuid.UUID  `json:"contest_id"`
+	UserID    uuid.UUID  `json:"user_id"`
+	ProblemID uuid.UUID  `json:"problem_id"`
+	Reason    *string    `json:"reason"`
+	CreatedBy *uuid.UUID `json:"created_by"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
 type EventAggregate struct {
@@ -571,17 +572,17 @@ type InboxReceipt struct {
 }
 
 type JudgeJob struct {
-	ID           uuid.UUID          `json:"id"`
-	SubmissionID uuid.UUID          `json:"submission_id"`
-	Generation   int64              `json:"generation"`
-	PackageID    pgtype.UUID        `json:"package_id"`
-	PackageHash  string             `json:"package_hash"`
-	State        string             `json:"state"`
-	Attempt      int32              `json:"attempt"`
-	LeaseToken   pgtype.UUID        `json:"lease_token"`
-	DeadlineAt   pgtype.Timestamptz `json:"deadline_at"`
-	CreatedAt    time.Time          `json:"created_at"`
-	CompletedAt  pgtype.Timestamptz `json:"completed_at"`
+	ID           uuid.UUID  `json:"id"`
+	SubmissionID uuid.UUID  `json:"submission_id"`
+	Generation   int64      `json:"generation"`
+	PackageID    *uuid.UUID `json:"package_id"`
+	PackageHash  string     `json:"package_hash"`
+	State        string     `json:"state"`
+	Attempt      int32      `json:"attempt"`
+	LeaseToken   *uuid.UUID `json:"lease_token"`
+	DeadlineAt   *time.Time `json:"deadline_at"`
+	CreatedAt    time.Time  `json:"created_at"`
+	CompletedAt  *time.Time `json:"completed_at"`
 }
 
 type Notification struct {
@@ -619,21 +620,21 @@ type OrganizationInvitation struct {
 }
 
 type OrganizationJoinRequest struct {
-	ID             uuid.UUID   `json:"id"`
-	OrganizationID uuid.UUID   `json:"organization_id"`
-	UserID         uuid.UUID   `json:"user_id"`
-	Message        *string     `json:"message"`
-	Status         string      `json:"status"`
-	ReviewedBy     pgtype.UUID `json:"reviewed_by"`
-	CreatedAt      time.Time   `json:"created_at"`
-	UpdatedAt      time.Time   `json:"updated_at"`
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	UserID         uuid.UUID  `json:"user_id"`
+	Message        *string    `json:"message"`
+	Status         string     `json:"status"`
+	ReviewedBy     *uuid.UUID `json:"reviewed_by"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 type OrganizationMember struct {
-	OrganizationID uuid.UUID        `json:"organization_id"`
-	UserID         uuid.UUID        `json:"user_id"`
-	Role           OrganizationRole `json:"role"`
-	CreatedAt      time.Time        `json:"created_at"`
+	OrganizationID uuid.UUID                           `json:"organization_id"`
+	UserID         uuid.UUID                           `json:"user_id"`
+	Role           organizationsmodel.OrganizationRole `json:"role"`
+	CreatedAt      time.Time                           `json:"created_at"`
 }
 
 type OutboxEvent struct {
@@ -650,7 +651,7 @@ type OutboxEvent struct {
 	DeadlineAt       *time.Time               `json:"deadline_at"`
 	Headers          []byte                   `json:"headers"`
 	AggregateVersion int64                    `json:"aggregate_version"`
-	LeaseToken       pgtype.UUID              `json:"lease_token"`
+	LeaseToken       *uuid.UUID               `json:"lease_token"`
 	NextAttemptAt    time.Time                `json:"next_attempt_at"`
 }
 
@@ -667,45 +668,45 @@ type Post struct {
 }
 
 type Problem struct {
-	ID             uuid.UUID         `json:"id"`
-	OrganizationID uuid.UUID         `json:"organization_id"`
-	OwnerID        pgtype.UUID       `json:"owner_id"`
-	Visibility     ProblemVisibility `json:"visibility"`
-	Title          string            `json:"title"`
-	ShortName      string            `json:"short_name"`
-	TimeLimitMs    int32             `json:"time_limit_ms"`
-	MemoryLimitMb  int32             `json:"memory_limit_mb"`
-	CreatedAt      time.Time         `json:"created_at"`
-	UpdatedAt      time.Time         `json:"updated_at"`
-	IsTemplate     bool              `json:"is_template"`
-	WorkspaceHash  string            `json:"workspace_hash"`
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	OwnerID        *uuid.UUID `json:"owner_id"`
+	Visibility     string     `json:"visibility"`
+	Title          string     `json:"title"`
+	ShortName      string     `json:"short_name"`
+	TimeLimitMs    int32      `json:"time_limit_ms"`
+	MemoryLimitMb  int32      `json:"memory_limit_mb"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	IsTemplate     bool       `json:"is_template"`
+	WorkspaceHash  string     `json:"workspace_hash"`
 }
 
 type ProblemMember struct {
-	ProblemID uuid.UUID   `json:"problem_id"`
-	UserID    uuid.UUID   `json:"user_id"`
-	Role      ProblemRole `json:"role"`
-	CreatedAt time.Time   `json:"created_at"`
+	ProblemID uuid.UUID                 `json:"problem_id"`
+	UserID    uuid.UUID                 `json:"user_id"`
+	Role      problemsmodel.ProblemRole `json:"role"`
+	CreatedAt time.Time                 `json:"created_at"`
 }
 
 type ProblemPackage struct {
-	ID             uuid.UUID          `json:"id"`
-	ProblemID      uuid.UUID          `json:"problem_id"`
-	OrganizationID uuid.UUID          `json:"organization_id"`
-	Version        int32              `json:"version"`
-	PackageHash    string             `json:"package_hash"`
-	Url            *string            `json:"url"`
-	Status         PackageStatus      `json:"status"`
-	BuildLog       *string            `json:"build_log"`
-	CreatedAt      time.Time          `json:"created_at"`
-	CompiledAt     pgtype.Timestamptz `json:"compiled_at"`
+	ID             uuid.UUID  `json:"id"`
+	ProblemID      uuid.UUID  `json:"problem_id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	Version        int32      `json:"version"`
+	PackageHash    string     `json:"package_hash"`
+	Url            *string    `json:"url"`
+	Status         string     `json:"status"`
+	BuildLog       *string    `json:"build_log"`
+	CreatedAt      time.Time  `json:"created_at"`
+	CompiledAt     *time.Time `json:"compiled_at"`
 }
 
 type ProblemTeam struct {
-	ProblemID  uuid.UUID         `json:"problem_id"`
-	TeamID     uuid.UUID         `json:"team_id"`
-	Permission ProblemPermission `json:"permission"`
-	CreatedAt  time.Time         `json:"created_at"`
+	ProblemID  uuid.UUID                       `json:"problem_id"`
+	TeamID     uuid.UUID                       `json:"team_id"`
+	Permission problemsmodel.ProblemPermission `json:"permission"`
+	CreatedAt  time.Time                       `json:"created_at"`
 }
 
 type Session struct {
@@ -717,9 +718,9 @@ type Session struct {
 
 type Submission struct {
 	ID          uuid.UUID                     `json:"id"`
-	ContestID   pgtype.UUID                   `json:"contest_id"`
-	ProblemID   pgtype.UUID                   `json:"problem_id"`
-	OwnerID     pgtype.UUID                   `json:"owner_id"`
+	ContestID   *uuid.UUID                    `json:"contest_id"`
+	ProblemID   *uuid.UUID                    `json:"problem_id"`
+	OwnerID     *uuid.UUID                    `json:"owner_id"`
 	Source      string                        `json:"source"`
 	Language    submissionsmodel.LanguageName `json:"language"`
 	State       submissionsmodel.State        `json:"state"`
@@ -734,35 +735,35 @@ type Submission struct {
 }
 
 type Team struct {
-	ID             uuid.UUID   `json:"id"`
-	OrganizationID uuid.UUID   `json:"organization_id"`
-	Name           string      `json:"name"`
-	Slug           string      `json:"slug"`
-	Description    string      `json:"description"`
-	Privacy        string      `json:"privacy"`
-	ParentTeamID   pgtype.UUID `json:"parent_team_id"`
-	CreatedAt      time.Time   `json:"created_at"`
-	UpdatedAt      time.Time   `json:"updated_at"`
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	Name           string     `json:"name"`
+	Slug           string     `json:"slug"`
+	Description    string     `json:"description"`
+	Privacy        string     `json:"privacy"`
+	ParentTeamID   *uuid.UUID `json:"parent_team_id"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 type TeamMember struct {
-	TeamID    uuid.UUID `json:"team_id"`
-	UserID    uuid.UUID `json:"user_id"`
-	Role      TeamRole  `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
+	TeamID    uuid.UUID                   `json:"team_id"`
+	UserID    uuid.UUID                   `json:"user_id"`
+	Role      organizationsmodel.TeamRole `json:"role"`
+	CreatedAt time.Time                   `json:"created_at"`
 }
 
 type User struct {
-	ID              uuid.UUID          `json:"id"`
-	Username        string             `json:"username"`
-	Role            UserRole           `json:"role"`
-	Email           *string            `json:"email"`
-	AvatarUrl       *string            `json:"avatar_url"`
-	CreatedAt       time.Time          `json:"created_at"`
-	UpdatedAt       time.Time          `json:"updated_at"`
-	PasswordHash    string             `json:"password_hash"`
-	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
-	ClaimedByUserID pgtype.UUID        `json:"claimed_by_user_id"`
-	ClaimedAt       pgtype.Timestamptz `json:"claimed_at"`
-	IsEmailVerified bool               `json:"is_email_verified"`
+	ID              uuid.UUID  `json:"id"`
+	Username        string     `json:"username"`
+	Role            string     `json:"role"`
+	Email           *string    `json:"email"`
+	AvatarUrl       *string    `json:"avatar_url"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	PasswordHash    string     `json:"password_hash"`
+	ExpiresAt       *time.Time `json:"expires_at"`
+	ClaimedByUserID *uuid.UUID `json:"claimed_by_user_id"`
+	ClaimedAt       *time.Time `json:"claimed_at"`
+	IsEmailVerified bool       `json:"is_email_verified"`
 }

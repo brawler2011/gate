@@ -19,11 +19,11 @@ RETURNING id, problem_id, organization_id, version, package_hash, url, status, b
 `
 
 type CreateProblemPackageParams struct {
-	ID             uuid.UUID     `json:"id"`
-	ProblemID      uuid.UUID     `json:"problem_id"`
-	OrganizationID uuid.UUID     `json:"organization_id"`
-	PackageHash    string        `json:"package_hash"`
-	Status         PackageStatus `json:"status"`
+	ID             uuid.UUID `json:"id"`
+	ProblemID      uuid.UUID `json:"problem_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	PackageHash    string    `json:"package_hash"`
+	Status         string    `json:"status"`
 }
 
 // Problem Packages queries

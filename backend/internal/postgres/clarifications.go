@@ -12,7 +12,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -40,7 +39,7 @@ func (r *ClarificationsRepo) CreateClarification(ctx context.Context, input *con
 	row, err := r.queries.CreateContestClarification(ctx, sqlc.CreateContestClarificationParams{
 		ID:        id,
 		ContestID: input.ContestID,
-		ProblemID: uuidPtrToPgtypeUUID(input.ProblemID),
+		ProblemID: input.ProblemID,
 		UserID:    input.UserID,
 		Question:  input.Question,
 	})
@@ -63,18 +62,18 @@ func (r *ClarificationsRepo) GetClarificationByID(ctx context.Context, id uuid.U
 	return &contestsmodel.ContestClarification{
 		ID:                 row.ID,
 		ContestID:          row.ContestID,
-		ProblemID:          pgtypeUUIDToPtr(row.ProblemID),
+		ProblemID:          row.ProblemID,
 		ProblemTitle:       row.ProblemTitle,
 		ProblemLetter:      ordinalToLetter(row.ProblemOrdinal),
 		UserID:             row.UserID,
 		Username:           row.Username,
 		Question:           row.Question,
 		Answer:             row.Answer,
-		AnsweredBy:         pgtypeUUIDToPtr(row.AnsweredBy),
+		AnsweredBy:         row.AnsweredBy,
 		AnsweredByUsername: row.AnsweredByUsername,
 		Status:             contestsmodel.ClarificationStatus(row.Status),
 		CreatedAt:          row.CreatedAt,
-		AnsweredAt:         pgtypeTimestamptzToPtr(row.AnsweredAt),
+		AnsweredAt:         row.AnsweredAt,
 		UpdatedAt:          row.UpdatedAt,
 	}, nil
 }
@@ -111,18 +110,18 @@ func (r *ClarificationsRepo) ListClarificationsForUser(ctx context.Context, cont
 		clarifications[i] = contestsmodel.ContestClarification{
 			ID:                 row.ID,
 			ContestID:          row.ContestID,
-			ProblemID:          pgtypeUUIDToPtr(row.ProblemID),
+			ProblemID:          row.ProblemID,
 			ProblemTitle:       row.ProblemTitle,
 			ProblemLetter:      ordinalToLetter(row.ProblemOrdinal),
 			UserID:             row.UserID,
 			Username:           row.Username,
 			Question:           row.Question,
 			Answer:             row.Answer,
-			AnsweredBy:         pgtypeUUIDToPtr(row.AnsweredBy),
+			AnsweredBy:         row.AnsweredBy,
 			AnsweredByUsername: row.AnsweredByUsername,
 			Status:             contestsmodel.ClarificationStatus(row.Status),
 			CreatedAt:          row.CreatedAt,
-			AnsweredAt:         pgtypeTimestamptzToPtr(row.AnsweredAt),
+			AnsweredAt:         row.AnsweredAt,
 			UpdatedAt:          row.UpdatedAt,
 		}
 	}
@@ -146,9 +145,9 @@ func (r *ClarificationsRepo) ListClarificationsForModerator(ctx context.Context,
 	}
 	offset := (page - 1) * pageSize
 
-	var problemID pgtype.UUID
-	if filter != nil && filter.ProblemID != nil {
-		problemID = pgtype.UUID{Bytes: *filter.ProblemID, Valid: true}
+	var problemID *uuid.UUID
+	if filter != nil {
+		problemID = filter.ProblemID
 	}
 
 	var status *string
@@ -181,18 +180,18 @@ func (r *ClarificationsRepo) ListClarificationsForModerator(ctx context.Context,
 		clarifications[i] = contestsmodel.ContestClarification{
 			ID:                 row.ID,
 			ContestID:          row.ContestID,
-			ProblemID:          pgtypeUUIDToPtr(row.ProblemID),
+			ProblemID:          row.ProblemID,
 			ProblemTitle:       row.ProblemTitle,
 			ProblemLetter:      ordinalToLetter(row.ProblemOrdinal),
 			UserID:             row.UserID,
 			Username:           row.Username,
 			Question:           row.Question,
 			Answer:             row.Answer,
-			AnsweredBy:         pgtypeUUIDToPtr(row.AnsweredBy),
+			AnsweredBy:         row.AnsweredBy,
 			AnsweredByUsername: row.AnsweredByUsername,
 			Status:             contestsmodel.ClarificationStatus(row.Status),
 			CreatedAt:          row.CreatedAt,
-			AnsweredAt:         pgtypeTimestamptzToPtr(row.AnsweredAt),
+			AnsweredAt:         row.AnsweredAt,
 			UpdatedAt:          row.UpdatedAt,
 		}
 	}
@@ -208,7 +207,7 @@ func (r *ClarificationsRepo) AnswerClarification(ctx context.Context, id, contes
 	if answer != "" {
 		ansPtr = &answer
 	}
-	ansByPtr := pgtype.UUID{Bytes: answeredBy, Valid: true}
+	ansByPtr := &answeredBy
 
 	_, err := r.queries.AnswerContestClarification(ctx, sqlc.AnswerContestClarificationParams{
 		Answer:     ansPtr,

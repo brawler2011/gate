@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
@@ -131,7 +130,7 @@ type Querier interface {
 	GetSpecificUserOrganizationID(ctx context.Context, arg GetSpecificUserOrganizationIDParams) (uuid.UUID, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissionRow, error)
 	GetSubmissionsForScoreboard(ctx context.Context, arg GetSubmissionsForScoreboardParams) ([]GetSubmissionsForScoreboardRow, error)
-	GetSubmissionsRevision(ctx context.Context, contestID pgtype.UUID) (int64, error)
+	GetSubmissionsRevision(ctx context.Context, contestID *uuid.UUID) (int64, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (Team, error)
 	GetTeamBySlug(ctx context.Context, arg GetTeamBySlugParams) (Team, error)
 	GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]Contest, error)

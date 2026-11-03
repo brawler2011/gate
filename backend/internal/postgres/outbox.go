@@ -120,10 +120,14 @@ func mapOutboxEvent(e sqlc.OutboxEvent) eventdata.OutboxEvent {
 		headers = make(map[string]string)
 	}
 
+	var leaseToken uuid.UUID
+	if e.LeaseToken != nil {
+		leaseToken = *e.LeaseToken
+	}
 	return eventdata.OutboxEvent{
 		Id:               e.ID,
 		AggregateVersion: e.AggregateVersion,
-		LeaseToken:       uuid.UUID(e.LeaseToken.Bytes),
+		LeaseToken:       leaseToken,
 		NextAttemptAt:    e.NextAttemptAt,
 		AggregateID:      e.AggregateID,
 		EventType:        e.EventType,

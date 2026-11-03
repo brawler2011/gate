@@ -9,9 +9,9 @@ import (
 	"context"
 	"time"
 
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const blockSubmission = `-- name: BlockSubmission :exec
@@ -117,11 +117,11 @@ WHERE (
 `
 
 type CountSubmissionsParams struct {
-	ContestID pgtype.UUID `json:"contest_id"`
-	OwnerID   pgtype.UUID `json:"owner_id"`
-	ProblemID pgtype.UUID `json:"problem_id"`
-	Language  *int32      `json:"language"`
-	State     *int32      `json:"state"`
+	ContestID *uuid.UUID `json:"contest_id"`
+	OwnerID   *uuid.UUID `json:"owner_id"`
+	ProblemID *uuid.UUID `json:"problem_id"`
+	Language  *int32     `json:"language"`
+	State     *int32     `json:"state"`
 }
 
 func (q *Queries) CountSubmissions(ctx context.Context, arg CountSubmissionsParams) (int64, error) {
@@ -234,32 +234,32 @@ WHERE s.id = $1::uuid
 `
 
 type GetSubmissionRow struct {
-	ID                uuid.UUID                     `json:"id"`
-	OwnerID           pgtype.UUID                   `json:"owner_id"`
-	Username          *string                       `json:"username"`
-	Source            string                        `json:"source"`
-	State             submissionsmodel.State        `json:"state"`
-	Score             int32                         `json:"score"`
-	Penalty           int32                         `json:"penalty"`
-	TimeStat          int32                         `json:"time_stat"`
-	MemoryStat        int32                         `json:"memory_stat"`
-	Language          submissionsmodel.LanguageName `json:"language"`
-	FailedTest        int32                         `json:"failed_test"`
-	TestDetails       []byte                        `json:"test_details"`
-	BanReason         *string                       `json:"ban_reason"`
-	ProblemID         pgtype.UUID                   `json:"problem_id"`
-	ProblemTitle      *string                       `json:"problem_title"`
-	ProblemShortName  *string                       `json:"problem_short_name"`
-	ProblemOrdinal    *int32                        `json:"problem_ordinal"`
-	ContestID         pgtype.UUID                   `json:"contest_id"`
-	ContestTitle      *string                       `json:"contest_title"`
-	ContestLogin      *string                       `json:"contest_login"`
-	ContestVisibility NullContestVisibility         `json:"contest_visibility"`
-	OrganizationLogin string                        `json:"organization_login"`
-	UpdatedAt         time.Time                     `json:"updated_at"`
-	Revision          int64                         `json:"revision"`
-	Generation        int64                         `json:"generation"`
-	CreatedAt         time.Time                     `json:"created_at"`
+	ID                uuid.UUID                        `json:"id"`
+	OwnerID           *uuid.UUID                       `json:"owner_id"`
+	Username          *string                          `json:"username"`
+	Source            string                           `json:"source"`
+	State             submissionsmodel.State           `json:"state"`
+	Score             int32                            `json:"score"`
+	Penalty           int32                            `json:"penalty"`
+	TimeStat          int32                            `json:"time_stat"`
+	MemoryStat        int32                            `json:"memory_stat"`
+	Language          submissionsmodel.LanguageName    `json:"language"`
+	FailedTest        int32                            `json:"failed_test"`
+	TestDetails       []byte                           `json:"test_details"`
+	BanReason         *string                          `json:"ban_reason"`
+	ProblemID         *uuid.UUID                       `json:"problem_id"`
+	ProblemTitle      *string                          `json:"problem_title"`
+	ProblemShortName  *string                          `json:"problem_short_name"`
+	ProblemOrdinal    *int32                           `json:"problem_ordinal"`
+	ContestID         *uuid.UUID                       `json:"contest_id"`
+	ContestTitle      *string                          `json:"contest_title"`
+	ContestLogin      *string                          `json:"contest_login"`
+	ContestVisibility *contestsmodel.ContestVisibility `json:"contest_visibility"`
+	OrganizationLogin string                           `json:"organization_login"`
+	UpdatedAt         time.Time                        `json:"updated_at"`
+	Revision          int64                            `json:"revision"`
+	Generation        int64                            `json:"generation"`
+	CreatedAt         time.Time                        `json:"created_at"`
 }
 
 func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissionRow, error) {
@@ -302,7 +302,7 @@ FROM contests
 WHERE $1::uuid IS NULL OR id = $1::uuid
 `
 
-func (q *Queries) GetSubmissionsRevision(ctx context.Context, contestID pgtype.UUID) (int64, error) {
+func (q *Queries) GetSubmissionsRevision(ctx context.Context, contestID *uuid.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, getSubmissionsRevision, contestID)
 	var revision int64
 	err := row.Scan(&revision)
@@ -371,19 +371,19 @@ LIMIT $8 OFFSET $7
 `
 
 type ListSubmissionsParams struct {
-	ContestID pgtype.UUID `json:"contest_id"`
-	OwnerID   pgtype.UUID `json:"owner_id"`
-	ProblemID pgtype.UUID `json:"problem_id"`
-	Language  *int32      `json:"language"`
-	State     *int32      `json:"state"`
-	SortOrder *int32      `json:"sort_order"`
-	Offset    int32       `json:"offset"`
-	Limit     int32       `json:"limit"`
+	ContestID *uuid.UUID `json:"contest_id"`
+	OwnerID   *uuid.UUID `json:"owner_id"`
+	ProblemID *uuid.UUID `json:"problem_id"`
+	Language  *int32     `json:"language"`
+	State     *int32     `json:"state"`
+	SortOrder *int32     `json:"sort_order"`
+	Offset    int32      `json:"offset"`
+	Limit     int32      `json:"limit"`
 }
 
 type ListSubmissionsRow struct {
 	ID                uuid.UUID                     `json:"id"`
-	OwnerID           pgtype.UUID                   `json:"owner_id"`
+	OwnerID           *uuid.UUID                    `json:"owner_id"`
 	Username          *string                       `json:"username"`
 	State             submissionsmodel.State        `json:"state"`
 	Score             int32                         `json:"score"`
@@ -393,11 +393,11 @@ type ListSubmissionsRow struct {
 	Language          submissionsmodel.LanguageName `json:"language"`
 	FailedTest        int32                         `json:"failed_test"`
 	BanReason         *string                       `json:"ban_reason"`
-	ProblemID         pgtype.UUID                   `json:"problem_id"`
+	ProblemID         *uuid.UUID                    `json:"problem_id"`
 	ProblemTitle      *string                       `json:"problem_title"`
 	ProblemShortName  *string                       `json:"problem_short_name"`
 	ProblemOrdinal    *int32                        `json:"problem_ordinal"`
-	ContestID         pgtype.UUID                   `json:"contest_id"`
+	ContestID         *uuid.UUID                    `json:"contest_id"`
 	ContestTitle      *string                       `json:"contest_title"`
 	ContestLogin      *string                       `json:"contest_login"`
 	OrganizationLogin string                        `json:"organization_login"`
@@ -493,10 +493,10 @@ RETURNING s.id, previous.state AS previous_state, s.revision
 `
 
 type ResetSubmissionsStateParams struct {
-	ContestID    uuid.UUID   `json:"contest_id"`
-	ProblemID    pgtype.UUID `json:"problem_id"`
-	SubmissionID pgtype.UUID `json:"submission_id"`
-	OwnerID      pgtype.UUID `json:"owner_id"`
+	ContestID    uuid.UUID  `json:"contest_id"`
+	ProblemID    *uuid.UUID `json:"problem_id"`
+	SubmissionID *uuid.UUID `json:"submission_id"`
+	OwnerID      *uuid.UUID `json:"owner_id"`
 }
 
 type ResetSubmissionsStateRow struct {

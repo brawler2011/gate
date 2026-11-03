@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countContestAnnouncements = `-- name: CountContestAnnouncements :one
@@ -48,12 +47,12 @@ INSERT INTO contest_announcements (
 `
 
 type CreateContestAnnouncementParams struct {
-	ID        uuid.UUID   `json:"id"`
-	ContestID uuid.UUID   `json:"contest_id"`
-	ProblemID pgtype.UUID `json:"problem_id"`
-	AuthorID  uuid.UUID   `json:"author_id"`
-	Title     string      `json:"title"`
-	Body      string      `json:"body"`
+	ID        uuid.UUID  `json:"id"`
+	ContestID uuid.UUID  `json:"contest_id"`
+	ProblemID *uuid.UUID `json:"problem_id"`
+	AuthorID  uuid.UUID  `json:"author_id"`
+	Title     string     `json:"title"`
+	Body      string     `json:"body"`
 }
 
 func (q *Queries) CreateContestAnnouncement(ctx context.Context, arg CreateContestAnnouncementParams) (ContestAnnouncement, error) {
@@ -108,17 +107,17 @@ WHERE ca.id = $1
 `
 
 type GetContestAnnouncementByIDRow struct {
-	ID             uuid.UUID   `json:"id"`
-	ContestID      uuid.UUID   `json:"contest_id"`
-	ProblemID      pgtype.UUID `json:"problem_id"`
-	AuthorID       uuid.UUID   `json:"author_id"`
-	Title          string      `json:"title"`
-	Body           string      `json:"body"`
-	CreatedAt      time.Time   `json:"created_at"`
-	UpdatedAt      time.Time   `json:"updated_at"`
-	AuthorUsername string      `json:"author_username"`
-	ProblemTitle   *string     `json:"problem_title"`
-	ProblemOrdinal *int32      `json:"problem_ordinal"`
+	ID             uuid.UUID  `json:"id"`
+	ContestID      uuid.UUID  `json:"contest_id"`
+	ProblemID      *uuid.UUID `json:"problem_id"`
+	AuthorID       uuid.UUID  `json:"author_id"`
+	Title          string     `json:"title"`
+	Body           string     `json:"body"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	AuthorUsername string     `json:"author_username"`
+	ProblemTitle   *string    `json:"problem_title"`
+	ProblemOrdinal *int32     `json:"problem_ordinal"`
 }
 
 func (q *Queries) GetContestAnnouncementByID(ctx context.Context, id uuid.UUID) (GetContestAnnouncementByIDRow, error) {
@@ -162,17 +161,17 @@ type ListContestAnnouncementsParams struct {
 }
 
 type ListContestAnnouncementsRow struct {
-	ID             uuid.UUID   `json:"id"`
-	ContestID      uuid.UUID   `json:"contest_id"`
-	ProblemID      pgtype.UUID `json:"problem_id"`
-	AuthorID       uuid.UUID   `json:"author_id"`
-	Title          string      `json:"title"`
-	Body           string      `json:"body"`
-	CreatedAt      time.Time   `json:"created_at"`
-	UpdatedAt      time.Time   `json:"updated_at"`
-	AuthorUsername string      `json:"author_username"`
-	ProblemTitle   *string     `json:"problem_title"`
-	ProblemOrdinal *int32      `json:"problem_ordinal"`
+	ID             uuid.UUID  `json:"id"`
+	ContestID      uuid.UUID  `json:"contest_id"`
+	ProblemID      *uuid.UUID `json:"problem_id"`
+	AuthorID       uuid.UUID  `json:"author_id"`
+	Title          string     `json:"title"`
+	Body           string     `json:"body"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	AuthorUsername string     `json:"author_username"`
+	ProblemTitle   *string    `json:"problem_title"`
+	ProblemOrdinal *int32     `json:"problem_ordinal"`
 }
 
 func (q *Queries) ListContestAnnouncements(ctx context.Context, arg ListContestAnnouncementsParams) ([]ListContestAnnouncementsRow, error) {

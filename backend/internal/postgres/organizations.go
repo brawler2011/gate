@@ -11,7 +11,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -192,7 +191,7 @@ func (r *OrganizationsRepo) AddMember(ctx context.Context, orgID, userID uuid.UU
 	if err := r.q.AddOrganizationMember(ctx, sqlc.AddOrganizationMemberParams{
 		OrganizationID: orgID,
 		UserID:         userID,
-		Role:           sqlc.OrganizationRole(role),
+		Role:           role,
 	}); err != nil {
 		return fmt.Errorf("failed to add organization member: %w", HandlePgErr(err))
 	}
@@ -248,7 +247,7 @@ func (r *OrganizationsRepo) UpdateMemberRole(ctx context.Context, orgID, userID 
 	if err := r.q.UpdateOrganizationMemberRole(ctx, sqlc.UpdateOrganizationMemberRoleParams{
 		OrganizationID: orgID,
 		UserID:         userID,
-		Role:           sqlc.OrganizationRole(role),
+		Role:           role,
 	}); err != nil {
 		return fmt.Errorf("failed to update organization member role: %w", HandlePgErr(err))
 	}
@@ -490,11 +489,7 @@ func (r *OrganizationsRepo) GetJoinRequestByID(ctx context.Context, id uuid.UUID
 		email = *row.Email
 	}
 
-	var reviewedBy *uuid.UUID
-	if row.ReviewedBy.Valid {
-		id := uuid.UUID(row.ReviewedBy.Bytes)
-		reviewedBy = &id
-	}
+	reviewedBy := row.ReviewedBy
 
 	return &organizationsmodel.OrganizationJoinRequest{
 		ID:                row.ID,
@@ -543,11 +538,7 @@ func (r *OrganizationsRepo) ListJoinRequests(ctx context.Context, orgID uuid.UUI
 		if row.Email != nil {
 			email = *row.Email
 		}
-		var reviewedBy *uuid.UUID
-		if row.ReviewedBy.Valid {
-			id := uuid.UUID(row.ReviewedBy.Bytes)
-			reviewedBy = &id
-		}
+		reviewedBy := row.ReviewedBy
 		requests[i] = organizationsmodel.OrganizationJoinRequest{
 			ID:               row.ID,
 			OrganizationID:   row.OrganizationID,
@@ -589,10 +580,7 @@ func (r *OrganizationsRepo) ListUserJoinRequests(ctx context.Context, userID uui
 }
 
 func (r *OrganizationsRepo) UpdateJoinRequestStatus(ctx context.Context, id uuid.UUID, status organizationsmodel.RequestStatus, reviewedBy *uuid.UUID) error {
-	pgReviewedBy := pgtype.UUID{}
-	if reviewedBy != nil {
-		pgReviewedBy = pgtype.UUID{Bytes: *reviewedBy, Valid: true}
-	}
+	pgReviewedBy := reviewedBy
 	affected, err := r.q.UpdateOrganizationJoinRequestStatus(ctx, sqlc.UpdateOrganizationJoinRequestStatusParams{
 		ID:         id,
 		Status:     string(status),
