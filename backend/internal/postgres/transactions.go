@@ -71,7 +71,8 @@ func NewSubmissionTransactions(pool *pgxpool.Pool) submissions.SubmissionTransac
 			*OutboxRepo
 			*JudgeJobs
 			*ContestsRepo
-		}{&SubmissionsRepo{queries: q}, &OutboxRepo{queries: q}, &JudgeJobs{queries: q}, &ContestsRepo{queries: q}}
+			*authorization
+		}{&SubmissionsRepo{queries: q}, &OutboxRepo{queries: q}, &JudgeJobs{queries: q}, &ContestsRepo{queries: q}, bindAuthorization(q)}
 	}}
 }
 
@@ -103,6 +104,18 @@ func NewContestCommandTransactions(pool *pgxpool.Pool) contests.CommandTransacti
 			*SubmissionsRepo
 			*JudgeJobs
 			*OutboxRepo
-		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}}
+			*authorization
+			*OrganizationsRepo
+		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}, bindAuthorization(q), &OrganizationsRepo{q: q}}
+	}}
+}
+
+func NewDraftTransactions(pool *pgxpool.Pool) contests.DraftTransactions {
+	return transactions[contests.DraftTxStore]{pool: pool, bind: func(q *sqlc.Queries) contests.DraftTxStore {
+		return struct {
+			*DraftsRepo
+			*ContestsRepo
+			*authorization
+		}{&DraftsRepo{queries: q}, &ContestsRepo{queries: q}, bindAuthorization(q)}
 	}}
 }

@@ -379,6 +379,7 @@ SELECT cm.contest_id, cm.user_id, cm.role, cm.created_at, u.username
 FROM contest_members cm
 JOIN users u ON u.id = cm.user_id
 WHERE cm.contest_id = $1 AND cm.user_id = $2
+FOR SHARE OF cm
 `
 
 type GetContestMemberParams struct {
@@ -1185,7 +1186,7 @@ SET login = COALESCE($2, login),
     title = COALESCE($3, title),
     description = COALESCE($4, description),
     visibility = COALESCE($5, visibility),
-    settings = COALESCE($6, settings),
+    settings = COALESCE(settings, '{}'::jsonb) || COALESCE($6::jsonb, '{}'::jsonb),
     start_time = CASE WHEN $7::boolean THEN $8::timestamptz ELSE start_time END,
     end_time = CASE WHEN $9::boolean THEN $10::timestamptz ELSE end_time END,
     owner_id = COALESCE($11, owner_id)

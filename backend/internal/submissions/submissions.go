@@ -107,6 +107,10 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *su
 		if err := tx.LockContest(ctx, creation.ContestId); err != nil {
 			return err
 		}
+		if err := requireContest(ctx, tx, creation.ContestId, accessmodel.ActionCreateSubmission); err != nil {
+			return err
+		}
+
 		if _, err := tx.GetContestProblem(ctx, contestsmodel.ContestProblemGet{ContestId: creation.ContestId, ProblemId: creation.ProblemId}); err != nil {
 			return pkg.Wrap(pkg.ErrBadInput, err, "problem does not belong to contest")
 		}
@@ -179,6 +183,12 @@ func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, su
 				return err
 			}
 		}
+		if sub.ContestID != nil {
+			if err := requireContest(ctx, tx, *sub.ContestID, accessmodel.ActionManageContest); err != nil {
+				return err
+			}
+		}
+
 		// Read again after acquiring the shared scoring lock.
 		sub, err = tx.GetSubmission(ctx, submissionID)
 		if err != nil {
@@ -300,6 +310,10 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter sub
 		if err := tx.LockContest(ctx, filter.ContestID); err != nil {
 			return err
 		}
+		if err := requireContest(ctx, tx, filter.ContestID, accessmodel.ActionManageContest); err != nil {
+			return err
+		}
+
 		txSubRepo := tx
 		txOutboxRepo := tx
 

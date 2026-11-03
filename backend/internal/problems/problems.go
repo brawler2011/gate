@@ -33,9 +33,10 @@ type ProblemsUseCase struct {
 	orgsRepo     OrganizationsRepo
 	workspace    *WorkspaceStorage
 	transactions ProblemTransactions
+	templates    PackageTemplates
 }
 
-func NewProblemsUseCase(repo ProblemsRepo, workspace *WorkspaceStorage, transactions ProblemTransactions, orgsRepo ...OrganizationsRepo) *ProblemsUseCase {
+func NewProblemsUseCase(repo ProblemsRepo, workspace *WorkspaceStorage, transactions ProblemTransactions, templates PackageTemplates, orgsRepo ...OrganizationsRepo) *ProblemsUseCase {
 	var orgRepo OrganizationsRepo
 	if len(orgsRepo) > 0 {
 		orgRepo = orgsRepo[0]
@@ -44,47 +45,9 @@ func NewProblemsUseCase(repo ProblemsRepo, workspace *WorkspaceStorage, transact
 		repo:         repo,
 		workspace:    workspace,
 		transactions: transactions,
+		templates:    templates,
 		orgsRepo:     orgRepo,
 	}
-}
-
-func (uc *ProblemsUseCase) CreateProblem(ctx context.Context, input *problemsmodel.CreateProblemInput) (uuid.UUID, error) {
-	id := uuid.New()
-
-	params := &problemsmodel.CreateProblemParams{
-		ID:             id,
-		OrganizationID: input.OrganizationID,
-		Title:          input.Title,
-		ShortName:      input.ShortName,
-		Visibility:     input.Visibility,
-		OwnerID:        input.OwnerID,
-	}
-
-	err := uc.transactions.Within(ctx, func(tx ProblemTxStore) error {
-		if err := tx.CreateProblem(ctx, params); err != nil {
-			return err
-		}
-
-		// Add creator as owner
-		if input.OwnerID != nil {
-			memberParams := &problemsmodel.CreateProblemMemberParams{
-				ProblemID: id,
-				UserID:    *input.OwnerID,
-				Role:      problemsmodel.ProblemRoleOwner,
-			}
-
-			if err := tx.CreateProblemMember(ctx, memberParams); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		return uuid.Nil, err
-	}
-
-	return id, nil
 }
 
 func (uc *ProblemsUseCase) GetProblemById(ctx context.Context, id uuid.UUID) (problemsmodel.Problem, error) {

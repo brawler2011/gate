@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
@@ -62,12 +64,12 @@ func (m *mockDraftsRepo) DeleteDraft(ctx context.Context, id uuid.UUID) error {
 
 func TestDraftsUseCase_Validation(t *testing.T) {
 	repo := newMockDraftsRepo()
-	uc := NewDraftsUseCase(repo, nil)
+	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}})
 
 	contestID := uuid.New()
 	userID := uuid.New()
 
-	ctx := context.Background()
+	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
 
 	// 1. Empty code
 	_, err := uc.CreateDraft(ctx, &contestsmodel.ContestDraftCreation{
@@ -93,11 +95,11 @@ func TestDraftsUseCase_Validation(t *testing.T) {
 
 func TestDraftsUseCase_LimitPerUser(t *testing.T) {
 	repo := newMockDraftsRepo()
-	uc := NewDraftsUseCase(repo, nil)
+	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}})
 
 	contestID := uuid.New()
 	userID := uuid.New()
-	ctx := context.Background()
+	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
 
 	// Fill 50 drafts
 	for i := 0; i < 50; i++ {
@@ -124,7 +126,7 @@ func TestDraftsUseCase_LimitPerUser(t *testing.T) {
 
 func TestDraftsUseCase_DeletePermissions(t *testing.T) {
 	repo := newMockDraftsRepo()
-	uc := NewDraftsUseCase(repo, nil)
+	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}})
 
 	authorID := uuid.New()
 	otherUserID := uuid.New()
@@ -141,13 +143,13 @@ func TestDraftsUseCase_DeletePermissions(t *testing.T) {
 	}
 
 	// Other user cannot delete
-	err = uc.DeleteDraft(ctx, draftID, otherUserID, false)
+	err = uc.DeleteDraft(accessmodel.WithUser(ctx, accessmodel.User{Id: otherUserID, Role: accessmodel.UserRoleUser}), contestID, draftID)
 	if err == nil {
 		t.Fatal("expected permission error when deleting other user's draft as non-manager, got nil")
 	}
 
 	// Manager can delete
-	err = uc.DeleteDraft(ctx, draftID, otherUserID, true)
+	err = uc.DeleteDraft(accessmodel.WithUser(ctx, accessmodel.User{Id: otherUserID, Role: accessmodel.UserRoleAdmin}), contestID, draftID)
 	if err != nil {
 		t.Fatalf("manager should be able to delete draft, got: %v", err)
 	}
@@ -158,8 +160,18 @@ func TestDraftsUseCase_DeletePermissions(t *testing.T) {
 		UserID:    authorID,
 		Code:      "package main",
 	})
-	err = uc.DeleteDraft(ctx, draftID2, authorID, false)
+	err = uc.DeleteDraft(accessmodel.WithUser(ctx, accessmodel.User{Id: authorID, Role: accessmodel.UserRoleUser}), contestID, draftID2)
 	if err != nil {
 		t.Fatalf("author should be able to delete draft, got: %v", err)
 	}
+}
+
+type draftTestStore struct{ *mockDraftsRepo }
+
+func (draftTestStore) LockContest(context.Context, uuid.UUID) error { return nil }
+func (draftTestStore) GetContest(_ context.Context, id uuid.UUID) (contestsmodel.Contest, error) {
+	return contestsmodel.Contest{ID: id}, nil
+}
+func (draftTestStore) HasContestPermission(ctx context.Context, _, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
+	return action == accessmodel.ActionGetContest || accessmodel.UserFromContext(ctx).IsAdmin(), nil
 }

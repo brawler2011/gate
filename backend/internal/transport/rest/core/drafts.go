@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -25,22 +24,6 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
-	}
-
-	// Check if contest has ended. If ended, non-managers cannot create drafts (read-only mode)
-	if contest.EndTime != nil && time.Now().After(*contest.EndTime) {
-		isManager := false
-		if user.IsAdmin() {
-			isManager = true
-		} else {
-			allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
-			if err == nil && allowed {
-				isManager = true
-			}
-		}
-		if !isManager {
-			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "contest has ended; new drafts cannot be created")
-		}
 	}
 
 	draftCreation := &contestsmodel.ContestDraftCreation{
@@ -91,17 +74,7 @@ func (h *CoreServer) DeleteContestDraft(ctx context.Context, params corev1.Delet
 		return err
 	}
 
-	isManager := false
-	if user.IsAdmin() {
-		isManager = true
-	} else {
-		allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
-		if err == nil && allowed {
-			isManager = true
-		}
-	}
-
-	if err := h.draftsUC.DeleteDraft(ctx, params.DraftID, user.Id, isManager); err != nil {
+	if err := h.draftsUC.DeleteDraft(ctx, contest.ID, params.DraftID); err != nil {
 		return err
 	}
 

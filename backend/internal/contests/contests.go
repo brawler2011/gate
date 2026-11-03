@@ -7,6 +7,8 @@ import (
 	"sort"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -56,7 +58,19 @@ func (uc *ContestsUseCase) CreateContest(
 	}
 
 	err := uc.transactions.Within(ctx, func(tx CommandTxStore) error {
-		err := tx.CreateContest(ctx, params)
+		user := accessmodel.UserFromContext(ctx)
+		if user.IsGuest() {
+			return pkg.ErrUnauthenticated
+		}
+		allowed, err := tx.HasOrganizationPermission(ctx, c.OrganizationID, user.Id, accessmodel.ActionManageOrganization)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return pkg.NoPermission
+		}
+
+		err = tx.CreateContest(ctx, params)
 		if err != nil {
 			return pkg.Wrap(err, nil, "can't create contest")
 		}
@@ -100,17 +114,21 @@ func (uc *ContestsUseCase) GetContestByOrgLoginAndContestLogin(ctx context.Conte
 }
 
 func (uc *ContestsUseCase) UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error {
-	params := contestsmodel.ContestUpdateParams(c)
-
-	return uc.contestRepo.UpdateContest(ctx, params)
+	return uc.withinContest(ctx, c.ID, accessmodel.ActionUpdateContest, func(tx CommandTxStore) error {
+		return tx.UpdateContest(ctx, c)
+	})
 }
 
 func (uc *ContestsUseCase) DeleteContest(ctx context.Context, id uuid.UUID) error {
-	return uc.contestRepo.DeleteContest(ctx, id)
+	return uc.withinContest(ctx, id, accessmodel.ActionAdminContest, func(tx CommandTxStore) error {
+		return tx.DeleteContest(ctx, id)
+	})
 }
 
 func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error {
-	return uc.contestRepo.CreateContestProblem(ctx, c)
+	return uc.withinContest(ctx, c.ContestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		return tx.CreateContestProblem(ctx, c)
+	})
 }
 
 func (uc *ContestsUseCase) GetContestProblem(ctx context.Context, c contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error) {
@@ -122,38 +140,48 @@ func (uc *ContestsUseCase) GetContestProblems(ctx context.Context, contestId uui
 }
 
 func (uc *ContestsUseCase) UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error {
-	return uc.contestRepo.UpdateContestProblemPackage(ctx, contestId, problemId, packageId)
+	return uc.withinContest(ctx, contestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		return tx.UpdateContestProblemPackage(ctx, contestId, problemId, packageId)
+	})
 }
 
 func (uc *ContestsUseCase) DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error {
-	return uc.contestRepo.DeleteContestProblem(ctx, c)
+	return uc.withinContest(ctx, c.ContestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		return tx.DeleteContestProblem(ctx, c)
+	})
 }
 
 func (uc *ContestsUseCase) ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []contestsmodel.ContestProblemReorderItem) error {
-	return uc.contestRepo.ReorderContestProblems(ctx, contestId, problems)
+	return uc.withinContest(ctx, contestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		return tx.ReorderContestProblems(ctx, contestId, problems)
+	})
 }
 
 func (uc *ContestsUseCase) CreateParticipant(ctx context.Context, c contestsmodel.ParticipantCreation) error {
-	if uc.orgsRepo != nil {
-		contest, err := uc.contestRepo.GetContest(ctx, c.ContestId)
-		if err != nil {
-			return err
+	return uc.withinContest(ctx, c.ContestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		{
+			contest, err := tx.GetContest(ctx, c.ContestId)
+			if err != nil {
+				return err
+			}
+			_, err = tx.GetMember(ctx, contest.OrganizationID, c.UserId)
+			if err != nil {
+				return pkg.Wrap(pkg.ErrBadInput, nil, "user must be a member of the organization")
+			}
 		}
-		_, err = uc.orgsRepo.GetMember(ctx, contest.OrganizationID, c.UserId)
-		if err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "user must be a member of the organization")
-		}
-	}
 
-	return uc.contestRepo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{
-		ContestId: c.ContestId,
-		UserId:    c.UserId,
-		Role:      contestsmodel.ContestRoleParticipant,
+		return tx.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{
+			ContestId: c.ContestId,
+			UserId:    c.UserId,
+			Role:      contestsmodel.ContestRoleParticipant,
+		})
 	})
 }
 
 func (uc *ContestsUseCase) DeleteParticipant(ctx context.Context, c contestsmodel.ParticipantDeletion) error {
-	return uc.contestRepo.DeleteContestMember(ctx, c.UserId, c.ContestId)
+	return uc.withinContest(ctx, c.ContestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		return tx.DeleteContestMember(ctx, c.UserId, c.ContestId)
+	})
 }
 
 func (uc *ContestsUseCase) GetContestMember(ctx context.Context, c *contestsmodel.ContestPermissionGet) (contestsmodel.ContestMember, error) {
@@ -161,32 +189,34 @@ func (uc *ContestsUseCase) GetContestMember(ctx context.Context, c *contestsmode
 }
 
 func (uc *ContestsUseCase) UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role string) error {
-	if role != contestsmodel.ContestRoleOwner && role != contestsmodel.ContestRoleModerator && role != contestsmodel.ContestRoleParticipant {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role value")
-	}
+	return uc.withinContest(ctx, contestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		if role != contestsmodel.ContestRoleOwner && role != contestsmodel.ContestRoleModerator && role != contestsmodel.ContestRoleParticipant {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role value")
+		}
 
-	currentMember, err := uc.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{
-		ContestId: contestId,
-		UserId:    userId,
+		currentMember, err := tx.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{
+			ContestId: contestId,
+			UserId:    userId,
+		})
+		if err != nil {
+			return pkg.Wrap(err, nil, "can't get contest member")
+		}
+
+		if currentMember.Role == contestsmodel.ContestRoleOwner {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "cannot change role from owner")
+		}
+
+		if role == contestsmodel.ContestRoleOwner {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "cannot change role to owner")
+		}
+
+		err = tx.UpdateContestMember(ctx, contestId, userId, role)
+		if err != nil {
+			return pkg.Wrap(err, nil, "can't update contest member")
+		}
+
+		return nil
 	})
-	if err != nil {
-		return pkg.Wrap(err, nil, "can't get contest member")
-	}
-
-	if currentMember.Role == contestsmodel.ContestRoleOwner {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "cannot change role from owner")
-	}
-
-	if role == contestsmodel.ContestRoleOwner {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "cannot change role to owner")
-	}
-
-	err = uc.contestRepo.UpdateContestMember(ctx, contestId, userId, role)
-	if err != nil {
-		return pkg.Wrap(err, nil, "can't update contest member")
-	}
-
-	return nil
 }
 
 func (uc *ContestsUseCase) ProcessSubmissionResult(ctx context.Context, submission *submissionsmodel.Submission) error {
@@ -314,7 +344,9 @@ func (uc *ContestsUseCase) CreateContestTeam(
 	contestID, teamID, requestUserID uuid.UUID,
 	role contestsmodel.ContestRole,
 ) error {
-	return uc.contestRepo.CreateContestTeam(ctx, contestID, teamID, role)
+	return uc.withinContest(ctx, contestID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		return tx.CreateContestTeam(ctx, contestID, teamID, role)
+	})
 }
 
 func (uc *ContestsUseCase) UpdateContestTeamRole(
@@ -322,21 +354,22 @@ func (uc *ContestsUseCase) UpdateContestTeamRole(
 	contestID, teamID, requestUserID uuid.UUID,
 	role contestsmodel.ContestRole,
 ) error {
-	return uc.contestRepo.UpdateContestTeamRole(ctx, contestID, teamID, role)
+	return uc.withinContest(ctx, contestID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		return tx.UpdateContestTeamRole(ctx, contestID, teamID, role)
+	})
 }
 
 func (uc *ContestsUseCase) DeleteContestTeam(
 	ctx context.Context,
 	contestID, teamID, requestUserID uuid.UUID,
 ) error {
-	return uc.contestRepo.DeleteContestTeam(ctx, contestID, teamID)
+	return uc.withinContest(ctx, contestID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		return tx.DeleteContestTeam(ctx, contestID, teamID)
+	})
 }
 
 func (uc *ContestsUseCase) BlockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string, operatorID uuid.UUID) error {
-	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {
-		if err := tx.LockContest(ctx, contestID); err != nil {
-			return err
-		}
+	return uc.withinContest(ctx, contestID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
 		if err := tx.CreateContestUserProblemBlock(ctx, &contestsmodel.CreateContestUserProblemBlockParams{ContestID: contestID, UserID: userID, ProblemID: problemID, Reason: reason, CreatedBy: &operatorID}); err != nil {
 			return err
 		}
@@ -358,10 +391,7 @@ func (uc *ContestsUseCase) BlockProblemForUser(ctx context.Context, contestID, u
 }
 
 func (uc *ContestsUseCase) UnblockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, rejudgeSubmissions bool) error {
-	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {
-		if err := tx.LockContest(ctx, contestID); err != nil {
-			return err
-		}
+	return uc.withinContest(ctx, contestID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
 		if err := tx.DeleteContestUserProblemBlock(ctx, contestID, userID, problemID); err != nil {
 			return err
 		}
@@ -413,47 +443,60 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 		return nil, false, err
 	}
 
-	// Check if already a member
-	_, err = uc.contestRepo.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{
-		ContestId: contest.ID,
-		UserId:    userID,
-	})
-	if err == nil {
-		return nil, false, pkg.Wrap(pkg.ErrBadInput, nil, "вы уже являетесь участником этого контеста")
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return nil, false, pkg.ErrUnauthenticated
 	}
-
-	mode := contest.TypedSettings().GetParticipationMode()
-	if mode == contestsmodel.ParticipationModeInviteOnly {
-		return nil, false, pkg.Wrap(pkg.ErrBadInput, nil, "регистрация на данный контест закрыта (только по приглашениям)")
+	if user.Id != userID {
+		return nil, false, pkg.NoPermission
 	}
-
-	if mode == contestsmodel.ParticipationModeOpen {
-		err := uc.CreateParticipant(ctx, contestsmodel.ParticipantCreation{
-			ContestId: contest.ID,
-			UserId:    userID,
-		})
-		if err != nil {
-			return nil, false, err
+	var req *contestsmodel.ContestJoinRequest
+	registered := false
+	err = uc.transactions.Within(ctx, func(tx CommandTxStore) error {
+		if err := tx.LockContest(ctx, contest.ID); err != nil {
+			return err
 		}
-		return nil, true, nil
-	}
-
-	// Mode is ByRequest
-	pending, err := uc.contestRepo.GetPendingContestJoinRequest(ctx, contest.ID, userID)
-	if err != nil {
-		return nil, false, err
-	}
-	if pending != nil {
-		return nil, false, pkg.Wrap(pkg.ErrBadInput, nil, "заявка на участие уже отправлена и ожидает рассмотрения")
-	}
-
-	req, err := uc.contestRepo.CreateContestJoinRequest(ctx, &contestsmodel.CreateContestJoinRequestInput{
-		ContestID: contest.ID,
-		UserID:    userID,
-		Message:   message,
+		current, err := tx.GetContest(ctx, contest.ID)
+		if err != nil {
+			return err
+		}
+		contest = current
+		_, err = tx.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{ContestId: contest.ID, UserId: userID})
+		if err == nil {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "вы уже являетесь участником этого контеста")
+		}
+		if !errors.Is(err, pkg.ErrNotFound) {
+			return err
+		}
+		mode := contest.TypedSettings().GetParticipationMode()
+		if mode == contestsmodel.ParticipationModeInviteOnly {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "регистрация на данный контест закрыта (только по приглашениям)")
+		}
+		if mode == contestsmodel.ParticipationModeOpen {
+			if _, err := tx.GetMember(ctx, contest.OrganizationID, userID); err != nil {
+				return pkg.Wrap(pkg.ErrBadInput, err, "user must be a member of the organization")
+			}
+			if err := tx.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: contest.ID, UserId: userID, Role: contestsmodel.ContestRoleParticipant}); err != nil {
+				return err
+			}
+			registered = true
+			return nil
+		}
+		pending, err := tx.GetPendingContestJoinRequest(ctx, contest.ID, userID)
+		if err != nil {
+			return err
+		}
+		if pending != nil {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "заявка на участие уже отправлена и ожидает рассмотрения")
+		}
+		req, err = tx.CreateContestJoinRequest(ctx, &contestsmodel.CreateContestJoinRequestInput{ContestID: contest.ID, UserID: userID, Message: message})
+		return err
 	})
 	if err != nil {
 		return nil, false, err
+	}
+	if registered {
+		return nil, true, nil
 	}
 
 	// Send notifications to contest moderators / owner
@@ -559,7 +602,7 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 		return pkg.Wrap(pkg.ErrBadInput, nil, "заявка уже рассмотрена")
 	}
 
-	err = uc.transactions.Within(ctx, func(tx CommandTxStore) error {
+	err = uc.withinContest(ctx, contest.ID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
 		// Add member to contest
 		err := tx.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{
 			ContestId: contest.ID,
@@ -623,8 +666,10 @@ func (uc *ContestsUseCase) RejectJoinRequest(
 		return pkg.Wrap(pkg.ErrBadInput, nil, "заявка уже рассмотрена")
 	}
 
-	if err := uc.contestRepo.UpdateContestJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusRejected, &reviewerID); err != nil {
-		return fmt.Errorf("update join request status: %w", err)
+	if err := uc.withinContest(ctx, contest.ID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		return tx.UpdateContestJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusRejected, &reviewerID)
+	}); err != nil {
+		return err
 	}
 
 	// Notify applicant

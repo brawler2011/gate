@@ -59,7 +59,7 @@ SET login = COALESCE(sqlc.narg('login'), login),
     title = COALESCE(sqlc.narg('title'), title),
     description = COALESCE(sqlc.narg('description'), description),
     visibility = COALESCE(sqlc.narg('visibility'), visibility),
-    settings = COALESCE(sqlc.narg('settings'), settings),
+    settings = COALESCE(settings, '{}'::jsonb) || COALESCE(sqlc.narg('settings')::jsonb, '{}'::jsonb),
     start_time = CASE WHEN sqlc.arg('start_time_set')::boolean THEN sqlc.narg('start_time')::timestamptz ELSE start_time END,
     end_time = CASE WHEN sqlc.arg('end_time_set')::boolean THEN sqlc.narg('end_time')::timestamptz ELSE end_time END,
     owner_id = COALESCE(sqlc.narg('owner_id'), owner_id)
@@ -78,7 +78,8 @@ VALUES ($1, $2, $3);
 SELECT cm.*, u.username
 FROM contest_members cm
 JOIN users u ON u.id = cm.user_id
-WHERE cm.contest_id = $1 AND cm.user_id = $2;
+WHERE cm.contest_id = $1 AND cm.user_id = $2
+FOR SHARE OF cm;
 
 -- name: ListContestMembers :many
 SELECT cm.*, u.username, u.email

@@ -48,3 +48,23 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, 
 	}
 	return uc.ProjectScoreboard(ctx, contestID, unfrozen)
 }
+
+func (uc *ContestsUseCase) withinContest(ctx context.Context, id uuid.UUID, action accessmodel.ContestAction, fn func(CommandTxStore) error) error {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return pkg.ErrUnauthenticated
+	}
+	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {
+		if err := tx.LockContest(ctx, id); err != nil {
+			return err
+		}
+		allowed, err := tx.HasContestPermission(ctx, id, user.Id, action)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return pkg.NoPermission
+		}
+		return fn(tx)
+	})
+}

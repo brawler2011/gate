@@ -3,6 +3,9 @@
 package integration
 
 import (
+	"sync"
+	"time"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -21,7 +24,7 @@ CREATE TRIGGER reject_contest_owner BEFORE INSERT ON contest_members FOR EACH RO
 		s.Require().NoError(err)
 	}()
 	uc := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), nil)
-	_, err = uc.CreateContest(s.ctx, &contestsmodel.CreateContestInput{OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Atomic contest", Login: "atomic", Visibility: contestsmodel.ContestVisibilityPublic})
+	_, err = uc.CreateContest(accessmodel.WithUser(s.ctx, owner), &contestsmodel.CreateContestInput{OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Atomic contest", Login: "atomic", Visibility: contestsmodel.ContestVisibilityPublic})
 	s.Require().Error(err)
 	var count int
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, `SELECT count(*) FROM contests WHERE organization_id=$1`, org.ID).Scan(&count))
@@ -44,7 +47,7 @@ CREATE TRIGGER reject_block_event BEFORE INSERT ON outbox_events FOR EACH ROW EX
 		s.Require().NoError(err)
 	}()
 	uc := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), nil)
-	s.Require().Error(uc.BlockProblemForUser(s.ctx, contest, user, problem, nil, user))
+	s.Require().Error(uc.BlockProblemForUser(accessmodel.WithUser(s.ctx, accessmodel.User{Id: user, Role: accessmodel.UserRoleUser}), contest, user, problem, nil, user))
 	after, err := repo.GetSubmission(s.ctx, sub)
 	s.Require().NoError(err)
 	s.Equal(before.State, after.State)
@@ -56,4 +59,38 @@ CREATE TRIGGER reject_block_event BEFORE INSERT ON outbox_events FOR EACH ROW EX
 	standing, err := s.contestsRepo.GetContestProblemResult(s.ctx, contest, user, problem)
 	s.Require().NoError(err)
 	s.True(standing.Solved)
+}
+
+func (s *IntegrationTestSuite) TestContestPatchRetainsConcurrentFieldsAndNullPresence() {
+	_, contest, _, _ := s.newJobSubmission()
+	initial := map[string]interface{}{"freeze_status": "frozen", "enable_drafts": true}
+	start := time.Now().UTC().Truncate(time.Second)
+	s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: contest, Settings: &initial, StartTime: &start, StartTimeSet: true}))
+	var wg sync.WaitGroup
+	results := make(chan error, 2)
+	for _, patch := range []map[string]interface{}{{"enable_upsolving": true}, {"monitor_scope": "public"}} {
+		wg.Go(func() {
+			results <- s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: contest, Settings: &patch})
+		})
+	}
+	wg.Wait()
+	close(results)
+	for err := range results {
+		s.Require().NoError(err)
+	}
+	got, err := s.contestsRepo.GetContest(s.ctx, contest)
+	s.Require().NoError(err)
+	s.Equal("frozen", got.Settings["freeze_status"])
+	s.Equal(true, got.Settings["enable_drafts"])
+	s.Equal(true, got.Settings["enable_upsolving"])
+	s.Equal("public", got.Settings["monitor_scope"])
+	s.Require().NotNil(got.StartTime)
+	s.True(start.Equal(*got.StartTime), "absent datetime leaves the stored value")
+	empty := ""
+	s.Require().NoError(s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{ID: contest, Description: &empty, StartTimeSet: true}))
+	got, err = s.contestsRepo.GetContest(s.ctx, contest)
+	s.Require().NoError(err)
+	s.Nil(got.StartTime, "explicit null clears the datetime")
+	s.Equal("", got.Description)
+	s.Equal(true, got.Settings["enable_upsolving"], "absent settings keep existing fields")
 }

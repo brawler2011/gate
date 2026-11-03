@@ -3,6 +3,8 @@ package contests
 import (
 	"context"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -32,6 +34,24 @@ type ScoreboardStore interface {
 }
 
 type CommandTxStore interface {
+	GetPendingContestJoinRequest(context.Context, uuid.UUID, uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
+	CreateContestJoinRequest(context.Context, *contestsmodel.CreateContestJoinRequestInput) (*contestsmodel.ContestJoinRequest, error)
+
+	UpdateContest(context.Context, contestsmodel.ContestUpdateInput) error
+	DeleteContest(context.Context, uuid.UUID) error
+	CreateContestProblem(context.Context, contestsmodel.ContestProblemCreation) error
+	UpdateContestProblemPackage(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error
+	DeleteContestProblem(context.Context, contestsmodel.ContestProblemDeletion) error
+	ReorderContestProblems(context.Context, uuid.UUID, []contestsmodel.ContestProblemReorderItem) error
+	UpdateContestMember(context.Context, uuid.UUID, uuid.UUID, string) error
+	DeleteContestMember(context.Context, uuid.UUID, uuid.UUID) error
+	GetMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationMember, error)
+	CreateContestTeam(context.Context, uuid.UUID, uuid.UUID, contestsmodel.ContestRole) error
+	UpdateContestTeamRole(context.Context, uuid.UUID, uuid.UUID, contestsmodel.ContestRole) error
+	DeleteContestTeam(context.Context, uuid.UUID, uuid.UUID) error
+
+	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error)
+	HasOrganizationPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.OrgAction) (bool, error)
 	ScoreboardStore
 	eventdata.Writer
 	LockContest(context.Context, uuid.UUID) error

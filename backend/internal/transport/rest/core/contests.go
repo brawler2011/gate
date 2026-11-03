@@ -271,11 +271,6 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 	}
 
 	settingsMap := make(map[string]interface{})
-	if existingContest.Settings != nil {
-		for k, v := range existingContest.Settings {
-			settingsMap[k] = v
-		}
-	}
 
 	hasSettingsUpdate := false
 	if req.MonitorScope.IsSet() {

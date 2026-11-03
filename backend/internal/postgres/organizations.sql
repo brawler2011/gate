@@ -41,7 +41,8 @@ VALUES ($1, $2, $3);
 
 -- name: GetOrganizationMember :one
 SELECT * FROM organization_members
-WHERE organization_id = $1 AND user_id = $2;
+WHERE organization_id = $1 AND user_id = $2
+FOR SHARE;
 
 -- name: ListOrganizationMembers :many
 SELECT om.organization_id, om.user_id, om.role, om.created_at,

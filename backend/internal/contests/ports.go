@@ -27,7 +27,7 @@ type ContestsRepo interface {
 	GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error)
 
 	GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error)
-	UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateParams) error
+	UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
 
 	CreateContestMember(ctx context.Context, c *contestsmodel.CreateContestMemberParams) error

@@ -2,64 +2,123 @@ package contests
 
 import (
 	"context"
+	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
 const (
-	maxDraftCodeSize = 64 * 1024 // 64 KB
+	maxDraftCodeSize = 64 * 1024
 	maxDraftsPerUser = 50
 )
 
-type DraftsUseCase struct {
-	draftsRepo DraftsRepo
-	contestsUC ContestsUC
+type DraftTxStore interface {
+	LockContest(context.Context, uuid.UUID) error
+	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error)
+	GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error)
+	CreateDraft(context.Context, *contestsmodel.ContestDraftCreation) (uuid.UUID, error)
+	GetDraft(context.Context, uuid.UUID) (contestsmodel.ContestDraft, error)
+	GetDraftsCount(context.Context, uuid.UUID, uuid.UUID) (int64, error)
+	DeleteDraft(context.Context, uuid.UUID) error
 }
 
-func NewDraftsUseCase(
-	draftsRepo DraftsRepo,
-	contestsUC ContestsUC) *DraftsUseCase {
-	return &DraftsUseCase{
-		draftsRepo: draftsRepo,
-		contestsUC: contestsUC,
-	}
+type DraftTransactions interface {
+	Within(context.Context, func(DraftTxStore) error) error
+}
+
+type DraftsUseCase struct{ transactions DraftTransactions }
+
+func NewDraftsUseCase(transactions DraftTransactions) *DraftsUseCase {
+	return &DraftsUseCase{transactions: transactions}
 }
 
 func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmodel.ContestDraftCreation) (uuid.UUID, error) {
-	codeSize := len(creation.Code)
-	if codeSize == 0 || codeSize > maxDraftCodeSize {
+	if len(creation.Code) == 0 || len(creation.Code) > maxDraftCodeSize {
 		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid draft code size")
 	}
-
-	if uc.contestsUC != nil && creation.ContestID != uuid.Nil {
-		_, err := uc.contestsUC.GetContest(ctx, creation.ContestID)
-		if err != nil {
-			return uuid.Nil, err
-		}
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return uuid.Nil, pkg.ErrUnauthenticated
 	}
-
-	count, err := uc.draftsRepo.GetDraftsCount(ctx, creation.ContestID, creation.UserID)
+	if user.Id != creation.UserID {
+		return uuid.Nil, pkg.NoPermission
+	}
+	var id uuid.UUID
+	err := uc.transactions.Within(ctx, func(tx DraftTxStore) error {
+		if err := tx.LockContest(ctx, creation.ContestID); err != nil {
+			return err
+		}
+		allowed, err := tx.HasContestPermission(ctx, creation.ContestID, user.Id, accessmodel.ActionGetContest)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return pkg.NoPermission
+		}
+		contest, err := tx.GetContest(ctx, creation.ContestID)
+		if err != nil {
+			return err
+		}
+		if contest.EndTime != nil && time.Now().After(*contest.EndTime) && !user.IsAdmin() {
+			manager, err := tx.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
+			if err != nil {
+				return err
+			}
+			if !manager {
+				return pkg.Wrap(pkg.ErrBadInput, nil, "contest has ended; new drafts cannot be created")
+			}
+		}
+		count, err := tx.GetDraftsCount(ctx, creation.ContestID, user.Id)
+		if err != nil {
+			return err
+		}
+		if count >= maxDraftsPerUser {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "maximum number of drafts reached (limit: 50)")
+		}
+		id, err = tx.CreateDraft(ctx, creation)
+		return err
+	})
 	if err != nil {
 		return uuid.Nil, err
 	}
-	if count >= maxDraftsPerUser {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "maximum number of drafts reached (limit: 50)")
-	}
-
-	return uc.draftsRepo.CreateDraft(ctx, creation)
+	return id, nil
 }
 
-func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, draftID, userID uuid.UUID, isManager bool) error {
-	draft, err := uc.draftsRepo.GetDraft(ctx, draftID)
-	if err != nil {
-		return err
+func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, contestID, draftID uuid.UUID) error {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return pkg.ErrUnauthenticated
 	}
-
-	if !isManager && draft.UserID != userID {
-		return pkg.Wrap(pkg.NoPermission, nil, "cannot delete other user's draft")
-	}
-
-	return uc.draftsRepo.DeleteDraft(ctx, draftID)
+	return uc.transactions.Within(ctx, func(tx DraftTxStore) error {
+		if err := tx.LockContest(ctx, contestID); err != nil {
+			return err
+		}
+		allowed, err := tx.HasContestPermission(ctx, contestID, user.Id, accessmodel.ActionGetContest)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return pkg.NoPermission
+		}
+		draft, err := tx.GetDraft(ctx, draftID)
+		if err != nil {
+			return err
+		}
+		if draft.ContestID != contestID {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "draft does not belong to contest")
+		}
+		if draft.UserID != user.Id && !user.IsAdmin() {
+			manager, err := tx.HasContestPermission(ctx, contestID, user.Id, accessmodel.ActionManageContest)
+			if err != nil {
+				return err
+			}
+			if !manager {
+				return pkg.NoPermission
+			}
+		}
+		return tx.DeleteDraft(ctx, draftID)
+	})
 }

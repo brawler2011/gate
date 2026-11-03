@@ -1,10 +1,7 @@
 package core
 
 import (
-	"bytes"
 	"context"
-	"io"
-	"strings"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
@@ -128,129 +125,11 @@ func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.Lis
 }
 
 func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProblemParams) (*corev1.CreationResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-
-	if params.Title == "" {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "empty title")
-	}
-
-	templateIDStr := strings.TrimSpace(params.TemplateID)
-	if templateIDStr == "" {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "template_id is required")
-	}
-
-	var orgID uuid.UUID
-	if params.OrganizationID.IsSet() {
-		orgID = params.OrganizationID.Value
-	} else {
-		orgs, err := h.organizationsUC.GetUserOrganizations(ctx, user.Id)
-		if err != nil {
-			return nil, err
-		}
-		if len(orgs) == 0 {
-			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "user has no organizations")
-		}
-		orgID = orgs[0].ID
-	}
-
-	shortName := "problem-" + uuid.New().String()[:8]
-
-	input := &problemsmodel.CreateProblemInput{
-		OrganizationID: orgID,
-		OwnerID:        &user.Id,
-		Title:          params.Title,
-		ShortName:      shortName,
-		Visibility:     problemsmodel.ProblemVisibilityPrivate,
-	}
-
-	if strings.HasPrefix(templateIDStr, "builtin:") {
-		zipBytes, err := templates.GetBuiltinTemplateZip(templateIDStr)
-		if err != nil {
-			return nil, pkg.Wrap(pkg.ErrBadInput, err, "неизвестный встроенный шаблон")
-		}
-
-		problemID, err := h.problemsUC.CreateProblem(ctx, input)
-		if err != nil {
-			return nil, err
-		}
-
-		_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(zipBytes), int64(len(zipBytes)), problemID)
-		if err != nil {
-			_ = h.problemsUC.DeleteProblem(ctx, problemID)
-			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to import builtin template package")
-		}
-
-		manifest, err := h.workshopUC.GetManifest(ctx, problemID)
-		if err != nil {
-			_ = h.problemsUC.DeleteProblem(ctx, problemID)
-			return nil, err
-		}
-		manifest.Statement.Title = input.Title
-		if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
-			_ = h.problemsUC.DeleteProblem(ctx, problemID)
-			return nil, workshopWriteError(err, "save template title")
-		}
-
-		return &corev1.CreationResponseModel{ID: problemID}, nil
-	}
-
-	templateUUID, err := uuid.Parse(templateIDStr)
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid template_id format")
-	}
-
-	templateProblem, err := h.problemsUC.GetProblemById(ctx, templateUUID)
+	id, err := h.problemsUC.CreateProblem(ctx, &problemsmodel.CreateProblemInput{OrganizationID: params.OrganizationID.Or(uuid.Nil), Title: params.Title, TemplateID: params.TemplateID})
 	if err != nil {
 		return nil, err
 	}
-	if !templateProblem.IsTemplate {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "выбранная задача не является шаблоном")
-	}
-	if templateProblem.OrganizationID != orgID {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "шаблон должен принадлежать той же организации")
-	}
-
-	readyPkg, err := h.publishUC.GetReadyPackage(ctx, templateUUID)
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "не удалось найти готовый пакет шаблона")
-	}
-
-	problemID, err := h.problemsUC.CreateProblem(ctx, input)
-	if err != nil {
-		return nil, err
-	}
-
-	zipReader, err := h.publishUC.DownloadPackage(ctx, templateUUID, readyPkg.PackageHash)
-	if err != nil {
-		_ = h.problemsUC.DeleteProblem(ctx, problemID)
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to download template package")
-	}
-	defer zipReader.Close()
-
-	fileBytes, err := io.ReadAll(zipReader)
-	if err != nil {
-		_ = h.problemsUC.DeleteProblem(ctx, problemID)
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to read template package")
-	}
-
-	_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(fileBytes), int64(len(fileBytes)), problemID)
-	if err != nil {
-		_ = h.problemsUC.DeleteProblem(ctx, problemID)
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to import template package")
-	}
-
-	manifest, err := h.workshopUC.GetManifest(ctx, problemID)
-	if err != nil {
-		_ = h.problemsUC.DeleteProblem(ctx, problemID)
-		return nil, err
-	}
-	manifest.Statement.Title = input.Title
-	if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
-		_ = h.problemsUC.DeleteProblem(ctx, problemID)
-		return nil, workshopWriteError(err, "save template title")
-	}
-
-	return &corev1.CreationResponseModel{ID: problemID}, nil
+	return &corev1.CreationResponseModel{ID: id}, nil
 }
 
 func (h *CoreServer) DeleteProblem(ctx context.Context, params corev1.DeleteProblemParams) error {

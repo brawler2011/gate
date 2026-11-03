@@ -52,7 +52,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	// Update contest to be active (started and not finished)
 	startTime := time.Now().Add(-1 * time.Hour)
 	endTime := time.Now().Add(1 * time.Hour)
-	err = s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateParams{
+	err = s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{
 		ID:           contestID,
 		StartTime:    &startTime,
 		StartTimeSet: true,

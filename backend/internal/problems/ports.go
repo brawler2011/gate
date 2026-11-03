@@ -9,6 +9,7 @@ import (
 )
 
 type OrganizationsRepo interface {
+	GetUserOrganizations(context.Context, uuid.UUID) ([]organizationsmodel.Organization, error)
 
 	// Member management
 

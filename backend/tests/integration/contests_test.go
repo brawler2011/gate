@@ -33,7 +33,7 @@ func (s *IntegrationTestSuite) TestListContests() {
 
 	// 4. Update to Public
 	visibility := contestsmodel.ContestVisibilityPublic
-	err = s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateParams{
+	err = s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{
 		ID:         contestID,
 		Visibility: &visibility,
 	})

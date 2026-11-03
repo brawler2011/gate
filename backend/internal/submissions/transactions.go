@@ -14,6 +14,7 @@ import (
 )
 
 type SubmissionTxStore interface {
+	ContestAccess
 	GetContestProblem(context.Context, contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error)
 	GetContestUserProblemBlock(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (*contestsmodel.ContestUserProblemBlock, error)
 	contests.ScoreboardStore

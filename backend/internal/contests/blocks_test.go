@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
@@ -243,4 +245,15 @@ func (allowSubmissionPermissions) HasContestPermission(context.Context, uuid.UUI
 }
 func (allowSubmissionPermissions) GetContestPermissions(context.Context, uuid.UUID, uuid.UUID) (*accessmodel.ContestPermissions, error) {
 	return &accessmodel.ContestPermissions{GetOtherUserSubmission: true, GetSubmissionDetails: true, ManageContest: true}, nil
+}
+
+func (*blockingSubmissionsRepo) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+	return true, nil
+}
+func (*blockingSubmissionsRepo) HasOrganizationPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.OrgAction) (bool, error) {
+	return true, nil
+}
+
+func (*blockingSubmissionsRepo) GetMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationMember, error) {
+	return nil, pkg.ErrNotFound
 }

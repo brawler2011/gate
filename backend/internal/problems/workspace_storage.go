@@ -112,15 +112,42 @@ func (w *WorkspaceStorage) replacePackage(ctx context.Context, id uuid.UUID, fn 
 	return w.updatePackage(ctx, id, &workspacePackage{files: make(map[string][]byte), hash: hash}, fn)
 }
 
+type workspaceVersion struct {
+	hash     string
+	metadata *problemsmodel.WorkspaceMetadata
+}
+
+func (w *WorkspaceStorage) preparePackage(ctx context.Context, id uuid.UUID, fn func(context.Context) error) (workspaceVersion, error) {
+	pkg := &workspacePackage{files: make(map[string][]byte)}
+	ctx = context.WithValue(ctx, workspacePackageKey{w, id}, pkg)
+	if err := fn(ctx); err != nil {
+		return workspaceVersion{}, err
+	}
+	return w.uploadPackage(ctx, id, pkg)
+}
+
 func (w *WorkspaceStorage) updatePackage(ctx context.Context, id uuid.UUID, pkg *workspacePackage, fn func(context.Context, *workspacePackage) error) error {
-	key := workspacePackageKey{w, id}
-	if err := fn(context.WithValue(ctx, key, pkg), pkg); err != nil {
+	if err := fn(context.WithValue(ctx, workspacePackageKey{w, id}, pkg), pkg); err != nil {
 		return err
 	}
-
 	if !pkg.dirty {
 		return nil
 	}
+	version, err := w.uploadPackage(ctx, id, pkg)
+	if err != nil {
+		return err
+	}
+	if version.hash == pkg.hash {
+		return nil
+	}
+	if err := w.repo.CommitWorkspace(ctx, id, pkg.hash, version.hash, version.metadata); err != nil {
+		return fmt.Errorf("commit workspace package: %w", err)
+	}
+	pkg.hash = version.hash
+	return nil
+}
+
+func (w *WorkspaceStorage) uploadPackage(ctx context.Context, id uuid.UUID, pkg *workspacePackage) (workspaceVersion, error) {
 	var buffer bytes.Buffer
 	archive := zip.NewWriter(&buffer)
 	names := make([]string, 0, len(pkg.files))
@@ -131,38 +158,34 @@ func (w *WorkspaceStorage) updatePackage(ctx context.Context, id uuid.UUID, pkg 
 	for _, name := range names {
 		entry, err := archive.Create(name)
 		if err != nil {
-			return fmt.Errorf("create package file %s: %w", name, err)
+			return workspaceVersion{}, fmt.Errorf("create package file %s: %w", name, err)
 		}
 		if _, err := entry.Write(pkg.files[name]); err != nil {
-			return err
+			return workspaceVersion{}, err
 		}
 	}
 	if err := archive.Close(); err != nil {
-		return fmt.Errorf("close package archive: %w", err)
+		return workspaceVersion{}, fmt.Errorf("close package archive: %w", err)
 	}
 	hash := fmt.Sprintf("%x", sha256.Sum256(buffer.Bytes()))
 	if hash == pkg.hash {
-		return nil
+		return workspaceVersion{hash: pkg.hash}, nil
 	}
 	var metadata *problemsmodel.WorkspaceMetadata
 	if data, ok := pkg.files["problem.yaml"]; ok {
 		var config *gfmt.Problem
 		if err := yaml.Unmarshal(data, &config); err != nil {
-			return fmt.Errorf("invalid problem.yaml: %w", err)
+			return workspaceVersion{}, fmt.Errorf("invalid problem.yaml: %w", err)
 		}
 		if config == nil {
-			return fmt.Errorf("problem.yaml must contain a mapping")
+			return workspaceVersion{}, fmt.Errorf("problem.yaml must contain a mapping")
 		}
 		metadata = &problemsmodel.WorkspaceMetadata{Title: config.Title, TimeLimitMs: config.Limits.TimeMs, MemoryLimitMb: config.Limits.MemoryMb}
 	}
 	if err := w.storage.UploadFile(ctx, w.bucket, w.getWorkspaceKey(id, hash), &buffer, "application/zip"); err != nil {
-		return fmt.Errorf("upload workspace package: %w", err)
+		return workspaceVersion{}, fmt.Errorf("upload workspace package: %w", err)
 	}
-	if err := w.repo.CommitWorkspace(ctx, id, pkg.hash, hash, metadata); err != nil {
-		return fmt.Errorf("commit workspace package: %w", err)
-	}
-	pkg.hash = hash
-	return nil
+	return workspaceVersion{hash: hash, metadata: metadata}, nil
 }
 
 func withWorkspaceValue[T any](ctx context.Context, w *WorkspaceStorage, id uuid.UUID, fn func(context.Context) (T, error)) (result T, err error) {

@@ -172,20 +172,6 @@ type ContestUpdateInput struct {
 	OwnerID      *uuid.UUID
 }
 
-type ContestUpdateParams struct {
-	ID           uuid.UUID
-	Login        *string
-	Title        *string
-	Description  *string
-	Visibility   *ContestVisibility
-	Settings     *map[string]interface{}
-	StartTime    *time.Time
-	StartTimeSet bool
-	EndTime      *time.Time
-	EndTimeSet   bool
-	OwnerID      *uuid.UUID
-}
-
 type ContestProblemGet struct {
 	ContestId uuid.UUID
 	ProblemId uuid.UUID

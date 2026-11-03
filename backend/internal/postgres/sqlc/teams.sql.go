@@ -194,6 +194,7 @@ SELECT t.id, t.organization_id, t.name, t.slug, t.description, t.privacy, t.pare
 INNER JOIN team_members tm ON t.id = tm.team_id
 WHERE tm.user_id = $1 AND t.organization_id = $2
 ORDER BY t.created_at DESC
+FOR SHARE OF t, tm
 `
 
 type GetUserTeamsByOrganizationParams struct {

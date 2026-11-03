@@ -149,9 +149,7 @@ type UpdatePackageStatusParams struct {
 type CreateProblemInput struct {
 	OrganizationID uuid.UUID
 	Title          string
-	ShortName      string
-	Visibility     string
-	OwnerID        *uuid.UUID
+	TemplateID     string
 }
 
 type CreateProblemParams struct {

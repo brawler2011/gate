@@ -31,20 +31,17 @@ func safeInt32[T ~int | ~int64](v T) int32 {
 
 type ContestsRepo struct {
 	queries *sqlc.Queries
-	db      *pgxpool.Pool
 }
 
 func NewContestsRepo(db *pgxpool.Pool) *ContestsRepo {
 	return &ContestsRepo{
 		queries: sqlc.New(db),
-		db:      db,
 	}
 }
 
 func (r *ContestsRepo) WithTx(tx pgx.Tx) *ContestsRepo {
 	return &ContestsRepo{
 		queries: sqlc.New(tx),
-		db:      r.db,
 	}
 }
 
@@ -102,7 +99,7 @@ func (r *ContestsRepo) GetContestByOrgLoginAndContestLogin(ctx context.Context, 
 	return mapGetContestByOrgLoginAndContestLoginRow(contest), nil
 }
 
-func (r *ContestsRepo) UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateParams) error {
+func (r *ContestsRepo) UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error {
 	var settingsJSON []byte
 	var err error
 
@@ -334,21 +331,7 @@ func (r *ContestsRepo) DeleteContestProblem(ctx context.Context, c contestsmodel
 }
 
 func (r *ContestsRepo) ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []contestsmodel.ContestProblemReorderItem) error {
-	var q *sqlc.Queries
-	var commit func() error
-
-	if r.db != nil {
-		tx, err := r.db.Begin(ctx)
-		if err != nil {
-			return HandlePgErr(err)
-		}
-		defer func() { _ = tx.Rollback(ctx) }()
-		q = r.queries.WithTx(tx)
-		commit = func() error { return tx.Commit(ctx) }
-	} else {
-		q = r.queries
-		commit = func() error { return nil }
-	}
+	q := r.queries
 
 	// Step 1: Temporarily assign large ordinals to avoid UNIQUE (contest_id, ordinal) constraint violations
 	for i, p := range problems {
@@ -375,7 +358,7 @@ func (r *ContestsRepo) ReorderContestProblems(ctx context.Context, contestId uui
 		}
 	}
 
-	return commit()
+	return nil
 }
 
 func (r *ContestsRepo) GetContestProblem(ctx context.Context, c contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error) {
@@ -717,7 +700,7 @@ func timePtrToNullTime(t *time.Time) pgtype.Timestamptz {
 	}
 }
 
-func marshalJSON(v interface{}) ([]byte, error) {
+func marshalJSON(v map[string]interface{}) ([]byte, error) {
 	if v == nil {
 		return []byte("{}"), nil
 	}

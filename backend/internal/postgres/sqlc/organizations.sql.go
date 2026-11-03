@@ -149,6 +149,7 @@ func (q *Queries) GetOrganizationByLogin(ctx context.Context, lower string) (Org
 const getOrganizationMember = `-- name: GetOrganizationMember :one
 SELECT organization_id, user_id, role, created_at FROM organization_members
 WHERE organization_id = $1 AND user_id = $2
+FOR SHARE
 `
 
 type GetOrganizationMemberParams struct {

@@ -66,7 +66,7 @@ type ContestsUC interface {
 
 type DraftsUC interface {
 	CreateDraft(ctx context.Context, creation *contestsmodel.ContestDraftCreation) (uuid.UUID, error)
-	DeleteDraft(ctx context.Context, draftID, userID uuid.UUID, isManager bool) error
+	DeleteDraft(ctx context.Context, contestID, draftID uuid.UUID) error
 }
 
 type NotificationsUC interface {
