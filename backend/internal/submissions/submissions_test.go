@@ -8,15 +8,15 @@ import (
 	"testing"
 	"time"
 
+	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
+
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
-	judging "github.com/brawler2011/gate/backend/internal/judging"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/logging"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,8 +35,6 @@ type diagnosticSubmissionsRepo struct {
 	submission submissionsmodel.Submission
 }
 
-func (r *diagnosticSubmissionsRepo) WithTx(pgx.Tx) SubmissionsRepo { return r }
-
 func (r *diagnosticSubmissionsRepo) CreateSubmission(context.Context, *submissionsmodel.SubmissionCreation) (uuid.UUID, error) {
 	return r.submission.ID, nil
 }
@@ -53,8 +51,6 @@ type diagnosticOutboxRepo struct {
 	OutboxRepo
 	event *eventdata.CreateOutboxEventParams
 }
-
-func (r *diagnosticOutboxRepo) WithTx(pgx.Tx) OutboxRepo { return r }
 
 func (r *diagnosticOutboxRepo) CreateEvent(_ context.Context, event *eventdata.CreateOutboxEventParams) error {
 	r.event = event
@@ -137,6 +133,6 @@ func (r *diagnosticOutboxRepo) Record(ctx context.Context, event eventdata.Event
 	return recordTestEvent(ctx, event, r.CreateEvent)
 }
 
-func (r *diagnosticSubmissionsRepo) ScheduleJob(_ context.Context, id uuid.UUID) (judging.Job, error) {
-	return judging.Job{ID: uuid.New(), SubmissionID: id, Generation: 1}, nil
+func (r *diagnosticSubmissionsRepo) ScheduleJob(_ context.Context, id uuid.UUID) (judgingmodel.Job, error) {
+	return judgingmodel.Job{ID: uuid.New(), SubmissionID: id, Generation: 1}, nil
 }

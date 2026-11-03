@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
+	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
+
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -263,12 +265,12 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, submissionID uuid.U
 	return nil
 }
 
-func (uc *JudgeUseCase) markInternalError(ctx context.Context, job Job, cause error) error {
+func (uc *JudgeUseCase) markInternalError(ctx context.Context, job judgingmodel.Job, cause error) error {
 	uc.logger.ErrorContext(ctx, "judging terminal failure", "job_id", job.ID, "error_type", fmt.Sprintf("%T", cause))
 	return uc.applyJudgeResult(ctx, job, &submissionsmodel.SubmissionUpdate{State: submissionsmodel.GotIE})
 }
 
-func (uc *JudgeUseCase) applyJudgeResult(ctx context.Context, job Job, update *submissionsmodel.SubmissionUpdate) error {
+func (uc *JudgeUseCase) applyJudgeResult(ctx context.Context, job judgingmodel.Job, update *submissionsmodel.SubmissionUpdate) error {
 	return uc.transactions.Within(ctx, func(tx JudgeTxStore) error {
 		current, err := tx.CompleteJob(ctx, job)
 		if err != nil {
@@ -288,8 +290,7 @@ func (uc *JudgeUseCase) applyJudgeResult(ctx context.Context, job Job, update *s
 		if err := contests.ApplySubmissionResult(ctx, tx, &sub); err != nil {
 			return err
 		}
-		event := submissionsmodel.SubmissionCompletedEvent{Id: sub.ID, PreviousState: change.PreviousState, State: sub.State, Score: sub.Score, Penalty: sub.Penalty, TimeStat: sub.TimeStat, MemoryStat: sub.MemoryStat, FailedTest: sub.FailedTest,
-			SubmissionEventMeta: submissionsmodel.SubmissionEventMeta{Revision: sub.Revision, UpdatedAt: sub.UpdatedAt, UserId: sub.CreatedBy, Username: sub.Username, ContestId: sub.ContestID, ContestTitle: sub.ContestTitle, ProblemId: sub.ProblemID, ProblemTitle: sub.ProblemTitle, Position: sub.Position, Language: sub.Language, CreatedAt: sub.CreatedAt}}
+		event := sub.CompletedEvent(change.PreviousState)
 		return tx.Record(ctx, eventdata.Event{AggregateID: sub.ID, Type: eventdata.OutboxEventSubmissionCompleted, Payload: event})
 	})
 }

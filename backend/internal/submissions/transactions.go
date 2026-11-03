@@ -3,17 +3,22 @@ package submissions
 import (
 	"context"
 
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+
+	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
+
 	"github.com/brawler2011/gate/backend/internal/contests"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
-	judging "github.com/brawler2011/gate/backend/internal/judging"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 )
 
 type SubmissionTxStore interface {
+	GetContestProblem(context.Context, contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error)
+	GetContestUserProblemBlock(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (*contestsmodel.ContestUserProblemBlock, error)
 	contests.ScoreboardStore
 	LockContest(context.Context, uuid.UUID) error
-	ScheduleJob(context.Context, uuid.UUID) (judging.Job, error)
+	ScheduleJob(context.Context, uuid.UUID) (judgingmodel.Job, error)
 	CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (submissionsmodel.Submission, error)
 	Record(context.Context, eventdata.Event) error

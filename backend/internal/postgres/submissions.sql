@@ -94,16 +94,21 @@ SET generation = generation + 1, state = 300, score = 0, ban_reason = @ban_reaso
     updated_at = NOW(), revision = (SELECT submissions_revision FROM version)
 WHERE id = @id::uuid;
 
--- name: BlockUserProblemSubmissions :exec
+-- name: BlockUserProblemSubmissions :many
 WITH version AS (
-  UPDATE contests SET submissions_revision = submissions_revision + 1
-  WHERE id = @contest_id::uuid
-  RETURNING submissions_revision
+ UPDATE contests SET submissions_revision = submissions_revision + 1
+ WHERE id = @contest_id::uuid RETURNING submissions_revision
+), previous AS (
+ SELECT s.id, s.state, v.submissions_revision
+ FROM submissions s CROSS JOIN version v
+ WHERE contest_id = @contest_id::uuid AND owner_id = @owner_id::uuid AND problem_id = @problem_id::uuid
+ FOR UPDATE OF s
 )
-UPDATE submissions
-SET generation = generation + 1, state = 300, score = 0, ban_reason = @ban_reason,
-    updated_at = NOW(), revision = (SELECT submissions_revision FROM version)
-WHERE contest_id = @contest_id::uuid AND owner_id = @owner_id::uuid AND problem_id = @problem_id::uuid;
+UPDATE submissions s
+SET generation = s.generation + 1, state = 300, score = 0, ban_reason = @ban_reason,
+ updated_at = NOW(), revision = previous.submissions_revision
+FROM previous WHERE s.id = previous.id
+RETURNING s.id, previous.state AS previous_state, s.revision;
 
 -- Submission listing
 -- name: ListSubmissions :many

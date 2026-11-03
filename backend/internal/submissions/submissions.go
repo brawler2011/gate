@@ -2,13 +2,15 @@ package submissions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+
+	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
-	judging "github.com/brawler2011/gate/backend/internal/judging"
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -54,39 +56,26 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *su
 		return uuid.Nil, err
 	}
 
-	if creation.ContestId != uuid.Nil {
-		_, err = uc.contestsUC.GetContestProblem(ctx, contestsmodel.ContestProblemGet{
-			ContestId: creation.ContestId,
-			ProblemId: creation.ProblemId,
-		})
-		if err != nil {
-			return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "problem does not belong to contest")
-		}
-
-		block, err := uc.contestsUC.GetProblemBlockStatusForUser(ctx, creation.ContestId, creation.UserId, creation.ProblemId)
-		if err == nil && block != nil {
-			dqState := submissionsmodel.Disqualified
-			creation.State = &dqState
-			creation.BanReason = block.Reason
-
-			id, err := uc.submissionsRepo.CreateSubmission(ctx, creation)
-			if err != nil {
-				return uuid.Nil, err
-			}
-
-			submission, err := uc.submissionsRepo.GetSubmission(ctx, id)
-			if err == nil && uc.contestsUC != nil {
-				_ = uc.contestsUC.ProcessSubmissionResult(ctx, &submission)
-			}
-			slog.InfoContext(ctx, "submission_accepted", "event", "submission_accepted", "submission_id", id, "request_id", requestid.Get(ctx), "state", submissionsmodel.Disqualified)
-			return id, nil
-		}
-	}
-
 	var id uuid.UUID
 
 	err = uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
-		id, err = tx.CreateSubmission(ctx, creation)
+		if err := tx.LockContest(ctx, creation.ContestId); err != nil {
+			return err
+		}
+		if _, err := tx.GetContestProblem(ctx, contestsmodel.ContestProblemGet{ContestId: creation.ContestId, ProblemId: creation.ProblemId}); err != nil {
+			return pkg.Wrap(pkg.ErrBadInput, err, "problem does not belong to contest")
+		}
+		input := *creation
+		block, err := tx.GetContestUserProblemBlock(ctx, input.ContestId, input.UserId, input.ProblemId)
+		if err != nil && !errors.Is(err, pkg.ErrNotFound) {
+			return err
+		}
+		if block != nil {
+			state := submissionsmodel.Disqualified
+			input.State, input.BanReason = &state, block.Reason
+		}
+
+		id, err = tx.CreateSubmission(ctx, &input)
 		if err != nil {
 			return err
 		}
@@ -94,6 +83,16 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *su
 		submission, err := tx.GetSubmission(ctx, id)
 		if err != nil {
 			return err
+		}
+
+		if submission.State == submissionsmodel.Disqualified {
+			if err := contests.ApplySubmissionResult(ctx, tx, &submission); err != nil {
+				return err
+			}
+			if err := tx.Record(ctx, newOutboxEventParams(submission, judgingmodel.Job{}, nil)); err != nil {
+				return err
+			}
+			return tx.Record(ctx, eventdata.Event{AggregateID: submission.ID, Type: eventdata.OutboxEventSubmissionCompleted, Payload: submission.CompletedEvent(submissionsmodel.Saved)})
 		}
 
 		job, err := tx.ScheduleJob(ctx, id)
@@ -147,8 +146,7 @@ func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, su
 		if err := contests.ApplySubmissionResult(ctx, tx, &sub); err != nil {
 			return err
 		}
-		event := submissionsmodel.SubmissionCompletedEvent{Id: sub.ID, PreviousState: previous, State: sub.State, Score: sub.Score, Penalty: sub.Penalty, TimeStat: sub.TimeStat, MemoryStat: sub.MemoryStat, FailedTest: sub.FailedTest,
-			SubmissionEventMeta: submissionsmodel.SubmissionEventMeta{Revision: sub.Revision, UpdatedAt: sub.UpdatedAt, UserId: sub.CreatedBy, Username: sub.Username, ContestId: sub.ContestID, ContestTitle: sub.ContestTitle, ProblemId: sub.ProblemID, ProblemTitle: sub.ProblemTitle, Position: sub.Position, Language: sub.Language, CreatedAt: sub.CreatedAt}}
+		event := sub.CompletedEvent(previous)
 		return tx.Record(ctx, eventdata.Event{AggregateID: sub.ID, Type: eventdata.OutboxEventSubmissionCompleted, Payload: event})
 	})
 }
@@ -162,26 +160,8 @@ func (uc *SubmissionsUseCase) UnblockSubmission(ctx context.Context, contestID, 
 	return err
 }
 
-func newOutboxEventParams(submission submissionsmodel.Submission, job judging.Job, previousState *submissionsmodel.State) eventdata.Event {
-	submissionCreatedEvent := submissionsmodel.SubmissionCreatedEvent{JobID: job.ID, Generation: job.Generation,
-		IsNew: previousState == nil, PreviousState: previousState,
-		SubmissionEventMeta: submissionsmodel.SubmissionEventMeta{
-			Revision:     submission.Revision,
-			UserId:       submission.CreatedBy,
-			Username:     submission.Username,
-			ContestId:    submission.ContestID,
-			ContestTitle: submission.ContestTitle,
-			ProblemId:    submission.ProblemID,
-			ProblemTitle: submission.ProblemTitle,
-			Position:     submission.Position,
-			Language:     submission.Language,
-			CreatedAt:    submission.CreatedAt,
-			UpdatedAt:    submission.UpdatedAt,
-		},
-		Id:     submission.ID,
-		State:  submission.State,
-		Source: submission.Submission,
-	}
+func newOutboxEventParams(submission submissionsmodel.Submission, job judgingmodel.Job, previousState *submissionsmodel.State) eventdata.Event {
+	submissionCreatedEvent := submission.CreatedEvent(job.ID, job.Generation, previousState)
 
 	return eventdata.Event{AggregateID: submission.ID, Type: eventdata.OutboxEventSubmissionCreated, Payload: submissionCreatedEvent}
 }

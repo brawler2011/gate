@@ -30,7 +30,7 @@ type Querier interface {
 	AddTeamMember(ctx context.Context, arg AddTeamMemberParams) error
 	AnswerContestClarification(ctx context.Context, arg AnswerContestClarificationParams) (ContestClarification, error)
 	BlockSubmission(ctx context.Context, arg BlockSubmissionParams) error
-	BlockUserProblemSubmissions(ctx context.Context, arg BlockUserProblemSubmissionsParams) error
+	BlockUserProblemSubmissions(ctx context.Context, arg BlockUserProblemSubmissionsParams) ([]BlockUserProblemSubmissionsRow, error)
 	ClaimJudgeJob(ctx context.Context, arg ClaimJudgeJobParams) (JudgeJob, error)
 	ClaimTemporaryUser(ctx context.Context, arg ClaimTemporaryUserParams) (int64, error)
 	CleanupExpiredAuthTokens(ctx context.Context) error

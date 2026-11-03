@@ -102,17 +102,21 @@ func (r *SubmissionsRepo) BlockSubmission(ctx context.Context, id uuid.UUID, rea
 	return nil
 }
 
-func (r *SubmissionsRepo) BlockUserProblemSubmissions(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string) error {
-	err := r.queries.BlockUserProblemSubmissions(ctx, sqlc.BlockUserProblemSubmissionsParams{
+func (r *SubmissionsRepo) BlockUserProblemSubmissions(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string) ([]submissionsmodel.SubmissionReset, error) {
+	rows, err := r.queries.BlockUserProblemSubmissions(ctx, sqlc.BlockUserProblemSubmissionsParams{
 		ContestID: contestID,
 		OwnerID:   userID,
 		ProblemID: problemID,
 		BanReason: reason,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return nil, HandlePgErr(err)
 	}
-	return nil
+	result := make([]submissionsmodel.SubmissionReset, len(rows))
+	for i, row := range rows {
+		result[i] = submissionsmodel.SubmissionReset{ID: row.ID, PreviousState: row.PreviousState}
+	}
+	return result, nil
 }
 
 func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submissionsmodel.SubmissionsFilter) ([]submissionsmodel.Submission, int32, int64, error) {

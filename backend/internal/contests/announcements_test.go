@@ -8,7 +8,6 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,10 +20,6 @@ func newMockAnnouncementsRepo() *mockAnnouncementsRepo {
 	return &mockAnnouncementsRepo{
 		announcements: make(map[uuid.UUID]contestsmodel.ContestAnnouncement),
 	}
-}
-
-func (m *mockAnnouncementsRepo) WithTx(tx pgx.Tx) AnnouncementsRepo {
-	return m
 }
 
 func (m *mockAnnouncementsRepo) CreateAnnouncement(ctx context.Context, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error) {
@@ -61,10 +56,6 @@ func (m *mockAnnouncementsRepo) DeleteAnnouncement(ctx context.Context, id, cont
 
 type mockOutboxRepo struct {
 	events []*eventdata.CreateOutboxEventParams
-}
-
-func (m *mockOutboxRepo) WithTx(tx pgx.Tx) OutboxRepo {
-	return m
 }
 
 func (m *mockOutboxRepo) CreateEvent(ctx context.Context, params *eventdata.CreateOutboxEventParams) error {

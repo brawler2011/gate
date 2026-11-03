@@ -102,7 +102,7 @@ func newScoreboardFixture(names ...string) *scoreboardFixture {
 	for i, name := range []string{"A", "B"} {
 		r.problems = append(r.problems, contestsmodel.ContestProblem{ContestID: r.contest.ID, ProblemID: uuid.New(), Title: name, ShortName: name, Ordinal: i + 1})
 	}
-	f := &scoreboardFixture{repo: r, uc: contests.NewContestsUseCase(r, nil), users: map[string]uuid.UUID{}}
+	f := &scoreboardFixture{repo: r, uc: contests.NewContestsUseCase(r, nil, nil), users: map[string]uuid.UUID{}}
 	for _, name := range names {
 		id := uuid.New()
 		f.users[name] = id

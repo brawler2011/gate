@@ -8,7 +8,6 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,10 +20,6 @@ func newMockClarificationsRepo() *mockClarificationsRepo {
 	return &mockClarificationsRepo{
 		clarifications: make(map[uuid.UUID]contestsmodel.ContestClarification),
 	}
-}
-
-func (m *mockClarificationsRepo) WithTx(tx pgx.Tx) ClarificationsRepo {
-	return m
 }
 
 func (m *mockClarificationsRepo) CreateClarification(ctx context.Context, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error) {

@@ -7,6 +7,8 @@ import (
 	"sort"
 	"time"
 
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
+
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
@@ -18,25 +20,13 @@ import (
 type ContestsUseCase struct {
 	contestRepo     ContestsRepo
 	orgsRepo        OrganizationsRepo
-	submissionsRepo SubmissionsRepo
+	transactions    CommandTransactions
 	notificationsUC NotificationsUC
 	usersRepo       UsersRepo
 }
 
-func NewContestsUseCase(
-	contestRepo ContestsRepo,
-	orgsRepo OrganizationsRepo,
-	submissionsRepo ...SubmissionsRepo,
-) *ContestsUseCase {
-	var subRepo SubmissionsRepo
-	if len(submissionsRepo) > 0 {
-		subRepo = submissionsRepo[0]
-	}
-	return &ContestsUseCase{
-		contestRepo:     contestRepo,
-		orgsRepo:        orgsRepo,
-		submissionsRepo: subRepo,
-	}
+func NewContestsUseCase(contestRepo ContestsRepo, orgsRepo OrganizationsRepo, transactions CommandTransactions) *ContestsUseCase {
+	return &ContestsUseCase{contestRepo: contestRepo, orgsRepo: orgsRepo, transactions: transactions}
 }
 
 func (uc *ContestsUseCase) SetNotificationsUC(n NotificationsUC) {
@@ -64,21 +54,28 @@ func (uc *ContestsUseCase) CreateContest(
 		EndTime:        c.EndTime,
 	}
 
-	err := uc.contestRepo.CreateContest(ctx, params)
-	if err != nil {
-		return uuid.Nil, pkg.Wrap(err, nil, "can't create contest")
-	}
-
-	// If an owner ID was provided, add them as a contest member with owner role
-	if c.OwnerID != nil {
-		err = uc.contestRepo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{
-			ContestId: params.ID,
-			UserId:    *c.OwnerID,
-			Role:      contestsmodel.ContestRoleOwner,
-		})
+	err := uc.transactions.Within(ctx, func(tx CommandTxStore) error {
+		err := tx.CreateContest(ctx, params)
 		if err != nil {
-			return uuid.Nil, pkg.Wrap(err, nil, "can't create contest member")
+			return pkg.Wrap(err, nil, "can't create contest")
 		}
+
+		// If an owner ID was provided, add them as a contest member with owner role
+		if c.OwnerID != nil {
+			err = tx.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{
+				ContestId: params.ID,
+				UserId:    *c.OwnerID,
+				Role:      contestsmodel.ContestRoleOwner,
+			})
+			if err != nil {
+				return pkg.Wrap(err, nil, "can't create contest member")
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return uuid.Nil, err
 	}
 
 	return params.ID, nil
@@ -334,68 +331,60 @@ func (uc *ContestsUseCase) DeleteContestTeam(
 	return uc.contestRepo.DeleteContestTeam(ctx, contestID, teamID)
 }
 
-func (uc *ContestsUseCase) BlockProblemForUser(
-	ctx context.Context,
-	contestID, userID, problemID uuid.UUID,
-	reason *string,
-	operatorID uuid.UUID,
-) error {
-	_, err := uc.GetContest(ctx, contestID)
-	if err != nil {
-		return err
-	}
-
-	err = uc.contestRepo.CreateContestUserProblemBlock(ctx, &contestsmodel.CreateContestUserProblemBlockParams{
-		ContestID: contestID,
-		UserID:    userID,
-		ProblemID: problemID,
-		Reason:    reason,
-		CreatedBy: &operatorID,
-	})
-	if err != nil {
-		return err
-	}
-
-	if uc.submissionsRepo != nil {
-		err = uc.submissionsRepo.BlockUserProblemSubmissions(ctx, contestID, userID, problemID, reason)
+func (uc *ContestsUseCase) BlockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string, operatorID uuid.UUID) error {
+	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {
+		if err := tx.LockContest(ctx, contestID); err != nil {
+			return err
+		}
+		if err := tx.CreateContestUserProblemBlock(ctx, &contestsmodel.CreateContestUserProblemBlockParams{ContestID: contestID, UserID: userID, ProblemID: problemID, Reason: reason, CreatedBy: &operatorID}); err != nil {
+			return err
+		}
+		changed, err := tx.BlockUserProblemSubmissions(ctx, contestID, userID, problemID, reason)
 		if err != nil {
 			return err
 		}
-	}
-
-	dummySub := &submissionsmodel.Submission{
-		ContestID: &contestID,
-		CreatedBy: &userID,
-		ProblemID: &problemID,
-	}
-	_ = uc.ProcessSubmissionResult(ctx, dummySub)
-
-	return nil
+		for _, change := range changed {
+			sub, err := tx.GetSubmission(ctx, change.ID)
+			if err != nil {
+				return err
+			}
+			if err := tx.Record(ctx, eventdata.Event{AggregateID: sub.ID, Type: eventdata.OutboxEventSubmissionCompleted, Payload: sub.CompletedEvent(change.PreviousState)}); err != nil {
+				return err
+			}
+		}
+		return ApplySubmissionResult(ctx, tx, &submissionsmodel.Submission{ContestID: &contestID, CreatedBy: &userID, ProblemID: &problemID})
+	})
 }
 
-func (uc *ContestsUseCase) UnblockProblemForUser(
-	ctx context.Context,
-	contestID, userID, problemID uuid.UUID,
-	rejudgeSubmissions bool,
-) error {
-	_, err := uc.GetContest(ctx, contestID)
-	if err != nil {
-		return err
-	}
-
-	err = uc.contestRepo.DeleteContestUserProblemBlock(ctx, contestID, userID, problemID)
-	if err != nil {
-		return err
-	}
-
-	dummySub := &submissionsmodel.Submission{
-		ContestID: &contestID,
-		CreatedBy: &userID,
-		ProblemID: &problemID,
-	}
-	_ = uc.ProcessSubmissionResult(ctx, dummySub)
-
-	return nil
+func (uc *ContestsUseCase) UnblockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, rejudgeSubmissions bool) error {
+	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {
+		if err := tx.LockContest(ctx, contestID); err != nil {
+			return err
+		}
+		if err := tx.DeleteContestUserProblemBlock(ctx, contestID, userID, problemID); err != nil {
+			return err
+		}
+		if rejudgeSubmissions {
+			changed, err := tx.ResetSubmissionsState(ctx, submissionsmodel.RejudgeFilter{ContestID: contestID, UserID: &userID, ProblemID: &problemID})
+			if err != nil {
+				return err
+			}
+			for _, change := range changed {
+				sub, err := tx.GetSubmission(ctx, change.ID)
+				if err != nil {
+					return err
+				}
+				job, err := tx.ScheduleJob(ctx, sub.ID)
+				if err != nil {
+					return err
+				}
+				if err := tx.Record(ctx, eventdata.Event{AggregateID: sub.ID, Type: eventdata.OutboxEventSubmissionCreated, Payload: sub.CreatedEvent(job.ID, job.Generation, &change.PreviousState)}); err != nil {
+					return err
+				}
+			}
+		}
+		return ApplySubmissionResult(ctx, tx, &submissionsmodel.Submission{ContestID: &contestID, CreatedBy: &userID, ProblemID: &problemID})
+	})
 }
 
 func (uc *ContestsUseCase) GetProblemBlockStatusForUser(
@@ -569,18 +558,25 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 		return pkg.Wrap(pkg.ErrBadInput, nil, "заявка уже рассмотрена")
 	}
 
-	// Add member to contest
-	err = uc.contestRepo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{
-		ContestId: contest.ID,
-		UserId:    req.UserID,
-		Role:      contestsmodel.ContestRoleParticipant,
+	err = uc.transactions.Within(ctx, func(tx CommandTxStore) error {
+		// Add member to contest
+		err := tx.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{
+			ContestId: contest.ID,
+			UserId:    req.UserID,
+			Role:      contestsmodel.ContestRoleParticipant,
+		})
+		if err != nil {
+			return fmt.Errorf("create contest member: %w", err)
+		}
+
+		if err := tx.UpdateContestJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusApproved, &reviewerID); err != nil {
+			return fmt.Errorf("update join request status: %w", err)
+		}
+
+		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("create contest member: %w", err)
-	}
-
-	if err := uc.contestRepo.UpdateContestJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusApproved, &reviewerID); err != nil {
-		return fmt.Errorf("update join request status: %w", err)
+		return err
 	}
 
 	// Notify applicant

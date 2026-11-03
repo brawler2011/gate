@@ -12,7 +12,6 @@ import (
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -100,10 +99,6 @@ func (m *mockUsersRepoForTemp) ClaimTemporaryUser(ctx context.Context, id, claim
 	m.usersByName[u.Username] = u
 	m.claimedUsers[claimedByUserID] = append(m.claimedUsers[claimedByUserID], u)
 	return nil
-}
-
-func (m *mockUsersRepoForTemp) WithTx(tx pgx.Tx) UsersRepo {
-	return m
 }
 
 func TestBatchCreateOrganizationUsers_Success(t *testing.T) {

@@ -9,7 +9,6 @@ import (
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,10 +22,6 @@ func newMockNotificationsRepo() *mockNotificationsRepo {
 	return &mockNotificationsRepo{
 		notifications: make(map[uuid.UUID]notificationsmodel.Notification),
 	}
-}
-
-func (m *mockNotificationsRepo) WithTx(tx pgx.Tx) NotificationsRepo {
-	return m
 }
 
 func (m *mockNotificationsRepo) CreateNotification(ctx context.Context, input *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error) {

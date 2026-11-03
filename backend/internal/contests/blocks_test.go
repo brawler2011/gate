@@ -7,16 +7,16 @@ import (
 	"testing"
 	"time"
 
+	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
+
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
-	judging "github.com/brawler2011/gate/backend/internal/judging"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissions "github.com/brawler2011/gate/backend/internal/submissions"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,8 +42,6 @@ type blockingSubmissionsRepo struct {
 	SubmissionsRepo
 	repo *scoreboardRepo
 }
-
-func (r *blockingSubmissionsRepo) WithTx(pgx.Tx) SubmissionsRepo { return r }
 
 func (r *blockingSubmissionsRepo) GetSubmission(_ context.Context, id uuid.UUID) (submissionsmodel.Submission, error) {
 	sub, ok := r.repo.submissions[id]
@@ -74,15 +72,17 @@ func (r *blockingSubmissionsRepo) BlockSubmission(_ context.Context, id uuid.UUI
 	return nil
 }
 
-func (r *blockingSubmissionsRepo) BlockUserProblemSubmissions(ctx context.Context, contest, user, problem uuid.UUID, reason *string) error {
+func (r *blockingSubmissionsRepo) BlockUserProblemSubmissions(ctx context.Context, contest, user, problem uuid.UUID, reason *string) ([]submissionsmodel.SubmissionReset, error) {
+	var changed []submissionsmodel.SubmissionReset
 	for id, sub := range r.repo.submissions {
 		if sub.ContestID != nil && *sub.ContestID == contest && sub.CreatedBy != nil && *sub.CreatedBy == user && sub.ProblemID != nil && *sub.ProblemID == problem {
+			changed = append(changed, submissionsmodel.SubmissionReset{ID: id, PreviousState: sub.State})
 			if err := r.BlockSubmission(ctx, id, reason); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
-	return nil
+	return changed, nil
 }
 
 func (r *blockingSubmissionsRepo) ResetSubmissionsState(_ context.Context, filter submissionsmodel.RejudgeFilter) ([]submissionsmodel.SubmissionReset, error) {
@@ -104,8 +104,6 @@ type blockingOutbox struct {
 	OutboxRepo
 	events []eventdata.CreateOutboxEventParams
 }
-
-func (r *blockingOutbox) WithTx(pgx.Tx) OutboxRepo { return r }
 
 func (r *blockingOutbox) CreateEvent(_ context.Context, p *eventdata.CreateOutboxEventParams) error {
 	r.events = append(r.events, *p)
@@ -165,7 +163,11 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 	bob := f.submit(t, "bob", 0, submissionsmodel.Accepted, 20*time.Minute)
 	other := f.submit(t, "alice", 1, submissionsmodel.Accepted, 30*time.Minute)
 	repo, outbox := &blockingSubmissionsRepo{repo: f.repo}, &blockingOutbox{}
-	f.uc = contests.NewContestsUseCase(f.repo, nil, repo)
+	f.uc = contests.NewContestsUseCase(f.repo, nil, contestCommandTransactions{struct {
+		*scoreboardRepo
+		*blockingSubmissionsRepo
+		OutboxRepo
+	}{f.repo, repo, outbox}})
 	uc := submissions.NewSubmissionsUseCase(repo, f.uc, blockingProblems{}, blockingTransactor{struct {
 		*blockingSubmissionsRepo
 		OutboxRepo
@@ -192,7 +194,12 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, submissionsmodel.Disqualified, blocked.State)
 	require.Equal(t, &reason, blocked.BanReason)
-	require.Empty(t, outbox.events)
+	require.Len(t, outbox.events, 3)
+	require.Equal(t, eventdata.OutboxEventSubmissionCompleted, outbox.events[0].EventType)
+	require.Equal(t, eventdata.OutboxEventSubmissionCreated, outbox.events[1].EventType)
+	require.Equal(t, blockedID, outbox.events[1].AggregateID)
+	require.Equal(t, eventdata.OutboxEventSubmissionCompleted, outbox.events[2].EventType)
+	require.Equal(t, blockedID, outbox.events[2].AggregateID)
 	require.NoError(t, f.uc.UnblockProblemForUser(ctx, contest, user, problem, false))
 	block, err := f.uc.GetProblemBlockStatusForUser(ctx, contest, user, problem)
 	require.NoError(t, err)
@@ -203,8 +210,8 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 	allowed, err := uc.GetSubmission(ctx, allowedID)
 	require.NoError(t, err)
 	require.Equal(t, submissionsmodel.Saved, allowed.State)
-	require.Len(t, outbox.events, 1)
-	require.Equal(t, allowedID, outbox.events[0].AggregateID)
+	require.Len(t, outbox.events, 4)
+	require.Equal(t, allowedID, outbox.events[3].AggregateID)
 }
 
 func (r *blockingOutbox) Record(ctx context.Context, event eventdata.Event) error {
@@ -215,8 +222,14 @@ func (r *blockingOutbox) Record(ctx context.Context, event eventdata.Event) erro
 	return r.CreateEvent(ctx, &eventdata.CreateOutboxEventParams{Id: uuid.New(), AggregateID: event.AggregateID, EventType: event.Type, Payload: data})
 }
 
-func (r *blockingSubmissionsRepo) ScheduleJob(_ context.Context, id uuid.UUID) (judging.Job, error) {
-	return judging.Job{ID: uuid.New(), SubmissionID: id, Generation: 1}, nil
+func (r *blockingSubmissionsRepo) ScheduleJob(_ context.Context, id uuid.UUID) (judgingmodel.Job, error) {
+	return judgingmodel.Job{ID: uuid.New(), SubmissionID: id, Generation: 1}, nil
 }
 
 func (*blockingSubmissionsRepo) LockContest(context.Context, uuid.UUID) error { return nil }
+
+type contestCommandTransactions struct{ store contests.CommandTxStore }
+
+func (t contestCommandTransactions) Within(_ context.Context, fn func(contests.CommandTxStore) error) error {
+	return fn(t.store)
+}

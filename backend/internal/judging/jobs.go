@@ -3,7 +3,8 @@ package judging
 import (
 	"context"
 	"errors"
-	"time"
+
+	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
@@ -13,21 +14,10 @@ var ErrBusy = errors.New("judge job is active")
 
 var ErrLeaseLost = errors.New("judge job lease lost")
 
-type Job struct {
-	ID           uuid.UUID
-	SubmissionID uuid.UUID
-	Generation   int64
-	PackageID    *uuid.UUID
-	PackageHash  string
-	Attempt      int32
-	LeaseToken   uuid.UUID
-	Deadline     time.Time
-}
-
 type Jobs interface {
-	Claim(context.Context, uuid.UUID) (Job, error)
-	Renew(context.Context, Job) error
-	Release(context.Context, Job) error
+	Claim(context.Context, uuid.UUID) (judgingmodel.Job, error)
+	Renew(context.Context, judgingmodel.Job) error
+	Release(context.Context, judgingmodel.Job) error
 }
 
 type Progress interface {

@@ -8,7 +8,6 @@ import (
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 type mockEmailService struct {
@@ -164,8 +163,4 @@ func (m *mockUsersRepoForTemp) ClaimTemporaryUser(ctx context.Context, id, claim
 	m.usersByName[u.Username] = u
 	m.claimedUsers[claimedByUserID] = append(m.claimedUsers[claimedByUserID], u)
 	return nil
-}
-
-func (m *mockUsersRepoForTemp) WithTx(tx pgx.Tx) UsersRepo {
-	return m
 }

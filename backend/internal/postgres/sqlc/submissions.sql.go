@@ -36,16 +36,21 @@ func (q *Queries) BlockSubmission(ctx context.Context, arg BlockSubmissionParams
 	return err
 }
 
-const blockUserProblemSubmissions = `-- name: BlockUserProblemSubmissions :exec
+const blockUserProblemSubmissions = `-- name: BlockUserProblemSubmissions :many
 WITH version AS (
-  UPDATE contests SET submissions_revision = submissions_revision + 1
-  WHERE id = $2::uuid
-  RETURNING submissions_revision
+ UPDATE contests SET submissions_revision = submissions_revision + 1
+ WHERE id = $2::uuid RETURNING submissions_revision
+), previous AS (
+ SELECT s.id, s.state, v.submissions_revision
+ FROM submissions s CROSS JOIN version v
+ WHERE contest_id = $2::uuid AND owner_id = $3::uuid AND problem_id = $4::uuid
+ FOR UPDATE OF s
 )
-UPDATE submissions
-SET generation = generation + 1, state = 300, score = 0, ban_reason = $1,
-    updated_at = NOW(), revision = (SELECT submissions_revision FROM version)
-WHERE contest_id = $2::uuid AND owner_id = $3::uuid AND problem_id = $4::uuid
+UPDATE submissions s
+SET generation = s.generation + 1, state = 300, score = 0, ban_reason = $1,
+ updated_at = NOW(), revision = previous.submissions_revision
+FROM previous WHERE s.id = previous.id
+RETURNING s.id, previous.state AS previous_state, s.revision
 `
 
 type BlockUserProblemSubmissionsParams struct {
@@ -55,14 +60,35 @@ type BlockUserProblemSubmissionsParams struct {
 	ProblemID uuid.UUID `json:"problem_id"`
 }
 
-func (q *Queries) BlockUserProblemSubmissions(ctx context.Context, arg BlockUserProblemSubmissionsParams) error {
-	_, err := q.db.Exec(ctx, blockUserProblemSubmissions,
+type BlockUserProblemSubmissionsRow struct {
+	ID            uuid.UUID `json:"id"`
+	PreviousState int32     `json:"previous_state"`
+	Revision      int64     `json:"revision"`
+}
+
+func (q *Queries) BlockUserProblemSubmissions(ctx context.Context, arg BlockUserProblemSubmissionsParams) ([]BlockUserProblemSubmissionsRow, error) {
+	rows, err := q.db.Query(ctx, blockUserProblemSubmissions,
 		arg.BanReason,
 		arg.ContestID,
 		arg.OwnerID,
 		arg.ProblemID,
 	)
-	return err
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BlockUserProblemSubmissionsRow{}
+	for rows.Next() {
+		var i BlockUserProblemSubmissionsRow
+		if err := rows.Scan(&i.ID, &i.PreviousState, &i.Revision); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const countSubmissions = `-- name: CountSubmissions :one

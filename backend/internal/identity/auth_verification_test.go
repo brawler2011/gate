@@ -9,7 +9,6 @@ import (
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -316,10 +315,6 @@ func (m *fullMockUsersRepo) UpdateUser(ctx context.Context, params identitymodel
 	}
 	m.users[u.Id] = u
 	return nil
-}
-
-func (m *fullMockUsersRepo) WithTx(tx pgx.Tx) UsersRepo {
-	return m
 }
 
 func TestRegistrationAndEmailVerification(t *testing.T) {

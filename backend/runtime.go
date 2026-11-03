@@ -177,7 +177,7 @@ func runApp(envFile string) error {
 	avatarsUC := identity.NewAvatarsUseCase(usersRepo, store, defaultS3AvatarBucket)
 	problemImportUC := problems.NewProblemImportUseCase(problemsRepo, workspaceStorage)
 	problemsUC := problems.NewProblemsUseCase(problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(pool), orgsRepo)
-	contestsUC := contests.NewContestsUseCase(contestsRepo, orgsRepo, submissionsRepo)
+	contestsUC := contests.NewContestsUseCase(contestsRepo, orgsRepo, pgstore.NewContestCommandTransactions(pool))
 	contestsUC.SetNotificationsUC(notificationsUC)
 	contestsUC.SetUsersRepo(usersRepo)
 	blogsUC := blogs.NewBlogsUseCase(blogsRepo, store, defaultS3BlogBucket)

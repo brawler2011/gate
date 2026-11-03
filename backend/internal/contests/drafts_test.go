@@ -9,7 +9,6 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 type mockDraftsRepo struct {
@@ -59,10 +58,6 @@ func (m *mockDraftsRepo) DeleteDraft(ctx context.Context, id uuid.UUID) error {
 	}
 	delete(m.drafts, id)
 	return nil
-}
-
-func (m *mockDraftsRepo) WithTx(tx pgx.Tx) DraftsRepo {
-	return m
 }
 
 func TestDraftsUseCase_Validation(t *testing.T) {

@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
@@ -64,7 +66,7 @@ func (s *IntegrationTestSuite) TestJudgeJobsFenceDuplicateLeasesAndGenerations()
 	_, err = jobs.ScheduleJob(s.ctx, sub)
 	s.Require().Error(err, "one job per generation")
 	var wg sync.WaitGroup
-	claims := make(chan judging.Job, 2)
+	claims := make(chan judgingmodel.Job, 2)
 	failures := make(chan error, 2)
 	for range 2 {
 		wg.Go(func() { job, err := jobs.Claim(s.ctx, sub); claims <- job; failures <- err })
@@ -72,7 +74,7 @@ func (s *IntegrationTestSuite) TestJudgeJobsFenceDuplicateLeasesAndGenerations()
 	wg.Wait()
 	close(claims)
 	close(failures)
-	var active judging.Job
+	var active judgingmodel.Job
 	for job := range claims {
 		if job.ID != uuid.Nil {
 			active = job

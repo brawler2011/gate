@@ -11,7 +11,6 @@ import (
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -91,10 +90,6 @@ func (m *mockContestsRepo) AddContestMemberIfNotExists(ctx context.Context, cont
 	return nil
 }
 
-func (m *mockContestsRepo) WithTx(tx pgx.Tx) ContestsRepo {
-	return m
-}
-
 type mockOrgsRepo struct {
 	OrganizationsRepo
 	members       map[string]organizationsmodel.OrganizationMember // key: orgID:userID
@@ -106,10 +101,6 @@ func newMockOrgsRepo() *mockOrgsRepo {
 		members:       make(map[string]organizationsmodel.OrganizationMember),
 		organizations: make(map[string]organizationsmodel.Organization),
 	}
-}
-
-func (m *mockOrgsRepo) WithTx(tx pgx.Tx) OrganizationsRepo {
-	return m
 }
 
 func (m *mockOrgsRepo) GetMember(ctx context.Context, orgID, userID uuid.UUID) (*organizationsmodel.OrganizationMember, error) {

@@ -95,3 +95,14 @@ func NewJudgeTransactions(pool *pgxpool.Pool) judging.JudgeTransactions {
 		}{&JudgeJobs{q}, &SubmissionsRepo{queries: q}, &ContestsRepo{queries: q}, &OutboxRepo{queries: q}}
 	}}
 }
+
+func NewContestCommandTransactions(pool *pgxpool.Pool) contests.CommandTransactions {
+	return transactions[contests.CommandTxStore]{pool: pool, bind: func(q *sqlc.Queries) contests.CommandTxStore {
+		return struct {
+			*ContestsRepo
+			*SubmissionsRepo
+			*JudgeJobs
+			*OutboxRepo
+		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}}
+	}}
+}
