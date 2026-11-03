@@ -195,22 +195,6 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 
 	// Handle is_template update
 	if req.IsTemplate.IsSet() {
-		if req.IsTemplate.Value {
-			pkgs, err := h.publishUC.ListPackages(ctx, params.ID)
-			if err != nil {
-				return err
-			}
-			hasReady := false
-			for _, p := range pkgs {
-				if p.Status == "ready" {
-					hasReady = true
-					break
-				}
-			}
-			if !hasReady {
-				return pkg.Wrap(pkg.ErrBadInput, nil, "для перевода задачи в шаблон необходим хотя бы один успешно собранный пакет")
-			}
-		}
 		update.IsTemplate = &req.IsTemplate.Value
 	}
 

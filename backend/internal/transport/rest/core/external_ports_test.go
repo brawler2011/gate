@@ -61,14 +61,10 @@ type PermissionsUC interface {
 
 type ProblemsUC interface {
 	CreateProblem(ctx context.Context, input *problemsmodel.CreateProblemInput) (uuid.UUID, error)
-	CreateProblemTests(ctx context.Context, problemId uuid.UUID, tests []problemsmodel.ProblemTest) error
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
-	DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error
 	GetProblemById(ctx context.Context, id uuid.UUID) (problemsmodel.Problem, error)
 	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (problemsmodel.ProblemMember, error)
-	GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemsmodel.ProblemTest, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error
-	UploadProblemTests(ctx context.Context, problemId uuid.UUID, zipData []byte) error
 
 	AddProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission problemsmodel.ProblemPermission) error
 	UpdateProblemTeamPermission(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission problemsmodel.ProblemPermission) error

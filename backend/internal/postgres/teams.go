@@ -44,7 +44,7 @@ func (r *TeamsRepo) CreateTeam(ctx context.Context, input *organizationsmodel.Cr
 		ParentTeamID:   nullableUUIDToPgtype(input.ParentTeamID),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create team: %w", err)
+		return nil, fmt.Errorf("failed to create team: %w", HandlePgErr(err))
 	}
 
 	return &organizationsmodel.Team{
@@ -63,7 +63,7 @@ func (r *TeamsRepo) CreateTeam(ctx context.Context, input *organizationsmodel.Cr
 func (r *TeamsRepo) GetTeamByID(ctx context.Context, id uuid.UUID) (*organizationsmodel.Team, error) {
 	team, err := r.q.GetTeamByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get team by ID: %w", err)
+		return nil, fmt.Errorf("failed to get team by ID: %w", HandlePgErr(err))
 	}
 
 	return &organizationsmodel.Team{
@@ -85,7 +85,7 @@ func (r *TeamsRepo) GetTeamBySlug(ctx context.Context, orgID uuid.UUID, slug str
 		Slug:           slug,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get team by slug: %w", err)
+		return nil, fmt.Errorf("failed to get team by slug: %w", HandlePgErr(err))
 	}
 
 	return &organizationsmodel.Team{
@@ -104,7 +104,7 @@ func (r *TeamsRepo) GetTeamBySlug(ctx context.Context, orgID uuid.UUID, slug str
 func (r *TeamsRepo) ListOrganizationTeams(ctx context.Context, orgID uuid.UUID) ([]organizationsmodel.Team, error) {
 	teams, err := r.q.ListOrganizationTeams(ctx, orgID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list organization teams: %w", err)
+		return nil, fmt.Errorf("failed to list organization teams: %w", HandlePgErr(err))
 	}
 
 	result := make([]organizationsmodel.Team, len(teams))
@@ -142,7 +142,7 @@ func (r *TeamsRepo) UpdateTeam(ctx context.Context, id uuid.UUID, input *organiz
 	}
 
 	if err := r.q.UpdateTeam(ctx, params); err != nil {
-		return fmt.Errorf("failed to update team: %w", err)
+		return fmt.Errorf("failed to update team: %w", HandlePgErr(err))
 	}
 
 	return nil
@@ -150,7 +150,7 @@ func (r *TeamsRepo) UpdateTeam(ctx context.Context, id uuid.UUID, input *organiz
 
 func (r *TeamsRepo) DeleteTeam(ctx context.Context, id uuid.UUID) error {
 	if err := r.q.DeleteTeam(ctx, id); err != nil {
-		return fmt.Errorf("failed to delete team: %w", err)
+		return fmt.Errorf("failed to delete team: %w", HandlePgErr(err))
 	}
 	return nil
 }
@@ -161,7 +161,7 @@ func (r *TeamsRepo) AddTeamMember(ctx context.Context, teamID, userID uuid.UUID,
 		UserID: userID,
 		Role:   sqlc.TeamRole(role),
 	}); err != nil {
-		return fmt.Errorf("failed to add team member: %w", err)
+		return fmt.Errorf("failed to add team member: %w", HandlePgErr(err))
 	}
 	return nil
 }
@@ -172,7 +172,7 @@ func (r *TeamsRepo) GetTeamMember(ctx context.Context, teamID, userID uuid.UUID)
 		UserID: userID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get team member: %w", err)
+		return nil, fmt.Errorf("failed to get team member: %w", HandlePgErr(err))
 	}
 
 	return &organizationsmodel.TeamMember{
@@ -186,7 +186,7 @@ func (r *TeamsRepo) GetTeamMember(ctx context.Context, teamID, userID uuid.UUID)
 func (r *TeamsRepo) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]organizationsmodel.TeamMember, error) {
 	members, err := r.q.ListTeamMembers(ctx, teamID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list team members: %w", err)
+		return nil, fmt.Errorf("failed to list team members: %w", HandlePgErr(err))
 	}
 
 	result := make([]organizationsmodel.TeamMember, len(members))
@@ -214,7 +214,7 @@ func (r *TeamsRepo) UpdateTeamMemberRole(ctx context.Context, teamID, userID uui
 		UserID: userID,
 		Role:   sqlc.TeamRole(role),
 	}); err != nil {
-		return fmt.Errorf("failed to update team member role: %w", err)
+		return fmt.Errorf("failed to update team member role: %w", HandlePgErr(err))
 	}
 	return nil
 }
@@ -224,7 +224,7 @@ func (r *TeamsRepo) RemoveTeamMember(ctx context.Context, teamID, userID uuid.UU
 		TeamID: teamID,
 		UserID: userID,
 	}); err != nil {
-		return fmt.Errorf("failed to remove team member: %w", err)
+		return fmt.Errorf("failed to remove team member: %w", HandlePgErr(err))
 	}
 	return nil
 }
@@ -232,7 +232,7 @@ func (r *TeamsRepo) RemoveTeamMember(ctx context.Context, teamID, userID uuid.UU
 func (r *TeamsRepo) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]organizationsmodel.Team, error) {
 	teams, err := r.q.GetUserTeams(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user teams: %w", err)
+		return nil, fmt.Errorf("failed to get user teams: %w", HandlePgErr(err))
 	}
 
 	result := make([]organizationsmodel.Team, len(teams))
@@ -259,7 +259,7 @@ func (r *TeamsRepo) GetUserTeamsByOrganization(ctx context.Context, userID, orgI
 		OrganizationID: orgID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user teams by organization: %w", err)
+		return nil, fmt.Errorf("failed to get user teams by organization: %w", HandlePgErr(err))
 	}
 
 	result := make([]organizationsmodel.Team, len(teams))
@@ -283,7 +283,7 @@ func (r *TeamsRepo) GetUserTeamsByOrganization(ctx context.Context, userID, orgI
 func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]contestsmodel.Contest, error) {
 	contests, err := r.q.GetTeamContests(ctx, teamID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get team contests: %w", err)
+		return nil, fmt.Errorf("failed to get team contests: %w", HandlePgErr(err))
 	}
 
 	result := make([]contestsmodel.Contest, len(contests))
@@ -308,7 +308,7 @@ func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]co
 func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID uuid.UUID) ([]problemsmodel.Problem, error) {
 	problems, err := r.q.GetTeamProblems(ctx, teamID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get team problems: %w", err)
+		return nil, fmt.Errorf("failed to get team problems: %w", HandlePgErr(err))
 	}
 
 	result := make([]problemsmodel.Problem, len(problems))

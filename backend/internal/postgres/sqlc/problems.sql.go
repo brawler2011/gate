@@ -215,6 +215,7 @@ func (q *Queries) GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemB
 const getProblemMember = `-- name: GetProblemMember :one
 SELECT problem_id, user_id, role, created_at FROM problem_members
 WHERE problem_id = $1 AND user_id = $2
+FOR SHARE
 `
 
 type GetProblemMemberParams struct {
@@ -454,6 +455,16 @@ func (q *Queries) ListProblemMembers(ctx context.Context, problemID uuid.UUID) (
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockProblem = `-- name: LockProblem :one
+SELECT id FROM problems WHERE id=$1 FOR UPDATE
+`
+
+func (q *Queries) LockProblem(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockProblem, id)
+	err := row.Scan(&id)
+	return id, err
 }
 
 const removeProblemMember = `-- name: RemoveProblemMember :exec

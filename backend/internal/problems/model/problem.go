@@ -161,12 +161,6 @@ type CreateProblemParams struct {
 	OwnerID        *uuid.UUID
 }
 
-type UpdateProblemInput struct {
-	Title      *string
-	Visibility *string
-	OwnerID    *uuid.UUID
-}
-
 type ProblemsFilter struct {
 	// ViewerID restricts rows to read access; nil is reserved for trusted internal lists.
 	ViewerID       *uuid.UUID
@@ -196,17 +190,6 @@ type CreateProblemMemberParams struct {
 	UserID    uuid.UUID
 	Role      ProblemRole
 }
-
-type ProblemTest struct {
-	ID        uuid.UUID
-	ProblemID uuid.UUID
-	Ordinal   int32
-	Input     string
-	Output    string
-	IsSample  bool
-}
-
-type ProblemTests []ProblemTest
 
 // WorkspaceMetadata is the searchable catalog entry extracted from problem.yaml.
 // Package readers always use the referenced GFMT archive.

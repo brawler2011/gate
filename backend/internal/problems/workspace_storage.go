@@ -56,50 +56,77 @@ func (w *WorkspaceStorage) withPackage(ctx context.Context, id uuid.UUID, fn fun
 	if pkg, ok := ctx.Value(key).(*workspacePackage); ok {
 		return fn(ctx, pkg)
 	}
+	pkg, err := w.loadPackage(ctx, id)
+	if err != nil {
+		return err
+	}
+	return w.updatePackage(ctx, id, pkg, fn)
+}
+
+func (w *WorkspaceStorage) loadPackage(ctx context.Context, id uuid.UUID) (*workspacePackage, error) {
 	pkg := &workspacePackage{files: make(map[string][]byte)}
 	hash, err := w.repo.GetWorkspaceHash(ctx, id)
 	if err != nil {
-		return fmt.Errorf("read workspace reference: %w", err)
+		return nil, fmt.Errorf("read workspace reference: %w", err)
 	}
 	pkg.hash = hash
 	if hash != "" {
 		reader, _, err := w.storage.DownloadFile(ctx, w.bucket, w.getWorkspaceKey(id, hash), nil)
 		if err != nil {
-			return fmt.Errorf("read workspace package: %w", err)
+			return nil, fmt.Errorf("read workspace package: %w", err)
 		}
 
 		data, readErr := io.ReadAll(reader)
 		closeErr := reader.Close()
 		if err := errors.Join(readErr, closeErr); err != nil {
-			return fmt.Errorf("read workspace package: %w", err)
+			return nil, fmt.Errorf("read workspace package: %w", err)
 		}
 		archive, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 		if err != nil {
-			return fmt.Errorf("open workspace package: %w", err)
+			return nil, fmt.Errorf("open workspace package: %w", err)
 		}
 		for _, file := range archive.File {
 			if file.FileInfo().IsDir() {
 				continue
 			}
 			if !fs.ValidPath(file.Name) || file.Mode()&fs.ModeSymlink != 0 {
-				return fmt.Errorf("invalid package path %q", file.Name)
+				return nil, fmt.Errorf("invalid package path %q", file.Name)
 			}
 			content, err := file.Open()
 			if err != nil {
-				return fmt.Errorf("open package file %s: %w", file.Name, err)
+				return nil, fmt.Errorf("open package file %s: %w", file.Name, err)
 			}
 			data, readErr := io.ReadAll(io.LimitReader(content, 500*1024*1024+1))
 			closeErr := content.Close()
 			if err := errors.Join(readErr, closeErr); err != nil {
-				return err
+				return nil, err
 			}
 			if len(data) > 500*1024*1024 {
-				return fmt.Errorf("package file too large: %s", file.Name)
+				return nil, fmt.Errorf("package file too large: %s", file.Name)
 			}
 			pkg.files[file.Name] = data
 		}
 	}
-	return w.updatePackage(ctx, id, pkg, fn)
+	return pkg, nil
+}
+
+// prepareChange uploads an immutable candidate without changing the database reference.
+func (w *WorkspaceStorage) prepareChange(ctx context.Context, id uuid.UUID, fn func(context.Context) error) (string, *workspaceVersion, error) {
+	current, err := w.loadPackage(ctx, id)
+	if err != nil {
+		return "", nil, err
+	}
+	if err := fn(context.WithValue(ctx, workspacePackageKey{w, id}, current)); err != nil {
+		return "", nil, err
+	}
+	if !current.dirty {
+		return current.hash, nil, nil
+	}
+	version, err := w.uploadPackage(ctx, id, current)
+	if err != nil {
+		return "", nil, err
+	}
+	return current.hash, &version, nil
 }
 
 // Replacement imports need only the current reference, so a complete valid

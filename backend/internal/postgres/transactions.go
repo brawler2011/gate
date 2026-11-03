@@ -45,7 +45,12 @@ func NewTeamTransactions(pool *pgxpool.Pool) organizations.TeamTransactions {
 
 func NewProblemTransactions(pool *pgxpool.Pool) problems.ProblemTransactions {
 	return transactions[problems.ProblemTxStore]{pool: pool, bind: func(q *sqlc.Queries) problems.ProblemTxStore {
-		return struct{ *ProblemsRepo }{&ProblemsRepo{queries: q}}
+		return struct {
+			*ProblemsRepo
+			*OrganizationsRepo
+			*authorization
+			*PackagesRepo
+		}{&ProblemsRepo{queries: q}, &OrganizationsRepo{q: q}, bindAuthorization(q), &PackagesRepo{queries: q}}
 	}}
 }
 

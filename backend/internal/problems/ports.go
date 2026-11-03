@@ -28,20 +28,8 @@ type PackagesRepo interface {
 }
 
 type ProblemsRepo interface {
-	CreateProblemMember(ctx context.Context, params *problemsmodel.CreateProblemMemberParams) error
-	CreateProblemTests(ctx context.Context, tests problemsmodel.ProblemTests) error
-	DeleteProblem(ctx context.Context, id uuid.UUID) error
-	DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error
 	GetProblemById(ctx context.Context, id uuid.UUID) (problemsmodel.Problem, error)
-	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (problemsmodel.ProblemMember, error)
-	GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemsmodel.ProblemTest, error)
 
-	AddProblemTeam(ctx context.Context, problemID, teamID uuid.UUID, permission problemsmodel.ProblemPermission) error
-	UpdateProblemTeamPermission(ctx context.Context, problemID, teamID uuid.UUID, permission problemsmodel.ProblemPermission) error
-	RemoveProblemTeam(ctx context.Context, problemID, teamID uuid.UUID) error
-	UpdateProblemMemberRole(ctx context.Context, problemID, userID uuid.UUID, role problemsmodel.ProblemRole) error
-	RemoveProblemMember(ctx context.Context, problemID, userID uuid.UUID) error
-	UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error
 	WorkspaceRepo
 }
 

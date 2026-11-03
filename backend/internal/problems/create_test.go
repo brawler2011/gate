@@ -43,6 +43,7 @@ func (s *creationStorage) UploadFile(_ context.Context, _, _ string, reader io.R
 }
 
 type creationTransactions struct {
+	ProblemTxStore
 	active, called bool
 	object         *creationStorage
 	owner          bool
@@ -80,7 +81,7 @@ func TestProblemCreationUploadsBeforeAtomicCatalogWrites(t *testing.T) {
 			object := &creationStorage{active: &tx.active, failure: failure}
 			tx.object = object
 			workspace := NewWorkspaceStorage(object, "workspace", nil)
-			uc := NewProblemsUseCase(creationCatalog{}, workspace, tx, nil)
+			uc := NewProblemsUseCase(creationCatalog{}, workspace, tx, nil, nil)
 			user := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 			id, err := uc.CreateProblem(accessmodel.WithUser(context.Background(), user), &problemsmodel.CreateProblemInput{OrganizationID: uuid.New(), Title: "New task", TemplateID: "builtin:a-plus-b"})
 			if failure != nil {

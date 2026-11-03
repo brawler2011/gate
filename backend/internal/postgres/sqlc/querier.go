@@ -190,6 +190,7 @@ type Querier interface {
 	LockContest(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	LockJudgeContest(ctx context.Context, submissionID uuid.UUID) (uuid.UUID, error)
 	LockOrganization(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
+	LockProblem(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	LockTeam(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	LockUser(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	MarkAllNotificationsAsRead(ctx context.Context, userID uuid.UUID) error

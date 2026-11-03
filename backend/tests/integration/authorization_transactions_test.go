@@ -98,7 +98,7 @@ func (s *IntegrationTestSuite) TestOrganizationAndTeamCommandsRecheckPermissions
 	org := s.createOrganization("org-permission", "Original", owner.Id)
 	ctx := accessmodel.WithUser(s.ctx, owner)
 	teams := pgstore.NewTeamsRepo(s.dbPool)
-	team, err := teams.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{OrganizationID: org.ID, Name: "Original"})
+	team, err := teams.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{OrganizationID: org.ID, Name: "Original", Slug: "original", Privacy: organizationsmodel.TeamPrivacyClosed})
 	s.Require().NoError(err)
 	_, err = s.dbPool.Exec(s.ctx, `UPDATE organization_members SET role='member' WHERE organization_id=$1 AND user_id=$2`, org.ID, owner.Id)
 	s.Require().NoError(err)

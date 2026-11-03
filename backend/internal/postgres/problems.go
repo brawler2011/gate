@@ -130,21 +130,6 @@ func (r *ProblemsRepo) GetProblemMember(ctx context.Context, problemId uuid.UUID
 	return mapProblemMember(row), nil
 }
 
-func (r *ProblemsRepo) DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error {
-	// Tests are now in git repos, not in database
-	return nil
-}
-
-func (r *ProblemsRepo) CreateProblemTests(ctx context.Context, tests problemsmodel.ProblemTests) error {
-	// Tests are now in git repos, not in database
-	return nil
-}
-
-func (r *ProblemsRepo) GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemsmodel.ProblemTest, error) {
-	// Tests are now in git repos, not in database
-	return []problemsmodel.ProblemTest{}, nil
-}
-
 func (r *ProblemsRepo) GetProblemTeams(ctx context.Context, problemId uuid.UUID) ([]problemsmodel.ProblemTeam, error) {
 	rows, err := r.queries.ListProblemTeams(ctx, problemId)
 	if err != nil {
@@ -367,4 +352,9 @@ func mapDashboardProblem(row sqlc.ListDashboardProblemsRow) problemsmodel.Dashbo
 		MemoryLimitMb:     int(row.MemoryLimitMb),
 		UpdatedAt:         row.UpdatedAt,
 	}
+}
+
+func (r *ProblemsRepo) LockProblem(ctx context.Context, id uuid.UUID) error {
+	_, err := r.queries.LockProblem(ctx, id)
+	return HandlePgErr(err)
 }

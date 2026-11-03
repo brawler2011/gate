@@ -48,12 +48,9 @@ type OrganizationsRepo interface {
 type ProblemsRepo interface {
 	CreateProblem(ctx context.Context, params *problemsmodel.CreateProblemParams) error
 	CreateProblemMember(ctx context.Context, params *problemsmodel.CreateProblemMemberParams) error
-	CreateProblemTests(ctx context.Context, tests problemsmodel.ProblemTests) error
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
-	DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error
 	GetProblemById(ctx context.Context, id uuid.UUID) (problemsmodel.Problem, error)
 	GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (problemsmodel.ProblemMember, error)
-	GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemsmodel.ProblemTest, error)
 	GetProblemTeams(ctx context.Context, problemId uuid.UUID) ([]problemsmodel.ProblemTeam, error)
 	AddProblemTeam(ctx context.Context, problemID, teamID uuid.UUID, permission problemsmodel.ProblemPermission) error
 	UpdateProblemTeamPermission(ctx context.Context, problemID, teamID uuid.UUID, permission problemsmodel.ProblemPermission) error

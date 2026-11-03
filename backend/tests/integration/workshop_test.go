@@ -405,15 +405,7 @@ func (m *mockProblemsRepo) CreateProblemMember(_ context.Context, _ *problemsmod
 	return nil
 }
 
-func (m *mockProblemsRepo) CreateProblemTests(_ context.Context, _ problemsmodel.ProblemTests) error {
-	return nil
-}
-
 func (m *mockProblemsRepo) DeleteProblem(_ context.Context, _ uuid.UUID) error {
-	return nil
-}
-
-func (m *mockProblemsRepo) DeleteProblemTests(_ context.Context, _ uuid.UUID) error {
 	return nil
 }
 
@@ -426,10 +418,6 @@ func (m *mockProblemsRepo) GetProblemById(_ context.Context, id uuid.UUID) (prob
 
 func (m *mockProblemsRepo) GetProblemMember(_ context.Context, _, _ uuid.UUID) (problemsmodel.ProblemMember, error) {
 	return problemsmodel.ProblemMember{}, nil
-}
-
-func (m *mockProblemsRepo) GetProblemTests(_ context.Context, _ uuid.UUID) ([]problemsmodel.ProblemTest, error) {
-	return nil, nil
 }
 
 func (m *mockProblemsRepo) GetProblemTeams(_ context.Context, _ uuid.UUID) ([]problemsmodel.ProblemTeam, error) {

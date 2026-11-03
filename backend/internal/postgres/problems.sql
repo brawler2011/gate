@@ -87,7 +87,8 @@ VALUES ($1, $2, $3);
 
 -- name: GetProblemMember :one
 SELECT * FROM problem_members
-WHERE problem_id = $1 AND user_id = $2;
+WHERE problem_id = $1 AND user_id = $2
+FOR SHARE;
 
 -- name: ListProblemMembers :many
 SELECT pm.*, u.username, u.email
@@ -136,3 +137,6 @@ WHERE p.owner_id = $1 OR pm.user_id = $1
 GROUP BY p.id, o.id
 ORDER BY p.updated_at DESC
 LIMIT $2;
+
+-- name: LockProblem :one
+SELECT id FROM problems WHERE id=$1 FOR UPDATE;

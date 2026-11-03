@@ -1,32 +1,16 @@
 package problems
 
 import (
-	"archive/zip"
-	"bytes"
 	"context"
 	"errors"
-	"io"
-	"math"
-	"path/filepath"
-	"sort"
-	"strconv"
-	"strings"
+
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 )
-
-func safeInt32[T ~int | ~int64](v T) int32 {
-	if int64(v) > math.MaxInt32 {
-		return math.MaxInt32
-	}
-	if int64(v) < math.MinInt32 {
-		return math.MinInt32
-	}
-	return int32(v)
-}
 
 type ProblemsUseCase struct {
 	repo         ProblemsRepo
@@ -36,11 +20,7 @@ type ProblemsUseCase struct {
 	templates    PackageTemplates
 }
 
-func NewProblemsUseCase(repo ProblemsRepo, workspace *WorkspaceStorage, transactions ProblemTransactions, templates PackageTemplates, orgsRepo ...OrganizationsRepo) *ProblemsUseCase {
-	var orgRepo OrganizationsRepo
-	if len(orgsRepo) > 0 {
-		orgRepo = orgsRepo[0]
-	}
+func NewProblemsUseCase(repo ProblemsRepo, workspace *WorkspaceStorage, transactions ProblemTransactions, templates PackageTemplates, orgRepo OrganizationsRepo) *ProblemsUseCase {
 	return &ProblemsUseCase{
 		repo:         repo,
 		workspace:    workspace,
@@ -55,8 +35,14 @@ func (uc *ProblemsUseCase) GetProblemById(ctx context.Context, id uuid.UUID) (pr
 }
 
 func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error {
+	if err := uc.withinProblem(ctx, id, accessmodel.ActionEditProblem, func(ProblemTxStore) error { return nil }); err != nil {
+		return err
+	}
+	var previous string
+	var version *workspaceVersion
 	if problem.Title != nil {
-		err := uc.workspace.withPackage(ctx, id, func(ctx context.Context, _ *workspacePackage) error {
+		var err error
+		previous, version, err = uc.workspace.prepareChange(ctx, id, func(ctx context.Context) error {
 			workshop := NewWorkshopUseCase(uc.workspace, nil)
 			config, err := workshop.readProblemConfig(ctx, id)
 			if errors.Is(err, storage.ErrNotFound) {
@@ -72,182 +58,113 @@ func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, prob
 			return err
 		}
 	}
-	if err := uc.repo.UpdateProblem(ctx, id, problem); err != nil {
-		return err
-	}
+	return uc.withinProblem(ctx, id, accessmodel.ActionEditProblem, func(tx ProblemTxStore) error {
+		if problem.IsTemplate != nil && *problem.IsTemplate {
+			if _, err := tx.GetReadyPackage(ctx, id); err != nil {
+				if errors.Is(err, pkg.ErrNotFound) {
+					return pkg.Wrap(pkg.ErrBadInput, err, "для перевода задачи в шаблон необходим хотя бы один успешно собранный пакет")
+				}
+				return err
+			}
+		}
 
-	return nil
+		if version != nil && version.hash != previous {
+			if err := tx.CommitWorkspace(ctx, id, previous, version.hash, version.metadata); err != nil {
+				return err
+			}
+		}
+		return tx.UpdateProblem(ctx, id, problem)
+	})
 }
 
 func (uc *ProblemsUseCase) DeleteProblem(ctx context.Context, id uuid.UUID) error {
-	return uc.repo.DeleteProblem(ctx, id)
-}
-
-func (uc *ProblemsUseCase) GetProblemMember(ctx context.Context, problemId uuid.UUID, userId uuid.UUID) (problemsmodel.ProblemMember, error) {
-	return uc.repo.GetProblemMember(ctx, problemId, userId)
-}
-
-func (uc *ProblemsUseCase) CreateProblemTests(ctx context.Context, problemId uuid.UUID, tests []problemsmodel.ProblemTest) error {
-	modelTests := make(problemsmodel.ProblemTests, len(tests))
-	for i, t := range tests {
-		modelTests[i] = problemsmodel.ProblemTest{
-			ID:        t.ID,
-			ProblemID: t.ProblemID,
-			Ordinal:   t.Ordinal,
-			Input:     t.Input,
-			Output:    t.Output,
-			IsSample:  t.IsSample,
-		}
-	}
-
-	err := uc.repo.CreateProblemTests(ctx, modelTests)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (uc *ProblemsUseCase) GetProblemTests(ctx context.Context, problemId uuid.UUID) ([]problemsmodel.ProblemTest, error) {
-	return uc.repo.GetProblemTests(ctx, problemId)
-}
-
-func (uc *ProblemsUseCase) DeleteProblemTests(ctx context.Context, problemId uuid.UUID) error {
-	return uc.repo.DeleteProblemTests(ctx, problemId)
-}
-
-func (uc *ProblemsUseCase) UploadProblemTests(ctx context.Context, problemId uuid.UUID, zipData []byte) error {
-	// Parse zip
-	reader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "failed to open zip file")
-	}
-
-	inputs := make(map[string]string)
-	outputs := make(map[string]string)
-
-	for _, file := range reader.File {
-		if file.FileInfo().IsDir() {
-			continue
-		}
-
-		name := file.Name
-		ext := filepath.Ext(name)
-		base := strings.TrimSuffix(name, ext)
-
-		// Read file content
-		f, err := file.Open()
-		if err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, err, "failed to read file in zip")
-		}
-		contentBytes, err := io.ReadAll(f)
-		f.Close()
-		if err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, err, "failed to read file content")
-		}
-		content := string(contentBytes)
-
-		// Normalize newlines? Maybe later.
-
-		if strings.HasSuffix(name, ".in") || strings.Contains(name, "input") {
-			// Extract number
-			numStr := extractNumber(base)
-			if numStr != "" {
-				inputs[numStr] = content
-			}
-		} else if strings.HasSuffix(name, ".out") || strings.HasSuffix(name, ".ans") || strings.Contains(name, "output") {
-			numStr := extractNumber(base)
-			if numStr != "" {
-				outputs[numStr] = content
-			}
-		}
-	}
-
-	var tests []problemsmodel.ProblemTest
-	for num, input := range inputs {
-		if output, ok := outputs[num]; ok {
-			ordinal, _ := strconv.ParseInt(num, 10, 32)
-			tests = append(tests, problemsmodel.ProblemTest{
-				ID:        uuid.New(),
-				ProblemID: problemId,
-				Ordinal:   int32(ordinal),
-				Input:     input,
-				Output:    output,
-			})
-		}
-	}
-
-	if len(tests) == 0 {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "no valid tests found in zip (pairs of input/output)")
-	}
-
-	// Sort by ordinal
-	sort.Slice(tests, func(i, j int) bool {
-		return tests[i].Ordinal < tests[j].Ordinal
-	})
-
-	// Re-assign ordinals to be sequential 1..N
-	for i := range tests {
-		tests[i].Ordinal = safeInt32(i + 1)
-	}
-
-	// Delete existing tests
-	if err := uc.DeleteProblemTests(ctx, problemId); err != nil {
-		return err
-	}
-
-	// Create new tests
-	return uc.CreateProblemTests(ctx, problemId, tests)
-}
-
-func extractNumber(s string) string {
-	// Extract numeric part from filename
-	// E.g. "input/test1" -> "1"
-	// "1" -> "1"
-	var numStr string
-	for _, r := range s {
-		if r >= '0' && r <= '9' {
-			numStr += string(r)
-		}
-	}
-	return numStr
+	return uc.withinProblem(ctx, id, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error { return tx.DeleteProblem(ctx, id) })
 }
 
 func (uc *ProblemsUseCase) AddProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission problemsmodel.ProblemPermission) error {
-	return uc.repo.AddProblemTeam(ctx, problemID, teamID, permission)
+	if accessmodel.UserFromContext(ctx).Id != requestUserID {
+		return pkg.NoPermission
+	}
+	return uc.withinProblem(ctx, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
+		return tx.AddProblemTeam(ctx, problemID, teamID, permission)
+	})
 }
 
 func (uc *ProblemsUseCase) UpdateProblemTeamPermission(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission problemsmodel.ProblemPermission) error {
-	return uc.repo.UpdateProblemTeamPermission(ctx, problemID, teamID, permission)
+	if accessmodel.UserFromContext(ctx).Id != requestUserID {
+		return pkg.NoPermission
+	}
+	return uc.withinProblem(ctx, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
+		return tx.UpdateProblemTeamPermission(ctx, problemID, teamID, permission)
+	})
 }
 
 func (uc *ProblemsUseCase) RemoveProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID) error {
-	return uc.repo.RemoveProblemTeam(ctx, problemID, teamID)
+	if accessmodel.UserFromContext(ctx).Id != requestUserID {
+		return pkg.NoPermission
+	}
+	return uc.withinProblem(ctx, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
+		return tx.RemoveProblemTeam(ctx, problemID, teamID)
+	})
 }
 
 func (uc *ProblemsUseCase) CreateProblemMember(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role problemsmodel.ProblemRole) error {
-	if uc.orgsRepo != nil {
-		problem, err := uc.repo.GetProblemById(ctx, problemID)
+	if accessmodel.UserFromContext(ctx).Id != requestUserID {
+		return pkg.NoPermission
+	}
+	return uc.withinProblem(ctx, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
+		problem, err := tx.GetProblemById(ctx, problemID)
 		if err != nil {
 			return err
 		}
-		_, err = uc.orgsRepo.GetMember(ctx, problem.OrganizationID, userID)
-		if err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "user must be a member of the organization")
+		if _, err := tx.GetMember(ctx, problem.OrganizationID, userID); err != nil {
+			return pkg.Wrap(pkg.ErrBadInput, err, "user must be a member of the organization")
 		}
-	}
-
-	return uc.repo.CreateProblemMember(ctx, &problemsmodel.CreateProblemMemberParams{
-		ProblemID: problemID,
-		UserID:    userID,
-		Role:      role,
+		return tx.CreateProblemMember(ctx, &problemsmodel.CreateProblemMemberParams{ProblemID: problemID, UserID: userID, Role: role})
 	})
 }
 
 func (uc *ProblemsUseCase) UpdateProblemMemberRole(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role problemsmodel.ProblemRole) error {
-	return uc.repo.UpdateProblemMemberRole(ctx, problemID, userID, role)
+	if accessmodel.UserFromContext(ctx).Id != requestUserID {
+		return pkg.NoPermission
+	}
+	return uc.withinProblem(ctx, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
+		return tx.UpdateProblemMemberRole(ctx, problemID, userID, role)
+	})
 }
 
 func (uc *ProblemsUseCase) RemoveProblemMember(ctx context.Context, problemID, userID, requestUserID uuid.UUID) error {
-	return uc.repo.RemoveProblemMember(ctx, problemID, userID)
+	if accessmodel.UserFromContext(ctx).Id != requestUserID {
+		return pkg.NoPermission
+	}
+	return uc.withinProblem(ctx, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
+		return tx.RemoveProblemMember(ctx, problemID, userID)
+	})
+}
+
+func (uc *ProblemsUseCase) withinProblem(ctx context.Context, id uuid.UUID, action accessmodel.ProblemAction, fn func(ProblemTxStore) error) error {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return pkg.ErrUnauthenticated
+	}
+	return uc.transactions.Within(ctx, func(tx ProblemTxStore) error {
+		problem, err := tx.GetProblemById(ctx, id)
+		if err != nil {
+			return err
+		}
+		if err := tx.LockOrganization(ctx, problem.OrganizationID); err != nil {
+			return err
+		}
+		if err := tx.LockProblem(ctx, id); err != nil {
+			return err
+		}
+		allowed, err := tx.HasProblemPermission(ctx, id, user.Id, action)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return pkg.NoPermission
+		}
+		return fn(tx)
+	})
 }
