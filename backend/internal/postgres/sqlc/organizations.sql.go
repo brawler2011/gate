@@ -311,6 +311,16 @@ func (q *Queries) ListOrganizations(ctx context.Context, arg ListOrganizationsPa
 	return items, nil
 }
 
+const lockOrganization = `-- name: LockOrganization :one
+SELECT id FROM organizations WHERE id = $1 FOR UPDATE
+`
+
+func (q *Queries) LockOrganization(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockOrganization, id)
+	err := row.Scan(&id)
+	return id, err
+}
+
 const removeContestMembersByOrgAndUser = `-- name: RemoveContestMembersByOrgAndUser :exec
 DELETE FROM contest_members
 WHERE user_id = $2

@@ -3,6 +3,8 @@ package identity
 import (
 	"context"
 
+	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
+
 	access "github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -21,6 +23,7 @@ func newMockContestsRepo() *mockContestsRepo {
 }
 
 type organizationTestStore struct {
+	*access.PermissionsUseCase
 	OrganizationsRepo
 	UsersRepo
 }
@@ -220,3 +223,9 @@ func (m *mockUsersUC) GetUserById(ctx context.Context, id uuid.UUID) (accessmode
 	}
 	return accessmodel.User{}, pkg.ErrNotFound
 }
+
+func (organizationTestStore) CreateNotification(context.Context, *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error) {
+	return nil, pkg.NotImplemented
+}
+
+func (organizationTestStore) LockOrganization(context.Context, uuid.UUID) error { return nil }

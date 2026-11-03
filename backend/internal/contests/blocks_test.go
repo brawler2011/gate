@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
+
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -256,4 +258,11 @@ func (*blockingSubmissionsRepo) HasOrganizationPermission(context.Context, uuid.
 
 func (*blockingSubmissionsRepo) GetMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationMember, error) {
 	return nil, pkg.ErrNotFound
+}
+
+func (*blockingSubmissionsRepo) CreateNotification(context.Context, *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error) {
+	return nil, pkg.NotImplemented
+}
+func (*blockingSubmissionsRepo) GetUserById(context.Context, uuid.UUID) (accessmodel.User, error) {
+	return accessmodel.User{}, pkg.NotImplemented
 }

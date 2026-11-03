@@ -74,7 +74,7 @@ type DraftsRepo interface {
 }
 
 type NotificationsUC interface {
-	Notify(ctx context.Context, input *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error)
+	SendEmail(context.Context, notificationsmodel.Notification)
 }
 
 type OrganizationsRepo interface {

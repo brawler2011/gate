@@ -65,7 +65,7 @@ func (m *mockNotificationsRepo) MarkAllAsRead(ctx context.Context, userID uuid.U
 	return nil
 }
 
-func TestNotificationsUseCase_NotifyAndRead(t *testing.T) {
+func TestNotificationsUseCase_EmailAndRead(t *testing.T) {
 	ctx := context.Background()
 	notifsRepo := newMockNotificationsRepo()
 	usersRepo := newMockUsersRepoForTemp()
@@ -85,7 +85,7 @@ func TestNotificationsUseCase_NotifyAndRead(t *testing.T) {
 
 	// Create in-app notification
 	link := "/org/settings"
-	notif, err := uc.Notify(ctx, &notificationsmodel.CreateNotificationInput{
+	notif, err := notifsRepo.CreateNotification(ctx, &notificationsmodel.CreateNotificationInput{
 		UserID: userID,
 		Type:   notificationsmodel.NotificationTypeOrgInvitation,
 		Title:  "Invite",
@@ -102,8 +102,10 @@ func TestNotificationsUseCase_NotifyAndRead(t *testing.T) {
 	assert.NotNil(t, notif)
 	assert.False(t, notif.IsRead)
 
+	uc.SendEmail(ctx, *notif)
+
 	// Mark as read
-	err = uc.MarkAsRead(ctx, notif.ID, userID)
+	err = uc.MarkAsRead(accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser}), notif.ID, userID)
 	require.NoError(t, err)
 	assert.True(t, notifsRepo.notifications[notif.ID].IsRead)
 }

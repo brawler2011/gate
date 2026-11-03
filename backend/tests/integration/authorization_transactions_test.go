@@ -9,6 +9,8 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	"github.com/brawler2011/gate/backend/internal/organizations"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/internal/submissions"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -82,4 +84,37 @@ func (s *IntegrationTestSuite) TestAuthorizationHoldsMembershipUntilCommit() {
 	close(release)
 	s.Require().NoError(<-finished)
 	s.Require().Error(err, "revocation must wait until the authorized command commits")
+}
+
+type optimisticOrganizationPermissions struct{}
+
+func (optimisticOrganizationPermissions) HasOrganizationPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.OrgAction) (bool, error) {
+	return true, nil
+}
+
+func (s *IntegrationTestSuite) TestOrganizationAndTeamCommandsRecheckPermissions() {
+	owner := s.createUser("org_permission_owner", accessmodel.UserRoleUser)
+	target := s.createUser("org_permission_target", accessmodel.UserRoleUser)
+	org := s.createOrganization("org-permission", "Original", owner.Id)
+	ctx := accessmodel.WithUser(s.ctx, owner)
+	teams := pgstore.NewTeamsRepo(s.dbPool)
+	team, err := teams.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{OrganizationID: org.ID, Name: "Original"})
+	s.Require().NoError(err)
+	_, err = s.dbPool.Exec(s.ctx, `UPDATE organization_members SET role='member' WHERE organization_id=$1 AND user_id=$2`, org.ID, owner.Id)
+	s.Require().NoError(err)
+	orgUC := organizations.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, optimisticOrganizationPermissions{}, pgstore.NewOrganizationTransactions(s.dbPool), nil)
+	name := "Denied"
+	s.ErrorIs(orgUC.UpdateOrganization(ctx, org.ID, owner.Id, &organizationsmodel.UpdateOrganizationInput{Name: &name}), pkg.NoPermission)
+	_, err = orgUC.InviteMember(ctx, org.Login, target.Id, organizationsmodel.OrgRoleMember, owner.Id)
+	s.ErrorIs(err, pkg.NoPermission)
+	teamUC := organizations.NewTeamsUseCase(teams, optimisticOrganizationPermissions{}, pgstore.NewTeamTransactions(s.dbPool))
+	s.ErrorIs(teamUC.UpdateTeam(ctx, team.ID, owner.Id, &organizationsmodel.UpdateTeamInput{Name: &name}), pkg.NoPermission)
+	_, err = teamUC.CreateTeam(ctx, &organizationsmodel.CreateTeamInput{OrganizationID: org.ID, Name: "Denied"}, owner.Id)
+	s.ErrorIs(err, pkg.NoPermission)
+	saved, err := s.organizationsRepo.GetOrganizationByID(s.ctx, org.ID)
+	s.Require().NoError(err)
+	s.Equal("Original", saved.Name)
+	savedTeam, err := teams.GetTeamByID(s.ctx, team.ID)
+	s.Require().NoError(err)
+	s.Equal("Original", savedTeam.Name)
 }

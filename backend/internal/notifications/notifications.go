@@ -2,7 +2,7 @@ package notifications
 
 import (
 	"context"
-	"fmt"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"log/slog"
 
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
@@ -28,18 +28,11 @@ func NewNotificationsUseCase(
 	}
 }
 
-func (uc *NotificationsUseCase) Notify(ctx context.Context, input *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error) {
-	notif, err := uc.repo.CreateNotification(ctx, input)
-	if err != nil {
-		return nil, fmt.Errorf("create notification in repo: %w", err)
+func (uc *NotificationsUseCase) SendEmail(ctx context.Context, n notificationsmodel.Notification) {
+	if uc.emailService == nil {
+		return
 	}
-
-	uc.sendEmail(ctx, input.UserID, *notif)
-
-	return notif, nil
-}
-
-func (uc *NotificationsUseCase) sendEmail(ctx context.Context, targetUserID uuid.UUID, n notificationsmodel.Notification) {
+	targetUserID := n.UserID
 	user, err := uc.usersRepo.GetUserById(ctx, targetUserID)
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to load notification email recipient", "error", err, "user_id", targetUserID)
@@ -112,9 +105,15 @@ func (uc *NotificationsUseCase) sendEmail(ctx context.Context, targetUserID uuid
 }
 
 func (uc *NotificationsUseCase) MarkAsRead(ctx context.Context, id, userID uuid.UUID) error {
+	if err := accessmodel.RequireSelfOrAdmin(ctx, userID); err != nil {
+		return err
+	}
 	return uc.repo.MarkAsRead(ctx, id, userID)
 }
 
 func (uc *NotificationsUseCase) MarkAllAsRead(ctx context.Context, userID uuid.UUID) error {
+	if err := accessmodel.RequireSelfOrAdmin(ctx, userID); err != nil {
+		return err
+	}
 	return uc.repo.MarkAllAsRead(ctx, userID)
 }

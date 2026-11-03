@@ -339,3 +339,8 @@ func pgtypeToNullableUUID(pgu pgtype.UUID) *uuid.UUID {
 	u := uuid.UUID(pgu.Bytes)
 	return &u
 }
+
+func (r *TeamsRepo) LockTeam(ctx context.Context, id uuid.UUID) error {
+	_, err := r.q.LockTeam(ctx, id)
+	return HandlePgErr(err)
+}

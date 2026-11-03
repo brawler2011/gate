@@ -118,7 +118,7 @@ func TestBatchCreateOrganizationUsers_Success(t *testing.T) {
 		Role:           organizationsmodel.OrgRoleOwner,
 	}
 
-	orgsUC := organizations.NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, testTransactions[organizations.OrganizationTxStore]{organizationTestStore{OrganizationsRepo: f.orgs, UsersRepo: usersRepo}}, nil)
+	orgsUC := organizations.NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, testTransactions[organizations.OrganizationTxStore]{organizationTestStore{PermissionsUseCase: f.permUC, OrganizationsRepo: f.orgs, UsersRepo: usersRepo}}, nil)
 
 	ttl := int32(30)
 	input := organizationsmodel.BatchCreateOrganizationUsersInput{
@@ -128,7 +128,7 @@ func TestBatchCreateOrganizationUsers_Success(t *testing.T) {
 		TTLDays:  &ttl,
 	}
 
-	res, err := orgsUC.BatchCreateUsers(ctx, input, adminUser.Id)
+	res, err := orgsUC.BatchCreateUsers(accessmodel.WithUser(ctx, adminUser), input, adminUser.Id)
 	require.NoError(t, err)
 	require.Len(t, res.Users, 10)
 
@@ -174,7 +174,7 @@ func TestBatchCreateOrganizationUsers_CollisionHandling(t *testing.T) {
 		PasswordHash: "dummy",
 	})
 
-	orgsUC := organizations.NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, testTransactions[organizations.OrganizationTxStore]{organizationTestStore{OrganizationsRepo: f.orgs, UsersRepo: usersRepo}}, nil)
+	orgsUC := organizations.NewOrganizationsUseCase(f.orgs, usersRepo, f.permUC, testTransactions[organizations.OrganizationTxStore]{organizationTestStore{PermissionsUseCase: f.permUC, OrganizationsRepo: f.orgs, UsersRepo: usersRepo}}, nil)
 
 	input := organizationsmodel.BatchCreateOrganizationUsersInput{
 		OrgLogin: "test-org",
@@ -182,7 +182,7 @@ func TestBatchCreateOrganizationUsers_CollisionHandling(t *testing.T) {
 		Count:    2,
 	}
 
-	res, err := orgsUC.BatchCreateUsers(ctx, input, adminUser.Id)
+	res, err := orgsUC.BatchCreateUsers(accessmodel.WithUser(ctx, adminUser), input, adminUser.Id)
 	require.NoError(t, err)
 	require.Len(t, res.Users, 2)
 

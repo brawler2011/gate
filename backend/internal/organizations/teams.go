@@ -9,54 +9,56 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
 type TeamsUseCase struct {
 	repo          TeamsRepo
-	orgsRepo      OrganizationsRepo
-	usersRepo     UsersRepo
 	permissionsUC PermissionsUC
 	transactor    TeamTransactions
 }
 
 func NewTeamsUseCase(
 	repo TeamsRepo,
-	orgsRepo OrganizationsRepo,
-	usersRepo UsersRepo,
 	permissionsUC PermissionsUC,
 	transactor TeamTransactions,
 ) *TeamsUseCase {
 	return &TeamsUseCase{
 		repo:          repo,
-		orgsRepo:      orgsRepo,
-		usersRepo:     usersRepo,
 		permissionsUC: permissionsUC,
 		transactor:    transactor,
 	}
 }
 
 func (uc *TeamsUseCase) CreateTeam(ctx context.Context, input *organizationsmodel.CreateTeamInput, creatorID uuid.UUID) (*organizationsmodel.Team, error) {
-	// Check if user has permission to create teams in this organization
-	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, input.OrganizationID, creatorID, accessmodel.ActionManageOrganization)
-	if err != nil {
-		return nil, fmt.Errorf("check permissions: %w", err)
-	}
-	if !hasAccess {
-		return nil, errors.New("access denied: need org admin/owner role to create teams")
+	if user := accessmodel.UserFromContext(ctx); user.IsGuest() {
+		return nil, pkg.ErrUnauthenticated
+	} else if user.Id != creatorID {
+		return nil, pkg.NoPermission
 	}
 
 	var team *organizationsmodel.Team
-	err = uc.transactor.Within(ctx, func(tx TeamTxStore) error {
-		txCtx := ctx
+	err := uc.transactor.Within(ctx, func(tx TeamTxStore) error {
+		if err := tx.LockOrganization(ctx, input.OrganizationID); err != nil {
+			return err
+		}
+		allowed, err := tx.HasOrganizationPermission(ctx, input.OrganizationID, creatorID, accessmodel.ActionManageOrganization)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return pkg.NoPermission
+		}
+
 		// Create team
-		team, err = tx.CreateTeam(txCtx, input)
+		team, err = tx.CreateTeam(ctx, input)
 		if err != nil {
 			return fmt.Errorf("create team: %w", err)
 		}
 
 		// Add creator as maintainer
-		err = tx.AddTeamMember(txCtx, team.ID, creatorID, organizationsmodel.TeamRoleMaintainer)
+		err = tx.AddTeamMember(ctx, team.ID, creatorID, organizationsmodel.TeamRoleMaintainer)
 		if err != nil {
 			return fmt.Errorf("add creator as maintainer: %w", err)
 		}
@@ -136,71 +138,59 @@ func (uc *TeamsUseCase) ListOrganizationTeams(ctx context.Context, orgID, userID
 }
 
 func (uc *TeamsUseCase) UpdateTeam(ctx context.Context, teamID, userID uuid.UUID, input *organizationsmodel.UpdateTeamInput) error {
-	team, err := uc.repo.GetTeamByID(ctx, teamID)
-	if err != nil {
-		return err
-	}
-
-	// Check if user can manage team (org admin or team maintainer)
-	hasOrgAccess, _ := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, userID, accessmodel.ActionManageOrganization)
-
-	teamMember, err := uc.repo.GetTeamMember(ctx, teamID, userID)
-	isTeamMaintainer := err == nil && teamMember.Role == organizationsmodel.TeamRoleMaintainer
-
-	if !hasOrgAccess && !isTeamMaintainer {
-		return errors.New("access denied: need org admin or team maintainer role")
-	}
-
-	return uc.repo.UpdateTeam(ctx, teamID, input)
+	return uc.withinTeam(ctx, teamID, userID, func(tx TeamTxStore, team *organizationsmodel.Team) error {
+		allowed, err := tx.HasOrganizationPermission(ctx, team.OrganizationID, userID, accessmodel.ActionManageOrganization)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			member, err := tx.GetTeamMember(ctx, teamID, userID)
+			if err != nil && !errors.Is(err, pkg.ErrNotFound) {
+				return err
+			}
+			allowed = err == nil && member.Role == organizationsmodel.TeamRoleMaintainer
+		}
+		if !allowed {
+			return pkg.NoPermission
+		}
+		return tx.UpdateTeam(ctx, teamID, input)
+	})
 }
 
 func (uc *TeamsUseCase) DeleteTeam(ctx context.Context, teamID, userID uuid.UUID) error {
-	team, err := uc.repo.GetTeamByID(ctx, teamID)
-	if err != nil {
-		return err
-	}
-
-	// Only org admins can delete teams
-	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, userID, accessmodel.ActionManageOrganization)
-	if err != nil {
-		return fmt.Errorf("check permissions: %w", err)
-	}
-	if !hasAccess {
-		return errors.New("access denied: only org admins can delete teams")
-	}
-
-	return uc.repo.DeleteTeam(ctx, teamID)
+	return uc.withinTeam(ctx, teamID, userID, func(tx TeamTxStore, team *organizationsmodel.Team) error {
+		allowed, err := tx.HasOrganizationPermission(ctx, team.OrganizationID, userID, accessmodel.ActionManageOrganization)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return pkg.NoPermission
+		}
+		return tx.DeleteTeam(ctx, teamID)
+	})
 }
 
 func (uc *TeamsUseCase) AddTeamMember(ctx context.Context, input *organizationsmodel.AddTeamMemberInput, requestUserID uuid.UUID) error {
-	team, err := uc.repo.GetTeamByID(ctx, input.TeamID)
-	if err != nil {
-		return err
-	}
-
-	// Check permissions
-	hasOrgAccess, _ := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, accessmodel.ActionManageOrganization)
-
-	teamMember, err := uc.repo.GetTeamMember(ctx, input.TeamID, requestUserID)
-	isTeamMaintainer := err == nil && teamMember.Role == organizationsmodel.TeamRoleMaintainer
-
-	if !hasOrgAccess && !isTeamMaintainer {
-		return errors.New("access denied: need org admin or team maintainer role")
-	}
-
-	// Verify user exists
-	_, err = uc.usersRepo.GetUserById(ctx, input.UserID)
-	if err != nil {
-		return fmt.Errorf("user not found: %w", err)
-	}
-
-	// Verify user is org member
-	_, err = uc.orgsRepo.GetMember(ctx, team.OrganizationID, input.UserID)
-	if err != nil {
-		return errors.New("user must be organization member first")
-	}
-
-	return uc.repo.AddTeamMember(ctx, input.TeamID, input.UserID, input.Role)
+	return uc.withinTeam(ctx, input.TeamID, requestUserID, func(tx TeamTxStore, team *organizationsmodel.Team) error {
+		allowed, err := tx.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, accessmodel.ActionManageOrganization)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			member, err := tx.GetTeamMember(ctx, input.TeamID, requestUserID)
+			if err != nil && !errors.Is(err, pkg.ErrNotFound) {
+				return err
+			}
+			allowed = err == nil && member.Role == organizationsmodel.TeamRoleMaintainer
+		}
+		if !allowed {
+			return pkg.NoPermission
+		}
+		if _, err := tx.GetMember(ctx, team.OrganizationID, input.UserID); err != nil {
+			return err
+		}
+		return tx.AddTeamMember(ctx, input.TeamID, input.UserID, input.Role)
+	})
 }
 
 func (uc *TeamsUseCase) ListTeamMembers(ctx context.Context, teamID, requestUserID uuid.UUID) ([]organizationsmodel.TeamMember, error) {
@@ -223,44 +213,44 @@ func (uc *TeamsUseCase) ListTeamMembers(ctx context.Context, teamID, requestUser
 }
 
 func (uc *TeamsUseCase) UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole, requestUserID uuid.UUID) error {
-	team, err := uc.repo.GetTeamByID(ctx, teamID)
-	if err != nil {
-		return err
-	}
-
-	// Check permissions
-	hasOrgAccess, _ := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, accessmodel.ActionManageOrganization)
-
-	teamMember, err := uc.repo.GetTeamMember(ctx, teamID, requestUserID)
-	isTeamMaintainer := err == nil && teamMember.Role == organizationsmodel.TeamRoleMaintainer
-
-	if !hasOrgAccess && !isTeamMaintainer {
-		return errors.New("access denied: need org admin or team maintainer role")
-	}
-
-	return uc.repo.UpdateTeamMemberRole(ctx, teamID, userID, role)
+	return uc.withinTeam(ctx, teamID, requestUserID, func(tx TeamTxStore, team *organizationsmodel.Team) error {
+		allowed, err := tx.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, accessmodel.ActionManageOrganization)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			member, err := tx.GetTeamMember(ctx, teamID, requestUserID)
+			if err != nil && !errors.Is(err, pkg.ErrNotFound) {
+				return err
+			}
+			allowed = err == nil && member.Role == organizationsmodel.TeamRoleMaintainer
+		}
+		if !allowed {
+			return pkg.NoPermission
+		}
+		return tx.UpdateTeamMemberRole(ctx, teamID, userID, role)
+	})
 }
 
 func (uc *TeamsUseCase) RemoveTeamMember(ctx context.Context, teamID, userID, requestUserID uuid.UUID) error {
-	team, err := uc.repo.GetTeamByID(ctx, teamID)
-	if err != nil {
-		return err
-	}
-
-	// Check permissions
-	hasOrgAccess, _ := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, accessmodel.ActionManageOrganization)
-
-	teamMember, err := uc.repo.GetTeamMember(ctx, teamID, requestUserID)
-	isTeamMaintainer := err == nil && teamMember.Role == organizationsmodel.TeamRoleMaintainer
-
-	// Users can remove themselves
-	isSelf := userID == requestUserID
-
-	if !hasOrgAccess && !isTeamMaintainer && !isSelf {
-		return errors.New("access denied")
-	}
-
-	return uc.repo.RemoveTeamMember(ctx, teamID, userID)
+	return uc.withinTeam(ctx, teamID, requestUserID, func(tx TeamTxStore, team *organizationsmodel.Team) error {
+		allowed, err := tx.HasOrganizationPermission(ctx, team.OrganizationID, requestUserID, accessmodel.ActionManageOrganization)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			member, err := tx.GetTeamMember(ctx, teamID, requestUserID)
+			if err != nil && !errors.Is(err, pkg.ErrNotFound) {
+				return err
+			}
+			allowed = err == nil && member.Role == organizationsmodel.TeamRoleMaintainer
+		}
+		allowed = allowed || userID == requestUserID
+		if !allowed {
+			return pkg.NoPermission
+		}
+		return tx.RemoveTeamMember(ctx, teamID, userID)
+	})
 }
 
 func (uc *TeamsUseCase) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]organizationsmodel.Team, error) {
@@ -293,4 +283,31 @@ func (uc *TeamsUseCase) GetTeamProblems(ctx context.Context, teamID, requestUser
 	}
 
 	return uc.repo.GetTeamProblems(ctx, teamID)
+}
+
+func (uc *TeamsUseCase) withinTeam(ctx context.Context, id, actor uuid.UUID, fn func(TeamTxStore, *organizationsmodel.Team) error) error {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return pkg.ErrUnauthenticated
+	}
+	if user.Id != actor {
+		return pkg.NoPermission
+	}
+	team, err := uc.repo.GetTeamByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	return uc.transactor.Within(ctx, func(tx TeamTxStore) error {
+		if err := tx.LockOrganization(ctx, team.OrganizationID); err != nil {
+			return err
+		}
+		if err := tx.LockTeam(ctx, id); err != nil {
+			return err
+		}
+		current, err := tx.GetTeamByID(ctx, id)
+		if err != nil {
+			return err
+		}
+		return fn(tx, current)
+	})
 }

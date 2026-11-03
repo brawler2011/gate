@@ -606,3 +606,8 @@ func (r *OrganizationsRepo) UpdateJoinRequestStatus(ctx context.Context, id uuid
 	}
 	return nil
 }
+
+func (r *OrganizationsRepo) LockOrganization(ctx context.Context, id uuid.UUID) error {
+	_, err := r.q.LockOrganization(ctx, id)
+	return HandlePgErr(err)
+}

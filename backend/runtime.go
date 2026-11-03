@@ -181,10 +181,10 @@ func runApp(envFile string) error {
 	permissionsUC := access.NewPermissionsUseCase(contestsRepo, usersUC, problemsRepo, teamsRepo, orgsRepo)
 	contestsUC := contests.NewContestsUseCase(contestsRepo, orgsRepo, pgstore.NewContestCommandTransactions(pool), permissionsUC)
 	contestsUC.SetNotificationsUC(notificationsUC)
-	contestsUC.SetUsersRepo(usersRepo)
+
 	blogsUC := blogs.NewBlogsUseCase(blogsRepo, store, defaultS3BlogBucket)
 	orgsUC := organizations.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(pool), notificationsUC)
-	teamsUC := organizations.NewTeamsUseCase(teamsRepo, orgsRepo, usersRepo, permissionsUC, pgstore.NewTeamTransactions(pool))
+	teamsUC := organizations.NewTeamsUseCase(teamsRepo, permissionsUC, pgstore.NewTeamTransactions(pool))
 	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, pgstore.NewSubmissionTransactions(pool), permissionsUC)
 	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(pool))
 	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(pool))

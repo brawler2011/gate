@@ -35,7 +35,11 @@ func (p transactions[T]) Within(ctx context.Context, fn func(T) error) error {
 
 func NewTeamTransactions(pool *pgxpool.Pool) organizations.TeamTransactions {
 	return transactions[organizations.TeamTxStore]{pool: pool, bind: func(q *sqlc.Queries) organizations.TeamTxStore {
-		return struct{ *TeamsRepo }{&TeamsRepo{q: q}}
+		return struct {
+			*TeamsRepo
+			*OrganizationsRepo
+			*authorization
+		}{&TeamsRepo{q: q}, &OrganizationsRepo{q: q}, bindAuthorization(q)}
 	}}
 }
 
@@ -60,7 +64,9 @@ func NewOrganizationTransactions(pool *pgxpool.Pool) organizations.OrganizationT
 		return struct {
 			*OrganizationsRepo
 			*UsersRepo
-		}{&OrganizationsRepo{q: q}, &UsersRepo{queries: q}}
+			*NotificationsRepo
+			*authorization
+		}{&OrganizationsRepo{q: q}, &UsersRepo{queries: q}, &NotificationsRepo{queries: q}, bindAuthorization(q)}
 	}}
 }
 
@@ -106,7 +112,9 @@ func NewContestCommandTransactions(pool *pgxpool.Pool) contests.CommandTransacti
 			*OutboxRepo
 			*authorization
 			*OrganizationsRepo
-		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}, bindAuthorization(q), &OrganizationsRepo{q: q}}
+			*UsersRepo
+			*NotificationsRepo
+		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}, bindAuthorization(q), &OrganizationsRepo{q: q}, &UsersRepo{queries: q}, &NotificationsRepo{queries: q}}
 	}}
 }
 

@@ -94,3 +94,6 @@ SELECT om.organization_id
 FROM organization_members om
 WHERE om.user_id = $1 AND om.organization_id = $2
 LIMIT 1;
+
+-- name: LockOrganization :one
+SELECT id FROM organizations WHERE id = $1 FOR UPDATE;

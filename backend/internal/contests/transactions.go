@@ -3,6 +3,8 @@ package contests
 import (
 	"context"
 
+	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
@@ -34,6 +36,9 @@ type ScoreboardStore interface {
 }
 
 type CommandTxStore interface {
+	GetContestJoinRequestByID(context.Context, uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
+	GetUserById(context.Context, uuid.UUID) (accessmodel.User, error)
+	CreateNotification(context.Context, *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error)
 	GetPendingContestJoinRequest(context.Context, uuid.UUID, uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
 	CreateContestJoinRequest(context.Context, *contestsmodel.CreateContestJoinRequestInput) (*contestsmodel.ContestJoinRequest, error)
 
