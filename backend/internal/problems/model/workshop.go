@@ -9,7 +9,6 @@ type UpdateFileRequest struct {
 	// Revision is set for read/patch/write operations, such as statement PATCH.
 	Revision  string
 	ProblemID uuid.UUID
-	UserID    uuid.UUID
 	Path      string
 	Content   []byte
 }
@@ -18,7 +17,6 @@ type UpdateFileRequest struct {
 type CompileComponentRequest struct {
 	ProblemID     uuid.UUID
 	ComponentType string // "checker", "validator", "generator", "interactor"
-	UserID        uuid.UUID
 }
 
 // CompileResult represents the result of a compilation
@@ -36,7 +34,6 @@ type GenerateTestsRequest struct {
 	GeneratorName string
 	TestNumbers   []int
 	Arguments     [][]string // args for each test
-	UserID        uuid.UUID
 }
 
 // ValidationReport contains validation results for tests
@@ -60,7 +57,6 @@ type TestSolutionRequest struct {
 	ProblemID    uuid.UUID
 	SolutionPath string
 	TestNumbers  []int // nil = all tests
-	UserID       uuid.UUID
 }
 
 // TestReport contains test results

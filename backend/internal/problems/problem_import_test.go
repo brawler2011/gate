@@ -69,7 +69,7 @@ func TestImportProblemPackagePolygonFallback(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "3\n", string(out))
 
-	manifest, err := NewWorkshopUseCase(workspaceStorage, nil).GetManifest(ctx, problemID)
+	manifest, err := NewWorkshopUseCase(workspaceStorage, nil, allowProblemPermissions{}).GetManifest(ctx, problemID)
 	require.NoError(t, err)
 	assert.Equal(t, "APlusB", manifest.Statement.Title)
 }
@@ -131,7 +131,7 @@ validation:
 	assert.Equal(t, 1, testsMeta.Tests[0].Ordinal)
 	assert.Equal(t, 2, testsMeta.Tests[1].Ordinal)
 
-	manifest, err := NewWorkshopUseCase(workspaceStorage, nil).GetManifest(ctx, problemID)
+	manifest, err := NewWorkshopUseCase(workspaceStorage, nil, allowProblemPermissions{}).GetManifest(ctx, problemID)
 	require.NoError(t, err)
 	assert.Equal(t, "A + B", manifest.Statement.Title)
 }
@@ -255,10 +255,10 @@ func seedWorkspaceFiles(t *testing.T, ws *WorkspaceStorage, id uuid.UUID, files 
 	t.Helper()
 	data := createZipBytes(t, files)
 	hash := fmt.Sprintf("%x", sha256.Sum256(data))
-	previous, err := ws.repo.GetWorkspaceHash(context.Background(), id)
+	previous, err := ws.repo.GetWorkspaceHash(problemActorContext(), id)
 	require.NoError(t, err)
-	require.NoError(t, ws.storage.UploadFile(context.Background(), ws.bucket, ws.getWorkspaceKey(id, hash), bytes.NewReader(data), "application/zip"))
-	require.NoError(t, ws.repo.CommitWorkspace(context.Background(), id, previous, hash, nil))
+	require.NoError(t, ws.storage.UploadFile(problemActorContext(), ws.bucket, ws.getWorkspaceKey(id, hash), bytes.NewReader(data), "application/zip"))
+	require.NoError(t, ws.repo.CommitWorkspace(problemActorContext(), id, previous, hash, nil))
 }
 
 func workshopFixtureFiles(manifest *problemsmodel.ProblemManifest, files map[string]string) map[string]string {

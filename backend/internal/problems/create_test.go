@@ -83,7 +83,7 @@ func TestProblemCreationUploadsBeforeAtomicCatalogWrites(t *testing.T) {
 			workspace := NewWorkspaceStorage(object, "workspace", nil)
 			uc := NewProblemsUseCase(creationCatalog{}, workspace, tx, nil, nil)
 			user := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
-			id, err := uc.CreateProblem(accessmodel.WithUser(context.Background(), user), &problemsmodel.CreateProblemInput{OrganizationID: uuid.New(), Title: "New task", TemplateID: "builtin:a-plus-b"})
+			id, err := uc.CreateProblem(accessmodel.WithUser(problemActorContext(), user), &problemsmodel.CreateProblemInput{OrganizationID: uuid.New(), Title: "New task", TemplateID: "builtin:a-plus-b"})
 			if failure != nil {
 				require.ErrorIs(t, err, failure)
 				require.False(t, tx.called)

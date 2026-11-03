@@ -22,7 +22,7 @@ func (r *StatementReader) loadProblemStatementFiles(ctx context.Context, problem
 	}
 
 	if lang != "" && lang != "en" {
-		if mdBytes, err := r.workshop.ReadProblemFile(ctx, problemID, "statements/"+lang+".md"); err == nil {
+		if mdBytes, err := r.workshop.workspaceStorage.ReadFile(ctx, problemID, "statements/"+lang+".md"); err == nil {
 			parsed := ParseStatementMarkdown(string(mdBytes))
 			if hasStatementContent(parsed) {
 				return &parsed
@@ -30,7 +30,7 @@ func (r *StatementReader) loadProblemStatementFiles(ctx context.Context, problem
 		}
 	}
 
-	manifest, err := r.workshop.GetManifest(ctx, problemID)
+	manifest, err := r.workshop.loadManifest(ctx, problemID)
 	if err != nil {
 		return nil
 	}
@@ -57,7 +57,7 @@ func (r *StatementReader) loadProblemSampleFiles(ctx context.Context, problemID 
 		return []problemsmodel.Sample{}
 	}
 
-	yamlBytes, err := r.workshop.ReadProblemFile(ctx, problemID, "problem.yaml")
+	yamlBytes, err := r.workshop.workspaceStorage.ReadFile(ctx, problemID, "problem.yaml")
 	if err != nil {
 		return []problemsmodel.Sample{}
 	}
@@ -77,17 +77,17 @@ func (r *StatementReader) loadProblemSampleFiles(ctx context.Context, problemID 
 				continue
 			}
 
-			inputBytes, err := r.workshop.ReadProblemFile(ctx, problemID, "tests/"+t.Manual)
+			inputBytes, err := r.workshop.workspaceStorage.ReadFile(ctx, problemID, "tests/"+t.Manual)
 			if err != nil {
 				continue
 			}
 
 			// Try .out first, then .ans
 			ansFile := strings.TrimSuffix(t.Manual, ".in") + ".out"
-			outputBytes, err := r.workshop.ReadProblemFile(ctx, problemID, "tests/"+ansFile)
+			outputBytes, err := r.workshop.workspaceStorage.ReadFile(ctx, problemID, "tests/"+ansFile)
 			if err != nil {
 				ansFile = strings.TrimSuffix(t.Manual, ".in") + ".ans"
-				outputBytes, err = r.workshop.ReadProblemFile(ctx, problemID, "tests/"+ansFile)
+				outputBytes, err = r.workshop.workspaceStorage.ReadFile(ctx, problemID, "tests/"+ansFile)
 			}
 
 			if err != nil {
@@ -203,7 +203,7 @@ func (r *StatementReader) loadWorkspaceStatementAndSamples(ctx context.Context, 
 	}
 	var statement *problemsmodel.Statement
 	var samples []problemsmodel.Sample
-	err := r.workshop.WithWorkspace(ctx, problemID, func(ctx context.Context) error {
+	err := r.workshop.workspaceStorage.withPackage(ctx, problemID, func(ctx context.Context, _ *workspacePackage) error {
 		statement = r.loadProblemStatementFiles(ctx, problemID, lang)
 		samples = r.loadProblemSampleFiles(ctx, problemID)
 		return nil
@@ -226,7 +226,7 @@ type StatementPackages interface {
 }
 
 func NewStatementReader(workspace *WorkspaceStorage, packages StatementPackages) *StatementReader {
-	return &StatementReader{workshop: NewWorkshopUseCase(workspace, nil), packages: packages}
+	return &StatementReader{workshop: newWorkshop(workspace), packages: packages}
 }
 func (r *StatementReader) ReadStatement(ctx context.Context, problemID, packageID uuid.UUID, lang string) (*problemsmodel.Statement, []problemsmodel.Sample) {
 	var statement *problemsmodel.Statement

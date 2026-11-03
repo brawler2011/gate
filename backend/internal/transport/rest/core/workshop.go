@@ -10,10 +10,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
-
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	problems "github.com/brawler2011/gate/backend/internal/problems"
@@ -54,97 +51,35 @@ func (h *CoreServer) UpdateProblemLimits(ctx context.Context, req *corev1.Update
 	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
 	}
-
-	manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
+	patch := problems.LimitsPatch{MaxScoreSet: req.MaxScore.IsSet()}
+	if req.ProblemType.IsSet() {
+		patch.ProblemType = &req.ProblemType.Value
+	}
+	if req.TimeLimitMs.IsSet() {
+		patch.TimeLimitMs = &req.TimeLimitMs.Value
+	}
+	if req.MemoryLimitMB.IsSet() {
+		patch.MemoryLimitMb = &req.MemoryLimitMB.Value
+	}
+	if req.MaxScore.IsSet() && !req.MaxScore.Null {
+		patch.MaxScore = &req.MaxScore.Value
+	}
+	manifest, err := h.workshopUC.UpdateLimits(ctx, params.ProblemId, patch)
 	if err != nil {
 		return nil, err
 	}
-
-	if req.ProblemType.IsSet() {
-		manifest.ProblemType = req.ProblemType.Value
-	}
-	if req.TimeLimitMs.IsSet() {
-		manifest.TimeLimitMs = req.TimeLimitMs.Value
-	}
-	if req.MemoryLimitMB.IsSet() {
-		manifest.MemoryLimitMb = req.MemoryLimitMB.Value
-	}
-	if req.MaxScore.IsSet() {
-		if req.MaxScore.Null {
-			manifest.MaxScore = nil
-		} else {
-			score := req.MaxScore.Value
-			manifest.MaxScore = &score
-		}
-	}
-	if manifest.ProblemType != "scoring" {
-		manifest.MaxScore = nil
-	}
-
-	if err := validateManifest(manifest); err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid limits update")
-	}
-
-	if err := h.saveWorkshopManifest(ctx, params.ProblemId, manifest); err != nil {
-		return nil, err
-	}
-
 	return h.toContractLimits(manifest), nil
+
 }
 
 // GetProblemStatement handles GET /problems/{problemId}/statement
 func (h *CoreServer) GetProblemStatement(ctx context.Context, params corev1.GetProblemStatementParams) (*corev1.ProblemStatement, error) {
-	return withWorkshopValue(ctx, h, params.ProblemId, func(ctx context.Context) (*corev1.ProblemStatement, error) {
+	statement, err := h.workshopUC.GetStatement(ctx, params.ProblemId, params.Lang.Or("en"))
+	if err != nil {
+		return nil, err
+	}
+	return h.toContractStatementForLang(statement.Statement, statement.Languages, statement.Language), nil
 
-		manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
-		if err != nil {
-			return nil, err
-		}
-
-		lang := params.Lang.Or("en")
-
-		// 1. Get list of available languages from statements/ folder
-		var languages []string
-		if files, err := h.workshopUC.ListProblemFiles(ctx, params.ProblemId, "statements"); err == nil {
-			for _, f := range files {
-				if !f.IsDirectory && strings.HasSuffix(f.Path, ".md") {
-					base := filepath.Base(f.Path)
-					langCode := strings.TrimSuffix(base, ".md")
-					if langCode != "" {
-						languages = append(languages, langCode)
-					}
-				}
-			}
-		}
-		sort.Strings(languages)
-
-		// Ensure the default language is listed if the list is empty
-		if len(languages) == 0 {
-			languages = []string{"en"}
-		}
-
-		// 2. Read statement for specific language from workspace
-		var stmt problemsmodel.Statement
-		filePath := fmt.Sprintf("statements/%s.md", lang)
-		fileData, err := h.workshopUC.ReadProblemFile(ctx, params.ProblemId, filePath)
-		if err == nil {
-			stmt = problems.ParseStatementMarkdown(string(fileData))
-			// If title tag is empty, fallback to the manifest title
-			if lang == "en" || strings.TrimSpace(stmt.Title) == "" {
-				stmt.Title = manifest.Statement.Title
-			}
-		} else {
-			// If requested lang is "en" and en.md is missing, fallback to manifest
-			if lang == "en" {
-				stmt = manifest.Statement
-			} else {
-				// Return empty statement with title of the main problem
-				stmt.Title = manifest.Statement.Title
-			}
-		}
-
-		return h.toContractStatementForLang(stmt, languages, lang), nil
-	})
 }
 
 // UpdateProblemStatement handles PATCH /problems/{problemId}/statement
@@ -152,96 +87,34 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, req *corev1.Upd
 	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
 	}
-	return withWorkshopValue(ctx, h, params.ProblemId, func(ctx context.Context) (*corev1.ProblemStatement, error) {
+	patch := problems.StatementPatch{}
+	if req.Title.IsSet() {
+		patch.Title = &req.Title.Value
+	}
+	if req.Legend.IsSet() {
+		patch.Legend = &req.Legend.Value
+	}
+	if req.InputFormat.IsSet() {
+		patch.InputFormat = &req.InputFormat.Value
+	}
+	if req.OutputFormat.IsSet() {
+		patch.OutputFormat = &req.OutputFormat.Value
+	}
+	if req.Notes.IsSet() {
+		patch.Notes = &req.Notes.Value
+	}
+	if req.Interaction.IsSet() {
+		patch.Interaction = &req.Interaction.Value
+	}
+	if req.Scoring.IsSet() {
+		patch.Scoring = &req.Scoring.Value
+	}
+	statement, err := h.workshopUC.UpdateStatement(ctx, params.ProblemId, params.Lang.Or("en"), patch)
+	if err != nil {
+		return nil, err
+	}
+	return h.toContractStatementForLang(statement.Statement, statement.Languages, statement.Language), nil
 
-		manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
-		if err != nil {
-			return nil, err
-		}
-
-		lang := params.Lang.Or("en")
-
-		// 1. Get existing statement for this language to apply patch
-		var stmt problemsmodel.Statement
-		filePath := fmt.Sprintf("statements/%s.md", lang)
-		fileData, err := h.workshopUC.ReadProblemFile(ctx, params.ProblemId, filePath)
-		if err == nil {
-			stmt = problems.ParseStatementMarkdown(string(fileData))
-			if lang == "en" || strings.TrimSpace(stmt.Title) == "" {
-				stmt.Title = manifest.Statement.Title
-			}
-		} else {
-			if lang == "en" {
-				stmt = manifest.Statement
-			} else {
-				stmt.Title = manifest.Statement.Title
-			}
-		}
-
-		if req.Title.IsSet() {
-			stmt.Title = req.Title.Value
-		}
-		if req.Legend.IsSet() {
-			stmt.Legend = req.Legend.Value
-		}
-		if req.InputFormat.IsSet() {
-			stmt.InputFormat = req.InputFormat.Value
-		}
-		if req.OutputFormat.IsSet() {
-			stmt.OutputFormat = req.OutputFormat.Value
-		}
-		if req.Notes.IsSet() {
-			stmt.Notes = req.Notes.Value
-		}
-		if req.Interaction.IsSet() {
-			stmt.Interaction = req.Interaction.Value
-		}
-		if req.Scoring.IsSet() {
-			stmt.Scoring = req.Scoring.Value
-		}
-
-		if lang == "en" {
-			manifest.Statement = stmt
-			if err := validateManifest(manifest); err != nil {
-				return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid statement update")
-			}
-		}
-		// 2. Write statement back to workspace storage
-		stmtBytes := []byte(problems.RenderStatementMarkdown(stmt))
-		if int64(len(stmtBytes)) > MaxStatementFileSize {
-			return nil, pkg.Wrap(pkg.ErrPayloadTooLarge, nil, "statement size exceeds maximum allowed limit of 2MB")
-		}
-		user := accessmodel.UserFromContext(ctx)
-		if err := h.workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
-			ProblemID: params.ProblemId,
-			Revision:  manifest.Revision,
-			UserID:    user.Id,
-			Path:      filePath,
-			Content:   stmtBytes,
-		}); err != nil {
-			return nil, workshopWriteError(err, "failed to save statement file")
-		}
-
-		// 4. Retrieve list of languages for response
-		var languages []string
-		if files, err := h.workshopUC.ListProblemFiles(ctx, params.ProblemId, "statements"); err == nil {
-			for _, f := range files {
-				if !f.IsDirectory && strings.HasSuffix(f.Path, ".md") {
-					base := filepath.Base(f.Path)
-					langCode := strings.TrimSuffix(base, ".md")
-					if langCode != "" {
-						languages = append(languages, langCode)
-					}
-				}
-			}
-		}
-		sort.Strings(languages)
-		if len(languages) == 0 {
-			languages = []string{"en"}
-		}
-
-		return h.toContractStatementForLang(stmt, languages, lang), nil
-	})
 }
 
 // ListProblemCheckers handles GET /problems/{problemId}/checkers
@@ -646,9 +519,6 @@ func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, req corev1.Up
 	if err := json.Unmarshal(bodyBytes, &testsMeta); err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to parse tests config")
 	}
-	if err := validateTestsMetadata(&testsMeta); err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid tests config")
-	}
 
 	if err := h.workshopUC.UpdateTestsConfig(ctx, params.ProblemId, &testsMeta); err != nil {
 		return nil, workshopWriteError(err, "failed to update tests config")
@@ -696,12 +566,10 @@ func (h *CoreServer) DeleteProblemTestFile(ctx context.Context, params corev1.De
 
 // CompileProblemComponent handles POST /problems/{problemId}/workshop/components/{componentType}/compile
 func (h *CoreServer) CompileProblemComponent(ctx context.Context, params corev1.CompileProblemComponentParams) (*corev1.CompileResult, error) {
-	user := accessmodel.UserFromContext(ctx)
 
 	compileReq := problemsmodel.CompileComponentRequest{
 		ProblemID:     params.ProblemId,
 		ComponentType: string(params.ComponentType),
-		UserID:        user.Id,
 	}
 
 	result, err := h.workshopUC.CompileProblemComponent(ctx, compileReq)
@@ -720,7 +588,6 @@ func (h *CoreServer) CompileProblemComponent(ctx context.Context, params corev1.
 
 // GenerateTests handles POST /problems/{problemId}/workshop/tests/generate
 func (h *CoreServer) GenerateTests(ctx context.Context, req *corev1.GenerateTestsReq, params corev1.GenerateTestsParams) (*corev1.GenerateTestsOK, error) {
-	user := accessmodel.UserFromContext(ctx)
 
 	testNumbers := make([]int, len(req.TestNumbers))
 	copy(testNumbers, req.TestNumbers)
@@ -736,7 +603,6 @@ func (h *CoreServer) GenerateTests(ctx context.Context, req *corev1.GenerateTest
 		GeneratorName: req.GeneratorName,
 		TestNumbers:   testNumbers,
 		Arguments:     arguments,
-		UserID:        user.Id,
 	}
 
 	if err := h.workshopUC.GenerateTests(ctx, generateReq); err != nil {
@@ -748,9 +614,8 @@ func (h *CoreServer) GenerateTests(ctx context.Context, req *corev1.GenerateTest
 
 // ValidateAllTests handles POST /problems/{problemId}/workshop/tests/validate
 func (h *CoreServer) ValidateAllTests(ctx context.Context, params corev1.ValidateAllTestsParams) (*corev1.ValidationReport, error) {
-	user := accessmodel.UserFromContext(ctx)
 
-	report, err := h.workshopUC.ValidateAllTests(ctx, params.ProblemId, user.Id)
+	report, err := h.workshopUC.ValidateAllTests(ctx, params.ProblemId)
 	if err != nil {
 		return nil, workshopWriteError(err, "failed to validate tests")
 	}
@@ -775,7 +640,6 @@ func (h *CoreServer) ValidateAllTests(ctx context.Context, params corev1.Validat
 
 // TestSolution handles POST /problems/{problemId}/workshop/solutions/test
 func (h *CoreServer) TestSolution(ctx context.Context, req *corev1.TestSolutionReq, params corev1.TestSolutionParams) (*corev1.TestReport, error) {
-	user := accessmodel.UserFromContext(ctx)
 
 	var testNumbers []int
 	if req.TestNumbers != nil {
@@ -787,7 +651,6 @@ func (h *CoreServer) TestSolution(ctx context.Context, req *corev1.TestSolutionR
 		ProblemID:    params.ProblemId,
 		SolutionPath: req.SolutionPath,
 		TestNumbers:  testNumbers,
-		UserID:       user.Id,
 	}
 
 	report, err := h.workshopUC.TestSolution(ctx, testReq)
@@ -924,12 +787,11 @@ func (h *CoreServer) saveWorkshopCollectionBytes(ctx context.Context, problemID 
 		return pkg.Wrap(pkg.ErrPayloadTooLarge, nil, fmt.Sprintf("file size (%d bytes) exceeds maximum allowed limit of %d bytes", len(content), maxLimit))
 	}
 
-	user := accessmodel.UserFromContext(ctx)
 	if err := h.workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 		ProblemID: problemID,
-		UserID:    user.Id,
-		Path:      filepath.Join(dir, cleanName),
-		Content:   content,
+
+		Path:    filepath.Join(dir, cleanName),
+		Content: content,
 	}); err != nil {
 		return workshopWriteError(err, actionErrMsg)
 	}
@@ -1048,14 +910,6 @@ func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UU
 	return manifest, nil
 }
 
-func (h *CoreServer) saveWorkshopManifest(ctx context.Context, problemID uuid.UUID, manifest *problemsmodel.ProblemManifest) error {
-	if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
-		return workshopWriteError(err, "failed to update manifest")
-	}
-
-	return nil
-}
-
 func (h *CoreServer) toContractLimits(manifest *problemsmodel.ProblemManifest) *corev1.ProblemLimits {
 	var maxScoreOpt corev1.OptNilInt
 	if manifest.MaxScore != nil {
@@ -1126,23 +980,6 @@ func toContractFileEntries(files []problemsmodel.FileEntry, manifest *problemsmo
 		}
 	}
 	return contractFiles
-}
-
-func validateManifest(m *problemsmodel.ProblemManifest) error {
-	if m.TimeLimitMs <= 0 || m.MemoryLimitMb <= 0 {
-		return fmt.Errorf("limits must be positive")
-	}
-	if strings.TrimSpace(m.Statement.Title) == "" {
-		return fmt.Errorf("title is required")
-	}
-	return nil
-}
-
-func validateTestsMetadata(t *problemsmodel.TestsMetadata) error {
-	if len(t.Tests) == 0 {
-		return fmt.Errorf("at least one test case is required")
-	}
-	return nil
 }
 
 func sanitizeFileName(name string) (string, error) {

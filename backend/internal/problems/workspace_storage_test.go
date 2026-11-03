@@ -34,7 +34,7 @@ func TestWorkspaceStorage_ReadFile(t *testing.T) {
 			repo.workspaceHashes = map[uuid.UUID]string{id: "fixture"}
 			ws := NewWorkspaceStorage(store, "workspaces", repo)
 
-			data, err := ws.ReadFile(context.Background(), id, "problem.yaml")
+			data, err := ws.ReadFile(problemActorContext(), id, "problem.yaml")
 
 			if tt.downloadErr != nil {
 				require.ErrorIs(t, err, downloadErr)

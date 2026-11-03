@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	problems "github.com/brawler2011/gate/backend/internal/problems"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -47,7 +49,7 @@ func TestWorkshopE2E(t *testing.T) {
 	// Initialize Storage-backed Workspace service
 	store := storage.NewLocalStorage(t.TempDir())
 	workspaceStorage := problems.NewWorkspaceStorage(store, "integration-workshop", newMockProblemsRepo())
-	ctx := context.Background()
+	ctx := workshopActorContext()
 	problemID := uuid.New()
 
 	// Create mock repositories (simplified for testing)
@@ -55,7 +57,7 @@ func TestWorkshopE2E(t *testing.T) {
 	problemsRepo.problems[problemID] = problemsmodel.Problem{ID: problemID, Title: "A+B Problem"}
 
 	// Initialize WorkshopUseCase
-	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sandboxInst)
+	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sandboxInst, allowWorkshopPermissions{})
 
 	// Step 1: Initialize workshop
 	t.Run("InitWorkshop", func(t *testing.T) {
@@ -80,9 +82,9 @@ func TestWorkshopE2E(t *testing.T) {
 
 		err = workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 			ProblemID: problemID,
-			UserID:    uuid.Nil,
-			Path:      "lib/testlib.h",
-			Content:   testlibContent,
+
+			Path:    "lib/testlib.h",
+			Content: testlibContent,
 		})
 		require.NoError(t, err)
 
@@ -99,9 +101,9 @@ int main(int argc, char* argv[]) {
 `
 		err = workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 			ProblemID: problemID,
-			UserID:    uuid.Nil,
-			Path:      "checkers/checker.cpp",
-			Content:   []byte(checkerCode),
+
+			Path:    "checkers/checker.cpp",
+			Content: []byte(checkerCode),
 		})
 		require.NoError(t, err)
 	})
@@ -119,9 +121,9 @@ int main() {
 `
 		err := workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 			ProblemID: problemID,
-			UserID:    uuid.Nil,
-			Path:      "solutions/main.cpp",
-			Content:   []byte(solutionCode),
+
+			Path:    "solutions/main.cpp",
+			Content: []byte(solutionCode),
 		})
 		require.NoError(t, err)
 	})
@@ -148,7 +150,7 @@ int main() {
 			ProblemID:    problemID,
 			SolutionPath: "solutions/main.cpp",
 			TestNumbers:  []int{1}, // Test only sample test
-			UserID:       uuid.Nil,
+
 		})
 		require.NoError(t, err)
 		assert.Equal(t, 1, report.TotalTests)
@@ -176,7 +178,7 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	sb := newWorkshopSandbox(t)
-	ctx := context.Background()
+	ctx := workshopActorContext()
 	for _, tc := range []struct {
 		name         string
 		checker      string
@@ -257,7 +259,7 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 			for path, content := range files {
 				require.NoError(t, ws.WriteFile(ctx, problemID, path, []byte(content)))
 			}
-			uc := problems.NewWorkshopUseCase(ws, sb)
+			uc := problems.NewWorkshopUseCase(ws, sb, allowWorkshopPermissions{})
 			if tc.compileFirst {
 				compiled, err := uc.CompileProblemComponent(ctx, problemsmodel.CompileComponentRequest{ProblemID: problemID, ComponentType: "checker"})
 				require.NoError(t, err)
@@ -288,7 +290,7 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 func newWorkshopSandbox(t *testing.T) *sandbox.Sandbox {
 	t.Helper()
 
-	ctx := context.Background()
+	ctx := workshopActorContext()
 
 	req := testcontainers.ContainerRequest{
 		ExposedPorts: []string{workshopGoJudgeGRPCPort},
@@ -483,4 +485,13 @@ func (m *mockProblemsRepo) CommitWorkspace(ctx context.Context, id uuid.UUID, pr
 		m.problems[id] = problem
 	}
 	return nil
+}
+
+type allowWorkshopPermissions struct{}
+
+func (allowWorkshopPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+	return true, nil
+}
+func workshopActorContext() context.Context {
+	return accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 }

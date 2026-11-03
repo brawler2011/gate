@@ -17,16 +17,16 @@ func (uc *ProblemsUseCase) GetProblemDetails(ctx context.Context, id uuid.UUID) 
 		return nil, err
 	}
 	result := &problemsmodel.ProblemDetails{Problem: problem}
-	editor := NewWorkshopUseCase(uc.workspace, nil)
+	editor := newWorkshop(uc.workspace)
 	err = uc.workspace.withPackage(ctx, id, func(ctx context.Context, _ *workspacePackage) error {
-		initialized, err := editor.IsInitialized(ctx, id)
+		initialized, err := editor.isInitialized(ctx, id)
 		if err != nil {
 			return err
 		}
 		if !initialized {
 			return nil
 		}
-		manifest, err := editor.GetManifest(ctx, id)
+		manifest, err := editor.loadManifest(ctx, id)
 		if err != nil {
 			return err
 		}

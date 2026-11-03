@@ -80,7 +80,7 @@ func TestFilePackageCommitFailures(t *testing.T) {
 			repo := &packageFaultRepo{WorkspaceRepo: base}
 			store := &packageFaultStorage{Storage: storage.NewLocalStorage(t.TempDir())}
 			ws := NewWorkspaceStorage(store, "workspaces", repo)
-			uc := NewWorkshopUseCase(ws, nil)
+			uc := NewWorkshopUseCase(ws, nil, allowProblemPermissions{})
 			id := uuid.New()
 			require.NoError(t, uc.InitProblemWorkshop(ctx, id, "Original"))
 			originalHash, err := base.GetWorkspaceHash(ctx, id)
@@ -105,7 +105,7 @@ func TestFilePackageCommitFailures(t *testing.T) {
 			hash, err := base.GetWorkspaceHash(ctx, id)
 			require.NoError(t, err)
 			require.Equal(t, originalHash, hash)
-			fresh := NewWorkshopUseCase(NewWorkspaceStorage(store.Storage, "workspaces", base), nil)
+			fresh := NewWorkshopUseCase(NewWorkspaceStorage(store.Storage, "workspaces", base), nil, allowProblemPermissions{})
 			actual, err := fresh.GetManifest(ctx, id)
 			require.NoError(t, err)
 			require.Equal(t, "Original", actual.Statement.Title)
@@ -137,13 +137,13 @@ func TestFilePackageCorruptConfigurationDoesNotResetTests(t *testing.T) {
 				files["problem.yaml"] = content
 			}
 			seedWorkspaceFiles(t, uc.workspaceStorage, id, files)
-			previous, err := uc.workspaceStorage.repo.GetWorkspaceHash(context.Background(), id)
+			previous, err := uc.workspaceStorage.repo.GetWorkspaceHash(problemActorContext(), id)
 			require.NoError(t, err)
-			require.Error(t, uc.SaveManifest(context.Background(), id, defaultManifest("Must not reset")))
-			hash, err := uc.workspaceStorage.repo.GetWorkspaceHash(context.Background(), id)
+			require.Error(t, uc.SaveManifest(problemActorContext(), id, defaultManifest("Must not reset")))
+			hash, err := uc.workspaceStorage.repo.GetWorkspaceHash(problemActorContext(), id)
 			require.NoError(t, err)
 			require.Equal(t, previous, hash)
-			data, err := uc.ReadProblemFile(context.Background(), id, "tests/custom.in")
+			data, err := uc.ReadProblemFile(problemActorContext(), id, "tests/custom.in")
 			require.NoError(t, err)
 			require.Equal(t, "keep", string(data))
 		})
@@ -157,7 +157,7 @@ func TestFilePackageConcurrentCommits(t *testing.T) {
 	first := NewWorkspaceStorage(store, "workspaces", repo)
 	second := NewWorkspaceStorage(store, "workspaces", repo)
 	id := uuid.New()
-	require.NoError(t, NewWorkshopUseCase(first, nil).InitProblemWorkshop(ctx, id, "Concurrent"))
+	require.NoError(t, NewWorkshopUseCase(first, nil, allowProblemPermissions{}).InitProblemWorkshop(ctx, id, "Concurrent"))
 	entered := make(chan struct{}, 2)
 	release := make(chan struct{})
 	results := make(chan error, 2)
@@ -203,7 +203,7 @@ func TestFilePackagePublicationUsesCapturedRevision(t *testing.T) {
 		// commit a replacement without blocking publication or changing its files.
 		other := NewWorkspaceStorage(raw, uc.workspaceStorage.bucket, repo)
 		return other.withPackage(ctx, id, func(ctx context.Context, _ *workspacePackage) error {
-			editor := NewWorkshopUseCase(other, nil)
+			editor := NewWorkshopUseCase(other, nil, allowProblemPermissions{})
 			config, err := editor.readProblemConfig(ctx, id)
 			if err != nil {
 				return err
@@ -258,13 +258,13 @@ func TestFilePackageValidationDoesNotLockEditors(t *testing.T) {
 		return pb.Response_builder{Results: []*pb.Response_Result{pb.Response_Result_builder{Status: pb.Response_Result_Accepted}.Build()}}.Build(), nil
 	})
 	done := make(chan error, 1)
-	go func() { _, err := uc.ValidateAllTests(context.Background(), id, uuid.Nil); done <- err }()
+	go func() { _, err := uc.ValidateAllTests(problemActorContext(), id); done <- err }()
 	<-entered
-	err := uc.UpdateProblemFile(context.Background(), problemsmodel.UpdateFileRequest{ProblemID: id, Path: "tests/01.in", Content: []byte("replacement")})
+	err := uc.UpdateProblemFile(problemActorContext(), problemsmodel.UpdateFileRequest{ProblemID: id, Path: "tests/01.in", Content: []byte("replacement")})
 	close(release)
 	require.NoError(t, err)
 	require.NoError(t, <-done)
-	data, err := uc.ReadProblemFile(context.Background(), id, "tests/01.in")
+	data, err := uc.ReadProblemFile(problemActorContext(), id, "tests/01.in")
 	require.NoError(t, err)
 	require.Equal(t, "replacement", string(data))
 }
@@ -274,7 +274,7 @@ func TestFilePackageInitializationAndImportAreAtomic(t *testing.T) {
 	repo := newProblemImportMockProblemsRepo()
 	store := &packageFaultStorage{Storage: storage.NewLocalStorage(t.TempDir())}
 	ws := NewWorkspaceStorage(store, "workspaces", repo)
-	uc := NewWorkshopUseCase(ws, nil)
+	uc := NewWorkshopUseCase(ws, nil, allowProblemPermissions{})
 	id := uuid.New()
 	failure := errors.New("upload failed")
 	store.uploadErr = failure
@@ -435,7 +435,7 @@ func TestFilePackageRejectsInvalidImportBeforeConversion(t *testing.T) {
 			current, err := uc.workspaceStorage.repo.GetWorkspaceHash(ctx, id)
 			require.NoError(t, err)
 			require.Equal(t, previous, current)
-			fresh := NewWorkshopUseCase(NewWorkspaceStorage(uc.workspaceStorage.storage, uc.workspaceStorage.bucket, uc.workspaceStorage.repo), nil)
+			fresh := NewWorkshopUseCase(NewWorkspaceStorage(uc.workspaceStorage.storage, uc.workspaceStorage.bucket, uc.workspaceStorage.repo), nil, allowProblemPermissions{})
 			original, err := fresh.GetManifest(ctx, id)
 			require.NoError(t, err)
 			require.Equal(t, "Validator test", original.Statement.Title)
@@ -462,7 +462,7 @@ func TestFilePackagePreservesStatementBytesOnImportAndMetadataSave(t *testing.T)
 			})
 			_, err := NewProblemImportUseCase(repo, ws, newProblemTestTransactions(repo, nil)).ImportProblemPackage(ctx, bytes.NewReader(data), int64(len(data)), id)
 			require.NoError(t, err)
-			uc := NewWorkshopUseCase(ws, nil)
+			uc := NewWorkshopUseCase(ws, nil, allowProblemPermissions{})
 			raw, err := uc.ReadProblemFile(ctx, id, "statements/en.md")
 			require.NoError(t, err)
 			require.Equal(t, statement, string(raw))

@@ -118,7 +118,7 @@ func (uc *ProblemImportUseCase) importProblemPackageFiles(ctx context.Context, z
 		return nil, fmt.Errorf("failed to upload workspace files: %w", err)
 	}
 
-	workshop := NewWorkshopUseCase(uc.workspaceStorage, nil)
+	workshop := newWorkshop(uc.workspaceStorage)
 	manifest, err := workshop.loadManifest(ctx, problemID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to map import plan to manifest: %w", err)

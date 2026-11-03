@@ -35,7 +35,7 @@ func TestWorkshopTestSolution_CheckerPreparationErrors(t *testing.T) {
 			uc, req := newWorkshopCheckerTest(t, store, tc.files, tc.deps)
 			// An empty language config fails compilation without dispatching any execution.
 			uc.sandbox = sandbox.NewSandbox(nil, &sandbox.Config{})
-			report, err := uc.TestSolution(context.Background(), req)
+			report, err := uc.TestSolution(problemActorContext(), req)
 			require.ErrorContains(t, err, tc.wantError)
 			require.Nil(t, report)
 			if tc.wantCause != nil {
@@ -61,10 +61,10 @@ func TestWorkshopTestSolution_CheckerCancellation(t *testing.T) {
 			cfg, err := sandbox.LoadConfig("../../../languages.yaml")
 			require.NoError(t, err)
 			uc.sandbox = sandbox.NewSandbox(client, cfg)
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(problemActorContext())
 			if tc.code == codes.DeadlineExceeded {
 				cancel()
-				ctx, cancel = context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+				ctx, cancel = context.WithDeadline(problemActorContext(), time.Now().Add(-time.Second))
 			}
 			cancel()
 			report, err := uc.TestSolution(ctx, req)
@@ -77,12 +77,12 @@ func TestWorkshopTestSolution_CheckerCancellation(t *testing.T) {
 
 func TestWorkshopTestSolution_RequiresChecker(t *testing.T) {
 	uc, req := newWorkshopCheckerTest(t, storage.NewLocalStorage(t.TempDir()), nil, nil)
-	config, err := uc.readProblemConfig(context.Background(), req.ProblemID)
+	config, err := uc.readProblemConfig(problemActorContext(), req.ProblemID)
 	require.NoError(t, err)
 	config.Checker = ""
-	require.NoError(t, uc.writeProblemConfig(context.Background(), req.ProblemID, config))
+	require.NoError(t, uc.writeProblemConfig(problemActorContext(), req.ProblemID, config))
 	// A nil sandbox would panic if solution compilation were attempted.
-	report, err := uc.TestSolution(context.Background(), req)
+	report, err := uc.TestSolution(problemActorContext(), req)
 	require.ErrorContains(t, err, "problem must have a checker")
 	require.Nil(t, report)
 }
@@ -98,7 +98,7 @@ func newWorkshopCheckerTest(t *testing.T, store storage.Storage, files map[strin
 	fixtureFiles["solutions/main.cpp"] = "solution"
 	seedWorkspaceFiles(t, ws, problemID, fixtureFiles)
 
-	return NewWorkshopUseCase(ws, nil), problemsmodel.TestSolutionRequest{ProblemID: problemID, SolutionPath: "solutions/main.cpp"}
+	return NewWorkshopUseCase(ws, nil, allowProblemPermissions{}), problemsmodel.TestSolutionRequest{ProblemID: problemID, SolutionPath: "solutions/main.cpp"}
 }
 
 func TestWorkshopTestSolution_ManifestFilesAndGenerators(t *testing.T) {
@@ -138,17 +138,17 @@ subtasks:
 		}
 		return pb.Response_builder{Results: []*pb.Response_Result{pb.Response_Result_builder{Status: pb.Response_Result_Accepted, Files: map[string][]byte{"stdout": []byte(output)}}.Build()}}.Build(), nil
 	})
-	meta, err := uc.GetTestsConfig(context.Background(), req.ProblemID)
+	meta, err := uc.GetTestsConfig(problemActorContext(), req.ProblemID)
 	require.NoError(t, err)
-	require.NoError(t, uc.UpdateTestsConfig(context.Background(), req.ProblemID, meta))
-	report, err := uc.TestSolution(context.Background(), req)
+	require.NoError(t, uc.UpdateTestsConfig(problemActorContext(), req.ProblemID, meta))
+	report, err := uc.TestSolution(problemActorContext(), req)
 	require.NoError(t, err)
 	require.Equal(t, 3, report.PassedTests)
 	require.Zero(t, report.FailedTests)
 	require.Equal(t, []string{"sample", "edge", "generated"}, inputs)
 	req.TestNumbers = []int{2}
 	inputs = nil
-	report, err = uc.TestSolution(context.Background(), req)
+	report, err = uc.TestSolution(problemActorContext(), req)
 	require.NoError(t, err)
 	require.Equal(t, 1, report.PassedTests)
 	require.Equal(t, []string{"edge"}, inputs)

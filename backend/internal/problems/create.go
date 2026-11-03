@@ -48,7 +48,7 @@ func (uc *ProblemsUseCase) CreateProblem(ctx context.Context, input *problemsmod
 	}
 	id := uuid.New()
 	importer := &ProblemImportUseCase{problemsRepo: uc.repo, workspaceStorage: uc.workspace}
-	workshop := NewWorkshopUseCase(uc.workspace, nil)
+	workshop := newWorkshop(uc.workspace)
 	version, prepareErr := uc.workspace.preparePackage(ctx, id, func(ctx context.Context) error {
 		manifest, err := importer.importProblemPackageFiles(ctx, reader, id)
 		if err != nil {

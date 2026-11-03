@@ -212,3 +212,9 @@ type ProblemDetails struct {
 	Statement *Statement
 	Samples   []Sample
 }
+
+type LocalizedStatement struct {
+	Statement Statement
+	Languages []string
+	Language  string
+}

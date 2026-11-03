@@ -36,7 +36,7 @@ func TestWorkshopValidateAllTests_InputNamesAndOrder(t *testing.T) {
 		inputs <- string(req.GetCmd()[0].GetFiles()[0].GetMemory().GetContent())
 		return pb.Response_builder{Results: []*pb.Response_Result{pb.Response_Result_builder{Status: pb.Response_Result_Accepted}.Build()}}.Build(), nil
 	})
-	report, err := uc.ValidateAllTests(context.Background(), id, uuid.Nil)
+	report, err := uc.ValidateAllTests(problemActorContext(), id)
 	require.NoError(t, err)
 	require.Equal(t, 3, report.TotalTests)
 	require.Equal(t, 3, report.ValidTests)
@@ -44,7 +44,7 @@ func TestWorkshopValidateAllTests_InputNamesAndOrder(t *testing.T) {
 	require.Equal(t, "sample", <-inputs)
 	require.Equal(t, "edge", <-inputs)
 	require.Equal(t, "generated", <-inputs)
-	meta, err := uc.readTestsMetadata(context.Background(), id)
+	meta, err := uc.readTestsMetadata(problemActorContext(), id)
 	require.NoError(t, err)
 	for i, name := range []string{"samples", "a", "z"} {
 		require.Equal(t, name, meta.Groups[i].Name)
@@ -59,7 +59,7 @@ func TestWorkshopValidateAllTests_EmptyTestSet(t *testing.T) {
 		t.Error("empty test set must not dispatch a validator run")
 		return pb.Response_builder{}.Build(), nil
 	})
-	report, err := uc.ValidateAllTests(context.Background(), id, uuid.Nil)
+	report, err := uc.ValidateAllTests(problemActorContext(), id)
 	require.NoError(t, err)
 	require.Zero(t, report.TotalTests)
 	require.Zero(t, report.ValidTests)
@@ -88,7 +88,7 @@ func TestWorkshopValidateAllTests_RuntimeErrors(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			uc, id := newWorkshopValidatorTest(t, true, map[string]string{"validators/validator.cpp": "validator"}, nil)
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(problemActorContext(), 10*time.Second)
 			defer cancel()
 
 			uc.sandbox = newWorkshopValidatorSandbox(t, func(_ context.Context, _ *pb.Request) (*pb.Response, error) {
@@ -101,7 +101,7 @@ func TestWorkshopValidateAllTests_RuntimeErrors(t *testing.T) {
 				}
 				return pb.Response_builder{Results: []*pb.Response_Result{pb.Response_Result_builder{Status: tc.runStatus, ExitStatus: tc.exitStatus}.Build()}}.Build(), tc.dispatchErr
 			})
-			report, err := uc.ValidateAllTests(ctx, id, uuid.Nil)
+			report, err := uc.ValidateAllTests(ctx, id)
 			if tc.wantInvalid {
 				require.NoError(t, err)
 				require.Equal(t, 1, report.InvalidTests)
@@ -173,7 +173,7 @@ func TestWorkshopValidateAllTests_PreparationErrors(t *testing.T) {
 			store := &packageFaultStorage{Storage: uc.workspaceStorage.storage, readErr: tc.readErr}
 			uc.workspaceStorage.storage = store
 			uc.sandbox = sandbox.NewSandbox(nil, &sandbox.Config{})
-			report, err := uc.ValidateAllTests(context.Background(), id, uuid.Nil)
+			report, err := uc.ValidateAllTests(problemActorContext(), id)
 			require.ErrorContains(t, err, tc.wantError)
 			require.Nil(t, report)
 			if tc.wantCause != nil {
@@ -192,15 +192,15 @@ func TestWorkshopValidateAllTests_Cancellation(t *testing.T) {
 		cfg, err := sandbox.LoadConfig("../../../languages.yaml")
 		require.NoError(t, err)
 		uc.sandbox = sandbox.NewSandbox(client, cfg)
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(problemActorContext())
 		wantCode := codes.Canceled
 		if deadline {
 			cancel()
-			ctx, cancel = context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+			ctx, cancel = context.WithDeadline(problemActorContext(), time.Now().Add(-time.Second))
 			wantCode = codes.DeadlineExceeded
 		}
 		cancel()
-		report, err := uc.ValidateAllTests(ctx, id, uuid.Nil)
+		report, err := uc.ValidateAllTests(ctx, id)
 		require.ErrorIs(t, err, ctx.Err())
 		require.Equal(t, wantCode, status.Code(status.FromContextError(err).Err()))
 		require.Nil(t, report)
@@ -217,5 +217,5 @@ func newWorkshopValidatorTest(t *testing.T, validator bool, files map[string]str
 	}
 	ws := NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "validator-test", repo)
 	seedWorkspaceFiles(t, ws, id, workshopFixtureFiles(manifest, files))
-	return NewWorkshopUseCase(ws, nil), id
+	return NewWorkshopUseCase(ws, nil, allowProblemPermissions{}), id
 }

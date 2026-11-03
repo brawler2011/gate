@@ -179,7 +179,7 @@ func (s *IntegrationTestSuite) initApp() {
 	blogsRepo := pgstore.NewBlogsRepo(s.dbPool)
 	tempStoragePath := s.T().TempDir()
 	testStorage := storage.NewLocalStorage(tempStoragePath)
-	workspaceStorage := problems.NewWorkspaceStorage(testStorage, "integration-workshop", s.problemsRepo)
+	workspaceStorage := problems.NewWorkspaceStorage(testStorage, "integration-workshop", problems.NewWorkspaceCatalog(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool)))
 
 	authRepo := pgstore.NewAuthRepo(s.dbPool)
 	emailService := &email.LogEmailService{}
@@ -200,7 +200,7 @@ func (s *IntegrationTestSuite) initApp() {
 	organizationsUC := organizations.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(s.dbPool), notificationsUC)
 	teamsUC := organizations.NewTeamsUseCase(s.teamsRepo, permissionsUC, pgstore.NewTeamTransactions(s.dbPool))
 	blogsUC := blogs.NewBlogsUseCase(blogsRepo, nil, "")
-	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, nil)
+	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, nil, permissionsUC)
 
 	avatarsUC := identity.NewAvatarsUseCase(s.usersRepo, testStorage, "avatars")
 

@@ -165,7 +165,7 @@ func runApp(envFile string) error {
 		}
 	}
 
-	workspaceStorage := problems.NewWorkspaceStorage(store, defaultS3WorkshopBucket, problemsRepo)
+	workspaceStorage := problems.NewWorkspaceStorage(store, defaultS3WorkshopBucket, problems.NewWorkspaceCatalog(problemsRepo, pgstore.NewProblemTransactions(pool)))
 
 	authRepo := pgstore.NewAuthRepo(pool)
 	emailService := email.NewEmailService(cfg.Env, cfg.ResendAPIKey, cfg.EmailFrom, cfg.AppBaseURL)
@@ -211,7 +211,7 @@ func runApp(envFile string) error {
 
 	sandboxInstance := sandbox.NewSandbox(sandboxClient, sandboxCfg)
 	contestDetails := contests.NewDetailsReader(contestsRepo, problemsRepo, problems.NewStatementReader(workspaceStorage, problemPublishUC), permissionsUC, sandboxInstance, usersRepo)
-	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sandboxInstance)
+	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sandboxInstance, permissionsUC)
 
 	natsJS, err := pkg.NewNatsJetStream(cfg.GetNatsURL())
 	if err != nil {

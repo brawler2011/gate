@@ -39,7 +39,7 @@ func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, prob
 	if problem.Title != nil {
 		var err error
 		previous, version, err = uc.workspace.prepareChange(ctx, id, func(ctx context.Context) error {
-			workshop := NewWorkshopUseCase(uc.workspace, nil)
+			workshop := newWorkshop(uc.workspace)
 			config, err := workshop.readProblemConfig(ctx, id)
 			if errors.Is(err, storage.ErrNotFound) {
 				return nil

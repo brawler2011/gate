@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"context"
 	"testing"
 
 	problems "github.com/brawler2011/gate/backend/internal/problems"
@@ -20,7 +19,7 @@ func TestWorkshopValidatorExecution(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	sb := newWorkshopSandbox(t)
-	ctx := context.Background()
+	ctx := workshopActorContext()
 	for _, tc := range []struct {
 		name         string
 		source       string
@@ -80,13 +79,13 @@ func TestWorkshopValidatorExecution(t *testing.T) {
 			for path, content := range tc.files {
 				require.NoError(t, ws.WriteFile(ctx, id, path, []byte(content)))
 			}
-			uc := problems.NewWorkshopUseCase(ws, sb)
+			uc := problems.NewWorkshopUseCase(ws, sb, allowWorkshopPermissions{})
 			if tc.compileFirst {
 				compiled, err := uc.CompileProblemComponent(ctx, problemsmodel.CompileComponentRequest{ProblemID: id, ComponentType: "validator"})
 				require.NoError(t, err)
 				require.True(t, compiled.Success, compiled.CompileError)
 			}
-			report, err := uc.ValidateAllTests(ctx, id, uuid.Nil)
+			report, err := uc.ValidateAllTests(ctx, id)
 			if tc.wantError != "" {
 				require.ErrorContains(t, err, tc.wantError)
 				require.Nil(t, report)

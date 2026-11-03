@@ -9,6 +9,8 @@ import (
 	"io"
 	"sync"
 
+	"github.com/brawler2011/gate/backend/internal/access"
+
 	"github.com/brawler2011/gate/backend/internal/templates"
 
 	"github.com/brawler2011/gate/backend/pkg"
@@ -45,14 +47,14 @@ func (s *IntegrationTestSuite) TestProblemPatchRollsBackWorkspaceAndCatalogToget
 	catalog, err := s.problemsRepo.GetProblemById(s.ctx, id)
 	s.Require().NoError(err)
 	s.Equal("Original", catalog.Title)
-	workshop := problems.NewWorkshopUseCase(workspace, nil)
-	manifest, err := workshop.GetManifest(s.ctx, id)
+	workshop := problems.NewWorkshopUseCase(workspace, nil, allowWorkshopPermissions{})
+	manifest, err := workshop.GetManifest(ctx, id)
 	s.Require().NoError(err)
 	s.Equal("Original", manifest.Statement.Title)
 	_, err = s.dbPool.Exec(s.ctx, `DROP TRIGGER reject_problem_patch ON problems`)
 	s.Require().NoError(err)
 	s.Require().NoError(uc.UpdateProblem(ctx, id, &problemsmodel.ProblemUpdate{Title: &title}))
-	manifest, err = workshop.GetManifest(s.ctx, id)
+	manifest, err = workshop.GetManifest(ctx, id)
 	s.Require().NoError(err)
 	s.Equal(title, manifest.Statement.Title)
 	catalog, err = s.problemsRepo.GetProblemById(s.ctx, id)
@@ -140,4 +142,30 @@ func (s *IntegrationTestSuite) TestImportRechecksAccessAfterObjectUpload() {
 	current, err := s.problemsRepo.GetWorkspaceHash(s.ctx, id)
 	s.Require().NoError(err)
 	s.Equal(previous, current, "a revoked caller must not switch the workspace reference")
+}
+
+func (s *IntegrationTestSuite) TestWorkshopRechecksAccessBeforeReferenceCommit() {
+	owner := s.createUser("workshop_revoke_owner", accessmodel.UserRoleUser)
+	org := s.createOrganization("workshop-revoke", "Workshop", owner.Id)
+	objects := &problemUploadHook{Storage: storage.NewLocalStorage(s.T().TempDir())}
+	transactions := pgstore.NewProblemTransactions(s.dbPool)
+	workspace := problems.NewWorkspaceStorage(objects, "workspaces", problems.NewWorkspaceCatalog(s.problemsRepo, transactions))
+	uc := problems.NewProblemsUseCase(s.problemsRepo, workspace, transactions, nil, s.organizationsRepo)
+	ctx := accessmodel.WithUser(s.ctx, owner)
+	id, err := uc.CreateProblem(ctx, &problemsmodel.CreateProblemInput{OrganizationID: org.ID, Title: "Original", TemplateID: "builtin:a-plus-b"})
+	s.Require().NoError(err)
+	previous, err := s.problemsRepo.GetWorkspaceHash(s.ctx, id)
+	s.Require().NoError(err)
+	permissions := access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
+	workshop := problems.NewWorkshopUseCase(workspace, nil, permissions)
+	objects.before = func(ctx context.Context) error {
+		_, err := s.dbPool.Exec(ctx, `WITH membership AS (UPDATE organization_members SET role='member' WHERE organization_id=$1 AND user_id=$2 RETURNING user_id),
+ problem AS (UPDATE problems SET owner_id=NULL WHERE id=$3 RETURNING id)
+ DELETE FROM problem_members WHERE problem_id=$3 AND user_id=$2`, org.ID, owner.Id, id)
+		return err
+	}
+	s.Require().ErrorIs(workshop.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{ProblemID: id, Path: "tests/01.in", Content: []byte("changed")}), pkg.NoPermission)
+	current, err := s.problemsRepo.GetWorkspaceHash(s.ctx, id)
+	s.Require().NoError(err)
+	s.Equal(previous, current)
 }

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
@@ -22,15 +24,43 @@ import (
 )
 
 type WorkshopUseCase struct {
+	permissions      ProblemPermissions
 	workspaceStorage *WorkspaceStorage
-	sandbox          *sandbox.Sandbox
+	sandbox          WorkshopSandbox
 }
 
-func NewWorkshopUseCase(workspaceStorage *WorkspaceStorage, sandbox *sandbox.Sandbox) *WorkshopUseCase {
-	return &WorkshopUseCase{workspaceStorage: workspaceStorage, sandbox: sandbox}
+type ProblemPermissions interface {
+	HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error)
+}
+type WorkshopSandbox interface {
+	Compile(context.Context, []byte, string, map[string][]byte) (sandbox.Executable, error)
+	Generate(context.Context, sandbox.Executable, []string) ([]byte, error)
+	Test(context.Context, sandbox.Executable, string, []byte, int, int) (*sandbox.RunResult, error)
+	Check(context.Context, sandbox.Executable, []byte, []byte, []byte) (*sandbox.CheckerResult, error)
 }
 
-func (uc *WorkshopUseCase) IsInitialized(ctx context.Context, problemID uuid.UUID) (bool, error) {
+func NewWorkshopUseCase(workspace *WorkspaceStorage, sandbox WorkshopSandbox, permissions ProblemPermissions) *WorkshopUseCase {
+	return &WorkshopUseCase{workspaceStorage: workspace, sandbox: sandbox, permissions: permissions}
+}
+func newWorkshop(workspace *WorkspaceStorage) *WorkshopUseCase {
+	return &WorkshopUseCase{workspaceStorage: workspace}
+}
+func (uc *WorkshopUseCase) authorize(ctx context.Context, id uuid.UUID, action accessmodel.ProblemAction) error {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return pkg.ErrUnauthenticated
+	}
+	allowed, err := uc.permissions.HasProblemPermission(ctx, id, user.Id, action)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return pkg.NoPermission
+	}
+	return nil
+}
+
+func (uc *WorkshopUseCase) isInitialized(ctx context.Context, problemID uuid.UUID) (bool, error) {
 	return withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) (bool, error) {
 		_, err := uc.readProblemConfig(ctx, problemID)
 		if errors.Is(err, storage.ErrNotFound) {
@@ -225,10 +255,18 @@ func (uc *WorkshopUseCase) deleteProblemFileFiles(ctx context.Context, problemID
 }
 
 func (uc *WorkshopUseCase) ReadProblemFile(ctx context.Context, problemID uuid.UUID, path string) ([]byte, error) {
+	if err := uc.authorize(ctx, problemID, accessmodel.ActionEditProblem); err != nil {
+		return nil, err
+	}
+
 	return uc.workspaceStorage.ReadFile(ctx, problemID, path)
 }
 
 func (uc *WorkshopUseCase) ListProblemFiles(ctx context.Context, problemID uuid.UUID, dirPath string) ([]problemsmodel.FileEntry, error) {
+	if err := uc.authorize(ctx, problemID, accessmodel.ActionEditProblem); err != nil {
+		return nil, err
+	}
+
 	return uc.workspaceStorage.ListFiles(ctx, problemID, dirPath)
 }
 
@@ -292,6 +330,10 @@ func (uc *WorkshopUseCase) compileProblemComponentFiles(ctx context.Context, req
 }
 
 func (uc *WorkshopUseCase) GenerateTests(ctx context.Context, req problemsmodel.GenerateTestsRequest) error {
+	if err := uc.authorize(ctx, req.ProblemID, accessmodel.ActionEditProblem); err != nil {
+		return err
+	}
+
 	return fmt.Errorf("test generation not yet fully implemented")
 }
 
@@ -934,10 +976,18 @@ func ManifestAndTestsToGfmtProblem(manifest *problemsmodel.ProblemManifest, test
 }
 
 func (uc *WorkshopUseCase) GetManifest(ctx context.Context, problemID uuid.UUID) (*problemsmodel.ProblemManifest, error) {
+	if err := uc.authorize(ctx, problemID, accessmodel.ActionViewProblem); err != nil {
+		return nil, err
+	}
+
 	return uc.loadManifest(ctx, problemID)
 }
 
 func (uc *WorkshopUseCase) SaveManifest(ctx context.Context, problemID uuid.UUID, manifest *problemsmodel.ProblemManifest) error {
+	if err := uc.authorize(ctx, problemID, accessmodel.ActionEditProblem); err != nil {
+		return err
+	}
+
 	return uc.saveManifest(ctx, problemID, manifest)
 }
 
@@ -966,6 +1016,10 @@ func (uc *WorkshopUseCase) updateTestsConfigFiles(ctx context.Context, problemID
 }
 
 func (uc *WorkshopUseCase) GetTestsConfig(ctx context.Context, problemID uuid.UUID) (*problemsmodel.TestsMetadata, error) {
+	if err := uc.authorize(ctx, problemID, accessmodel.ActionEditProblem); err != nil {
+		return nil, err
+	}
+
 	return uc.readTestsMetadata(ctx, problemID)
 }
 
@@ -1095,22 +1149,38 @@ func componentFilenames(manifest *problemsmodel.ProblemManifest, kind string) []
 }
 
 func (uc *WorkshopUseCase) InitProblemWorkshop(ctx context.Context, problemID uuid.UUID, title string) error {
+	if err := uc.authorize(ctx, problemID, accessmodel.ActionEditProblem); err != nil {
+		return err
+	}
+
 	return uc.workspaceStorage.withPackage(ctx, problemID, func(ctx context.Context, _ *workspacePackage) error {
 		return uc.initProblemWorkshopFiles(ctx, problemID, title)
 	})
 }
 
 func (uc *WorkshopUseCase) UpdateProblemFile(ctx context.Context, req problemsmodel.UpdateFileRequest) error {
+	if err := uc.authorize(ctx, req.ProblemID, accessmodel.ActionEditProblem); err != nil {
+		return err
+	}
+
 	return uc.workspaceStorage.withPackage(ctx, req.ProblemID, func(ctx context.Context, _ *workspacePackage) error { return uc.updateProblemFileFiles(ctx, req) })
 }
 
 func (uc *WorkshopUseCase) DeleteProblemFile(ctx context.Context, problemID uuid.UUID, path string) error {
+	if err := uc.authorize(ctx, problemID, accessmodel.ActionEditProblem); err != nil {
+		return err
+	}
+
 	return uc.workspaceStorage.withPackage(ctx, problemID, func(ctx context.Context, _ *workspacePackage) error {
 		return uc.deleteProblemFileFiles(ctx, problemID, path)
 	})
 }
 
 func (uc *WorkshopUseCase) CompileProblemComponent(ctx context.Context, req problemsmodel.CompileComponentRequest) (*problemsmodel.CompileResult, error) {
+	if err := uc.authorize(ctx, req.ProblemID, accessmodel.ActionEditProblem); err != nil {
+		return nil, err
+	}
+
 	return withWorkspaceValue(ctx, uc.workspaceStorage, req.ProblemID, func(ctx context.Context) (*problemsmodel.CompileResult, error) {
 		return uc.compileProblemComponentFiles(ctx, req)
 	})
@@ -1138,22 +1208,49 @@ func (uc *WorkshopUseCase) saveManifest(ctx context.Context, problemID uuid.UUID
 }
 
 func (uc *WorkshopUseCase) UpdateTestsConfig(ctx context.Context, problemID uuid.UUID, testsMeta *problemsmodel.TestsMetadata) error {
+	if err := uc.authorize(ctx, problemID, accessmodel.ActionEditProblem); err != nil {
+		return err
+	}
+
+	if len(testsMeta.Tests) == 0 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "at least one test case is required")
+	}
+
 	return uc.workspaceStorage.withPackage(ctx, problemID, func(ctx context.Context, _ *workspacePackage) error {
 		return uc.updateTestsConfigFiles(ctx, problemID, testsMeta)
 	})
 }
 
-func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.UUID, userID uuid.UUID) (*problemsmodel.ValidationReport, error) {
+func (uc *WorkshopUseCase) ValidateAllTests(ctx context.Context, problemID uuid.UUID) (*problemsmodel.ValidationReport, error) {
+	if err := uc.authorize(ctx, problemID, accessmodel.ActionEditProblem); err != nil {
+		return nil, err
+	}
+
 	return withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) (*problemsmodel.ValidationReport, error) {
 		return uc.validateAllTestsFiles(ctx, problemID)
 	})
 }
 
 func (uc *WorkshopUseCase) TestSolution(ctx context.Context, req problemsmodel.TestSolutionRequest) (*problemsmodel.TestReport, error) {
+	if err := uc.authorize(ctx, req.ProblemID, accessmodel.ActionEditProblem); err != nil {
+		return nil, err
+	}
+
 	return withWorkspaceValue(ctx, uc.workspaceStorage, req.ProblemID, func(ctx context.Context) (*problemsmodel.TestReport, error) { return uc.testSolutionFiles(ctx, req) })
 }
 
 // WithWorkspace keeps composed API reads and edits on one package revision.
 func (uc *WorkshopUseCase) WithWorkspace(ctx context.Context, problemID uuid.UUID, fn func(context.Context) error) error {
+	if err := uc.authorize(ctx, problemID, accessmodel.ActionViewProblem); err != nil {
+		return err
+	}
+
 	return uc.workspaceStorage.withPackage(ctx, problemID, func(ctx context.Context, _ *workspacePackage) error { return fn(ctx) })
+}
+
+func (uc *WorkshopUseCase) IsInitialized(ctx context.Context, problemID uuid.UUID) (bool, error) {
+	if err := uc.authorize(ctx, problemID, accessmodel.ActionViewProblem); err != nil {
+		return false, err
+	}
+	return uc.isInitialized(ctx, problemID)
 }

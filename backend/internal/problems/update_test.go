@@ -101,7 +101,7 @@ func TestProblemUpdatePreparesObjectBeforeFencedCatalogChange(t *testing.T) {
 			uc := NewProblemsUseCase(nil, workspace, tx, nil, nil)
 			user := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 			title := "Changed"
-			err := uc.UpdateProblem(accessmodel.WithUser(context.Background(), user), uuid.New(), &problemsmodel.ProblemUpdate{Title: &title})
+			err := uc.UpdateProblem(accessmodel.WithUser(problemActorContext(), user), uuid.New(), &problemsmodel.ProblemUpdate{Title: &title})
 			require.ErrorIs(t, err, tc.error)
 			require.Equal(t, tc.calls, tx.calls)
 			require.Equal(t, tc.updated, tx.updated)

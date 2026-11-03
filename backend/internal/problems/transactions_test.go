@@ -42,3 +42,9 @@ func problemActorContext() context.Context {
 type packageCreation interface {
 	CreatePackage(context.Context, *problemsmodel.CreatePackageParams) (problemsmodel.ProblemPackage, error)
 }
+
+type allowProblemPermissions struct{}
+
+func (allowProblemPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+	return true, nil
+}

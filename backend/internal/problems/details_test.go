@@ -17,7 +17,7 @@ func TestProblemDetailsUseOneCanonicalPackage(t *testing.T) {
 	repo.problems[id] = problemsmodel.Problem{ID: id, Title: "Catalog", TimeLimitMs: 9, MemoryLimitMb: 8}
 	raw := storage.NewLocalStorage(t.TempDir())
 	original := NewWorkspaceStorage(raw, "workspace", repo)
-	editor := NewWorkshopUseCase(original, nil)
+	editor := NewWorkshopUseCase(original, nil, allowProblemPermissions{})
 	require.NoError(t, editor.InitProblemWorkshop(ctx, id, "Original"))
 	objects := &packageFaultStorage{Storage: raw}
 	changed := false
@@ -52,4 +52,50 @@ func TestProblemDetailsUseOneCanonicalPackage(t *testing.T) {
 	actual, err := editor.GetManifest(ctx, id)
 	require.NoError(t, err)
 	require.Equal(t, "Changed", actual.Statement.Title)
+}
+
+func TestLocalizedStatementUsesCapturedRevision(t *testing.T) {
+	for _, lang := range []string{"en", "ru"} {
+		t.Run(lang, func(t *testing.T) {
+			ctx := problemActorContext()
+			id := uuid.New()
+			repo := newProblemImportMockProblemsRepo()
+			raw := storage.NewLocalStorage(t.TempDir())
+			original := NewWorkspaceStorage(raw, "workspace", repo)
+			editor := NewWorkshopUseCase(original, nil, allowProblemPermissions{})
+			require.NoError(t, editor.InitProblemWorkshop(ctx, id, "Original"))
+			require.NoError(t, editor.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{ProblemID: id, Path: "statements/ru.md", Content: []byte("<!-- legend -->\nOriginal translation\n")}))
+			objects := &packageFaultStorage{Storage: raw}
+			changed := false
+			objects.beforeDownload = func(ctx context.Context) error {
+				if changed {
+					return nil
+				}
+				changed = true
+				return editor.WithWorkspace(ctx, id, func(ctx context.Context) error {
+					manifest, err := editor.GetManifest(ctx, id)
+					if err != nil {
+						return err
+					}
+					manifest.Statement.Title = "Changed"
+					if err := editor.SaveManifest(ctx, id, manifest); err != nil {
+						return err
+					}
+					return editor.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{ProblemID: id, Path: "statements/ru.md", Content: []byte("<!-- legend -->\nNew translation\n")})
+				})
+			}
+			reader := NewWorkshopUseCase(NewWorkspaceStorage(objects, "workspace", repo), nil, allowProblemPermissions{})
+			result, err := reader.GetStatement(ctx, id, lang)
+			require.NoError(t, err)
+			require.Equal(t, "Original", result.Statement.Title)
+			if lang == "en" {
+				require.Equal(t, "Problem description goes here.", result.Statement.Legend)
+			} else {
+				require.Equal(t, "Original translation", result.Statement.Legend)
+			}
+			current, err := editor.GetManifest(ctx, id)
+			require.NoError(t, err)
+			require.Equal(t, "Changed", current.Statement.Title)
+		})
+	}
 }

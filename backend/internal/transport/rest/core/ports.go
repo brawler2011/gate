@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -179,6 +181,9 @@ type UsersUC interface {
 }
 
 type WorkshopUC interface {
+	UpdateLimits(context.Context, uuid.UUID, problems.LimitsPatch) (*problemsmodel.ProblemManifest, error)
+	UpdateStatement(context.Context, uuid.UUID, string, problems.StatementPatch) (*problemsmodel.LocalizedStatement, error)
+	GetStatement(context.Context, uuid.UUID, string) (*problemsmodel.LocalizedStatement, error)
 	WithWorkspace(ctx context.Context, problemID uuid.UUID, fn func(context.Context) error) error
 	IsInitialized(ctx context.Context, problemID uuid.UUID) (bool, error)
 
@@ -188,10 +193,9 @@ type WorkshopUC interface {
 	ListProblemFiles(ctx context.Context, problemID uuid.UUID, dirPath string) ([]problemsmodel.FileEntry, error)
 	CompileProblemComponent(ctx context.Context, req problemsmodel.CompileComponentRequest) (*problemsmodel.CompileResult, error)
 	GenerateTests(ctx context.Context, req problemsmodel.GenerateTestsRequest) error
-	ValidateAllTests(ctx context.Context, problemID uuid.UUID, userID uuid.UUID) (*problemsmodel.ValidationReport, error)
+	ValidateAllTests(ctx context.Context, problemID uuid.UUID) (*problemsmodel.ValidationReport, error)
 	TestSolution(ctx context.Context, req problemsmodel.TestSolutionRequest) (*problemsmodel.TestReport, error)
 	GetManifest(ctx context.Context, problemID uuid.UUID) (*problemsmodel.ProblemManifest, error)
-	SaveManifest(ctx context.Context, problemID uuid.UUID, manifest *problemsmodel.ProblemManifest) error
 	UpdateTestsConfig(ctx context.Context, problemID uuid.UUID, testsMeta *problemsmodel.TestsMetadata) error
 	GetTestsConfig(ctx context.Context, problemID uuid.UUID) (*problemsmodel.TestsMetadata, error)
 }

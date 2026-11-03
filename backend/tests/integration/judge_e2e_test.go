@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/access"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
@@ -159,8 +161,8 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	packagesRepo := pgstore.NewPackagesRepo(dbPool)
 
 	// Storage & UseCases
-	workspaceStorage := problems.NewWorkspaceStorage(s3Store, "problem-workspaces", problemsRepo)
-	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sb)
+	workspaceStorage := problems.NewWorkspaceStorage(s3Store, "problem-workspaces", problems.NewWorkspaceCatalog(problemsRepo, pgstore.NewProblemTransactions(dbPool)))
+	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sb, access.NewPermissionsUseCase(contestsRepo, usersRepo, problemsRepo, pgstore.NewTeamsRepo(dbPool), orgsRepo))
 	publishUC := problems.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, s3Store, "problem-packages", pgstore.NewProblemTransactions(dbPool))
 
 	eventPublisher := judgeworker.NewEventPublisher(js)
@@ -218,31 +220,31 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	// Add test cases (01: 1 2 -> 3; 02: 3 2 -> 5)
 	err = workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 		ProblemID: problemID,
-		UserID:    userID,
-		Path:      "tests/01.in",
-		Content:   []byte("1 2\n"),
+
+		Path:    "tests/01.in",
+		Content: []byte("1 2\n"),
 	})
 	require.NoError(t, err)
 	err = workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 		ProblemID: problemID,
-		UserID:    userID,
-		Path:      "tests/01.out",
-		Content:   []byte("3\n"),
+
+		Path:    "tests/01.out",
+		Content: []byte("3\n"),
 	})
 	require.NoError(t, err)
 
 	err = workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 		ProblemID: problemID,
-		UserID:    userID,
-		Path:      "tests/02.in",
-		Content:   []byte("3 2\n"),
+
+		Path:    "tests/02.in",
+		Content: []byte("3 2\n"),
 	})
 	require.NoError(t, err)
 	err = workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 		ProblemID: problemID,
-		UserID:    userID,
-		Path:      "tests/02.out",
-		Content:   []byte("5\n"),
+
+		Path:    "tests/02.out",
+		Content: []byte("5\n"),
 	})
 	require.NoError(t, err)
 

@@ -1,7 +1,6 @@
 package problems
 
 import (
-	"context"
 	"fmt"
 	"io/fs"
 	"os"
@@ -80,7 +79,7 @@ func TestWorkshopTestsConfig_RoundTrip(t *testing.T) {
 	for _, format := range []string{"gfmt", "polygon", "pcms2", "icpc"} {
 		for _, name := range []string{"a-plus-b", "subtasks-groups", "max-subarray", "interactive-guess"} {
 			t.Run(format+"/"+name, func(t *testing.T) {
-				ctx := context.Background()
+				ctx := problemActorContext()
 				src := t.TempDir()
 				require.NoError(t, os.CopyFS(src, os.DirFS("../../pkg/testdata/"+format+"/"+name)))
 				parser, err := formats.GetParser(format)
@@ -149,7 +148,7 @@ subtasks:
    - manual: edge-case.in
 `
 	uc, id := newWorkshopValidatorTest(t, false, map[string]string{"problem.yaml": data, "tests/edge-case.in": "edge"}, nil)
-	ctx := context.Background()
+	ctx := problemActorContext()
 	before, err := uc.GetTestsConfig(ctx, id)
 	require.NoError(t, err)
 	require.Equal(t, "edge-case.in", before.Tests[1].Filename)
@@ -172,7 +171,7 @@ subtasks:
 
 func TestWorkshopSaveManifest_IntentionalComponentSelection(t *testing.T) {
 	uc, id := newWorkshopValidatorTest(t, true, map[string]string{"problem.yaml": "validator: validators/selected.cpp\nsubtasks: {}\n"}, nil)
-	ctx := context.Background()
+	ctx := problemActorContext()
 	manifest, err := uc.loadManifest(ctx, id)
 	require.NoError(t, err)
 	require.NoError(t, uc.saveManifest(ctx, id, manifest))
@@ -188,7 +187,7 @@ func TestWorkshopSaveManifest_IntentionalComponentSelection(t *testing.T) {
 
 func TestWorkshopSaveManifest_UnrelatedComponentMetadata(t *testing.T) {
 	uc, id := newWorkshopValidatorTest(t, false, map[string]string{"problem.yaml": "checker: checkers/z-selected.cpp\nvalidator: validators/z-selected.cpp\ninteractor: interactors/z-selected.cpp\nsubtasks: {}\n"}, nil)
-	ctx := context.Background()
+	ctx := problemActorContext()
 	manifest, err := uc.loadManifest(ctx, id)
 	require.NoError(t, err)
 	for _, kind := range []string{"checker", "validator", "interactor"} {
@@ -225,7 +224,7 @@ func TestWorkshopTestsConfig_DeleteMiddleWithoutRenumber(t *testing.T) {
 		"tests/first.in": "first", "tests/middle.in": "deleted", "tests/last.in": "last", "tests/tail.in": "tail",
 		"tests/02.in": "unrelated retained file",
 	}, nil)
-	ctx := context.Background()
+	ctx := problemActorContext()
 	metadata, err := uc.GetTestsConfig(ctx, id)
 	require.NoError(t, err)
 	require.Len(t, metadata.Tests, 5)
