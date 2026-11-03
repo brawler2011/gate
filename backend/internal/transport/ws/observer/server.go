@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	observerv1 "github.com/brawler2011/gate/backend/contracts/observer/v1"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -139,7 +140,7 @@ func parseSubmissionsFilter(r *http.Request) (*SubmissionsFilter, error) {
 func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -326,7 +327,7 @@ func startReadPump(conn *websocket.Conn) <-chan struct{} {
 func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return

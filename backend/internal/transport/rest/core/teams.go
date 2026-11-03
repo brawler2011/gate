@@ -5,19 +5,20 @@ import (
 	"errors"
 	"strings"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 )
 
 // ListTeams handles GET /teams
 func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParams) (*corev1.ListTeamsResponseModel, error) {
 	// Get current user
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(50)
@@ -79,7 +80,7 @@ func (h *CoreServer) CreateTeam(ctx context.Context, req *corev1.CreateTeamReq) 
 	}
 
 	// Get current user
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	// Validate request body
 	if err := validateCreateTeamRequest(req.Name, req.OrganizationID); err != nil {
@@ -113,7 +114,7 @@ func (h *CoreServer) CreateTeam(ctx context.Context, req *corev1.CreateTeamReq) 
 // GetTeam handles GET /teams/{id}
 func (h *CoreServer) GetTeam(ctx context.Context, params corev1.GetTeamParams) (*corev1.GetTeamResponseModel, error) {
 	// Get current user
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	// Get team
 	team, err := h.teamsUC.GetTeam(ctx, params.ID, user.Id)
@@ -129,7 +130,7 @@ func (h *CoreServer) GetTeam(ctx context.Context, params corev1.GetTeamParams) (
 // UpdateTeam handles PATCH /teams/{id}
 func (h *CoreServer) UpdateTeam(ctx context.Context, req *corev1.UpdateTeamRequestModel, params corev1.UpdateTeamParams) error {
 	// Get current user
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	// Validate request body
 	if err := validateUpdateTeamRequest(req); err != nil {
@@ -165,7 +166,7 @@ func (h *CoreServer) UpdateTeam(ctx context.Context, req *corev1.UpdateTeamReque
 // DeleteTeam handles DELETE /teams/{id}
 func (h *CoreServer) DeleteTeam(ctx context.Context, params corev1.DeleteTeamParams) error {
 	// Get current user
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	// Delete team
 	err := h.teamsUC.DeleteTeam(ctx, params.ID, user.Id)
@@ -179,7 +180,7 @@ func (h *CoreServer) DeleteTeam(ctx context.Context, params corev1.DeleteTeamPar
 // ListTeamMembers handles GET /teams/{id}/members
 func (h *CoreServer) ListTeamMembers(ctx context.Context, params corev1.ListTeamMembersParams) (*corev1.ListTeamMembersResponseModel, error) {
 	// Get current user
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	page := params.Page.Or(1)
 
@@ -197,7 +198,7 @@ func (h *CoreServer) ListTeamMembers(ctx context.Context, params corev1.ListTeam
 
 // AddTeamMember handles POST /teams/{id}/members
 func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMemberParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	role := organizationsmodel.TeamRoleMember
 	if params.Role.IsSet() && params.Role.Value != "" {
@@ -220,7 +221,7 @@ func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMem
 
 // UpdateTeamMemberRole handles PATCH /teams/{id}/members
 func (h *CoreServer) UpdateTeamMemberRole(ctx context.Context, params corev1.UpdateTeamMemberRoleParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	err := h.teamsUC.UpdateTeamMemberRole(ctx, params.ID, params.UserID, organizationsmodel.TeamRole(params.Role), user.Id)
 	if err != nil {
@@ -232,7 +233,7 @@ func (h *CoreServer) UpdateTeamMemberRole(ctx context.Context, params corev1.Upd
 
 // RemoveTeamMember handles DELETE /teams/{id}/members
 func (h *CoreServer) RemoveTeamMember(ctx context.Context, params corev1.RemoveTeamMemberParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	err := h.teamsUC.RemoveTeamMember(ctx, params.ID, params.UserID, user.Id)
 	if err != nil {
@@ -244,7 +245,7 @@ func (h *CoreServer) RemoveTeamMember(ctx context.Context, params corev1.RemoveT
 
 // ListTeamContests handles GET /teams/{id}/contests
 func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTeamContestsParams) (*corev1.ListContestsResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	contests, err := h.teamsUC.GetTeamContests(ctx, params.ID, user.Id)
 	if err != nil {
@@ -264,7 +265,7 @@ func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTea
 
 // ListTeamProblems handles GET /teams/{id}/problems
 func (h *CoreServer) ListTeamProblems(ctx context.Context, params corev1.ListTeamProblemsParams) (*corev1.ListProblemsResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	problems, err := h.teamsUC.GetTeamProblems(ctx, params.ID, user.Id)
 	if err != nil {

@@ -2,6 +2,8 @@ package identity
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type testTransactions[T any] struct{ store T }
@@ -13,3 +15,5 @@ type identityTestStore struct {
 	AuthRepo
 	ContestsRepo
 }
+
+func (identityTestStore) LockUser(context.Context, uuid.UUID) error { return nil }

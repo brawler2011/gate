@@ -6,9 +6,10 @@ import (
 	"regexp"
 	"strings"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 )
 
@@ -23,7 +24,7 @@ func generateLogin(name string) string {
 
 // ListOrganizations handles GET /organizations
 func (h *CoreServer) ListOrganizations(ctx context.Context, params corev1.ListOrganizationsParams) (*corev1.ListOrganizationsResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(50)
@@ -45,7 +46,7 @@ func (h *CoreServer) ListOrganizations(ctx context.Context, params corev1.ListOr
 
 // CreateOrganization handles POST /organizations
 func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.CreateOrganizationParams) (*corev1.CreateOrganizationResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	if err := validateCreateOrganizationParams(params.Name); err != nil {
 		return nil, err
@@ -94,7 +95,7 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.Creat
 
 // GetOrganization handles GET /organizations/{login}
 func (h *CoreServer) GetOrganization(ctx context.Context, params corev1.GetOrganizationParams) (*corev1.GetOrganizationResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	org, err := h.organizationsUC.GetOrganizationByLogin(ctx, params.Login, user.Id)
 	if err != nil {
@@ -108,7 +109,7 @@ func (h *CoreServer) GetOrganization(ctx context.Context, params corev1.GetOrgan
 
 // UpdateOrganization handles PATCH /organizations/{login}
 func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateOrganizationRequestModel, params corev1.UpdateOrganizationParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	if err := validateUpdateOrganizationRequest(req); err != nil {
 		return err
@@ -149,7 +150,7 @@ func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateO
 
 // DeleteOrganization handles DELETE /organizations/{login}
 func (h *CoreServer) DeleteOrganization(ctx context.Context, params corev1.DeleteOrganizationParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	err := h.organizationsUC.DeleteOrganizationByLogin(ctx, params.Login, user.Id)
 	if err != nil {
@@ -161,7 +162,7 @@ func (h *CoreServer) DeleteOrganization(ctx context.Context, params corev1.Delet
 
 // ListOrganizationMembers handles GET /organizations/{login}/members
 func (h *CoreServer) ListOrganizationMembers(ctx context.Context, params corev1.ListOrganizationMembersParams) (*corev1.ListOrganizationMembersResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	page := params.Page.Or(1)
 
@@ -176,7 +177,7 @@ func (h *CoreServer) ListOrganizationMembers(ctx context.Context, params corev1.
 
 // AddOrganizationMember handles POST /organizations/{login}/members
 func (h *CoreServer) AddOrganizationMember(ctx context.Context, params corev1.AddOrganizationMemberParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	if !validateOrganizationRole(string(params.Role)) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role, must be 'owner', 'admin', or 'member'")
@@ -197,7 +198,7 @@ func (h *CoreServer) AddOrganizationMember(ctx context.Context, params corev1.Ad
 
 // RemoveOrganizationMember handles DELETE /organizations/{login}/members
 func (h *CoreServer) RemoveOrganizationMember(ctx context.Context, params corev1.RemoveOrganizationMemberParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	err := h.organizationsUC.RemoveMemberByLogin(ctx, params.Login, params.UserID, user.Id)
 	if err != nil {
@@ -213,7 +214,7 @@ func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, req *core
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -250,7 +251,7 @@ func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, req *core
 
 // ListOrganizationInvitations handles GET /organizations/{login}/invitations
 func (h *CoreServer) ListOrganizationInvitations(ctx context.Context, params corev1.ListOrganizationInvitationsParams) (*corev1.ListOrganizationInvitationsResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -265,7 +266,7 @@ func (h *CoreServer) ListOrganizationInvitations(ctx context.Context, params cor
 
 // InviteOrganizationMember handles POST /organizations/{login}/invitations
 func (h *CoreServer) InviteOrganizationMember(ctx context.Context, req *corev1.InviteOrganizationMemberRequestModel, params corev1.InviteOrganizationMemberParams) (*corev1.OrganizationInvitationModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -290,7 +291,7 @@ func (h *CoreServer) InviteOrganizationMember(ctx context.Context, req *corev1.I
 
 // CancelOrganizationInvitation handles DELETE /organizations/{login}/invitations/{id}
 func (h *CoreServer) CancelOrganizationInvitation(ctx context.Context, params corev1.CancelOrganizationInvitationParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -305,7 +306,7 @@ func (h *CoreServer) CancelOrganizationInvitation(ctx context.Context, params co
 
 // AcceptOrganizationInvitation handles POST /invitations/{id}/accept
 func (h *CoreServer) AcceptOrganizationInvitation(ctx context.Context, params corev1.AcceptOrganizationInvitationParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -320,7 +321,7 @@ func (h *CoreServer) AcceptOrganizationInvitation(ctx context.Context, params co
 
 // DeclineOrganizationInvitation handles POST /invitations/{id}/decline
 func (h *CoreServer) DeclineOrganizationInvitation(ctx context.Context, params corev1.DeclineOrganizationInvitationParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -335,7 +336,7 @@ func (h *CoreServer) DeclineOrganizationInvitation(ctx context.Context, params c
 
 // ListOrganizationJoinRequests handles GET /organizations/{login}/requests
 func (h *CoreServer) ListOrganizationJoinRequests(ctx context.Context, params corev1.ListOrganizationJoinRequestsParams) (*corev1.ListOrganizationJoinRequestsResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -350,7 +351,7 @@ func (h *CoreServer) ListOrganizationJoinRequests(ctx context.Context, params co
 
 // CreateOrganizationJoinRequest handles POST /organizations/{login}/requests
 func (h *CoreServer) CreateOrganizationJoinRequest(ctx context.Context, req corev1.OptCreateOrganizationJoinRequestModel, params corev1.CreateOrganizationJoinRequestParams) (*corev1.OrganizationJoinRequestResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -379,7 +380,7 @@ func (h *CoreServer) CreateOrganizationJoinRequest(ctx context.Context, req core
 
 // GetMyOrganizationJoinRequest handles GET /organizations/{login}/requests/mine
 func (h *CoreServer) GetMyOrganizationJoinRequest(ctx context.Context, params corev1.GetMyOrganizationJoinRequestParams) (*corev1.OrganizationJoinRequestNullableResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return &corev1.OrganizationJoinRequestNullableResponseModel{}, nil
 	}
@@ -402,7 +403,7 @@ func (h *CoreServer) GetMyOrganizationJoinRequest(ctx context.Context, params co
 
 // CancelOrganizationJoinRequest handles DELETE /organizations/{login}/requests/mine
 func (h *CoreServer) CancelOrganizationJoinRequest(ctx context.Context, params corev1.CancelOrganizationJoinRequestParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -417,7 +418,7 @@ func (h *CoreServer) CancelOrganizationJoinRequest(ctx context.Context, params c
 
 // ApproveOrganizationJoinRequest handles POST /organizations/{login}/requests/{id}/approve
 func (h *CoreServer) ApproveOrganizationJoinRequest(ctx context.Context, req corev1.OptApproveOrganizationJoinRequestModel, params corev1.ApproveOrganizationJoinRequestParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -437,7 +438,7 @@ func (h *CoreServer) ApproveOrganizationJoinRequest(ctx context.Context, req cor
 
 // RejectOrganizationJoinRequest handles POST /organizations/{login}/requests/{id}/reject
 func (h *CoreServer) RejectOrganizationJoinRequest(ctx context.Context, params corev1.RejectOrganizationJoinRequestParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}

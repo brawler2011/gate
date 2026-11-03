@@ -3,6 +3,8 @@ package submissions
 import (
 	"context"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
@@ -28,4 +30,13 @@ func (submissionTestStore) GetContestProblem(context.Context, contestsmodel.Cont
 }
 func (submissionTestStore) GetContestUserProblemBlock(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (*contestsmodel.ContestUserProblemBlock, error) {
 	return nil, nil
+}
+
+type allowSubmissionPermissions struct{}
+
+func (allowSubmissionPermissions) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+	return true, nil
+}
+func (allowSubmissionPermissions) GetContestPermissions(context.Context, uuid.UUID, uuid.UUID) (*accessmodel.ContestPermissions, error) {
+	return &accessmodel.ContestPermissions{GetOtherUserSubmission: true, GetSubmissionDetails: true, ManageContest: true}, nil
 }

@@ -11,13 +11,7 @@ import (
 )
 
 type ContestsUC interface {
-	GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error)
-
-	GetContestProblem(ctx context.Context, c contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error)
-
-	ProcessSubmissionResult(ctx context.Context, submission *submissionsmodel.Submission) error
-
-	GetProblemBlockStatusForUser(ctx context.Context, contestID, userID, problemID uuid.UUID) (*contestsmodel.ContestUserProblemBlock, error)
+	GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error)
 }
 
 type OutboxRepo interface {

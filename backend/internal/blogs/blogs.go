@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	blogsmodel "github.com/brawler2011/gate/backend/internal/blogs/model"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
@@ -65,6 +66,9 @@ func (uc *BlogsUseCase) CreatePost(
 	imageReader io.Reader,
 	filename string,
 ) (uuid.UUID, error) {
+	if err := accessmodel.RequireAdmin(ctx); err != nil {
+		return uuid.Nil, err
+	}
 	// Validate and process image
 	imageKey, err := uc.uploadImage(ctx, imageReader, filename)
 	if err != nil {
@@ -107,6 +111,9 @@ func (uc *BlogsUseCase) UpdatePost(
 	imageReader io.Reader,
 	filename string,
 ) error {
+	if err := accessmodel.RequireAdmin(ctx); err != nil {
+		return err
+	}
 	// Get existing post
 	post, err := uc.blogsRepo.GetPostByID(ctx, id)
 	if err != nil {
@@ -150,6 +157,9 @@ func (uc *BlogsUseCase) UpdatePost(
 
 // DeletePost deletes a post and its associated image
 func (uc *BlogsUseCase) DeletePost(ctx context.Context, id uuid.UUID) error {
+	if err := accessmodel.RequireAdmin(ctx); err != nil {
+		return err
+	}
 	// Get post to find image key
 	post, err := uc.blogsRepo.GetPostByID(ctx, id)
 	if err != nil {

@@ -2,18 +2,17 @@ package core
 
 import (
 	"context"
-	"time"
+
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	submissions "github.com/brawler2011/gate/backend/internal/submissions"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
 func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSubmissionRequestModel, params corev1.CreateSubmissionParams) (*corev1.CreationResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
@@ -56,21 +55,6 @@ func (h *CoreServer) GetSubmission(ctx context.Context, params corev1.GetSubmiss
 	submission, err := h.submissionsUC.GetSubmission(ctx, params.SubmissionID)
 	if err != nil {
 		return nil, err
-	}
-
-	user := middleware.GetUser(ctx)
-	if submission.ContestID != nil {
-		contest, err := h.contestsUC.GetContest(ctx, *submission.ContestID)
-		if err != nil {
-			return nil, err
-		}
-		permissions, err := h.permissionsUC.GetContestPermissions(ctx, contest.ID, user.Id)
-		if err != nil {
-			return nil, err
-		}
-		submission = submissions.SubmissionView(&contest, submission.CreatedBy, submission.CreatedAt, user.Id, permissions, time.Now()).Apply(submission)
-	} else if !user.IsAdmin() && (submission.CreatedBy == nil || *submission.CreatedBy != user.Id) {
-		return nil, pkg.NoPermission
 	}
 
 	return &corev1.GetSubmissionResponseModel{Submission: SolutionDTO(submission)}, nil

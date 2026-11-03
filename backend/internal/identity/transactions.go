@@ -11,6 +11,7 @@ import (
 )
 
 type IdentityTxStore interface {
+	LockUser(context.Context, uuid.UUID) error
 	CreateUser(ctx context.Context, params identitymodel.CreateUserParams) error
 	GetUserById(ctx context.Context, id uuid.UUID) (accessmodel.User, error)
 	GetUserByUsername(ctx context.Context, username string) (accessmodel.User, error)

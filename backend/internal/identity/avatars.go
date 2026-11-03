@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
@@ -58,6 +59,10 @@ func (uc *AvatarsUseCase) UploadAvatar(
 		return "", fmt.Errorf("failed to get user: %w", err)
 	}
 
+	if err := accessmodel.RequireSelfOrAdmin(ctx, user.Id); err != nil {
+		return "", err
+	}
+
 	// Validate file extension
 	ext := strings.ToLower(filepath.Ext(filename)) // FIXME: че? почему мы по filename определяем контент? что насчёт contentType???
 	allowedExts := map[string]bool{
@@ -103,16 +108,14 @@ func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, username string) err
 		return fmt.Errorf("failed to get user: %w", err)
 	}
 
+	if err := accessmodel.RequireSelfOrAdmin(ctx, user.Id); err != nil {
+		return err
+	}
+
 	// FIXME: если в схеме бд пустая строка и null эквивалентны по логике, то значение стоит сделать NOT NULL
 	// FIXME: ну и название поля оч кривое, это же не url, а id
 	if user.AvatarUrl == nil || *user.AvatarUrl == "" {
 		return fmt.Errorf("user has no avatar")
-	}
-
-	// Delete the avatar file
-	err = uc.storage.DeleteFile(ctx, uc.avatarBucket, *user.AvatarUrl)
-	if err != nil {
-		slog.Debug("failed to delete old avatar file", "error", err)
 	}
 
 	// Update user record to remove avatar URL
@@ -123,6 +126,12 @@ func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, username string) err
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update user record: %w", err)
+	}
+
+	// Delete the avatar file
+	err = uc.storage.DeleteFile(ctx, uc.avatarBucket, *user.AvatarUrl)
+	if err != nil {
+		slog.Debug("failed to delete old avatar file", "error", err)
 	}
 
 	return nil

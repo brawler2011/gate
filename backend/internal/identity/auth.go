@@ -105,6 +105,25 @@ func (uc *AuthUseCase) Register(ctx context.Context, username, emailAddr, passwo
 			return errByEmail
 		}
 
+		if errByName == nil {
+			if err := store.LockUser(ctx, existingByName.Id); err != nil {
+				return err
+			}
+			existingByName, errByName = store.GetUserById(ctx, existingByName.Id)
+			if errByName != nil {
+				return errByName
+			}
+		}
+		if errByEmail == nil {
+			if err := store.LockUser(ctx, existingByEmail.Id); err != nil {
+				return err
+			}
+			existingByEmail, errByEmail = store.GetUserById(ctx, existingByEmail.Id)
+			if errByEmail != nil {
+				return errByEmail
+			}
+		}
+
 		if errByName == nil && existingByName.IsEmailVerified {
 			return pkg.Wrap(pkg.ErrConflict, nil, "username already taken")
 		}
@@ -348,14 +367,12 @@ func (uc *AuthUseCase) ResendVerificationEmail(ctx context.Context, identifier s
 		return pkg.Wrap(pkg.ErrBadInput, nil, "user has no email associated")
 	}
 
-	_ = uc.authRepo.DeleteAuthTokensByUserIdAndType(ctx, user.Id, identitymodel.AuthTokenTypeEmailVerification)
-
 	token, tokenHash, err := generateSecureToken()
 	if err != nil {
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to generate token")
 	}
 
-	err = uc.authRepo.CreateAuthToken(ctx, identitymodel.CreateAuthTokenParams{
+	err = replaceAuthToken(ctx, uc.txManager, identitymodel.CreateAuthTokenParams{
 		ID:        uuid.New(),
 		UserID:    user.Id,
 		TokenType: identitymodel.AuthTokenTypeEmailVerification,
@@ -380,14 +397,12 @@ func (uc *AuthUseCase) ForgotPassword(ctx context.Context, identifier string) er
 		return nil
 	}
 
-	_ = uc.authRepo.DeleteAuthTokensByUserIdAndType(ctx, user.Id, identitymodel.AuthTokenTypePasswordReset)
-
 	token, tokenHash, err := generateSecureToken()
 	if err != nil {
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to generate token")
 	}
 
-	err = uc.authRepo.CreateAuthToken(ctx, identitymodel.CreateAuthTokenParams{
+	err = replaceAuthToken(ctx, uc.txManager, identitymodel.CreateAuthTokenParams{
 		ID:        uuid.New(),
 		UserID:    user.Id,
 		TokenType: identitymodel.AuthTokenTypePasswordReset,
@@ -448,6 +463,9 @@ func (uc *AuthUseCase) resetPasswordWithin(ctx context.Context, store IdentityTx
 }
 
 func (uc *AuthUseCase) ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) (uuid.UUID, error) {
+	if err := accessmodel.RequireSelfOrAdmin(ctx, userID); err != nil {
+		return uuid.Nil, err
+	}
 	var sessionID uuid.UUID
 	err := uc.txManager.Within(ctx, func(store IdentityTxStore) error {
 		var err error
@@ -460,6 +478,10 @@ func (uc *AuthUseCase) ChangePassword(ctx context.Context, userID uuid.UUID, old
 func (uc *AuthUseCase) changePasswordWithin(ctx context.Context, store IdentityTxStore, userID uuid.UUID, oldPassword, newPassword string) (uuid.UUID, error) {
 	if err := identitymodel.PasswordValidate(newPassword); err != nil {
 		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid password")
+	}
+
+	if err := store.LockUser(ctx, userID); err != nil {
+		return uuid.Nil, err
 	}
 
 	user, err := store.GetUserById(ctx, userID)
@@ -501,6 +523,9 @@ type emailChangePayload struct {
 }
 
 func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID, password, newEmail string) error {
+	if err := accessmodel.RequireSelfOrAdmin(ctx, userID); err != nil {
+		return err
+	}
 	if err := identitymodel.EmailValidate(newEmail); err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "invalid email")
 	}
@@ -519,8 +544,6 @@ func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID,
 		return pkg.Wrap(pkg.ErrConflict, nil, "email already in use")
 	}
 
-	_ = uc.authRepo.DeleteAuthTokensByUserIdAndType(ctx, userID, identitymodel.AuthTokenTypeEmailChange)
-
 	token, tokenHash, err := generateSecureToken()
 	if err != nil {
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to generate token")
@@ -531,7 +554,7 @@ func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID,
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to marshal payload")
 	}
 
-	err = uc.authRepo.CreateAuthToken(ctx, identitymodel.CreateAuthTokenParams{
+	err = replaceAuthToken(ctx, uc.txManager, identitymodel.CreateAuthTokenParams{
 		ID:        uuid.New(),
 		UserID:    userID,
 		TokenType: identitymodel.AuthTokenTypeEmailChange,
@@ -593,4 +616,16 @@ func (uc *AuthUseCase) confirmEmailChangeWithin(ctx context.Context, store Ident
 	}
 
 	return nil
+}
+
+func replaceAuthToken(ctx context.Context, transactions IdentityTransactions, params identitymodel.CreateAuthTokenParams) error {
+	return transactions.Within(ctx, func(store IdentityTxStore) error {
+		if err := store.LockUser(ctx, params.UserID); err != nil {
+			return err
+		}
+		if err := store.DeleteAuthTokensByUserIdAndType(ctx, params.UserID, params.TokenType); err != nil {
+			return err
+		}
+		return store.CreateAuthToken(ctx, params)
+	})
 }

@@ -114,3 +114,6 @@ WHERE username ILIKE @prefix::text || '%';
 
 
 
+
+-- name: LockUser :one
+SELECT id FROM users WHERE id = @id::uuid FOR UPDATE;

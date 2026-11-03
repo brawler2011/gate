@@ -16,9 +16,7 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
-	submissions "github.com/brawler2011/gate/backend/internal/submissions"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/booklet"
 	"github.com/google/uuid"
@@ -126,7 +124,7 @@ func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateCont
 		return nil, err
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	org, err := h.organizationsUC.GetOrganizationByLogin(ctx, params.OrgLogin, user.Id)
 	if err != nil {
@@ -174,7 +172,7 @@ func (h *CoreServer) ListOrganizationContests(ctx context.Context, params corev1
 	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	org, err := h.organizationsUC.GetOrganizationByLogin(ctx, params.OrgLogin, user.Id)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
@@ -211,7 +209,7 @@ func (h *CoreServer) GetContest(ctx context.Context, params corev1.GetContestPar
 		return nil, err
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionGetContestProblem)
 	if err != nil {
 		return nil, err
@@ -464,7 +462,7 @@ func (h *CoreServer) ListWorkshopContests(ctx context.Context, params corev1.Lis
 	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	var sortBy string
 	if params.SortBy.IsSet() {
@@ -568,7 +566,7 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, params corev1.GetCon
 	}
 
 	var isManager bool
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if !user.IsGuest() {
 		isManager, _ = h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
 	}
@@ -602,7 +600,7 @@ func (h *CoreServer) DownloadContestStatementsPdf(ctx context.Context, params co
 	}
 
 	var isManager bool
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if !user.IsGuest() {
 		isManager, _ = h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
 	}
@@ -811,7 +809,7 @@ func (h *CoreServer) UpdateContestMember(ctx context.Context, params corev1.Upda
 		return err
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	// Prevent user from updating their own role
 	if params.UserID == user.Id {
@@ -875,7 +873,7 @@ func (h *CoreServer) GetMyContestRole(ctx context.Context, params corev1.GetMyCo
 		return nil, err
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	contestRole, permissionsMask, err := h.permissionsUC.GetEffectiveContestRole(ctx, contest.ID, user.Id)
 	if err != nil {
@@ -936,16 +934,6 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 		problemID = &params.ProblemId.Value
 	}
 
-	user := middleware.GetUser(ctx)
-	permissions, err := h.permissionsUC.GetContestPermissions(ctx, contest.ID, user.Id)
-	if err != nil {
-		return nil, err
-	}
-	ownOnly := filterUserId != nil && *filterUserId == user.Id
-	if state != nil && contest.IsFrozenAt(time.Now()) && !permissions.ManageContest && !ownOnly {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "state filter is unavailable during freeze")
-	}
-
 	var since int64
 	if h.natsJS != nil {
 		lastSeq, seqErr := pkg.GetSubmissionsLastSequence(ctx, h.natsJS)
@@ -970,10 +958,6 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 		return nil, err
 	}
 
-	for i, submission := range submissionsList.Submissions {
-		submissionsList.Submissions[i] = submissions.SubmissionView(&contest, submission.CreatedBy, submission.CreatedAt, user.Id, permissions, time.Now()).Apply(submission)
-	}
-
 	resp := SubmissionsListToDTO(submissionsList)
 	if since != 0 {
 		resp.Since = corev1.NewOptInt64(since)
@@ -988,7 +972,7 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, params corev1.Get
 		return nil, err
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionGetMonitor)
 	if err != nil {
 		return nil, err
@@ -1054,7 +1038,7 @@ func (h *CoreServer) CreateContestTeam(ctx context.Context, params corev1.Create
 		return err
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	role := contestsmodel.ContestRoleParticipant
 	if params.Role.IsSet() && params.Role.Value != "" {
@@ -1075,7 +1059,7 @@ func (h *CoreServer) UpdateContestTeam(ctx context.Context, params corev1.Update
 		return err
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	err = h.contestsUC.UpdateContestTeamRole(ctx, contest.ID, params.TeamID, user.Id, contestsmodel.ContestRole(params.Role))
 	if err != nil {
@@ -1091,7 +1075,7 @@ func (h *CoreServer) DeleteContestTeam(ctx context.Context, params corev1.Delete
 		return err
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	err = h.contestsUC.DeleteContestTeam(ctx, contest.ID, params.TeamID, user.Id)
 	if err != nil {
@@ -1107,7 +1091,7 @@ func (h *CoreServer) BlockProblemForUser(ctx context.Context, req corev1.OptBloc
 		return err
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	var reason *string
 	if req.IsSet() && req.Value.Reason.IsSet() {
@@ -1176,7 +1160,7 @@ func (h *CoreServer) GetProblemBlockStatusForUser(ctx context.Context, params co
 
 // ListContestJoinRequests handles GET /organizations/{org_login}/contests/{contest_login}/requests
 func (h *CoreServer) ListContestJoinRequests(ctx context.Context, params corev1.ListContestJoinRequestsParams) (*corev1.ListContestJoinRequestsResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -1191,7 +1175,7 @@ func (h *CoreServer) ListContestJoinRequests(ctx context.Context, params corev1.
 
 // CreateContestJoinRequest handles POST /organizations/{org_login}/contests/{contest_login}/requests
 func (h *CoreServer) CreateContestJoinRequest(ctx context.Context, req corev1.OptCreateContestJoinRequestModel, params corev1.CreateContestJoinRequestParams) (*corev1.ContestJoinRequestResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -1220,7 +1204,7 @@ func (h *CoreServer) CreateContestJoinRequest(ctx context.Context, req corev1.Op
 
 // GetMyContestJoinRequest handles GET /organizations/{org_login}/contests/{contest_login}/requests/mine
 func (h *CoreServer) GetMyContestJoinRequest(ctx context.Context, params corev1.GetMyContestJoinRequestParams) (*corev1.ContestJoinRequestNullableResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return &corev1.ContestJoinRequestNullableResponseModel{}, nil
 	}
@@ -1243,7 +1227,7 @@ func (h *CoreServer) GetMyContestJoinRequest(ctx context.Context, params corev1.
 
 // CancelContestJoinRequest handles DELETE /organizations/{org_login}/contests/{contest_login}/requests/mine
 func (h *CoreServer) CancelContestJoinRequest(ctx context.Context, params corev1.CancelContestJoinRequestParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -1258,7 +1242,7 @@ func (h *CoreServer) CancelContestJoinRequest(ctx context.Context, params corev1
 
 // ApproveContestJoinRequest handles POST /organizations/{org_login}/contests/{contest_login}/requests/{id}/approve
 func (h *CoreServer) ApproveContestJoinRequest(ctx context.Context, params corev1.ApproveContestJoinRequestParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -1273,7 +1257,7 @@ func (h *CoreServer) ApproveContestJoinRequest(ctx context.Context, params corev
 
 // RejectContestJoinRequest handles POST /organizations/{org_login}/contests/{contest_login}/requests/{id}/reject
 func (h *CoreServer) RejectContestJoinRequest(ctx context.Context, params corev1.RejectContestJoinRequestParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}

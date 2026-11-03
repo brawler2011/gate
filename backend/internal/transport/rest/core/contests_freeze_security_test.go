@@ -8,7 +8,6 @@ import (
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
@@ -94,7 +93,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			Id:   participantID,
 			Role: accessmodel.UserRoleUser,
 		}
-		ctx := middleware.WithUser(context.Background(), user)
+		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(baseContest, nil)
 		// Participant has permission to view monitor
@@ -134,7 +133,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			Id:   participantID,
 			Role: accessmodel.UserRoleUser,
 		}
-		ctx := middleware.WithUser(context.Background(), user)
+		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(baseContest, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionGetMonitor).Return(true, nil)
@@ -182,7 +181,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			Id:   moderatorID,
 			Role: accessmodel.UserRoleUser, // User role in system, but moderator in contest
 		}
-		ctx := middleware.WithUser(context.Background(), user)
+		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(baseContest, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, moderatorID, accessmodel.ActionGetMonitor).Return(true, nil)
@@ -231,7 +230,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			Id:   adminID,
 			Role: accessmodel.UserRoleAdmin,
 		}
-		ctx := middleware.WithUser(context.Background(), user)
+		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(baseContest, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, adminID, accessmodel.ActionGetMonitor).Return(true, nil)
@@ -286,7 +285,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			Id:   participantID,
 			Role: accessmodel.UserRoleUser,
 		}
-		ctx := middleware.WithUser(context.Background(), user)
+		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(futureContest, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionGetMonitor).Return(true, nil)
@@ -331,7 +330,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			Id:   ownerID,
 			Role: accessmodel.UserRoleUser,
 		}
-		ctx := middleware.WithUser(context.Background(), user)
+		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(futureContest, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, ownerID, accessmodel.ActionGetMonitor).Return(true, nil)
@@ -366,7 +365,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			Id:   participantID,
 			Role: accessmodel.UserRoleUser,
 		}
-		ctx := middleware.WithUser(context.Background(), user)
+		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(baseContest, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionGetMonitor).Return(false, nil)

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 
 	contests "github.com/brawler2011/gate/backend/internal/contests"
@@ -131,8 +133,8 @@ func TestBlockSubmissionRemovesSolveAndUnblockQueuesRejudge(t *testing.T) {
 		*blockingSubmissionsRepo
 		OutboxRepo
 		*scoreboardRepo
-	}{repo, outbox, f.repo}})
-	ctx := context.Background()
+	}{repo, outbox, f.repo}}, allowSubmissionPermissions{})
+	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: f.users["alice"], Role: accessmodel.UserRoleUser})
 	reason := "Cheating"
 	require.NoError(t, uc.BlockSubmission(ctx, f.repo.contest.ID, id, &reason))
 	sub, err := uc.GetSubmission(ctx, id)
@@ -172,8 +174,8 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 		*blockingSubmissionsRepo
 		OutboxRepo
 		*scoreboardRepo
-	}{repo, outbox, f.repo}})
-	ctx := context.Background()
+	}{repo, outbox, f.repo}}, allowSubmissionPermissions{})
+	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: f.users["alice"], Role: accessmodel.UserRoleUser})
 	reason := "Banned from problem A"
 	contest, user, problem := f.repo.contest.ID, f.users["alice"], f.repo.problems[0].ProblemID
 	require.NoError(t, f.uc.BlockProblemForUser(ctx, contest, user, problem, &reason, uuid.New()))
@@ -232,4 +234,13 @@ type contestCommandTransactions struct{ store contests.CommandTxStore }
 
 func (t contestCommandTransactions) Within(_ context.Context, fn func(contests.CommandTxStore) error) error {
 	return fn(t.store)
+}
+
+type allowSubmissionPermissions struct{}
+
+func (allowSubmissionPermissions) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+	return true, nil
+}
+func (allowSubmissionPermissions) GetContestPermissions(context.Context, uuid.UUID, uuid.UUID) (*accessmodel.ContestPermissions, error) {
+	return &accessmodel.ContestPermissions{GetOtherUserSubmission: true, GetSubmissionDetails: true, ManageContest: true}, nil
 }

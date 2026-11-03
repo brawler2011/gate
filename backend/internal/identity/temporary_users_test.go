@@ -195,7 +195,7 @@ func TestClaimTemporaryUser_Success(t *testing.T) {
 	ctx := context.Background()
 	usersRepo := newMockUsersRepoForTemp()
 	contestsRepo := newMockContestsRepo()
-	usersUC := NewUsersUseCase(usersRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, ContestsRepo: contestsRepo}}, nil, nil)
+	usersUC := NewUsersUseCase(usersRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, ContestsRepo: contestsRepo}}, nil)
 
 	// Permanent user
 	permUser := accessmodel.User{
@@ -257,7 +257,7 @@ func TestClaimTemporaryUser_Rejections(t *testing.T) {
 	ctx := context.Background()
 	usersRepo := newMockUsersRepoForTemp()
 	contestsRepo := newMockContestsRepo()
-	usersUC := NewUsersUseCase(usersRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, ContestsRepo: contestsRepo}}, nil, nil)
+	usersUC := NewUsersUseCase(usersRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, ContestsRepo: contestsRepo}}, nil)
 
 	permUser := accessmodel.User{Id: uuid.New(), Username: "alice_perm", Role: accessmodel.UserRoleUser}
 	usersRepo.users[permUser.Id] = permUser

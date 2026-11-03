@@ -3,9 +3,10 @@ package core
 import (
 	"context"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -16,7 +17,7 @@ type NotificationsReader interface {
 }
 
 func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNotificationsParams) (*corev1.NotificationsListResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -38,7 +39,7 @@ func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNo
 }
 
 func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context) (*corev1.UnreadNotificationsCountResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return &corev1.UnreadNotificationsCountResponseModel{Count: 0}, nil
 	}
@@ -52,7 +53,7 @@ func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context) (*corev1.U
 }
 
 func (h *CoreServer) MarkNotificationAsRead(ctx context.Context, params corev1.MarkNotificationAsReadParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -66,7 +67,7 @@ func (h *CoreServer) MarkNotificationAsRead(ctx context.Context, params corev1.M
 }
 
 func (h *CoreServer) MarkAllNotificationsAsRead(ctx context.Context) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}

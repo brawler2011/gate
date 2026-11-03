@@ -18,7 +18,6 @@ import (
 
 type UsersUseCase struct {
 	usersRepo UsersRepo
-	authRepo  AuthRepo
 
 	txManager    IdentityTransactions
 	emailService email.EmailService
@@ -27,7 +26,6 @@ type UsersUseCase struct {
 func NewUsersUseCase(
 	repo UsersRepo,
 	txManager IdentityTransactions,
-	authRepo AuthRepo,
 	emailService email.EmailService,
 ) *UsersUseCase {
 	if emailService == nil {
@@ -36,7 +34,6 @@ func NewUsersUseCase(
 
 	return &UsersUseCase{
 		usersRepo: repo,
-		authRepo:  authRepo,
 
 		txManager:    txManager,
 		emailService: emailService,
@@ -44,6 +41,9 @@ func NewUsersUseCase(
 }
 
 func (u *UsersUseCase) CreateUser(ctx context.Context, input identitymodel.CreateUserInput) (uuid.UUID, error) {
+	if err := accessmodel.RequireAdmin(ctx); err != nil {
+		return uuid.Nil, err
+	}
 	id := uuid.New()
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
@@ -80,6 +80,9 @@ func (u *UsersUseCase) GetUserByUsername(ctx context.Context, username string) (
 }
 
 func (u *UsersUseCase) UpdateUser(ctx context.Context, input identitymodel.UpdateUserInput) error {
+	if err := accessmodel.RequireSelfOrAdmin(ctx, input.Id); err != nil {
+		return err
+	}
 	return u.usersRepo.UpdateUser(ctx, input)
 }
 
@@ -159,6 +162,9 @@ func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller accessmode
 }
 
 func (u *UsersUseCase) AdminSetPassword(ctx context.Context, username, newPassword string) error {
+	if err := accessmodel.RequireAdmin(ctx); err != nil {
+		return err
+	}
 	if err := identitymodel.PasswordValidate(newPassword); err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "invalid password")
 	}
@@ -173,19 +179,18 @@ func (u *UsersUseCase) AdminSetPassword(ctx context.Context, username, newPasswo
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to hash password")
 	}
 
-	err = u.usersRepo.UpdateUserPassword(ctx, user.Id, string(hashed))
-	if err != nil {
-		return err
-	}
-
-	if u.authRepo != nil {
-		_ = u.authRepo.DeleteSessionsByUserID(ctx, user.Id)
-	}
-
-	return nil
+	return u.txManager.Within(ctx, func(tx IdentityTxStore) error {
+		if err := tx.UpdateUserPassword(ctx, user.Id, string(hashed)); err != nil {
+			return err
+		}
+		return tx.DeleteSessionsByUserID(ctx, user.Id)
+	})
 }
 
 func (u *UsersUseCase) AdminSendPasswordReset(ctx context.Context, username string) error {
+	if err := accessmodel.RequireAdmin(ctx); err != nil {
+		return err
+	}
 	user, err := u.GetUserByUsername(ctx, username)
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "user not found")
@@ -195,32 +200,29 @@ func (u *UsersUseCase) AdminSendPasswordReset(ctx context.Context, username stri
 		return pkg.Wrap(pkg.ErrBadInput, nil, "user has no email address")
 	}
 
-	if u.authRepo != nil {
-		_ = u.authRepo.DeleteAuthTokensByUserIdAndType(ctx, user.Id, identitymodel.AuthTokenTypePasswordReset)
-	}
-
 	token, tokenHash, err := generateSecureToken()
 	if err != nil {
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to generate token")
 	}
 
-	if u.authRepo != nil {
-		err = u.authRepo.CreateAuthToken(ctx, identitymodel.CreateAuthTokenParams{
-			ID:        uuid.New(),
-			UserID:    user.Id,
-			TokenType: identitymodel.AuthTokenTypePasswordReset,
-			TokenHash: tokenHash,
-			ExpiresAt: time.Now().Add(passwordResetTokenTTL),
-		})
-		if err != nil {
-			return err
-		}
+	err = replaceAuthToken(ctx, u.txManager, identitymodel.CreateAuthTokenParams{
+		ID:        uuid.New(),
+		UserID:    user.Id,
+		TokenType: identitymodel.AuthTokenTypePasswordReset,
+		TokenHash: tokenHash,
+		ExpiresAt: time.Now().Add(passwordResetTokenTTL),
+	})
+	if err != nil {
+		return err
 	}
 
 	return u.emailService.SendPasswordResetEmail(ctx, *user.Email, user.Username, token)
 }
 
 func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail string, withConfirmation bool) error {
+	if err := accessmodel.RequireAdmin(ctx); err != nil {
+		return err
+	}
 	if err := identitymodel.EmailValidate(newEmail); err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "invalid email")
 	}
@@ -239,9 +241,6 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 	}
 
 	// With confirmation
-	if u.authRepo != nil {
-		_ = u.authRepo.DeleteAuthTokensByUserIdAndType(ctx, user.Id, identitymodel.AuthTokenTypeEmailChange)
-	}
 
 	token, tokenHash, err := generateSecureToken()
 	if err != nil {
@@ -253,18 +252,16 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to marshal payload")
 	}
 
-	if u.authRepo != nil {
-		err = u.authRepo.CreateAuthToken(ctx, identitymodel.CreateAuthTokenParams{
-			ID:        uuid.New(),
-			UserID:    user.Id,
-			TokenType: identitymodel.AuthTokenTypeEmailChange,
-			TokenHash: tokenHash,
-			Payload:   payloadBytes,
-			ExpiresAt: time.Now().Add(emailChangeTokenTTL),
-		})
-		if err != nil {
-			return err
-		}
+	err = replaceAuthToken(ctx, u.txManager, identitymodel.CreateAuthTokenParams{
+		ID:        uuid.New(),
+		UserID:    user.Id,
+		TokenType: identitymodel.AuthTokenTypeEmailChange,
+		TokenHash: tokenHash,
+		Payload:   payloadBytes,
+		ExpiresAt: time.Now().Add(emailChangeTokenTTL),
+	})
+	if err != nil {
+		return err
 	}
 
 	if err := u.emailService.SendEmailChangeVerification(ctx, newEmail, user.Username, token); err != nil {
@@ -281,6 +278,9 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 }
 
 func (u *UsersUseCase) AdminResendVerification(ctx context.Context, username string) error {
+	if err := accessmodel.RequireAdmin(ctx); err != nil {
+		return err
+	}
 	user, err := u.GetUserByUsername(ctx, username)
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "user not found")
@@ -294,26 +294,20 @@ func (u *UsersUseCase) AdminResendVerification(ctx context.Context, username str
 		return pkg.Wrap(pkg.ErrBadInput, nil, "user has no email address")
 	}
 
-	if u.authRepo != nil {
-		_ = u.authRepo.DeleteAuthTokensByUserIdAndType(ctx, user.Id, identitymodel.AuthTokenTypeEmailVerification)
-	}
-
 	token, tokenHash, err := generateSecureToken()
 	if err != nil {
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to generate token")
 	}
 
-	if u.authRepo != nil {
-		err = u.authRepo.CreateAuthToken(ctx, identitymodel.CreateAuthTokenParams{
-			ID:        uuid.New(),
-			UserID:    user.Id,
-			TokenType: identitymodel.AuthTokenTypeEmailVerification,
-			TokenHash: tokenHash,
-			ExpiresAt: time.Now().Add(verificationTokenTTL),
-		})
-		if err != nil {
-			return err
-		}
+	err = replaceAuthToken(ctx, u.txManager, identitymodel.CreateAuthTokenParams{
+		ID:        uuid.New(),
+		UserID:    user.Id,
+		TokenType: identitymodel.AuthTokenTypeEmailVerification,
+		TokenHash: tokenHash,
+		ExpiresAt: time.Now().Add(verificationTokenTTL),
+	})
+	if err != nil {
+		return err
 	}
 
 	return u.emailService.SendVerificationEmail(ctx, *user.Email, user.Username, token)

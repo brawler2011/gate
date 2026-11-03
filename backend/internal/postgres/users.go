@@ -259,3 +259,8 @@ func (r *UsersRepo) ListExistingUsernamesByPrefix(ctx context.Context, prefix st
 	}
 	return usernames, nil
 }
+
+func (r *UsersRepo) LockUser(ctx context.Context, id uuid.UUID) error {
+	_, err := r.queries.LockUser(ctx, id)
+	return HandlePgErr(err)
+}

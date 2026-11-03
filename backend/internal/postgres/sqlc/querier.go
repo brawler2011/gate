@@ -188,6 +188,7 @@ type Querier interface {
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	LockContest(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	LockJudgeContest(ctx context.Context, submissionID uuid.UUID) (uuid.UUID, error)
+	LockUser(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	MarkAllNotificationsAsRead(ctx context.Context, userID uuid.UUID) error
 	MarkAsCompleted(ctx context.Context, arg MarkAsCompletedParams) (int64, error)
 	MarkAsFailed(ctx context.Context, arg MarkAsFailedParams) (int64, error)

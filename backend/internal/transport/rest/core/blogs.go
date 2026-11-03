@@ -5,10 +5,11 @@ import (
 	"errors"
 	"io"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	blogsmodel "github.com/brawler2011/gate/backend/internal/blogs/model"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
@@ -59,7 +60,7 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 // CreatePost implements the CreatePost operation
 func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) (corev1.CreatePostRes, error) {
 	// FIXME: эти провери должны быть в мидлваре
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}

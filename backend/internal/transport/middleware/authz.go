@@ -398,7 +398,7 @@ func AuthzMiddleware(permissionsUC PermissionsUC, submissionsUC SubmissionsUC, o
 			return ogenMiddleware.Response{}, pkg.Wrap(pkg.NoPermission, nil, "endpoint not permitted by authorization policy")
 		}
 
-		user := GetUser(req.Context)
+		user := accessmodel.UserFromContext(req.Context)
 		evalCtx := &EvalContext{
 			User:        user,
 			Request:     req,

@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
+
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 
@@ -23,7 +26,8 @@ type SubmissionsUseCase struct {
 	contestsUC      ContestsUC
 	problemsUC      ProblemsUC
 
-	transactor SubmissionTransactions
+	transactor  SubmissionTransactions
+	permissions Permissions
 }
 
 func NewSubmissionsUseCase(
@@ -31,21 +35,62 @@ func NewSubmissionsUseCase(
 	contestsUC ContestsUC,
 	problemsUC ProblemsUC,
 	transactor SubmissionTransactions,
+	permissions Permissions,
 ) *SubmissionsUseCase {
 	return &SubmissionsUseCase{
 		submissionsRepo: submissionsRepo,
 		contestsUC:      contestsUC,
 		problemsUC:      problemsUC,
 
-		transactor: transactor,
+		transactor:  transactor,
+		permissions: permissions,
 	}
 }
 
 func (uc *SubmissionsUseCase) GetSubmission(ctx context.Context, id uuid.UUID) (submissionsmodel.Submission, error) {
-	return uc.submissionsRepo.GetSubmission(ctx, id)
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return submissionsmodel.Submission{}, pkg.ErrUnauthenticated
+	}
+	sub, err := uc.submissionsRepo.GetSubmission(ctx, id)
+	if err != nil {
+		return sub, err
+	}
+	return uc.submissionView(ctx, sub, true)
+}
+
+func (uc *SubmissionsUseCase) submissionView(ctx context.Context, sub submissionsmodel.Submission, requireReadPermission bool) (submissionsmodel.Submission, error) {
+	user := accessmodel.UserFromContext(ctx)
+	own := sub.CreatedBy != nil && *sub.CreatedBy == user.Id
+	if sub.ContestID == nil {
+		if !own && !user.IsAdmin() {
+			return submissionsmodel.Submission{}, pkg.NoPermission
+		}
+		return sub, nil
+	}
+	permissions, err := uc.permissions.GetContestPermissions(ctx, *sub.ContestID, user.Id)
+	if err != nil {
+		return submissionsmodel.Submission{}, err
+	}
+	if requireReadPermission && !own && !user.IsAdmin() && !permissions.GetOtherUserSubmission {
+		return submissionsmodel.Submission{}, pkg.NoPermission
+	}
+	contest, err := uc.contestsUC.GetContest(ctx, *sub.ContestID)
+	if err != nil {
+		return submissionsmodel.Submission{}, err
+	}
+	return SubmissionView(&contest, sub.CreatedBy, sub.CreatedAt, user.Id, permissions, time.Now()).Apply(sub), nil
 }
 
 func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error) {
+	if err := uc.requireContest(ctx, creation.ContestId, accessmodel.ActionCreateSubmission); err != nil {
+		return uuid.Nil, err
+	}
+
+	if creation.UserId != accessmodel.UserFromContext(ctx).Id {
+		return uuid.Nil, pkg.NoPermission
+	}
+
 	_, err := uc.contestsUC.GetContest(ctx, creation.ContestId)
 	if err != nil {
 		return uuid.Nil, err
@@ -117,6 +162,10 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *su
 }
 
 func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, submissionID uuid.UUID, reason *string) error {
+	if err := uc.requireContest(ctx, contestID, accessmodel.ActionManageContest); err != nil {
+		return err
+	}
+
 	return uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
 		sub, err := tx.GetSubmission(ctx, submissionID)
 		if err != nil {
@@ -166,16 +215,47 @@ func newOutboxEventParams(submission submissionsmodel.Submission, job judgingmod
 	return eventdata.Event{AggregateID: submission.ID, Type: eventdata.OutboxEventSubmissionCreated, Payload: submissionCreatedEvent}
 }
 
-func (uc *SubmissionsUseCase) UpdateSubmission(ctx context.Context, id uuid.UUID, update *submissionsmodel.SubmissionUpdate) error {
-	_, err := uc.submissionsRepo.UpdateSubmission(ctx, id, update)
-	return err
-}
-
 func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submissionsmodel.SubmissionsFilter) (*submissionsmodel.SubmissionsList, error) {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return nil, pkg.ErrUnauthenticated
+	}
+	ownOnly := filter.UserId != nil && *filter.UserId == user.Id
+	if filter.ContestId != nil {
+		permissions, err := uc.permissions.GetContestPermissions(ctx, *filter.ContestId, user.Id)
+		if err != nil {
+			return nil, err
+		}
+		canList := permissions.ListUsersSubmissions
+		if ownOnly {
+			canList = permissions.ListOwnSubmissions
+		}
+		if !canList {
+			return nil, pkg.NoPermission
+		}
+		contest, err := uc.contestsUC.GetContest(ctx, *filter.ContestId)
+		if err != nil {
+			return nil, err
+		}
+		if filter.State != nil && contest.IsFrozenAt(time.Now()) && !permissions.ManageContest && !ownOnly {
+			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "state filter is unavailable during freeze")
+		}
+	} else if !ownOnly && !user.IsAdmin() {
+		return nil, pkg.NoPermission
+	}
+
 	submissions, total, revision, err := uc.submissionsRepo.ListSubmissions(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
+	for i, sub := range submissions {
+		visible, err := uc.submissionView(ctx, sub, false)
+		if err != nil {
+			return nil, err
+		}
+		submissions[i] = visible
+	}
+
 	return &submissionsmodel.SubmissionsList{
 		Submissions: submissions, TotalCount: total, Revision: revision,
 		Pagination: paging.NewPagination(filter.Page, filter.PageSize, total),
@@ -185,6 +265,10 @@ func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submis
 func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter submissionsmodel.RejudgeFilter) (int, error) {
 	if filter.ContestID == uuid.Nil {
 		return 0, pkg.Wrap(pkg.ErrBadInput, nil, "contest id is required")
+	}
+
+	if err := uc.requireContest(ctx, filter.ContestID, accessmodel.ActionManageContest); err != nil {
+		return 0, err
 	}
 
 	_, err := uc.contestsUC.GetContest(ctx, filter.ContestID)

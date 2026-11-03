@@ -472,6 +472,8 @@ func TestEmailChangeFlow(t *testing.T) {
 		IsEmailVerified: true,
 	})
 
+	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
+
 	// 1. Request email change
 	newEmail := "new@example.com"
 	err := authUC.RequestEmailChange(ctx, userID, "MyPassword123", newEmail)
@@ -502,7 +504,7 @@ func TestAdminUserManagement(t *testing.T) {
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
 
-	usersUC := NewUsersUseCase(usersRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, authRepo, emailSvc)
+	usersUC := NewUsersUseCase(usersRepo, testTransactions[IdentityTxStore]{identityTestStore{UsersRepo: usersRepo, AuthRepo: authRepo}}, emailSvc)
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("Pass12345"), bcrypt.DefaultCost)
 	emailStr := "adminmanaged@example.com"
@@ -517,6 +519,11 @@ func TestAdminUserManagement(t *testing.T) {
 	})
 
 	// 1. Admin direct email change without confirmation
+	require.ErrorIs(t, usersUC.AdminSetPassword(ctx, "targetuser", "DeniedPassword99"), pkg.ErrUnauthenticated)
+	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
+	require.ErrorIs(t, usersUC.AdminSetPassword(ctx, "targetuser", "DeniedPassword99"), pkg.NoPermission)
+	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleAdmin})
+
 	err := usersUC.AdminChangeEmail(ctx, "targetuser", "direct@example.com", false)
 	require.NoError(t, err)
 	u, err := usersRepo.GetUserById(ctx, userID)

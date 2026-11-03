@@ -319,6 +319,16 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 	return items, nil
 }
 
+const lockUser = `-- name: LockUser :one
+SELECT id FROM users WHERE id = $1::uuid FOR UPDATE
+`
+
+func (q *Queries) LockUser(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockUser, id)
+	err := row.Scan(&id)
+	return id, err
+}
+
 const setUserEmailVerified = `-- name: SetUserEmailVerified :exec
 UPDATE users
 SET is_email_verified = $1::boolean

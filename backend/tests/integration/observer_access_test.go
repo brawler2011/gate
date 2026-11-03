@@ -36,7 +36,7 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{ID: contestID, OrganizationID: org.ID, OwnerID: &owner.Id, Login: "ws-" + suffix, Title: "Observer", Visibility: contestsmodel.ContestVisibilityPrivate, StartTime: &start, Settings: map[string]any{"freeze_status": contestsmodel.FreezeStatusFrozen}}))
 	authRepo := pgstore.NewAuthRepo(s.dbPool)
 	tx := pgstore.NewIdentityTransactions(s.dbPool)
-	users := identity.NewUsersUseCase(s.usersRepo, tx, authRepo, nil)
+	users := identity.NewUsersUseCase(s.usersRepo, tx, nil)
 	auth := identity.NewAuthUseCase(s.usersRepo, authRepo, tx)
 	permissions := access.NewPermissionsUseCase(s.contestsRepo, users, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
 	contests := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool))

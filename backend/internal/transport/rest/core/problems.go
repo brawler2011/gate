@@ -6,10 +6,11 @@ import (
 	"io"
 	"strings"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -22,7 +23,7 @@ type ProblemsReader interface {
 }
 
 func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblemsParams) (*corev1.ListProblemsResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	searchStr := params.Search.Or("")
 
 	filter := &problemsmodel.ProblemsFilter{
@@ -63,7 +64,7 @@ func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblem
 }
 
 func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.ListProblemTemplatesParams) ([]corev1.ProblemTemplateModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	var orgID uuid.UUID
 	if params.OrganizationID.IsSet() {
@@ -127,7 +128,7 @@ func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.Lis
 }
 
 func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProblemParams) (*corev1.CreationResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	if params.Title == "" {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "empty title")
@@ -355,7 +356,7 @@ func (h *CoreServer) ListProblemTeams(ctx context.Context, params corev1.ListPro
 }
 
 func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.CreateProblemTeamParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	permission := problemsmodel.ProblemPermissionRead
 	if params.Permission.IsSet() && params.Permission.Value != "" {
@@ -371,7 +372,7 @@ func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.Create
 }
 
 func (h *CoreServer) UpdateProblemTeam(ctx context.Context, params corev1.UpdateProblemTeamParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	err := h.problemsUC.UpdateProblemTeamPermission(ctx, params.ID, params.TeamID, user.Id, problemsmodel.ProblemPermission(params.Permission))
 	if err != nil {
@@ -382,7 +383,7 @@ func (h *CoreServer) UpdateProblemTeam(ctx context.Context, params corev1.Update
 }
 
 func (h *CoreServer) DeleteProblemTeam(ctx context.Context, params corev1.DeleteProblemTeamParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	err := h.problemsUC.RemoveProblemTeam(ctx, params.ID, params.TeamID, user.Id)
 	if err != nil {
@@ -404,7 +405,7 @@ func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListP
 }
 
 func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.CreateProblemMemberParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	role := problemsmodel.ProblemRoleViewer
 	if params.Role.IsSet() && params.Role.Value != "" {
@@ -420,7 +421,7 @@ func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.Crea
 }
 
 func (h *CoreServer) UpdateProblemMember(ctx context.Context, params corev1.UpdateProblemMemberParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	err := h.problemsUC.UpdateProblemMemberRole(ctx, params.ID, params.UserID, user.Id, problemsmodel.ProblemRole(params.Role))
 	if err != nil {
@@ -431,7 +432,7 @@ func (h *CoreServer) UpdateProblemMember(ctx context.Context, params corev1.Upda
 }
 
 func (h *CoreServer) DeleteProblemMember(ctx context.Context, params corev1.DeleteProblemMemberParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	err := h.problemsUC.RemoveProblemMember(ctx, params.ID, params.UserID, user.Id)
 	if err != nil {

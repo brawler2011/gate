@@ -30,7 +30,7 @@ func (h *CoreServer) GetUser(ctx context.Context, params corev1.GetUserParams) (
 }
 
 func (h *CoreServer) GetMe(ctx context.Context) (*corev1.GetUserResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	return &corev1.GetUserResponseModel{
 		User: userDTO(user),
@@ -38,7 +38,7 @@ func (h *CoreServer) GetMe(ctx context.Context) (*corev1.GetUserResponseModel, e
 }
 
 func (h *CoreServer) GetMyDashboard(ctx context.Context) (*corev1.GetUserDashboardResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	contests, err := h.contestsReader.ListDashboardContests(ctx, user.Id, 5)
 	if err != nil {
@@ -172,7 +172,7 @@ func (h *CoreServer) ClaimTemporaryUser(ctx context.Context, req *corev1.ClaimTe
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	result, err := h.usersUC.ClaimTemporaryUser(ctx, user, identitymodel.ClaimTemporaryUserInput{
 		Username: req.Username,
@@ -190,7 +190,7 @@ func (h *CoreServer) ClaimTemporaryUser(ctx context.Context, req *corev1.ClaimTe
 }
 
 func (h *CoreServer) ListMyClaimedAccounts(ctx context.Context) (*corev1.ListClaimedAccountsResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -220,7 +220,7 @@ func (h *CoreServer) ChangePassword(ctx context.Context, req *corev1.ChangePassw
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -243,7 +243,7 @@ func (h *CoreServer) RequestEmailChange(ctx context.Context, req *corev1.Request
 		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}

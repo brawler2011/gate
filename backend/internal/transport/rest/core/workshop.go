@@ -13,10 +13,11 @@ import (
 	"sort"
 	"strings"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	problems "github.com/brawler2011/gate/backend/internal/problems"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -210,7 +211,7 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, req *corev1.Upd
 		if int64(len(stmtBytes)) > MaxStatementFileSize {
 			return nil, pkg.Wrap(pkg.ErrPayloadTooLarge, nil, "statement size exceeds maximum allowed limit of 2MB")
 		}
-		user := middleware.GetUser(ctx)
+		user := accessmodel.UserFromContext(ctx)
 		if err := h.workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 			ProblemID: params.ProblemId,
 			Revision:  manifest.Revision,
@@ -695,7 +696,7 @@ func (h *CoreServer) DeleteProblemTestFile(ctx context.Context, params corev1.De
 
 // CompileProblemComponent handles POST /problems/{problemId}/workshop/components/{componentType}/compile
 func (h *CoreServer) CompileProblemComponent(ctx context.Context, params corev1.CompileProblemComponentParams) (*corev1.CompileResult, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	compileReq := problemsmodel.CompileComponentRequest{
 		ProblemID:     params.ProblemId,
@@ -719,7 +720,7 @@ func (h *CoreServer) CompileProblemComponent(ctx context.Context, params corev1.
 
 // GenerateTests handles POST /problems/{problemId}/workshop/tests/generate
 func (h *CoreServer) GenerateTests(ctx context.Context, req *corev1.GenerateTestsReq, params corev1.GenerateTestsParams) (*corev1.GenerateTestsOK, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	testNumbers := make([]int, len(req.TestNumbers))
 	copy(testNumbers, req.TestNumbers)
@@ -747,7 +748,7 @@ func (h *CoreServer) GenerateTests(ctx context.Context, req *corev1.GenerateTest
 
 // ValidateAllTests handles POST /problems/{problemId}/workshop/tests/validate
 func (h *CoreServer) ValidateAllTests(ctx context.Context, params corev1.ValidateAllTestsParams) (*corev1.ValidationReport, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	report, err := h.workshopUC.ValidateAllTests(ctx, params.ProblemId, user.Id)
 	if err != nil {
@@ -774,7 +775,7 @@ func (h *CoreServer) ValidateAllTests(ctx context.Context, params corev1.Validat
 
 // TestSolution handles POST /problems/{problemId}/workshop/solutions/test
 func (h *CoreServer) TestSolution(ctx context.Context, req *corev1.TestSolutionReq, params corev1.TestSolutionParams) (*corev1.TestReport, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	var testNumbers []int
 	if req.TestNumbers != nil {
@@ -923,7 +924,7 @@ func (h *CoreServer) saveWorkshopCollectionBytes(ctx context.Context, problemID 
 		return pkg.Wrap(pkg.ErrPayloadTooLarge, nil, fmt.Sprintf("file size (%d bytes) exceeds maximum allowed limit of %d bytes", len(content), maxLimit))
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if err := h.workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 		ProblemID: problemID,
 		UserID:    user.Id,

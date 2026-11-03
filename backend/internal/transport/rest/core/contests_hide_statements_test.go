@@ -9,7 +9,6 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -99,7 +98,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 			Id:   participantID,
 			Role: accessmodel.UserRoleUser,
 		}
-		ctx := middleware.WithUser(context.Background(), user)
+		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "onsite-contest").Return(hiddenContest, nil)
 		mockContests.On("GetContestProblem", mock.Anything, contestsmodel.ContestProblemGet{
@@ -146,7 +145,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 			Id:   participantID,
 			Role: accessmodel.UserRoleUser,
 		}
-		ctx := middleware.WithUser(context.Background(), user)
+		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "onsite-contest").Return(hiddenContest, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionManageContest).Return(false, nil)
@@ -178,7 +177,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 			Id:   managerID,
 			Role: accessmodel.UserRoleUser,
 		}
-		ctx := middleware.WithUser(context.Background(), user)
+		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "onsite-contest").Return(hiddenContest, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, managerID, accessmodel.ActionManageContest).Return(true, nil)

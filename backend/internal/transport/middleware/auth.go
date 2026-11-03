@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
@@ -50,7 +51,7 @@ func AuthMiddleware(authUC AuthUC) func(http.Handler) http.Handler {
 			}
 
 			ctx = context.WithValue(ctx, sessionKey, session)
-			ctx = context.WithValue(ctx, userKey, user)
+			ctx = accessmodel.WithUser(ctx, user)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

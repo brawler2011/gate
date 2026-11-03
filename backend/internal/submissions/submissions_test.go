@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -103,13 +105,14 @@ func TestSubmissionDiagnosticEventsOnlyAfterCommit(t *testing.T) {
 			submissionID := uuid.New()
 			repo := &diagnosticSubmissionsRepo{submission: submissionsmodel.Submission{ID: submissionID, ContestID: &contestID, CreatedAt: time.Now().Add(-24 * time.Hour)}}
 			outbox := &diagnosticOutboxRepo{}
-			uc := NewSubmissionsUseCase(repo, diagnosticContests{}, diagnosticProblems{}, diagnosticTransactor{commitErr, &buf, t, submissionTestStore{SubmissionsRepo: repo, OutboxRepo: outbox}})
-			ctx := requestid.With(context.Background(), "request-123")
+			uc := NewSubmissionsUseCase(repo, diagnosticContests{}, diagnosticProblems{}, diagnosticTransactor{commitErr, &buf, t, submissionTestStore{SubmissionsRepo: repo, OutboxRepo: outbox}}, allowSubmissionPermissions{})
+			viewerID := uuid.New()
+			ctx := accessmodel.WithUser(requestid.With(context.Background(), "request-123"), accessmodel.User{Id: viewerID, Role: accessmodel.UserRoleUser})
 			var err error
 			if rejudge {
 				_, err = uc.RejudgeSubmissions(ctx, submissionsmodel.RejudgeFilter{ContestID: contestID})
 			} else {
-				_, err = uc.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{ContestId: contestID})
+				_, err = uc.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{ContestId: contestID, UserId: viewerID})
 			}
 			require.Equal(t, commitErr, err)
 			require.NotNil(t, outbox.event)
