@@ -8,15 +8,18 @@ import (
 	"net/http"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
 	ht "github.com/ogen-go/ogen/http"
 )
 
 func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
-	user := s.createUser("authz_user", models.UserRoleUser)
-	admin := s.createUser("authz_admin", models.UserRoleAdmin)
-	target := s.createUser("authz_target", models.UserRoleUser)
+	user := s.createUser("authz_user", accessmodel.UserRoleUser)
+	admin := s.createUser("authz_admin", accessmodel.UserRoleAdmin)
+	target := s.createUser("authz_target", accessmodel.UserRoleUser)
 
 	s.Run("Public endpoint without auth", func() {
 		resp, err := s.client.ListPublicContests(s.ctx, corev1.ListPublicContestsParams{
@@ -61,9 +64,9 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 	s.Run("UploadAvatar custom check self/admin", func() {
 		suffix := uuid.NewString()[:8]
-		targetUser := s.createUser("authz_avatar_target_"+suffix, models.UserRoleUser)
-		otherUser := s.createUser("authz_avatar_other_"+suffix, models.UserRoleUser)
-		adminUser := s.createUser("authz_avatar_admin_"+suffix, models.UserRoleAdmin)
+		targetUser := s.createUser("authz_avatar_target_"+suffix, accessmodel.UserRoleUser)
+		otherUser := s.createUser("authz_avatar_other_"+suffix, accessmodel.UserRoleUser)
+		adminUser := s.createUser("authz_avatar_admin_"+suffix, accessmodel.UserRoleAdmin)
 
 		sampleFile := ht.MultipartFile{
 			Name: "avatar.png",
@@ -106,20 +109,20 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 	s.Run("ListUserSubmissions custom check", func() {
 		suffix := uuid.NewString()[:8]
-		contestOwner := s.createUser("authz_lus_owner_"+suffix, models.UserRoleUser)
-		requestUser := s.createUser("authz_lus_user_"+suffix, models.UserRoleUser)
-		anotherUser := s.createUser("authz_lus_another_"+suffix, models.UserRoleUser)
-		adminUser := s.createUser("authz_lus_admin_"+suffix, models.UserRoleAdmin)
+		contestOwner := s.createUser("authz_lus_owner_"+suffix, accessmodel.UserRoleUser)
+		requestUser := s.createUser("authz_lus_user_"+suffix, accessmodel.UserRoleUser)
+		anotherUser := s.createUser("authz_lus_another_"+suffix, accessmodel.UserRoleUser)
+		adminUser := s.createUser("authz_lus_admin_"+suffix, accessmodel.UserRoleAdmin)
 
 		org := s.createOrganization("authz-lus-org-"+suffix, "Authz LUS Org", contestOwner.Id)
 
 		ownerID := contestOwner.Id
 		allowedContestID := uuid.New()
-		err := s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+		err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 			ID:             allowedContestID,
 			OrganizationID: org.ID,
 			OwnerID:        &ownerID,
-			Visibility:     models.ContestVisibilityPrivate,
+			Visibility:     contestsmodel.ContestVisibilityPrivate,
 			Title:          "LUS Allowed Contest",
 			Login:          "lus-allowed-" + suffix,
 			Description:    "contest for allowed own submissions",
@@ -127,19 +130,19 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		})
 		s.Require().NoError(err)
 
-		err = s.contestsRepo.CreateContestMember(s.ctx, &models.CreateContestMemberParams{
+		err = s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
 			ContestId: allowedContestID,
 			UserId:    requestUser.Id,
-			Role:      models.ContestRoleParticipant,
+			Role:      contestsmodel.ContestRoleParticipant,
 		})
 		s.Require().NoError(err)
 
 		deniedContestID := uuid.New()
-		err = s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+		err = s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 			ID:             deniedContestID,
 			OrganizationID: org.ID,
 			OwnerID:        &ownerID,
-			Visibility:     models.ContestVisibilityPrivate,
+			Visibility:     contestsmodel.ContestVisibilityPrivate,
 			Title:          "LUS Denied Contest",
 			Login:          "lus-denied-" + suffix,
 			Description:    "contest for denied own submissions",
@@ -147,10 +150,10 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		})
 		s.Require().NoError(err)
 
-		err = s.contestsRepo.CreateContestMember(s.ctx, &models.CreateContestMemberParams{
+		err = s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
 			ContestId: deniedContestID,
 			UserId:    requestUser.Id,
-			Role:      models.ContestRoleParticipant,
+			Role:      contestsmodel.ContestRoleParticipant,
 		})
 		s.Require().NoError(err)
 
@@ -199,20 +202,20 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 	s.Run("ListContestSubmissions custom check", func() {
 		suffix := uuid.NewString()[:8]
-		owner := s.createUser("authz_lcs_owner_"+suffix, models.UserRoleUser)
-		participant := s.createUser("authz_lcs_participant_"+suffix, models.UserRoleUser)
-		moderator := s.createUser("authz_lcs_moderator_"+suffix, models.UserRoleUser)
-		otherUser := s.createUser("authz_lcs_other_"+suffix, models.UserRoleUser)
+		owner := s.createUser("authz_lcs_owner_"+suffix, accessmodel.UserRoleUser)
+		participant := s.createUser("authz_lcs_participant_"+suffix, accessmodel.UserRoleUser)
+		moderator := s.createUser("authz_lcs_moderator_"+suffix, accessmodel.UserRoleUser)
+		otherUser := s.createUser("authz_lcs_other_"+suffix, accessmodel.UserRoleUser)
 
 		org := s.createOrganization("authz-lcs-org-"+suffix, "Authz LCS Org", owner.Id)
 		contestID := uuid.New()
 		ownerID := owner.Id
 
-		err := s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+		err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 			ID:             contestID,
 			OrganizationID: org.ID,
 			OwnerID:        &ownerID,
-			Visibility:     models.ContestVisibilityPrivate,
+			Visibility:     contestsmodel.ContestVisibilityPrivate,
 			Title:          "LCS Contest",
 			Login:          "lcs-contest-" + suffix,
 			Description:    "contest for list contest submissions custom checks",
@@ -220,17 +223,17 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		})
 		s.Require().NoError(err)
 
-		err = s.contestsRepo.CreateContestMember(s.ctx, &models.CreateContestMemberParams{
+		err = s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
 			ContestId: contestID,
 			UserId:    participant.Id,
-			Role:      models.ContestRoleParticipant,
+			Role:      contestsmodel.ContestRoleParticipant,
 		})
 		s.Require().NoError(err)
 
-		err = s.contestsRepo.CreateContestMember(s.ctx, &models.CreateContestMemberParams{
+		err = s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
 			ContestId: contestID,
 			UserId:    moderator.Id,
-			Role:      models.ContestRoleModerator,
+			Role:      contestsmodel.ContestRoleModerator,
 		})
 		s.Require().NoError(err)
 
@@ -283,18 +286,18 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 	s.Run("Contest access through team role", func() {
 		suffix := uuid.NewString()[:8]
-		owner := s.createUser("authz_contest_owner_"+suffix, models.UserRoleUser)
-		teamMember := s.createUser("authz_contest_member_"+suffix, models.UserRoleUser)
+		owner := s.createUser("authz_contest_owner_"+suffix, accessmodel.UserRoleUser)
+		teamMember := s.createUser("authz_contest_member_"+suffix, accessmodel.UserRoleUser)
 
 		org := s.createOrganization("authz-contest-org-"+suffix, "Authz Contest Org", owner.Id)
 		contestID := uuid.New()
 		ownerID := owner.Id
 
-		err := s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+		err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 			ID:             contestID,
 			OrganizationID: org.ID,
 			OwnerID:        &ownerID,
-			Visibility:     models.ContestVisibilityPrivate,
+			Visibility:     contestsmodel.ContestVisibilityPrivate,
 			Title:          "Team Contest",
 			Login:          "team-contest-" + suffix,
 			Description:    "private contest for authz",
@@ -310,7 +313,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			"Authz Contest Team",
 			"authz-contest-team-"+suffix,
 			"",
-			string(models.TeamPrivacyClosed),
+			string(organizationsmodel.TeamPrivacyClosed),
 		)
 		s.Require().NoError(err)
 
@@ -318,11 +321,11 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			"INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, $3)",
 			teamID,
 			teamMember.Id,
-			string(models.TeamRoleMember),
+			string(organizationsmodel.TeamRoleMember),
 		)
 		s.Require().NoError(err)
 
-		err = s.contestsRepo.CreateContestTeam(s.ctx, contestID, teamID, models.ContestRoleParticipant)
+		err = s.contestsRepo.CreateContestTeam(s.ctx, contestID, teamID, contestsmodel.ContestRoleParticipant)
 		s.Require().NoError(err)
 
 		resp, err := s.client.GetContest(withTestUser(s.ctx, teamMember.Id), corev1.GetContestParams{
@@ -335,19 +338,19 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 	s.Run("Higher contest role resolved from team with mask persistence", func() {
 		suffix := uuid.NewString()[:8]
-		owner := s.createUser("authz_mix_owner_"+suffix, models.UserRoleUser)
-		mixedUser := s.createUser("authz_mix_user_"+suffix, models.UserRoleUser)
-		otherUser := s.createUser("authz_mix_other_"+suffix, models.UserRoleUser)
+		owner := s.createUser("authz_mix_owner_"+suffix, accessmodel.UserRoleUser)
+		mixedUser := s.createUser("authz_mix_user_"+suffix, accessmodel.UserRoleUser)
+		otherUser := s.createUser("authz_mix_other_"+suffix, accessmodel.UserRoleUser)
 
 		org := s.createOrganization("authz-mix-org-"+suffix, "Authz Mix Org", owner.Id)
 		contestID := uuid.New()
 		ownerID := owner.Id
 
-		err := s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+		err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 			ID:             contestID,
 			OrganizationID: org.ID,
 			OwnerID:        &ownerID,
-			Visibility:     models.ContestVisibilityPrivate,
+			Visibility:     contestsmodel.ContestVisibilityPrivate,
 			Title:          "Mixed Role Contest",
 			Login:          "mixed-role-" + suffix,
 			Description:    "contest for mixed direct+team role resolution",
@@ -355,10 +358,10 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		})
 		s.Require().NoError(err)
 
-		err = s.contestsRepo.CreateContestMember(s.ctx, &models.CreateContestMemberParams{
+		err = s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
 			ContestId: contestID,
 			UserId:    mixedUser.Id,
-			Role:      models.ContestRoleParticipant,
+			Role:      contestsmodel.ContestRoleParticipant,
 		})
 		s.Require().NoError(err)
 
@@ -370,7 +373,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			"Authz Mixed Team",
 			"authz-mixed-team-"+suffix,
 			"",
-			string(models.TeamPrivacyClosed),
+			string(organizationsmodel.TeamPrivacyClosed),
 		)
 		s.Require().NoError(err)
 
@@ -378,11 +381,11 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			"INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, $3)",
 			teamID,
 			mixedUser.Id,
-			string(models.TeamRoleMember),
+			string(organizationsmodel.TeamRoleMember),
 		)
 		s.Require().NoError(err)
 
-		err = s.contestsRepo.CreateContestTeam(s.ctx, contestID, teamID, models.ContestRoleModerator)
+		err = s.contestsRepo.CreateContestTeam(s.ctx, contestID, teamID, contestsmodel.ContestRoleModerator)
 		s.Require().NoError(err)
 
 		roleResp, err := s.client.GetMyContestRole(withTestUser(s.ctx, mixedUser.Id), corev1.GetMyContestRoleParams{
@@ -391,7 +394,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		})
 		s.Require().NoError(err)
 		s.Require().NotNil(roleResp)
-		s.Equal(string(models.ContestRoleModerator), roleResp.Role)
+		s.Equal(string(contestsmodel.ContestRoleModerator), roleResp.Role)
 
 		resp, err := s.client.ListContestSubmissions(withTestUser(s.ctx, mixedUser.Id), corev1.ListContestSubmissionsParams{
 			OrgLogin:     org.Login,
@@ -406,8 +409,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 	s.Run("Problem access through team permission", func() {
 		suffix := uuid.NewString()[:8]
-		owner := s.createUser("authz_problem_owner_"+suffix, models.UserRoleUser)
-		teamMember := s.createUser("authz_problem_member_"+suffix, models.UserRoleUser)
+		owner := s.createUser("authz_problem_owner_"+suffix, accessmodel.UserRoleUser)
+		teamMember := s.createUser("authz_problem_member_"+suffix, accessmodel.UserRoleUser)
 
 		org := s.createOrganization("authz-problem-org-"+suffix, "Authz Problem Org", owner.Id)
 		problemID := uuid.New()
@@ -418,7 +421,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			problemID,
 			org.ID,
 			ownerID,
-			models.ProblemVisibilityPrivate,
+			problemsmodel.ProblemVisibilityPrivate,
 			"Team Problem",
 			"team-problem-"+suffix,
 		)
@@ -432,7 +435,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			"Authz Problem Team",
 			"authz-problem-team-"+suffix,
 			"",
-			string(models.TeamPrivacyClosed),
+			string(organizationsmodel.TeamPrivacyClosed),
 		)
 		s.Require().NoError(err)
 
@@ -440,7 +443,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			"INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, $3)",
 			teamID,
 			teamMember.Id,
-			string(models.TeamRoleMember),
+			string(organizationsmodel.TeamRoleMember),
 		)
 		s.Require().NoError(err)
 
@@ -448,7 +451,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			"INSERT INTO problem_teams (problem_id, team_id, permission) VALUES ($1, $2, $3)",
 			problemID,
 			teamID,
-			models.ProblemPermissionRead,
+			problemsmodel.ProblemPermissionRead,
 		)
 		s.Require().NoError(err)
 
@@ -461,18 +464,18 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 
 	s.Run("Non-member cannot view private contest", func() {
 		suffix := uuid.NewString()[:8]
-		owner := s.createUser("authz_policy_owner_"+suffix, models.UserRoleUser)
-		nonMember := s.createUser("authz_pol_part_"+suffix, models.UserRoleUser)
+		owner := s.createUser("authz_policy_owner_"+suffix, accessmodel.UserRoleUser)
+		nonMember := s.createUser("authz_pol_part_"+suffix, accessmodel.UserRoleUser)
 
 		org := s.createOrganization("authz-policy-org-"+suffix, "Authz Policy Org", owner.Id)
 		contestID := uuid.New()
 		ownerID := owner.Id
 
-		err := s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+		err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 			ID:             contestID,
 			OrganizationID: org.ID,
 			OwnerID:        &ownerID,
-			Visibility:     models.ContestVisibilityPrivate,
+			Visibility:     contestsmodel.ContestVisibilityPrivate,
 			Title:          "Private Contest",
 			Login:          "policy-contest-" + suffix,
 			Description:    "contest with private access",

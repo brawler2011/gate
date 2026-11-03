@@ -6,14 +6,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"time"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/repository/pg"
-	"github.com/brawler2011/gate/backend/internal/worker/judge"
-	"github.com/brawler2011/gate/backend/internal/worker/outbox"
-	"github.com/brawler2011/gate/backend/internal/worker/pubsub"
+	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
+	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
+	outbox "github.com/brawler2011/gate/backend/internal/messaging/outbox"
+	pubsub "github.com/brawler2011/gate/backend/internal/messaging/pubsub"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/queuecontext"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
@@ -28,6 +29,7 @@ type diagnosticJudgingCall struct {
 	id        uuid.UUID
 	requestID string
 }
+
 type diagnosticJudge struct{ calls chan diagnosticJudgingCall }
 
 func (j diagnosticJudge) JudgeSubmission(ctx context.Context, id uuid.UUID) error {
@@ -44,7 +46,7 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 	var eventID uuid.UUID
 	var headersJSON []byte
 	var createdAt time.Time
-	err := s.dbPool.QueryRow(s.ctx, "SELECT id, headers, created_at FROM outbox_events WHERE aggregate_id=$1 AND event_type=$2", submissionID, models.OutboxEventSubmissionCreated).Scan(&eventID, &headersJSON, &createdAt)
+	err := s.dbPool.QueryRow(s.ctx, "SELECT id, headers, created_at FROM outbox_events WHERE aggregate_id=$1 AND event_type=$2", submissionID, eventdata.OutboxEventSubmissionCreated).Scan(&eventID, &headersJSON, &createdAt)
 	s.Require().NoError(err)
 	var headers map[string]string
 	s.Require().NoError(json.Unmarshal(headersJSON, &headers))
@@ -69,14 +71,14 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 	tap, err := js.CreateOrUpdateConsumer(s.ctx, pkg.SubmissionsStreamName, jetstream.ConsumerConfig{Durable: "diagnostic_tap", FilterSubject: "submissions.created", AckPolicy: jetstream.AckExplicitPolicy})
 	s.Require().NoError(err)
 	calls := make(chan diagnosticJudgingCall, 10)
-	worker, err := judge.NewJudgeWorker(s.ctx, js, diagnosticJudge{calls}, 1)
+	worker, err := judgeworker.NewJudgeWorker(s.ctx, js, diagnosticJudge{calls}, 1)
 	s.Require().NoError(err)
 	dispatcher := outbox.NewEventDispatcher()
-	dispatcher.Register(models.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(js))
-	for _, kind := range []string{models.OutboxEventContestAnnouncementCreated, models.OutboxEventContestAnnouncementDeleted, models.OutboxEventContestClarificationCreated, models.OutboxEventContestClarificationAnswered} {
+	dispatcher.Register(eventdata.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(js))
+	for _, kind := range []string{eventdata.OutboxEventContestAnnouncementCreated, eventdata.OutboxEventContestAnnouncementDeleted, eventdata.OutboxEventContestClarificationCreated, eventdata.OutboxEventContestClarificationAnswered} {
 		dispatcher.Register(kind, pubsub.NewContestEventsPublisher(js))
 	}
-	outboxWorker := outbox.NewOutboxWorker(dispatcher, pg.NewOutboxRepo(s.dbPool))
+	outboxWorker := outbox.NewOutboxWorker(dispatcher, pgstore.NewOutboxRepo(s.dbPool))
 	ctx, cancel := context.WithCancel(context.Background())
 	stopped := make(chan struct{})
 	defer func() { cancel(); <-stopped }()
@@ -98,7 +100,7 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 	queuedAt, err := time.Parse(time.RFC3339Nano, msg.Headers().Get(queuecontext.QueuedAtHeader))
 	s.Require().NoError(err)
 	s.True(createdAt.Equal(queuedAt))
-	var createdEvent models.SubmissionCreatedEvent
+	var createdEvent submissionsmodel.SubmissionCreatedEvent
 	s.Require().NoError(json.Unmarshal(msg.Data(), &createdEvent))
 	s.True(createdEvent.IsNew)
 	s.Nil(createdEvent.PreviousState)
@@ -108,7 +110,7 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 		if err := s.dbPool.QueryRow(s.ctx, "SELECT status FROM outbox_events WHERE id=$1", eventID).Scan(&status); err != nil {
 			return false
 		}
-		return status == models.OutboxEventStatusCompleted
+		return status == eventdata.OutboxEventStatusCompleted
 	}, 5*time.Second, 20*time.Millisecond)
 	// Make the submission old, then request a new rejudge through HTTP.
 	_, err = s.dbPool.Exec(s.ctx, "UPDATE submissions SET created_at=NOW()-INTERVAL '1 day', state=200 WHERE id=$1", submissionID)
@@ -135,11 +137,11 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 	s.Require().NoError(err)
 	s.True(rejudgeCreatedAt.Equal(rejudgeQueuedAt))
 	s.WithinDuration(time.Now(), rejudgeQueuedAt, 30*time.Second)
-	var resetEvent models.SubmissionCreatedEvent
+	var resetEvent submissionsmodel.SubmissionCreatedEvent
 	s.Require().NoError(json.Unmarshal(rejudgeMsg.Data(), &resetEvent))
 	s.False(resetEvent.IsNew)
 	s.Require().NotNil(resetEvent.PreviousState)
-	s.Equal(models.Accepted, *resetEvent.PreviousState)
+	s.Equal(submissionsmodel.Accepted, *resetEvent.PreviousState)
 	s.Require().NoError(rejudgeMsg.Ack())
 
 }

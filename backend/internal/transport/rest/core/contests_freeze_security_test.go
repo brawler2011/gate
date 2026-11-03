@@ -6,8 +6,8 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -19,33 +19,33 @@ import (
 
 type MockContestsUC struct {
 	mock.Mock
-	interfaces.ContestsUC
+	ContestsUC
 }
 
-func (m *MockContestsUC) GetContest(ctx context.Context, id uuid.UUID) (models.Contest, error) {
+func (m *MockContestsUC) GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error) {
 	args := m.Called(ctx, id)
-	return args.Get(0).(models.Contest), args.Error(1) //nolint:wrapcheck
+	return args.Get(0).(contestsmodel.Contest), args.Error(1) //nolint:wrapcheck
 }
 
-func (m *MockContestsUC) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (models.Contest, error) {
+func (m *MockContestsUC) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error) {
 	args := m.Called(ctx, orgLogin, contestLogin)
-	return args.Get(0).(models.Contest), args.Error(1) //nolint:wrapcheck
+	return args.Get(0).(contestsmodel.Contest), args.Error(1) //nolint:wrapcheck
 }
 
-func (m *MockContestsUC) GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*models.ScoreboardResponse, error) {
+func (m *MockContestsUC) GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error) {
 	args := m.Called(ctx, contestID, userID, unfrozen)
 	if res := args.Get(0); res != nil {
-		return res.(*models.ScoreboardResponse), args.Error(1) //nolint:wrapcheck
+		return res.(*contestsmodel.ScoreboardResponse), args.Error(1) //nolint:wrapcheck
 	}
 	return nil, args.Error(1) //nolint:wrapcheck
 }
 
 type MockPermissionsUC struct {
 	mock.Mock
-	interfaces.PermissionsUC
+	PermissionsUC
 }
 
-func (m *MockPermissionsUC) HasContestPermission(ctx context.Context, contestID uuid.UUID, userID uuid.UUID, action models.ContestAction) (bool, error) {
+func (m *MockPermissionsUC) HasContestPermission(ctx context.Context, contestID uuid.UUID, userID uuid.UUID, action accessmodel.ContestAction) (bool, error) {
 	args := m.Called(ctx, contestID, userID, action)
 	return args.Bool(0), args.Error(1) //nolint:wrapcheck
 }
@@ -63,7 +63,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 	endTime := time.Now().Add(1 * time.Hour)
 	freezeTime := endTime.Add(-30 * time.Minute)
 
-	baseContest := models.Contest{
+	baseContest := contestsmodel.Contest{
 		ID:                contestID,
 		Login:             "test-contest",
 		OrganizationLogin: "test-org",
@@ -71,7 +71,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		StartTime:         &startTime,
 		EndTime:           &endTime,
 		Settings: map[string]interface{}{
-			"freeze_status":           models.FreezeStatusAuto,
+			"freeze_status":           contestsmodel.FreezeStatusAuto,
 			"freeze_duration_minutes": 30,
 		},
 	}
@@ -90,17 +90,17 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			nil,
 		)
 
-		user := models.User{
+		user := accessmodel.User{
 			Id:   participantID,
-			Role: models.UserRoleUser,
+			Role: accessmodel.UserRoleUser,
 		}
 		ctx := middleware.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(baseContest, nil)
 		// Participant has permission to view monitor
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, models.ActionGetMonitor).Return(true, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionGetMonitor).Return(true, nil)
 		// But DOES NOT have permission to manage contest (cannot view unfrozen scoreboard)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, models.ActionManageContest).Return(false, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionManageContest).Return(false, nil)
 
 		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardParams{
 			OrgLogin:     "test-org",
@@ -130,23 +130,23 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			nil,
 		)
 
-		user := models.User{
+		user := accessmodel.User{
 			Id:   participantID,
-			Role: models.UserRoleUser,
+			Role: accessmodel.UserRoleUser,
 		}
 		ctx := middleware.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(baseContest, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, models.ActionGetMonitor).Return(true, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionGetMonitor).Return(true, nil)
 
-		expectedScoreboard := &models.ScoreboardResponse{
+		expectedScoreboard := &contestsmodel.ScoreboardResponse{
 			ContestID:         contestID,
 			ContestLogin:      "test-contest",
 			OrganizationLogin: "test-org",
 			IsFrozen:          true,
 			FreezeTime:        &freezeTime,
-			Problems:          []models.ScoreboardProblemHeader{},
-			Items:             []models.ScoreboardItem{},
+			Problems:          []contestsmodel.ScoreboardProblemHeader{},
+			Items:             []contestsmodel.ScoreboardItem{},
 		}
 		mockContests.On("GetContestScoreboard", mock.Anything, contestID, participantID, false).Return(expectedScoreboard, nil)
 
@@ -178,24 +178,24 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			nil,
 		)
 
-		user := models.User{
+		user := accessmodel.User{
 			Id:   moderatorID,
-			Role: models.UserRoleUser, // User role in system, but moderator in contest
+			Role: accessmodel.UserRoleUser, // User role in system, but moderator in contest
 		}
 		ctx := middleware.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(baseContest, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, moderatorID, models.ActionGetMonitor).Return(true, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, moderatorID, models.ActionManageContest).Return(true, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, moderatorID, accessmodel.ActionGetMonitor).Return(true, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, moderatorID, accessmodel.ActionManageContest).Return(true, nil)
 
-		expectedScoreboard := &models.ScoreboardResponse{
+		expectedScoreboard := &contestsmodel.ScoreboardResponse{
 			ContestID:         contestID,
 			ContestLogin:      "test-contest",
 			OrganizationLogin: "test-org",
 			IsFrozen:          true,
 			FreezeTime:        &freezeTime,
-			Problems:          []models.ScoreboardProblemHeader{},
-			Items:             []models.ScoreboardItem{},
+			Problems:          []contestsmodel.ScoreboardProblemHeader{},
+			Items:             []contestsmodel.ScoreboardItem{},
 		}
 		mockContests.On("GetContestScoreboard", mock.Anything, contestID, moderatorID, true).Return(expectedScoreboard, nil)
 
@@ -227,24 +227,24 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			nil,
 		)
 
-		user := models.User{
+		user := accessmodel.User{
 			Id:   adminID,
-			Role: models.UserRoleAdmin,
+			Role: accessmodel.UserRoleAdmin,
 		}
 		ctx := middleware.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(baseContest, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, adminID, models.ActionGetMonitor).Return(true, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, adminID, models.ActionManageContest).Return(true, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, adminID, accessmodel.ActionGetMonitor).Return(true, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, adminID, accessmodel.ActionManageContest).Return(true, nil)
 
-		expectedScoreboard := &models.ScoreboardResponse{
+		expectedScoreboard := &contestsmodel.ScoreboardResponse{
 			ContestID:         contestID,
 			ContestLogin:      "test-contest",
 			OrganizationLogin: "test-org",
 			IsFrozen:          true,
 			FreezeTime:        &freezeTime,
-			Problems:          []models.ScoreboardProblemHeader{},
-			Items:             []models.ScoreboardItem{},
+			Problems:          []contestsmodel.ScoreboardProblemHeader{},
+			Items:             []contestsmodel.ScoreboardItem{},
 		}
 		mockContests.On("GetContestScoreboard", mock.Anything, contestID, adminID, true).Return(expectedScoreboard, nil)
 
@@ -273,7 +273,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		)
 
 		futureStart := time.Now().Add(1 * time.Hour)
-		futureContest := models.Contest{
+		futureContest := contestsmodel.Contest{
 			ID:                contestID,
 			Login:             "test-contest",
 			OrganizationLogin: "test-org",
@@ -282,14 +282,14 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			Settings:          map[string]interface{}{},
 		}
 
-		user := models.User{
+		user := accessmodel.User{
 			Id:   participantID,
-			Role: models.UserRoleUser,
+			Role: accessmodel.UserRoleUser,
 		}
 		ctx := middleware.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(futureContest, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, models.ActionGetMonitor).Return(true, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionGetMonitor).Return(true, nil)
 
 		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardParams{
 			OrgLogin:     "test-org",
@@ -318,7 +318,7 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 		)
 
 		futureStart := time.Now().Add(1 * time.Hour)
-		futureContest := models.Contest{
+		futureContest := contestsmodel.Contest{
 			ID:                contestID,
 			Login:             "test-contest",
 			OrganizationLogin: "test-org",
@@ -327,17 +327,17 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			Settings:          map[string]interface{}{},
 		}
 
-		user := models.User{
+		user := accessmodel.User{
 			Id:   ownerID,
-			Role: models.UserRoleUser,
+			Role: accessmodel.UserRoleUser,
 		}
 		ctx := middleware.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(futureContest, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, ownerID, models.ActionGetMonitor).Return(true, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, ownerID, accessmodel.ActionGetMonitor).Return(true, nil)
 
 		mockContests.On("GetContestScoreboard", mock.Anything, contestID, ownerID, false).
-			Return(&models.ScoreboardResponse{ContestID: contestID, ContestLogin: "test-contest", OrganizationLogin: "test-org"}, nil)
+			Return(&contestsmodel.ScoreboardResponse{ContestID: contestID, ContestLogin: "test-contest", OrganizationLogin: "test-org"}, nil)
 
 		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardParams{
 			OrgLogin:     "test-org",
@@ -362,14 +362,14 @@ func TestGetContestScoreboard_SecurityAndPermissions(t *testing.T) {
 			nil,
 		)
 
-		user := models.User{
+		user := accessmodel.User{
 			Id:   participantID,
-			Role: models.UserRoleUser,
+			Role: accessmodel.UserRoleUser,
 		}
 		ctx := middleware.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "test-contest").Return(baseContest, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, models.ActionGetMonitor).Return(false, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionGetMonitor).Return(false, nil)
 
 		resp, err := server.GetContestScoreboard(ctx, corev1.GetContestScoreboardParams{
 			OrgLogin:     "test-org",

@@ -11,14 +11,15 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/google/uuid"
 )
 
 func (s *IntegrationTestSuite) TestUpdateContestDates() {
 	suffix := uuid.NewString()[:8]
-	owner := s.createUser("dates_owner_"+suffix, models.UserRoleUser)
-	outsider := s.createUser("dates_outsider_"+suffix, models.UserRoleUser)
+	owner := s.createUser("dates_owner_"+suffix, accessmodel.UserRoleUser)
+	outsider := s.createUser("dates_outsider_"+suffix, accessmodel.UserRoleUser)
 	org := s.createOrganization("contest-dates-org-"+suffix, "Contest dates", owner.Id)
 	start := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
 	end := start.Add(2 * time.Hour)
@@ -30,10 +31,10 @@ func (s *IntegrationTestSuite) TestUpdateContestDates() {
 			s.Run(startState+"_"+endState, func() {
 				id := uuid.New()
 				login := "dates-" + startState + "-" + endState
-				err := s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+				err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 					ID: id, OrganizationID: org.ID, OwnerID: &owner.Id,
 					Title: "Original title", Login: login, Description: "Keep description",
-					Visibility: models.ContestVisibilityPublic,
+					Visibility: contestsmodel.ContestVisibilityPublic,
 					Settings:   map[string]interface{}{"enable_drafts": true},
 					StartTime:  &start, EndTime: &end,
 				})
@@ -101,7 +102,7 @@ func (s *IntegrationTestSuite) TestUpdateContestDates() {
 				}
 				s.Equal(true, stored.Settings["enable_drafts"])
 				s.Equal(&owner.Id, stored.OwnerID)
-				s.Equal(models.ContestVisibilityPublic, stored.Visibility)
+				s.Equal(contestsmodel.ContestVisibilityPublic, stored.Visibility)
 				s.Equal(http.StatusForbidden, patch(outsider.Id, `{"start_time":null,"end_time":null}`))
 				s.Equal(http.StatusBadRequest, patch(owner.Id, `{"start_time":"2026-01-02T10:00:00Z","end_time":"2026-01-01T10:00:00Z"}`))
 				afterRejected, err := s.contestsRepo.GetContest(s.ctx, id)

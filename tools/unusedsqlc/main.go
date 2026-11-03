@@ -14,7 +14,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-const queriesPackage = "github.com/brawler2011/gate/backend/internal/repository/pg/sqlc"
+const queriesPackage = "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 
 func main() {
 	dir := flag.String("dir", ".", "repository directory")

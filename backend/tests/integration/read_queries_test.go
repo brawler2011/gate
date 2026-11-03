@@ -9,8 +9,12 @@ import (
 	"net/http/httptest"
 	"time"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/repository/pg"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
 )
 
@@ -42,16 +46,16 @@ func (s *IntegrationTestSuite) TestReadQueries() {
 	_, cleanupErr := s.dbPool.Exec(s.ctx, "TRUNCATE TABLE users, posts CASCADE")
 	s.Require().NoError(cleanupErr)
 	suffix := uuid.NewString()[:8]
-	owner := s.createUser("read_owner_"+suffix, models.UserRoleAdmin)
-	participant := s.createUser("read_user_"+suffix, models.UserRoleUser)
-	other := s.createUser("read_other_"+suffix, models.UserRoleUser)
+	owner := s.createUser("read_owner_"+suffix, accessmodel.UserRoleAdmin)
+	participant := s.createUser("read_user_"+suffix, accessmodel.UserRoleUser)
+	other := s.createUser("read_other_"+suffix, accessmodel.UserRoleUser)
 	org := s.createOrganization("read-org-"+suffix, "Reads", owner.Id)
 	contestID := uuid.New()
-	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 		ID: contestID, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Read contest", Login: "read",
-		Visibility: models.ContestVisibilityPublic, Settings: map[string]interface{}{},
+		Visibility: contestsmodel.ContestVisibilityPublic, Settings: map[string]interface{}{},
 	}))
-	s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &models.CreateContestMemberParams{ContestId: contestID, UserId: participant.Id, Role: "participant"}))
+	s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: contestID, UserId: participant.Id, Role: "participant"}))
 	base := "/organizations/" + org.Login + "/contests/read"
 	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
@@ -151,14 +155,14 @@ func (s *IntegrationTestSuite) TestReadQueries() {
 	})
 
 	s.Run("drafts and contest members", func() {
-		repo := pg.NewDraftsRepo(s.dbPool)
+		repo := pgstore.NewDraftsRepo(s.dbPool)
 		for i := 0; i < 3; i++ {
-			id, err := repo.CreateDraft(s.ctx, &models.ContestDraftCreation{ContestID: contestID, UserID: participant.Id, Code: fmt.Sprintf("code%d", i)})
+			id, err := repo.CreateDraft(s.ctx, &contestsmodel.ContestDraftCreation{ContestID: contestID, UserID: participant.Id, Code: fmt.Sprintf("code%d", i)})
 			s.Require().NoError(err)
 			_, err = s.dbPool.Exec(s.ctx, "UPDATE contest_drafts SET created_at=$2 WHERE id=$1", id, now.Add(time.Duration(i)*time.Hour))
 			s.Require().NoError(err)
 		}
-		_, err := repo.CreateDraft(s.ctx, &models.ContestDraftCreation{ContestID: contestID, UserID: other.Id, Code: "hidden"})
+		_, err := repo.CreateDraft(s.ctx, &contestsmodel.ContestDraftCreation{ContestID: contestID, UserID: other.Id, Code: "hidden"})
 		s.Require().NoError(err)
 		items := s.readItems(base+"/drafts?page=2&pageSize=1", participant.Id, "drafts", 2, 3) // total is row count here
 		s.Require().Len(items, 1)
@@ -171,10 +175,10 @@ func (s *IntegrationTestSuite) TestReadQueries() {
 	})
 
 	s.Run("clarifications", func() {
-		repo := pg.NewClarificationsRepo(s.dbPool)
-		first, err := repo.CreateClarification(s.ctx, &models.CreateContestClarificationInput{ContestID: contestID, UserID: participant.Id, Question: "First?"})
+		repo := pgstore.NewClarificationsRepo(s.dbPool)
+		first, err := repo.CreateClarification(s.ctx, &contestsmodel.CreateContestClarificationInput{ContestID: contestID, UserID: participant.Id, Question: "First?"})
 		s.Require().NoError(err)
-		second, err := repo.CreateClarification(s.ctx, &models.CreateContestClarificationInput{ContestID: contestID, ProblemID: &problemID, UserID: other.Id, Question: "Other?"})
+		second, err := repo.CreateClarification(s.ctx, &contestsmodel.CreateContestClarificationInput{ContestID: contestID, ProblemID: &problemID, UserID: other.Id, Question: "Other?"})
 		s.Require().NoError(err)
 		_, err = repo.AnswerClarification(s.ctx, second.ID, contestID, owner.Id, "Answer")
 		s.Require().NoError(err)
@@ -195,7 +199,7 @@ func (s *IntegrationTestSuite) TestReadQueries() {
 	})
 
 	s.Run("notifications", func() {
-		repo := pg.NewNotificationsRepo(s.dbPool)
+		repo := pgstore.NewNotificationsRepo(s.dbPool)
 		for i := 0; i < 3; i++ {
 			var link *string
 			var data map[string]interface{}
@@ -204,7 +208,7 @@ func (s *IntegrationTestSuite) TestReadQueries() {
 				link = &empty
 				data = map[string]interface{}{"number": 1, "null": nil, "nested": map[string]interface{}{"ok": true}}
 			}
-			n, err := repo.CreateNotification(s.ctx, &models.CreateNotificationInput{UserID: participant.Id, Type: models.NotificationTypeSystem, Title: fmt.Sprintf("Notification %d", i), Link: link, Data: data})
+			n, err := repo.CreateNotification(s.ctx, &notificationsmodel.CreateNotificationInput{UserID: participant.Id, Type: notificationsmodel.NotificationTypeSystem, Title: fmt.Sprintf("Notification %d", i), Link: link, Data: data})
 			s.Require().NoError(err)
 			_, err = s.dbPool.Exec(s.ctx, "UPDATE notifications SET created_at=$2 WHERE id=$1", n.ID, now.Add(time.Duration(i)*time.Hour))
 			s.Require().NoError(err)
@@ -212,7 +216,7 @@ func (s *IntegrationTestSuite) TestReadQueries() {
 				s.Require().NoError(repo.MarkAsRead(s.ctx, n.ID, participant.Id))
 			}
 		}
-		_, err := repo.CreateNotification(s.ctx, &models.CreateNotificationInput{UserID: other.Id, Type: models.NotificationTypeSystem, Title: "Hidden"})
+		_, err := repo.CreateNotification(s.ctx, &notificationsmodel.CreateNotificationInput{UserID: other.Id, Type: notificationsmodel.NotificationTypeSystem, Title: "Hidden"})
 		s.Require().NoError(err)
 		items := s.readItems("/notifications?unread_only=true&pageSize=1", participant.Id, "notifications", 1, 2)
 		s.Require().Len(items, 1)
@@ -233,18 +237,18 @@ func (s *IntegrationTestSuite) TestReadQueries() {
 
 func (s *IntegrationTestSuite) TestContestReadQueries() {
 	suffix := uuid.NewString()[:8]
-	admin := s.createUser("catalog_admin_"+suffix, models.UserRoleAdmin)
-	member := s.createUser("catalog_user_"+suffix, models.UserRoleUser)
-	outsider := s.createUser("catalog_other_"+suffix, models.UserRoleUser)
+	admin := s.createUser("catalog_admin_"+suffix, accessmodel.UserRoleAdmin)
+	member := s.createUser("catalog_user_"+suffix, accessmodel.UserRoleUser)
+	outsider := s.createUser("catalog_other_"+suffix, accessmodel.UserRoleUser)
 	org := s.createOrganization("catalog-"+suffix, "Catalog", admin.Id)
 	ids := []uuid.UUID{uuid.New(), uuid.New(), uuid.New()}
 	for i, id := range ids {
-		visibility := models.ContestVisibilityPublic
+		visibility := contestsmodel.ContestVisibilityPublic
 		if i == 1 {
-			visibility = models.ContestVisibilityPrivate
+			visibility = contestsmodel.ContestVisibilityPrivate
 		}
-		s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{ID: id, OrganizationID: org.ID, OwnerID: &admin.Id, Title: fmt.Sprintf("Catalog %d", i), Login: fmt.Sprintf("catalog-%d", i), Visibility: visibility, Settings: map[string]interface{}{"hide_statements": true, "freeze_duration_minutes": int32(15)}}))
-		s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &models.CreateContestMemberParams{ContestId: id, UserId: member.Id, Role: "participant"}))
+		s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{ID: id, OrganizationID: org.ID, OwnerID: &admin.Id, Title: fmt.Sprintf("Catalog %d", i), Login: fmt.Sprintf("catalog-%d", i), Visibility: visibility, Settings: map[string]interface{}{"hide_statements": true, "freeze_duration_minutes": int32(15)}}))
+		s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: id, UserId: member.Id, Role: "participant"}))
 		_, err := s.dbPool.Exec(s.ctx, "UPDATE contests SET created_at=$2 WHERE id=$1", id, time.Date(2026, 1, i+1, 0, 0, 0, 0, time.UTC))
 		s.Require().NoError(err)
 	}
@@ -270,9 +274,9 @@ func (s *IntegrationTestSuite) TestContestReadQueries() {
 			}
 		})
 	}
-	team, err := s.teamsRepo.CreateTeam(s.ctx, &models.CreateTeamInput{OrganizationID: org.ID, Name: "Contest readers", Slug: "contest-readers", Privacy: models.TeamPrivacyClosed})
+	team, err := s.teamsRepo.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{OrganizationID: org.ID, Name: "Contest readers", Slug: "contest-readers", Privacy: organizationsmodel.TeamPrivacyClosed})
 	s.Require().NoError(err)
-	s.Require().NoError(s.contestsRepo.CreateContestTeam(s.ctx, ids[0], team.ID, models.ContestRoleParticipant))
+	s.Require().NoError(s.contestsRepo.CreateContestTeam(s.ctx, ids[0], team.ID, contestsmodel.ContestRoleParticipant))
 	teams := s.readJSON("/organizations/"+org.Login+"/contests/catalog-0/teams", admin.Id, 200)
 	var contestTeams []map[string]json.RawMessage
 	s.Require().NoError(json.Unmarshal(teams["teams"], &contestTeams))
@@ -290,15 +294,15 @@ func (s *IntegrationTestSuite) TestContestReadQueries() {
 
 func (s *IntegrationTestSuite) TestProblemAccessReadQueries() {
 	suffix := uuid.NewString()[:8]
-	admin := s.createUser("access_admin_"+suffix, models.UserRoleAdmin)
-	other := s.createUser("access_other_"+suffix, models.UserRoleUser)
+	admin := s.createUser("access_admin_"+suffix, accessmodel.UserRoleAdmin)
+	other := s.createUser("access_other_"+suffix, accessmodel.UserRoleUser)
 	org := s.createOrganization("access-"+suffix, "Access", admin.Id)
 	problemID := uuid.New()
-	s.Require().NoError(s.problemsRepo.CreateProblem(s.ctx, &models.CreateProblemParams{ID: problemID, OrganizationID: org.ID, OwnerID: &admin.Id, Title: "Private", ShortName: "access", Visibility: models.ProblemVisibilityPrivate}))
-	s.Require().NoError(s.problemsRepo.CreateProblemMember(s.ctx, &models.CreateProblemMemberParams{ProblemID: problemID, UserID: admin.Id, Role: models.ProblemRoleOwner}))
-	team, err := s.teamsRepo.CreateTeam(s.ctx, &models.CreateTeamInput{OrganizationID: org.ID, Name: "Readers", Slug: "readers", Privacy: models.TeamPrivacyClosed})
+	s.Require().NoError(s.problemsRepo.CreateProblem(s.ctx, &problemsmodel.CreateProblemParams{ID: problemID, OrganizationID: org.ID, OwnerID: &admin.Id, Title: "Private", ShortName: "access", Visibility: problemsmodel.ProblemVisibilityPrivate}))
+	s.Require().NoError(s.problemsRepo.CreateProblemMember(s.ctx, &problemsmodel.CreateProblemMemberParams{ProblemID: problemID, UserID: admin.Id, Role: problemsmodel.ProblemRoleOwner}))
+	team, err := s.teamsRepo.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{OrganizationID: org.ID, Name: "Readers", Slug: "readers", Privacy: organizationsmodel.TeamPrivacyClosed})
 	s.Require().NoError(err)
-	s.Require().NoError(s.problemsRepo.AddProblemTeam(s.ctx, problemID, team.ID, models.ProblemPermission("read")))
+	s.Require().NoError(s.problemsRepo.AddProblemTeam(s.ctx, problemID, team.ID, problemsmodel.ProblemPermission("read")))
 	base := "/problems/" + problemID.String()
 	members := s.readItems(base+"/members?page=2&pageSize=1", admin.Id, "members", 2, 1)
 	s.Require().Len(members, 1)
@@ -309,10 +313,10 @@ func (s *IntegrationTestSuite) TestProblemAccessReadQueries() {
 	s.Require().Len(items, 1)
 	s.JSONEq(`"Readers"`, string(items[0]["team_name"]))
 	s.JSONEq(`"read"`, string(items[0]["permission"]))
-	packagesRepo := pg.NewPackagesRepo(s.dbPool)
-	first, err := packagesRepo.CreatePackage(s.ctx, &models.CreatePackageParams{ID: uuid.New(), ProblemID: problemID, OrganizationID: org.ID, PackageHash: fmt.Sprintf("%064d", 1), Status: "pending"})
+	packagesRepo := pgstore.NewPackagesRepo(s.dbPool)
+	first, err := packagesRepo.CreatePackage(s.ctx, &problemsmodel.CreatePackageParams{ID: uuid.New(), ProblemID: problemID, OrganizationID: org.ID, PackageHash: fmt.Sprintf("%064d", 1), Status: "pending"})
 	s.Require().NoError(err)
-	second, err := packagesRepo.CreatePackage(s.ctx, &models.CreatePackageParams{ID: uuid.New(), ProblemID: problemID, OrganizationID: org.ID, PackageHash: fmt.Sprintf("%064d", 2), Status: "ready"})
+	second, err := packagesRepo.CreatePackage(s.ctx, &problemsmodel.CreatePackageParams{ID: uuid.New(), ProblemID: problemID, OrganizationID: org.ID, PackageHash: fmt.Sprintf("%064d", 2), Status: "ready"})
 	s.Require().NoError(err)
 	_, err = s.dbPool.Exec(s.ctx, "UPDATE problem_packages SET compiled_at=$2 WHERE id=$1", second.ID, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
 	s.Require().NoError(err)
@@ -333,10 +337,10 @@ func (s *IntegrationTestSuite) TestProblemAccessReadQueries() {
 
 func (s *IntegrationTestSuite) TestClarificationReadOptionalFields() {
 	suffix := uuid.NewString()[:8]
-	admin := s.createUser("optional_admin_"+suffix, models.UserRoleAdmin)
+	admin := s.createUser("optional_admin_"+suffix, accessmodel.UserRoleAdmin)
 	org := s.createOrganization("optional-"+suffix, "Optional fields", admin.Id)
 	contestID := uuid.New()
-	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{ID: contestID, OrganizationID: org.ID, OwnerID: &admin.Id, Title: "Optional", Login: "optional", Visibility: models.ContestVisibilityPublic, Settings: map[string]interface{}{}}))
+	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{ID: contestID, OrganizationID: org.ID, OwnerID: &admin.Id, Title: "Optional", Login: "optional", Visibility: contestsmodel.ContestVisibilityPublic, Settings: map[string]interface{}{}}))
 	for i, ordinal := range []int32{0, 25, 26} {
 		problemID, packageID := uuid.New(), uuid.New()
 		_, err := s.dbPool.Exec(s.ctx, "INSERT INTO problems(id,organization_id,owner_id,title,short_name,visibility) VALUES($1,$2,$3,'',$4,'private')", problemID, org.ID, admin.Id, fmt.Sprintf("optional-%d", i))

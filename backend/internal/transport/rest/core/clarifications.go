@@ -4,15 +4,16 @@ import (
 	"context"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
 type ClarificationsReader interface {
-	ListClarificationsForUser(ctx context.Context, contestID, userID uuid.UUID, page, pageSize int32) (*models.ContestClarificationsList, error)
-	ListClarificationsForModerator(ctx context.Context, contestID uuid.UUID, filter *models.ContestClarificationsFilter) (*models.ContestClarificationsList, error)
+	ListClarificationsForUser(ctx context.Context, contestID, userID uuid.UUID, page, pageSize int32) (*contestsmodel.ContestClarificationsList, error)
+	ListClarificationsForModerator(ctx context.Context, contestID uuid.UUID, filter *contestsmodel.ContestClarificationsFilter) (*contestsmodel.ContestClarificationsList, error)
 }
 
 func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev1.ListContestClarificationsParams) (*corev1.ListContestClarificationsResponseModel, error) {
@@ -28,7 +29,7 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 	}
 
 	// FIXME: должно быть в middleware
-	isModerator, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
+	isModerator, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +38,7 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(50)
 
-	var list *models.ContestClarificationsList
+	var list *contestsmodel.ContestClarificationsList
 
 	// FIXME: здесь происходит смешивание модераторского и юзерского эндпоинтов, так не должно быть
 	// возможно нужна какая-то декомпозиция
@@ -50,7 +51,7 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 		if params.Status.IsSet() {
 			status = &params.Status.Value
 		}
-		filter := &models.ContestClarificationsFilter{
+		filter := &contestsmodel.ContestClarificationsFilter{
 			ProblemID: problemID,
 			Status:    status,
 			Page:      page,
@@ -85,7 +86,7 @@ func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1
 		problemID = &req.ProblemID.Value
 	}
 
-	clarification, err := h.clarificationsUC.CreateClarification(ctx, &models.CreateContestClarificationInput{
+	clarification, err := h.clarificationsUC.CreateClarification(ctx, &contestsmodel.CreateContestClarificationInput{
 		ContestID: contest.ID,
 		ProblemID: problemID,
 		UserID:    user.Id,
@@ -111,7 +112,7 @@ func (h *CoreServer) AnswerContestClarification(ctx context.Context, req *corev1
 	}
 
 	// FIXME:
-	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
+	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +123,7 @@ func (h *CoreServer) AnswerContestClarification(ctx context.Context, req *corev1
 	publishAsAnnouncement := req.PublishAsAnnouncement.Or(false)
 	announcementTitle := req.AnnouncementTitle.Or("")
 
-	clarification, err := h.clarificationsUC.AnswerClarification(ctx, &models.AnswerContestClarificationInput{
+	clarification, err := h.clarificationsUC.AnswerClarification(ctx, &contestsmodel.AnswerContestClarificationInput{
 		ClarificationID:       params.ClarificationID,
 		ContestID:             contest.ID,
 		Answer:                req.Answer,

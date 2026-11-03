@@ -5,20 +5,19 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 )
 
 const userKey contextKey = "user"
 
 // UsersMiddleware loads user from session into context
-func UsersMiddleware(usersUC interfaces.UsersUC) func(http.Handler) http.Handler {
+func UsersMiddleware(usersUC UsersUC) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
 			// If user is already set (e.g. by AuthMiddleware or test middleware), proceed
-			if _, ok := ctx.Value(userKey).(models.User); ok {
+			if _, ok := ctx.Value(userKey).(accessmodel.User); ok {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -43,16 +42,16 @@ func UsersMiddleware(usersUC interfaces.UsersUC) func(http.Handler) http.Handler
 }
 
 // WithUser returns a new context with the given user attached.
-func WithUser(ctx context.Context, user models.User) context.Context {
+func WithUser(ctx context.Context, user accessmodel.User) context.Context {
 	return context.WithValue(ctx, userKey, user)
 }
 
 // GetUser extracts User from context
 // Returns an anonymous user if no user is found in context
-func GetUser(ctx context.Context) models.User {
-	u, ok := ctx.Value(userKey).(models.User)
+func GetUser(ctx context.Context) accessmodel.User {
+	u, ok := ctx.Value(userKey).(accessmodel.User)
 	if !ok {
-		return models.Guest
+		return accessmodel.Guest
 	}
 	return u
 }

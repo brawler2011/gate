@@ -7,12 +7,12 @@ import (
 	"net/http"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/google/uuid"
 )
 
 func (s *IntegrationTestSuite) TestProblems() {
-	admin := s.createUser("admin_problems", models.UserRoleAdmin)
+	admin := s.createUser("admin_problems", accessmodel.UserRoleAdmin)
 
 	org := s.createOrganization("admin-org", "Admin Organization", admin.Id)
 
@@ -75,7 +75,7 @@ func (s *IntegrationTestSuite) TestProblems() {
 }
 
 func (s *IntegrationTestSuite) TestProblemTemplates() {
-	admin := s.createUser("admin_templates", models.UserRoleAdmin)
+	admin := s.createUser("admin_templates", accessmodel.UserRoleAdmin)
 	org := s.createOrganization("templates-org", "Templates Organization", admin.Id)
 
 	var problemID uuid.UUID
@@ -165,4 +165,3 @@ func (s *IntegrationTestSuite) TestProblemTemplates() {
 		s.False(getResp.Problem.IsTemplate)
 	})
 }
-

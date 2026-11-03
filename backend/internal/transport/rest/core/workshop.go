@@ -14,9 +14,9 @@ import (
 	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
-	"github.com/brawler2011/gate/backend/internal/usecase"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -123,11 +123,11 @@ func (h *CoreServer) GetProblemStatement(ctx context.Context, params corev1.GetP
 		}
 
 		// 2. Read statement for specific language from workspace
-		var stmt models.Statement
+		var stmt problemsmodel.Statement
 		filePath := fmt.Sprintf("statements/%s.md", lang)
 		fileData, err := h.workshopUC.ReadProblemFile(ctx, params.ProblemId, filePath)
 		if err == nil {
-			stmt = usecase.ParseStatementMarkdown(string(fileData))
+			stmt = problems.ParseStatementMarkdown(string(fileData))
 			// If title tag is empty, fallback to the manifest title
 			if lang == "en" || strings.TrimSpace(stmt.Title) == "" {
 				stmt.Title = manifest.Statement.Title
@@ -161,11 +161,11 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, req *corev1.Upd
 		lang := params.Lang.Or("en")
 
 		// 1. Get existing statement for this language to apply patch
-		var stmt models.Statement
+		var stmt problemsmodel.Statement
 		filePath := fmt.Sprintf("statements/%s.md", lang)
 		fileData, err := h.workshopUC.ReadProblemFile(ctx, params.ProblemId, filePath)
 		if err == nil {
-			stmt = usecase.ParseStatementMarkdown(string(fileData))
+			stmt = problems.ParseStatementMarkdown(string(fileData))
 			if lang == "en" || strings.TrimSpace(stmt.Title) == "" {
 				stmt.Title = manifest.Statement.Title
 			}
@@ -206,12 +206,12 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, req *corev1.Upd
 			}
 		}
 		// 2. Write statement back to workspace storage
-		stmtBytes := []byte(usecase.RenderStatementMarkdown(stmt))
+		stmtBytes := []byte(problems.RenderStatementMarkdown(stmt))
 		if int64(len(stmtBytes)) > MaxStatementFileSize {
 			return nil, pkg.Wrap(pkg.ErrPayloadTooLarge, nil, "statement size exceeds maximum allowed limit of 2MB")
 		}
 		user := middleware.GetUser(ctx)
-		if err := h.workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+		if err := h.workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 			ProblemID: params.ProblemId,
 			Revision:  manifest.Revision,
 			UserID:    user.Id,
@@ -641,7 +641,7 @@ func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, req corev1.Up
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid tests config payload")
 	}
 
-	var testsMeta models.TestsMetadata
+	var testsMeta problemsmodel.TestsMetadata
 	if err := json.Unmarshal(bodyBytes, &testsMeta); err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to parse tests config")
 	}
@@ -697,7 +697,7 @@ func (h *CoreServer) DeleteProblemTestFile(ctx context.Context, params corev1.De
 func (h *CoreServer) CompileProblemComponent(ctx context.Context, params corev1.CompileProblemComponentParams) (*corev1.CompileResult, error) {
 	user := middleware.GetUser(ctx)
 
-	compileReq := models.CompileComponentRequest{
+	compileReq := problemsmodel.CompileComponentRequest{
 		ProblemID:     params.ProblemId,
 		ComponentType: string(params.ComponentType),
 		UserID:        user.Id,
@@ -730,7 +730,7 @@ func (h *CoreServer) GenerateTests(ctx context.Context, req *corev1.GenerateTest
 		copy(arguments, req.Arguments)
 	}
 
-	generateReq := models.GenerateTestsRequest{
+	generateReq := problemsmodel.GenerateTestsRequest{
 		ProblemID:     params.ProblemId,
 		GeneratorName: req.GeneratorName,
 		TestNumbers:   testNumbers,
@@ -782,7 +782,7 @@ func (h *CoreServer) TestSolution(ctx context.Context, req *corev1.TestSolutionR
 		copy(testNumbers, req.TestNumbers)
 	}
 
-	testReq := models.TestSolutionRequest{
+	testReq := problemsmodel.TestSolutionRequest{
 		ProblemID:    params.ProblemId,
 		SolutionPath: req.SolutionPath,
 		TestNumbers:  testNumbers,
@@ -837,7 +837,7 @@ func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.
 				}
 				files = append(files, nested...)
 			}
-			var testFiles []models.FileEntry
+			var testFiles []problemsmodel.FileEntry
 			for _, file := range files {
 				if !file.IsDirectory {
 					testFiles = append(testFiles, file)
@@ -848,7 +848,7 @@ func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.
 
 		manifest, err := h.readWorkshopManifest(ctx, problemID)
 		if err != nil {
-			manifest = &models.ProblemManifest{}
+			manifest = &problemsmodel.ProblemManifest{}
 		}
 
 		contractFiles := toContractFileEntries(files, manifest)
@@ -924,7 +924,7 @@ func (h *CoreServer) saveWorkshopCollectionBytes(ctx context.Context, problemID 
 	}
 
 	user := middleware.GetUser(ctx)
-	if err := h.workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+	if err := h.workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 		ProblemID: problemID,
 		UserID:    user.Id,
 		Path:      filepath.Join(dir, cleanName),
@@ -1034,7 +1034,7 @@ func (h *CoreServer) deleteWorkshopCollectionFile(ctx context.Context, problemID
 	return nil
 }
 
-func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UUID) (*models.ProblemManifest, error) {
+func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UUID) (*problemsmodel.ProblemManifest, error) {
 	if err := h.requireWorkshop(ctx, problemID); err != nil {
 		return nil, err
 	}
@@ -1047,7 +1047,7 @@ func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UU
 	return manifest, nil
 }
 
-func (h *CoreServer) saveWorkshopManifest(ctx context.Context, problemID uuid.UUID, manifest *models.ProblemManifest) error {
+func (h *CoreServer) saveWorkshopManifest(ctx context.Context, problemID uuid.UUID, manifest *problemsmodel.ProblemManifest) error {
 	if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
 		return workshopWriteError(err, "failed to update manifest")
 	}
@@ -1055,7 +1055,7 @@ func (h *CoreServer) saveWorkshopManifest(ctx context.Context, problemID uuid.UU
 	return nil
 }
 
-func (h *CoreServer) toContractLimits(manifest *models.ProblemManifest) *corev1.ProblemLimits {
+func (h *CoreServer) toContractLimits(manifest *problemsmodel.ProblemManifest) *corev1.ProblemLimits {
 	var maxScoreOpt corev1.OptNilInt
 	if manifest.MaxScore != nil {
 		maxScoreOpt = corev1.NewOptNilInt(*manifest.MaxScore)
@@ -1068,7 +1068,7 @@ func (h *CoreServer) toContractLimits(manifest *models.ProblemManifest) *corev1.
 	}
 }
 
-func (h *CoreServer) toContractStatementForLang(stmt models.Statement, languages []string, currentLang string) *corev1.ProblemStatement {
+func (h *CoreServer) toContractStatementForLang(stmt problemsmodel.Statement, languages []string, currentLang string) *corev1.ProblemStatement {
 	return &corev1.ProblemStatement{
 		InputFormat:  stmt.InputFormat,
 		Interaction:  stringToOptString(stmt.Interaction),
@@ -1082,7 +1082,7 @@ func (h *CoreServer) toContractStatementForLang(stmt models.Statement, languages
 	}
 }
 
-func toContractFileEntries(files []models.FileEntry, manifest *models.ProblemManifest) []corev1.FileEntry {
+func toContractFileEntries(files []problemsmodel.FileEntry, manifest *problemsmodel.ProblemManifest) []corev1.FileEntry {
 	var mainChecker, mainInteractor, mainValidator string
 	if manifest != nil {
 		for _, meta := range manifest.FilesMetadata {
@@ -1127,7 +1127,7 @@ func toContractFileEntries(files []models.FileEntry, manifest *models.ProblemMan
 	return contractFiles
 }
 
-func validateManifest(m *models.ProblemManifest) error {
+func validateManifest(m *problemsmodel.ProblemManifest) error {
 	if m.TimeLimitMs <= 0 || m.MemoryLimitMb <= 0 {
 		return fmt.Errorf("limits must be positive")
 	}
@@ -1137,7 +1137,7 @@ func validateManifest(m *models.ProblemManifest) error {
 	return nil
 }
 
-func validateTestsMetadata(t *models.TestsMetadata) error {
+func validateTestsMetadata(t *problemsmodel.TestsMetadata) error {
 	if len(t.Tests) == 0 {
 		return fmt.Errorf("at least one test case is required")
 	}

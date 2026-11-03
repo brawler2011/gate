@@ -10,8 +10,14 @@ import (
 	"strings"
 	"time"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
+	submissions "github.com/brawler2011/gate/backend/internal/submissions"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/booklet"
@@ -19,18 +25,15 @@ import (
 )
 
 type ContestsReader interface {
-	GetContestTeams(ctx context.Context, contestId uuid.UUID) ([]models.ContestTeam, error)
-	ListPublicContests(ctx context.Context, filter models.PublicContestsFilter) (*models.ContestsList, error)
-	ListWorkshopContests(ctx context.Context, filter models.WorkshopContestsFilter) (*models.ContestsList, error)
-	ListUserContests(ctx context.Context, filter models.UserContestsFilter) (*models.ContestsList, error)
-	ListAdminContests(ctx context.Context, filter models.AdminContestsFilter) (*models.ContestsList, error)
-	ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, visibility string, page, pageSize int32) (*models.ContestsList, error)
-	ListContestMembers(ctx context.Context, filter models.ParticipantsFilter) (*models.ContestMembersList, error)
-	ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardContest, error)
+	GetContestTeams(ctx context.Context, contestId uuid.UUID) ([]contestsmodel.ContestTeam, error)
+	ListPublicContests(ctx context.Context, filter contestsmodel.PublicContestsFilter) (*contestsmodel.ContestsList, error)
+	ListWorkshopContests(ctx context.Context, filter contestsmodel.WorkshopContestsFilter) (*contestsmodel.ContestsList, error)
+	ListUserContests(ctx context.Context, filter contestsmodel.UserContestsFilter) (*contestsmodel.ContestsList, error)
+	ListAdminContests(ctx context.Context, filter contestsmodel.AdminContestsFilter) (*contestsmodel.ContestsList, error)
+	ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, visibility string, page, pageSize int32) (*contestsmodel.ContestsList, error)
+	ListContestMembers(ctx context.Context, filter contestsmodel.ParticipantsFilter) (*contestsmodel.ContestMembersList, error)
+	ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]contestsmodel.DashboardContest, error)
 }
-
-// ----------------------------------------------------------------------------------
-// FIXME: логика slugify не относится к транспортному слою, это нужно куда-то вынести
 
 func ordinalToLetter(ordinal int) string {
 	if ordinal <= 0 {
@@ -115,8 +118,6 @@ func (h *CoreServer) generateUniqueContestLogin(ctx context.Context, orgLogin, t
 	}
 }
 
-// ----------------------------------------------------------------------------------
-
 func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateContestParams) (*corev1.CreationResponseModel, error) {
 
 	// FIXME: валидация не должна быть ручной
@@ -144,13 +145,13 @@ func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateCont
 		login = h.generateUniqueContestLogin(ctx, params.OrgLogin, params.Title)
 	}
 
-	contestCreation := &models.CreateContestInput{
+	contestCreation := &contestsmodel.CreateContestInput{
 		OrganizationID: org.ID,
 		OwnerID:        &user.Id,
 		Title:          params.Title,
 		Login:          login,
 		Description:    "",
-		Visibility:     models.ContestVisibilityPrivate,
+		Visibility:     contestsmodel.ContestVisibilityPrivate,
 		Settings:       make(map[string]interface{}),
 		StartTime:      nil,
 		EndTime:        nil,
@@ -181,7 +182,7 @@ func (h *CoreServer) ListOrganizationContests(ctx context.Context, params corev1
 
 	// FIXME: это не зона отвественности транспортного слоя
 	isMember := false
-	if user.Role == models.UserRoleAdmin {
+	if user.Role == accessmodel.UserRoleAdmin {
 		isMember = true
 	} else if user.Id != uuid.Nil {
 		_, err := h.organizationsUC.ListMembers(ctx, org.ID, user.Id)
@@ -211,12 +212,12 @@ func (h *CoreServer) GetContest(ctx context.Context, params corev1.GetContestPar
 	}
 
 	user := middleware.GetUser(ctx)
-	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionGetContestProblem)
+	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionGetContestProblem)
 	if err != nil {
 		return nil, err
 	}
 
-	var ps []models.ContestProblem
+	var ps []contestsmodel.ContestProblem
 	if allowed {
 		ps, err = h.contestsUC.GetContestProblems(ctx, contest.ID)
 		if err != nil {
@@ -224,7 +225,7 @@ func (h *CoreServer) GetContest(ctx context.Context, params corev1.GetContestPar
 		}
 	}
 
-	problemDetails := make(map[uuid.UUID]models.Problem, len(ps))
+	problemDetails := make(map[uuid.UUID]problemsmodel.Problem, len(ps))
 	for _, p := range ps {
 		prob, err := h.problemsUC.GetProblemById(ctx, p.ProblemID)
 		if err != nil {
@@ -233,7 +234,7 @@ func (h *CoreServer) GetContest(ctx context.Context, params corev1.GetContestPar
 		problemDetails[p.ProblemID] = prob
 	}
 
-	var owner models.User
+	var owner accessmodel.User
 	if contest.OwnerID != nil {
 		owner, err = h.usersUC.GetUserById(ctx, *contest.OwnerID)
 		if err != nil {
@@ -352,7 +353,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		endTime = &req.EndTime.Value
 	}
 
-	err = h.contestsUC.UpdateContest(ctx, models.ContestUpdateInput{
+	err = h.contestsUC.UpdateContest(ctx, contestsmodel.ContestUpdateInput{
 		ID:           existingContest.ID,
 		Login:        newLogin,
 		Title:        reqTitle,
@@ -400,12 +401,12 @@ func (h *CoreServer) ListAdminContests(ctx context.Context, params corev1.ListAd
 	if params.SortBy.IsSet() {
 		sortBy = string(params.SortBy.Value)
 	}
-	sortOrder := models.SortOrderAsc
+	sortOrder := paging.SortOrderAsc
 	if params.SortOrder.IsSet() {
 		sortOrder = string(params.SortOrder.Value)
 	}
 
-	filter := models.AdminContestsFilter{
+	filter := contestsmodel.AdminContestsFilter{
 		Page:       page,
 		PageSize:   pageSize,
 		Search:     search,
@@ -441,7 +442,7 @@ func (h *CoreServer) ListUserContests(ctx context.Context, params corev1.ListUse
 		return nil, err
 	}
 
-	filter := models.UserContestsFilter{
+	filter := contestsmodel.UserContestsFilter{
 		Page:      page,
 		PageSize:  pageSize,
 		UserId:    user.Id,
@@ -474,7 +475,7 @@ func (h *CoreServer) ListWorkshopContests(ctx context.Context, params corev1.Lis
 		sortOrder = string(params.SortOrder.Value)
 	}
 
-	filter := models.WorkshopContestsFilter{
+	filter := contestsmodel.WorkshopContestsFilter{
 		Page:      page,
 		PageSize:  pageSize,
 		UserId:    user.Id,
@@ -509,7 +510,7 @@ func (h *CoreServer) ListPublicContests(ctx context.Context, params corev1.ListP
 		sortOrder = string(params.SortOrder.Value)
 	}
 
-	filter := models.PublicContestsFilter{
+	filter := contestsmodel.PublicContestsFilter{
 		Page:      page,
 		PageSize:  pageSize,
 		Search:    search,
@@ -535,7 +536,7 @@ func (h *CoreServer) CreateContestProblem(ctx context.Context, params corev1.Cre
 	if params.PackageID.IsSet() {
 		pkgID = params.PackageID.Value
 	}
-	err = h.contestsUC.CreateContestProblem(ctx, models.ContestProblemCreation{
+	err = h.contestsUC.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{
 		ContestId: contest.ID,
 		ProblemId: params.ProblemID,
 		PackageId: pkgID,
@@ -553,7 +554,7 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, params corev1.GetCon
 		return nil, err
 	}
 
-	p, err := h.contestsUC.GetContestProblem(ctx, models.ContestProblemGet{
+	p, err := h.contestsUC.GetContestProblem(ctx, contestsmodel.ContestProblemGet{
 		ContestId: contest.ID,
 		ProblemId: params.ProblemID,
 	})
@@ -569,10 +570,10 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, params corev1.GetCon
 	var isManager bool
 	user := middleware.GetUser(ctx)
 	if !user.IsGuest() {
-		isManager, _ = h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
+		isManager, _ = h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
 	}
 
-	var statement *models.Statement
+	var statement *problemsmodel.Statement
 	var samples []corev1.ProblemSampleModel
 
 	if !contest.GetHideStatements() || isManager {
@@ -603,7 +604,7 @@ func (h *CoreServer) DownloadContestStatementsPdf(ctx context.Context, params co
 	var isManager bool
 	user := middleware.GetUser(ctx)
 	if !user.IsGuest() {
-		isManager, _ = h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
+		isManager, _ = h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
 	}
 
 	if !isManager {
@@ -629,7 +630,7 @@ func (h *CoreServer) DownloadContestStatementsPdf(ctx context.Context, params co
 			continue
 		}
 
-		var statement *models.Statement
+		var statement *problemsmodel.Statement
 		var samples []corev1.ProblemSampleModel
 
 		if cp.PackageID != uuid.Nil {
@@ -733,7 +734,7 @@ func (h *CoreServer) DeleteContestProblem(ctx context.Context, params corev1.Del
 		return err
 	}
 
-	err = h.contestsUC.DeleteContestProblem(ctx, models.ContestProblemDeletion{
+	err = h.contestsUC.DeleteContestProblem(ctx, contestsmodel.ContestProblemDeletion{
 		ContestId: contest.ID,
 		ProblemId: params.ProblemID,
 	})
@@ -754,9 +755,9 @@ func (h *CoreServer) ReorderContestProblems(ctx context.Context, req *corev1.Reo
 		return err
 	}
 
-	reorderItems := make([]models.ContestProblemReorderItem, len(req.Problems))
+	reorderItems := make([]contestsmodel.ContestProblemReorderItem, len(req.Problems))
 	for i, item := range req.Problems {
-		reorderItems[i] = models.ContestProblemReorderItem{
+		reorderItems[i] = contestsmodel.ContestProblemReorderItem{
 			ProblemID: item.ProblemID,
 			Position:  item.Position,
 		}
@@ -776,7 +777,7 @@ func (h *CoreServer) CreateContestMember(ctx context.Context, params corev1.Crea
 		return nil, err
 	}
 
-	err = h.contestsUC.CreateParticipant(ctx, models.ParticipantCreation{
+	err = h.contestsUC.CreateParticipant(ctx, contestsmodel.ParticipantCreation{
 		ContestId: contest.ID,
 		UserId:    params.UserID,
 	})
@@ -793,7 +794,7 @@ func (h *CoreServer) DeleteContestMember(ctx context.Context, params corev1.Dele
 		return err
 	}
 
-	err = h.contestsUC.DeleteParticipant(ctx, models.ParticipantDeletion{
+	err = h.contestsUC.DeleteParticipant(ctx, contestsmodel.ParticipantDeletion{
 		ContestId: contest.ID,
 		UserId:    params.UserID,
 	})
@@ -818,7 +819,7 @@ func (h *CoreServer) UpdateContestMember(ctx context.Context, params corev1.Upda
 	}
 
 	// Validate role value
-	if params.Role != models.ContestRoleOwner && params.Role != models.ContestRoleModerator && params.Role != models.ContestRoleParticipant {
+	if params.Role != contestsmodel.ContestRoleOwner && params.Role != contestsmodel.ContestRoleModerator && params.Role != contestsmodel.ContestRoleParticipant {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role value")
 	}
 
@@ -839,7 +840,7 @@ func (h *CoreServer) ListContestMembers(ctx context.Context, params corev1.ListC
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(50)
 
-	participantsList, err := h.contestsReader.ListContestMembers(ctx, models.ParticipantsFilter{
+	participantsList, err := h.contestsReader.ListContestMembers(ctx, contestsmodel.ParticipantsFilter{
 		Page:      page,
 		PageSize:  pageSize,
 		ContestId: contest.ID,
@@ -918,15 +919,15 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 		order = &orderVal
 	}
 
-	var state *models.State
+	var state *submissionsmodel.State
 	if params.State.IsSet() {
-		stateVal := models.State(params.State.Value)
+		stateVal := submissionsmodel.State(params.State.Value)
 		state = &stateVal
 	}
 
-	var langName *models.LanguageName
+	var langName *submissionsmodel.LanguageName
 	if params.Language.IsSet() {
-		lang := models.LanguageName(params.Language.Value)
+		lang := submissionsmodel.LanguageName(params.Language.Value)
 		langName = &lang
 	}
 
@@ -955,7 +956,7 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 		}
 	}
 
-	submissionsList, err := h.submissionsUC.ListSubmissions(ctx, models.SubmissionsFilter{
+	submissionsList, err := h.submissionsUC.ListSubmissions(ctx, submissionsmodel.SubmissionsFilter{
 		ContestId: &contest.ID,
 		Page:      page,
 		PageSize:  pageSize,
@@ -970,7 +971,7 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 	}
 
 	for i, submission := range submissionsList.Submissions {
-		submissionsList.Submissions[i] = models.SubmissionView(&contest, submission.CreatedBy, submission.CreatedAt, user.Id, permissions, time.Now()).Apply(submission)
+		submissionsList.Submissions[i] = submissions.SubmissionView(&contest, submission.CreatedBy, submission.CreatedAt, user.Id, permissions, time.Now()).Apply(submission)
 	}
 
 	resp := SubmissionsListToDTO(submissionsList)
@@ -988,7 +989,7 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, params corev1.Get
 	}
 
 	user := middleware.GetUser(ctx)
-	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionGetMonitor)
+	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionGetMonitor)
 	if err != nil {
 		return nil, err
 	}
@@ -996,7 +997,7 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, params corev1.Get
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "permission denied to view contest monitor")
 	}
 
-	isManager := user.Role == models.UserRoleAdmin || (contest.OwnerID != nil && *contest.OwnerID == user.Id)
+	isManager := user.Role == accessmodel.UserRoleAdmin || (contest.OwnerID != nil && *contest.OwnerID == user.Id)
 	hasStarted := contest.StartTime == nil || !time.Now().Before(*contest.StartTime)
 	if !isManager && !hasStarted {
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "contest has not started yet")
@@ -1005,7 +1006,7 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, params corev1.Get
 	unfrozen := false
 	if params.Unfrozen.IsSet() && params.Unfrozen.Value {
 		unfrozen = true
-		canManage, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
+		canManage, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
 		if err != nil {
 			return nil, err
 		}
@@ -1055,9 +1056,9 @@ func (h *CoreServer) CreateContestTeam(ctx context.Context, params corev1.Create
 
 	user := middleware.GetUser(ctx)
 
-	role := models.ContestRoleParticipant
+	role := contestsmodel.ContestRoleParticipant
 	if params.Role.IsSet() && params.Role.Value != "" {
-		role = models.ContestRole(params.Role.Value)
+		role = contestsmodel.ContestRole(params.Role.Value)
 	}
 
 	err = h.contestsUC.CreateContestTeam(ctx, contest.ID, params.TeamID, user.Id, role)
@@ -1076,7 +1077,7 @@ func (h *CoreServer) UpdateContestTeam(ctx context.Context, params corev1.Update
 
 	user := middleware.GetUser(ctx)
 
-	err = h.contestsUC.UpdateContestTeamRole(ctx, contest.ID, params.TeamID, user.Id, models.ContestRole(params.Role))
+	err = h.contestsUC.UpdateContestTeamRole(ctx, contest.ID, params.TeamID, user.Id, contestsmodel.ContestRole(params.Role))
 	if err != nil {
 		return err
 	}
@@ -1135,7 +1136,7 @@ func (h *CoreServer) UnblockProblemForUser(ctx context.Context, params corev1.Un
 	}
 
 	if rejudgeSubmissions {
-		filter := models.RejudgeFilter{
+		filter := submissionsmodel.RejudgeFilter{
 			ContestID: contest.ID,
 			ProblemID: &params.ProblemID,
 			UserID:    &params.UserID,
@@ -1172,8 +1173,6 @@ func (h *CoreServer) GetProblemBlockStatusForUser(ctx context.Context, params co
 		CreatedAt: timePtrToOptNilDateTime(&block.CreatedAt),
 	}, nil
 }
-
-// Contest Join Requests
 
 // ListContestJoinRequests handles GET /organizations/{org_login}/contests/{contest_login}/requests
 func (h *CoreServer) ListContestJoinRequests(ctx context.Context, params corev1.ListContestJoinRequestsParams) (*corev1.ListContestJoinRequestsResponseModel, error) {

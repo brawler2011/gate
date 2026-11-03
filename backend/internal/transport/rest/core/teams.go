@@ -6,7 +6,10 @@ import (
 	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	paging "github.com/brawler2011/gate/backend/internal/page"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 )
@@ -20,7 +23,7 @@ func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParam
 	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
 
-	var teams []models.Team
+	var teams []organizationsmodel.Team
 	var err error
 
 	// If organization_id is specified, list teams for that organization
@@ -39,7 +42,7 @@ func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParam
 
 	// Apply search filter if provided (simple name filtering)
 	if search != "" {
-		filtered := make([]models.Team, 0)
+		filtered := make([]organizationsmodel.Team, 0)
 		for _, team := range teams {
 			if containsIgnoreCase(team.Name, search) {
 				filtered = append(filtered, team)
@@ -59,7 +62,7 @@ func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParam
 
 	switch {
 	case start > len(teams):
-		teams = []models.Team{}
+		teams = []organizationsmodel.Team{}
 	case end > len(teams):
 		teams = teams[start:]
 	default:
@@ -87,12 +90,12 @@ func (h *CoreServer) CreateTeam(ctx context.Context, req *corev1.CreateTeamReq) 
 	slug := generateLogin(req.Name)
 
 	// Create input
-	input := &models.CreateTeamInput{
+	input := &organizationsmodel.CreateTeamInput{
 		OrganizationID: req.OrganizationID,
 		Name:           req.Name,
 		Slug:           slug,
 		Description:    "",
-		Privacy:        models.TeamPrivacyClosed, // Default privacy
+		Privacy:        organizationsmodel.TeamPrivacyClosed, // Default privacy
 		ParentTeamID:   nil,
 	}
 
@@ -144,7 +147,7 @@ func (h *CoreServer) UpdateTeam(ctx context.Context, req *corev1.UpdateTeamReque
 	}
 
 	// Create update input
-	input := &models.UpdateTeamInput{
+	input := &organizationsmodel.UpdateTeamInput{
 		Name:        reqName,
 		Description: reqDesc,
 		Privacy:     nil, // Privacy not exposed in API yet
@@ -196,12 +199,12 @@ func (h *CoreServer) ListTeamMembers(ctx context.Context, params corev1.ListTeam
 func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMemberParams) error {
 	user := middleware.GetUser(ctx)
 
-	role := models.TeamRoleMember
+	role := organizationsmodel.TeamRoleMember
 	if params.Role.IsSet() && params.Role.Value != "" {
-		role = models.TeamRole(params.Role.Value)
+		role = organizationsmodel.TeamRole(params.Role.Value)
 	}
 
-	input := &models.AddTeamMemberInput{
+	input := &organizationsmodel.AddTeamMemberInput{
 		TeamID: params.ID,
 		UserID: params.UserID,
 		Role:   role,
@@ -219,7 +222,7 @@ func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMem
 func (h *CoreServer) UpdateTeamMemberRole(ctx context.Context, params corev1.UpdateTeamMemberRoleParams) error {
 	user := middleware.GetUser(ctx)
 
-	err := h.teamsUC.UpdateTeamMemberRole(ctx, params.ID, params.UserID, models.TeamRole(params.Role), user.Id)
+	err := h.teamsUC.UpdateTeamMemberRole(ctx, params.ID, params.UserID, organizationsmodel.TeamRole(params.Role), user.Id)
 	if err != nil {
 		return wrapTeamUCError(err, "failed to update team member role")
 	}
@@ -248,9 +251,9 @@ func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTea
 		return nil, wrapTeamUCError(err, "failed to list team contests")
 	}
 
-	contestsList := &models.ContestsList{
+	contestsList := &contestsmodel.ContestsList{
 		Contests: contests,
-		Pagination: models.Pagination{
+		Pagination: paging.Pagination{
 			Page:  1,
 			Total: safeInt32(len(contests)),
 		},
@@ -268,9 +271,9 @@ func (h *CoreServer) ListTeamProblems(ctx context.Context, params corev1.ListTea
 		return nil, wrapTeamUCError(err, "failed to list team problems")
 	}
 
-	problemsList := &models.ProblemsList{
+	problemsList := &problemsmodel.ProblemsList{
 		Problems: problems,
-		Pagination: models.Pagination{
+		Pagination: paging.Pagination{
 			Page:  1,
 			Total: safeInt32(len(problems)),
 		},

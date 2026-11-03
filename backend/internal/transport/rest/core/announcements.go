@@ -4,14 +4,15 @@ import (
 	"context"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
 type AnnouncementsReader interface {
-	ListAnnouncements(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*models.ContestAnnouncementsList, error)
+	ListAnnouncements(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*contestsmodel.ContestAnnouncementsList, error)
 }
 
 func (h *CoreServer) ListContestAnnouncements(ctx context.Context, params corev1.ListContestAnnouncementsParams) (*corev1.ListContestAnnouncementsResponseModel, error) {
@@ -41,7 +42,7 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.
 	}
 
 	// FIXME: должно быть в middleware, а не здесь
-	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
+	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +56,7 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.
 		problemID = &req.ProblemID.Value
 	}
 
-	announcement, err := h.announcementsUC.CreateAnnouncement(ctx, &models.CreateContestAnnouncementInput{
+	announcement, err := h.announcementsUC.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{
 		ContestID: contest.ID,
 		ProblemID: problemID,
 		AuthorID:  user.Id,
@@ -82,7 +83,7 @@ func (h *CoreServer) DeleteContestAnnouncement(ctx context.Context, params corev
 	}
 
 	// FIXME: должно быть в middleware, а не здесь
-	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
+	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -15,17 +15,17 @@ import (
 )
 
 type ProblemsReader interface {
-	ListProblemMembers(ctx context.Context, problemID uuid.UUID) ([]models.ProblemMember, error)
-	GetProblemTeams(ctx context.Context, problemId uuid.UUID) ([]models.ProblemTeam, error)
-	ListProblems(ctx context.Context, filter *models.ProblemsFilter) (*models.ProblemsList, error)
-	ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]models.DashboardProblem, error)
+	ListProblemMembers(ctx context.Context, problemID uuid.UUID) ([]problemsmodel.ProblemMember, error)
+	GetProblemTeams(ctx context.Context, problemId uuid.UUID) ([]problemsmodel.ProblemTeam, error)
+	ListProblems(ctx context.Context, filter *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error)
+	ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]problemsmodel.DashboardProblem, error)
 }
 
 func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblemsParams) (*corev1.ListProblemsResponseModel, error) {
 	user := middleware.GetUser(ctx)
 	searchStr := params.Search.Or("")
 
-	filter := &models.ProblemsFilter{
+	filter := &problemsmodel.ProblemsFilter{
 		ViewerID: &user.Id,
 		Page:     params.Page.Or(1),
 		PageSize: params.PageSize.Or(50),
@@ -92,7 +92,7 @@ func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.Lis
 	// 2. Organization templates
 	if orgID != uuid.Nil {
 		isTemplate := true
-		filter := &models.ProblemsFilter{
+		filter := &problemsmodel.ProblemsFilter{
 			Page:           1,
 			PageSize:       100,
 			OrganizationID: &orgID,
@@ -154,12 +154,12 @@ func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProb
 
 	shortName := "problem-" + uuid.New().String()[:8]
 
-	input := &models.CreateProblemInput{
+	input := &problemsmodel.CreateProblemInput{
 		OrganizationID: orgID,
 		OwnerID:        &user.Id,
 		Title:          params.Title,
 		ShortName:      shortName,
-		Visibility:     models.ProblemVisibilityPrivate,
+		Visibility:     problemsmodel.ProblemVisibilityPrivate,
 	}
 
 	if strings.HasPrefix(templateIDStr, "builtin:") {
@@ -267,7 +267,7 @@ func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemPar
 		return nil, err
 	}
 
-	var statement *models.Statement
+	var statement *problemsmodel.Statement
 	var samples []corev1.ProblemSampleModel
 	if h.workshopUC != nil {
 		if err := h.workshopUC.WithWorkspace(ctx, params.ID, func(ctx context.Context) error {
@@ -301,7 +301,7 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 	}
 
 	// Build update params
-	update := &models.ProblemUpdate{}
+	update := &problemsmodel.ProblemUpdate{}
 
 	// Handle title update
 	if req.Title.IsSet() {
@@ -357,9 +357,9 @@ func (h *CoreServer) ListProblemTeams(ctx context.Context, params corev1.ListPro
 func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.CreateProblemTeamParams) error {
 	user := middleware.GetUser(ctx)
 
-	permission := models.ProblemPermissionRead
+	permission := problemsmodel.ProblemPermissionRead
 	if params.Permission.IsSet() && params.Permission.Value != "" {
-		permission = models.ProblemPermission(params.Permission.Value)
+		permission = problemsmodel.ProblemPermission(params.Permission.Value)
 	}
 
 	err := h.problemsUC.AddProblemTeam(ctx, params.ID, params.TeamID, user.Id, permission)
@@ -373,7 +373,7 @@ func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.Create
 func (h *CoreServer) UpdateProblemTeam(ctx context.Context, params corev1.UpdateProblemTeamParams) error {
 	user := middleware.GetUser(ctx)
 
-	err := h.problemsUC.UpdateProblemTeamPermission(ctx, params.ID, params.TeamID, user.Id, models.ProblemPermission(params.Permission))
+	err := h.problemsUC.UpdateProblemTeamPermission(ctx, params.ID, params.TeamID, user.Id, problemsmodel.ProblemPermission(params.Permission))
 	if err != nil {
 		return err
 	}
@@ -406,9 +406,9 @@ func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListP
 func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.CreateProblemMemberParams) error {
 	user := middleware.GetUser(ctx)
 
-	role := models.ProblemRoleViewer
+	role := problemsmodel.ProblemRoleViewer
 	if params.Role.IsSet() && params.Role.Value != "" {
-		role = models.ProblemRole(params.Role.Value)
+		role = problemsmodel.ProblemRole(params.Role.Value)
 	}
 
 	err := h.problemsUC.CreateProblemMember(ctx, params.ID, params.UserID, user.Id, role)
@@ -422,7 +422,7 @@ func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.Crea
 func (h *CoreServer) UpdateProblemMember(ctx context.Context, params corev1.UpdateProblemMemberParams) error {
 	user := middleware.GetUser(ctx)
 
-	err := h.problemsUC.UpdateProblemMemberRole(ctx, params.ID, params.UserID, user.Id, models.ProblemRole(params.Role))
+	err := h.problemsUC.UpdateProblemMemberRole(ctx, params.ID, params.UserID, user.Id, problemsmodel.ProblemRole(params.Role))
 	if err != nil {
 		return err
 	}

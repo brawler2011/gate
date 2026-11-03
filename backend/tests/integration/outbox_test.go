@@ -7,13 +7,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/repository/pg"
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/google/uuid"
 )
 
 func (s *IntegrationTestSuite) TestOutbox_HeadersPersistence() {
-	outboxRepo := pg.NewOutboxRepo(s.dbPool)
+	outboxRepo := pgstore.NewOutboxRepo(s.dbPool)
 
 	s.Run("CreateEventWithHeaders_PickEventsReturnsHeaders", func() {
 		eventID := uuid.New()
@@ -23,10 +23,10 @@ func (s *IntegrationTestSuite) TestOutbox_HeadersPersistence() {
 			"custom-header": "rojo=1",
 		}
 
-		err := outboxRepo.CreateEvent(s.ctx, &models.CreateOutboxEventParams{
+		err := outboxRepo.CreateEvent(s.ctx, &eventdata.CreateOutboxEventParams{
 			Id:          eventID,
 			AggregateID: aggregateID,
-			EventType:   models.OutboxEventSubmissionCreated,
+			EventType:   eventdata.OutboxEventSubmissionCreated,
 			Payload:     []byte(`{"test":"data"}`),
 			Headers:     headers,
 		})
@@ -35,7 +35,7 @@ func (s *IntegrationTestSuite) TestOutbox_HeadersPersistence() {
 		events, err := outboxRepo.PickEvents(s.ctx, 10, 30)
 		s.Require().NoError(err)
 
-		var found *models.OutboxEvent
+		var found *eventdata.OutboxEvent
 		for _, e := range events {
 			if e.Id == eventID {
 				found = &e
@@ -46,7 +46,7 @@ func (s *IntegrationTestSuite) TestOutbox_HeadersPersistence() {
 		s.Require().NotNil(found, "created outbox event should be found in picked events")
 		s.Equal(eventID, found.Id)
 		s.Equal(aggregateID, found.AggregateID)
-		s.Equal(models.OutboxEventSubmissionCreated, found.EventType)
+		s.Equal(eventdata.OutboxEventSubmissionCreated, found.EventType)
 		s.JSONEq(`{"test":"data"}`, string(found.Payload))
 		s.NotNil(found.Headers)
 		s.Equal(headers["X-Request-ID"], found.Headers["X-Request-ID"])
@@ -61,10 +61,10 @@ func (s *IntegrationTestSuite) TestOutbox_HeadersPersistence() {
 		eventID := uuid.New()
 		aggregateID := uuid.New()
 
-		err := outboxRepo.CreateEvent(s.ctx, &models.CreateOutboxEventParams{
+		err := outboxRepo.CreateEvent(s.ctx, &eventdata.CreateOutboxEventParams{
 			Id:          eventID,
 			AggregateID: aggregateID,
-			EventType:   models.OutboxEventSubmissionCreated,
+			EventType:   eventdata.OutboxEventSubmissionCreated,
 			Payload:     []byte(`{"test":"nil_headers"}`),
 			Headers:     nil,
 		})
@@ -73,7 +73,7 @@ func (s *IntegrationTestSuite) TestOutbox_HeadersPersistence() {
 		events, err := outboxRepo.PickEvents(s.ctx, 10, 30)
 		s.Require().NoError(err)
 
-		var found *models.OutboxEvent
+		var found *eventdata.OutboxEvent
 		for _, e := range events {
 			if e.Id == eventID {
 				found = &e
@@ -95,11 +95,11 @@ func (s *IntegrationTestSuite) TestOutbox_HeadersPersistence() {
 func (s *IntegrationTestSuite) TestOutboxSkipsLockedEventsAndRecoversExpiredClaims() {
 	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
 	defer cancel()
-	repo := pg.NewOutboxRepo(s.dbPool)
+	repo := pgstore.NewOutboxRepo(s.dbPool)
 	first, second := uuid.New(), uuid.New()
 	for i, id := range []uuid.UUID{first, second} {
-		s.Require().NoError(repo.CreateEvent(ctx, &models.CreateOutboxEventParams{
-			Id: id, AggregateID: uuid.New(), EventType: models.OutboxEventSubmissionCreated, Payload: []byte(`{}`),
+		s.Require().NoError(repo.CreateEvent(ctx, &eventdata.CreateOutboxEventParams{
+			Id: id, AggregateID: uuid.New(), EventType: eventdata.OutboxEventSubmissionCreated, Payload: []byte(`{}`),
 		}))
 		_, err := s.dbPool.Exec(ctx, "UPDATE outbox_events SET created_at=$2 WHERE id=$1", id, time.Date(2000, 1, 1, 0, i, 0, 0, time.UTC))
 		s.Require().NoError(err)

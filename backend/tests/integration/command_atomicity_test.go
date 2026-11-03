@@ -8,14 +8,15 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/repository/pg"
-	"github.com/brawler2011/gate/backend/internal/usecase"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
 )
 
 func (s *IntegrationTestSuite) TestCreateTeamRollsBackMaintainerFailure() {
-	owner := s.createUser("atomic_team_owner", models.UserRoleUser)
+	owner := s.createUser("atomic_team_owner", accessmodel.UserRoleUser)
 	org := s.createOrganization("atomic-team", "Atomic team", owner.Id)
 	_, err := s.dbPool.Exec(s.ctx, `CREATE FUNCTION reject_team_member() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected member failure'; END $$;
 CREATE TRIGGER reject_team_member BEFORE INSERT ON team_members FOR EACH ROW EXECUTE FUNCTION reject_team_member()`)
@@ -35,7 +36,7 @@ CREATE TRIGGER reject_team_member BEFORE INSERT ON team_members FOR EACH ROW EXE
 }
 
 func (s *IntegrationTestSuite) TestCreateProblemRollsBackOwnerFailure() {
-	owner := s.createUser("atomic_problem_owner", models.UserRoleAdmin)
+	owner := s.createUser("atomic_problem_owner", accessmodel.UserRoleAdmin)
 	org := s.createOrganization("atomic-problem", "Atomic problem", owner.Id)
 	_, err := s.dbPool.Exec(s.ctx, `CREATE FUNCTION reject_problem_member() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected owner failure'; END $$;
 CREATE TRIGGER reject_problem_member BEFORE INSERT ON problem_members FOR EACH ROW EXECUTE FUNCTION reject_problem_member()`)
@@ -55,7 +56,7 @@ CREATE TRIGGER reject_problem_member BEFORE INSERT ON problem_members FOR EACH R
 }
 
 func (s *IntegrationTestSuite) TestUsersPaginationDefaultsAndBounds() {
-	admin := s.createUser("pagination_admin", models.UserRoleAdmin)
+	admin := s.createUser("pagination_admin", accessmodel.UserRoleAdmin)
 	s.readJSON("/users", admin.Id, 200)
 	for _, query := range []string{"page=0", "pageSize=0", "pageSize=101"} {
 		s.readJSON("/users?"+query, admin.Id, 400)
@@ -64,17 +65,17 @@ func (s *IntegrationTestSuite) TestUsersPaginationDefaultsAndBounds() {
 }
 
 func (s *IntegrationTestSuite) TestTransactionRollbackLifecycle() {
-	owner := s.createUser("rollback_owner", models.UserRoleUser)
+	owner := s.createUser("rollback_owner", accessmodel.UserRoleUser)
 	org := s.createOrganization("rollback-lifecycle", "Rollback", owner.Id)
-	provider := pg.NewProblemTransactions(s.dbPool)
+	provider := pgstore.NewProblemTransactions(s.dbPool)
 	failure := errors.New("injected callback failure")
 	for _, mode := range []string{"error", "panic", "canceled"} {
 		s.Run(mode, func() {
 			id := uuid.New()
 			ctx, cancel := context.WithCancel(s.ctx)
 			defer cancel()
-			callback := func(tx usecase.ProblemTxStore) error {
-				err := tx.CreateProblem(ctx, &models.CreateProblemParams{ID: id, OrganizationID: org.ID, Title: "Rollback", ShortName: mode, Visibility: models.ProblemVisibilityPrivate})
+			callback := func(tx problems.ProblemTxStore) error {
+				err := tx.CreateProblem(ctx, &problemsmodel.CreateProblemParams{ID: id, OrganizationID: org.ID, Title: "Rollback", ShortName: mode, Visibility: problemsmodel.ProblemVisibilityPrivate})
 				if err != nil {
 					return err
 				}

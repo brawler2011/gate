@@ -7,7 +7,14 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
+	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	paging "github.com/brawler2011/gate/backend/internal/page"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/go-faster/jx"
 	"github.com/google/uuid"
 )
@@ -78,7 +85,7 @@ func int32PtrToOptNilInt32(i *int32) corev1.OptNilInt32 {
 	return corev1.NewOptNilInt32(*i)
 }
 
-func PaginationDTO(p models.Pagination) corev1.PaginationModel {
+func PaginationDTO(p paging.Pagination) corev1.PaginationModel {
 	return corev1.PaginationModel{
 		Page:  p.Page,
 		Total: p.Total,
@@ -99,7 +106,7 @@ func int32PtrToInt32(ptr *int32) int32 {
 	return *ptr
 }
 
-func GetContestResponseDTO(contest models.Contest, problems []models.ContestProblem, problemDetails map[uuid.UUID]models.Problem, owner *models.User) *corev1.GetContestResponseModel {
+func GetContestResponseDTO(contest contestsmodel.Contest, problems []contestsmodel.ContestProblem, problemDetails map[uuid.UUID]problemsmodel.Problem, owner *accessmodel.User) *corev1.GetContestResponseModel {
 	resp := corev1.GetContestResponseModel{
 		Contest:  ContestDTO(contest, owner),
 		Problems: make([]corev1.ContestProblemListItemModel, len(problems)),
@@ -117,7 +124,7 @@ func GetContestResponseDTO(contest models.Contest, problems []models.ContestProb
 	return &resp
 }
 
-func ListContestsResponseDTO(contestsList *models.ContestsList) *corev1.ListContestsResponseModel {
+func ListContestsResponseDTO(contestsList *contestsmodel.ContestsList) *corev1.ListContestsResponseModel {
 	resp := corev1.ListContestsResponseModel{
 		Contests:   make([]corev1.ContestModel, len(contestsList.Contests)),
 		Pagination: PaginationDTO(contestsList.Pagination),
@@ -130,7 +137,7 @@ func ListContestsResponseDTO(contestsList *models.ContestsList) *corev1.ListCont
 	return &resp
 }
 
-func GetContestProblemResponseDTO(contestProblem models.ContestProblem, problem models.Problem, statement *models.Statement, samples []corev1.ProblemSampleModel) *corev1.GetContestProblemResponseModel {
+func GetContestProblemResponseDTO(contestProblem contestsmodel.ContestProblem, problem problemsmodel.Problem, statement *problemsmodel.Statement, samples []corev1.ProblemSampleModel) *corev1.GetContestProblemResponseModel {
 	title := strings.TrimSpace(problem.Title)
 	if title == "" {
 		title = strings.TrimSpace(contestProblem.Title)
@@ -153,11 +160,11 @@ func GetContestProblemResponseDTO(contestProblem models.ContestProblem, problem 
 			TimeLimit:        safeInt32(problem.TimeLimitMs),
 			MemoryLimit:      safeInt32(problem.MemoryLimitMb),
 			Position:         safeInt32(contestProblem.Ordinal),
-			LegendHTML:       statementField(statement, func(s models.Statement) string { return s.Legend }),
-			InputFormatHTML:  statementField(statement, func(s models.Statement) string { return s.InputFormat }),
-			OutputFormatHTML: statementField(statement, func(s models.Statement) string { return s.OutputFormat }),
-			NotesHTML:        statementField(statement, func(s models.Statement) string { return s.Notes }),
-			ScoringHTML:      statementField(statement, func(s models.Statement) string { return s.Scoring }),
+			LegendHTML:       statementField(statement, func(s problemsmodel.Statement) string { return s.Legend }),
+			InputFormatHTML:  statementField(statement, func(s problemsmodel.Statement) string { return s.InputFormat }),
+			OutputFormatHTML: statementField(statement, func(s problemsmodel.Statement) string { return s.OutputFormat }),
+			NotesHTML:        statementField(statement, func(s problemsmodel.Statement) string { return s.Notes }),
+			ScoringHTML:      statementField(statement, func(s problemsmodel.Statement) string { return s.Scoring }),
 			CreatedAt:        problem.CreatedAt,
 			UpdatedAt:        problem.UpdatedAt,
 			Samples:          samples,
@@ -165,7 +172,7 @@ func GetContestProblemResponseDTO(contestProblem models.ContestProblem, problem 
 	}
 }
 
-func SubmissionsListToDTO(submissionsList *models.SubmissionsList) *corev1.ListSubmissionsResponseModel {
+func SubmissionsListToDTO(submissionsList *submissionsmodel.SubmissionsList) *corev1.ListSubmissionsResponseModel {
 	resp := corev1.ListSubmissionsResponseModel{
 		TotalCount: submissionsList.TotalCount, Revision: submissionsList.Revision,
 		Submissions: make([]corev1.SubmissionsListItemModel, len(submissionsList.Submissions)),
@@ -179,7 +186,7 @@ func SubmissionsListToDTO(submissionsList *models.SubmissionsList) *corev1.ListS
 	return &resp
 }
 
-func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
+func ContestDTO(c contestsmodel.Contest, owner *accessmodel.User) corev1.ContestModel {
 	title := c.Title
 
 	// Extract owner ID
@@ -253,7 +260,7 @@ func ContestDTO(c models.Contest, owner *models.User) corev1.ContestModel {
 	return model
 }
 
-func ContestProblemsListItemDTO(t models.ContestProblem, problem *models.Problem) corev1.ContestProblemListItemModel {
+func ContestProblemsListItemDTO(t contestsmodel.ContestProblem, problem *problemsmodel.Problem) corev1.ContestProblemListItemModel {
 	title := strings.TrimSpace(t.Title)
 	if problem != nil {
 		problemTitle := strings.TrimSpace(problem.Title)
@@ -282,11 +289,11 @@ func ContestProblemsListItemDTO(t models.ContestProblem, problem *models.Problem
 	}
 }
 
-func UserDTO(u models.User) corev1.UserModel {
+func UserDTO(u accessmodel.User) corev1.UserModel {
 	return userDTO(u)
 }
 
-func ParticipantDTO(p models.ContestMember) corev1.UserModel {
+func ParticipantDTO(p contestsmodel.ContestMember) corev1.UserModel {
 	return corev1.UserModel{
 		ID:        p.UserID,
 		Username:  p.Username,
@@ -296,7 +303,7 @@ func ParticipantDTO(p models.ContestMember) corev1.UserModel {
 	}
 }
 
-func ProblemsListItemDTO(p models.Problem) corev1.ProblemsListItemModel {
+func ProblemsListItemDTO(p problemsmodel.Problem) corev1.ProblemsListItemModel {
 	title := p.Title
 
 	return corev1.ProblemsListItemModel{
@@ -313,7 +320,7 @@ func ProblemsListItemDTO(p models.Problem) corev1.ProblemsListItemModel {
 	}
 }
 
-func ListProblemsResponseDTO(problemsList *models.ProblemsList) *corev1.ListProblemsResponseModel {
+func ListProblemsResponseDTO(problemsList *problemsmodel.ProblemsList) *corev1.ListProblemsResponseModel {
 	resp := corev1.ListProblemsResponseModel{
 		Problems:   make([]corev1.ProblemsListItemModel, len(problemsList.Problems)),
 		Pagination: PaginationDTO(problemsList.Pagination),
@@ -326,7 +333,7 @@ func ListProblemsResponseDTO(problemsList *models.ProblemsList) *corev1.ListProb
 	return &resp
 }
 
-func ProblemDTO(p models.Problem, statement *models.Statement, samples []corev1.ProblemSampleModel) *corev1.ProblemModel {
+func ProblemDTO(p problemsmodel.Problem, statement *problemsmodel.Statement, samples []corev1.ProblemSampleModel) *corev1.ProblemModel {
 	title := strings.TrimSpace(p.Title)
 	if statement != nil {
 		statementTitle := strings.TrimSpace(statement.Title)
@@ -340,11 +347,11 @@ func ProblemDTO(p models.Problem, statement *models.Statement, samples []corev1.
 		createdBy = *p.OwnerID
 	}
 
-	legend := statementField(statement, func(s models.Statement) string { return s.Legend })
-	inputFormat := statementField(statement, func(s models.Statement) string { return s.InputFormat })
-	outputFormat := statementField(statement, func(s models.Statement) string { return s.OutputFormat })
-	notes := statementField(statement, func(s models.Statement) string { return s.Notes })
-	scoring := statementField(statement, func(s models.Statement) string { return s.Scoring })
+	legend := statementField(statement, func(s problemsmodel.Statement) string { return s.Legend })
+	inputFormat := statementField(statement, func(s problemsmodel.Statement) string { return s.InputFormat })
+	outputFormat := statementField(statement, func(s problemsmodel.Statement) string { return s.OutputFormat })
+	notes := statementField(statement, func(s problemsmodel.Statement) string { return s.Notes })
+	scoring := statementField(statement, func(s problemsmodel.Statement) string { return s.Scoring })
 
 	if samples == nil {
 		samples = []corev1.ProblemSampleModel{}
@@ -379,7 +386,7 @@ func ProblemDTO(p models.Problem, statement *models.Statement, samples []corev1.
 	}
 }
 
-func statementField(statement *models.Statement, getter func(models.Statement) string) string {
+func statementField(statement *problemsmodel.Statement, getter func(problemsmodel.Statement) string) string {
 	if statement == nil {
 		return ""
 	}
@@ -387,7 +394,7 @@ func statementField(statement *models.Statement, getter func(models.Statement) s
 	return getter(*statement)
 }
 
-func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel {
+func SubmissionListItemDTO(s submissionsmodel.Submission) corev1.SubmissionsListItemModel {
 	dto := corev1.SubmissionsListItemModel{
 		Revision: s.Revision,
 		ID:       s.ID,
@@ -431,7 +438,7 @@ func SubmissionListItemDTO(s models.Submission) corev1.SubmissionsListItemModel 
 
 }
 
-func SubmissionTestDetailsDTO(td *models.SubmissionTestDetails) *corev1.SubmissionTestDetailsModel {
+func SubmissionTestDetailsDTO(td *submissionsmodel.SubmissionTestDetails) *corev1.SubmissionTestDetailsModel {
 	if td == nil {
 		return nil
 	}
@@ -470,7 +477,7 @@ func SubmissionTestDetailsDTO(td *models.SubmissionTestDetails) *corev1.Submissi
 	}
 }
 
-func SolutionDTO(s models.Submission) corev1.SubmissionModel {
+func SolutionDTO(s submissionsmodel.Submission) corev1.SubmissionModel {
 	var testDetailsOpt corev1.OptSubmissionTestDetailsModel
 	if td := SubmissionTestDetailsDTO(s.TestDetails); td != nil {
 		testDetailsOpt = corev1.NewOptSubmissionTestDetailsModel(*td)
@@ -527,7 +534,7 @@ func SolutionDTO(s models.Submission) corev1.SubmissionModel {
 
 }
 
-func userDTO(u models.User) corev1.UserModel {
+func userDTO(u accessmodel.User) corev1.UserModel {
 	var imgID corev1.OptUUID
 	if u.AvatarUrl != nil && *u.AvatarUrl != "" {
 		if parsed, err := uuid.Parse(*u.AvatarUrl); err == nil {
@@ -550,9 +557,7 @@ func userDTO(u models.User) corev1.UserModel {
 	}
 }
 
-// Organizations DTOs
-
-func organizationDTO(o models.Organization) corev1.OrganizationModel {
+func organizationDTO(o organizationsmodel.Organization) corev1.OrganizationModel {
 	joinPolicy := corev1.OrganizationModelJoinPolicyByRequest
 	if o.JoinPolicy != "" {
 		joinPolicy = corev1.OrganizationModelJoinPolicy(o.JoinPolicy)
@@ -569,7 +574,7 @@ func organizationDTO(o models.Organization) corev1.OrganizationModel {
 	}
 }
 
-func listOrganizationsDTO(ol *models.OrganizationList) *corev1.ListOrganizationsResponseModel {
+func listOrganizationsDTO(ol *organizationsmodel.OrganizationList) *corev1.ListOrganizationsResponseModel {
 	resp := corev1.ListOrganizationsResponseModel{
 		Organizations: make([]corev1.OrganizationModel, len(ol.Organizations)),
 		Pagination:    PaginationDTO(ol.Pagination),
@@ -582,7 +587,7 @@ func listOrganizationsDTO(ol *models.OrganizationList) *corev1.ListOrganizations
 	return &resp
 }
 
-func organizationMemberDTO(m models.OrganizationMember) corev1.OrganizationMemberModel {
+func organizationMemberDTO(m organizationsmodel.OrganizationMember) corev1.OrganizationMemberModel {
 	return corev1.OrganizationMemberModel{
 		UserID:         m.UserID,
 		OrganizationID: m.OrganizationID,
@@ -592,7 +597,7 @@ func organizationMemberDTO(m models.OrganizationMember) corev1.OrganizationMembe
 	}
 }
 
-func listOrganizationMembersDTO(members []models.OrganizationMember, page, total int32) *corev1.ListOrganizationMembersResponseModel {
+func listOrganizationMembersDTO(members []organizationsmodel.OrganizationMember, page, total int32) *corev1.ListOrganizationMembersResponseModel {
 	resp := corev1.ListOrganizationMembersResponseModel{
 		Members: make([]corev1.OrganizationMemberModel, len(members)),
 		Pagination: corev1.PaginationModel{
@@ -608,9 +613,7 @@ func listOrganizationMembersDTO(members []models.OrganizationMember, page, total
 	return &resp
 }
 
-// Teams DTOs
-
-func teamDTO(t models.Team) corev1.TeamModel {
+func teamDTO(t organizationsmodel.Team) corev1.TeamModel {
 	return corev1.TeamModel{
 		ID:             t.ID,
 		Name:           t.Name,
@@ -621,7 +624,7 @@ func teamDTO(t models.Team) corev1.TeamModel {
 	}
 }
 
-func listTeamsDTO(teams []models.Team, page, total int32) *corev1.ListTeamsResponseModel {
+func listTeamsDTO(teams []organizationsmodel.Team, page, total int32) *corev1.ListTeamsResponseModel {
 	resp := corev1.ListTeamsResponseModel{
 		Teams: make([]corev1.TeamModel, len(teams)),
 		Pagination: corev1.PaginationModel{
@@ -637,7 +640,7 @@ func listTeamsDTO(teams []models.Team, page, total int32) *corev1.ListTeamsRespo
 	return &resp
 }
 
-func teamMemberDTO(m models.TeamMember) corev1.TeamMemberModel {
+func teamMemberDTO(m organizationsmodel.TeamMember) corev1.TeamMemberModel {
 	return corev1.TeamMemberModel{
 		UserID:    m.UserID,
 		TeamID:    m.TeamID,
@@ -647,7 +650,7 @@ func teamMemberDTO(m models.TeamMember) corev1.TeamMemberModel {
 	}
 }
 
-func listTeamMembersDTO(members []models.TeamMember, page, total int32) *corev1.ListTeamMembersResponseModel {
+func listTeamMembersDTO(members []organizationsmodel.TeamMember, page, total int32) *corev1.ListTeamMembersResponseModel {
 	resp := corev1.ListTeamMembersResponseModel{
 		Members: make([]corev1.TeamMemberModel, len(members)),
 		Pagination: corev1.PaginationModel{
@@ -663,7 +666,7 @@ func listTeamMembersDTO(members []models.TeamMember, page, total int32) *corev1.
 	return &resp
 }
 
-func GetScoreboardResponseDTO(sb *models.ScoreboardResponse) *corev1.ScoreboardResponseModel {
+func GetScoreboardResponseDTO(sb *contestsmodel.ScoreboardResponse) *corev1.ScoreboardResponseModel {
 	if sb == nil {
 		return &corev1.ScoreboardResponseModel{}
 	}
@@ -722,7 +725,7 @@ func GetScoreboardResponseDTO(sb *models.ScoreboardResponse) *corev1.ScoreboardR
 	}
 }
 
-func OrganizationInvitationDTO(inv models.OrganizationInvitation) corev1.OrganizationInvitationModel {
+func OrganizationInvitationDTO(inv organizationsmodel.OrganizationInvitation) corev1.OrganizationInvitationModel {
 	return corev1.OrganizationInvitationModel{
 		ID:                    inv.ID,
 		OrganizationID:        inv.OrganizationID,
@@ -741,7 +744,7 @@ func OrganizationInvitationDTO(inv models.OrganizationInvitation) corev1.Organiz
 	}
 }
 
-func ListOrganizationInvitationsResponseDTO(invs []models.OrganizationInvitation) *corev1.ListOrganizationInvitationsResponseModel {
+func ListOrganizationInvitationsResponseDTO(invs []organizationsmodel.OrganizationInvitation) *corev1.ListOrganizationInvitationsResponseModel {
 	items := make([]corev1.OrganizationInvitationModel, len(invs))
 	for i, inv := range invs {
 		items[i] = OrganizationInvitationDTO(inv)
@@ -751,7 +754,7 @@ func ListOrganizationInvitationsResponseDTO(invs []models.OrganizationInvitation
 	}
 }
 
-func OrganizationJoinRequestDTO(req models.OrganizationJoinRequest) corev1.OrganizationJoinRequestModel {
+func OrganizationJoinRequestDTO(req organizationsmodel.OrganizationJoinRequest) corev1.OrganizationJoinRequestModel {
 	return corev1.OrganizationJoinRequestModel{
 		ID:                req.ID,
 		OrganizationID:    req.OrganizationID,
@@ -768,7 +771,7 @@ func OrganizationJoinRequestDTO(req models.OrganizationJoinRequest) corev1.Organ
 	}
 }
 
-func ListOrganizationJoinRequestsResponseDTO(reqs []models.OrganizationJoinRequest) *corev1.ListOrganizationJoinRequestsResponseModel {
+func ListOrganizationJoinRequestsResponseDTO(reqs []organizationsmodel.OrganizationJoinRequest) *corev1.ListOrganizationJoinRequestsResponseModel {
 	items := make([]corev1.OrganizationJoinRequestModel, len(reqs))
 	for i, r := range reqs {
 		items[i] = OrganizationJoinRequestDTO(r)
@@ -778,7 +781,7 @@ func ListOrganizationJoinRequestsResponseDTO(reqs []models.OrganizationJoinReque
 	}
 }
 
-func ContestJoinRequestDTO(req models.ContestJoinRequest) corev1.ContestJoinRequestModel {
+func ContestJoinRequestDTO(req contestsmodel.ContestJoinRequest) corev1.ContestJoinRequestModel {
 	return corev1.ContestJoinRequestModel{
 		ID:                req.ID,
 		ContestID:         req.ContestID,
@@ -796,7 +799,7 @@ func ContestJoinRequestDTO(req models.ContestJoinRequest) corev1.ContestJoinRequ
 	}
 }
 
-func ListContestJoinRequestsResponseDTO(reqs []models.ContestJoinRequest) *corev1.ListContestJoinRequestsResponseModel {
+func ListContestJoinRequestsResponseDTO(reqs []contestsmodel.ContestJoinRequest) *corev1.ListContestJoinRequestsResponseModel {
 	items := make([]corev1.ContestJoinRequestModel, len(reqs))
 	for i, r := range reqs {
 		items[i] = ContestJoinRequestDTO(r)
@@ -806,7 +809,7 @@ func ListContestJoinRequestsResponseDTO(reqs []models.ContestJoinRequest) *corev
 	}
 }
 
-func ContestAnnouncementDTO(a *models.ContestAnnouncement) *corev1.ContestAnnouncementModel {
+func ContestAnnouncementDTO(a *contestsmodel.ContestAnnouncement) *corev1.ContestAnnouncementModel {
 	if a == nil {
 		return nil
 	}
@@ -825,7 +828,7 @@ func ContestAnnouncementDTO(a *models.ContestAnnouncement) *corev1.ContestAnnoun
 	}
 }
 
-func ContestClarificationDTO(c *models.ContestClarification) *corev1.ContestClarificationModel {
+func ContestClarificationDTO(c *contestsmodel.ContestClarification) *corev1.ContestClarificationModel {
 	if c == nil {
 		return nil
 	}
@@ -848,7 +851,7 @@ func ContestClarificationDTO(c *models.ContestClarification) *corev1.ContestClar
 	}
 }
 
-func ListUserContestsResponseDTO(contestsList *models.ContestsList) *corev1.ListUserContestsResponseModel {
+func ListUserContestsResponseDTO(contestsList *contestsmodel.ContestsList) *corev1.ListUserContestsResponseModel {
 	resp := corev1.ListUserContestsResponseModel{
 		Contests:   make([]corev1.ContestModel, len(contestsList.Contests)),
 		Pagination: PaginationDTO(contestsList.Pagination),
@@ -861,7 +864,7 @@ func ListUserContestsResponseDTO(contestsList *models.ContestsList) *corev1.List
 	return &resp
 }
 
-func usersListDTO(ul *models.UsersList) corev1.ListUsersResponseModel {
+func usersListDTO(ul *identitymodel.UsersList) corev1.ListUsersResponseModel {
 	userDTOs := make([]corev1.UserModel, len(ul.Users))
 	for i, user := range ul.Users {
 		userDTOs[i] = userDTO(user)
@@ -876,7 +879,7 @@ func usersListDTO(ul *models.UsersList) corev1.ListUsersResponseModel {
 	}
 }
 
-func contestTeamDTO(ct models.ContestTeam) corev1.ContestTeamModel {
+func contestTeamDTO(ct contestsmodel.ContestTeam) corev1.ContestTeamModel {
 	var mask corev1.OptInt64
 	if ct.PermissionsMask != nil {
 		mask = corev1.NewOptInt64(int64(*ct.PermissionsMask)) //nolint:gosec // bitmask conversion
@@ -892,7 +895,7 @@ func contestTeamDTO(ct models.ContestTeam) corev1.ContestTeamModel {
 	}
 }
 
-func listContestTeamsDTO(teams []models.ContestTeam) *corev1.ListContestTeamsResponseModel {
+func listContestTeamsDTO(teams []contestsmodel.ContestTeam) *corev1.ListContestTeamsResponseModel {
 	resp := corev1.ListContestTeamsResponseModel{
 		Teams: make([]corev1.ContestTeamModel, len(teams)),
 	}
@@ -902,7 +905,7 @@ func listContestTeamsDTO(teams []models.ContestTeam) *corev1.ListContestTeamsRes
 	return &resp
 }
 
-func problemTeamDTO(pt models.ProblemTeam) corev1.ProblemTeamModel {
+func problemTeamDTO(pt problemsmodel.ProblemTeam) corev1.ProblemTeamModel {
 	return corev1.ProblemTeamModel{
 		ProblemID:  pt.ProblemID,
 		TeamID:     pt.TeamID,
@@ -913,7 +916,7 @@ func problemTeamDTO(pt models.ProblemTeam) corev1.ProblemTeamModel {
 	}
 }
 
-func listProblemTeamsDTO(teams []models.ProblemTeam) *corev1.ListProblemTeamsResponseModel {
+func listProblemTeamsDTO(teams []problemsmodel.ProblemTeam) *corev1.ListProblemTeamsResponseModel {
 	resp := corev1.ListProblemTeamsResponseModel{
 		Teams: make([]corev1.ProblemTeamModel, len(teams)),
 	}
@@ -923,7 +926,7 @@ func listProblemTeamsDTO(teams []models.ProblemTeam) *corev1.ListProblemTeamsRes
 	return &resp
 }
 
-func problemMemberDTO(pm models.ProblemMember) corev1.ProblemMemberModel {
+func problemMemberDTO(pm problemsmodel.ProblemMember) corev1.ProblemMemberModel {
 	return corev1.ProblemMemberModel{
 		ProblemID: pm.ProblemID,
 		UserID:    pm.UserID,
@@ -933,7 +936,7 @@ func problemMemberDTO(pm models.ProblemMember) corev1.ProblemMemberModel {
 	}
 }
 
-func listProblemMembersDTO(members []models.ProblemMember, page, total int32) *corev1.ListProblemMembersResponseModel {
+func listProblemMembersDTO(members []problemsmodel.ProblemMember, page, total int32) *corev1.ListProblemMembersResponseModel {
 	resp := corev1.ListProblemMembersResponseModel{
 		Members: make([]corev1.ProblemMemberModel, len(members)),
 		Pagination: corev1.PaginationModel{
@@ -947,7 +950,7 @@ func listProblemMembersDTO(members []models.ProblemMember, page, total int32) *c
 	return &resp
 }
 
-func DashboardContestDTO(c models.DashboardContest) corev1.DashboardContestModel {
+func DashboardContestDTO(c contestsmodel.DashboardContest) corev1.DashboardContestModel {
 	return corev1.DashboardContestModel{
 		ID:                 c.ID,
 		Login:              c.Login,
@@ -963,7 +966,7 @@ func DashboardContestDTO(c models.DashboardContest) corev1.DashboardContestModel
 	}
 }
 
-func DashboardProblemDTO(p models.DashboardProblem) corev1.DashboardProblemModel {
+func DashboardProblemDTO(p problemsmodel.DashboardProblem) corev1.DashboardProblemModel {
 	return corev1.DashboardProblemModel{
 		ID:                p.ID,
 		Title:             p.Title,
@@ -976,7 +979,7 @@ func DashboardProblemDTO(p models.DashboardProblem) corev1.DashboardProblemModel
 	}
 }
 
-func DashboardResponseDTO(contests []models.DashboardContest, problems []models.DashboardProblem) corev1.GetUserDashboardResponseModel {
+func DashboardResponseDTO(contests []contestsmodel.DashboardContest, problems []problemsmodel.DashboardProblem) corev1.GetUserDashboardResponseModel {
 	contestDTOs := make([]corev1.DashboardContestModel, len(contests))
 	for i, c := range contests {
 		contestDTOs[i] = DashboardContestDTO(c)
@@ -993,7 +996,7 @@ func DashboardResponseDTO(contests []models.DashboardContest, problems []models.
 	}
 }
 
-func ContestDraftDTO(draft models.ContestDraft) corev1.ContestDraftModel {
+func ContestDraftDTO(draft contestsmodel.ContestDraft) corev1.ContestDraftModel {
 	return corev1.ContestDraftModel{
 		ID:        draft.ID,
 		UserID:    draft.UserID,
@@ -1005,7 +1008,7 @@ func ContestDraftDTO(draft models.ContestDraft) corev1.ContestDraftModel {
 	}
 }
 
-func ListContestDraftsResponseDTO(list *models.ContestDraftsList) *corev1.ListContestDraftsResponseModel {
+func ListContestDraftsResponseDTO(list *contestsmodel.ContestDraftsList) *corev1.ListContestDraftsResponseModel {
 	if list == nil {
 		return &corev1.ListContestDraftsResponseModel{
 			Drafts: []corev1.ContestDraftModel{},
@@ -1027,7 +1030,7 @@ func ListContestDraftsResponseDTO(list *models.ContestDraftsList) *corev1.ListCo
 	}
 }
 
-func NotificationDTO(n models.Notification) corev1.NotificationModel {
+func NotificationDTO(n notificationsmodel.Notification) corev1.NotificationModel {
 	var optData corev1.OptNotificationModelData
 	if len(n.Data) > 0 {
 		dataMap := make(corev1.NotificationModelData)
@@ -1052,7 +1055,7 @@ func NotificationDTO(n models.Notification) corev1.NotificationModel {
 	}
 }
 
-func NotificationsListResponseDTO(list *models.NotificationsList) *corev1.NotificationsListResponseModel {
+func NotificationsListResponseDTO(list *notificationsmodel.NotificationsList) *corev1.NotificationsListResponseModel {
 	if list == nil {
 		return &corev1.NotificationsListResponseModel{
 			Notifications: []corev1.NotificationModel{},
@@ -1074,7 +1077,7 @@ func NotificationsListResponseDTO(list *models.NotificationsList) *corev1.Notifi
 	}
 }
 
-func ContestAnnouncementsListResponseDTO(list *models.ContestAnnouncementsList) *corev1.ListContestAnnouncementsResponseModel {
+func ContestAnnouncementsListResponseDTO(list *contestsmodel.ContestAnnouncementsList) *corev1.ListContestAnnouncementsResponseModel {
 	if list == nil {
 		return &corev1.ListContestAnnouncementsResponseModel{
 			Announcements: []corev1.ContestAnnouncementModel{},
@@ -1093,7 +1096,7 @@ func ContestAnnouncementsListResponseDTO(list *models.ContestAnnouncementsList) 
 	}
 }
 
-func ContestClarificationsListResponseDTO(list *models.ContestClarificationsList) *corev1.ListContestClarificationsResponseModel {
+func ContestClarificationsListResponseDTO(list *contestsmodel.ContestClarificationsList) *corev1.ListContestClarificationsResponseModel {
 	if list == nil {
 		return &corev1.ListContestClarificationsResponseModel{
 			Clarifications: []corev1.ContestClarificationModel{},

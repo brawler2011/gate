@@ -9,13 +9,15 @@ import (
 	"net/textproto"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/google/uuid"
 	ht "github.com/ogen-go/ogen/http"
 )
 
 func (s *IntegrationTestSuite) TestUserAvatar() {
-	user := s.createUser("avataruser", models.UserRoleUser)
+	user := s.createUser("avataruser", accessmodel.UserRoleUser)
 
 	avatarContent := []byte("fake image content")
 	file := ht.MultipartFile{
@@ -111,8 +113,8 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 
 func (s *IntegrationTestSuite) TestUsers() {
 	// 1. Create Users
-	user1 := s.createUser("user1", models.UserRoleUser)
-	user2 := s.createUser("user2", models.UserRoleAdmin)
+	user1 := s.createUser("user1", accessmodel.UserRoleUser)
+	user2 := s.createUser("user2", accessmodel.UserRoleAdmin)
 
 	// 2. GetMe
 	s.Run("GetMe", func() {
@@ -137,8 +139,8 @@ func (s *IntegrationTestSuite) TestUsers() {
 	// 4. ListUsers
 	s.Run("ListUsers", func() {
 		searchPrefix := "pagetest" + uuid.NewString()[:8]
-		searchUser1 := s.createUser(searchPrefix+"alpha", models.UserRoleUser)
-		searchUser2 := s.createUser(searchPrefix+"beta", models.UserRoleAdmin)
+		searchUser1 := s.createUser(searchPrefix+"alpha", accessmodel.UserRoleUser)
+		searchUser2 := s.createUser(searchPrefix+"beta", accessmodel.UserRoleAdmin)
 		search := searchPrefix
 
 		resp, err := s.client.ListUsers(withTestUser(s.ctx, user1.Id), corev1.ListUsersParams{
@@ -167,16 +169,16 @@ func (s *IntegrationTestSuite) TestUsers() {
 	})
 }
 
-func (s *IntegrationTestSuite) createUser(username string, role models.UserRole) models.User {
+func (s *IntegrationTestSuite) createUser(username string, role accessmodel.UserRole) accessmodel.User {
 	email := username + "@example.com"
-	user := models.User{
+	user := accessmodel.User{
 		Id:           uuid.New(),
 		Username:     username,
 		Role:         role,
 		PasswordHash: "$2a$10$8K1p/ae9QD.b69/j/8G5/eF/G0y.L4tG7c2G/u1w5u/c3t6T7y6m6", // dummy bcrypt hash
 		Email:        &email,
 	}
-	err := s.usersRepo.CreateUser(s.ctx, models.CreateUserParams{
+	err := s.usersRepo.CreateUser(s.ctx, identitymodel.CreateUserParams{
 		Id:           user.Id,
 		Username:     user.Username,
 		Role:         user.Role,
@@ -187,29 +189,29 @@ func (s *IntegrationTestSuite) createUser(username string, role models.UserRole)
 	return user
 }
 
-func (s *IntegrationTestSuite) createOrganization(login string, name string, ownerID uuid.UUID) *models.Organization {
-	org, err := s.organizationsRepo.CreateOrganization(s.ctx, &models.CreateOrganizationInput{
+func (s *IntegrationTestSuite) createOrganization(login string, name string, ownerID uuid.UUID) *organizationsmodel.Organization {
+	org, err := s.organizationsRepo.CreateOrganization(s.ctx, &organizationsmodel.CreateOrganizationInput{
 		Login:     login,
 		Name:      name,
 		CreatorID: ownerID,
 	})
 	s.Require().NoError(err)
 
-	err = s.organizationsRepo.AddMember(s.ctx, org.ID, ownerID, models.OrgRoleOwner)
+	err = s.organizationsRepo.AddMember(s.ctx, org.ID, ownerID, organizationsmodel.OrgRoleOwner)
 	s.Require().NoError(err)
 
 	return org
 }
 
 // createOrganizationWithID creates an organization with a specific ID (for test scenarios)
-func (s *IntegrationTestSuite) createOrganizationWithID(id uuid.UUID, login string, name string) *models.Organization {
+func (s *IntegrationTestSuite) createOrganizationWithID(id uuid.UUID, login string, name string) *organizationsmodel.Organization {
 	// Directly insert using SQL to set a specific ID
 	_, err := s.dbPool.Exec(s.ctx,
 		"INSERT INTO organizations (id, login, name, description) VALUES ($1, $2, $3, $4)",
 		id, login, name, "")
 	s.Require().NoError(err)
 
-	return &models.Organization{
+	return &organizationsmodel.Organization{
 		ID:    id,
 		Login: login,
 		Name:  name,

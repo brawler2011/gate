@@ -15,16 +15,25 @@ import (
 
 	"github.com/brawler2011/gate/backend/config"
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/repository/pg"
+	access "github.com/brawler2011/gate/backend/internal/access"
+	blogs "github.com/brawler2011/gate/backend/internal/blogs"
+	contests "github.com/brawler2011/gate/backend/internal/contests"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
+	identity "github.com/brawler2011/gate/backend/internal/identity"
+	judging "github.com/brawler2011/gate/backend/internal/judging"
+	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
+	outbox "github.com/brawler2011/gate/backend/internal/messaging/outbox"
+	pubsub "github.com/brawler2011/gate/backend/internal/messaging/pubsub"
+	notifications "github.com/brawler2011/gate/backend/internal/notifications"
+	organizations "github.com/brawler2011/gate/backend/internal/organizations"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+	submissions "github.com/brawler2011/gate/backend/internal/submissions"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	handlers "github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	wsobserver "github.com/brawler2011/gate/backend/internal/transport/ws/observer"
-	"github.com/brawler2011/gate/backend/internal/usecase"
-	"github.com/brawler2011/gate/backend/internal/worker/judge"
-	"github.com/brawler2011/gate/backend/internal/worker/outbox"
-	"github.com/brawler2011/gate/backend/internal/worker/pubsub"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
@@ -35,6 +44,7 @@ import (
 )
 
 const submissionsRingBufferSize = 10000
+
 const serviceShutdownTimeout = 5 * time.Second
 
 const (
@@ -115,20 +125,19 @@ func runApp(envFile string) error {
 	defer pool.Close()
 	logger.Info("successfully connected to postgres")
 
-	usersRepo := pg.NewUsersRepo(pool)
-	outboxRepo := pg.NewOutboxRepo(pool)
-	txManager := pg.NewTransactor(pool)
-	orgsRepo := pg.NewOrganizationsRepo(pool)
-	teamsRepo := pg.NewTeamsRepo(pool)
-	problemsRepo := pg.NewProblemsRepo(pool)
-	contestsRepo := pg.NewContestsRepo(pool)
-	blogsRepo := pg.NewBlogsRepo(pool)
-	submissionsRepo := pg.NewSubmissionsRepo(pool)
-	packagesRepo := pg.NewPackagesRepo(pool)
-	draftsRepo := pg.NewDraftsRepo(pool)
-	notificationsRepo := pg.NewNotificationsRepo(pool)
-	announcementsRepo := pg.NewAnnouncementsRepo(pool)
-	clarificationsRepo := pg.NewClarificationsRepo(pool)
+	usersRepo := pgstore.NewUsersRepo(pool)
+	outboxRepo := pgstore.NewOutboxRepo(pool)
+	orgsRepo := pgstore.NewOrganizationsRepo(pool)
+	teamsRepo := pgstore.NewTeamsRepo(pool)
+	problemsRepo := pgstore.NewProblemsRepo(pool)
+	contestsRepo := pgstore.NewContestsRepo(pool)
+	blogsRepo := pgstore.NewBlogsRepo(pool)
+	submissionsRepo := pgstore.NewSubmissionsRepo(pool)
+	packagesRepo := pgstore.NewPackagesRepo(pool)
+	draftsRepo := pgstore.NewDraftsRepo(pool)
+	notificationsRepo := pgstore.NewNotificationsRepo(pool)
+	announcementsRepo := pgstore.NewAnnouncementsRepo(pool)
+	clarificationsRepo := pgstore.NewClarificationsRepo(pool)
 	logger.Info("successfully initialized repositories")
 
 	var store storage.Storage
@@ -156,30 +165,30 @@ func runApp(envFile string) error {
 		}
 	}
 
-	workspaceStorage := usecase.NewWorkspaceStorage(store, defaultS3WorkshopBucket, problemsRepo)
+	workspaceStorage := problems.NewWorkspaceStorage(store, defaultS3WorkshopBucket, problemsRepo)
 
-	authRepo := pg.NewAuthRepo(pool)
+	authRepo := pgstore.NewAuthRepo(pool)
 	emailService := email.NewEmailService(cfg.Env, cfg.ResendAPIKey, cfg.EmailFrom, cfg.AppBaseURL)
 
-	usersUC := usecase.NewUsersUseCase(usersRepo, contestsRepo, outboxRepo, pg.NewIdentityTransactions(pool), authRepo, emailService)
-	authUC := usecase.NewAuthUseCase(usersRepo, authRepo, pg.NewIdentityTransactions(pool), emailService)
-	notificationsUC := usecase.NewNotificationsUseCase(notificationsRepo, usersRepo, emailService)
+	usersUC := identity.NewUsersUseCase(usersRepo, pgstore.NewIdentityTransactions(pool), authRepo, emailService)
+	authUC := identity.NewAuthUseCase(usersRepo, authRepo, pgstore.NewIdentityTransactions(pool), emailService)
+	notificationsUC := notifications.NewNotificationsUseCase(notificationsRepo, usersRepo, emailService)
 
-	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, store, defaultS3AvatarBucket)
-	problemImportUC := usecase.NewProblemImportUseCase(problemsRepo, workspaceStorage)
-	problemsUC := usecase.NewProblemsUseCase(problemsRepo, workspaceStorage, pg.NewProblemTransactions(pool), orgsRepo)
-	contestsUC := usecase.NewContestsUseCase(contestsRepo, orgsRepo, submissionsRepo)
+	avatarsUC := identity.NewAvatarsUseCase(usersRepo, store, defaultS3AvatarBucket)
+	problemImportUC := problems.NewProblemImportUseCase(problemsRepo, workspaceStorage)
+	problemsUC := problems.NewProblemsUseCase(problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(pool), orgsRepo)
+	contestsUC := contests.NewContestsUseCase(contestsRepo, orgsRepo, submissionsRepo)
 	contestsUC.SetNotificationsUC(notificationsUC)
 	contestsUC.SetUsersRepo(usersRepo)
-	blogsUC := usecase.NewBlogsUseCase(blogsRepo, store, defaultS3BlogBucket)
-	permissionsUC := usecase.NewPermissionsUseCase(contestsRepo, usersUC, problemsRepo, teamsRepo, orgsRepo)
-	orgsUC := usecase.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, pg.NewOrganizationTransactions(pool), notificationsUC)
-	teamsUC := usecase.NewTeamsUseCase(teamsRepo, orgsRepo, usersRepo, permissionsUC, pg.NewTeamTransactions(pool))
-	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, pg.NewSubmissionTransactions(pool))
-	draftsUC := usecase.NewDraftsUseCase(draftsRepo, contestsUC, permissionsUC, txManager)
-	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, store, defaultS3PackageBucket)
-	announcementsUC := usecase.NewAnnouncementsUseCase(announcementsRepo, contestsUC, outboxRepo, pg.NewContestEventsTransactions(pool))
-	clarificationsUC := usecase.NewClarificationsUseCase(clarificationsRepo, announcementsRepo, contestsUC, outboxRepo, pg.NewContestEventsTransactions(pool))
+	blogsUC := blogs.NewBlogsUseCase(blogsRepo, store, defaultS3BlogBucket)
+	permissionsUC := access.NewPermissionsUseCase(contestsRepo, usersUC, problemsRepo, teamsRepo, orgsRepo)
+	orgsUC := organizations.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(pool), notificationsUC)
+	teamsUC := organizations.NewTeamsUseCase(teamsRepo, orgsRepo, usersRepo, permissionsUC, pgstore.NewTeamTransactions(pool))
+	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, pgstore.NewSubmissionTransactions(pool))
+	draftsUC := contests.NewDraftsUseCase(draftsRepo, contestsUC)
+	problemPublishUC := problems.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, store, defaultS3PackageBucket)
+	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(pool))
+	clarificationsUC := contests.NewClarificationsUseCase(contestsUC, pgstore.NewContestEventsTransactions(pool))
 	logger.Info("successfully initialized use cases")
 
 	judgeTempDir, err := prepareJudgeTempDir(cfg.JudgeTempDir)
@@ -200,7 +209,7 @@ func runApp(envFile string) error {
 	}
 
 	sandboxInstance := sandbox.NewSandbox(sandboxClient, sandboxCfg)
-	workshopUC := usecase.NewWorkshopUseCase(workspaceStorage, sandboxInstance)
+	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sandboxInstance)
 
 	natsJS, err := pkg.NewNatsJetStream(cfg.GetNatsURL())
 	if err != nil {
@@ -217,26 +226,26 @@ func runApp(envFile string) error {
 	logger.Info("SUBMISSIONS and CONTESTS streams ready")
 
 	outboxDispatcher := outbox.NewEventDispatcher()
-	outboxDispatcher.Register(models.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(natsJS))
-	outboxDispatcher.Register(models.OutboxEventSubmissionCompleted, pubsub.NewSubmissionCreatedPublisher(natsJS))
+	outboxDispatcher.Register(eventdata.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(natsJS))
+	outboxDispatcher.Register(eventdata.OutboxEventSubmissionCompleted, pubsub.NewSubmissionCreatedPublisher(natsJS))
 	contestEventsPublisher := pubsub.NewContestEventsPublisher(natsJS)
-	outboxDispatcher.Register(models.OutboxEventContestAnnouncementCreated, contestEventsPublisher)
-	outboxDispatcher.Register(models.OutboxEventContestAnnouncementDeleted, contestEventsPublisher)
-	outboxDispatcher.Register(models.OutboxEventContestClarificationCreated, contestEventsPublisher)
-	outboxDispatcher.Register(models.OutboxEventContestClarificationAnswered, contestEventsPublisher)
+	outboxDispatcher.Register(eventdata.OutboxEventContestAnnouncementCreated, contestEventsPublisher)
+	outboxDispatcher.Register(eventdata.OutboxEventContestAnnouncementDeleted, contestEventsPublisher)
+	outboxDispatcher.Register(eventdata.OutboxEventContestClarificationCreated, contestEventsPublisher)
+	outboxDispatcher.Register(eventdata.OutboxEventContestClarificationAnswered, contestEventsPublisher)
 	outboxWorker := outbox.NewOutboxWorker(outboxDispatcher, outboxRepo)
 
-	judgeUC := usecase.NewJudgeUseCase(
-		pg.NewJudgeJobs(pool), pg.NewJudgeTransactions(pool),
+	judgeUC := judging.NewJudgeUseCase(
+		pgstore.NewJudgeJobs(pool), pgstore.NewJudgeTransactions(pool),
 		submissionsRepo,
 		store,
 		defaultS3PackageBucket,
 		judgeTempDir,
 		sandboxInstance,
-		judge.NewEventPublisher(natsJS),
+		judgeworker.NewEventPublisher(natsJS),
 	)
 
-	judgeWorker, err := judge.NewJudgeWorker(context.Background(), natsJS, judgeUC, cfg.JudgeWorkerCount)
+	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), natsJS, judgeUC, cfg.JudgeWorkerCount)
 	if err != nil {
 		return fmt.Errorf("create judge worker: %w", err)
 	}
@@ -244,13 +253,13 @@ func runApp(envFile string) error {
 	submissionDispatcher := outbox.NewEventDispatcher()
 	observerHub := wsobserver.NewHub(submissionsRingBufferSize, contestsUC)
 
-	for _, event := range []models.SubmissionEventType{
-		models.SubmissionEventCreated,
-		models.SubmissionEventQueued,
-		models.SubmissionEventCompilingStarted,
-		models.SubmissionEventTestingStarted,
-		models.SubmissionEventTestStarted,
-		models.SubmissionEventCompleted,
+	for _, event := range []submissionsmodel.SubmissionEventType{
+		submissionsmodel.SubmissionEventCreated,
+		submissionsmodel.SubmissionEventQueued,
+		submissionsmodel.SubmissionEventCompilingStarted,
+		submissionsmodel.SubmissionEventTestingStarted,
+		submissionsmodel.SubmissionEventTestStarted,
+		submissionsmodel.SubmissionEventCompleted,
 	} {
 		submissionDispatcher.Register(event, observerHub)
 	}
@@ -264,10 +273,10 @@ func runApp(envFile string) error {
 	contestsObserverHub := wsobserver.NewContestsHub(submissionsRingBufferSize)
 
 	for _, event := range []string{
-		models.ContestEventAnnouncementCreated,
-		models.ContestEventAnnouncementDeleted,
-		models.ContestEventClarificationCreated,
-		models.ContestEventClarificationAnswered,
+		contestsmodel.ContestEventAnnouncementCreated,
+		contestsmodel.ContestEventAnnouncementDeleted,
+		contestsmodel.ContestEventClarificationCreated,
+		contestsmodel.ContestEventClarificationAnswered,
 	} {
 		contestsDispatcher.Register(event, contestsObserverHub)
 	}
@@ -442,7 +451,7 @@ func loadConfig(envFile string) (config.Config, error) {
 	return cfg, nil
 }
 
-func newObserverMiddleware(usersUC interfaces.UsersUC, authUC interfaces.AuthUC) func(http.Handler) http.Handler {
+func newObserverMiddleware(usersUC UsersUC, authUC AuthUC) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return middleware.AuthMiddleware(authUC)(
 			middleware.UsersMiddleware(usersUC)(next),

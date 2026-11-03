@@ -5,15 +5,14 @@ import (
 	"context"
 	"io"
 
-	"github.com/google/uuid"
-
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/google/uuid"
 )
 
 type PackagesReader interface {
-	ListPackages(ctx context.Context, problemID uuid.UUID, limit, offset int32) ([]models.ProblemPackage, error)
+	ListPackages(ctx context.Context, problemID uuid.UUID, limit, offset int32) ([]problemsmodel.ProblemPackage, error)
 }
 
 // ImportProblem handles POST /problems/{id}/import

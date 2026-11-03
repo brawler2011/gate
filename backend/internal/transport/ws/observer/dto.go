@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	observerv1 "github.com/brawler2011/gate/backend/contracts/observer/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 )
 
@@ -37,8 +38,8 @@ func SubmissionsEnvelopeDTO(eventType string, event any) ([]byte, error) {
 	var msg observerv1.SubmissionsMessage
 
 	switch eventType {
-	case models.SubmissionEventCreated:
-		e, ok := event.(*models.SubmissionCreatedEvent)
+	case submissionsmodel.SubmissionEventCreated:
+		e, ok := event.(*submissionsmodel.SubmissionCreatedEvent)
 		if !ok || e == nil {
 			return nil, fmt.Errorf("invalid event payload for %s: %T", eventType, event)
 		}
@@ -47,8 +48,8 @@ func SubmissionsEnvelopeDTO(eventType string, event any) ([]byte, error) {
 			EventType: new(observerv1.SubmissionCreatedMessageEventType),
 			Payload:   &payload,
 		}
-	case models.SubmissionEventQueued:
-		e, ok := event.(*models.SubmissionQueuedEvent)
+	case submissionsmodel.SubmissionEventQueued:
+		e, ok := event.(*submissionsmodel.SubmissionQueuedEvent)
 		if !ok || e == nil {
 			return nil, fmt.Errorf("invalid event payload for %s: %T", eventType, event)
 		}
@@ -57,8 +58,8 @@ func SubmissionsEnvelopeDTO(eventType string, event any) ([]byte, error) {
 			EventType: new(observerv1.SubmissionQueuedMessageEventType),
 			Payload:   &payload,
 		}
-	case models.SubmissionEventCompilingStarted:
-		e, ok := event.(*models.SubmissionCompilingStartedEvent)
+	case submissionsmodel.SubmissionEventCompilingStarted:
+		e, ok := event.(*submissionsmodel.SubmissionCompilingStartedEvent)
 		if !ok || e == nil {
 			return nil, fmt.Errorf("invalid event payload for %s: %T", eventType, event)
 		}
@@ -67,8 +68,8 @@ func SubmissionsEnvelopeDTO(eventType string, event any) ([]byte, error) {
 			EventType: new(observerv1.SubmissionCompilingStartedMessageEventType),
 			Payload:   &payload,
 		}
-	case models.SubmissionEventTestingStarted:
-		e, ok := event.(*models.SubmissionTestingStartedEvent)
+	case submissionsmodel.SubmissionEventTestingStarted:
+		e, ok := event.(*submissionsmodel.SubmissionTestingStartedEvent)
 		if !ok || e == nil {
 			return nil, fmt.Errorf("invalid event payload for %s: %T", eventType, event)
 		}
@@ -77,8 +78,8 @@ func SubmissionsEnvelopeDTO(eventType string, event any) ([]byte, error) {
 			EventType: new(observerv1.SubmissionTestingStartedMessageEventType),
 			Payload:   &payload,
 		}
-	case models.SubmissionEventTestStarted:
-		e, ok := event.(*models.SubmissionTestStartedEvent)
+	case submissionsmodel.SubmissionEventTestStarted:
+		e, ok := event.(*submissionsmodel.SubmissionTestStartedEvent)
 		if !ok || e == nil {
 			return nil, fmt.Errorf("invalid event payload for %s: %T", eventType, event)
 		}
@@ -87,8 +88,8 @@ func SubmissionsEnvelopeDTO(eventType string, event any) ([]byte, error) {
 			EventType: new(observerv1.SubmissionTestStartedMessageEventType),
 			Payload:   &payload,
 		}
-	case models.SubmissionEventCompleted:
-		e, ok := event.(*models.SubmissionCompletedEvent)
+	case submissionsmodel.SubmissionEventCompleted:
+		e, ok := event.(*submissionsmodel.SubmissionCompletedEvent)
 		if !ok || e == nil {
 			return nil, fmt.Errorf("invalid event payload for %s: %T", eventType, event)
 		}
@@ -109,7 +110,7 @@ func SubmissionsEnvelopeDTO(eventType string, event any) ([]byte, error) {
 	return data, nil
 }
 
-func SubmissionCreatedDTO(e models.SubmissionCreatedEvent) observerv1.MessageSubmissionCreated {
+func SubmissionCreatedDTO(e submissionsmodel.SubmissionCreatedEvent) observerv1.MessageSubmissionCreated {
 	return observerv1.MessageSubmissionCreated{
 		IsNew: e.IsNew, PreviousState: e.PreviousState,
 		ContestId:    e.ContestId,
@@ -129,7 +130,7 @@ func SubmissionCreatedDTO(e models.SubmissionCreatedEvent) observerv1.MessageSub
 	}
 }
 
-func SubmissionQueuedDTO(e models.SubmissionQueuedEvent) observerv1.MessageSubmissionQueued {
+func SubmissionQueuedDTO(e submissionsmodel.SubmissionQueuedEvent) observerv1.MessageSubmissionQueued {
 	return observerv1.MessageSubmissionQueued{
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
@@ -146,7 +147,7 @@ func SubmissionQueuedDTO(e models.SubmissionQueuedEvent) observerv1.MessageSubmi
 	}
 }
 
-func SubmissionCompilingStartedDTO(e models.SubmissionCompilingStartedEvent) observerv1.MessageSubmissionCompilingStarted {
+func SubmissionCompilingStartedDTO(e submissionsmodel.SubmissionCompilingStartedEvent) observerv1.MessageSubmissionCompilingStarted {
 	return observerv1.MessageSubmissionCompilingStarted{
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
@@ -163,7 +164,7 @@ func SubmissionCompilingStartedDTO(e models.SubmissionCompilingStartedEvent) obs
 	}
 }
 
-func SubmissionTestingStartedDTO(e models.SubmissionTestingStartedEvent) observerv1.MessageSubmissionTestingStarted {
+func SubmissionTestingStartedDTO(e submissionsmodel.SubmissionTestingStartedEvent) observerv1.MessageSubmissionTestingStarted {
 	return observerv1.MessageSubmissionTestingStarted{
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
@@ -180,7 +181,7 @@ func SubmissionTestingStartedDTO(e models.SubmissionTestingStartedEvent) observe
 	}
 }
 
-func SubmissionTestStartedDTO(e models.SubmissionTestStartedEvent) observerv1.MessageSubmissionTestStarted {
+func SubmissionTestStartedDTO(e submissionsmodel.SubmissionTestStartedEvent) observerv1.MessageSubmissionTestStarted {
 	return observerv1.MessageSubmissionTestStarted{
 		ContestId:    e.ContestId,
 		ContestTitle: strPtrIfNotEmpty(e.ContestTitle),
@@ -198,7 +199,7 @@ func SubmissionTestStartedDTO(e models.SubmissionTestStartedEvent) observerv1.Me
 	}
 }
 
-func SubmissionCompletedDTO(e models.SubmissionCompletedEvent) observerv1.MessageSubmissionCompleted {
+func SubmissionCompletedDTO(e submissionsmodel.SubmissionCompletedEvent) observerv1.MessageSubmissionCompleted {
 	previous := e.PreviousState
 	return observerv1.MessageSubmissionCompleted{
 		PreviousState: &previous,
@@ -227,8 +228,8 @@ func ContestEnvelopeDTO(eventType string, event any) ([]byte, error) {
 	var msg observerv1.ContestMessage
 
 	switch eventType {
-	case models.ContestEventAnnouncementCreated:
-		e, ok := event.(*models.ContestAnnouncementCreatedEvent)
+	case contestsmodel.ContestEventAnnouncementCreated:
+		e, ok := event.(*contestsmodel.ContestAnnouncementCreatedEvent)
 		if !ok || e == nil {
 			return nil, fmt.Errorf("invalid event payload for %s: %T", eventType, event)
 		}
@@ -248,8 +249,8 @@ func ContestEnvelopeDTO(eventType string, event any) ([]byte, error) {
 			EventType: new(observerv1.ContestAnnouncementCreatedMessageEventType),
 			Payload:   &payload,
 		}
-	case models.ContestEventAnnouncementDeleted:
-		e, ok := event.(*models.ContestAnnouncementDeletedEvent)
+	case contestsmodel.ContestEventAnnouncementDeleted:
+		e, ok := event.(*contestsmodel.ContestAnnouncementDeletedEvent)
 		if !ok || e == nil {
 			return nil, fmt.Errorf("invalid event payload for %s: %T", eventType, event)
 		}
@@ -261,8 +262,8 @@ func ContestEnvelopeDTO(eventType string, event any) ([]byte, error) {
 			EventType: new(observerv1.ContestAnnouncementDeletedMessageEventType),
 			Payload:   &payload,
 		}
-	case models.ContestEventClarificationCreated:
-		e, ok := event.(*models.ContestClarificationCreatedEvent)
+	case contestsmodel.ContestEventClarificationCreated:
+		e, ok := event.(*contestsmodel.ContestClarificationCreatedEvent)
 		if !ok || e == nil {
 			return nil, fmt.Errorf("invalid event payload for %s: %T", eventType, event)
 		}
@@ -281,8 +282,8 @@ func ContestEnvelopeDTO(eventType string, event any) ([]byte, error) {
 			EventType: new(observerv1.ContestClarificationCreatedMessageEventType),
 			Payload:   &payload,
 		}
-	case models.ContestEventClarificationAnswered:
-		e, ok := event.(*models.ContestClarificationAnsweredEvent)
+	case contestsmodel.ContestEventClarificationAnswered:
+		e, ok := event.(*contestsmodel.ContestClarificationAnsweredEvent)
 		if !ok || e == nil {
 			return nil, fmt.Errorf("invalid event payload for %s: %T", eventType, event)
 		}

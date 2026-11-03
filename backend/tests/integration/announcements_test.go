@@ -11,23 +11,26 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/repository/pg"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	paging "github.com/brawler2011/gate/backend/internal/page"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
 )
 
 func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 	suffix := uuid.NewString()[:8]
-	owner := s.createUser("ann_owner_"+suffix, models.UserRoleUser)
-	outsider := s.createUser("ann_outsider_"+suffix, models.UserRoleUser)
+	owner := s.createUser("ann_owner_"+suffix, accessmodel.UserRoleUser)
+	outsider := s.createUser("ann_outsider_"+suffix, accessmodel.UserRoleUser)
 	org := s.createOrganization("ann-org-"+suffix, "Announcements", owner.Id)
 	contestID, otherContestID := uuid.New(), uuid.New()
 	for login, id := range map[string]uuid.UUID{"ann-public": contestID, "ann-private": otherContestID} {
-		visibility := models.ContestVisibilityPublic
+		visibility := contestsmodel.ContestVisibilityPublic
 		if id == otherContestID {
-			visibility = models.ContestVisibilityPrivate
+			visibility = contestsmodel.ContestVisibilityPrivate
 		}
-		s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+		s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 			ID: id, OrganizationID: org.ID, OwnerID: &owner.Id, Title: login, Login: login,
 			Visibility: visibility, Settings: map[string]interface{}{},
 		}))
@@ -72,7 +75,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 		}
 		_, err := s.dbPool.Exec(s.ctx,
 			"INSERT INTO problems (id, organization_id, owner_id, visibility, title, short_name) VALUES ($1,$2,$3,$4,$5,$6)",
-			id, org.ID, owner.Id, models.ProblemVisibilityPrivate, title, fmt.Sprintf("ann-problem-%d", i))
+			id, org.ID, owner.Id, problemsmodel.ProblemVisibilityPrivate, title, fmt.Sprintf("ann-problem-%d", i))
 		s.Require().NoError(err)
 		if i < 3 {
 			packageID := uuid.New()
@@ -168,7 +171,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 	s.Require().NoError(json.Unmarshal(payload["pagination"], &pagination))
 	s.Equal(corev1.PaginationModel{Page: 1, Total: 2}, pagination)
 
-	reader := pg.NewAnnouncementsRepo(s.dbPool)
+	reader := pgstore.NewAnnouncementsRepo(s.dbPool)
 	for _, tc := range []struct {
 		page, pageSize, wantPage, wantTotal int32
 		wantLength                          int
@@ -185,7 +188,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 		s.Run(fmt.Sprintf("reader_page_%d_size_%d", tc.page, tc.pageSize), func() {
 			response, err := reader.ListAnnouncements(s.ctx, contestID, tc.page, tc.pageSize)
 			s.Require().NoError(err)
-			s.Equal(models.Pagination{Page: tc.wantPage, Total: tc.wantTotal}, response.Pagination)
+			s.Equal(paging.Pagination{Page: tc.wantPage, Total: tc.wantTotal}, response.Pagination)
 			s.Len(response.Announcements, tc.wantLength)
 			s.NotNil(response.Announcements)
 		})

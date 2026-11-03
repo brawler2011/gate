@@ -18,11 +18,17 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/repository/pg"
+	access "github.com/brawler2011/gate/backend/internal/access"
+	blogs "github.com/brawler2011/gate/backend/internal/blogs"
+	contests "github.com/brawler2011/gate/backend/internal/contests"
+	identity "github.com/brawler2011/gate/backend/internal/identity"
+	notifications "github.com/brawler2011/gate/backend/internal/notifications"
+	organizations "github.com/brawler2011/gate/backend/internal/organizations"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+	submissions "github.com/brawler2011/gate/backend/internal/submissions"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	handlers "github.com/brawler2011/gate/backend/internal/transport/rest/core"
-	"github.com/brawler2011/gate/backend/internal/usecase"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/storage"
@@ -75,11 +81,11 @@ type IntegrationTestSuite struct {
 	mockNats *mocks.MockPublisher
 
 	// Repositories (for direct DB access in tests)
-	usersRepo         *pg.UsersRepo
-	contestsRepo      *pg.ContestsRepo
-	organizationsRepo interfaces.OrganizationsRepo
-	teamsRepo         interfaces.TeamsRepo
-	problemsRepo      *pg.ProblemsRepo
+	usersRepo         *pgstore.UsersRepo
+	contestsRepo      *pgstore.ContestsRepo
+	organizationsRepo *pgstore.OrganizationsRepo
+	teamsRepo         *pgstore.TeamsRepo
+	problemsRepo      *pgstore.ProblemsRepo
 }
 
 func (s *IntegrationTestSuite) getStatusCode(err error) int {
@@ -162,51 +168,49 @@ func (s *IntegrationTestSuite) TearDownTest() {
 
 func (s *IntegrationTestSuite) initApp() {
 	// Repositories
-	s.usersRepo = pg.NewUsersRepo(s.dbPool)
-	s.contestsRepo = pg.NewContestsRepo(s.dbPool)
-	s.organizationsRepo = pg.NewOrganizationsRepo(s.dbPool)
-	s.problemsRepo = pg.NewProblemsRepo(s.dbPool)
-	s.teamsRepo = pg.NewTeamsRepo(s.dbPool)
-	submissionsRepo := pg.NewSubmissionsRepo(s.dbPool)
-	outboxRepo := pg.NewOutboxRepo(s.dbPool)
-	blogsRepo := pg.NewBlogsRepo(s.dbPool)
-	txManager := pg.NewTransactor(s.dbPool)
+	s.usersRepo = pgstore.NewUsersRepo(s.dbPool)
+	s.contestsRepo = pgstore.NewContestsRepo(s.dbPool)
+	s.organizationsRepo = pgstore.NewOrganizationsRepo(s.dbPool)
+	s.problemsRepo = pgstore.NewProblemsRepo(s.dbPool)
+	s.teamsRepo = pgstore.NewTeamsRepo(s.dbPool)
+	submissionsRepo := pgstore.NewSubmissionsRepo(s.dbPool)
+	blogsRepo := pgstore.NewBlogsRepo(s.dbPool)
 	tempStoragePath := s.T().TempDir()
 	testStorage := storage.NewLocalStorage(tempStoragePath)
-	workspaceStorage := usecase.NewWorkspaceStorage(testStorage, "integration-workshop", s.problemsRepo)
+	workspaceStorage := problems.NewWorkspaceStorage(testStorage, "integration-workshop", s.problemsRepo)
 
-	authRepo := pg.NewAuthRepo(s.dbPool)
+	authRepo := pgstore.NewAuthRepo(s.dbPool)
 	emailService := &email.LogEmailService{}
 
 	// UseCases
-	usersUC := usecase.NewUsersUseCase(s.usersRepo, s.contestsRepo, outboxRepo, pg.NewIdentityTransactions(s.dbPool), authRepo, emailService)
-	authUC := usecase.NewAuthUseCase(s.usersRepo, authRepo, pg.NewIdentityTransactions(s.dbPool), emailService)
-	problemsUC := usecase.NewProblemsUseCase(s.problemsRepo, workspaceStorage, pg.NewProblemTransactions(s.dbPool), s.organizationsRepo)
-	contestsUC := usecase.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, submissionsRepo)
-	permissionsUC := usecase.NewPermissionsUseCase(s.contestsRepo, usersUC, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
-	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, pg.NewSubmissionTransactions(s.dbPool))
-	notificationsRepo := pg.NewNotificationsRepo(s.dbPool)
-	notificationsUC := usecase.NewNotificationsUseCase(notificationsRepo, s.usersRepo, emailService)
+	usersUC := identity.NewUsersUseCase(s.usersRepo, pgstore.NewIdentityTransactions(s.dbPool), authRepo, emailService)
+	authUC := identity.NewAuthUseCase(s.usersRepo, authRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService)
+	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(s.dbPool), s.organizationsRepo)
+	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, submissionsRepo)
+	permissionsUC := access.NewPermissionsUseCase(s.contestsRepo, usersUC, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
+	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, pgstore.NewSubmissionTransactions(s.dbPool))
+	notificationsRepo := pgstore.NewNotificationsRepo(s.dbPool)
+	notificationsUC := notifications.NewNotificationsUseCase(notificationsRepo, s.usersRepo, emailService)
 	contestsUC.SetNotificationsUC(notificationsUC)
 	contestsUC.SetUsersRepo(s.usersRepo)
-	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, pg.NewOrganizationTransactions(s.dbPool), notificationsUC)
-	teamsUC := usecase.NewTeamsUseCase(s.teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, pg.NewTeamTransactions(s.dbPool))
-	blogsUC := usecase.NewBlogsUseCase(blogsRepo, nil, "")
-	workshopUC := usecase.NewWorkshopUseCase(workspaceStorage, nil)
+	organizationsUC := organizations.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(s.dbPool), notificationsUC)
+	teamsUC := organizations.NewTeamsUseCase(s.teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, pgstore.NewTeamTransactions(s.dbPool))
+	blogsUC := blogs.NewBlogsUseCase(blogsRepo, nil, "")
+	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, nil)
 
-	avatarsUC := usecase.NewAvatarsUseCase(s.usersRepo, testStorage, "avatars")
+	avatarsUC := identity.NewAvatarsUseCase(s.usersRepo, testStorage, "avatars")
 
-	packagesRepo := pg.NewPackagesRepo(s.dbPool)
-	importUC := usecase.NewProblemImportUseCase(s.problemsRepo, workspaceStorage)
-	publishUC := usecase.NewProblemPublishUseCase(s.problemsRepo, packagesRepo, workspaceStorage, testStorage, "packages")
+	packagesRepo := pgstore.NewPackagesRepo(s.dbPool)
+	importUC := problems.NewProblemImportUseCase(s.problemsRepo, workspaceStorage)
+	publishUC := problems.NewProblemPublishUseCase(s.problemsRepo, packagesRepo, workspaceStorage, testStorage, "packages")
 
-	draftsRepo := pg.NewDraftsRepo(s.dbPool)
-	draftsUC := usecase.NewDraftsUseCase(draftsRepo, contestsUC, permissionsUC, txManager)
+	draftsRepo := pgstore.NewDraftsRepo(s.dbPool)
+	draftsUC := contests.NewDraftsUseCase(draftsRepo, contestsUC)
 
-	announcementsRepo := pg.NewAnnouncementsRepo(s.dbPool)
-	announcementsUC := usecase.NewAnnouncementsUseCase(announcementsRepo, contestsUC, outboxRepo, pg.NewContestEventsTransactions(s.dbPool))
-	clarificationsRepo := pg.NewClarificationsRepo(s.dbPool)
-	clarificationsUC := usecase.NewClarificationsUseCase(clarificationsRepo, announcementsRepo, contestsUC, outboxRepo, pg.NewContestEventsTransactions(s.dbPool))
+	announcementsRepo := pgstore.NewAnnouncementsRepo(s.dbPool)
+	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(s.dbPool))
+	clarificationsRepo := pgstore.NewClarificationsRepo(s.dbPool)
+	clarificationsUC := contests.NewClarificationsUseCase(contestsUC, pgstore.NewContestEventsTransactions(s.dbPool))
 
 	// Handler
 	coreServer := handlers.NewCoreServer(

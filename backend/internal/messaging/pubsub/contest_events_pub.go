@@ -1,0 +1,35 @@
+package pubsub
+
+import (
+	"context"
+	"fmt"
+
+	messaging "github.com/brawler2011/gate/backend/internal/messaging"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+)
+
+type ContestEventsPublisher struct {
+	natsJetStream jetstream.JetStream
+}
+
+func NewContestEventsPublisher(natsJetStream jetstream.JetStream) EventHandler {
+	return &ContestEventsPublisher{
+		natsJetStream: natsJetStream,
+	}
+}
+
+func (h *ContestEventsPublisher) Handle(ctx context.Context, eventType string, payload []byte) error {
+	msg := &nats.Msg{
+		Subject: eventType,
+		Data:    payload,
+	}
+	msg.Header = messaging.Headers(ctx)
+
+	_, err := h.natsJetStream.PublishMsg(ctx, msg)
+	if err != nil {
+		return fmt.Errorf("failed to publish contest event %s: %w", eventType, err)
+	}
+
+	return nil
+}

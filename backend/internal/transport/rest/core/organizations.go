@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 )
@@ -29,7 +29,7 @@ func (h *CoreServer) ListOrganizations(ctx context.Context, params corev1.ListOr
 	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
 
-	filter := &models.OrganizationFilter{
+	filter := &organizationsmodel.OrganizationFilter{
 		Search:   search,
 		Page:     page,
 		PageSize: pageSize,
@@ -67,12 +67,12 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.Creat
 		}
 	}
 
-	joinPolicy := models.OrgJoinPolicyByRequest
+	joinPolicy := organizationsmodel.OrgJoinPolicyByRequest
 	if params.JoinPolicy.IsSet() {
-		joinPolicy = models.OrganizationJoinPolicy(params.JoinPolicy.Value)
+		joinPolicy = organizationsmodel.OrganizationJoinPolicy(params.JoinPolicy.Value)
 	}
 
-	input := &models.CreateOrganizationInput{
+	input := &organizationsmodel.CreateOrganizationInput{
 		Login:       login,
 		Name:        params.Name,
 		Description: "",
@@ -114,9 +114,9 @@ func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateO
 		return err
 	}
 
-	var joinPolicy *models.OrganizationJoinPolicy
+	var joinPolicy *organizationsmodel.OrganizationJoinPolicy
 	if req.JoinPolicy.IsSet() {
-		jp := models.OrganizationJoinPolicy(req.JoinPolicy.Value)
+		jp := organizationsmodel.OrganizationJoinPolicy(req.JoinPolicy.Value)
 		joinPolicy = &jp
 	}
 
@@ -131,7 +131,7 @@ func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateO
 		reqDesc = &req.Description.Value
 	}
 
-	input := &models.UpdateOrganizationInput{
+	input := &organizationsmodel.UpdateOrganizationInput{
 		Login:       reqLogin,
 		Name:        reqName,
 		Description: reqDesc,
@@ -182,9 +182,9 @@ func (h *CoreServer) AddOrganizationMember(ctx context.Context, params corev1.Ad
 		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role, must be 'owner', 'admin', or 'member'")
 	}
 
-	input := &models.AddOrganizationMemberInput{
+	input := &organizationsmodel.AddOrganizationMemberInput{
 		UserID: params.UserID,
-		Role:   models.OrganizationRole(params.Role),
+		Role:   organizationsmodel.OrganizationRole(params.Role),
 	}
 
 	err := h.organizationsUC.AddMemberByLogin(ctx, params.Login, input, user.Id)
@@ -223,7 +223,7 @@ func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, req *core
 		ttlDays = &req.TTLDays.Value
 	}
 
-	result, err := h.organizationsUC.BatchCreateUsers(ctx, models.BatchCreateOrganizationUsersInput{
+	result, err := h.organizationsUC.BatchCreateUsers(ctx, organizationsmodel.BatchCreateOrganizationUsersInput{
 		OrgLogin: params.Login,
 		Prefix:   req.Prefix,
 		Count:    req.Count,
@@ -247,8 +247,6 @@ func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, req *core
 		Users: userItems,
 	}, nil
 }
-
-// Invitations
 
 // ListOrganizationInvitations handles GET /organizations/{login}/invitations
 func (h *CoreServer) ListOrganizationInvitations(ctx context.Context, params corev1.ListOrganizationInvitationsParams) (*corev1.ListOrganizationInvitationsResponseModel, error) {
@@ -276,7 +274,7 @@ func (h *CoreServer) InviteOrganizationMember(ctx context.Context, req *corev1.I
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	role := models.OrganizationRole(req.Role)
+	role := organizationsmodel.OrganizationRole(req.Role)
 	if !validateOrganizationRole(string(role)) {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid role")
 	}
@@ -334,8 +332,6 @@ func (h *CoreServer) DeclineOrganizationInvitation(ctx context.Context, params c
 
 	return nil
 }
-
-// Join Requests
 
 // ListOrganizationJoinRequests handles GET /organizations/{login}/requests
 func (h *CoreServer) ListOrganizationJoinRequests(ctx context.Context, params corev1.ListOrganizationJoinRequestsParams) (*corev1.ListOrganizationJoinRequestsResponseModel, error) {
@@ -426,9 +422,9 @@ func (h *CoreServer) ApproveOrganizationJoinRequest(ctx context.Context, req cor
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	role := models.OrgRoleMember
+	role := organizationsmodel.OrgRoleMember
 	if req.IsSet() && req.Value.Role.IsSet() {
-		role = models.OrganizationRole(req.Value.Role.Value)
+		role = organizationsmodel.OrganizationRole(req.Value.Role.Value)
 	}
 
 	err := h.organizationsUC.ApproveJoinRequest(ctx, params.Login, params.ID, user.Id, role)

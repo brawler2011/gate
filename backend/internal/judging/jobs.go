@@ -5,12 +5,12 @@ import (
 	"errors"
 	"time"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 )
 
 var ErrBusy = errors.New("judge job is active")
+
 var ErrLeaseLost = errors.New("judge job lease lost")
 
 type Job struct {
@@ -31,8 +31,8 @@ type Jobs interface {
 }
 
 type Progress interface {
-	PublishQueued(context.Context, uuid.UUID, models.SubmissionEventMeta) error
-	PublishCompilingStarted(context.Context, uuid.UUID, models.SubmissionEventMeta) error
-	PublishTestingStarted(context.Context, uuid.UUID, models.SubmissionEventMeta) error
-	PublishTestStarted(context.Context, uuid.UUID, int32, models.SubmissionEventMeta) error
+	PublishQueued(context.Context, uuid.UUID, submissionsmodel.SubmissionEventMeta) error
+	PublishCompilingStarted(context.Context, uuid.UUID, submissionsmodel.SubmissionEventMeta) error
+	PublishTestingStarted(context.Context, uuid.UUID, submissionsmodel.SubmissionEventMeta) error
+	PublishTestStarted(context.Context, uuid.UUID, int32, submissionsmodel.SubmissionEventMeta) error
 }

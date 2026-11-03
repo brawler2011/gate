@@ -7,7 +7,8 @@ import (
 	"unicode/utf8"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -123,7 +124,7 @@ func validateUpdateContestRequest(params *corev1.UpdateContestRequestModel) erro
 
 	if params.FreezeStatus.IsSet() {
 		status := string(params.FreezeStatus.Value)
-		if status != models.FreezeStatusAuto && status != models.FreezeStatusFrozen && status != models.FreezeStatusUnfrozen {
+		if status != contestsmodel.FreezeStatusAuto && status != contestsmodel.FreezeStatusFrozen && status != contestsmodel.FreezeStatusUnfrozen {
 			return pkg.Wrap(pkg.ErrBadInput, nil, "invalid freeze_status value")
 		}
 	}
@@ -134,8 +135,6 @@ func validateUpdateContestRequest(params *corev1.UpdateContestRequestModel) erro
 const (
 	maxSolutionSize int64 = 10 * 1024 * 1024 // 10 MB
 )
-
-// Organizations validation
 
 var (
 	orgLoginRegex     = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$`)
@@ -211,12 +210,10 @@ func validateUpdateOrganizationRequest(params *corev1.UpdateOrganizationRequestM
 }
 
 func validateOrganizationRole(role string) bool {
-	return role == string(models.OrgRoleOwner) ||
-		role == string(models.OrgRoleAdmin) ||
-		role == string(models.OrgRoleMember)
+	return role == string(organizationsmodel.OrgRoleOwner) ||
+		role == string(organizationsmodel.OrgRoleAdmin) ||
+		role == string(organizationsmodel.OrgRoleMember)
 }
-
-// Teams validation
 
 func validateCreateTeamRequest(name string, organizationID uuid.UUID) error {
 	if !checkLength(name, 3, 64) {

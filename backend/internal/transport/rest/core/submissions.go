@@ -5,7 +5,8 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	submissions "github.com/brawler2011/gate/backend/internal/submissions"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
@@ -24,8 +25,8 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSub
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid solution size")
 	}
 
-	langName := models.LanguageName(params.Language)
-	if err := models.LanguageNameValid(langName); err != nil {
+	langName := submissionsmodel.LanguageName(params.Language)
+	if err := submissionsmodel.LanguageNameValid(langName); err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid language")
 	}
 
@@ -34,7 +35,7 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSub
 		return nil, err
 	}
 
-	solutionCreation := &models.SubmissionCreation{
+	solutionCreation := &submissionsmodel.SubmissionCreation{
 		UserId:    user.Id,
 		ProblemId: params.ProblemID,
 		ContestId: contest.ID,
@@ -67,7 +68,7 @@ func (h *CoreServer) GetSubmission(ctx context.Context, params corev1.GetSubmiss
 		if err != nil {
 			return nil, err
 		}
-		submission = models.SubmissionView(&contest, submission.CreatedBy, submission.CreatedAt, user.Id, permissions, time.Now()).Apply(submission)
+		submission = submissions.SubmissionView(&contest, submission.CreatedBy, submission.CreatedAt, user.Id, permissions, time.Now()).Apply(submission)
 	} else if !user.IsAdmin() && (submission.CreatedBy == nil || *submission.CreatedBy != user.Id) {
 		return nil, pkg.NoPermission
 	}
@@ -119,16 +120,16 @@ func (h *CoreServer) ListSubmissions(ctx context.Context, params corev1.ListSubm
 	return ListSolutionsResponseDTO(solutionsList), nil
 }
 
-func ListSolutionsParamsDTO(params corev1.ListSubmissionsParams) models.SubmissionsFilter {
-	var langName *models.LanguageName = nil
+func ListSolutionsParamsDTO(params corev1.ListSubmissionsParams) submissionsmodel.SubmissionsFilter {
+	var langName *submissionsmodel.LanguageName = nil
 	if params.Language.IsSet() {
-		t := models.LanguageName(params.Language.Value)
+		t := submissionsmodel.LanguageName(params.Language.Value)
 		langName = &t
 	}
 
-	var state *models.State = nil
+	var state *submissionsmodel.State = nil
 	if params.State.IsSet() {
-		t := models.State(params.State.Value)
+		t := submissionsmodel.State(params.State.Value)
 		state = &t
 	}
 
@@ -159,7 +160,7 @@ func ListSolutionsParamsDTO(params corev1.ListSubmissionsParams) models.Submissi
 		problemID = &params.ProblemId.Value
 	}
 
-	return models.SubmissionsFilter{
+	return submissionsmodel.SubmissionsFilter{
 		ContestId: contestID,
 		Page:      params.Page.Or(1),
 		PageSize:  params.PageSize.Or(50),
@@ -171,7 +172,7 @@ func ListSolutionsParamsDTO(params corev1.ListSubmissionsParams) models.Submissi
 	}
 }
 
-func ListSolutionsResponseDTO(solutionsList *models.SubmissionsList) *corev1.ListSubmissionsResponseModel {
+func ListSolutionsResponseDTO(solutionsList *submissionsmodel.SubmissionsList) *corev1.ListSubmissionsResponseModel {
 	resp := corev1.ListSubmissionsResponseModel{
 		Submissions: make([]corev1.SubmissionsListItemModel, len(solutionsList.Submissions)),
 		Pagination:  PaginationDTO(solutionsList.Pagination),
@@ -190,7 +191,7 @@ func (h *CoreServer) RejudgeSubmission(ctx context.Context, params corev1.Rejudg
 		return err
 	}
 
-	filter := models.RejudgeFilter{
+	filter := submissionsmodel.RejudgeFilter{
 		ContestID:    contest.ID,
 		SubmissionID: &params.SubmissionID,
 	}
@@ -209,7 +210,7 @@ func (h *CoreServer) RejudgeContestProblem(ctx context.Context, params corev1.Re
 		return err
 	}
 
-	filter := models.RejudgeFilter{
+	filter := submissionsmodel.RejudgeFilter{
 		ContestID: contest.ID,
 		ProblemID: &params.ProblemID,
 	}
@@ -228,7 +229,7 @@ func (h *CoreServer) RejudgeContest(ctx context.Context, params corev1.RejudgeCo
 		return err
 	}
 
-	filter := models.RejudgeFilter{
+	filter := submissionsmodel.RejudgeFilter{
 		ContestID: contest.ID,
 	}
 

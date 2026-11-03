@@ -7,15 +7,14 @@ import (
 	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	ogenMiddleware "github.com/ogen-go/ogen/middleware"
 )
 
 type EvalContext struct {
-	User        models.User
+	User        accessmodel.User
 	Request     interface{}
 	OperationID string
 	Deps        strictAuthzDependencies
@@ -24,10 +23,10 @@ type EvalContext struct {
 type AccessEvaluator func(ctx context.Context, evalCtx *EvalContext) error
 
 type strictAuthzDependencies struct {
-	permissionsUC     interfaces.PermissionsUC
-	submissionsUC     interfaces.SubmissionsUC
-	organizationsRepo interfaces.OrganizationsRepo
-	contestsRepo      interfaces.ContestsRepo
+	permissionsUC     PermissionsUC
+	submissionsUC     SubmissionsUC
+	organizationsRepo OrganizationsRepo
+	contestsRepo      ContestsRepo
 }
 
 // Parameterless Evaluators (Bare Function Pointers)
@@ -79,7 +78,7 @@ func RequireSelfOrAdmin(idFieldNames ...string) AccessEvaluator {
 	}
 }
 
-func RequireOrgPermission(action models.OrgAction) AccessEvaluator {
+func RequireOrgPermission(action accessmodel.OrgAction) AccessEvaluator {
 	return func(ctx context.Context, evalCtx *EvalContext) error {
 		if evalCtx.User.IsGuest() {
 			return pkg.ErrUnauthenticated
@@ -112,9 +111,9 @@ func RequireOrgPermission(action models.OrgAction) AccessEvaluator {
 	}
 }
 
-func RequireContestPermission(action models.ContestAction) AccessEvaluator {
+func RequireContestPermission(action accessmodel.ContestAction) AccessEvaluator {
 	return func(ctx context.Context, evalCtx *EvalContext) error {
-		if evalCtx.User.IsGuest() && action != models.ActionGetContest && action != models.ActionGetContestProblem {
+		if evalCtx.User.IsGuest() && action != accessmodel.ActionGetContest && action != accessmodel.ActionGetContestProblem {
 			return pkg.ErrUnauthenticated
 		}
 		var contestID uuid.UUID
@@ -153,7 +152,7 @@ func RequireContestPermission(action models.ContestAction) AccessEvaluator {
 	}
 }
 
-func RequireProblemPermission(action models.ProblemAction) AccessEvaluator {
+func RequireProblemPermission(action accessmodel.ProblemAction) AccessEvaluator {
 	return func(ctx context.Context, evalCtx *EvalContext) error {
 		if evalCtx.User.IsGuest() {
 			return pkg.ErrUnauthenticated
@@ -201,30 +200,30 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"GetMyDashboard":     {RequireAuth},
 		"ChangePassword":     {RequireAuth},
 		"RequestEmailChange": {RequireAuth},
-		"CreateContest":      {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
+		"CreateContest":      {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
 		"GetMyContestRole":   {RequireAuth},
 
-		"ListOrganizations":        {RequireAuth},
-		"CreateOrganization":       {RequireAuth},
-		"GetOrganization":          {RequireAuth, RequireOrgPermission(models.ActionViewOrganization)},
-		"UpdateOrganization":       {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
-		"DeleteOrganization":       {RequireAuth, RequireOrgPermission(models.ActionDeleteOrganization)},
-		"ListOrganizationMembers":  {RequireAuth, RequireOrgPermission(models.ActionViewOrganization)},
-		"AddOrganizationMember":    {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
-		"RemoveOrganizationMember": {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
-		"BatchCreateOrganizationUsers": {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
-		"ListOrganizationContests": {RequireAuth, RequireOrgPermission(models.ActionViewOrganization)},
-		"ListOrganizationInvitations":  {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
-		"InviteOrganizationMember":     {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
-		"CancelOrganizationInvitation": {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
-		"AcceptOrganizationInvitation": {RequireAuth},
-		"DeclineOrganizationInvitation": {RequireAuth},
-		"ListOrganizationJoinRequests":   {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
-		"CreateOrganizationJoinRequest": {RequireAuth},
-		"GetMyOrganizationJoinRequest":  {RequireAuth},
-		"CancelOrganizationJoinRequest": {RequireAuth},
-		"ApproveOrganizationJoinRequest": {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
-		"RejectOrganizationJoinRequest":  {RequireAuth, RequireOrgPermission(models.ActionManageOrganization)},
+		"ListOrganizations":              {RequireAuth},
+		"CreateOrganization":             {RequireAuth},
+		"GetOrganization":                {RequireAuth, RequireOrgPermission(accessmodel.ActionViewOrganization)},
+		"UpdateOrganization":             {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
+		"DeleteOrganization":             {RequireAuth, RequireOrgPermission(accessmodel.ActionDeleteOrganization)},
+		"ListOrganizationMembers":        {RequireAuth, RequireOrgPermission(accessmodel.ActionViewOrganization)},
+		"AddOrganizationMember":          {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
+		"RemoveOrganizationMember":       {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
+		"BatchCreateOrganizationUsers":   {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
+		"ListOrganizationContests":       {RequireAuth, RequireOrgPermission(accessmodel.ActionViewOrganization)},
+		"ListOrganizationInvitations":    {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
+		"InviteOrganizationMember":       {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
+		"CancelOrganizationInvitation":   {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
+		"AcceptOrganizationInvitation":   {RequireAuth},
+		"DeclineOrganizationInvitation":  {RequireAuth},
+		"ListOrganizationJoinRequests":   {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
+		"CreateOrganizationJoinRequest":  {RequireAuth},
+		"GetMyOrganizationJoinRequest":   {RequireAuth},
+		"CancelOrganizationJoinRequest":  {RequireAuth},
+		"ApproveOrganizationJoinRequest": {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
+		"RejectOrganizationJoinRequest":  {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
 
 		"ListNotifications":           {RequireAuth},
 		"GetUnreadNotificationsCount": {RequireAuth},
@@ -243,16 +242,16 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"ListTeamContests":     {RequireAuth},
 		"ListTeamProblems":     {RequireAuth},
 
-		"CreateProblem":        {RequireAuth},
-		"ListProblemTemplates": {RequireAuth},
-		"ListUserContests":     {RequireAuth, checkListUserContestsAccess},
-		"ListUserSubmissions":  {RequireAuth, checkListUserSubmissionsAccess},
-		"ListWorkshopContests": {RequireAuth},
-		"GetSubmission":        {RequireAuth, checkGetSubmissionAccess},
-		"UploadAvatar":         {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
-		"DeleteAvatar":         {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
-		"UpdateUser":           {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
-		"ClaimTemporaryUser":   {RequireAuth},
+		"CreateProblem":         {RequireAuth},
+		"ListProblemTemplates":  {RequireAuth},
+		"ListUserContests":      {RequireAuth, checkListUserContestsAccess},
+		"ListUserSubmissions":   {RequireAuth, checkListUserSubmissionsAccess},
+		"ListWorkshopContests":  {RequireAuth},
+		"GetSubmission":         {RequireAuth, checkGetSubmissionAccess},
+		"UploadAvatar":          {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
+		"DeleteAvatar":          {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
+		"UpdateUser":            {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
+		"ClaimTemporaryUser":    {RequireAuth},
 		"ListMyClaimedAccounts": {RequireAuth},
 
 		"ListAdminContests":       {RequireAuth, RequireAdmin},
@@ -265,67 +264,66 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"AdminSendPasswordReset":  {RequireAuth, RequireAdmin},
 		"AdminResendVerification": {RequireAuth, RequireAdmin},
 
-
-		"GetContest":                   {RequireContestPermission(models.ActionGetContest)},
-		"DownloadContestStatementsPdf": {RequireContestPermission(models.ActionGetContest)},
-		"GetContestScoreboard":         {RequireContestPermission(models.ActionGetMonitor)},
-		"UpdateContest":          {RequireAuth, RequireContestPermission(models.ActionUpdateContest)},
-		"DeleteContest":          {RequireAuth, RequireContestPermission(models.ActionAdminContest)},
-		"CreateContestProblem":   {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"GetContestProblem":      {RequireContestPermission(models.ActionGetContestProblem)},
-		"DeleteContestProblem":   {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"ReorderContestProblems": {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"CreateContestMember":    {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"UpdateContestMember":    {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"DeleteContestMember":    {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"ListContestMembers":     {RequireAuth, checkListContestMembersAccess},
-		"ListContestTeams":       {RequireAuth, checkListContestMembersAccess},
-		"CreateContestTeam":      {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"UpdateContestTeam":      {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"DeleteContestTeam":      {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"ListContestSubmissions": {RequireAuth, checkListContestSubmissionsAccess},
-		"CreateSubmission":       {RequireAuth, RequireContestPermission(models.ActionCreateSubmission)},
+		"GetContest":                   {RequireContestPermission(accessmodel.ActionGetContest)},
+		"DownloadContestStatementsPdf": {RequireContestPermission(accessmodel.ActionGetContest)},
+		"GetContestScoreboard":         {RequireContestPermission(accessmodel.ActionGetMonitor)},
+		"UpdateContest":                {RequireAuth, RequireContestPermission(accessmodel.ActionUpdateContest)},
+		"DeleteContest":                {RequireAuth, RequireContestPermission(accessmodel.ActionAdminContest)},
+		"CreateContestProblem":         {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"GetContestProblem":            {RequireContestPermission(accessmodel.ActionGetContestProblem)},
+		"DeleteContestProblem":         {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"ReorderContestProblems":       {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"CreateContestMember":          {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"UpdateContestMember":          {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"DeleteContestMember":          {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"ListContestMembers":           {RequireAuth, checkListContestMembersAccess},
+		"ListContestTeams":             {RequireAuth, checkListContestMembersAccess},
+		"CreateContestTeam":            {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"UpdateContestTeam":            {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"DeleteContestTeam":            {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"ListContestSubmissions":       {RequireAuth, checkListContestSubmissionsAccess},
+		"CreateSubmission":             {RequireAuth, RequireContestPermission(accessmodel.ActionCreateSubmission)},
 		"ListContestDrafts":            {RequireAuth, checkListContestDraftsAccess},
-		"CreateContestDraft":           {RequireAuth, RequireContestPermission(models.ActionGetContest)},
-		"DeleteContestDraft":           {RequireAuth, RequireContestPermission(models.ActionGetContest)},
-		"RejudgeSubmission":            {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"RejudgeContestProblem":        {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"RejudgeContest":               {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"BlockSubmission":              {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"UnblockSubmission":            {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"BlockProblemForUser":          {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"UnblockProblemForUser":        {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"CreateContestDraft":           {RequireAuth, RequireContestPermission(accessmodel.ActionGetContest)},
+		"DeleteContestDraft":           {RequireAuth, RequireContestPermission(accessmodel.ActionGetContest)},
+		"RejudgeSubmission":            {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"RejudgeContestProblem":        {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"RejudgeContest":               {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"BlockSubmission":              {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"UnblockSubmission":            {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"BlockProblemForUser":          {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"UnblockProblemForUser":        {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
 		"GetProblemBlockStatusForUser": {RequireAuth, checkGetProblemBlockStatusAccess},
-		"ListContestJoinRequests":      {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"ListContestJoinRequests":      {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
 		"CreateContestJoinRequest":     {RequireAuth},
 		"GetMyContestJoinRequest":      {RequireAuth},
 		"CancelContestJoinRequest":     {RequireAuth},
-		"ApproveContestJoinRequest":    {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"RejectContestJoinRequest":     {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"ApproveContestJoinRequest":    {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"RejectContestJoinRequest":     {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
 
-		"ListContestAnnouncements":   {RequireContestPermission(models.ActionGetContest)},
-		"CreateContestAnnouncement": {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"DeleteContestAnnouncement": {RequireAuth, RequireContestPermission(models.ActionManageContest)},
-		"ListContestClarifications": {RequireAuth, RequireContestPermission(models.ActionGetContest)},
-		"CreateContestClarification": {RequireAuth, RequireContestPermission(models.ActionGetContest)},
-		"AnswerContestClarification": {RequireAuth, RequireContestPermission(models.ActionManageContest)},
+		"ListContestAnnouncements":   {RequireContestPermission(accessmodel.ActionGetContest)},
+		"CreateContestAnnouncement":  {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"DeleteContestAnnouncement":  {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"ListContestClarifications":  {RequireAuth, RequireContestPermission(accessmodel.ActionGetContest)},
+		"CreateContestClarification": {RequireAuth, RequireContestPermission(accessmodel.ActionGetContest)},
+		"AnswerContestClarification": {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
 
-		"GetProblem":           {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
-		"GetProblemLimits":     {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
-		"GetProblemStatement":  {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
-		"UpdateProblem":        {RequireAuth, RequireProblemPermission(models.ActionEditProblem)},
-		"DeleteProblem":        {RequireAuth, RequireProblemPermission(models.ActionAdminProblem)},
-		"ImportProblem":        {RequireAuth, RequireProblemPermission(models.ActionEditProblem)},
-		"PublishProblem":       {RequireAuth, RequireProblemPermission(models.ActionEditProblem)},
-		"ListProblemPackages":  {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
-		"ListProblemMembers":   {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
-		"CreateProblemMember":  {RequireAuth, RequireProblemPermission(models.ActionAdminProblem)},
-		"UpdateProblemMember":  {RequireAuth, RequireProblemPermission(models.ActionAdminProblem)},
-		"DeleteProblemMember":  {RequireAuth, RequireProblemPermission(models.ActionAdminProblem)},
-		"ListProblemTeams":     {RequireAuth, RequireProblemPermission(models.ActionViewProblem)},
-		"CreateProblemTeam":    {RequireAuth, RequireProblemPermission(models.ActionAdminProblem)},
-		"UpdateProblemTeam":    {RequireAuth, RequireProblemPermission(models.ActionAdminProblem)},
-		"DeleteProblemTeam":    {RequireAuth, RequireProblemPermission(models.ActionAdminProblem)},
+		"GetProblem":          {RequireAuth, RequireProblemPermission(accessmodel.ActionViewProblem)},
+		"GetProblemLimits":    {RequireAuth, RequireProblemPermission(accessmodel.ActionViewProblem)},
+		"GetProblemStatement": {RequireAuth, RequireProblemPermission(accessmodel.ActionViewProblem)},
+		"UpdateProblem":       {RequireAuth, RequireProblemPermission(accessmodel.ActionEditProblem)},
+		"DeleteProblem":       {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
+		"ImportProblem":       {RequireAuth, RequireProblemPermission(accessmodel.ActionEditProblem)},
+		"PublishProblem":      {RequireAuth, RequireProblemPermission(accessmodel.ActionEditProblem)},
+		"ListProblemPackages": {RequireAuth, RequireProblemPermission(accessmodel.ActionViewProblem)},
+		"ListProblemMembers":  {RequireAuth, RequireProblemPermission(accessmodel.ActionViewProblem)},
+		"CreateProblemMember": {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
+		"UpdateProblemMember": {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
+		"DeleteProblemMember": {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
+		"ListProblemTeams":    {RequireAuth, RequireProblemPermission(accessmodel.ActionViewProblem)},
+		"CreateProblemTeam":   {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
+		"UpdateProblemTeam":   {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
+		"DeleteProblemTeam":   {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
 	}
 
 	for _, operationID := range []string{
@@ -377,14 +375,14 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"ValidateAllTests",
 		"TestSolution",
 	} {
-		policies[operationID] = []AccessEvaluator{RequireAuth, RequireProblemPermission(models.ActionEditProblem)}
+		policies[operationID] = []AccessEvaluator{RequireAuth, RequireProblemPermission(accessmodel.ActionEditProblem)}
 	}
 
 	return policies
 }
 
 // AuthzMiddleware validates operation access before handlers are called.
-func AuthzMiddleware(permissionsUC interfaces.PermissionsUC, submissionsUC interfaces.SubmissionsUC, organizationsRepo interfaces.OrganizationsRepo, contestsRepo interfaces.ContestsRepo) corev1.Middleware {
+func AuthzMiddleware(permissionsUC PermissionsUC, submissionsUC SubmissionsUC, organizationsRepo OrganizationsRepo, contestsRepo ContestsRepo) corev1.Middleware {
 	deps := strictAuthzDependencies{
 		permissionsUC:     permissionsUC,
 		submissionsUC:     submissionsUC,
@@ -465,7 +463,7 @@ func checkListUserSubmissionsAccess(ctx context.Context, evalCtx *EvalContext) e
 				ctx,
 				contestID,
 				evalCtx.User.Id,
-				models.ActionListOwnSubmissions,
+				accessmodel.ActionListOwnSubmissions,
 			)
 			if err != nil {
 				return err
@@ -502,7 +500,7 @@ func checkListContestMembersAccess(ctx context.Context, evalCtx *EvalContext) er
 		}
 	}
 
-	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contestID, evalCtx.User.Id, models.ActionGetMonitor)
+	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contestID, evalCtx.User.Id, accessmodel.ActionGetMonitor)
 	if err != nil {
 		return err
 	}
@@ -510,7 +508,7 @@ func checkListContestMembersAccess(ctx context.Context, evalCtx *EvalContext) er
 		return nil
 	}
 
-	allowed, err = evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contestID, evalCtx.User.Id, models.ActionListOwnSubmissions)
+	allowed, err = evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contestID, evalCtx.User.Id, accessmodel.ActionListOwnSubmissions)
 	if err != nil {
 		return err
 	}
@@ -539,15 +537,15 @@ func checkListContestSubmissionsAccess(ctx context.Context, evalCtx *EvalContext
 		return pkg.Wrap(pkg.ErrNotFound, err, "contest not found")
 	}
 
-	action := models.ActionListUsersSubmissions
+	action := accessmodel.ActionListUsersSubmissions
 	errMessage := "insufficient permission to list all contest submissions"
 
 	if targetUserID, err := extractUUIDFromRequest(evalCtx.Request, "UserId", "user_id"); err == nil && targetUserID != uuid.Nil {
 		if targetUserID == evalCtx.User.Id {
-			action = models.ActionListOwnSubmissions
+			action = accessmodel.ActionListOwnSubmissions
 			errMessage = "insufficient permission to view own submissions in this contest"
 		} else {
-			action = models.ActionListUsersSubmissions
+			action = accessmodel.ActionListUsersSubmissions
 			errMessage = "insufficient permission to view other users' submissions"
 		}
 	}
@@ -581,7 +579,7 @@ func checkListContestDraftsAccess(ctx context.Context, evalCtx *EvalContext) err
 		return pkg.Wrap(pkg.ErrNotFound, err, "contest not found")
 	}
 
-	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contest.ID, evalCtx.User.Id, models.ActionGetContest)
+	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contest.ID, evalCtx.User.Id, accessmodel.ActionGetContest)
 	if err != nil {
 		return err
 	}
@@ -620,7 +618,7 @@ func checkGetSubmissionAccess(ctx context.Context, evalCtx *EvalContext) error {
 			ctx,
 			*submission.ContestID,
 			evalCtx.User.Id,
-			models.ActionGetOtherUserSubmission,
+			accessmodel.ActionGetOtherUserSubmission,
 		)
 		if err == nil && allowed {
 			return nil
@@ -640,7 +638,7 @@ func checkGetProblemBlockStatusAccess(ctx context.Context, evalCtx *EvalContext)
 		return nil
 	}
 
-	return RequireContestPermission(models.ActionManageContest)(ctx, evalCtx)
+	return RequireContestPermission(accessmodel.ActionManageContest)(ctx, evalCtx)
 }
 
 func toUUID(val any) (uuid.UUID, error) {

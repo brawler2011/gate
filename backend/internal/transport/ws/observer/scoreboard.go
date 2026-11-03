@@ -8,11 +8,12 @@ import (
 	"time"
 
 	observerv1 "github.com/brawler2011/gate/backend/contracts/observer/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 )
 
-func scoreboardConfiguration(contest models.Contest) string {
+func scoreboardConfiguration(contest contestsmodel.Contest) string {
 	return fmt.Sprintf("%t/%v/%v/%v/%s/%d", contest.IsFrozenAt(time.Now()), contest.StartTime, contest.EndTime,
 		contest.GetFreezeTime(), contest.GetFreezeStatus(), contest.GetPenaltyPerAttempt())
 }
@@ -36,7 +37,7 @@ func (h *Hub) trackScoreboard(ctx context.Context, contestID *uuid.UUID) error {
 	return nil
 }
 
-func scoreboardEnvelope(scoreboard *models.ScoreboardResponse, userID uuid.UUID, unfrozen, replace bool, seq uint64) ([]byte, error) {
+func scoreboardEnvelope(scoreboard *contestsmodel.ScoreboardResponse, userID uuid.UUID, unfrozen, replace bool, seq uint64) ([]byte, error) {
 	if seq > math.MaxInt64 {
 		return nil, fmt.Errorf("scoreboard sequence exceeds int64")
 	}
@@ -61,7 +62,7 @@ func (h *Hub) projectScoreboard(ctx context.Context, event *WrappedEvent) error 
 	if h.contests == nil {
 		return nil
 	}
-	if event.EventType != models.SubmissionEventCreated && event.EventType != models.SubmissionEventCompleted {
+	if event.EventType != submissionsmodel.SubmissionEventCreated && event.EventType != submissionsmodel.SubmissionEventCompleted {
 		return nil
 	}
 	meta := eventMeta(event)
@@ -80,7 +81,7 @@ func (h *Hub) projectScoreboard(ctx context.Context, event *WrappedEvent) error 
 	}
 	configuration := scoreboardConfiguration(contest)
 	replace := configuration != previous
-	var public *models.ScoreboardResponse
+	var public *contestsmodel.ScoreboardResponse
 	if replace {
 		public, err = h.contests.GetContestScoreboard(ctx, *meta.ContestId, uuid.Nil, false)
 	} else {

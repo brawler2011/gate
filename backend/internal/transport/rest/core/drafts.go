@@ -6,13 +6,14 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 )
 
 type DraftsReader interface {
-	ListDrafts(ctx context.Context, filter models.ContestDraftsFilter) (*models.ContestDraftsList, error)
+	ListDrafts(ctx context.Context, filter contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error)
 }
 
 func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateContestDraftRequestModel, params corev1.CreateContestDraftParams) (*corev1.CreationResponseModel, error) {
@@ -33,7 +34,7 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 		if user.IsAdmin() {
 			isManager = true
 		} else {
-			allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
+			allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
 			if err == nil && allowed {
 				isManager = true
 			}
@@ -43,7 +44,7 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 		}
 	}
 
-	draftCreation := &models.ContestDraftCreation{
+	draftCreation := &contestsmodel.ContestDraftCreation{
 		ContestID: contest.ID,
 		UserID:    user.Id,
 		Code:      req.Code,
@@ -70,7 +71,7 @@ func (h *CoreServer) ListContestDrafts(ctx context.Context, params corev1.ListCo
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(20)
 
-	draftsList, err := h.draftsReader.ListDrafts(ctx, models.ContestDraftsFilter{
+	draftsList, err := h.draftsReader.ListDrafts(ctx, contestsmodel.ContestDraftsFilter{
 		ContestID: contest.ID,
 		UserID:    user.Id,
 		Page:      page,
@@ -95,7 +96,7 @@ func (h *CoreServer) DeleteContestDraft(ctx context.Context, params corev1.Delet
 	if user.IsAdmin() {
 		isManager = true
 	} else {
-		allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
+		allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
 		if err == nil && allowed {
 			isManager = true
 		}

@@ -24,7 +24,7 @@ linters:
         - pattern: ^log\.(Print|Fatal|Panic).*$
           msg: Do not use log package, use slog instead.
         - pattern: ^(pgx|pgxpool|pgconn|sql|sqlc)\.[^.]+\.(Query|QueryRow|Exec|QueryContext|QueryRowContext|ExecContext|ExecParams|ExecPrepared|SendBatch|CopyFrom|Prepare|PrepareContext|Queue)$
-          pkg: ^(github\.com/jackc/pgx/v5(/pgxpool|/pgconn)?|database/sql|github\.com/brawler2011/gate/backend/internal/repository/pg/sqlc)$
+          pkg: ^(github\.com/jackc/pgx/v5(/pgxpool|/pgconn)?|database/sql|github\.com/brawler2011/gate/backend/internal/postgres/sqlc)$
           msg: Do not execute raw SQL in application code; use generated sqlc queries.
     revive:
       rules:

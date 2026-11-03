@@ -2,12 +2,12 @@ version: "2"
 sql:
   - engine: "postgresql"
 
-    queries: "backend/internal/repository/pg/*.sql"
+    queries: "backend/internal/postgres/*.sql"
     schema: "backend/migrations/"
     gen:
       go:
         package: "sqlc"
-        out: "backend/internal/repository/pg/sqlc"
+        out: "backend/internal/postgres/sqlc"
         sql_package: "pgx/v5"
         emit_json_tags: true
         emit_empty_slices: true
@@ -28,15 +28,30 @@ sql:
             go_type: "string"
 
           - column: "submissions.language"
-            go_type: "github.com/brawler2011/gate/backend/internal/domain/models.LanguageName"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/submissions/model"
+              package: "submissionsmodel"
+              type: "LanguageName"
           - column: "contest_drafts.language"
-            go_type: "github.com/brawler2011/gate/backend/internal/domain/models.LanguageName"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/submissions/model"
+              package: "submissionsmodel"
+              type: "LanguageName"
           - column: "submissions.state"
-            go_type: "github.com/brawler2011/gate/backend/internal/domain/models.State"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/submissions/model"
+              package: "submissionsmodel"
+              type: "State"
           - column: "outbox_events.status"
-            go_type: "github.com/brawler2011/gate/backend/internal/domain/models.OutboxEventStatus"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/events"
+              package: "events"
+              type: "OutboxEventStatus"
           - column: "outbox_events.event_type"
-            go_type: "github.com/brawler2011/gate/backend/internal/domain/models.OutboxEventType"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/events"
+              package: "events"
+              type: "OutboxEventType"
           - column: "outbox_events.processed_at"
             go_type:
               import: "time"
@@ -59,14 +74,32 @@ sql:
             go_type: "*github.com/google/uuid.UUID"
 
           - db_type: "contest_visibility"
-            go_type: "github.com/brawler2011/gate/backend/internal/domain/models.ContestVisibility"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/contests/model"
+              package: "contestsmodel"
+              type: "ContestVisibility"
           - db_type: "contest_role"
-            go_type: "github.com/brawler2011/gate/backend/internal/domain/models.ContestRole"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/contests/model"
+              package: "contestsmodel"
+              type: "ContestRole"
           - db_type: "language_name"
-            go_type: "github.com/brawler2011/gate/backend/internal/domain/models.LanguageName"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/submissions/model"
+              package: "submissionsmodel"
+              type: "LanguageName"
           - db_type: "state"
-            go_type: "github.com/brawler2011/gate/backend/internal/domain/models.State"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/submissions/model"
+              package: "submissionsmodel"
+              type: "State"
           - db_type: "outbox_event_status"
-            go_type: "github.com/brawler2011/gate/backend/internal/domain/models.OutboxEventStatus"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/events"
+              package: "events"
+              type: "OutboxEventStatus"
           - db_type: "outbox_event_type"
-            go_type: "github.com/brawler2011/gate/backend/internal/domain/models.OutboxEventType"
+            go_type:
+              import: "github.com/brawler2011/gate/backend/internal/events"
+              package: "events"
+              type: "OutboxEventType"

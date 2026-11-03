@@ -3,16 +3,15 @@ package core
 import (
 	"context"
 
-	"github.com/google/uuid"
-
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/google/uuid"
 )
 
 type NotificationsReader interface {
-	ListNotifications(ctx context.Context, userID uuid.UUID, filter *models.NotificationFilter) (*models.NotificationsList, error)
+	ListNotifications(ctx context.Context, userID uuid.UUID, filter *notificationsmodel.NotificationFilter) (*notificationsmodel.NotificationsList, error)
 	GetUnreadCount(ctx context.Context, userID uuid.UUID) (int32, error)
 }
 
@@ -26,7 +25,7 @@ func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNo
 	pageSize := params.PageSize.Or(20)
 	unreadOnly := params.UnreadOnly.Or(false)
 
-	list, err := h.notificationsReader.ListNotifications(ctx, user.Id, &models.NotificationFilter{
+	list, err := h.notificationsReader.ListNotifications(ctx, user.Id, &notificationsmodel.NotificationFilter{
 		Page:       page,
 		PageSize:   pageSize,
 		UnreadOnly: unreadOnly,

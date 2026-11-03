@@ -6,8 +6,9 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	"github.com/google/uuid"
@@ -18,22 +19,22 @@ import (
 
 type MockProblemsUC struct {
 	mock.Mock
-	interfaces.ProblemsUC
+	ProblemsUC
 }
 
-func (m *MockProblemsUC) GetProblemById(ctx context.Context, id uuid.UUID) (models.Problem, error) {
+func (m *MockProblemsUC) GetProblemById(ctx context.Context, id uuid.UUID) (problemsmodel.Problem, error) {
 	args := m.Called(ctx, id)
-	return args.Get(0).(models.Problem), args.Error(1) //nolint:wrapcheck
+	return args.Get(0).(problemsmodel.Problem), args.Error(1) //nolint:wrapcheck
 }
 
-func (m *MockContestsUC) GetContestProblem(ctx context.Context, input models.ContestProblemGet) (models.ContestProblem, error) {
+func (m *MockContestsUC) GetContestProblem(ctx context.Context, input contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error) {
 	args := m.Called(ctx, input)
-	return args.Get(0).(models.ContestProblem), args.Error(1) //nolint:wrapcheck
+	return args.Get(0).(contestsmodel.ContestProblem), args.Error(1) //nolint:wrapcheck
 }
 
-func (m *MockContestsUC) GetContestProblems(ctx context.Context, contestID uuid.UUID) ([]models.ContestProblem, error) {
+func (m *MockContestsUC) GetContestProblems(ctx context.Context, contestID uuid.UUID) ([]contestsmodel.ContestProblem, error) {
 	args := m.Called(ctx, contestID)
-	return args.Get(0).([]models.ContestProblem), args.Error(1) //nolint:wrapcheck
+	return args.Get(0).([]contestsmodel.ContestProblem), args.Error(1) //nolint:wrapcheck
 }
 
 type stubBookletCompiler struct{}
@@ -53,7 +54,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 	startTime := time.Now().Add(-1 * time.Hour)
 	endTime := time.Now().Add(1 * time.Hour)
 
-	hiddenContest := models.Contest{
+	hiddenContest := contestsmodel.Contest{
 		ID:                contestID,
 		Login:             "onsite-contest",
 		OrganizationLogin: "test-org",
@@ -64,14 +65,14 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		},
 	}
 
-	contestProblem := models.ContestProblem{
+	contestProblem := contestsmodel.ContestProblem{
 		ContestID: contestID,
 		ProblemID: problemID,
 		Ordinal:   1,
 		Title:     "A + B",
 	}
 
-	problem := models.Problem{
+	problem := problemsmodel.Problem{
 		ID:            problemID,
 		Title:         "A + B",
 		TimeLimitMs:   1000,
@@ -94,19 +95,19 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 			nil,
 		)
 
-		user := models.User{
+		user := accessmodel.User{
 			Id:   participantID,
-			Role: models.UserRoleUser,
+			Role: accessmodel.UserRoleUser,
 		}
 		ctx := middleware.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "onsite-contest").Return(hiddenContest, nil)
-		mockContests.On("GetContestProblem", mock.Anything, models.ContestProblemGet{
+		mockContests.On("GetContestProblem", mock.Anything, contestsmodel.ContestProblemGet{
 			ContestId: contestID,
 			ProblemId: problemID,
 		}).Return(contestProblem, nil)
 		mockProblems.On("GetProblemById", mock.Anything, problemID).Return(problem, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, models.ActionManageContest).Return(false, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionManageContest).Return(false, nil)
 
 		resp, err := server.GetContestProblem(ctx, corev1.GetContestProblemParams{
 			OrgLogin:     "test-org",
@@ -141,14 +142,14 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 			nil,
 		)
 
-		user := models.User{
+		user := accessmodel.User{
 			Id:   participantID,
-			Role: models.UserRoleUser,
+			Role: accessmodel.UserRoleUser,
 		}
 		ctx := middleware.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "onsite-contest").Return(hiddenContest, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, models.ActionManageContest).Return(false, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionManageContest).Return(false, nil)
 
 		_, err := server.DownloadContestStatementsPdf(ctx, corev1.DownloadContestStatementsPdfParams{
 			OrgLogin:     "test-org",
@@ -173,15 +174,15 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 			nil,
 		)
 
-		user := models.User{
+		user := accessmodel.User{
 			Id:   managerID,
-			Role: models.UserRoleUser,
+			Role: accessmodel.UserRoleUser,
 		}
 		ctx := middleware.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "onsite-contest").Return(hiddenContest, nil)
-		mockPerms.On("HasContestPermission", mock.Anything, contestID, managerID, models.ActionManageContest).Return(true, nil)
-		mockContests.On("GetContestProblems", mock.Anything, contestID).Return([]models.ContestProblem{contestProblem}, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, managerID, accessmodel.ActionManageContest).Return(true, nil)
+		mockContests.On("GetContestProblems", mock.Anything, contestID).Return([]contestsmodel.ContestProblem{contestProblem}, nil)
 		mockProblems.On("GetProblemById", mock.Anything, problemID).Return(problem, nil)
 
 		resp, err := server.DownloadContestStatementsPdf(ctx, corev1.DownloadContestStatementsPdfParams{

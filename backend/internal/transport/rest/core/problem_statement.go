@@ -10,21 +10,21 @@ import (
 	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/usecase"
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
-func (h *CoreServer) loadProblemStatementFiles(ctx context.Context, problemID uuid.UUID, lang string) *models.Statement {
+func (h *CoreServer) loadProblemStatementFiles(ctx context.Context, problemID uuid.UUID, lang string) *problemsmodel.Statement {
 	if h.workshopUC == nil {
 		return nil
 	}
 
 	if lang != "" && lang != "en" {
 		if mdBytes, err := h.workshopUC.ReadProblemFile(ctx, problemID, "statements/"+lang+".md"); err == nil {
-			parsed := usecase.ParseStatementMarkdown(string(mdBytes))
+			parsed := problems.ParseStatementMarkdown(string(mdBytes))
 			if hasStatementContent(parsed) {
 				return &parsed
 			}
@@ -44,7 +44,7 @@ func (h *CoreServer) loadProblemStatementFiles(ctx context.Context, problemID uu
 	return nil
 }
 
-func hasStatementContent(statement models.Statement) bool {
+func hasStatementContent(statement problemsmodel.Statement) bool {
 	return strings.TrimSpace(statement.Title) != "" ||
 		strings.TrimSpace(statement.Legend) != "" ||
 		strings.TrimSpace(statement.InputFormat) != "" ||
@@ -109,7 +109,7 @@ func (h *CoreServer) loadPackageStatementAndSamples(
 	ctx context.Context,
 	problemID uuid.UUID,
 	packageID uuid.UUID,
-) (*models.Statement, []corev1.ProblemSampleModel) {
+) (*problemsmodel.Statement, []corev1.ProblemSampleModel) {
 	return h.loadPackageStatementAndSamplesWithLang(ctx, problemID, packageID, "")
 }
 
@@ -118,7 +118,7 @@ func (h *CoreServer) loadPackageStatementAndSamplesWithLang(
 	problemID uuid.UUID,
 	packageID uuid.UUID,
 	lang string,
-) (*models.Statement, []corev1.ProblemSampleModel) {
+) (*problemsmodel.Statement, []corev1.ProblemSampleModel) {
 	if h.publishUC == nil || packageID == uuid.Nil {
 		return nil, nil
 	}
@@ -176,12 +176,12 @@ func (h *CoreServer) loadPackageStatementAndSamplesWithLang(
 		return nil, nil
 	}
 
-	var statement models.Statement
+	var statement problemsmodel.Statement
 	if lang == "" {
 		lang = "en"
 	}
 	if data, err := os.ReadFile(filepath.Join(tempDir, "statements", lang+".md")); err == nil {
-		statement = usecase.ParseStatementMarkdown(string(data))
+		statement = problems.ParseStatementMarkdown(string(data))
 	}
 	if lang == "en" || strings.TrimSpace(statement.Title) == "" {
 		statement.Title = gfmtPkg.Problem.Title
@@ -223,11 +223,11 @@ func (h *CoreServer) loadPackageStatementAndSamplesWithLang(
 	return &statement, samples
 }
 
-func (h *CoreServer) loadWorkspaceStatementAndSamples(ctx context.Context, problemID uuid.UUID, lang string) (*models.Statement, []corev1.ProblemSampleModel) {
+func (h *CoreServer) loadWorkspaceStatementAndSamples(ctx context.Context, problemID uuid.UUID, lang string) (*problemsmodel.Statement, []corev1.ProblemSampleModel) {
 	if h.workshopUC == nil {
 		return nil, nil
 	}
-	var statement *models.Statement
+	var statement *problemsmodel.Statement
 	var samples []corev1.ProblemSampleModel
 	err := h.workshopUC.WithWorkspace(ctx, problemID, func(ctx context.Context) error {
 		statement = h.loadProblemStatementFiles(ctx, problemID, lang)

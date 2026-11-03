@@ -6,10 +6,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/events"
-	"github.com/brawler2011/gate/backend/internal/repository/pg"
-	"github.com/brawler2011/gate/backend/internal/worker/pubsub"
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
+	pubsub "github.com/brawler2011/gate/backend/internal/messaging/pubsub"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/queuecontext"
 	"github.com/google/uuid"
@@ -22,10 +22,10 @@ func (s *IntegrationTestSuite) resetDeliveryTables() {
 
 func (s *IntegrationTestSuite) TestOutboxFencesLeasesAndOrdersAggregate() {
 	s.resetDeliveryTables()
-	repo := pg.NewOutboxRepo(s.dbPool)
+	repo := pgstore.NewOutboxRepo(s.dbPool)
 	aggregate := uuid.New()
 	for range 2 {
-		s.Require().NoError(repo.Record(s.ctx, events.Event{AggregateID: aggregate, Type: models.OutboxEventSubmissionCreated, Payload: map[string]string{"value": "test"}}))
+		s.Require().NoError(repo.Record(s.ctx, eventdata.Event{AggregateID: aggregate, Type: eventdata.OutboxEventSubmissionCreated, Payload: map[string]string{"value": "test"}}))
 	}
 	first, err := repo.PickEvents(s.ctx, 10, 30)
 	s.Require().NoError(err)
@@ -67,11 +67,11 @@ func (s *IntegrationTestSuite) TestOutboxFencesLeasesAndOrdersAggregate() {
 
 func (s *IntegrationTestSuite) TestInboxCommitsEffectsOnceAndRollsBackFailures() {
 	s.resetDeliveryTables()
-	inbox := pg.NewInbox(s.dbPool)
+	inbox := pgstore.NewInbox(s.dbPool)
 	input := uuid.New()
-	output := events.Event{AggregateID: uuid.New(), Type: models.OutboxEventSubmissionCreated, Payload: map[string]string{"effect": "once"}}
+	output := eventdata.Event{AggregateID: uuid.New(), Type: eventdata.OutboxEventSubmissionCreated, Payload: map[string]string{"effect": "once"}}
 	failure := errors.New("injected effect failure")
-	err := inbox.Within(s.ctx, "consumer", input, func(writer events.Writer) error {
+	err := inbox.Within(s.ctx, "consumer", input, func(writer eventdata.Writer) error {
 		if err := writer.Record(s.ctx, output); err != nil {
 			return err
 		}
@@ -84,14 +84,16 @@ func (s *IntegrationTestSuite) TestInboxCommitsEffectsOnceAndRollsBackFailures()
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events").Scan(&count))
 	s.Zero(count)
 	calls := 0
-	effect := func(writer events.Writer) error { calls++; return writer.Record(s.ctx, output) }
+	effect := func(writer eventdata.Writer) error { calls++; return writer.Record(s.ctx, output) }
 	s.Require().NoError(inbox.Within(s.ctx, "consumer", input, effect))
 	// The first transaction committed, but the broker Ack was lost.
 	s.Require().NoError(inbox.Within(s.ctx, "consumer", input, effect))
 	s.Equal(1, calls)
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events").Scan(&count))
 	s.Equal(1, count)
-	s.PanicsWithValue(failure, func() { _ = inbox.Within(s.ctx, "consumer", uuid.New(), func(events.Writer) error { panic(failure) }) })
+	s.PanicsWithValue(failure, func() {
+		_ = inbox.Within(s.ctx, "consumer", uuid.New(), func(eventdata.Writer) error { panic(failure) })
+	})
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM inbox_receipts").Scan(&count))
 	s.Equal(1, count)
 }
@@ -100,10 +102,10 @@ func (s *IntegrationTestSuite) TestOutboxRetriesSameMessageAfterPubAckCrash() {
 	s.resetDeliveryTables()
 	js, _ := newNATSJetStream(s.T())
 	s.Require().NoError(pkg.EnsureSubmissionsStream(s.ctx, js))
-	repo := pg.NewOutboxRepo(s.dbPool)
-	s.Require().NoError(repo.Record(s.ctx, events.Event{AggregateID: uuid.New(), Type: models.OutboxEventSubmissionCreated, Payload: models.SubmissionCreatedEvent{Id: uuid.New()}}))
+	repo := pgstore.NewOutboxRepo(s.dbPool)
+	s.Require().NoError(repo.Record(s.ctx, eventdata.Event{AggregateID: uuid.New(), Type: eventdata.OutboxEventSubmissionCreated, Payload: submissionsmodel.SubmissionCreatedEvent{Id: uuid.New()}}))
 	publisher := pubsub.NewSubmissionCreatedPublisher(js)
-	publish := func(event models.OutboxEvent) {
+	publish := func(event eventdata.OutboxEvent) {
 		ctx := queuecontext.With(context.Background(), queuecontext.Metadata{EventID: event.Id, QueuedAt: event.CreatedAt})
 		s.Require().NoError(publisher.Handle(ctx, event.EventType, event.Payload))
 	}

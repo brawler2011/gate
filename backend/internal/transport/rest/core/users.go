@@ -4,16 +4,18 @@ import (
 	"context"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
 type UsersReader interface {
-	GetUserByUsername(ctx context.Context, username string) (models.User, error)
-	ListUsers(ctx context.Context, filter models.UsersListFilter) (models.UsersList, error)
-	ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]models.ClaimedAccountItem, error)
+	GetUserByUsername(ctx context.Context, username string) (accessmodel.User, error)
+	ListUsers(ctx context.Context, filter identitymodel.UsersListFilter) (identitymodel.UsersList, error)
+	ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]identitymodel.ClaimedAccountItem, error)
 }
 
 func (h *CoreServer) GetUser(ctx context.Context, params corev1.GetUserParams) (*corev1.GetUserResponseModel, error) {
@@ -58,7 +60,7 @@ func (h *CoreServer) ListUsers(ctx context.Context, params corev1.ListUsersParam
 	search := params.Search.Or("")
 	role := params.Role.Or("")
 
-	filter := models.UsersListFilter{
+	filter := identitymodel.UsersListFilter{
 		Page:     page,
 		PageSize: pageSize,
 		Search:   search,
@@ -93,9 +95,9 @@ func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.List
 		problemID = &params.ProblemId.Value
 	}
 
-	var state *models.State
+	var state *submissionsmodel.State
 	if params.State.IsSet() {
-		s := models.State(params.State.Value)
+		s := submissionsmodel.State(params.State.Value)
 		state = &s
 	}
 
@@ -110,7 +112,7 @@ func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.List
 		order = &orderVal
 	}
 
-	filter := models.SubmissionsFilter{
+	filter := submissionsmodel.SubmissionsFilter{
 		ContestId: contestID,
 		Page:      page,
 		PageSize:  pageSize,
@@ -150,7 +152,7 @@ func (h *CoreServer) UpdateUser(ctx context.Context, req *corev1.UpdateUserReque
 		reqRole = &r
 	}
 
-	input := models.UpdateUserInput{
+	input := identitymodel.UpdateUserInput{
 		Id:       user.Id,
 		Username: reqUsername,
 		Email:    reqEmail,
@@ -172,7 +174,7 @@ func (h *CoreServer) ClaimTemporaryUser(ctx context.Context, req *corev1.ClaimTe
 
 	user := middleware.GetUser(ctx)
 
-	result, err := h.usersUC.ClaimTemporaryUser(ctx, user, models.ClaimTemporaryUserInput{
+	result, err := h.usersUC.ClaimTemporaryUser(ctx, user, identitymodel.ClaimTemporaryUserInput{
 		Username: req.Username,
 		Password: req.Password,
 	})

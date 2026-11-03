@@ -8,18 +8,19 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/google/uuid"
 )
 
 func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 	suffix := uuid.NewString()[:8]
 
-	ownerUser := s.createUser("matrix_owner_"+suffix, models.UserRoleUser)
-	modUser := s.createUser("matrix_mod_"+suffix, models.UserRoleUser)
-	partUser := s.createUser("matrix_part_"+suffix, models.UserRoleUser)
-	otherUser := s.createUser("matrix_other_"+suffix, models.UserRoleUser)
-	adminUser := s.createUser("matrix_admin_"+suffix, models.UserRoleAdmin)
+	ownerUser := s.createUser("matrix_owner_"+suffix, accessmodel.UserRoleUser)
+	modUser := s.createUser("matrix_mod_"+suffix, accessmodel.UserRoleUser)
+	partUser := s.createUser("matrix_part_"+suffix, accessmodel.UserRoleUser)
+	otherUser := s.createUser("matrix_other_"+suffix, accessmodel.UserRoleUser)
+	adminUser := s.createUser("matrix_admin_"+suffix, accessmodel.UserRoleAdmin)
 
 	org := s.createOrganization("matrix-org-"+suffix, "Matrix Org", ownerUser.Id)
 
@@ -30,11 +31,11 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		contestID := uuid.New()
 		ownerID := ownerUser.Id
 
-		err := s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+		err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 			ID:             contestID,
 			OrganizationID: org.ID,
 			OwnerID:        &ownerID,
-			Visibility:     models.ContestVisibilityPrivate,
+			Visibility:     contestsmodel.ContestVisibilityPrivate,
 			Title:          "Unstarted Contest",
 			Login:          "unstarted-" + suffix,
 			Description:    "Contest that has not started yet",
@@ -44,17 +45,17 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		})
 		s.Require().NoError(err)
 
-		err = s.contestsRepo.CreateContestMember(s.ctx, &models.CreateContestMemberParams{
+		err = s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
 			ContestId: contestID,
 			UserId:    partUser.Id,
-			Role:      models.ContestRoleParticipant,
+			Role:      contestsmodel.ContestRoleParticipant,
 		})
 		s.Require().NoError(err)
 
-		err = s.contestsRepo.CreateContestMember(s.ctx, &models.CreateContestMemberParams{
+		err = s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
 			ContestId: contestID,
 			UserId:    modUser.Id,
-			Role:      models.ContestRoleModerator,
+			Role:      contestsmodel.ContestRoleModerator,
 		})
 		s.Require().NoError(err)
 
@@ -105,11 +106,11 @@ func (s *IntegrationTestSuite) TestPermissionsMatrix() {
 		contestID := uuid.New()
 		ownerID := ownerUser.Id
 
-		err := s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+		err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 			ID:             contestID,
 			OrganizationID: org.ID,
 			OwnerID:        &ownerID,
-			Visibility:     models.ContestVisibilityPrivate,
+			Visibility:     contestsmodel.ContestVisibilityPrivate,
 			Title:          "Delete Target Contest",
 			Login:          "del-target-" + suffix,
 			Description:    "Contest deletion test",

@@ -75,4 +75,3 @@ func GetSubmissionsLastSequence(ctx context.Context, js jetstream.JetStream) (ui
 
 	return info.State.LastSeq, nil
 }
-

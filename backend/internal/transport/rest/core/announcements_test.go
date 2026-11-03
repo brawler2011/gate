@@ -6,27 +6,27 @@ import (
 	"testing"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	paging "github.com/brawler2011/gate/backend/internal/page"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 type announcementsContestStub struct {
-	interfaces.ContestsUC
-	resolve func(context.Context, string, string) (models.Contest, error)
+	ContestsUC
+	resolve func(context.Context, string, string) (contestsmodel.Contest, error)
 }
 
-func (s announcementsContestStub) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (models.Contest, error) {
+func (s announcementsContestStub) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error) {
 	return s.resolve(ctx, orgLogin, contestLogin)
 }
 
 type announcementsReaderStub struct {
-	read func(context.Context, uuid.UUID, int32, int32) (*models.ContestAnnouncementsList, error)
+	read func(context.Context, uuid.UUID, int32, int32) (*contestsmodel.ContestAnnouncementsList, error)
 }
 
-func (s announcementsReaderStub) ListAnnouncements(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*models.ContestAnnouncementsList, error) {
+func (s announcementsReaderStub) ListAnnouncements(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*contestsmodel.ContestAnnouncementsList, error) {
 	return s.read(ctx, contestID, page, pageSize)
 }
 
@@ -47,18 +47,18 @@ func TestListContestAnnouncementsReader(t *testing.T) {
 		{name: "missing contest", resolveErr: pkg.ErrNotFound},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			response := &models.ContestAnnouncementsList{
-				Announcements: []models.ContestAnnouncement{{ID: uuid.New()}},
-				Pagination:    models.Pagination{Page: 3, Total: 4},
+			response := &contestsmodel.ContestAnnouncementsList{
+				Announcements: []contestsmodel.ContestAnnouncement{{ID: uuid.New()}},
+				Pagination:    paging.Pagination{Page: 3, Total: 4},
 			}
-			contests := announcementsContestStub{resolve: func(gotCtx context.Context, orgLogin, contestLogin string) (models.Contest, error) {
+			contests := announcementsContestStub{resolve: func(gotCtx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error) {
 				require.Equal(t, ctx, gotCtx)
 				require.Equal(t, params.OrgLogin, orgLogin)
 				require.Equal(t, params.ContestLogin, contestLogin)
-				return models.Contest{ID: contestID}, tc.resolveErr
+				return contestsmodel.Contest{ID: contestID}, tc.resolveErr
 			}}
 			called := false
-			reader := announcementsReaderStub{read: func(gotCtx context.Context, id uuid.UUID, page, pageSize int32) (*models.ContestAnnouncementsList, error) {
+			reader := announcementsReaderStub{read: func(gotCtx context.Context, id uuid.UUID, page, pageSize int32) (*contestsmodel.ContestAnnouncementsList, error) {
 				called = true
 				require.Equal(t, ctx, gotCtx)
 				require.Equal(t, contestID, id)

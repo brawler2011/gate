@@ -5,7 +5,7 @@ vars:
   GENERATED_PATHS: >-
     backend/contracts
     frontend/contracts
-    backend/internal/repository/pg/sqlc
+    backend/internal/postgres/sqlc
     backend/tests/mocks
 
 tasks:
@@ -153,9 +153,9 @@ tasks:
     sources:
       - sqlc.yaml
       - backend/migrations/*.sql
-      - backend/internal/repository/pg/*.sql
+      - backend/internal/postgres/*.sql
     generates:
-      - backend/internal/repository/pg/sqlc/*.go
+      - backend/internal/postgres/sqlc/*.go
     cmds:
       - >-
         sqlc

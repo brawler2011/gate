@@ -2,8 +2,10 @@ package core
 
 import (
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/usecase"
+	blogs "github.com/brawler2011/gate/backend/internal/blogs"
+	contests "github.com/brawler2011/gate/backend/internal/contests"
+	identity "github.com/brawler2011/gate/backend/internal/identity"
+	problems "github.com/brawler2011/gate/backend/internal/problems"
 	"github.com/brawler2011/gate/backend/pkg/booklet"
 	"github.com/nats-io/nats.go/jetstream"
 )
@@ -19,47 +21,47 @@ type CoreServer struct {
 	draftsReader         DraftsReader
 	notificationsReader  NotificationsReader
 	clarificationsReader ClarificationsReader
-	authUC               interfaces.AuthUC
-	contestsUC           interfaces.ContestsUC
-	permissionsUC        interfaces.PermissionsUC
-	submissionsUC        interfaces.SubmissionsUC
-	usersUC              interfaces.UsersUC
-	problemsUC           interfaces.ProblemsUC
-	organizationsUC      interfaces.OrganizationsUC
-	teamsUC              interfaces.TeamsUC
-	workshopUC           interfaces.WorkshopUC
-	blogsUC              *usecase.BlogsUseCase
-	avatarsUC            *usecase.AvatarsUseCase
-	importUC             *usecase.ProblemImportUseCase
-	publishUC            *usecase.ProblemPublishUseCase
-	draftsUC             interfaces.DraftsUC
-	notificationsUC      interfaces.NotificationsUC
-	announcementsUC      *usecase.AnnouncementsUseCase
+	authUC               AuthUC
+	contestsUC           ContestsUC
+	permissionsUC        PermissionsUC
+	submissionsUC        SubmissionsUC
+	usersUC              UsersUC
+	problemsUC           ProblemsUC
+	organizationsUC      OrganizationsUC
+	teamsUC              TeamsUC
+	workshopUC           WorkshopUC
+	blogsUC              *blogs.BlogsUseCase
+	avatarsUC            *identity.AvatarsUseCase
+	importUC             *problems.ProblemImportUseCase
+	publishUC            *problems.ProblemPublishUseCase
+	draftsUC             DraftsUC
+	notificationsUC      NotificationsUC
+	announcementsUC      *contests.AnnouncementsUseCase
 	announcementsReader  AnnouncementsReader
-	clarificationsUC     *usecase.ClarificationsUseCase
+	clarificationsUC     *contests.ClarificationsUseCase
 	natsJS               jetstream.JetStream
 	bookletCompiler      booklet.Compiler
 }
 
 func NewCoreServer(
-	authUC interfaces.AuthUC,
-	contestsUC interfaces.ContestsUC,
-	permissionsUC interfaces.PermissionsUC,
-	submissionsUC interfaces.SubmissionsUC,
-	usersUC interfaces.UsersUC,
-	problemsUC interfaces.ProblemsUC,
-	organizationsUC interfaces.OrganizationsUC,
-	teamsUC interfaces.TeamsUC,
-	workshopUC interfaces.WorkshopUC,
-	blogsUC *usecase.BlogsUseCase,
-	avatarsUC *usecase.AvatarsUseCase,
-	importUC *usecase.ProblemImportUseCase,
-	publishUC *usecase.ProblemPublishUseCase,
-	draftsUC interfaces.DraftsUC,
-	notificationsUC interfaces.NotificationsUC,
-	announcementsUC *usecase.AnnouncementsUseCase,
+	authUC AuthUC,
+	contestsUC ContestsUC,
+	permissionsUC PermissionsUC,
+	submissionsUC SubmissionsUC,
+	usersUC UsersUC,
+	problemsUC ProblemsUC,
+	organizationsUC OrganizationsUC,
+	teamsUC TeamsUC,
+	workshopUC WorkshopUC,
+	blogsUC *blogs.BlogsUseCase,
+	avatarsUC *identity.AvatarsUseCase,
+	importUC *problems.ProblemImportUseCase,
+	publishUC *problems.ProblemPublishUseCase,
+	draftsUC DraftsUC,
+	notificationsUC NotificationsUC,
+	announcementsUC *contests.AnnouncementsUseCase,
 	announcementsReader AnnouncementsReader,
-	clarificationsUC *usecase.ClarificationsUseCase,
+	clarificationsUC *contests.ClarificationsUseCase,
 	natsJS jetstream.JetStream,
 	bookletCompiler booklet.Compiler,
 	usersReader UsersReader,

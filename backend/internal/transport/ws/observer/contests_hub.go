@@ -5,7 +5,8 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -28,13 +29,13 @@ type ContestsFilter struct {
 
 func (f *ContestsFilter) Matches(event *WrappedEvent) bool {
 	switch e := event.RawEvent.(type) {
-	case *models.ContestAnnouncementCreatedEvent:
+	case *contestsmodel.ContestAnnouncementCreatedEvent:
 		return e.ContestID == f.ContestId
-	case *models.ContestAnnouncementDeletedEvent:
+	case *contestsmodel.ContestAnnouncementDeletedEvent:
 		return e.ContestID == f.ContestId
-	case *models.ContestClarificationCreatedEvent:
+	case *contestsmodel.ContestClarificationCreatedEvent:
 		return e.ContestID == f.ContestId
-	case *models.ContestClarificationAnsweredEvent:
+	case *contestsmodel.ContestClarificationAnsweredEvent:
 		return e.ContestID == f.ContestId
 	default:
 		slog.Warn("unknown event type in contest filter match", "type", event.EventType)
@@ -56,7 +57,7 @@ func NewContestsHub(ringSize int) *ContestsHub {
 }
 
 func (h *ContestsHub) Handle(ctx context.Context, eventType string, payload []byte) error {
-	seq, ok := ctx.Value(models.MessageStreamSequenceKey).(uint64)
+	seq, ok := ctx.Value(eventdata.MessageStreamSequenceKey).(uint64)
 	if !ok {
 		slog.Error("missing message_stream_sequence in contest hub")
 		return nil
@@ -66,14 +67,14 @@ func (h *ContestsHub) Handle(ctx context.Context, eventType string, payload []by
 	var err error
 
 	switch eventType {
-	case models.ContestEventAnnouncementCreated:
-		event, err = parseEvent[models.ContestAnnouncementCreatedEvent](payload)
-	case models.ContestEventAnnouncementDeleted:
-		event, err = parseEvent[models.ContestAnnouncementDeletedEvent](payload)
-	case models.ContestEventClarificationCreated:
-		event, err = parseEvent[models.ContestClarificationCreatedEvent](payload)
-	case models.ContestEventClarificationAnswered:
-		event, err = parseEvent[models.ContestClarificationAnsweredEvent](payload)
+	case contestsmodel.ContestEventAnnouncementCreated:
+		event, err = parseEvent[contestsmodel.ContestAnnouncementCreatedEvent](payload)
+	case contestsmodel.ContestEventAnnouncementDeleted:
+		event, err = parseEvent[contestsmodel.ContestAnnouncementDeletedEvent](payload)
+	case contestsmodel.ContestEventClarificationCreated:
+		event, err = parseEvent[contestsmodel.ContestClarificationCreatedEvent](payload)
+	case contestsmodel.ContestEventClarificationAnswered:
+		event, err = parseEvent[contestsmodel.ContestClarificationAnsweredEvent](payload)
 	default:
 		slog.Warn("unknown contest event type in hub", "type", eventType)
 		return nil

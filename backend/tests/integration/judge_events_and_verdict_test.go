@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/worker/judge"
+	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
@@ -38,31 +38,31 @@ func TestEventPublishing(t *testing.T) {
 	err = natsConn.Flush()
 	require.NoError(t, err)
 
-	publisher := judge.NewEventPublisher(js)
+	publisher := judgeworker.NewEventPublisher(js)
 
 	submissionID := uuid.New()
-	meta := models.SubmissionEventMeta{
+	meta := submissionsmodel.SubmissionEventMeta{
 		UserId:       nil,
 		Username:     "testuser",
 		ContestId:    nil,
 		ContestTitle: "Test Contest",
 		ProblemId:    nil,
 		ProblemTitle: "Test Problem",
-		Language:     models.Cpp,
+		Language:     submissionsmodel.Cpp,
 	}
 
 	require.NoError(t, publisher.PublishQueued(ctx, submissionID, meta))
 	require.NoError(t, publisher.PublishCompilingStarted(ctx, submissionID, meta))
 	require.NoError(t, publisher.PublishTestingStarted(ctx, submissionID, meta))
 	require.NoError(t, publisher.PublishTestStarted(ctx, submissionID, 1, meta))
-	require.NoError(t, publisher.PublishCompleted(ctx, submissionID, models.Accepted, 100, 1000, 256, 20, nil, models.Saved, meta))
+	require.NoError(t, publisher.PublishCompleted(ctx, submissionID, submissionsmodel.Accepted, 100, 1000, 256, 20, nil, submissionsmodel.Saved, meta))
 
 	expectedSubjects := []string{
-		models.SubmissionEventQueued,
-		models.SubmissionEventCompilingStarted,
-		models.SubmissionEventTestingStarted,
-		models.SubmissionEventTestStarted,
-		models.SubmissionEventCompleted,
+		submissionsmodel.SubmissionEventQueued,
+		submissionsmodel.SubmissionEventCompilingStarted,
+		submissionsmodel.SubmissionEventTestingStarted,
+		submissionsmodel.SubmissionEventTestStarted,
+		submissionsmodel.SubmissionEventCompleted,
 	}
 
 	for _, subject := range expectedSubjects {

@@ -5,19 +5,18 @@ import (
 	"errors"
 	"io"
 
-	"github.com/google/uuid"
-
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	blogsmodel "github.com/brawler2011/gate/backend/internal/blogs/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
+	"github.com/google/uuid"
 )
 
 type BlogsReader interface {
-	ListPosts(ctx context.Context, params models.ListPostsParams) ([]models.Post, int, error)
-	GetPostByID(ctx context.Context, id uuid.UUID) (*models.Post, error)
+	ListPosts(ctx context.Context, params blogsmodel.ListPostsParams) ([]blogsmodel.Post, int, error)
+	GetPostByID(ctx context.Context, id uuid.UUID) (*blogsmodel.Post, error)
 }
 
 func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParams) (*corev1.ListPostsResponseModel, error) {
@@ -27,7 +26,7 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 	pageSize := int(params.PageSize.Or(10))
 	sortOrder := string(params.SortOrder.Or("desc"))
 
-	items, totalPages, err := s.blogsReader.ListPosts(ctx, models.ListPostsParams{Page: page, PageSize: pageSize, SortOrder: sortOrder})
+	items, totalPages, err := s.blogsReader.ListPosts(ctx, blogsmodel.ListPostsParams{Page: page, PageSize: pageSize, SortOrder: sortOrder})
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list posts")
 	}

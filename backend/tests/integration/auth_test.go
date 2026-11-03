@@ -8,8 +8,8 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/repository/pg"
-	"github.com/brawler2011/gate/backend/internal/usecase"
+	identity "github.com/brawler2011/gate/backend/internal/identity"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/google/uuid"
 )
 
@@ -213,9 +213,9 @@ func (s *IntegrationTestSuite) TestAuth() {
 		time.Sleep(100 * time.Millisecond)
 
 		// Perform a request utilizing the session context to trigger sliding expiry update.
-		authRepo := pg.NewAuthRepo(s.dbPool)
-		txManager := pg.NewIdentityTransactions(s.dbPool)
-		authUC := usecase.NewAuthUseCase(s.usersRepo, authRepo, txManager)
+		authRepo := pgstore.NewAuthRepo(s.dbPool)
+		txManager := pgstore.NewIdentityTransactions(s.dbPool)
+		authUC := identity.NewAuthUseCase(s.usersRepo, authRepo, txManager)
 
 		// Call Authenticate
 		user, err := authUC.Authenticate(s.ctx, sessionID)
@@ -256,9 +256,9 @@ func (s *IntegrationTestSuite) TestAuth() {
 		sessionID := loginResp.SessionID.Value
 		userID := regResp.User.ID
 
-		authRepo := pg.NewAuthRepo(s.dbPool)
-		txManager := pg.NewIdentityTransactions(s.dbPool)
-		authUC := usecase.NewAuthUseCase(s.usersRepo, authRepo, txManager)
+		authRepo := pgstore.NewAuthRepo(s.dbPool)
+		txManager := pgstore.NewIdentityTransactions(s.dbPool)
+		authUC := identity.NewAuthUseCase(s.usersRepo, authRepo, txManager)
 
 		// Test Case A: Soft timeout (expires_at in past)
 		_, err = s.dbPool.Exec(s.ctx, "UPDATE sessions SET expires_at = NOW() - INTERVAL '5 minutes' WHERE id = $1", sessionID)
