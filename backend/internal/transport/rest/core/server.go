@@ -6,7 +6,6 @@ import (
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
 	problems "github.com/brawler2011/gate/backend/internal/problems"
-	"github.com/brawler2011/gate/backend/pkg/booklet"
 	"github.com/nats-io/nats.go/jetstream"
 )
 
@@ -40,7 +39,7 @@ type CoreServer struct {
 	announcementsReader  AnnouncementsReader
 	clarificationsUC     *contests.ClarificationsUseCase
 	natsJS               jetstream.JetStream
-	bookletCompiler      booklet.Compiler
+	contestDetails       ContestDetails
 }
 
 func NewCoreServer(
@@ -63,7 +62,7 @@ func NewCoreServer(
 	announcementsReader AnnouncementsReader,
 	clarificationsUC *contests.ClarificationsUseCase,
 	natsJS jetstream.JetStream,
-	bookletCompiler booklet.Compiler,
+	contestDetails ContestDetails,
 	usersReader UsersReader,
 	problemsReader ProblemsReader,
 	contestsReader ContestsReader,
@@ -101,6 +100,6 @@ func NewCoreServer(
 		announcementsReader:  announcementsReader,
 		clarificationsUC:     clarificationsUC,
 		natsJS:               natsJS,
-		bookletCompiler:      bookletCompiler,
+		contestDetails:       contestDetails,
 	}
 }

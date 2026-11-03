@@ -409,7 +409,7 @@ func (q *Queries) GetContestMember(ctx context.Context, arg GetContestMemberPara
 }
 
 const getContestProblem = `-- name: GetContestProblem :one
-SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, p.title, p.short_name, p.visibility
+SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, p.title, p.short_name, p.visibility, p.time_limit_ms, p.memory_limit_mb, p.updated_at AS problem_updated_at
 FROM contest_problems cp
 JOIN problems p ON cp.problem_id = p.id
 WHERE cp.contest_id = $1 AND cp.problem_id = $2
@@ -421,14 +421,17 @@ type GetContestProblemParams struct {
 }
 
 type GetContestProblemRow struct {
-	ContestID  uuid.UUID         `json:"contest_id"`
-	ProblemID  uuid.UUID         `json:"problem_id"`
-	PackageID  uuid.UUID         `json:"package_id"`
-	Ordinal    int32             `json:"ordinal"`
-	CreatedAt  time.Time         `json:"created_at"`
-	Title      string            `json:"title"`
-	ShortName  string            `json:"short_name"`
-	Visibility ProblemVisibility `json:"visibility"`
+	ContestID        uuid.UUID         `json:"contest_id"`
+	ProblemID        uuid.UUID         `json:"problem_id"`
+	PackageID        uuid.UUID         `json:"package_id"`
+	Ordinal          int32             `json:"ordinal"`
+	CreatedAt        time.Time         `json:"created_at"`
+	Title            string            `json:"title"`
+	ShortName        string            `json:"short_name"`
+	Visibility       ProblemVisibility `json:"visibility"`
+	TimeLimitMs      int32             `json:"time_limit_ms"`
+	MemoryLimitMb    int32             `json:"memory_limit_mb"`
+	ProblemUpdatedAt time.Time         `json:"problem_updated_at"`
 }
 
 func (q *Queries) GetContestProblem(ctx context.Context, arg GetContestProblemParams) (GetContestProblemRow, error) {
@@ -443,6 +446,9 @@ func (q *Queries) GetContestProblem(ctx context.Context, arg GetContestProblemPa
 		&i.Title,
 		&i.ShortName,
 		&i.Visibility,
+		&i.TimeLimitMs,
+		&i.MemoryLimitMb,
+		&i.ProblemUpdatedAt,
 	)
 	return i, err
 }
@@ -712,7 +718,7 @@ func (q *Queries) ListContestMembers(ctx context.Context, contestID uuid.UUID) (
 }
 
 const listContestProblems = `-- name: ListContestProblems :many
-SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, p.title, p.short_name, p.visibility, pp.url as package_url
+SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, p.title, p.short_name, p.visibility, p.time_limit_ms, p.memory_limit_mb, p.updated_at AS problem_updated_at, pp.url as package_url
 FROM contest_problems cp
 JOIN problems p ON cp.problem_id = p.id
 JOIN problem_packages pp ON cp.package_id = pp.id
@@ -721,15 +727,18 @@ ORDER BY cp.ordinal
 `
 
 type ListContestProblemsRow struct {
-	ContestID  uuid.UUID         `json:"contest_id"`
-	ProblemID  uuid.UUID         `json:"problem_id"`
-	PackageID  uuid.UUID         `json:"package_id"`
-	Ordinal    int32             `json:"ordinal"`
-	CreatedAt  time.Time         `json:"created_at"`
-	Title      string            `json:"title"`
-	ShortName  string            `json:"short_name"`
-	Visibility ProblemVisibility `json:"visibility"`
-	PackageUrl *string           `json:"package_url"`
+	ContestID        uuid.UUID         `json:"contest_id"`
+	ProblemID        uuid.UUID         `json:"problem_id"`
+	PackageID        uuid.UUID         `json:"package_id"`
+	Ordinal          int32             `json:"ordinal"`
+	CreatedAt        time.Time         `json:"created_at"`
+	Title            string            `json:"title"`
+	ShortName        string            `json:"short_name"`
+	Visibility       ProblemVisibility `json:"visibility"`
+	TimeLimitMs      int32             `json:"time_limit_ms"`
+	MemoryLimitMb    int32             `json:"memory_limit_mb"`
+	ProblemUpdatedAt time.Time         `json:"problem_updated_at"`
+	PackageUrl       *string           `json:"package_url"`
 }
 
 func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) ([]ListContestProblemsRow, error) {
@@ -750,6 +759,9 @@ func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) 
 			&i.Title,
 			&i.ShortName,
 			&i.Visibility,
+			&i.TimeLimitMs,
+			&i.MemoryLimitMb,
+			&i.ProblemUpdatedAt,
 			&i.PackageUrl,
 		); err != nil {
 			return nil, err

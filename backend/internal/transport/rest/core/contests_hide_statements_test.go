@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/contests"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -83,7 +85,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		mockProblems := new(MockProblemsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, stubBookletCompiler{},
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, contests.NewDetailsReader(mockContests, mockProblems, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil),
 			nil,
 			nil,
 			nil,
@@ -106,6 +108,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 			ProblemId: problemID,
 		}).Return(contestProblem, nil)
 		mockProblems.On("GetProblemById", mock.Anything, problemID).Return(problem, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionGetContestProblem).Return(true, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionManageContest).Return(false, nil)
 
 		resp, err := server.GetContestProblem(ctx, corev1.GetContestProblemParams{
@@ -130,7 +133,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		mockProblems := new(MockProblemsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, stubBookletCompiler{},
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, contests.NewDetailsReader(mockContests, mockProblems, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil),
 			nil,
 			nil,
 			nil,
@@ -148,6 +151,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "onsite-contest").Return(hiddenContest, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionGetContestProblem).Return(true, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, participantID, accessmodel.ActionManageContest).Return(false, nil)
 
 		_, err := server.DownloadContestStatementsPdf(ctx, corev1.DownloadContestStatementsPdfParams{
@@ -162,7 +166,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		mockProblems := new(MockProblemsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, stubBookletCompiler{},
+		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, contests.NewDetailsReader(mockContests, mockProblems, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil),
 			nil,
 			nil,
 			nil,
@@ -180,6 +184,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		ctx := accessmodel.WithUser(context.Background(), user)
 
 		mockContests.On("GetContestByOrgLoginAndContestLogin", mock.Anything, "test-org", "onsite-contest").Return(hiddenContest, nil)
+		mockPerms.On("HasContestPermission", mock.Anything, contestID, managerID, accessmodel.ActionGetContestProblem).Return(true, nil)
 		mockPerms.On("HasContestPermission", mock.Anything, contestID, managerID, accessmodel.ActionManageContest).Return(true, nil)
 		mockContests.On("GetContestProblems", mock.Anything, contestID).Return([]contestsmodel.ContestProblem{contestProblem}, nil)
 		mockProblems.On("GetProblemById", mock.Anything, problemID).Return(problem, nil)
@@ -191,4 +196,10 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, resp.Data)
 	})
+}
+
+type hiddenStatementSource struct{}
+
+func (hiddenStatementSource) ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) (*problemsmodel.Statement, []problemsmodel.Sample) {
+	return nil, nil
 }

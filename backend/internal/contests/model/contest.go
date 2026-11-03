@@ -291,15 +291,18 @@ type ContestsList struct {
 }
 
 type ContestProblem struct {
-	ContestID  uuid.UUID
-	ProblemID  uuid.UUID
-	PackageID  uuid.UUID
-	Ordinal    int
-	Title      string
-	ShortName  string
-	Visibility string
-	PackageURL *string
-	CreatedAt  time.Time
+	TimeLimitMs   int
+	MemoryLimitMb int
+	UpdatedAt     time.Time
+	ContestID     uuid.UUID
+	ProblemID     uuid.UUID
+	PackageID     uuid.UUID
+	Ordinal       int
+	Title         string
+	ShortName     string
+	Visibility    string
+	PackageURL    *string
+	CreatedAt     time.Time
 }
 
 type ContestMember struct {

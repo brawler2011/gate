@@ -15,10 +15,8 @@ import (
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
-	"github.com/brawler2011/gate/backend/pkg/booklet"
 	"github.com/google/uuid"
 )
 
@@ -31,19 +29,6 @@ type ContestsReader interface {
 	ListOrganizationContests(ctx context.Context, orgID uuid.UUID, search string, visibility string, page, pageSize int32) (*contestsmodel.ContestsList, error)
 	ListContestMembers(ctx context.Context, filter contestsmodel.ParticipantsFilter) (*contestsmodel.ContestMembersList, error)
 	ListDashboardContests(ctx context.Context, userID uuid.UUID, limit int32) ([]contestsmodel.DashboardContest, error)
-}
-
-func ordinalToLetter(ordinal int) string {
-	if ordinal <= 0 {
-		return "A"
-	}
-	res := ""
-	for ordinal > 0 {
-		rem := (ordinal - 1) % 26
-		res = string(rune('A'+rem)) + res
-		ordinal = (ordinal - 1) / 26
-	}
-	return res
 }
 
 var nonAlphaNumRegex = regexp.MustCompile(`[^a-z0-9]+`)
@@ -204,43 +189,11 @@ func (h *CoreServer) ListOrganizationContests(ctx context.Context, params corev1
 }
 
 func (h *CoreServer) GetContest(ctx context.Context, params corev1.GetContestParams) (*corev1.GetContestResponseModel, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	details, err := h.contestDetails.GetContestDetails(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
-
-	user := accessmodel.UserFromContext(ctx)
-	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionGetContestProblem)
-	if err != nil {
-		return nil, err
-	}
-
-	var ps []contestsmodel.ContestProblem
-	if allowed {
-		ps, err = h.contestsUC.GetContestProblems(ctx, contest.ID)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	problemDetails := make(map[uuid.UUID]problemsmodel.Problem, len(ps))
-	for _, p := range ps {
-		prob, err := h.problemsUC.GetProblemById(ctx, p.ProblemID)
-		if err != nil {
-			continue
-		}
-		problemDetails[p.ProblemID] = prob
-	}
-
-	var owner accessmodel.User
-	if contest.OwnerID != nil {
-		owner, err = h.usersUC.GetUserById(ctx, *contest.OwnerID)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return GetContestResponseDTO(contest, ps, problemDetails, &owner), nil
+	return GetContestResponseDTO(details.Contest, details.Problems, details.Owner), nil
 }
 
 func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContestRequestModel, params corev1.UpdateContestParams) error {
@@ -542,183 +495,19 @@ func (h *CoreServer) CreateContestProblem(ctx context.Context, params corev1.Cre
 }
 
 func (h *CoreServer) GetContestProblem(ctx context.Context, params corev1.GetContestProblemParams) (*corev1.GetContestProblemResponseModel, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	details, err := h.contestDetails.GetContestProblemDetails(ctx, params.OrgLogin, params.ContestLogin, params.ProblemID)
 	if err != nil {
 		return nil, err
 	}
-
-	p, err := h.contestsUC.GetContestProblem(ctx, contestsmodel.ContestProblemGet{
-		ContestId: contest.ID,
-		ProblemId: params.ProblemID,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	problem, err := h.problemsUC.GetProblemById(ctx, params.ProblemID)
-	if err != nil {
-		return nil, err
-	}
-
-	var isManager bool
-	user := accessmodel.UserFromContext(ctx)
-	if !user.IsGuest() {
-		isManager, _ = h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
-	}
-
-	var statement *problemsmodel.Statement
-	var samples []corev1.ProblemSampleModel
-
-	if !contest.GetHideStatements() || isManager {
-		if p.PackageID != uuid.Nil {
-			statement, samples = h.loadPackageStatementAndSamples(ctx, params.ProblemID, p.PackageID)
-		}
-
-		if statement == nil || len(samples) == 0 {
-			workspaceStatement, workspaceSamples := h.loadWorkspaceStatementAndSamples(ctx, params.ProblemID, "")
-			if statement == nil {
-				statement = workspaceStatement
-			}
-			if len(samples) == 0 {
-				samples = workspaceSamples
-			}
-		}
-	}
-
-	return GetContestProblemResponseDTO(p, problem, statement, samples), nil
+	return GetContestProblemResponseDTO(details.Link, details.Problem, details.Statement, SamplesDTO(details.Samples)), nil
 }
 
 func (h *CoreServer) DownloadContestStatementsPdf(ctx context.Context, params corev1.DownloadContestStatementsPdfParams) (corev1.DownloadContestStatementsPdfOK, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	data, err := h.contestDetails.ReadBooklet(ctx, params.OrgLogin, params.ContestLogin, params.Lang.Or("ru"))
 	if err != nil {
 		return corev1.DownloadContestStatementsPdfOK{}, err
 	}
-
-	var isManager bool
-	user := accessmodel.UserFromContext(ctx)
-	if !user.IsGuest() {
-		isManager, _ = h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
-	}
-
-	if !isManager {
-		if contest.GetHideStatements() {
-			return corev1.DownloadContestStatementsPdfOK{}, pkg.Wrap(pkg.NoPermission, nil, "statements are hidden for this contest")
-		}
-		if contest.StartTime != nil && time.Now().Before(*contest.StartTime) {
-			return corev1.DownloadContestStatementsPdfOK{}, pkg.Wrap(pkg.NoPermission, nil, "contest has not started yet")
-		}
-	}
-
-	problems, err := h.contestsUC.GetContestProblems(ctx, contest.ID)
-	if err != nil {
-		return corev1.DownloadContestStatementsPdfOK{}, err
-	}
-
-	lang := params.Lang.Or("ru")
-
-	var problemDatas []booklet.ProblemData
-	for _, cp := range problems {
-		prob, err := h.problemsUC.GetProblemById(ctx, cp.ProblemID)
-		if err != nil {
-			continue
-		}
-
-		var statement *problemsmodel.Statement
-		var samples []corev1.ProblemSampleModel
-
-		if cp.PackageID != uuid.Nil {
-			statement, samples = h.loadPackageStatementAndSamplesWithLang(ctx, cp.ProblemID, cp.PackageID, lang)
-		}
-		if statement == nil || len(samples) == 0 {
-			workspaceStatement, workspaceSamples := h.loadWorkspaceStatementAndSamples(ctx, cp.ProblemID, lang)
-			if statement == nil {
-				statement = workspaceStatement
-			}
-			if len(samples) == 0 {
-				samples = workspaceSamples
-			}
-		}
-
-		title := strings.TrimSpace(prob.Title)
-		if title == "" {
-			title = strings.TrimSpace(cp.Title)
-		}
-		if statement != nil && strings.TrimSpace(statement.Title) != "" {
-			title = strings.TrimSpace(statement.Title)
-		}
-
-		var bookletSamples []booklet.SampleData
-		for _, s := range samples {
-			bookletSamples = append(bookletSamples, booklet.SampleData{
-				Input:  s.Input,
-				Output: s.Output,
-			})
-		}
-
-		legend := ""
-		inputFormat := ""
-		outputFormat := ""
-		interaction := ""
-		scoring := ""
-		notes := ""
-		if statement != nil {
-			legend = statement.Legend
-			inputFormat = statement.InputFormat
-			outputFormat = statement.OutputFormat
-			interaction = statement.Interaction
-			scoring = statement.Scoring
-			notes = statement.Notes
-		}
-
-		problemDatas = append(problemDatas, booklet.ProblemData{
-			Letter:        ordinalToLetter(cp.Ordinal),
-			Title:         title,
-			TimeLimitMs:   prob.TimeLimitMs,
-			MemoryLimitMb: prob.MemoryLimitMb,
-			InputFile:     "stdin",
-			OutputFile:    "stdout",
-			Legend:        legend,
-			InputFormat:   inputFormat,
-			OutputFormat:  outputFormat,
-			Interaction:   interaction,
-			Scoring:       scoring,
-			Notes:         notes,
-			Samples:       bookletSamples,
-		})
-	}
-
-	dateStr := time.Now().Format("02.01.2006")
-	if contest.StartTime != nil {
-		dateStr = contest.StartTime.Format("02.01.2006")
-	}
-
-	contestData := booklet.ContestData{
-		Title:        contest.Title,
-		Organization: contest.OrganizationLogin,
-		Date:         dateStr,
-		Language:     lang,
-		Problems:     problemDatas,
-	}
-
-	texSource, err := booklet.GenerateLatex(contestData)
-	if err != nil {
-		return corev1.DownloadContestStatementsPdfOK{}, pkg.Wrap(pkg.ErrInternal, err, "failed to generate LaTeX booklet")
-	}
-
-	var pdfBytes []byte
-	if h.bookletCompiler != nil {
-		pdfBytes, err = h.bookletCompiler.CompilePDF(ctx, texSource)
-	} else {
-		pdfBytes, err = booklet.CompilePDFLocal(ctx, texSource)
-	}
-	if err != nil {
-		slog.ErrorContext(ctx, "failed to compile PDF booklet", "error", err)
-		return corev1.DownloadContestStatementsPdfOK{}, pkg.Wrap(pkg.ErrInternal, err, "failed to compile PDF booklet")
-	}
-
-	return corev1.DownloadContestStatementsPdfOK{
-		Data: bytes.NewReader(pdfBytes),
-	}, nil
+	return corev1.DownloadContestStatementsPdfOK{Data: bytes.NewReader(data)}, nil
 }
 
 func (h *CoreServer) DeleteContestProblem(ctx context.Context, params corev1.DeleteContestProblemParams) error {

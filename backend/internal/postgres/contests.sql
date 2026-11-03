@@ -115,13 +115,13 @@ INSERT INTO contest_problems (contest_id, problem_id, package_id, ordinal)
 VALUES ($1, $2, $3, $4);
 
 -- name: GetContestProblem :one
-SELECT cp.*, p.title, p.short_name, p.visibility
+SELECT cp.*, p.title, p.short_name, p.visibility, p.time_limit_ms, p.memory_limit_mb, p.updated_at AS problem_updated_at
 FROM contest_problems cp
 JOIN problems p ON cp.problem_id = p.id
 WHERE cp.contest_id = $1 AND cp.problem_id = $2;
 
 -- name: ListContestProblems :many
-SELECT cp.*, p.title, p.short_name, p.visibility, pp.url as package_url
+SELECT cp.*, p.title, p.short_name, p.visibility, p.time_limit_ms, p.memory_limit_mb, p.updated_at AS problem_updated_at, pp.url as package_url
 FROM contest_problems cp
 JOIN problems p ON cp.problem_id = p.id
 JOIN problem_packages pp ON cp.package_id = pp.id

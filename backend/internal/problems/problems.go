@@ -30,10 +30,6 @@ func NewProblemsUseCase(repo ProblemsRepo, workspace *WorkspaceStorage, transact
 	}
 }
 
-func (uc *ProblemsUseCase) GetProblemById(ctx context.Context, id uuid.UUID) (problemsmodel.Problem, error) {
-	return uc.repo.GetProblemById(ctx, id)
-}
-
 func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error {
 	if err := withinProblem(ctx, uc.transactions, id, accessmodel.ActionEditProblem, func(ProblemTxStore) error { return nil }); err != nil {
 		return err

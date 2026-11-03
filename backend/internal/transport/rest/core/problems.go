@@ -142,37 +142,12 @@ func (h *CoreServer) DeleteProblem(ctx context.Context, params corev1.DeleteProb
 }
 
 func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemParams) (*corev1.GetProblemResponseModel, error) {
-	problem, err := h.problemsUC.GetProblemById(ctx, params.ID)
+	details, err := h.problemsUC.GetProblemDetails(ctx, params.ID)
 	if err != nil {
 		return nil, err
 	}
+	return &corev1.GetProblemResponseModel{Problem: *ProblemDTO(details.Problem, details.Statement, SamplesDTO(details.Samples))}, nil
 
-	var statement *problemsmodel.Statement
-	var samples []corev1.ProblemSampleModel
-	if h.workshopUC != nil {
-		if err := h.workshopUC.WithWorkspace(ctx, params.ID, func(ctx context.Context) error {
-			initialized, err := h.workshopUC.IsInitialized(ctx, params.ID)
-			if err != nil {
-				return err
-			}
-			if !initialized {
-				return nil
-			}
-			manifest, err := h.workshopUC.GetManifest(ctx, params.ID)
-			if err != nil {
-				return err
-			}
-			problem.Title = manifest.Statement.Title
-			problem.TimeLimitMs = manifest.TimeLimitMs
-			problem.MemoryLimitMb = manifest.MemoryLimitMb
-			statement, samples = h.loadWorkspaceStatementAndSamples(ctx, params.ID, "")
-			return nil
-		}); err != nil {
-			return nil, workshopWriteError(err, "read problem package")
-		}
-	}
-
-	return &corev1.GetProblemResponseModel{Problem: *ProblemDTO(problem, statement, samples)}, nil
 }
 
 func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProblemRequestModel, params corev1.UpdateProblemParams) error {

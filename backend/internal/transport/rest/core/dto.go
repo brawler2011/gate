@@ -106,22 +106,12 @@ func int32PtrToInt32(ptr *int32) int32 {
 	return *ptr
 }
 
-func GetContestResponseDTO(contest contestsmodel.Contest, problems []contestsmodel.ContestProblem, problemDetails map[uuid.UUID]problemsmodel.Problem, owner *accessmodel.User) *corev1.GetContestResponseModel {
-	resp := corev1.GetContestResponseModel{
-		Contest:  ContestDTO(contest, owner),
-		Problems: make([]corev1.ContestProblemListItemModel, len(problems)),
+func GetContestResponseDTO(contest contestsmodel.Contest, problems []contestsmodel.ContestProblem, owner *identitymodel.UserProfile) *corev1.GetContestResponseModel {
+	resp := &corev1.GetContestResponseModel{Contest: ContestDTO(contest, owner), Problems: make([]corev1.ContestProblemListItemModel, len(problems))}
+	for i, p := range problems {
+		resp.Problems[i] = ContestProblemsListItemDTO(p)
 	}
-
-	for i, task := range problems {
-		if details, ok := problemDetails[task.ProblemID]; ok {
-			resp.Problems[i] = ContestProblemsListItemDTO(task, &details)
-			continue
-		}
-
-		resp.Problems[i] = ContestProblemsListItemDTO(task, nil)
-	}
-
-	return &resp
+	return resp
 }
 
 func ListContestsResponseDTO(contestsList *contestsmodel.ContestsList) *corev1.ListContestsResponseModel {
@@ -186,7 +176,7 @@ func SubmissionsListToDTO(submissionsList *submissionsmodel.SubmissionsList) *co
 	return &resp
 }
 
-func ContestDTO(c contestsmodel.Contest, owner *accessmodel.User) corev1.ContestModel {
+func ContestDTO(c contestsmodel.Contest, owner *identitymodel.UserProfile) corev1.ContestModel {
 	title := c.Title
 
 	// Extract owner ID
@@ -253,40 +243,22 @@ func ContestDTO(c contestsmodel.Contest, owner *accessmodel.User) corev1.Contest
 	}
 
 	if owner != nil {
-		ownerModel := UserDTO(*owner)
+		ownerModel := userProfileDTO(*owner)
 		model.Owner = corev1.NewOptUserModel(ownerModel)
 	}
 
 	return model
 }
 
-func ContestProblemsListItemDTO(t contestsmodel.ContestProblem, problem *problemsmodel.Problem) corev1.ContestProblemListItemModel {
-	title := strings.TrimSpace(t.Title)
-	if problem != nil {
-		problemTitle := strings.TrimSpace(problem.Title)
-		if problemTitle != "" {
-			title = problemTitle
-		}
+func ContestProblemsListItemDTO(t contestsmodel.ContestProblem) corev1.ContestProblemListItemModel {
+	return corev1.ContestProblemListItemModel{ProblemID: t.ProblemID, Position: safeInt32(t.Ordinal), Title: strings.TrimSpace(t.Title), MemoryLimit: safeInt32(t.MemoryLimitMb), TimeLimit: safeInt32(t.TimeLimitMs), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
+}
+func SamplesDTO(samples []problemsmodel.Sample) []corev1.ProblemSampleModel {
+	result := make([]corev1.ProblemSampleModel, len(samples))
+	for i, s := range samples {
+		result[i] = corev1.ProblemSampleModel{Input: s.Input, Output: s.Output}
 	}
-
-	timeLimit := int32(0)
-	memoryLimit := int32(0)
-	updatedAt := t.CreatedAt
-	if problem != nil {
-		timeLimit = safeInt32(problem.TimeLimitMs)
-		memoryLimit = safeInt32(problem.MemoryLimitMb)
-		updatedAt = problem.UpdatedAt
-	}
-
-	return corev1.ContestProblemListItemModel{
-		ProblemID:   t.ProblemID,
-		Position:    safeInt32(t.Ordinal),
-		Title:       title,
-		MemoryLimit: memoryLimit,
-		TimeLimit:   timeLimit,
-		CreatedAt:   t.CreatedAt,
-		UpdatedAt:   updatedAt,
-	}
+	return result
 }
 
 func UserDTO(u accessmodel.User) corev1.UserModel {

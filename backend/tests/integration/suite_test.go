@@ -192,7 +192,7 @@ func (s *IntegrationTestSuite) initApp() {
 	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(s.dbPool), publishUC, s.organizationsRepo)
 	permissionsUC := access.NewPermissionsUseCase(s.contestsRepo, usersUC, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
 	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissionsUC)
-	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, pgstore.NewSubmissionTransactions(s.dbPool), permissionsUC)
+	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsUC, s.problemsRepo, pgstore.NewSubmissionTransactions(s.dbPool), permissionsUC)
 	notificationsRepo := pgstore.NewNotificationsRepo(s.dbPool)
 	notificationsUC := notifications.NewNotificationsUseCase(notificationsRepo, s.usersRepo, emailService)
 	contestsUC.SetNotificationsUC(notificationsUC)
@@ -214,6 +214,7 @@ func (s *IntegrationTestSuite) initApp() {
 	clarificationsRepo := pgstore.NewClarificationsRepo(s.dbPool)
 	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(s.dbPool))
 	communicationReader := contests.NewCommunicationReader(announcementsRepo, clarificationsRepo, permissionsUC)
+	contestDetails := contests.NewDetailsReader(s.contestsRepo, s.problemsRepo, problems.NewStatementReader(workspaceStorage, publishUC), permissionsUC, nil, s.usersRepo)
 
 	// Handler
 	coreServer := handlers.NewCoreServer(
@@ -236,7 +237,7 @@ func (s *IntegrationTestSuite) initApp() {
 		communicationReader,
 		clarificationsUC,
 		nil, // natsJS - not needed for integration tests
-		nil, // bookletCompiler - not needed for integration tests,
+		contestDetails,
 		s.usersRepo,
 		s.problemsRepo,
 		s.contestsRepo,

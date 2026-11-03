@@ -190,6 +190,44 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, identifier strin
 	return i, err
 }
 
+const getUserProfileByID = `-- name: GetUserProfileByID :one
+SELECT id, username, role, email, avatar_url, expires_at, is_email_verified, claimed_by_user_id, claimed_at, created_at, updated_at
+FROM users WHERE id = $1
+`
+
+type GetUserProfileByIDRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Username        string             `json:"username"`
+	Role            UserRole           `json:"role"`
+	Email           *string            `json:"email"`
+	AvatarUrl       *string            `json:"avatar_url"`
+	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
+	IsEmailVerified bool               `json:"is_email_verified"`
+	ClaimedByUserID pgtype.UUID        `json:"claimed_by_user_id"`
+	ClaimedAt       pgtype.Timestamptz `json:"claimed_at"`
+	CreatedAt       time.Time          `json:"created_at"`
+	UpdatedAt       time.Time          `json:"updated_at"`
+}
+
+func (q *Queries) GetUserProfileByID(ctx context.Context, id uuid.UUID) (GetUserProfileByIDRow, error) {
+	row := q.db.QueryRow(ctx, getUserProfileByID, id)
+	var i GetUserProfileByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Role,
+		&i.Email,
+		&i.AvatarUrl,
+		&i.ExpiresAt,
+		&i.IsEmailVerified,
+		&i.ClaimedByUserID,
+		&i.ClaimedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUserProfileByUsername = `-- name: GetUserProfileByUsername :one
 SELECT id, username, role, email, avatar_url, expires_at, is_email_verified, claimed_by_user_id, claimed_at, created_at, updated_at
 FROM users WHERE LOWER(username)=LOWER($1) LIMIT 1

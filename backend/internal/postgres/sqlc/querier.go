@@ -142,6 +142,7 @@ type Querier interface {
 	GetUserByUsername(ctx context.Context, username string) (User, error)
 	GetUserByUsernameOrEmail(ctx context.Context, identifier string) (User, error)
 	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]Organization, error)
+	GetUserProfileByID(ctx context.Context, id uuid.UUID) (GetUserProfileByIDRow, error)
 	GetUserProfileByUsername(ctx context.Context, username string) (GetUserProfileByUsernameRow, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]Team, error)
 	GetUserTeamsByOrganization(ctx context.Context, arg GetUserTeamsByOrganizationParams) ([]Team, error)

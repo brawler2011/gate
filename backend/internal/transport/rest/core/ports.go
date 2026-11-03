@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 
+	contests "github.com/brawler2011/gate/backend/internal/contests"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
@@ -120,11 +122,10 @@ type PermissionsUC interface {
 }
 
 type ProblemsUC interface {
+	GetProblemDetails(context.Context, uuid.UUID) (*problemsmodel.ProblemDetails, error)
 	CreateProblem(ctx context.Context, input *problemsmodel.CreateProblemInput) (uuid.UUID, error)
 
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
-
-	GetProblemById(ctx context.Context, id uuid.UUID) (problemsmodel.Problem, error)
 
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error
 
@@ -193,4 +194,10 @@ type WorkshopUC interface {
 	SaveManifest(ctx context.Context, problemID uuid.UUID, manifest *problemsmodel.ProblemManifest) error
 	UpdateTestsConfig(ctx context.Context, problemID uuid.UUID, testsMeta *problemsmodel.TestsMetadata) error
 	GetTestsConfig(ctx context.Context, problemID uuid.UUID) (*problemsmodel.TestsMetadata, error)
+}
+
+type ContestDetails interface {
+	GetContestDetails(context.Context, string, string) (*contests.ContestDetails, error)
+	GetContestProblemDetails(context.Context, string, string, uuid.UUID) (*contests.ContestProblemDetails, error)
+	ReadBooklet(context.Context, string, string, string) ([]byte, error)
 }

@@ -202,3 +202,13 @@ type DashboardProblem struct {
 	MemoryLimitMb     int
 	UpdatedAt         time.Time
 }
+
+type Sample struct {
+	Input  string
+	Output string
+}
+type ProblemDetails struct {
+	Problem   Problem
+	Statement *Statement
+	Samples   []Sample
+}

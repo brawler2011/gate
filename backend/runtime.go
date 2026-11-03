@@ -185,7 +185,7 @@ func runApp(envFile string) error {
 	blogsUC := blogs.NewBlogsUseCase(blogsRepo, store, defaultS3BlogBucket)
 	orgsUC := organizations.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(pool), notificationsUC)
 	teamsUC := organizations.NewTeamsUseCase(teamsRepo, permissionsUC, pgstore.NewTeamTransactions(pool))
-	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, pgstore.NewSubmissionTransactions(pool), permissionsUC)
+	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsRepo, pgstore.NewSubmissionTransactions(pool), permissionsUC)
 	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(pool))
 	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(pool))
 	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(pool))
@@ -210,6 +210,7 @@ func runApp(envFile string) error {
 	}
 
 	sandboxInstance := sandbox.NewSandbox(sandboxClient, sandboxCfg)
+	contestDetails := contests.NewDetailsReader(contestsRepo, problemsRepo, problems.NewStatementReader(workspaceStorage, problemPublishUC), permissionsUC, sandboxInstance, usersRepo)
 	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sandboxInstance)
 
 	natsJS, err := pkg.NewNatsJetStream(cfg.GetNatsURL())
@@ -316,7 +317,7 @@ func runApp(envFile string) error {
 		communicationReader,
 		clarificationsUC,
 		natsJS,
-		sandboxInstance,
+		contestDetails,
 		usersRepo,
 		problemsRepo,
 		contestsRepo,

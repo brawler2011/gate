@@ -276,3 +276,11 @@ func (r *UsersRepo) GetUserProfileByUsername(ctx context.Context, username strin
 	}
 	return mapUserProfile(sqlc.ListUsersRow(row)), nil
 }
+
+func (r *UsersRepo) GetUserProfileByID(ctx context.Context, id uuid.UUID) (identitymodel.UserProfile, error) {
+	row, err := r.queries.GetUserProfileByID(ctx, id)
+	if err != nil {
+		return identitymodel.UserProfile{}, HandlePgErr(err)
+	}
+	return mapUserProfile(sqlc.ListUsersRow(row)), nil
+}

@@ -44,6 +44,7 @@ type packageFaultStorage struct {
 	uploadErr, readErr error
 	uploads            int
 	beforeUpload       func(context.Context, string) error
+	beforeDownload     func(context.Context) error
 }
 
 func (s *packageFaultStorage) UploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string) error {
@@ -60,6 +61,11 @@ func (s *packageFaultStorage) UploadFile(ctx context.Context, bucket, key string
 }
 
 func (s *packageFaultStorage) DownloadFile(ctx context.Context, bucket, key string, etag *string) (io.ReadCloser, string, error) {
+	if s.beforeDownload != nil {
+		if err := s.beforeDownload(ctx); err != nil {
+			return nil, "", err
+		}
+	}
 	if s.readErr != nil {
 		return nil, "", s.readErr
 	}
