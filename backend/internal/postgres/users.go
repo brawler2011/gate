@@ -139,9 +139,9 @@ func (r *UsersRepo) ListUsers(ctx context.Context, filter identitymodel.UsersLis
 		return identitymodel.UsersList{}, HandlePgErr(err)
 	}
 
-	userRecords := make([]accessmodel.User, len(users))
+	userRecords := make([]identitymodel.UserProfile, len(users))
 	for i, u := range users {
-		userRecords[i] = mapUserToModel(u)
+		userRecords[i] = mapUserProfile(u)
 	}
 
 	return identitymodel.UsersList{
@@ -263,4 +263,16 @@ func (r *UsersRepo) ListExistingUsernamesByPrefix(ctx context.Context, prefix st
 func (r *UsersRepo) LockUser(ctx context.Context, id uuid.UUID) error {
 	_, err := r.queries.LockUser(ctx, id)
 	return HandlePgErr(err)
+}
+
+func mapUserProfile(row sqlc.ListUsersRow) identitymodel.UserProfile {
+	return identitymodel.UserProfile{Id: row.ID, Username: row.Username, Role: accessmodel.UserRole(row.Role), Email: row.Email, AvatarUrl: row.AvatarUrl, ExpiresAt: pgtypeTimestamptzToPtr(row.ExpiresAt), IsEmailVerified: row.IsEmailVerified, ClaimedByUserID: pgtypeUUIDToPtr(row.ClaimedByUserID), ClaimedAt: pgtypeTimestamptzToPtr(row.ClaimedAt), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}
+}
+
+func (r *UsersRepo) GetUserProfileByUsername(ctx context.Context, username string) (identitymodel.UserProfile, error) {
+	row, err := r.queries.GetUserProfileByUsername(ctx, strings.TrimPrefix(username, "@"))
+	if err != nil {
+		return identitymodel.UserProfile{}, HandlePgErr(err)
+	}
+	return mapUserProfile(sqlc.ListUsersRow(row)), nil
 }

@@ -15,7 +15,7 @@ type AuthUC interface {
 type ContestsUC interface {
 	GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error)
 
-	GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error)
+	ProjectScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error)
 	GetContestScoreboardUser(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error)
 
 	// Contest Join Requests

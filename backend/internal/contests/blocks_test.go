@@ -169,7 +169,7 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 		*scoreboardRepo
 		*blockingSubmissionsRepo
 		OutboxRepo
-	}{f.repo, repo, outbox}})
+	}{f.repo, repo, outbox}}, nil)
 	uc := submissions.NewSubmissionsUseCase(repo, f.uc, blockingProblems{}, blockingTransactor{struct {
 		*blockingSubmissionsRepo
 		OutboxRepo

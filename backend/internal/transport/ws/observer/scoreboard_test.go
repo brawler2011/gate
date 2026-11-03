@@ -38,9 +38,9 @@ func (s *scoreboardStub) GetContestScoreboardUser(_ context.Context, _, userID u
 	return s.result(userID, unfrozen), nil
 }
 
-func (s *scoreboardStub) GetContestScoreboard(_ context.Context, _, userID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error) {
+func (s *scoreboardStub) ProjectScoreboard(_ context.Context, _ uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error) {
 	s.snapshots++
-	return s.result(userID, unfrozen), nil
+	return s.result(uuid.Nil, unfrozen), nil
 }
 
 func TestScoreboardProjectionIsSharedAcrossSpectators(t *testing.T) {

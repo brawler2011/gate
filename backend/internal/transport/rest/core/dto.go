@@ -535,6 +535,10 @@ func SolutionDTO(s submissionsmodel.Submission) corev1.SubmissionModel {
 }
 
 func userDTO(u accessmodel.User) corev1.UserModel {
+	return userProfileDTO(identitymodel.UserProfile{Id: u.Id, Username: u.Username, Role: u.Role, Email: u.Email, AvatarUrl: u.AvatarUrl, ExpiresAt: u.ExpiresAt, IsEmailVerified: u.IsEmailVerified, ClaimedByUserID: u.ClaimedByUserID, ClaimedAt: u.ClaimedAt, CreatedAt: u.CreatedAt, UpdatedAt: u.UpdatedAt})
+}
+
+func userProfileDTO(u identitymodel.UserProfile) corev1.UserModel {
 	var imgID corev1.OptUUID
 	if u.AvatarUrl != nil && *u.AvatarUrl != "" {
 		if parsed, err := uuid.Parse(*u.AvatarUrl); err == nil {
@@ -867,7 +871,7 @@ func ListUserContestsResponseDTO(contestsList *contestsmodel.ContestsList) *core
 func usersListDTO(ul *identitymodel.UsersList) corev1.ListUsersResponseModel {
 	userDTOs := make([]corev1.UserModel, len(ul.Users))
 	for i, user := range ul.Users {
-		userDTOs[i] = userDTO(user)
+		userDTOs[i] = userProfileDTO(user)
 	}
 
 	return corev1.ListUsersResponseModel{

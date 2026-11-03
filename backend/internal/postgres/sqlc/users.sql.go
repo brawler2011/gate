@@ -190,6 +190,44 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, identifier strin
 	return i, err
 }
 
+const getUserProfileByUsername = `-- name: GetUserProfileByUsername :one
+SELECT id, username, role, email, avatar_url, expires_at, is_email_verified, claimed_by_user_id, claimed_at, created_at, updated_at
+FROM users WHERE LOWER(username)=LOWER($1) LIMIT 1
+`
+
+type GetUserProfileByUsernameRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Username        string             `json:"username"`
+	Role            UserRole           `json:"role"`
+	Email           *string            `json:"email"`
+	AvatarUrl       *string            `json:"avatar_url"`
+	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
+	IsEmailVerified bool               `json:"is_email_verified"`
+	ClaimedByUserID pgtype.UUID        `json:"claimed_by_user_id"`
+	ClaimedAt       pgtype.Timestamptz `json:"claimed_at"`
+	CreatedAt       time.Time          `json:"created_at"`
+	UpdatedAt       time.Time          `json:"updated_at"`
+}
+
+func (q *Queries) GetUserProfileByUsername(ctx context.Context, username string) (GetUserProfileByUsernameRow, error) {
+	row := q.db.QueryRow(ctx, getUserProfileByUsername, username)
+	var i GetUserProfileByUsernameRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Role,
+		&i.Email,
+		&i.AvatarUrl,
+		&i.ExpiresAt,
+		&i.IsEmailVerified,
+		&i.ClaimedByUserID,
+		&i.ClaimedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listClaimedAccountsByUserId = `-- name: ListClaimedAccountsByUserId :many
 SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at, is_email_verified
 FROM users
@@ -257,7 +295,7 @@ func (q *Queries) ListExistingUsernamesByPrefix(ctx context.Context, prefix stri
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, role, email, avatar_url, created_at, updated_at, password_hash, expires_at, claimed_by_user_id, claimed_at, is_email_verified
+SELECT id, username, role, email, avatar_url, expires_at, is_email_verified, claimed_by_user_id, claimed_at, created_at, updated_at
 FROM users
 WHERE (
         $1::text = ''
@@ -281,7 +319,21 @@ type ListUsersParams struct {
 	Limit  int32  `json:"limit"`
 }
 
-func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
+type ListUsersRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Username        string             `json:"username"`
+	Role            UserRole           `json:"role"`
+	Email           *string            `json:"email"`
+	AvatarUrl       *string            `json:"avatar_url"`
+	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
+	IsEmailVerified bool               `json:"is_email_verified"`
+	ClaimedByUserID pgtype.UUID        `json:"claimed_by_user_id"`
+	ClaimedAt       pgtype.Timestamptz `json:"claimed_at"`
+	CreatedAt       time.Time          `json:"created_at"`
+	UpdatedAt       time.Time          `json:"updated_at"`
+}
+
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
 	rows, err := q.db.Query(ctx, listUsers,
 		arg.Search,
 		arg.Role,
@@ -292,22 +344,21 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 		return nil, err
 	}
 	defer rows.Close()
-	items := []User{}
+	items := []ListUsersRow{}
 	for rows.Next() {
-		var i User
+		var i ListUsersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Username,
 			&i.Role,
 			&i.Email,
 			&i.AvatarUrl,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.PasswordHash,
 			&i.ExpiresAt,
+			&i.IsEmailVerified,
 			&i.ClaimedByUserID,
 			&i.ClaimedAt,
-			&i.IsEmailVerified,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

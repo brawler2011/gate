@@ -142,6 +142,7 @@ type Querier interface {
 	GetUserByUsername(ctx context.Context, username string) (User, error)
 	GetUserByUsernameOrEmail(ctx context.Context, identifier string) (User, error)
 	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]Organization, error)
+	GetUserProfileByUsername(ctx context.Context, username string) (GetUserProfileByUsernameRow, error)
 	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]Team, error)
 	GetUserTeamsByOrganization(ctx context.Context, arg GetUserTeamsByOrganizationParams) ([]Team, error)
 	// Workshop integration queries
@@ -185,7 +186,7 @@ type Querier interface {
 	ListUserContestMemberships(ctx context.Context, userID uuid.UUID) ([]ListUserContestMembershipsRow, error)
 	ListUserOrganizationInvitations(ctx context.Context, arg ListUserOrganizationInvitationsParams) ([]ListUserOrganizationInvitationsRow, error)
 	ListUserOrganizationJoinRequests(ctx context.Context, userID uuid.UUID) ([]ListUserOrganizationJoinRequestsRow, error)
-	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
+	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	LockContest(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	LockJudgeContest(ctx context.Context, submissionID uuid.UUID) (uuid.UUID, error)
 	LockUser(ctx context.Context, id uuid.UUID) (uuid.UUID, error)

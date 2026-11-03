@@ -196,7 +196,7 @@ type ClaimTemporaryUserResult struct {
 }
 
 type UsersList struct {
-	Users      []accessmodel.User
+	Users      []UserProfile
 	Pagination paging.Pagination
 }
 
@@ -205,4 +205,19 @@ type ClaimedAccountItem struct {
 	Username  string
 	ClaimedAt time.Time
 	ExpiresAt *time.Time
+}
+
+// UserProfile contains public account fields selected by profile readers.
+type UserProfile struct {
+	Id              uuid.UUID
+	Username        string
+	Role            accessmodel.UserRole
+	Email           *string
+	AvatarUrl       *string
+	ExpiresAt       *time.Time
+	IsEmailVerified bool
+	ClaimedByUserID *uuid.UUID
+	ClaimedAt       *time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }

@@ -21,12 +21,13 @@ type ContestsUseCase struct {
 	contestRepo     ContestsRepo
 	orgsRepo        OrganizationsRepo
 	transactions    CommandTransactions
+	permissions     Permissions
 	notificationsUC NotificationsUC
 	usersRepo       UsersRepo
 }
 
-func NewContestsUseCase(contestRepo ContestsRepo, orgsRepo OrganizationsRepo, transactions CommandTransactions) *ContestsUseCase {
-	return &ContestsUseCase{contestRepo: contestRepo, orgsRepo: orgsRepo, transactions: transactions}
+func NewContestsUseCase(contestRepo ContestsRepo, orgsRepo OrganizationsRepo, transactions CommandTransactions, permissions Permissions) *ContestsUseCase {
+	return &ContestsUseCase{contestRepo: contestRepo, orgsRepo: orgsRepo, transactions: transactions, permissions: permissions}
 }
 
 func (uc *ContestsUseCase) SetNotificationsUC(n NotificationsUC) {
@@ -192,7 +193,7 @@ func (uc *ContestsUseCase) ProcessSubmissionResult(ctx context.Context, submissi
 	return ApplySubmissionResult(ctx, uc.contestRepo, submission)
 }
 
-func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error) {
+func (uc *ContestsUseCase) ProjectScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error) {
 	contest, err := uc.contestRepo.GetContest(ctx, contestID)
 	if err != nil {
 		return nil, err

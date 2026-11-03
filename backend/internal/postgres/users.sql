@@ -39,7 +39,7 @@ WHERE LOWER(username) = LOWER(@username)
 LIMIT 1;
 
 -- name: ListUsers :many
-SELECT *
+SELECT id, username, role, email, avatar_url, expires_at, is_email_verified, claimed_by_user_id, claimed_at, created_at, updated_at
 FROM users
 WHERE (
         @search::text = ''
@@ -117,3 +117,7 @@ WHERE username ILIKE @prefix::text || '%';
 
 -- name: LockUser :one
 SELECT id FROM users WHERE id = @id::uuid FOR UPDATE;
+
+-- name: GetUserProfileByUsername :one
+SELECT id, username, role, email, avatar_url, expires_at, is_email_verified, claimed_by_user_id, claimed_at, created_at, updated_at
+FROM users WHERE LOWER(username)=LOWER(@username) LIMIT 1;

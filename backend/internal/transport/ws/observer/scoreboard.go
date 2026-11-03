@@ -83,7 +83,7 @@ func (h *Hub) projectScoreboard(ctx context.Context, event *WrappedEvent) error 
 	replace := configuration != previous
 	var public *contestsmodel.ScoreboardResponse
 	if replace {
-		public, err = h.contests.GetContestScoreboard(ctx, *meta.ContestId, uuid.Nil, false)
+		public, err = h.contests.ProjectScoreboard(ctx, *meta.ContestId, false)
 	} else {
 		public, err = h.contests.GetContestScoreboardUser(ctx, *meta.ContestId, *meta.UserId, false)
 	}
@@ -93,7 +93,7 @@ func (h *Hub) projectScoreboard(ctx context.Context, event *WrappedEvent) error 
 	live := public
 	if public.IsFrozen {
 		if replace {
-			live, err = h.contests.GetContestScoreboard(ctx, *meta.ContestId, uuid.Nil, true)
+			live, err = h.contests.ProjectScoreboard(ctx, *meta.ContestId, true)
 		} else {
 			live, err = h.contests.GetContestScoreboardUser(ctx, *meta.ContestId, *meta.UserId, true)
 		}

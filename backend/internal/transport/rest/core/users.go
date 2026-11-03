@@ -13,19 +13,19 @@ import (
 )
 
 type UsersReader interface {
-	GetUserByUsername(ctx context.Context, username string) (accessmodel.User, error)
+	GetUserProfileByUsername(ctx context.Context, username string) (identitymodel.UserProfile, error)
 	ListUsers(ctx context.Context, filter identitymodel.UsersListFilter) (identitymodel.UsersList, error)
 	ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]identitymodel.ClaimedAccountItem, error)
 }
 
 func (h *CoreServer) GetUser(ctx context.Context, params corev1.GetUserParams) (*corev1.GetUserResponseModel, error) {
-	user, err := h.usersReader.GetUserByUsername(ctx, params.Username)
+	user, err := h.usersReader.GetUserProfileByUsername(ctx, params.Username)
 	if err != nil {
 		return nil, err
 	}
 
 	return &corev1.GetUserResponseModel{
-		User: userDTO(user),
+		User: userProfileDTO(user),
 	}, nil
 }
 

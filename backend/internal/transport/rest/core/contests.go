@@ -435,7 +435,7 @@ func (h *CoreServer) ListUserContests(ctx context.Context, params corev1.ListUse
 		sortOrder = string(params.SortOrder.Value)
 	}
 
-	user, err := h.usersReader.GetUserByUsername(ctx, params.Username)
+	user, err := h.usersReader.GetUserProfileByUsername(ctx, params.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -973,31 +973,7 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, params corev1.Get
 	}
 
 	user := accessmodel.UserFromContext(ctx)
-	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionGetMonitor)
-	if err != nil {
-		return nil, err
-	}
-	if !allowed {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "permission denied to view contest monitor")
-	}
-
-	isManager := user.Role == accessmodel.UserRoleAdmin || (contest.OwnerID != nil && *contest.OwnerID == user.Id)
-	hasStarted := contest.StartTime == nil || !time.Now().Before(*contest.StartTime)
-	if !isManager && !hasStarted {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "contest has not started yet")
-	}
-
-	unfrozen := false
-	if params.Unfrozen.IsSet() && params.Unfrozen.Value {
-		unfrozen = true
-		canManage, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
-		if err != nil {
-			return nil, err
-		}
-		if !canManage {
-			return nil, pkg.Wrap(pkg.NoPermission, nil, "permission denied to view unfrozen scoreboard")
-		}
-	}
+	unfrozen := params.Unfrozen.Or(false)
 
 	var since int64
 	if h.natsJS != nil {

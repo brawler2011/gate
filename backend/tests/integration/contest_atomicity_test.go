@@ -20,7 +20,7 @@ CREATE TRIGGER reject_contest_owner BEFORE INSERT ON contest_members FOR EACH RO
 		_, err := s.dbPool.Exec(s.ctx, `DROP TRIGGER reject_contest_owner ON contest_members; DROP FUNCTION reject_contest_owner()`)
 		s.Require().NoError(err)
 	}()
-	uc := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool))
+	uc := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), nil)
 	_, err = uc.CreateContest(s.ctx, &contestsmodel.CreateContestInput{OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Atomic contest", Login: "atomic", Visibility: contestsmodel.ContestVisibilityPublic})
 	s.Require().Error(err)
 	var count int
@@ -43,7 +43,7 @@ CREATE TRIGGER reject_block_event BEFORE INSERT ON outbox_events FOR EACH ROW EX
 		_, err := s.dbPool.Exec(s.ctx, `DROP TRIGGER reject_block_event ON outbox_events; DROP FUNCTION reject_block_event()`)
 		s.Require().NoError(err)
 	}()
-	uc := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool))
+	uc := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), nil)
 	s.Require().Error(uc.BlockProblemForUser(s.ctx, contest, user, problem, nil, user))
 	after, err := repo.GetSubmission(s.ctx, sub)
 	s.Require().NoError(err)
