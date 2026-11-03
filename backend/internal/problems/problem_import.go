@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/formats"
 	ziputil "github.com/brawler2011/gate/backend/pkg/ziputil"
@@ -17,12 +19,13 @@ import (
 )
 
 type ProblemImportUseCase struct {
+	transactions     ProblemTransactions
 	problemsRepo     ProblemsRepo
 	workspaceStorage *WorkspaceStorage
 }
 
-func NewProblemImportUseCase(problemsRepo ProblemsRepo, workspaceStorage *WorkspaceStorage) *ProblemImportUseCase {
-	return &ProblemImportUseCase{
+func NewProblemImportUseCase(problemsRepo ProblemsRepo, workspaceStorage *WorkspaceStorage, transactions ProblemTransactions) *ProblemImportUseCase {
+	return &ProblemImportUseCase{transactions: transactions,
 		problemsRepo:     problemsRepo,
 		workspaceStorage: workspaceStorage,
 	}
@@ -237,10 +240,15 @@ func hasPackageMarker(dir string) bool {
 }
 
 func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipReader io.Reader, zipSize int64, problemID uuid.UUID) (*problemsmodel.ProblemManifest, error) {
+	if err := withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionEditProblem, func(ProblemTxStore) error { return nil }); err != nil {
+		return nil, err
+	}
+	previous, err := uc.workspaceStorage.repo.GetWorkspaceHash(ctx, problemID)
+	if err != nil {
+		return nil, err
+	}
 	var result *problemsmodel.ProblemManifest
-	var committed *workspacePackage
-	err := uc.workspaceStorage.replacePackage(ctx, problemID, func(ctx context.Context, current *workspacePackage) error {
-		committed = current
+	version, err := uc.workspaceStorage.preparePackage(ctx, problemID, func(ctx context.Context) error {
 		var err error
 		result, err = uc.importProblemPackageFiles(ctx, zipReader, problemID)
 		return err
@@ -248,6 +256,12 @@ func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipRea
 	if err != nil {
 		return nil, err
 	}
-	result.Revision = committed.hash
+	err = withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionEditProblem, func(tx ProblemTxStore) error {
+		return tx.CommitWorkspace(ctx, problemID, previous, version.hash, version.metadata)
+	})
+	if err != nil {
+		return nil, err
+	}
+	result.Revision = version.hash
 	return result, nil
 }

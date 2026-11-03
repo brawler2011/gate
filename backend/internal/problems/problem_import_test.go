@@ -20,7 +20,7 @@ import (
 )
 
 func TestImportProblemPackagePolygonFallback(t *testing.T) {
-	ctx := context.Background()
+	ctx := problemActorContext()
 	problemID := uuid.New()
 
 	problemsRepo := newProblemImportMockProblemsRepo()
@@ -28,7 +28,7 @@ func TestImportProblemPackagePolygonFallback(t *testing.T) {
 
 	store := storage.NewLocalStorage(t.TempDir())
 	workspaceStorage := NewWorkspaceStorage(store, "test-workshop", problemsRepo)
-	uc := NewProblemImportUseCase(problemsRepo, workspaceStorage)
+	uc := NewProblemImportUseCase(problemsRepo, workspaceStorage, newProblemTestTransactions(problemsRepo, nil))
 
 	zipBytes := createZipBytes(t, map[string]string{
 		"problem.xml": `<?xml version="1.0" encoding="UTF-8"?>
@@ -75,7 +75,7 @@ func TestImportProblemPackagePolygonFallback(t *testing.T) {
 }
 
 func TestImportProblemPackageICPCFallbackWithNestedRoot(t *testing.T) {
-	ctx := context.Background()
+	ctx := problemActorContext()
 	problemID := uuid.New()
 
 	problemsRepo := newProblemImportMockProblemsRepo()
@@ -83,7 +83,7 @@ func TestImportProblemPackageICPCFallbackWithNestedRoot(t *testing.T) {
 
 	store := storage.NewLocalStorage(t.TempDir())
 	workspaceStorage := NewWorkspaceStorage(store, "test-workshop", problemsRepo)
-	uc := NewProblemImportUseCase(problemsRepo, workspaceStorage)
+	uc := NewProblemImportUseCase(problemsRepo, workspaceStorage, newProblemTestTransactions(problemsRepo, nil))
 
 	zipBytes := createZipBytes(t, map[string]string{
 		"icpc-problem/problem.yaml": `name: "A + B"

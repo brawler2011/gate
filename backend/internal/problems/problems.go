@@ -35,7 +35,7 @@ func (uc *ProblemsUseCase) GetProblemById(ctx context.Context, id uuid.UUID) (pr
 }
 
 func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error {
-	if err := uc.withinProblem(ctx, id, accessmodel.ActionEditProblem, func(ProblemTxStore) error { return nil }); err != nil {
+	if err := withinProblem(ctx, uc.transactions, id, accessmodel.ActionEditProblem, func(ProblemTxStore) error { return nil }); err != nil {
 		return err
 	}
 	var previous string
@@ -58,7 +58,7 @@ func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, prob
 			return err
 		}
 	}
-	return uc.withinProblem(ctx, id, accessmodel.ActionEditProblem, func(tx ProblemTxStore) error {
+	return withinProblem(ctx, uc.transactions, id, accessmodel.ActionEditProblem, func(tx ProblemTxStore) error {
 		if problem.IsTemplate != nil && *problem.IsTemplate {
 			if _, err := tx.GetReadyPackage(ctx, id); err != nil {
 				if errors.Is(err, pkg.ErrNotFound) {
@@ -78,14 +78,14 @@ func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, prob
 }
 
 func (uc *ProblemsUseCase) DeleteProblem(ctx context.Context, id uuid.UUID) error {
-	return uc.withinProblem(ctx, id, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error { return tx.DeleteProblem(ctx, id) })
+	return withinProblem(ctx, uc.transactions, id, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error { return tx.DeleteProblem(ctx, id) })
 }
 
 func (uc *ProblemsUseCase) AddProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission problemsmodel.ProblemPermission) error {
 	if accessmodel.UserFromContext(ctx).Id != requestUserID {
 		return pkg.NoPermission
 	}
-	return uc.withinProblem(ctx, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
+	return withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
 		return tx.AddProblemTeam(ctx, problemID, teamID, permission)
 	})
 }
@@ -94,7 +94,7 @@ func (uc *ProblemsUseCase) UpdateProblemTeamPermission(ctx context.Context, prob
 	if accessmodel.UserFromContext(ctx).Id != requestUserID {
 		return pkg.NoPermission
 	}
-	return uc.withinProblem(ctx, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
+	return withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
 		return tx.UpdateProblemTeamPermission(ctx, problemID, teamID, permission)
 	})
 }
@@ -103,7 +103,7 @@ func (uc *ProblemsUseCase) RemoveProblemTeam(ctx context.Context, problemID, tea
 	if accessmodel.UserFromContext(ctx).Id != requestUserID {
 		return pkg.NoPermission
 	}
-	return uc.withinProblem(ctx, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
+	return withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
 		return tx.RemoveProblemTeam(ctx, problemID, teamID)
 	})
 }
@@ -112,7 +112,7 @@ func (uc *ProblemsUseCase) CreateProblemMember(ctx context.Context, problemID, u
 	if accessmodel.UserFromContext(ctx).Id != requestUserID {
 		return pkg.NoPermission
 	}
-	return uc.withinProblem(ctx, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
+	return withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
 		problem, err := tx.GetProblemById(ctx, problemID)
 		if err != nil {
 			return err
@@ -128,7 +128,7 @@ func (uc *ProblemsUseCase) UpdateProblemMemberRole(ctx context.Context, problemI
 	if accessmodel.UserFromContext(ctx).Id != requestUserID {
 		return pkg.NoPermission
 	}
-	return uc.withinProblem(ctx, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
+	return withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
 		return tx.UpdateProblemMemberRole(ctx, problemID, userID, role)
 	})
 }
@@ -137,34 +137,7 @@ func (uc *ProblemsUseCase) RemoveProblemMember(ctx context.Context, problemID, u
 	if accessmodel.UserFromContext(ctx).Id != requestUserID {
 		return pkg.NoPermission
 	}
-	return uc.withinProblem(ctx, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
+	return withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionAdminProblem, func(tx ProblemTxStore) error {
 		return tx.RemoveProblemMember(ctx, problemID, userID)
-	})
-}
-
-func (uc *ProblemsUseCase) withinProblem(ctx context.Context, id uuid.UUID, action accessmodel.ProblemAction, fn func(ProblemTxStore) error) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
-	}
-	return uc.transactions.Within(ctx, func(tx ProblemTxStore) error {
-		problem, err := tx.GetProblemById(ctx, id)
-		if err != nil {
-			return err
-		}
-		if err := tx.LockOrganization(ctx, problem.OrganizationID); err != nil {
-			return err
-		}
-		if err := tx.LockProblem(ctx, id); err != nil {
-			return err
-		}
-		allowed, err := tx.HasProblemPermission(ctx, id, user.Id, action)
-		if err != nil {
-			return err
-		}
-		if !allowed {
-			return pkg.NoPermission
-		}
-		return fn(tx)
 	})
 }

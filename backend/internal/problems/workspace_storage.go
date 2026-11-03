@@ -129,16 +129,6 @@ func (w *WorkspaceStorage) prepareChange(ctx context.Context, id uuid.UUID, fn f
 	return current.hash, &version, nil
 }
 
-// Replacement imports need only the current reference, so a complete valid
-// package can replace a missing or corrupt previous archive.
-func (w *WorkspaceStorage) replacePackage(ctx context.Context, id uuid.UUID, fn func(context.Context, *workspacePackage) error) error {
-	hash, err := w.repo.GetWorkspaceHash(ctx, id)
-	if err != nil {
-		return err
-	}
-	return w.updatePackage(ctx, id, &workspacePackage{files: make(map[string][]byte), hash: hash}, fn)
-}
-
 type workspaceVersion struct {
 	hash     string
 	metadata *problemsmodel.WorkspaceMetadata

@@ -224,7 +224,6 @@ type Querier interface {
 	UpdateOrganizationInvitationStatus(ctx context.Context, arg UpdateOrganizationInvitationStatusParams) (int64, error)
 	UpdateOrganizationJoinRequestStatus(ctx context.Context, arg UpdateOrganizationJoinRequestStatusParams) (int64, error)
 	UpdateOrganizationMemberRole(ctx context.Context, arg UpdateOrganizationMemberRoleParams) error
-	UpdatePackageStatus(ctx context.Context, arg UpdatePackageStatusParams) error
 	UpdatePost(ctx context.Context, arg UpdatePostParams) (int64, error)
 	UpdateProblem(ctx context.Context, arg UpdateProblemParams) error
 	UpdateProblemMemberRole(ctx context.Context, arg UpdateProblemMemberRoleParams) error

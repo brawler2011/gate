@@ -2,6 +2,7 @@ package problems
 
 import (
 	"context"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 
@@ -11,6 +12,7 @@ import (
 )
 
 type ProblemTxStore interface {
+	CreatePackage(context.Context, *problemsmodel.CreatePackageParams) (problemsmodel.ProblemPackage, error)
 	GetReadyPackage(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
 	LockProblem(context.Context, uuid.UUID) error
 	LockOrganization(context.Context, uuid.UUID) error

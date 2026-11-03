@@ -1,7 +1,6 @@
 package problems
 
 import (
-	"context"
 	"testing"
 
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestPublishProblem_Validation(t *testing.T) {
-	ctx := context.Background()
+	ctx := problemActorContext()
 	problemID := uuid.New()
 	orgID := uuid.New()
 
@@ -25,7 +24,7 @@ func TestPublishProblem_Validation(t *testing.T) {
 		Title:          "Test Problem",
 	}
 
-	publishUC := NewProblemPublishUseCase(mockRepo, nil, wsStorage, nil, "packages")
+	publishUC := NewProblemPublishUseCase(mockRepo, nil, wsStorage, nil, "packages", newProblemTestTransactions(mockRepo, nil))
 
 	// Case 1: pass-fail without checker fails
 	yamlNoChecker := `format_version: "1.0"

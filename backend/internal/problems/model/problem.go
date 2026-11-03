@@ -139,13 +139,6 @@ type CreatePackageParams struct {
 	Status         string
 }
 
-type UpdatePackageStatusParams struct {
-	ID       uuid.UUID
-	Status   string
-	URL      *string
-	BuildLog *string
-}
-
 type CreateProblemInput struct {
 	OrganizationID uuid.UUID
 	Title          string

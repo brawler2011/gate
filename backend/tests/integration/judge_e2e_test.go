@@ -161,7 +161,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	// Storage & UseCases
 	workspaceStorage := problems.NewWorkspaceStorage(s3Store, "problem-workspaces", problemsRepo)
 	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sb)
-	publishUC := problems.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, s3Store, "problem-packages")
+	publishUC := problems.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, s3Store, "problem-packages", pgstore.NewProblemTransactions(dbPool))
 
 	eventPublisher := judgeworker.NewEventPublisher(js)
 	tempDir := t.TempDir()
@@ -194,6 +194,8 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
+
 	// 2. Create Problem in Workshop
 	problemID := uuid.New()
 	err = problemsRepo.CreateProblem(ctx, &problemsmodel.CreateProblemParams{
@@ -209,7 +211,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	zipBytes, err := templates.GetBuiltinTemplateZip("builtin:a-plus-b")
 	require.NoError(t, err)
 
-	importUC := problems.NewProblemImportUseCase(problemsRepo, workspaceStorage)
+	importUC := problems.NewProblemImportUseCase(problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(dbPool))
 	_, err = importUC.ImportProblemPackage(ctx, bytes.NewReader(zipBytes), int64(len(zipBytes)), problemID)
 	require.NoError(t, err)
 

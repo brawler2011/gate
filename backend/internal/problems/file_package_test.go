@@ -69,7 +69,7 @@ func (s *packageFaultStorage) DownloadFile(ctx context.Context, bucket, key stri
 func TestFilePackageCommitFailures(t *testing.T) {
 	for _, phase := range []string{"upload", "commit", "download", "reference"} {
 		t.Run(phase, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := problemActorContext()
 			base := newProblemImportMockProblemsRepo()
 			repo := &packageFaultRepo{WorkspaceRepo: base}
 			store := &packageFaultStorage{Storage: storage.NewLocalStorage(t.TempDir())}
@@ -145,7 +145,7 @@ func TestFilePackageCorruptConfigurationDoesNotResetTests(t *testing.T) {
 }
 
 func TestFilePackageConcurrentCommits(t *testing.T) {
-	ctx := context.Background()
+	ctx := problemActorContext()
 	repo := newProblemImportMockProblemsRepo()
 	store := storage.NewLocalStorage(t.TempDir())
 	first := NewWorkspaceStorage(store, "workspaces", repo)
@@ -180,12 +180,8 @@ func (filePackageRecords) CreatePackage(_ context.Context, params *problemsmodel
 	return problemsmodel.ProblemPackage{ID: params.ID, Version: 1}, nil
 }
 
-func (filePackageRecords) UpdatePackageStatus(context.Context, *problemsmodel.UpdatePackageStatusParams) error {
-	return nil
-}
-
 func TestFilePackagePublicationUsesCapturedRevision(t *testing.T) {
-	ctx := context.Background()
+	ctx := problemActorContext()
 	uc, id := newWorkshopValidatorTest(t, false, map[string]string{
 		"problem.yaml":       "title: Original\nchecker: checkers/check.cpp\nsubtasks: {}\n",
 		"checkers/check.cpp": "original checker",
@@ -213,7 +209,7 @@ func TestFilePackagePublicationUsesCapturedRevision(t *testing.T) {
 			return other.WriteFile(ctx, id, "checkers/check.cpp", []byte("replacement checker"))
 		})
 	}
-	publisher := NewProblemPublishUseCase(repo, filePackageRecords{}, uc.workspaceStorage, store, "packages")
+	publisher := NewProblemPublishUseCase(repo, filePackageRecords{}, uc.workspaceStorage, store, "packages", newProblemTestTransactions(repo, filePackageRecords{}))
 	result, err := publisher.PublishProblem(ctx, id)
 	require.NoError(t, err)
 	require.EqualValues(t, 1, result.Version)
@@ -268,7 +264,7 @@ func TestFilePackageValidationDoesNotLockEditors(t *testing.T) {
 }
 
 func TestFilePackageInitializationAndImportAreAtomic(t *testing.T) {
-	ctx := context.Background()
+	ctx := problemActorContext()
 	repo := newProblemImportMockProblemsRepo()
 	store := &packageFaultStorage{Storage: storage.NewLocalStorage(t.TempDir())}
 	ws := NewWorkspaceStorage(store, "workspaces", repo)
@@ -289,10 +285,12 @@ func TestFilePackageInitializationAndImportAreAtomic(t *testing.T) {
 		"problem.yaml":     "format_version: '1.0'\ntitle: Imported\ntype: pass-fail\nchecker: checkers/new.cpp\nlimits: {time_ms: 2345, memory_mb: 512}\nsubtasks: {}\n",
 		"checkers/new.cpp": "new checker",
 	})
-	importer := NewProblemImportUseCase(repo, ws)
+	transactions := newProblemTestTransactions(repo, nil)
+	importer := NewProblemImportUseCase(repo, ws, transactions)
 	for _, phase := range []string{"upload", "commit"} {
 		fault := &packageFaultRepo{WorkspaceRepo: repo}
 		ws.repo = fault
+		transactions.workspace = fault
 		if phase == "upload" {
 			store.uploadErr = failure
 		} else {
@@ -309,6 +307,7 @@ func TestFilePackageInitializationAndImportAreAtomic(t *testing.T) {
 		store.uploadErr = nil
 	}
 	ws.repo = repo
+	transactions.workspace = repo
 	manifest, err := importer.ImportProblemPackage(ctx, bytes.NewReader(incoming), int64(len(incoming)), id)
 	require.NoError(t, err)
 	require.Equal(t, "Imported", manifest.Statement.Title)
@@ -331,7 +330,7 @@ func TestFilePackageInitializationAndImportAreAtomic(t *testing.T) {
 }
 
 func TestFilePackageMetadataRoundTrip(t *testing.T) {
-	ctx := context.Background()
+	ctx := problemActorContext()
 	uc, id := newWorkshopValidatorTest(t, false, map[string]string{"checkers/check.cpp": "checker"}, nil)
 	manifest, err := uc.GetManifest(ctx, id)
 	require.NoError(t, err)
@@ -358,7 +357,7 @@ func TestFilePackageMetadataRoundTrip(t *testing.T) {
 }
 
 func TestFilePackageRejectsStaleMetadataAndStatementPatches(t *testing.T) {
-	ctx := context.Background()
+	ctx := problemActorContext()
 	uc, id := newWorkshopValidatorTest(t, false, nil, nil)
 	first, err := uc.GetManifest(ctx, id)
 	require.NoError(t, err)
@@ -382,7 +381,7 @@ func TestFilePackagePreservesSolutionBuildSettings(t *testing.T) {
 		"problem.yaml":       "title: Settings\ntype: pass-fail\nlimits: {time_ms: 1000, memory_mb: 256}\nsubtasks: {}\nsolutions: {main.cpp: main}\nsources:\n solutions/main.cpp: {compiler: cpp20, dependencies: [../lib/helper.h]}\n",
 		"solutions/main.cpp": "solution", "lib/helper.h": "header",
 	}, nil)
-	ctx := context.Background()
+	ctx := problemActorContext()
 	before, err := uc.readProblemConfig(ctx, id)
 	require.NoError(t, err)
 	manifest, err := uc.GetManifest(ctx, id)
@@ -400,7 +399,7 @@ func TestFilePackageRejectsNullAndEmptyYAML(t *testing.T) {
 		t.Run(content, func(t *testing.T) {
 			uc, id := newWorkshopValidatorTest(t, false, nil, nil)
 			seedWorkspaceFiles(t, uc.workspaceStorage, id, map[string]string{"problem.yaml": content, "tests/custom.in": "keep"})
-			ctx := context.Background()
+			ctx := problemActorContext()
 			previous, err := uc.workspaceStorage.repo.GetWorkspaceHash(ctx, id)
 			require.NoError(t, err)
 			_, err = uc.GetManifest(ctx, id)
@@ -419,12 +418,12 @@ func TestFilePackageRejectsNullAndEmptyYAML(t *testing.T) {
 func TestFilePackageRejectsInvalidImportBeforeConversion(t *testing.T) {
 	for _, content := range []string{"null\n", "", "[]\n", "subtasks: ["} {
 		t.Run(content, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := problemActorContext()
 			uc, id := newWorkshopValidatorTest(t, false, map[string]string{"tests/custom.in": "keep"}, nil)
 			previous, err := uc.workspaceStorage.repo.GetWorkspaceHash(ctx, id)
 			require.NoError(t, err)
 			data := createZipBytes(t, map[string]string{"problem.yaml": content})
-			importer := NewProblemImportUseCase(uc.workspaceStorage.repo.(*problemImportMockProblemsRepo), uc.workspaceStorage)
+			importer := NewProblemImportUseCase(uc.workspaceStorage.repo.(*problemImportMockProblemsRepo), uc.workspaceStorage, newProblemTestTransactions(uc.workspaceStorage.repo.(*problemImportMockProblemsRepo), nil))
 			_, err = importer.ImportProblemPackage(ctx, bytes.NewReader(data), int64(len(data)), id)
 			require.Error(t, err)
 			current, err := uc.workspaceStorage.repo.GetWorkspaceHash(ctx, id)
@@ -447,7 +446,7 @@ func TestFilePackagePreservesStatementBytesOnImportAndMetadataSave(t *testing.T)
 		"<!-- title -->\nStatement title\n\n<!-- legend -->\nSolve this problem.\n<!-- editorial note -->\nKeep this paragraph.\n\n<!-- input -->\nRead a number.\n",
 	} {
 		t.Run(statement, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := problemActorContext()
 			repo := newProblemImportMockProblemsRepo()
 			ws := NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "workspace", repo)
 			id := uuid.New()
@@ -455,7 +454,7 @@ func TestFilePackagePreservesStatementBytesOnImportAndMetadataSave(t *testing.T)
 				"problem.yaml":     "format_version: '1.0'\ntitle: Canonical title\ntype: pass-fail\nlimits: {time_ms: 1000, memory_mb: 256}\nsubtasks: {}\n",
 				"statements/en.md": statement,
 			})
-			_, err := NewProblemImportUseCase(repo, ws).ImportProblemPackage(ctx, bytes.NewReader(data), int64(len(data)), id)
+			_, err := NewProblemImportUseCase(repo, ws, newProblemTestTransactions(repo, nil)).ImportProblemPackage(ctx, bytes.NewReader(data), int64(len(data)), id)
 			require.NoError(t, err)
 			uc := NewWorkshopUseCase(ws, nil)
 			raw, err := uc.ReadProblemFile(ctx, id, "statements/en.md")

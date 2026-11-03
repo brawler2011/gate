@@ -78,19 +78,6 @@ func (r *PackagesRepo) GetPackageByVersion(ctx context.Context, problemID uuid.U
 	return mapPackage(row), nil
 }
 
-func (r *PackagesRepo) UpdatePackageStatus(ctx context.Context, params *problemsmodel.UpdatePackageStatusParams) error {
-	err := r.queries.UpdatePackageStatus(ctx, sqlc.UpdatePackageStatusParams{
-		ID:       params.ID,
-		Status:   sqlc.PackageStatus(params.Status),
-		Url:      params.URL,
-		BuildLog: params.BuildLog,
-	})
-	if err != nil {
-		return HandlePgErr(err)
-	}
-	return nil
-}
-
 func mapPackage(p sqlc.ProblemPackage) problemsmodel.ProblemPackage {
 	pkg := problemsmodel.ProblemPackage{
 		ID:             p.ID,
@@ -108,15 +95,4 @@ func mapPackage(p sqlc.ProblemPackage) problemsmodel.ProblemPackage {
 		pkg.CompiledAt = &t
 	}
 	return pkg
-}
-
-func init() {
-	// Compile-time check that PackagesRepo implements interfaces.PackagesRepo
-	var _ interface {
-		CreatePackage(context.Context, *problemsmodel.CreatePackageParams) (problemsmodel.ProblemPackage, error)
-		ListPackages(context.Context, uuid.UUID, int32, int32) ([]problemsmodel.ProblemPackage, error)
-		GetReadyPackage(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
-		GetPackageByVersion(context.Context, uuid.UUID, int32) (problemsmodel.ProblemPackage, error)
-		UpdatePackageStatus(context.Context, *problemsmodel.UpdatePackageStatusParams) error
-	} = (*PackagesRepo)(nil)
 }

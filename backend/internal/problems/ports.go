@@ -19,12 +19,10 @@ type OrganizationsRepo interface {
 }
 
 type PackagesRepo interface {
-	CreatePackage(ctx context.Context, params *problemsmodel.CreatePackageParams) (problemsmodel.ProblemPackage, error)
 	ListPackages(ctx context.Context, problemID uuid.UUID, limit, offset int32) ([]problemsmodel.ProblemPackage, error)
 	GetReadyPackage(ctx context.Context, problemID uuid.UUID) (problemsmodel.ProblemPackage, error)
 	GetPackageByID(ctx context.Context, id uuid.UUID) (problemsmodel.ProblemPackage, error)
 	GetPackageByVersion(ctx context.Context, problemID uuid.UUID, version int32) (problemsmodel.ProblemPackage, error)
-	UpdatePackageStatus(ctx context.Context, params *problemsmodel.UpdatePackageStatusParams) error
 }
 
 type ProblemsRepo interface {

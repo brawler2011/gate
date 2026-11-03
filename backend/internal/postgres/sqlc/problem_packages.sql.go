@@ -13,8 +13,8 @@ import (
 
 const createProblemPackage = `-- name: CreateProblemPackage :one
 
-INSERT INTO problem_packages (id, problem_id, organization_id, package_hash, status, version)
-VALUES ($1, $2, $3, $4, $5, (SELECT COALESCE(MAX(version), 0) + 1 FROM problem_packages WHERE problem_id = $2))
+INSERT INTO problem_packages (id, problem_id, organization_id, package_hash, status, version, compiled_at)
+VALUES ($1, $2, $3, $4, $5, (SELECT COALESCE(MAX(version), 0) + 1 FROM problem_packages WHERE problem_id = $2), CASE WHEN $5::package_status = 'ready'::package_status THEN NOW() ELSE NULL END)
 RETURNING id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at
 `
 
@@ -167,30 +167,4 @@ func (q *Queries) ListProblemPackages(ctx context.Context, arg ListProblemPackag
 		return nil, err
 	}
 	return items, nil
-}
-
-const updatePackageStatus = `-- name: UpdatePackageStatus :exec
-UPDATE problem_packages
-SET status = $2,
-    url = COALESCE($3, url),
-    build_log = COALESCE($4, build_log),
-    compiled_at = CASE WHEN $2 = 'ready'::package_status THEN NOW() ELSE compiled_at END
-WHERE id = $1
-`
-
-type UpdatePackageStatusParams struct {
-	ID       uuid.UUID     `json:"id"`
-	Status   PackageStatus `json:"status"`
-	Url      *string       `json:"url"`
-	BuildLog *string       `json:"build_log"`
-}
-
-func (q *Queries) UpdatePackageStatus(ctx context.Context, arg UpdatePackageStatusParams) error {
-	_, err := q.db.Exec(ctx, updatePackageStatus,
-		arg.ID,
-		arg.Status,
-		arg.Url,
-		arg.BuildLog,
-	)
-	return err
 }

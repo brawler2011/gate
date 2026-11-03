@@ -188,7 +188,7 @@ func (s *IntegrationTestSuite) initApp() {
 	usersUC := identity.NewUsersUseCase(s.usersRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService)
 	authUC := identity.NewAuthUseCase(s.usersRepo, authRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService)
 	packagesRepo := pgstore.NewPackagesRepo(s.dbPool)
-	publishUC := problems.NewProblemPublishUseCase(s.problemsRepo, packagesRepo, workspaceStorage, testStorage, "packages")
+	publishUC := problems.NewProblemPublishUseCase(s.problemsRepo, packagesRepo, workspaceStorage, testStorage, "packages", pgstore.NewProblemTransactions(s.dbPool))
 	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(s.dbPool), publishUC, s.organizationsRepo)
 	permissionsUC := access.NewPermissionsUseCase(s.contestsRepo, usersUC, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
 	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissionsUC)
@@ -204,7 +204,7 @@ func (s *IntegrationTestSuite) initApp() {
 
 	avatarsUC := identity.NewAvatarsUseCase(s.usersRepo, testStorage, "avatars")
 
-	importUC := problems.NewProblemImportUseCase(s.problemsRepo, workspaceStorage)
+	importUC := problems.NewProblemImportUseCase(s.problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(s.dbPool))
 
 	draftsRepo := pgstore.NewDraftsRepo(s.dbPool)
 	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(s.dbPool))

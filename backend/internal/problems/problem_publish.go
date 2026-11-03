@@ -14,7 +14,10 @@ import (
 	"strings"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
@@ -26,6 +29,7 @@ type PublishResult struct {
 }
 
 type ProblemPublishUseCase struct {
+	transactions     ProblemTransactions
 	problemsRepo     ProblemsRepo
 	packagesRepo     PackagesRepo
 	workspaceStorage *WorkspaceStorage
@@ -39,8 +43,9 @@ func NewProblemPublishUseCase(
 	workspaceStorage *WorkspaceStorage,
 	storage storage.Storage,
 	packageBucket string,
+	transactions ProblemTransactions,
 ) *ProblemPublishUseCase {
-	return &ProblemPublishUseCase{
+	return &ProblemPublishUseCase{transactions: transactions,
 		problemsRepo:     problemsRepo,
 		packagesRepo:     packagesRepo,
 		workspaceStorage: workspaceStorage,
@@ -88,24 +93,24 @@ func (uc *ProblemPublishUseCase) publishProblemFiles(
 	// Validate the package layout by loading problem.yaml
 	gfmtProb, err := gfmt.OpenPackage(tempDir)
 	if err != nil {
-		return nil, fmt.Errorf("invalid problem package: %w", err)
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid problem package")
 	}
 
 	// Validate required components
 	switch gfmtProb.Problem.Type {
 	case "interactive":
 		if gfmtProb.Problem.Interactor == "" {
-			return nil, fmt.Errorf("interactive problem must have an interactor")
+			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "interactive problem must have an interactor")
 		}
 		if _, err := gfmtProb.GetInteractor(gfmtProb.Problem.Interactor); err != nil {
-			return nil, fmt.Errorf("interactor file %s not found: %w", gfmtProb.Problem.Interactor, err)
+			return nil, pkg.Wrap(pkg.ErrBadInput, err, fmt.Sprintf("interactor file %s not found", gfmtProb.Problem.Interactor))
 		}
 	default: // "pass-fail", "scoring"
 		if gfmtProb.Problem.Checker == "" {
-			return nil, fmt.Errorf("problem must have a checker")
+			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "problem must have a checker")
 		}
 		if _, err := gfmtProb.GetChecker(gfmtProb.Problem.Checker); err != nil {
-			return nil, fmt.Errorf("checker file %s not found: %w", gfmtProb.Problem.Checker, err)
+			return nil, pkg.Wrap(pkg.ErrBadInput, err, fmt.Sprintf("checker file %s not found", gfmtProb.Problem.Checker))
 		}
 	}
 
@@ -131,23 +136,15 @@ func (uc *ProblemPublishUseCase) publishProblemFiles(
 	}
 
 	packageID := uuid.New()
-	created, err := uc.packagesRepo.CreatePackage(ctx, &problemsmodel.CreatePackageParams{
-		ID:             packageID,
-		ProblemID:      problemID,
-		OrganizationID: problem.OrganizationID,
-		PackageHash:    packageHash,
-		Status:         "building",
+
+	var created problemsmodel.ProblemPackage
+	err = withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionEditProblem, func(tx ProblemTxStore) error {
+		var err error
+		created, err = tx.CreatePackage(ctx, &problemsmodel.CreatePackageParams{ID: packageID, ProblemID: problemID, OrganizationID: problem.OrganizationID, PackageHash: packageHash, Status: "ready"})
+		return err
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create package record: %w", err)
-	}
-
-	if err := uc.packagesRepo.UpdatePackageStatus(ctx, &problemsmodel.UpdatePackageStatusParams{
-		ID:     packageID,
-		Status: "ready",
-		URL:    nil,
-	}); err != nil {
-		return nil, fmt.Errorf("failed to update package status to ready: %w", err)
+		return nil, fmt.Errorf("create published package: %w", err)
 	}
 
 	return &PublishResult{
@@ -160,6 +157,9 @@ func (uc *ProblemPublishUseCase) ListPackages(
 	ctx context.Context,
 	problemID uuid.UUID,
 ) ([]problemsmodel.ProblemPackage, error) {
+	if err := withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionViewProblem, func(ProblemTxStore) error { return nil }); err != nil {
+		return nil, err
+	}
 	return uc.packagesRepo.ListPackages(ctx, problemID, 100, 0)
 }
 
@@ -168,10 +168,14 @@ func (uc *ProblemPublishUseCase) GetPublishedPackageURL(
 	problemID uuid.UUID,
 	version string,
 ) (string, error) {
+	if err := withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionViewProblem, func(ProblemTxStore) error { return nil }); err != nil {
+		return "", err
+	}
+
 	version = strings.TrimPrefix(version, "v")
 	versionNum, err := strconv.ParseInt(version, 10, 32)
 	if err != nil {
-		return "", fmt.Errorf("invalid version: %w", err)
+		return "", pkg.Wrap(pkg.ErrBadInput, err, "invalid version")
 	}
 
 	pkgVersion, err := uc.packagesRepo.GetPackageByVersion(ctx, problemID, int32(versionNum))
@@ -255,5 +259,8 @@ func ZipDirectory(srcDir string, writer io.Writer) error {
 }
 
 func (uc *ProblemPublishUseCase) PublishProblem(ctx context.Context, problemID uuid.UUID) (*PublishResult, error) {
+	if err := withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionEditProblem, func(ProblemTxStore) error { return nil }); err != nil {
+		return nil, err
+	}
 	return withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) (*PublishResult, error) { return uc.publishProblemFiles(ctx, problemID) })
 }
