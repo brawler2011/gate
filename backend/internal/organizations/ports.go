@@ -23,7 +23,6 @@ type OrganizationsRepo interface {
 	// Member management
 	GetMember(ctx context.Context, orgID, userID uuid.UUID) (*organizationsmodel.OrganizationMember, error)
 	ListMembers(ctx context.Context, orgID uuid.UUID) ([]organizationsmodel.OrganizationMember, error)
-	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]organizationsmodel.Organization, error)
 	ResolveUserOrganizationID(ctx context.Context, userID uuid.UUID, requestedOrgID *uuid.UUID) (uuid.UUID, bool, error)
 
 	// Invitations

@@ -21,7 +21,7 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (h *CoreServer) AnswerContestClarification(ctx context.Context, req *corev1
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}

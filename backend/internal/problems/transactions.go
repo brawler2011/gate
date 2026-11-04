@@ -12,6 +12,7 @@ import (
 )
 
 type ProblemTxStore interface {
+	GetUserById(context.Context, uuid.UUID) (accessmodel.User, error)
 	CreatePackage(context.Context, *problemsmodel.CreatePackageParams) (problemsmodel.ProblemPackage, error)
 	GetReadyPackage(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
 	LockProblem(context.Context, uuid.UUID) error

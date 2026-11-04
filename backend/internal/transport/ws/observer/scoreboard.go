@@ -59,7 +59,7 @@ func scoreboardEnvelope(scoreboard *contestsmodel.ScoreboardResponse, userID uui
 }
 
 func (h *Hub) projectScoreboard(ctx context.Context, event *WrappedEvent) error {
-	if h.contests == nil {
+	if h.contests == nil || h.scoreboard == nil {
 		return nil
 	}
 	if event.EventType != submissionsmodel.SubmissionEventCreated && event.EventType != submissionsmodel.SubmissionEventCompleted {
@@ -83,9 +83,9 @@ func (h *Hub) projectScoreboard(ctx context.Context, event *WrappedEvent) error 
 	replace := configuration != previous
 	var public *contestsmodel.ScoreboardResponse
 	if replace {
-		public, err = h.contests.ProjectScoreboard(ctx, *meta.ContestId, false)
+		public, err = h.scoreboard.ProjectScoreboard(ctx, *meta.ContestId, false)
 	} else {
-		public, err = h.contests.GetContestScoreboardUser(ctx, *meta.ContestId, *meta.UserId, false)
+		public, err = h.scoreboard.GetContestScoreboardUser(ctx, *meta.ContestId, *meta.UserId, false)
 	}
 	if err != nil {
 		return fmt.Errorf("project public scoreboard: %w", err)
@@ -93,9 +93,9 @@ func (h *Hub) projectScoreboard(ctx context.Context, event *WrappedEvent) error 
 	live := public
 	if public.IsFrozen {
 		if replace {
-			live, err = h.contests.ProjectScoreboard(ctx, *meta.ContestId, true)
+			live, err = h.scoreboard.ProjectScoreboard(ctx, *meta.ContestId, true)
 		} else {
-			live, err = h.contests.GetContestScoreboardUser(ctx, *meta.ContestId, *meta.UserId, true)
+			live, err = h.scoreboard.GetContestScoreboardUser(ctx, *meta.ContestId, *meta.UserId, true)
 		}
 		if err != nil {
 			return fmt.Errorf("project unfrozen scoreboard: %w", err)

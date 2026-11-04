@@ -31,6 +31,7 @@ func (s snapshotJS) Stream(context.Context, string) (jetstream.Stream, error) { 
 
 type snapshotUC struct {
 	ContestsUC
+	ContestsReader
 	SubmissionsUC
 	PermissionsUC
 	stream *snapshotStream
@@ -64,7 +65,7 @@ func TestSnapshotCursorDoesNotDiscardConcurrentEvent(t *testing.T) {
 		t.Run(map[bool]string{false: "submissions", true: "scoreboard"}[scoreboard], func(t *testing.T) {
 			stream := &snapshotStream{sequence: 7}
 			uc := snapshotUC{stream: stream}
-			server := &CoreServer{contestsUC: uc, submissionsUC: uc, permissionsUC: uc, natsJS: snapshotJS{stream: stream}}
+			server := &CoreServer{contestsUC: uc, contestsReader: uc, submissionsUC: uc, permissionsUC: uc, natsJS: snapshotJS{stream: stream}}
 			var cursor corev1.OptInt64
 			if scoreboard {
 				response, err := server.GetContestScoreboard(context.Background(), corev1.GetContestScoreboardParams{})

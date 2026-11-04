@@ -20,6 +20,7 @@ import (
 
 type visibilityStub struct {
 	ContestsUC
+	ContestsReader
 	PermissionsUC
 	SubmissionsUC
 	contest       contestsmodel.Contest
@@ -57,7 +58,7 @@ func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 	h := NewCoreServer(nil, stub, stub, application, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		nil,
 		nil,
-		nil,
+		stub,
 		nil,
 		nil,
 		nil,

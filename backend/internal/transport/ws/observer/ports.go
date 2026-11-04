@@ -12,9 +12,11 @@ type AuthUC interface {
 	Authenticate(ctx context.Context, sessionID uuid.UUID) (accessmodel.User, error)
 }
 
-type ContestsUC interface {
+type ContestReader interface {
 	GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error)
+}
 
+type Scoreboard interface {
 	ProjectScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error)
 	GetContestScoreboardUser(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error)
 

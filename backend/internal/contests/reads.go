@@ -10,6 +10,7 @@ import (
 )
 
 type Reads interface {
+	GetContestByOrgLoginAndContestLogin(context.Context, string, string) (contestsmodel.Contest, error)
 	GetContestTeams(context.Context, uuid.UUID) ([]contestsmodel.ContestTeam, error)
 	ListPublicContests(context.Context, contestsmodel.PublicContestsFilter) (*contestsmodel.ContestsList, error)
 	ListWorkshopContests(context.Context, contestsmodel.WorkshopContestsFilter) (*contestsmodel.ContestsList, error)

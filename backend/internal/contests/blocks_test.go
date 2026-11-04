@@ -133,7 +133,7 @@ func TestBlockSubmissionRemovesSolveAndUnblockQueuesRejudge(t *testing.T) {
 	id := f.submit(t, "alice", 0, submissionsmodel.Accepted, 10*time.Minute)
 	other := f.submit(t, "alice", 1, submissionsmodel.Accepted, 20*time.Minute)
 	repo, outbox := &blockingSubmissionsRepo{repo: f.repo}, &blockingOutbox{}
-	uc := submissions.NewSubmissionsUseCase(repo, f.uc, blockingProblems{}, blockingTransactor{struct {
+	uc := submissions.NewSubmissionsUseCase(repo, f.repo, blockingProblems{}, blockingTransactor{struct {
 		*blockingSubmissionsRepo
 		OutboxRepo
 		*scoreboardRepo
@@ -174,7 +174,7 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 		*blockingSubmissionsRepo
 		OutboxRepo
 	}{f.repo, repo, outbox}}, nil)
-	uc := submissions.NewSubmissionsUseCase(repo, f.uc, blockingProblems{}, blockingTransactor{struct {
+	uc := submissions.NewSubmissionsUseCase(repo, f.repo, blockingProblems{}, blockingTransactor{struct {
 		*blockingSubmissionsRepo
 		OutboxRepo
 		*scoreboardRepo

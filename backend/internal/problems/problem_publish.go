@@ -191,13 +191,6 @@ func (uc *ProblemPublishUseCase) GetPublishedPackageURL(
 	return packageURL, nil
 }
 
-func (uc *ProblemPublishUseCase) GetReadyPackage(
-	ctx context.Context,
-	problemID uuid.UUID,
-) (problemsmodel.ProblemPackage, error) {
-	return uc.packagesRepo.GetReadyPackage(ctx, problemID)
-}
-
 func (uc *ProblemPublishUseCase) DownloadPackage(
 	ctx context.Context,
 	problemID uuid.UUID,

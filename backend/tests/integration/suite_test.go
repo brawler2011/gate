@@ -192,7 +192,7 @@ func (s *IntegrationTestSuite) initApp() {
 	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(s.dbPool), publishUC, s.organizationsRepo)
 	permissionsUC := access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
 	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissionsUC)
-	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsUC, s.problemsRepo, pgstore.NewSubmissionTransactions(s.dbPool), permissionsUC)
+	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, s.contestsRepo, s.problemsRepo, pgstore.NewSubmissionTransactions(s.dbPool), permissionsUC)
 	notificationsRepo := pgstore.NewNotificationsRepo(s.dbPool)
 	notificationsUC := notifications.NewNotificationsUseCase(notificationsRepo, s.usersRepo, emailService)
 	contestsUC.SetNotificationsUC(notificationsUC)

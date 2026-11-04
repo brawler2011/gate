@@ -52,7 +52,7 @@ func TestScoreboardProjectionIsSharedAcrossSpectators(t *testing.T) {
 				contest.Settings = map[string]interface{}{"freeze_status": contestsmodel.FreezeStatusFrozen}
 			}
 			source := &scoreboardStub{accessStub: &accessStub{contest: contest}}
-			h := NewHub(10, source)
+			h := NewHub(10, source, source)
 			require.NoError(t, h.trackScoreboard(context.Background(), &contestID))
 			defer h.releaseScoreboard(&contestID)
 			for i := 0; i < 5000; i++ {
@@ -104,6 +104,7 @@ func TestScoreboardFramesRespectCurrentPermissions(t *testing.T) {
 			f.stub.contest.Settings = map[string]interface{}{"freeze_status": contestsmodel.FreezeStatusFrozen}
 			source := &scoreboardStub{accessStub: f.stub}
 			f.hub.contests = source
+			f.hub.scoreboard = source
 			conn := f.connect(t, f.path("submissions"))
 			f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), State: submissionsmodel.Accepted, SubmissionEventMeta: f.meta(uuid.New())})
 			raw := readPayload(t, conn)

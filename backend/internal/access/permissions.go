@@ -69,7 +69,7 @@ func (uc *PermissionsUseCase) HasContestPermission(
 	var user accessmodel.User
 	var err error
 	if userID != uuid.Nil {
-		user, err = uc.users.GetUserById(ctx, userID)
+		user, err = uc.getUser(ctx, userID)
 		if err != nil {
 			return false, fmt.Errorf("get user: %w", err)
 		}
@@ -329,7 +329,7 @@ func (uc *PermissionsUseCase) HasProblemPermission(
 	var user accessmodel.User
 	var err error
 	if userID != uuid.Nil {
-		user, err = uc.users.GetUserById(ctx, userID)
+		user, err = uc.getUser(ctx, userID)
 		if err != nil {
 			return false, fmt.Errorf("get user: %w", err)
 		}
@@ -419,7 +419,7 @@ func (uc *PermissionsUseCase) GetContestPermissions(
 	var user accessmodel.User
 	var err error
 	if userID != uuid.Nil {
-		user, err = uc.users.GetUserById(ctx, userID)
+		user, err = uc.getUser(ctx, userID)
 		if err != nil {
 			return nil, fmt.Errorf("get user: %w", err)
 		}
@@ -488,7 +488,7 @@ func (uc *PermissionsUseCase) GetProblemPermissions(
 	var user accessmodel.User
 	var err error
 	if userID != uuid.Nil {
-		user, err = uc.users.GetUserById(ctx, userID)
+		user, err = uc.getUser(ctx, userID)
 		if err != nil {
 			return nil, fmt.Errorf("get user: %w", err)
 		}
@@ -538,7 +538,7 @@ func (uc *PermissionsUseCase) HasOrganizationPermission(
 		return false, nil
 	}
 
-	user, err := uc.users.GetUserById(ctx, userID)
+	user, err := uc.getUser(ctx, userID)
 	if err != nil {
 		return false, fmt.Errorf("get user: %w", err)
 	}
@@ -582,7 +582,7 @@ func (uc *PermissionsUseCase) resolveEffectiveContestRole(
 		return nil, nil
 	}
 
-	user, err := uc.users.GetUserById(ctx, userID)
+	user, err := uc.getUser(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 	}
@@ -672,7 +672,7 @@ func (uc *PermissionsUseCase) resolveProblemPermission(
 		return nil, nil
 	}
 
-	user, err := uc.users.GetUserById(ctx, userID)
+	user, err := uc.getUser(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 	}
@@ -805,4 +805,15 @@ func (uc *PermissionsUseCase) hasProblemPermission(pc *problemContext, required 
 		return false
 	}
 	return problemPermissionRank(*pc.permission) >= problemPermissionRank(required)
+}
+
+func (uc *PermissionsUseCase) getUser(ctx context.Context, id uuid.UUID) (accessmodel.User, error) {
+	user, err := uc.users.GetUserById(ctx, id)
+	if err != nil {
+		return accessmodel.User{}, err
+	}
+	if user.IsExpired() {
+		return accessmodel.User{}, pkg.ErrUnauthenticated
+	}
+	return user, nil
 }

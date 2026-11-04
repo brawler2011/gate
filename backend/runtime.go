@@ -184,7 +184,7 @@ func runApp(envFile string) error {
 	blogsUC := blogs.NewBlogsUseCase(pgstore.NewBlogTransactions(pool), store, defaultS3BlogBucket)
 	orgsUC := organizations.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(pool), notificationsUC)
 	teamsUC := organizations.NewTeamsUseCase(teamsRepo, permissionsUC, pgstore.NewTeamTransactions(pool))
-	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsRepo, pgstore.NewSubmissionTransactions(pool), permissionsUC)
+	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsRepo, problemsRepo, pgstore.NewSubmissionTransactions(pool), permissionsUC)
 	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(pool))
 	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(pool))
 	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(pool))
@@ -252,7 +252,7 @@ func runApp(envFile string) error {
 	}
 
 	submissionDispatcher := outbox.NewEventDispatcher()
-	observerHub := wsobserver.NewHub(submissionsRingBufferSize, contestsUC)
+	observerHub := wsobserver.NewHub(submissionsRingBufferSize, contestsRepo, contestsUC)
 
 	for _, event := range []submissionsmodel.SubmissionEventType{
 		submissionsmodel.SubmissionEventCreated,
@@ -287,7 +287,7 @@ func runApp(envFile string) error {
 		return fmt.Errorf("create contests subscriber: %w", err)
 	}
 
-	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersRepo, authUC), authUC, permissionsUC, contestsUC)
+	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersRepo, authUC), authUC, permissionsUC, contestsRepo)
 
 	publicMux := http.NewServeMux()
 	publicMux.Handle("/ws/", observer.Handler())

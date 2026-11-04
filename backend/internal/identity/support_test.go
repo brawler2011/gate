@@ -229,3 +229,5 @@ func (organizationTestStore) CreateNotification(context.Context, *notificationsm
 }
 
 func (organizationTestStore) LockOrganization(context.Context, uuid.UUID) error { return nil }
+
+func (organizationTestStore) LockUser(context.Context, uuid.UUID) error { return nil }

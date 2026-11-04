@@ -514,15 +514,22 @@ func (r *ContestsRepo) DeleteContestTeam(
 }
 
 func (r *ContestsRepo) ListContestMembers(ctx context.Context, filter contestsmodel.ParticipantsFilter) (*contestsmodel.ContestMembersList, error) {
-	rows, err := r.queries.ListContestMembers(ctx, filter.ContestId)
+	if r.pool != nil {
+		return readSnapshot(ctx, r.pool, func(q *sqlc.Queries) (*contestsmodel.ContestMembersList, error) {
+			return (&ContestsRepo{queries: q}).ListContestMembers(ctx, filter)
+		})
+	}
+	rows, err := r.queries.ListContestMembers(ctx, sqlc.ListContestMembersParams{
+		ContestID: filter.ContestId, PageLimit: filter.PageSize, PageOffset: Offset(filter.Page, filter.PageSize),
+	})
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
 
-	count := int64(len(rows))
-	start := min(int64(Offset(filter.Page, filter.PageSize)), count)
-	end := min(start+int64(filter.PageSize), count)
-	rows = rows[start:end]
+	count, err := r.queries.CountContestMembers(ctx, filter.ContestId)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
 
 	members := make([]contestsmodel.ContestMember, len(rows))
 	for i, row := range rows {

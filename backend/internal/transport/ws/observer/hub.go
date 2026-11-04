@@ -42,7 +42,8 @@ type Subscriber struct {
 }
 
 type Hub struct {
-	contests                 ContestsUC
+	contests                 ContestReader
+	scoreboard               Scoreboard
 	scoreboardMu             sync.Mutex
 	scoreboardConfigurations map[uuid.UUID]string
 	scoreboardReferences     map[uuid.UUID]int
@@ -58,9 +59,9 @@ func safeUint64(v int) uint64 {
 	return uint64(v)
 }
 
-func NewHub(ringSize int, contests ContestsUC) *Hub {
+func NewHub(ringSize int, contests ContestReader, scoreboard Scoreboard) *Hub {
 	return &Hub{
-		contests: contests, scoreboardConfigurations: make(map[uuid.UUID]string), scoreboardReferences: make(map[uuid.UUID]int),
+		contests: contests, scoreboard: scoreboard, scoreboardConfigurations: make(map[uuid.UUID]string), scoreboardReferences: make(map[uuid.UUID]int),
 		subscribers: make(map[uuid.UUID]*Subscriber),
 		ring:        NewRingBuffer[*WrappedEvent](safeUint64(ringSize)),
 	}

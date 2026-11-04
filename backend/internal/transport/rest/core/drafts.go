@@ -21,7 +21,7 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 func (h *CoreServer) ListContestDrafts(ctx context.Context, params corev1.ListContestDraftsParams) (*corev1.ListContestDraftsResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (h *CoreServer) ListContestDrafts(ctx context.Context, params corev1.ListCo
 func (h *CoreServer) DeleteContestDraft(ctx context.Context, params corev1.DeleteContestDraftParams) error {
 	user := accessmodel.UserFromContext(ctx)
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}

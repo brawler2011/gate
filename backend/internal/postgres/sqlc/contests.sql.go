@@ -91,6 +91,17 @@ func (q *Queries) CountAllContests(ctx context.Context, arg CountAllContestsPara
 	return count, err
 }
 
+const countContestMembers = `-- name: CountContestMembers :one
+SELECT COUNT(*) FROM contest_members WHERE contest_id = $1
+`
+
+func (q *Queries) CountContestMembers(ctx context.Context, contestID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countContestMembers, contestID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countContests = `-- name: CountContests :one
 SELECT COUNT(*) FROM contests c
 WHERE c.organization_id = $1::uuid
@@ -728,9 +739,16 @@ const listContestMembers = `-- name: ListContestMembers :many
 SELECT cm.contest_id, cm.user_id, cm.role, cm.created_at, u.username, u.email
 FROM contest_members cm
 JOIN users u ON cm.user_id = u.id
-WHERE cm.contest_id = $1
+WHERE cm.contest_id = $1::uuid
 ORDER BY cm.created_at, cm.user_id
+LIMIT $3 OFFSET $2
 `
+
+type ListContestMembersParams struct {
+	ContestID  uuid.UUID `json:"contest_id"`
+	PageOffset int32     `json:"page_offset"`
+	PageLimit  int32     `json:"page_limit"`
+}
 
 type ListContestMembersRow struct {
 	ContestID uuid.UUID                 `json:"contest_id"`
@@ -741,8 +759,8 @@ type ListContestMembersRow struct {
 	Email     *string                   `json:"email"`
 }
 
-func (q *Queries) ListContestMembers(ctx context.Context, contestID uuid.UUID) ([]ListContestMembersRow, error) {
-	rows, err := q.db.Query(ctx, listContestMembers, contestID)
+func (q *Queries) ListContestMembers(ctx context.Context, arg ListContestMembersParams) ([]ListContestMembersRow, error) {
+	rows, err := q.db.Query(ctx, listContestMembers, arg.ContestID, arg.PageOffset, arg.PageLimit)
 	if err != nil {
 		return nil, err
 	}

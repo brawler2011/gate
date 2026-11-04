@@ -32,8 +32,6 @@ type AuthUC interface {
 
 type ContestsUC interface {
 	CreateContest(ctx context.Context, c *contestsmodel.CreateContestInput) (uuid.UUID, error)
-	GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error)
-	GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error)
 	UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
 
@@ -93,7 +91,6 @@ type OrganizationsUC interface {
 	ListMembersByLogin(ctx context.Context, login string, requestUserID uuid.UUID) ([]organizationsmodel.OrganizationMember, error)
 
 	RemoveMemberByLogin(ctx context.Context, login string, userID, requestUserID uuid.UUID) error
-	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]organizationsmodel.Organization, error)
 
 	BatchCreateUsers(ctx context.Context, input organizationsmodel.BatchCreateOrganizationUsersInput, requestUserID uuid.UUID) (*organizationsmodel.BatchCreateOrganizationUsersResult, error)
 

@@ -15,6 +15,7 @@ import (
 
 type announcementsContestStub struct {
 	ContestsUC
+	ContestsReader
 	resolve func(context.Context, string, string) (contestsmodel.Contest, error)
 }
 
@@ -72,7 +73,7 @@ func TestListContestAnnouncementsReader(t *testing.T) {
 			h := NewCoreServer(nil, contests, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, reader, nil, nil, nil,
 				nil,
 				nil,
-				nil,
+				contests,
 				nil,
 				nil,
 				nil,

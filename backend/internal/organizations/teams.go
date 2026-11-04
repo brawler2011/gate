@@ -74,8 +74,8 @@ func (uc *TeamsUseCase) CreateTeam(ctx context.Context, input *organizationsmode
 }
 
 func (uc *TeamsUseCase) GetTeam(ctx context.Context, teamID, userID uuid.UUID) (*organizationsmodel.Team, error) {
-	if accessmodel.UserFromContext(ctx).Id != userID {
-		return nil, pkg.NoPermission
+	if err := accessmodel.RequireCaller(ctx, userID); err != nil {
+		return nil, err
 	}
 	team, err := uc.repo.GetTeamByID(ctx, teamID)
 	if err != nil {
@@ -116,8 +116,8 @@ func (uc *TeamsUseCase) GetTeam(ctx context.Context, teamID, userID uuid.UUID) (
 }
 
 func (uc *TeamsUseCase) ListOrganizationTeams(ctx context.Context, orgID, userID uuid.UUID) ([]organizationsmodel.Team, error) {
-	if accessmodel.UserFromContext(ctx).Id != userID {
-		return nil, pkg.NoPermission
+	if err := accessmodel.RequireCaller(ctx, userID); err != nil {
+		return nil, err
 	}
 	// Check org access
 	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, orgID, userID, accessmodel.ActionViewOrganization)

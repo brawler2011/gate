@@ -27,7 +27,8 @@ import (
 type accessStub struct {
 	AuthUC
 	PermissionsUC
-	ContestsUC
+	ContestReader
+	Scoreboard
 	mu            sync.Mutex
 	user          accessmodel.User
 	permissions   accessmodel.ContestPermissions
@@ -75,7 +76,7 @@ type wsFixture struct {
 func newWSFixture(t *testing.T) *wsFixture {
 	t.Helper()
 	stub := &accessStub{user: accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}, contest: contestsmodel.Contest{ID: uuid.New()}, permissions: accessmodel.ContestPermissions{GetContest: true, ListOwnSubmissions: true}}
-	f := &wsFixture{stub: stub, hub: NewHub(100, nil), contests: NewContestsHub(100), session: uuid.New()}
+	f := &wsFixture{stub: stub, hub: NewHub(100, nil, nil), contests: NewContestsHub(100), session: uuid.New()}
 	observer := NewObserver(f.hub, f.contests, middleware.AuthMiddleware(stub), stub, stub, stub)
 	f.server = httptest.NewServer(observer.Handler())
 	t.Cleanup(f.server.Close)

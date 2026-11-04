@@ -98,8 +98,12 @@ FOR SHARE OF cm;
 SELECT cm.*, u.username, u.email
 FROM contest_members cm
 JOIN users u ON cm.user_id = u.id
-WHERE cm.contest_id = $1
-ORDER BY cm.created_at, cm.user_id;
+WHERE cm.contest_id = sqlc.arg('contest_id')::uuid
+ORDER BY cm.created_at, cm.user_id
+LIMIT sqlc.arg('page_limit') OFFSET sqlc.arg('page_offset');
+
+-- name: CountContestMembers :one
+SELECT COUNT(*) FROM contest_members WHERE contest_id = $1;
 
 -- name: UpdateContestMemberRole :exec
 UPDATE contest_members

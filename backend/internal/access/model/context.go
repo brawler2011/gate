@@ -22,7 +22,7 @@ func UserFromContext(ctx context.Context) User {
 
 func RequireAdmin(ctx context.Context) error {
 	user := UserFromContext(ctx)
-	if user.IsGuest() {
+	if user.IsGuest() || user.IsExpired() {
 		return pkg.ErrUnauthenticated
 	}
 	if !user.IsAdmin() {
@@ -33,10 +33,21 @@ func RequireAdmin(ctx context.Context) error {
 
 func RequireSelfOrAdmin(ctx context.Context, id uuid.UUID) error {
 	user := UserFromContext(ctx)
-	if user.IsGuest() {
+	if user.IsGuest() || user.IsExpired() {
 		return pkg.ErrUnauthenticated
 	}
 	if !user.IsAdmin() && user.Id != id {
+		return pkg.NoPermission
+	}
+	return nil
+}
+
+func RequireCaller(ctx context.Context, id uuid.UUID) error {
+	user := UserFromContext(ctx)
+	if user.IsGuest() || user.IsExpired() {
+		return pkg.ErrUnauthenticated
+	}
+	if user.Id != id {
 		return pkg.NoPermission
 	}
 	return nil

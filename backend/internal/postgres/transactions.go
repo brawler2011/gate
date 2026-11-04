@@ -51,7 +51,8 @@ func NewProblemTransactions(pool *pgxpool.Pool) problems.ProblemTransactions {
 			*OrganizationsRepo
 			*authorization
 			*PackagesRepo
-		}{&ProblemsRepo{queries: q}, &OrganizationsRepo{q: q}, bindAuthorization(q), &PackagesRepo{queries: q}}
+			authorizationUsers
+		}{&ProblemsRepo{queries: q}, &OrganizationsRepo{q: q}, bindAuthorization(q), &PackagesRepo{queries: q}, authorizationUsers{q}}
 	}}
 }
 

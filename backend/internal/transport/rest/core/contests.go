@@ -77,7 +77,7 @@ func (h *CoreServer) generateUniqueContestLogin(ctx context.Context, orgLogin, t
 
 	for {
 		if !isReservedContestLogin(slug) {
-			existing, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, slug)
+			existing, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, slug)
 			if err != nil || existing.ID == uuid.Nil {
 				return slug
 			}
@@ -112,7 +112,7 @@ func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateCont
 	var login string
 	if params.Login.IsSet() && params.Login.Value != "" {
 		login = strings.ToLower(params.Login.Value)
-		existing, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, login)
+		existing, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, login)
 		if err == nil && existing.ID != uuid.Nil {
 			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "contest with this login already exists in organization")
 		}
@@ -169,7 +169,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		return err
 	}
 
-	existingContest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	existingContest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 	if req.Login.IsSet() && req.Login.Value != "" {
 		cleaned := strings.ToLower(req.Login.Value)
 		if cleaned != strings.ToLower(existingContest.Login) {
-			existing, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, cleaned)
+			existing, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, cleaned)
 			if err == nil && existing.ID != uuid.Nil {
 				return pkg.Wrap(pkg.ErrBadInput, nil, "contest with this login already exists in organization")
 			}
@@ -283,7 +283,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 }
 
 func (h *CoreServer) DeleteContest(ctx context.Context, params corev1.DeleteContestParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -436,7 +436,7 @@ func (h *CoreServer) ListPublicContests(ctx context.Context, params corev1.ListP
 }
 
 func (h *CoreServer) CreateContestProblem(ctx context.Context, params corev1.CreateContestProblemParams) (*corev1.CreationResponseModel, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -474,7 +474,7 @@ func (h *CoreServer) DownloadContestStatementsPdf(ctx context.Context, params co
 }
 
 func (h *CoreServer) DeleteContestProblem(ctx context.Context, params corev1.DeleteContestProblemParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -495,7 +495,7 @@ func (h *CoreServer) ReorderContestProblems(ctx context.Context, req *corev1.Reo
 		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -517,7 +517,7 @@ func (h *CoreServer) ReorderContestProblems(ctx context.Context, req *corev1.Reo
 }
 
 func (h *CoreServer) CreateContestMember(ctx context.Context, params corev1.CreateContestMemberParams) (*corev1.CreationResponseModel, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -534,7 +534,7 @@ func (h *CoreServer) CreateContestMember(ctx context.Context, params corev1.Crea
 }
 
 func (h *CoreServer) DeleteContestMember(ctx context.Context, params corev1.DeleteContestMemberParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -551,7 +551,7 @@ func (h *CoreServer) DeleteContestMember(ctx context.Context, params corev1.Dele
 }
 
 func (h *CoreServer) UpdateContestMember(ctx context.Context, params corev1.UpdateContestMemberParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -577,7 +577,7 @@ func (h *CoreServer) UpdateContestMember(ctx context.Context, params corev1.Upda
 }
 
 func (h *CoreServer) ListContestMembers(ctx context.Context, params corev1.ListContestMembersParams) (*corev1.ListContestMembersResponseModel, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -615,7 +615,7 @@ func (h *CoreServer) ListContestMembers(ctx context.Context, params corev1.ListC
 }
 
 func (h *CoreServer) GetMyContestRole(ctx context.Context, params corev1.GetMyContestRoleParams) (*corev1.GetMyContestRoleResponseModel, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -640,7 +640,7 @@ func (h *CoreServer) GetMyContestRole(ctx context.Context, params corev1.GetMyCo
 }
 
 func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.ListContestSubmissionsParams) (*corev1.ListSubmissionsResponseModel, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -714,7 +714,7 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 }
 
 func (h *CoreServer) GetContestScoreboard(ctx context.Context, params corev1.GetContestScoreboardParams) (*corev1.ScoreboardResponseModel, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -742,7 +742,7 @@ func (h *CoreServer) GetContestScoreboard(ctx context.Context, params corev1.Get
 }
 
 func (h *CoreServer) ListContestTeams(ctx context.Context, params corev1.ListContestTeamsParams) (*corev1.ListContestTeamsResponseModel, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -756,7 +756,7 @@ func (h *CoreServer) ListContestTeams(ctx context.Context, params corev1.ListCon
 }
 
 func (h *CoreServer) CreateContestTeam(ctx context.Context, params corev1.CreateContestTeamParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -777,7 +777,7 @@ func (h *CoreServer) CreateContestTeam(ctx context.Context, params corev1.Create
 }
 
 func (h *CoreServer) UpdateContestTeam(ctx context.Context, params corev1.UpdateContestTeamParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -793,7 +793,7 @@ func (h *CoreServer) UpdateContestTeam(ctx context.Context, params corev1.Update
 }
 
 func (h *CoreServer) DeleteContestTeam(ctx context.Context, params corev1.DeleteContestTeamParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -809,7 +809,7 @@ func (h *CoreServer) DeleteContestTeam(ctx context.Context, params corev1.Delete
 }
 
 func (h *CoreServer) BlockProblemForUser(ctx context.Context, req corev1.OptBlockProblemRequestModel, params corev1.BlockProblemForUserParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -830,7 +830,7 @@ func (h *CoreServer) BlockProblemForUser(ctx context.Context, req corev1.OptBloc
 }
 
 func (h *CoreServer) UnblockProblemForUser(ctx context.Context, params corev1.UnblockProblemForUserParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -846,7 +846,7 @@ func (h *CoreServer) UnblockProblemForUser(ctx context.Context, params corev1.Un
 }
 
 func (h *CoreServer) GetProblemBlockStatusForUser(ctx context.Context, params corev1.GetProblemBlockStatusForUserParams) (*corev1.ProblemBlockStatusResponseModel, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}

@@ -119,3 +119,7 @@ func TestCreationRejectsInaccessibleTemplateBeforeLoadingPackage(t *testing.T) {
 	_, err := uc.templatePackage(problemActorContext(), uuid.New(), uuid.NewString())
 	require.ErrorIs(t, err, pkg.NoPermission)
 }
+
+func (*creationTransactions) GetUserById(_ context.Context, id uuid.UUID) (accessmodel.User, error) {
+	return accessmodel.User{Id: id, Role: accessmodel.UserRoleUser}, nil
+}

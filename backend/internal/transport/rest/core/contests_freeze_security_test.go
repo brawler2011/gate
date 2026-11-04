@@ -12,6 +12,7 @@ import (
 type MockContestsUC struct {
 	mock.Mock
 	ContestsUC
+	ContestsReader
 }
 
 func (m *MockContestsUC) GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error) {

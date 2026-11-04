@@ -25,10 +25,10 @@ type Observer struct {
 	contestsHub *ContestsHub
 	auth        AuthUC
 	permissions PermissionsUC
-	contests    ContestsUC
+	contests    ContestReader
 }
 
-func NewObserver(hub *Hub, contestsHub *ContestsHub, middleware func(http.Handler) http.Handler, auth AuthUC, permissions PermissionsUC, contests ContestsUC) *Observer {
+func NewObserver(hub *Hub, contestsHub *ContestsHub, middleware func(http.Handler) http.Handler, auth AuthUC, permissions PermissionsUC, contests ContestReader) *Observer {
 	mux := http.NewServeMux()
 
 	observer := &Observer{

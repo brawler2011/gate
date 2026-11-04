@@ -15,7 +15,7 @@ type AnnouncementsReader interface {
 }
 
 func (h *CoreServer) ListContestAnnouncements(ctx context.Context, params corev1.ListContestAnnouncementsParams) (*corev1.ListContestAnnouncementsResponseModel, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (h *CoreServer) DeleteContestAnnouncement(ctx context.Context, params corev
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}

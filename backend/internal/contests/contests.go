@@ -91,23 +91,6 @@ func (uc *ContestsUseCase) CreateContest(
 	return params.ID, nil
 }
 
-func (uc *ContestsUseCase) GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error) {
-	contest, err := uc.contestRepo.GetContest(ctx, id)
-	if err != nil {
-		return contestsmodel.Contest{}, err
-	}
-	return contest, nil
-}
-
-// FIXME: ебать, что с названием??
-func (uc *ContestsUseCase) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error) {
-	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
-	if err != nil {
-		return contestsmodel.Contest{}, err
-	}
-	return contest, nil
-}
-
 func (uc *ContestsUseCase) UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error {
 	return uc.withinContest(ctx, c.ID, accessmodel.ActionUpdateContest, func(tx CommandTxStore) error {
 		return tx.UpdateContest(ctx, c)
@@ -540,6 +523,9 @@ func (uc *ContestsUseCase) ListJoinRequests(
 	orgLogin, contestLogin string,
 	requestUserID uuid.UUID,
 ) ([]contestsmodel.ContestJoinRequest, error) {
+	if err := accessmodel.RequireCaller(ctx, requestUserID); err != nil {
+		return nil, err
+	}
 	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 	if err != nil {
 		return nil, err
@@ -745,6 +731,9 @@ func (uc *ContestsUseCase) GetMyPendingJoinRequest(
 	orgLogin, contestLogin string,
 	userID uuid.UUID,
 ) (*contestsmodel.ContestJoinRequest, error) {
+	if err := accessmodel.RequireCaller(ctx, userID); err != nil {
+		return nil, err
+	}
 	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 	if err != nil {
 		return nil, err

@@ -29,7 +29,7 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSub
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid language")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrganizationLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrganizationLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (h *CoreServer) GetSubmission(ctx context.Context, params corev1.GetSubmiss
 }
 
 func (h *CoreServer) BlockSubmission(ctx context.Context, req corev1.OptBlockSubmissionRequestModel, params corev1.BlockSubmissionParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (h *CoreServer) BlockSubmission(ctx context.Context, req corev1.OptBlockSub
 }
 
 func (h *CoreServer) UnblockSubmission(ctx context.Context, params corev1.UnblockSubmissionParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func ListSolutionsResponseDTO(solutionsList *submissionsmodel.SubmissionsList) *
 }
 
 func (h *CoreServer) RejudgeSubmission(ctx context.Context, params corev1.RejudgeSubmissionParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,7 @@ func (h *CoreServer) RejudgeSubmission(ctx context.Context, params corev1.Rejudg
 }
 
 func (h *CoreServer) RejudgeContestProblem(ctx context.Context, params corev1.RejudgeContestProblemParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (h *CoreServer) RejudgeContestProblem(ctx context.Context, params corev1.Re
 }
 
 func (h *CoreServer) RejudgeContest(ctx context.Context, params corev1.RejudgeContestParams) error {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
