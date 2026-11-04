@@ -182,7 +182,7 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: f.users["alice"], Role: accessmodel.UserRoleUser})
 	reason := "Banned from problem A"
 	contest, user, problem := f.repo.contest.ID, f.users["alice"], f.repo.problems[0].ProblemID
-	require.NoError(t, f.uc.BlockProblemForUser(ctx, contest, user, problem, &reason, uuid.New()))
+	require.NoError(t, f.uc.BlockProblemForUser(ctx, contest, user, problem, &reason, user))
 	require.Equal(t, submissionsmodel.Disqualified, f.repo.submissions[alice].State)
 	require.Equal(t, submissionsmodel.Accepted, f.repo.submissions[bob].State)
 	require.Equal(t, submissionsmodel.Accepted, f.repo.submissions[other].State)
