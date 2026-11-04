@@ -15,16 +15,26 @@ import (
 
 	"github.com/brawler2011/gate/backend/config"
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/repository/pg"
+	access "github.com/brawler2011/gate/backend/internal/access"
+	blogs "github.com/brawler2011/gate/backend/internal/blogs"
+	contests "github.com/brawler2011/gate/backend/internal/contests"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	"github.com/brawler2011/gate/backend/internal/coremodules"
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
+	identity "github.com/brawler2011/gate/backend/internal/identity"
+	judging "github.com/brawler2011/gate/backend/internal/judging"
+	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
+	outbox "github.com/brawler2011/gate/backend/internal/messaging/outbox"
+	pubsub "github.com/brawler2011/gate/backend/internal/messaging/pubsub"
+	notifications "github.com/brawler2011/gate/backend/internal/notifications"
+	organizations "github.com/brawler2011/gate/backend/internal/organizations"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+	submissions "github.com/brawler2011/gate/backend/internal/submissions"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	handlers "github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	wsobserver "github.com/brawler2011/gate/backend/internal/transport/ws/observer"
-	"github.com/brawler2011/gate/backend/internal/usecase"
-	"github.com/brawler2011/gate/backend/internal/worker/judge"
-	"github.com/brawler2011/gate/backend/internal/worker/outbox"
-	"github.com/brawler2011/gate/backend/internal/worker/pubsub"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
@@ -35,6 +45,7 @@ import (
 )
 
 const submissionsRingBufferSize = 10000
+
 const serviceShutdownTimeout = 5 * time.Second
 
 const (
@@ -115,20 +126,18 @@ func runApp(envFile string) error {
 	defer pool.Close()
 	logger.Info("successfully connected to postgres")
 
-	usersRepo := pg.NewUsersRepo(pool)
-	outboxRepo := pg.NewOutboxRepo(pool)
-	txManager := pg.NewTransactor(pool)
-	orgsRepo := pg.NewOrganizationsRepo(pool)
-	teamsRepo := pg.NewTeamsRepo(pool)
-	problemsRepo := pg.NewProblemsRepo(pool)
-	contestsRepo := pg.NewContestsRepo(pool)
-	blogsRepo := pg.NewBlogsRepo(pool)
-	submissionsRepo := pg.NewSubmissionsRepo(pool)
-	packagesRepo := pg.NewPackagesRepo(pool)
-	draftsRepo := pg.NewDraftsRepo(pool)
-	notificationsRepo := pg.NewNotificationsRepo(pool)
-	announcementsRepo := pg.NewAnnouncementsRepo(pool)
-	clarificationsRepo := pg.NewClarificationsRepo(pool)
+	usersRepo := pgstore.NewUsersRepo(pool)
+	outboxRepo := pgstore.NewOutboxRepo(pool)
+	orgsRepo := pgstore.NewOrganizationsRepo(pool)
+	teamsRepo := pgstore.NewTeamsRepo(pool)
+	problemsRepo := pgstore.NewProblemsRepo(pool)
+	contestsRepo := pgstore.NewContestsRepo(pool)
+	blogsRepo := pgstore.NewBlogsRepo(pool)
+	submissionsRepo := pgstore.NewSubmissionsRepo(pool)
+	packagesRepo := pgstore.NewPackagesRepo(pool)
+	notificationsRepo := pgstore.NewNotificationsRepo(pool)
+	announcementsRepo := pgstore.NewAnnouncementsRepo(pool)
+	clarificationsRepo := pgstore.NewClarificationsRepo(pool)
 	logger.Info("successfully initialized repositories")
 
 	var store storage.Storage
@@ -156,30 +165,31 @@ func runApp(envFile string) error {
 		}
 	}
 
-	workspaceStorage := usecase.NewWorkspaceStorage(store, defaultS3WorkshopBucket, problemsRepo)
+	workspaceStorage := problems.NewWorkspaceStorage(store, defaultS3WorkshopBucket, problems.NewWorkspaceCatalog(problemsRepo, pgstore.NewProblemTransactions(pool)))
 
-	authRepo := pg.NewAuthRepo(pool)
+	authRepo := pgstore.NewAuthRepo(pool)
 	emailService := email.NewEmailService(cfg.Env, cfg.ResendAPIKey, cfg.EmailFrom, cfg.AppBaseURL)
 
-	usersUC := usecase.NewUsersUseCase(usersRepo, contestsRepo, outboxRepo, txManager, authRepo, emailService)
-	authUC := usecase.NewAuthUseCase(usersRepo, authRepo, txManager, emailService)
-	notificationsUC := usecase.NewNotificationsUseCase(notificationsRepo, usersRepo, emailService)
+	usersUC := identity.NewUsersUseCase(usersRepo, pgstore.NewIdentityTransactions(pool), emailService)
+	authUC := identity.NewAuthUseCase(usersRepo, authRepo, pgstore.NewIdentityTransactions(pool), emailService)
+	notificationsUC := notifications.NewNotificationsUseCase(notificationsRepo, usersRepo, emailService)
 
-	avatarsUC := usecase.NewAvatarsUseCase(usersRepo, store, defaultS3AvatarBucket)
-	problemImportUC := usecase.NewProblemImportUseCase(problemsRepo, workspaceStorage)
-	problemsUC := usecase.NewProblemsUseCase(problemsRepo, workspaceStorage, orgsRepo)
-	contestsUC := usecase.NewContestsUseCase(contestsRepo, orgsRepo, submissionsRepo)
+	avatarsUC := identity.NewAvatarsUseCase(usersRepo, pgstore.NewIdentityTransactions(pool), store, defaultS3AvatarBucket)
+	problemImportUC := problems.NewProblemImportUseCase(problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(pool))
+	problemPublishUC := problems.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, store, defaultS3PackageBucket, pgstore.NewProblemTransactions(pool))
+	problemsUC := problems.NewProblemsUseCase(problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(pool), problemPublishUC, orgsRepo)
+	permissionsUC := access.NewPermissionsUseCase(contestsRepo, usersRepo, problemsRepo, teamsRepo, orgsRepo)
+	contestsUC := contests.NewContestsUseCase(contestsRepo, orgsRepo, pgstore.NewContestCommandTransactions(pool), permissionsUC)
 	contestsUC.SetNotificationsUC(notificationsUC)
-	contestsUC.SetUsersRepo(usersRepo)
-	blogsUC := usecase.NewBlogsUseCase(blogsRepo, store, defaultS3BlogBucket)
-	permissionsUC := usecase.NewPermissionsUseCase(contestsRepo, usersUC, problemsRepo, teamsRepo, orgsRepo)
-	orgsUC := usecase.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, txManager, notificationsUC)
-	teamsUC := usecase.NewTeamsUseCase(teamsRepo, orgsRepo, usersRepo, permissionsUC, txManager)
-	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
-	draftsUC := usecase.NewDraftsUseCase(draftsRepo, contestsUC, permissionsUC, txManager)
-	problemPublishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, store, defaultS3PackageBucket)
-	announcementsUC := usecase.NewAnnouncementsUseCase(announcementsRepo, contestsUC, outboxRepo, txManager)
-	clarificationsUC := usecase.NewClarificationsUseCase(clarificationsRepo, announcementsRepo, contestsUC, outboxRepo, txManager)
+
+	blogsUC := blogs.NewBlogsUseCase(pgstore.NewBlogTransactions(pool), store, defaultS3BlogBucket)
+	orgsUC := organizations.NewOrganizationsUseCase(orgsRepo, usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(pool), notificationsUC)
+	teamsUC := organizations.NewTeamsUseCase(teamsRepo, permissionsUC, pgstore.NewTeamTransactions(pool))
+	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsRepo, problemsRepo, pgstore.NewSubmissionTransactions(pool), permissionsUC)
+	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(pool))
+	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(pool))
+	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(pool))
+	communicationReader := contests.NewCommunicationReader(announcementsRepo, clarificationsRepo, permissionsUC)
 	logger.Info("successfully initialized use cases")
 
 	judgeTempDir, err := prepareJudgeTempDir(cfg.JudgeTempDir)
@@ -200,7 +210,8 @@ func runApp(envFile string) error {
 	}
 
 	sandboxInstance := sandbox.NewSandbox(sandboxClient, sandboxCfg)
-	workshopUC := usecase.NewWorkshopUseCase(workspaceStorage, sandboxInstance)
+	contestDetails := contests.NewDetailsReader(contestsRepo, problemsRepo, problems.NewStatementReader(workspaceStorage, packagesRepo, problemPublishUC), permissionsUC, sandboxInstance, usersRepo)
+	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sandboxInstance, permissionsUC)
 
 	natsJS, err := pkg.NewNatsJetStream(cfg.GetNatsURL())
 	if err != nil {
@@ -217,40 +228,40 @@ func runApp(envFile string) error {
 	logger.Info("SUBMISSIONS and CONTESTS streams ready")
 
 	outboxDispatcher := outbox.NewEventDispatcher()
-	outboxDispatcher.Register(models.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(natsJS))
+	outboxDispatcher.Register(eventdata.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(natsJS))
+	outboxDispatcher.Register(eventdata.OutboxEventSubmissionCompleted, pubsub.NewSubmissionCreatedPublisher(natsJS))
 	contestEventsPublisher := pubsub.NewContestEventsPublisher(natsJS)
-	outboxDispatcher.Register(models.OutboxEventContestAnnouncementCreated, contestEventsPublisher)
-	outboxDispatcher.Register(models.OutboxEventContestAnnouncementDeleted, contestEventsPublisher)
-	outboxDispatcher.Register(models.OutboxEventContestClarificationCreated, contestEventsPublisher)
-	outboxDispatcher.Register(models.OutboxEventContestClarificationAnswered, contestEventsPublisher)
+	outboxDispatcher.Register(eventdata.OutboxEventContestAnnouncementCreated, contestEventsPublisher)
+	outboxDispatcher.Register(eventdata.OutboxEventContestAnnouncementDeleted, contestEventsPublisher)
+	outboxDispatcher.Register(eventdata.OutboxEventContestClarificationCreated, contestEventsPublisher)
+	outboxDispatcher.Register(eventdata.OutboxEventContestClarificationAnswered, contestEventsPublisher)
 	outboxWorker := outbox.NewOutboxWorker(outboxDispatcher, outboxRepo)
 
-	judgeUC := usecase.NewJudgeUseCase(
+	judgeUC := judging.NewJudgeUseCase(
+		pgstore.NewJudgeJobs(pool), pgstore.NewJudgeTransactions(pool),
 		submissionsRepo,
-		packagesRepo,
-		contestsUC,
 		store,
 		defaultS3PackageBucket,
 		judgeTempDir,
 		sandboxInstance,
-		judge.NewEventPublisher(natsJS),
+		judgeworker.NewEventPublisher(natsJS),
 	)
 
-	judgeWorker, err := judge.NewJudgeWorker(context.Background(), natsJS, judgeUC, cfg.JudgeWorkerCount)
+	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), natsJS, judgeUC, cfg.JudgeWorkerCount)
 	if err != nil {
 		return fmt.Errorf("create judge worker: %w", err)
 	}
 
 	submissionDispatcher := outbox.NewEventDispatcher()
-	observerHub := wsobserver.NewHub(submissionsRingBufferSize, contestsUC)
+	observerHub := wsobserver.NewHub(submissionsRingBufferSize, contestsRepo, contestsUC)
 
-	for _, event := range []models.SubmissionEventType{
-		models.SubmissionEventCreated,
-		models.SubmissionEventQueued,
-		models.SubmissionEventCompilingStarted,
-		models.SubmissionEventTestingStarted,
-		models.SubmissionEventTestStarted,
-		models.SubmissionEventCompleted,
+	for _, event := range []submissionsmodel.SubmissionEventType{
+		submissionsmodel.SubmissionEventCreated,
+		submissionsmodel.SubmissionEventQueued,
+		submissionsmodel.SubmissionEventCompilingStarted,
+		submissionsmodel.SubmissionEventTestingStarted,
+		submissionsmodel.SubmissionEventTestStarted,
+		submissionsmodel.SubmissionEventCompleted,
 	} {
 		submissionDispatcher.Register(event, observerHub)
 	}
@@ -264,10 +275,10 @@ func runApp(envFile string) error {
 	contestsObserverHub := wsobserver.NewContestsHub(submissionsRingBufferSize)
 
 	for _, event := range []string{
-		models.ContestEventAnnouncementCreated,
-		models.ContestEventAnnouncementDeleted,
-		models.ContestEventClarificationCreated,
-		models.ContestEventClarificationAnswered,
+		contestsmodel.ContestEventAnnouncementCreated,
+		contestsmodel.ContestEventAnnouncementDeleted,
+		contestsmodel.ContestEventClarificationCreated,
+		contestsmodel.ContestEventClarificationAnswered,
 	} {
 		contestsDispatcher.Register(event, contestsObserverHub)
 	}
@@ -277,7 +288,7 @@ func runApp(envFile string) error {
 		return fmt.Errorf("create contests subscriber: %w", err)
 	}
 
-	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersUC, authUC), authUC, permissionsUC, contestsUC)
+	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersRepo, authUC), authUC, permissionsUC, contestsRepo)
 
 	publicMux := http.NewServeMux()
 	publicMux.Handle("/ws/", observer.Handler())
@@ -287,34 +298,46 @@ func runApp(envFile string) error {
 	}
 
 	coreServer := handlers.NewCoreServer(
-		authUC,
-		contestsUC,
-		permissionsUC,
-		submissionsUC,
-		usersUC,
-		problemsUC,
-		orgsUC,
-		teamsUC,
-		workshopUC,
-		blogsUC,
-		avatarsUC,
-		problemImportUC,
-		problemPublishUC,
-		draftsUC,
-		notificationsUC,
-		announcementsUC,
-		announcementsRepo,
-		clarificationsUC,
+		coremodules.Identity{
+			AuthUC:      authUC,
+			UsersUC:     usersUC,
+			UsersReader: usersRepo,
+			AvatarsUC:   avatarsUC,
+		},
+		coremodules.Organizations{
+			OrganizationsUC: orgsUC,
+			TeamsUC:         teamsUC,
+		},
+		coremodules.Contests{
+			ContestsUC:           contestsUC,
+			PermissionsUC:        permissionsUC,
+			ContestsReader:       contests.NewReader(contestsRepo, permissionsUC),
+			ContestDetails:       contestDetails,
+			DraftsUC:             draftsUC,
+			DraftsReader:         draftsUC,
+			AnnouncementsUC:      announcementsUC,
+			AnnouncementsReader:  communicationReader,
+			ClarificationsUC:     clarificationsUC,
+			ClarificationsReader: communicationReader,
+		},
+		coremodules.Problems{
+			ProblemsUC:     problemsUC,
+			ProblemsReader: problems.NewReader(problemsRepo, permissionsUC, orgsRepo, workshopUC),
+			WorkshopUC:     workshopUC,
+			ImportUC:       problemImportUC,
+			PublishUC:      problemPublishUC,
+			PackagesReader: packagesRepo,
+		},
+		coremodules.Submissions{SubmissionsUC: submissionsUC},
+		coremodules.Notifications{
+			NotificationsUC:     notificationsUC,
+			NotificationsReader: notificationsRepo,
+		},
+		coremodules.Blogs{
+			BlogsUC:     blogsUC,
+			BlogsReader: blogsRepo,
+		},
 		natsJS,
-		sandboxInstance,
-		usersRepo,
-		problemsRepo,
-		contestsRepo,
-		blogsRepo,
-		draftsRepo,
-		notificationsRepo,
-		clarificationsRepo,
-		packagesRepo,
 	)
 
 	secHandler := middleware.NewSecurityHandler()
@@ -330,7 +353,7 @@ func runApp(envFile string) error {
 	}
 
 	apiHandler := middleware.AuthMiddleware(authUC)(
-		middleware.UsersMiddleware(usersUC)(
+		middleware.UsersMiddleware(usersRepo)(
 			middleware.ResponseWriterMiddleware(apiServer),
 		),
 	)
@@ -442,10 +465,10 @@ func loadConfig(envFile string) (config.Config, error) {
 	return cfg, nil
 }
 
-func newObserverMiddleware(usersUC interfaces.UsersUC, authUC interfaces.AuthUC) func(http.Handler) http.Handler {
+func newObserverMiddleware(users middleware.UsersUC, authUC middleware.AuthUC) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return middleware.AuthMiddleware(authUC)(
-			middleware.UsersMiddleware(usersUC)(next),
+			middleware.UsersMiddleware(users)(next),
 		)
 	}
 }

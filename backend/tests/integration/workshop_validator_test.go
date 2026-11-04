@@ -3,16 +3,15 @@
 package integration
 
 import (
-	"context"
-	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
-	"gopkg.in/yaml.v3"
 	"testing"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/usecase"
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
+	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestWorkshopValidatorExecution(t *testing.T) {
@@ -20,14 +19,14 @@ func TestWorkshopValidatorExecution(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	sb := newWorkshopSandbox(t)
-	ctx := context.Background()
+	ctx := workshopActorContext()
 	for _, tc := range []struct {
 		name         string
 		source       string
 		path         string
 		input        string
 		files        map[string]string
-		deps         []models.Dependency
+		deps         []problemsmodel.Dependency
 		compileFirst bool
 		valid        bool
 		wantError    string
@@ -41,8 +40,8 @@ func TestWorkshopValidatorExecution(t *testing.T) {
 		{name: "runtime failure", source: "#include <cstdlib>\nint main(){std::abort();}", input: "42\n", wantInvalid: "status=RE"},
 		{name: "time limit", source: "int main(){for(;;){}}", input: "42\n", wantInvalid: "status=TLE"},
 		{name: "interpreted validator", path: "validators/validator.py", source: "import sys\nsys.exit(0 if sys.stdin.read().strip() == '42' else 1)\n", input: "42\n", valid: true},
-		{name: "relative dependency", source: "#include \"validation.h\"\nint main(){return VALIDATOR_EXIT;}", input: "42\n", deps: []models.Dependency{{Filename: "validation.h"}}, files: map[string]string{"validators/validation.h": "#define VALIDATOR_EXIT 0", "lib/validation.h": "#define VALIDATOR_EXIT 1"}, valid: true},
-		{name: "shared dependency", source: "#include \"validation.h\"\nint main(){return VALIDATOR_EXIT;}", input: "42\n", deps: []models.Dependency{{Filename: "validation.h"}}, files: map[string]string{"lib/validation.h": "#define VALIDATOR_EXIT 1"}, wantInvalid: "exit code=1"},
+		{name: "relative dependency", source: "#include \"validation.h\"\nint main(){return VALIDATOR_EXIT;}", input: "42\n", deps: []problemsmodel.Dependency{{Filename: "validation.h"}}, files: map[string]string{"validators/validation.h": "#define VALIDATOR_EXIT 0", "lib/validation.h": "#define VALIDATOR_EXIT 1"}, valid: true},
+		{name: "shared dependency", source: "#include \"validation.h\"\nint main(){return VALIDATOR_EXIT;}", input: "42\n", deps: []problemsmodel.Dependency{{Filename: "validation.h"}}, files: map[string]string{"lib/validation.h": "#define VALIDATOR_EXIT 1"}, wantInvalid: "exit code=1"},
 		{name: "compiled nested dependency", source: "#include \"validation.h\"\nint main(){return VALIDATOR_EXIT;}", input: "42\n", files: map[string]string{"lib/nested/validation.h": "#define VALIDATOR_EXIT 0"}, compileFirst: true, valid: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -52,12 +51,12 @@ func TestWorkshopValidatorExecution(t *testing.T) {
 				path = "validators/validator.cpp"
 			}
 			repo := newMockProblemsRepo()
-			manifest := models.ProblemManifest{
+			manifest := problemsmodel.ProblemManifest{
 				TimeLimitMs:   1, // Validator budget must be independent of solution limits.
 				MemoryLimitMb: 1,
-				FilesMetadata: []models.FileMetadata{{Type: "validator", Filename: path, Dependencies: tc.deps}},
+				FilesMetadata: []problemsmodel.FileMetadata{{Type: "validator", Filename: path, Dependencies: tc.deps}},
 			}
-			config := usecase.ManifestAndTestsToGfmtProblem(&manifest, &models.TestsMetadata{Groups: []models.TestGroup{{Ordinal: 1, Name: "samples", Tests: [2]int{1, 1}}}, Tests: []models.TestCase{{Ordinal: 1, Filename: "01.in", Method: "manual"}}})
+			config := problems.ManifestAndTestsToGfmtProblem(&manifest, &problemsmodel.TestsMetadata{Groups: []problemsmodel.TestGroup{{Ordinal: 1, Name: "samples", Tests: [2]int{1, 1}}}, Tests: []problemsmodel.TestCase{{Ordinal: 1, Filename: "01.in", Method: "manual"}}})
 			config.Sources = make(map[string]gfmt.Source)
 			for _, meta := range manifest.FilesMetadata {
 				var deps []string
@@ -71,7 +70,7 @@ func TestWorkshopValidatorExecution(t *testing.T) {
 			data, err := yaml.Marshal(config)
 			require.NoError(t, err)
 
-			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "validator-execution", repo)
+			ws := problems.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "validator-execution", repo)
 			require.NoError(t, ws.WriteFile(ctx, id, "problem.yaml", data))
 			require.NoError(t, ws.WriteFile(ctx, id, path, []byte(tc.source)))
 			if tc.input != "" {
@@ -80,13 +79,13 @@ func TestWorkshopValidatorExecution(t *testing.T) {
 			for path, content := range tc.files {
 				require.NoError(t, ws.WriteFile(ctx, id, path, []byte(content)))
 			}
-			uc := usecase.NewWorkshopUseCase(ws, sb)
+			uc := problems.NewWorkshopUseCase(ws, sb, allowWorkshopPermissions{})
 			if tc.compileFirst {
-				compiled, err := uc.CompileProblemComponent(ctx, models.CompileComponentRequest{ProblemID: id, ComponentType: "validator"})
+				compiled, err := uc.CompileProblemComponent(ctx, problemsmodel.CompileComponentRequest{ProblemID: id, ComponentType: "validator"})
 				require.NoError(t, err)
 				require.True(t, compiled.Success, compiled.CompileError)
 			}
-			report, err := uc.ValidateAllTests(ctx, id, uuid.Nil)
+			report, err := uc.ValidateAllTests(ctx, id)
 			if tc.wantError != "" {
 				require.ErrorContains(t, err, tc.wantError)
 				require.Nil(t, report)

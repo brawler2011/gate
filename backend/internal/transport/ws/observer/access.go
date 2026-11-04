@@ -8,7 +8,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	submissions "github.com/brawler2011/gate/backend/internal/submissions"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/gorilla/websocket"
@@ -25,14 +28,14 @@ func subscriptionError(w http.ResponseWriter, err error) {
 	http.Error(w, http.StatusText(code), code)
 }
 
-func (s *Observer) currentAccess(ctx context.Context, filter *SubmissionsFilter) (models.User, *models.ContestPermissions, error) {
+func (s *Observer) currentAccess(ctx context.Context, filter *SubmissionsFilter) (accessmodel.User, *accessmodel.ContestPermissions, error) {
 	session, err := middleware.GetSession(ctx)
 	if err != nil {
-		return models.User{}, nil, err
+		return accessmodel.User{}, nil, err
 	}
 	user, err := s.auth.Authenticate(ctx, session.ID)
 	if err != nil {
-		return models.User{}, nil, err
+		return accessmodel.User{}, nil, err
 	}
 	if user.IsGuest() || user.Id != session.UserID {
 		return user, nil, pkg.ErrUnauthenticated
@@ -50,7 +53,7 @@ func (s *Observer) currentAccess(ctx context.Context, filter *SubmissionsFilter)
 	return user, permissions, nil
 }
 
-func submissionAccess(user models.User, permissions *models.ContestPermissions, filter *SubmissionsFilter) bool {
+func submissionAccess(user accessmodel.User, permissions *accessmodel.ContestPermissions, filter *SubmissionsFilter) bool {
 	if filter.ContestId == nil {
 		return user.IsAdmin()
 	}
@@ -81,19 +84,19 @@ func closeVerification(conn *websocket.Conn, err error) error {
 	return err
 }
 
-func eventMeta(event *WrappedEvent) *models.SubmissionEventMeta {
+func eventMeta(event *WrappedEvent) *submissionsmodel.SubmissionEventMeta {
 	switch e := event.RawEvent.(type) {
-	case *models.SubmissionCreatedEvent:
+	case *submissionsmodel.SubmissionCreatedEvent:
 		return &e.SubmissionEventMeta
-	case *models.SubmissionQueuedEvent:
+	case *submissionsmodel.SubmissionQueuedEvent:
 		return &e.SubmissionEventMeta
-	case *models.SubmissionCompilingStartedEvent:
+	case *submissionsmodel.SubmissionCompilingStartedEvent:
 		return &e.SubmissionEventMeta
-	case *models.SubmissionTestingStartedEvent:
+	case *submissionsmodel.SubmissionTestingStartedEvent:
 		return &e.SubmissionEventMeta
-	case *models.SubmissionTestStartedEvent:
+	case *submissionsmodel.SubmissionTestStartedEvent:
 		return &e.SubmissionEventMeta
-	case *models.SubmissionCompletedEvent:
+	case *submissionsmodel.SubmissionCompletedEvent:
 		return &e.SubmissionEventMeta
 	default:
 		return nil
@@ -132,11 +135,11 @@ func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter
 	if err != nil {
 		return closeVerification(conn, err)
 	}
-	view := models.SubmissionView(&contest, meta.UserId, meta.CreatedAt, user.Id, permissions, time.Now())
-	if view.Frozen && event.EventType != models.SubmissionEventCreated && event.EventType != models.SubmissionEventCompleted {
+	view := submissions.SubmissionView(&contest, meta.UserId, meta.CreatedAt, user.Id, permissions, time.Now())
+	if view.Frozen && event.EventType != submissionsmodel.SubmissionEventCreated && event.EventType != submissionsmodel.SubmissionEventCompleted {
 		return nil
 	}
-	if event.EventType == models.SubmissionEventTestStarted && !view.Details {
+	if event.EventType == submissionsmodel.SubmissionEventTestStarted && !view.Details {
 		return nil
 	}
 	// Decode the contract envelope to remove fields rather than inventing result values.
@@ -188,11 +191,11 @@ func (s *Observer) sendContest(ctx context.Context, filter *SubmissionsFilter, e
 	if !permissions.GetContest {
 		return closeVerification(conn, pkg.NoPermission)
 	}
-	var author models.User
+	var author accessmodel.User
 	switch e := event.RawEvent.(type) {
-	case *models.ContestClarificationCreatedEvent:
+	case *contestsmodel.ContestClarificationCreatedEvent:
 		author.Id = e.UserID
-	case *models.ContestClarificationAnsweredEvent:
+	case *contestsmodel.ContestClarificationAnsweredEvent:
 		author.Id = e.UserID
 	default:
 		return writeEvent(conn, event.DTOPayload)

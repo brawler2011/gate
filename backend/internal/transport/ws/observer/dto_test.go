@@ -5,7 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -17,16 +18,16 @@ func TestDiscriminatedEnvelopes(t *testing.T) {
 		event  any
 		encode func(string, any) ([]byte, error)
 	}{
-		{models.SubmissionEventCreated, &models.SubmissionCreatedEvent{Id: id}, SubmissionsEnvelopeDTO},
-		{models.SubmissionEventQueued, &models.SubmissionQueuedEvent{Id: id}, SubmissionsEnvelopeDTO},
-		{models.SubmissionEventCompilingStarted, &models.SubmissionCompilingStartedEvent{Id: id}, SubmissionsEnvelopeDTO},
-		{models.SubmissionEventTestingStarted, &models.SubmissionTestingStartedEvent{Id: id}, SubmissionsEnvelopeDTO},
-		{models.SubmissionEventTestStarted, &models.SubmissionTestStartedEvent{Id: id, Number: 7}, SubmissionsEnvelopeDTO},
-		{models.SubmissionEventCompleted, &models.SubmissionCompletedEvent{Id: id}, SubmissionsEnvelopeDTO},
-		{models.ContestEventAnnouncementCreated, &models.ContestAnnouncementCreatedEvent{ID: id}, ContestEnvelopeDTO},
-		{models.ContestEventAnnouncementDeleted, &models.ContestAnnouncementDeletedEvent{ID: id}, ContestEnvelopeDTO},
-		{models.ContestEventClarificationCreated, &models.ContestClarificationCreatedEvent{ID: id}, ContestEnvelopeDTO},
-		{models.ContestEventClarificationAnswered, &models.ContestClarificationAnsweredEvent{ID: id}, ContestEnvelopeDTO},
+		{submissionsmodel.SubmissionEventCreated, &submissionsmodel.SubmissionCreatedEvent{Id: id}, SubmissionsEnvelopeDTO},
+		{submissionsmodel.SubmissionEventQueued, &submissionsmodel.SubmissionQueuedEvent{Id: id}, SubmissionsEnvelopeDTO},
+		{submissionsmodel.SubmissionEventCompilingStarted, &submissionsmodel.SubmissionCompilingStartedEvent{Id: id}, SubmissionsEnvelopeDTO},
+		{submissionsmodel.SubmissionEventTestingStarted, &submissionsmodel.SubmissionTestingStartedEvent{Id: id}, SubmissionsEnvelopeDTO},
+		{submissionsmodel.SubmissionEventTestStarted, &submissionsmodel.SubmissionTestStartedEvent{Id: id, Number: 7}, SubmissionsEnvelopeDTO},
+		{submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: id}, SubmissionsEnvelopeDTO},
+		{contestsmodel.ContestEventAnnouncementCreated, &contestsmodel.ContestAnnouncementCreatedEvent{ID: id}, ContestEnvelopeDTO},
+		{contestsmodel.ContestEventAnnouncementDeleted, &contestsmodel.ContestAnnouncementDeletedEvent{ID: id}, ContestEnvelopeDTO},
+		{contestsmodel.ContestEventClarificationCreated, &contestsmodel.ContestClarificationCreatedEvent{ID: id}, ContestEnvelopeDTO},
+		{contestsmodel.ContestEventClarificationAnswered, &contestsmodel.ContestClarificationAnsweredEvent{ID: id}, ContestEnvelopeDTO},
 	}
 	for _, tt := range tests {
 		t.Run(tt.kind, func(t *testing.T) {
@@ -39,7 +40,7 @@ func TestDiscriminatedEnvelopes(t *testing.T) {
 			require.NoError(t, json.Unmarshal(data, &got))
 			require.Equal(t, tt.kind, got.EventType)
 			require.Equal(t, id.String(), got.Payload["id"])
-			if tt.kind == models.SubmissionEventTestStarted {
+			if tt.kind == submissionsmodel.SubmissionEventTestStarted {
 				require.InDelta(t, 7, got.Payload["number"], 0)
 			} else {
 				require.NotContains(t, got.Payload, "number")
@@ -52,13 +53,13 @@ func TestCompletedEnvelopePreservesZeroAndFormats(t *testing.T) {
 	id := uuid.New()
 	created := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 	position := int32(0)
-	event := &models.SubmissionCompletedEvent{
+	event := &submissionsmodel.SubmissionCompletedEvent{
 		Id: id,
-		SubmissionEventMeta: models.SubmissionEventMeta{
+		SubmissionEventMeta: submissionsmodel.SubmissionEventMeta{
 			UserId: &id, CreatedAt: created, Position: &position,
 		},
 	}
-	data, err := SubmissionsEnvelopeDTO(models.SubmissionEventCompleted, event)
+	data, err := SubmissionsEnvelopeDTO(submissionsmodel.SubmissionEventCompleted, event)
 	require.NoError(t, err)
 	var got struct {
 		Payload map[string]any `json:"payload"`
@@ -76,7 +77,7 @@ func TestCompletedEnvelopePreservesZeroAndFormats(t *testing.T) {
 	}
 	failedTest := int32(3)
 	event.FailedTest = &failedTest
-	data, err = SubmissionsEnvelopeDTO(models.SubmissionEventCompleted, event)
+	data, err = SubmissionsEnvelopeDTO(submissionsmodel.SubmissionEventCompleted, event)
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(data, &got))
 	require.InDelta(t, 3, got.Payload["failed_test"], 0)

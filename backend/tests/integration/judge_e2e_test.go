@@ -13,11 +13,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/repository/pg"
+	"github.com/brawler2011/gate/backend/internal/access"
+
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
+	judging "github.com/brawler2011/gate/backend/internal/judging"
+	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
-	"github.com/brawler2011/gate/backend/internal/usecase"
-	"github.com/brawler2011/gate/backend/internal/worker/judge"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
@@ -145,25 +153,23 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	ctx, dbPool, js, s3Store, sb := setupE2EEnvironment(t)
 
 	// Repositories
-	orgsRepo := pg.NewOrganizationsRepo(dbPool)
-	usersRepo := pg.NewUsersRepo(dbPool)
-	problemsRepo := pg.NewProblemsRepo(dbPool)
-	contestsRepo := pg.NewContestsRepo(dbPool)
-	submissionsRepo := pg.NewSubmissionsRepo(dbPool)
-	packagesRepo := pg.NewPackagesRepo(dbPool)
+	orgsRepo := pgstore.NewOrganizationsRepo(dbPool)
+	usersRepo := pgstore.NewUsersRepo(dbPool)
+	problemsRepo := pgstore.NewProblemsRepo(dbPool)
+	contestsRepo := pgstore.NewContestsRepo(dbPool)
+	submissionsRepo := pgstore.NewSubmissionsRepo(dbPool)
+	packagesRepo := pgstore.NewPackagesRepo(dbPool)
 
 	// Storage & UseCases
-	workspaceStorage := usecase.NewWorkspaceStorage(s3Store, "problem-workspaces", problemsRepo)
-	workshopUC := usecase.NewWorkshopUseCase(workspaceStorage, sb)
-	publishUC := usecase.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, s3Store, "problem-packages")
-	contestsUC := usecase.NewContestsUseCase(contestsRepo, nil)
+	workspaceStorage := problems.NewWorkspaceStorage(s3Store, "problem-workspaces", problems.NewWorkspaceCatalog(problemsRepo, pgstore.NewProblemTransactions(dbPool)))
+	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sb, access.NewPermissionsUseCase(contestsRepo, usersRepo, problemsRepo, pgstore.NewTeamsRepo(dbPool), orgsRepo))
+	publishUC := problems.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, s3Store, "problem-packages", pgstore.NewProblemTransactions(dbPool))
 
-	eventPublisher := judge.NewEventPublisher(js)
+	eventPublisher := judgeworker.NewEventPublisher(js)
 	tempDir := t.TempDir()
-	judgeUC := usecase.NewJudgeUseCase(
+	judgeUC := judging.NewJudgeUseCase(
+		pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool),
 		submissionsRepo,
-		packagesRepo,
-		contestsUC,
 		s3Store,
 		"problem-packages",
 		tempDir,
@@ -174,25 +180,27 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	// 1. Create Organization & User
 	userID := uuid.New()
 	email := "test@example.com"
-	err := usersRepo.CreateUser(ctx, models.CreateUserParams{
+	err := usersRepo.CreateUser(ctx, identitymodel.CreateUserParams{
 		Id:           userID,
 		Username:     "testuser",
 		Email:        &email,
 		PasswordHash: "hashed_password",
-		Role:         models.UserRoleUser,
+		Role:         accessmodel.UserRoleUser,
 	})
 	require.NoError(t, err)
 
-	org, err := orgsRepo.CreateOrganization(ctx, &models.CreateOrganizationInput{
+	org, err := orgsRepo.CreateOrganization(ctx, &organizationsmodel.CreateOrganizationInput{
 		Login:     "test-org",
 		Name:      "Test Org",
 		CreatorID: userID,
 	})
 	require.NoError(t, err)
 
+	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
+
 	// 2. Create Problem in Workshop
 	problemID := uuid.New()
-	err = problemsRepo.CreateProblem(ctx, &models.CreateProblemParams{
+	err = problemsRepo.CreateProblem(ctx, &problemsmodel.CreateProblemParams{
 		ID:             problemID,
 		OrganizationID: org.ID,
 		OwnerID:        &userID,
@@ -205,38 +213,38 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	zipBytes, err := templates.GetBuiltinTemplateZip("builtin:a-plus-b")
 	require.NoError(t, err)
 
-	importUC := usecase.NewProblemImportUseCase(problemsRepo, workspaceStorage)
+	importUC := problems.NewProblemImportUseCase(problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(dbPool))
 	_, err = importUC.ImportProblemPackage(ctx, bytes.NewReader(zipBytes), int64(len(zipBytes)), problemID)
 	require.NoError(t, err)
 
 	// Add test cases (01: 1 2 -> 3; 02: 3 2 -> 5)
-	err = workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+	err = workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 		ProblemID: problemID,
-		UserID:    userID,
-		Path:      "tests/01.in",
-		Content:   []byte("1 2\n"),
+
+		Path:    "tests/01.in",
+		Content: []byte("1 2\n"),
 	})
 	require.NoError(t, err)
-	err = workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+	err = workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 		ProblemID: problemID,
-		UserID:    userID,
-		Path:      "tests/01.out",
-		Content:   []byte("3\n"),
+
+		Path:    "tests/01.out",
+		Content: []byte("3\n"),
 	})
 	require.NoError(t, err)
 
-	err = workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+	err = workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 		ProblemID: problemID,
-		UserID:    userID,
-		Path:      "tests/02.in",
-		Content:   []byte("3 2\n"),
+
+		Path:    "tests/02.in",
+		Content: []byte("3 2\n"),
 	})
 	require.NoError(t, err)
-	err = workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+	err = workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 		ProblemID: problemID,
-		UserID:    userID,
-		Path:      "tests/02.out",
-		Content:   []byte("5\n"),
+
+		Path:    "tests/02.out",
+		Content: []byte("5\n"),
 	})
 	require.NoError(t, err)
 
@@ -249,71 +257,75 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	contestID := uuid.New()
 	startTime := time.Now().Add(-1 * time.Hour)
 	endTime := time.Now().Add(1 * time.Hour)
-	err = contestsRepo.CreateContest(ctx, &models.CreateContestParams{
+	err = contestsRepo.CreateContest(ctx, &contestsmodel.CreateContestParams{
 		ID:             contestID,
 		OrganizationID: org.ID,
 		OwnerID:        &userID,
 		Title:          "E2E Contest",
 		Login:          "e2e-contest",
 		Description:    "E2E Contest for judging flow",
-		Visibility:     models.ContestVisibilityPublic,
+		Visibility:     contestsmodel.ContestVisibilityPublic,
 		StartTime:      &startTime,
 		EndTime:        &endTime,
 		Settings:       make(map[string]interface{}),
 	})
 	require.NoError(t, err)
 
-	err = contestsRepo.CreateContestProblem(ctx, models.ContestProblemCreation{
+	err = contestsRepo.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{
 		ContestId: contestID,
 		ProblemId: problemID,
 		PackageId: pubRes.PackageID,
 	})
 	require.NoError(t, err)
 
-	err = contestsRepo.CreateContestMember(ctx, &models.CreateContestMemberParams{
+	err = contestsRepo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{
 		ContestId: contestID,
 		UserId:    userID,
-		Role:      models.ContestRoleParticipant,
+		Role:      contestsmodel.ContestRoleParticipant,
 	})
 	require.NoError(t, err)
 
 	// 5. Test Correct Python Solution -> Accepted (200)
 	t.Run("PythonCorrectSolution_Accepted", func(t *testing.T) {
-		subID, err := submissionsRepo.CreateSubmission(ctx, &models.SubmissionCreation{
+		subID, err := submissionsRepo.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{
 			Solution:  "print(sum(map(int, input().split())))",
 			ProblemId: problemID,
 			ContestId: contestID,
 			UserId:    userID,
-			Language:  models.Python,
+			Language:  submissionsmodel.Python,
 		})
 		require.NoError(t, err)
 
-		err = judgeUC.JudgeSubmission(ctx, subID)
+		job, err := pgstore.NewJudgeJobs(dbPool).ScheduleJob(ctx, subID)
+		require.NoError(t, err)
+		err = judgeUC.JudgeSubmission(ctx, job.Ref())
 		require.NoError(t, err)
 
 		sub, err := submissionsRepo.GetSubmission(ctx, subID)
 		require.NoError(t, err)
-		assert.Equal(t, models.Accepted, sub.State, "Expected Accepted (200) for correct Python solution")
+		assert.Equal(t, submissionsmodel.Accepted, sub.State, "Expected Accepted (200) for correct Python solution")
 		assert.Equal(t, int32(100), sub.Score)
 	})
 
 	// 6. Test Wrong Python Solution -> Wrong Answer (106)
 	t.Run("PythonWrongSolution_WrongAnswer", func(t *testing.T) {
-		subID, err := submissionsRepo.CreateSubmission(ctx, &models.SubmissionCreation{
+		subID, err := submissionsRepo.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{
 			Solution:  "print(42)",
 			ProblemId: problemID,
 			ContestId: contestID,
 			UserId:    userID,
-			Language:  models.Python,
+			Language:  submissionsmodel.Python,
 		})
 		require.NoError(t, err)
 
-		err = judgeUC.JudgeSubmission(ctx, subID)
+		job, err := pgstore.NewJudgeJobs(dbPool).ScheduleJob(ctx, subID)
+		require.NoError(t, err)
+		err = judgeUC.JudgeSubmission(ctx, job.Ref())
 		require.NoError(t, err)
 
 		sub, err := submissionsRepo.GetSubmission(ctx, subID)
 		require.NoError(t, err)
-		assert.Equal(t, models.GotWA, sub.State, "Expected Wrong Answer (106) for incorrect solution")
+		assert.Equal(t, submissionsmodel.GotWA, sub.State, "Expected Wrong Answer (106) for incorrect solution")
 		assert.Equal(t, int32(0), sub.Score)
 	})
 
@@ -321,7 +333,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	t.Run("InternalError_GotIE", func(t *testing.T) {
 		// Create a problem with invalid package hash
 		brokenProblemID := uuid.New()
-		err = problemsRepo.CreateProblem(ctx, &models.CreateProblemParams{
+		err = problemsRepo.CreateProblem(ctx, &problemsmodel.CreateProblemParams{
 			ID:             brokenProblemID,
 			OrganizationID: org.ID,
 			OwnerID:        &userID,
@@ -332,7 +344,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		require.NoError(t, err)
 
 		brokenPackageID := uuid.New()
-		_, err = packagesRepo.CreatePackage(ctx, &models.CreatePackageParams{
+		_, err = packagesRepo.CreatePackage(ctx, &problemsmodel.CreatePackageParams{
 			ID:             brokenPackageID,
 			ProblemID:      brokenProblemID,
 			OrganizationID: org.ID,
@@ -341,27 +353,29 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = contestsRepo.CreateContestProblem(ctx, models.ContestProblemCreation{
+		err = contestsRepo.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{
 			ContestId: contestID,
 			ProblemId: brokenProblemID,
 			PackageId: brokenPackageID,
 		})
 		require.NoError(t, err)
 
-		subID, err := submissionsRepo.CreateSubmission(ctx, &models.SubmissionCreation{
+		subID, err := submissionsRepo.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{
 			Solution:  "print(1)",
 			ProblemId: brokenProblemID,
 			ContestId: contestID,
 			UserId:    userID,
-			Language:  models.Python,
+			Language:  submissionsmodel.Python,
 		})
 		require.NoError(t, err)
 
-		err = judgeUC.JudgeSubmission(ctx, subID)
-		assert.Error(t, err)
+		job, err := pgstore.NewJudgeJobs(dbPool).ScheduleJob(ctx, subID)
+		require.NoError(t, err)
+		err = judgeUC.JudgeSubmission(ctx, job.Ref())
+		require.NoError(t, err)
 
 		sub, err := submissionsRepo.GetSubmission(ctx, subID)
 		require.NoError(t, err)
-		assert.Equal(t, models.GotIE, sub.State, "Expected Internal Error (107) when package cannot be loaded")
+		assert.Equal(t, submissionsmodel.GotIE, sub.State, "Expected Internal Error (107) when package cannot be loaded")
 	})
 }

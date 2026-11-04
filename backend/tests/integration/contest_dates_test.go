@@ -11,14 +11,15 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/google/uuid"
 )
 
 func (s *IntegrationTestSuite) TestUpdateContestDates() {
 	suffix := uuid.NewString()[:8]
-	owner := s.createUser("dates_owner_"+suffix, models.UserRoleUser)
-	outsider := s.createUser("dates_outsider_"+suffix, models.UserRoleUser)
+	owner := s.createUser("dates_owner_"+suffix, accessmodel.UserRoleUser)
+	outsider := s.createUser("dates_outsider_"+suffix, accessmodel.UserRoleUser)
 	org := s.createOrganization("contest-dates-org-"+suffix, "Contest dates", owner.Id)
 	start := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
 	end := start.Add(2 * time.Hour)
@@ -30,10 +31,10 @@ func (s *IntegrationTestSuite) TestUpdateContestDates() {
 			s.Run(startState+"_"+endState, func() {
 				id := uuid.New()
 				login := "dates-" + startState + "-" + endState
-				err := s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+				err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 					ID: id, OrganizationID: org.ID, OwnerID: &owner.Id,
 					Title: "Original title", Login: login, Description: "Keep description",
-					Visibility: models.ContestVisibilityPublic,
+					Visibility: contestsmodel.ContestVisibilityPublic,
 					Settings:   map[string]interface{}{"enable_drafts": true},
 					StartTime:  &start, EndTime: &end,
 				})
@@ -101,7 +102,7 @@ func (s *IntegrationTestSuite) TestUpdateContestDates() {
 				}
 				s.Equal(true, stored.Settings["enable_drafts"])
 				s.Equal(&owner.Id, stored.OwnerID)
-				s.Equal(models.ContestVisibilityPublic, stored.Visibility)
+				s.Equal(contestsmodel.ContestVisibilityPublic, stored.Visibility)
 				s.Equal(http.StatusForbidden, patch(outsider.Id, `{"start_time":null,"end_time":null}`))
 				s.Equal(http.StatusBadRequest, patch(owner.Id, `{"start_time":"2026-01-02T10:00:00Z","end_time":"2026-01-01T10:00:00Z"}`))
 				afterRejected, err := s.contestsRepo.GetContest(s.ctx, id)
@@ -109,5 +110,48 @@ func (s *IntegrationTestSuite) TestUpdateContestDates() {
 				s.Equal(stored, afterRejected)
 			})
 		}
+	}
+}
+
+func (s *IntegrationTestSuite) TestContestPatchSettingsPresence() {
+	owner := s.createUser("settings_owner_"+uuid.NewString()[:8], accessmodel.UserRoleUser)
+	org := s.createOrganization("settings-"+uuid.NewString()[:8], "Settings", owner.Id)
+	for _, tc := range []struct {
+		name, body  string
+		freeze      any
+		drafts      bool
+		description string
+	}{
+		{"omitted", `{}`, float64(30), true, "Original"},
+		{"null", `{"freeze_duration_minutes":null}`, nil, true, "Original"},
+		{"zero", `{"freeze_duration_minutes":0}`, float64(0), true, "Original"},
+		{"false", `{"enable_drafts":false}`, float64(30), false, "Original"},
+		{"empty", `{"description":""}`, float64(30), true, ""},
+	} {
+		s.Run(tc.name, func() {
+			id := uuid.New()
+			login := "settings-" + tc.name
+			s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
+				ID: id, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Settings", Login: login,
+				Description: "Original", Visibility: contestsmodel.ContestVisibilityPublic,
+				Settings: map[string]interface{}{"freeze_duration_minutes": 30, "enable_drafts": true, "enable_upsolving": true},
+			}))
+			req := httptest.NewRequest(http.MethodPatch, "/organizations/"+org.Login+"/contests/"+login, strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Test-User-ID", owner.Id.String())
+			recorder := httptest.NewRecorder()
+			s.handler.ServeHTTP(recorder, req)
+			s.Equal(http.StatusOK, recorder.Code, recorder.Body.String())
+			got, err := s.contestsRepo.GetContest(s.ctx, id)
+			s.Require().NoError(err)
+			s.Equal(tc.freeze, got.Settings["freeze_duration_minutes"])
+			if tc.freeze == nil {
+				_, exists := got.Settings["freeze_duration_minutes"]
+				s.False(exists, "null clears the stored setting")
+			}
+			s.Equal(tc.drafts, got.Settings["enable_drafts"])
+			s.Equal(true, got.Settings["enable_upsolving"])
+			s.Equal(tc.description, got.Description)
+		})
 	}
 }

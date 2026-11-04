@@ -10,24 +10,27 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/repository/pg"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	paging "github.com/brawler2011/gate/backend/internal/page"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
 )
 
 func (s *IntegrationTestSuite) TestProblemListGuestAccess() {
-	owner := s.createUser("list_guest_owner", models.UserRoleUser)
+	owner := s.createUser("list_guest_owner", accessmodel.UserRoleUser)
 	org := s.createOrganization("list-guest-org", "List Guest Org", owner.Id)
 	var publicIDs []uuid.UUID
-	for _, visibility := range []string{models.ProblemVisibilityPublic, models.ProblemVisibilityPublic, models.ProblemVisibilityPrivate, models.ProblemVisibilityUnlisted} {
+	for _, visibility := range []string{problemsmodel.ProblemVisibilityPublic, problemsmodel.ProblemVisibilityPublic, problemsmodel.ProblemVisibilityPrivate, problemsmodel.ProblemVisibilityUnlisted} {
 		id := uuid.New()
-		s.Require().NoError(s.problemsRepo.CreateProblem(s.ctx, &models.CreateProblemParams{
+		s.Require().NoError(s.problemsRepo.CreateProblem(s.ctx, &problemsmodel.CreateProblemParams{
 			ID: id, OrganizationID: org.ID, OwnerID: &owner.Id,
 			Visibility: visibility, Title: "List guest " + visibility, ShortName: id.String(),
 		}))
 		isTemplate := true
-		s.Require().NoError(s.problemsRepo.UpdateProblem(s.ctx, id, &models.ProblemUpdate{IsTemplate: &isTemplate}))
-		if visibility == models.ProblemVisibilityPublic {
+		s.Require().NoError(s.problemsRepo.UpdateProblem(s.ctx, id, &problemsmodel.ProblemUpdate{IsTemplate: &isTemplate}))
+		if visibility == problemsmodel.ProblemVisibilityPublic {
 			publicIDs = append(publicIDs, id)
 		}
 	}
@@ -50,10 +53,10 @@ func (s *IntegrationTestSuite) TestProblemListGuestAccess() {
 			ids := make([]uuid.UUID, 0, len(resp.Problems))
 			for _, problem := range resp.Problems {
 				ids = append(ids, problem.ID)
-				s.Equal(models.ProblemVisibilityPublic, problem.Visibility.Or(""))
+				s.Equal(problemsmodel.ProblemVisibilityPublic, problem.Visibility.Or(""))
 			}
 			s.ElementsMatch(tc.want, ids)
-			s.Equal(models.Total(int32(len(tc.want)), 50), resp.Pagination.Total)
+			s.Equal(paging.Total(int32(len(tc.want)), 50), resp.Pagination.Total)
 		})
 	}
 
@@ -72,32 +75,32 @@ func (s *IntegrationTestSuite) TestProblemListGuestAccess() {
 }
 
 func (s *IntegrationTestSuite) TestProblemListAuthenticatedAccess() {
-	orgOwner := s.createUser("list_org_owner", models.UserRoleUser)
-	orgAdmin := s.createUser("list_org_admin", models.UserRoleUser)
-	orgMember := s.createUser("list_org_member", models.UserRoleUser)
-	outsider := s.createUser("list_outsider", models.UserRoleUser)
-	admin := s.createUser("list_global_admin", models.UserRoleAdmin)
-	problemOwner := s.createUser("list_problem_owner", models.UserRoleUser)
+	orgOwner := s.createUser("list_org_owner", accessmodel.UserRoleUser)
+	orgAdmin := s.createUser("list_org_admin", accessmodel.UserRoleUser)
+	orgMember := s.createUser("list_org_member", accessmodel.UserRoleUser)
+	outsider := s.createUser("list_outsider", accessmodel.UserRoleUser)
+	admin := s.createUser("list_global_admin", accessmodel.UserRoleAdmin)
+	problemOwner := s.createUser("list_problem_owner", accessmodel.UserRoleUser)
 	org := s.createOrganization("list-access-org", "List Access Org", orgOwner.Id)
 	otherOrg := s.createOrganization("list-other-org", "List Other Org", outsider.Id)
-	s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, orgAdmin.Id, models.OrgRoleAdmin))
-	s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, orgMember.Id, models.OrgRoleMember))
+	s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, orgAdmin.Id, organizationsmodel.OrgRoleAdmin))
+	s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, orgMember.Id, organizationsmodel.OrgRoleMember))
 
 	createProblem := func(orgID uuid.UUID, visibility string, ownerID *uuid.UUID, template bool) uuid.UUID {
 		id := uuid.New()
-		s.Require().NoError(s.problemsRepo.CreateProblem(s.ctx, &models.CreateProblemParams{
+		s.Require().NoError(s.problemsRepo.CreateProblem(s.ctx, &problemsmodel.CreateProblemParams{
 			ID: id, OrganizationID: orgID, OwnerID: ownerID,
 			Visibility: visibility, Title: "List access " + visibility, ShortName: id.String(),
 		}))
-		s.Require().NoError(s.problemsRepo.UpdateProblem(s.ctx, id, &models.ProblemUpdate{IsTemplate: &template}))
+		s.Require().NoError(s.problemsRepo.UpdateProblem(s.ctx, id, &problemsmodel.ProblemUpdate{IsTemplate: &template}))
 		return id
 	}
-	publicID := createProblem(org.ID, models.ProblemVisibilityPublic, &orgOwner.Id, false)
-	privateID := createProblem(org.ID, models.ProblemVisibilityPrivate, nil, false)
-	unlistedID := createProblem(org.ID, models.ProblemVisibilityUnlisted, nil, false)
-	templateID := createProblem(org.ID, models.ProblemVisibilityPrivate, nil, true)
-	ownedID := createProblem(org.ID, models.ProblemVisibilityPrivate, &problemOwner.Id, false)
-	foreignID := createProblem(otherOrg.ID, models.ProblemVisibilityPrivate, nil, false)
+	publicID := createProblem(org.ID, problemsmodel.ProblemVisibilityPublic, &orgOwner.Id, false)
+	privateID := createProblem(org.ID, problemsmodel.ProblemVisibilityPrivate, nil, false)
+	unlistedID := createProblem(org.ID, problemsmodel.ProblemVisibilityUnlisted, nil, false)
+	templateID := createProblem(org.ID, problemsmodel.ProblemVisibilityPrivate, nil, true)
+	ownedID := createProblem(org.ID, problemsmodel.ProblemVisibilityPrivate, &problemOwner.Id, false)
+	foreignID := createProblem(otherOrg.ID, problemsmodel.ProblemVisibilityPrivate, nil, false)
 	allIDs := []uuid.UUID{publicID, privateID, unlistedID, templateID, ownedID, foreignID}
 	// Equal timestamps exercise the stable ordering used between pages.
 	_, err := s.dbPool.Exec(s.ctx, "UPDATE problems SET created_at = '2026-01-01'::timestamptz")
@@ -105,7 +108,7 @@ func (s *IntegrationTestSuite) TestProblemListAuthenticatedAccess() {
 
 	type accessCase struct {
 		name string
-		user models.User
+		user accessmodel.User
 		want []uuid.UUID
 	}
 	cases := []accessCase{
@@ -116,45 +119,45 @@ func (s *IntegrationTestSuite) TestProblemListAuthenticatedAccess() {
 		{"outsider", outsider, []uuid.UUID{publicID, foreignID}},
 		{"problem owner without organization membership", problemOwner, []uuid.UUID{publicID, ownedID}},
 	}
-	var directViewer models.User
-	for _, role := range []models.ProblemRole{models.ProblemRoleViewer, models.ProblemRoleModerator, models.ProblemRoleOwner} {
-		user := s.createUser("list_direct_"+string(role), models.UserRoleUser)
+	var directViewer accessmodel.User
+	for _, role := range []problemsmodel.ProblemRole{problemsmodel.ProblemRoleViewer, problemsmodel.ProblemRoleModerator, problemsmodel.ProblemRoleOwner} {
+		user := s.createUser("list_direct_"+string(role), accessmodel.UserRoleUser)
 		for _, id := range []uuid.UUID{privateID, unlistedID} {
-			s.Require().NoError(s.problemsRepo.CreateProblemMember(s.ctx, &models.CreateProblemMemberParams{
+			s.Require().NoError(s.problemsRepo.CreateProblemMember(s.ctx, &problemsmodel.CreateProblemMemberParams{
 				ProblemID: id, UserID: user.Id, Role: role,
 			}))
 		}
 		cases = append(cases, accessCase{"direct " + string(role), user, []uuid.UUID{publicID, privateID, unlistedID}})
-		if role == models.ProblemRoleViewer {
+		if role == problemsmodel.ProblemRoleViewer {
 			directViewer = user
 		}
 	}
 	var readTeamID uuid.UUID
-	var teamReader models.User
-	for _, permission := range []models.ProblemPermission{models.ProblemPermissionRead, models.ProblemPermissionWrite, models.ProblemPermissionAdmin} {
-		user := s.createUser("list_team_"+string(permission), models.UserRoleUser)
-		s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, user.Id, models.OrgRoleMember))
-		team, err := s.teamsRepo.CreateTeam(s.ctx, &models.CreateTeamInput{
-			OrganizationID: org.ID, Name: string(permission), Slug: string(permission), Privacy: models.TeamPrivacySecret,
+	var teamReader accessmodel.User
+	for _, permission := range []problemsmodel.ProblemPermission{problemsmodel.ProblemPermissionRead, problemsmodel.ProblemPermissionWrite, problemsmodel.ProblemPermissionAdmin} {
+		user := s.createUser("list_team_"+string(permission), accessmodel.UserRoleUser)
+		s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, user.Id, organizationsmodel.OrgRoleMember))
+		team, err := s.teamsRepo.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{
+			OrganizationID: org.ID, Name: string(permission), Slug: string(permission), Privacy: organizationsmodel.TeamPrivacySecret,
 		})
 		s.Require().NoError(err)
-		s.Require().NoError(s.teamsRepo.AddTeamMember(s.ctx, team.ID, user.Id, models.TeamRoleMember))
+		s.Require().NoError(s.teamsRepo.AddTeamMember(s.ctx, team.ID, user.Id, organizationsmodel.TeamRoleMember))
 		for _, id := range []uuid.UUID{privateID, unlistedID} {
 			s.Require().NoError(s.problemsRepo.AddProblemTeam(s.ctx, id, team.ID, permission))
 		}
 		cases = append(cases, accessCase{"team " + string(permission), user, []uuid.UUID{publicID, privateID, unlistedID}})
-		if permission == models.ProblemPermissionRead {
+		if permission == problemsmodel.ProblemPermissionRead {
 			readTeamID, teamReader = team.ID, user
 		}
 	}
 	// Multiple grants must not duplicate problems or inflate pagination.
-	s.Require().NoError(s.teamsRepo.AddTeamMember(s.ctx, readTeamID, directViewer.Id, models.TeamRoleMember))
+	s.Require().NoError(s.teamsRepo.AddTeamMember(s.ctx, readTeamID, directViewer.Id, organizationsmodel.TeamRoleMember))
 	// A team in another organization must not grant access (same as GetProblem).
-	s.Require().NoError(s.problemsRepo.AddProblemTeam(s.ctx, foreignID, readTeamID, models.ProblemPermissionRead))
+	s.Require().NoError(s.problemsRepo.AddProblemTeam(s.ctx, foreignID, readTeamID, problemsmodel.ProblemPermissionRead))
 
 	assertList := func(ctx context.Context, params corev1.ListProblemsParams, want []uuid.UUID) {
 		params.PageSize = corev1.NewOptInt32(2)
-		totalPages := models.Total(int32(len(want)), 2)
+		totalPages := paging.Total(int32(len(want)), 2)
 		var ids []uuid.UUID
 		for page := int32(1); page <= totalPages+1; page++ {
 			params.Page = corev1.NewOptInt32(page)
@@ -201,7 +204,7 @@ func (s *IntegrationTestSuite) TestProblemListAuthenticatedAccess() {
 		})
 	}
 	// Exercise the production authentication middleware, without the test user header.
-	authRepo := pg.NewAuthRepo(s.dbPool)
+	authRepo := pgstore.NewAuthRepo(s.dbPool)
 	sessionID := uuid.New()
 	s.Require().NoError(authRepo.CreateSession(s.ctx, sessionID, problemOwner.Id, time.Now().Add(time.Hour)))
 	assertList(withTestCookie(s.ctx, sessionID), corev1.ListProblemsParams{}, []uuid.UUID{publicID, ownedID})

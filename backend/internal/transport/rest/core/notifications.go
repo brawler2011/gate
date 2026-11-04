@@ -3,21 +3,21 @@ package core
 import (
 	"context"
 
-	"github.com/google/uuid"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
+	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/google/uuid"
 )
 
 type NotificationsReader interface {
-	ListNotificationResponses(ctx context.Context, userID uuid.UUID, filter *models.NotificationFilter) (*corev1.NotificationsListResponseModel, error)
+	ListNotifications(ctx context.Context, userID uuid.UUID, filter *notificationsmodel.NotificationFilter) (*notificationsmodel.NotificationsList, error)
 	GetUnreadCount(ctx context.Context, userID uuid.UUID) (int32, error)
 }
 
 func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNotificationsParams) (*corev1.NotificationsListResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -26,55 +26,47 @@ func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNo
 	pageSize := params.PageSize.Or(20)
 	unreadOnly := params.UnreadOnly.Or(false)
 
-	list, err := h.notificationsReader.ListNotificationResponses(ctx, user.Id, &models.NotificationFilter{
+	list, err := h.notifications.ListNotifications(ctx, user.Id, &notificationsmodel.NotificationFilter{
 		Page:       page,
 		PageSize:   pageSize,
 		UnreadOnly: unreadOnly,
 	})
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list notifications")
+		return nil, err
 	}
 
-	return list, nil
+	return NotificationsListResponseDTO(list), nil
 }
 
 func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context) (*corev1.UnreadNotificationsCountResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return &corev1.UnreadNotificationsCountResponseModel{Count: 0}, nil
 	}
 
-	count, err := h.notificationsReader.GetUnreadCount(ctx, user.Id)
+	count, err := h.notifications.GetUnreadCount(ctx, user.Id)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to get unread notifications count")
+		return nil, err
 	}
 
 	return &corev1.UnreadNotificationsCountResponseModel{Count: count}, nil
 }
 
 func (h *CoreServer) MarkNotificationAsRead(ctx context.Context, params corev1.MarkNotificationAsReadParams) error {
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
 
-	err := h.notificationsUC.MarkAsRead(ctx, params.ID, user.Id)
+	err := h.notifications.MarkAsRead(ctx, params.ID)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, "failed to mark notification as read")
+		return err
 	}
 
 	return nil
 }
 
 func (h *CoreServer) MarkAllNotificationsAsRead(ctx context.Context) error {
-	user := middleware.GetUser(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
 
-	err := h.notificationsUC.MarkAllAsRead(ctx, user.Id)
+	err := h.notifications.MarkAllAsRead(ctx)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrInternal, err, "failed to mark all notifications as read")
+		return err
 	}
 
 	return nil

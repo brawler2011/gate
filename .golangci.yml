@@ -3,6 +3,7 @@ version: "2"
 linters:
   enable:
     - bodyclose
+    - depguard
     - dupl
     - errorlint
     - forbidigo
@@ -16,6 +17,82 @@ linters:
     - unparam
     - wrapcheck
   settings:
+    depguard:
+      rules:
+        application:
+          files:
+            - "**/backend/internal/{identity,organizations,contests,problems,submissions,judging,notifications,blogs,access,events}/*.go"
+            - "**/backend/internal/{identity,organizations,contests,problems,submissions,judging,notifications,blogs,access,events}/**/*.go"
+            - "!$test"
+          deny:
+            - pkg: github.com/brawler2011/gate/backend/contracts$
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/contracts/
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/transport$
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/transport/
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/postgres$
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/postgres/
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/repository$
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/repository/
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/messaging$
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/messaging/
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/postgres/sqlc$
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/postgres/sqlc/
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/jackc$
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/jackc/
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/nats-io$
+              desc: Keep application imports within architecture boundaries.
+            - pkg: github.com/nats-io/
+              desc: Keep application imports within architecture boundaries.
+        postgres:
+          files:
+            - "**/backend/internal/postgres/*.go"
+            - "**/backend/internal/postgres/**/*.go"
+            - "!$test"
+          deny:
+            - pkg: github.com/brawler2011/gate/backend/contracts$
+              desc: Keep postgres imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/contracts/
+              desc: Keep postgres imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/transport$
+              desc: Keep postgres imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/transport/
+              desc: Keep postgres imports within architecture boundaries.
+        transport:
+          files:
+            - "**/backend/internal/transport/*.go"
+            - "**/backend/internal/transport/**/*.go"
+            - "!$test"
+          deny:
+            - pkg: github.com/brawler2011/gate/backend/internal/postgres$
+              desc: Keep transport imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/postgres/
+              desc: Keep transport imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/postgres/sqlc$
+              desc: Keep transport imports within architecture boundaries.
+            - pkg: github.com/brawler2011/gate/backend/internal/postgres/sqlc/
+              desc: Keep transport imports within architecture boundaries.
+            - pkg: github.com/jackc$
+              desc: Keep transport imports within architecture boundaries.
+            - pkg: github.com/jackc/
+              desc: Keep transport imports within architecture boundaries.
+            - pkg: database/sql$
+              desc: Keep transport imports within architecture boundaries.
+            - pkg: database/sql/
+              desc: Keep transport imports within architecture boundaries.
     forbidigo:
       analyze-types: true
       forbid:
@@ -24,7 +101,7 @@ linters:
         - pattern: ^log\.(Print|Fatal|Panic).*$
           msg: Do not use log package, use slog instead.
         - pattern: ^(pgx|pgxpool|pgconn|sql|sqlc)\.[^.]+\.(Query|QueryRow|Exec|QueryContext|QueryRowContext|ExecContext|ExecParams|ExecPrepared|SendBatch|CopyFrom|Prepare|PrepareContext|Queue)$
-          pkg: ^(github\.com/jackc/pgx/v5(/pgxpool|/pgconn)?|database/sql|github\.com/brawler2011/gate/backend/internal/repository/pg/sqlc)$
+          pkg: ^(github\.com/jackc/pgx/v5(/pgxpool|/pgconn)?|database/sql|github\.com/brawler2011/gate/backend/internal/postgres/sqlc)$
           msg: Do not execute raw SQL in application code; use generated sqlc queries.
     revive:
       rules:

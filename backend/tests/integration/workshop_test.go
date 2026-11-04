@@ -14,12 +14,12 @@ import (
 	"testing"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
-	"gopkg.in/yaml.v3"
-
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/usecase"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -47,16 +48,16 @@ func TestWorkshopE2E(t *testing.T) {
 
 	// Initialize Storage-backed Workspace service
 	store := storage.NewLocalStorage(t.TempDir())
-	workspaceStorage := usecase.NewWorkspaceStorage(store, "integration-workshop", newMockProblemsRepo())
-	ctx := context.Background()
+	workspaceStorage := problems.NewWorkspaceStorage(store, "integration-workshop", newMockProblemsRepo())
+	ctx := workshopActorContext()
 	problemID := uuid.New()
 
 	// Create mock repositories (simplified for testing)
 	problemsRepo := newMockProblemsRepo()
-	problemsRepo.problems[problemID] = models.Problem{ID: problemID, Title: "A+B Problem"}
+	problemsRepo.problems[problemID] = problemsmodel.Problem{ID: problemID, Title: "A+B Problem"}
 
 	// Initialize WorkshopUseCase
-	workshopUC := usecase.NewWorkshopUseCase(workspaceStorage, sandboxInst)
+	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sandboxInst, allowWorkshopPermissions{})
 
 	// Step 1: Initialize workshop
 	t.Run("InitWorkshop", func(t *testing.T) {
@@ -79,11 +80,11 @@ func TestWorkshopE2E(t *testing.T) {
 		testlibContent, err := os.ReadFile("../../pkg/testdata/gfmt/a-plus-b/lib/testlib.h")
 		require.NoError(t, err)
 
-		err = workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+		err = workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 			ProblemID: problemID,
-			UserID:    uuid.Nil,
-			Path:      "lib/testlib.h",
-			Content:   testlibContent,
+
+			Path:    "lib/testlib.h",
+			Content: testlibContent,
 		})
 		require.NoError(t, err)
 
@@ -98,11 +99,11 @@ int main(int argc, char* argv[]) {
     quitf(_ok, "answer is correct");
 }
 `
-		err = workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+		err = workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 			ProblemID: problemID,
-			UserID:    uuid.Nil,
-			Path:      "checkers/checker.cpp",
-			Content:   []byte(checkerCode),
+
+			Path:    "checkers/checker.cpp",
+			Content: []byte(checkerCode),
 		})
 		require.NoError(t, err)
 	})
@@ -118,11 +119,11 @@ int main() {
     return 0;
 }
 `
-		err := workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+		err := workshopUC.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 			ProblemID: problemID,
-			UserID:    uuid.Nil,
-			Path:      "solutions/main.cpp",
-			Content:   []byte(solutionCode),
+
+			Path:    "solutions/main.cpp",
+			Content: []byte(solutionCode),
 		})
 		require.NoError(t, err)
 	})
@@ -138,18 +139,18 @@ int main() {
 		assert.Contains(t, files, "tests/01.out")
 
 		// First we must compile the checker component
-		compRes, err := workshopUC.CompileProblemComponent(ctx, models.CompileComponentRequest{
+		compRes, err := workshopUC.CompileProblemComponent(ctx, problemsmodel.CompileComponentRequest{
 			ProblemID:     problemID,
 			ComponentType: "checker",
 		})
 		require.NoError(t, err)
 		require.True(t, compRes.Success, compRes.CompileLog)
 
-		report, err := workshopUC.TestSolution(ctx, models.TestSolutionRequest{
+		report, err := workshopUC.TestSolution(ctx, problemsmodel.TestSolutionRequest{
 			ProblemID:    problemID,
 			SolutionPath: "solutions/main.cpp",
 			TestNumbers:  []int{1}, // Test only sample test
-			UserID:       uuid.Nil,
+
 		})
 		require.NoError(t, err)
 		assert.Equal(t, 1, report.TotalTests)
@@ -177,13 +178,13 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	sb := newWorkshopSandbox(t)
-	ctx := context.Background()
+	ctx := workshopActorContext()
 	for _, tc := range []struct {
 		name         string
 		checker      string
 		output       string
 		files        map[string]string
-		deps         []models.Dependency
+		deps         []problemsmodel.Dependency
 		compileFirst bool
 		verdict      string
 		wantError    string
@@ -202,7 +203,7 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 			checker: "#include \"verdict.h\"\nint main(){return CHECKER_EXIT;}",
 			output:  "3",
 			files:   map[string]string{"checkers/verdict.h": "#define CHECKER_EXIT 1", "lib/verdict.h": "#define CHECKER_EXIT 0"},
-			deps:    []models.Dependency{{Filename: "verdict.h"}},
+			deps:    []problemsmodel.Dependency{{Filename: "verdict.h"}},
 			verdict: "WA",
 		},
 		{
@@ -210,7 +211,7 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 			checker: "#include \"verdict.h\"\nint main(){return CHECKER_EXIT;}",
 			output:  "3",
 			files:   map[string]string{"lib/verdict.h": "#define CHECKER_EXIT 1"},
-			deps:    []models.Dependency{{Filename: "verdict.h"}},
+			deps:    []problemsmodel.Dependency{{Filename: "verdict.h"}},
 			verdict: "WA",
 		},
 		{
@@ -225,12 +226,12 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			problemID := uuid.New()
 			repo := newMockProblemsRepo()
-			manifest := models.ProblemManifest{
+			manifest := problemsmodel.ProblemManifest{
 				TimeLimitMs:   1000,
 				MemoryLimitMb: 256,
-				FilesMetadata: []models.FileMetadata{{Type: "checker", Filename: "checkers/checker.cpp", Dependencies: tc.deps}},
+				FilesMetadata: []problemsmodel.FileMetadata{{Type: "checker", Filename: "checkers/checker.cpp", Dependencies: tc.deps}},
 			}
-			config := usecase.ManifestAndTestsToGfmtProblem(&manifest, &models.TestsMetadata{Groups: []models.TestGroup{{Ordinal: 1, Name: "samples", Tests: [2]int{1, 1}}}, Tests: []models.TestCase{{Ordinal: 1, Filename: "01.in", Method: "manual"}}})
+			config := problems.ManifestAndTestsToGfmtProblem(&manifest, &problemsmodel.TestsMetadata{Groups: []problemsmodel.TestGroup{{Ordinal: 1, Name: "samples", Tests: [2]int{1, 1}}}, Tests: []problemsmodel.TestCase{{Ordinal: 1, Filename: "01.in", Method: "manual"}}})
 			config.Sources = make(map[string]gfmt.Source)
 			for _, meta := range manifest.FilesMetadata {
 				var deps []string
@@ -244,7 +245,7 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 			data, err := yaml.Marshal(config)
 			require.NoError(t, err)
 
-			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "checker-evaluation", repo)
+			ws := problems.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "checker-evaluation", repo)
 			files := map[string]string{
 				"problem.yaml":         string(data),
 				"tests/01.in":          "1 2\n",
@@ -258,13 +259,13 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 			for path, content := range files {
 				require.NoError(t, ws.WriteFile(ctx, problemID, path, []byte(content)))
 			}
-			uc := usecase.NewWorkshopUseCase(ws, sb)
+			uc := problems.NewWorkshopUseCase(ws, sb, allowWorkshopPermissions{})
 			if tc.compileFirst {
-				compiled, err := uc.CompileProblemComponent(ctx, models.CompileComponentRequest{ProblemID: problemID, ComponentType: "checker"})
+				compiled, err := uc.CompileProblemComponent(ctx, problemsmodel.CompileComponentRequest{ProblemID: problemID, ComponentType: "checker"})
 				require.NoError(t, err)
 				require.True(t, compiled.Success, compiled.CompileError)
 			}
-			report, err := uc.TestSolution(ctx, models.TestSolutionRequest{ProblemID: problemID, SolutionPath: "solutions/main.cpp"})
+			report, err := uc.TestSolution(ctx, problemsmodel.TestSolutionRequest{ProblemID: problemID, SolutionPath: "solutions/main.cpp"})
 			if tc.wantError != "" {
 				require.ErrorContains(t, err, "failed to compile checker checkers/checker.cpp")
 				require.ErrorContains(t, err, tc.wantError)
@@ -289,7 +290,7 @@ func TestWorkshopCheckerEvaluation(t *testing.T) {
 func newWorkshopSandbox(t *testing.T) *sandbox.Sandbox {
 	t.Helper()
 
-	ctx := context.Background()
+	ctx := workshopActorContext()
 
 	req := testcontainers.ContainerRequest{
 		ExposedPorts: []string{workshopGoJudgeGRPCPort},
@@ -389,24 +390,20 @@ func workshopGoJudgeDockerfileContext() (string, string, error) {
 type mockProblemsRepo struct {
 	workspaceMu     sync.Mutex
 	workspaceHashes map[uuid.UUID]string
-	problems        map[uuid.UUID]models.Problem
+	problems        map[uuid.UUID]problemsmodel.Problem
 }
 
 func newMockProblemsRepo() *mockProblemsRepo {
 	return &mockProblemsRepo{
-		problems: make(map[uuid.UUID]models.Problem),
+		problems: make(map[uuid.UUID]problemsmodel.Problem),
 	}
 }
 
-func (m *mockProblemsRepo) CreateProblem(_ context.Context, _ *models.CreateProblemParams) error {
+func (m *mockProblemsRepo) CreateProblem(_ context.Context, _ *problemsmodel.CreateProblemParams) error {
 	return nil
 }
 
-func (m *mockProblemsRepo) CreateProblemMember(_ context.Context, _ *models.CreateProblemMemberParams) error {
-	return nil
-}
-
-func (m *mockProblemsRepo) CreateProblemTests(_ context.Context, _ models.ProblemTests) error {
+func (m *mockProblemsRepo) CreateProblemMember(_ context.Context, _ *problemsmodel.CreateProblemMemberParams) error {
 	return nil
 }
 
@@ -414,34 +411,26 @@ func (m *mockProblemsRepo) DeleteProblem(_ context.Context, _ uuid.UUID) error {
 	return nil
 }
 
-func (m *mockProblemsRepo) DeleteProblemTests(_ context.Context, _ uuid.UUID) error {
-	return nil
-}
-
-func (m *mockProblemsRepo) GetProblemById(_ context.Context, id uuid.UUID) (models.Problem, error) {
+func (m *mockProblemsRepo) GetProblemById(_ context.Context, id uuid.UUID) (problemsmodel.Problem, error) {
 	if problem, ok := m.problems[id]; ok {
 		return problem, nil
 	}
-	return models.Problem{}, nil
+	return problemsmodel.Problem{}, nil
 }
 
-func (m *mockProblemsRepo) GetProblemMember(_ context.Context, _, _ uuid.UUID) (models.ProblemMember, error) {
-	return models.ProblemMember{}, nil
+func (m *mockProblemsRepo) GetProblemMember(_ context.Context, _, _ uuid.UUID) (problemsmodel.ProblemMember, error) {
+	return problemsmodel.ProblemMember{}, nil
 }
 
-func (m *mockProblemsRepo) GetProblemTests(_ context.Context, _ uuid.UUID) ([]models.ProblemTest, error) {
+func (m *mockProblemsRepo) GetProblemTeams(_ context.Context, _ uuid.UUID) ([]problemsmodel.ProblemTeam, error) {
 	return nil, nil
 }
 
-func (m *mockProblemsRepo) GetProblemTeams(_ context.Context, _ uuid.UUID) ([]models.ProblemTeam, error) {
-	return nil, nil
-}
-
-func (m *mockProblemsRepo) AddProblemTeam(_ context.Context, _, _ uuid.UUID, _ models.ProblemPermission) error {
+func (m *mockProblemsRepo) AddProblemTeam(_ context.Context, _, _ uuid.UUID, _ problemsmodel.ProblemPermission) error {
 	return nil
 }
 
-func (m *mockProblemsRepo) UpdateProblemTeamPermission(_ context.Context, _, _ uuid.UUID, _ models.ProblemPermission) error {
+func (m *mockProblemsRepo) UpdateProblemTeamPermission(_ context.Context, _, _ uuid.UUID, _ problemsmodel.ProblemPermission) error {
 	return nil
 }
 
@@ -449,7 +438,7 @@ func (m *mockProblemsRepo) RemoveProblemTeam(_ context.Context, _, _ uuid.UUID) 
 	return nil
 }
 
-func (m *mockProblemsRepo) UpdateProblemMemberRole(_ context.Context, _, _ uuid.UUID, _ models.ProblemRole) error {
+func (m *mockProblemsRepo) UpdateProblemMemberRole(_ context.Context, _, _ uuid.UUID, _ problemsmodel.ProblemRole) error {
 	return nil
 }
 
@@ -457,7 +446,7 @@ func (m *mockProblemsRepo) RemoveProblemMember(_ context.Context, _, _ uuid.UUID
 	return nil
 }
 
-func (m *mockProblemsRepo) UpdateProblem(_ context.Context, id uuid.UUID, update *models.ProblemUpdate) error {
+func (m *mockProblemsRepo) UpdateProblem(_ context.Context, id uuid.UUID, update *problemsmodel.ProblemUpdate) error {
 	problem := m.problems[id]
 	if update != nil && update.Title != nil {
 		problem.Title = *update.Title
@@ -474,7 +463,8 @@ func (m *mockProblemsRepo) GetWorkspaceHash(ctx context.Context, id uuid.UUID) (
 	defer m.workspaceMu.Unlock()
 	return m.workspaceHashes[id], nil
 }
-func (m *mockProblemsRepo) CommitWorkspace(ctx context.Context, id uuid.UUID, previousHash, hash string, metadata *models.WorkspaceMetadata) error {
+
+func (m *mockProblemsRepo) CommitWorkspace(ctx context.Context, id uuid.UUID, previousHash, hash string, metadata *problemsmodel.WorkspaceMetadata) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -495,4 +485,13 @@ func (m *mockProblemsRepo) CommitWorkspace(ctx context.Context, id uuid.UUID, pr
 		m.problems[id] = problem
 	}
 	return nil
+}
+
+type allowWorkshopPermissions struct{}
+
+func (allowWorkshopPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+	return true, nil
+}
+func workshopActorContext() context.Context {
+	return accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 }

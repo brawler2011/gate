@@ -1,0 +1,654 @@
+package judging
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
+	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/google/uuid"
+)
+
+type JudgingStrategy interface {
+	Judge(ctx context.Context, submissionID uuid.UUID, sourceCode string, language submissionsmodel.LanguageName, meta submissionsmodel.SubmissionEventMeta) (*FinalVerdict, error)
+}
+
+type FlatTest struct {
+	SubtaskName string
+	TestIndex   int
+	Test        gfmt.Test
+}
+
+type StandardStrategy struct {
+	sandbox            Sandbox
+	eventPublisher     Progress
+	pkg                *gfmt.GateFormat
+	compiledComponents map[string]sandbox.Executable
+}
+
+func NewStandardStrategy(
+	sandbox Sandbox,
+	eventPublisher Progress,
+	pkg *gfmt.GateFormat,
+	compiledComponents map[string]sandbox.Executable,
+) *StandardStrategy {
+	return &StandardStrategy{
+		sandbox:            sandbox,
+		eventPublisher:     eventPublisher,
+		pkg:                pkg,
+		compiledComponents: compiledComponents,
+	}
+}
+
+func (s *StandardStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sourceCode string, language submissionsmodel.LanguageName, meta submissionsmodel.SubmissionEventMeta) (*FinalVerdict, error) {
+	languageStr := convertLanguage(language)
+
+	// Compile user solution
+	solExec, err := s.sandbox.Compile(ctx, []byte(sourceCode), languageStr, nil)
+	if err != nil {
+		if IsTemporary(err) {
+			return nil, fmt.Errorf("judging infrastructure: %w", err)
+		}
+		compilerOutput := err.Error()
+		errorLine := ParseErrorLine(language, compilerOutput)
+		return &FinalVerdict{
+			State:     submissionsmodel.GotCE,
+			Score:     0,
+			MaxTime:   0,
+			MaxMemory: 0,
+			Message:   fmt.Sprintf("Compilation failed: %v", err),
+			TestDetails: &submissionsmodel.SubmissionTestDetails{
+				CompilerOutput: &compilerOutput,
+				ErrorLine:      errorLine,
+			},
+		}, nil
+	}
+
+	checkerExec, hasChecker := s.compiledComponents["checker"]
+	if !hasChecker {
+		return nil, fmt.Errorf("checker is required for standard strategy")
+	}
+
+	// Collect tests
+	flatTests := collectFlatTests(s.pkg.Problem)
+
+	var results []TestResult
+
+	if err := s.eventPublisher.PublishTestingStarted(ctx, submissionID, meta); err != nil {
+		return nil, fmt.Errorf("failed to publish testing started: %w", err)
+	}
+
+	for _, tc := range flatTests {
+		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, safeInt32(tc.TestIndex), meta); err != nil {
+			return nil, fmt.Errorf("failed to publish test started: %w", err)
+		}
+
+		input, err := s.getTestInput(ctx, tc.Test)
+		if err != nil {
+			if IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to get input for test %d: %v", tc.TestIndex, err),
+			})
+			break
+		}
+
+		answer, err := s.getTestAnswer(ctx, tc.Test, input)
+		if err != nil {
+			if IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to get answer for test %d: %v", tc.TestIndex, err),
+				Input:      string(input),
+			})
+			break
+		}
+
+		// Run solution
+		runRes, err := s.sandbox.Test(ctx, solExec, languageStr, input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
+		if err != nil {
+			if IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to run solution for test %d: %v", tc.TestIndex, err),
+				Input:      string(input),
+				Answer:     string(answer),
+			})
+			break
+		}
+
+		verdict := string(runRes.Status)
+		message := string(runRes.Stderr)
+		var checkerScore *float64
+		var checkerOutput string
+
+		if runRes.Status == sandbox.StatusOK {
+			chkRes, err := s.sandbox.Check(ctx, checkerExec, input, runRes.Stdout, answer)
+			if err != nil {
+				if IsTemporary(err) {
+					return nil, fmt.Errorf("judging infrastructure: %w", err)
+				}
+				verdict = "IE"
+				message = fmt.Sprintf("Checker execution failed: %v", err)
+			} else {
+				verdict = string(chkRes.Status)
+				message = chkRes.Message
+				checkerOutput = chkRes.Message
+				checkerScore = chkRes.Score
+			}
+		}
+
+		var errorLine *int32
+		if verdict == "RE" || verdict == "Runtime Error" || len(message) > 0 {
+			errorLine = ParseErrorLine(language, message)
+		}
+
+		res := TestResult{
+			TestNumber:    tc.TestIndex,
+			Verdict:       verdict,
+			Score:         checkerScore,
+			Time:          runRes.Time.Nanoseconds(),
+			Memory:        runRes.Memory,
+			Message:       message,
+			Input:         string(input),
+			Output:        string(runRes.Stdout),
+			Answer:        string(answer),
+			CheckerOutput: checkerOutput,
+			ErrorLine:     errorLine,
+		}
+		results = append(results, res)
+
+		if verdict != "OK" && verdict != "AC" && verdict != "Accepted" {
+			break
+		}
+	}
+
+	calculator := NewVerdictCalculator(s.pkg.Problem.Type, s.pkg.Problem)
+	return calculator.Calculate(results), nil
+}
+
+func (s *StandardStrategy) getTestInput(ctx context.Context, test gfmt.Test) ([]byte, error) {
+	if test.Manual != "" {
+		return s.pkg.GetTestInput(test.Manual)
+	}
+
+	if test.Generate != "" {
+		parts := strings.Fields(test.Generate)
+		if len(parts) == 0 {
+			return nil, fmt.Errorf("empty generate command")
+		}
+		genName := parts[0]
+		genArgs := parts[1:]
+
+		genExec, exists := s.compiledComponents["generator_"+genName]
+		if !exists {
+			dir := filepath.Join(s.pkg.Path, "generators")
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				if IsTemporary(err) {
+					return nil, fmt.Errorf("judging infrastructure: %w", err)
+				}
+				return nil, fmt.Errorf("failed to read generators dir: %w", err)
+			}
+			var filename string
+			for _, entry := range entries {
+				if !entry.IsDir() && strings.HasPrefix(entry.Name(), genName) {
+					filename = entry.Name()
+					break
+				}
+			}
+			if filename == "" {
+				return nil, fmt.Errorf("generator source not found for %s", genName)
+			}
+			data, err := os.ReadFile(filepath.Join(dir, filename))
+			if err != nil {
+				if IsTemporary(err) {
+					return nil, fmt.Errorf("judging infrastructure: %w", err)
+				}
+				return nil, fmt.Errorf("failed to read generator file %s: %w", filename, err)
+			}
+			deps, _ := loadLibDependencies(s.pkg.Path)
+			lang := detectLanguage(filepath.Ext(filename))
+			compiled, err := s.sandbox.Compile(ctx, data, lang, deps)
+			if err != nil {
+				if IsTemporary(err) {
+					return nil, fmt.Errorf("judging infrastructure: %w", err)
+				}
+				return nil, err
+			}
+			genExec = compiled
+			s.compiledComponents["generator_"+genName] = genExec
+		}
+
+		return s.sandbox.Generate(ctx, genExec, genArgs)
+	}
+
+	// Manual test
+	return s.pkg.GetTestInput(test.Manual)
+}
+
+func (s *StandardStrategy) getTestAnswer(ctx context.Context, test gfmt.Test, input []byte) ([]byte, error) {
+	if test.Manual != "" {
+		data, err := s.pkg.GetTestOutput(test.Manual)
+		if err == nil {
+			return data, nil
+		}
+	}
+
+	// Generated test or manual test without pre-computed answer -> run correct solution
+	var candidateSols []string
+	for solFile, tag := range s.pkg.Problem.Solutions {
+		if tag == "OK" || tag == "Accepted" || tag == "main" {
+			candidateSols = append(candidateSols, solFile)
+		}
+	}
+	if len(candidateSols) == 0 {
+		return nil, fmt.Errorf("no test answer file or correct solution found to generate answer")
+	}
+	sort.Strings(candidateSols)
+	okSol := candidateSols[0]
+	for _, sol := range candidateSols {
+		if s.pkg.Problem.Solutions[sol] == "main" {
+			okSol = sol
+			break
+		}
+	}
+
+	cacheKey := "solution_" + okSol
+	solExec, exists := s.compiledComponents[cacheKey]
+	if !exists {
+		data, err := os.ReadFile(filepath.Join(s.pkg.Path, "solutions", okSol))
+		if err != nil {
+			if IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
+			return nil, fmt.Errorf("failed to read solution file %s: %w", okSol, err)
+		}
+		lang := detectLanguage(filepath.Ext(okSol))
+		compiled, err := s.sandbox.Compile(ctx, data, lang, nil)
+		if err != nil {
+			if IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
+			return nil, fmt.Errorf("failed to compile correct solution %s: %w", okSol, err)
+		}
+		solExec = compiled
+		s.compiledComponents[cacheKey] = solExec
+	}
+
+	runRes, err := s.sandbox.Test(ctx, solExec, detectLanguage(filepath.Ext(okSol)), input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
+	if err != nil {
+		if IsTemporary(err) {
+			return nil, fmt.Errorf("judging infrastructure: %w", err)
+		}
+		return nil, fmt.Errorf("failed to run correct solution: %w", err)
+	}
+	if runRes.Status != sandbox.StatusOK {
+		return nil, fmt.Errorf("correct solution failed to run: %s (stderr: %s)", runRes.Status, string(runRes.Stderr))
+	}
+	return runRes.Stdout, nil
+}
+
+type ScoringStrategy struct {
+	sandbox            Sandbox
+	eventPublisher     Progress
+	pkg                *gfmt.GateFormat
+	compiledComponents map[string]sandbox.Executable
+}
+
+func NewScoringStrategy(
+	sandbox Sandbox,
+	eventPublisher Progress,
+	pkg *gfmt.GateFormat,
+	compiledComponents map[string]sandbox.Executable,
+) *ScoringStrategy {
+	return &ScoringStrategy{
+		sandbox:            sandbox,
+		eventPublisher:     eventPublisher,
+		pkg:                pkg,
+		compiledComponents: compiledComponents,
+	}
+}
+
+func (s *ScoringStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sourceCode string, language submissionsmodel.LanguageName, meta submissionsmodel.SubmissionEventMeta) (*FinalVerdict, error) {
+	languageStr := convertLanguage(language)
+
+	solExec, err := s.sandbox.Compile(ctx, []byte(sourceCode), languageStr, nil)
+	if err != nil {
+		if IsTemporary(err) {
+			return nil, fmt.Errorf("judging infrastructure: %w", err)
+		}
+		compilerOutput := err.Error()
+		errorLine := ParseErrorLine(language, compilerOutput)
+		return &FinalVerdict{
+			State:     submissionsmodel.GotCE,
+			Score:     0,
+			MaxTime:   0,
+			MaxMemory: 0,
+			Message:   fmt.Sprintf("Compilation failed: %v", err),
+			TestDetails: &submissionsmodel.SubmissionTestDetails{
+				CompilerOutput: &compilerOutput,
+				ErrorLine:      errorLine,
+			},
+		}, nil
+	}
+
+	checkerExec, hasChecker := s.compiledComponents["checker"]
+	if !hasChecker {
+		return nil, fmt.Errorf("checker is required for scoring strategy")
+	}
+
+	flatTests := collectFlatTests(s.pkg.Problem)
+	var results []TestResult
+
+	if err := s.eventPublisher.PublishTestingStarted(ctx, submissionID, meta); err != nil {
+		return nil, fmt.Errorf("failed to publish testing started: %w", err)
+	}
+
+	for _, tc := range flatTests {
+		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, safeInt32(tc.TestIndex), meta); err != nil {
+			return nil, fmt.Errorf("failed to publish test started: %w", err)
+		}
+
+		// Reuse StandardStrategy helpers by wrapping them
+		wrapper := StandardStrategy{
+			sandbox:            s.sandbox,
+			pkg:                s.pkg,
+			compiledComponents: s.compiledComponents,
+		}
+
+		input, err := wrapper.getTestInput(ctx, tc.Test)
+		if err != nil {
+			if IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to get input for test %d: %v", tc.TestIndex, err),
+			})
+			break
+		}
+
+		answer, err := wrapper.getTestAnswer(ctx, tc.Test, input)
+		if err != nil {
+			if IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to get answer for test %d: %v", tc.TestIndex, err),
+				Input:      string(input),
+			})
+			break
+		}
+
+		runRes, err := s.sandbox.Test(ctx, solExec, languageStr, input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
+		if err != nil {
+			if IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to run solution for test %d: %v", tc.TestIndex, err),
+				Input:      string(input),
+				Answer:     string(answer),
+			})
+			break
+		}
+
+		verdict := string(runRes.Status)
+		message := string(runRes.Stderr)
+		var checkerScore *float64
+		var checkerOutput string
+
+		if runRes.Status == sandbox.StatusOK {
+			chkRes, err := s.sandbox.Check(ctx, checkerExec, input, runRes.Stdout, answer)
+			if err != nil {
+				if IsTemporary(err) {
+					return nil, fmt.Errorf("judging infrastructure: %w", err)
+				}
+				verdict = "IE"
+				message = fmt.Sprintf("Checker execution failed: %v", err)
+			} else {
+				verdict = string(chkRes.Status)
+				message = chkRes.Message
+				checkerOutput = chkRes.Message
+				checkerScore = chkRes.Score
+			}
+		}
+
+		var errorLine *int32
+		if verdict == "RE" || verdict == "Runtime Error" || len(message) > 0 {
+			errorLine = ParseErrorLine(language, message)
+		}
+
+		res := TestResult{
+			TestNumber:    tc.TestIndex,
+			Verdict:       verdict,
+			Score:         checkerScore,
+			Time:          runRes.Time.Nanoseconds(),
+			Memory:        runRes.Memory,
+			Message:       message,
+			Input:         string(input),
+			Output:        string(runRes.Stdout),
+			Answer:        string(answer),
+			CheckerOutput: checkerOutput,
+			ErrorLine:     errorLine,
+		}
+		results = append(results, res)
+	}
+
+	calculator := NewVerdictCalculator(s.pkg.Problem.Type, s.pkg.Problem)
+	return calculator.Calculate(results), nil
+}
+
+type InteractiveStrategy struct {
+	sandbox            Sandbox
+	eventPublisher     Progress
+	pkg                *gfmt.GateFormat
+	compiledComponents map[string]sandbox.Executable
+}
+
+func NewInteractiveStrategy(
+	sandbox Sandbox,
+	eventPublisher Progress,
+	pkg *gfmt.GateFormat,
+	compiledComponents map[string]sandbox.Executable,
+) *InteractiveStrategy {
+	return &InteractiveStrategy{
+		sandbox:            sandbox,
+		eventPublisher:     eventPublisher,
+		pkg:                pkg,
+		compiledComponents: compiledComponents,
+	}
+}
+
+func (s *InteractiveStrategy) Judge(ctx context.Context, submissionID uuid.UUID, sourceCode string, language submissionsmodel.LanguageName, meta submissionsmodel.SubmissionEventMeta) (*FinalVerdict, error) {
+	languageStr := convertLanguage(language)
+
+	solExec, err := s.sandbox.Compile(ctx, []byte(sourceCode), languageStr, nil)
+	if err != nil {
+		if IsTemporary(err) {
+			return nil, fmt.Errorf("judging infrastructure: %w", err)
+		}
+		compilerOutput := err.Error()
+		errorLine := ParseErrorLine(language, compilerOutput)
+		return &FinalVerdict{
+			State:     submissionsmodel.GotCE,
+			Score:     0,
+			MaxTime:   0,
+			MaxMemory: 0,
+			Message:   fmt.Sprintf("Compilation failed: %v", err),
+			TestDetails: &submissionsmodel.SubmissionTestDetails{
+				CompilerOutput: &compilerOutput,
+				ErrorLine:      errorLine,
+			},
+		}, nil
+	}
+
+	interactorExec, hasInteractor := s.compiledComponents["interactor"]
+	if !hasInteractor {
+		return nil, fmt.Errorf("interactor is required for interactive strategy")
+	}
+
+	flatTests := collectFlatTests(s.pkg.Problem)
+	var results []TestResult
+
+	if err := s.eventPublisher.PublishTestingStarted(ctx, submissionID, meta); err != nil {
+		return nil, fmt.Errorf("failed to publish testing started: %w", err)
+	}
+
+	for _, tc := range flatTests {
+		if err := s.eventPublisher.PublishTestStarted(ctx, submissionID, safeInt32(tc.TestIndex), meta); err != nil {
+			return nil, fmt.Errorf("failed to publish test started: %w", err)
+		}
+
+		wrapper := StandardStrategy{
+			sandbox:            s.sandbox,
+			pkg:                s.pkg,
+			compiledComponents: s.compiledComponents,
+		}
+
+		input, err := wrapper.getTestInput(ctx, tc.Test)
+		if err != nil {
+			if IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to get input for test %d: %v", tc.TestIndex, err),
+			})
+			break
+		}
+
+		interactRes, err := s.sandbox.Interact(ctx, solExec, languageStr, interactorExec, input, s.pkg.Problem.Limits.TimeMs, s.pkg.Problem.Limits.MemoryMb)
+		if err != nil {
+			if IsTemporary(err) {
+				return nil, fmt.Errorf("judging infrastructure: %w", err)
+			}
+			results = append(results, TestResult{
+				TestNumber: tc.TestIndex,
+				Verdict:    "IE",
+				Message:    fmt.Sprintf("Failed to interact for test %d: %v", tc.TestIndex, err),
+				Input:      string(input),
+			})
+			break
+		}
+
+		var errorLine *int32
+		if interactRes.Status == sandbox.StatusRE || len(interactRes.SolutionResult.Stderr) > 0 {
+			errorLine = ParseErrorLine(language, string(interactRes.SolutionResult.Stderr))
+		}
+
+		res := TestResult{
+			TestNumber:    tc.TestIndex,
+			Verdict:       string(interactRes.Status),
+			Score:         interactRes.Score,
+			Time:          interactRes.SolutionResult.Time.Nanoseconds(),
+			Memory:        interactRes.SolutionResult.Memory,
+			Message:       interactRes.Message,
+			Input:         string(input),
+			Output:        string(interactRes.SolutionResult.Stdout),
+			CheckerOutput: interactRes.Message,
+			ErrorLine:     errorLine,
+		}
+		results = append(results, res)
+	}
+
+	calculator := NewVerdictCalculator(s.pkg.Problem.Type, s.pkg.Problem)
+	return calculator.Calculate(results), nil
+}
+
+func collectFlatTests(prob *gfmt.Problem) []FlatTest {
+	var flatTests []FlatTest
+	subtaskNames := prob.OrderedSubtaskNames()
+
+	testIdx := 1
+	for _, subName := range subtaskNames {
+		sub := prob.Subtasks[subName]
+		for _, t := range sub.Tests {
+			flatTests = append(flatTests, FlatTest{
+				SubtaskName: subName,
+				TestIndex:   testIdx,
+				Test:        t,
+			})
+			testIdx++
+		}
+	}
+	return flatTests
+}
+
+func convertLanguage(lang submissionsmodel.LanguageName) string {
+	switch lang {
+	case submissionsmodel.Golang:
+		return "go"
+	case submissionsmodel.Cpp:
+		return "cpp"
+	case submissionsmodel.Python:
+		return "python"
+	default:
+		return "cpp"
+	}
+}
+
+func detectLanguage(ext string) string {
+	switch ext {
+	case ".cpp", ".cc", ".cxx":
+		return "cpp"
+	case ".py":
+		return "python"
+	case ".go":
+		return "go"
+	case ".java":
+		return "java"
+	default:
+		return "cpp"
+	}
+}
+
+func loadLibDependencies(pkgPath string) (map[string][]byte, error) {
+	deps := make(map[string][]byte)
+	libDir := filepath.Join(pkgPath, "lib")
+	entries, err := os.ReadDir(libDir)
+	if err != nil {
+		if IsTemporary(err) {
+			return nil, fmt.Errorf("judging infrastructure: %w", err)
+		}
+		if os.IsNotExist(err) {
+			return deps, nil
+		}
+		return nil, fmt.Errorf("failed to read lib directory %s: %w", libDir, err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			data, err := os.ReadFile(filepath.Join(libDir, entry.Name()))
+			if err != nil {
+				if IsTemporary(err) {
+					return nil, fmt.Errorf("judging infrastructure: %w", err)
+				}
+				return nil, fmt.Errorf("failed to read lib file %s: %w", entry.Name(), err)
+			}
+			deps[entry.Name()] = data
+		}
+	}
+	return deps, nil
+}

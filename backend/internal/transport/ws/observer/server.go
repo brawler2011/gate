@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	observerv1 "github.com/brawler2011/gate/backend/contracts/observer/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -23,12 +23,12 @@ type Observer struct {
 	handler     http.Handler
 	hub         *Hub
 	contestsHub *ContestsHub
-	auth        interfaces.AuthUC
-	permissions interfaces.PermissionsUC
-	contests    interfaces.ContestsUC
+	auth        AuthUC
+	permissions PermissionsUC
+	contests    ContestReader
 }
 
-func NewObserver(hub *Hub, contestsHub *ContestsHub, middleware func(http.Handler) http.Handler, auth interfaces.AuthUC, permissions interfaces.PermissionsUC, contests interfaces.ContestsUC) *Observer {
+func NewObserver(hub *Hub, contestsHub *ContestsHub, middleware func(http.Handler) http.Handler, auth AuthUC, permissions PermissionsUC, contests ContestReader) *Observer {
 	mux := http.NewServeMux()
 
 	observer := &Observer{
@@ -59,7 +59,7 @@ type SubmissionsFilter struct {
 	Language  *int32
 }
 
-func metaMatches(meta *models.SubmissionEventMeta, filter *SubmissionsFilter) bool {
+func metaMatches(meta *submissionsmodel.SubmissionEventMeta, filter *SubmissionsFilter) bool {
 	if filter.ContestId != nil && (meta.ContestId == nil || *meta.ContestId != *filter.ContestId) {
 		return false
 	}
@@ -77,17 +77,17 @@ func metaMatches(meta *models.SubmissionEventMeta, filter *SubmissionsFilter) bo
 
 func (f *SubmissionsFilter) Matches(event *WrappedEvent) bool {
 	switch e := event.RawEvent.(type) {
-	case *models.SubmissionCreatedEvent:
+	case *submissionsmodel.SubmissionCreatedEvent:
 		return metaMatches(&e.SubmissionEventMeta, f)
-	case *models.SubmissionQueuedEvent:
+	case *submissionsmodel.SubmissionQueuedEvent:
 		return metaMatches(&e.SubmissionEventMeta, f)
-	case *models.SubmissionCompilingStartedEvent:
+	case *submissionsmodel.SubmissionCompilingStartedEvent:
 		return metaMatches(&e.SubmissionEventMeta, f)
-	case *models.SubmissionTestingStartedEvent:
+	case *submissionsmodel.SubmissionTestingStartedEvent:
 		return metaMatches(&e.SubmissionEventMeta, f)
-	case *models.SubmissionTestStartedEvent:
+	case *submissionsmodel.SubmissionTestStartedEvent:
 		return metaMatches(&e.SubmissionEventMeta, f)
-	case *models.SubmissionCompletedEvent:
+	case *submissionsmodel.SubmissionCompletedEvent:
 		return metaMatches(&e.SubmissionEventMeta, f)
 	default:
 		slog.Warn("unknown event type in filter match", "type", event.EventType)
@@ -129,7 +129,7 @@ func parseSubmissionsFilter(r *http.Request) (*SubmissionsFilter, error) {
 			return nil, fmt.Errorf("invalid language: %w", err)
 		}
 		lang := int32(value)
-		if err := models.LanguageNameValid(lang); err != nil {
+		if err := submissionsmodel.LanguageNameValid(lang); err != nil {
 			return nil, err
 		}
 		filter.Language = &lang
@@ -140,7 +140,7 @@ func parseSubmissionsFilter(r *http.Request) (*SubmissionsFilter, error) {
 func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -327,7 +327,7 @@ func startReadPump(conn *websocket.Conn) <-chan struct{} {
 func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return

@@ -10,13 +10,11 @@ import (
 	"io/fs"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
-	"github.com/brawler2011/gate/backend/internal/usecase"
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -53,97 +51,35 @@ func (h *CoreServer) UpdateProblemLimits(ctx context.Context, req *corev1.Update
 	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
 	}
-
-	manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
+	patch := problems.LimitsPatch{MaxScoreSet: req.MaxScore.IsSet()}
+	if req.ProblemType.IsSet() {
+		patch.ProblemType = &req.ProblemType.Value
+	}
+	if req.TimeLimitMs.IsSet() {
+		patch.TimeLimitMs = &req.TimeLimitMs.Value
+	}
+	if req.MemoryLimitMB.IsSet() {
+		patch.MemoryLimitMb = &req.MemoryLimitMB.Value
+	}
+	if req.MaxScore.IsSet() && !req.MaxScore.Null {
+		patch.MaxScore = &req.MaxScore.Value
+	}
+	manifest, err := h.problems.UpdateLimits(ctx, params.ProblemId, patch)
 	if err != nil {
 		return nil, err
 	}
-
-	if req.ProblemType.IsSet() {
-		manifest.ProblemType = req.ProblemType.Value
-	}
-	if req.TimeLimitMs.IsSet() {
-		manifest.TimeLimitMs = req.TimeLimitMs.Value
-	}
-	if req.MemoryLimitMB.IsSet() {
-		manifest.MemoryLimitMb = req.MemoryLimitMB.Value
-	}
-	if req.MaxScore.IsSet() {
-		if req.MaxScore.Null {
-			manifest.MaxScore = nil
-		} else {
-			score := req.MaxScore.Value
-			manifest.MaxScore = &score
-		}
-	}
-	if manifest.ProblemType != "scoring" {
-		manifest.MaxScore = nil
-	}
-
-	if err := validateManifest(manifest); err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid limits update")
-	}
-
-	if err := h.saveWorkshopManifest(ctx, params.ProblemId, manifest); err != nil {
-		return nil, err
-	}
-
 	return h.toContractLimits(manifest), nil
+
 }
 
 // GetProblemStatement handles GET /problems/{problemId}/statement
 func (h *CoreServer) GetProblemStatement(ctx context.Context, params corev1.GetProblemStatementParams) (*corev1.ProblemStatement, error) {
-	return withWorkshopValue(ctx, h, params.ProblemId, func(ctx context.Context) (*corev1.ProblemStatement, error) {
+	statement, err := h.problems.GetStatement(ctx, params.ProblemId, params.Lang.Or("en"))
+	if err != nil {
+		return nil, err
+	}
+	return h.toContractStatementForLang(statement.Statement, statement.Languages, statement.Language), nil
 
-		manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
-		if err != nil {
-			return nil, err
-		}
-
-		lang := params.Lang.Or("en")
-
-		// 1. Get list of available languages from statements/ folder
-		var languages []string
-		if files, err := h.workshopUC.ListProblemFiles(ctx, params.ProblemId, "statements"); err == nil {
-			for _, f := range files {
-				if !f.IsDirectory && strings.HasSuffix(f.Path, ".md") {
-					base := filepath.Base(f.Path)
-					langCode := strings.TrimSuffix(base, ".md")
-					if langCode != "" {
-						languages = append(languages, langCode)
-					}
-				}
-			}
-		}
-		sort.Strings(languages)
-
-		// Ensure the default language is listed if the list is empty
-		if len(languages) == 0 {
-			languages = []string{"en"}
-		}
-
-		// 2. Read statement for specific language from workspace
-		var stmt models.Statement
-		filePath := fmt.Sprintf("statements/%s.md", lang)
-		fileData, err := h.workshopUC.ReadProblemFile(ctx, params.ProblemId, filePath)
-		if err == nil {
-			stmt = usecase.ParseStatementMarkdown(string(fileData))
-			// If title tag is empty, fallback to the manifest title
-			if lang == "en" || strings.TrimSpace(stmt.Title) == "" {
-				stmt.Title = manifest.Statement.Title
-			}
-		} else {
-			// If requested lang is "en" and en.md is missing, fallback to manifest
-			if lang == "en" {
-				stmt = manifest.Statement
-			} else {
-				// Return empty statement with title of the main problem
-				stmt.Title = manifest.Statement.Title
-			}
-		}
-
-		return h.toContractStatementForLang(stmt, languages, lang), nil
-	})
 }
 
 // UpdateProblemStatement handles PATCH /problems/{problemId}/statement
@@ -151,96 +87,34 @@ func (h *CoreServer) UpdateProblemStatement(ctx context.Context, req *corev1.Upd
 	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
 	}
-	return withWorkshopValue(ctx, h, params.ProblemId, func(ctx context.Context) (*corev1.ProblemStatement, error) {
+	patch := problems.StatementPatch{}
+	if req.Title.IsSet() {
+		patch.Title = &req.Title.Value
+	}
+	if req.Legend.IsSet() {
+		patch.Legend = &req.Legend.Value
+	}
+	if req.InputFormat.IsSet() {
+		patch.InputFormat = &req.InputFormat.Value
+	}
+	if req.OutputFormat.IsSet() {
+		patch.OutputFormat = &req.OutputFormat.Value
+	}
+	if req.Notes.IsSet() {
+		patch.Notes = &req.Notes.Value
+	}
+	if req.Interaction.IsSet() {
+		patch.Interaction = &req.Interaction.Value
+	}
+	if req.Scoring.IsSet() {
+		patch.Scoring = &req.Scoring.Value
+	}
+	statement, err := h.problems.UpdateStatement(ctx, params.ProblemId, params.Lang.Or("en"), patch)
+	if err != nil {
+		return nil, err
+	}
+	return h.toContractStatementForLang(statement.Statement, statement.Languages, statement.Language), nil
 
-		manifest, err := h.readWorkshopManifest(ctx, params.ProblemId)
-		if err != nil {
-			return nil, err
-		}
-
-		lang := params.Lang.Or("en")
-
-		// 1. Get existing statement for this language to apply patch
-		var stmt models.Statement
-		filePath := fmt.Sprintf("statements/%s.md", lang)
-		fileData, err := h.workshopUC.ReadProblemFile(ctx, params.ProblemId, filePath)
-		if err == nil {
-			stmt = usecase.ParseStatementMarkdown(string(fileData))
-			if lang == "en" || strings.TrimSpace(stmt.Title) == "" {
-				stmt.Title = manifest.Statement.Title
-			}
-		} else {
-			if lang == "en" {
-				stmt = manifest.Statement
-			} else {
-				stmt.Title = manifest.Statement.Title
-			}
-		}
-
-		if req.Title.IsSet() {
-			stmt.Title = req.Title.Value
-		}
-		if req.Legend.IsSet() {
-			stmt.Legend = req.Legend.Value
-		}
-		if req.InputFormat.IsSet() {
-			stmt.InputFormat = req.InputFormat.Value
-		}
-		if req.OutputFormat.IsSet() {
-			stmt.OutputFormat = req.OutputFormat.Value
-		}
-		if req.Notes.IsSet() {
-			stmt.Notes = req.Notes.Value
-		}
-		if req.Interaction.IsSet() {
-			stmt.Interaction = req.Interaction.Value
-		}
-		if req.Scoring.IsSet() {
-			stmt.Scoring = req.Scoring.Value
-		}
-
-		if lang == "en" {
-			manifest.Statement = stmt
-			if err := validateManifest(manifest); err != nil {
-				return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid statement update")
-			}
-		}
-		// 2. Write statement back to workspace storage
-		stmtBytes := []byte(usecase.RenderStatementMarkdown(stmt))
-		if int64(len(stmtBytes)) > MaxStatementFileSize {
-			return nil, pkg.Wrap(pkg.ErrPayloadTooLarge, nil, "statement size exceeds maximum allowed limit of 2MB")
-		}
-		user := middleware.GetUser(ctx)
-		if err := h.workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
-			ProblemID: params.ProblemId,
-			Revision:  manifest.Revision,
-			UserID:    user.Id,
-			Path:      filePath,
-			Content:   stmtBytes,
-		}); err != nil {
-			return nil, workshopWriteError(err, "failed to save statement file")
-		}
-
-		// 4. Retrieve list of languages for response
-		var languages []string
-		if files, err := h.workshopUC.ListProblemFiles(ctx, params.ProblemId, "statements"); err == nil {
-			for _, f := range files {
-				if !f.IsDirectory && strings.HasSuffix(f.Path, ".md") {
-					base := filepath.Base(f.Path)
-					langCode := strings.TrimSuffix(base, ".md")
-					if langCode != "" {
-						languages = append(languages, langCode)
-					}
-				}
-			}
-		}
-		sort.Strings(languages)
-		if len(languages) == 0 {
-			languages = []string{"en"}
-		}
-
-		return h.toContractStatementForLang(stmt, languages, lang), nil
-	})
 }
 
 // ListProblemCheckers handles GET /problems/{problemId}/checkers
@@ -641,15 +515,12 @@ func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, req corev1.Up
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid tests config payload")
 	}
 
-	var testsMeta models.TestsMetadata
+	var testsMeta problemsmodel.TestsMetadata
 	if err := json.Unmarshal(bodyBytes, &testsMeta); err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to parse tests config")
 	}
-	if err := validateTestsMetadata(&testsMeta); err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid tests config")
-	}
 
-	if err := h.workshopUC.UpdateTestsConfig(ctx, params.ProblemId, &testsMeta); err != nil {
+	if err := h.problems.UpdateTestsConfig(ctx, params.ProblemId, &testsMeta); err != nil {
 		return nil, workshopWriteError(err, "failed to update tests config")
 	}
 
@@ -659,7 +530,7 @@ func (h *CoreServer) UpdateProblemTestsConfig(ctx context.Context, req corev1.Up
 // GetProblemTestFile handles GET /problems/{problemId}/tests/{name}
 func (h *CoreServer) GetProblemTestFile(ctx context.Context, params corev1.GetProblemTestFileParams) (corev1.GetProblemTestFileOK, error) {
 	if params.Name == "tests.json" {
-		testsMeta, err := h.workshopUC.GetTestsConfig(ctx, params.ProblemId)
+		testsMeta, err := h.problems.GetTestsConfig(ctx, params.ProblemId)
 		if err != nil {
 			return corev1.GetProblemTestFileOK{}, pkg.Wrap(pkg.ErrNotFound, err, "tests config not found")
 		}
@@ -695,15 +566,13 @@ func (h *CoreServer) DeleteProblemTestFile(ctx context.Context, params corev1.De
 
 // CompileProblemComponent handles POST /problems/{problemId}/workshop/components/{componentType}/compile
 func (h *CoreServer) CompileProblemComponent(ctx context.Context, params corev1.CompileProblemComponentParams) (*corev1.CompileResult, error) {
-	user := middleware.GetUser(ctx)
 
-	compileReq := models.CompileComponentRequest{
+	compileReq := problemsmodel.CompileComponentRequest{
 		ProblemID:     params.ProblemId,
 		ComponentType: string(params.ComponentType),
-		UserID:        user.Id,
 	}
 
-	result, err := h.workshopUC.CompileProblemComponent(ctx, compileReq)
+	result, err := h.problems.CompileProblemComponent(ctx, compileReq)
 	if err != nil {
 		return nil, workshopWriteError(err, "failed to compile component")
 	}
@@ -719,7 +588,6 @@ func (h *CoreServer) CompileProblemComponent(ctx context.Context, params corev1.
 
 // GenerateTests handles POST /problems/{problemId}/workshop/tests/generate
 func (h *CoreServer) GenerateTests(ctx context.Context, req *corev1.GenerateTestsReq, params corev1.GenerateTestsParams) (*corev1.GenerateTestsOK, error) {
-	user := middleware.GetUser(ctx)
 
 	testNumbers := make([]int, len(req.TestNumbers))
 	copy(testNumbers, req.TestNumbers)
@@ -730,15 +598,14 @@ func (h *CoreServer) GenerateTests(ctx context.Context, req *corev1.GenerateTest
 		copy(arguments, req.Arguments)
 	}
 
-	generateReq := models.GenerateTestsRequest{
+	generateReq := problemsmodel.GenerateTestsRequest{
 		ProblemID:     params.ProblemId,
 		GeneratorName: req.GeneratorName,
 		TestNumbers:   testNumbers,
 		Arguments:     arguments,
-		UserID:        user.Id,
 	}
 
-	if err := h.workshopUC.GenerateTests(ctx, generateReq); err != nil {
+	if err := h.problems.GenerateTests(ctx, generateReq); err != nil {
 		return nil, workshopWriteError(err, "failed to generate tests")
 	}
 
@@ -747,9 +614,8 @@ func (h *CoreServer) GenerateTests(ctx context.Context, req *corev1.GenerateTest
 
 // ValidateAllTests handles POST /problems/{problemId}/workshop/tests/validate
 func (h *CoreServer) ValidateAllTests(ctx context.Context, params corev1.ValidateAllTestsParams) (*corev1.ValidationReport, error) {
-	user := middleware.GetUser(ctx)
 
-	report, err := h.workshopUC.ValidateAllTests(ctx, params.ProblemId, user.Id)
+	report, err := h.problems.ValidateAllTests(ctx, params.ProblemId)
 	if err != nil {
 		return nil, workshopWriteError(err, "failed to validate tests")
 	}
@@ -774,7 +640,6 @@ func (h *CoreServer) ValidateAllTests(ctx context.Context, params corev1.Validat
 
 // TestSolution handles POST /problems/{problemId}/workshop/solutions/test
 func (h *CoreServer) TestSolution(ctx context.Context, req *corev1.TestSolutionReq, params corev1.TestSolutionParams) (*corev1.TestReport, error) {
-	user := middleware.GetUser(ctx)
 
 	var testNumbers []int
 	if req.TestNumbers != nil {
@@ -782,14 +647,13 @@ func (h *CoreServer) TestSolution(ctx context.Context, req *corev1.TestSolutionR
 		copy(testNumbers, req.TestNumbers)
 	}
 
-	testReq := models.TestSolutionRequest{
+	testReq := problemsmodel.TestSolutionRequest{
 		ProblemID:    params.ProblemId,
 		SolutionPath: req.SolutionPath,
 		TestNumbers:  testNumbers,
-		UserID:       user.Id,
 	}
 
-	report, err := h.workshopUC.TestSolution(ctx, testReq)
+	report, err := h.problems.TestSolution(ctx, testReq)
 	if err != nil {
 		return nil, workshopWriteError(err, "failed to test solution")
 	}
@@ -820,7 +684,7 @@ func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.
 			return corev1.WorkshopFileListResponse{}, err
 		}
 
-		files, err := h.workshopUC.ListProblemFiles(ctx, problemID, dir)
+		files, err := h.problems.ListProblemFiles(ctx, problemID, dir)
 		if err != nil {
 			return corev1.WorkshopFileListResponse{}, workshopWriteError(err, "failed to list files")
 		}
@@ -831,13 +695,13 @@ func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.
 				if !files[i].IsDirectory {
 					continue
 				}
-				nested, err := h.workshopUC.ListProblemFiles(ctx, problemID, files[i].Path)
+				nested, err := h.problems.ListProblemFiles(ctx, problemID, files[i].Path)
 				if err != nil {
 					return corev1.WorkshopFileListResponse{}, workshopWriteError(err, "failed to list nested tests")
 				}
 				files = append(files, nested...)
 			}
-			var testFiles []models.FileEntry
+			var testFiles []problemsmodel.FileEntry
 			for _, file := range files {
 				if !file.IsDirectory {
 					testFiles = append(testFiles, file)
@@ -848,7 +712,7 @@ func (h *CoreServer) listWorkshopCollection(ctx context.Context, problemID uuid.
 
 		manifest, err := h.readWorkshopManifest(ctx, problemID)
 		if err != nil {
-			manifest = &models.ProblemManifest{}
+			manifest = &problemsmodel.ProblemManifest{}
 		}
 
 		contractFiles := toContractFileEntries(files, manifest)
@@ -923,12 +787,11 @@ func (h *CoreServer) saveWorkshopCollectionBytes(ctx context.Context, problemID 
 		return pkg.Wrap(pkg.ErrPayloadTooLarge, nil, fmt.Sprintf("file size (%d bytes) exceeds maximum allowed limit of %d bytes", len(content), maxLimit))
 	}
 
-	user := middleware.GetUser(ctx)
-	if err := h.workshopUC.UpdateProblemFile(ctx, models.UpdateFileRequest{
+	if err := h.problems.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{
 		ProblemID: problemID,
-		UserID:    user.Id,
-		Path:      filepath.Join(dir, cleanName),
-		Content:   content,
+
+		Path:    filepath.Join(dir, cleanName),
+		Content: content,
 	}); err != nil {
 		return workshopWriteError(err, actionErrMsg)
 	}
@@ -965,7 +828,7 @@ func (h *CoreServer) saveWorkshopCollectionFile(ctx context.Context, problemID u
 
 func (h *CoreServer) createWorkshopCollectionTextFile(ctx context.Context, problemID uuid.UUID, dir, name, content string) error {
 	if dir == checkerDir || dir == generatorDir || dir == interactorDir || dir == validatorDir {
-		existing, err := h.workshopUC.ListProblemFiles(ctx, problemID, dir)
+		existing, err := h.problems.ListProblemFiles(ctx, problemID, dir)
 		if err == nil {
 			for _, f := range existing {
 				if !f.IsDirectory {
@@ -983,7 +846,7 @@ func (h *CoreServer) updateWorkshopCollectionTextFile(ctx context.Context, probl
 
 func (h *CoreServer) createWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string, body io.Reader) error {
 	if dir == checkerDir || dir == generatorDir || dir == interactorDir || dir == validatorDir {
-		existing, err := h.workshopUC.ListProblemFiles(ctx, problemID, dir)
+		existing, err := h.problems.ListProblemFiles(ctx, problemID, dir)
 		if err == nil {
 			for _, f := range existing {
 				if !f.IsDirectory {
@@ -1005,7 +868,7 @@ func (h *CoreServer) getWorkshopCollectionFile(ctx context.Context, problemID uu
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid file name")
 	}
 
-	content, err := h.workshopUC.ReadProblemFile(ctx, problemID, filepath.Join(dir, cleanName))
+	content, err := h.problems.ReadProblemFile(ctx, problemID, filepath.Join(dir, cleanName))
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrNotFound, err, "file not found")
 	}
@@ -1027,19 +890,19 @@ func (h *CoreServer) deleteWorkshopCollectionFile(ctx context.Context, problemID
 	}
 
 	path := filepath.Join(dir, cleanName)
-	if err := h.workshopUC.DeleteProblemFile(ctx, problemID, path); err != nil {
+	if err := h.problems.DeleteProblemFile(ctx, problemID, path); err != nil {
 		return workshopWriteError(err, "failed to delete file")
 	}
 
 	return nil
 }
 
-func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UUID) (*models.ProblemManifest, error) {
+func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UUID) (*problemsmodel.ProblemManifest, error) {
 	if err := h.requireWorkshop(ctx, problemID); err != nil {
 		return nil, err
 	}
 
-	manifest, err := h.workshopUC.GetManifest(ctx, problemID)
+	manifest, err := h.problems.GetManifest(ctx, problemID)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrNotFound, err, "manifest not found")
 	}
@@ -1047,15 +910,7 @@ func (h *CoreServer) readWorkshopManifest(ctx context.Context, problemID uuid.UU
 	return manifest, nil
 }
 
-func (h *CoreServer) saveWorkshopManifest(ctx context.Context, problemID uuid.UUID, manifest *models.ProblemManifest) error {
-	if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
-		return workshopWriteError(err, "failed to update manifest")
-	}
-
-	return nil
-}
-
-func (h *CoreServer) toContractLimits(manifest *models.ProblemManifest) *corev1.ProblemLimits {
+func (h *CoreServer) toContractLimits(manifest *problemsmodel.ProblemManifest) *corev1.ProblemLimits {
 	var maxScoreOpt corev1.OptNilInt
 	if manifest.MaxScore != nil {
 		maxScoreOpt = corev1.NewOptNilInt(*manifest.MaxScore)
@@ -1068,7 +923,7 @@ func (h *CoreServer) toContractLimits(manifest *models.ProblemManifest) *corev1.
 	}
 }
 
-func (h *CoreServer) toContractStatementForLang(stmt models.Statement, languages []string, currentLang string) *corev1.ProblemStatement {
+func (h *CoreServer) toContractStatementForLang(stmt problemsmodel.Statement, languages []string, currentLang string) *corev1.ProblemStatement {
 	return &corev1.ProblemStatement{
 		InputFormat:  stmt.InputFormat,
 		Interaction:  stringToOptString(stmt.Interaction),
@@ -1082,7 +937,7 @@ func (h *CoreServer) toContractStatementForLang(stmt models.Statement, languages
 	}
 }
 
-func toContractFileEntries(files []models.FileEntry, manifest *models.ProblemManifest) []corev1.FileEntry {
+func toContractFileEntries(files []problemsmodel.FileEntry, manifest *problemsmodel.ProblemManifest) []corev1.FileEntry {
 	var mainChecker, mainInteractor, mainValidator string
 	if manifest != nil {
 		for _, meta := range manifest.FilesMetadata {
@@ -1127,23 +982,6 @@ func toContractFileEntries(files []models.FileEntry, manifest *models.ProblemMan
 	return contractFiles
 }
 
-func validateManifest(m *models.ProblemManifest) error {
-	if m.TimeLimitMs <= 0 || m.MemoryLimitMb <= 0 {
-		return fmt.Errorf("limits must be positive")
-	}
-	if strings.TrimSpace(m.Statement.Title) == "" {
-		return fmt.Errorf("title is required")
-	}
-	return nil
-}
-
-func validateTestsMetadata(t *models.TestsMetadata) error {
-	if len(t.Tests) == 0 {
-		return fmt.Errorf("at least one test case is required")
-	}
-	return nil
-}
-
 func sanitizeFileName(name string) (string, error) {
 	clean := strings.TrimSpace(name)
 	if clean == "" {
@@ -1176,7 +1014,7 @@ func workshopWriteError(err error, message string) error {
 }
 
 func (h *CoreServer) requireWorkshop(ctx context.Context, id uuid.UUID) error {
-	initialized, err := h.workshopUC.IsInitialized(ctx, id)
+	initialized, err := h.problems.IsInitialized(ctx, id)
 	if err != nil {
 		return workshopWriteError(err, "read workspace package")
 	}
@@ -1187,7 +1025,7 @@ func (h *CoreServer) requireWorkshop(ctx context.Context, id uuid.UUID) error {
 }
 
 func withWorkshopValue[T any](ctx context.Context, h *CoreServer, id uuid.UUID, fn func(context.Context) (T, error)) (result T, err error) {
-	err = h.workshopUC.WithWorkspace(ctx, id, func(ctx context.Context) error {
+	err = h.problems.WithWorkspace(ctx, id, func(ctx context.Context) error {
 		result, err = fn(ctx)
 		return err
 	})

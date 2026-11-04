@@ -7,35 +7,38 @@ import (
 	"net/http"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
 )
 
 func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 	suffix := uuid.NewString()[:8]
 
-	ownerUser := s.createUser("team_owner_"+suffix, models.UserRoleUser)
-	teamMemberUser := s.createUser("team_member_"+suffix, models.UserRoleUser)
-	adminUser := s.createUser("team_admin_"+suffix, models.UserRoleAdmin)
+	ownerUser := s.createUser("team_owner_"+suffix, accessmodel.UserRoleUser)
+	teamMemberUser := s.createUser("team_member_"+suffix, accessmodel.UserRoleUser)
+	adminUser := s.createUser("team_admin_"+suffix, accessmodel.UserRoleAdmin)
 
 	org := s.createOrganization("team-org-"+suffix, "Team Test Org", ownerUser.Id)
 
 	// Add teamMemberUser to org
-	err := s.organizationsRepo.AddMember(s.ctx, org.ID, teamMemberUser.Id, models.OrgRoleMember)
+	err := s.organizationsRepo.AddMember(s.ctx, org.ID, teamMemberUser.Id, organizationsmodel.OrgRoleMember)
 	s.Require().NoError(err)
 
 	// Create Team
-	team, err := s.teamsRepo.CreateTeam(s.ctx, &models.CreateTeamInput{
+	team, err := s.teamsRepo.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{
 		OrganizationID: org.ID,
 		Name:           "Test Dev Team " + suffix,
 		Slug:           "dev-team-" + suffix,
 		Description:    "Dev Team for testing",
-		Privacy:        models.TeamPrivacyClosed,
+		Privacy:        organizationsmodel.TeamPrivacyClosed,
 	})
 	s.Require().NoError(err)
 
 	// Add teamMemberUser to team
-	err = s.teamsRepo.AddTeamMember(s.ctx, team.ID, teamMemberUser.Id, models.TeamRoleMember)
+	err = s.teamsRepo.AddTeamMember(s.ctx, team.ID, teamMemberUser.Id, organizationsmodel.TeamRoleMember)
 	s.Require().NoError(err)
 
 	// 1. Contest Team Access Test
@@ -43,11 +46,11 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 		contestID := uuid.New()
 		ownerID := ownerUser.Id
 
-		err := s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+		err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 			ID:             contestID,
 			OrganizationID: org.ID,
 			OwnerID:        &ownerID,
-			Visibility:     models.ContestVisibilityPrivate,
+			Visibility:     contestsmodel.ContestVisibilityPrivate,
 			Title:          "Private Contest " + suffix,
 			Login:          "priv-" + suffix,
 			Description:    "Private contest description",
@@ -115,11 +118,11 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 		problemID := uuid.New()
 		ownerID := ownerUser.Id
 
-		err := s.problemsRepo.CreateProblem(s.ctx, &models.CreateProblemParams{
+		err := s.problemsRepo.CreateProblem(s.ctx, &problemsmodel.CreateProblemParams{
 			ID:             problemID,
 			OrganizationID: org.ID,
 			OwnerID:        &ownerID,
-			Visibility:     models.ProblemVisibilityPrivate,
+			Visibility:     problemsmodel.ProblemVisibilityPrivate,
 			Title:          "Private Problem " + suffix,
 			ShortName:      "prob-" + suffix,
 		})

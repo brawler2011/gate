@@ -1,31 +1,27 @@
 package core
 
 import (
-	"bytes"
 	"context"
-	"io"
-	"strings"
+
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/templates"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
+	"github.com/brawler2011/gate/backend/internal/problems"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
 type ProblemsReader interface {
-	ListProblemMemberResponses(ctx context.Context, problemID uuid.UUID, page int32) (*corev1.ListProblemMembersResponseModel, error)
-	ListProblemTeamResponses(ctx context.Context, problemID uuid.UUID) (*corev1.ListProblemTeamsResponseModel, error)
-	ListProblemResponses(ctx context.Context, filter *models.ProblemsFilter) (*corev1.ListProblemsResponseModel, error)
-	ListDashboardProblemResponses(ctx context.Context, userID uuid.UUID, limit int32) ([]corev1.DashboardProblemModel, error)
+	problems.Reads
+	ListTemplates(context.Context, uuid.UUID) ([]problems.Template, error)
 }
 
 func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblemsParams) (*corev1.ListProblemsResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	searchStr := params.Search.Or("")
 
-	filter := &models.ProblemsFilter{
+	filter := &problemsmodel.ProblemsFilter{
 		ViewerID: &user.Id,
 		Page:     params.Page.Or(1),
 		PageSize: params.PageSize.Or(50),
@@ -46,201 +42,44 @@ func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblem
 		filter.IsTemplate = &isTmpl
 	}
 
-	return h.problemsReader.ListProblemResponses(ctx, filter)
+	problemsList, err := h.problems.ListProblems(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := corev1.ListProblemsResponseModel{
+		Problems:   make([]corev1.ProblemsListItemModel, len(problemsList.Problems)),
+		Pagination: PaginationDTO(problemsList.Pagination),
+	}
+
+	for i, problem := range problemsList.Problems {
+		resp.Problems[i] = ProblemsListItemDTO(problem)
+	}
+	return &resp, nil
 }
 
 func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.ListProblemTemplatesParams) ([]corev1.ProblemTemplateModel, error) {
-	user := middleware.GetUser(ctx)
-
-	var orgID uuid.UUID
-	if params.OrganizationID.IsSet() {
-		orgID = params.OrganizationID.Value
-	} else if user.Id != uuid.Nil {
-		orgs, err := h.organizationsUC.GetUserOrganizations(ctx, user.Id)
-		if err == nil && len(orgs) > 0 {
-			orgID = orgs[0].ID
-		}
+	templates, err := h.problems.ListTemplates(ctx, params.OrganizationID.Or(uuid.Nil))
+	if err != nil {
+		return nil, err
 	}
-
-	result := make([]corev1.ProblemTemplateModel, 0)
-
-	// 1. Builtin templates
-	builtinList := templates.ListBuiltinTemplates()
-	for _, b := range builtinList {
-		result = append(result, corev1.ProblemTemplateModel{
-			ID:          b.ID,
-			Title:       b.Title,
-			Description: b.Description,
-			ProblemType: b.ProblemType,
-			IsBuiltin:   true,
-		})
+	result := make([]corev1.ProblemTemplateModel, len(templates))
+	for i, template := range templates {
+		result[i] = corev1.ProblemTemplateModel{ID: template.ID, Title: template.Title, Description: template.Description, ProblemType: template.ProblemType, IsBuiltin: template.IsBuiltin}
 	}
-
-	// 2. Organization templates
-	if orgID != uuid.Nil {
-		isTemplate := true
-		filter := &models.ProblemsFilter{
-			Page:           1,
-			PageSize:       100,
-			OrganizationID: &orgID,
-			IsTemplate:     &isTemplate,
-		}
-		orgProblems, err := h.problemsReader.ListProblemResponses(ctx, filter)
-		if err == nil && orgProblems != nil {
-			for _, p := range orgProblems.Problems {
-				probType := "pass-fail"
-				manifest, err := h.workshopUC.GetManifest(ctx, p.ID)
-				if err == nil && manifest != nil && manifest.ProblemType != "" {
-					probType = manifest.ProblemType
-				}
-
-				desc := "Пользовательский шаблон организации"
-				if manifest != nil && manifest.Statement.Legend != "" {
-					desc = manifest.Statement.Legend
-				}
-
-				result = append(result, corev1.ProblemTemplateModel{
-					ID:          p.ID.String(),
-					Title:       p.Title,
-					Description: desc,
-					ProblemType: probType,
-					IsBuiltin:   false,
-				})
-			}
-		}
-	}
-
 	return result, nil
 }
 
 func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProblemParams) (*corev1.CreationResponseModel, error) {
-	user := middleware.GetUser(ctx)
-
-	if params.Title == "" {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "empty title")
-	}
-
-	templateIDStr := strings.TrimSpace(params.TemplateID)
-	if templateIDStr == "" {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "template_id is required")
-	}
-
-	var orgID uuid.UUID
-	if params.OrganizationID.IsSet() {
-		orgID = params.OrganizationID.Value
-	} else {
-		orgs, err := h.organizationsUC.GetUserOrganizations(ctx, user.Id)
-		if err != nil {
-			return nil, err
-		}
-		if len(orgs) == 0 {
-			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "user has no organizations")
-		}
-		orgID = orgs[0].ID
-	}
-
-	shortName := "problem-" + uuid.New().String()[:8]
-
-	input := &models.CreateProblemInput{
-		OrganizationID: orgID,
-		OwnerID:        &user.Id,
-		Title:          params.Title,
-		ShortName:      shortName,
-		Visibility:     models.ProblemVisibilityPrivate,
-	}
-
-	if strings.HasPrefix(templateIDStr, "builtin:") {
-		zipBytes, err := templates.GetBuiltinTemplateZip(templateIDStr)
-		if err != nil {
-			return nil, pkg.Wrap(pkg.ErrBadInput, err, "неизвестный встроенный шаблон")
-		}
-
-		problemID, err := h.problemsUC.CreateProblem(ctx, input)
-		if err != nil {
-			return nil, err
-		}
-
-		_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(zipBytes), int64(len(zipBytes)), problemID)
-		if err != nil {
-			_ = h.problemsUC.DeleteProblem(ctx, problemID)
-			return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to import builtin template package")
-		}
-
-		manifest, err := h.workshopUC.GetManifest(ctx, problemID)
-		if err != nil {
-			_ = h.problemsUC.DeleteProblem(ctx, problemID)
-			return nil, err
-		}
-		manifest.Statement.Title = input.Title
-		if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
-			_ = h.problemsUC.DeleteProblem(ctx, problemID)
-			return nil, workshopWriteError(err, "save template title")
-		}
-
-		return &corev1.CreationResponseModel{ID: problemID}, nil
-	}
-
-	templateUUID, err := uuid.Parse(templateIDStr)
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid template_id format")
-	}
-
-	templateProblem, err := h.problemsUC.GetProblemById(ctx, templateUUID)
+	id, err := h.problems.CreateProblem(ctx, &problemsmodel.CreateProblemInput{OrganizationID: params.OrganizationID.Or(uuid.Nil), Title: params.Title, TemplateID: params.TemplateID})
 	if err != nil {
 		return nil, err
 	}
-	if !templateProblem.IsTemplate {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "выбранная задача не является шаблоном")
-	}
-	if templateProblem.OrganizationID != orgID {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "шаблон должен принадлежать той же организации")
-	}
-
-	readyPkg, err := h.publishUC.GetReadyPackage(ctx, templateUUID)
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "не удалось найти готовый пакет шаблона")
-	}
-
-	problemID, err := h.problemsUC.CreateProblem(ctx, input)
-	if err != nil {
-		return nil, err
-	}
-
-	zipReader, err := h.publishUC.DownloadPackage(ctx, templateUUID, readyPkg.PackageHash)
-	if err != nil {
-		_ = h.problemsUC.DeleteProblem(ctx, problemID)
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to download template package")
-	}
-	defer zipReader.Close()
-
-	fileBytes, err := io.ReadAll(zipReader)
-	if err != nil {
-		_ = h.problemsUC.DeleteProblem(ctx, problemID)
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to read template package")
-	}
-
-	_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(fileBytes), int64(len(fileBytes)), problemID)
-	if err != nil {
-		_ = h.problemsUC.DeleteProblem(ctx, problemID)
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to import template package")
-	}
-
-	manifest, err := h.workshopUC.GetManifest(ctx, problemID)
-	if err != nil {
-		_ = h.problemsUC.DeleteProblem(ctx, problemID)
-		return nil, err
-	}
-	manifest.Statement.Title = input.Title
-	if err := h.workshopUC.SaveManifest(ctx, problemID, manifest); err != nil {
-		_ = h.problemsUC.DeleteProblem(ctx, problemID)
-		return nil, workshopWriteError(err, "save template title")
-	}
-
-	return &corev1.CreationResponseModel{ID: problemID}, nil
+	return &corev1.CreationResponseModel{ID: id}, nil
 }
 
 func (h *CoreServer) DeleteProblem(ctx context.Context, params corev1.DeleteProblemParams) error {
-	err := h.problemsUC.DeleteProblem(ctx, params.ID)
+	err := h.problems.DeleteProblem(ctx, params.ID)
 	if err != nil {
 		return err
 	}
@@ -249,37 +88,12 @@ func (h *CoreServer) DeleteProblem(ctx context.Context, params corev1.DeleteProb
 }
 
 func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemParams) (*corev1.GetProblemResponseModel, error) {
-	problem, err := h.problemsUC.GetProblemById(ctx, params.ID)
+	details, err := h.problems.GetProblemDetails(ctx, params.ID)
 	if err != nil {
 		return nil, err
 	}
+	return &corev1.GetProblemResponseModel{Problem: *ProblemDTO(details.Problem, details.Statement, SamplesDTO(details.Samples))}, nil
 
-	var statement *models.Statement
-	var samples []corev1.ProblemSampleModel
-	if h.workshopUC != nil {
-		if err := h.workshopUC.WithWorkspace(ctx, params.ID, func(ctx context.Context) error {
-			initialized, err := h.workshopUC.IsInitialized(ctx, params.ID)
-			if err != nil {
-				return err
-			}
-			if !initialized {
-				return nil
-			}
-			manifest, err := h.workshopUC.GetManifest(ctx, params.ID)
-			if err != nil {
-				return err
-			}
-			problem.Title = manifest.Statement.Title
-			problem.TimeLimitMs = manifest.TimeLimitMs
-			problem.MemoryLimitMb = manifest.MemoryLimitMb
-			statement, samples = h.loadWorkspaceStatementAndSamples(ctx, params.ID, "")
-			return nil
-		}); err != nil {
-			return nil, workshopWriteError(err, "read problem package")
-		}
-	}
-
-	return &corev1.GetProblemResponseModel{Problem: *ProblemDTO(problem, statement, samples)}, nil
 }
 
 func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProblemRequestModel, params corev1.UpdateProblemParams) error {
@@ -288,7 +102,7 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 	}
 
 	// Build update params
-	update := &models.ProblemUpdate{}
+	update := &problemsmodel.ProblemUpdate{}
 
 	// Handle title update
 	if req.Title.IsSet() {
@@ -302,29 +116,13 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 
 	// Handle is_template update
 	if req.IsTemplate.IsSet() {
-		if req.IsTemplate.Value {
-			pkgs, err := h.publishUC.ListPackages(ctx, params.ID)
-			if err != nil {
-				return err
-			}
-			hasReady := false
-			for _, p := range pkgs {
-				if p.Status == "ready" {
-					hasReady = true
-					break
-				}
-			}
-			if !hasReady {
-				return pkg.Wrap(pkg.ErrBadInput, nil, "для перевода задачи в шаблон необходим хотя бы один успешно собранный пакет")
-			}
-		}
 		update.IsTemplate = &req.IsTemplate.Value
 	}
 
 	// Note: Other fields (Legend, InputFormat, etc.) are now stored in git repos
 	// and managed through the workshop/publish workflow
 
-	err := h.problemsUC.UpdateProblem(ctx, params.ID, update)
+	err := h.problems.UpdateProblem(ctx, params.ID, update)
 	if err != nil {
 		return err
 	}
@@ -333,18 +131,23 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 }
 
 func (h *CoreServer) ListProblemTeams(ctx context.Context, params corev1.ListProblemTeamsParams) (*corev1.ListProblemTeamsResponseModel, error) {
-	return h.problemsReader.ListProblemTeamResponses(ctx, params.ID)
+	teams, err := h.problems.GetProblemTeams(ctx, params.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return listProblemTeamsDTO(teams), nil
 }
 
 func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.CreateProblemTeamParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
-	permission := models.ProblemPermissionRead
+	permission := problemsmodel.ProblemPermissionRead
 	if params.Permission.IsSet() && params.Permission.Value != "" {
-		permission = models.ProblemPermission(params.Permission.Value)
+		permission = problemsmodel.ProblemPermission(params.Permission.Value)
 	}
 
-	err := h.problemsUC.AddProblemTeam(ctx, params.ID, params.TeamID, user.Id, permission)
+	err := h.problems.AddProblemTeam(ctx, params.ID, params.TeamID, user.Id, permission)
 	if err != nil {
 		return err
 	}
@@ -353,9 +156,9 @@ func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.Create
 }
 
 func (h *CoreServer) UpdateProblemTeam(ctx context.Context, params corev1.UpdateProblemTeamParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
-	err := h.problemsUC.UpdateProblemTeamPermission(ctx, params.ID, params.TeamID, user.Id, models.ProblemPermission(params.Permission))
+	err := h.problems.UpdateProblemTeamPermission(ctx, params.ID, params.TeamID, user.Id, problemsmodel.ProblemPermission(params.Permission))
 	if err != nil {
 		return err
 	}
@@ -364,9 +167,9 @@ func (h *CoreServer) UpdateProblemTeam(ctx context.Context, params corev1.Update
 }
 
 func (h *CoreServer) DeleteProblemTeam(ctx context.Context, params corev1.DeleteProblemTeamParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
-	err := h.problemsUC.RemoveProblemTeam(ctx, params.ID, params.TeamID, user.Id)
+	err := h.problems.RemoveProblemTeam(ctx, params.ID, params.TeamID, user.Id)
 	if err != nil {
 		return err
 	}
@@ -375,18 +178,25 @@ func (h *CoreServer) DeleteProblemTeam(ctx context.Context, params corev1.Delete
 }
 
 func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListProblemMembersParams) (*corev1.ListProblemMembersResponseModel, error) {
-	return h.problemsReader.ListProblemMemberResponses(ctx, params.ID, params.Page.Or(1))
+	members, err := h.problems.ListProblemMembers(ctx, params.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	total := safeInt32(len(members))
+	page := params.Page.Or(1)
+	return listProblemMembersDTO(members, page, total), nil
 }
 
 func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.CreateProblemMemberParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
-	role := models.ProblemRoleViewer
+	role := problemsmodel.ProblemRoleViewer
 	if params.Role.IsSet() && params.Role.Value != "" {
-		role = models.ProblemRole(params.Role.Value)
+		role = problemsmodel.ProblemRole(params.Role.Value)
 	}
 
-	err := h.problemsUC.CreateProblemMember(ctx, params.ID, params.UserID, user.Id, role)
+	err := h.problems.CreateProblemMember(ctx, params.ID, params.UserID, user.Id, role)
 	if err != nil {
 		return err
 	}
@@ -395,9 +205,9 @@ func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.Crea
 }
 
 func (h *CoreServer) UpdateProblemMember(ctx context.Context, params corev1.UpdateProblemMemberParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
-	err := h.problemsUC.UpdateProblemMemberRole(ctx, params.ID, params.UserID, user.Id, models.ProblemRole(params.Role))
+	err := h.problems.UpdateProblemMemberRole(ctx, params.ID, params.UserID, user.Id, problemsmodel.ProblemRole(params.Role))
 	if err != nil {
 		return err
 	}
@@ -406,9 +216,9 @@ func (h *CoreServer) UpdateProblemMember(ctx context.Context, params corev1.Upda
 }
 
 func (h *CoreServer) DeleteProblemMember(ctx context.Context, params corev1.DeleteProblemMemberParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
-	err := h.problemsUC.RemoveProblemMember(ctx, params.ID, params.UserID, user.Id)
+	err := h.problems.RemoveProblemMember(ctx, params.ID, params.UserID, user.Id)
 	if err != nil {
 		return err
 	}

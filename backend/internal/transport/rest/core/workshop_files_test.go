@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"encoding/json"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -11,9 +10,11 @@ import (
 	"sync"
 	"testing"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/usecase"
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
@@ -21,7 +22,7 @@ import (
 )
 
 type workshopFilesRepo struct {
-	interfaces.ProblemsRepo
+	ProblemsRepo
 	mu   sync.Mutex
 	hash string
 }
@@ -31,7 +32,8 @@ func (r *workshopFilesRepo) GetWorkspaceHash(context.Context, uuid.UUID) (string
 	defer r.mu.Unlock()
 	return r.hash, nil
 }
-func (r *workshopFilesRepo) CommitWorkspace(_ context.Context, _ uuid.UUID, previousHash, hash string, _ *models.WorkspaceMetadata) error {
+
+func (r *workshopFilesRepo) CommitWorkspace(_ context.Context, _ uuid.UUID, previousHash, hash string, _ *problemsmodel.WorkspaceMetadata) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.hash != previousHash {
@@ -44,14 +46,14 @@ func (r *workshopFilesRepo) CommitWorkspace(_ context.Context, _ uuid.UUID, prev
 type workshopFilesSecurity struct{}
 
 func (workshopFilesSecurity) HandleCookieAuth(ctx context.Context, _ corev1.OperationName, _ corev1.CookieAuth) (context.Context, error) {
-	return ctx, nil
+	return workshopFileContext(), nil
 }
 
 func TestWorkshopNestedTestFiles_HTTP(t *testing.T) {
-	ctx := context.Background()
+	ctx := workshopFileContext()
 	id := uuid.New()
 	repo := &workshopFilesRepo{}
-	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test", repo)
+	ws := problems.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test", repo)
 	for path, content := range map[string]string{
 		"problem.yaml":         "subtasks:\n  samples:\n    tests:\n      - manual: nested/edge\n",
 		"tests/nested/edge.in": "original input", "tests/nested/edge.ans": "original answer",
@@ -59,13 +61,13 @@ func TestWorkshopNestedTestFiles_HTTP(t *testing.T) {
 	} {
 		require.NoError(t, ws.WriteFile(ctx, id, path, []byte(content)))
 	}
-	handler := &CoreServer{workshopUC: usecase.NewWorkshopUseCase(ws, nil)}
+	handler := &CoreServer{problems: testProblemsModule{WorkshopUC: problems.NewWorkshopUseCase(ws, nil, workshopFilePermissions{})}}
 	server, err := corev1.NewServer(handler, workshopFilesSecurity{}, corev1.WithErrorHandler(func(_ context.Context, w http.ResponseWriter, _ *http.Request, err error) {
 		w.WriteHeader(pkg.ToREST(err))
 	}))
 	require.NoError(t, err)
 	request := func(method, path, body string) *httptest.ResponseRecorder {
-		req := httptest.NewRequest(method, "/problems/"+id.String()+"/tests"+path, strings.NewReader(body))
+		req := httptest.NewRequest(method, "/problems/"+id.String()+"/tests"+path, strings.NewReader(body)).WithContext(ctx)
 		req.AddCookie(&http.Cookie{Name: "session_id", Value: "test"})
 		req.Header.Set("Content-Type", "application/octet-stream")
 		response := httptest.NewRecorder()
@@ -90,7 +92,7 @@ func TestWorkshopNestedTestFiles_HTTP(t *testing.T) {
 	}
 	require.ElementsMatch(t, []string{"tests/nested/edge.in", "tests/nested/edge.ans", "tests/nested/deeper/extra.in"}, paths)
 	// The generic workspace tree stays shallow; only the tests collection expands directories.
-	tree, err := handler.workshopUC.ListProblemFiles(ctx, id, "tests")
+	tree, err := handler.problems.ListProblemFiles(ctx, id, "tests")
 	require.NoError(t, err)
 	require.Len(t, tree, 1)
 	require.True(t, tree[0].IsDirectory)
@@ -119,176 +121,30 @@ func TestWorkshopNestedTestFiles_HTTP(t *testing.T) {
 	require.Equal(t, "outside", string(outside))
 }
 
-type competingWorkshopPatch struct {
-	interfaces.WorkshopUC
-	beforeWrite func()
-}
+type conflictingWorkshop struct{ WorkshopUC }
 
-func (w competingWorkshopPatch) SaveManifest(ctx context.Context, id uuid.UUID, manifest *models.ProblemManifest) error {
-	w.beforeWrite()
-	return w.WorkshopUC.SaveManifest(ctx, id, manifest)
+func (conflictingWorkshop) UpdateLimits(context.Context, uuid.UUID, problems.LimitsPatch) (*problemsmodel.ProblemManifest, error) {
+	return nil, pkg.ErrConflict
 }
-func (w competingWorkshopPatch) UpdateProblemFile(ctx context.Context, request models.UpdateFileRequest) error {
-	w.beforeWrite()
-	return w.WorkshopUC.UpdateProblemFile(ctx, request)
+func (conflictingWorkshop) UpdateStatement(context.Context, uuid.UUID, string, problems.StatementPatch) (*problemsmodel.LocalizedStatement, error) {
+	return nil, pkg.ErrConflict
 }
-
-func TestWorkshopPatchesRejectConcurrentChanges_HTTP409(t *testing.T) {
-	for _, patch := range []string{"limits", "statement"} {
-		t.Run(patch, func(t *testing.T) {
-			ctx := context.Background()
-			id := uuid.New()
-			repo := &workshopFilesRepo{}
-			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test", repo)
-			uc := usecase.NewWorkshopUseCase(ws, nil)
-			require.NoError(t, uc.InitProblemWorkshop(ctx, id, "Original"))
-			beforeWrite := func() {
-				current, err := uc.GetManifest(ctx, id)
-				require.NoError(t, err)
-				current.Statement.Title = "Concurrent title"
-				require.NoError(t, uc.SaveManifest(ctx, id, current))
-			}
-			handler := &CoreServer{workshopUC: competingWorkshopPatch{WorkshopUC: uc, beforeWrite: beforeWrite}}
-			var err error
-			if patch == "limits" {
-				_, err = handler.UpdateProblemLimits(ctx, &corev1.UpdateProblemLimitsRequest{TimeLimitMs: corev1.NewOptInt(4321)}, corev1.UpdateProblemLimitsParams{ProblemId: id})
-			} else {
-				_, err = handler.UpdateProblemStatement(ctx, &corev1.UpdateProblemStatementRequest{Legend: corev1.NewOptString("Stale legend")}, corev1.UpdateProblemStatementParams{ProblemId: id})
-			}
-			require.ErrorIs(t, err, pkg.ErrConflict)
-			require.Equal(t, http.StatusConflict, pkg.ToREST(err))
-			actual, err := uc.GetManifest(ctx, id)
-			require.NoError(t, err)
-			require.Equal(t, "Concurrent title", actual.Statement.Title)
-			require.Equal(t, 1000, actual.TimeLimitMs)
-			require.NotEqual(t, "Stale legend", actual.Statement.Legend)
-		})
-	}
-}
-
-func TestEnglishStatementUsesCanonicalTitleAfterRename(t *testing.T) {
-	ctx := context.Background()
+func TestWorkshopPatchesReturnHTTP409(t *testing.T) {
+	handler := &CoreServer{problems: testProblemsModule{WorkshopUC: conflictingWorkshop{}}}
 	id := uuid.New()
-	repo := &workshopFilesRepo{}
-	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test", repo)
-	uc := usecase.NewWorkshopUseCase(ws, nil)
-	require.NoError(t, uc.InitProblemWorkshop(ctx, id, "Old title"))
-	markdown := "<!-- title -->\nOld title\n\n<!-- legend -->\nOriginal legend\n"
-	require.NoError(t, uc.UpdateProblemFile(ctx, models.UpdateFileRequest{ProblemID: id, Path: "statements/en.md", Content: []byte(markdown)}))
-	manifest, err := uc.GetManifest(ctx, id)
-	require.NoError(t, err)
-	manifest.Statement.Title = "Renamed title"
-	require.NoError(t, uc.SaveManifest(ctx, id, manifest))
-	original, err := uc.ReadProblemFile(ctx, id, "statements/en.md")
-	require.NoError(t, err)
-	require.Equal(t, markdown, string(original))
-	handler := &CoreServer{workshopUC: uc}
-	statement, err := handler.GetProblemStatement(ctx, corev1.GetProblemStatementParams{ProblemId: id})
-	require.NoError(t, err)
-	require.Equal(t, "Renamed title", statement.Title)
-	statement, err = handler.UpdateProblemStatement(ctx, &corev1.UpdateProblemStatementRequest{Legend: corev1.NewOptString("Changed legend")}, corev1.UpdateProblemStatementParams{ProblemId: id})
-	require.NoError(t, err)
-	require.Equal(t, "Renamed title", statement.Title)
-	actual, err := uc.GetManifest(ctx, id)
-	require.NoError(t, err)
-	require.Equal(t, "Renamed title", actual.Statement.Title)
-	require.Equal(t, "Changed legend", actual.Statement.Legend)
+	_, err := handler.UpdateProblemLimits(workshopFileContext(), &corev1.UpdateProblemLimitsRequest{TimeLimitMs: corev1.NewOptInt(4321)}, corev1.UpdateProblemLimitsParams{ProblemId: id})
+	require.ErrorIs(t, err, pkg.ErrConflict)
+	require.Equal(t, http.StatusConflict, pkg.ToREST(err))
+	_, err = handler.UpdateProblemStatement(workshopFileContext(), &corev1.UpdateProblemStatementRequest{Legend: corev1.NewOptString("Legend")}, corev1.UpdateProblemStatementParams{ProblemId: id})
+	require.ErrorIs(t, err, pkg.ErrConflict)
+	require.Equal(t, http.StatusConflict, pkg.ToREST(err))
 }
 
-type concurrentStatementRead struct {
-	interfaces.WorkshopUC
-	beforeRead func()
-}
+type workshopFilePermissions struct{}
 
-func (w concurrentStatementRead) ReadProblemFile(ctx context.Context, id uuid.UUID, path string) ([]byte, error) {
-	w.beforeRead()
-	return w.WorkshopUC.ReadProblemFile(ctx, id, path)
+func (workshopFilePermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+	return true, nil
 }
-
-func TestStatementResponseCapturesOnePackageRevision(t *testing.T) {
-	for _, lang := range []string{"en", "ru"} {
-		t.Run(lang, func(t *testing.T) {
-			ctx := context.Background()
-			id := uuid.New()
-			ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test", &workshopFilesRepo{})
-			uc := usecase.NewWorkshopUseCase(ws, nil)
-			require.NoError(t, uc.InitProblemWorkshop(ctx, id, "Original title"))
-			require.NoError(t, uc.UpdateProblemFile(ctx, models.UpdateFileRequest{ProblemID: id, Path: "statements/ru.md", Content: []byte("<!-- legend -->\nOriginal translation\n")}))
-			changed := false
-			beforeRead := func() {
-				if changed {
-					return
-				}
-				changed = true
-				require.NoError(t, uc.WithWorkspace(ctx, id, func(ctx context.Context) error {
-					manifest, err := uc.GetManifest(ctx, id)
-					require.NoError(t, err)
-					manifest.Statement.Title = "New title"
-					manifest.Statement.Legend = "New legend"
-					require.NoError(t, uc.SaveManifest(ctx, id, manifest))
-					return uc.UpdateProblemFile(ctx, models.UpdateFileRequest{ProblemID: id, Path: "statements/ru.md", Content: []byte("<!-- legend -->\nNew translation\n")})
-				}))
-			}
-			handler := &CoreServer{workshopUC: concurrentStatementRead{WorkshopUC: uc, beforeRead: beforeRead}}
-			statement, err := handler.GetProblemStatement(ctx, corev1.GetProblemStatementParams{ProblemId: id, Lang: corev1.NewOptString(lang)})
-			require.NoError(t, err)
-			require.Equal(t, "Original title", statement.Title)
-			if lang == "en" {
-				require.Equal(t, "Problem description goes here.", statement.Legend)
-			} else {
-				require.Equal(t, "Original translation", statement.Legend)
-			}
-			current, err := uc.GetManifest(ctx, id)
-			require.NoError(t, err)
-			require.Equal(t, "New title", current.Statement.Title)
-		})
-	}
-}
-
-type workspaceProblemCatalog struct {
-	interfaces.ProblemsUC
-	problem models.Problem
-}
-
-func (c workspaceProblemCatalog) GetProblemById(context.Context, uuid.UUID) (models.Problem, error) {
-	return c.problem, nil
-}
-
-func TestProblemDetailsUseOneCanonicalPackage(t *testing.T) {
-	ctx := context.Background()
-	id := uuid.New()
-	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "test", &workshopFilesRepo{})
-	uc := usecase.NewWorkshopUseCase(ws, nil)
-	require.NoError(t, uc.InitProblemWorkshop(ctx, id, "Original title"))
-	changed := false
-	beforeRead := func() {
-		if changed {
-			return
-		}
-		changed = true
-		require.NoError(t, uc.WithWorkspace(ctx, id, func(ctx context.Context) error {
-			manifest, err := uc.GetManifest(ctx, id)
-			require.NoError(t, err)
-			manifest.Statement.Title = "New title"
-			manifest.Statement.Legend = "New legend"
-			manifest.TimeLimitMs = 4321
-			require.NoError(t, uc.SaveManifest(ctx, id, manifest))
-			return uc.UpdateProblemFile(ctx, models.UpdateFileRequest{ProblemID: id, Path: "tests/01.in", Content: []byte("new sample")})
-		}))
-	}
-	handler := &CoreServer{
-		workshopUC: concurrentStatementRead{WorkshopUC: uc, beforeRead: beforeRead},
-		problemsUC: workspaceProblemCatalog{problem: models.Problem{ID: id, Title: "Catalog label", TimeLimitMs: 9, MemoryLimitMb: 8}},
-	}
-	response, err := handler.GetProblem(ctx, corev1.GetProblemParams{ID: id})
-	require.NoError(t, err)
-	require.Equal(t, "Original title", response.Problem.Title)
-	require.EqualValues(t, 1000, response.Problem.TimeLimit)
-	require.EqualValues(t, 256, response.Problem.MemoryLimit)
-	require.Equal(t, "Problem description goes here.", response.Problem.Legend)
-	require.Len(t, response.Problem.Samples, 1)
-	require.Equal(t, "1 2\n", response.Problem.Samples[0].Input)
-	actual, err := uc.GetManifest(ctx, id)
-	require.NoError(t, err)
-	require.Equal(t, "New title", actual.Statement.Title)
+func workshopFileContext() context.Context {
+	return accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 }

@@ -9,12 +9,12 @@ import (
 	"io"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/go-faster/jx"
 )
 
 func (s *IntegrationTestSuite) TestWorkshopStatementEndpointSyncsProblemTitle() {
-	admin := s.createUser("workshop_statement_admin", models.UserRoleAdmin)
+	admin := s.createUser("workshop_statement_admin", accessmodel.UserRoleAdmin)
 	org := s.createOrganization("workshop-statement-org", "Workshop Statement Org", admin.Id)
 
 	createResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
@@ -46,7 +46,7 @@ func (s *IntegrationTestSuite) TestWorkshopStatementEndpointSyncsProblemTitle() 
 }
 
 func (s *IntegrationTestSuite) TestWorkshopCheckerEndpointsCRUD() {
-	admin := s.createUser("workshop_checker_admin", models.UserRoleAdmin)
+	admin := s.createUser("workshop_checker_admin", accessmodel.UserRoleAdmin)
 	org := s.createOrganization("workshop-checker-org", "Workshop Checker Org", admin.Id)
 
 	createResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
@@ -121,7 +121,7 @@ func (s *IntegrationTestSuite) TestWorkshopCheckerEndpointsCRUD() {
 }
 
 func (s *IntegrationTestSuite) TestWorkshopTestsConfigEndpoint() {
-	admin := s.createUser("workshop_tests_config_admin", models.UserRoleAdmin)
+	admin := s.createUser("workshop_tests_config_admin", accessmodel.UserRoleAdmin)
 	org := s.createOrganization("workshop-tests-config-org", "Workshop Tests Config Org", admin.Id)
 
 	createResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
@@ -196,4 +196,3 @@ func (s *IntegrationTestSuite) TestWorkshopTestsConfigEndpoint() {
 	s.Require().True(ok)
 	s.Equal(true, test0["is_sample"])
 }
-

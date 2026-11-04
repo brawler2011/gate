@@ -11,19 +11,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
+	"github.com/brawler2011/gate/backend/internal/coremodules"
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/transport/rest/core"
-	"github.com/brawler2011/gate/backend/internal/usecase"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 )
 
 type fixtureRepo struct {
-	interfaces.ProblemsRepo
+	ProblemsRepo
 	mu   sync.Mutex
 	hash string
 }
@@ -33,7 +34,8 @@ func (r *fixtureRepo) GetWorkspaceHash(context.Context, uuid.UUID) (string, erro
 	defer r.mu.Unlock()
 	return r.hash, nil
 }
-func (r *fixtureRepo) CommitWorkspace(_ context.Context, _ uuid.UUID, previousHash, hash string, _ *models.WorkspaceMetadata) error {
+
+func (r *fixtureRepo) CommitWorkspace(_ context.Context, _ uuid.UUID, previousHash, hash string, _ *problemsmodel.WorkspaceMetadata) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.hash != previousHash {
@@ -46,13 +48,13 @@ func (r *fixtureRepo) CommitWorkspace(_ context.Context, _ uuid.UUID, previousHa
 type fixtureSecurity struct{}
 
 func (fixtureSecurity) HandleCookieAuth(ctx context.Context, _ corev1.OperationName, _ corev1.CookieAuth) (context.Context, error) {
-	return ctx, nil
+	return accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.MustParse("00000000-0000-4000-8000-000000000001"), Role: accessmodel.UserRoleUser}), nil
 }
 
 func run() error {
 	id := uuid.MustParse(os.Args[3])
 	repo := &fixtureRepo{}
-	ws := usecase.NewWorkspaceStorage(storage.NewLocalStorage(os.Args[1]), "fixture", repo)
+	ws := problems.NewWorkspaceStorage(storage.NewLocalStorage(os.Args[1]), "fixture", repo)
 	if err := ws.WriteFile(context.Background(), id, "problem.yaml", []byte("type: pass-fail\nsubtasks: {}\n")); err != nil {
 		return err
 	}
@@ -61,12 +63,12 @@ func run() error {
 			return err
 		}
 	}
-	uc := usecase.NewWorkshopUseCase(ws, nil)
-	handler := core.NewCoreServer(nil, nil, nil, nil, nil, nil, nil, nil, uc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+	uc := problems.NewWorkshopUseCase(ws, nil, fixturePermissions{})
+	handler := core.NewCoreServer(
 		nil,
 		nil,
 		nil,
-		nil,
+		coremodules.Problems{WorkshopUC: uc},
 		nil,
 		nil,
 		nil,
@@ -80,16 +82,23 @@ func run() error {
 	}
 	server := &http.Server{Addr: os.Args[2], ReadHeaderTimeout: 5 * time.Second, Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.AddCookie(&http.Cookie{Name: "session_id", Value: "fixture"})
-		router.ServeHTTP(w, r)
+		router.ServeHTTP(w, r.WithContext(accessmodel.WithUser(r.Context(), accessmodel.User{Id: uuid.MustParse("00000000-0000-4000-8000-000000000001"), Role: accessmodel.UserRoleUser})))
 	})}
 	if err := server.ListenAndServe(); err != nil {
 		return fmt.Errorf("serve workshop fixture: %w", err)
 	}
 	return nil
 }
+
 func main() {
 	if err := run(); err != nil {
 		slog.Error("workshop HTTP fixture failed", "error", err)
 		os.Exit(1)
 	}
+}
+
+type fixturePermissions struct{}
+
+func (fixturePermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+	return true, nil
 }

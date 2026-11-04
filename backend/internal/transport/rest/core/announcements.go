@@ -4,44 +4,39 @@ import (
 	"context"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
 type AnnouncementsReader interface {
-	ListAnnouncementResponses(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*corev1.ListContestAnnouncementsResponseModel, error)
+	ListAnnouncements(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*contestsmodel.ContestAnnouncementsList, error)
 }
 
 func (h *CoreServer) ListContestAnnouncements(ctx context.Context, params corev1.ListContestAnnouncementsParams) (*corev1.ListContestAnnouncementsResponseModel, error) {
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
 
-	return h.announcementsReader.ListAnnouncementResponses(ctx, contest.ID, params.Page.Value, params.PageSize.Value)
+	list, err := h.contests.ListAnnouncements(ctx, contest.ID, params.Page.Value, params.PageSize.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	return ContestAnnouncementsListResponseDTO(list), nil
 }
 
 func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.CreateContestAnnouncementRequestModel, params corev1.CreateContestAnnouncementParams) (*corev1.ContestAnnouncementModel, error) {
-	// FIXME: должно быть в middleware, а не здесь
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
-	}
-
-	// FIXME: должно быть в middleware, а не здесь
-	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
-	if err != nil {
-		return nil, err
-	}
-	if !allowed {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "permission denied: only contest moderators can create announcements")
 	}
 
 	// FIXME: create OptUUID struct instead of using pointer
@@ -50,7 +45,7 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.
 		problemID = &req.ProblemID.Value
 	}
 
-	announcement, err := h.announcementsUC.CreateAnnouncement(ctx, &models.CreateContestAnnouncementInput{
+	announcement, err := h.contests.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{
 		ContestID: contest.ID,
 		ProblemID: problemID,
 		AuthorID:  user.Id,
@@ -65,27 +60,17 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.
 }
 
 func (h *CoreServer) DeleteContestAnnouncement(ctx context.Context, params corev1.DeleteContestAnnouncementParams) error {
-	// FIXME: должно быть в middleware, а не здесь
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsUC.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
 
-	// FIXME: должно быть в middleware, а не здесь
-	allowed, err := h.permissionsUC.HasContestPermission(ctx, contest.ID, user.Id, models.ActionManageContest)
-	if err != nil {
-		return err
-	}
-	if !allowed {
-		return pkg.Wrap(pkg.NoPermission, nil, "permission denied: only contest moderators can delete announcements")
-	}
-
-	if err := h.announcementsUC.DeleteAnnouncement(ctx, params.AnnouncementID, contest.ID); err != nil {
+	if err := h.contests.DeleteAnnouncement(ctx, params.AnnouncementID, contest.ID); err != nil {
 		return err
 	}
 

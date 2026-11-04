@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -42,7 +42,8 @@ type Subscriber struct {
 }
 
 type Hub struct {
-	contests                 interfaces.ContestsUC
+	contests                 ContestReader
+	scoreboard               Scoreboard
 	scoreboardMu             sync.Mutex
 	scoreboardConfigurations map[uuid.UUID]string
 	scoreboardReferences     map[uuid.UUID]int
@@ -58,9 +59,9 @@ func safeUint64(v int) uint64 {
 	return uint64(v)
 }
 
-func NewHub(ringSize int, contests interfaces.ContestsUC) *Hub {
+func NewHub(ringSize int, contests ContestReader, scoreboard Scoreboard) *Hub {
 	return &Hub{
-		contests: contests, scoreboardConfigurations: make(map[uuid.UUID]string), scoreboardReferences: make(map[uuid.UUID]int),
+		contests: contests, scoreboard: scoreboard, scoreboardConfigurations: make(map[uuid.UUID]string), scoreboardReferences: make(map[uuid.UUID]int),
 		subscribers: make(map[uuid.UUID]*Subscriber),
 		ring:        NewRingBuffer[*WrappedEvent](safeUint64(ringSize)),
 	}
@@ -69,13 +70,13 @@ func NewHub(ringSize int, contests interfaces.ContestsUC) *Hub {
 func parseEvent[T any](payload []byte) (*T, error) {
 	var e T
 	if err := json.Unmarshal(payload, &e); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal event payload: %w", err)
+		return nil, &eventdata.PermanentError{Cause: fmt.Errorf("failed to unmarshal event payload: %w", err)}
 	}
 	return &e, nil
 }
 
 func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) error {
-	seq, ok := ctx.Value(models.MessageStreamSequenceKey).(uint64)
+	seq, ok := ctx.Value(eventdata.MessageStreamSequenceKey).(uint64)
 	if !ok {
 		slog.Error("missing message_stream_sequence")
 		return nil
@@ -85,18 +86,18 @@ func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) erro
 	var err error
 
 	switch eventType {
-	case models.SubmissionEventCreated:
-		event, err = parseEvent[models.SubmissionCreatedEvent](payload)
-	case models.SubmissionEventQueued:
-		event, err = parseEvent[models.SubmissionQueuedEvent](payload)
-	case models.SubmissionEventCompilingStarted:
-		event, err = parseEvent[models.SubmissionCompilingStartedEvent](payload)
-	case models.SubmissionEventTestingStarted:
-		event, err = parseEvent[models.SubmissionTestingStartedEvent](payload)
-	case models.SubmissionEventTestStarted:
-		event, err = parseEvent[models.SubmissionTestStartedEvent](payload)
-	case models.SubmissionEventCompleted:
-		event, err = parseEvent[models.SubmissionCompletedEvent](payload)
+	case submissionsmodel.SubmissionEventCreated:
+		event, err = parseEvent[submissionsmodel.SubmissionCreatedEvent](payload)
+	case submissionsmodel.SubmissionEventQueued:
+		event, err = parseEvent[submissionsmodel.SubmissionQueuedEvent](payload)
+	case submissionsmodel.SubmissionEventCompilingStarted:
+		event, err = parseEvent[submissionsmodel.SubmissionCompilingStartedEvent](payload)
+	case submissionsmodel.SubmissionEventTestingStarted:
+		event, err = parseEvent[submissionsmodel.SubmissionTestingStartedEvent](payload)
+	case submissionsmodel.SubmissionEventTestStarted:
+		event, err = parseEvent[submissionsmodel.SubmissionTestStartedEvent](payload)
+	case submissionsmodel.SubmissionEventCompleted:
+		event, err = parseEvent[submissionsmodel.SubmissionCompletedEvent](payload)
 	default:
 		slog.Warn("unknown event type", "type", eventType)
 		return nil
@@ -130,6 +131,7 @@ func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) erro
 
 	return nil
 }
+
 func (h *Hub) broadcast(event *WrappedEvent) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()

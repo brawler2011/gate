@@ -5,14 +5,14 @@ import (
 	"context"
 	"io"
 
-	"github.com/google/uuid"
-
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/google/uuid"
 )
 
 type PackagesReader interface {
-	ListPackageResponses(ctx context.Context, problemID uuid.UUID) (*corev1.ListProblemPackagesOK, error)
+	ListPackages(ctx context.Context, problemID uuid.UUID, limit, offset int32) ([]problemsmodel.ProblemPackage, error)
 }
 
 // ImportProblem handles POST /problems/{id}/import
@@ -37,7 +37,7 @@ func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProble
 	}
 
 	// Import problem
-	_, err = h.importUC.ImportProblemPackage(ctx, bytes.NewReader(fileBytes), int64(len(fileBytes)), params.ID)
+	_, err = h.problems.ImportProblemPackage(ctx, bytes.NewReader(fileBytes), int64(len(fileBytes)), params.ID)
 	if err != nil {
 		return nil, workshopWriteError(err, "failed to import problem")
 	}
@@ -49,7 +49,7 @@ func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProble
 
 // PublishProblem handles POST /problems/{id}/publish
 func (h *CoreServer) PublishProblem(ctx context.Context, params corev1.PublishProblemParams) (*corev1.PublishProblemOK, error) {
-	result, err := h.publishUC.PublishProblem(ctx, params.ID)
+	result, err := h.problems.PublishProblem(ctx, params.ID)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to publish problem")
 	}
@@ -62,17 +62,31 @@ func (h *CoreServer) PublishProblem(ctx context.Context, params corev1.PublishPr
 
 // ListProblemPackages handles GET /problems/{id}/packages
 func (h *CoreServer) ListProblemPackages(ctx context.Context, params corev1.ListProblemPackagesParams) (*corev1.ListProblemPackagesOK, error) {
-	response, err := h.packagesReader.ListPackageResponses(ctx, params.ID)
+	packages, err := h.problems.ListPackages(ctx, params.ID, 100, 0)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list packages")
 	}
-	return response, nil
+
+	items := make([]corev1.ListProblemPackagesOKPackagesItem, len(packages))
+	for i, p := range packages {
+		items[i] = corev1.ListProblemPackagesOKPackagesItem{
+			ID:          corev1.NewOptUUID(p.ID),
+			Version:     corev1.NewOptInt32(p.Version),
+			Status:      corev1.NewOptString(p.Status),
+			PackageHash: corev1.NewOptString(p.PackageHash),
+			CreatedAt:   corev1.NewOptDateTime(p.CreatedAt),
+		}
+		if p.CompiledAt != nil {
+			items[i].CompiledAt = corev1.NewOptDateTime(*p.CompiledAt)
+		}
+	}
+	return &corev1.ListProblemPackagesOK{Packages: items}, nil
 }
 
 // GetPublishedPackage handles GET /problems/{id}/package/{version}
 func (h *CoreServer) GetPublishedPackage(ctx context.Context, params corev1.GetPublishedPackageParams) (*corev1.GetPublishedPackageFound, error) {
 	// Get presigned URL
-	packageURL, err := h.publishUC.GetPublishedPackageURL(ctx, params.ID, params.Version)
+	packageURL, err := h.problems.GetPublishedPackageURL(ctx, params.ID, params.Version)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to get package URL")
 	}

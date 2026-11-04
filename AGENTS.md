@@ -128,9 +128,9 @@ When working with the backend codebase, adhere strictly to the following rules:
 
 - Edit OpenAPI sources in `contracts/core/v1/openapi.yaml` and `contracts/observer/v1/openapi.yaml`, then run `task gen:contracts` to regenerate Go and TypeScript contracts.
 - `task lint:contracts` validates both specifications using the pinned Vacuum version and `vacuum.yaml`; correctness errors block changes, while style/documentation warnings are advisory.
-- Edit SQL queries in `backend/internal/repository/pg/*.sql` and migrations in `backend/migrations/`, then run `task gen:sqlc`.
+- Edit SQL queries in `backend/internal/postgres/*.sql` and migrations in `backend/migrations/`, then run `task gen:sqlc`.
 - `task gen:mocks` regenerates mocks; `task gen` runs all generators.
-- Do not hand-edit generated files in `backend/contracts/core/v1/`, `backend/contracts/observer/v1/`, `frontend/contracts/`, `backend/internal/repository/pg/sqlc/`, or `backend/tests/mocks/`.
+- Do not hand-edit generated files in `backend/contracts/core/v1/`, `backend/contracts/observer/v1/`, `frontend/contracts/`, `backend/internal/postgres/sqlc/`, or `backend/tests/mocks/`.
 - `task diff:codegen` regenerates code and fails if those generated paths have tracked or untracked changes.
 
 ---

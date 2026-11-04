@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -15,10 +15,11 @@ import (
 type contextKey string
 
 const sessionKey contextKey = "session"
+
 const sessionCookieName = "session_id"
 
 // AuthMiddleware checks for a valid session cookie and retrieves the session
-func AuthMiddleware(authUC interfaces.AuthUC) func(http.Handler) http.Handler {
+func AuthMiddleware(authUC AuthUC) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -44,23 +45,23 @@ func AuthMiddleware(authUC interfaces.AuthUC) func(http.Handler) http.Handler {
 				return
 			}
 
-			session := models.Session{
+			session := identitymodel.Session{
 				ID:     sessionID,
 				UserID: user.Id,
 			}
 
 			ctx = context.WithValue(ctx, sessionKey, session)
-			ctx = context.WithValue(ctx, userKey, user)
+			ctx = accessmodel.WithUser(ctx, user)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
-func GetSession(ctx context.Context) (models.Session, error) {
-	session, ok := ctx.Value(sessionKey).(models.Session)
+func GetSession(ctx context.Context) (identitymodel.Session, error) {
+	session, ok := ctx.Value(sessionKey).(identitymodel.Session)
 	if !ok {
-		return models.Session{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "no session in context")
+		return identitymodel.Session{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "no session in context")
 	}
 	return session, nil
 }
@@ -112,6 +113,3 @@ func NewSecurityHandler() *SecurityHandler {
 func (s *SecurityHandler) HandleCookieAuth(ctx context.Context, operationName corev1.OperationName, t corev1.CookieAuth) (context.Context, error) {
 	return ctx, nil
 }
-
-
-

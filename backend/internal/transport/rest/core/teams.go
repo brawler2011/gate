@@ -5,33 +5,37 @@ import (
 	"errors"
 	"strings"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	paging "github.com/brawler2011/gate/backend/internal/page"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 )
 
 // ListTeams handles GET /teams
 func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParams) (*corev1.ListTeamsResponseModel, error) {
 	// Get current user
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
 
-	var teams []models.Team
+	var teams []organizationsmodel.Team
 	var err error
 
 	// If organization_id is specified, list teams for that organization
 	if params.OrganizationID.IsSet() {
-		teams, err = h.teamsUC.ListOrganizationTeams(ctx, params.OrganizationID.Value, user.Id)
+		teams, err = h.organizations.ListOrganizationTeams(ctx, params.OrganizationID.Value, user.Id)
 		if err != nil {
 			return nil, wrapTeamUCError(err, "failed to list organization teams")
 		}
 	} else {
 		// Otherwise, list all teams the user is a member of
-		teams, err = h.teamsUC.GetUserTeams(ctx, user.Id)
+		teams, err = h.organizations.GetUserTeams(ctx, user.Id)
 		if err != nil {
 			return nil, wrapTeamUCError(err, "failed to list user teams")
 		}
@@ -39,7 +43,7 @@ func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParam
 
 	// Apply search filter if provided (simple name filtering)
 	if search != "" {
-		filtered := make([]models.Team, 0)
+		filtered := make([]organizationsmodel.Team, 0)
 		for _, team := range teams {
 			if containsIgnoreCase(team.Name, search) {
 				filtered = append(filtered, team)
@@ -59,7 +63,7 @@ func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParam
 
 	switch {
 	case start > len(teams):
-		teams = []models.Team{}
+		teams = []organizationsmodel.Team{}
 	case end > len(teams):
 		teams = teams[start:]
 	default:
@@ -76,7 +80,7 @@ func (h *CoreServer) CreateTeam(ctx context.Context, req *corev1.CreateTeamReq) 
 	}
 
 	// Get current user
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	// Validate request body
 	if err := validateCreateTeamRequest(req.Name, req.OrganizationID); err != nil {
@@ -87,17 +91,17 @@ func (h *CoreServer) CreateTeam(ctx context.Context, req *corev1.CreateTeamReq) 
 	slug := generateLogin(req.Name)
 
 	// Create input
-	input := &models.CreateTeamInput{
+	input := &organizationsmodel.CreateTeamInput{
 		OrganizationID: req.OrganizationID,
 		Name:           req.Name,
 		Slug:           slug,
 		Description:    "",
-		Privacy:        models.TeamPrivacyClosed, // Default privacy
+		Privacy:        organizationsmodel.TeamPrivacyClosed, // Default privacy
 		ParentTeamID:   nil,
 	}
 
 	// Create team
-	team, err := h.teamsUC.CreateTeam(ctx, input, user.Id)
+	team, err := h.organizations.CreateTeam(ctx, input, user.Id)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to create team")
 	}
@@ -110,10 +114,10 @@ func (h *CoreServer) CreateTeam(ctx context.Context, req *corev1.CreateTeamReq) 
 // GetTeam handles GET /teams/{id}
 func (h *CoreServer) GetTeam(ctx context.Context, params corev1.GetTeamParams) (*corev1.GetTeamResponseModel, error) {
 	// Get current user
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	// Get team
-	team, err := h.teamsUC.GetTeam(ctx, params.ID, user.Id)
+	team, err := h.organizations.GetTeam(ctx, params.ID, user.Id)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to get team")
 	}
@@ -126,7 +130,7 @@ func (h *CoreServer) GetTeam(ctx context.Context, params corev1.GetTeamParams) (
 // UpdateTeam handles PATCH /teams/{id}
 func (h *CoreServer) UpdateTeam(ctx context.Context, req *corev1.UpdateTeamRequestModel, params corev1.UpdateTeamParams) error {
 	// Get current user
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	// Validate request body
 	if err := validateUpdateTeamRequest(req); err != nil {
@@ -144,14 +148,14 @@ func (h *CoreServer) UpdateTeam(ctx context.Context, req *corev1.UpdateTeamReque
 	}
 
 	// Create update input
-	input := &models.UpdateTeamInput{
+	input := &organizationsmodel.UpdateTeamInput{
 		Name:        reqName,
 		Description: reqDesc,
 		Privacy:     nil, // Privacy not exposed in API yet
 	}
 
 	// Update team
-	err := h.teamsUC.UpdateTeam(ctx, params.ID, user.Id, input)
+	err := h.organizations.UpdateTeam(ctx, params.ID, user.Id, input)
 	if err != nil {
 		return wrapTeamUCError(err, "failed to update team")
 	}
@@ -162,10 +166,10 @@ func (h *CoreServer) UpdateTeam(ctx context.Context, req *corev1.UpdateTeamReque
 // DeleteTeam handles DELETE /teams/{id}
 func (h *CoreServer) DeleteTeam(ctx context.Context, params corev1.DeleteTeamParams) error {
 	// Get current user
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	// Delete team
-	err := h.teamsUC.DeleteTeam(ctx, params.ID, user.Id)
+	err := h.organizations.DeleteTeam(ctx, params.ID, user.Id)
 	if err != nil {
 		return wrapTeamUCError(err, "failed to delete team")
 	}
@@ -176,12 +180,12 @@ func (h *CoreServer) DeleteTeam(ctx context.Context, params corev1.DeleteTeamPar
 // ListTeamMembers handles GET /teams/{id}/members
 func (h *CoreServer) ListTeamMembers(ctx context.Context, params corev1.ListTeamMembersParams) (*corev1.ListTeamMembersResponseModel, error) {
 	// Get current user
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	page := params.Page.Or(1)
 
 	// Get members
-	members, err := h.teamsUC.ListTeamMembers(ctx, params.ID, user.Id)
+	members, err := h.organizations.ListTeamMembers(ctx, params.ID, user.Id)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to list team members")
 	}
@@ -194,20 +198,20 @@ func (h *CoreServer) ListTeamMembers(ctx context.Context, params corev1.ListTeam
 
 // AddTeamMember handles POST /teams/{id}/members
 func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMemberParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
-	role := models.TeamRoleMember
+	role := organizationsmodel.TeamRoleMember
 	if params.Role.IsSet() && params.Role.Value != "" {
-		role = models.TeamRole(params.Role.Value)
+		role = organizationsmodel.TeamRole(params.Role.Value)
 	}
 
-	input := &models.AddTeamMemberInput{
+	input := &organizationsmodel.AddTeamMemberInput{
 		TeamID: params.ID,
 		UserID: params.UserID,
 		Role:   role,
 	}
 
-	err := h.teamsUC.AddTeamMember(ctx, input, user.Id)
+	err := h.organizations.AddTeamMember(ctx, input, user.Id)
 	if err != nil {
 		return wrapTeamUCError(err, "failed to add team member")
 	}
@@ -217,9 +221,9 @@ func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMem
 
 // UpdateTeamMemberRole handles PATCH /teams/{id}/members
 func (h *CoreServer) UpdateTeamMemberRole(ctx context.Context, params corev1.UpdateTeamMemberRoleParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
-	err := h.teamsUC.UpdateTeamMemberRole(ctx, params.ID, params.UserID, models.TeamRole(params.Role), user.Id)
+	err := h.organizations.UpdateTeamMemberRole(ctx, params.ID, params.UserID, organizationsmodel.TeamRole(params.Role), user.Id)
 	if err != nil {
 		return wrapTeamUCError(err, "failed to update team member role")
 	}
@@ -229,9 +233,9 @@ func (h *CoreServer) UpdateTeamMemberRole(ctx context.Context, params corev1.Upd
 
 // RemoveTeamMember handles DELETE /teams/{id}/members
 func (h *CoreServer) RemoveTeamMember(ctx context.Context, params corev1.RemoveTeamMemberParams) error {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
-	err := h.teamsUC.RemoveTeamMember(ctx, params.ID, params.UserID, user.Id)
+	err := h.organizations.RemoveTeamMember(ctx, params.ID, params.UserID, user.Id)
 	if err != nil {
 		return wrapTeamUCError(err, "failed to remove team member")
 	}
@@ -241,16 +245,16 @@ func (h *CoreServer) RemoveTeamMember(ctx context.Context, params corev1.RemoveT
 
 // ListTeamContests handles GET /teams/{id}/contests
 func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTeamContestsParams) (*corev1.ListContestsResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
-	contests, err := h.teamsUC.GetTeamContests(ctx, params.ID, user.Id)
+	contests, err := h.organizations.GetTeamContests(ctx, params.ID, user.Id)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to list team contests")
 	}
 
-	contestsList := &models.ContestsList{
+	contestsList := &contestsmodel.ContestsList{
 		Contests: contests,
-		Pagination: models.Pagination{
+		Pagination: paging.Pagination{
 			Page:  1,
 			Total: safeInt32(len(contests)),
 		},
@@ -261,16 +265,16 @@ func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTea
 
 // ListTeamProblems handles GET /teams/{id}/problems
 func (h *CoreServer) ListTeamProblems(ctx context.Context, params corev1.ListTeamProblemsParams) (*corev1.ListProblemsResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
-	problems, err := h.teamsUC.GetTeamProblems(ctx, params.ID, user.Id)
+	problems, err := h.organizations.GetTeamProblems(ctx, params.ID, user.Id)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to list team problems")
 	}
 
-	problemsList := &models.ProblemsList{
+	problemsList := &problemsmodel.ProblemsList{
 		Problems: problems,
-		Pagination: models.Pagination{
+		Pagination: paging.Pagination{
 			Page:  1,
 			Total: safeInt32(len(problems)),
 		},

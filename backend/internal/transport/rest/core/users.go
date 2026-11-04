@@ -4,24 +4,34 @@ import (
 	"context"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
 
 type UsersReader interface {
-	GetUserResponse(ctx context.Context, username string) (*corev1.GetUserResponseModel, error)
-	ListUserResponses(ctx context.Context, filter models.UsersListFilter) (*corev1.ListUsersResponseModel, error)
-	ListClaimedAccountResponses(ctx context.Context, userID uuid.UUID) (*corev1.ListClaimedAccountsResponseModel, error)
+	GetUserByUsername(context.Context, string) (accessmodel.User, error)
+	GetUserProfileByUsername(ctx context.Context, username string) (identitymodel.UserProfile, error)
+	ListUsers(ctx context.Context, filter identitymodel.UsersListFilter) (identitymodel.UsersList, error)
+	ListClaimedAccountsByUserId(ctx context.Context, claimedByUserID uuid.UUID) ([]identitymodel.ClaimedAccountItem, error)
 }
 
 func (h *CoreServer) GetUser(ctx context.Context, params corev1.GetUserParams) (*corev1.GetUserResponseModel, error) {
-	return h.usersReader.GetUserResponse(ctx, params.Username)
+	user, err := h.identity.GetUserProfileByUsername(ctx, params.Username)
+	if err != nil {
+		return nil, err
+	}
+
+	return &corev1.GetUserResponseModel{
+		User: userProfileDTO(user),
+	}, nil
 }
 
 func (h *CoreServer) GetMe(ctx context.Context) (*corev1.GetUserResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
 	return &corev1.GetUserResponseModel{
 		User: userDTO(user),
@@ -29,19 +39,20 @@ func (h *CoreServer) GetMe(ctx context.Context) (*corev1.GetUserResponseModel, e
 }
 
 func (h *CoreServer) GetMyDashboard(ctx context.Context) (*corev1.GetUserDashboardResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
-	contests, err := h.contestsReader.ListDashboardContestResponses(ctx, user.Id, 5)
+	contests, err := h.contests.ListDashboardContests(ctx, user.Id, 5)
 	if err != nil {
 		return nil, err
 	}
 
-	problems, err := h.problemsReader.ListDashboardProblemResponses(ctx, user.Id, 5)
+	problems, err := h.problems.ListDashboardProblems(ctx, user.Id, 5)
 	if err != nil {
 		return nil, err
 	}
 
-	return &corev1.GetUserDashboardResponseModel{RecentContests: contests, MyProblems: problems}, nil
+	resp := DashboardResponseDTO(contests, problems)
+	return &resp, nil
 }
 
 func (h *CoreServer) ListUsers(ctx context.Context, params corev1.ListUsersParams) (*corev1.ListUsersResponseModel, error) {
@@ -50,18 +61,24 @@ func (h *CoreServer) ListUsers(ctx context.Context, params corev1.ListUsersParam
 	search := params.Search.Or("")
 	role := params.Role.Or("")
 
-	filter := models.UsersListFilter{
+	filter := identitymodel.UsersListFilter{
 		Page:     page,
 		PageSize: pageSize,
 		Search:   search,
 		Role:     role,
 	}
 
-	return h.usersReader.ListUserResponses(ctx, filter)
+	users, err := h.identity.ListUsers(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := usersListDTO(&users)
+	return &resp, nil
 }
 
 func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.ListUserSubmissionsParams) (*corev1.ListSubmissionsResponseModel, error) {
-	user, err := h.usersUC.GetUserByUsername(ctx, params.Username)
+	user, err := h.identity.GetUserByUsername(ctx, params.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -79,9 +96,9 @@ func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.List
 		problemID = &params.ProblemId.Value
 	}
 
-	var state *models.State
+	var state *submissionsmodel.State
 	if params.State.IsSet() {
-		s := models.State(params.State.Value)
+		s := submissionsmodel.State(params.State.Value)
 		state = &s
 	}
 
@@ -96,7 +113,7 @@ func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.List
 		order = &orderVal
 	}
 
-	filter := models.SubmissionsFilter{
+	filter := submissionsmodel.SubmissionsFilter{
 		ContestId: contestID,
 		Page:      page,
 		PageSize:  pageSize,
@@ -106,7 +123,7 @@ func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.List
 		State:     state,
 	}
 
-	submissions, err := h.submissionsUC.ListSubmissions(ctx, filter)
+	submissions, err := h.submissions.ListSubmissions(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +136,7 @@ func (h *CoreServer) UpdateUser(ctx context.Context, req *corev1.UpdateUserReque
 		return pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
 	}
 
-	user, err := h.usersUC.GetUserByUsername(ctx, params.Username)
+	user, err := h.identity.GetUserByUsername(ctx, params.Username)
 	if err != nil {
 		return err
 	}
@@ -136,14 +153,14 @@ func (h *CoreServer) UpdateUser(ctx context.Context, req *corev1.UpdateUserReque
 		reqRole = &r
 	}
 
-	input := models.UpdateUserInput{
+	input := identitymodel.UpdateUserInput{
 		Id:       user.Id,
 		Username: reqUsername,
 		Email:    reqEmail,
 		Role:     reqRole,
 	}
 
-	err = h.usersUC.UpdateUser(ctx, input)
+	err = h.identity.UpdateUser(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -156,9 +173,9 @@ func (h *CoreServer) ClaimTemporaryUser(ctx context.Context, req *corev1.ClaimTe
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 
-	result, err := h.usersUC.ClaimTemporaryUser(ctx, user, models.ClaimTemporaryUserInput{
+	result, err := h.identity.ClaimTemporaryUser(ctx, user, identitymodel.ClaimTemporaryUserInput{
 		Username: req.Username,
 		Password: req.Password,
 	})
@@ -174,12 +191,29 @@ func (h *CoreServer) ClaimTemporaryUser(ctx context.Context, req *corev1.ClaimTe
 }
 
 func (h *CoreServer) ListMyClaimedAccounts(ctx context.Context) (*corev1.ListClaimedAccountsResponseModel, error) {
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	return h.usersReader.ListClaimedAccountResponses(ctx, user.Id)
+	accounts, err := h.identity.ListClaimedAccountsByUserId(ctx, user.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]corev1.ClaimedAccountItem, len(accounts))
+	for i, acc := range accounts {
+		items[i] = corev1.ClaimedAccountItem{
+			ID:        acc.ID,
+			Username:  acc.Username,
+			ClaimedAt: acc.ClaimedAt,
+			ExpiresAt: timePtrToOptDateTime(acc.ExpiresAt),
+		}
+	}
+
+	return &corev1.ListClaimedAccountsResponseModel{
+		Accounts: items,
+	}, nil
 }
 
 func (h *CoreServer) ChangePassword(ctx context.Context, req *corev1.ChangePasswordRequestModel) (*corev1.AuthResponseModel, error) {
@@ -187,12 +221,12 @@ func (h *CoreServer) ChangePassword(ctx context.Context, req *corev1.ChangePassw
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	newSessionID, err := h.authUC.ChangePassword(ctx, user.Id, req.OldPassword, req.NewPassword)
+	newSessionID, err := h.identity.ChangePassword(ctx, user.Id, req.OldPassword, req.NewPassword)
 	if err != nil {
 		return nil, err
 	}
@@ -210,12 +244,12 @@ func (h *CoreServer) RequestEmailChange(ctx context.Context, req *corev1.Request
 		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	err := h.authUC.RequestEmailChange(ctx, user.Id, req.Password, req.NewEmail)
+	err := h.identity.RequestEmailChange(ctx, user.Id, req.Password, req.NewEmail)
 	if err != nil {
 		return err
 	}
@@ -230,7 +264,7 @@ func (h *CoreServer) AdminChangeEmail(ctx context.Context, req *corev1.AdminChan
 
 	withConfirmation := req.WithConfirmation.Or(true)
 
-	err := h.usersUC.AdminChangeEmail(ctx, params.Username, req.Email, withConfirmation)
+	err := h.identity.AdminChangeEmail(ctx, params.Username, req.Email, withConfirmation)
 	if err != nil {
 		return err
 	}
@@ -243,7 +277,7 @@ func (h *CoreServer) AdminSetPassword(ctx context.Context, req *corev1.AdminSetP
 		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	err := h.usersUC.AdminSetPassword(ctx, params.Username, req.Password)
+	err := h.identity.AdminSetPassword(ctx, params.Username, req.Password)
 	if err != nil {
 		return err
 	}
@@ -252,7 +286,7 @@ func (h *CoreServer) AdminSetPassword(ctx context.Context, req *corev1.AdminSetP
 }
 
 func (h *CoreServer) AdminSendPasswordReset(ctx context.Context, params corev1.AdminSendPasswordResetParams) error {
-	err := h.usersUC.AdminSendPasswordReset(ctx, params.Username)
+	err := h.identity.AdminSendPasswordReset(ctx, params.Username)
 	if err != nil {
 		return err
 	}
@@ -261,7 +295,7 @@ func (h *CoreServer) AdminSendPasswordReset(ctx context.Context, params corev1.A
 }
 
 func (h *CoreServer) AdminResendVerification(ctx context.Context, params corev1.AdminResendVerificationParams) error {
-	err := h.usersUC.AdminResendVerification(ctx, params.Username)
+	err := h.identity.AdminResendVerification(ctx, params.Username)
 	if err != nil {
 		return err
 	}

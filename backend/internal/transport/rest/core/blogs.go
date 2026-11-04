@@ -5,18 +5,19 @@ import (
 	"errors"
 	"io"
 
-	"github.com/google/uuid"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
+	blogsmodel "github.com/brawler2011/gate/backend/internal/blogs/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
+	"github.com/google/uuid"
 )
 
 type BlogsReader interface {
-	ListPostResponses(ctx context.Context, page, pageSize int, sortOrder string) (*corev1.ListPostsResponseModel, error)
-	GetPostResponse(ctx context.Context, id uuid.UUID) (*corev1.PostModel, error)
+	ListPosts(ctx context.Context, params blogsmodel.ListPostsParams) ([]blogsmodel.Post, int, error)
+	GetPostByID(ctx context.Context, id uuid.UUID) (*blogsmodel.Post, error)
 }
 
 func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParams) (*corev1.ListPostsResponseModel, error) {
@@ -26,17 +27,40 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 	pageSize := int(params.PageSize.Or(10))
 	sortOrder := string(params.SortOrder.Or("desc"))
 
-	result, err := s.blogsReader.ListPostResponses(ctx, page, pageSize, sortOrder)
+	items, totalPages, err := s.blogs.ListPosts(ctx, blogsmodel.ListPostsParams{Page: page, PageSize: pageSize, SortOrder: sortOrder})
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list posts")
 	}
-	return result, nil
+
+	// Convert to response model
+	posts := make([]corev1.PostModel, len(items))
+	for i, post := range items {
+		posts[i] = corev1.PostModel{
+			ID:             post.ID,
+			CreatedAt:      post.CreatedAt,
+			UpdatedAt:      post.UpdatedAt,
+			Title:          post.Title,
+			Text:           post.Text,
+			Description:    post.Description,
+			PreviewImageID: post.ImageKey,
+			AuthorID:       post.AuthorUUID,
+			AuthorUsername: post.AuthorName,
+		}
+	}
+
+	return &corev1.ListPostsResponseModel{
+		Pagination: corev1.PaginationModel{
+			Total: safeInt32(totalPages), // FIXME: разобраться где возникает проблема типов
+			Page:  safeInt32(page),       // FIXME: аналогично
+		},
+		Posts: posts,
+	}, nil
 }
 
 // CreatePost implements the CreatePost operation
 func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) (corev1.CreatePostRes, error) {
 	// FIXME: эти провери должны быть в мидлваре
-	user := middleware.GetUser(ctx)
+	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
@@ -53,7 +77,7 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 	description := req.Description.Value
 	text := req.Text.Value
 
-	postID, err := s.blogsUC.CreatePost(ctx, title, text, description, user.Id, user.Username, file.File, file.Name)
+	postID, err := s.blogs.CreatePost(ctx, title, text, description, file.File, file.Name)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to create post")
 	}
@@ -65,7 +89,7 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 }
 
 func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdParams) (corev1.GetPostByIdRes, error) {
-	post, err := s.blogsReader.GetPostResponse(ctx, params.ID)
+	post, err := s.blogs.GetPostByID(ctx, params.ID)
 	if err != nil {
 
 		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
@@ -79,7 +103,17 @@ func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdP
 		}, nil
 	}
 
-	return post, nil
+	return &corev1.PostModel{
+		ID:             post.ID,
+		CreatedAt:      post.CreatedAt,
+		UpdatedAt:      post.UpdatedAt,
+		Title:          post.Title,
+		Text:           post.Text,
+		Description:    post.Description,
+		PreviewImageID: post.ImageKey,
+		AuthorID:       post.AuthorUUID,
+		AuthorUsername: post.AuthorName,
+	}, nil
 }
 
 func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostByIdReq, params corev1.PatchPostByIdParams) (corev1.PatchPostByIdRes, error) {
@@ -107,7 +141,7 @@ func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostB
 		}
 	}
 
-	err := s.blogsUC.UpdatePost(ctx, params.ID, titlePtr, textPtr, descriptionPtr, imageReader, filename)
+	err := s.blogs.UpdatePost(ctx, params.ID, titlePtr, textPtr, descriptionPtr, imageReader, filename)
 	if err != nil {
 		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
@@ -123,7 +157,7 @@ func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostB
 }
 
 func (s *CoreServer) DeletePostById(ctx context.Context, params corev1.DeletePostByIdParams) (corev1.DeletePostByIdRes, error) {
-	err := s.blogsUC.DeletePost(ctx, params.ID)
+	err := s.blogs.DeletePost(ctx, params.ID)
 	if err != nil {
 		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
@@ -140,7 +174,7 @@ func (s *CoreServer) DeletePostById(ctx context.Context, params corev1.DeletePos
 }
 
 func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImageParams) (corev1.GetPostImageRes, error) {
-	post, err := s.blogsUC.GetPost(ctx, params.ID)
+	post, err := s.blogs.GetPostByID(ctx, params.ID)
 	if err != nil {
 		// FIXME:
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
@@ -157,7 +191,7 @@ func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImag
 		ifNoneMatch = &params.IfNoneMatch.Value
 	}
 
-	postImage, imageErr := s.blogsUC.GetPostImage(ctx, post.ImageKey, ifNoneMatch)
+	postImage, imageErr := s.blogs.GetPostImage(ctx, post.ImageKey, ifNoneMatch)
 
 	var re *http.ResponseError
 	if errors.Is(imageErr, storage.ErrNotModified) || (errors.As(imageErr, &re) && re.HTTPStatusCode() == 304) {

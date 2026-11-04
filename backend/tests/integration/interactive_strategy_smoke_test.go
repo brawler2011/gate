@@ -10,8 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brawler2011/gate/backend/internal/domain/models"
-	"github.com/brawler2011/gate/backend/internal/worker/judge"
+	judging "github.com/brawler2011/gate/backend/internal/judging"
+	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
@@ -32,7 +33,7 @@ func TestInteractiveStrategySmoke(t *testing.T) {
 	defer natsConn.Close()
 	require.NoError(t, pkg.EnsureSubmissionsStream(ctx, js))
 
-	eventPublisher := judge.NewEventPublisher(js)
+	eventPublisher := judgeworker.NewEventPublisher(js)
 
 	// Compile the interactor
 	binary, err := sandboxInst.Compile(ctx, []byte(smokeInteractorSource()), "cpp", nil)
@@ -70,7 +71,7 @@ subtasks:
 		"interactor": binary,
 	}
 
-	strategy := judge.NewInteractiveStrategy(
+	strategy := judging.NewInteractiveStrategy(
 		sandboxInst,
 		eventPublisher,
 		gfmtPkg,
@@ -81,21 +82,21 @@ subtasks:
 		ctx,
 		uuid.New(),
 		smokeSolutionSource(),
-		models.Cpp,
-		models.SubmissionEventMeta{
+		submissionsmodel.Cpp,
+		submissionsmodel.SubmissionEventMeta{
 			Username:     "integration",
 			ContestTitle: "integration",
 			ProblemTitle: "interactive-smoke",
-			Language:     models.Cpp,
+			Language:     submissionsmodel.Cpp,
 			CreatedAt:    time.Now(),
 		},
 	)
 	require.NoError(t, err)
 
-	if verdict.State != models.Accepted {
+	if verdict.State != submissionsmodel.Accepted {
 		t.Logf("Verdict Message: %s", verdict.Message)
 	}
-	assert.Equal(t, models.Accepted, verdict.State)
+	assert.Equal(t, submissionsmodel.Accepted, verdict.State)
 	assert.Equal(t, int32(100), verdict.Score)
 }
 

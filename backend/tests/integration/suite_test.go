@@ -17,12 +17,21 @@ import (
 	"testing"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/repository/pg"
+	access "github.com/brawler2011/gate/backend/internal/access"
+	blogs "github.com/brawler2011/gate/backend/internal/blogs"
+	contests "github.com/brawler2011/gate/backend/internal/contests"
+	"github.com/brawler2011/gate/backend/internal/coremodules"
+	identity "github.com/brawler2011/gate/backend/internal/identity"
+	notifications "github.com/brawler2011/gate/backend/internal/notifications"
+	organizations "github.com/brawler2011/gate/backend/internal/organizations"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
+	problems "github.com/brawler2011/gate/backend/internal/problems"
+	submissions "github.com/brawler2011/gate/backend/internal/submissions"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	handlers "github.com/brawler2011/gate/backend/internal/transport/rest/core"
-	"github.com/brawler2011/gate/backend/internal/usecase"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/storage"
@@ -75,11 +84,11 @@ type IntegrationTestSuite struct {
 	mockNats *mocks.MockPublisher
 
 	// Repositories (for direct DB access in tests)
-	usersRepo         *pg.UsersRepo
-	contestsRepo      *pg.ContestsRepo
-	organizationsRepo interfaces.OrganizationsRepo
-	teamsRepo         interfaces.TeamsRepo
-	problemsRepo      *pg.ProblemsRepo
+	usersRepo         *pgstore.UsersRepo
+	contestsRepo      *pgstore.ContestsRepo
+	organizationsRepo *pgstore.OrganizationsRepo
+	teamsRepo         *pgstore.TeamsRepo
+	problemsRepo      *pgstore.ProblemsRepo
 }
 
 func (s *IntegrationTestSuite) getStatusCode(err error) int {
@@ -162,82 +171,93 @@ func (s *IntegrationTestSuite) TearDownTest() {
 
 func (s *IntegrationTestSuite) initApp() {
 	// Repositories
-	s.usersRepo = pg.NewUsersRepo(s.dbPool)
-	s.contestsRepo = pg.NewContestsRepo(s.dbPool)
-	s.organizationsRepo = pg.NewOrganizationsRepo(s.dbPool)
-	s.problemsRepo = pg.NewProblemsRepo(s.dbPool)
-	s.teamsRepo = pg.NewTeamsRepo(s.dbPool)
-	submissionsRepo := pg.NewSubmissionsRepo(s.dbPool)
-	outboxRepo := pg.NewOutboxRepo(s.dbPool)
-	blogsRepo := pg.NewBlogsRepo(s.dbPool)
-	txManager := pg.NewTransactor(s.dbPool)
+	s.usersRepo = pgstore.NewUsersRepo(s.dbPool)
+	s.contestsRepo = pgstore.NewContestsRepo(s.dbPool)
+	s.organizationsRepo = pgstore.NewOrganizationsRepo(s.dbPool)
+	s.problemsRepo = pgstore.NewProblemsRepo(s.dbPool)
+	s.teamsRepo = pgstore.NewTeamsRepo(s.dbPool)
+	submissionsRepo := pgstore.NewSubmissionsRepo(s.dbPool)
+	blogsRepo := pgstore.NewBlogsRepo(s.dbPool)
 	tempStoragePath := s.T().TempDir()
 	testStorage := storage.NewLocalStorage(tempStoragePath)
-	workspaceStorage := usecase.NewWorkspaceStorage(testStorage, "integration-workshop", s.problemsRepo)
+	workspaceStorage := problems.NewWorkspaceStorage(testStorage, "integration-workshop", problems.NewWorkspaceCatalog(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool)))
 
-	authRepo := pg.NewAuthRepo(s.dbPool)
+	authRepo := pgstore.NewAuthRepo(s.dbPool)
 	emailService := &email.LogEmailService{}
 
 	// UseCases
-	usersUC := usecase.NewUsersUseCase(s.usersRepo, s.contestsRepo, outboxRepo, txManager, authRepo, emailService)
-	authUC := usecase.NewAuthUseCase(s.usersRepo, authRepo, txManager, emailService)
-	problemsUC := usecase.NewProblemsUseCase(s.problemsRepo, workspaceStorage, s.organizationsRepo)
-	contestsUC := usecase.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, submissionsRepo)
-	permissionsUC := usecase.NewPermissionsUseCase(s.contestsRepo, usersUC, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
-	submissionsUC := usecase.NewSubmissionsUseCase(submissionsRepo, contestsUC, problemsUC, outboxRepo, txManager)
-	notificationsRepo := pg.NewNotificationsRepo(s.dbPool)
-	notificationsUC := usecase.NewNotificationsUseCase(notificationsRepo, s.usersRepo, emailService)
+	usersUC := identity.NewUsersUseCase(s.usersRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService)
+	authUC := identity.NewAuthUseCase(s.usersRepo, authRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService)
+	packagesRepo := pgstore.NewPackagesRepo(s.dbPool)
+	publishUC := problems.NewProblemPublishUseCase(s.problemsRepo, packagesRepo, workspaceStorage, testStorage, "packages", pgstore.NewProblemTransactions(s.dbPool))
+	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(s.dbPool), publishUC, s.organizationsRepo)
+	permissionsUC := access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
+	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissionsUC)
+	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, s.contestsRepo, s.problemsRepo, pgstore.NewSubmissionTransactions(s.dbPool), permissionsUC)
+	notificationsRepo := pgstore.NewNotificationsRepo(s.dbPool)
+	notificationsUC := notifications.NewNotificationsUseCase(notificationsRepo, s.usersRepo, emailService)
 	contestsUC.SetNotificationsUC(notificationsUC)
-	contestsUC.SetUsersRepo(s.usersRepo)
-	organizationsUC := usecase.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, txManager, notificationsUC)
-	teamsUC := usecase.NewTeamsUseCase(s.teamsRepo, s.organizationsRepo, s.usersRepo, permissionsUC, txManager)
-	blogsUC := usecase.NewBlogsUseCase(blogsRepo, nil, "")
-	workshopUC := usecase.NewWorkshopUseCase(workspaceStorage, nil)
 
-	avatarsUC := usecase.NewAvatarsUseCase(s.usersRepo, testStorage, "avatars")
+	organizationsUC := organizations.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(s.dbPool), notificationsUC)
+	teamsUC := organizations.NewTeamsUseCase(s.teamsRepo, permissionsUC, pgstore.NewTeamTransactions(s.dbPool))
+	blogsUC := blogs.NewBlogsUseCase(pgstore.NewBlogTransactions(s.dbPool), nil, "")
+	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, nil, permissionsUC)
 
-	packagesRepo := pg.NewPackagesRepo(s.dbPool)
-	importUC := usecase.NewProblemImportUseCase(s.problemsRepo, workspaceStorage)
-	publishUC := usecase.NewProblemPublishUseCase(s.problemsRepo, packagesRepo, workspaceStorage, testStorage, "packages")
+	avatarsUC := identity.NewAvatarsUseCase(s.usersRepo, pgstore.NewIdentityTransactions(s.dbPool), testStorage, "avatars")
 
-	draftsRepo := pg.NewDraftsRepo(s.dbPool)
-	draftsUC := usecase.NewDraftsUseCase(draftsRepo, contestsUC, permissionsUC, txManager)
+	importUC := problems.NewProblemImportUseCase(s.problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(s.dbPool))
 
-	announcementsRepo := pg.NewAnnouncementsRepo(s.dbPool)
-	announcementsUC := usecase.NewAnnouncementsUseCase(announcementsRepo, contestsUC, outboxRepo, txManager)
-	clarificationsRepo := pg.NewClarificationsRepo(s.dbPool)
-	clarificationsUC := usecase.NewClarificationsUseCase(clarificationsRepo, announcementsRepo, contestsUC, outboxRepo, txManager)
+	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(s.dbPool))
+
+	announcementsRepo := pgstore.NewAnnouncementsRepo(s.dbPool)
+	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(s.dbPool))
+	clarificationsRepo := pgstore.NewClarificationsRepo(s.dbPool)
+	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(s.dbPool))
+	communicationReader := contests.NewCommunicationReader(announcementsRepo, clarificationsRepo, permissionsUC)
+	contestDetails := contests.NewDetailsReader(s.contestsRepo, s.problemsRepo, problems.NewStatementReader(workspaceStorage, packagesRepo, publishUC), permissionsUC, nil, s.usersRepo)
 
 	// Handler
 	coreServer := handlers.NewCoreServer(
-		authUC,
-		contestsUC,
-		permissionsUC,
-		submissionsUC,
-		usersUC,
-		problemsUC,
-		organizationsUC,
-		teamsUC,
-		workshopUC,
-		blogsUC,
-		avatarsUC,
-		importUC,
-		publishUC,
-		draftsUC,
-		notificationsUC,
-		announcementsUC,
-		announcementsRepo,
-		clarificationsUC,
-		nil, // natsJS - not needed for integration tests
-		nil, // bookletCompiler - not needed for integration tests,
-		s.usersRepo,
-		s.problemsRepo,
-		s.contestsRepo,
-		blogsRepo,
-		draftsRepo,
-		notificationsRepo,
-		clarificationsRepo,
-		packagesRepo,
+		coremodules.Identity{
+			AuthUC:      authUC,
+			UsersUC:     usersUC,
+			UsersReader: s.usersRepo,
+			AvatarsUC:   avatarsUC,
+		},
+		coremodules.Organizations{
+			OrganizationsUC: organizationsUC,
+			TeamsUC:         teamsUC,
+		},
+		coremodules.Contests{
+			ContestsUC:           contestsUC,
+			PermissionsUC:        permissionsUC,
+			ContestsReader:       contests.NewReader(s.contestsRepo, permissionsUC),
+			ContestDetails:       contestDetails,
+			DraftsUC:             draftsUC,
+			DraftsReader:         draftsUC,
+			AnnouncementsUC:      announcementsUC,
+			AnnouncementsReader:  communicationReader,
+			ClarificationsUC:     clarificationsUC,
+			ClarificationsReader: communicationReader,
+		},
+		coremodules.Problems{
+			ProblemsUC:     problemsUC,
+			ProblemsReader: problems.NewReader(s.problemsRepo, permissionsUC, s.organizationsRepo, workshopUC),
+			WorkshopUC:     workshopUC,
+			ImportUC:       importUC,
+			PublishUC:      publishUC,
+			PackagesReader: packagesRepo,
+		},
+		coremodules.Submissions{SubmissionsUC: submissionsUC},
+		coremodules.Notifications{
+			NotificationsUC:     notificationsUC,
+			NotificationsReader: notificationsRepo,
+		},
+		coremodules.Blogs{
+			BlogsUC:     blogsUC,
+			BlogsReader: blogsRepo,
+		},
+		nil,
 	)
 
 	// Server setup
@@ -260,7 +280,7 @@ func (s *IntegrationTestSuite) initApp() {
 		return "unmatched"
 	})(
 		middleware.AuthMiddleware(authUC)(
-			middleware.UsersMiddleware(usersUC)(
+			middleware.UsersMiddleware(s.usersRepo)(
 				s.testMiddleware(
 					middleware.ResponseWriterMiddleware(server),
 				),
@@ -305,7 +325,7 @@ func (s *IntegrationTestSuite) testMiddleware(next http.Handler) http.Handler {
 			if err == nil {
 				user, err := s.usersRepo.GetUserById(r.Context(), uid)
 				if err == nil {
-					ctx := middleware.WithUser(r.Context(), user)
+					ctx := accessmodel.WithUser(r.Context(), user)
 					r = r.WithContext(ctx)
 				}
 			}

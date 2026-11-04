@@ -13,8 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brawler2011/gate/backend/internal/domain/interfaces"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	eventdata "github.com/brawler2011/gate/backend/internal/events"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
@@ -23,25 +25,27 @@ import (
 )
 
 type accessStub struct {
-	interfaces.AuthUC
-	interfaces.PermissionsUC
-	interfaces.ContestsUC
+	AuthUC
+	PermissionsUC
+	ContestReader
+	Scoreboard
 	mu            sync.Mutex
-	user          models.User
-	permissions   models.ContestPermissions
-	contest       models.Contest
+	user          accessmodel.User
+	permissions   accessmodel.ContestPermissions
+	contest       contestsmodel.Contest
 	authErr       error
 	permissionErr error
 	contestErr    error
 	onPermissions func()
 }
 
-func (m *accessStub) Authenticate(context.Context, uuid.UUID) (models.User, error) {
+func (m *accessStub) Authenticate(context.Context, uuid.UUID) (accessmodel.User, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.user, m.authErr
 }
-func (m *accessStub) GetContestPermissions(context.Context, uuid.UUID, uuid.UUID) (*models.ContestPermissions, error) {
+
+func (m *accessStub) GetContestPermissions(context.Context, uuid.UUID, uuid.UUID) (*accessmodel.ContestPermissions, error) {
 	m.mu.Lock()
 	p, err, hook := m.permissions, m.permissionErr, m.onPermissions
 	m.onPermissions = nil
@@ -51,11 +55,13 @@ func (m *accessStub) GetContestPermissions(context.Context, uuid.UUID, uuid.UUID
 	}
 	return &p, err
 }
-func (m *accessStub) GetContest(context.Context, uuid.UUID) (models.Contest, error) {
+
+func (m *accessStub) GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.contest, m.contestErr
 }
+
 func (m *accessStub) change(fn func()) { m.mu.Lock(); defer m.mu.Unlock(); fn() }
 
 type wsFixture struct {
@@ -69,13 +75,14 @@ type wsFixture struct {
 
 func newWSFixture(t *testing.T) *wsFixture {
 	t.Helper()
-	stub := &accessStub{user: models.User{Id: uuid.New(), Role: models.UserRoleUser}, contest: models.Contest{ID: uuid.New()}, permissions: models.ContestPermissions{GetContest: true, ListOwnSubmissions: true}}
-	f := &wsFixture{stub: stub, hub: NewHub(100, nil), contests: NewContestsHub(100), session: uuid.New()}
+	stub := &accessStub{user: accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}, contest: contestsmodel.Contest{ID: uuid.New()}, permissions: accessmodel.ContestPermissions{GetContest: true, ListOwnSubmissions: true}}
+	f := &wsFixture{stub: stub, hub: NewHub(100, nil, nil), contests: NewContestsHub(100), session: uuid.New()}
 	observer := NewObserver(f.hub, f.contests, middleware.AuthMiddleware(stub), stub, stub, stub)
 	f.server = httptest.NewServer(observer.Handler())
 	t.Cleanup(f.server.Close)
 	return f
 }
+
 func (f *wsFixture) dial(t *testing.T, path string, authenticated bool) (*websocket.Conn, *http.Response, error) {
 	t.Helper()
 	headers := http.Header{}
@@ -91,6 +98,7 @@ func (f *wsFixture) dial(t *testing.T, path string, authenticated bool) (*websoc
 	}
 	return conn, resp, nil
 }
+
 func (f *wsFixture) connect(t *testing.T, path string) *websocket.Conn {
 	t.Helper()
 	conn, resp, err := f.dial(t, path, true)
@@ -100,25 +108,30 @@ func (f *wsFixture) connect(t *testing.T, path string) *websocket.Conn {
 	require.NoError(t, err)
 	return conn
 }
+
 func (f *wsFixture) path(kind string) string {
 	return "/ws/" + kind + "?contestId=" + f.stub.contest.ID.String() + "&since=0"
 }
+
 func (f *wsFixture) publish(t *testing.T, eventType string, event any) {
 	t.Helper()
 	seq := atomic.AddUint64(&f.seq, 1)
 	payload, err := json.Marshal(event)
 	require.NoError(t, err)
-	ctx := context.WithValue(context.Background(), models.MessageStreamSequenceKey, seq)
+	ctx := context.WithValue(context.Background(), eventdata.MessageStreamSequenceKey, seq)
 	if strings.HasPrefix(eventType, "submissions.") {
 		require.NoError(t, f.hub.Handle(ctx, eventType, payload))
 	} else {
 		require.NoError(t, f.contests.Handle(ctx, eventType, payload))
 	}
 }
-func (f *wsFixture) meta(author uuid.UUID) models.SubmissionEventMeta {
-	return models.SubmissionEventMeta{UserId: &author, ContestId: &f.stub.contest.ID, ProblemId: ptrUUID(uuid.New()), CreatedAt: time.Now(), Language: models.Cpp}
+
+func (f *wsFixture) meta(author uuid.UUID) submissionsmodel.SubmissionEventMeta {
+	return submissionsmodel.SubmissionEventMeta{UserId: &author, ContestId: &f.stub.contest.ID, ProblemId: ptrUUID(uuid.New()), CreatedAt: time.Now(), Language: submissionsmodel.Cpp}
 }
+
 func ptrUUID(v uuid.UUID) *uuid.UUID { return &v }
+
 func readPayload(t *testing.T, conn *websocket.Conn) map[string]any {
 	t.Helper()
 	require.NoError(t, conn.SetReadDeadline(time.Now().Add(3*time.Second)))
@@ -128,6 +141,7 @@ func readPayload(t *testing.T, conn *websocket.Conn) map[string]any {
 	require.NoError(t, conn.ReadJSON(&msg))
 	return msg.Payload
 }
+
 func requireClose(t *testing.T, conn *websocket.Conn, code int) {
 	t.Helper()
 	require.NoError(t, conn.SetReadDeadline(time.Now().Add(3*time.Second)))
@@ -142,7 +156,7 @@ func TestHandshake(t *testing.T) {
 			auth        bool
 			suffix      string
 			err         error
-			permissions models.ContestPermissions
+			permissions accessmodel.ContestPermissions
 			status      int
 		}{
 			{name: "guest", status: 401},
@@ -153,7 +167,7 @@ func TestHandshake(t *testing.T) {
 			{name: "missing contest", auth: true, err: pkg.ErrNotFound, status: 403},
 			{name: "private stranger", auth: true, status: 403},
 			{name: "database error", auth: true, err: errors.New("db unavailable"), status: 500},
-			{name: "allowed", auth: true, permissions: models.ContestPermissions{GetContest: true, GetMonitor: true}, status: 101},
+			{name: "allowed", auth: true, permissions: accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}, status: 101},
 		} {
 			t.Run(kind+"/"+test.name, func(t *testing.T) {
 				f := newWSFixture(t)
@@ -177,23 +191,25 @@ func TestHandshake(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, 403, resp.StatusCode)
 		require.NoError(t, resp.Body.Close())
-		f.stub.change(func() { f.stub.user.Role = models.UserRoleAdmin })
+		f.stub.change(func() { f.stub.user.Role = accessmodel.UserRoleAdmin })
 		f.connect(t, "/ws/submissions")
 	})
 }
 
 func TestSubmissionHistoryPendingLiveAndRevocation(t *testing.T) {
 	f := newWSFixture(t)
-	f.stub.permissions = models.ContestPermissions{GetMonitor: true}
-	f.stub.contest.Settings = map[string]any{"freeze_status": models.FreezeStatusFrozen}
+	f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true}
+	f.stub.contest.Settings = map[string]any{"freeze_status": contestsmodel.FreezeStatusFrozen}
 	other := uuid.New()
 	meta := f.meta(other)
-	created := &models.SubmissionCreatedEvent{SubmissionEventMeta: meta, Id: uuid.New(), State: models.Saved, Source: "secret code"}
-	completed := &models.SubmissionCompletedEvent{SubmissionEventMeta: meta, Id: created.Id, State: models.Accepted, Score: 100, TimeStat: 42, MemoryStat: 256}
-	f.publish(t, models.SubmissionEventCreated, created)
+	created := &submissionsmodel.SubmissionCreatedEvent{SubmissionEventMeta: meta, Id: uuid.New(), State: submissionsmodel.Saved, Source: "secret code"}
+	completed := &submissionsmodel.SubmissionCompletedEvent{SubmissionEventMeta: meta, Id: created.Id, State: submissionsmodel.Accepted, Score: 100, TimeStat: 42, MemoryStat: 256}
+	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	// Run during history authorization. Synchronous broadcast proves no hub/subscriber lock is held.
 	f.stub.onPermissions = func() {
-		f.stub.change(func() { f.stub.onPermissions = func() { f.publish(t, models.SubmissionEventCompleted, completed) } })
+		f.stub.change(func() {
+			f.stub.onPermissions = func() { f.publish(t, submissionsmodel.SubmissionEventCompleted, completed) }
+		})
 	}
 	conn := f.connect(t, f.path("submissions"))
 	for range 2 {
@@ -204,15 +220,15 @@ func TestSubmissionHistoryPendingLiveAndRevocation(t *testing.T) {
 		}
 	}
 	// Hidden test progress never arrives; the own completion that follows remains complete.
-	f.publish(t, models.SubmissionEventTestStarted, &models.SubmissionTestStartedEvent{SubmissionEventMeta: meta, Id: created.Id, Number: 99})
+	f.publish(t, submissionsmodel.SubmissionEventTestStarted, &submissionsmodel.SubmissionTestStartedEvent{SubmissionEventMeta: meta, Id: created.Id, Number: 99})
 	own := *completed
 	own.SubmissionEventMeta = f.meta(f.stub.user.Id)
-	f.publish(t, models.SubmissionEventCompleted, &own)
+	f.publish(t, submissionsmodel.SubmissionEventCompleted, &own)
 	payload := readPayload(t, conn)
-	require.InDelta(t, float64(models.Accepted), payload["state"], 0)
+	require.InDelta(t, float64(submissionsmodel.Accepted), payload["state"], 0)
 	require.NotContains(t, payload, "frozen")
-	f.stub.change(func() { f.stub.permissions = models.ContestPermissions{} })
-	f.publish(t, models.SubmissionEventCompleted, completed)
+	f.stub.change(func() { f.stub.permissions = accessmodel.ContestPermissions{} })
+	f.publish(t, submissionsmodel.SubmissionEventCompleted, completed)
 	requireClose(t, conn, 1008)
 }
 
@@ -224,20 +240,20 @@ func TestDeliveryRevalidates(t *testing.T) {
 			change func(*accessStub)
 		}{
 			{"session revoked", 1008, func(m *accessStub) { m.authErr = pkg.ErrUnauthenticated }},
-			{"membership revoked", 1008, func(m *accessStub) { m.permissions = models.ContestPermissions{} }},
+			{"membership revoked", 1008, func(m *accessStub) { m.permissions = accessmodel.ContestPermissions{} }},
 			{"contest deleted", 1008, func(m *accessStub) { m.permissionErr = pkg.ErrNotFound }},
 			{"permissions database error", 1011, func(m *accessStub) { m.permissionErr = errors.New("db") }},
 			{"session database error", 1011, func(m *accessStub) { m.authErr = errors.New("db") }},
 		} {
 			t.Run(kind+"/"+test.name, func(t *testing.T) {
 				f := newWSFixture(t)
-				f.stub.permissions = models.ContestPermissions{GetContest: true, GetMonitor: true}
+				f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
 				conn := f.connect(t, f.path(kind))
 				f.stub.change(func() { test.change(f.stub) })
 				if kind == "submissions" {
-					f.publish(t, models.SubmissionEventCompleted, &models.SubmissionCompletedEvent{SubmissionEventMeta: f.meta(uuid.New()), Id: uuid.New()})
+					f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{SubmissionEventMeta: f.meta(uuid.New()), Id: uuid.New()})
 				} else {
-					f.publish(t, models.ContestEventAnnouncementDeleted, &models.ContestAnnouncementDeletedEvent{ContestID: f.stub.contest.ID, ID: uuid.New()})
+					f.publish(t, contestsmodel.ContestEventAnnouncementDeleted, &contestsmodel.ContestAnnouncementDeletedEvent{ContestID: f.stub.contest.ID, ID: uuid.New()})
 				}
 				requireClose(t, conn, test.code)
 			})
@@ -247,61 +263,61 @@ func TestDeliveryRevalidates(t *testing.T) {
 
 func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	f := newWSFixture(t)
-	f.stub.permissions = models.ContestPermissions{GetMonitor: true, ManageContest: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}
-	f.stub.contest.Settings = map[string]any{"freeze_status": models.FreezeStatusFrozen}
+	f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ManageContest: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}
+	f.stub.contest.Settings = map[string]any{"freeze_status": contestsmodel.FreezeStatusFrozen}
 	conn := f.connect(t, f.path("submissions"))
 	meta := f.meta(uuid.New())
 	id := uuid.New()
-	created := &models.SubmissionCreatedEvent{SubmissionEventMeta: meta, Id: id, State: 1, Source: "code"}
-	f.publish(t, models.SubmissionEventCreated, created)
+	created := &submissionsmodel.SubmissionCreatedEvent{SubmissionEventMeta: meta, Id: id, State: 1, Source: "code"}
+	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	require.Equal(t, "code", readPayload(t, conn)["source"])
-	f.publish(t, models.SubmissionEventTestStarted, &models.SubmissionTestStartedEvent{SubmissionEventMeta: meta, Id: id, Number: 7})
+	f.publish(t, submissionsmodel.SubmissionEventTestStarted, &submissionsmodel.SubmissionTestStartedEvent{SubmissionEventMeta: meta, Id: id, Number: 7})
 	require.InDelta(t, float64(7), readPayload(t, conn)["number"], 0)
-	f.stub.change(func() { f.stub.permissions = models.ContestPermissions{GetMonitor: true} })
-	f.publish(t, models.SubmissionEventCreated, created)
+	f.stub.change(func() { f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true} })
+	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	require.Equal(t, true, readPayload(t, conn)["frozen"])
-	f.stub.change(func() { f.stub.contest.Settings = map[string]any{"freeze_status": models.FreezeStatusUnfrozen} })
-	f.publish(t, models.SubmissionEventCreated, created)
+	f.stub.change(func() { f.stub.contest.Settings = map[string]any{"freeze_status": contestsmodel.FreezeStatusUnfrozen} })
+	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	payload := readPayload(t, conn)
 	require.NotContains(t, payload, "source")
 	require.NotContains(t, payload, "frozen")
-	f.publish(t, models.SubmissionEventTestStarted, &models.SubmissionTestStartedEvent{SubmissionEventMeta: meta, Id: id, Number: 7})
-	f.publish(t, models.SubmissionEventCompleted, &models.SubmissionCompletedEvent{SubmissionEventMeta: meta, Id: id, State: 200})
+	f.publish(t, submissionsmodel.SubmissionEventTestStarted, &submissionsmodel.SubmissionTestStartedEvent{SubmissionEventMeta: meta, Id: id, Number: 7})
+	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{SubmissionEventMeta: meta, Id: id, State: 200})
 	require.InDelta(t, float64(200), readPayload(t, conn)["state"], 0)
 	// Source belongs to author even without review permission.
 	created.SubmissionEventMeta = f.meta(f.stub.user.Id)
-	f.publish(t, models.SubmissionEventCreated, created)
+	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	require.Equal(t, "code", readPayload(t, conn)["source"])
 }
 
 func TestClarificationsUseCurrentManagePermission(t *testing.T) {
 	f := newWSFixture(t)
-	f.stub.permissions = models.ContestPermissions{GetContest: true, ManageContest: true}
+	f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, ManageContest: true}
 	other := uuid.New()
-	event := &models.ContestClarificationCreatedEvent{ContestID: f.stub.contest.ID, UserID: other, ID: uuid.New(), Question: "private"}
-	f.publish(t, models.ContestEventClarificationCreated, event)
+	event := &contestsmodel.ContestClarificationCreatedEvent{ContestID: f.stub.contest.ID, UserID: other, ID: uuid.New(), Question: "private"}
+	f.publish(t, contestsmodel.ContestEventClarificationCreated, event)
 	conn := f.connect(t, f.path("contests"))
 	require.Equal(t, "private", readPayload(t, conn)["question"])
 	f.stub.change(func() { f.stub.permissions.ManageContest = false })
-	f.publish(t, models.ContestEventClarificationCreated, event)
+	f.publish(t, contestsmodel.ContestEventClarificationCreated, event)
 	eventCopy := *event
 	eventCopy.UserID = f.stub.user.Id
 	eventCopy.Question = "mine"
-	f.publish(t, models.ContestEventClarificationCreated, &eventCopy)
+	f.publish(t, contestsmodel.ContestEventClarificationCreated, &eventCopy)
 	require.Equal(t, "mine", readPayload(t, conn)["question"])
-	f.publish(t, models.ContestEventAnnouncementDeleted, &models.ContestAnnouncementDeletedEvent{ContestID: f.stub.contest.ID, ID: uuid.New()})
+	f.publish(t, contestsmodel.ContestEventAnnouncementDeleted, &contestsmodel.ContestAnnouncementDeletedEvent{ContestID: f.stub.contest.ID, ID: uuid.New()})
 	require.Contains(t, readPayload(t, conn), "id")
 }
 
 func TestFiltersNarrowAccessAndRequireMetadata(t *testing.T) {
 	f := newWSFixture(t)
 	conn := f.connect(t, f.path("submissions"))
-	f.publish(t, models.SubmissionEventCompleted, &models.SubmissionCompletedEvent{SubmissionEventMeta: f.meta(uuid.New()), Id: uuid.New(), State: 106})
-	own := &models.SubmissionCompletedEvent{SubmissionEventMeta: f.meta(f.stub.user.Id), Id: uuid.New(), State: 200}
-	f.publish(t, models.SubmissionEventCompleted, own)
+	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{SubmissionEventMeta: f.meta(uuid.New()), Id: uuid.New(), State: 106})
+	own := &submissionsmodel.SubmissionCompletedEvent{SubmissionEventMeta: f.meta(f.stub.user.Id), Id: uuid.New(), State: 200}
+	f.publish(t, submissionsmodel.SubmissionEventCompleted, own)
 	require.Equal(t, own.Id.String(), readPayload(t, conn)["id"])
 	for _, filter := range []*SubmissionsFilter{{ContestId: ptrUUID(uuid.New())}, {UserId: ptrUUID(uuid.New())}, {ProblemId: ptrUUID(uuid.New())}} {
-		require.False(t, filter.Matches(&WrappedEvent{RawEvent: &models.SubmissionCompletedEvent{}}))
+		require.False(t, filter.Matches(&WrappedEvent{RawEvent: &submissionsmodel.SubmissionCompletedEvent{}}))
 	}
 	_, resp, err := f.dial(t, f.path("submissions")+"&userId="+uuid.NewString(), true)
 	require.Error(t, err)
@@ -315,12 +331,12 @@ func TestCatchUpAccessLoss(t *testing.T) {
 			for _, code := range []int{1008, 1011} {
 				t.Run(fmt.Sprintf("%s/%s/%d", kind, phase, code), func(t *testing.T) {
 					f := newWSFixture(t)
-					f.stub.permissions = models.ContestPermissions{GetContest: true, GetMonitor: true}
+					f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
 					publish := func() {
 						if kind == "submissions" {
-							f.publish(t, models.SubmissionEventCompleted, &models.SubmissionCompletedEvent{SubmissionEventMeta: f.meta(uuid.New()), Id: uuid.New(), State: 200})
+							f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{SubmissionEventMeta: f.meta(uuid.New()), Id: uuid.New(), State: 200})
 						} else {
-							f.publish(t, models.ContestEventAnnouncementDeleted, &models.ContestAnnouncementDeletedEvent{ContestID: f.stub.contest.ID, ID: uuid.New()})
+							f.publish(t, contestsmodel.ContestEventAnnouncementDeleted, &contestsmodel.ContestAnnouncementDeletedEvent{ContestID: f.stub.contest.ID, ID: uuid.New()})
 						}
 					}
 					publish()
@@ -365,7 +381,7 @@ func TestFreezeBoundaryJSON(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			f := newWSFixture(t)
-			f.stub.permissions = models.ContestPermissions{GetMonitor: true, ManageContest: test.moderator}
+			f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ManageContest: test.moderator}
 			end := time.Now().Add(30 * time.Minute)
 			boundary := end.Add(-time.Hour)
 			f.stub.contest.EndTime = &end
@@ -380,7 +396,7 @@ func TestFreezeBoundaryJSON(t *testing.T) {
 			meta := f.meta(author)
 			meta.CreatedAt = boundary.Add(test.offset)
 			failed := int32(7)
-			f.publish(t, models.SubmissionEventCompleted, &models.SubmissionCompletedEvent{SubmissionEventMeta: meta, Id: uuid.New(), State: 106, FailedTest: &failed})
+			f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{SubmissionEventMeta: meta, Id: uuid.New(), State: 106, FailedTest: &failed})
 			conn := f.connect(t, f.path("submissions"))
 			payload := readPayload(t, conn)
 			if test.frozen {

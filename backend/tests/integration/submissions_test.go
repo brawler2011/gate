@@ -7,13 +7,14 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/domain/models"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/google/uuid"
 )
 
 func (s *IntegrationTestSuite) TestSubmissions() {
-	admin := s.createUser("admin_submissions", models.UserRoleAdmin)
-	user := s.createUser("user_submissions", models.UserRoleUser)
+	admin := s.createUser("admin_submissions", accessmodel.UserRoleAdmin)
+	user := s.createUser("user_submissions", accessmodel.UserRoleUser)
 
 	problemOrg := s.createOrganization("admin-submissions-org", "Admin Submissions Organization", admin.Id)
 
@@ -36,14 +37,14 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 
 	// 2. Create Contest
 	contestID := uuid.New()
-	err = s.contestsRepo.CreateContest(s.ctx, &models.CreateContestParams{
+	err = s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 		ID:             contestID,
 		OrganizationID: contestOrg.ID,
 		OwnerID:        &admin.Id,
 		Title:          "Submission Contest",
 		Login:          "submission-contest",
 		Description:    "A test contest for submissions",
-		Visibility:     models.ContestVisibilityPublic,
+		Visibility:     contestsmodel.ContestVisibilityPublic,
 		Settings:       make(map[string]interface{}),
 	})
 	s.Require().NoError(err)
@@ -51,7 +52,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	// Update contest to be active (started and not finished)
 	startTime := time.Now().Add(-1 * time.Hour)
 	endTime := time.Now().Add(1 * time.Hour)
-	err = s.contestsRepo.UpdateContest(s.ctx, models.ContestUpdateParams{
+	err = s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{
 		ID:           contestID,
 		StartTime:    &startTime,
 		StartTimeSet: true,
@@ -61,7 +62,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	s.Require().NoError(err)
 
 	// Add problem to contest
-	err = s.contestsRepo.CreateContestProblem(s.ctx, models.ContestProblemCreation{
+	err = s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{
 		ContestId: contestID,
 		ProblemId: problemID,
 		PackageId: packageID,
@@ -69,10 +70,10 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	s.Require().NoError(err)
 
 	// Add user to contest
-	err = s.contestsRepo.CreateContestMember(s.ctx, &models.CreateContestMemberParams{
+	err = s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
 		ContestId: contestID,
 		UserId:    user.Id,
-		Role:      models.ContestRoleParticipant,
+		Role:      contestsmodel.ContestRoleParticipant,
 	})
 	s.Require().NoError(err)
 
