@@ -7,7 +7,12 @@ import (
 	"github.com/google/uuid"
 )
 
-type NotificationsRepo interface {
+type Transactions interface {
+	Within(context.Context, func(TxStore) error) error
+}
+
+type TxStore interface {
+	UsersRepo
 	MarkAsRead(ctx context.Context, id, userID uuid.UUID) error
 	MarkAllAsRead(ctx context.Context, userID uuid.UUID) error
 }

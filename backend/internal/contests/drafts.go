@@ -63,7 +63,7 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmode
 		if err != nil {
 			return err
 		}
-		if contest.EndTime != nil && time.Now().After(*contest.EndTime) && !user.IsAdmin() {
+		if contest.EndTime != nil && time.Now().After(*contest.EndTime) {
 			manager, err := tx.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
 			if err != nil {
 				return err
@@ -111,7 +111,7 @@ func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, contestID, draftID uui
 		if draft.ContestID != contestID {
 			return pkg.Wrap(pkg.ErrBadInput, nil, "draft does not belong to contest")
 		}
-		if draft.UserID != user.Id && !user.IsAdmin() {
+		if draft.UserID != user.Id {
 			manager, err := tx.HasContestPermission(ctx, contestID, user.Id, accessmodel.ActionManageContest)
 			if err != nil {
 				return err

@@ -266,3 +266,5 @@ func (*blockingSubmissionsRepo) CreateNotification(context.Context, *notificatio
 func (*blockingSubmissionsRepo) GetUserById(context.Context, uuid.UUID) (accessmodel.User, error) {
 	return accessmodel.User{}, pkg.NotImplemented
 }
+
+func (*blockingSubmissionsRepo) LockUser(context.Context, uuid.UUID) error { return nil }

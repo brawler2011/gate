@@ -548,6 +548,9 @@ func (uc *OrganizationsUseCase) AcceptInvitation(ctx context.Context, invitation
 		if err := tx.LockOrganization(ctx, inv.OrganizationID); err != nil {
 			return err
 		}
+		if err := authorizeSelfService(ctx, tx, requestUserID); err != nil {
+			return err
+		}
 		inv, err := tx.GetInvitationByID(ctx, invitationID)
 		if err != nil {
 			return err
@@ -575,6 +578,9 @@ func (uc *OrganizationsUseCase) DeclineInvitation(ctx context.Context, invitatio
 	}
 	return uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
 		if err := tx.LockOrganization(ctx, inv.OrganizationID); err != nil {
+			return err
+		}
+		if err := authorizeSelfService(ctx, tx, requestUserID); err != nil {
 			return err
 		}
 		inv, err := tx.GetInvitationByID(ctx, invitationID)
@@ -611,6 +617,9 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 	var pendingNotifications []notificationsmodel.Notification
 	err = uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
 		if err := tx.LockOrganization(ctx, org.ID); err != nil {
+			return err
+		}
+		if err := authorizeSelfService(ctx, tx, userID); err != nil {
 			return err
 		}
 		org, err := tx.GetOrganizationByID(ctx, org.ID)
@@ -741,6 +750,9 @@ func (uc *OrganizationsUseCase) CancelJoinRequest(ctx context.Context, orgLogin 
 	}
 	return uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
 		if err := tx.LockOrganization(ctx, org.ID); err != nil {
+			return err
+		}
+		if err := authorizeSelfService(ctx, tx, requestUserID); err != nil {
 			return err
 		}
 		req, err := tx.GetPendingJoinRequest(ctx, org.ID, requestUserID)
@@ -909,4 +921,16 @@ func (uc *OrganizationsUseCase) withinOrganization(ctx context.Context, id, acto
 		}
 		return fn(tx)
 	})
+}
+
+func authorizeSelfService(ctx context.Context, tx OrganizationTxStore, target uuid.UUID) error {
+	actor := accessmodel.UserFromContext(ctx)
+	if err := tx.LockUser(ctx, actor.Id); err != nil {
+		return err
+	}
+	current, err := tx.GetUserById(ctx, actor.Id)
+	if err != nil {
+		return err
+	}
+	return accessmodel.RequireSelfOrAdmin(accessmodel.WithUser(ctx, current), target)
 }

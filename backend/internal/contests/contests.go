@@ -331,6 +331,9 @@ func (uc *ContestsUseCase) DeleteContestTeam(
 }
 
 func (uc *ContestsUseCase) BlockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string, operatorID uuid.UUID) error {
+	if err := accessmodel.RequireCaller(ctx, operatorID); err != nil {
+		return err
+	}
 	return uc.withinContest(ctx, contestID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
 		if err := tx.CreateContestUserProblemBlock(ctx, &contestsmodel.CreateContestUserProblemBlockParams{ContestID: contestID, UserID: userID, ProblemID: problemID, Reason: reason, CreatedBy: &operatorID}); err != nil {
 			return err
@@ -430,6 +433,9 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 	var pendingNotifications []notificationsmodel.Notification
 	err = uc.transactions.Within(ctx, func(tx CommandTxStore) error {
 		if err := tx.LockContest(ctx, contest.ID); err != nil {
+			return err
+		}
+		if err := authorizeApplicant(ctx, tx, userID); err != nil {
 			return err
 		}
 		current, err := tx.GetContest(ctx, contest.ID)
@@ -572,6 +578,9 @@ func (uc *ContestsUseCase) CancelJoinRequest(
 	}
 	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {
 		if err := tx.LockContest(ctx, contest.ID); err != nil {
+			return err
+		}
+		if err := authorizeApplicant(ctx, tx, requestUserID); err != nil {
 			return err
 		}
 		req, err := tx.GetPendingContestJoinRequest(ctx, contest.ID, requestUserID)
@@ -934,4 +943,15 @@ func ApplySubmissionResult(ctx context.Context, store ScoreboardStore, submissio
 		Solved: result.Solved, FailedAttempts: result.FailedAttempts,
 		FirstACTime: result.FirstACTime, TimeMinutes: result.TimeMinutes,
 	})
+}
+
+func authorizeApplicant(ctx context.Context, tx CommandTxStore, id uuid.UUID) error {
+	if err := tx.LockUser(ctx, id); err != nil {
+		return err
+	}
+	current, err := tx.GetUserById(ctx, id)
+	if err != nil {
+		return err
+	}
+	return accessmodel.RequireCaller(accessmodel.WithUser(ctx, current), id)
 }

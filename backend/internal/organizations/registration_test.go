@@ -44,8 +44,8 @@ func (s *registrationStore) GetMember(context.Context, uuid.UUID, uuid.UUID) (*o
 	}
 	return nil, pkg.ErrNotFound
 }
-func (s *registrationStore) GetUserById(context.Context, uuid.UUID) (accessmodel.User, error) {
-	return accessmodel.User{}, nil
+func (s *registrationStore) GetUserById(_ context.Context, id uuid.UUID) (accessmodel.User, error) {
+	return accessmodel.User{Id: id, Role: accessmodel.UserRoleUser}, nil
 }
 func (s *registrationStore) AddMember(context.Context, uuid.UUID, uuid.UUID, organizationsmodel.OrganizationRole) error {
 	s.added = true
@@ -87,3 +87,5 @@ func TestRegistrationUsesLockedOrganizationState(t *testing.T) {
 		})
 	}
 }
+
+func (*registrationStore) LockUser(context.Context, uuid.UUID) error { return nil }

@@ -14,7 +14,7 @@ import (
 )
 
 type mockNotificationsRepo struct {
-	NotificationsRepo
+	UsersRepo
 	notifications map[uuid.UUID]notificationsmodel.Notification
 }
 
@@ -81,6 +81,7 @@ func TestNotificationsUseCase_EmailAndRead(t *testing.T) {
 		Email:        &userEmail,
 	})
 
+	notifsRepo.UsersRepo = usersRepo
 	uc := NewNotificationsUseCase(notifsRepo, usersRepo, emailSvc)
 
 	// Create in-app notification
@@ -108,4 +109,8 @@ func TestNotificationsUseCase_EmailAndRead(t *testing.T) {
 	err = uc.MarkAsRead(accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser}), notif.ID, userID)
 	require.NoError(t, err)
 	assert.True(t, notifsRepo.notifications[notif.ID].IsRead)
+}
+
+func (m *mockNotificationsRepo) Within(ctx context.Context, fn func(TxStore) error) error {
+	return fn(m)
 }

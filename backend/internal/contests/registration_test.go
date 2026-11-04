@@ -82,3 +82,8 @@ func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
 		})
 	}
 }
+
+func (*registrationStore) LockUser(context.Context, uuid.UUID) error { return nil }
+func (*registrationStore) GetUserById(_ context.Context, id uuid.UUID) (accessmodel.User, error) {
+	return accessmodel.User{Id: id, Role: accessmodel.UserRoleUser}, nil
+}

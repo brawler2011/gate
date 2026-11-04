@@ -11,18 +11,18 @@ import (
 )
 
 type NotificationsUseCase struct {
-	repo         NotificationsRepo
+	transactions Transactions
 	usersRepo    UsersRepo
 	emailService email.EmailService
 }
 
 func NewNotificationsUseCase(
-	repo NotificationsRepo,
+	transactions Transactions,
 	usersRepo UsersRepo,
 	emailService email.EmailService,
 ) *NotificationsUseCase {
 	return &NotificationsUseCase{
-		repo:         repo,
+		transactions: transactions,
 		usersRepo:    usersRepo,
 		emailService: emailService,
 	}
@@ -108,12 +108,26 @@ func (uc *NotificationsUseCase) MarkAsRead(ctx context.Context, id, userID uuid.
 	if err := accessmodel.RequireSelfOrAdmin(ctx, userID); err != nil {
 		return err
 	}
-	return uc.repo.MarkAsRead(ctx, id, userID)
+	return uc.withinUser(ctx, userID, func(tx TxStore) error { return tx.MarkAsRead(ctx, id, userID) })
 }
 
 func (uc *NotificationsUseCase) MarkAllAsRead(ctx context.Context, userID uuid.UUID) error {
 	if err := accessmodel.RequireSelfOrAdmin(ctx, userID); err != nil {
 		return err
 	}
-	return uc.repo.MarkAllAsRead(ctx, userID)
+	return uc.withinUser(ctx, userID, func(tx TxStore) error { return tx.MarkAllAsRead(ctx, userID) })
+}
+
+func (uc *NotificationsUseCase) withinUser(ctx context.Context, userID uuid.UUID, fn func(TxStore) error) error {
+	actor := accessmodel.UserFromContext(ctx)
+	return uc.transactions.Within(ctx, func(tx TxStore) error {
+		current, err := tx.GetUserById(ctx, actor.Id)
+		if err != nil {
+			return err
+		}
+		if err := accessmodel.RequireSelfOrAdmin(accessmodel.WithUser(ctx, current), userID); err != nil {
+			return err
+		}
+		return fn(tx)
+	})
 }
