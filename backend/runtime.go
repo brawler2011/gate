@@ -171,7 +171,7 @@ func runApp(envFile string) error {
 
 	usersUC := identity.NewUsersUseCase(usersRepo, pgstore.NewIdentityTransactions(pool), emailService)
 	authUC := identity.NewAuthUseCase(usersRepo, authRepo, pgstore.NewIdentityTransactions(pool), emailService)
-	notificationsUC := notifications.NewNotificationsUseCase(pgstore.NewNotificationTransactions(pool), usersRepo, emailService)
+	notificationsUC := notifications.NewNotificationsUseCase(notificationsRepo, usersRepo, emailService)
 
 	avatarsUC := identity.NewAvatarsUseCase(usersRepo, pgstore.NewIdentityTransactions(pool), store, defaultS3AvatarBucket)
 	problemImportUC := problems.NewProblemImportUseCase(problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(pool))

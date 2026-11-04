@@ -51,14 +51,14 @@ type ContestsUC interface {
 
 	GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error)
 
-	BlockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string, operatorID uuid.UUID) error
+	BlockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string) error
 	UnblockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, rejudgeSubmissions bool) error
 	GetProblemBlockStatusForUser(ctx context.Context, contestID, userID, problemID uuid.UUID) (*contestsmodel.ContestUserProblemBlock, error)
 
 	// Contest Join Requests
-	CreateJoinRequest(ctx context.Context, orgLogin, contestLogin string, userID uuid.UUID, message *string) (*contestsmodel.ContestJoinRequest, bool, error)
+	CreateJoinRequest(ctx context.Context, orgLogin, contestLogin string, message *string) (*contestsmodel.ContestJoinRequest, bool, error)
 	ListJoinRequests(ctx context.Context, orgLogin, contestLogin string, requestUserID uuid.UUID) ([]contestsmodel.ContestJoinRequest, error)
-	CancelJoinRequest(ctx context.Context, orgLogin, contestLogin string, requestUserID uuid.UUID) error
+	CancelJoinRequest(ctx context.Context, orgLogin, contestLogin string) error
 	ApproveJoinRequest(ctx context.Context, orgLogin, contestLogin string, requestID, reviewerID uuid.UUID) error
 	RejectJoinRequest(ctx context.Context, orgLogin, contestLogin string, requestID, reviewerID uuid.UUID) error
 	GetMyPendingJoinRequest(ctx context.Context, orgLogin, contestLogin string, userID uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
@@ -70,8 +70,8 @@ type DraftsUC interface {
 }
 
 type NotificationsUC interface {
-	MarkAsRead(ctx context.Context, id, userID uuid.UUID) error
-	MarkAllAsRead(ctx context.Context, userID uuid.UUID) error
+	MarkAsRead(ctx context.Context, id uuid.UUID) error
+	MarkAllAsRead(ctx context.Context) error
 }
 
 type OrganizationsUC interface {
@@ -98,13 +98,13 @@ type OrganizationsUC interface {
 	InviteMember(ctx context.Context, orgLogin string, targetUserID uuid.UUID, role organizationsmodel.OrganizationRole, inviterID uuid.UUID) (*organizationsmodel.OrganizationInvitation, error)
 	ListInvitations(ctx context.Context, orgLogin string, requestUserID uuid.UUID) ([]organizationsmodel.OrganizationInvitation, error)
 	CancelInvitation(ctx context.Context, orgLogin string, invitationID, requestUserID uuid.UUID) error
-	AcceptInvitation(ctx context.Context, invitationID, requestUserID uuid.UUID) error
-	DeclineInvitation(ctx context.Context, invitationID, requestUserID uuid.UUID) error
+	AcceptInvitation(ctx context.Context, invitationID uuid.UUID) error
+	DeclineInvitation(ctx context.Context, invitationID uuid.UUID) error
 
 	// Join Requests
-	CreateJoinRequest(ctx context.Context, orgLogin string, userID uuid.UUID, message *string) (*organizationsmodel.OrganizationJoinRequest, bool, error)
+	CreateJoinRequest(ctx context.Context, orgLogin string, message *string) (*organizationsmodel.OrganizationJoinRequest, bool, error)
 	ListJoinRequests(ctx context.Context, orgLogin string, requestUserID uuid.UUID) ([]organizationsmodel.OrganizationJoinRequest, error)
-	CancelJoinRequest(ctx context.Context, orgLogin string, requestUserID uuid.UUID) error
+	CancelJoinRequest(ctx context.Context, orgLogin string) error
 	ApproveJoinRequest(ctx context.Context, orgLogin string, requestID, reviewerID uuid.UUID, role organizationsmodel.OrganizationRole) error
 	RejectJoinRequest(ctx context.Context, orgLogin string, requestID, reviewerID uuid.UUID) error
 	GetMyPendingJoinRequest(ctx context.Context, orgLogin string, userID uuid.UUID) (*organizationsmodel.OrganizationJoinRequest, error)

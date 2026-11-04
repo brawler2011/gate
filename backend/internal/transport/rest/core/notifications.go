@@ -53,12 +53,8 @@ func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context) (*corev1.U
 }
 
 func (h *CoreServer) MarkNotificationAsRead(ctx context.Context, params corev1.MarkNotificationAsReadParams) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
 
-	err := h.notificationsUC.MarkAsRead(ctx, params.ID, user.Id)
+	err := h.notificationsUC.MarkAsRead(ctx, params.ID)
 	if err != nil {
 		return err
 	}
@@ -67,12 +63,8 @@ func (h *CoreServer) MarkNotificationAsRead(ctx context.Context, params corev1.M
 }
 
 func (h *CoreServer) MarkAllNotificationsAsRead(ctx context.Context) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
 
-	err := h.notificationsUC.MarkAllAsRead(ctx, user.Id)
+	err := h.notificationsUC.MarkAllAsRead(ctx)
 	if err != nil {
 		return err
 	}

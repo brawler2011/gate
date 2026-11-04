@@ -62,7 +62,7 @@ func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
 			store := &registrationStore{contest: contest}
 			uc := NewContestsUseCase(registrationLookup{contest: contest}, nil, testTransactions[CommandTxStore]{store}, nil)
 			caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
-			request, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), "org", "contest", caller.Id, nil)
+			request, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), "org", "contest", nil)
 			switch mode {
 			case contestsmodel.ParticipationModeOpen:
 				require.NoError(t, err)
@@ -81,9 +81,4 @@ func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
 			}
 		})
 	}
-}
-
-func (*registrationStore) LockUser(context.Context, uuid.UUID) error { return nil }
-func (*registrationStore) GetUserById(_ context.Context, id uuid.UUID) (accessmodel.User, error) {
-	return accessmodel.User{Id: id, Role: accessmodel.UserRoleUser}, nil
 }

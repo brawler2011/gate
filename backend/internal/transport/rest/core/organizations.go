@@ -306,12 +306,8 @@ func (h *CoreServer) CancelOrganizationInvitation(ctx context.Context, params co
 
 // AcceptOrganizationInvitation handles POST /invitations/{id}/accept
 func (h *CoreServer) AcceptOrganizationInvitation(ctx context.Context, params corev1.AcceptOrganizationInvitationParams) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
 
-	err := h.organizationsUC.AcceptInvitation(ctx, params.ID, user.Id)
+	err := h.organizationsUC.AcceptInvitation(ctx, params.ID)
 	if err != nil {
 		return wrapOrgUCError(err, "failed to accept invitation")
 	}
@@ -321,12 +317,8 @@ func (h *CoreServer) AcceptOrganizationInvitation(ctx context.Context, params co
 
 // DeclineOrganizationInvitation handles POST /invitations/{id}/decline
 func (h *CoreServer) DeclineOrganizationInvitation(ctx context.Context, params corev1.DeclineOrganizationInvitationParams) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
 
-	err := h.organizationsUC.DeclineInvitation(ctx, params.ID, user.Id)
+	err := h.organizationsUC.DeclineInvitation(ctx, params.ID)
 	if err != nil {
 		return wrapOrgUCError(err, "failed to decline invitation")
 	}
@@ -351,17 +343,13 @@ func (h *CoreServer) ListOrganizationJoinRequests(ctx context.Context, params co
 
 // CreateOrganizationJoinRequest handles POST /organizations/{login}/requests
 func (h *CoreServer) CreateOrganizationJoinRequest(ctx context.Context, req corev1.OptCreateOrganizationJoinRequestModel, params corev1.CreateOrganizationJoinRequestParams) (*corev1.OrganizationJoinRequestResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
 
 	var message *string
 	if req.IsSet() && req.Value.Message.IsSet() {
 		message = &req.Value.Message.Value
 	}
 
-	joinReq, joined, err := h.organizationsUC.CreateJoinRequest(ctx, params.Login, user.Id, message)
+	joinReq, joined, err := h.organizationsUC.CreateJoinRequest(ctx, params.Login, message)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to create join request")
 	}
@@ -403,12 +391,8 @@ func (h *CoreServer) GetMyOrganizationJoinRequest(ctx context.Context, params co
 
 // CancelOrganizationJoinRequest handles DELETE /organizations/{login}/requests/mine
 func (h *CoreServer) CancelOrganizationJoinRequest(ctx context.Context, params corev1.CancelOrganizationJoinRequestParams) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
 
-	err := h.organizationsUC.CancelJoinRequest(ctx, params.Login, user.Id)
+	err := h.organizationsUC.CancelJoinRequest(ctx, params.Login)
 	if err != nil {
 		return wrapOrgUCError(err, "failed to cancel join request")
 	}

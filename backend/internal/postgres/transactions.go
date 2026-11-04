@@ -7,7 +7,6 @@ import (
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
 	judging "github.com/brawler2011/gate/backend/internal/judging"
-	"github.com/brawler2011/gate/backend/internal/notifications"
 	organizations "github.com/brawler2011/gate/backend/internal/organizations"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	problems "github.com/brawler2011/gate/backend/internal/problems"
@@ -122,9 +121,8 @@ func NewContestCommandTransactions(pool *pgxpool.Pool) contests.CommandTransacti
 			*OutboxRepo
 			*authorization
 			*OrganizationsRepo
-			*UsersRepo
 			*NotificationsRepo
-		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}, bindAuthorization(q), &OrganizationsRepo{q: q}, &UsersRepo{queries: q}, &NotificationsRepo{queries: q}}
+		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}, bindAuthorization(q), &OrganizationsRepo{q: q}, &NotificationsRepo{queries: q}}
 	}}
 }
 
@@ -144,14 +142,5 @@ func NewBlogTransactions(pool *pgxpool.Pool) blogs.Transactions {
 			*BlogsRepo
 			authorizationUsers
 		}{&BlogsRepo{queries: q}, authorizationUsers{q}}
-	}}
-}
-
-func NewNotificationTransactions(pool *pgxpool.Pool) notifications.Transactions {
-	return transactions[notifications.TxStore]{pool: pool, bind: func(q *sqlc.Queries) notifications.TxStore {
-		return struct {
-			*NotificationsRepo
-			authorizationUsers
-		}{&NotificationsRepo{queries: q}, authorizationUsers{q}}
 	}}
 }

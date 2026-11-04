@@ -814,14 +814,12 @@ func (h *CoreServer) BlockProblemForUser(ctx context.Context, req corev1.OptBloc
 		return err
 	}
 
-	user := accessmodel.UserFromContext(ctx)
-
 	var reason *string
 	if req.IsSet() && req.Value.Reason.IsSet() {
 		reason = &req.Value.Reason.Value
 	}
 
-	err = h.contestsUC.BlockProblemForUser(ctx, contest.ID, params.UserID, params.ProblemID, reason, user.Id)
+	err = h.contestsUC.BlockProblemForUser(ctx, contest.ID, params.UserID, params.ProblemID, reason)
 	if err != nil {
 		return err
 	}
@@ -886,17 +884,13 @@ func (h *CoreServer) ListContestJoinRequests(ctx context.Context, params corev1.
 
 // CreateContestJoinRequest handles POST /organizations/{org_login}/contests/{contest_login}/requests
 func (h *CoreServer) CreateContestJoinRequest(ctx context.Context, req corev1.OptCreateContestJoinRequestModel, params corev1.CreateContestJoinRequestParams) (*corev1.ContestJoinRequestResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
 
 	var message *string
 	if req.IsSet() && req.Value.Message.IsSet() {
 		message = &req.Value.Message.Value
 	}
 
-	joinReq, registered, err := h.contestsUC.CreateJoinRequest(ctx, params.OrgLogin, params.ContestLogin, user.Id, message)
+	joinReq, registered, err := h.contestsUC.CreateJoinRequest(ctx, params.OrgLogin, params.ContestLogin, message)
 	if err != nil {
 		return nil, wrapContestUCError(err, "failed to create contest join request")
 	}
@@ -938,12 +932,8 @@ func (h *CoreServer) GetMyContestJoinRequest(ctx context.Context, params corev1.
 
 // CancelContestJoinRequest handles DELETE /organizations/{org_login}/contests/{contest_login}/requests/mine
 func (h *CoreServer) CancelContestJoinRequest(ctx context.Context, params corev1.CancelContestJoinRequestParams) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
-	}
 
-	err := h.contestsUC.CancelJoinRequest(ctx, params.OrgLogin, params.ContestLogin, user.Id)
+	err := h.contestsUC.CancelJoinRequest(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return wrapContestUCError(err, "failed to cancel contest join request")
 	}

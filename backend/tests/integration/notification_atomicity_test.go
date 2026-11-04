@@ -50,7 +50,7 @@ func (s *IntegrationTestSuite) TestOrganizationNotificationFailureRollsBackComma
 	s.Require().NoError(err)
 	s.Nil(pending, "notification failure must roll back the invitation")
 	s.Zero(emails)
-	_, _, err = uc.CreateJoinRequest(accessmodel.WithUser(s.ctx, applicant), org.Login, applicant.Id, nil)
+	_, _, err = uc.CreateJoinRequest(accessmodel.WithUser(s.ctx, applicant), org.Login, nil)
 	s.Require().Error(err)
 	request, err := s.organizationsRepo.GetPendingJoinRequest(s.ctx, org.ID, applicant.Id)
 	s.Require().NoError(err)

@@ -2,27 +2,29 @@ package notifications
 
 import (
 	"context"
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"log/slog"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/google/uuid"
 )
 
 type NotificationsUseCase struct {
-	transactions Transactions
+	repo         NotificationsRepo
 	usersRepo    UsersRepo
 	emailService email.EmailService
 }
 
 func NewNotificationsUseCase(
-	transactions Transactions,
+	repo NotificationsRepo,
 	usersRepo UsersRepo,
 	emailService email.EmailService,
 ) *NotificationsUseCase {
 	return &NotificationsUseCase{
-		transactions: transactions,
+		repo:         repo,
 		usersRepo:    usersRepo,
 		emailService: emailService,
 	}
@@ -104,30 +106,18 @@ func (uc *NotificationsUseCase) SendEmail(ctx context.Context, n notificationsmo
 	}
 }
 
-func (uc *NotificationsUseCase) MarkAsRead(ctx context.Context, id, userID uuid.UUID) error {
-	if err := accessmodel.RequireSelfOrAdmin(ctx, userID); err != nil {
-		return err
+func (uc *NotificationsUseCase) MarkAsRead(ctx context.Context, id uuid.UUID) error {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() || user.IsExpired() {
+		return pkg.ErrUnauthenticated
 	}
-	return uc.withinUser(ctx, userID, func(tx TxStore) error { return tx.MarkAsRead(ctx, id, userID) })
+	return uc.repo.MarkAsRead(ctx, id, user.Id)
 }
 
-func (uc *NotificationsUseCase) MarkAllAsRead(ctx context.Context, userID uuid.UUID) error {
-	if err := accessmodel.RequireSelfOrAdmin(ctx, userID); err != nil {
-		return err
+func (uc *NotificationsUseCase) MarkAllAsRead(ctx context.Context) error {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() || user.IsExpired() {
+		return pkg.ErrUnauthenticated
 	}
-	return uc.withinUser(ctx, userID, func(tx TxStore) error { return tx.MarkAllAsRead(ctx, userID) })
-}
-
-func (uc *NotificationsUseCase) withinUser(ctx context.Context, userID uuid.UUID, fn func(TxStore) error) error {
-	actor := accessmodel.UserFromContext(ctx)
-	return uc.transactions.Within(ctx, func(tx TxStore) error {
-		current, err := tx.GetUserById(ctx, actor.Id)
-		if err != nil {
-			return err
-		}
-		if err := accessmodel.RequireSelfOrAdmin(accessmodel.WithUser(ctx, current), userID); err != nil {
-			return err
-		}
-		return fn(tx)
-	})
+	return uc.repo.MarkAllAsRead(ctx, user.Id)
 }

@@ -75,7 +75,7 @@ func TestRegistrationUsesLockedOrganizationState(t *testing.T) {
 			store := &registrationStore{org: organizationsmodel.Organization{ID: id, JoinPolicy: tc.policy}, member: tc.member}
 			reader := registrationReader{org: organizationsmodel.Organization{ID: id, Login: "org", JoinPolicy: organizationsmodel.OrgJoinPolicyOpen}}
 			uc := NewOrganizationsUseCase(reader, nil, nil, registrationTransactions{store}, nil)
-			_, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), user), "org", user.Id, nil)
+			_, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), user), "org", nil)
 			if tc.joined {
 				require.NoError(t, err)
 			} else {

@@ -536,9 +536,10 @@ func (uc *OrganizationsUseCase) CancelInvitation(ctx context.Context, orgLogin s
 	})
 }
 
-func (uc *OrganizationsUseCase) AcceptInvitation(ctx context.Context, invitationID, requestUserID uuid.UUID) error {
-	if err := accessmodel.RequireSelfOrAdmin(ctx, requestUserID); err != nil {
-		return err
+func (uc *OrganizationsUseCase) AcceptInvitation(ctx context.Context, invitationID uuid.UUID) error {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() || user.IsExpired() {
+		return pkg.ErrUnauthenticated
 	}
 	inv, err := uc.repo.GetInvitationByID(ctx, invitationID)
 	if err != nil {
@@ -548,14 +549,11 @@ func (uc *OrganizationsUseCase) AcceptInvitation(ctx context.Context, invitation
 		if err := tx.LockOrganization(ctx, inv.OrganizationID); err != nil {
 			return err
 		}
-		if err := authorizeSelfService(ctx, tx, requestUserID); err != nil {
-			return err
-		}
 		inv, err := tx.GetInvitationByID(ctx, invitationID)
 		if err != nil {
 			return err
 		}
-		if inv.UserID != requestUserID {
+		if inv.UserID != user.Id {
 			return pkg.NoPermission
 		}
 		if inv.Status != organizationsmodel.RequestStatusPending {
@@ -568,9 +566,10 @@ func (uc *OrganizationsUseCase) AcceptInvitation(ctx context.Context, invitation
 	})
 }
 
-func (uc *OrganizationsUseCase) DeclineInvitation(ctx context.Context, invitationID, requestUserID uuid.UUID) error {
-	if err := accessmodel.RequireSelfOrAdmin(ctx, requestUserID); err != nil {
-		return err
+func (uc *OrganizationsUseCase) DeclineInvitation(ctx context.Context, invitationID uuid.UUID) error {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() || user.IsExpired() {
+		return pkg.ErrUnauthenticated
 	}
 	inv, err := uc.repo.GetInvitationByID(ctx, invitationID)
 	if err != nil {
@@ -580,14 +579,11 @@ func (uc *OrganizationsUseCase) DeclineInvitation(ctx context.Context, invitatio
 		if err := tx.LockOrganization(ctx, inv.OrganizationID); err != nil {
 			return err
 		}
-		if err := authorizeSelfService(ctx, tx, requestUserID); err != nil {
-			return err
-		}
 		inv, err := tx.GetInvitationByID(ctx, invitationID)
 		if err != nil {
 			return err
 		}
-		if inv.UserID != requestUserID {
+		if inv.UserID != user.Id {
 			return pkg.NoPermission
 		}
 		if inv.Status != organizationsmodel.RequestStatusPending {
@@ -600,7 +596,6 @@ func (uc *OrganizationsUseCase) DeclineInvitation(ctx context.Context, invitatio
 func (uc *OrganizationsUseCase) CreateJoinRequest(
 	ctx context.Context,
 	orgLogin string,
-	userID uuid.UUID,
 	message *string,
 ) (*organizationsmodel.OrganizationJoinRequest, bool, error) {
 	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
@@ -608,18 +603,17 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 		return nil, false, err
 	}
 
-	if err := accessmodel.RequireSelfOrAdmin(ctx, userID); err != nil {
-		return nil, false, err
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() || user.IsExpired() {
+		return nil, false, pkg.ErrUnauthenticated
 	}
+	userID := user.Id
 	var joined bool
 
 	var req *organizationsmodel.OrganizationJoinRequest
 	var pendingNotifications []notificationsmodel.Notification
 	err = uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
 		if err := tx.LockOrganization(ctx, org.ID); err != nil {
-			return err
-		}
-		if err := authorizeSelfService(ctx, tx, userID); err != nil {
 			return err
 		}
 		org, err := tx.GetOrganizationByID(ctx, org.ID)
@@ -635,11 +629,6 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 
 		if err != nil && !errors.Is(err, pkg.ErrNotFound) {
 			return err
-		}
-
-		applicantUser, err := tx.GetUserById(ctx, userID)
-		if err != nil {
-			return fmt.Errorf("get applicant user: %w", err)
 		}
 
 		if org.JoinPolicy == organizationsmodel.OrgJoinPolicyInviteOnly {
@@ -685,14 +674,14 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 					UserID: m.UserID,
 					Type:   notificationsmodel.NotificationTypeOrgJoinRequest,
 					Title:  fmt.Sprintf("Новая заявка в организацию %s", org.Name),
-					Body:   fmt.Sprintf("Пользователь @%s подал заявку на вступление в организацию %s", applicantUser.Username, org.Name),
+					Body:   fmt.Sprintf("Пользователь @%s подал заявку на вступление в организацию %s", user.Username, org.Name),
 					Link:   &link,
 					Data: map[string]interface{}{
 						"organization_id":    org.ID.String(),
 						"organization_name":  org.Name,
 						"organization_login": org.Login,
 						"applicant_id":       userID.String(),
-						"applicant_username": applicantUser.Username,
+						"applicant_username": user.Username,
 						"request_id":         req.ID.String(),
 					},
 				})
@@ -739,23 +728,21 @@ func (uc *OrganizationsUseCase) ListJoinRequests(ctx context.Context, orgLogin s
 	return uc.repo.ListJoinRequests(ctx, org.ID, &status)
 }
 
-func (uc *OrganizationsUseCase) CancelJoinRequest(ctx context.Context, orgLogin string, requestUserID uuid.UUID) error {
+func (uc *OrganizationsUseCase) CancelJoinRequest(ctx context.Context, orgLogin string) error {
 	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
 	if err != nil {
 		return err
 	}
 
-	if err := accessmodel.RequireSelfOrAdmin(ctx, requestUserID); err != nil {
-		return err
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() || user.IsExpired() {
+		return pkg.ErrUnauthenticated
 	}
 	return uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
 		if err := tx.LockOrganization(ctx, org.ID); err != nil {
 			return err
 		}
-		if err := authorizeSelfService(ctx, tx, requestUserID); err != nil {
-			return err
-		}
-		req, err := tx.GetPendingJoinRequest(ctx, org.ID, requestUserID)
+		req, err := tx.GetPendingJoinRequest(ctx, org.ID, user.Id)
 		if err != nil {
 			return err
 		}
@@ -921,16 +908,4 @@ func (uc *OrganizationsUseCase) withinOrganization(ctx context.Context, id, acto
 		}
 		return fn(tx)
 	})
-}
-
-func authorizeSelfService(ctx context.Context, tx OrganizationTxStore, target uuid.UUID) error {
-	actor := accessmodel.UserFromContext(ctx)
-	if err := tx.LockUser(ctx, actor.Id); err != nil {
-		return err
-	}
-	current, err := tx.GetUserById(ctx, actor.Id)
-	if err != nil {
-		return err
-	}
-	return accessmodel.RequireSelfOrAdmin(accessmodel.WithUser(ctx, current), target)
 }

@@ -39,9 +39,7 @@ type ScoreboardStore interface {
 }
 
 type CommandTxStore interface {
-	LockUser(context.Context, uuid.UUID) error
 	GetContestJoinRequestByID(context.Context, uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
-	GetUserById(context.Context, uuid.UUID) (accessmodel.User, error)
 	CreateNotification(context.Context, *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error)
 	GetPendingContestJoinRequest(context.Context, uuid.UUID, uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
 	CreateContestJoinRequest(context.Context, *contestsmodel.CreateContestJoinRequestInput) (*contestsmodel.ContestJoinRequest, error)
