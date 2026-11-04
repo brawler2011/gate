@@ -2,7 +2,10 @@ package core
 
 import (
 	"context"
+	"io"
 
+	"github.com/brawler2011/gate/backend/internal/blogs"
+	"github.com/brawler2011/gate/backend/internal/identity"
 	problems "github.com/brawler2011/gate/backend/internal/problems"
 
 	contests "github.com/brawler2011/gate/backend/internal/contests"
@@ -197,4 +200,36 @@ type ContestDetails interface {
 	GetContestDetails(context.Context, string, string) (*contests.ContestDetails, error)
 	GetContestProblemDetails(context.Context, string, string, uuid.UUID) (*contests.ContestProblemDetails, error)
 	ReadBooklet(context.Context, string, string, string) ([]byte, error)
+}
+
+type AvatarsUC interface {
+	UploadAvatar(ctx context.Context, username string, fileReader io.Reader, filename, contentType string) (string, error)
+	DeleteAvatar(ctx context.Context, username string) error
+	GetAvatar(ctx context.Context, username string, ifNoneMatch *string) (identity.AvatarImage, error)
+}
+
+type BlogsUC interface {
+	CreatePost(ctx context.Context, title, text, description string, imageReader io.Reader, filename string) (uuid.UUID, error)
+	UpdatePost(ctx context.Context, id uuid.UUID, title, text, description *string, imageReader io.Reader, filename string) error
+	DeletePost(ctx context.Context, id uuid.UUID) error
+	GetPostImage(ctx context.Context, imageKey string, ifNoneMatch *string) (blogs.PostImage, error)
+}
+
+type ImportUC interface {
+	ImportProblemPackage(ctx context.Context, zipReader io.Reader, zipSize int64, problemID uuid.UUID) (*problemsmodel.ProblemManifest, error)
+}
+
+type PublishUC interface {
+	PublishProblem(ctx context.Context, problemID uuid.UUID) (*problems.PublishResult, error)
+	GetPublishedPackageURL(ctx context.Context, problemID uuid.UUID, version string) (string, error)
+}
+
+type AnnouncementsUC interface {
+	CreateAnnouncement(ctx context.Context, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error)
+	DeleteAnnouncement(ctx context.Context, announcementID, contestID uuid.UUID) error
+}
+
+type ClarificationsUC interface {
+	CreateClarification(ctx context.Context, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error)
+	AnswerClarification(ctx context.Context, input *contestsmodel.AnswerContestClarificationInput) (*contestsmodel.ContestClarification, error)
 }

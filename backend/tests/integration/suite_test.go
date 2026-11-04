@@ -23,6 +23,7 @@ import (
 	access "github.com/brawler2011/gate/backend/internal/access"
 	blogs "github.com/brawler2011/gate/backend/internal/blogs"
 	contests "github.com/brawler2011/gate/backend/internal/contests"
+	"github.com/brawler2011/gate/backend/internal/coremodules"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
 	notifications "github.com/brawler2011/gate/backend/internal/notifications"
 	organizations "github.com/brawler2011/gate/backend/internal/organizations"
@@ -217,34 +218,46 @@ func (s *IntegrationTestSuite) initApp() {
 
 	// Handler
 	coreServer := handlers.NewCoreServer(
-		authUC,
-		contestsUC,
-		permissionsUC,
-		submissionsUC,
-		usersUC,
-		problemsUC,
-		organizationsUC,
-		teamsUC,
-		workshopUC,
-		blogsUC,
-		avatarsUC,
-		importUC,
-		publishUC,
-		draftsUC,
-		notificationsUC,
-		announcementsUC,
-		communicationReader,
-		clarificationsUC,
-		nil, // natsJS - not needed for integration tests
-		contestDetails,
-		s.usersRepo,
-		problems.NewReader(s.problemsRepo, permissionsUC, s.organizationsRepo, workshopUC),
-		contests.NewReader(s.contestsRepo, permissionsUC),
-		blogsRepo,
-		draftsUC,
-		notificationsRepo,
-		communicationReader,
-		packagesRepo,
+		coremodules.Identity{
+			AuthUC:      authUC,
+			UsersUC:     usersUC,
+			UsersReader: s.usersRepo,
+			AvatarsUC:   avatarsUC,
+		},
+		coremodules.Organizations{
+			OrganizationsUC: organizationsUC,
+			TeamsUC:         teamsUC,
+		},
+		coremodules.Contests{
+			ContestsUC:           contestsUC,
+			PermissionsUC:        permissionsUC,
+			ContestsReader:       contests.NewReader(s.contestsRepo, permissionsUC),
+			ContestDetails:       contestDetails,
+			DraftsUC:             draftsUC,
+			DraftsReader:         draftsUC,
+			AnnouncementsUC:      announcementsUC,
+			AnnouncementsReader:  communicationReader,
+			ClarificationsUC:     clarificationsUC,
+			ClarificationsReader: communicationReader,
+		},
+		coremodules.Problems{
+			ProblemsUC:     problemsUC,
+			ProblemsReader: problems.NewReader(s.problemsRepo, permissionsUC, s.organizationsRepo, workshopUC),
+			WorkshopUC:     workshopUC,
+			ImportUC:       importUC,
+			PublishUC:      publishUC,
+			PackagesReader: packagesRepo,
+		},
+		coremodules.Submissions{SubmissionsUC: submissionsUC},
+		coremodules.Notifications{
+			NotificationsUC:     notificationsUC,
+			NotificationsReader: notificationsRepo,
+		},
+		coremodules.Blogs{
+			BlogsUC:     blogsUC,
+			BlogsReader: blogsRepo,
+		},
+		nil,
 	)
 
 	// Server setup

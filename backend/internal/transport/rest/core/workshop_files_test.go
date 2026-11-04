@@ -61,7 +61,7 @@ func TestWorkshopNestedTestFiles_HTTP(t *testing.T) {
 	} {
 		require.NoError(t, ws.WriteFile(ctx, id, path, []byte(content)))
 	}
-	handler := &CoreServer{workshopUC: problems.NewWorkshopUseCase(ws, nil, workshopFilePermissions{})}
+	handler := &CoreServer{problems: testProblemsModule{WorkshopUC: problems.NewWorkshopUseCase(ws, nil, workshopFilePermissions{})}}
 	server, err := corev1.NewServer(handler, workshopFilesSecurity{}, corev1.WithErrorHandler(func(_ context.Context, w http.ResponseWriter, _ *http.Request, err error) {
 		w.WriteHeader(pkg.ToREST(err))
 	}))
@@ -92,7 +92,7 @@ func TestWorkshopNestedTestFiles_HTTP(t *testing.T) {
 	}
 	require.ElementsMatch(t, []string{"tests/nested/edge.in", "tests/nested/edge.ans", "tests/nested/deeper/extra.in"}, paths)
 	// The generic workspace tree stays shallow; only the tests collection expands directories.
-	tree, err := handler.workshopUC.ListProblemFiles(ctx, id, "tests")
+	tree, err := handler.problems.ListProblemFiles(ctx, id, "tests")
 	require.NoError(t, err)
 	require.Len(t, tree, 1)
 	require.True(t, tree[0].IsDirectory)
@@ -130,7 +130,7 @@ func (conflictingWorkshop) UpdateStatement(context.Context, uuid.UUID, string, p
 	return nil, pkg.ErrConflict
 }
 func TestWorkshopPatchesReturnHTTP409(t *testing.T) {
-	handler := &CoreServer{workshopUC: conflictingWorkshop{}}
+	handler := &CoreServer{problems: testProblemsModule{WorkshopUC: conflictingWorkshop{}}}
 	id := uuid.New()
 	_, err := handler.UpdateProblemLimits(workshopFileContext(), &corev1.UpdateProblemLimitsRequest{TimeLimitMs: corev1.NewOptInt(4321)}, corev1.UpdateProblemLimitsParams{ProblemId: id})
 	require.ErrorIs(t, err, pkg.ErrConflict)

@@ -20,7 +20,7 @@ type UsersReader interface {
 }
 
 func (h *CoreServer) GetUser(ctx context.Context, params corev1.GetUserParams) (*corev1.GetUserResponseModel, error) {
-	user, err := h.usersReader.GetUserProfileByUsername(ctx, params.Username)
+	user, err := h.identity.GetUserProfileByUsername(ctx, params.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -41,12 +41,12 @@ func (h *CoreServer) GetMe(ctx context.Context) (*corev1.GetUserResponseModel, e
 func (h *CoreServer) GetMyDashboard(ctx context.Context) (*corev1.GetUserDashboardResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 
-	contests, err := h.contestsReader.ListDashboardContests(ctx, user.Id, 5)
+	contests, err := h.contests.ListDashboardContests(ctx, user.Id, 5)
 	if err != nil {
 		return nil, err
 	}
 
-	problems, err := h.problemsReader.ListDashboardProblems(ctx, user.Id, 5)
+	problems, err := h.problems.ListDashboardProblems(ctx, user.Id, 5)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (h *CoreServer) ListUsers(ctx context.Context, params corev1.ListUsersParam
 		Role:     role,
 	}
 
-	users, err := h.usersReader.ListUsers(ctx, filter)
+	users, err := h.identity.ListUsers(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (h *CoreServer) ListUsers(ctx context.Context, params corev1.ListUsersParam
 }
 
 func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.ListUserSubmissionsParams) (*corev1.ListSubmissionsResponseModel, error) {
-	user, err := h.usersReader.GetUserByUsername(ctx, params.Username)
+	user, err := h.identity.GetUserByUsername(ctx, params.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.List
 		State:     state,
 	}
 
-	submissions, err := h.submissionsUC.ListSubmissions(ctx, filter)
+	submissions, err := h.submissions.ListSubmissions(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (h *CoreServer) UpdateUser(ctx context.Context, req *corev1.UpdateUserReque
 		return pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
 	}
 
-	user, err := h.usersReader.GetUserByUsername(ctx, params.Username)
+	user, err := h.identity.GetUserByUsername(ctx, params.Username)
 	if err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func (h *CoreServer) UpdateUser(ctx context.Context, req *corev1.UpdateUserReque
 		Role:     reqRole,
 	}
 
-	err = h.usersUC.UpdateUser(ctx, input)
+	err = h.identity.UpdateUser(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -175,7 +175,7 @@ func (h *CoreServer) ClaimTemporaryUser(ctx context.Context, req *corev1.ClaimTe
 
 	user := accessmodel.UserFromContext(ctx)
 
-	result, err := h.usersUC.ClaimTemporaryUser(ctx, user, identitymodel.ClaimTemporaryUserInput{
+	result, err := h.identity.ClaimTemporaryUser(ctx, user, identitymodel.ClaimTemporaryUserInput{
 		Username: req.Username,
 		Password: req.Password,
 	})
@@ -196,7 +196,7 @@ func (h *CoreServer) ListMyClaimedAccounts(ctx context.Context) (*corev1.ListCla
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	accounts, err := h.usersReader.ListClaimedAccountsByUserId(ctx, user.Id)
+	accounts, err := h.identity.ListClaimedAccountsByUserId(ctx, user.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +226,7 @@ func (h *CoreServer) ChangePassword(ctx context.Context, req *corev1.ChangePassw
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	newSessionID, err := h.authUC.ChangePassword(ctx, user.Id, req.OldPassword, req.NewPassword)
+	newSessionID, err := h.identity.ChangePassword(ctx, user.Id, req.OldPassword, req.NewPassword)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +249,7 @@ func (h *CoreServer) RequestEmailChange(ctx context.Context, req *corev1.Request
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	err := h.authUC.RequestEmailChange(ctx, user.Id, req.Password, req.NewEmail)
+	err := h.identity.RequestEmailChange(ctx, user.Id, req.Password, req.NewEmail)
 	if err != nil {
 		return err
 	}
@@ -264,7 +264,7 @@ func (h *CoreServer) AdminChangeEmail(ctx context.Context, req *corev1.AdminChan
 
 	withConfirmation := req.WithConfirmation.Or(true)
 
-	err := h.usersUC.AdminChangeEmail(ctx, params.Username, req.Email, withConfirmation)
+	err := h.identity.AdminChangeEmail(ctx, params.Username, req.Email, withConfirmation)
 	if err != nil {
 		return err
 	}
@@ -277,7 +277,7 @@ func (h *CoreServer) AdminSetPassword(ctx context.Context, req *corev1.AdminSetP
 		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	err := h.usersUC.AdminSetPassword(ctx, params.Username, req.Password)
+	err := h.identity.AdminSetPassword(ctx, params.Username, req.Password)
 	if err != nil {
 		return err
 	}
@@ -286,7 +286,7 @@ func (h *CoreServer) AdminSetPassword(ctx context.Context, req *corev1.AdminSetP
 }
 
 func (h *CoreServer) AdminSendPasswordReset(ctx context.Context, params corev1.AdminSendPasswordResetParams) error {
-	err := h.usersUC.AdminSendPasswordReset(ctx, params.Username)
+	err := h.identity.AdminSendPasswordReset(ctx, params.Username)
 	if err != nil {
 		return err
 	}
@@ -295,7 +295,7 @@ func (h *CoreServer) AdminSendPasswordReset(ctx context.Context, params corev1.A
 }
 
 func (h *CoreServer) AdminResendVerification(ctx context.Context, params corev1.AdminResendVerificationParams) error {
-	err := h.usersUC.AdminResendVerification(ctx, params.Username)
+	err := h.identity.AdminResendVerification(ctx, params.Username)
 	if err != nil {
 		return err
 	}

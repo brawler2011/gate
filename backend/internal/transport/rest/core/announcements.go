@@ -15,12 +15,12 @@ type AnnouncementsReader interface {
 }
 
 func (h *CoreServer) ListContestAnnouncements(ctx context.Context, params corev1.ListContestAnnouncementsParams) (*corev1.ListContestAnnouncementsResponseModel, error) {
-	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
 
-	list, err := h.announcementsReader.ListAnnouncements(ctx, contest.ID, params.Page.Value, params.PageSize.Value)
+	list, err := h.contests.ListAnnouncements(ctx, contest.ID, params.Page.Value, params.PageSize.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.
 		problemID = &req.ProblemID.Value
 	}
 
-	announcement, err := h.announcementsUC.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{
+	announcement, err := h.contests.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{
 		ContestID: contest.ID,
 		ProblemID: problemID,
 		AuthorID:  user.Id,
@@ -65,12 +65,12 @@ func (h *CoreServer) DeleteContestAnnouncement(ctx context.Context, params corev
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
 
-	if err := h.announcementsUC.DeleteAnnouncement(ctx, params.AnnouncementID, contest.ID); err != nil {
+	if err := h.contests.DeleteAnnouncement(ctx, params.AnnouncementID, contest.ID); err != nil {
 		return err
 	}
 

@@ -65,7 +65,7 @@ func TestSnapshotCursorDoesNotDiscardConcurrentEvent(t *testing.T) {
 		t.Run(map[bool]string{false: "submissions", true: "scoreboard"}[scoreboard], func(t *testing.T) {
 			stream := &snapshotStream{sequence: 7}
 			uc := snapshotUC{stream: stream}
-			server := &CoreServer{contestsUC: uc, contestsReader: uc, submissionsUC: uc, permissionsUC: uc, natsJS: snapshotJS{stream: stream}}
+			server := &CoreServer{contests: testContestsModule{ContestsUC: uc, ContestsReader: uc, PermissionsUC: uc}, submissions: uc, natsJS: snapshotJS{stream: stream}}
 			var cursor corev1.OptInt64
 			if scoreboard {
 				response, err := server.GetContestScoreboard(context.Background(), corev1.GetContestScoreboardParams{})

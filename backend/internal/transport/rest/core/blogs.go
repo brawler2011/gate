@@ -27,7 +27,7 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 	pageSize := int(params.PageSize.Or(10))
 	sortOrder := string(params.SortOrder.Or("desc"))
 
-	items, totalPages, err := s.blogsReader.ListPosts(ctx, blogsmodel.ListPostsParams{Page: page, PageSize: pageSize, SortOrder: sortOrder})
+	items, totalPages, err := s.blogs.ListPosts(ctx, blogsmodel.ListPostsParams{Page: page, PageSize: pageSize, SortOrder: sortOrder})
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list posts")
 	}
@@ -77,7 +77,7 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 	description := req.Description.Value
 	text := req.Text.Value
 
-	postID, err := s.blogsUC.CreatePost(ctx, title, text, description, file.File, file.Name)
+	postID, err := s.blogs.CreatePost(ctx, title, text, description, file.File, file.Name)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to create post")
 	}
@@ -89,7 +89,7 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 }
 
 func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdParams) (corev1.GetPostByIdRes, error) {
-	post, err := s.blogsReader.GetPostByID(ctx, params.ID)
+	post, err := s.blogs.GetPostByID(ctx, params.ID)
 	if err != nil {
 
 		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
@@ -141,7 +141,7 @@ func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostB
 		}
 	}
 
-	err := s.blogsUC.UpdatePost(ctx, params.ID, titlePtr, textPtr, descriptionPtr, imageReader, filename)
+	err := s.blogs.UpdatePost(ctx, params.ID, titlePtr, textPtr, descriptionPtr, imageReader, filename)
 	if err != nil {
 		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
@@ -157,7 +157,7 @@ func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostB
 }
 
 func (s *CoreServer) DeletePostById(ctx context.Context, params corev1.DeletePostByIdParams) (corev1.DeletePostByIdRes, error) {
-	err := s.blogsUC.DeletePost(ctx, params.ID)
+	err := s.blogs.DeletePost(ctx, params.ID)
 	if err != nil {
 		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
@@ -174,7 +174,7 @@ func (s *CoreServer) DeletePostById(ctx context.Context, params corev1.DeletePos
 }
 
 func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImageParams) (corev1.GetPostImageRes, error) {
-	post, err := s.blogsReader.GetPostByID(ctx, params.ID)
+	post, err := s.blogs.GetPostByID(ctx, params.ID)
 	if err != nil {
 		// FIXME:
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
@@ -191,7 +191,7 @@ func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImag
 		ifNoneMatch = &params.IfNoneMatch.Value
 	}
 
-	postImage, imageErr := s.blogsUC.GetPostImage(ctx, post.ImageKey, ifNoneMatch)
+	postImage, imageErr := s.blogs.GetPostImage(ctx, post.ImageKey, ifNoneMatch)
 
 	var re *http.ResponseError
 	if errors.Is(imageErr, storage.ErrNotModified) || (errors.As(imageErr, &re) && re.HTTPStatusCode() == 304) {

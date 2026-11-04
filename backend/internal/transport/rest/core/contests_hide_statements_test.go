@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/brawler2011/gate/backend/internal/contests"
+	"github.com/brawler2011/gate/backend/internal/coremodules"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -85,11 +86,11 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		mockProblems := new(MockProblemsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, contests.NewDetailsReader(mockContests, mockProblems, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil),
+		server := core.NewCoreServer(
 			nil,
 			nil,
-			mockContests,
-			nil,
+			coremodules.Contests{ContestsUC: mockContests, PermissionsUC: mockPerms, ContestsReader: mockContests, ContestDetails: contests.NewDetailsReader(mockContests, mockProblems, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil)},
+			coremodules.Problems{ProblemsUC: mockProblems},
 			nil,
 			nil,
 			nil,
@@ -133,11 +134,11 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		mockProblems := new(MockProblemsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, contests.NewDetailsReader(mockContests, mockProblems, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil),
+		server := core.NewCoreServer(
 			nil,
 			nil,
-			mockContests,
-			nil,
+			coremodules.Contests{ContestsUC: mockContests, PermissionsUC: mockPerms, ContestsReader: mockContests, ContestDetails: contests.NewDetailsReader(mockContests, mockProblems, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil)},
+			coremodules.Problems{ProblemsUC: mockProblems},
 			nil,
 			nil,
 			nil,
@@ -166,11 +167,11 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		mockContests := new(MockContestsUC)
 		mockPerms := new(MockPermissionsUC)
 		mockProblems := new(MockProblemsUC)
-		server := core.NewCoreServer(nil, mockContests, mockPerms, nil, nil, mockProblems, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, contests.NewDetailsReader(mockContests, mockProblems, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil),
+		server := core.NewCoreServer(
 			nil,
 			nil,
-			mockContests,
-			nil,
+			coremodules.Contests{ContestsUC: mockContests, PermissionsUC: mockPerms, ContestsReader: mockContests, ContestDetails: contests.NewDetailsReader(mockContests, mockProblems, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil)},
+			coremodules.Problems{ProblemsUC: mockProblems},
 			nil,
 			nil,
 			nil,

@@ -21,7 +21,7 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev
 	if params.Status.IsSet() {
 		status = &params.Status.Value
 	}
-	list, err := h.clarificationsReader.ListClarifications(ctx, contest.ID, &contestsmodel.ContestClarificationsFilter{
+	list, err := h.contests.ListClarifications(ctx, contest.ID, &contestsmodel.ContestClarificationsFilter{
 		ProblemID: problemID, Status: status, Page: params.Page.Or(1), PageSize: params.PageSize.Or(50),
 	})
 	if err != nil {
@@ -50,7 +50,7 @@ func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1
 		problemID = &req.ProblemID.Value
 	}
 
-	clarification, err := h.clarificationsUC.CreateClarification(ctx, &contestsmodel.CreateContestClarificationInput{
+	clarification, err := h.contests.CreateClarification(ctx, &contestsmodel.CreateContestClarificationInput{
 		ContestID: contest.ID,
 		ProblemID: problemID,
 		UserID:    user.Id,
@@ -80,7 +80,7 @@ func (h *CoreServer) AnswerContestClarification(ctx context.Context, req *corev1
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	contest, err := h.contestsReader.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (h *CoreServer) AnswerContestClarification(ctx context.Context, req *corev1
 	publishAsAnnouncement := req.PublishAsAnnouncement.Or(false)
 	announcementTitle := req.AnnouncementTitle.Or("")
 
-	clarification, err := h.clarificationsUC.AnswerClarification(ctx, &contestsmodel.AnswerContestClarificationInput{
+	clarification, err := h.contests.AnswerClarification(ctx, &contestsmodel.AnswerContestClarificationInput{
 		ClarificationID:       params.ClarificationID,
 		ContestID:             contest.ID,
 		Answer:                req.Answer,

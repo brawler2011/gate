@@ -19,6 +19,7 @@ import (
 	blogs "github.com/brawler2011/gate/backend/internal/blogs"
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	"github.com/brawler2011/gate/backend/internal/coremodules"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
 	judging "github.com/brawler2011/gate/backend/internal/judging"
@@ -297,34 +298,46 @@ func runApp(envFile string) error {
 	}
 
 	coreServer := handlers.NewCoreServer(
-		authUC,
-		contestsUC,
-		permissionsUC,
-		submissionsUC,
-		usersUC,
-		problemsUC,
-		orgsUC,
-		teamsUC,
-		workshopUC,
-		blogsUC,
-		avatarsUC,
-		problemImportUC,
-		problemPublishUC,
-		draftsUC,
-		notificationsUC,
-		announcementsUC,
-		communicationReader,
-		clarificationsUC,
+		coremodules.Identity{
+			AuthUC:      authUC,
+			UsersUC:     usersUC,
+			UsersReader: usersRepo,
+			AvatarsUC:   avatarsUC,
+		},
+		coremodules.Organizations{
+			OrganizationsUC: orgsUC,
+			TeamsUC:         teamsUC,
+		},
+		coremodules.Contests{
+			ContestsUC:           contestsUC,
+			PermissionsUC:        permissionsUC,
+			ContestsReader:       contests.NewReader(contestsRepo, permissionsUC),
+			ContestDetails:       contestDetails,
+			DraftsUC:             draftsUC,
+			DraftsReader:         draftsUC,
+			AnnouncementsUC:      announcementsUC,
+			AnnouncementsReader:  communicationReader,
+			ClarificationsUC:     clarificationsUC,
+			ClarificationsReader: communicationReader,
+		},
+		coremodules.Problems{
+			ProblemsUC:     problemsUC,
+			ProblemsReader: problems.NewReader(problemsRepo, permissionsUC, orgsRepo, workshopUC),
+			WorkshopUC:     workshopUC,
+			ImportUC:       problemImportUC,
+			PublishUC:      problemPublishUC,
+			PackagesReader: packagesRepo,
+		},
+		coremodules.Submissions{SubmissionsUC: submissionsUC},
+		coremodules.Notifications{
+			NotificationsUC:     notificationsUC,
+			NotificationsReader: notificationsRepo,
+		},
+		coremodules.Blogs{
+			BlogsUC:     blogsUC,
+			BlogsReader: blogsRepo,
+		},
 		natsJS,
-		contestDetails,
-		usersRepo,
-		problems.NewReader(problemsRepo, permissionsUC, orgsRepo, workshopUC),
-		contests.NewReader(contestsRepo, permissionsUC),
-		blogsRepo,
-		draftsUC,
-		notificationsRepo,
-		communicationReader,
-		packagesRepo,
 	)
 
 	secHandler := middleware.NewSecurityHandler()

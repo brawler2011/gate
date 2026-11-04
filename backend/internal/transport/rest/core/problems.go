@@ -42,7 +42,7 @@ func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblem
 		filter.IsTemplate = &isTmpl
 	}
 
-	problemsList, err := h.problemsReader.ListProblems(ctx, filter)
+	problemsList, err := h.problems.ListProblems(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblem
 }
 
 func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.ListProblemTemplatesParams) ([]corev1.ProblemTemplateModel, error) {
-	templates, err := h.problemsReader.ListTemplates(ctx, params.OrganizationID.Or(uuid.Nil))
+	templates, err := h.problems.ListTemplates(ctx, params.OrganizationID.Or(uuid.Nil))
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.Lis
 }
 
 func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProblemParams) (*corev1.CreationResponseModel, error) {
-	id, err := h.problemsUC.CreateProblem(ctx, &problemsmodel.CreateProblemInput{OrganizationID: params.OrganizationID.Or(uuid.Nil), Title: params.Title, TemplateID: params.TemplateID})
+	id, err := h.problems.CreateProblem(ctx, &problemsmodel.CreateProblemInput{OrganizationID: params.OrganizationID.Or(uuid.Nil), Title: params.Title, TemplateID: params.TemplateID})
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProb
 }
 
 func (h *CoreServer) DeleteProblem(ctx context.Context, params corev1.DeleteProblemParams) error {
-	err := h.problemsUC.DeleteProblem(ctx, params.ID)
+	err := h.problems.DeleteProblem(ctx, params.ID)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (h *CoreServer) DeleteProblem(ctx context.Context, params corev1.DeleteProb
 }
 
 func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemParams) (*corev1.GetProblemResponseModel, error) {
-	details, err := h.problemsUC.GetProblemDetails(ctx, params.ID)
+	details, err := h.problems.GetProblemDetails(ctx, params.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 	// Note: Other fields (Legend, InputFormat, etc.) are now stored in git repos
 	// and managed through the workshop/publish workflow
 
-	err := h.problemsUC.UpdateProblem(ctx, params.ID, update)
+	err := h.problems.UpdateProblem(ctx, params.ID, update)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 }
 
 func (h *CoreServer) ListProblemTeams(ctx context.Context, params corev1.ListProblemTeamsParams) (*corev1.ListProblemTeamsResponseModel, error) {
-	teams, err := h.problemsReader.GetProblemTeams(ctx, params.ID)
+	teams, err := h.problems.GetProblemTeams(ctx, params.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.Create
 		permission = problemsmodel.ProblemPermission(params.Permission.Value)
 	}
 
-	err := h.problemsUC.AddProblemTeam(ctx, params.ID, params.TeamID, user.Id, permission)
+	err := h.problems.AddProblemTeam(ctx, params.ID, params.TeamID, user.Id, permission)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.Create
 func (h *CoreServer) UpdateProblemTeam(ctx context.Context, params corev1.UpdateProblemTeamParams) error {
 	user := accessmodel.UserFromContext(ctx)
 
-	err := h.problemsUC.UpdateProblemTeamPermission(ctx, params.ID, params.TeamID, user.Id, problemsmodel.ProblemPermission(params.Permission))
+	err := h.problems.UpdateProblemTeamPermission(ctx, params.ID, params.TeamID, user.Id, problemsmodel.ProblemPermission(params.Permission))
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func (h *CoreServer) UpdateProblemTeam(ctx context.Context, params corev1.Update
 func (h *CoreServer) DeleteProblemTeam(ctx context.Context, params corev1.DeleteProblemTeamParams) error {
 	user := accessmodel.UserFromContext(ctx)
 
-	err := h.problemsUC.RemoveProblemTeam(ctx, params.ID, params.TeamID, user.Id)
+	err := h.problems.RemoveProblemTeam(ctx, params.ID, params.TeamID, user.Id)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func (h *CoreServer) DeleteProblemTeam(ctx context.Context, params corev1.Delete
 }
 
 func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListProblemMembersParams) (*corev1.ListProblemMembersResponseModel, error) {
-	members, err := h.problemsReader.ListProblemMembers(ctx, params.ID)
+	members, err := h.problems.ListProblemMembers(ctx, params.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.Crea
 		role = problemsmodel.ProblemRole(params.Role.Value)
 	}
 
-	err := h.problemsUC.CreateProblemMember(ctx, params.ID, params.UserID, user.Id, role)
+	err := h.problems.CreateProblemMember(ctx, params.ID, params.UserID, user.Id, role)
 	if err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.Crea
 func (h *CoreServer) UpdateProblemMember(ctx context.Context, params corev1.UpdateProblemMemberParams) error {
 	user := accessmodel.UserFromContext(ctx)
 
-	err := h.problemsUC.UpdateProblemMemberRole(ctx, params.ID, params.UserID, user.Id, problemsmodel.ProblemRole(params.Role))
+	err := h.problems.UpdateProblemMemberRole(ctx, params.ID, params.UserID, user.Id, problemsmodel.ProblemRole(params.Role))
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (h *CoreServer) UpdateProblemMember(ctx context.Context, params corev1.Upda
 func (h *CoreServer) DeleteProblemMember(ctx context.Context, params corev1.DeleteProblemMemberParams) error {
 	user := accessmodel.UserFromContext(ctx)
 
-	err := h.problemsUC.RemoveProblemMember(ctx, params.ID, params.UserID, user.Id)
+	err := h.problems.RemoveProblemMember(ctx, params.ID, params.UserID, user.Id)
 	if err != nil {
 		return err
 	}

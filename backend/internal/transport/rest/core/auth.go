@@ -9,7 +9,7 @@ import (
 )
 
 func (h *CoreServer) Register(ctx context.Context, req *corev1.RegisterRequestModel) (*corev1.AuthResponseModel, error) {
-	user, err := h.authUC.Register(ctx, req.Username, req.Email, req.Password)
+	user, err := h.identity.Register(ctx, req.Username, req.Email, req.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +20,7 @@ func (h *CoreServer) Register(ctx context.Context, req *corev1.RegisterRequestMo
 }
 
 func (h *CoreServer) Login(ctx context.Context, req *corev1.LoginRequestModel) (*corev1.AuthResponseModel, error) {
-	user, sessionID, err := h.authUC.Login(ctx, req.Identifier, req.Password)
+	user, sessionID, err := h.identity.Login(ctx, req.Identifier, req.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (h *CoreServer) Login(ctx context.Context, req *corev1.LoginRequestModel) (
 func (h *CoreServer) Logout(ctx context.Context) error {
 	if session, err := middleware.GetSession(ctx); err == nil {
 		// FIXME: do not ignore errors
-		_ = h.authUC.Logout(ctx, session.ID)
+		_ = h.identity.Logout(ctx, session.ID)
 	}
 
 	middleware.ClearSessionCookie(ctx)
@@ -44,7 +44,7 @@ func (h *CoreServer) Logout(ctx context.Context) error {
 }
 
 func (h *CoreServer) VerifyEmail(ctx context.Context, req *corev1.VerifyEmailRequestModel) (*corev1.AuthResponseModel, error) {
-	user, sessionID, err := h.authUC.VerifyEmail(ctx, req.Token)
+	user, sessionID, err := h.identity.VerifyEmail(ctx, req.Token)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (h *CoreServer) VerifyEmail(ctx context.Context, req *corev1.VerifyEmailReq
 }
 
 func (h *CoreServer) ResendVerification(ctx context.Context, req *corev1.ResendVerificationRequestModel) error {
-	err := h.authUC.ResendVerificationEmail(ctx, req.Identifier)
+	err := h.identity.ResendVerificationEmail(ctx, req.Identifier)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (h *CoreServer) ResendVerification(ctx context.Context, req *corev1.ResendV
 }
 
 func (h *CoreServer) ForgotPassword(ctx context.Context, req *corev1.ForgotPasswordRequestModel) error {
-	err := h.authUC.ForgotPassword(ctx, req.Identifier)
+	err := h.identity.ForgotPassword(ctx, req.Identifier)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (h *CoreServer) ForgotPassword(ctx context.Context, req *corev1.ForgotPassw
 }
 
 func (h *CoreServer) ResetPassword(ctx context.Context, req *corev1.ResetPasswordRequestModel) error {
-	err := h.authUC.ResetPassword(ctx, req.Token, req.Password)
+	err := h.identity.ResetPassword(ctx, req.Token, req.Password)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (h *CoreServer) ResetPassword(ctx context.Context, req *corev1.ResetPasswor
 
 // ConfirmEmailChange implements corev1.Handler
 func (h *CoreServer) ConfirmEmailChange(ctx context.Context, req *corev1.ConfirmEmailChangeRequestModel) error {
-	err := h.authUC.ConfirmEmailChange(ctx, req.Token)
+	err := h.identity.ConfirmEmailChange(ctx, req.Token)
 	if err != nil {
 		return err
 	}

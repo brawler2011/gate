@@ -14,6 +14,7 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/coremodules"
 	problems "github.com/brawler2011/gate/backend/internal/problems"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/transport/rest/core"
@@ -63,11 +64,11 @@ func run() error {
 		}
 	}
 	uc := problems.NewWorkshopUseCase(ws, nil, fixturePermissions{})
-	handler := core.NewCoreServer(nil, nil, nil, nil, nil, nil, nil, nil, uc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+	handler := core.NewCoreServer(
 		nil,
 		nil,
 		nil,
-		nil,
+		coremodules.Problems{WorkshopUC: uc},
 		nil,
 		nil,
 		nil,

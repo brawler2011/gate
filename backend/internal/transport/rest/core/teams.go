@@ -29,13 +29,13 @@ func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParam
 
 	// If organization_id is specified, list teams for that organization
 	if params.OrganizationID.IsSet() {
-		teams, err = h.teamsUC.ListOrganizationTeams(ctx, params.OrganizationID.Value, user.Id)
+		teams, err = h.organizations.ListOrganizationTeams(ctx, params.OrganizationID.Value, user.Id)
 		if err != nil {
 			return nil, wrapTeamUCError(err, "failed to list organization teams")
 		}
 	} else {
 		// Otherwise, list all teams the user is a member of
-		teams, err = h.teamsUC.GetUserTeams(ctx, user.Id)
+		teams, err = h.organizations.GetUserTeams(ctx, user.Id)
 		if err != nil {
 			return nil, wrapTeamUCError(err, "failed to list user teams")
 		}
@@ -101,7 +101,7 @@ func (h *CoreServer) CreateTeam(ctx context.Context, req *corev1.CreateTeamReq) 
 	}
 
 	// Create team
-	team, err := h.teamsUC.CreateTeam(ctx, input, user.Id)
+	team, err := h.organizations.CreateTeam(ctx, input, user.Id)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to create team")
 	}
@@ -117,7 +117,7 @@ func (h *CoreServer) GetTeam(ctx context.Context, params corev1.GetTeamParams) (
 	user := accessmodel.UserFromContext(ctx)
 
 	// Get team
-	team, err := h.teamsUC.GetTeam(ctx, params.ID, user.Id)
+	team, err := h.organizations.GetTeam(ctx, params.ID, user.Id)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to get team")
 	}
@@ -155,7 +155,7 @@ func (h *CoreServer) UpdateTeam(ctx context.Context, req *corev1.UpdateTeamReque
 	}
 
 	// Update team
-	err := h.teamsUC.UpdateTeam(ctx, params.ID, user.Id, input)
+	err := h.organizations.UpdateTeam(ctx, params.ID, user.Id, input)
 	if err != nil {
 		return wrapTeamUCError(err, "failed to update team")
 	}
@@ -169,7 +169,7 @@ func (h *CoreServer) DeleteTeam(ctx context.Context, params corev1.DeleteTeamPar
 	user := accessmodel.UserFromContext(ctx)
 
 	// Delete team
-	err := h.teamsUC.DeleteTeam(ctx, params.ID, user.Id)
+	err := h.organizations.DeleteTeam(ctx, params.ID, user.Id)
 	if err != nil {
 		return wrapTeamUCError(err, "failed to delete team")
 	}
@@ -185,7 +185,7 @@ func (h *CoreServer) ListTeamMembers(ctx context.Context, params corev1.ListTeam
 	page := params.Page.Or(1)
 
 	// Get members
-	members, err := h.teamsUC.ListTeamMembers(ctx, params.ID, user.Id)
+	members, err := h.organizations.ListTeamMembers(ctx, params.ID, user.Id)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to list team members")
 	}
@@ -211,7 +211,7 @@ func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMem
 		Role:   role,
 	}
 
-	err := h.teamsUC.AddTeamMember(ctx, input, user.Id)
+	err := h.organizations.AddTeamMember(ctx, input, user.Id)
 	if err != nil {
 		return wrapTeamUCError(err, "failed to add team member")
 	}
@@ -223,7 +223,7 @@ func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMem
 func (h *CoreServer) UpdateTeamMemberRole(ctx context.Context, params corev1.UpdateTeamMemberRoleParams) error {
 	user := accessmodel.UserFromContext(ctx)
 
-	err := h.teamsUC.UpdateTeamMemberRole(ctx, params.ID, params.UserID, organizationsmodel.TeamRole(params.Role), user.Id)
+	err := h.organizations.UpdateTeamMemberRole(ctx, params.ID, params.UserID, organizationsmodel.TeamRole(params.Role), user.Id)
 	if err != nil {
 		return wrapTeamUCError(err, "failed to update team member role")
 	}
@@ -235,7 +235,7 @@ func (h *CoreServer) UpdateTeamMemberRole(ctx context.Context, params corev1.Upd
 func (h *CoreServer) RemoveTeamMember(ctx context.Context, params corev1.RemoveTeamMemberParams) error {
 	user := accessmodel.UserFromContext(ctx)
 
-	err := h.teamsUC.RemoveTeamMember(ctx, params.ID, params.UserID, user.Id)
+	err := h.organizations.RemoveTeamMember(ctx, params.ID, params.UserID, user.Id)
 	if err != nil {
 		return wrapTeamUCError(err, "failed to remove team member")
 	}
@@ -247,7 +247,7 @@ func (h *CoreServer) RemoveTeamMember(ctx context.Context, params corev1.RemoveT
 func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTeamContestsParams) (*corev1.ListContestsResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 
-	contests, err := h.teamsUC.GetTeamContests(ctx, params.ID, user.Id)
+	contests, err := h.organizations.GetTeamContests(ctx, params.ID, user.Id)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to list team contests")
 	}
@@ -267,7 +267,7 @@ func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTea
 func (h *CoreServer) ListTeamProblems(ctx context.Context, params corev1.ListTeamProblemsParams) (*corev1.ListProblemsResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 
-	problems, err := h.teamsUC.GetTeamProblems(ctx, params.ID, user.Id)
+	problems, err := h.organizations.GetTeamProblems(ctx, params.ID, user.Id)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to list team problems")
 	}

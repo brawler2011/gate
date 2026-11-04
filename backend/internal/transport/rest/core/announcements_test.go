@@ -70,10 +70,10 @@ func TestListContestAnnouncementsReader(t *testing.T) {
 				}
 				return response, nil
 			}}
-			h := NewCoreServer(nil, contests, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, reader, nil, nil, nil,
+			h := NewCoreServer(
 				nil,
 				nil,
-				contests,
+				testContestsModule{ContestsUC: contests, ContestsReader: contests, AnnouncementsReader: reader},
 				nil,
 				nil,
 				nil,
