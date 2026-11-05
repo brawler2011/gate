@@ -292,10 +292,6 @@ func runApp(envFile string) error {
 
 	publicMux := http.NewServeMux()
 	publicMux.Handle("/ws/", observer.Handler())
-	if cfg.StorageType == "local" {
-		publicMux.Handle("/files/", http.StripPrefix("/files/", http.FileServer(http.Dir(cfg.LocalStoragePath))))
-		logger.Info("mounted local files storage server", slog.String("prefix", "/files/"), slog.String("dir", cfg.LocalStoragePath))
-	}
 
 	coreServer := handlers.NewCoreServer(
 		coremodules.Identity{
@@ -367,9 +363,6 @@ func runApp(envFile string) error {
 		Handler: middleware.RequestLoggerMiddleware(logger, func(r *http.Request) string {
 			if strings.HasPrefix(r.URL.Path, "/ws/") {
 				return "/ws/*"
-			}
-			if cfg.StorageType == "local" && strings.HasPrefix(r.URL.Path, "/files/") {
-				return "/files/*"
 			}
 			if route, ok := apiServer.FindRoute(r.Method, strings.TrimPrefix(r.URL.Path, "/api")); ok {
 				return route.PathPattern()
