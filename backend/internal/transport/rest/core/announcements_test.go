@@ -79,6 +79,7 @@ func TestListContestAnnouncementsReader(t *testing.T) {
 				nil,
 				nil,
 				nil,
+				false,
 			)
 			got, err := h.ListContestAnnouncements(ctx, params)
 			switch {

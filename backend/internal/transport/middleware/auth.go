@@ -66,50 +66,6 @@ func GetSession(ctx context.Context) (identitymodel.Session, error) {
 	return session, nil
 }
 
-const responseWriterKey contextKey = "response_writer"
-const secureCookiesKey contextKey = "secure_cookies"
-
-// SessionCookieMiddleware injects the ResponseWriter and cookie security policy into the request context
-func SessionCookieMiddleware(secureCookies bool) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := context.WithValue(r.Context(), responseWriterKey, w)
-			ctx = context.WithValue(ctx, secureCookiesKey, secureCookies)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
-}
-
-func SetSessionCookie(ctx context.Context, sessionID uuid.UUID) {
-	if w, ok := ctx.Value(responseWriterKey).(http.ResponseWriter); ok && w != nil {
-		secureCookies, _ := ctx.Value(secureCookiesKey).(bool)
-		http.SetCookie(w, &http.Cookie{
-			Name:     sessionCookieName,
-			Value:    sessionID.String(),
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   secureCookies,
-			MaxAge:   7 * 24 * 60 * 60,
-			SameSite: http.SameSiteLaxMode,
-		})
-	}
-}
-
-func ClearSessionCookie(ctx context.Context) {
-	if w, ok := ctx.Value(responseWriterKey).(http.ResponseWriter); ok && w != nil {
-		secureCookies, _ := ctx.Value(secureCookiesKey).(bool)
-		http.SetCookie(w, &http.Cookie{
-			Name:     sessionCookieName,
-			Value:    "",
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   secureCookies,
-			MaxAge:   -1,
-			SameSite: http.SameSiteLaxMode,
-		})
-	}
-}
-
 type SecurityHandler struct{}
 
 func NewSecurityHandler() *SecurityHandler {

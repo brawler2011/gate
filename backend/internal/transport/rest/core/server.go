@@ -16,6 +16,7 @@ type CoreServer struct {
 	notifications NotificationsModule
 	blogs         BlogsModule
 	natsJS        jetstream.JetStream
+	secureCookies bool
 }
 
 func NewCoreServer(
@@ -27,6 +28,7 @@ func NewCoreServer(
 	notifications NotificationsModule,
 	blogs BlogsModule,
 	natsJS jetstream.JetStream,
+	secureCookies bool,
 ) *CoreServer {
 	return &CoreServer{
 		identity:      identity,
@@ -37,5 +39,6 @@ func NewCoreServer(
 		notifications: notifications,
 		blogs:         blogs,
 		natsJS:        natsJS,
+		secureCookies: secureCookies,
 	}
 }

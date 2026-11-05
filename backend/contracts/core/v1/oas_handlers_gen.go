@@ -1572,7 +1572,7 @@ func (s *Server) handleChangePasswordRequest(args [0]string, argsEscaped bool, w
 		}
 	}()
 
-	var response *AuthResponseModel
+	var response *AuthResponseModelHeaders
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
@@ -1588,7 +1588,7 @@ func (s *Server) handleChangePasswordRequest(args [0]string, argsEscaped bool, w
 		type (
 			Request  = *ChangePasswordRequestModel
 			Params   = struct{}
-			Response = *AuthResponseModel
+			Response = *AuthResponseModelHeaders
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -12871,7 +12871,7 @@ func (s *Server) handleLoginRequest(args [0]string, argsEscaped bool, w http.Res
 		}
 	}()
 
-	var response *AuthResponseModel
+	var response *AuthResponseModelHeaders
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
@@ -12887,7 +12887,7 @@ func (s *Server) handleLoginRequest(args [0]string, argsEscaped bool, w http.Res
 		type (
 			Request  = *LoginRequestModel
 			Params   = struct{}
-			Response = *AuthResponseModel
+			Response = *AuthResponseModelHeaders
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -12961,12 +12961,12 @@ func (s *Server) handleLogoutRequest(args [0]string, argsEscaped bool, w http.Re
 			mreq,
 			nil,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				err = s.h.Logout(ctx)
+				response, err = s.h.Logout(ctx)
 				return response, err
 			},
 		)
 	} else {
-		err = s.h.Logout(ctx)
+		response, err = s.h.Logout(ctx)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -16993,7 +16993,7 @@ func (s *Server) handleVerifyEmailRequest(args [0]string, argsEscaped bool, w ht
 		}
 	}()
 
-	var response *AuthResponseModel
+	var response *VerifyEmailResponseHeaders
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
@@ -17009,7 +17009,7 @@ func (s *Server) handleVerifyEmailRequest(args [0]string, argsEscaped bool, w ht
 		type (
 			Request  = *VerifyEmailRequestModel
 			Params   = struct{}
-			Response = *AuthResponseModel
+			Response = *VerifyEmailResponseHeaders
 		)
 		response, err = middleware.HookMiddleware[
 			Request,

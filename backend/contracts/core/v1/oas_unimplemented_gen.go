@@ -158,7 +158,7 @@ func (UnimplementedHandler) CancelOrganizationJoinRequest(ctx context.Context, p
 // Change password for current user.
 //
 // POST /users/me/change-password
-func (UnimplementedHandler) ChangePassword(ctx context.Context, req *ChangePasswordRequestModel) (r *AuthResponseModel, _ error) {
+func (UnimplementedHandler) ChangePassword(ctx context.Context, req *ChangePasswordRequestModel) (r *AuthResponseModelHeaders, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1189,15 +1189,15 @@ func (UnimplementedHandler) ListWorkshopContests(ctx context.Context, params Lis
 // Login implements Login operation.
 //
 // POST /auth/login
-func (UnimplementedHandler) Login(ctx context.Context, req *LoginRequestModel) (r *AuthResponseModel, _ error) {
+func (UnimplementedHandler) Login(ctx context.Context, req *LoginRequestModel) (r *AuthResponseModelHeaders, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // Logout implements Logout operation.
 //
 // POST /auth/logout
-func (UnimplementedHandler) Logout(ctx context.Context) error {
-	return ht.ErrNotImplemented
+func (UnimplementedHandler) Logout(ctx context.Context) (r *LogoutOK, _ error) {
+	return r, ht.ErrNotImplemented
 }
 
 // MarkAllNotificationsAsRead implements MarkAllNotificationsAsRead operation.
@@ -1549,6 +1549,6 @@ func (UnimplementedHandler) ValidateAllTests(ctx context.Context, params Validat
 // VerifyEmail implements VerifyEmail operation.
 //
 // POST /auth/verify-email
-func (UnimplementedHandler) VerifyEmail(ctx context.Context, req *VerifyEmailRequestModel) (r *AuthResponseModel, _ error) {
+func (UnimplementedHandler) VerifyEmail(ctx context.Context, req *VerifyEmailRequestModel) (r *VerifyEmailResponseHeaders, _ error) {
 	return r, ht.ErrNotImplemented
 }

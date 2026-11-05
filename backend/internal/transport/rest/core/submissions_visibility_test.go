@@ -64,6 +64,7 @@ func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		false,
 	)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: viewer, Role: accessmodel.UserRoleUser})
 	for _, own := range []bool{false, true} {

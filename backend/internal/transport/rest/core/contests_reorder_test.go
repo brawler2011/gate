@@ -19,6 +19,7 @@ func TestReorderContestProblemsRejectsMissingBody(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		false,
 	)
 	err := server.ReorderContestProblems(context.Background(), nil, corev1.ReorderContestProblemsParams{OrgLogin: "org", ContestLogin: "round"})
 	require.Error(t, err)

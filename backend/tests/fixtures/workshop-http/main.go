@@ -73,6 +73,7 @@ func run() error {
 		nil,
 		nil,
 		nil,
+		false,
 	)
 	router, err := corev1.NewServer(handler, fixtureSecurity{}, corev1.WithErrorHandler(func(_ context.Context, w http.ResponseWriter, _ *http.Request, err error) {
 		w.WriteHeader(pkg.ToREST(err))
