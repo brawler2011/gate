@@ -119,7 +119,7 @@ type Invoker interface {
 	// Change password for current user.
 	//
 	// POST /users/me/change-password
-	ChangePassword(ctx context.Context, request *ChangePasswordRequestModel) (*AuthResponseModel, error)
+	ChangePassword(ctx context.Context, request *ChangePasswordRequestModel) (*AuthResponseModelHeaders, error)
 	// ClaimTemporaryUser invokes ClaimTemporaryUser operation.
 	//
 	// Claim temporary user results into permanent account.
@@ -775,11 +775,11 @@ type Invoker interface {
 	// Login invokes Login operation.
 	//
 	// POST /auth/login
-	Login(ctx context.Context, request *LoginRequestModel) (*AuthResponseModel, error)
+	Login(ctx context.Context, request *LoginRequestModel) (*AuthResponseModelHeaders, error)
 	// Logout invokes Logout operation.
 	//
 	// POST /auth/logout
-	Logout(ctx context.Context) error
+	Logout(ctx context.Context) (*LogoutOK, error)
 	// MarkAllNotificationsAsRead invokes MarkAllNotificationsAsRead operation.
 	//
 	// Mark all notifications as read.
@@ -1003,7 +1003,7 @@ type Invoker interface {
 	// VerifyEmail invokes VerifyEmail operation.
 	//
 	// POST /auth/verify-email
-	VerifyEmail(ctx context.Context, request *VerifyEmailRequestModel) (*AuthResponseModel, error)
+	VerifyEmail(ctx context.Context, request *VerifyEmailRequestModel) (*VerifyEmailResponseHeaders, error)
 }
 
 // Client implements OAS client.
@@ -2353,12 +2353,12 @@ func (c *Client) sendCancelOrganizationJoinRequest(ctx context.Context, params C
 // Change password for current user.
 //
 // POST /users/me/change-password
-func (c *Client) ChangePassword(ctx context.Context, request *ChangePasswordRequestModel) (*AuthResponseModel, error) {
+func (c *Client) ChangePassword(ctx context.Context, request *ChangePasswordRequestModel) (*AuthResponseModelHeaders, error) {
 	res, err := c.sendChangePassword(ctx, request)
 	return res, err
 }
 
-func (c *Client) sendChangePassword(ctx context.Context, request *ChangePasswordRequestModel) (res *AuthResponseModel, err error) {
+func (c *Client) sendChangePassword(ctx context.Context, request *ChangePasswordRequestModel) (res *AuthResponseModelHeaders, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
@@ -12846,12 +12846,12 @@ func (c *Client) sendListWorkshopContests(ctx context.Context, params ListWorksh
 // Login invokes Login operation.
 //
 // POST /auth/login
-func (c *Client) Login(ctx context.Context, request *LoginRequestModel) (*AuthResponseModel, error) {
+func (c *Client) Login(ctx context.Context, request *LoginRequestModel) (*AuthResponseModelHeaders, error) {
 	res, err := c.sendLogin(ctx, request)
 	return res, err
 }
 
-func (c *Client) sendLogin(ctx context.Context, request *LoginRequestModel) (res *AuthResponseModel, err error) {
+func (c *Client) sendLogin(ctx context.Context, request *LoginRequestModel) (res *AuthResponseModelHeaders, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
@@ -12890,9 +12890,9 @@ func (c *Client) sendLogin(ctx context.Context, request *LoginRequestModel) (res
 // Logout invokes Logout operation.
 //
 // POST /auth/logout
-func (c *Client) Logout(ctx context.Context) error {
-	_, err := c.sendLogout(ctx)
-	return err
+func (c *Client) Logout(ctx context.Context) (*LogoutOK, error) {
+	res, err := c.sendLogout(ctx)
+	return res, err
 }
 
 func (c *Client) sendLogout(ctx context.Context) (res *LogoutOK, err error) {
@@ -16203,12 +16203,12 @@ func (c *Client) sendValidateAllTests(ctx context.Context, params ValidateAllTes
 // VerifyEmail invokes VerifyEmail operation.
 //
 // POST /auth/verify-email
-func (c *Client) VerifyEmail(ctx context.Context, request *VerifyEmailRequestModel) (*AuthResponseModel, error) {
+func (c *Client) VerifyEmail(ctx context.Context, request *VerifyEmailRequestModel) (*VerifyEmailResponseHeaders, error) {
 	res, err := c.sendVerifyEmail(ctx, request)
 	return res, err
 }
 
-func (c *Client) sendVerifyEmail(ctx context.Context, request *VerifyEmailRequestModel) (res *AuthResponseModel, err error) {
+func (c *Client) sendVerifyEmail(ctx context.Context, request *VerifyEmailRequestModel) (res *VerifyEmailResponseHeaders, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string

@@ -233,7 +233,7 @@ func decodeCancelOrganizationJoinRequestResponse(resp *http.Response) (res *Canc
 	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
-func decodeChangePasswordResponse(resp *http.Response) (res *AuthResponseModel, _ error) {
+func decodeChangePasswordResponse(resp *http.Response) (res *AuthResponseModelHeaders, _ error) {
 	switch resp.StatusCode {
 	case 200:
 		// Code 200.
@@ -266,7 +266,42 @@ func decodeChangePasswordResponse(resp *http.Response) (res *AuthResponseModel, 
 				}
 				return res, err
 			}
-			return &response, nil
+			var wrapper AuthResponseModelHeaders
+			wrapper.Response = response
+			h := uri.NewHeaderDecoder(resp.Header)
+			// Parse "Set-Cookie" header.
+			{
+				cfg := uri.HeaderParameterDecodingConfig{
+					Name:    "Set-Cookie",
+					Explode: false,
+				}
+				if err := func() error {
+					if err := h.HasParam(cfg); err == nil {
+						if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+							val, err := d.DecodeValue()
+							if err != nil {
+								return err
+							}
+
+							c, err := conv.ToString(val)
+							if err != nil {
+								return err
+							}
+
+							wrapper.SetCookie = c
+							return nil
+						}); err != nil {
+							return err
+						}
+					} else {
+						return err
+					}
+					return nil
+				}(); err != nil {
+					return res, errors.Wrap(err, "parse Set-Cookie header")
+				}
+			}
+			return &wrapper, nil
 		default:
 			return res, validate.InvalidContentType(ct)
 		}
@@ -5541,7 +5576,7 @@ func decodeListWorkshopContestsResponse(resp *http.Response) (res *ListContestsR
 	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
-func decodeLoginResponse(resp *http.Response) (res *AuthResponseModel, _ error) {
+func decodeLoginResponse(resp *http.Response) (res *AuthResponseModelHeaders, _ error) {
 	switch resp.StatusCode {
 	case 200:
 		// Code 200.
@@ -5574,7 +5609,42 @@ func decodeLoginResponse(resp *http.Response) (res *AuthResponseModel, _ error) 
 				}
 				return res, err
 			}
-			return &response, nil
+			var wrapper AuthResponseModelHeaders
+			wrapper.Response = response
+			h := uri.NewHeaderDecoder(resp.Header)
+			// Parse "Set-Cookie" header.
+			{
+				cfg := uri.HeaderParameterDecodingConfig{
+					Name:    "Set-Cookie",
+					Explode: false,
+				}
+				if err := func() error {
+					if err := h.HasParam(cfg); err == nil {
+						if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+							val, err := d.DecodeValue()
+							if err != nil {
+								return err
+							}
+
+							c, err := conv.ToString(val)
+							if err != nil {
+								return err
+							}
+
+							wrapper.SetCookie = c
+							return nil
+						}); err != nil {
+							return err
+						}
+					} else {
+						return err
+					}
+					return nil
+				}(); err != nil {
+					return res, errors.Wrap(err, "parse Set-Cookie header")
+				}
+			}
+			return &wrapper, nil
 		default:
 			return res, validate.InvalidContentType(ct)
 		}
@@ -5586,7 +5656,41 @@ func decodeLogoutResponse(resp *http.Response) (res *LogoutOK, _ error) {
 	switch resp.StatusCode {
 	case 200:
 		// Code 200.
-		return &LogoutOK{}, nil
+		var wrapper LogoutOK
+		h := uri.NewHeaderDecoder(resp.Header)
+		// Parse "Set-Cookie" header.
+		{
+			cfg := uri.HeaderParameterDecodingConfig{
+				Name:    "Set-Cookie",
+				Explode: false,
+			}
+			if err := func() error {
+				if err := h.HasParam(cfg); err == nil {
+					if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+						val, err := d.DecodeValue()
+						if err != nil {
+							return err
+						}
+
+						c, err := conv.ToString(val)
+						if err != nil {
+							return err
+						}
+
+						wrapper.SetCookie = c
+						return nil
+					}); err != nil {
+						return err
+					}
+				} else {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return res, errors.Wrap(err, "parse Set-Cookie header")
+			}
+		}
+		return &wrapper, nil
 	}
 	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
@@ -6621,7 +6725,7 @@ func decodeValidateAllTestsResponse(resp *http.Response) (res *ValidationReport,
 	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
-func decodeVerifyEmailResponse(resp *http.Response) (res *AuthResponseModel, _ error) {
+func decodeVerifyEmailResponse(resp *http.Response) (res *VerifyEmailResponseHeaders, _ error) {
 	switch resp.StatusCode {
 	case 200:
 		// Code 200.
@@ -6654,7 +6758,47 @@ func decodeVerifyEmailResponse(resp *http.Response) (res *AuthResponseModel, _ e
 				}
 				return res, err
 			}
-			return &response, nil
+			var wrapper VerifyEmailResponseHeaders
+			wrapper.Response = response
+			h := uri.NewHeaderDecoder(resp.Header)
+			// Parse "Set-Cookie" header.
+			{
+				cfg := uri.HeaderParameterDecodingConfig{
+					Name:    "Set-Cookie",
+					Explode: false,
+				}
+				if err := func() error {
+					if err := h.HasParam(cfg); err == nil {
+						if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+							var wrapperDotSetCookieVal string
+							if err := func() error {
+								val, err := d.DecodeValue()
+								if err != nil {
+									return err
+								}
+
+								c, err := conv.ToString(val)
+								if err != nil {
+									return err
+								}
+
+								wrapperDotSetCookieVal = c
+								return nil
+							}(); err != nil {
+								return err
+							}
+							wrapper.SetCookie.SetTo(wrapperDotSetCookieVal)
+							return nil
+						}); err != nil {
+							return err
+						}
+					}
+					return nil
+				}(); err != nil {
+					return res, errors.Wrap(err, "parse Set-Cookie header")
+				}
+			}
+			return &wrapper, nil
 		default:
 			return res, validate.InvalidContentType(ct)
 		}

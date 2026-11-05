@@ -95,6 +95,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 			nil,
 			nil,
 			nil,
+			false,
 		)
 
 		user := accessmodel.User{
@@ -143,6 +144,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 			nil,
 			nil,
 			nil,
+			false,
 		)
 
 		user := accessmodel.User{
@@ -176,6 +178,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 			nil,
 			nil,
 			nil,
+			false,
 		)
 
 		user := accessmodel.User{

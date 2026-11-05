@@ -3360,7 +3360,19 @@ export interface components {
             pagination: components["schemas"]["PaginationModel"];
         };
     };
-    responses: never;
+    responses: {
+        /** @description Successfully verified email */
+        VerifyEmailResponse: {
+            headers: {
+                /** @description Session cookie */
+                "Set-Cookie"?: string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["AuthResponseModel"];
+            };
+        };
+    };
     parameters: {
         /** @description Page number */
         PageQuery: number;
@@ -3508,6 +3520,7 @@ export type ContestClarificationModel = components['schemas']['ContestClarificat
 export type CreateContestClarificationRequestModel = components['schemas']['CreateContestClarificationRequestModel'];
 export type AnswerContestClarificationRequestModel = components['schemas']['AnswerContestClarificationRequestModel'];
 export type ListContestClarificationsResponseModel = components['schemas']['ListContestClarificationsResponseModel'];
+export type ResponseVerifyEmailResponse = components['responses']['VerifyEmailResponse'];
 export type ParameterPageQuery = components['parameters']['PageQuery'];
 export type ParameterPageSizeQuery = components['parameters']['PageSizeQuery'];
 export type $defs = Record<string, never>;
@@ -5309,6 +5322,8 @@ export interface operations {
             /** @description Password successfully changed */
             200: {
                 headers: {
+                    /** @description Session cookie */
+                    "Set-Cookie": string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -8114,6 +8129,8 @@ export interface operations {
             /** @description Successfully logged in */
             200: {
                 headers: {
+                    /** @description Session cookie */
+                    "Set-Cookie": string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -8134,6 +8151,8 @@ export interface operations {
             /** @description Successfully logged out */
             200: {
                 headers: {
+                    /** @description Session cookie */
+                    "Set-Cookie": string;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -8153,15 +8172,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successfully verified email */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuthResponseModel"];
-                };
-            };
+            200: components["responses"]["VerifyEmailResponse"];
         };
     };
     ResendVerification: {

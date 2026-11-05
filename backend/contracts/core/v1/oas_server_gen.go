@@ -105,7 +105,7 @@ type Handler interface {
 	// Change password for current user.
 	//
 	// POST /users/me/change-password
-	ChangePassword(ctx context.Context, req *ChangePasswordRequestModel) (*AuthResponseModel, error)
+	ChangePassword(ctx context.Context, req *ChangePasswordRequestModel) (*AuthResponseModelHeaders, error)
 	// ClaimTemporaryUser implements ClaimTemporaryUser operation.
 	//
 	// Claim temporary user results into permanent account.
@@ -761,11 +761,11 @@ type Handler interface {
 	// Login implements Login operation.
 	//
 	// POST /auth/login
-	Login(ctx context.Context, req *LoginRequestModel) (*AuthResponseModel, error)
+	Login(ctx context.Context, req *LoginRequestModel) (*AuthResponseModelHeaders, error)
 	// Logout implements Logout operation.
 	//
 	// POST /auth/logout
-	Logout(ctx context.Context) error
+	Logout(ctx context.Context) (*LogoutOK, error)
 	// MarkAllNotificationsAsRead implements MarkAllNotificationsAsRead operation.
 	//
 	// Mark all notifications as read.
@@ -989,7 +989,7 @@ type Handler interface {
 	// VerifyEmail implements VerifyEmail operation.
 	//
 	// POST /auth/verify-email
-	VerifyEmail(ctx context.Context, req *VerifyEmailRequestModel) (*AuthResponseModel, error)
+	VerifyEmail(ctx context.Context, req *VerifyEmailRequestModel) (*VerifyEmailResponseHeaders, error)
 }
 
 // Server implements http server based on OpenAPI v3 specification and

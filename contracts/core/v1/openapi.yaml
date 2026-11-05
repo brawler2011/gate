@@ -1791,6 +1791,12 @@ paths:
       responses:
         "200":
           description: Password successfully changed
+          headers:
+            Set-Cookie:
+              description: Session cookie
+              required: true
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -4302,6 +4308,12 @@ paths:
       responses:
         "200":
           description: Successfully logged in
+          headers:
+            Set-Cookie:
+              description: Session cookie
+              required: true
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -4312,6 +4324,12 @@ paths:
       responses:
         "200":
           description: Successfully logged out
+          headers:
+            Set-Cookie:
+              description: Session cookie
+              required: true
+              schema:
+                type: string
   /auth/verify-email:
     post:
       operationId: VerifyEmail
@@ -4323,11 +4341,7 @@ paths:
               $ref: "#/components/schemas/VerifyEmailRequestModel"
       responses:
         "200":
-          description: Successfully verified email
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthResponseModel"
+          $ref: "#/components/responses/VerifyEmailResponse"
   /auth/resend-verification:
     post:
       operationId: ResendVerification
@@ -4381,6 +4395,20 @@ paths:
           description: Email change confirmed successfully
           content: {}
 components:
+  responses:
+    VerifyEmailResponse:
+      description: Successfully verified email
+      headers:
+        Set-Cookie:
+          description: Session cookie
+          required: false
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AuthResponseModel"
+
   securitySchemes:
     cookieAuth:
       type: apiKey

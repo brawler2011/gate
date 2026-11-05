@@ -334,6 +334,7 @@ func runApp(envFile string) error {
 			BlogsReader: blogsRepo,
 		},
 		natsJS,
+		cfg.Env != "local",
 	)
 
 	secHandler := middleware.NewSecurityHandler()
@@ -350,7 +351,7 @@ func runApp(envFile string) error {
 
 	apiHandler := middleware.AuthMiddleware(authUC)(
 		middleware.UsersMiddleware(usersRepo)(
-			middleware.SessionCookieMiddleware(cfg.Env != "local")(apiServer),
+			apiServer,
 		),
 	)
 

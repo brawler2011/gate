@@ -258,6 +258,7 @@ func (s *IntegrationTestSuite) initApp() {
 			BlogsReader: blogsRepo,
 		},
 		nil,
+		false,
 	)
 
 	// Server setup
@@ -282,7 +283,7 @@ func (s *IntegrationTestSuite) initApp() {
 		middleware.AuthMiddleware(authUC)(
 			middleware.UsersMiddleware(s.usersRepo)(
 				s.testMiddleware(
-					middleware.SessionCookieMiddleware(false)(server),
+					server,
 				),
 			),
 		),

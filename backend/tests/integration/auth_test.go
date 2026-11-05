@@ -4,11 +4,14 @@
 package integration
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
+	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/google/uuid"
 )
@@ -84,6 +87,7 @@ func (s *IntegrationTestSuite) TestAuth() {
 		})
 		s.Require().Error(err)
 		s.Equal(http.StatusBadRequest, s.getStatusCode(err))
+		s.Empty(s.transport.lastResponse.Header.Values("Set-Cookie"))
 
 		// Mark email as verified
 		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.User.ID)
@@ -95,22 +99,12 @@ func (s *IntegrationTestSuite) TestAuth() {
 			Password:   password,
 		})
 		s.Require().NoError(err)
-		s.Equal(username, loginResp.User.Username)
-		s.Require().True(loginResp.SessionID.IsSet())
-		s.NotEmpty(loginResp.SessionID.Value)
+		s.Equal(username, loginResp.Response.User.Username)
+		s.Require().True(loginResp.Response.SessionID.IsSet())
+		s.NotEmpty(loginResp.Response.SessionID.Value)
 
-		// Verify cookie is set on the response
-		cookies := s.transport.lastResponse.Cookies()
-		var sessionCookie *http.Cookie
-		for _, c := range cookies {
-			if c.Name == "session_id" {
-				sessionCookie = c
-				break
-			}
-		}
-		s.Require().NotNil(sessionCookie)
-		s.Equal(loginResp.SessionID.Value.String(), sessionCookie.Value)
-		s.True(sessionCookie.HttpOnly)
+		s.Equal(s.transport.lastResponse.Header.Get("Set-Cookie"), loginResp.SetCookie)
+		s.requireSessionCookie(loginResp.Response.SessionID.Value.String(), 7*24*60*60)
 
 		// Test successful Login via Email
 		loginRespEmail, err := s.client.Login(s.ctx, &corev1.LoginRequestModel{
@@ -127,6 +121,7 @@ func (s *IntegrationTestSuite) TestAuth() {
 		})
 		s.Require().Error(err)
 		s.Equal(http.StatusUnauthorized, s.getStatusCode(err))
+		s.Empty(s.transport.lastResponse.Header.Values("Set-Cookie"))
 
 		// Test Login with non-existent user
 		_, err = s.client.Login(s.ctx, &corev1.LoginRequestModel{
@@ -135,6 +130,7 @@ func (s *IntegrationTestSuite) TestAuth() {
 		})
 		s.Require().Error(err)
 		s.Equal(http.StatusUnauthorized, s.getStatusCode(err))
+		s.Empty(s.transport.lastResponse.Header.Values("Set-Cookie"))
 	})
 
 	// 3. Logout
@@ -160,24 +156,23 @@ func (s *IntegrationTestSuite) TestAuth() {
 			Password:   password,
 		})
 		s.Require().NoError(err)
-		s.Require().True(loginResp.SessionID.IsSet())
-		sessionID := loginResp.SessionID.Value
+		s.Require().True(loginResp.Response.SessionID.IsSet())
+		sessionID := loginResp.Response.SessionID.Value
 
 		// Logout
-		err = s.client.Logout(withTestCookie(s.ctx, sessionID))
+		logoutResp, err := s.client.Logout(withTestCookie(s.ctx, sessionID))
 		s.Require().NoError(err)
+		s.Equal(s.transport.lastResponse.Header.Get("Set-Cookie"), logoutResp.SetCookie)
+		s.requireSessionCookie("", -1)
 
-		// Verify cookie is cleared on response (MaxAge < 0 or empty value)
-		cookies := s.transport.lastResponse.Cookies()
-		var sessionCookie *http.Cookie
-		for _, c := range cookies {
-			if c.Name == "session_id" {
-				sessionCookie = c
-				break
-			}
-		}
-		s.Require().NotNil(sessionCookie)
-		s.True(sessionCookie.MaxAge < 0 || sessionCookie.Value == "")
+		_, err = s.client.GetMe(withTestCookie(s.ctx, sessionID))
+		s.Require().Error(err)
+		s.Equal(http.StatusUnauthorized, s.getStatusCode(err))
+
+		// An unauthenticated logout must still clear the browser cookie.
+		_, err = s.client.Logout(s.ctx)
+		s.Require().NoError(err)
+		s.requireSessionCookie("", -1)
 	})
 
 	// 4. Sliding Session authentication test
@@ -201,8 +196,8 @@ func (s *IntegrationTestSuite) TestAuth() {
 			Password:   password,
 		})
 		s.Require().NoError(err)
-		s.Require().True(loginResp.SessionID.IsSet())
-		sessionID := loginResp.SessionID.Value
+		s.Require().True(loginResp.Response.SessionID.IsSet())
+		sessionID := loginResp.Response.SessionID.Value
 
 		// Directly query DB to get the initial expires_at
 		var initialExpiry time.Time
@@ -252,8 +247,8 @@ func (s *IntegrationTestSuite) TestAuth() {
 			Password:   password,
 		})
 		s.Require().NoError(err)
-		s.Require().True(loginResp.SessionID.IsSet())
-		sessionID := loginResp.SessionID.Value
+		s.Require().True(loginResp.Response.SessionID.IsSet())
+		sessionID := loginResp.Response.SessionID.Value
 		userID := regResp.User.ID
 
 		authRepo := pgstore.NewAuthRepo(s.dbPool)
@@ -352,4 +347,94 @@ func (s *IntegrationTestSuite) TestAuth() {
 		s.Require().NoError(err)
 		s.Equal(1, count)
 	})
+}
+
+func (s *IntegrationTestSuite) requireSessionCookie(value string, maxAge int) {
+	s.T().Helper()
+	s.Require().Len(s.transport.lastResponse.Header.Values("Set-Cookie"), 1)
+	cookies := s.transport.lastResponse.Cookies()
+	s.Require().Len(cookies, 1)
+	cookie := cookies[0]
+	s.Equal("session_id", cookie.Name)
+	s.Equal(value, cookie.Value)
+	s.Equal("/", cookie.Path)
+	s.True(cookie.HttpOnly)
+	s.False(cookie.Secure)
+	s.Equal(maxAge, cookie.MaxAge)
+	s.Equal(http.SameSiteLaxMode, cookie.SameSite)
+	s.Empty(cookie.Domain)
+	s.True(cookie.Expires.IsZero())
+}
+
+func (s *IntegrationTestSuite) TestSessionCookieLifecycle() {
+	username := "cookie_" + uuid.NewString()[:8]
+	registered, err := s.client.Register(s.ctx, &corev1.RegisterRequestModel{
+		Username: username, Email: username + "@example.com", Password: "Password123!",
+	})
+	s.Require().NoError(err)
+	s.Empty(s.transport.lastResponse.Header.Values("Set-Cookie"))
+
+	repo := pgstore.NewAuthRepo(s.dbPool)
+	createToken := func(tokenType identitymodel.AuthTokenType) string {
+		token := uuid.NewString()
+		digest := sha256.Sum256([]byte(token))
+		s.Require().NoError(repo.CreateAuthToken(s.ctx, identitymodel.CreateAuthTokenParams{
+			ID: uuid.New(), UserID: registered.User.ID, TokenType: tokenType,
+			TokenHash: hex.EncodeToString(digest[:]), ExpiresAt: time.Now().Add(time.Hour),
+		}))
+		return token
+	}
+
+	token := createToken(identitymodel.AuthTokenTypeEmailVerification)
+	verified, err := s.client.VerifyEmail(s.ctx, &corev1.VerifyEmailRequestModel{Token: token})
+	s.Require().NoError(err)
+	s.Equal(registered.User.ID, verified.Response.User.ID)
+	s.Require().True(verified.Response.SessionID.IsSet())
+	s.Require().True(verified.SetCookie.IsSet())
+	s.Equal(s.transport.lastResponse.Header.Get("Set-Cookie"), verified.SetCookie.Value)
+	oldSessionID := verified.Response.SessionID.Value
+	s.requireSessionCookie(oldSessionID.String(), 7*24*60*60)
+
+	_, err = s.client.VerifyEmail(s.ctx, &corev1.VerifyEmailRequestModel{Token: token})
+	s.Require().Error(err)
+	s.Equal(http.StatusBadRequest, s.getStatusCode(err))
+	s.Empty(s.transport.lastResponse.Header.Values("Set-Cookie"))
+
+	_, err = s.client.ChangePassword(withTestCookie(s.ctx, oldSessionID), &corev1.ChangePasswordRequestModel{
+		OldPassword: "wrongpassword", NewPassword: "Password456!",
+	})
+	s.Require().Error(err)
+	s.Equal(http.StatusBadRequest, s.getStatusCode(err))
+	s.Empty(s.transport.lastResponse.Header.Values("Set-Cookie"))
+
+	changed, err := s.client.ChangePassword(withTestCookie(s.ctx, oldSessionID), &corev1.ChangePasswordRequestModel{
+		OldPassword: "Password123!", NewPassword: "Password456!",
+	})
+	s.Require().NoError(err)
+	s.Equal(registered.User.ID, changed.Response.User.ID)
+	s.Require().True(changed.Response.SessionID.IsSet())
+	newSessionID := changed.Response.SessionID.Value
+	s.NotEqual(oldSessionID, newSessionID)
+	s.Equal(s.transport.lastResponse.Header.Get("Set-Cookie"), changed.SetCookie)
+	s.requireSessionCookie(newSessionID.String(), 7*24*60*60)
+
+	_, err = s.client.GetMe(withTestCookie(s.ctx, oldSessionID))
+	s.Require().Error(err)
+	s.Equal(http.StatusUnauthorized, s.getStatusCode(err))
+	_, err = s.client.GetMe(withTestCookie(s.ctx, newSessionID))
+	s.Require().NoError(err)
+
+	err = s.client.ResetPassword(s.ctx, &corev1.ResetPasswordRequestModel{
+		Token: createToken(identitymodel.AuthTokenTypePasswordReset), Password: "Password789!",
+	})
+	s.Require().NoError(err)
+	s.Empty(s.transport.lastResponse.Header.Values("Set-Cookie"))
+	_, err = s.client.GetMe(withTestCookie(s.ctx, newSessionID))
+	s.Require().Error(err)
+	s.Equal(http.StatusUnauthorized, s.getStatusCode(err))
+
+	err = s.client.ResetPassword(s.ctx, &corev1.ResetPasswordRequestModel{Token: "invalid", Password: "Password789!"})
+	s.Require().Error(err)
+	s.Equal(http.StatusBadRequest, s.getStatusCode(err))
+	s.Empty(s.transport.lastResponse.Header.Values("Set-Cookie"))
 }

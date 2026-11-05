@@ -206,6 +206,32 @@ func (s *AuthResponseModel) SetSessionID(val OptUUID) {
 	s.SessionID = val
 }
 
+// AuthResponseModelHeaders wraps AuthResponseModel with response headers.
+type AuthResponseModelHeaders struct {
+	SetCookie string
+	Response  AuthResponseModel
+}
+
+// GetSetCookie returns the value of SetCookie.
+func (s *AuthResponseModelHeaders) GetSetCookie() string {
+	return s.SetCookie
+}
+
+// GetResponse returns the value of Response.
+func (s *AuthResponseModelHeaders) GetResponse() AuthResponseModel {
+	return s.Response
+}
+
+// SetSetCookie sets the value of SetCookie.
+func (s *AuthResponseModelHeaders) SetSetCookie(val string) {
+	s.SetCookie = val
+}
+
+// SetResponse sets the value of Response.
+func (s *AuthResponseModelHeaders) SetResponse(val AuthResponseModel) {
+	s.Response = val
+}
+
 // Ref: #/components/schemas/BatchCreateOrganizationUsersRequestModel
 type BatchCreateOrganizationUsersRequestModel struct {
 	Prefix  string   `json:"prefix"`
@@ -4709,7 +4735,19 @@ func (s *LoginRequestModel) SetPassword(val string) {
 }
 
 // LogoutOK is response for Logout operation.
-type LogoutOK struct{}
+type LogoutOK struct {
+	SetCookie string
+}
+
+// GetSetCookie returns the value of SetCookie.
+func (s *LogoutOK) GetSetCookie() string {
+	return s.SetCookie
+}
+
+// SetSetCookie sets the value of SetCookie.
+func (s *LogoutOK) SetSetCookie(val string) {
+	s.SetCookie = val
+}
 
 // MarkAllNotificationsAsReadOK is response for MarkAllNotificationsAsRead operation.
 type MarkAllNotificationsAsReadOK struct{}
@@ -11056,6 +11094,32 @@ func (s *VerifyEmailRequestModel) GetToken() string {
 // SetToken sets the value of Token.
 func (s *VerifyEmailRequestModel) SetToken(val string) {
 	s.Token = val
+}
+
+// VerifyEmailResponseHeaders wraps AuthResponseModel with response headers.
+type VerifyEmailResponseHeaders struct {
+	SetCookie OptString
+	Response  AuthResponseModel
+}
+
+// GetSetCookie returns the value of SetCookie.
+func (s *VerifyEmailResponseHeaders) GetSetCookie() OptString {
+	return s.SetCookie
+}
+
+// GetResponse returns the value of Response.
+func (s *VerifyEmailResponseHeaders) GetResponse() AuthResponseModel {
+	return s.Response
+}
+
+// SetSetCookie sets the value of SetCookie.
+func (s *VerifyEmailResponseHeaders) SetSetCookie(val OptString) {
+	s.SetCookie = val
+}
+
+// SetResponse sets the value of Response.
+func (s *VerifyEmailResponseHeaders) SetResponse(val AuthResponseModel) {
+	s.Response = val
 }
 
 // Ref: #/components/schemas/WorkshopFileListResponse

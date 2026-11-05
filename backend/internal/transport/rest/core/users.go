@@ -7,7 +7,6 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
-	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -216,7 +215,7 @@ func (h *CoreServer) ListMyClaimedAccounts(ctx context.Context) (*corev1.ListCla
 	}, nil
 }
 
-func (h *CoreServer) ChangePassword(ctx context.Context, req *corev1.ChangePasswordRequestModel) (*corev1.AuthResponseModel, error) {
+func (h *CoreServer) ChangePassword(ctx context.Context, req *corev1.ChangePasswordRequestModel) (*corev1.AuthResponseModelHeaders, error) {
 	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
@@ -231,11 +230,12 @@ func (h *CoreServer) ChangePassword(ctx context.Context, req *corev1.ChangePassw
 		return nil, err
 	}
 
-	middleware.SetSessionCookie(ctx, newSessionID)
-
-	return &corev1.AuthResponseModel{
-		User:      userDTO(user),
-		SessionID: corev1.NewOptUUID(newSessionID),
+	return &corev1.AuthResponseModelHeaders{
+		SetCookie: h.sessionCookie(newSessionID),
+		Response: corev1.AuthResponseModel{
+			User:      userDTO(user),
+			SessionID: corev1.NewOptUUID(newSessionID),
+		},
 	}, nil
 }
 

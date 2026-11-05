@@ -19,49 +19,49 @@ func (h *CoreServer) Register(ctx context.Context, req *corev1.RegisterRequestMo
 	}, nil
 }
 
-func (h *CoreServer) Login(ctx context.Context, req *corev1.LoginRequestModel) (*corev1.AuthResponseModel, error) {
+func (h *CoreServer) Login(ctx context.Context, req *corev1.LoginRequestModel) (*corev1.AuthResponseModelHeaders, error) {
 	user, sessionID, err := h.identity.Login(ctx, req.Identifier, req.Password)
 	if err != nil {
 		return nil, err
 	}
 
-	middleware.SetSessionCookie(ctx, sessionID)
-
-	return &corev1.AuthResponseModel{
-		User:      userDTO(user),
-		SessionID: corev1.NewOptUUID(sessionID),
+	return &corev1.AuthResponseModelHeaders{
+		SetCookie: h.sessionCookie(sessionID),
+		Response: corev1.AuthResponseModel{
+			User:      userDTO(user),
+			SessionID: corev1.NewOptUUID(sessionID),
+		},
 	}, nil
 }
 
-func (h *CoreServer) Logout(ctx context.Context) error {
+func (h *CoreServer) Logout(ctx context.Context) (*corev1.LogoutOK, error) {
 	if session, err := middleware.GetSession(ctx); err == nil {
 		// FIXME: do not ignore errors
 		_ = h.identity.Logout(ctx, session.ID)
 	}
 
-	middleware.ClearSessionCookie(ctx)
-	return nil
+	return &corev1.LogoutOK{SetCookie: h.clearSessionCookie()}, nil
 }
 
-func (h *CoreServer) VerifyEmail(ctx context.Context, req *corev1.VerifyEmailRequestModel) (*corev1.AuthResponseModel, error) {
+func (h *CoreServer) VerifyEmail(ctx context.Context, req *corev1.VerifyEmailRequestModel) (*corev1.VerifyEmailResponseHeaders, error) {
 	user, sessionID, err := h.identity.VerifyEmail(ctx, req.Token)
 	if err != nil {
 		return nil, err
 	}
 
-	if sessionID != uuid.Nil {
-		middleware.SetSessionCookie(ctx, sessionID)
-	}
-
-	// FIXME: this field should not be optional
+	var cookie corev1.OptString
 	var sessOpt corev1.OptUUID
 	if sessionID != uuid.Nil {
+		cookie = corev1.NewOptString(h.sessionCookie(sessionID))
 		sessOpt = corev1.NewOptUUID(sessionID)
 	}
 
-	return &corev1.AuthResponseModel{
-		User:      userDTO(user),
-		SessionID: sessOpt,
+	return &corev1.VerifyEmailResponseHeaders{
+		SetCookie: cookie,
+		Response: corev1.AuthResponseModel{
+			User:      userDTO(user),
+			SessionID: sessOpt,
+		},
 	}, nil
 }
 
