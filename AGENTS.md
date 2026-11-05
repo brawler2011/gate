@@ -2,79 +2,23 @@
 
 ## General Guidelines
 
-Behavioral guidelines to reduce common LLM coding mistakes.
+### 1. Clarify & Challenge
+- Do not assume or pick interpretations silently. If requirements or designs are ambiguous, ask.
+- Push back constructively with concrete trade-offs when an approach is suboptimal or overengineered. Commit cleanly once decided.
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+### 2. Scope & Surgical Restraint
+- Touch only what the task requires. Zero unrelated edits, no drive-by refactoring, and no adjacent formatting changes.
+- Do not create Markdown files or edit `README.md` unless explicitly requested.
+- Clean up only your own orphans; leave pre-existing dead code untouched. Never create symlinks.
 
-### 1. Think Before Coding
+### 3. Architecture Over Diff Minimization
+- Issue acceptance criteria are immutable: never drop, weaken, mock out, or invert requirements to minimize diff.
+- Structural integrity, Single Responsibility, and idiomatic patterns take precedence over diff-line count.
+- Do not overload existing functions or types with unrelated concerns or control flags (no lazy overloading); create focused components instead.
+- No speculative code: no unrequested abstractions, configurability, or handling for impossible scenarios.
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
-
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
-
-### 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
-
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-### 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
-
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Do not modify the root `README.md` unless explicitly requested by the user.
-- Do not create Markdown files or add documentation unless explicitly requested by the user. Keep requested documentation concise and factual; omit filler, duplicated explanations, and unsolicited reports or summaries.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
-- **Never create symbolic links (symlinks).** Use standard files instead.
-
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-### 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
-
-### 5. Rigorous Discussion & Critical Pushback
-
-**Never agree blindly. Provide trade-offs, risks, and real-world precedents.**
-
-During active discussion and planning:
-- Do not be a sycophant or validate flawed ideas just to be agreeable. Act as an objective, critical engineering peer.
-- Support technical recommendations with concrete arguments: pros, cons, failure modes, and trade-offs.
-- Ground arguments in real-world production practices and operational realities (e.g., maintenance cost, failure risks, scalability).
-- If a proposed approach is suboptimal or overengineered, push back constructively and suggest a battle-tested alternative.
-- Once debate concludes and a final decision is made by the user, commit fully and execute cleanly.
+### 4. Goal-Driven Verification
+- Ground tasks in verifiable success criteria (tests, commands). Loop until verified.
 
 ---
 
@@ -82,20 +26,19 @@ During active discussion and planning:
 
 - `backend/`: Go application, migrations, SQL queries, and backend tests. The main Go module is at the repository root.
 - `frontend/main.tsx`: React SPA entry point; `frontend/app/App.tsx`: React Router route definitions.
-- `frontend/`: pages, components, hooks, API client, and Bun tests. The `@/` alias resolves here; `frontend/app/` filenames do not define routes automatically.
+- `frontend/`: pages, components, hooks, API client, and Bun tests. The `@/` alias resolves here.
 - `contracts/`: core OpenAPI and observer AsyncAPI specifications.
 - `deploy/`: local and production configuration, Compose services, and environment examples.
 - `package.json`, `bun.lock`, `vite.config.ts`, and `Taskfile.yml` live at the repository root. Run commands from there.
 
 ## Frontend Guidelines
 
-These rules apply to `frontend/`, `src/`, and frontend configuration at the repository root.
+These rules apply to `frontend/` and frontend configuration at the repository root.
 
 1. **Use `bun` instead of `npm`**
    - Use `bun` for package management, scripts, and development commands. Do not use `npm`, `npx`, `yarn`, or `pnpm`.
-2. **Keep the React/Vite SPA architecture**
+2. **React/Vite SPA architecture**
    - Use React Router for routing and loaders, TanStack Query for query state, and Mantine for UI.
-   - Do not introduce Next.js, React Server Components, or Server Actions (`'use server'`).
 3. **Use the shared API client**
    - Import `api` and, when needed, `unwrap` from `@/lib/api` in components, hooks, and route loaders.
    - Browser requests use same-origin `/api` and `/ws`; Vite proxies these paths to `BACKEND_API_URL` during development.
@@ -183,10 +126,11 @@ When working with the backend codebase, adhere strictly to the following rules:
    - **Context Isolation**: Review in a fresh context and clean worktree at the PR head, without the author's conversation or claimed results.
    - **Reviewer Inputs**: Issue description, `AGENTS.md`, and `git diff <base-sha>...<head-sha>`. Allow access to repository code and tests needed to verify the change. Obtain the full PR head and current `main` base SHAs through GitHub and git to track the reviewed revision; publishing them is not required. Stop and report any failure to obtain the diff.
    - **Reviewer Audit Focus**:
-     1. Acceptance Criteria: All items genuinely verified and tested.
-     2. `AGENTS.md` compliance: `slog` only, no env fallback values, no Server Actions, React/Vite SPA architecture, no symlinks.
-     3. Surgical changes: no unrelated edits, no leftover dead code.
-     4. Test coverage and edge cases.
+     1. Acceptance criteria integrity: verify against the original issue; reject dropped/inverted requirements and confirmation-bias tests.
+     2. Architecture & SRP: reject lazy overloading (cramming secondary concerns or control flags into existing helpers to save lines).
+     3. `AGENTS.md` compliance: `slog` only, no env fallback values, React/Vite SPA architecture, no symlinks.
+     4. Surgical scope: zero unrelated edits, no drive-by refactoring or formatting changes, no leftover dead code.
+     5. Test coverage and edge cases.
    - **Independent Verification**: Run the checks needed to verify the reviewed revision. Do not treat author claims as verification.
    - **Verdict Format**: With no findings, output `APPROVE`. Otherwise, output `REQUEST_CHANGES` with concrete problems and actionable `file:line` pointers. Include material verification limitations when present. Post with `gh pr review --comment --body-file <path>`; `APPROVE` in a comment is an agent verdict, not a GitHub approval event.
    - Any head or base change invalidates prior review and check evidence; obtain a new diff, independent review and CI results.

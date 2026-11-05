@@ -2,7 +2,6 @@
 const config = {
   extends: ["stylelint-config-standard"],
   ignoreFiles: [
-    ".next/**",
     "node_modules/**",
     "dist/**",
     "contracts/**",
