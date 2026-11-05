@@ -81,7 +81,7 @@ During active discussion and planning:
 ## Repository Layout
 
 - `backend/`: Go application, migrations, SQL queries, and backend tests. The main Go module is at the repository root.
-- `src/main.tsx`: React SPA entry point; `src/App.tsx`: React Router route definitions.
+- `frontend/main.tsx`: React SPA entry point; `frontend/app/App.tsx`: React Router route definitions.
 - `frontend/`: pages, components, hooks, API client, and Bun tests. The `@/` alias resolves here; `frontend/app/` filenames do not define routes automatically.
 - `contracts/`: core OpenAPI and observer AsyncAPI specifications.
 - `deploy/`: local and production configuration, Compose services, and environment examples.
