@@ -4,7 +4,7 @@ import hooks from "eslint-plugin-react-hooks";
 import imports from "eslint-plugin-import";
 
 const eslintConfig = [
-  {ignores: ["**/node_modules/**", "dist/**", "frontend/contracts/**", "**/.next/**"]},
+  {ignores: ["**/node_modules/**", "dist/**", "frontend/contracts/**"]},
   ...tseslint.configs.recommended,
   {
     files: ["**/*.ts", "**/*.tsx"],
@@ -14,10 +14,8 @@ const eslintConfig = [
   },
   {
     ignores: [
-      ".next/**",
       "node_modules/**",
       "dist/**",
-      "next-env.d.ts",
       "contracts/**",
     ],
   },
