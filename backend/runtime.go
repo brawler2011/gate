@@ -350,7 +350,7 @@ func runApp(envFile string) error {
 
 	apiHandler := middleware.AuthMiddleware(authUC)(
 		middleware.UsersMiddleware(usersRepo)(
-			middleware.ResponseWriterMiddleware(apiServer),
+			middleware.SessionCookieMiddleware(cfg.Env != "local")(apiServer),
 		),
 	)
 

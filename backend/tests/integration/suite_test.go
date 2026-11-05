@@ -282,7 +282,7 @@ func (s *IntegrationTestSuite) initApp() {
 		middleware.AuthMiddleware(authUC)(
 			middleware.UsersMiddleware(s.usersRepo)(
 				s.testMiddleware(
-					middleware.ResponseWriterMiddleware(server),
+					middleware.SessionCookieMiddleware(false)(server),
 				),
 			),
 		),
