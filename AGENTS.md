@@ -8,6 +8,7 @@
 
 ### 2. Scope & Surgical Restraint
 - Touch only what the task requires. Zero unrelated edits, no drive-by refactoring, and no adjacent formatting changes.
+- Surgical restraint applies equally to test code: author new tests strictly for newly introduced logic, bug fixes, or explicit issue test requirements. Never build speculative test harnesses, mocks, or synthetic test suites for untouched pre-existing features.
 - Do not create Markdown files or edit `README.md` unless explicitly requested.
 - Clean up only your own orphans; leave pre-existing dead code untouched. Never create symlinks.
 
@@ -19,6 +20,8 @@
 
 ### 4. Goal-Driven Verification
 - Ground tasks in verifiable success criteria (tests, commands). Loop until verified.
+- Distinguish change verification from invariant preservation: acceptance criteria requiring untouched features to remain operational are verified by running existing regression suites (`task test`, `task typecheck:fe`, `task lint:fe`), never by authoring new test suites for untouched code paths.
+- Escalate test-environment impedance: if a test fails due to test-runner or mock limitations (e.g., headless DOM event quirks) rather than a code defect, verify whether the test itself violates surgical scope before attempting test-harness rewrites.
 
 ---
 
@@ -60,7 +63,7 @@ When working with the backend codebase, adhere strictly to the following rules:
 
 - Use `task` instead of `go-task`. `task -a` lists available tasks.
 - Install JavaScript dependencies with `bun install --frozen-lockfile`.
-- Development: `task dev` runs the Go backend with Air and the Vite frontend; `task dev:be` and `task dev:fe` run them separately. Start required services separately using `deploy/local/docker-compose.yml`.
+- Development: `task dev` runs the Go backend with Air and the Vite frontend; `task dev:be` and `task dev:fe` run them separately. Start required services separately using `task docker:up`.
 - Database migrations: `task migrate:be` uses `deploy/local/.env`.
 - Checks: `task test:be`, `task lint:be`, `task typecheck:fe`, `task lint:fe`, `task knip:fe`, and `bun run test`. `task test` runs backend and frontend tests.
 - Full backend test suite: `task test:be:integration` includes integration tests and requires Docker for Testcontainers.
@@ -129,8 +132,8 @@ When working with the backend codebase, adhere strictly to the following rules:
      1. Acceptance criteria integrity: verify against the original issue; reject dropped/inverted requirements and confirmation-bias tests.
      2. Architecture & SRP: reject lazy overloading (cramming secondary concerns or control flags into existing helpers to save lines).
      3. `AGENTS.md` compliance: `slog` only, no env fallback values, React/Vite SPA architecture, no symlinks.
-     4. Surgical scope: zero unrelated edits, no drive-by refactoring or formatting changes, no leftover dead code.
-     5. Test coverage and edge cases.
+     4. Surgical scope: zero unrelated edits, no drive-by refactoring or formatting changes, no leftover dead code, and no test scope creep on untouched invariants.
+     5. Test coverage and edge cases: verify meaningful test coverage for newly introduced logic; reject speculative test suites for unmodified invariants.
    - **Independent Verification**: Run the checks needed to verify the reviewed revision. Do not treat author claims as verification.
    - **Verdict Format**: With no findings, output `APPROVE`. Otherwise, output `REQUEST_CHANGES` with concrete problems and actionable `file:line` pointers. Include material verification limitations when present. Post with `gh pr review --comment --body-file <path>`; `APPROVE` in a comment is an agent verdict, not a GitHub approval event.
    - Any head or base change invalidates prior review and check evidence; obtain a new diff, independent review and CI results.
