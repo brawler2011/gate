@@ -8,7 +8,9 @@ import (
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/google/uuid"
 )
 
@@ -115,4 +117,29 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 		s.Require().NotNil(resp)
 		s.GreaterOrEqual(len(resp.Submissions), 1)
 	})
+}
+
+func (s *IntegrationTestSuite) TestUnblockProblemQueuesOneGeneration() {
+	sub, contestID, problemID, userID := s.newJobSubmission()
+	actor, err := s.usersRepo.GetUserById(s.ctx, userID)
+	s.Require().NoError(err)
+	ctx := accessmodel.WithUser(s.ctx, actor)
+	uc := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), nil)
+	s.Require().NoError(uc.BlockProblemForUser(ctx, contestID, userID, problemID, nil))
+	repo := pgstore.NewSubmissionsRepo(s.dbPool)
+	before, err := repo.GetSubmission(s.ctx, sub)
+	s.Require().NoError(err)
+	contest, err := s.contestsRepo.GetContest(s.ctx, contestID)
+	s.Require().NoError(err)
+	s.Require().NoError(s.client.UnblockProblemForUser(withTestUser(s.ctx, userID), corev1.UnblockProblemForUserParams{
+		OrgLogin: contest.OrganizationLogin, ContestLogin: contest.Login, UserID: userID, ProblemID: problemID, RejudgeSubmissions: corev1.NewOptBool(true),
+	}))
+	after, err := repo.GetSubmission(s.ctx, sub)
+	s.Require().NoError(err)
+	s.Equal(before.Generation+1, after.Generation)
+	var jobs, events int
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, `SELECT count(*) FROM judge_jobs WHERE submission_id=$1`, sub).Scan(&jobs))
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, `SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type='submission.created'`, sub).Scan(&events))
+	s.Equal(1, jobs)
+	s.Equal(1, events)
 }
