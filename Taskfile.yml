@@ -7,6 +7,7 @@ vars:
     frontend/contracts
     backend/internal/postgres/sqlc
     backend/tests/mocks
+  DOCKER_COMPOSE: docker compose --env-file deploy/local/.env -f deploy/local/docker-compose.yml
 
 tasks:
   default:
@@ -186,6 +187,31 @@ tasks:
     desc: Apply database migrations
     cmds:
       - go run ./backend -env=deploy/local/.env -migrate
+
+  docker:up:
+    desc: Start local Docker containers in background
+    cmds:
+      - "{{.DOCKER_COMPOSE}} up -d {{.CLI_ARGS}}"
+
+  docker:down:
+    desc: Stop local Docker containers
+    cmds:
+      - "{{.DOCKER_COMPOSE}} down {{.CLI_ARGS}}"
+
+  docker:restart:
+    desc: Restart local Docker containers
+    cmds:
+      - "{{.DOCKER_COMPOSE}} restart {{.CLI_ARGS}}"
+
+  docker:status:
+    desc: Show status of local Docker containers
+    cmds:
+      - "{{.DOCKER_COMPOSE}} ps {{.CLI_ARGS}}"
+
+  docker:logs:
+    desc: View logs from local Docker containers
+    cmds:
+      - "{{.DOCKER_COMPOSE}} logs {{.CLI_ARGS}}"
 
   install:hooks:
     desc: Install Lefthook and setup git pre-commit hooks

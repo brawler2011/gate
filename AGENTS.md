@@ -63,7 +63,7 @@ When working with the backend codebase, adhere strictly to the following rules:
 
 - Use `task` instead of `go-task`. `task -a` lists available tasks.
 - Install JavaScript dependencies with `bun install --frozen-lockfile`.
-- Development: `task dev` runs the Go backend with Air and the Vite frontend; `task dev:be` and `task dev:fe` run them separately. Start required services separately using `deploy/local/docker-compose.yml`.
+- Development: `task dev` runs the Go backend with Air and the Vite frontend; `task dev:be` and `task dev:fe` run them separately. Start required services separately using `task docker:up`.
 - Database migrations: `task migrate:be` uses `deploy/local/.env`.
 - Checks: `task test:be`, `task lint:be`, `task typecheck:fe`, `task lint:fe`, `task knip:fe`, and `bun run test`. `task test` runs backend and frontend tests.
 - Full backend test suite: `task test:be:integration` includes integration tests and requires Docker for Testcontainers.
