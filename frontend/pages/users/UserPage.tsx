@@ -2,7 +2,7 @@ import {Suspense} from "react";
 import {useLoaderData, redirect} from "react-router-dom";
 
 import {DefaultLayout} from "@/components/shared";
-import {ClaimTemporaryAccountSection, ProfileContainer, ProfileHeader, UserContestsSection, UserContestsSkeleton} from "@/components/users";
+import {ProfileContainer, ProfileHeader, UserContestsSection, UserContestsSkeleton} from "@/components/users";
 import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
 
@@ -52,7 +52,6 @@ const Page = (): ReactNode => {
           claimedAt={user.claimed_at}
           isOwnProfile={currentUser?.id === user.id}
         />
-        {currentUser?.id === user.id && <ClaimTemporaryAccountSection />}
         <Suspense fallback={<UserContestsSkeleton />}>
           <UserContestsSection username={cleanUsername} page={userPage} />
         </Suspense>
