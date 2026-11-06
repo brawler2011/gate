@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"time"
 
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
@@ -37,3 +38,13 @@ func (i *Inbox) Within(ctx context.Context, consumer string, eventID uuid.UUID, 
 	}
 	return nil
 }
+
+func (i *Inbox) PruneReceipts(ctx context.Context, cutoff time.Time) (int64, error) {
+	q := sqlc.New(i.pool)
+	rows, err := q.PruneInboxReceipts(ctx, cutoff)
+	if err != nil {
+		return 0, HandlePgErr(err)
+	}
+	return rows, nil
+}
+

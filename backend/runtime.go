@@ -24,6 +24,7 @@ import (
 	identity "github.com/brawler2011/gate/backend/internal/identity"
 	judging "github.com/brawler2011/gate/backend/internal/judging"
 	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
+	inbox "github.com/brawler2011/gate/backend/internal/messaging/inbox"
 	outbox "github.com/brawler2011/gate/backend/internal/messaging/outbox"
 	pubsub "github.com/brawler2011/gate/backend/internal/messaging/pubsub"
 	notifications "github.com/brawler2011/gate/backend/internal/notifications"
@@ -236,6 +237,8 @@ func runApp(envFile string) error {
 	outboxDispatcher.Register(eventdata.OutboxEventContestClarificationCreated, contestEventsPublisher)
 	outboxDispatcher.Register(eventdata.OutboxEventContestClarificationAnswered, contestEventsPublisher)
 	outboxWorker := outbox.NewOutboxWorker(outboxDispatcher, outboxRepo)
+	inboxRepo := pgstore.NewInbox(pool)
+	inboxPruner := inbox.NewPruner(inboxRepo, cfg.GetInboxRetention(), inbox.DefaultPruneInterval)
 
 	judgeUC := judging.NewJudgeUseCase(
 		pgstore.NewJudgeJobs(pool), pgstore.NewJudgeTransactions(pool),
@@ -432,6 +435,16 @@ func runApp(envFile string) error {
 						}
 					}
 				}
+			},
+			func(context.Context) error {
+				return nil
+			},
+		),
+		newService(
+			"inbox receipts pruner",
+			func(ctx context.Context) error {
+				inboxPruner.Start(ctx)
+				return nil
 			},
 			func(context.Context) error {
 				return nil

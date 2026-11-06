@@ -1,6 +1,9 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type Config struct {
 	Env string `env:"ENV" env-default:"prod"`
@@ -39,6 +42,9 @@ type Config struct {
 	S3AccessKey string `env:"S3_ACCESS_KEY"`
 	S3SecretKey string `env:"S3_SECRET_KEY"`
 
+	// Message delivery configuration
+	InboxRetentionDays int `env:"INBOX_RETENTION_DAYS" env-default:"7"`
+
 	// Judging configuration
 	JudgeWorkerCount int    `env:"JUDGE_WORKER_COUNT" env-default:"4"`
 	JudgeTempDir     string `env:"JUDGE_TEMP_DIR"`                     // defaults to os.TempDir()/judge at runtime
@@ -76,3 +82,12 @@ func (c *Config) GetNatsURL() string {
 	}
 	return fmt.Sprintf("nats://%s:%s", c.NatsHost, c.NatsPort)
 }
+
+func (c *Config) GetInboxRetention() time.Duration {
+	days := c.InboxRetentionDays
+	if days <= 0 {
+		days = 7
+	}
+	return time.Duration(days) * 24 * time.Hour
+}
+

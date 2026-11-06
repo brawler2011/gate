@@ -203,6 +203,7 @@ type Querier interface {
 	MarkAsFailed(ctx context.Context, arg MarkAsFailedParams) (int64, error)
 	MarkNotificationAsRead(ctx context.Context, arg MarkNotificationAsReadParams) error
 	PickEvents(ctx context.Context, arg PickEventsParams) ([]OutboxEvent, error)
+	PruneInboxReceipts(ctx context.Context, cutoff time.Time) (int64, error)
 	RecordInboxReceipt(ctx context.Context, arg RecordInboxReceiptParams) (uuid.UUID, error)
 	ReleaseJudgeJob(ctx context.Context, arg ReleaseJudgeJobParams) (int64, error)
 	RemoveContestMember(ctx context.Context, arg RemoveContestMemberParams) error
