@@ -92,6 +92,12 @@ tasks:
     cmds:
       - go test -v -p 1 -tags=integration ./...
 
+  bench:be:
+    desc: Run PostgreSQL and scoreboard performance benchmarks
+    dotenv: [deploy/local/.env]
+    cmds:
+      - go test -p 1 -tags=benchmark -run='^$' -bench=Benchmark -benchmem -benchtime=100x -cpu=2 ./backend/internal/postgres ./backend/internal/contests {{.CLI_ARGS}}
+
   lint:be:
     desc: Run golangci-lint
     cmds:
