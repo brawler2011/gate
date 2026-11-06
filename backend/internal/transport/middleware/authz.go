@@ -416,12 +416,6 @@ func AuthzMiddleware(permissionsUC PermissionsUC, submissionsUC SubmissionsUC, o
 	}
 }
 
-// AuthzStrictMiddleware and NewAuthzMiddleware are aliases for backward-compatibility
-var (
-	AuthzStrictMiddleware = AuthzMiddleware
-	NewAuthzMiddleware    = AuthzMiddleware
-)
-
 func checkListUserContestsAccess(ctx context.Context, evalCtx *EvalContext) error {
 	if evalCtx.User.IsAdmin() {
 		return nil

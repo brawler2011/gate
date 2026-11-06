@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
@@ -65,11 +66,8 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	// FIXME: req не может быть nil, остальное надо сделать required в openapi
 	if req == nil || !req.Title.IsSet() || !req.Description.IsSet() || !req.Text.IsSet() || !req.PreviewImage.IsSet() {
-		return &corev1.CreatePostBadRequest{
-			Error: corev1.NewOptString("title, description, text, and preview_image are required"),
-		}, nil
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "title, description, text, and preview_image are required")
 	}
 
 	file := req.PreviewImage.Value // FIXME: эта хуйня не должна быть optional
@@ -91,16 +89,7 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdParams) (corev1.GetPostByIdRes, error) {
 	post, err := s.blogs.GetPostByID(ctx, params.ID)
 	if err != nil {
-
-		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
-		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-			return nil, err
-		}
-
-		// FIXME: в проекте не приянто создавать касатомные ошибки внутри схемы апи
-		return &corev1.GetPostByIdNotFound{
-			Error: corev1.NewOptString("post not found"),
-		}, nil
+		return nil, wrapBlogError(err, "post not found")
 	}
 
 	return &corev1.PostModel{
@@ -117,12 +106,10 @@ func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdP
 }
 
 func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostByIdReq, params corev1.PatchPostByIdParams) (corev1.PatchPostByIdRes, error) {
-	// FIXME: антипаттерн, эти поля нужно объединить в структуру или тп
 	var titlePtr, descriptionPtr, textPtr *string
 	var imageReader io.Reader
 	var filename string
 
-	// FIXME: req должен быть required, поля мапяться в структуру
 	if req.IsSet() {
 		r := req.Value
 		if r.Title.IsSet() {
@@ -143,47 +130,24 @@ func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostB
 
 	err := s.blogs.UpdatePost(ctx, params.ID, titlePtr, textPtr, descriptionPtr, imageReader, filename)
 	if err != nil {
-		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
-		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-			return nil, err
-		}
-		// FIXME: в проекте так не принято
-		return &corev1.PatchPostByIdNotFound{
-			Error: corev1.NewOptString("post not found"),
-		}, nil
+		return nil, wrapBlogError(err, "post not found")
 	}
-	// FIXME: в проекте так не принято
 	return &corev1.PatchPostByIdOK{}, nil
 }
 
 func (s *CoreServer) DeletePostById(ctx context.Context, params corev1.DeletePostByIdParams) (corev1.DeletePostByIdRes, error) {
 	err := s.blogs.DeletePost(ctx, params.ID)
 	if err != nil {
-		// FIXME: какой смысл здесь это хендлить, если это должно хендлиться в middleware?
-		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-			return nil, err
-		}
-		// FIXME: в проекте так не принято
-		return &corev1.DeletePostByIdNotFound{
-			Error: corev1.NewOptString("post not found"),
-		}, nil
+		return nil, wrapBlogError(err, "post not found")
 	}
 
-	// FIXME: в проекте так не принято
 	return &corev1.DeletePostByIdOK{}, nil
 }
 
 func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImageParams) (corev1.GetPostImageRes, error) {
 	post, err := s.blogs.GetPostByID(ctx, params.ID)
 	if err != nil {
-		// FIXME:
-		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-			return nil, err
-		}
-		// FIXME:
-		return &corev1.GetPostImageNotFound{
-			Error: corev1.NewOptString("post not found"),
-		}, nil
+		return nil, wrapBlogError(err, "post not found")
 	}
 
 	var ifNoneMatch *string
@@ -199,21 +163,29 @@ func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImag
 			ETag: params.IfNoneMatch,
 		}, nil
 	} else if imageErr != nil {
-		// FIXME:
-		if errors.Is(imageErr, context.DeadlineExceeded) || errors.Is(imageErr, context.Canceled) {
-			return nil, imageErr
-		}
-		// FIXME:
-		return &corev1.GetPostImageNotFound{
-			Error: corev1.NewOptString("image not found"),
-		}, nil
+		return nil, wrapBlogError(imageErr, "image not found")
 	}
 
-	// FIXME:
 	return &corev1.GetPostImageOKHeaders{
 		Response: corev1.GetPostImageOK{
 			Data: postImage.ReadCloser(),
 		},
 		ETag: corev1.NewOptString(postImage.Etag()),
 	}, nil
+}
+
+func wrapBlogError(err error, fallbackMsg string) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, pkg.NoPermission) || strings.Contains(err.Error(), "access denied") {
+		return pkg.Wrap(pkg.NoPermission, err, fallbackMsg)
+	}
+	if errors.Is(err, pkg.ErrNotFound) {
+		return pkg.Wrap(pkg.ErrNotFound, err, fallbackMsg)
+	}
+	if errors.Is(err, pkg.ErrBadInput) {
+		return pkg.Wrap(pkg.ErrBadInput, err, fallbackMsg)
+	}
+	return pkg.Wrap(pkg.ErrInternal, err, fallbackMsg)
 }

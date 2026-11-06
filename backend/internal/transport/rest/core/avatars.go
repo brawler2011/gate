@@ -7,7 +7,6 @@ import (
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
-	"github.com/google/uuid"
 )
 
 func (h *CoreServer) UploadAvatar(ctx context.Context, req *corev1.UploadAvatarReq, params corev1.UploadAvatarParams) (*corev1.UploadAvatarOK, error) {
@@ -20,19 +19,13 @@ func (h *CoreServer) UploadAvatar(ctx context.Context, req *corev1.UploadAvatarR
 		contentType = "application/octet-stream"
 	}
 
-	imgIDStr, err := h.identity.UploadAvatar(ctx, params.Username, file.File, filename, contentType)
+	imgID, err := h.identity.UploadAvatar(ctx, params.Username, file.File, filename, contentType)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to upload avatar")
 	}
 
-	// FIXME: бля так а нахуя сначала uuid->string, а потом обратно??
-	parsedUUID, err := uuid.Parse(imgIDStr)
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to parse uploaded avatar uuid")
-	}
-
 	return &corev1.UploadAvatarOK{
-		ImgId: parsedUUID,
+		ImgId: imgID,
 	}, nil
 }
 
