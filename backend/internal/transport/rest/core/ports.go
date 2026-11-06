@@ -203,7 +203,7 @@ type ContestDetails interface {
 }
 
 type AvatarsUC interface {
-	UploadAvatar(ctx context.Context, username string, fileReader io.Reader, filename, contentType string) (string, error)
+	UploadAvatar(ctx context.Context, username string, fileReader io.Reader, filename, contentType string) (uuid.UUID, error)
 	DeleteAvatar(ctx context.Context, username string) error
 	GetAvatar(ctx context.Context, username string, ifNoneMatch *string) (identity.AvatarImage, error)
 }

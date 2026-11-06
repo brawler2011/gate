@@ -56,19 +56,18 @@ func (uc *AvatarsUseCase) UploadAvatar(
 	fileReader io.Reader,
 	filename string,
 	contentType string,
-) (string, error) {
-	username = strings.TrimPrefix(username, "@") // FIXME: зачем?? Как это вообще возможно?
+) (uuid.UUID, error) {
 	user, err := uc.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return "", fmt.Errorf("failed to get user: %w", err)
+		return uuid.Nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
 	if err := accessmodel.RequireSelfOrAdmin(ctx, user.Id); err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
 
 	// Validate file extension
-	ext := strings.ToLower(filepath.Ext(filename)) // FIXME: че? почему мы по filename определяем контент? что насчёт contentType???
+	ext := strings.ToLower(filepath.Ext(filename))
 	allowedExts := map[string]bool{
 		".jpg":  true,
 		".jpeg": true,
@@ -77,17 +76,17 @@ func (uc *AvatarsUseCase) UploadAvatar(
 		".webp": true,
 	}
 	if !allowedExts[ext] {
-		return "", pkg.Wrap(pkg.ErrBadInput, nil, "invalid avatar file extension")
+		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid avatar file extension")
 	}
 
 	// Generate unique image ID
-	imgID := uuid.New().String()
-	key := imgID // FIXME: зачем просто так переменную копировать?
+	imgID := uuid.New()
+	key := imgID.String()
 
 	// Upload to storage
 	err = uc.storage.UploadFile(ctx, uc.avatarBucket, key, fileReader, contentType)
 	if err != nil {
-		return "", fmt.Errorf("failed to upload avatar: %w", err)
+		return uuid.Nil, fmt.Errorf("failed to upload avatar: %w", err)
 	}
 
 	var oldAvatar *string
@@ -97,13 +96,13 @@ func (uc *AvatarsUseCase) UploadAvatar(
 			return err
 		}
 		oldAvatar = current.AvatarUrl
-		return store.UpdateUser(ctx, identitymodel.UpdateUserParams{Id: user.Id, AvatarUrl: &imgID})
+		return store.UpdateUser(ctx, identitymodel.UpdateUserParams{Id: user.Id, AvatarUrl: &key})
 	})
 
 	if err != nil {
 		// Try to clean up uploaded file
 		uc.deleteAvatarFile(ctx, key)
-		return "", fmt.Errorf("failed to update user avatar: %w", err)
+		return uuid.Nil, fmt.Errorf("failed to update user avatar: %w", err)
 	}
 
 	if oldAvatar != nil && *oldAvatar != "" {
@@ -114,7 +113,6 @@ func (uc *AvatarsUseCase) UploadAvatar(
 
 // DeleteAvatar deletes a user's avatar from storage and updates the user record
 func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, username string) error {
-	username = strings.TrimPrefix(username, "@") // FIXME: блядь что??
 	user, err := uc.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return fmt.Errorf("failed to get user: %w", err)
@@ -147,7 +145,6 @@ func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, username string) err
 
 // GetAvatar retrieves a user's avatar from storage
 func (uc *AvatarsUseCase) GetAvatar(ctx context.Context, username string, ifNoneMatch *string) (AvatarImage, error) {
-	username = strings.TrimPrefix(username, "@") // FIXME: бред!
 	user, err := uc.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return AvatarImage{}, fmt.Errorf("failed to get user: %w", err)
