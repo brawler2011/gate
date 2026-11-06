@@ -7,8 +7,10 @@ import (
 	"errors"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
+	inbox "github.com/brawler2011/gate/backend/internal/messaging/inbox"
 	pubsub "github.com/brawler2011/gate/backend/internal/messaging/pubsub"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -196,3 +198,68 @@ func (s *IntegrationTestSuite) TestInboxConcurrentRedeliveriesApplyOncePerConsum
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_id=$1", output.AggregateID).Scan(&count))
 	s.Equal(2, count)
 }
+
+func (s *IntegrationTestSuite) TestInboxRetentionPrunesExpiredReceiptsAndPreservesRecent() {
+	s.resetDeliveryTables()
+	inboxRepo := pgstore.NewInbox(s.dbPool)
+
+	expiredID1 := uuid.New()
+	expiredID2 := uuid.New()
+	recentID1 := uuid.New()
+	recentID2 := uuid.New()
+
+	// Insert expired receipts (older than 7 days)
+	_, err := s.dbPool.Exec(s.ctx, `
+		INSERT INTO inbox_receipts (consumer_name, event_id, processed_at)
+		VALUES
+			('consumer-a', $1, now() - interval '14 days'),
+			('consumer-b', $2, now() - interval '8 days')
+	`, expiredID1, expiredID2)
+	s.Require().NoError(err)
+
+	// Insert recent receipts (within 7 days)
+	_, err = s.dbPool.Exec(s.ctx, `
+		INSERT INTO inbox_receipts (consumer_name, event_id, processed_at)
+		VALUES
+			('consumer-a', $1, now() - interval '1 day'),
+			('consumer-b', $2, now())
+	`, recentID1, recentID2)
+	s.Require().NoError(err)
+
+	var totalBefore int
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM inbox_receipts").Scan(&totalBefore))
+	s.Equal(4, totalBefore)
+
+	// Prune receipts older than 7 days
+	retentionWindow := 7 * 24 * time.Hour
+	pruner := inbox.NewPruner(inboxRepo, retentionWindow, time.Hour)
+	deleted, err := pruner.Prune(s.ctx)
+	s.Require().NoError(err)
+	s.Equal(int64(2), deleted)
+
+	var totalAfter int
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM inbox_receipts").Scan(&totalAfter))
+	s.Equal(2, totalAfter)
+
+	// Check expired receipts were deleted
+	var countExpired int
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM inbox_receipts WHERE event_id IN ($1, $2)", expiredID1, expiredID2).Scan(&countExpired))
+	s.Zero(countExpired)
+
+	// Check recent receipts still exist
+	var countRecent int
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM inbox_receipts WHERE event_id IN ($1, $2)", recentID1, recentID2).Scan(&countRecent))
+	s.Equal(2, countRecent)
+
+	// Idempotency: second prune deletes 0 rows
+	deletedSecond, err := pruner.Prune(s.ctx)
+	s.Require().NoError(err)
+	s.Equal(int64(0), deletedSecond)
+
+	// Deduplication continues to work for recent receipts
+	calls := 0
+	effect := func(writer eventdata.Writer) error { calls++; return nil }
+	s.Require().NoError(inboxRepo.Within(s.ctx, "consumer-a", recentID1, effect))
+	s.Zero(calls, "recent receipt must prevent duplicate execution")
+}
+
