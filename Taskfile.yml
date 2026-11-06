@@ -91,6 +91,11 @@ tasks:
     cmds:
       - go test -v -p 1 -tags=integration ./...
 
+  bench:be:
+    desc: Run backend database performance benchmarks
+    cmds:
+      - go test -v -tags=integration -bench=. -benchmem -run=^$ ./backend/tests/benchmarks/...
+
   lint:be:
     desc: Run golangci-lint
     cmds:
