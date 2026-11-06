@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
@@ -15,7 +14,7 @@ import (
 
 type EvalContext struct {
 	User        accessmodel.User
-	Request     interface{}
+	Request     ogenMiddleware.Request
 	OperationID string
 	Deps        strictAuthzDependencies
 }
@@ -52,7 +51,7 @@ func RequireAdmin(ctx context.Context, evalCtx *EvalContext) error {
 }
 
 // Parameterized Evaluator Factories (Closure Factories)
-func RequireSelfOrAdmin(idFieldNames ...string) AccessEvaluator {
+func RequireSelfOrAdmin() AccessEvaluator {
 	return func(ctx context.Context, evalCtx *EvalContext) error {
 		if evalCtx.User.IsGuest() {
 			return pkg.ErrUnauthenticated
@@ -60,18 +59,12 @@ func RequireSelfOrAdmin(idFieldNames ...string) AccessEvaluator {
 		if evalCtx.User.IsAdmin() {
 			return nil
 		}
-		if targetUsername, err := extractStringFromRequest(evalCtx.Request, idFieldNames...); err == nil && targetUsername != "" {
-			cleanTarget := strings.ToLower(strings.TrimPrefix(targetUsername, "@"))
-			if cleanTarget == strings.ToLower(evalCtx.User.Username) {
-				return nil
-			}
-			return pkg.Wrap(pkg.NoPermission, nil, "can only modify your own resource")
-		}
-		targetUserID, err := extractUUIDFromRequest(evalCtx.Request, idFieldNames...)
+		targetUsername, err := pathString(evalCtx.Request, "username")
 		if err != nil {
 			return pkg.Wrap(pkg.ErrBadInput, err, "user identifier is required for authorization")
 		}
-		if targetUserID != evalCtx.User.Id {
+		cleanTarget := strings.ToLower(strings.TrimPrefix(targetUsername, "@"))
+		if cleanTarget != strings.ToLower(evalCtx.User.Username) {
 			return pkg.Wrap(pkg.NoPermission, nil, "can only modify your own resource")
 		}
 		return nil
@@ -83,24 +76,18 @@ func RequireOrgPermission(action accessmodel.OrgAction) AccessEvaluator {
 		if evalCtx.User.IsGuest() {
 			return pkg.ErrUnauthenticated
 		}
-		var orgID uuid.UUID
-		if targetLogin, err := extractStringFromRequest(evalCtx.Request, "Login", "OrgLogin"); err == nil && targetLogin != "" {
-			if evalCtx.Deps.organizationsRepo == nil {
-				return pkg.Wrap(pkg.ErrInternal, nil, "organizations repository dependency is missing")
-			}
-			org, err := evalCtx.Deps.organizationsRepo.GetOrganizationByLogin(ctx, targetLogin)
-			if err != nil {
-				return pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
-			}
-			orgID = org.ID
-		} else {
-			var err error
-			orgID, err = extractUUIDFromRequest(evalCtx.Request, "OrganizationId", "OrgId", "Id")
-			if err != nil {
-				return pkg.Wrap(pkg.ErrBadInput, err, "organization identifier is required for authorization")
-			}
+		targetLogin, err := pathString(evalCtx.Request, "login", "org_login")
+		if err != nil {
+			return pkg.Wrap(pkg.ErrBadInput, err, "organization login is required for authorization")
 		}
-		allowed, err := evalCtx.Deps.permissionsUC.HasOrganizationPermission(ctx, orgID, evalCtx.User.Id, action)
+		if evalCtx.Deps.organizationsRepo == nil {
+			return pkg.Wrap(pkg.ErrInternal, nil, "organizations repository dependency is missing")
+		}
+		org, err := evalCtx.Deps.organizationsRepo.GetOrganizationByLogin(ctx, targetLogin)
+		if err != nil {
+			return pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
+		}
+		allowed, err := evalCtx.Deps.permissionsUC.HasOrganizationPermission(ctx, org.ID, evalCtx.User.Id, action)
 		if err != nil {
 			return err
 		}
@@ -116,29 +103,18 @@ func RequireContestPermission(action accessmodel.ContestAction) AccessEvaluator 
 		if evalCtx.User.IsGuest() && action != accessmodel.ActionGetContest && action != accessmodel.ActionGetContestProblem {
 			return pkg.ErrUnauthenticated
 		}
-		var contestID uuid.UUID
-		if contestLogin, err := extractStringFromRequest(evalCtx.Request, "ContestLogin"); err == nil && contestLogin != "" {
-			orgLogin, err := extractStringFromRequest(evalCtx.Request, "OrgLogin", "OrganizationLogin")
-			if err != nil || orgLogin == "" {
-				return pkg.Wrap(pkg.ErrBadInput, err, "organization login is required for contest authorization")
-			}
-			if evalCtx.Deps.contestsRepo == nil {
-				return pkg.Wrap(pkg.ErrInternal, nil, "contests repository dependency is missing")
-			}
-			contest, err := evalCtx.Deps.contestsRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
-			if err != nil {
-				return pkg.Wrap(pkg.ErrNotFound, err, "contest not found")
-			}
-			contestID = contest.ID
-		} else {
-			var err error
-			contestID, err = extractUUIDFromRequest(evalCtx.Request, "ContestId", "Id")
-			if err != nil {
-				return pkg.Wrap(pkg.ErrBadInput, err, "contest id is required for authorization")
-			}
+		orgLogin, contestLogin, err := contestLogins(evalCtx.Request)
+		if err != nil {
+			return pkg.Wrap(pkg.ErrBadInput, err, "organization and contest logins are required for authorization")
 		}
-
-		allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contestID, evalCtx.User.Id, action)
+		if evalCtx.Deps.contestsRepo == nil {
+			return pkg.Wrap(pkg.ErrInternal, nil, "contests repository dependency is missing")
+		}
+		contest, err := evalCtx.Deps.contestsRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+		if err != nil {
+			return pkg.Wrap(pkg.ErrNotFound, err, "contest not found")
+		}
+		allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contest.ID, evalCtx.User.Id, action)
 		if err != nil {
 			return err
 		}
@@ -157,7 +133,7 @@ func RequireProblemPermission(action accessmodel.ProblemAction) AccessEvaluator 
 		if evalCtx.User.IsGuest() {
 			return pkg.ErrUnauthenticated
 		}
-		problemID, err := extractUUIDFromRequest(evalCtx.Request, "ProblemId", "Id")
+		problemID, err := pathUUID(evalCtx.Request, "problemId", "id")
 		if err != nil {
 			return pkg.Wrap(pkg.ErrBadInput, err, "problem id is required for authorization")
 		}
@@ -248,9 +224,9 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"ListUserSubmissions":   {RequireAuth, checkListUserSubmissionsAccess},
 		"ListWorkshopContests":  {RequireAuth},
 		"GetSubmission":         {RequireAuth, checkGetSubmissionAccess},
-		"UploadAvatar":          {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
-		"DeleteAvatar":          {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
-		"UpdateUser":            {RequireAuth, RequireSelfOrAdmin("Username", "Id")},
+		"UploadAvatar":          {RequireAuth, RequireSelfOrAdmin()},
+		"DeleteAvatar":          {RequireAuth, RequireSelfOrAdmin()},
+		"UpdateUser":            {RequireAuth, RequireSelfOrAdmin()},
 		"ClaimTemporaryUser":    {RequireAuth},
 		"ListMyClaimedAccounts": {RequireAuth},
 
@@ -420,18 +396,12 @@ func checkListUserContestsAccess(ctx context.Context, evalCtx *EvalContext) erro
 	if evalCtx.User.IsAdmin() {
 		return nil
 	}
-	if targetUsername, err := extractStringFromRequest(evalCtx.Request, "Username", "username", "Id", "id"); err == nil && targetUsername != "" {
-		cleanTarget := strings.ToLower(strings.TrimPrefix(targetUsername, "@"))
-		if cleanTarget == strings.ToLower(evalCtx.User.Username) {
-			return nil
-		}
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view user contests")
-	}
-	targetUserID, err := extractUUIDFromRequest(evalCtx.Request, "Id", "id")
+	targetUsername, err := pathString(evalCtx.Request, "username")
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "user identifier is required for authorization")
 	}
-	if targetUserID != evalCtx.User.Id {
+	cleanTarget := strings.ToLower(strings.TrimPrefix(targetUsername, "@"))
+	if cleanTarget != strings.ToLower(evalCtx.User.Username) {
 		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view user contests")
 	}
 
@@ -439,7 +409,7 @@ func checkListUserContestsAccess(ctx context.Context, evalCtx *EvalContext) erro
 }
 
 func checkListUserSubmissionsAccess(ctx context.Context, evalCtx *EvalContext) error {
-	targetUsername, err := extractStringFromRequest(evalCtx.Request, "Username", "username")
+	targetUsername, err := pathString(evalCtx.Request, "username")
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "invalid submissions request")
 	}
@@ -452,7 +422,7 @@ func checkListUserSubmissionsAccess(ctx context.Context, evalCtx *EvalContext) e
 	}
 
 	if isSelf {
-		if contestID, err := extractUUIDFromRequest(evalCtx.Request, "ContestId", "contest_id"); err == nil && contestID != uuid.Nil {
+		if contestID, err := queryUUID(evalCtx.Request, "contestId"); err == nil && contestID != uuid.Nil {
 			allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(
 				ctx,
 				contestID,
@@ -472,29 +442,22 @@ func checkListUserSubmissionsAccess(ctx context.Context, evalCtx *EvalContext) e
 }
 
 func checkListContestMembersAccess(ctx context.Context, evalCtx *EvalContext) error {
-	var contestID uuid.UUID
-	if contestLogin, err := extractStringFromRequest(evalCtx.Request, "ContestLogin", "contest_login"); err == nil && contestLogin != "" {
-		orgLogin, err := extractStringFromRequest(evalCtx.Request, "OrgLogin", "OrganizationLogin", "org_login")
-		if err != nil || orgLogin == "" {
-			return pkg.Wrap(pkg.ErrBadInput, err, "organization login is required for contest authorization")
-		}
-		if evalCtx.Deps.contestsRepo == nil {
-			return pkg.Wrap(pkg.ErrInternal, nil, "contests repository dependency is missing")
-		}
-		contest, err := evalCtx.Deps.contestsRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
-		if err != nil {
-			return pkg.Wrap(pkg.ErrNotFound, err, "contest not found")
-		}
-		contestID = contest.ID
-	} else {
-		var err error
-		contestID, err = extractUUIDFromRequest(evalCtx.Request, "ContestId", "contest_id")
-		if err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, err, "contest id is required for authorization")
-		}
+	contestLogin, err := pathString(evalCtx.Request, "contest_login")
+	if err != nil {
+		return pkg.Wrap(pkg.ErrBadInput, err, "contest login is required for authorization")
 	}
-
-	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contestID, evalCtx.User.Id, accessmodel.ActionGetMonitor)
+	orgLogin, err := pathString(evalCtx.Request, "org_login")
+	if err != nil || orgLogin == "" {
+		return pkg.Wrap(pkg.ErrBadInput, err, "organization login is required for contest authorization")
+	}
+	if evalCtx.Deps.contestsRepo == nil {
+		return pkg.Wrap(pkg.ErrInternal, nil, "contests repository dependency is missing")
+	}
+	contest, err := evalCtx.Deps.contestsRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	if err != nil {
+		return pkg.Wrap(pkg.ErrNotFound, err, "contest not found")
+	}
+	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contest.ID, evalCtx.User.Id, accessmodel.ActionGetMonitor)
 	if err != nil {
 		return err
 	}
@@ -502,7 +465,7 @@ func checkListContestMembersAccess(ctx context.Context, evalCtx *EvalContext) er
 		return nil
 	}
 
-	allowed, err = evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contestID, evalCtx.User.Id, accessmodel.ActionListOwnSubmissions)
+	allowed, err = evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contest.ID, evalCtx.User.Id, accessmodel.ActionListOwnSubmissions)
 	if err != nil {
 		return err
 	}
@@ -514,11 +477,11 @@ func checkListContestMembersAccess(ctx context.Context, evalCtx *EvalContext) er
 }
 
 func checkListContestSubmissionsAccess(ctx context.Context, evalCtx *EvalContext) error {
-	orgLogin, err := extractStringFromRequest(evalCtx.Request, "OrgLogin", "org_login")
+	orgLogin, err := pathString(evalCtx.Request, "org_login")
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "organization login is required")
 	}
-	contestLogin, err := extractStringFromRequest(evalCtx.Request, "ContestLogin", "contest_login")
+	contestLogin, err := pathString(evalCtx.Request, "contest_login")
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "contest login is required")
 	}
@@ -534,7 +497,7 @@ func checkListContestSubmissionsAccess(ctx context.Context, evalCtx *EvalContext
 	action := accessmodel.ActionListUsersSubmissions
 	errMessage := "insufficient permission to list all contest submissions"
 
-	if targetUserID, err := extractUUIDFromRequest(evalCtx.Request, "UserId", "user_id"); err == nil && targetUserID != uuid.Nil {
+	if targetUserID, err := queryUUID(evalCtx.Request, "userId"); err == nil && targetUserID != uuid.Nil {
 		if targetUserID == evalCtx.User.Id {
 			action = accessmodel.ActionListOwnSubmissions
 			errMessage = "insufficient permission to view own submissions in this contest"
@@ -556,11 +519,11 @@ func checkListContestSubmissionsAccess(ctx context.Context, evalCtx *EvalContext
 }
 
 func checkListContestDraftsAccess(ctx context.Context, evalCtx *EvalContext) error {
-	orgLogin, err := extractStringFromRequest(evalCtx.Request, "OrgLogin", "org_login")
+	orgLogin, err := pathString(evalCtx.Request, "org_login")
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "organization login is required")
 	}
-	contestLogin, err := extractStringFromRequest(evalCtx.Request, "ContestLogin", "contest_login")
+	contestLogin, err := pathString(evalCtx.Request, "contest_login")
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "contest login is required")
 	}
@@ -589,7 +552,7 @@ func checkGetSubmissionAccess(ctx context.Context, evalCtx *EvalContext) error {
 		return pkg.Wrap(pkg.ErrInternal, nil, "submissions authorization dependency is not configured")
 	}
 
-	submissionID, err := extractUUIDFromRequest(evalCtx.Request, "SubmissionId", "submission_id", "id")
+	submissionID, err := pathUUID(evalCtx.Request, "submission_id")
 	if err != nil {
 		return pkg.Wrap(pkg.ErrBadInput, err, "submission id is required for authorization")
 	}
@@ -627,7 +590,7 @@ func checkGetProblemBlockStatusAccess(ctx context.Context, evalCtx *EvalContext)
 		return nil
 	}
 
-	targetUserID, err := extractUUIDFromRequest(evalCtx.Request, "UserId", "user_id")
+	targetUserID, err := pathUUID(evalCtx.Request, "user_id")
 	if err == nil && targetUserID == evalCtx.User.Id {
 		return nil
 	}
@@ -635,258 +598,50 @@ func checkGetProblemBlockStatusAccess(ctx context.Context, evalCtx *EvalContext)
 	return RequireContestPermission(accessmodel.ActionManageContest)(ctx, evalCtx)
 }
 
-func toUUID(val any) (uuid.UUID, error) {
-	if val == nil {
-		return uuid.Nil, fmt.Errorf("nil value")
+func pathString(req ogenMiddleware.Request, names ...string) (string, error) {
+	for _, name := range names {
+		value, _ := req.Params.Path(name)
+		if value, ok := value.(string); ok && value != "" {
+			return value, nil
+		}
 	}
-	switch v := val.(type) {
-	case uuid.UUID:
-		return v, nil
-	case *uuid.UUID:
-		if v == nil {
-			return uuid.Nil, fmt.Errorf("nil uuid pointer")
-		}
-		return *v, nil
-	case corev1.OptUUID:
-		if v.IsSet() {
-			return v.Value, nil
-		}
-		return uuid.Nil, fmt.Errorf("opt uuid not set")
-	case string:
-		if v == "" {
-			return uuid.Nil, fmt.Errorf("empty string")
-		}
-		return uuid.Parse(v)
-	case *string:
-		if v == nil || *v == "" {
-			return uuid.Nil, fmt.Errorf("empty string pointer")
-		}
-		return uuid.Parse(*v)
-	case corev1.OptString:
-		if v.IsSet() && v.Value != "" {
-			return uuid.Parse(v.Value)
-		}
-		return uuid.Nil, fmt.Errorf("opt string not set")
-	default:
-		rv := reflect.ValueOf(val)
-		if rv.Kind() == reflect.Pointer && !rv.IsNil() {
-			return toUUID(rv.Elem().Interface())
-		}
-		return uuid.Nil, fmt.Errorf("unsupported uuid type %T", val)
-	}
+	return "", fmt.Errorf("missing string path parameter %q", names)
 }
 
-func toString(val any) (string, bool) {
-	if val == nil {
-		return "", false
-	}
-	switch v := val.(type) {
-	case string:
-		return v, true
-	case *string:
-		if v == nil {
-			return "", false
-		}
-		return *v, true
-	case corev1.OptString:
-		if v.IsSet() {
-			return v.Value, true
-		}
-		return "", false
-	case corev1.OptNilString:
-		if v.IsSet() {
-			return v.Value, true
-		}
-		return "", false
-	case uuid.UUID:
-		return v.String(), true
-	case *uuid.UUID:
-		if v == nil {
-			return "", false
-		}
-		return v.String(), true
-	default:
-		rv := reflect.ValueOf(val)
-		if rv.Kind() == reflect.Pointer && !rv.IsNil() {
-			return toString(rv.Elem().Interface())
-		}
-		return "", false
-	}
-}
-
-func normalizeParamName(name string) string {
-	return strings.ToLower(strings.ReplaceAll(name, "_", ""))
-}
-
-func extractUUIDFromRequest(request interface{}, fieldNames ...string) (uuid.UUID, error) {
-	if mreq, ok := request.(ogenMiddleware.Request); ok {
-		for key, val := range mreq.Params {
-			normKey := normalizeParamName(key.Name)
-			for _, name := range fieldNames {
-				if normKey == normalizeParamName(name) {
-					if id, err := toUUID(val); err == nil && id != uuid.Nil {
-						return id, nil
-					}
-				}
-			}
-		}
-		if mreq.Body != nil {
-			if id, err := extractUUIDFromRequest(mreq.Body, fieldNames...); err == nil && id != uuid.Nil {
-				return id, nil
-			}
-		}
-	}
-
-	v := reflect.ValueOf(request)
-	if !v.IsValid() {
-		return uuid.Nil, fmt.Errorf("request is nil")
-	}
-
-	for v.Kind() == reflect.Pointer {
-		if v.IsNil() {
-			return uuid.Nil, fmt.Errorf("request is nil")
-		}
-		v = v.Elem()
-	}
-
-	if v.Kind() != reflect.Struct {
-		return uuid.Nil, fmt.Errorf("request must be a struct")
-	}
-
-	id, found, err := extractUUIDFromStruct(v, fieldNames)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	if found {
-		return id, nil
-	}
-
-	params := v.FieldByName("Params")
-	if params.IsValid() {
-		id, found, err := extractUUIDFromValue(params, fieldNames)
-		if err != nil {
-			return uuid.Nil, err
-		}
-		if found {
+func pathUUID(req ogenMiddleware.Request, names ...string) (uuid.UUID, error) {
+	for _, name := range names {
+		value, _ := req.Params.Path(name)
+		if id, ok := value.(uuid.UUID); ok && id != uuid.Nil {
 			return id, nil
 		}
 	}
-
-	return uuid.Nil, fmt.Errorf("uuid field not found")
+	return uuid.Nil, fmt.Errorf("missing UUID path parameter %q", names)
 }
 
-func extractUUIDFromStruct(v reflect.Value, fieldNames []string) (uuid.UUID, bool, error) {
-	for _, fieldName := range fieldNames {
-		normFieldName := normalizeParamName(fieldName)
-		for i := 0; i < v.NumField(); i++ {
-			f := v.Type().Field(i)
-			if normalizeParamName(f.Name) == normFieldName {
-				val := v.Field(i)
-				if id, err := toUUID(val.Interface()); err == nil && id != uuid.Nil {
-					return id, true, nil
-				}
-			}
-		}
+func queryUUID(req ogenMiddleware.Request, name string) (uuid.UUID, error) {
+	value, _ := req.Params.Query(name)
+	if value, ok := value.(corev1.OptUUID); ok && value.IsSet() && value.Value != uuid.Nil {
+		return value.Value, nil
 	}
-
-	return uuid.Nil, false, nil
+	return uuid.Nil, fmt.Errorf("missing UUID query parameter %q", name)
 }
 
-func extractUUIDFromValue(v reflect.Value, fieldNames []string) (uuid.UUID, bool, error) {
-	for v.Kind() == reflect.Pointer {
-		if v.IsNil() {
-			return uuid.Nil, false, nil
+// CreateSubmission carries contest logins in the query; contest routes use path parameters.
+func contestLogins(req ogenMiddleware.Request) (string, string, error) {
+	if req.OperationID == "CreateSubmission" {
+		orgValue, _ := req.Params.Query("organization_login")
+		contestValue, _ := req.Params.Query("contest_login")
+		orgLogin, orgOK := orgValue.(string)
+		contestLogin, contestOK := contestValue.(string)
+		if !orgOK || !contestOK || orgLogin == "" || contestLogin == "" {
+			return "", "", fmt.Errorf("missing organization or contest query parameter")
 		}
-		v = v.Elem()
+		return orgLogin, contestLogin, nil
 	}
-
-	if !v.IsValid() {
-		return uuid.Nil, false, nil
+	orgLogin, err := pathString(req, "org_login")
+	if err != nil {
+		return "", "", err
 	}
-
-	if v.Kind() == reflect.Struct {
-		return extractUUIDFromStruct(v, fieldNames)
-	}
-
-	if id, err := toUUID(v.Interface()); err == nil && id != uuid.Nil {
-		return id, true, nil
-	}
-
-	return uuid.Nil, false, nil
-}
-
-func extractStringFromRequest(request interface{}, fieldNames ...string) (string, error) {
-	if mreq, ok := request.(ogenMiddleware.Request); ok {
-		for key, val := range mreq.Params {
-			normKey := normalizeParamName(key.Name)
-			for _, name := range fieldNames {
-				if normKey == normalizeParamName(name) {
-					if s, ok := toString(val); ok && s != "" {
-						return s, nil
-					}
-				}
-			}
-		}
-		if mreq.Body != nil {
-			if s, err := extractStringFromRequest(mreq.Body, fieldNames...); err == nil && s != "" {
-				return s, nil
-			}
-		}
-	}
-
-	v := reflect.ValueOf(request)
-	if !v.IsValid() {
-		return "", fmt.Errorf("request is nil")
-	}
-
-	for v.Kind() == reflect.Pointer {
-		if v.IsNil() {
-			return "", fmt.Errorf("request is nil")
-		}
-		v = v.Elem()
-	}
-
-	if v.Kind() != reflect.Struct {
-		return "", fmt.Errorf("request must be a struct")
-	}
-
-	for _, fieldName := range fieldNames {
-		normFieldName := normalizeParamName(fieldName)
-		for i := 0; i < v.NumField(); i++ {
-			f := v.Type().Field(i)
-			if normalizeParamName(f.Name) == normFieldName {
-				val := v.Field(i)
-				if s, ok := toString(val.Interface()); ok && s != "" {
-					return s, nil
-				}
-			}
-		}
-	}
-
-	params := v.FieldByName("Params")
-	if params.IsValid() {
-		p := params
-		for p.Kind() == reflect.Pointer {
-			if p.IsNil() {
-				break
-			}
-			p = p.Elem()
-		}
-		if p.Kind() == reflect.Struct {
-			for _, fieldName := range fieldNames {
-				normFieldName := normalizeParamName(fieldName)
-				for i := 0; i < p.NumField(); i++ {
-					f := p.Type().Field(i)
-					if normalizeParamName(f.Name) == normFieldName {
-						val := p.Field(i)
-						if s, ok := toString(val.Interface()); ok && s != "" {
-							return s, nil
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return "", fmt.Errorf("string field not found")
+	contestLogin, err := pathString(req, "contest_login")
+	return orgLogin, contestLogin, err
 }

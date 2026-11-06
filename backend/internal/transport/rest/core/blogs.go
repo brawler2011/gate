@@ -181,7 +181,7 @@ func wrapBlogError(err error, fallbackMsg string) error {
 	if errors.Is(err, pkg.NoPermission) || strings.Contains(err.Error(), "access denied") {
 		return pkg.Wrap(pkg.NoPermission, err, fallbackMsg)
 	}
-	if errors.Is(err, pkg.ErrNotFound) {
+	if errors.Is(err, pkg.ErrNotFound) || errors.Is(err, storage.ErrNotFound) {
 		return pkg.Wrap(pkg.ErrNotFound, err, fallbackMsg)
 	}
 	if errors.Is(err, pkg.ErrBadInput) {
