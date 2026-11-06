@@ -5,16 +5,20 @@ package integration
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"image"
 	"image/png"
 	"io"
 	"sync"
+	"time"
 
+	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/blogs"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
+	"github.com/google/uuid"
 )
 
 type blogUploadHook struct {
@@ -75,4 +79,45 @@ func (s *IntegrationTestSuite) TestBlogCommandsAuthorizeAfterUploadAndSerializeI
 	objects, err = local.ListFiles(s.ctx, "blogs", "")
 	s.Require().NoError(err)
 	s.Empty(objects)
+}
+
+func (s *IntegrationTestSuite) TestListPostsPagination() {
+	admin := s.createUser("blog_page_admin_"+uuid.NewString()[:8], accessmodel.UserRoleAdmin)
+	ids := make([]uuid.UUID, 3)
+	for i := range ids {
+		ids[i] = uuid.New()
+		_, err := s.dbPool.Exec(s.ctx, "INSERT INTO posts(id, title, text, description, author_uuid, author_name, image_key, created_at) VALUES($1, $2, 'text', 'description', $3, $4, 'preview', $5)",
+			ids[i], fmt.Sprintf("Paged Post %d", i), admin.Id, admin.Username, time.Now().Add(time.Duration(i)*time.Hour))
+		s.Require().NoError(err)
+	}
+
+	resAsc, err := s.client.ListPosts(s.ctx, corev1.ListPostsParams{
+		Page:      corev1.NewOptInt32(1),
+		PageSize:  corev1.NewOptInt32(1),
+		SortOrder: corev1.NewOptListPostsSortOrder(corev1.ListPostsSortOrderAsc),
+	})
+	s.Require().NoError(err)
+	s.Require().NotNil(resAsc)
+	s.Require().Len(resAsc.Posts, 1)
+
+	resDesc, err := s.client.ListPosts(s.ctx, corev1.ListPostsParams{
+		Page:      corev1.NewOptInt32(1),
+		PageSize:  corev1.NewOptInt32(1),
+		SortOrder: corev1.NewOptListPostsSortOrder(corev1.ListPostsSortOrderDesc),
+	})
+	s.Require().NoError(err)
+	s.Require().NotNil(resDesc)
+	s.Require().Len(resDesc.Posts, 1)
+	s.NotEqual(resAsc.Posts[0].ID, resDesc.Posts[0].ID)
+
+	got, err := s.client.GetPostById(s.ctx, corev1.GetPostByIdParams{ID: ids[0]})
+	s.Require().NoError(err)
+	postModel, ok := got.(*corev1.PostModel)
+	s.Require().True(ok)
+	s.Equal("Paged Post 0", postModel.Title)
+
+	notfound, err := s.client.GetPostById(s.ctx, corev1.GetPostByIdParams{ID: uuid.New()})
+	s.Require().NoError(err)
+	_, isNotFound := notfound.(*corev1.GetPostByIdNotFound)
+	s.True(isNotFound)
 }

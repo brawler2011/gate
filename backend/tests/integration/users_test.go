@@ -6,6 +6,7 @@ package integration
 import (
 	"bytes"
 	"io"
+	"net/http"
 	"net/textproto"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
@@ -167,6 +168,42 @@ func (s *IntegrationTestSuite) TestUsers() {
 		s.GreaterOrEqual(len(resp.Users), 2)
 		s.Equal(int32(1), resp.Pagination.Total)
 	})
+}
+
+func (s *IntegrationTestSuite) TestUsersPaginationDefaultsAndBounds() {
+	admin := s.createUser("pagination_admin_"+uuid.NewString()[:8], accessmodel.UserRoleAdmin)
+	resp, err := s.client.ListUsers(withTestUser(s.ctx, admin.Id), corev1.ListUsersParams{})
+	s.Require().NoError(err)
+	s.Require().NotNil(resp)
+
+	for _, invalid := range []corev1.ListUsersParams{
+		{Page: corev1.NewOptInt32(0)},
+		{PageSize: corev1.NewOptInt32(0)},
+		{PageSize: corev1.NewOptInt32(101)},
+	} {
+		_, err := s.client.ListUsers(withTestUser(s.ctx, admin.Id), invalid)
+		s.Require().Error(err)
+		s.Equal(http.StatusBadRequest, s.getStatusCode(err))
+	}
+
+	valid, err := s.client.ListUsers(withTestUser(s.ctx, admin.Id), corev1.ListUsersParams{
+		PageSize: corev1.NewOptInt32(100),
+	})
+	s.Require().NoError(err)
+	s.Require().NotNil(valid)
+}
+
+func (s *IntegrationTestSuite) TestListMyClaimedAccounts() {
+	owner := s.createUser("claim_owner_"+uuid.NewString()[:8], accessmodel.UserRoleUser)
+	claimed := s.createUser("claimed_user_"+uuid.NewString()[:8], accessmodel.UserRoleUser)
+	_, err := s.dbPool.Exec(s.ctx, "UPDATE users SET claimed_by_user_id=$1, claimed_at=now(), expires_at=now()+interval '1 day' WHERE id=$2", owner.Id, claimed.Id)
+	s.Require().NoError(err)
+
+	resp, err := s.client.ListMyClaimedAccounts(withTestUser(s.ctx, owner.Id))
+	s.Require().NoError(err)
+	s.Require().NotNil(resp)
+	s.Require().Len(resp.Accounts, 1)
+	s.Equal(claimed.Id, resp.Accounts[0].ID)
 }
 
 func (s *IntegrationTestSuite) createUser(username string, role accessmodel.UserRole) accessmodel.User {
