@@ -6,6 +6,7 @@ import (
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	paging "github.com/brawler2011/gate/backend/internal/page"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -133,17 +134,13 @@ func (uc *DraftsUseCase) ListDrafts(ctx context.Context, filter contestsmodel.Co
 	if user.Id != filter.UserID {
 		return nil, pkg.NoPermission
 	}
-	if filter.Page == 0 {
-		filter.Page = 1
-	}
-	if filter.PageSize == 0 {
-		filter.PageSize = 20
-	}
-	if filter.Page < 1 || filter.PageSize < 1 || filter.PageSize > 100 {
-		return nil, pkg.ErrBadInput
+	var err error
+	filter.Page, filter.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 20)
+	if err != nil {
+		return nil, err
 	}
 	var result *contestsmodel.ContestDraftsList
-	err := uc.transactions.Within(ctx, func(tx DraftTxStore) error {
+	err = uc.transactions.Within(ctx, func(tx DraftTxStore) error {
 		if err := tx.LockContest(ctx, filter.ContestID); err != nil {
 			return err
 		}
