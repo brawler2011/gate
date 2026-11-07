@@ -12,7 +12,7 @@ import {act, cleanup, fireEvent, render, setupDOMEnvironment, waitFor} from "./t
 import type {UserModel} from "@/contracts/core/v1/schema";
 
 const user: UserModel = {
-  id: "user", username: "alice", role: "user", createdAt: "2026-10-01", updatedAt: "2026-10-01",
+  id: "user", username: "alice", role: "user", created_at: "2026-10-01", updated_at: "2026-10-01",
 };
 const SessionConsumer = () => {
   const session = useSession();

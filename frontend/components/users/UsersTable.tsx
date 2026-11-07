@@ -131,7 +131,7 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
                 />
               </Table.Td>
               <Table.Td style={{maxWidth: 0, overflow: "hidden"}}>
-                {new Date(user.createdAt).toLocaleDateString("ru-RU")}
+                {new Date(user.created_at).toLocaleDateString("ru-RU")}
               </Table.Td>
               <Table.Td style={{maxWidth: 0, overflow: "hidden"}} onClick={(e) => e.stopPropagation()}>
                 <Group gap="xs">

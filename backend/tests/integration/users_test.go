@@ -38,19 +38,19 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 		})
 		s.Require().NoError(err)
 		s.Require().NotNil(resp)
-		imgID = resp.ImgId
+		imgID = resp.ImgID
 		s.NotEmpty(imgID.String())
 	})
 
-	// 2. Get User Profile and Check ImgId
-	s.Run("GetUserProfileWithImgId", func() {
+	// 2. Get User Profile and Check ImgID
+	s.Run("GetUserProfileWithImgID", func() {
 		resp, err := s.client.GetUser(withTestUser(s.ctx, user.Id), corev1.GetUserParams{
 			Username: user.Username,
 		})
 		s.Require().NoError(err)
 		s.Require().NotNil(resp)
-		s.Require().True(resp.User.ImgId.IsSet())
-		s.Equal(imgID, resp.User.ImgId.Value)
+		s.Require().True(resp.User.ImgID.IsSet())
+		s.Equal(imgID, resp.User.ImgID.Value)
 	})
 
 	// 3. Get Avatar Image
@@ -91,14 +91,14 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 		s.Require().NoError(err)
 	})
 
-	// 6. Get User Profile and Check ImgId is nil
-	s.Run("GetUserProfileWithImgIdNil", func() {
+	// 6. Get User Profile and Check ImgID is nil
+	s.Run("GetUserProfileWithImgIDNil", func() {
 		resp, err := s.client.GetUser(withTestUser(s.ctx, user.Id), corev1.GetUserParams{
 			Username: user.Username,
 		})
 		s.Require().NoError(err)
 		s.Require().NotNil(resp)
-		s.False(resp.User.ImgId.IsSet())
+		s.False(resp.User.ImgID.IsSet())
 	})
 
 	// 7. Get Avatar Image (404 Not Found)

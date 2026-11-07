@@ -90,9 +90,13 @@ type Invoker interface {
 	BatchCreateOrganizationUsers(ctx context.Context, request *BatchCreateOrganizationUsersRequestModel, params BatchCreateOrganizationUsersParams) (*BatchCreateOrganizationUsersResponseModel, error)
 	// BlockProblemForUser invokes BlockProblemForUser operation.
 	//
+	// Block problem for user.
+	//
 	// POST /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 	BlockProblemForUser(ctx context.Context, request OptBlockProblemRequestModel, params BlockProblemForUserParams) error
 	// BlockSubmission invokes BlockSubmission operation.
+	//
+	// Block submission.
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block
 	BlockSubmission(ctx context.Context, request OptBlockSubmissionRequestModel, params BlockSubmissionParams) error
@@ -134,9 +138,13 @@ type Invoker interface {
 	CompileProblemComponent(ctx context.Context, params CompileProblemComponentParams) (*CompileResult, error)
 	// ConfirmEmailChange invokes ConfirmEmailChange operation.
 	//
+	// Confirm email change.
+	//
 	// POST /auth/confirm-email-change
 	ConfirmEmailChange(ctx context.Context, request *ConfirmEmailChangeRequestModel) error
 	// CreateContest invokes CreateContest operation.
+	//
+	// Create contest.
 	//
 	// POST /organizations/{org_login}/contests
 	CreateContest(ctx context.Context, params CreateContestParams) (*CreationResponseModel, error)
@@ -154,6 +162,8 @@ type Invoker interface {
 	CreateContestClarification(ctx context.Context, request *CreateContestClarificationRequestModel, params CreateContestClarificationParams) (*ContestClarificationModel, error)
 	// CreateContestDraft invokes CreateContestDraft operation.
 	//
+	// Create contest draft.
+	//
 	// POST /organizations/{org_login}/contests/{contest_login}/drafts
 	CreateContestDraft(ctx context.Context, request *CreateContestDraftRequestModel, params CreateContestDraftParams) (*CreationResponseModel, error)
 	// CreateContestJoinRequest invokes CreateContestJoinRequest operation.
@@ -164,13 +174,19 @@ type Invoker interface {
 	CreateContestJoinRequest(ctx context.Context, request OptCreateContestJoinRequestModel, params CreateContestJoinRequestParams) (*ContestJoinRequestResponseModel, error)
 	// CreateContestMember invokes CreateContestMember operation.
 	//
+	// Create contest member.
+	//
 	// POST /organizations/{org_login}/contests/{contest_login}/members
 	CreateContestMember(ctx context.Context, params CreateContestMemberParams) (*CreationResponseModel, error)
 	// CreateContestProblem invokes CreateContestProblem operation.
 	//
+	// Create contest problem.
+	//
 	// POST /organizations/{org_login}/contests/{contest_login}/problems
 	CreateContestProblem(ctx context.Context, params CreateContestProblemParams) (*CreationResponseModel, error)
 	// CreateContestTeam invokes CreateContestTeam operation.
+	//
+	// Create contest team.
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/teams
 	CreateContestTeam(ctx context.Context, params CreateContestTeamParams) error
@@ -193,6 +209,8 @@ type Invoker interface {
 	// POST /posts
 	CreatePost(ctx context.Context, request *CreatePostReq) (CreatePostRes, error)
 	// CreateProblem invokes CreateProblem operation.
+	//
+	// Create problem.
 	//
 	// POST /problems
 	CreateProblem(ctx context.Context, params CreateProblemParams) (*CreationResponseModel, error)
@@ -228,9 +246,13 @@ type Invoker interface {
 	CreateProblemMediaFile(ctx context.Context, request CreateProblemMediaFileReq, params CreateProblemMediaFileParams) (*MessageResponse, error)
 	// CreateProblemMember invokes CreateProblemMember operation.
 	//
+	// Create problem member.
+	//
 	// POST /problems/{id}/members
 	CreateProblemMember(ctx context.Context, params CreateProblemMemberParams) error
 	// CreateProblemTeam invokes CreateProblemTeam operation.
+	//
+	// Create problem team.
 	//
 	// POST /problems/{id}/teams
 	CreateProblemTeam(ctx context.Context, params CreateProblemTeamParams) error
@@ -254,6 +276,8 @@ type Invoker interface {
 	CreateProblemWorkshopSubmission(ctx context.Context, request CreateProblemWorkshopSubmissionReq, params CreateProblemWorkshopSubmissionParams) (*MessageResponse, error)
 	// CreateSubmission invokes CreateSubmission operation.
 	//
+	// Create submission.
+	//
 	// POST /submissions
 	CreateSubmission(ctx context.Context, request *CreateSubmissionRequestModel, params CreateSubmissionParams) (*CreationResponseModel, error)
 	// CreateTeam invokes CreateTeam operation.
@@ -276,6 +300,8 @@ type Invoker interface {
 	DeleteAvatar(ctx context.Context, params DeleteAvatarParams) error
 	// DeleteContest invokes DeleteContest operation.
 	//
+	// Delete contest.
+	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}
 	DeleteContest(ctx context.Context, params DeleteContestParams) error
 	// DeleteContestAnnouncement invokes DeleteContestAnnouncement operation.
@@ -286,17 +312,25 @@ type Invoker interface {
 	DeleteContestAnnouncement(ctx context.Context, params DeleteContestAnnouncementParams) error
 	// DeleteContestDraft invokes DeleteContestDraft operation.
 	//
+	// Delete contest draft.
+	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}
 	DeleteContestDraft(ctx context.Context, params DeleteContestDraftParams) error
 	// DeleteContestMember invokes DeleteContestMember operation.
+	//
+	// Delete contest member.
 	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}/members
 	DeleteContestMember(ctx context.Context, params DeleteContestMemberParams) error
 	// DeleteContestProblem invokes DeleteContestProblem operation.
 	//
+	// Delete contest problem.
+	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
 	DeleteContestProblem(ctx context.Context, params DeleteContestProblemParams) error
 	// DeleteContestTeam invokes DeleteContestTeam operation.
+	//
+	// Delete contest team.
 	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}/teams
 	DeleteContestTeam(ctx context.Context, params DeleteContestTeamParams) error
@@ -313,6 +347,8 @@ type Invoker interface {
 	// DELETE /posts/{id}
 	DeletePostById(ctx context.Context, params DeletePostByIdParams) (DeletePostByIdRes, error)
 	// DeleteProblem invokes DeleteProblem operation.
+	//
+	// Delete problem.
 	//
 	// DELETE /problems/{id}
 	DeleteProblem(ctx context.Context, params DeleteProblemParams) error
@@ -348,9 +384,13 @@ type Invoker interface {
 	DeleteProblemMediaFile(ctx context.Context, params DeleteProblemMediaFileParams) (*MessageResponse, error)
 	// DeleteProblemMember invokes DeleteProblemMember operation.
 	//
+	// Delete problem member.
+	//
 	// DELETE /problems/{id}/members
 	DeleteProblemMember(ctx context.Context, params DeleteProblemMemberParams) error
 	// DeleteProblemTeam invokes DeleteProblemTeam operation.
+	//
+	// Delete problem team.
 	//
 	// DELETE /problems/{id}/teams
 	DeleteProblemTeam(ctx context.Context, params DeleteProblemTeamParams) error
@@ -386,6 +426,8 @@ type Invoker interface {
 	DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (DownloadContestStatementsPdfOK, error)
 	// ForgotPassword invokes ForgotPassword operation.
 	//
+	// Forgot password.
+	//
 	// POST /auth/forgot-password
 	ForgotPassword(ctx context.Context, request *ForgotPasswordRequestModel) error
 	// GenerateTests invokes GenerateTests operation.
@@ -396,17 +438,25 @@ type Invoker interface {
 	GenerateTests(ctx context.Context, request *GenerateTestsReq, params GenerateTestsParams) (*GenerateTestsOK, error)
 	// GetContest invokes GetContest operation.
 	//
+	// Get contest.
+	//
 	// GET /organizations/{org_login}/contests/{contest_login}
 	GetContest(ctx context.Context, params GetContestParams) (*GetContestResponseModel, error)
 	// GetContestProblem invokes GetContestProblem operation.
+	//
+	// Get contest problem.
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
 	GetContestProblem(ctx context.Context, params GetContestProblemParams) (*GetContestProblemResponseModel, error)
 	// GetContestScoreboard invokes GetContestScoreboard operation.
 	//
+	// Get contest scoreboard.
+	//
 	// GET /organizations/{org_login}/contests/{contest_login}/scoreboard
 	GetContestScoreboard(ctx context.Context, params GetContestScoreboardParams) (*ScoreboardResponseModel, error)
 	// GetHealth invokes GetHealth operation.
+	//
+	// Get health.
 	//
 	// GET /health
 	GetHealth(ctx context.Context) (*GetHealthResponseModel, error)
@@ -418,6 +468,8 @@ type Invoker interface {
 	GetLanguages(ctx context.Context) (*SupportedLanguagesResponse, error)
 	// GetMe invokes GetMe operation.
 	//
+	// Get me.
+	//
 	// GET /users/me
 	GetMe(ctx context.Context) (*GetUserResponseModel, error)
 	// GetMyContestJoinRequest invokes GetMyContestJoinRequest operation.
@@ -428,9 +480,13 @@ type Invoker interface {
 	GetMyContestJoinRequest(ctx context.Context, params GetMyContestJoinRequestParams) (*ContestJoinRequestNullableResponseModel, error)
 	// GetMyContestRole invokes GetMyContestRole operation.
 	//
+	// Get my contest role.
+	//
 	// GET /organizations/{org_login}/contests/{contest_login}/my-role
 	GetMyContestRole(ctx context.Context, params GetMyContestRoleParams) (*GetMyContestRoleResponseModel, error)
 	// GetMyDashboard invokes GetMyDashboard operation.
+	//
+	// Get my dashboard.
 	//
 	// GET /users/me/dashboard
 	GetMyDashboard(ctx context.Context) (*GetUserDashboardResponseModel, error)
@@ -460,9 +516,13 @@ type Invoker interface {
 	GetPostImage(ctx context.Context, params GetPostImageParams) (GetPostImageRes, error)
 	// GetProblem invokes GetProblem operation.
 	//
+	// Get problem.
+	//
 	// GET /problems/{id}
 	GetProblem(ctx context.Context, params GetProblemParams) (*GetProblemResponseModel, error)
 	// GetProblemBlockStatusForUser invokes GetProblemBlockStatusForUser operation.
+	//
+	// Get problem block status for user.
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 	GetProblemBlockStatusForUser(ctx context.Context, params GetProblemBlockStatusForUserParams) (*ProblemBlockStatusResponseModel, error)
@@ -534,6 +594,8 @@ type Invoker interface {
 	GetPublishedPackage(ctx context.Context, params GetPublishedPackageParams) (*GetPublishedPackageFound, error)
 	// GetSubmission invokes GetSubmission operation.
 	//
+	// Get submission.
+	//
 	// GET /submissions/{submission_id}
 	GetSubmission(ctx context.Context, params GetSubmissionParams) (*GetSubmissionResponseModel, error)
 	// GetTeam invokes GetTeam operation.
@@ -549,6 +611,8 @@ type Invoker interface {
 	// GET /notifications/unread-count
 	GetUnreadNotificationsCount(ctx context.Context) (*UnreadNotificationsCountResponseModel, error)
 	// GetUser invokes GetUser operation.
+	//
+	// Get user.
 	//
 	// GET /users/{username}
 	GetUser(ctx context.Context, params GetUserParams) (*GetUserResponseModel, error)
@@ -572,6 +636,8 @@ type Invoker interface {
 	InviteOrganizationMember(ctx context.Context, request *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (*OrganizationInvitationModel, error)
 	// ListAdminContests invokes ListAdminContests operation.
 	//
+	// List admin contests.
+	//
 	// GET /admin/contests
 	ListAdminContests(ctx context.Context, params ListAdminContestsParams) (*ListContestsResponseModel, error)
 	// ListContestAnnouncements invokes ListContestAnnouncements operation.
@@ -588,6 +654,8 @@ type Invoker interface {
 	ListContestClarifications(ctx context.Context, params ListContestClarificationsParams) (*ListContestClarificationsResponseModel, error)
 	// ListContestDrafts invokes ListContestDrafts operation.
 	//
+	// List contest drafts.
+	//
 	// GET /organizations/{org_login}/contests/{contest_login}/drafts
 	ListContestDrafts(ctx context.Context, params ListContestDraftsParams) (*ListContestDraftsResponseModel, error)
 	// ListContestJoinRequests invokes ListContestJoinRequests operation.
@@ -598,13 +666,19 @@ type Invoker interface {
 	ListContestJoinRequests(ctx context.Context, params ListContestJoinRequestsParams) (*ListContestJoinRequestsResponseModel, error)
 	// ListContestMembers invokes ListContestMembers operation.
 	//
+	// List contest members.
+	//
 	// GET /organizations/{org_login}/contests/{contest_login}/members
 	ListContestMembers(ctx context.Context, params ListContestMembersParams) (*ListContestMembersResponseModel, error)
 	// ListContestSubmissions invokes ListContestSubmissions operation.
 	//
+	// List contest submissions.
+	//
 	// GET /organizations/{org_login}/contests/{contest_login}/submissions
 	ListContestSubmissions(ctx context.Context, params ListContestSubmissionsParams) (*ListSubmissionsResponseModel, error)
 	// ListContestTeams invokes ListContestTeams operation.
+	//
+	// List contest teams.
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/teams
 	ListContestTeams(ctx context.Context, params ListContestTeamsParams) (*ListContestTeamsResponseModel, error)
@@ -621,6 +695,8 @@ type Invoker interface {
 	// GET /notifications
 	ListNotifications(ctx context.Context, params ListNotificationsParams) (*NotificationsListResponseModel, error)
 	// ListOrganizationContests invokes ListOrganizationContests operation.
+	//
+	// List organization contests.
 	//
 	// GET /organizations/{org_login}/contests
 	ListOrganizationContests(ctx context.Context, params ListOrganizationContestsParams) (*ListContestsResponseModel, error)
@@ -686,6 +762,8 @@ type Invoker interface {
 	ListProblemMediaFiles(ctx context.Context, params ListProblemMediaFilesParams) (*WorkshopFileListResponse, error)
 	// ListProblemMembers invokes ListProblemMembers operation.
 	//
+	// List problem members.
+	//
 	// GET /problems/{id}/members
 	ListProblemMembers(ctx context.Context, params ListProblemMembersParams) (*ListProblemMembersResponseModel, error)
 	// ListProblemPackages invokes ListProblemPackages operation.
@@ -696,9 +774,13 @@ type Invoker interface {
 	ListProblemPackages(ctx context.Context, params ListProblemPackagesParams) (*ListProblemPackagesOK, error)
 	// ListProblemTeams invokes ListProblemTeams operation.
 	//
+	// List problem teams.
+	//
 	// GET /problems/{id}/teams
 	ListProblemTeams(ctx context.Context, params ListProblemTeamsParams) (*ListProblemTeamsResponseModel, error)
 	// ListProblemTemplates invokes ListProblemTemplates operation.
+	//
+	// List problem templates.
 	//
 	// GET /problem-templates
 	ListProblemTemplates(ctx context.Context, params ListProblemTemplatesParams) ([]ProblemTemplateModel, error)
@@ -722,13 +804,19 @@ type Invoker interface {
 	ListProblemWorkshopSubmissions(ctx context.Context, params ListProblemWorkshopSubmissionsParams) (*WorkshopFileListResponse, error)
 	// ListProblems invokes ListProblems operation.
 	//
+	// List problems.
+	//
 	// GET /problems
 	ListProblems(ctx context.Context, params ListProblemsParams) (*ListProblemsResponseModel, error)
 	// ListPublicContests invokes ListPublicContests operation.
 	//
+	// List public contests.
+	//
 	// GET /public/contests
 	ListPublicContests(ctx context.Context, params ListPublicContestsParams) (*ListContestsResponseModel, error)
 	// ListSubmissions invokes ListSubmissions operation.
+	//
+	// List submissions.
 	//
 	// GET /submissions
 	ListSubmissions(ctx context.Context, params ListSubmissionsParams) (*ListSubmissionsResponseModel, error)
@@ -758,25 +846,37 @@ type Invoker interface {
 	ListTeams(ctx context.Context, params ListTeamsParams) (*ListTeamsResponseModel, error)
 	// ListUserContests invokes ListUserContests operation.
 	//
+	// List user contests.
+	//
 	// GET /users/{username}/contests
 	ListUserContests(ctx context.Context, params ListUserContestsParams) (*ListUserContestsResponseModel, error)
 	// ListUserSubmissions invokes ListUserSubmissions operation.
+	//
+	// List user submissions.
 	//
 	// GET /users/{username}/submissions
 	ListUserSubmissions(ctx context.Context, params ListUserSubmissionsParams) (*ListSubmissionsResponseModel, error)
 	// ListUsers invokes ListUsers operation.
 	//
+	// List users.
+	//
 	// GET /users
 	ListUsers(ctx context.Context, params ListUsersParams) (*ListUsersResponseModel, error)
 	// ListWorkshopContests invokes ListWorkshopContests operation.
+	//
+	// List workshop contests.
 	//
 	// GET /workshop/contests
 	ListWorkshopContests(ctx context.Context, params ListWorkshopContestsParams) (*ListContestsResponseModel, error)
 	// Login invokes Login operation.
 	//
+	// Login.
+	//
 	// POST /auth/login
 	Login(ctx context.Context, request *LoginRequestModel) (*AuthResponseModelHeaders, error)
 	// Logout invokes Logout operation.
+	//
+	// Logout.
 	//
 	// POST /auth/logout
 	Logout(ctx context.Context) (*LogoutOK, error)
@@ -806,6 +906,8 @@ type Invoker interface {
 	PublishProblem(ctx context.Context, params PublishProblemParams) (*PublishProblemOK, error)
 	// Register invokes Register operation.
 	//
+	// Register.
+	//
 	// POST /auth/register
 	Register(ctx context.Context, request *RegisterRequestModel) (*AuthResponseModel, error)
 	// RejectContestJoinRequest invokes RejectContestJoinRequest operation.
@@ -822,13 +924,19 @@ type Invoker interface {
 	RejectOrganizationJoinRequest(ctx context.Context, params RejectOrganizationJoinRequestParams) error
 	// RejudgeContest invokes RejudgeContest operation.
 	//
+	// Rejudge contest.
+	//
 	// POST /organizations/{org_login}/contests/{contest_login}/rejudge
 	RejudgeContest(ctx context.Context, params RejudgeContestParams) error
 	// RejudgeContestProblem invokes RejudgeContestProblem operation.
 	//
+	// Rejudge contest problem.
+	//
 	// POST /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge
 	RejudgeContestProblem(ctx context.Context, params RejudgeContestProblemParams) error
 	// RejudgeSubmission invokes RejudgeSubmission operation.
+	//
+	// Rejudge submission.
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge
 	RejudgeSubmission(ctx context.Context, params RejudgeSubmissionParams) error
@@ -846,6 +954,8 @@ type Invoker interface {
 	RemoveTeamMember(ctx context.Context, params RemoveTeamMemberParams) error
 	// ReorderContestProblems invokes ReorderContestProblems operation.
 	//
+	// Reorder contest problems.
+	//
 	// PUT /organizations/{org_login}/contests/{contest_login}/problems/reorder
 	ReorderContestProblems(ctx context.Context, request *ReorderContestProblemsRequestModel, params ReorderContestProblemsParams) error
 	// RequestEmailChange invokes RequestEmailChange operation.
@@ -856,9 +966,13 @@ type Invoker interface {
 	RequestEmailChange(ctx context.Context, request *RequestEmailChangeRequestModel) error
 	// ResendVerification invokes ResendVerification operation.
 	//
+	// Resend verification.
+	//
 	// POST /auth/resend-verification
 	ResendVerification(ctx context.Context, request *ResendVerificationRequestModel) error
 	// ResetPassword invokes ResetPassword operation.
+	//
+	// Reset password.
 	//
 	// POST /auth/reset-password
 	ResetPassword(ctx context.Context, request *ResetPasswordRequestModel) error
@@ -870,21 +984,31 @@ type Invoker interface {
 	TestSolution(ctx context.Context, request *TestSolutionReq, params TestSolutionParams) (*TestReport, error)
 	// UnblockProblemForUser invokes UnblockProblemForUser operation.
 	//
+	// Unblock problem for user.
+	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 	UnblockProblemForUser(ctx context.Context, params UnblockProblemForUserParams) error
 	// UnblockSubmission invokes UnblockSubmission operation.
+	//
+	// Unblock submission.
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock
 	UnblockSubmission(ctx context.Context, params UnblockSubmissionParams) error
 	// UpdateContest invokes UpdateContest operation.
 	//
+	// Update contest.
+	//
 	// PATCH /organizations/{org_login}/contests/{contest_login}
 	UpdateContest(ctx context.Context, request *UpdateContestRequestModel, params UpdateContestParams) error
 	// UpdateContestMember invokes UpdateContestMember operation.
 	//
+	// Update contest member.
+	//
 	// PATCH /organizations/{org_login}/contests/{contest_login}/members
 	UpdateContestMember(ctx context.Context, params UpdateContestMemberParams) error
 	// UpdateContestTeam invokes UpdateContestTeam operation.
+	//
+	// Update contest team.
 	//
 	// PATCH /organizations/{org_login}/contests/{contest_login}/teams
 	UpdateContestTeam(ctx context.Context, params UpdateContestTeamParams) error
@@ -895,6 +1019,8 @@ type Invoker interface {
 	// PATCH /organizations/{login}
 	UpdateOrganization(ctx context.Context, request *UpdateOrganizationRequestModel, params UpdateOrganizationParams) error
 	// UpdateProblem invokes UpdateProblem operation.
+	//
+	// Update problem.
 	//
 	// PATCH /problems/{id}
 	UpdateProblem(ctx context.Context, request *UpdateProblemRequestModel, params UpdateProblemParams) error
@@ -936,6 +1062,8 @@ type Invoker interface {
 	UpdateProblemMediaFile(ctx context.Context, request UpdateProblemMediaFileReq, params UpdateProblemMediaFileParams) (*MessageResponse, error)
 	// UpdateProblemMember invokes UpdateProblemMember operation.
 	//
+	// Update problem member.
+	//
 	// PATCH /problems/{id}/members
 	UpdateProblemMember(ctx context.Context, params UpdateProblemMemberParams) error
 	// UpdateProblemStatement invokes UpdateProblemStatement operation.
@@ -945,6 +1073,8 @@ type Invoker interface {
 	// PATCH /problems/{problemId}/statement
 	UpdateProblemStatement(ctx context.Context, request *UpdateProblemStatementRequest, params UpdateProblemStatementParams) (*ProblemStatement, error)
 	// UpdateProblemTeam invokes UpdateProblemTeam operation.
+	//
+	// Update problem team.
 	//
 	// PATCH /problems/{id}/teams
 	UpdateProblemTeam(ctx context.Context, params UpdateProblemTeamParams) error
@@ -986,6 +1116,8 @@ type Invoker interface {
 	UpdateTeamMemberRole(ctx context.Context, params UpdateTeamMemberRoleParams) error
 	// UpdateUser invokes UpdateUser operation.
 	//
+	// Update user.
+	//
 	// PATCH /users/{username}
 	UpdateUser(ctx context.Context, request *UpdateUserRequestModel, params UpdateUserParams) error
 	// UploadAvatar invokes UploadAvatar operation.
@@ -1001,6 +1133,8 @@ type Invoker interface {
 	// POST /problems/{problemId}/workshop/tests/validate
 	ValidateAllTests(ctx context.Context, params ValidateAllTestsParams) (*ValidationReport, error)
 	// VerifyEmail invokes VerifyEmail operation.
+	//
+	// Verify email.
 	//
 	// POST /auth/verify-email
 	VerifyEmail(ctx context.Context, request *VerifyEmailRequestModel) (*VerifyEmailResponseHeaders, error)
@@ -1906,6 +2040,8 @@ func (c *Client) sendBatchCreateOrganizationUsers(ctx context.Context, request *
 
 // BlockProblemForUser invokes BlockProblemForUser operation.
 //
+// Block problem for user.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 func (c *Client) BlockProblemForUser(ctx context.Context, request OptBlockProblemRequestModel, params BlockProblemForUserParams) error {
 	_, err := c.sendBlockProblemForUser(ctx, request, params)
@@ -2025,6 +2161,8 @@ func (c *Client) sendBlockProblemForUser(ctx context.Context, request OptBlockPr
 }
 
 // BlockSubmission invokes BlockSubmission operation.
+//
+// Block submission.
 //
 // POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block
 func (c *Client) BlockSubmission(ctx context.Context, request OptBlockSubmissionRequestModel, params BlockSubmissionParams) error {
@@ -2523,6 +2661,8 @@ func (c *Client) sendCompileProblemComponent(ctx context.Context, params Compile
 
 // ConfirmEmailChange invokes ConfirmEmailChange operation.
 //
+// Confirm email change.
+//
 // POST /auth/confirm-email-change
 func (c *Client) ConfirmEmailChange(ctx context.Context, request *ConfirmEmailChangeRequestModel) error {
 	_, err := c.sendConfirmEmailChange(ctx, request)
@@ -2566,6 +2706,8 @@ func (c *Client) sendConfirmEmailChange(ctx context.Context, request *ConfirmEma
 }
 
 // CreateContest invokes CreateContest operation.
+//
+// Create contest.
 //
 // POST /organizations/{org_login}/contests
 func (c *Client) CreateContest(ctx context.Context, params CreateContestParams) (*CreationResponseModel, error) {
@@ -2829,6 +2971,8 @@ func (c *Client) sendCreateContestClarification(ctx context.Context, request *Cr
 
 // CreateContestDraft invokes CreateContestDraft operation.
 //
+// Create contest draft.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/drafts
 func (c *Client) CreateContestDraft(ctx context.Context, request *CreateContestDraftRequestModel, params CreateContestDraftParams) (*CreationResponseModel, error) {
 	res, err := c.sendCreateContestDraft(ctx, request, params)
@@ -2995,6 +3139,8 @@ func (c *Client) sendCreateContestJoinRequest(ctx context.Context, request OptCr
 
 // CreateContestMember invokes CreateContestMember operation.
 //
+// Create contest member.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/members
 func (c *Client) CreateContestMember(ctx context.Context, params CreateContestMemberParams) (*CreationResponseModel, error) {
 	res, err := c.sendCreateContestMember(ctx, params)
@@ -3090,6 +3236,8 @@ func (c *Client) sendCreateContestMember(ctx context.Context, params CreateConte
 }
 
 // CreateContestProblem invokes CreateContestProblem operation.
+//
+// Create contest problem.
 //
 // POST /organizations/{org_login}/contests/{contest_login}/problems
 func (c *Client) CreateContestProblem(ctx context.Context, params CreateContestProblemParams) (*CreationResponseModel, error) {
@@ -3203,6 +3351,8 @@ func (c *Client) sendCreateContestProblem(ctx context.Context, params CreateCont
 }
 
 // CreateContestTeam invokes CreateContestTeam operation.
+//
+// Create contest team.
 //
 // POST /organizations/{org_login}/contests/{contest_login}/teams
 func (c *Client) CreateContestTeam(ctx context.Context, params CreateContestTeamParams) error {
@@ -3554,6 +3704,8 @@ func (c *Client) sendCreatePost(ctx context.Context, request *CreatePostReq) (re
 }
 
 // CreateProblem invokes CreateProblem operation.
+//
+// Create problem.
 //
 // POST /problems
 func (c *Client) CreateProblem(ctx context.Context, params CreateProblemParams) (*CreationResponseModel, error) {
@@ -4054,6 +4206,8 @@ func (c *Client) sendCreateProblemMediaFile(ctx context.Context, request CreateP
 
 // CreateProblemMember invokes CreateProblemMember operation.
 //
+// Create problem member.
+//
 // POST /problems/{id}/members
 func (c *Client) CreateProblemMember(ctx context.Context, params CreateProblemMemberParams) error {
 	_, err := c.sendCreateProblemMember(ctx, params)
@@ -4147,6 +4301,8 @@ func (c *Client) sendCreateProblemMember(ctx context.Context, params CreateProbl
 }
 
 // CreateProblemTeam invokes CreateProblemTeam operation.
+//
+// Create problem team.
 //
 // POST /problems/{id}/teams
 func (c *Client) CreateProblemTeam(ctx context.Context, params CreateProblemTeamParams) error {
@@ -4488,6 +4644,8 @@ func (c *Client) sendCreateProblemWorkshopSubmission(ctx context.Context, reques
 
 // CreateSubmission invokes CreateSubmission operation.
 //
+// Create submission.
+//
 // POST /submissions
 func (c *Client) CreateSubmission(ctx context.Context, request *CreateSubmissionRequestModel, params CreateSubmissionParams) (*CreationResponseModel, error) {
 	res, err := c.sendCreateSubmission(ctx, request, params)
@@ -4761,6 +4919,8 @@ func (c *Client) sendDeleteAvatar(ctx context.Context, params DeleteAvatarParams
 
 // DeleteContest invokes DeleteContest operation.
 //
+// Delete contest.
+//
 // DELETE /organizations/{org_login}/contests/{contest_login}
 func (c *Client) DeleteContest(ctx context.Context, params DeleteContestParams) error {
 	_, err := c.sendDeleteContest(ctx, params)
@@ -4938,6 +5098,8 @@ func (c *Client) sendDeleteContestAnnouncement(ctx context.Context, params Delet
 
 // DeleteContestDraft invokes DeleteContestDraft operation.
 //
+// Delete contest draft.
+//
 // DELETE /organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}
 func (c *Client) DeleteContestDraft(ctx context.Context, params DeleteContestDraftParams) error {
 	_, err := c.sendDeleteContestDraft(ctx, params)
@@ -5035,6 +5197,8 @@ func (c *Client) sendDeleteContestDraft(ctx context.Context, params DeleteContes
 
 // DeleteContestMember invokes DeleteContestMember operation.
 //
+// Delete contest member.
+//
 // DELETE /organizations/{org_login}/contests/{contest_login}/members
 func (c *Client) DeleteContestMember(ctx context.Context, params DeleteContestMemberParams) error {
 	_, err := c.sendDeleteContestMember(ctx, params)
@@ -5130,6 +5294,8 @@ func (c *Client) sendDeleteContestMember(ctx context.Context, params DeleteConte
 }
 
 // DeleteContestProblem invokes DeleteContestProblem operation.
+//
+// Delete contest problem.
 //
 // DELETE /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
 func (c *Client) DeleteContestProblem(ctx context.Context, params DeleteContestProblemParams) error {
@@ -5227,6 +5393,8 @@ func (c *Client) sendDeleteContestProblem(ctx context.Context, params DeleteCont
 }
 
 // DeleteContestTeam invokes DeleteContestTeam operation.
+//
+// Delete contest team.
 //
 // DELETE /organizations/{org_login}/contests/{contest_login}/teams
 func (c *Client) DeleteContestTeam(ctx context.Context, params DeleteContestTeamParams) error {
@@ -5478,6 +5646,8 @@ func (c *Client) sendDeletePostById(ctx context.Context, params DeletePostByIdPa
 }
 
 // DeleteProblem invokes DeleteProblem operation.
+//
+// Delete problem.
 //
 // DELETE /problems/{id}
 func (c *Client) DeleteProblem(ctx context.Context, params DeleteProblemParams) error {
@@ -5938,6 +6108,8 @@ func (c *Client) sendDeleteProblemMediaFile(ctx context.Context, params DeletePr
 
 // DeleteProblemMember invokes DeleteProblemMember operation.
 //
+// Delete problem member.
+//
 // DELETE /problems/{id}/members
 func (c *Client) DeleteProblemMember(ctx context.Context, params DeleteProblemMemberParams) error {
 	_, err := c.sendDeleteProblemMember(ctx, params)
@@ -6014,6 +6186,8 @@ func (c *Client) sendDeleteProblemMember(ctx context.Context, params DeleteProbl
 }
 
 // DeleteProblemTeam invokes DeleteProblemTeam operation.
+//
+// Delete problem team.
 //
 // DELETE /problems/{id}/teams
 func (c *Client) DeleteProblemTeam(ctx context.Context, params DeleteProblemTeamParams) error {
@@ -6494,6 +6668,8 @@ func (c *Client) sendDownloadContestStatementsPdf(ctx context.Context, params Do
 
 // ForgotPassword invokes ForgotPassword operation.
 //
+// Forgot password.
+//
 // POST /auth/forgot-password
 func (c *Client) ForgotPassword(ctx context.Context, request *ForgotPasswordRequestModel) error {
 	_, err := c.sendForgotPassword(ctx, request)
@@ -6603,6 +6779,8 @@ func (c *Client) sendGenerateTests(ctx context.Context, request *GenerateTestsRe
 
 // GetContest invokes GetContest operation.
 //
+// Get contest.
+//
 // GET /organizations/{org_login}/contests/{contest_login}
 func (c *Client) GetContest(ctx context.Context, params GetContestParams) (*GetContestResponseModel, error) {
 	res, err := c.sendGetContest(ctx, params)
@@ -6680,6 +6858,8 @@ func (c *Client) sendGetContest(ctx context.Context, params GetContestParams) (r
 }
 
 // GetContestProblem invokes GetContestProblem operation.
+//
+// Get contest problem.
 //
 // GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
 func (c *Client) GetContestProblem(ctx context.Context, params GetContestProblemParams) (*GetContestProblemResponseModel, error) {
@@ -6777,6 +6957,8 @@ func (c *Client) sendGetContestProblem(ctx context.Context, params GetContestPro
 }
 
 // GetContestScoreboard invokes GetContestScoreboard operation.
+//
+// Get contest scoreboard.
 //
 // GET /organizations/{org_login}/contests/{contest_login}/scoreboard
 func (c *Client) GetContestScoreboard(ctx context.Context, params GetContestScoreboardParams) (*ScoreboardResponseModel, error) {
@@ -6877,6 +7059,8 @@ func (c *Client) sendGetContestScoreboard(ctx context.Context, params GetContest
 
 // GetHealth invokes GetHealth operation.
 //
+// Get health.
+//
 // GET /health
 func (c *Client) GetHealth(ctx context.Context) (*GetHealthResponseModel, error) {
 	res, err := c.sendGetHealth(ctx)
@@ -6960,6 +7144,8 @@ func (c *Client) sendGetLanguages(ctx context.Context) (res *SupportedLanguagesR
 }
 
 // GetMe invokes GetMe operation.
+//
+// Get me.
 //
 // GET /users/me
 func (c *Client) GetMe(ctx context.Context) (*GetUserResponseModel, error) {
@@ -7083,6 +7269,8 @@ func (c *Client) sendGetMyContestJoinRequest(ctx context.Context, params GetMyCo
 
 // GetMyContestRole invokes GetMyContestRole operation.
 //
+// Get my contest role.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/my-role
 func (c *Client) GetMyContestRole(ctx context.Context, params GetMyContestRoleParams) (*GetMyContestRoleResponseModel, error) {
 	res, err := c.sendGetMyContestRole(ctx, params)
@@ -7161,6 +7349,8 @@ func (c *Client) sendGetMyContestRole(ctx context.Context, params GetMyContestRo
 }
 
 // GetMyDashboard invokes GetMyDashboard operation.
+//
+// Get my dashboard.
 //
 // GET /users/me/dashboard
 func (c *Client) GetMyDashboard(ctx context.Context) (*GetUserDashboardResponseModel, error) {
@@ -7465,6 +7655,8 @@ func (c *Client) sendGetPostImage(ctx context.Context, params GetPostImageParams
 
 // GetProblem invokes GetProblem operation.
 //
+// Get problem.
+//
 // GET /problems/{id}
 func (c *Client) GetProblem(ctx context.Context, params GetProblemParams) (*GetProblemResponseModel, error) {
 	res, err := c.sendGetProblem(ctx, params)
@@ -7523,6 +7715,8 @@ func (c *Client) sendGetProblem(ctx context.Context, params GetProblemParams) (r
 }
 
 // GetProblemBlockStatusForUser invokes GetProblemBlockStatusForUser operation.
+//
+// Get problem block status for user.
 //
 // GET /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 func (c *Client) GetProblemBlockStatusForUser(ctx context.Context, params GetProblemBlockStatusForUserParams) (*ProblemBlockStatusResponseModel, error) {
@@ -8505,6 +8699,8 @@ func (c *Client) sendGetPublishedPackage(ctx context.Context, params GetPublishe
 
 // GetSubmission invokes GetSubmission operation.
 //
+// Get submission.
+//
 // GET /submissions/{submission_id}
 func (c *Client) GetSubmission(ctx context.Context, params GetSubmissionParams) (*GetSubmissionResponseModel, error) {
 	res, err := c.sendGetSubmission(ctx, params)
@@ -8667,6 +8863,8 @@ func (c *Client) sendGetUnreadNotificationsCount(ctx context.Context) (res *Unre
 }
 
 // GetUser invokes GetUser operation.
+//
+// Get user.
 //
 // GET /users/{username}
 func (c *Client) GetUser(ctx context.Context, params GetUserParams) (*GetUserResponseModel, error) {
@@ -8934,6 +9132,8 @@ func (c *Client) sendInviteOrganizationMember(ctx context.Context, request *Invi
 }
 
 // ListAdminContests invokes ListAdminContests operation.
+//
+// List admin contests.
 //
 // GET /admin/contests
 func (c *Client) ListAdminContests(ctx context.Context, params ListAdminContestsParams) (*ListContestsResponseModel, error) {
@@ -9351,6 +9551,8 @@ func (c *Client) sendListContestClarifications(ctx context.Context, params ListC
 
 // ListContestDrafts invokes ListContestDrafts operation.
 //
+// List contest drafts.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/drafts
 func (c *Client) ListContestDrafts(ctx context.Context, params ListContestDraftsParams) (*ListContestDraftsResponseModel, error) {
 	res, err := c.sendListContestDrafts(ctx, params)
@@ -9548,6 +9750,8 @@ func (c *Client) sendListContestJoinRequests(ctx context.Context, params ListCon
 
 // ListContestMembers invokes ListContestMembers operation.
 //
+// List contest members.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/members
 func (c *Client) ListContestMembers(ctx context.Context, params ListContestMembersParams) (*ListContestMembersResponseModel, error) {
 	res, err := c.sendListContestMembers(ctx, params)
@@ -9663,6 +9867,8 @@ func (c *Client) sendListContestMembers(ctx context.Context, params ListContestM
 }
 
 // ListContestSubmissions invokes ListContestSubmissions operation.
+//
+// List contest submissions.
 //
 // GET /organizations/{org_login}/contests/{contest_login}/submissions
 func (c *Client) ListContestSubmissions(ctx context.Context, params ListContestSubmissionsParams) (*ListSubmissionsResponseModel, error) {
@@ -9864,6 +10070,8 @@ func (c *Client) sendListContestSubmissions(ctx context.Context, params ListCont
 }
 
 // ListContestTeams invokes ListContestTeams operation.
+//
+// List contest teams.
 //
 // GET /organizations/{org_login}/contests/{contest_login}/teams
 func (c *Client) ListContestTeams(ctx context.Context, params ListContestTeamsParams) (*ListContestTeamsResponseModel, error) {
@@ -10083,6 +10291,8 @@ func (c *Client) sendListNotifications(ctx context.Context, params ListNotificat
 }
 
 // ListOrganizationContests invokes ListOrganizationContests operation.
+//
+// List organization contests.
 //
 // GET /organizations/{org_login}/contests
 func (c *Client) ListOrganizationContests(ctx context.Context, params ListOrganizationContestsParams) (*ListContestsResponseModel, error) {
@@ -10925,6 +11135,8 @@ func (c *Client) sendListProblemMediaFiles(ctx context.Context, params ListProbl
 
 // ListProblemMembers invokes ListProblemMembers operation.
 //
+// List problem members.
+//
 // GET /problems/{id}/members
 func (c *Client) ListProblemMembers(ctx context.Context, params ListProblemMembersParams) (*ListProblemMembersResponseModel, error) {
 	res, err := c.sendListProblemMembers(ctx, params)
@@ -11084,6 +11296,8 @@ func (c *Client) sendListProblemPackages(ctx context.Context, params ListProblem
 
 // ListProblemTeams invokes ListProblemTeams operation.
 //
+// List problem teams.
+//
 // GET /problems/{id}/teams
 func (c *Client) ListProblemTeams(ctx context.Context, params ListProblemTeamsParams) (*ListProblemTeamsResponseModel, error) {
 	res, err := c.sendListProblemTeams(ctx, params)
@@ -11143,6 +11357,8 @@ func (c *Client) sendListProblemTeams(ctx context.Context, params ListProblemTea
 }
 
 // ListProblemTemplates invokes ListProblemTemplates operation.
+//
+// List problem templates.
 //
 // GET /problem-templates
 func (c *Client) ListProblemTemplates(ctx context.Context, params ListProblemTemplatesParams) ([]ProblemTemplateModel, error) {
@@ -11391,6 +11607,8 @@ func (c *Client) sendListProblemWorkshopSubmissions(ctx context.Context, params 
 
 // ListProblems invokes ListProblems operation.
 //
+// List problems.
+//
 // GET /problems
 func (c *Client) ListProblems(ctx context.Context, params ListProblemsParams) (*ListProblemsResponseModel, error) {
 	res, err := c.sendListProblems(ctx, params)
@@ -11554,6 +11772,8 @@ func (c *Client) sendListProblems(ctx context.Context, params ListProblemsParams
 
 // ListPublicContests invokes ListPublicContests operation.
 //
+// List public contests.
+//
 // GET /public/contests
 func (c *Client) ListPublicContests(ctx context.Context, params ListPublicContestsParams) (*ListContestsResponseModel, error) {
 	res, err := c.sendListPublicContests(ctx, params)
@@ -11682,6 +11902,8 @@ func (c *Client) sendListPublicContests(ctx context.Context, params ListPublicCo
 }
 
 // ListSubmissions invokes ListSubmissions operation.
+//
+// List submissions.
 //
 // GET /submissions
 func (c *Client) ListSubmissions(ctx context.Context, params ListSubmissionsParams) (*ListSubmissionsResponseModel, error) {
@@ -12274,6 +12496,8 @@ func (c *Client) sendListTeams(ctx context.Context, params ListTeamsParams) (res
 
 // ListUserContests invokes ListUserContests operation.
 //
+// List user contests.
+//
 // GET /users/{username}/contests
 func (c *Client) ListUserContests(ctx context.Context, params ListUserContestsParams) (*ListUserContestsResponseModel, error) {
 	res, err := c.sendListUserContests(ctx, params)
@@ -12421,6 +12645,8 @@ func (c *Client) sendListUserContests(ctx context.Context, params ListUserContes
 }
 
 // ListUserSubmissions invokes ListUserSubmissions operation.
+//
+// List user submissions.
 //
 // GET /users/{username}/submissions
 func (c *Client) ListUserSubmissions(ctx context.Context, params ListUserSubmissionsParams) (*ListSubmissionsResponseModel, error) {
@@ -12587,6 +12813,8 @@ func (c *Client) sendListUserSubmissions(ctx context.Context, params ListUserSub
 
 // ListUsers invokes ListUsers operation.
 //
+// List users.
+//
 // GET /users
 func (c *Client) ListUsers(ctx context.Context, params ListUsersParams) (*ListUsersResponseModel, error) {
 	res, err := c.sendListUsers(ctx, params)
@@ -12698,6 +12926,8 @@ func (c *Client) sendListUsers(ctx context.Context, params ListUsersParams) (res
 }
 
 // ListWorkshopContests invokes ListWorkshopContests operation.
+//
+// List workshop contests.
 //
 // GET /workshop/contests
 func (c *Client) ListWorkshopContests(ctx context.Context, params ListWorkshopContestsParams) (*ListContestsResponseModel, error) {
@@ -12845,6 +13075,8 @@ func (c *Client) sendListWorkshopContests(ctx context.Context, params ListWorksh
 
 // Login invokes Login operation.
 //
+// Login.
+//
 // POST /auth/login
 func (c *Client) Login(ctx context.Context, request *LoginRequestModel) (*AuthResponseModelHeaders, error) {
 	res, err := c.sendLogin(ctx, request)
@@ -12888,6 +13120,8 @@ func (c *Client) sendLogin(ctx context.Context, request *LoginRequestModel) (res
 }
 
 // Logout invokes Logout operation.
+//
+// Logout.
 //
 // POST /auth/logout
 func (c *Client) Logout(ctx context.Context) (*LogoutOK, error) {
@@ -13194,6 +13428,8 @@ func (c *Client) sendPublishProblem(ctx context.Context, params PublishProblemPa
 
 // Register invokes Register operation.
 //
+// Register.
+//
 // POST /auth/register
 func (c *Client) Register(ctx context.Context, request *RegisterRequestModel) (*AuthResponseModel, error) {
 	res, err := c.sendRegister(ctx, request)
@@ -13419,6 +13655,8 @@ func (c *Client) sendRejectOrganizationJoinRequest(ctx context.Context, params R
 
 // RejudgeContest invokes RejudgeContest operation.
 //
+// Rejudge contest.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/rejudge
 func (c *Client) RejudgeContest(ctx context.Context, params RejudgeContestParams) error {
 	_, err := c.sendRejudgeContest(ctx, params)
@@ -13497,6 +13735,8 @@ func (c *Client) sendRejudgeContest(ctx context.Context, params RejudgeContestPa
 }
 
 // RejudgeContestProblem invokes RejudgeContestProblem operation.
+//
+// Rejudge contest problem.
 //
 // POST /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge
 func (c *Client) RejudgeContestProblem(ctx context.Context, params RejudgeContestProblemParams) error {
@@ -13595,6 +13835,8 @@ func (c *Client) sendRejudgeContestProblem(ctx context.Context, params RejudgeCo
 }
 
 // RejudgeSubmission invokes RejudgeSubmission operation.
+//
+// Rejudge submission.
 //
 // POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge
 func (c *Client) RejudgeSubmission(ctx context.Context, params RejudgeSubmissionParams) error {
@@ -13852,6 +14094,8 @@ func (c *Client) sendRemoveTeamMember(ctx context.Context, params RemoveTeamMemb
 
 // ReorderContestProblems invokes ReorderContestProblems operation.
 //
+// Reorder contest problems.
+//
 // PUT /organizations/{org_login}/contests/{contest_login}/problems/reorder
 func (c *Client) ReorderContestProblems(ctx context.Context, request *ReorderContestProblemsRequestModel, params ReorderContestProblemsParams) error {
 	_, err := c.sendReorderContestProblems(ctx, request, params)
@@ -13980,6 +14224,8 @@ func (c *Client) sendRequestEmailChange(ctx context.Context, request *RequestEma
 
 // ResendVerification invokes ResendVerification operation.
 //
+// Resend verification.
+//
 // POST /auth/resend-verification
 func (c *Client) ResendVerification(ctx context.Context, request *ResendVerificationRequestModel) error {
 	_, err := c.sendResendVerification(ctx, request)
@@ -14023,6 +14269,8 @@ func (c *Client) sendResendVerification(ctx context.Context, request *ResendVeri
 }
 
 // ResetPassword invokes ResetPassword operation.
+//
+// Reset password.
 //
 // POST /auth/reset-password
 func (c *Client) ResetPassword(ctx context.Context, request *ResetPasswordRequestModel) error {
@@ -14132,6 +14380,8 @@ func (c *Client) sendTestSolution(ctx context.Context, request *TestSolutionReq,
 }
 
 // UnblockProblemForUser invokes UnblockProblemForUser operation.
+//
+// Unblock problem for user.
 //
 // DELETE /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 func (c *Client) UnblockProblemForUser(ctx context.Context, params UnblockProblemForUserParams) error {
@@ -14270,6 +14520,8 @@ func (c *Client) sendUnblockProblemForUser(ctx context.Context, params UnblockPr
 
 // UnblockSubmission invokes UnblockSubmission operation.
 //
+// Unblock submission.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock
 func (c *Client) UnblockSubmission(ctx context.Context, params UnblockSubmissionParams) error {
 	_, err := c.sendUnblockSubmission(ctx, params)
@@ -14368,6 +14620,8 @@ func (c *Client) sendUnblockSubmission(ctx context.Context, params UnblockSubmis
 
 // UpdateContest invokes UpdateContest operation.
 //
+// Update contest.
+//
 // PATCH /organizations/{org_login}/contests/{contest_login}
 func (c *Client) UpdateContest(ctx context.Context, request *UpdateContestRequestModel, params UpdateContestParams) error {
 	_, err := c.sendUpdateContest(ctx, request, params)
@@ -14448,6 +14702,8 @@ func (c *Client) sendUpdateContest(ctx context.Context, request *UpdateContestRe
 }
 
 // UpdateContestMember invokes UpdateContestMember operation.
+//
+// Update contest member.
 //
 // PATCH /organizations/{org_login}/contests/{contest_login}/members
 func (c *Client) UpdateContestMember(ctx context.Context, params UpdateContestMemberParams) error {
@@ -14558,6 +14814,8 @@ func (c *Client) sendUpdateContestMember(ctx context.Context, params UpdateConte
 }
 
 // UpdateContestTeam invokes UpdateContestTeam operation.
+//
+// Update contest team.
 //
 // PATCH /organizations/{org_login}/contests/{contest_login}/teams
 func (c *Client) UpdateContestTeam(ctx context.Context, params UpdateContestTeamParams) error {
@@ -14732,6 +14990,8 @@ func (c *Client) sendUpdateOrganization(ctx context.Context, request *UpdateOrga
 }
 
 // UpdateProblem invokes UpdateProblem operation.
+//
+// Update problem.
 //
 // PATCH /problems/{id}
 func (c *Client) UpdateProblem(ctx context.Context, request *UpdateProblemRequestModel, params UpdateProblemParams) error {
@@ -15275,6 +15535,8 @@ func (c *Client) sendUpdateProblemMediaFile(ctx context.Context, request UpdateP
 
 // UpdateProblemMember invokes UpdateProblemMember operation.
 //
+// Update problem member.
+//
 // PATCH /problems/{id}/members
 func (c *Client) UpdateProblemMember(ctx context.Context, params UpdateProblemMemberParams) error {
 	_, err := c.sendUpdateProblemMember(ctx, params)
@@ -15450,6 +15712,8 @@ func (c *Client) sendUpdateProblemStatement(ctx context.Context, request *Update
 }
 
 // UpdateProblemTeam invokes UpdateProblemTeam operation.
+//
+// Update problem team.
 //
 // PATCH /problems/{id}/teams
 func (c *Client) UpdateProblemTeam(ctx context.Context, params UpdateProblemTeamParams) error {
@@ -16013,6 +16277,8 @@ func (c *Client) sendUpdateTeamMemberRole(ctx context.Context, params UpdateTeam
 
 // UpdateUser invokes UpdateUser operation.
 //
+// Update user.
+//
 // PATCH /users/{username}
 func (c *Client) UpdateUser(ctx context.Context, request *UpdateUserRequestModel, params UpdateUserParams) error {
 	_, err := c.sendUpdateUser(ctx, request, params)
@@ -16201,6 +16467,8 @@ func (c *Client) sendValidateAllTests(ctx context.Context, params ValidateAllTes
 }
 
 // VerifyEmail invokes VerifyEmail operation.
+//
+// Verify email.
 //
 // POST /auth/verify-email
 func (c *Client) VerifyEmail(ctx context.Context, request *VerifyEmailRequestModel) (*VerifyEmailResponseHeaders, error) {

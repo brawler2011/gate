@@ -28,8 +28,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List problems */
         get: operations["ListProblems"];
         put?: never;
+        /** Create problem */
         post: operations["CreateProblem"];
         delete?: never;
         options?: never;
@@ -44,6 +46,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List problem templates */
         get: operations["ListProblemTemplates"];
         put?: never;
         post?: never;
@@ -60,12 +63,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Get problem */
         get: operations["GetProblem"];
         put?: never;
         post?: never;
+        /** Delete problem */
         delete: operations["DeleteProblem"];
         options?: never;
         head?: never;
+        /** Update problem */
         patch: operations["UpdateProblem"];
         trace?: never;
     };
@@ -76,6 +82,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List admin contests */
         get: operations["ListAdminContests"];
         put?: never;
         post?: never;
@@ -160,6 +167,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List user contests */
         get: operations["ListUserContests"];
         put?: never;
         post?: never;
@@ -176,6 +184,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List workshop contests */
         get: operations["ListWorkshopContests"];
         put?: never;
         post?: never;
@@ -192,6 +201,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List public contests */
         get: operations["ListPublicContests"];
         put?: never;
         post?: never;
@@ -208,8 +218,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List organization contests */
         get: operations["ListOrganizationContests"];
         put?: never;
+        /** Create contest */
         post: operations["CreateContest"];
         delete?: never;
         options?: never;
@@ -224,12 +236,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Get contest */
         get: operations["GetContest"];
         put?: never;
         post?: never;
+        /** Delete contest */
         delete: operations["DeleteContest"];
         options?: never;
         head?: never;
+        /** Update contest */
         patch: operations["UpdateContest"];
         trace?: never;
     };
@@ -259,6 +274,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Create contest problem */
         post: operations["CreateContestProblem"];
         delete?: never;
         options?: never;
@@ -274,6 +290,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** Reorder contest problems */
         put: operations["ReorderContestProblems"];
         post?: never;
         delete?: never;
@@ -289,9 +306,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Get contest problem */
         get: operations["GetContestProblem"];
         put?: never;
         post?: never;
+        /** Delete contest problem */
         delete: operations["DeleteContestProblem"];
         options?: never;
         head?: never;
@@ -305,12 +324,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List contest members */
         get: operations["ListContestMembers"];
         put?: never;
+        /** Create contest member */
         post: operations["CreateContestMember"];
+        /** Delete contest member */
         delete: operations["DeleteContestMember"];
         options?: never;
         head?: never;
+        /** Update contest member */
         patch: operations["UpdateContestMember"];
         trace?: never;
     };
@@ -321,12 +344,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List contest teams */
         get: operations["ListContestTeams"];
         put?: never;
+        /** Create contest team */
         post: operations["CreateContestTeam"];
+        /** Delete contest team */
         delete: operations["DeleteContestTeam"];
         options?: never;
         head?: never;
+        /** Update contest team */
         patch: operations["UpdateContestTeam"];
         trace?: never;
     };
@@ -337,6 +364,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Get my contest role */
         get: operations["GetMyContestRole"];
         put?: never;
         post?: never;
@@ -353,6 +381,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List contest submissions */
         get: operations["ListContestSubmissions"];
         put?: never;
         post?: never;
@@ -371,6 +400,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Rejudge submission */
         post: operations["RejudgeSubmission"];
         delete?: never;
         options?: never;
@@ -387,6 +417,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Block submission */
         post: operations["BlockSubmission"];
         delete?: never;
         options?: never;
@@ -403,6 +434,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Unblock submission */
         post: operations["UnblockSubmission"];
         delete?: never;
         options?: never;
@@ -417,9 +449,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Get problem block status for user */
         get: operations["GetProblemBlockStatusForUser"];
         put?: never;
+        /** Block problem for user */
         post: operations["BlockProblemForUser"];
+        /** Unblock problem for user */
         delete: operations["UnblockProblemForUser"];
         options?: never;
         head?: never;
@@ -435,6 +470,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Rejudge contest problem */
         post: operations["RejudgeContestProblem"];
         delete?: never;
         options?: never;
@@ -451,6 +487,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Rejudge contest */
         post: operations["RejudgeContest"];
         delete?: never;
         options?: never;
@@ -465,6 +502,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Get contest scoreboard */
         get: operations["GetContestScoreboard"];
         put?: never;
         post?: never;
@@ -481,8 +519,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List contest drafts */
         get: operations["ListContestDrafts"];
         put?: never;
+        /** Create contest draft */
         post: operations["CreateContestDraft"];
         delete?: never;
         options?: never;
@@ -500,6 +540,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Delete contest draft */
         delete: operations["DeleteContestDraft"];
         options?: never;
         head?: never;
@@ -653,8 +694,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List submissions */
         get: operations["ListSubmissions"];
         put?: never;
+        /** Create submission */
         post: operations["CreateSubmission"];
         delete?: never;
         options?: never;
@@ -669,6 +712,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Get submission */
         get: operations["GetSubmission"];
         put?: never;
         post?: never;
@@ -685,6 +729,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Get health */
         get: operations["GetHealth"];
         put?: never;
         post?: never;
@@ -701,6 +746,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List users */
         get: operations["ListUsers"];
         put?: never;
         post?: never;
@@ -717,12 +763,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Get user */
         get: operations["GetUser"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
+        /** Update user */
         patch: operations["UpdateUser"];
         trace?: never;
     };
@@ -733,6 +781,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List user submissions */
         get: operations["ListUserSubmissions"];
         put?: never;
         post?: never;
@@ -749,6 +798,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Get me */
         get: operations["GetMe"];
         put?: never;
         post?: never;
@@ -765,6 +815,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Get my dashboard */
         get: operations["GetMyDashboard"];
         put?: never;
         post?: never;
@@ -868,12 +919,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List problem teams */
         get: operations["ListProblemTeams"];
         put?: never;
+        /** Create problem team */
         post: operations["CreateProblemTeam"];
+        /** Delete problem team */
         delete: operations["DeleteProblemTeam"];
         options?: never;
         head?: never;
+        /** Update problem team */
         patch: operations["UpdateProblemTeam"];
         trace?: never;
     };
@@ -884,12 +939,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** List problem members */
         get: operations["ListProblemMembers"];
         put?: never;
+        /** Create problem member */
         post: operations["CreateProblemMember"];
+        /** Delete problem member */
         delete: operations["DeleteProblemMember"];
         options?: never;
         head?: never;
+        /** Update problem member */
         patch: operations["UpdateProblemMember"];
         trace?: never;
     };
@@ -1812,6 +1871,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Register */
         post: operations["Register"];
         delete?: never;
         options?: never;
@@ -1828,6 +1888,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Login */
         post: operations["Login"];
         delete?: never;
         options?: never;
@@ -1844,6 +1905,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Logout */
         post: operations["Logout"];
         delete?: never;
         options?: never;
@@ -1860,6 +1922,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Verify email */
         post: operations["VerifyEmail"];
         delete?: never;
         options?: never;
@@ -1876,6 +1939,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Resend verification */
         post: operations["ResendVerification"];
         delete?: never;
         options?: never;
@@ -1892,6 +1956,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Forgot password */
         post: operations["ForgotPassword"];
         delete?: never;
         options?: never;
@@ -1908,6 +1973,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Reset password */
         post: operations["ResetPassword"];
         delete?: never;
         options?: never;
@@ -1924,6 +1990,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Confirm email change */
         post: operations["ConfirmEmailChange"];
         delete?: never;
         options?: never;
@@ -1935,20 +2002,48 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description Error data.
+         * @example {
+         *       "error": "Resource not found"
+         *     }
+         */
         Error: {
+            /** @example Resource not found */
             error?: string;
         };
+        /**
+         * @description Result of creation.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000"
+         *     }
+         */
         CreationResponseModel: {
             /** Format: uuid */
             id: string;
             login?: string;
         };
+        /**
+         * @description Fields for the update user request.
+         * @example {
+         *       "username": "alice",
+         *       "role": "user",
+         *       "email": "user@example.com"
+         *     }
+         */
         UpdateUserRequestModel: {
             username?: string;
             /** @enum {string} */
             role?: "user" | "admin";
             email?: string;
         };
+        /**
+         * @description Pagination data.
+         * @example {
+         *       "page": 1,
+         *       "total": 10
+         *     }
+         */
         PaginationModel: {
             /**
              * Format: int32
@@ -1961,10 +2056,27 @@ export interface components {
              */
             total: number;
         };
+        /**
+         * @description Problem sample data.
+         * @example {
+         *       "input": "1 2",
+         *       "output": "3"
+         *     }
+         */
         ProblemSampleModel: {
             input: string;
             output: string;
         };
+        /**
+         * @description Problem template data.
+         * @example {
+         *       "id": "builtin:a-plus-b",
+         *       "title": "Стандартная задача (A+B)",
+         *       "description": "Классическая задача со стандартным вводом-выводом, чекером на testlib.h и валидатором тестов",
+         *       "problem_type": "pass-fail",
+         *       "is_builtin": false
+         *     }
+         */
         ProblemTemplateModel: {
             /** @example builtin:a-plus-b */
             id: string;
@@ -1976,6 +2088,38 @@ export interface components {
             problem_type: string;
             is_builtin: boolean;
         };
+        /**
+         * @description Problem data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "organization_login": "example",
+         *       "created_by": "123e4567-e89b-42d3-a456-426614174000",
+         *       "visibility": "example",
+         *       "title": "Test problem",
+         *       "time_limit": 1000,
+         *       "memory_limit": 256,
+         *       "legend": "example",
+         *       "input_format": "example",
+         *       "output_format": "example",
+         *       "notes": "example",
+         *       "scoring": "example",
+         *       "legend_html": "example",
+         *       "input_format_html": "example",
+         *       "output_format_html": "example",
+         *       "notes_html": "example",
+         *       "scoring_html": "example",
+         *       "is_template": false,
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z",
+         *       "samples": [
+         *         {
+         *           "input": "1 2",
+         *           "output": "3"
+         *         }
+         *       ]
+         *     }
+         */
         ProblemModel: {
             /** Format: uuid */
             id: string;
@@ -2017,6 +2161,20 @@ export interface components {
             updated_at: string;
             samples: components["schemas"]["ProblemSampleModel"][];
         };
+        /**
+         * @description Problems list item data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "organization_login": "example",
+         *       "title": "A + B",
+         *       "memory_limit": 1,
+         *       "time_limit": 1,
+         *       "is_template": false,
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         ProblemsListItemModel: {
             /** Format: uuid */
             id: string;
@@ -2035,13 +2193,92 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Paginated collection of problems.
+         * @example {
+         *       "problems": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "organization_login": "example",
+         *           "title": "A + B",
+         *           "memory_limit": 1,
+         *           "time_limit": 1,
+         *           "is_template": false,
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         ListProblemsResponseModel: {
             problems: components["schemas"]["ProblemsListItemModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Result of get problem.
+         * @example {
+         *       "problem": {
+         *         "id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "organization_login": "example",
+         *         "created_by": "123e4567-e89b-42d3-a456-426614174000",
+         *         "visibility": "example",
+         *         "title": "Test problem",
+         *         "time_limit": 1000,
+         *         "memory_limit": 256,
+         *         "legend": "example",
+         *         "input_format": "example",
+         *         "output_format": "example",
+         *         "notes": "example",
+         *         "scoring": "example",
+         *         "legend_html": "example",
+         *         "input_format_html": "example",
+         *         "output_format_html": "example",
+         *         "notes_html": "example",
+         *         "scoring_html": "example",
+         *         "is_template": false,
+         *         "created_at": "2026-01-01T12:00:00Z",
+         *         "updated_at": "2026-01-01T12:00:00Z",
+         *         "samples": [
+         *           {
+         *             "input": "1 2",
+         *             "output": "3"
+         *           }
+         *         ]
+         *       }
+         *     }
+         */
         GetProblemResponseModel: {
             problem: components["schemas"]["ProblemModel"];
         };
+        /**
+         * @description Contest problem data.
+         * @example {
+         *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "title": "Test problem",
+         *       "time_limit": 1000,
+         *       "memory_limit": 256,
+         *       "position": 1,
+         *       "legend_html": "example",
+         *       "input_format_html": "example",
+         *       "output_format_html": "example",
+         *       "notes_html": "example",
+         *       "scoring_html": "example",
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z",
+         *       "samples": [
+         *         {
+         *           "input": "1 2",
+         *           "output": "3"
+         *         }
+         *       ]
+         *     }
+         */
         ContestProblemModel: {
             /** Format: uuid */
             problem_id: string;
@@ -2070,9 +2307,54 @@ export interface components {
             updated_at: string;
             samples: components["schemas"]["ProblemSampleModel"][];
         };
+        /**
+         * @description Result of get contest problem.
+         * @example {
+         *       "problem": {
+         *         "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "title": "Test problem",
+         *         "time_limit": 1000,
+         *         "memory_limit": 256,
+         *         "position": 1,
+         *         "legend_html": "example",
+         *         "input_format_html": "example",
+         *         "output_format_html": "example",
+         *         "notes_html": "example",
+         *         "scoring_html": "example",
+         *         "created_at": "2026-01-01T12:00:00Z",
+         *         "updated_at": "2026-01-01T12:00:00Z",
+         *         "samples": [
+         *           {
+         *             "input": "1 2",
+         *             "output": "3"
+         *           }
+         *         ]
+         *       }
+         *     }
+         */
         GetContestProblemResponseModel: {
             problem: components["schemas"]["ContestProblemModel"];
         };
+        /**
+         * @description Contest data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "login": "contest-1",
+         *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "organization_login": "example",
+         *       "title": "Test contest",
+         *       "description": "Example description",
+         *       "visibility": "example",
+         *       "monitor_scope": "example",
+         *       "submissions_list_scope": "example",
+         *       "submissions_review_scope": "example",
+         *       "submission_details_scope": "example",
+         *       "freeze_status": "auto",
+         *       "created_by": "123e4567-e89b-42d3-a456-426614174000",
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         ContestModel: {
             /** Format: uuid */
             id: string;
@@ -2127,14 +2409,82 @@ export interface components {
             /** @default false */
             hide_statements: boolean;
         };
+        /**
+         * @description Paginated collection of contests.
+         * @example {
+         *       "contests": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "login": "contest-1",
+         *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "organization_login": "example",
+         *           "title": "Test contest",
+         *           "description": "Example description",
+         *           "visibility": "example",
+         *           "monitor_scope": "example",
+         *           "submissions_list_scope": "example",
+         *           "submissions_review_scope": "example",
+         *           "submission_details_scope": "example",
+         *           "freeze_status": "auto",
+         *           "created_by": "123e4567-e89b-42d3-a456-426614174000",
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         ListContestsResponseModel: {
             contests: components["schemas"]["ContestModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Paginated collection of user contests.
+         * @example {
+         *       "contests": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "login": "contest-1",
+         *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "organization_login": "example",
+         *           "title": "Test contest",
+         *           "description": "Example description",
+         *           "visibility": "example",
+         *           "monitor_scope": "example",
+         *           "submissions_list_scope": "example",
+         *           "submissions_review_scope": "example",
+         *           "submission_details_scope": "example",
+         *           "freeze_status": "auto",
+         *           "created_by": "123e4567-e89b-42d3-a456-426614174000",
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         ListUserContestsResponseModel: {
             contests: components["schemas"]["ContestModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Contest problem list item data.
+         * @example {
+         *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "position": 1,
+         *       "title": "Test task",
+         *       "memory_limit": 256,
+         *       "time_limit": 1000,
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         ContestProblemListItemModel: {
             /** Format: uuid */
             problem_id: string;
@@ -2157,19 +2507,85 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Result of get contest.
+         * @example {
+         *       "contest": {
+         *         "id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "login": "contest-1",
+         *         "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "organization_login": "example",
+         *         "title": "Test contest",
+         *         "description": "Example description",
+         *         "visibility": "example",
+         *         "monitor_scope": "example",
+         *         "submissions_list_scope": "example",
+         *         "submissions_review_scope": "example",
+         *         "submission_details_scope": "example",
+         *         "freeze_status": "auto",
+         *         "created_by": "123e4567-e89b-42d3-a456-426614174000",
+         *         "created_at": "2026-01-01T12:00:00Z",
+         *         "updated_at": "2026-01-01T12:00:00Z"
+         *       },
+         *       "problems": [
+         *         {
+         *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "position": 1,
+         *           "title": "Test task",
+         *           "memory_limit": 256,
+         *           "time_limit": 1000,
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ]
+         *     }
+         */
         GetContestResponseModel: {
             contest: components["schemas"]["ContestModel"];
             problems: components["schemas"]["ContestProblemListItemModel"][];
         };
+        /**
+         * @description Fields for the reorder contest problems request.
+         * @example {
+         *       "problems": [
+         *         {
+         *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "position": 1
+         *         }
+         *       ]
+         *     }
+         */
         ReorderContestProblemsRequestModel: {
             problems: components["schemas"]["ContestProblemReorderItemModel"][];
         };
+        /**
+         * @description Contest problem reorder item data.
+         * @example {
+         *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "position": 1
+         *     }
+         */
         ContestProblemReorderItemModel: {
             /** Format: uuid */
             problem_id: string;
             /** Format: int32 */
             position: number;
         };
+        /**
+         * @description Fields for the update problem request.
+         * @example {
+         *       "title": "Test problem",
+         *       "legend": "example",
+         *       "input_format": "example",
+         *       "output_format": "example",
+         *       "notes": "example",
+         *       "scoring": "example",
+         *       "memory_limit": 256,
+         *       "time_limit": 1000,
+         *       "visibility": "private",
+         *       "is_template": false
+         *     }
+         */
         UpdateProblemRequestModel: {
             /** @example Test problem */
             title?: string;
@@ -2192,6 +2608,29 @@ export interface components {
             visibility?: string;
             is_template?: boolean;
         };
+        /**
+         * @description Fields for the update contest request.
+         * @example {
+         *       "login": "contest-1",
+         *       "title": "Test contest",
+         *       "description": "Example description",
+         *       "visibility": "private",
+         *       "monitor_scope": "participant",
+         *       "submissions_list_scope": "moderator",
+         *       "submissions_review_scope": "admin",
+         *       "submission_details_scope": "moderator",
+         *       "freeze_duration_minutes": 1,
+         *       "freeze_status": "auto",
+         *       "start_time": "2026-01-01T12:00:00Z",
+         *       "end_time": "2026-01-01T12:00:00Z",
+         *       "enable_drafts": false,
+         *       "allow_clarifications": false,
+         *       "enable_upsolving": false,
+         *       "enable_virtual_contests": false,
+         *       "participation_mode": "open",
+         *       "hide_statements": false
+         *     }
+         */
         UpdateContestRequestModel: {
             /** @example contest-1 */
             login?: string;
@@ -2231,9 +2670,42 @@ export interface components {
             participation_mode?: "open" | "by_request" | "invite_only";
             hide_statements?: boolean;
         };
+        /**
+         * @description Fields for the create submission request.
+         * @example {
+         *       "submission": "example"
+         *     }
+         */
         CreateSubmissionRequestModel: {
             submission: string;
         };
+        /**
+         * @description Paginated collection of submissions.
+         * @example {
+         *       "submissions": [
+         *         {
+         *           "revision": 1,
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "username": "user123",
+         *           "language": 1,
+         *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "problem_title": "Task title",
+         *           "position": 1,
+         *           "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "contest_login": "contest-1",
+         *           "contest_title": "Contest title",
+         *           "updated_at": "2026-01-01T12:00:00Z",
+         *           "created_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       },
+         *       "total_count": 1
+         *     }
+         */
         ListSubmissionsResponseModel: {
             /** Format: int32 */
             total_count: number;
@@ -2242,6 +2714,24 @@ export interface components {
             submissions: components["schemas"]["SubmissionsListItemModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Submissions list item data.
+         * @example {
+         *       "revision": 1,
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "user123",
+         *       "language": 1,
+         *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "problem_title": "Task title",
+         *       "position": 1,
+         *       "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "contest_login": "contest-1",
+         *       "contest_title": "Contest title",
+         *       "updated_at": "2026-01-01T12:00:00Z",
+         *       "created_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         SubmissionsListItemModel: {
             /**
              * Format: int64
@@ -2313,6 +2803,15 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description Test detail item data.
+         * @example {
+         *       "test_index": 1,
+         *       "verdict": "OK",
+         *       "time_ms": 15,
+         *       "memory_kb": 2048
+         *     }
+         */
         TestDetailItemModel: {
             /**
              * Format: int32
@@ -2332,6 +2831,18 @@ export interface components {
              */
             memory_kb: number;
         };
+        /**
+         * @description Failed test detail data.
+         * @example {
+         *       "test_index": 5,
+         *       "input": "5\n1 2 3 4 5",
+         *       "output": "14",
+         *       "answer": "15",
+         *       "checker_output": "wrong answer: expected 15, got 14",
+         *       "error_message": "",
+         *       "is_truncated": false
+         *     }
+         */
         FailedTestDetailModel: {
             /**
              * Format: int32
@@ -2354,6 +2865,30 @@ export interface components {
             /** @example false */
             is_truncated: boolean;
         };
+        /**
+         * @description Submission test details data.
+         * @example {
+         *       "compiler_output": "example",
+         *       "error_line": 12,
+         *       "tests": [
+         *         {
+         *           "test_index": 1,
+         *           "verdict": "OK",
+         *           "time_ms": 15,
+         *           "memory_kb": 2048
+         *         }
+         *       ],
+         *       "failed_test_details": {
+         *         "test_index": 5,
+         *         "input": "5\n1 2 3 4 5",
+         *         "output": "14",
+         *         "answer": "15",
+         *         "checker_output": "wrong answer: expected 15, got 14",
+         *         "error_message": "",
+         *         "is_truncated": false
+         *       }
+         *     }
+         */
         SubmissionTestDetailsModel: {
             compiler_output?: string | null;
             /**
@@ -2364,6 +2899,23 @@ export interface components {
             tests?: components["schemas"]["TestDetailItemModel"][];
             failed_test_details?: components["schemas"]["FailedTestDetailModel"];
         };
+        /**
+         * @description Submission data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "user123",
+         *       "language": 1,
+         *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "problem_title": "Task title",
+         *       "position": 1,
+         *       "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "contest_login": "contest-1",
+         *       "contest_title": "Contest title",
+         *       "updated_at": "2026-01-01T12:00:00Z",
+         *       "created_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         SubmissionModel: {
             frozen?: boolean;
             /** Format: uuid */
@@ -2432,23 +2984,73 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description Result of get submission.
+         * @example {
+         *       "submission": {
+         *         "id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "username": "user123",
+         *         "language": 1,
+         *         "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "problem_title": "Task title",
+         *         "position": 1,
+         *         "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "contest_login": "contest-1",
+         *         "contest_title": "Contest title",
+         *         "updated_at": "2026-01-01T12:00:00Z",
+         *         "created_at": "2026-01-01T12:00:00Z"
+         *       }
+         *     }
+         */
         GetSubmissionResponseModel: {
             submission: components["schemas"]["SubmissionModel"];
         };
+        /**
+         * @description Fields for the block submission request.
+         * @example {
+         *       "reason": "Cheating detected"
+         *     }
+         */
         BlockSubmissionRequestModel: {
             /** @example Cheating detected */
             reason?: string;
         };
+        /**
+         * @description Fields for the block problem request.
+         * @example {
+         *       "reason": "Cheating detected on this problem"
+         *     }
+         */
         BlockProblemRequestModel: {
             /** @example Cheating detected on this problem */
             reason?: string;
         };
+        /**
+         * @description Result of problem block status.
+         * @example {
+         *       "is_blocked": false
+         *     }
+         */
         ProblemBlockStatusResponseModel: {
             is_blocked: boolean;
             reason?: string | null;
             /** Format: date-time */
             created_at?: string | null;
         };
+        /**
+         * @description Dashboard contest data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "login": "contest-1",
+         *       "title": "A + B",
+         *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "organization_name": "example",
+         *       "organization_login": "example",
+         *       "user_role": "example",
+         *       "created_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         DashboardContestModel: {
             /** Format: uuid */
             id: string;
@@ -2469,6 +3071,19 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description Dashboard problem data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "title": "A + B",
+         *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "organization_name": "example",
+         *       "organization_login": "example",
+         *       "time_limit": 1,
+         *       "memory_limit": 1,
+         *       "updated_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         DashboardProblemModel: {
             /** Format: uuid */
             id: string;
@@ -2484,27 +3099,78 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Result of get user dashboard.
+         * @example {
+         *       "recent_contests": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "login": "contest-1",
+         *           "title": "A + B",
+         *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "organization_name": "example",
+         *           "organization_login": "example",
+         *           "user_role": "example",
+         *           "created_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "my_problems": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "title": "A + B",
+         *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "organization_name": "example",
+         *           "organization_login": "example",
+         *           "time_limit": 1,
+         *           "memory_limit": 1,
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ]
+         *     }
+         */
         GetUserDashboardResponseModel: {
             recent_contests: components["schemas"]["DashboardContestModel"][];
             my_problems: components["schemas"]["DashboardProblemModel"][];
         };
+        /**
+         * @description Result of get user.
+         * @example {
+         *       "user": {
+         *         "id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "username": "user123",
+         *         "created_at": "2026-01-01T12:00:00Z",
+         *         "updated_at": "2026-01-01T12:00:00Z",
+         *         "role": "user"
+         *       }
+         *     }
+         */
         GetUserResponseModel: {
             user: components["schemas"]["UserModel"];
         };
+        /**
+         * @description User data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "user123",
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z",
+         *       "role": "user"
+         *     }
+         */
         UserModel: {
             /** Format: uuid */
             id: string;
             /** @example user123 */
             username: string;
             /** Format: date-time */
-            createdAt: string;
+            created_at: string;
             /** Format: date-time */
-            updatedAt: string;
+            updated_at: string;
             role: string;
             /** @example user@example.com */
             email?: string;
             /** Format: uuid */
-            imgId?: string;
+            img_id?: string;
             /** Format: date-time */
             expires_at?: string;
             /** Format: uuid */
@@ -2513,20 +3179,77 @@ export interface components {
             claimed_at?: string;
             is_email_verified?: boolean;
         };
+        /**
+         * @description Paginated collection of users.
+         * @example {
+         *       "users": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "username": "user123",
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z",
+         *           "role": "user"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         ListUsersResponseModel: {
             users: components["schemas"]["UserModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Paginated collection of contest members.
+         * @example {
+         *       "members": [
+         *         {
+         *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "username": "user123",
+         *           "role": "user",
+         *           "contest_role": "example",
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         ListContestMembersResponseModel: {
             members: components["schemas"]["ContestMemberModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Result of get health.
+         * @example {
+         *       "status": "ok",
+         *       "message": "Backend is running"
+         *     }
+         */
         GetHealthResponseModel: {
             /** @example ok */
             status: string;
             /** @example Backend is running */
             message: string;
         };
+        /**
+         * @description Contest member data.
+         * @example {
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "user123",
+         *       "role": "user",
+         *       "contest_role": "example",
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         ContestMemberModel: {
             /** Format: uuid */
             user_id: string;
@@ -2541,6 +3264,12 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Result of get my contest role.
+         * @example {
+         *       "role": "owner"
+         *     }
+         */
         GetMyContestRoleResponseModel: {
             /** @example owner */
             role: string;
@@ -2551,7 +3280,16 @@ export interface components {
              */
             permissions_mask?: number;
         };
-        /** ScoreboardProblemResultModel */
+        /**
+         * ScoreboardProblemResultModel
+         * @description Scoreboard problem result data.
+         * @example {
+         *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "solved": false,
+         *       "failed_attempts": 1,
+         *       "pending_attempts": 1
+         *     }
+         */
         ScoreboardProblemResultModel: {
             /** Format: uuid */
             problem_id: string;
@@ -2570,7 +3308,24 @@ export interface components {
             /** Format: int32 */
             penalty?: number;
         };
-        /** ScoreboardItemModel */
+        /**
+         * ScoreboardItemModel
+         * @description Scoreboard item data.
+         * @example {
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "alice",
+         *       "problems_solved": 1,
+         *       "total_penalty": 1,
+         *       "problem_results": [
+         *         {
+         *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "solved": false,
+         *           "failed_attempts": 1,
+         *           "pending_attempts": 1
+         *         }
+         *       ]
+         *     }
+         */
         ScoreboardItemModel: {
             /** Format: uuid */
             user_id: string;
@@ -2583,7 +3338,16 @@ export interface components {
             last_accepted_at?: string;
             problem_results: components["schemas"]["ScoreboardProblemResultModel"][];
         };
-        /** ScoreboardProblemHeaderModel */
+        /**
+         * ScoreboardProblemHeaderModel
+         * @description Scoreboard problem header data.
+         * @example {
+         *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "title": "A + B",
+         *       "short_name": "example",
+         *       "ordinal": 1
+         *     }
+         */
         ScoreboardProblemHeaderModel: {
             /** Format: uuid */
             problem_id: string;
@@ -2592,7 +3356,41 @@ export interface components {
             /** Format: int32 */
             ordinal: number;
         };
-        /** ScoreboardResponseModel */
+        /**
+         * ScoreboardResponseModel
+         * @description Result of scoreboard.
+         * @example {
+         *       "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "contest_login": "contest-1",
+         *       "organization_login": "yandex",
+         *       "penalty_per_attempt": 1,
+         *       "is_frozen": false,
+         *       "problems": [
+         *         {
+         *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "title": "A + B",
+         *           "short_name": "example",
+         *           "ordinal": 1
+         *         }
+         *       ],
+         *       "items": [
+         *         {
+         *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "username": "alice",
+         *           "problems_solved": 1,
+         *           "total_penalty": 1,
+         *           "problem_results": [
+         *             {
+         *               "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *               "solved": false,
+         *               "failed_attempts": 1,
+         *               "pending_attempts": 1
+         *             }
+         *           ]
+         *         }
+         *       ]
+         *     }
+         */
         ScoreboardResponseModel: {
             /** Format: int64 */
             since?: number;
@@ -2615,159 +3413,14 @@ export interface components {
             items: components["schemas"]["ScoreboardItemModel"][];
         };
         /**
-         * @description WebSocket testing progress event type:
-         *     - testing_started: Sent when testing of a submission begins
-         *     - test_completed: Sent after each individual test case completes
-         *     - testing_completed: Sent when all testing for a submission is finished
-         * @enum {string}
-         */
-        TestProgressEventType: "testing_started" | "test_completed" | "testing_completed";
-        /**
+         * @description File entry data.
          * @example {
-         *       "type": "testing_started",
-         *       "submission_id": "550e8400-e29b-41d4-a716-446655440000",
-         *       "total_tests": 10
+         *       "path": "example",
+         *       "is_directory": false,
+         *       "size": 1,
+         *       "is_main": false
          *     }
          */
-        TestingStartedEventModel: {
-            type: components["schemas"]["TestProgressEventType"];
-            /**
-             * Format: uuid
-             * @description UUID of the submission being tested
-             */
-            submission_id: string;
-            /** @description Total number of test cases for this submission */
-            total_tests: number;
-        };
-        /**
-         * @example {
-         *       "type": "test_completed",
-         *       "submission_id": "550e8400-e29b-41d4-a716-446655440000",
-         *       "test_number": 3,
-         *       "total_tests": 10,
-         *       "passed": true
-         *     }
-         */
-        TestCompletedEventModel: {
-            type: components["schemas"]["TestProgressEventType"];
-            /**
-             * Format: uuid
-             * @description UUID of the submission being tested
-             */
-            submission_id: string;
-            /** @description The test case number that just completed (1-indexed) */
-            test_number: number;
-            /** @description Total number of test cases */
-            total_tests: number;
-            /** @description Whether the test case passed */
-            passed: boolean;
-        };
-        /**
-         * @example {
-         *       "type": "testing_completed",
-         *       "submission_id": "550e8400-e29b-41d4-a716-446655440000",
-         *       "total_tests": 10,
-         *       "state": 200
-         *     }
-         */
-        TestingCompletedEventModel: {
-            type: components["schemas"]["TestProgressEventType"];
-            /**
-             * Format: uuid
-             * @description UUID of the submission
-             */
-            submission_id: string;
-            /** @description Total number of test cases */
-            total_tests: number;
-            /**
-             * @description Final submission state:
-             *     - 1: Saved (not yet tested)
-             *     - 101: Compilation Error (CE)
-             *     - 102: Time Limit Exceeded (TL)
-             *     - 103: Memory Limit Exceeded (ML)
-             *     - 104: Runtime Error (RE)
-             *     - 105: Presentation Error (PE)
-             *     - 106: Wrong Answer (WA)
-             *     - 200: Accepted (AC)
-             * @enum {integer}
-             */
-            state: 1 | 101 | 102 | 103 | 104 | 105 | 106 | 200;
-        };
-        /**
-         * @description WebSocket message type for submission list updates:
-         *     - submission_created: A new submission was created
-         *     - submission_updated: An existing submission was updated (test results)
-         *     - testing_started: Testing of a submission has started
-         *     - test_completed: A single test case completed (shows progress)
-         *     - testing_completed: All testing for a submission is finished
-         * @enum {string}
-         */
-        WebSocketMessageType: "submission_created" | "submission_updated" | "testing_started" | "test_completed" | "testing_completed";
-        /**
-         * @description WebSocket event sent to clients for submission list updates.
-         *
-         *     Event types:
-         *     - submission_created: New submission (includes full submission data)
-         *     - submission_updated: Test results ready (includes full submission data)
-         *     - testing_started: Testing began (includes submission_id, total_tests)
-         *     - test_completed: Test finished (includes submission_id, test_number, total_tests, passed)
-         *     - testing_completed: All tests done (includes submission_id, total_tests, state)
-         *
-         *     The /ws/submissions endpoint accepts these query parameters:
-         *     - contestId (uuid, optional): Filter by contest ID
-         *     - userId (uuid, optional): Filter by user ID
-         *     - problemId (uuid, optional): Filter by problem ID
-         *     - state (integer, optional): Filter by submission state
-         *     - language (integer, optional): Filter by programming language
-         *     - sortOrder (string, required): Must be "desc" for real-time updates
-         * @example {
-         *       "message_type": "test_completed",
-         *       "submission_id": "550e8400-e29b-41d4-a716-446655440000",
-         *       "test_number": 3,
-         *       "total_tests": 10,
-         *       "passed": true
-         *     }
-         */
-        SubmissionWebSocketEventModel: {
-            message_type: components["schemas"]["WebSocketMessageType"];
-            /** @description Full submission data (for submission_created/submission_updated events) */
-            submission?: components["schemas"]["SubmissionsListItemModel"];
-            /** @description Optional message with additional details */
-            message?: string;
-            /**
-             * Format: uuid
-             * @description Submission ID (for test progress events)
-             */
-            submission_id?: string;
-            /** @description Current test number (for test_completed events) */
-            test_number?: number;
-            /** @description Total number of tests */
-            total_tests?: number;
-            /** @description Whether the current test passed (for test_completed events) */
-            passed?: boolean;
-            /** @description Final submission state (for testing_completed events) */
-            state?: number;
-            /**
-             * Format: uuid
-             * @description Contest ID (for filtering)
-             */
-            contest_id?: string;
-            /**
-             * Format: uuid
-             * @description User ID (for filtering)
-             */
-            user_id?: string;
-            /**
-             * Format: uuid
-             * @description Problem ID (for filtering)
-             */
-            problem_id?: string;
-            /**
-             * Format: int32
-             * @description Programming language (for filtering)
-             */
-            language?: number;
-        };
         FileEntry: {
             path?: string;
             is_directory?: boolean;
@@ -2775,24 +3428,69 @@ export interface components {
             size?: number;
             is_main?: boolean;
         };
+        /**
+         * @description Result of message.
+         * @example {
+         *       "message": "Operation completed successfully"
+         *     }
+         */
         MessageResponse: {
             message?: string;
         };
+        /**
+         * @description Result of workshop file list.
+         * @example {
+         *       "files": [
+         *         {
+         *           "path": "example",
+         *           "is_directory": false,
+         *           "size": 1,
+         *           "is_main": false
+         *         }
+         *       ]
+         *     }
+         */
         WorkshopFileListResponse: {
             files?: components["schemas"]["FileEntry"][];
         };
+        /**
+         * @description Problem limits data.
+         * @example {
+         *       "problem_type": "example",
+         *       "time_limit_ms": 1,
+         *       "memory_limit_mb": 1
+         *     }
+         */
         ProblemLimits: {
             problem_type: string;
             time_limit_ms: number;
             memory_limit_mb: number;
             max_score?: number | null;
         };
+        /**
+         * @description Fields for the update problem limits request.
+         * @example {
+         *       "problem_type": "example",
+         *       "time_limit_ms": 1,
+         *       "memory_limit_mb": 1,
+         *       "max_score": 1
+         *     }
+         */
         UpdateProblemLimitsRequest: {
             problem_type?: string;
             time_limit_ms?: number;
             memory_limit_mb?: number;
             max_score?: number | null;
         };
+        /**
+         * @description Problem statement data.
+         * @example {
+         *       "title": "A + B",
+         *       "legend": "example",
+         *       "input_format": "example",
+         *       "output_format": "example"
+         *     }
+         */
         ProblemStatement: {
             title: string;
             legend: string;
@@ -2804,6 +3502,18 @@ export interface components {
             languages?: string[];
             current_lang?: string;
         };
+        /**
+         * @description Fields for the update problem statement request.
+         * @example {
+         *       "title": "A + B",
+         *       "legend": "example",
+         *       "input_format": "example",
+         *       "output_format": "example",
+         *       "notes": "example",
+         *       "interaction": "example",
+         *       "scoring": "example"
+         *     }
+         */
         UpdateProblemStatementRequest: {
             title?: string;
             legend?: string;
@@ -2813,12 +3523,23 @@ export interface components {
             interaction?: string;
             scoring?: string;
         };
-        MainComponentSelectionRequest: {
-            name: string;
-        };
+        /**
+         * @description Fields for the update problem tests config request.
+         * @example {}
+         */
         UpdateProblemTestsConfigRequest: {
             [key: string]: unknown;
         };
+        /**
+         * @description Compile result data.
+         * @example {
+         *       "success": false,
+         *       "file_id": "example",
+         *       "sha256": "example",
+         *       "compile_log": "example",
+         *       "compile_error": "example"
+         *     }
+         */
         CompileResult: {
             success?: boolean;
             file_id?: string;
@@ -2826,24 +3547,76 @@ export interface components {
             compile_log?: string;
             compile_error?: string;
         };
+        /**
+         * @description Validation report data.
+         * @example {
+         *       "total_tests": 1,
+         *       "valid_tests": 1,
+         *       "invalid_tests": 1,
+         *       "results": [
+         *         {
+         *           "test_number": 1,
+         *           "valid": false,
+         *           "message": "Operation completed successfully",
+         *           "error": "Resource not found"
+         *         }
+         *       ]
+         *     }
+         */
         ValidationReport: {
             total_tests?: number;
             valid_tests?: number;
             invalid_tests?: number;
             results?: components["schemas"]["TestValidationResult"][];
         };
+        /**
+         * @description Test validation result data.
+         * @example {
+         *       "test_number": 1,
+         *       "valid": false,
+         *       "message": "Operation completed successfully",
+         *       "error": "Resource not found"
+         *     }
+         */
         TestValidationResult: {
             test_number?: number;
             valid?: boolean;
             message?: string;
             error?: string;
         };
+        /**
+         * @description Test report data.
+         * @example {
+         *       "total_tests": 1,
+         *       "passed_tests": 1,
+         *       "failed_tests": 1,
+         *       "results": [
+         *         {
+         *           "test_number": 1,
+         *           "verdict": "example",
+         *           "time": 1,
+         *           "memory": 1,
+         *           "message": "Operation completed successfully"
+         *         }
+         *       ]
+         *     }
+         */
         TestReport: {
             total_tests?: number;
             passed_tests?: number;
             failed_tests?: number;
             results?: components["schemas"]["TestResult"][];
         };
+        /**
+         * @description Test result data.
+         * @example {
+         *       "test_number": 1,
+         *       "verdict": "example",
+         *       "time": 1,
+         *       "memory": 1,
+         *       "message": "Operation completed successfully"
+         *     }
+         */
         TestResult: {
             test_number?: number;
             verdict?: string;
@@ -2853,11 +3626,29 @@ export interface components {
             memory?: number;
             message?: string;
         };
+        /**
+         * @description Result of create organization.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "login": "example"
+         *     }
+         */
         CreateOrganizationResponseModel: {
             /** Format: uuid */
             id: string;
             login: string;
         };
+        /**
+         * @description Organization data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "login": "example",
+         *       "name": "main.cpp",
+         *       "join_policy": "open",
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         OrganizationModel: {
             /** Format: uuid */
             id: string;
@@ -2874,13 +3665,54 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Paginated collection of organizations.
+         * @example {
+         *       "organizations": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "login": "example",
+         *           "name": "main.cpp",
+         *           "join_policy": "open",
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         ListOrganizationsResponseModel: {
             organizations: components["schemas"]["OrganizationModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Result of get organization.
+         * @example {
+         *       "organization": {
+         *         "id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "login": "example",
+         *         "name": "main.cpp",
+         *         "join_policy": "open",
+         *         "created_at": "2026-01-01T12:00:00Z",
+         *         "updated_at": "2026-01-01T12:00:00Z"
+         *       }
+         *     }
+         */
         GetOrganizationResponseModel: {
             organization: components["schemas"]["OrganizationModel"];
         };
+        /**
+         * @description Fields for the update organization request.
+         * @example {
+         *       "login": "example",
+         *       "name": "main.cpp",
+         *       "description": "Example description",
+         *       "join_policy": "open"
+         *     }
+         */
         UpdateOrganizationRequestModel: {
             login?: string;
             name?: string;
@@ -2888,6 +3720,16 @@ export interface components {
             /** @enum {string} */
             join_policy?: "open" | "by_request" | "invite_only";
         };
+        /**
+         * @description Organization member data.
+         * @example {
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "alice",
+         *       "role": "user",
+         *       "created_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         OrganizationMemberModel: {
             /** Format: uuid */
             user_id: string;
@@ -2898,10 +3740,38 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description Paginated collection of organization members.
+         * @example {
+         *       "members": [
+         *         {
+         *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "username": "alice",
+         *           "role": "user",
+         *           "created_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         ListOrganizationMembersResponseModel: {
             members: components["schemas"]["OrganizationMemberModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Team data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "name": "main.cpp",
+         *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         TeamModel: {
             /** Format: uuid */
             id: string;
@@ -2914,17 +3784,64 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Paginated collection of teams.
+         * @example {
+         *       "teams": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "name": "main.cpp",
+         *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         ListTeamsResponseModel: {
             teams: components["schemas"]["TeamModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Result of get team.
+         * @example {
+         *       "team": {
+         *         "id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "name": "main.cpp",
+         *         "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "created_at": "2026-01-01T12:00:00Z",
+         *         "updated_at": "2026-01-01T12:00:00Z"
+         *       }
+         *     }
+         */
         GetTeamResponseModel: {
             team: components["schemas"]["TeamModel"];
         };
+        /**
+         * @description Fields for the update team request.
+         * @example {
+         *       "name": "main.cpp",
+         *       "description": "Example description"
+         *     }
+         */
         UpdateTeamRequestModel: {
             name?: string;
             description?: string;
         };
+        /**
+         * @description Team member data.
+         * @example {
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "team_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "alice",
+         *       "role": "user",
+         *       "created_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         TeamMemberModel: {
             /** Format: uuid */
             user_id: string;
@@ -2935,10 +3852,39 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description Paginated collection of team members.
+         * @example {
+         *       "members": [
+         *         {
+         *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "team_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "username": "alice",
+         *           "role": "user",
+         *           "created_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         ListTeamMembersResponseModel: {
             members: components["schemas"]["TeamMemberModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Contest team data.
+         * @example {
+         *       "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "team_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "team_name": "example",
+         *       "team_slug": "example",
+         *       "contest_role": "example",
+         *       "created_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         ContestTeamModel: {
             /** Format: uuid */
             contest_id: string;
@@ -2952,9 +3898,35 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description Paginated collection of contest teams.
+         * @example {
+         *       "teams": [
+         *         {
+         *           "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "team_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "team_name": "example",
+         *           "team_slug": "example",
+         *           "contest_role": "example",
+         *           "created_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ]
+         *     }
+         */
         ListContestTeamsResponseModel: {
             teams: components["schemas"]["ContestTeamModel"][];
         };
+        /**
+         * @description Problem team data.
+         * @example {
+         *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "team_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "team_name": "example",
+         *       "team_slug": "example",
+         *       "permission": "example",
+         *       "created_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         ProblemTeamModel: {
             /** Format: uuid */
             problem_id: string;
@@ -2966,9 +3938,34 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description Paginated collection of problem teams.
+         * @example {
+         *       "teams": [
+         *         {
+         *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "team_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "team_name": "example",
+         *           "team_slug": "example",
+         *           "permission": "example",
+         *           "created_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ]
+         *     }
+         */
         ListProblemTeamsResponseModel: {
             teams: components["schemas"]["ProblemTeamModel"][];
         };
+        /**
+         * @description Problem member data.
+         * @example {
+         *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "alice",
+         *       "role": "user",
+         *       "created_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         ProblemMemberModel: {
             /** Format: uuid */
             problem_id: string;
@@ -2979,10 +3976,42 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description Paginated collection of problem members.
+         * @example {
+         *       "members": [
+         *         {
+         *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "username": "alice",
+         *           "role": "user",
+         *           "created_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         ListProblemMembersResponseModel: {
             members: components["schemas"]["ProblemMemberModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Post data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z",
+         *       "title": "A + B",
+         *       "text": "Example text",
+         *       "description": "Example description",
+         *       "preview_image_id": "example",
+         *       "author_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "author_username": "example"
+         *     }
+         */
         PostModel: {
             /** Format: uuid */
             id: string;
@@ -2998,20 +4027,50 @@ export interface components {
             author_id: string;
             author_username: string;
         };
-        PostPatchRequestModel: {
-            title?: string;
-            description?: string;
-            text?: string;
-            preview_image_id?: string;
-        };
+        /**
+         * @description Paginated collection of posts.
+         * @example {
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       },
+         *       "posts": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z",
+         *           "title": "A + B",
+         *           "text": "Example text",
+         *           "description": "Example description",
+         *           "preview_image_id": "example",
+         *           "author_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "author_username": "example"
+         *         }
+         *       ]
+         *     }
+         */
         ListPostsResponseModel: {
             pagination: components["schemas"]["PaginationModel"];
             posts: components["schemas"]["PostModel"][];
         };
+        /**
+         * @description Created post data.
+         * @example {
+         *       "post_id": "123e4567-e89b-42d3-a456-426614174000"
+         *     }
+         */
         CreatedPost: {
             /** Format: uuid */
             post_id?: string;
         };
+        /**
+         * @description Fields for the register request.
+         * @example {
+         *       "username": "john_doe",
+         *       "email": "john@example.com",
+         *       "password": "secret123"
+         *     }
+         */
         RegisterRequestModel: {
             /** @example john_doe */
             username: string;
@@ -3026,6 +4085,13 @@ export interface components {
              */
             password: string;
         };
+        /**
+         * @description Fields for the login request.
+         * @example {
+         *       "identifier": "john_doe",
+         *       "password": "secret123"
+         *     }
+         */
         LoginRequestModel: {
             /** @example john_doe */
             identifier: string;
@@ -3035,50 +4101,126 @@ export interface components {
              */
             password: string;
         };
+        /**
+         * @description Result of auth.
+         * @example {
+         *       "user": {
+         *         "id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "username": "user123",
+         *         "created_at": "2026-01-01T12:00:00Z",
+         *         "updated_at": "2026-01-01T12:00:00Z",
+         *         "role": "user"
+         *       }
+         *     }
+         */
         AuthResponseModel: {
             user: components["schemas"]["UserModel"];
             /** Format: uuid */
             session_id?: string;
         };
+        /**
+         * @description Fields for the verify email request.
+         * @example {
+         *       "token": "example-token"
+         *     }
+         */
         VerifyEmailRequestModel: {
             token: string;
         };
+        /**
+         * @description Fields for the resend verification request.
+         * @example {
+         *       "identifier": "example"
+         *     }
+         */
         ResendVerificationRequestModel: {
             identifier: string;
         };
+        /**
+         * @description Fields for the forgot password request.
+         * @example {
+         *       "identifier": "example"
+         *     }
+         */
         ForgotPasswordRequestModel: {
             identifier: string;
         };
+        /**
+         * @description Fields for the reset password request.
+         * @example {
+         *       "token": "example-token",
+         *       "password": "ExamplePassword123!"
+         *     }
+         */
         ResetPasswordRequestModel: {
             token: string;
             /** Format: password */
             password: string;
         };
+        /**
+         * @description Fields for the change password request.
+         * @example {
+         *       "old_password": "example",
+         *       "new_password": "example"
+         *     }
+         */
         ChangePasswordRequestModel: {
             /** Format: password */
             old_password: string;
             /** Format: password */
             new_password: string;
         };
+        /**
+         * @description Fields for the request email change request.
+         * @example {
+         *       "password": "ExamplePassword123!",
+         *       "new_email": "user@example.com"
+         *     }
+         */
         RequestEmailChangeRequestModel: {
             /** Format: password */
             password: string;
             /** Format: email */
             new_email: string;
         };
+        /**
+         * @description Fields for the confirm email change request.
+         * @example {
+         *       "token": "example-token"
+         *     }
+         */
         ConfirmEmailChangeRequestModel: {
             token: string;
         };
+        /**
+         * @description Fields for the admin change email request.
+         * @example {
+         *       "email": "user@example.com"
+         *     }
+         */
         AdminChangeEmailRequestModel: {
             /** Format: email */
             email: string;
             /** @default true */
             with_confirmation: boolean;
         };
+        /**
+         * @description Fields for the admin set password request.
+         * @example {
+         *       "password": "ExamplePassword123!"
+         *     }
+         */
         AdminSetPasswordRequestModel: {
             /** Format: password */
             password: string;
         };
+        /**
+         * @description Supported language data.
+         * @example {
+         *       "name": "cpp",
+         *       "extension": "cpp"
+         *     }
+         */
         SupportedLanguage: {
             /** @example cpp */
             name: string;
@@ -3087,12 +4229,40 @@ export interface components {
             /** @example compiler */
             type?: string;
         };
+        /**
+         * @description Result of supported languages.
+         * @example {
+         *       "languages": [
+         *         {
+         *           "name": "cpp",
+         *           "extension": "cpp"
+         *         }
+         *       ]
+         *     }
+         */
         SupportedLanguagesResponse: {
             languages: components["schemas"]["SupportedLanguage"][];
         };
+        /**
+         * @description Fields for the create contest draft request.
+         * @example {
+         *       "code": "#include <iostream>\nint main() { int a, b; std::cin >> a >> b; std::cout << a + b; }"
+         *     }
+         */
         CreateContestDraftRequestModel: {
             code: string;
         };
+        /**
+         * @description Contest draft data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "code": "#include <iostream>\nint main() { int a, b; std::cin >> a >> b; std::cout << a + b; }",
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         ContestDraftModel: {
             /** Format: uuid */
             id: string;
@@ -3107,10 +4277,36 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Paginated collection of contest drafts.
+         * @example {
+         *       "drafts": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "code": "#include <iostream>\nint main() { int a, b; std::cin >> a >> b; std::cout << a + b; }",
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         ListContestDraftsResponseModel: {
             drafts: components["schemas"]["ContestDraftModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Fields for the batch create organization users request.
+         * @example {
+         *       "prefix": "olymp2026_",
+         *       "count": 50
+         *     }
+         */
         BatchCreateOrganizationUsersRequestModel: {
             /** @example olymp2026_ */
             prefix: string;
@@ -3125,9 +4321,29 @@ export interface components {
              */
             ttl_days?: number;
         };
+        /**
+         * @description Result of batch create organization users.
+         * @example {
+         *       "users": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "username": "olymp2026_01",
+         *           "password": "k8F3m9Pq"
+         *         }
+         *       ]
+         *     }
+         */
         BatchCreateOrganizationUsersResponseModel: {
             users: components["schemas"]["BatchCreatedUserItem"][];
         };
+        /**
+         * @description Batch created user item data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "olymp2026_01",
+         *       "password": "k8F3m9Pq"
+         *     }
+         */
         BatchCreatedUserItem: {
             /** Format: uuid */
             id: string;
@@ -3138,18 +4354,40 @@ export interface components {
             /** Format: date-time */
             expires_at?: string;
         };
+        /**
+         * @description Fields for the claim temporary user request.
+         * @example {
+         *       "username": "olymp2026_01",
+         *       "password": "k8F3m9Pq"
+         *     }
+         */
         ClaimTemporaryUserRequestModel: {
             /** @example olymp2026_01 */
             username: string;
             /** @example k8F3m9Pq */
             password: string;
         };
+        /**
+         * @description Result of claim temporary user.
+         * @example {
+         *       "claimed_user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "claimed_username": "example"
+         *     }
+         */
         ClaimTemporaryUserResponseModel: {
             /** Format: uuid */
             claimed_user_id: string;
             claimed_username: string;
             contests_granted?: string[];
         };
+        /**
+         * @description Claimed account item data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "alice",
+         *       "claimed_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         ClaimedAccountItem: {
             /** Format: uuid */
             id: string;
@@ -3159,9 +4397,33 @@ export interface components {
             /** Format: date-time */
             expires_at?: string;
         };
+        /**
+         * @description Paginated collection of claimed accounts.
+         * @example {
+         *       "accounts": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "username": "alice",
+         *           "claimed_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ]
+         *     }
+         */
         ListClaimedAccountsResponseModel: {
             accounts: components["schemas"]["ClaimedAccountItem"][];
         };
+        /**
+         * @description Notification data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "type": "example",
+         *       "title": "A + B",
+         *       "body": "example",
+         *       "is_read": false,
+         *       "created_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         NotificationModel: {
             /** Format: uuid */
             id: string;
@@ -3178,14 +4440,57 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description Result of notifications list.
+         * @example {
+         *       "notifications": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "type": "example",
+         *           "title": "A + B",
+         *           "body": "example",
+         *           "is_read": false,
+         *           "created_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         NotificationsListResponseModel: {
             notifications: components["schemas"]["NotificationModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Result of unread notifications count.
+         * @example {
+         *       "count": 1
+         *     }
+         */
         UnreadNotificationsCountResponseModel: {
             /** Format: int32 */
             count: number;
         };
+        /**
+         * @description Organization invitation data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "organization_name": "example",
+         *       "organization_login": "example",
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "alice",
+         *       "inviter_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "inviter_username": "example",
+         *       "role": "user",
+         *       "status": "example",
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         OrganizationInvitationModel: {
             /** Format: uuid */
             id: string;
@@ -3208,6 +4513,13 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Fields for the invite organization member request.
+         * @example {
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "role": "owner"
+         *     }
+         */
         InviteOrganizationMemberRequestModel: {
             /** Format: uuid */
             user_id: string;
@@ -3217,9 +4529,44 @@ export interface components {
              */
             role: "owner" | "admin" | "member";
         };
+        /**
+         * @description Paginated collection of organization invitations.
+         * @example {
+         *       "invitations": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "organization_name": "example",
+         *           "organization_login": "example",
+         *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "username": "alice",
+         *           "inviter_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "inviter_username": "example",
+         *           "role": "user",
+         *           "status": "example",
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ]
+         *     }
+         */
         ListOrganizationInvitationsResponseModel: {
             invitations: components["schemas"]["OrganizationInvitationModel"][];
         };
+        /**
+         * @description Fields for the organization join request.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "organization_name": "example",
+         *       "organization_login": "example",
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "alice",
+         *       "status": "example",
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         OrganizationJoinRequestModel: {
             /** Format: uuid */
             id: string;
@@ -3239,9 +4586,21 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Fields for the create organization join request.
+         * @example {
+         *       "message": "Operation completed successfully"
+         *     }
+         */
         CreateOrganizationJoinRequestModel: {
             message?: string;
         };
+        /**
+         * @description Fields for the approve organization join request.
+         * @example {
+         *       "role": "owner"
+         *     }
+         */
         ApproveOrganizationJoinRequestModel: {
             /**
              * @default member
@@ -3249,16 +4608,71 @@ export interface components {
              */
             role: "owner" | "admin" | "member";
         };
+        /**
+         * @description Paginated collection of organization join requests.
+         * @example {
+         *       "requests": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "organization_name": "example",
+         *           "organization_login": "example",
+         *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "username": "alice",
+         *           "status": "example",
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ]
+         *     }
+         */
         ListOrganizationJoinRequestsResponseModel: {
             requests: components["schemas"]["OrganizationJoinRequestModel"][];
         };
+        /**
+         * @description Result of organization join request.
+         * @example {
+         *       "joined": false
+         *     }
+         */
         OrganizationJoinRequestResponseModel: {
             request?: components["schemas"]["OrganizationJoinRequestModel"];
             joined: boolean;
         };
+        /**
+         * @description Result of organization join request nullable.
+         * @example {
+         *       "request": {
+         *         "id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "organization_id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "organization_name": "example",
+         *         "organization_login": "example",
+         *         "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "username": "alice",
+         *         "status": "example",
+         *         "created_at": "2026-01-01T12:00:00Z",
+         *         "updated_at": "2026-01-01T12:00:00Z"
+         *       }
+         *     }
+         */
         OrganizationJoinRequestNullableResponseModel: {
             request?: components["schemas"]["OrganizationJoinRequestModel"];
         };
+        /**
+         * @description Fields for the contest join request.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "contest_title": "example",
+         *       "contest_login": "example",
+         *       "organization_login": "example",
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "alice",
+         *       "status": "example",
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         ContestJoinRequestModel: {
             /** Format: uuid */
             id: string;
@@ -3279,19 +4693,80 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Fields for the create contest join request.
+         * @example {
+         *       "message": "Operation completed successfully"
+         *     }
+         */
         CreateContestJoinRequestModel: {
             message?: string;
         };
+        /**
+         * @description Paginated collection of contest join requests.
+         * @example {
+         *       "requests": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "contest_title": "example",
+         *           "contest_login": "example",
+         *           "organization_login": "example",
+         *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "username": "alice",
+         *           "status": "example",
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ]
+         *     }
+         */
         ListContestJoinRequestsResponseModel: {
             requests: components["schemas"]["ContestJoinRequestModel"][];
         };
+        /**
+         * @description Result of contest join request.
+         * @example {
+         *       "registered": false
+         *     }
+         */
         ContestJoinRequestResponseModel: {
             request?: components["schemas"]["ContestJoinRequestModel"];
             registered: boolean;
         };
+        /**
+         * @description Result of contest join request nullable.
+         * @example {
+         *       "request": {
+         *         "id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "contest_title": "example",
+         *         "contest_login": "example",
+         *         "organization_login": "example",
+         *         "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *         "username": "alice",
+         *         "status": "example",
+         *         "created_at": "2026-01-01T12:00:00Z",
+         *         "updated_at": "2026-01-01T12:00:00Z"
+         *       }
+         *     }
+         */
         ContestJoinRequestNullableResponseModel: {
             request?: components["schemas"]["ContestJoinRequestModel"];
         };
+        /**
+         * @description Contest announcement data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "author_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "author_username": "example",
+         *       "title": "A + B",
+         *       "body": "example",
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         ContestAnnouncementModel: {
             /** Format: uuid */
             id: string;
@@ -3311,16 +4786,57 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Fields for the create contest announcement request.
+         * @example {
+         *       "title": "A + B",
+         *       "body": "example"
+         *     }
+         */
         CreateContestAnnouncementRequestModel: {
             /** Format: uuid */
             problem_id?: string;
             title: string;
             body: string;
         };
+        /**
+         * @description Paginated collection of contest announcements.
+         * @example {
+         *       "announcements": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "author_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "author_username": "example",
+         *           "title": "A + B",
+         *           "body": "example",
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         ListContestAnnouncementsResponseModel: {
             announcements: components["schemas"]["ContestAnnouncementModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
+        /**
+         * @description Contest clarification data.
+         * @example {
+         *       "id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *       "username": "alice",
+         *       "question": "example",
+         *       "status": "example",
+         *       "created_at": "2026-01-01T12:00:00Z",
+         *       "updated_at": "2026-01-01T12:00:00Z"
+         *     }
+         */
         ContestClarificationModel: {
             /** Format: uuid */
             id: string;
@@ -3346,16 +4862,49 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Fields for the create contest clarification request.
+         * @example {
+         *       "question": "example"
+         *     }
+         */
         CreateContestClarificationRequestModel: {
             /** Format: uuid */
             problem_id?: string;
             question: string;
         };
+        /**
+         * @description Fields for the answer contest clarification request.
+         * @example {
+         *       "answer": "example"
+         *     }
+         */
         AnswerContestClarificationRequestModel: {
             answer: string;
             publish_as_announcement?: boolean;
             announcement_title?: string;
         };
+        /**
+         * @description Paginated collection of contest clarifications.
+         * @example {
+         *       "clarifications": [
+         *         {
+         *           "id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "contest_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
+         *           "username": "alice",
+         *           "question": "example",
+         *           "status": "example",
+         *           "created_at": "2026-01-01T12:00:00Z",
+         *           "updated_at": "2026-01-01T12:00:00Z"
+         *         }
+         *       ],
+         *       "pagination": {
+         *         "page": 1,
+         *         "total": 10
+         *       }
+         *     }
+         */
         ListContestClarificationsResponseModel: {
             clarifications: components["schemas"]["ContestClarificationModel"][];
             pagination: components["schemas"]["PaginationModel"];
@@ -3379,6 +4928,91 @@ export interface components {
         PageQuery: number;
         /** @description Number of items per page */
         PageSizeQuery: number;
+        /** @description UUID of the organization. */
+        OrganizationIDQuery: string;
+        /** @description UUID of the problem. */
+        ProblemIDPath: string;
+        /**
+         * @description Search text used to filter results.
+         * @example Contest
+         */
+        ContestSearchQuery: string;
+        /**
+         * @description Field used to sort results.
+         * @example created_at
+         */
+        SortByQuery: "created_at" | "updated_at" | "title";
+        /**
+         * @description Sort direction: asc or desc.
+         * @example desc
+         */
+        ContestSortOrderQuery: "asc" | "desc";
+        /**
+         * @description Username of the user.
+         * @example user123
+         */
+        UsernamePath: string;
+        /** @description Organization login. */
+        OrgLoginPath: string;
+        /** @description Contest login within the organization. */
+        ContestLoginPath: string;
+        /** @description UUID of the problem. */
+        ProblemIDQuery: string;
+        /** @description UUID of the problem. */
+        ProblemIDPathBySnakeName: string;
+        /** @description UUID of the user. */
+        UserIDQuery: string;
+        /** @description Role to assign to the member. */
+        RoleQuery: string;
+        /** @description UUID of the team. */
+        TeamIDQuery: string;
+        /** @description UUID of the user. */
+        OptionalUserIDQuery: string;
+        /** @description UUID of the problem. */
+        OptionalProblemIDQuery: string;
+        /**
+         * @description Filter results by processing state.
+         * @example 1
+         */
+        StateQuery: number;
+        /**
+         * @description Sort direction: asc or desc.
+         * @example asc
+         */
+        SubmissionSortOrderQuery: "asc" | "desc";
+        /**
+         * @description Programming language identifier.
+         * @example 1
+         */
+        LanguageQuery: number;
+        /** @description UUID of the submission. */
+        SubmissionIDPath: string;
+        /** @description UUID of the user. */
+        UserIDPath: string;
+        /** @description UUID of the join request. */
+        JoinRequestIDPath: string;
+        /** @description UUID of the contest. */
+        ContestIDQuery: string;
+        /** @description Previously returned ETag; returns 304 when the image has not changed. */
+        IfNoneMatchHeader: string;
+        /** @description UUID of the problem. */
+        ProblemIDPathByCamelName: string;
+        /** @description Language code of the problem statement. */
+        LangQuery: string;
+        /** @description Name of the workshop file. */
+        NameQuery: string;
+        /** @description Name of the workshop file. */
+        NamePath: string;
+        /** @description Search text used to filter results. */
+        SearchQuery: string;
+        /** @description Organization login. */
+        OrganizationLoginPath: string;
+        /** @description UUID of the invitation. */
+        InvitationIDPath: string;
+        /** @description UUID of the team. */
+        TeamIDPath: string;
+        /** @description UUID of the post. */
+        PostIDPath: string;
     };
     requestBodies: never;
     headers: never;
@@ -3430,12 +5064,6 @@ export type ScoreboardProblemResultModel = components['schemas']['ScoreboardProb
 export type ScoreboardItemModel = components['schemas']['ScoreboardItemModel'];
 export type ScoreboardProblemHeaderModel = components['schemas']['ScoreboardProblemHeaderModel'];
 export type ScoreboardResponseModel = components['schemas']['ScoreboardResponseModel'];
-export type TestProgressEventType = components['schemas']['TestProgressEventType'];
-export type TestingStartedEventModel = components['schemas']['TestingStartedEventModel'];
-export type TestCompletedEventModel = components['schemas']['TestCompletedEventModel'];
-export type TestingCompletedEventModel = components['schemas']['TestingCompletedEventModel'];
-export type WebSocketMessageType = components['schemas']['WebSocketMessageType'];
-export type SubmissionWebSocketEventModel = components['schemas']['SubmissionWebSocketEventModel'];
 export type FileEntry = components['schemas']['FileEntry'];
 export type MessageResponse = components['schemas']['MessageResponse'];
 export type WorkshopFileListResponse = components['schemas']['WorkshopFileListResponse'];
@@ -3443,7 +5071,6 @@ export type ProblemLimits = components['schemas']['ProblemLimits'];
 export type UpdateProblemLimitsRequest = components['schemas']['UpdateProblemLimitsRequest'];
 export type ProblemStatement = components['schemas']['ProblemStatement'];
 export type UpdateProblemStatementRequest = components['schemas']['UpdateProblemStatementRequest'];
-export type MainComponentSelectionRequest = components['schemas']['MainComponentSelectionRequest'];
 export type UpdateProblemTestsConfigRequest = components['schemas']['UpdateProblemTestsConfigRequest'];
 export type CompileResult = components['schemas']['CompileResult'];
 export type ValidationReport = components['schemas']['ValidationReport'];
@@ -3470,7 +5097,6 @@ export type ListProblemTeamsResponseModel = components['schemas']['ListProblemTe
 export type ProblemMemberModel = components['schemas']['ProblemMemberModel'];
 export type ListProblemMembersResponseModel = components['schemas']['ListProblemMembersResponseModel'];
 export type PostModel = components['schemas']['PostModel'];
-export type PostPatchRequestModel = components['schemas']['PostPatchRequestModel'];
 export type ListPostsResponseModel = components['schemas']['ListPostsResponseModel'];
 export type CreatedPost = components['schemas']['CreatedPost'];
 export type RegisterRequestModel = components['schemas']['RegisterRequestModel'];
@@ -3524,6 +5150,38 @@ export type ListContestClarificationsResponseModel = components['schemas']['List
 export type ResponseVerifyEmailResponse = components['responses']['VerifyEmailResponse'];
 export type ParameterPageQuery = components['parameters']['PageQuery'];
 export type ParameterPageSizeQuery = components['parameters']['PageSizeQuery'];
+export type ParameterOrganizationIdQuery = components['parameters']['OrganizationIDQuery'];
+export type ParameterProblemIdPath = components['parameters']['ProblemIDPath'];
+export type ParameterContestSearchQuery = components['parameters']['ContestSearchQuery'];
+export type ParameterSortByQuery = components['parameters']['SortByQuery'];
+export type ParameterContestSortOrderQuery = components['parameters']['ContestSortOrderQuery'];
+export type ParameterUsernamePath = components['parameters']['UsernamePath'];
+export type ParameterOrgLoginPath = components['parameters']['OrgLoginPath'];
+export type ParameterContestLoginPath = components['parameters']['ContestLoginPath'];
+export type ParameterProblemIdQuery = components['parameters']['ProblemIDQuery'];
+export type ParameterProblemIdPathBySnakeName = components['parameters']['ProblemIDPathBySnakeName'];
+export type ParameterUserIdQuery = components['parameters']['UserIDQuery'];
+export type ParameterRoleQuery = components['parameters']['RoleQuery'];
+export type ParameterTeamIdQuery = components['parameters']['TeamIDQuery'];
+export type ParameterOptionalUserIdQuery = components['parameters']['OptionalUserIDQuery'];
+export type ParameterOptionalProblemIdQuery = components['parameters']['OptionalProblemIDQuery'];
+export type ParameterStateQuery = components['parameters']['StateQuery'];
+export type ParameterSubmissionSortOrderQuery = components['parameters']['SubmissionSortOrderQuery'];
+export type ParameterLanguageQuery = components['parameters']['LanguageQuery'];
+export type ParameterSubmissionIdPath = components['parameters']['SubmissionIDPath'];
+export type ParameterUserIdPath = components['parameters']['UserIDPath'];
+export type ParameterJoinRequestIdPath = components['parameters']['JoinRequestIDPath'];
+export type ParameterContestIdQuery = components['parameters']['ContestIDQuery'];
+export type ParameterIfNoneMatchHeader = components['parameters']['IfNoneMatchHeader'];
+export type ParameterProblemIdPathByCamelName = components['parameters']['ProblemIDPathByCamelName'];
+export type ParameterLangQuery = components['parameters']['LangQuery'];
+export type ParameterNameQuery = components['parameters']['NameQuery'];
+export type ParameterNamePath = components['parameters']['NamePath'];
+export type ParameterSearchQuery = components['parameters']['SearchQuery'];
+export type ParameterOrganizationLoginPath = components['parameters']['OrganizationLoginPath'];
+export type ParameterInvitationIdPath = components['parameters']['InvitationIDPath'];
+export type ParameterTeamIdPath = components['parameters']['TeamIDPath'];
+export type ParameterPostIdPath = components['parameters']['PostIDPath'];
 export type $defs = Record<string, never>;
 export interface operations {
     GetLanguages: {
@@ -3553,12 +5211,21 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
-                /** @example Fibonacci */
+                /**
+                 * @description Search text used to filter results.
+                 * @example Fibonacci
+                 */
                 search?: string;
+                /** @description Whether to sort results in descending order. */
                 descending?: boolean;
-                /** @example true */
+                /**
+                 * @description When true, return only problems owned by the current user.
+                 * @example true
+                 */
                 owner?: boolean;
-                organization_id?: string;
+                /** @description UUID of the organization. */
+                organization_id?: components["parameters"]["OrganizationIDQuery"];
+                /** @description Filter problems by whether they are templates. */
                 is_template?: boolean;
             };
             header?: never;
@@ -3581,10 +5248,17 @@ export interface operations {
     CreateProblem: {
         parameters: {
             query: {
-                /** @example Problem 1 */
+                /**
+                 * @description Title of the new problem.
+                 * @example Problem 1
+                 */
                 title: string;
-                organization_id?: string;
-                /** @example builtin:a-plus-b */
+                /** @description UUID of the organization. */
+                organization_id?: components["parameters"]["OrganizationIDQuery"];
+                /**
+                 * @description Problem template identifier, including the builtin: prefix for built-in templates.
+                 * @example builtin:a-plus-b
+                 */
                 template_id: string;
             };
             header?: never;
@@ -3607,7 +5281,8 @@ export interface operations {
     ListProblemTemplates: {
         parameters: {
             query?: {
-                organization_id?: string;
+                /** @description UUID of the organization. */
+                organization_id?: components["parameters"]["OrganizationIDQuery"];
             };
             header?: never;
             path?: never;
@@ -3631,7 +5306,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
@@ -3653,7 +5329,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
@@ -3673,10 +5350,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update problem. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateProblemRequestModel"];
@@ -3699,13 +5378,23 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
-                /** @example Contest */
-                search?: string;
+                /**
+                 * @description Search text used to filter results.
+                 * @example Contest
+                 */
+                search?: components["parameters"]["ContestSearchQuery"];
+                /** @description Visibility level of the resource. */
                 visibility?: "public" | "private";
-                /** @example created_at */
-                sortBy?: "created_at" | "updated_at" | "title";
-                /** @example desc */
-                sortOrder?: "asc" | "desc";
+                /**
+                 * @description Field used to sort results.
+                 * @example created_at
+                 */
+                sortBy?: components["parameters"]["SortByQuery"];
+                /**
+                 * @description Sort direction: asc or desc.
+                 * @example desc
+                 */
+                sortOrder?: components["parameters"]["ContestSortOrderQuery"];
             };
             header?: never;
             path?: never;
@@ -3729,11 +5418,15 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @example user123 */
-                username: string;
+                /**
+                 * @description Username of the user.
+                 * @example user123
+                 */
+                username: components["parameters"]["UsernamePath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for admin change email. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AdminChangeEmailRequestModel"];
@@ -3754,11 +5447,15 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @example user123 */
-                username: string;
+                /**
+                 * @description Username of the user.
+                 * @example user123
+                 */
+                username: components["parameters"]["UsernamePath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for admin set password. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AdminSetPasswordRequestModel"];
@@ -3779,8 +5476,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @example user123 */
-                username: string;
+                /**
+                 * @description Username of the user.
+                 * @example user123
+                 */
+                username: components["parameters"]["UsernamePath"];
             };
             cookie?: never;
         };
@@ -3800,8 +5500,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @example user123 */
-                username: string;
+                /**
+                 * @description Username of the user.
+                 * @example user123
+                 */
+                username: components["parameters"]["UsernamePath"];
             };
             cookie?: never;
         };
@@ -3823,17 +5526,29 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
-                /** @example Contest */
-                search?: string;
-                /** @example last_submission_time */
+                /**
+                 * @description Search text used to filter results.
+                 * @example Contest
+                 */
+                search?: components["parameters"]["ContestSearchQuery"];
+                /**
+                 * @description Field used to sort results.
+                 * @example last_submission_time
+                 */
                 sortBy?: "last_submission_time" | "created_at" | "updated_at" | "title";
-                /** @example desc */
-                sortOrder?: "asc" | "desc";
+                /**
+                 * @description Sort direction: asc or desc.
+                 * @example desc
+                 */
+                sortOrder?: components["parameters"]["ContestSortOrderQuery"];
             };
             header?: never;
             path: {
-                /** @example user123 */
-                username: string;
+                /**
+                 * @description Username of the user.
+                 * @example user123
+                 */
+                username: components["parameters"]["UsernamePath"];
             };
             cookie?: never;
         };
@@ -3857,13 +5572,23 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
-                /** @example Contest */
-                search?: string;
-                /** @example created_at */
-                sortBy?: "created_at" | "updated_at" | "title";
-                /** @example desc */
-                sortOrder?: "asc" | "desc";
-                organization_id?: string;
+                /**
+                 * @description Search text used to filter results.
+                 * @example Contest
+                 */
+                search?: components["parameters"]["ContestSearchQuery"];
+                /**
+                 * @description Field used to sort results.
+                 * @example created_at
+                 */
+                sortBy?: components["parameters"]["SortByQuery"];
+                /**
+                 * @description Sort direction: asc or desc.
+                 * @example desc
+                 */
+                sortOrder?: components["parameters"]["ContestSortOrderQuery"];
+                /** @description UUID of the organization. */
+                organization_id?: components["parameters"]["OrganizationIDQuery"];
             };
             header?: never;
             path?: never;
@@ -3889,12 +5614,21 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
-                /** @example Contest */
-                search?: string;
-                /** @example created_at */
-                sortBy?: "created_at" | "updated_at" | "title";
-                /** @example desc */
-                sortOrder?: "asc" | "desc";
+                /**
+                 * @description Search text used to filter results.
+                 * @example Contest
+                 */
+                search?: components["parameters"]["ContestSearchQuery"];
+                /**
+                 * @description Field used to sort results.
+                 * @example created_at
+                 */
+                sortBy?: components["parameters"]["SortByQuery"];
+                /**
+                 * @description Sort direction: asc or desc.
+                 * @example desc
+                 */
+                sortOrder?: components["parameters"]["ContestSortOrderQuery"];
             };
             header?: never;
             path?: never;
@@ -3920,12 +5654,16 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
-                /** @example Contest */
-                search?: string;
+                /**
+                 * @description Search text used to filter results.
+                 * @example Contest
+                 */
+                search?: components["parameters"]["ContestSearchQuery"];
             };
             header?: never;
             path: {
-                org_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
             };
             cookie?: never;
         };
@@ -3945,14 +5683,21 @@ export interface operations {
     CreateContest: {
         parameters: {
             query: {
-                /** @example Contest 1 */
+                /**
+                 * @description Title of the new contest.
+                 * @example Contest 1
+                 */
                 title: string;
-                /** @example contest-1 */
+                /**
+                 * @description Login of the new contest within the organization.
+                 * @example contest-1
+                 */
                 login?: string;
             };
             header?: never;
             path: {
-                org_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
             };
             cookie?: never;
         };
@@ -3974,8 +5719,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -3997,8 +5744,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4018,11 +5767,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update contest. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateContestRequestModel"];
@@ -4041,12 +5793,15 @@ export interface operations {
     DownloadContestStatementsPdf: {
         parameters: {
             query?: {
+                /** @description Language code of the problem statement. */
                 lang?: string;
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4066,13 +5821,17 @@ export interface operations {
     CreateContestProblem: {
         parameters: {
             query: {
-                problem_id: string;
+                /** @description UUID of the problem. */
+                problem_id: components["parameters"]["ProblemIDQuery"];
+                /** @description UUID of the problem package. */
                 package_id?: string;
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4094,11 +5853,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for reorder contest problems. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ReorderContestProblemsRequestModel"];
@@ -4119,9 +5881,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
-                problem_id: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the problem. */
+                problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
             };
             cookie?: never;
         };
@@ -4143,9 +5908,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
-                problem_id: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the problem. */
+                problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
             };
             cookie?: never;
         };
@@ -4170,8 +5938,10 @@ export interface operations {
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4191,12 +5961,15 @@ export interface operations {
     CreateContestMember: {
         parameters: {
             query: {
-                user_id: string;
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDQuery"];
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4216,12 +5989,15 @@ export interface operations {
     DeleteContestMember: {
         parameters: {
             query: {
-                user_id: string;
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDQuery"];
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4239,13 +6015,17 @@ export interface operations {
     UpdateContestMember: {
         parameters: {
             query: {
-                user_id: string;
-                role: string;
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDQuery"];
+                /** @description Role to assign to the member. */
+                role: components["parameters"]["RoleQuery"];
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4265,8 +6045,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4286,13 +6068,17 @@ export interface operations {
     CreateContestTeam: {
         parameters: {
             query: {
-                team_id: string;
+                /** @description UUID of the team. */
+                team_id: components["parameters"]["TeamIDQuery"];
+                /** @description Role to assign to the member. */
                 role?: string;
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4310,12 +6096,15 @@ export interface operations {
     DeleteContestTeam: {
         parameters: {
             query: {
-                team_id: string;
+                /** @description UUID of the team. */
+                team_id: components["parameters"]["TeamIDQuery"];
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4333,13 +6122,17 @@ export interface operations {
     UpdateContestTeam: {
         parameters: {
             query: {
-                team_id: string;
-                role: string;
+                /** @description UUID of the team. */
+                team_id: components["parameters"]["TeamIDQuery"];
+                /** @description Role to assign to the member. */
+                role: components["parameters"]["RoleQuery"];
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4359,8 +6152,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4384,19 +6179,32 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
-                userId?: string;
-                problemId?: string;
-                /** @example 1 */
-                state?: number;
-                /** @example asc */
-                sortOrder?: "asc" | "desc";
-                /** @example 1 */
-                language?: number;
+                /** @description UUID of the user. */
+                userId?: components["parameters"]["OptionalUserIDQuery"];
+                /** @description UUID of the problem. */
+                problemId?: components["parameters"]["OptionalProblemIDQuery"];
+                /**
+                 * @description Filter results by processing state.
+                 * @example 1
+                 */
+                state?: components["parameters"]["StateQuery"];
+                /**
+                 * @description Sort direction: asc or desc.
+                 * @example asc
+                 */
+                sortOrder?: components["parameters"]["SubmissionSortOrderQuery"];
+                /**
+                 * @description Programming language identifier.
+                 * @example 1
+                 */
+                language?: components["parameters"]["LanguageQuery"];
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4418,9 +6226,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
-                submission_id: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the submission. */
+                submission_id: components["parameters"]["SubmissionIDPath"];
             };
             cookie?: never;
         };
@@ -4440,12 +6251,16 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
-                submission_id: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the submission. */
+                submission_id: components["parameters"]["SubmissionIDPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for block submission. */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["BlockSubmissionRequestModel"];
@@ -4466,9 +6281,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
-                submission_id: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the submission. */
+                submission_id: components["parameters"]["SubmissionIDPath"];
             };
             cookie?: never;
         };
@@ -4488,10 +6306,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
-                user_id: string;
-                problem_id: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDPath"];
+                /** @description UUID of the problem. */
+                problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
             };
             cookie?: never;
         };
@@ -4513,13 +6335,18 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
-                user_id: string;
-                problem_id: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDPath"];
+                /** @description UUID of the problem. */
+                problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for block problem for user. */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["BlockProblemRequestModel"];
@@ -4538,14 +6365,19 @@ export interface operations {
     UnblockProblemForUser: {
         parameters: {
             query?: {
+                /** @description Whether to rejudge existing submissions after the package update. */
                 rejudge_submissions?: boolean;
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
-                user_id: string;
-                problem_id: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDPath"];
+                /** @description UUID of the problem. */
+                problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
             };
             cookie?: never;
         };
@@ -4565,9 +6397,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
-                problem_id: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the problem. */
+                problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
             };
             cookie?: never;
         };
@@ -4587,8 +6422,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4611,8 +6448,10 @@ export interface operations {
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4639,8 +6478,10 @@ export interface operations {
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4662,11 +6503,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for create contest draft. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreateContestDraftRequestModel"];
@@ -4689,8 +6533,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the draft problem package. */
                 draft_id: string;
             };
             cookie?: never;
@@ -4711,8 +6558,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4734,11 +6583,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for create contest join request. */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["CreateContestJoinRequestModel"];
@@ -4761,8 +6613,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4784,8 +6638,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4805,9 +6661,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
-                id: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the join request. */
+                id: components["parameters"]["JoinRequestIDPath"];
             };
             cookie?: never;
         };
@@ -4827,9 +6686,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
-                id: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the join request. */
+                id: components["parameters"]["JoinRequestIDPath"];
             };
             cookie?: never;
         };
@@ -4854,8 +6716,10 @@ export interface operations {
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4877,11 +6741,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for create contest announcement. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreateContestAnnouncementRequestModel"];
@@ -4904,8 +6771,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the contest announcement. */
                 announcement_id: string;
             };
             cookie?: never;
@@ -4924,7 +6794,9 @@ export interface operations {
     ListContestClarifications: {
         parameters: {
             query?: {
+                /** @description UUID of the problem. */
                 problem_id?: string;
+                /** @description Filter results by status. */
                 status?: string;
                 /** @description Page number */
                 page?: components["parameters"]["PageQuery"];
@@ -4933,8 +6805,10 @@ export interface operations {
             };
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
@@ -4956,11 +6830,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for create contest clarification. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreateContestClarificationRequestModel"];
@@ -4983,12 +6860,16 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                org_login: string;
-                contest_login: string;
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the clarification. */
                 clarification_id: string;
             };
             cookie?: never;
         };
+        /** @description Request payload for answer contest clarification. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AnswerContestClarificationRequestModel"];
@@ -5013,15 +6894,27 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
-                contestId?: string;
-                userId?: string;
-                problemId?: string;
-                /** @example 1 */
-                state?: number;
-                /** @example asc */
-                sortOrder?: "asc" | "desc";
-                /** @example 1 */
-                language?: number;
+                /** @description UUID of the contest. */
+                contestId?: components["parameters"]["ContestIDQuery"];
+                /** @description UUID of the user. */
+                userId?: components["parameters"]["OptionalUserIDQuery"];
+                /** @description UUID of the problem. */
+                problemId?: components["parameters"]["OptionalProblemIDQuery"];
+                /**
+                 * @description Filter results by processing state.
+                 * @example 1
+                 */
+                state?: components["parameters"]["StateQuery"];
+                /**
+                 * @description Sort direction: asc or desc.
+                 * @example asc
+                 */
+                sortOrder?: components["parameters"]["SubmissionSortOrderQuery"];
+                /**
+                 * @description Programming language identifier.
+                 * @example 1
+                 */
+                language?: components["parameters"]["LanguageQuery"];
             };
             header?: never;
             path?: never;
@@ -5043,16 +6936,23 @@ export interface operations {
     CreateSubmission: {
         parameters: {
             query: {
-                problem_id: string;
+                /** @description UUID of the problem. */
+                problem_id: components["parameters"]["ProblemIDQuery"];
+                /** @description Organization login. */
                 organization_login: string;
+                /** @description Contest login within the organization. */
                 contest_login: string;
-                /** @example 1 */
+                /**
+                 * @description Programming language identifier.
+                 * @example 1
+                 */
                 language: number;
             };
             header?: never;
             path?: never;
             cookie?: never;
         };
+        /** @description Request payload for create submission. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreateSubmissionRequestModel"];
@@ -5075,7 +6975,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                submission_id: string;
+                /** @description UUID of the submission. */
+                submission_id: components["parameters"]["SubmissionIDPath"];
             };
             cookie?: never;
         };
@@ -5119,9 +7020,15 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
-                /** @example john */
+                /**
+                 * @description Search text used to filter results.
+                 * @example john
+                 */
                 search?: string;
-                /** @example admin */
+                /**
+                 * @description Role to assign to the member.
+                 * @example admin
+                 */
                 role?: string;
             };
             header?: never;
@@ -5146,8 +7053,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @example user123 */
-                username: string;
+                /**
+                 * @description Username of the user.
+                 * @example user123
+                 */
+                username: components["parameters"]["UsernamePath"];
             };
             cookie?: never;
         };
@@ -5169,11 +7079,15 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @example user123 */
-                username: string;
+                /**
+                 * @description Username of the user.
+                 * @example user123
+                 */
+                username: components["parameters"]["UsernamePath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update user. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateUserRequestModel"];
@@ -5196,17 +7110,28 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
-                contestId?: string;
-                problemId?: string;
-                /** @example 1 */
-                state?: number;
-                /** @example asc */
-                sortOrder?: "asc" | "desc";
+                /** @description UUID of the contest. */
+                contestId?: components["parameters"]["ContestIDQuery"];
+                /** @description UUID of the problem. */
+                problemId?: components["parameters"]["OptionalProblemIDQuery"];
+                /**
+                 * @description Filter results by processing state.
+                 * @example 1
+                 */
+                state?: components["parameters"]["StateQuery"];
+                /**
+                 * @description Sort direction: asc or desc.
+                 * @example asc
+                 */
+                sortOrder?: components["parameters"]["SubmissionSortOrderQuery"];
             };
             header?: never;
             path: {
-                /** @example user123 */
-                username: string;
+                /**
+                 * @description Username of the user.
+                 * @example user123
+                 */
+                username: components["parameters"]["UsernamePath"];
             };
             cookie?: never;
         };
@@ -5270,6 +7195,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description Request payload for claim temporary user. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ClaimTemporaryUserRequestModel"];
@@ -5314,6 +7240,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description Request payload for change password. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ChangePasswordRequestModel"];
@@ -5340,6 +7267,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description Request payload for request email change. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RequestEmailChangeRequestModel"];
@@ -5359,11 +7287,15 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "If-None-Match"?: string;
+                /** @description Previously returned ETag; returns 304 when the image has not changed. */
+                "If-None-Match"?: components["parameters"]["IfNoneMatchHeader"];
             };
             path: {
-                /** @example user123 */
-                username: string;
+                /**
+                 * @description Username of the user.
+                 * @example user123
+                 */
+                username: components["parameters"]["UsernamePath"];
             };
             cookie?: never;
         };
@@ -5412,11 +7344,15 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @example user123 */
-                username: string;
+                /**
+                 * @description Username of the user.
+                 * @example user123
+                 */
+                username: components["parameters"]["UsernamePath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for upload avatar. */
         requestBody: {
             content: {
                 "multipart/form-data": {
@@ -5434,7 +7370,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         /** Format: uuid */
-                        imgId: string;
+                        img_id: string;
                     };
                 };
             };
@@ -5445,8 +7381,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @example user123 */
-                username: string;
+                /**
+                 * @description Username of the user.
+                 * @example user123
+                 */
+                username: components["parameters"]["UsernamePath"];
             };
             cookie?: never;
         };
@@ -5466,7 +7405,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
@@ -5486,12 +7426,15 @@ export interface operations {
     CreateProblemTeam: {
         parameters: {
             query: {
-                team_id: string;
+                /** @description UUID of the team. */
+                team_id: components["parameters"]["TeamIDQuery"];
+                /** @description Permission level to grant. */
                 permission?: string;
             };
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
@@ -5509,11 +7452,13 @@ export interface operations {
     DeleteProblemTeam: {
         parameters: {
             query: {
-                team_id: string;
+                /** @description UUID of the team. */
+                team_id: components["parameters"]["TeamIDQuery"];
             };
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
@@ -5531,12 +7476,15 @@ export interface operations {
     UpdateProblemTeam: {
         parameters: {
             query: {
-                team_id: string;
+                /** @description UUID of the team. */
+                team_id: components["parameters"]["TeamIDQuery"];
+                /** @description Permission level to grant. */
                 permission: string;
             };
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
@@ -5561,7 +7509,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
@@ -5581,12 +7530,15 @@ export interface operations {
     CreateProblemMember: {
         parameters: {
             query: {
-                user_id: string;
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDQuery"];
+                /** @description Role to assign to the member. */
                 role?: string;
             };
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
@@ -5604,11 +7556,13 @@ export interface operations {
     DeleteProblemMember: {
         parameters: {
             query: {
-                user_id: string;
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDQuery"];
             };
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
@@ -5626,12 +7580,15 @@ export interface operations {
     UpdateProblemMember: {
         parameters: {
             query: {
-                user_id: string;
-                role: string;
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDQuery"];
+                /** @description Role to assign to the member. */
+                role: components["parameters"]["RoleQuery"];
             };
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
@@ -5651,10 +7608,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for import problem. */
         requestBody: {
             content: {
                 "multipart/form-data": {
@@ -5685,7 +7644,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
@@ -5711,7 +7671,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
@@ -5746,7 +7707,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+                /** @description Problem package version. */
                 version: string;
             };
             cookie?: never;
@@ -5768,7 +7731,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
@@ -5790,10 +7754,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update problem limits. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateProblemLimitsRequest"];
@@ -5814,11 +7780,13 @@ export interface operations {
     GetProblemStatement: {
         parameters: {
             query?: {
-                lang?: string;
+                /** @description Language code of the problem statement. */
+                lang?: components["parameters"]["LangQuery"];
             };
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
@@ -5838,14 +7806,17 @@ export interface operations {
     UpdateProblemStatement: {
         parameters: {
             query?: {
-                lang?: string;
+                /** @description Language code of the problem statement. */
+                lang?: components["parameters"]["LangQuery"];
             };
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update problem statement. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateProblemStatementRequest"];
@@ -5868,7 +7839,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
@@ -5888,14 +7860,17 @@ export interface operations {
     CreateProblemChecker: {
         parameters: {
             query: {
-                name: string;
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NameQuery"];
             };
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for create problem checker. */
         requestBody: {
             content: {
                 "text/plain": string;
@@ -5918,8 +7893,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -5941,11 +7918,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update problem checker. */
         requestBody: {
             content: {
                 "text/plain": string;
@@ -5968,8 +7948,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -5991,7 +7973,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
@@ -6011,14 +7994,17 @@ export interface operations {
     CreateProblemGenerator: {
         parameters: {
             query: {
-                name: string;
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NameQuery"];
             };
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for create problem generator. */
         requestBody: {
             content: {
                 "text/plain": string;
@@ -6041,8 +8027,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6064,11 +8052,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update problem generator. */
         requestBody: {
             content: {
                 "text/plain": string;
@@ -6091,8 +8082,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6114,7 +8107,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
@@ -6134,14 +8128,17 @@ export interface operations {
     CreateProblemInteractor: {
         parameters: {
             query: {
-                name: string;
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NameQuery"];
             };
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for create problem interactor. */
         requestBody: {
             content: {
                 "text/plain": string;
@@ -6164,8 +8161,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6187,11 +8186,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update problem interactor. */
         requestBody: {
             content: {
                 "text/plain": string;
@@ -6214,8 +8216,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6237,7 +8241,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
@@ -6257,14 +8262,17 @@ export interface operations {
     CreateProblemMediaFile: {
         parameters: {
             query: {
-                name: string;
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NameQuery"];
             };
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for create problem media file. */
         requestBody: {
             content: {
                 "application/octet-stream": string;
@@ -6287,8 +8295,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6310,11 +8320,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update problem media file. */
         requestBody: {
             content: {
                 "application/octet-stream": string;
@@ -6337,8 +8350,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6360,7 +8375,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
@@ -6380,14 +8396,17 @@ export interface operations {
     CreateProblemLib: {
         parameters: {
             query: {
-                name: string;
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NameQuery"];
             };
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for create problem lib. */
         requestBody: {
             content: {
                 "text/plain": string;
@@ -6410,8 +8429,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6433,11 +8454,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update problem lib. */
         requestBody: {
             content: {
                 "text/plain": string;
@@ -6460,8 +8484,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6483,7 +8509,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
@@ -6503,14 +8530,17 @@ export interface operations {
     CreateProblemWorkshopSubmission: {
         parameters: {
             query: {
-                name: string;
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NameQuery"];
             };
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for create problem workshop submission. */
         requestBody: {
             content: {
                 "text/plain": string;
@@ -6533,8 +8563,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6556,11 +8588,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update problem workshop submission. */
         requestBody: {
             content: {
                 "text/plain": string;
@@ -6583,8 +8618,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6606,7 +8643,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
@@ -6626,14 +8664,17 @@ export interface operations {
     CreateProblemTestFile: {
         parameters: {
             query: {
-                name: string;
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NameQuery"];
             };
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for create problem test file. */
         requestBody: {
             content: {
                 "application/octet-stream": string;
@@ -6656,10 +8697,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update problem tests config. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateProblemTestsConfigRequest"];
@@ -6682,8 +8725,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6705,11 +8750,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update problem test file. */
         requestBody: {
             content: {
                 "application/octet-stream": string;
@@ -6732,8 +8780,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6755,7 +8805,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
@@ -6775,14 +8826,17 @@ export interface operations {
     CreateProblemValidator: {
         parameters: {
             query: {
-                name: string;
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NameQuery"];
             };
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for create problem validator. */
         requestBody: {
             content: {
                 "text/plain": string;
@@ -6805,8 +8859,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6828,11 +8884,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update problem validator. */
         requestBody: {
             content: {
                 "text/plain": string;
@@ -6855,8 +8914,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
-                name: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Name of the workshop file. */
+                name: components["parameters"]["NamePath"];
             };
             cookie?: never;
         };
@@ -6878,7 +8939,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
+                /** @description Workshop component category. */
                 componentType: "checker" | "validator" | "generator" | "interactor";
             };
             cookie?: never;
@@ -6901,10 +8964,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for generate tests. */
         requestBody: {
             content: {
                 "application/json": {
@@ -6933,7 +8998,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
@@ -6955,10 +9021,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                problemId: string;
+                /** @description UUID of the problem. */
+                problemId: components["parameters"]["ProblemIDPathByCamelName"];
             };
             cookie?: never;
         };
+        /** @description Request payload for test solution. */
         requestBody: {
             content: {
                 "application/json": {
@@ -6988,7 +9056,8 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
-                search?: string;
+                /** @description Search text used to filter results. */
+                search?: components["parameters"]["SearchQuery"];
             };
             header?: never;
             path?: never;
@@ -7010,8 +9079,11 @@ export interface operations {
     CreateOrganization: {
         parameters: {
             query: {
+                /** @description Display name of the new organization. */
                 name: string;
+                /** @description Organization login. */
                 login?: string;
+                /** @description Policy for joining the organization: open, by request, or invitation only. */
                 join_policy?: "open" | "by_request" | "invite_only";
             };
             header?: never;
@@ -7036,7 +9108,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                login: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
             };
             cookie?: never;
         };
@@ -7058,7 +9131,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                login: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
             };
             cookie?: never;
         };
@@ -7078,10 +9152,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                login: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update organization. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateOrganizationRequestModel"];
@@ -7107,7 +9183,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                login: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
             };
             cookie?: never;
         };
@@ -7127,12 +9204,15 @@ export interface operations {
     AddOrganizationMember: {
         parameters: {
             query: {
-                user_id: string;
-                role: string;
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDQuery"];
+                /** @description Role to assign to the member. */
+                role: components["parameters"]["RoleQuery"];
             };
             header?: never;
             path: {
-                login: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
             };
             cookie?: never;
         };
@@ -7150,11 +9230,13 @@ export interface operations {
     RemoveOrganizationMember: {
         parameters: {
             query: {
-                user_id: string;
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDQuery"];
             };
             header?: never;
             path: {
-                login: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
             };
             cookie?: never;
         };
@@ -7174,10 +9256,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                login: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for batch create organization users. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["BatchCreateOrganizationUsersRequestModel"];
@@ -7200,7 +9284,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                login: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
             };
             cookie?: never;
         };
@@ -7222,10 +9307,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                login: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for invite organization member. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["InviteOrganizationMemberRequestModel"];
@@ -7248,8 +9335,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                login: string;
-                id: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
+                /** @description UUID of the invitation. */
+                id: components["parameters"]["InvitationIDPath"];
             };
             cookie?: never;
         };
@@ -7269,7 +9358,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the invitation. */
+                id: components["parameters"]["InvitationIDPath"];
             };
             cookie?: never;
         };
@@ -7289,7 +9379,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the invitation. */
+                id: components["parameters"]["InvitationIDPath"];
             };
             cookie?: never;
         };
@@ -7309,7 +9400,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                login: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
             };
             cookie?: never;
         };
@@ -7331,10 +9423,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                login: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for create organization join request. */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["CreateOrganizationJoinRequestModel"];
@@ -7357,7 +9451,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                login: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
             };
             cookie?: never;
         };
@@ -7379,7 +9474,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                login: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
             };
             cookie?: never;
         };
@@ -7399,11 +9495,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                login: string;
-                id: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
+                /** @description UUID of the join request. */
+                id: components["parameters"]["JoinRequestIDPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for approve organization join request. */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["ApproveOrganizationJoinRequestModel"];
@@ -7424,8 +9523,10 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                login: string;
-                id: string;
+                /** @description Organization login. */
+                login: components["parameters"]["OrganizationLoginPath"];
+                /** @description UUID of the join request. */
+                id: components["parameters"]["JoinRequestIDPath"];
             };
             cookie?: never;
         };
@@ -7447,6 +9548,7 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
+                /** @description When true, return only unread notifications. */
                 unread_only?: boolean;
             };
             header?: never;
@@ -7491,6 +9593,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description UUID of the notification. */
                 id: string;
             };
             cookie?: never;
@@ -7531,8 +9634,10 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
-                search?: string;
-                organization_id?: string;
+                /** @description Search text used to filter results. */
+                search?: components["parameters"]["SearchQuery"];
+                /** @description UUID of the organization. */
+                organization_id?: components["parameters"]["OrganizationIDQuery"];
             };
             header?: never;
             path?: never;
@@ -7558,6 +9663,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description Request payload for create team. */
         requestBody: {
             content: {
                 "application/json": {
@@ -7584,7 +9690,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the team. */
+                id: components["parameters"]["TeamIDPath"];
             };
             cookie?: never;
         };
@@ -7606,7 +9713,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the team. */
+                id: components["parameters"]["TeamIDPath"];
             };
             cookie?: never;
         };
@@ -7626,10 +9734,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the team. */
+                id: components["parameters"]["TeamIDPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for update team. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateTeamRequestModel"];
@@ -7655,7 +9765,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the team. */
+                id: components["parameters"]["TeamIDPath"];
             };
             cookie?: never;
         };
@@ -7675,12 +9786,15 @@ export interface operations {
     AddTeamMember: {
         parameters: {
             query: {
-                user_id: string;
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDQuery"];
+                /** @description Role to assign to the member. */
                 role?: string;
             };
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the team. */
+                id: components["parameters"]["TeamIDPath"];
             };
             cookie?: never;
         };
@@ -7698,11 +9812,13 @@ export interface operations {
     RemoveTeamMember: {
         parameters: {
             query: {
-                user_id: string;
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDQuery"];
             };
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the team. */
+                id: components["parameters"]["TeamIDPath"];
             };
             cookie?: never;
         };
@@ -7720,12 +9836,15 @@ export interface operations {
     UpdateTeamMemberRole: {
         parameters: {
             query: {
-                user_id: string;
-                role: string;
+                /** @description UUID of the user. */
+                user_id: components["parameters"]["UserIDQuery"];
+                /** @description Role to assign to the member. */
+                role: components["parameters"]["RoleQuery"];
             };
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the team. */
+                id: components["parameters"]["TeamIDPath"];
             };
             cookie?: never;
         };
@@ -7750,7 +9869,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the team. */
+                id: components["parameters"]["TeamIDPath"];
             };
             cookie?: never;
         };
@@ -7777,7 +9897,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the team. */
+                id: components["parameters"]["TeamIDPath"];
             };
             cookie?: never;
         };
@@ -7801,6 +9922,7 @@ export interface operations {
                 page?: components["parameters"]["PageQuery"];
                 /** @description Number of items per page */
                 pageSize?: components["parameters"]["PageSizeQuery"];
+                /** @description Sort direction: asc or desc. */
                 sort_order?: "asc" | "desc";
             };
             header?: never;
@@ -7827,6 +9949,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description Request payload for create post. */
         requestBody: {
             content: {
                 "multipart/form-data": {
@@ -7882,7 +10005,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the post. */
+                id: components["parameters"]["PostIDPath"];
             };
             cookie?: never;
         };
@@ -7922,7 +10046,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the post. */
+                id: components["parameters"]["PostIDPath"];
             };
             cookie?: never;
         };
@@ -7978,10 +10103,12 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description UUID of the post. */
+                id: components["parameters"]["PostIDPath"];
             };
             cookie?: never;
         };
+        /** @description Request payload for patch post by id. */
         requestBody?: {
             content: {
                 "multipart/form-data": {
@@ -8043,10 +10170,12 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "If-None-Match"?: string;
+                /** @description Previously returned ETag; returns 304 when the image has not changed. */
+                "If-None-Match"?: components["parameters"]["IfNoneMatchHeader"];
             };
             path: {
-                id: string;
+                /** @description UUID of the post. */
+                id: components["parameters"]["PostIDPath"];
             };
             cookie?: never;
         };
@@ -8097,6 +10226,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description Request payload for register. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RegisterRequestModel"];
@@ -8121,6 +10251,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description Request payload for login. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["LoginRequestModel"];
@@ -8167,6 +10298,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description Request payload for verify email. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["VerifyEmailRequestModel"];
@@ -8183,6 +10315,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description Request payload for resend verification. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ResendVerificationRequestModel"];
@@ -8205,6 +10338,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description Request payload for forgot password. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ForgotPasswordRequestModel"];
@@ -8227,6 +10361,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description Request payload for reset password. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ResetPasswordRequestModel"];
@@ -8249,6 +10384,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description Request payload for confirm email change. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ConfirmEmailChangeRequestModel"];

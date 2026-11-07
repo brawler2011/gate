@@ -42,7 +42,7 @@ describe('SPA route tree', () => {
       }
       if (url.pathname === '/api/users/alice') {
         return Response.json({user: {id: 'alice', username: 'alice', role: 'user',
-          createdAt: '2026-10-01', updatedAt: '2026-10-01'}});
+          created_at: '2026-10-01', updated_at: '2026-10-01'}});
       }
       if (url.pathname === '/api/users/alice/contests') {
         return Response.json({contests: [], pagination: {page: 1, total: 0}});
@@ -87,7 +87,7 @@ describe('SPA route tree', () => {
       const url = new URL(String(input), 'http://localhost');
       if (url.pathname === '/api/users/alice') {
         return Response.json({user: {id: 'alice', username: 'alice', role: 'user',
-          createdAt: '2026-10-01', updatedAt: '2026-10-01'}});
+          created_at: '2026-10-01', updated_at: '2026-10-01'}});
       }
       if (url.pathname === '/api/users/alice/contests') {
         return Response.json({contests: [], pagination: {page: 1, total: 0}});

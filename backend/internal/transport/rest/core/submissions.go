@@ -121,7 +121,7 @@ func ListSolutionsParamsDTO(params corev1.ListSubmissionsParams) submissionsmode
 	var order *int32 = nil
 	if params.SortOrder.IsSet() {
 		var orderVal int32
-		if params.SortOrder.Value == corev1.ListSubmissionsSortOrderDesc {
+		if params.SortOrder.Value == corev1.SubmissionSortOrderQueryDesc {
 			orderVal = -1
 		} else {
 			orderVal = 0

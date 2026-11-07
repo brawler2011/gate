@@ -14,6 +14,7 @@ import (
 // SecurityHandler is handler for security parameters.
 type SecurityHandler interface {
 	// HandleCookieAuth handles cookieAuth security.
+	// Authenticate using the session_id cookie issued at login.
 	HandleCookieAuth(ctx context.Context, operationName OperationName, t CookieAuth) (context.Context, error)
 }
 
@@ -86,6 +87,7 @@ func (s *Server) securityCookieAuth(ctx context.Context, operationName Operation
 // SecuritySource is provider of security values (tokens, passwords, etc.).
 type SecuritySource interface {
 	// CookieAuth provides cookieAuth security value.
+	// Authenticate using the session_id cookie issued at login.
 	CookieAuth(ctx context.Context, operationName OperationName) (CookieAuth, error)
 }
 

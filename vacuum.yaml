@@ -1,3 +1,15 @@
 # Keep recommended correctness checks and advisory documentation/style warnings.
 # The task fails only on errors; warnings do not require unrelated API changes.
 extends: [[vacuum:oas, recommended]]
+rules:
+  camel-case-properties:
+    description: Schema property names must use snake_case.
+    howToFix: Use lowercase words separated by underscores.
+    given: $
+    formats: [oas3]
+    severity: warn
+    resolved: true
+    then:
+      function: oasCamelCaseProperties
+      functionOptions:
+        type: snake

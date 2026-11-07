@@ -523,7 +523,7 @@ func userProfileDTO(u identitymodel.UserProfile) corev1.UserModel {
 		Username:        u.Username,
 		Role:            string(u.Role),
 		Email:           stringPtrToOptString(u.Email),
-		ImgId:           imgID,
+		ImgID:           imgID,
 		ExpiresAt:       timePtrToOptDateTime(u.ExpiresAt),
 		ClaimedByUserID: uuidPtrToOptUUID(u.ClaimedByUserID),
 		ClaimedAt:       timePtrToOptDateTime(u.ClaimedAt),

@@ -21643,13 +21643,13 @@ func (s *UploadAvatarOK) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *UploadAvatarOK) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("imgId")
-		json.EncodeUUID(e, s.ImgId)
+		e.FieldStart("img_id")
+		json.EncodeUUID(e, s.ImgID)
 	}
 }
 
 var jsonFieldsNameOfUploadAvatarOK = [1]string{
-	0: "imgId",
+	0: "img_id",
 }
 
 // Decode decodes UploadAvatarOK from json.
@@ -21661,17 +21661,17 @@ func (s *UploadAvatarOK) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "imgId":
+		case "img_id":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
-				s.ImgId = v
+				s.ImgID = v
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"imgId\"")
+				return errors.Wrap(err, "decode field \"img_id\"")
 			}
 		default:
 			return d.Skip()
@@ -21747,11 +21747,11 @@ func (s *UserModel) encodeFields(e *jx.Encoder) {
 		e.Str(s.Username)
 	}
 	{
-		e.FieldStart("createdAt")
+		e.FieldStart("created_at")
 		json.EncodeDateTime(e, s.CreatedAt)
 	}
 	{
-		e.FieldStart("updatedAt")
+		e.FieldStart("updated_at")
 		json.EncodeDateTime(e, s.UpdatedAt)
 	}
 	{
@@ -21765,9 +21765,9 @@ func (s *UserModel) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.ImgId.Set {
-			e.FieldStart("imgId")
-			s.ImgId.Encode(e)
+		if s.ImgID.Set {
+			e.FieldStart("img_id")
+			s.ImgID.Encode(e)
 		}
 	}
 	{
@@ -21799,11 +21799,11 @@ func (s *UserModel) encodeFields(e *jx.Encoder) {
 var jsonFieldsNameOfUserModel = [11]string{
 	0:  "id",
 	1:  "username",
-	2:  "createdAt",
-	3:  "updatedAt",
+	2:  "created_at",
+	3:  "updated_at",
 	4:  "role",
 	5:  "email",
-	6:  "imgId",
+	6:  "img_id",
 	7:  "expires_at",
 	8:  "claimed_by_user_id",
 	9:  "claimed_at",
@@ -21843,7 +21843,7 @@ func (s *UserModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"username\"")
 			}
-		case "createdAt":
+		case "created_at":
 			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
@@ -21853,9 +21853,9 @@ func (s *UserModel) Decode(d *jx.Decoder) error {
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"createdAt\"")
+				return errors.Wrap(err, "decode field \"created_at\"")
 			}
-		case "updatedAt":
+		case "updated_at":
 			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
@@ -21865,7 +21865,7 @@ func (s *UserModel) Decode(d *jx.Decoder) error {
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"updatedAt\"")
+				return errors.Wrap(err, "decode field \"updated_at\"")
 			}
 		case "role":
 			requiredBitSet[0] |= 1 << 4
@@ -21889,15 +21889,15 @@ func (s *UserModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"email\"")
 			}
-		case "imgId":
+		case "img_id":
 			if err := func() error {
-				s.ImgId.Reset()
-				if err := s.ImgId.Decode(d); err != nil {
+				s.ImgID.Reset()
+				if err := s.ImgID.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"imgId\"")
+				return errors.Wrap(err, "decode field \"img_id\"")
 			}
 		case "expires_at":
 			if err := func() error {

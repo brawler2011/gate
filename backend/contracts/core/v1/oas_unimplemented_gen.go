@@ -114,12 +114,16 @@ func (UnimplementedHandler) BatchCreateOrganizationUsers(ctx context.Context, re
 
 // BlockProblemForUser implements BlockProblemForUser operation.
 //
+// Block problem for user.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 func (UnimplementedHandler) BlockProblemForUser(ctx context.Context, req OptBlockProblemRequestModel, params BlockProblemForUserParams) error {
 	return ht.ErrNotImplemented
 }
 
 // BlockSubmission implements BlockSubmission operation.
+//
+// Block submission.
 //
 // POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block
 func (UnimplementedHandler) BlockSubmission(ctx context.Context, req OptBlockSubmissionRequestModel, params BlockSubmissionParams) error {
@@ -182,12 +186,16 @@ func (UnimplementedHandler) CompileProblemComponent(ctx context.Context, params 
 
 // ConfirmEmailChange implements ConfirmEmailChange operation.
 //
+// Confirm email change.
+//
 // POST /auth/confirm-email-change
 func (UnimplementedHandler) ConfirmEmailChange(ctx context.Context, req *ConfirmEmailChangeRequestModel) error {
 	return ht.ErrNotImplemented
 }
 
 // CreateContest implements CreateContest operation.
+//
+// Create contest.
 //
 // POST /organizations/{org_login}/contests
 func (UnimplementedHandler) CreateContest(ctx context.Context, params CreateContestParams) (r *CreationResponseModel, _ error) {
@@ -214,6 +222,8 @@ func (UnimplementedHandler) CreateContestClarification(ctx context.Context, req 
 
 // CreateContestDraft implements CreateContestDraft operation.
 //
+// Create contest draft.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/drafts
 func (UnimplementedHandler) CreateContestDraft(ctx context.Context, req *CreateContestDraftRequestModel, params CreateContestDraftParams) (r *CreationResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
@@ -230,6 +240,8 @@ func (UnimplementedHandler) CreateContestJoinRequest(ctx context.Context, req Op
 
 // CreateContestMember implements CreateContestMember operation.
 //
+// Create contest member.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/members
 func (UnimplementedHandler) CreateContestMember(ctx context.Context, params CreateContestMemberParams) (r *CreationResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
@@ -237,12 +249,16 @@ func (UnimplementedHandler) CreateContestMember(ctx context.Context, params Crea
 
 // CreateContestProblem implements CreateContestProblem operation.
 //
+// Create contest problem.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/problems
 func (UnimplementedHandler) CreateContestProblem(ctx context.Context, params CreateContestProblemParams) (r *CreationResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // CreateContestTeam implements CreateContestTeam operation.
+//
+// Create contest team.
 //
 // POST /organizations/{org_login}/contests/{contest_login}/teams
 func (UnimplementedHandler) CreateContestTeam(ctx context.Context, params CreateContestTeamParams) error {
@@ -277,6 +293,8 @@ func (UnimplementedHandler) CreatePost(ctx context.Context, req *CreatePostReq) 
 }
 
 // CreateProblem implements CreateProblem operation.
+//
+// Create problem.
 //
 // POST /problems
 func (UnimplementedHandler) CreateProblem(ctx context.Context, params CreateProblemParams) (r *CreationResponseModel, _ error) {
@@ -330,12 +348,16 @@ func (UnimplementedHandler) CreateProblemMediaFile(ctx context.Context, req Crea
 
 // CreateProblemMember implements CreateProblemMember operation.
 //
+// Create problem member.
+//
 // POST /problems/{id}/members
 func (UnimplementedHandler) CreateProblemMember(ctx context.Context, params CreateProblemMemberParams) error {
 	return ht.ErrNotImplemented
 }
 
 // CreateProblemTeam implements CreateProblemTeam operation.
+//
+// Create problem team.
 //
 // POST /problems/{id}/teams
 func (UnimplementedHandler) CreateProblemTeam(ctx context.Context, params CreateProblemTeamParams) error {
@@ -371,6 +393,8 @@ func (UnimplementedHandler) CreateProblemWorkshopSubmission(ctx context.Context,
 
 // CreateSubmission implements CreateSubmission operation.
 //
+// Create submission.
+//
 // POST /submissions
 func (UnimplementedHandler) CreateSubmission(ctx context.Context, req *CreateSubmissionRequestModel, params CreateSubmissionParams) (r *CreationResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
@@ -405,6 +429,8 @@ func (UnimplementedHandler) DeleteAvatar(ctx context.Context, params DeleteAvata
 
 // DeleteContest implements DeleteContest operation.
 //
+// Delete contest.
+//
 // DELETE /organizations/{org_login}/contests/{contest_login}
 func (UnimplementedHandler) DeleteContest(ctx context.Context, params DeleteContestParams) error {
 	return ht.ErrNotImplemented
@@ -421,12 +447,16 @@ func (UnimplementedHandler) DeleteContestAnnouncement(ctx context.Context, param
 
 // DeleteContestDraft implements DeleteContestDraft operation.
 //
+// Delete contest draft.
+//
 // DELETE /organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}
 func (UnimplementedHandler) DeleteContestDraft(ctx context.Context, params DeleteContestDraftParams) error {
 	return ht.ErrNotImplemented
 }
 
 // DeleteContestMember implements DeleteContestMember operation.
+//
+// Delete contest member.
 //
 // DELETE /organizations/{org_login}/contests/{contest_login}/members
 func (UnimplementedHandler) DeleteContestMember(ctx context.Context, params DeleteContestMemberParams) error {
@@ -435,12 +465,16 @@ func (UnimplementedHandler) DeleteContestMember(ctx context.Context, params Dele
 
 // DeleteContestProblem implements DeleteContestProblem operation.
 //
+// Delete contest problem.
+//
 // DELETE /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
 func (UnimplementedHandler) DeleteContestProblem(ctx context.Context, params DeleteContestProblemParams) error {
 	return ht.ErrNotImplemented
 }
 
 // DeleteContestTeam implements DeleteContestTeam operation.
+//
+// Delete contest team.
 //
 // DELETE /organizations/{org_login}/contests/{contest_login}/teams
 func (UnimplementedHandler) DeleteContestTeam(ctx context.Context, params DeleteContestTeamParams) error {
@@ -466,6 +500,8 @@ func (UnimplementedHandler) DeletePostById(ctx context.Context, params DeletePos
 }
 
 // DeleteProblem implements DeleteProblem operation.
+//
+// Delete problem.
 //
 // DELETE /problems/{id}
 func (UnimplementedHandler) DeleteProblem(ctx context.Context, params DeleteProblemParams) error {
@@ -519,12 +555,16 @@ func (UnimplementedHandler) DeleteProblemMediaFile(ctx context.Context, params D
 
 // DeleteProblemMember implements DeleteProblemMember operation.
 //
+// Delete problem member.
+//
 // DELETE /problems/{id}/members
 func (UnimplementedHandler) DeleteProblemMember(ctx context.Context, params DeleteProblemMemberParams) error {
 	return ht.ErrNotImplemented
 }
 
 // DeleteProblemTeam implements DeleteProblemTeam operation.
+//
+// Delete problem team.
 //
 // DELETE /problems/{id}/teams
 func (UnimplementedHandler) DeleteProblemTeam(ctx context.Context, params DeleteProblemTeamParams) error {
@@ -578,6 +618,8 @@ func (UnimplementedHandler) DownloadContestStatementsPdf(ctx context.Context, pa
 
 // ForgotPassword implements ForgotPassword operation.
 //
+// Forgot password.
+//
 // POST /auth/forgot-password
 func (UnimplementedHandler) ForgotPassword(ctx context.Context, req *ForgotPasswordRequestModel) error {
 	return ht.ErrNotImplemented
@@ -594,12 +636,16 @@ func (UnimplementedHandler) GenerateTests(ctx context.Context, req *GenerateTest
 
 // GetContest implements GetContest operation.
 //
+// Get contest.
+//
 // GET /organizations/{org_login}/contests/{contest_login}
 func (UnimplementedHandler) GetContest(ctx context.Context, params GetContestParams) (r *GetContestResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // GetContestProblem implements GetContestProblem operation.
+//
+// Get contest problem.
 //
 // GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
 func (UnimplementedHandler) GetContestProblem(ctx context.Context, params GetContestProblemParams) (r *GetContestProblemResponseModel, _ error) {
@@ -608,12 +654,16 @@ func (UnimplementedHandler) GetContestProblem(ctx context.Context, params GetCon
 
 // GetContestScoreboard implements GetContestScoreboard operation.
 //
+// Get contest scoreboard.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/scoreboard
 func (UnimplementedHandler) GetContestScoreboard(ctx context.Context, params GetContestScoreboardParams) (r *ScoreboardResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // GetHealth implements GetHealth operation.
+//
+// Get health.
 //
 // GET /health
 func (UnimplementedHandler) GetHealth(ctx context.Context) (r *GetHealthResponseModel, _ error) {
@@ -631,6 +681,8 @@ func (UnimplementedHandler) GetLanguages(ctx context.Context) (r *SupportedLangu
 
 // GetMe implements GetMe operation.
 //
+// Get me.
+//
 // GET /users/me
 func (UnimplementedHandler) GetMe(ctx context.Context) (r *GetUserResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
@@ -647,12 +699,16 @@ func (UnimplementedHandler) GetMyContestJoinRequest(ctx context.Context, params 
 
 // GetMyContestRole implements GetMyContestRole operation.
 //
+// Get my contest role.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/my-role
 func (UnimplementedHandler) GetMyContestRole(ctx context.Context, params GetMyContestRoleParams) (r *GetMyContestRoleResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // GetMyDashboard implements GetMyDashboard operation.
+//
+// Get my dashboard.
 //
 // GET /users/me/dashboard
 func (UnimplementedHandler) GetMyDashboard(ctx context.Context) (r *GetUserDashboardResponseModel, _ error) {
@@ -697,12 +753,16 @@ func (UnimplementedHandler) GetPostImage(ctx context.Context, params GetPostImag
 
 // GetProblem implements GetProblem operation.
 //
+// Get problem.
+//
 // GET /problems/{id}
 func (UnimplementedHandler) GetProblem(ctx context.Context, params GetProblemParams) (r *GetProblemResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // GetProblemBlockStatusForUser implements GetProblemBlockStatusForUser operation.
+//
+// Get problem block status for user.
 //
 // GET /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 func (UnimplementedHandler) GetProblemBlockStatusForUser(ctx context.Context, params GetProblemBlockStatusForUserParams) (r *ProblemBlockStatusResponseModel, _ error) {
@@ -810,6 +870,8 @@ func (UnimplementedHandler) GetPublishedPackage(ctx context.Context, params GetP
 
 // GetSubmission implements GetSubmission operation.
 //
+// Get submission.
+//
 // GET /submissions/{submission_id}
 func (UnimplementedHandler) GetSubmission(ctx context.Context, params GetSubmissionParams) (r *GetSubmissionResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
@@ -834,6 +896,8 @@ func (UnimplementedHandler) GetUnreadNotificationsCount(ctx context.Context) (r 
 }
 
 // GetUser implements GetUser operation.
+//
+// Get user.
 //
 // GET /users/{username}
 func (UnimplementedHandler) GetUser(ctx context.Context, params GetUserParams) (r *GetUserResponseModel, _ error) {
@@ -869,6 +933,8 @@ func (UnimplementedHandler) InviteOrganizationMember(ctx context.Context, req *I
 
 // ListAdminContests implements ListAdminContests operation.
 //
+// List admin contests.
+//
 // GET /admin/contests
 func (UnimplementedHandler) ListAdminContests(ctx context.Context, params ListAdminContestsParams) (r *ListContestsResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
@@ -894,6 +960,8 @@ func (UnimplementedHandler) ListContestClarifications(ctx context.Context, param
 
 // ListContestDrafts implements ListContestDrafts operation.
 //
+// List contest drafts.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/drafts
 func (UnimplementedHandler) ListContestDrafts(ctx context.Context, params ListContestDraftsParams) (r *ListContestDraftsResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
@@ -910,6 +978,8 @@ func (UnimplementedHandler) ListContestJoinRequests(ctx context.Context, params 
 
 // ListContestMembers implements ListContestMembers operation.
 //
+// List contest members.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/members
 func (UnimplementedHandler) ListContestMembers(ctx context.Context, params ListContestMembersParams) (r *ListContestMembersResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
@@ -917,12 +987,16 @@ func (UnimplementedHandler) ListContestMembers(ctx context.Context, params ListC
 
 // ListContestSubmissions implements ListContestSubmissions operation.
 //
+// List contest submissions.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/submissions
 func (UnimplementedHandler) ListContestSubmissions(ctx context.Context, params ListContestSubmissionsParams) (r *ListSubmissionsResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // ListContestTeams implements ListContestTeams operation.
+//
+// List contest teams.
 //
 // GET /organizations/{org_login}/contests/{contest_login}/teams
 func (UnimplementedHandler) ListContestTeams(ctx context.Context, params ListContestTeamsParams) (r *ListContestTeamsResponseModel, _ error) {
@@ -948,6 +1022,8 @@ func (UnimplementedHandler) ListNotifications(ctx context.Context, params ListNo
 }
 
 // ListOrganizationContests implements ListOrganizationContests operation.
+//
+// List organization contests.
 //
 // GET /organizations/{org_login}/contests
 func (UnimplementedHandler) ListOrganizationContests(ctx context.Context, params ListOrganizationContestsParams) (r *ListContestsResponseModel, _ error) {
@@ -1046,6 +1122,8 @@ func (UnimplementedHandler) ListProblemMediaFiles(ctx context.Context, params Li
 
 // ListProblemMembers implements ListProblemMembers operation.
 //
+// List problem members.
+//
 // GET /problems/{id}/members
 func (UnimplementedHandler) ListProblemMembers(ctx context.Context, params ListProblemMembersParams) (r *ListProblemMembersResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
@@ -1062,12 +1140,16 @@ func (UnimplementedHandler) ListProblemPackages(ctx context.Context, params List
 
 // ListProblemTeams implements ListProblemTeams operation.
 //
+// List problem teams.
+//
 // GET /problems/{id}/teams
 func (UnimplementedHandler) ListProblemTeams(ctx context.Context, params ListProblemTeamsParams) (r *ListProblemTeamsResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // ListProblemTemplates implements ListProblemTemplates operation.
+//
+// List problem templates.
 //
 // GET /problem-templates
 func (UnimplementedHandler) ListProblemTemplates(ctx context.Context, params ListProblemTemplatesParams) (r []ProblemTemplateModel, _ error) {
@@ -1103,6 +1185,8 @@ func (UnimplementedHandler) ListProblemWorkshopSubmissions(ctx context.Context, 
 
 // ListProblems implements ListProblems operation.
 //
+// List problems.
+//
 // GET /problems
 func (UnimplementedHandler) ListProblems(ctx context.Context, params ListProblemsParams) (r *ListProblemsResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
@@ -1110,12 +1194,16 @@ func (UnimplementedHandler) ListProblems(ctx context.Context, params ListProblem
 
 // ListPublicContests implements ListPublicContests operation.
 //
+// List public contests.
+//
 // GET /public/contests
 func (UnimplementedHandler) ListPublicContests(ctx context.Context, params ListPublicContestsParams) (r *ListContestsResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // ListSubmissions implements ListSubmissions operation.
+//
+// List submissions.
 //
 // GET /submissions
 func (UnimplementedHandler) ListSubmissions(ctx context.Context, params ListSubmissionsParams) (r *ListSubmissionsResponseModel, _ error) {
@@ -1160,12 +1248,16 @@ func (UnimplementedHandler) ListTeams(ctx context.Context, params ListTeamsParam
 
 // ListUserContests implements ListUserContests operation.
 //
+// List user contests.
+//
 // GET /users/{username}/contests
 func (UnimplementedHandler) ListUserContests(ctx context.Context, params ListUserContestsParams) (r *ListUserContestsResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // ListUserSubmissions implements ListUserSubmissions operation.
+//
+// List user submissions.
 //
 // GET /users/{username}/submissions
 func (UnimplementedHandler) ListUserSubmissions(ctx context.Context, params ListUserSubmissionsParams) (r *ListSubmissionsResponseModel, _ error) {
@@ -1174,12 +1266,16 @@ func (UnimplementedHandler) ListUserSubmissions(ctx context.Context, params List
 
 // ListUsers implements ListUsers operation.
 //
+// List users.
+//
 // GET /users
 func (UnimplementedHandler) ListUsers(ctx context.Context, params ListUsersParams) (r *ListUsersResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // ListWorkshopContests implements ListWorkshopContests operation.
+//
+// List workshop contests.
 //
 // GET /workshop/contests
 func (UnimplementedHandler) ListWorkshopContests(ctx context.Context, params ListWorkshopContestsParams) (r *ListContestsResponseModel, _ error) {
@@ -1188,12 +1284,16 @@ func (UnimplementedHandler) ListWorkshopContests(ctx context.Context, params Lis
 
 // Login implements Login operation.
 //
+// Login.
+//
 // POST /auth/login
 func (UnimplementedHandler) Login(ctx context.Context, req *LoginRequestModel) (r *AuthResponseModelHeaders, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
 // Logout implements Logout operation.
+//
+// Logout.
 //
 // POST /auth/logout
 func (UnimplementedHandler) Logout(ctx context.Context) (r *LogoutOK, _ error) {
@@ -1238,6 +1338,8 @@ func (UnimplementedHandler) PublishProblem(ctx context.Context, params PublishPr
 
 // Register implements Register operation.
 //
+// Register.
+//
 // POST /auth/register
 func (UnimplementedHandler) Register(ctx context.Context, req *RegisterRequestModel) (r *AuthResponseModel, _ error) {
 	return r, ht.ErrNotImplemented
@@ -1263,6 +1365,8 @@ func (UnimplementedHandler) RejectOrganizationJoinRequest(ctx context.Context, p
 
 // RejudgeContest implements RejudgeContest operation.
 //
+// Rejudge contest.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/rejudge
 func (UnimplementedHandler) RejudgeContest(ctx context.Context, params RejudgeContestParams) error {
 	return ht.ErrNotImplemented
@@ -1270,12 +1374,16 @@ func (UnimplementedHandler) RejudgeContest(ctx context.Context, params RejudgeCo
 
 // RejudgeContestProblem implements RejudgeContestProblem operation.
 //
+// Rejudge contest problem.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge
 func (UnimplementedHandler) RejudgeContestProblem(ctx context.Context, params RejudgeContestProblemParams) error {
 	return ht.ErrNotImplemented
 }
 
 // RejudgeSubmission implements RejudgeSubmission operation.
+//
+// Rejudge submission.
 //
 // POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge
 func (UnimplementedHandler) RejudgeSubmission(ctx context.Context, params RejudgeSubmissionParams) error {
@@ -1302,6 +1410,8 @@ func (UnimplementedHandler) RemoveTeamMember(ctx context.Context, params RemoveT
 
 // ReorderContestProblems implements ReorderContestProblems operation.
 //
+// Reorder contest problems.
+//
 // PUT /organizations/{org_login}/contests/{contest_login}/problems/reorder
 func (UnimplementedHandler) ReorderContestProblems(ctx context.Context, req *ReorderContestProblemsRequestModel, params ReorderContestProblemsParams) error {
 	return ht.ErrNotImplemented
@@ -1318,12 +1428,16 @@ func (UnimplementedHandler) RequestEmailChange(ctx context.Context, req *Request
 
 // ResendVerification implements ResendVerification operation.
 //
+// Resend verification.
+//
 // POST /auth/resend-verification
 func (UnimplementedHandler) ResendVerification(ctx context.Context, req *ResendVerificationRequestModel) error {
 	return ht.ErrNotImplemented
 }
 
 // ResetPassword implements ResetPassword operation.
+//
+// Reset password.
 //
 // POST /auth/reset-password
 func (UnimplementedHandler) ResetPassword(ctx context.Context, req *ResetPasswordRequestModel) error {
@@ -1341,12 +1455,16 @@ func (UnimplementedHandler) TestSolution(ctx context.Context, req *TestSolutionR
 
 // UnblockProblemForUser implements UnblockProblemForUser operation.
 //
+// Unblock problem for user.
+//
 // DELETE /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 func (UnimplementedHandler) UnblockProblemForUser(ctx context.Context, params UnblockProblemForUserParams) error {
 	return ht.ErrNotImplemented
 }
 
 // UnblockSubmission implements UnblockSubmission operation.
+//
+// Unblock submission.
 //
 // POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock
 func (UnimplementedHandler) UnblockSubmission(ctx context.Context, params UnblockSubmissionParams) error {
@@ -1355,6 +1473,8 @@ func (UnimplementedHandler) UnblockSubmission(ctx context.Context, params Unbloc
 
 // UpdateContest implements UpdateContest operation.
 //
+// Update contest.
+//
 // PATCH /organizations/{org_login}/contests/{contest_login}
 func (UnimplementedHandler) UpdateContest(ctx context.Context, req *UpdateContestRequestModel, params UpdateContestParams) error {
 	return ht.ErrNotImplemented
@@ -1362,12 +1482,16 @@ func (UnimplementedHandler) UpdateContest(ctx context.Context, req *UpdateContes
 
 // UpdateContestMember implements UpdateContestMember operation.
 //
+// Update contest member.
+//
 // PATCH /organizations/{org_login}/contests/{contest_login}/members
 func (UnimplementedHandler) UpdateContestMember(ctx context.Context, params UpdateContestMemberParams) error {
 	return ht.ErrNotImplemented
 }
 
 // UpdateContestTeam implements UpdateContestTeam operation.
+//
+// Update contest team.
 //
 // PATCH /organizations/{org_login}/contests/{contest_login}/teams
 func (UnimplementedHandler) UpdateContestTeam(ctx context.Context, params UpdateContestTeamParams) error {
@@ -1384,6 +1508,8 @@ func (UnimplementedHandler) UpdateOrganization(ctx context.Context, req *UpdateO
 }
 
 // UpdateProblem implements UpdateProblem operation.
+//
+// Update problem.
 //
 // PATCH /problems/{id}
 func (UnimplementedHandler) UpdateProblem(ctx context.Context, req *UpdateProblemRequestModel, params UpdateProblemParams) error {
@@ -1446,6 +1572,8 @@ func (UnimplementedHandler) UpdateProblemMediaFile(ctx context.Context, req Upda
 
 // UpdateProblemMember implements UpdateProblemMember operation.
 //
+// Update problem member.
+//
 // PATCH /problems/{id}/members
 func (UnimplementedHandler) UpdateProblemMember(ctx context.Context, params UpdateProblemMemberParams) error {
 	return ht.ErrNotImplemented
@@ -1461,6 +1589,8 @@ func (UnimplementedHandler) UpdateProblemStatement(ctx context.Context, req *Upd
 }
 
 // UpdateProblemTeam implements UpdateProblemTeam operation.
+//
+// Update problem team.
 //
 // PATCH /problems/{id}/teams
 func (UnimplementedHandler) UpdateProblemTeam(ctx context.Context, params UpdateProblemTeamParams) error {
@@ -1523,6 +1653,8 @@ func (UnimplementedHandler) UpdateTeamMemberRole(ctx context.Context, params Upd
 
 // UpdateUser implements UpdateUser operation.
 //
+// Update user.
+//
 // PATCH /users/{username}
 func (UnimplementedHandler) UpdateUser(ctx context.Context, req *UpdateUserRequestModel, params UpdateUserParams) error {
 	return ht.ErrNotImplemented
@@ -1547,6 +1679,8 @@ func (UnimplementedHandler) ValidateAllTests(ctx context.Context, params Validat
 }
 
 // VerifyEmail implements VerifyEmail operation.
+//
+// Verify email.
 //
 // POST /auth/verify-email
 func (UnimplementedHandler) VerifyEmail(ctx context.Context, req *VerifyEmailRequestModel) (r *VerifyEmailResponseHeaders, _ error) {

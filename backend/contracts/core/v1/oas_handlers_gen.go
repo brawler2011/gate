@@ -1065,6 +1065,8 @@ func (s *Server) handleBatchCreateOrganizationUsersRequest(args [1]string, argsE
 
 // handleBlockProblemForUserRequest handles BlockProblemForUser operation.
 //
+// Block problem for user.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 func (s *Server) handleBlockProblemForUserRequest(args [4]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -1111,7 +1113,7 @@ func (s *Server) handleBlockProblemForUserRequest(args [4]string, argsEscaped bo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    BlockProblemForUserOperation,
-			OperationSummary: "",
+			OperationSummary: "Block problem for user",
 			OperationID:      "BlockProblemForUser",
 			Body:             request,
 			RawBody:          rawBody,
@@ -1174,6 +1176,8 @@ func (s *Server) handleBlockProblemForUserRequest(args [4]string, argsEscaped bo
 
 // handleBlockSubmissionRequest handles BlockSubmission operation.
 //
+// Block submission.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block
 func (s *Server) handleBlockSubmissionRequest(args [3]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -1220,7 +1224,7 @@ func (s *Server) handleBlockSubmissionRequest(args [3]string, argsEscaped bool, 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    BlockSubmissionOperation,
-			OperationSummary: "",
+			OperationSummary: "Block submission",
 			OperationID:      "BlockSubmission",
 			Body:             request,
 			RawBody:          rawBody,
@@ -1795,6 +1799,8 @@ func (s *Server) handleCompileProblemComponentRequest(args [2]string, argsEscape
 
 // handleConfirmEmailChangeRequest handles ConfirmEmailChange operation.
 //
+// Confirm email change.
+//
 // POST /auth/confirm-email-change
 func (s *Server) handleConfirmEmailChangeRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -1831,7 +1837,7 @@ func (s *Server) handleConfirmEmailChangeRequest(args [0]string, argsEscaped boo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ConfirmEmailChangeOperation,
-			OperationSummary: "",
+			OperationSummary: "Confirm email change",
 			OperationID:      "ConfirmEmailChange",
 			Body:             request,
 			RawBody:          rawBody,
@@ -1877,6 +1883,8 @@ func (s *Server) handleConfirmEmailChangeRequest(args [0]string, argsEscaped boo
 
 // handleCreateContestRequest handles CreateContest operation.
 //
+// Create contest.
+//
 // POST /organizations/{org_login}/contests
 func (s *Server) handleCreateContestRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -1908,7 +1916,7 @@ func (s *Server) handleCreateContestRequest(args [1]string, argsEscaped bool, w 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    CreateContestOperation,
-			OperationSummary: "",
+			OperationSummary: "Create contest",
 			OperationID:      "CreateContest",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -2173,6 +2181,8 @@ func (s *Server) handleCreateContestClarificationRequest(args [2]string, argsEsc
 
 // handleCreateContestDraftRequest handles CreateContestDraft operation.
 //
+// Create contest draft.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/drafts
 func (s *Server) handleCreateContestDraftRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -2219,7 +2229,7 @@ func (s *Server) handleCreateContestDraftRequest(args [2]string, argsEscaped boo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    CreateContestDraftOperation,
-			OperationSummary: "",
+			OperationSummary: "Create contest draft",
 			OperationID:      "CreateContestDraft",
 			Body:             request,
 			RawBody:          rawBody,
@@ -2377,6 +2387,8 @@ func (s *Server) handleCreateContestJoinRequestRequest(args [2]string, argsEscap
 
 // handleCreateContestMemberRequest handles CreateContestMember operation.
 //
+// Create contest member.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/members
 func (s *Server) handleCreateContestMemberRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -2408,7 +2420,7 @@ func (s *Server) handleCreateContestMemberRequest(args [2]string, argsEscaped bo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    CreateContestMemberOperation,
-			OperationSummary: "",
+			OperationSummary: "Create contest member",
 			OperationID:      "CreateContestMember",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -2467,6 +2479,8 @@ func (s *Server) handleCreateContestMemberRequest(args [2]string, argsEscaped bo
 
 // handleCreateContestProblemRequest handles CreateContestProblem operation.
 //
+// Create contest problem.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/problems
 func (s *Server) handleCreateContestProblemRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -2498,7 +2512,7 @@ func (s *Server) handleCreateContestProblemRequest(args [2]string, argsEscaped b
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    CreateContestProblemOperation,
-			OperationSummary: "",
+			OperationSummary: "Create contest problem",
 			OperationID:      "CreateContestProblem",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -2561,6 +2575,8 @@ func (s *Server) handleCreateContestProblemRequest(args [2]string, argsEscaped b
 
 // handleCreateContestTeamRequest handles CreateContestTeam operation.
 //
+// Create contest team.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/teams
 func (s *Server) handleCreateContestTeamRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -2592,7 +2608,7 @@ func (s *Server) handleCreateContestTeamRequest(args [2]string, argsEscaped bool
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    CreateContestTeamOperation,
-			OperationSummary: "",
+			OperationSummary: "Create contest team",
 			OperationID:      "CreateContestTeam",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -2974,6 +2990,8 @@ func (s *Server) handleCreatePostRequest(args [0]string, argsEscaped bool, w htt
 
 // handleCreateProblemRequest handles CreateProblem operation.
 //
+// Create problem.
+//
 // POST /problems
 func (s *Server) handleCreateProblemRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -3005,7 +3023,7 @@ func (s *Server) handleCreateProblemRequest(args [0]string, argsEscaped bool, w 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    CreateProblemOperation,
-			OperationSummary: "",
+			OperationSummary: "Create problem",
 			OperationID:      "CreateProblem",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -3579,6 +3597,8 @@ func (s *Server) handleCreateProblemMediaFileRequest(args [1]string, argsEscaped
 
 // handleCreateProblemMemberRequest handles CreateProblemMember operation.
 //
+// Create problem member.
+//
 // POST /problems/{id}/members
 func (s *Server) handleCreateProblemMemberRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -3610,7 +3630,7 @@ func (s *Server) handleCreateProblemMemberRequest(args [1]string, argsEscaped bo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    CreateProblemMemberOperation,
-			OperationSummary: "",
+			OperationSummary: "Create problem member",
 			OperationID:      "CreateProblemMember",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -3669,6 +3689,8 @@ func (s *Server) handleCreateProblemMemberRequest(args [1]string, argsEscaped bo
 
 // handleCreateProblemTeamRequest handles CreateProblemTeam operation.
 //
+// Create problem team.
+//
 // POST /problems/{id}/teams
 func (s *Server) handleCreateProblemTeamRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -3700,7 +3722,7 @@ func (s *Server) handleCreateProblemTeamRequest(args [1]string, argsEscaped bool
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    CreateProblemTeamOperation,
-			OperationSummary: "",
+			OperationSummary: "Create problem team",
 			OperationID:      "CreateProblemTeam",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -4068,6 +4090,8 @@ func (s *Server) handleCreateProblemWorkshopSubmissionRequest(args [1]string, ar
 
 // handleCreateSubmissionRequest handles CreateSubmission operation.
 //
+// Create submission.
+//
 // POST /submissions
 func (s *Server) handleCreateSubmissionRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -4114,7 +4138,7 @@ func (s *Server) handleCreateSubmissionRequest(args [0]string, argsEscaped bool,
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    CreateSubmissionOperation,
-			OperationSummary: "",
+			OperationSummary: "Create submission",
 			OperationID:      "CreateSubmission",
 			Body:             request,
 			RawBody:          rawBody,
@@ -4429,6 +4453,8 @@ func (s *Server) handleDeleteAvatarRequest(args [1]string, argsEscaped bool, w h
 
 // handleDeleteContestRequest handles DeleteContest operation.
 //
+// Delete contest.
+//
 // DELETE /organizations/{org_login}/contests/{contest_login}
 func (s *Server) handleDeleteContestRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -4460,7 +4486,7 @@ func (s *Server) handleDeleteContestRequest(args [2]string, argsEscaped bool, w 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    DeleteContestOperation,
-			OperationSummary: "",
+			OperationSummary: "Delete contest",
 			OperationID:      "DeleteContest",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -4607,6 +4633,8 @@ func (s *Server) handleDeleteContestAnnouncementRequest(args [3]string, argsEsca
 
 // handleDeleteContestDraftRequest handles DeleteContestDraft operation.
 //
+// Delete contest draft.
+//
 // DELETE /organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}
 func (s *Server) handleDeleteContestDraftRequest(args [3]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -4638,7 +4666,7 @@ func (s *Server) handleDeleteContestDraftRequest(args [3]string, argsEscaped boo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    DeleteContestDraftOperation,
-			OperationSummary: "",
+			OperationSummary: "Delete contest draft",
 			OperationID:      "DeleteContestDraft",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -4697,6 +4725,8 @@ func (s *Server) handleDeleteContestDraftRequest(args [3]string, argsEscaped boo
 
 // handleDeleteContestMemberRequest handles DeleteContestMember operation.
 //
+// Delete contest member.
+//
 // DELETE /organizations/{org_login}/contests/{contest_login}/members
 func (s *Server) handleDeleteContestMemberRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -4728,7 +4758,7 @@ func (s *Server) handleDeleteContestMemberRequest(args [2]string, argsEscaped bo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    DeleteContestMemberOperation,
-			OperationSummary: "",
+			OperationSummary: "Delete contest member",
 			OperationID:      "DeleteContestMember",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -4787,6 +4817,8 @@ func (s *Server) handleDeleteContestMemberRequest(args [2]string, argsEscaped bo
 
 // handleDeleteContestProblemRequest handles DeleteContestProblem operation.
 //
+// Delete contest problem.
+//
 // DELETE /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
 func (s *Server) handleDeleteContestProblemRequest(args [3]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -4818,7 +4850,7 @@ func (s *Server) handleDeleteContestProblemRequest(args [3]string, argsEscaped b
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    DeleteContestProblemOperation,
-			OperationSummary: "",
+			OperationSummary: "Delete contest problem",
 			OperationID:      "DeleteContestProblem",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -4877,6 +4909,8 @@ func (s *Server) handleDeleteContestProblemRequest(args [3]string, argsEscaped b
 
 // handleDeleteContestTeamRequest handles DeleteContestTeam operation.
 //
+// Delete contest team.
+//
 // DELETE /organizations/{org_login}/contests/{contest_login}/teams
 func (s *Server) handleDeleteContestTeamRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -4908,7 +4942,7 @@ func (s *Server) handleDeleteContestTeamRequest(args [2]string, argsEscaped bool
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    DeleteContestTeamOperation,
-			OperationSummary: "",
+			OperationSummary: "Delete contest team",
 			OperationID:      "DeleteContestTeam",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -5179,6 +5213,8 @@ func (s *Server) handleDeletePostByIdRequest(args [1]string, argsEscaped bool, w
 
 // handleDeleteProblemRequest handles DeleteProblem operation.
 //
+// Delete problem.
+//
 // DELETE /problems/{id}
 func (s *Server) handleDeleteProblemRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -5210,7 +5246,7 @@ func (s *Server) handleDeleteProblemRequest(args [1]string, argsEscaped bool, w 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    DeleteProblemOperation,
-			OperationSummary: "",
+			OperationSummary: "Delete problem",
 			OperationID:      "DeleteProblem",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -5701,6 +5737,8 @@ func (s *Server) handleDeleteProblemMediaFileRequest(args [2]string, argsEscaped
 
 // handleDeleteProblemMemberRequest handles DeleteProblemMember operation.
 //
+// Delete problem member.
+//
 // DELETE /problems/{id}/members
 func (s *Server) handleDeleteProblemMemberRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -5732,7 +5770,7 @@ func (s *Server) handleDeleteProblemMemberRequest(args [1]string, argsEscaped bo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    DeleteProblemMemberOperation,
-			OperationSummary: "",
+			OperationSummary: "Delete problem member",
 			OperationID:      "DeleteProblemMember",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -5787,6 +5825,8 @@ func (s *Server) handleDeleteProblemMemberRequest(args [1]string, argsEscaped bo
 
 // handleDeleteProblemTeamRequest handles DeleteProblemTeam operation.
 //
+// Delete problem team.
+//
 // DELETE /problems/{id}/teams
 func (s *Server) handleDeleteProblemTeamRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -5818,7 +5858,7 @@ func (s *Server) handleDeleteProblemTeamRequest(args [1]string, argsEscaped bool
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    DeleteProblemTeamOperation,
-			OperationSummary: "",
+			OperationSummary: "Delete problem team",
 			OperationID:      "DeleteProblemTeam",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -6313,6 +6353,8 @@ func (s *Server) handleDownloadContestStatementsPdfRequest(args [2]string, argsE
 
 // handleForgotPasswordRequest handles ForgotPassword operation.
 //
+// Forgot password.
+//
 // POST /auth/forgot-password
 func (s *Server) handleForgotPasswordRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -6349,7 +6391,7 @@ func (s *Server) handleForgotPasswordRequest(args [0]string, argsEscaped bool, w
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ForgotPasswordOperation,
-			OperationSummary: "",
+			OperationSummary: "Forgot password",
 			OperationID:      "ForgotPassword",
 			Body:             request,
 			RawBody:          rawBody,
@@ -6494,6 +6536,8 @@ func (s *Server) handleGenerateTestsRequest(args [1]string, argsEscaped bool, w 
 
 // handleGetContestRequest handles GetContest operation.
 //
+// Get contest.
+//
 // GET /organizations/{org_login}/contests/{contest_login}
 func (s *Server) handleGetContestRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -6525,7 +6569,7 @@ func (s *Server) handleGetContestRequest(args [2]string, argsEscaped bool, w htt
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GetContestOperation,
-			OperationSummary: "",
+			OperationSummary: "Get contest",
 			OperationID:      "GetContest",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -6580,6 +6624,8 @@ func (s *Server) handleGetContestRequest(args [2]string, argsEscaped bool, w htt
 
 // handleGetContestProblemRequest handles GetContestProblem operation.
 //
+// Get contest problem.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
 func (s *Server) handleGetContestProblemRequest(args [3]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -6611,7 +6657,7 @@ func (s *Server) handleGetContestProblemRequest(args [3]string, argsEscaped bool
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GetContestProblemOperation,
-			OperationSummary: "",
+			OperationSummary: "Get contest problem",
 			OperationID:      "GetContestProblem",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -6670,6 +6716,8 @@ func (s *Server) handleGetContestProblemRequest(args [3]string, argsEscaped bool
 
 // handleGetContestScoreboardRequest handles GetContestScoreboard operation.
 //
+// Get contest scoreboard.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/scoreboard
 func (s *Server) handleGetContestScoreboardRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -6701,7 +6749,7 @@ func (s *Server) handleGetContestScoreboardRequest(args [2]string, argsEscaped b
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GetContestScoreboardOperation,
-			OperationSummary: "",
+			OperationSummary: "Get contest scoreboard",
 			OperationID:      "GetContestScoreboard",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -6760,6 +6808,8 @@ func (s *Server) handleGetContestScoreboardRequest(args [2]string, argsEscaped b
 
 // handleGetHealthRequest handles GetHealth operation.
 //
+// Get health.
+//
 // GET /health
 func (s *Server) handleGetHealthRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -6777,7 +6827,7 @@ func (s *Server) handleGetHealthRequest(args [0]string, argsEscaped bool, w http
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GetHealthOperation,
-			OperationSummary: "",
+			OperationSummary: "Get health",
 			OperationID:      "GetHealth",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -6888,6 +6938,8 @@ func (s *Server) handleGetLanguagesRequest(args [0]string, argsEscaped bool, w h
 
 // handleGetMeRequest handles GetMe operation.
 //
+// Get me.
+//
 // GET /users/me
 func (s *Server) handleGetMeRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -6905,7 +6957,7 @@ func (s *Server) handleGetMeRequest(args [0]string, argsEscaped bool, w http.Res
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GetMeOperation,
-			OperationSummary: "",
+			OperationSummary: "Get me",
 			OperationID:      "GetMe",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -7039,6 +7091,8 @@ func (s *Server) handleGetMyContestJoinRequestRequest(args [2]string, argsEscape
 
 // handleGetMyContestRoleRequest handles GetMyContestRole operation.
 //
+// Get my contest role.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/my-role
 func (s *Server) handleGetMyContestRoleRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -7070,7 +7124,7 @@ func (s *Server) handleGetMyContestRoleRequest(args [2]string, argsEscaped bool,
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GetMyContestRoleOperation,
-			OperationSummary: "",
+			OperationSummary: "Get my contest role",
 			OperationID:      "GetMyContestRole",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -7125,6 +7179,8 @@ func (s *Server) handleGetMyContestRoleRequest(args [2]string, argsEscaped bool,
 
 // handleGetMyDashboardRequest handles GetMyDashboard operation.
 //
+// Get my dashboard.
+//
 // GET /users/me/dashboard
 func (s *Server) handleGetMyDashboardRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -7142,7 +7198,7 @@ func (s *Server) handleGetMyDashboardRequest(args [0]string, argsEscaped bool, w
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GetMyDashboardOperation,
-			OperationSummary: "",
+			OperationSummary: "Get my dashboard",
 			OperationID:      "GetMyDashboard",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -7528,6 +7584,8 @@ func (s *Server) handleGetPostImageRequest(args [1]string, argsEscaped bool, w h
 
 // handleGetProblemRequest handles GetProblem operation.
 //
+// Get problem.
+//
 // GET /problems/{id}
 func (s *Server) handleGetProblemRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -7559,7 +7617,7 @@ func (s *Server) handleGetProblemRequest(args [1]string, argsEscaped bool, w htt
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GetProblemOperation,
-			OperationSummary: "",
+			OperationSummary: "Get problem",
 			OperationID:      "GetProblem",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -7610,6 +7668,8 @@ func (s *Server) handleGetProblemRequest(args [1]string, argsEscaped bool, w htt
 
 // handleGetProblemBlockStatusForUserRequest handles GetProblemBlockStatusForUser operation.
 //
+// Get problem block status for user.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 func (s *Server) handleGetProblemBlockStatusForUserRequest(args [4]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -7641,7 +7701,7 @@ func (s *Server) handleGetProblemBlockStatusForUserRequest(args [4]string, argsE
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GetProblemBlockStatusForUserOperation,
-			OperationSummary: "",
+			OperationSummary: "Get problem block status for user",
 			OperationID:      "GetProblemBlockStatusForUser",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -8668,6 +8728,8 @@ func (s *Server) handleGetPublishedPackageRequest(args [2]string, argsEscaped bo
 
 // handleGetSubmissionRequest handles GetSubmission operation.
 //
+// Get submission.
+//
 // GET /submissions/{submission_id}
 func (s *Server) handleGetSubmissionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -8699,7 +8761,7 @@ func (s *Server) handleGetSubmissionRequest(args [1]string, argsEscaped bool, w 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GetSubmissionOperation,
-			OperationSummary: "",
+			OperationSummary: "Get submission",
 			OperationID:      "GetSubmission",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -8899,6 +8961,8 @@ func (s *Server) handleGetUnreadNotificationsCountRequest(args [0]string, argsEs
 
 // handleGetUserRequest handles GetUser operation.
 //
+// Get user.
+//
 // GET /users/{username}
 func (s *Server) handleGetUserRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -8930,7 +8994,7 @@ func (s *Server) handleGetUserRequest(args [1]string, argsEscaped bool, w http.R
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GetUserOperation,
-			OperationSummary: "",
+			OperationSummary: "Get user",
 			OperationID:      "GetUser",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -9267,6 +9331,8 @@ func (s *Server) handleInviteOrganizationMemberRequest(args [1]string, argsEscap
 
 // handleListAdminContestsRequest handles ListAdminContests operation.
 //
+// List admin contests.
+//
 // GET /admin/contests
 func (s *Server) handleListAdminContestsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -9298,7 +9364,7 @@ func (s *Server) handleListAdminContestsRequest(args [0]string, argsEscaped bool
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListAdminContestsOperation,
-			OperationSummary: "",
+			OperationSummary: "List admin contests",
 			OperationID:      "ListAdminContests",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -9569,6 +9635,8 @@ func (s *Server) handleListContestClarificationsRequest(args [2]string, argsEsca
 
 // handleListContestDraftsRequest handles ListContestDrafts operation.
 //
+// List contest drafts.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/drafts
 func (s *Server) handleListContestDraftsRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -9600,7 +9668,7 @@ func (s *Server) handleListContestDraftsRequest(args [2]string, argsEscaped bool
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListContestDraftsOperation,
-			OperationSummary: "",
+			OperationSummary: "List contest drafts",
 			OperationID:      "ListContestDrafts",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -9751,6 +9819,8 @@ func (s *Server) handleListContestJoinRequestsRequest(args [2]string, argsEscape
 
 // handleListContestMembersRequest handles ListContestMembers operation.
 //
+// List contest members.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/members
 func (s *Server) handleListContestMembersRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -9782,7 +9852,7 @@ func (s *Server) handleListContestMembersRequest(args [2]string, argsEscaped boo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListContestMembersOperation,
-			OperationSummary: "",
+			OperationSummary: "List contest members",
 			OperationID:      "ListContestMembers",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -9845,6 +9915,8 @@ func (s *Server) handleListContestMembersRequest(args [2]string, argsEscaped boo
 
 // handleListContestSubmissionsRequest handles ListContestSubmissions operation.
 //
+// List contest submissions.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/submissions
 func (s *Server) handleListContestSubmissionsRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -9876,7 +9948,7 @@ func (s *Server) handleListContestSubmissionsRequest(args [2]string, argsEscaped
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListContestSubmissionsOperation,
-			OperationSummary: "",
+			OperationSummary: "List contest submissions",
 			OperationID:      "ListContestSubmissions",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -9959,6 +10031,8 @@ func (s *Server) handleListContestSubmissionsRequest(args [2]string, argsEscaped
 
 // handleListContestTeamsRequest handles ListContestTeams operation.
 //
+// List contest teams.
+//
 // GET /organizations/{org_login}/contests/{contest_login}/teams
 func (s *Server) handleListContestTeamsRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -9990,7 +10064,7 @@ func (s *Server) handleListContestTeamsRequest(args [2]string, argsEscaped bool,
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListContestTeamsOperation,
-			OperationSummary: "",
+			OperationSummary: "List contest teams",
 			OperationID:      "ListContestTeams",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -10202,6 +10276,8 @@ func (s *Server) handleListNotificationsRequest(args [0]string, argsEscaped bool
 
 // handleListOrganizationContestsRequest handles ListOrganizationContests operation.
 //
+// List organization contests.
+//
 // GET /organizations/{org_login}/contests
 func (s *Server) handleListOrganizationContestsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -10233,7 +10309,7 @@ func (s *Server) handleListOrganizationContestsRequest(args [1]string, argsEscap
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListOrganizationContestsOperation,
-			OperationSummary: "",
+			OperationSummary: "List organization contests",
 			OperationID:      "ListOrganizationContests",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -11160,6 +11236,8 @@ func (s *Server) handleListProblemMediaFilesRequest(args [1]string, argsEscaped 
 
 // handleListProblemMembersRequest handles ListProblemMembers operation.
 //
+// List problem members.
+//
 // GET /problems/{id}/members
 func (s *Server) handleListProblemMembersRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -11191,7 +11269,7 @@ func (s *Server) handleListProblemMembersRequest(args [1]string, argsEscaped boo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListProblemMembersOperation,
-			OperationSummary: "",
+			OperationSummary: "List problem members",
 			OperationID:      "ListProblemMembers",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -11334,6 +11412,8 @@ func (s *Server) handleListProblemPackagesRequest(args [1]string, argsEscaped bo
 
 // handleListProblemTeamsRequest handles ListProblemTeams operation.
 //
+// List problem teams.
+//
 // GET /problems/{id}/teams
 func (s *Server) handleListProblemTeamsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -11365,7 +11445,7 @@ func (s *Server) handleListProblemTeamsRequest(args [1]string, argsEscaped bool,
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListProblemTeamsOperation,
-			OperationSummary: "",
+			OperationSummary: "List problem teams",
 			OperationID:      "ListProblemTeams",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -11416,6 +11496,8 @@ func (s *Server) handleListProblemTeamsRequest(args [1]string, argsEscaped bool,
 
 // handleListProblemTemplatesRequest handles ListProblemTemplates operation.
 //
+// List problem templates.
+//
 // GET /problem-templates
 func (s *Server) handleListProblemTemplatesRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -11447,7 +11529,7 @@ func (s *Server) handleListProblemTemplatesRequest(args [0]string, argsEscaped b
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListProblemTemplatesOperation,
-			OperationSummary: "",
+			OperationSummary: "List problem templates",
 			OperationID:      "ListProblemTemplates",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -11750,6 +11832,8 @@ func (s *Server) handleListProblemWorkshopSubmissionsRequest(args [1]string, arg
 
 // handleListProblemsRequest handles ListProblems operation.
 //
+// List problems.
+//
 // GET /problems
 func (s *Server) handleListProblemsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -11781,7 +11865,7 @@ func (s *Server) handleListProblemsRequest(args [0]string, argsEscaped bool, w h
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListProblemsOperation,
-			OperationSummary: "",
+			OperationSummary: "List problems",
 			OperationID:      "ListProblems",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -11856,6 +11940,8 @@ func (s *Server) handleListProblemsRequest(args [0]string, argsEscaped bool, w h
 
 // handleListPublicContestsRequest handles ListPublicContests operation.
 //
+// List public contests.
+//
 // GET /public/contests
 func (s *Server) handleListPublicContestsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -11887,7 +11973,7 @@ func (s *Server) handleListPublicContestsRequest(args [0]string, argsEscaped boo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListPublicContestsOperation,
-			OperationSummary: "",
+			OperationSummary: "List public contests",
 			OperationID:      "ListPublicContests",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -11954,6 +12040,8 @@ func (s *Server) handleListPublicContestsRequest(args [0]string, argsEscaped boo
 
 // handleListSubmissionsRequest handles ListSubmissions operation.
 //
+// List submissions.
+//
 // GET /submissions
 func (s *Server) handleListSubmissionsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -11985,7 +12073,7 @@ func (s *Server) handleListSubmissionsRequest(args [0]string, argsEscaped bool, 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListSubmissionsOperation,
-			OperationSummary: "",
+			OperationSummary: "List submissions",
 			OperationID:      "ListSubmissions",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -12436,6 +12524,8 @@ func (s *Server) handleListTeamsRequest(args [0]string, argsEscaped bool, w http
 
 // handleListUserContestsRequest handles ListUserContests operation.
 //
+// List user contests.
+//
 // GET /users/{username}/contests
 func (s *Server) handleListUserContestsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -12467,7 +12557,7 @@ func (s *Server) handleListUserContestsRequest(args [1]string, argsEscaped bool,
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListUserContestsOperation,
-			OperationSummary: "",
+			OperationSummary: "List user contests",
 			OperationID:      "ListUserContests",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -12538,6 +12628,8 @@ func (s *Server) handleListUserContestsRequest(args [1]string, argsEscaped bool,
 
 // handleListUserSubmissionsRequest handles ListUserSubmissions operation.
 //
+// List user submissions.
+//
 // GET /users/{username}/submissions
 func (s *Server) handleListUserSubmissionsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -12569,7 +12661,7 @@ func (s *Server) handleListUserSubmissionsRequest(args [1]string, argsEscaped bo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListUserSubmissionsOperation,
-			OperationSummary: "",
+			OperationSummary: "List user submissions",
 			OperationID:      "ListUserSubmissions",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -12644,6 +12736,8 @@ func (s *Server) handleListUserSubmissionsRequest(args [1]string, argsEscaped bo
 
 // handleListUsersRequest handles ListUsers operation.
 //
+// List users.
+//
 // GET /users
 func (s *Server) handleListUsersRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -12675,7 +12769,7 @@ func (s *Server) handleListUsersRequest(args [0]string, argsEscaped bool, w http
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListUsersOperation,
-			OperationSummary: "",
+			OperationSummary: "List users",
 			OperationID:      "ListUsers",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -12738,6 +12832,8 @@ func (s *Server) handleListUsersRequest(args [0]string, argsEscaped bool, w http
 
 // handleListWorkshopContestsRequest handles ListWorkshopContests operation.
 //
+// List workshop contests.
+//
 // GET /workshop/contests
 func (s *Server) handleListWorkshopContestsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -12769,7 +12865,7 @@ func (s *Server) handleListWorkshopContestsRequest(args [0]string, argsEscaped b
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListWorkshopContestsOperation,
-			OperationSummary: "",
+			OperationSummary: "List workshop contests",
 			OperationID:      "ListWorkshopContests",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -12840,6 +12936,8 @@ func (s *Server) handleListWorkshopContestsRequest(args [0]string, argsEscaped b
 
 // handleLoginRequest handles Login operation.
 //
+// Login.
+//
 // POST /auth/login
 func (s *Server) handleLoginRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -12876,7 +12974,7 @@ func (s *Server) handleLoginRequest(args [0]string, argsEscaped bool, w http.Res
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    LoginOperation,
-			OperationSummary: "",
+			OperationSummary: "Login",
 			OperationID:      "Login",
 			Body:             request,
 			RawBody:          rawBody,
@@ -12922,6 +13020,8 @@ func (s *Server) handleLoginRequest(args [0]string, argsEscaped bool, w http.Res
 
 // handleLogoutRequest handles Logout operation.
 //
+// Logout.
+//
 // POST /auth/logout
 func (s *Server) handleLogoutRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -12939,7 +13039,7 @@ func (s *Server) handleLogoutRequest(args [0]string, argsEscaped bool, w http.Re
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    LogoutOperation,
-			OperationSummary: "",
+			OperationSummary: "Logout",
 			OperationID:      "Logout",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -13361,6 +13461,8 @@ func (s *Server) handlePublishProblemRequest(args [1]string, argsEscaped bool, w
 
 // handleRegisterRequest handles Register operation.
 //
+// Register.
+//
 // POST /auth/register
 func (s *Server) handleRegisterRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -13397,7 +13499,7 @@ func (s *Server) handleRegisterRequest(args [0]string, argsEscaped bool, w http.
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    RegisterOperation,
-			OperationSummary: "",
+			OperationSummary: "Register",
 			OperationID:      "Register",
 			Body:             request,
 			RawBody:          rawBody,
@@ -13623,6 +13725,8 @@ func (s *Server) handleRejectOrganizationJoinRequestRequest(args [2]string, args
 
 // handleRejudgeContestRequest handles RejudgeContest operation.
 //
+// Rejudge contest.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/rejudge
 func (s *Server) handleRejudgeContestRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -13654,7 +13758,7 @@ func (s *Server) handleRejudgeContestRequest(args [2]string, argsEscaped bool, w
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    RejudgeContestOperation,
-			OperationSummary: "",
+			OperationSummary: "Rejudge contest",
 			OperationID:      "RejudgeContest",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -13709,6 +13813,8 @@ func (s *Server) handleRejudgeContestRequest(args [2]string, argsEscaped bool, w
 
 // handleRejudgeContestProblemRequest handles RejudgeContestProblem operation.
 //
+// Rejudge contest problem.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge
 func (s *Server) handleRejudgeContestProblemRequest(args [3]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -13740,7 +13846,7 @@ func (s *Server) handleRejudgeContestProblemRequest(args [3]string, argsEscaped 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    RejudgeContestProblemOperation,
-			OperationSummary: "",
+			OperationSummary: "Rejudge contest problem",
 			OperationID:      "RejudgeContestProblem",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -13799,6 +13905,8 @@ func (s *Server) handleRejudgeContestProblemRequest(args [3]string, argsEscaped 
 
 // handleRejudgeSubmissionRequest handles RejudgeSubmission operation.
 //
+// Rejudge submission.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge
 func (s *Server) handleRejudgeSubmissionRequest(args [3]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -13830,7 +13938,7 @@ func (s *Server) handleRejudgeSubmissionRequest(args [3]string, argsEscaped bool
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    RejudgeSubmissionOperation,
-			OperationSummary: "",
+			OperationSummary: "Rejudge submission",
 			OperationID:      "RejudgeSubmission",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -14065,6 +14173,8 @@ func (s *Server) handleRemoveTeamMemberRequest(args [1]string, argsEscaped bool,
 
 // handleReorderContestProblemsRequest handles ReorderContestProblems operation.
 //
+// Reorder contest problems.
+//
 // PUT /organizations/{org_login}/contests/{contest_login}/problems/reorder
 func (s *Server) handleReorderContestProblemsRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -14111,7 +14221,7 @@ func (s *Server) handleReorderContestProblemsRequest(args [2]string, argsEscaped
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ReorderContestProblemsOperation,
-			OperationSummary: "",
+			OperationSummary: "Reorder contest problems",
 			OperationID:      "ReorderContestProblems",
 			Body:             request,
 			RawBody:          rawBody,
@@ -14250,6 +14360,8 @@ func (s *Server) handleRequestEmailChangeRequest(args [0]string, argsEscaped boo
 
 // handleResendVerificationRequest handles ResendVerification operation.
 //
+// Resend verification.
+//
 // POST /auth/resend-verification
 func (s *Server) handleResendVerificationRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -14286,7 +14398,7 @@ func (s *Server) handleResendVerificationRequest(args [0]string, argsEscaped boo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ResendVerificationOperation,
-			OperationSummary: "",
+			OperationSummary: "Resend verification",
 			OperationID:      "ResendVerification",
 			Body:             request,
 			RawBody:          rawBody,
@@ -14332,6 +14444,8 @@ func (s *Server) handleResendVerificationRequest(args [0]string, argsEscaped boo
 
 // handleResetPasswordRequest handles ResetPassword operation.
 //
+// Reset password.
+//
 // POST /auth/reset-password
 func (s *Server) handleResetPasswordRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -14368,7 +14482,7 @@ func (s *Server) handleResetPasswordRequest(args [0]string, argsEscaped bool, w 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ResetPasswordOperation,
-			OperationSummary: "",
+			OperationSummary: "Reset password",
 			OperationID:      "ResetPassword",
 			Body:             request,
 			RawBody:          rawBody,
@@ -14513,6 +14627,8 @@ func (s *Server) handleTestSolutionRequest(args [1]string, argsEscaped bool, w h
 
 // handleUnblockProblemForUserRequest handles UnblockProblemForUser operation.
 //
+// Unblock problem for user.
+//
 // DELETE /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 func (s *Server) handleUnblockProblemForUserRequest(args [4]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -14544,7 +14660,7 @@ func (s *Server) handleUnblockProblemForUserRequest(args [4]string, argsEscaped 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    UnblockProblemForUserOperation,
-			OperationSummary: "",
+			OperationSummary: "Unblock problem for user",
 			OperationID:      "UnblockProblemForUser",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -14611,6 +14727,8 @@ func (s *Server) handleUnblockProblemForUserRequest(args [4]string, argsEscaped 
 
 // handleUnblockSubmissionRequest handles UnblockSubmission operation.
 //
+// Unblock submission.
+//
 // POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock
 func (s *Server) handleUnblockSubmissionRequest(args [3]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -14642,7 +14760,7 @@ func (s *Server) handleUnblockSubmissionRequest(args [3]string, argsEscaped bool
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    UnblockSubmissionOperation,
-			OperationSummary: "",
+			OperationSummary: "Unblock submission",
 			OperationID:      "UnblockSubmission",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -14701,6 +14819,8 @@ func (s *Server) handleUnblockSubmissionRequest(args [3]string, argsEscaped bool
 
 // handleUpdateContestRequest handles UpdateContest operation.
 //
+// Update contest.
+//
 // PATCH /organizations/{org_login}/contests/{contest_login}
 func (s *Server) handleUpdateContestRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -14747,7 +14867,7 @@ func (s *Server) handleUpdateContestRequest(args [2]string, argsEscaped bool, w 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    UpdateContestOperation,
-			OperationSummary: "",
+			OperationSummary: "Update contest",
 			OperationID:      "UpdateContest",
 			Body:             request,
 			RawBody:          rawBody,
@@ -14802,6 +14922,8 @@ func (s *Server) handleUpdateContestRequest(args [2]string, argsEscaped bool, w 
 
 // handleUpdateContestMemberRequest handles UpdateContestMember operation.
 //
+// Update contest member.
+//
 // PATCH /organizations/{org_login}/contests/{contest_login}/members
 func (s *Server) handleUpdateContestMemberRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -14833,7 +14955,7 @@ func (s *Server) handleUpdateContestMemberRequest(args [2]string, argsEscaped bo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    UpdateContestMemberOperation,
-			OperationSummary: "",
+			OperationSummary: "Update contest member",
 			OperationID:      "UpdateContestMember",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -14896,6 +15018,8 @@ func (s *Server) handleUpdateContestMemberRequest(args [2]string, argsEscaped bo
 
 // handleUpdateContestTeamRequest handles UpdateContestTeam operation.
 //
+// Update contest team.
+//
 // PATCH /organizations/{org_login}/contests/{contest_login}/teams
 func (s *Server) handleUpdateContestTeamRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -14927,7 +15051,7 @@ func (s *Server) handleUpdateContestTeamRequest(args [2]string, argsEscaped bool
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    UpdateContestTeamOperation,
-			OperationSummary: "",
+			OperationSummary: "Update contest team",
 			OperationID:      "UpdateContestTeam",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -15089,6 +15213,8 @@ func (s *Server) handleUpdateOrganizationRequest(args [1]string, argsEscaped boo
 
 // handleUpdateProblemRequest handles UpdateProblem operation.
 //
+// Update problem.
+//
 // PATCH /problems/{id}
 func (s *Server) handleUpdateProblemRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -15135,7 +15261,7 @@ func (s *Server) handleUpdateProblemRequest(args [1]string, argsEscaped bool, w 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    UpdateProblemOperation,
-			OperationSummary: "",
+			OperationSummary: "Update problem",
 			OperationID:      "UpdateProblem",
 			Body:             request,
 			RawBody:          rawBody,
@@ -15800,6 +15926,8 @@ func (s *Server) handleUpdateProblemMediaFileRequest(args [2]string, argsEscaped
 
 // handleUpdateProblemMemberRequest handles UpdateProblemMember operation.
 //
+// Update problem member.
+//
 // PATCH /problems/{id}/members
 func (s *Server) handleUpdateProblemMemberRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -15831,7 +15959,7 @@ func (s *Server) handleUpdateProblemMemberRequest(args [1]string, argsEscaped bo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    UpdateProblemMemberOperation,
-			OperationSummary: "",
+			OperationSummary: "Update problem member",
 			OperationID:      "UpdateProblemMember",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -15993,6 +16121,8 @@ func (s *Server) handleUpdateProblemStatementRequest(args [1]string, argsEscaped
 
 // handleUpdateProblemTeamRequest handles UpdateProblemTeam operation.
 //
+// Update problem team.
+//
 // PATCH /problems/{id}/teams
 func (s *Server) handleUpdateProblemTeamRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -16024,7 +16154,7 @@ func (s *Server) handleUpdateProblemTeamRequest(args [1]string, argsEscaped bool
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    UpdateProblemTeamOperation,
-			OperationSummary: "",
+			OperationSummary: "Update problem team",
 			OperationID:      "UpdateProblemTeam",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -16682,6 +16812,8 @@ func (s *Server) handleUpdateTeamMemberRoleRequest(args [1]string, argsEscaped b
 
 // handleUpdateUserRequest handles UpdateUser operation.
 //
+// Update user.
+//
 // PATCH /users/{username}
 func (s *Server) handleUpdateUserRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -16728,7 +16860,7 @@ func (s *Server) handleUpdateUserRequest(args [1]string, argsEscaped bool, w htt
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    UpdateUserOperation,
-			OperationSummary: "",
+			OperationSummary: "Update user",
 			OperationID:      "UpdateUser",
 			Body:             request,
 			RawBody:          rawBody,
@@ -16962,6 +17094,8 @@ func (s *Server) handleValidateAllTestsRequest(args [1]string, argsEscaped bool,
 
 // handleVerifyEmailRequest handles VerifyEmail operation.
 //
+// Verify email.
+//
 // POST /auth/verify-email
 func (s *Server) handleVerifyEmailRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -16998,7 +17132,7 @@ func (s *Server) handleVerifyEmailRequest(args [0]string, argsEscaped bool, w ht
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    VerifyEmailOperation,
-			OperationSummary: "",
+			OperationSummary: "Verify email",
 			OperationID:      "VerifyEmail",
 			Body:             request,
 			RawBody:          rawBody,

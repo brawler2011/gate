@@ -17,6 +17,7 @@ import (
 
 // AcceptOrganizationInvitationParams is parameters of AcceptOrganizationInvitation operation.
 type AcceptOrganizationInvitationParams struct {
+	// UUID of the invitation.
 	ID uuid.UUID
 }
 
@@ -82,9 +83,12 @@ func decodeAcceptOrganizationInvitationParams(args [1]string, argsEscaped bool, 
 
 // AddOrganizationMemberParams is parameters of AddOrganizationMember operation.
 type AddOrganizationMemberParams struct {
-	Login  string
+	// Organization login.
+	Login string
+	// UUID of the user.
 	UserID uuid.UUID
-	Role   string
+	// Role to assign to the member.
+	Role string
 }
 
 func unpackAddOrganizationMemberParams(packed middleware.Parameters) (params AddOrganizationMemberParams) {
@@ -236,9 +240,12 @@ func decodeAddOrganizationMemberParams(args [1]string, argsEscaped bool, r *http
 
 // AddTeamMemberParams is parameters of AddTeamMember operation.
 type AddTeamMemberParams struct {
-	ID     uuid.UUID
+	// UUID of the team.
+	ID uuid.UUID
+	// UUID of the user.
 	UserID uuid.UUID
-	Role   OptString `json:",omitempty,omitzero"`
+	// Role to assign to the member.
+	Role OptString `json:",omitempty,omitzero"`
 }
 
 func unpackAddTeamMemberParams(packed middleware.Parameters) (params AddTeamMemberParams) {
@@ -402,6 +409,7 @@ func decodeAddTeamMemberParams(args [1]string, argsEscaped bool, r *http.Request
 
 // AdminChangeEmailParams is parameters of AdminChangeEmail operation.
 type AdminChangeEmailParams struct {
+	// Username of the user.
 	Username string
 }
 
@@ -467,6 +475,7 @@ func decodeAdminChangeEmailParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // AdminResendVerificationParams is parameters of AdminResendVerification operation.
 type AdminResendVerificationParams struct {
+	// Username of the user.
 	Username string
 }
 
@@ -532,6 +541,7 @@ func decodeAdminResendVerificationParams(args [1]string, argsEscaped bool, r *ht
 
 // AdminSendPasswordResetParams is parameters of AdminSendPasswordReset operation.
 type AdminSendPasswordResetParams struct {
+	// Username of the user.
 	Username string
 }
 
@@ -597,6 +607,7 @@ func decodeAdminSendPasswordResetParams(args [1]string, argsEscaped bool, r *htt
 
 // AdminSetPasswordParams is parameters of AdminSetPassword operation.
 type AdminSetPasswordParams struct {
+	// Username of the user.
 	Username string
 }
 
@@ -662,8 +673,11 @@ func decodeAdminSetPasswordParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // AnswerContestClarificationParams is parameters of AnswerContestClarification operation.
 type AnswerContestClarificationParams struct {
-	OrgLogin        string
-	ContestLogin    string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
+	ContestLogin string
+	// UUID of the clarification.
 	ClarificationID uuid.UUID
 }
 
@@ -833,9 +847,12 @@ func decodeAnswerContestClarificationParams(args [3]string, argsEscaped bool, r 
 
 // ApproveContestJoinRequestParams is parameters of ApproveContestJoinRequest operation.
 type ApproveContestJoinRequestParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	ID           uuid.UUID
+	// UUID of the join request.
+	ID uuid.UUID
 }
 
 func unpackApproveContestJoinRequestParams(packed middleware.Parameters) (params ApproveContestJoinRequestParams) {
@@ -1004,8 +1021,10 @@ func decodeApproveContestJoinRequestParams(args [3]string, argsEscaped bool, r *
 
 // ApproveOrganizationJoinRequestParams is parameters of ApproveOrganizationJoinRequest operation.
 type ApproveOrganizationJoinRequestParams struct {
+	// Organization login.
 	Login string
-	ID    uuid.UUID
+	// UUID of the join request.
+	ID uuid.UUID
 }
 
 func unpackApproveOrganizationJoinRequestParams(packed middleware.Parameters) (params ApproveOrganizationJoinRequestParams) {
@@ -1122,6 +1141,7 @@ func decodeApproveOrganizationJoinRequestParams(args [2]string, argsEscaped bool
 
 // BatchCreateOrganizationUsersParams is parameters of BatchCreateOrganizationUsers operation.
 type BatchCreateOrganizationUsersParams struct {
+	// Organization login.
 	Login string
 }
 
@@ -1187,10 +1207,14 @@ func decodeBatchCreateOrganizationUsersParams(args [1]string, argsEscaped bool, 
 
 // BlockProblemForUserParams is parameters of BlockProblemForUser operation.
 type BlockProblemForUserParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	UserID       uuid.UUID
-	ProblemID    uuid.UUID
+	// UUID of the user.
+	UserID uuid.UUID
+	// UUID of the problem.
+	ProblemID uuid.UUID
 }
 
 func unpackBlockProblemForUserParams(packed middleware.Parameters) (params BlockProblemForUserParams) {
@@ -1411,8 +1435,11 @@ func decodeBlockProblemForUserParams(args [4]string, argsEscaped bool, r *http.R
 
 // BlockSubmissionParams is parameters of BlockSubmission operation.
 type BlockSubmissionParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
+	// UUID of the submission.
 	SubmissionID uuid.UUID
 }
 
@@ -1582,7 +1609,9 @@ func decodeBlockSubmissionParams(args [3]string, argsEscaped bool, r *http.Reque
 
 // CancelContestJoinRequestParams is parameters of CancelContestJoinRequest operation.
 type CancelContestJoinRequestParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -1700,8 +1729,10 @@ func decodeCancelContestJoinRequestParams(args [2]string, argsEscaped bool, r *h
 
 // CancelOrganizationInvitationParams is parameters of CancelOrganizationInvitation operation.
 type CancelOrganizationInvitationParams struct {
+	// Organization login.
 	Login string
-	ID    uuid.UUID
+	// UUID of the invitation.
+	ID uuid.UUID
 }
 
 func unpackCancelOrganizationInvitationParams(packed middleware.Parameters) (params CancelOrganizationInvitationParams) {
@@ -1818,6 +1849,7 @@ func decodeCancelOrganizationInvitationParams(args [2]string, argsEscaped bool, 
 
 // CancelOrganizationJoinRequestParams is parameters of CancelOrganizationJoinRequest operation.
 type CancelOrganizationJoinRequestParams struct {
+	// Organization login.
 	Login string
 }
 
@@ -1883,7 +1915,9 @@ func decodeCancelOrganizationJoinRequestParams(args [1]string, argsEscaped bool,
 
 // CompileProblemComponentParams is parameters of CompileProblemComponent operation.
 type CompileProblemComponentParams struct {
-	ProblemId     uuid.UUID
+	// UUID of the problem.
+	ProblemId uuid.UUID
+	// Workshop component category.
 	ComponentType CompileProblemComponentComponentType
 }
 
@@ -2009,9 +2043,12 @@ func decodeCompileProblemComponentParams(args [2]string, argsEscaped bool, r *ht
 
 // CreateContestParams is parameters of CreateContest operation.
 type CreateContestParams struct {
+	// Organization login.
 	OrgLogin string
-	Title    string
-	Login    OptString `json:",omitempty,omitzero"`
+	// Title of the new contest.
+	Title string
+	// Login of the new contest within the organization.
+	Login OptString `json:",omitempty,omitzero"`
 }
 
 func unpackCreateContestParams(packed middleware.Parameters) (params CreateContestParams) {
@@ -2170,7 +2207,9 @@ func decodeCreateContestParams(args [1]string, argsEscaped bool, r *http.Request
 
 // CreateContestAnnouncementParams is parameters of CreateContestAnnouncement operation.
 type CreateContestAnnouncementParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -2288,7 +2327,9 @@ func decodeCreateContestAnnouncementParams(args [2]string, argsEscaped bool, r *
 
 // CreateContestClarificationParams is parameters of CreateContestClarification operation.
 type CreateContestClarificationParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -2406,7 +2447,9 @@ func decodeCreateContestClarificationParams(args [2]string, argsEscaped bool, r 
 
 // CreateContestDraftParams is parameters of CreateContestDraft operation.
 type CreateContestDraftParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -2524,7 +2567,9 @@ func decodeCreateContestDraftParams(args [2]string, argsEscaped bool, r *http.Re
 
 // CreateContestJoinRequestParams is parameters of CreateContestJoinRequest operation.
 type CreateContestJoinRequestParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -2642,9 +2687,12 @@ func decodeCreateContestJoinRequestParams(args [2]string, argsEscaped bool, r *h
 
 // CreateContestMemberParams is parameters of CreateContestMember operation.
 type CreateContestMemberParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	UserID       uuid.UUID
+	// UUID of the user.
+	UserID uuid.UUID
 }
 
 func unpackCreateContestMemberParams(packed middleware.Parameters) (params CreateContestMemberParams) {
@@ -2805,10 +2853,14 @@ func decodeCreateContestMemberParams(args [2]string, argsEscaped bool, r *http.R
 
 // CreateContestProblemParams is parameters of CreateContestProblem operation.
 type CreateContestProblemParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	ProblemID    uuid.UUID
-	PackageID    OptUUID `json:",omitempty,omitzero"`
+	// UUID of the problem.
+	ProblemID uuid.UUID
+	// UUID of the problem package.
+	PackageID OptUUID `json:",omitempty,omitzero"`
 }
 
 func unpackCreateContestProblemParams(packed middleware.Parameters) (params CreateContestProblemParams) {
@@ -3019,10 +3071,14 @@ func decodeCreateContestProblemParams(args [2]string, argsEscaped bool, r *http.
 
 // CreateContestTeamParams is parameters of CreateContestTeam operation.
 type CreateContestTeamParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	TeamID       uuid.UUID
-	Role         OptString `json:",omitempty,omitzero"`
+	// UUID of the team.
+	TeamID uuid.UUID
+	// Role to assign to the member.
+	Role OptString `json:",omitempty,omitzero"`
 }
 
 func unpackCreateContestTeamParams(packed middleware.Parameters) (params CreateContestTeamParams) {
@@ -3238,8 +3294,11 @@ func decodeCreateContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 
 // CreateOrganizationParams is parameters of CreateOrganization operation.
 type CreateOrganizationParams struct {
-	Name       string
-	Login      OptString                       `json:",omitempty,omitzero"`
+	// Display name of the new organization.
+	Name string
+	// Organization login.
+	Login OptString `json:",omitempty,omitzero"`
+	// Policy for joining the organization: open, by request, or invitation only.
 	JoinPolicy OptCreateOrganizationJoinPolicy `json:",omitempty,omitzero"`
 }
 
@@ -3412,6 +3471,7 @@ func decodeCreateOrganizationParams(args [0]string, argsEscaped bool, r *http.Re
 
 // CreateOrganizationJoinRequestParams is parameters of CreateOrganizationJoinRequest operation.
 type CreateOrganizationJoinRequestParams struct {
+	// Organization login.
 	Login string
 }
 
@@ -3477,9 +3537,12 @@ func decodeCreateOrganizationJoinRequestParams(args [1]string, argsEscaped bool,
 
 // CreateProblemParams is parameters of CreateProblem operation.
 type CreateProblemParams struct {
-	Title          string
+	// Title of the new problem.
+	Title string
+	// UUID of the organization.
 	OrganizationID OptUUID `json:",omitempty,omitzero"`
-	TemplateID     string
+	// Problem template identifier, including the builtin: prefix for built-in templates.
+	TemplateID string
 }
 
 func unpackCreateProblemParams(packed middleware.Parameters) (params CreateProblemParams) {
@@ -3629,8 +3692,10 @@ func decodeCreateProblemParams(args [0]string, argsEscaped bool, r *http.Request
 
 // CreateProblemCheckerParams is parameters of CreateProblemChecker operation.
 type CreateProblemCheckerParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackCreateProblemCheckerParams(packed middleware.Parameters) (params CreateProblemCheckerParams) {
@@ -3739,8 +3804,10 @@ func decodeCreateProblemCheckerParams(args [1]string, argsEscaped bool, r *http.
 
 // CreateProblemGeneratorParams is parameters of CreateProblemGenerator operation.
 type CreateProblemGeneratorParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackCreateProblemGeneratorParams(packed middleware.Parameters) (params CreateProblemGeneratorParams) {
@@ -3849,8 +3916,10 @@ func decodeCreateProblemGeneratorParams(args [1]string, argsEscaped bool, r *htt
 
 // CreateProblemInteractorParams is parameters of CreateProblemInteractor operation.
 type CreateProblemInteractorParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackCreateProblemInteractorParams(packed middleware.Parameters) (params CreateProblemInteractorParams) {
@@ -3959,8 +4028,10 @@ func decodeCreateProblemInteractorParams(args [1]string, argsEscaped bool, r *ht
 
 // CreateProblemLibParams is parameters of CreateProblemLib operation.
 type CreateProblemLibParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackCreateProblemLibParams(packed middleware.Parameters) (params CreateProblemLibParams) {
@@ -4069,8 +4140,10 @@ func decodeCreateProblemLibParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // CreateProblemMediaFileParams is parameters of CreateProblemMediaFile operation.
 type CreateProblemMediaFileParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackCreateProblemMediaFileParams(packed middleware.Parameters) (params CreateProblemMediaFileParams) {
@@ -4179,9 +4252,12 @@ func decodeCreateProblemMediaFileParams(args [1]string, argsEscaped bool, r *htt
 
 // CreateProblemMemberParams is parameters of CreateProblemMember operation.
 type CreateProblemMemberParams struct {
-	ID     uuid.UUID
+	// UUID of the problem.
+	ID uuid.UUID
+	// UUID of the user.
 	UserID uuid.UUID
-	Role   OptString `json:",omitempty,omitzero"`
+	// Role to assign to the member.
+	Role OptString `json:",omitempty,omitzero"`
 }
 
 func unpackCreateProblemMemberParams(packed middleware.Parameters) (params CreateProblemMemberParams) {
@@ -4345,8 +4421,11 @@ func decodeCreateProblemMemberParams(args [1]string, argsEscaped bool, r *http.R
 
 // CreateProblemTeamParams is parameters of CreateProblemTeam operation.
 type CreateProblemTeamParams struct {
-	ID         uuid.UUID
-	TeamID     uuid.UUID
+	// UUID of the problem.
+	ID uuid.UUID
+	// UUID of the team.
+	TeamID uuid.UUID
+	// Permission level to grant.
 	Permission OptString `json:",omitempty,omitzero"`
 }
 
@@ -4511,8 +4590,10 @@ func decodeCreateProblemTeamParams(args [1]string, argsEscaped bool, r *http.Req
 
 // CreateProblemTestFileParams is parameters of CreateProblemTestFile operation.
 type CreateProblemTestFileParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackCreateProblemTestFileParams(packed middleware.Parameters) (params CreateProblemTestFileParams) {
@@ -4621,8 +4702,10 @@ func decodeCreateProblemTestFileParams(args [1]string, argsEscaped bool, r *http
 
 // CreateProblemValidatorParams is parameters of CreateProblemValidator operation.
 type CreateProblemValidatorParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackCreateProblemValidatorParams(packed middleware.Parameters) (params CreateProblemValidatorParams) {
@@ -4731,8 +4814,10 @@ func decodeCreateProblemValidatorParams(args [1]string, argsEscaped bool, r *htt
 
 // CreateProblemWorkshopSubmissionParams is parameters of CreateProblemWorkshopSubmission operation.
 type CreateProblemWorkshopSubmissionParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackCreateProblemWorkshopSubmissionParams(packed middleware.Parameters) (params CreateProblemWorkshopSubmissionParams) {
@@ -4841,10 +4926,14 @@ func decodeCreateProblemWorkshopSubmissionParams(args [1]string, argsEscaped boo
 
 // CreateSubmissionParams is parameters of CreateSubmission operation.
 type CreateSubmissionParams struct {
-	ProblemID         uuid.UUID
+	// UUID of the problem.
+	ProblemID uuid.UUID
+	// Organization login.
 	OrganizationLogin string
-	ContestLogin      string
-	Language          int32
+	// Contest login within the organization.
+	ContestLogin string
+	// Programming language identifier.
+	Language int32
 }
 
 func unpackCreateSubmissionParams(packed middleware.Parameters) (params CreateSubmissionParams) {
@@ -5030,6 +5119,7 @@ func decodeCreateSubmissionParams(args [0]string, argsEscaped bool, r *http.Requ
 
 // DeclineOrganizationInvitationParams is parameters of DeclineOrganizationInvitation operation.
 type DeclineOrganizationInvitationParams struct {
+	// UUID of the invitation.
 	ID uuid.UUID
 }
 
@@ -5095,6 +5185,7 @@ func decodeDeclineOrganizationInvitationParams(args [1]string, argsEscaped bool,
 
 // DeleteAvatarParams is parameters of DeleteAvatar operation.
 type DeleteAvatarParams struct {
+	// Username of the user.
 	Username string
 }
 
@@ -5160,7 +5251,9 @@ func decodeDeleteAvatarParams(args [1]string, argsEscaped bool, r *http.Request)
 
 // DeleteContestParams is parameters of DeleteContest operation.
 type DeleteContestParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -5278,8 +5371,11 @@ func decodeDeleteContestParams(args [2]string, argsEscaped bool, r *http.Request
 
 // DeleteContestAnnouncementParams is parameters of DeleteContestAnnouncement operation.
 type DeleteContestAnnouncementParams struct {
-	OrgLogin       string
-	ContestLogin   string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
+	ContestLogin string
+	// UUID of the contest announcement.
 	AnnouncementID uuid.UUID
 }
 
@@ -5449,9 +5545,12 @@ func decodeDeleteContestAnnouncementParams(args [3]string, argsEscaped bool, r *
 
 // DeleteContestDraftParams is parameters of DeleteContestDraft operation.
 type DeleteContestDraftParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	DraftID      uuid.UUID
+	// UUID of the draft problem package.
+	DraftID uuid.UUID
 }
 
 func unpackDeleteContestDraftParams(packed middleware.Parameters) (params DeleteContestDraftParams) {
@@ -5620,8 +5719,11 @@ func decodeDeleteContestDraftParams(args [3]string, argsEscaped bool, r *http.Re
 
 // DeleteContestMemberParams is parameters of DeleteContestMember operation.
 type DeleteContestMemberParams struct {
-	UserID       uuid.UUID
-	OrgLogin     string
+	// UUID of the user.
+	UserID uuid.UUID
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -5783,9 +5885,12 @@ func decodeDeleteContestMemberParams(args [2]string, argsEscaped bool, r *http.R
 
 // DeleteContestProblemParams is parameters of DeleteContestProblem operation.
 type DeleteContestProblemParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	ProblemID    uuid.UUID
+	// UUID of the problem.
+	ProblemID uuid.UUID
 }
 
 func unpackDeleteContestProblemParams(packed middleware.Parameters) (params DeleteContestProblemParams) {
@@ -5954,9 +6059,12 @@ func decodeDeleteContestProblemParams(args [3]string, argsEscaped bool, r *http.
 
 // DeleteContestTeamParams is parameters of DeleteContestTeam operation.
 type DeleteContestTeamParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	TeamID       uuid.UUID
+	// UUID of the team.
+	TeamID uuid.UUID
 }
 
 func unpackDeleteContestTeamParams(packed middleware.Parameters) (params DeleteContestTeamParams) {
@@ -6117,6 +6225,7 @@ func decodeDeleteContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 
 // DeleteOrganizationParams is parameters of DeleteOrganization operation.
 type DeleteOrganizationParams struct {
+	// Organization login.
 	Login string
 }
 
@@ -6182,6 +6291,7 @@ func decodeDeleteOrganizationParams(args [1]string, argsEscaped bool, r *http.Re
 
 // DeletePostByIdParams is parameters of DeletePostById operation.
 type DeletePostByIdParams struct {
+	// UUID of the post.
 	ID uuid.UUID
 }
 
@@ -6247,6 +6357,7 @@ func decodeDeletePostByIdParams(args [1]string, argsEscaped bool, r *http.Reques
 
 // DeleteProblemParams is parameters of DeleteProblem operation.
 type DeleteProblemParams struct {
+	// UUID of the problem.
 	ID uuid.UUID
 }
 
@@ -6312,8 +6423,10 @@ func decodeDeleteProblemParams(args [1]string, argsEscaped bool, r *http.Request
 
 // DeleteProblemCheckerParams is parameters of DeleteProblemChecker operation.
 type DeleteProblemCheckerParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackDeleteProblemCheckerParams(packed middleware.Parameters) (params DeleteProblemCheckerParams) {
@@ -6430,8 +6543,10 @@ func decodeDeleteProblemCheckerParams(args [2]string, argsEscaped bool, r *http.
 
 // DeleteProblemGeneratorParams is parameters of DeleteProblemGenerator operation.
 type DeleteProblemGeneratorParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackDeleteProblemGeneratorParams(packed middleware.Parameters) (params DeleteProblemGeneratorParams) {
@@ -6548,8 +6663,10 @@ func decodeDeleteProblemGeneratorParams(args [2]string, argsEscaped bool, r *htt
 
 // DeleteProblemInteractorParams is parameters of DeleteProblemInteractor operation.
 type DeleteProblemInteractorParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackDeleteProblemInteractorParams(packed middleware.Parameters) (params DeleteProblemInteractorParams) {
@@ -6666,8 +6783,10 @@ func decodeDeleteProblemInteractorParams(args [2]string, argsEscaped bool, r *ht
 
 // DeleteProblemLibParams is parameters of DeleteProblemLib operation.
 type DeleteProblemLibParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackDeleteProblemLibParams(packed middleware.Parameters) (params DeleteProblemLibParams) {
@@ -6784,8 +6903,10 @@ func decodeDeleteProblemLibParams(args [2]string, argsEscaped bool, r *http.Requ
 
 // DeleteProblemMediaFileParams is parameters of DeleteProblemMediaFile operation.
 type DeleteProblemMediaFileParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackDeleteProblemMediaFileParams(packed middleware.Parameters) (params DeleteProblemMediaFileParams) {
@@ -6902,7 +7023,9 @@ func decodeDeleteProblemMediaFileParams(args [2]string, argsEscaped bool, r *htt
 
 // DeleteProblemMemberParams is parameters of DeleteProblemMember operation.
 type DeleteProblemMemberParams struct {
-	ID     uuid.UUID
+	// UUID of the problem.
+	ID uuid.UUID
+	// UUID of the user.
 	UserID uuid.UUID
 }
 
@@ -7012,7 +7135,9 @@ func decodeDeleteProblemMemberParams(args [1]string, argsEscaped bool, r *http.R
 
 // DeleteProblemTeamParams is parameters of DeleteProblemTeam operation.
 type DeleteProblemTeamParams struct {
-	ID     uuid.UUID
+	// UUID of the problem.
+	ID uuid.UUID
+	// UUID of the team.
 	TeamID uuid.UUID
 }
 
@@ -7122,8 +7247,10 @@ func decodeDeleteProblemTeamParams(args [1]string, argsEscaped bool, r *http.Req
 
 // DeleteProblemTestFileParams is parameters of DeleteProblemTestFile operation.
 type DeleteProblemTestFileParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackDeleteProblemTestFileParams(packed middleware.Parameters) (params DeleteProblemTestFileParams) {
@@ -7240,8 +7367,10 @@ func decodeDeleteProblemTestFileParams(args [2]string, argsEscaped bool, r *http
 
 // DeleteProblemValidatorParams is parameters of DeleteProblemValidator operation.
 type DeleteProblemValidatorParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackDeleteProblemValidatorParams(packed middleware.Parameters) (params DeleteProblemValidatorParams) {
@@ -7358,8 +7487,10 @@ func decodeDeleteProblemValidatorParams(args [2]string, argsEscaped bool, r *htt
 
 // DeleteProblemWorkshopSubmissionParams is parameters of DeleteProblemWorkshopSubmission operation.
 type DeleteProblemWorkshopSubmissionParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackDeleteProblemWorkshopSubmissionParams(packed middleware.Parameters) (params DeleteProblemWorkshopSubmissionParams) {
@@ -7476,6 +7607,7 @@ func decodeDeleteProblemWorkshopSubmissionParams(args [2]string, argsEscaped boo
 
 // DeleteTeamParams is parameters of DeleteTeam operation.
 type DeleteTeamParams struct {
+	// UUID of the team.
 	ID uuid.UUID
 }
 
@@ -7541,9 +7673,12 @@ func decodeDeleteTeamParams(args [1]string, argsEscaped bool, r *http.Request) (
 
 // DownloadContestStatementsPdfParams is parameters of DownloadContestStatementsPdf operation.
 type DownloadContestStatementsPdfParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	Lang         OptString `json:",omitempty,omitzero"`
+	// Language code of the problem statement.
+	Lang OptString `json:",omitempty,omitzero"`
 }
 
 func unpackDownloadContestStatementsPdfParams(packed middleware.Parameters) (params DownloadContestStatementsPdfParams) {
@@ -7716,6 +7851,7 @@ func decodeDownloadContestStatementsPdfParams(args [2]string, argsEscaped bool, 
 
 // GenerateTestsParams is parameters of GenerateTests operation.
 type GenerateTestsParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 
@@ -7781,7 +7917,9 @@ func decodeGenerateTestsParams(args [1]string, argsEscaped bool, r *http.Request
 
 // GetContestParams is parameters of GetContest operation.
 type GetContestParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -7899,9 +8037,12 @@ func decodeGetContestParams(args [2]string, argsEscaped bool, r *http.Request) (
 
 // GetContestProblemParams is parameters of GetContestProblem operation.
 type GetContestProblemParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	ProblemID    uuid.UUID
+	// UUID of the problem.
+	ProblemID uuid.UUID
 }
 
 func unpackGetContestProblemParams(packed middleware.Parameters) (params GetContestProblemParams) {
@@ -8070,7 +8211,9 @@ func decodeGetContestProblemParams(args [3]string, argsEscaped bool, r *http.Req
 
 // GetContestScoreboardParams is parameters of GetContestScoreboard operation.
 type GetContestScoreboardParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 	// Whether to return unfrozen scoreboard (managers only).
 	Unfrozen OptBool `json:",omitempty,omitzero"`
@@ -8241,7 +8384,9 @@ func decodeGetContestScoreboardParams(args [2]string, argsEscaped bool, r *http.
 
 // GetMyContestJoinRequestParams is parameters of GetMyContestJoinRequest operation.
 type GetMyContestJoinRequestParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -8359,7 +8504,9 @@ func decodeGetMyContestJoinRequestParams(args [2]string, argsEscaped bool, r *ht
 
 // GetMyContestRoleParams is parameters of GetMyContestRole operation.
 type GetMyContestRoleParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -8477,6 +8624,7 @@ func decodeGetMyContestRoleParams(args [2]string, argsEscaped bool, r *http.Requ
 
 // GetMyOrganizationJoinRequestParams is parameters of GetMyOrganizationJoinRequest operation.
 type GetMyOrganizationJoinRequestParams struct {
+	// Organization login.
 	Login string
 }
 
@@ -8542,6 +8690,7 @@ func decodeGetMyOrganizationJoinRequestParams(args [1]string, argsEscaped bool, 
 
 // GetOrganizationParams is parameters of GetOrganization operation.
 type GetOrganizationParams struct {
+	// Organization login.
 	Login string
 }
 
@@ -8607,6 +8756,7 @@ func decodeGetOrganizationParams(args [1]string, argsEscaped bool, r *http.Reque
 
 // GetPostByIdParams is parameters of GetPostById operation.
 type GetPostByIdParams struct {
+	// UUID of the post.
 	ID uuid.UUID
 }
 
@@ -8672,8 +8822,10 @@ func decodeGetPostByIdParams(args [1]string, argsEscaped bool, r *http.Request) 
 
 // GetPostImageParams is parameters of GetPostImage operation.
 type GetPostImageParams struct {
+	// Previously returned ETag; returns 304 when the image has not changed.
 	IfNoneMatch OptString `json:",omitempty,omitzero"`
-	ID          uuid.UUID
+	// UUID of the post.
+	ID uuid.UUID
 }
 
 func unpackGetPostImageParams(packed middleware.Parameters) (params GetPostImageParams) {
@@ -8787,6 +8939,7 @@ func decodeGetPostImageParams(args [1]string, argsEscaped bool, r *http.Request)
 
 // GetProblemParams is parameters of GetProblem operation.
 type GetProblemParams struct {
+	// UUID of the problem.
 	ID uuid.UUID
 }
 
@@ -8852,10 +9005,14 @@ func decodeGetProblemParams(args [1]string, argsEscaped bool, r *http.Request) (
 
 // GetProblemBlockStatusForUserParams is parameters of GetProblemBlockStatusForUser operation.
 type GetProblemBlockStatusForUserParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	UserID       uuid.UUID
-	ProblemID    uuid.UUID
+	// UUID of the user.
+	UserID uuid.UUID
+	// UUID of the problem.
+	ProblemID uuid.UUID
 }
 
 func unpackGetProblemBlockStatusForUserParams(packed middleware.Parameters) (params GetProblemBlockStatusForUserParams) {
@@ -9076,8 +9233,10 @@ func decodeGetProblemBlockStatusForUserParams(args [4]string, argsEscaped bool, 
 
 // GetProblemCheckerParams is parameters of GetProblemChecker operation.
 type GetProblemCheckerParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackGetProblemCheckerParams(packed middleware.Parameters) (params GetProblemCheckerParams) {
@@ -9194,8 +9353,10 @@ func decodeGetProblemCheckerParams(args [2]string, argsEscaped bool, r *http.Req
 
 // GetProblemGeneratorParams is parameters of GetProblemGenerator operation.
 type GetProblemGeneratorParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackGetProblemGeneratorParams(packed middleware.Parameters) (params GetProblemGeneratorParams) {
@@ -9312,8 +9473,10 @@ func decodeGetProblemGeneratorParams(args [2]string, argsEscaped bool, r *http.R
 
 // GetProblemInteractorParams is parameters of GetProblemInteractor operation.
 type GetProblemInteractorParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackGetProblemInteractorParams(packed middleware.Parameters) (params GetProblemInteractorParams) {
@@ -9430,8 +9593,10 @@ func decodeGetProblemInteractorParams(args [2]string, argsEscaped bool, r *http.
 
 // GetProblemLibParams is parameters of GetProblemLib operation.
 type GetProblemLibParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackGetProblemLibParams(packed middleware.Parameters) (params GetProblemLibParams) {
@@ -9548,6 +9713,7 @@ func decodeGetProblemLibParams(args [2]string, argsEscaped bool, r *http.Request
 
 // GetProblemLimitsParams is parameters of GetProblemLimits operation.
 type GetProblemLimitsParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 
@@ -9613,8 +9779,10 @@ func decodeGetProblemLimitsParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // GetProblemMediaFileParams is parameters of GetProblemMediaFile operation.
 type GetProblemMediaFileParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackGetProblemMediaFileParams(packed middleware.Parameters) (params GetProblemMediaFileParams) {
@@ -9731,8 +9899,10 @@ func decodeGetProblemMediaFileParams(args [2]string, argsEscaped bool, r *http.R
 
 // GetProblemStatementParams is parameters of GetProblemStatement operation.
 type GetProblemStatementParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Lang      OptString `json:",omitempty,omitzero"`
+	// Language code of the problem statement.
+	Lang OptString `json:",omitempty,omitzero"`
 }
 
 func unpackGetProblemStatementParams(packed middleware.Parameters) (params GetProblemStatementParams) {
@@ -9848,8 +10018,10 @@ func decodeGetProblemStatementParams(args [1]string, argsEscaped bool, r *http.R
 
 // GetProblemTestFileParams is parameters of GetProblemTestFile operation.
 type GetProblemTestFileParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackGetProblemTestFileParams(packed middleware.Parameters) (params GetProblemTestFileParams) {
@@ -9966,8 +10138,10 @@ func decodeGetProblemTestFileParams(args [2]string, argsEscaped bool, r *http.Re
 
 // GetProblemValidatorParams is parameters of GetProblemValidator operation.
 type GetProblemValidatorParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackGetProblemValidatorParams(packed middleware.Parameters) (params GetProblemValidatorParams) {
@@ -10084,8 +10258,10 @@ func decodeGetProblemValidatorParams(args [2]string, argsEscaped bool, r *http.R
 
 // GetProblemWorkshopSubmissionParams is parameters of GetProblemWorkshopSubmission operation.
 type GetProblemWorkshopSubmissionParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackGetProblemWorkshopSubmissionParams(packed middleware.Parameters) (params GetProblemWorkshopSubmissionParams) {
@@ -10202,7 +10378,9 @@ func decodeGetProblemWorkshopSubmissionParams(args [2]string, argsEscaped bool, 
 
 // GetPublishedPackageParams is parameters of GetPublishedPackage operation.
 type GetPublishedPackageParams struct {
-	ID      uuid.UUID
+	// UUID of the problem.
+	ID uuid.UUID
+	// Problem package version.
 	Version string
 }
 
@@ -10320,6 +10498,7 @@ func decodeGetPublishedPackageParams(args [2]string, argsEscaped bool, r *http.R
 
 // GetSubmissionParams is parameters of GetSubmission operation.
 type GetSubmissionParams struct {
+	// UUID of the submission.
 	SubmissionID uuid.UUID
 }
 
@@ -10385,6 +10564,7 @@ func decodeGetSubmissionParams(args [1]string, argsEscaped bool, r *http.Request
 
 // GetTeamParams is parameters of GetTeam operation.
 type GetTeamParams struct {
+	// UUID of the team.
 	ID uuid.UUID
 }
 
@@ -10450,6 +10630,7 @@ func decodeGetTeamParams(args [1]string, argsEscaped bool, r *http.Request) (par
 
 // GetUserParams is parameters of GetUser operation.
 type GetUserParams struct {
+	// Username of the user.
 	Username string
 }
 
@@ -10515,8 +10696,10 @@ func decodeGetUserParams(args [1]string, argsEscaped bool, r *http.Request) (par
 
 // GetUserAvatarParams is parameters of GetUserAvatar operation.
 type GetUserAvatarParams struct {
+	// Previously returned ETag; returns 304 when the image has not changed.
 	IfNoneMatch OptString `json:",omitempty,omitzero"`
-	Username    string
+	// Username of the user.
+	Username string
 }
 
 func unpackGetUserAvatarParams(packed middleware.Parameters) (params GetUserAvatarParams) {
@@ -10630,6 +10813,7 @@ func decodeGetUserAvatarParams(args [1]string, argsEscaped bool, r *http.Request
 
 // ImportProblemParams is parameters of ImportProblem operation.
 type ImportProblemParams struct {
+	// UUID of the problem.
 	ID uuid.UUID
 }
 
@@ -10695,6 +10879,7 @@ func decodeImportProblemParams(args [1]string, argsEscaped bool, r *http.Request
 
 // InviteOrganizationMemberParams is parameters of InviteOrganizationMember operation.
 type InviteOrganizationMemberParams struct {
+	// Organization login.
 	Login string
 }
 
@@ -10763,11 +10948,15 @@ type ListAdminContestsParams struct {
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize   OptInt32                       `json:",omitempty,omitzero"`
-	Search     OptString                      `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// Search text used to filter results.
+	Search OptString `json:",omitempty,omitzero"`
+	// Visibility level of the resource.
 	Visibility OptListAdminContestsVisibility `json:",omitempty,omitzero"`
-	SortBy     OptListAdminContestsSortBy     `json:",omitempty,omitzero"`
-	SortOrder  OptListAdminContestsSortOrder  `json:",omitempty,omitzero"`
+	// Field used to sort results.
+	SortBy OptSortByQuery `json:",omitempty,omitzero"`
+	// Sort direction: asc or desc.
+	SortOrder OptContestSortOrderQuery `json:",omitempty,omitzero"`
 }
 
 func unpackListAdminContestsParams(packed middleware.Parameters) (params ListAdminContestsParams) {
@@ -10813,7 +11002,7 @@ func unpackListAdminContestsParams(packed middleware.Parameters) (params ListAdm
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.SortBy = v.(OptListAdminContestsSortBy)
+			params.SortBy = v.(OptSortByQuery)
 		}
 	}
 	{
@@ -10822,7 +11011,7 @@ func unpackListAdminContestsParams(packed middleware.Parameters) (params ListAdm
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.SortOrder = v.(OptListAdminContestsSortOrder)
+			params.SortOrder = v.(OptContestSortOrderQuery)
 		}
 	}
 	return params
@@ -11079,7 +11268,7 @@ func decodeListAdminContestsParams(args [0]string, argsEscaped bool, r *http.Req
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortByVal ListAdminContestsSortBy
+				var paramsDotSortByVal SortByQuery
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -11091,7 +11280,7 @@ func decodeListAdminContestsParams(args [0]string, argsEscaped bool, r *http.Req
 						return err
 					}
 
-					paramsDotSortByVal = ListAdminContestsSortBy(c)
+					paramsDotSortByVal = SortByQuery(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -11135,7 +11324,7 @@ func decodeListAdminContestsParams(args [0]string, argsEscaped bool, r *http.Req
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortOrderVal ListAdminContestsSortOrder
+				var paramsDotSortOrderVal ContestSortOrderQuery
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -11147,7 +11336,7 @@ func decodeListAdminContestsParams(args [0]string, argsEscaped bool, r *http.Req
 						return err
 					}
 
-					paramsDotSortOrderVal = ListAdminContestsSortOrder(c)
+					paramsDotSortOrderVal = ContestSortOrderQuery(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -11186,7 +11375,9 @@ func decodeListAdminContestsParams(args [0]string, argsEscaped bool, r *http.Req
 
 // ListContestAnnouncementsParams is parameters of ListContestAnnouncements operation.
 type ListContestAnnouncementsParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
@@ -11469,10 +11660,14 @@ func decodeListContestAnnouncementsParams(args [2]string, argsEscaped bool, r *h
 
 // ListContestClarificationsParams is parameters of ListContestClarifications operation.
 type ListContestClarificationsParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	ProblemID    OptUUID   `json:",omitempty,omitzero"`
-	Status       OptString `json:",omitempty,omitzero"`
+	// UUID of the problem.
+	ProblemID OptUUID `json:",omitempty,omitzero"`
+	// Filter results by status.
+	Status OptString `json:",omitempty,omitzero"`
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
@@ -11854,7 +12049,9 @@ func decodeListContestClarificationsParams(args [2]string, argsEscaped bool, r *
 
 // ListContestDraftsParams is parameters of ListContestDrafts operation.
 type ListContestDraftsParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
@@ -12137,7 +12334,9 @@ func decodeListContestDraftsParams(args [2]string, argsEscaped bool, r *http.Req
 
 // ListContestJoinRequestsParams is parameters of ListContestJoinRequests operation.
 type ListContestJoinRequestsParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -12255,7 +12454,9 @@ func decodeListContestJoinRequestsParams(args [2]string, argsEscaped bool, r *ht
 
 // ListContestMembersParams is parameters of ListContestMembers operation.
 type ListContestMembersParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
@@ -12538,17 +12739,24 @@ func decodeListContestMembersParams(args [2]string, argsEscaped bool, r *http.Re
 
 // ListContestSubmissionsParams is parameters of ListContestSubmissions operation.
 type ListContestSubmissionsParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize  OptInt32                           `json:",omitempty,omitzero"`
-	UserId    OptUUID                            `json:",omitempty,omitzero"`
-	ProblemId OptUUID                            `json:",omitempty,omitzero"`
-	State     OptInt32                           `json:",omitempty,omitzero"`
-	SortOrder OptListContestSubmissionsSortOrder `json:",omitempty,omitzero"`
-	Language  OptInt32                           `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// UUID of the user.
+	UserId OptUUID `json:",omitempty,omitzero"`
+	// UUID of the problem.
+	ProblemId OptUUID `json:",omitempty,omitzero"`
+	// Filter results by processing state.
+	State OptInt32 `json:",omitempty,omitzero"`
+	// Sort direction: asc or desc.
+	SortOrder OptSubmissionSortOrderQuery `json:",omitempty,omitzero"`
+	// Programming language identifier.
+	Language OptInt32 `json:",omitempty,omitzero"`
 }
 
 func unpackListContestSubmissionsParams(packed middleware.Parameters) (params ListContestSubmissionsParams) {
@@ -12617,7 +12825,7 @@ func unpackListContestSubmissionsParams(packed middleware.Parameters) (params Li
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.SortOrder = v.(OptListContestSubmissionsSortOrder)
+			params.SortOrder = v.(OptSubmissionSortOrderQuery)
 		}
 	}
 	{
@@ -12999,7 +13207,7 @@ func decodeListContestSubmissionsParams(args [2]string, argsEscaped bool, r *htt
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortOrderVal ListContestSubmissionsSortOrder
+				var paramsDotSortOrderVal SubmissionSortOrderQuery
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -13011,7 +13219,7 @@ func decodeListContestSubmissionsParams(args [2]string, argsEscaped bool, r *htt
 						return err
 					}
 
-					paramsDotSortOrderVal = ListContestSubmissionsSortOrder(c)
+					paramsDotSortOrderVal = SubmissionSortOrderQuery(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -13091,7 +13299,9 @@ func decodeListContestSubmissionsParams(args [2]string, argsEscaped bool, r *htt
 
 // ListContestTeamsParams is parameters of ListContestTeams operation.
 type ListContestTeamsParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -13212,8 +13422,9 @@ type ListNotificationsParams struct {
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize   OptInt32 `json:",omitempty,omitzero"`
-	UnreadOnly OptBool  `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// When true, return only unread notifications.
+	UnreadOnly OptBool `json:",omitempty,omitzero"`
 }
 
 func unpackListNotificationsParams(packed middleware.Parameters) (params ListNotificationsParams) {
@@ -13437,12 +13648,14 @@ func decodeListNotificationsParams(args [0]string, argsEscaped bool, r *http.Req
 
 // ListOrganizationContestsParams is parameters of ListOrganizationContests operation.
 type ListOrganizationContestsParams struct {
+	// Organization login.
 	OrgLogin string
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize OptInt32  `json:",omitempty,omitzero"`
-	Search   OptString `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// Search text used to filter results.
+	Search OptString `json:",omitempty,omitzero"`
 }
 
 func unpackListOrganizationContestsParams(packed middleware.Parameters) (params ListOrganizationContestsParams) {
@@ -13718,6 +13931,7 @@ func decodeListOrganizationContestsParams(args [1]string, argsEscaped bool, r *h
 
 // ListOrganizationInvitationsParams is parameters of ListOrganizationInvitations operation.
 type ListOrganizationInvitationsParams struct {
+	// Organization login.
 	Login string
 }
 
@@ -13783,6 +13997,7 @@ func decodeListOrganizationInvitationsParams(args [1]string, argsEscaped bool, r
 
 // ListOrganizationJoinRequestsParams is parameters of ListOrganizationJoinRequests operation.
 type ListOrganizationJoinRequestsParams struct {
+	// Organization login.
 	Login string
 }
 
@@ -13848,6 +14063,7 @@ func decodeListOrganizationJoinRequestsParams(args [1]string, argsEscaped bool, 
 
 // ListOrganizationMembersParams is parameters of ListOrganizationMembers operation.
 type ListOrganizationMembersParams struct {
+	// Organization login.
 	Login string
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
@@ -14081,8 +14297,9 @@ type ListOrganizationsParams struct {
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize OptInt32  `json:",omitempty,omitzero"`
-	Search   OptString `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// Search text used to filter results.
+	Search OptString `json:",omitempty,omitzero"`
 }
 
 func unpackListOrganizationsParams(packed middleware.Parameters) (params ListOrganizationsParams) {
@@ -14309,7 +14526,8 @@ type ListPostsParams struct {
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize  OptInt32              `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// Sort direction: asc or desc.
 	SortOrder OptListPostsSortOrder `json:",omitempty,omitzero"`
 }
 
@@ -14554,6 +14772,7 @@ func decodeListPostsParams(args [0]string, argsEscaped bool, r *http.Request) (p
 
 // ListProblemCheckersParams is parameters of ListProblemCheckers operation.
 type ListProblemCheckersParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 
@@ -14619,6 +14838,7 @@ func decodeListProblemCheckersParams(args [1]string, argsEscaped bool, r *http.R
 
 // ListProblemGeneratorsParams is parameters of ListProblemGenerators operation.
 type ListProblemGeneratorsParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 
@@ -14684,6 +14904,7 @@ func decodeListProblemGeneratorsParams(args [1]string, argsEscaped bool, r *http
 
 // ListProblemInteractorsParams is parameters of ListProblemInteractors operation.
 type ListProblemInteractorsParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 
@@ -14749,6 +14970,7 @@ func decodeListProblemInteractorsParams(args [1]string, argsEscaped bool, r *htt
 
 // ListProblemLibsParams is parameters of ListProblemLibs operation.
 type ListProblemLibsParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 
@@ -14814,6 +15036,7 @@ func decodeListProblemLibsParams(args [1]string, argsEscaped bool, r *http.Reque
 
 // ListProblemMediaFilesParams is parameters of ListProblemMediaFiles operation.
 type ListProblemMediaFilesParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 
@@ -14879,6 +15102,7 @@ func decodeListProblemMediaFilesParams(args [1]string, argsEscaped bool, r *http
 
 // ListProblemMembersParams is parameters of ListProblemMembers operation.
 type ListProblemMembersParams struct {
+	// UUID of the problem.
 	ID uuid.UUID
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
@@ -15109,6 +15333,7 @@ func decodeListProblemMembersParams(args [1]string, argsEscaped bool, r *http.Re
 
 // ListProblemPackagesParams is parameters of ListProblemPackages operation.
 type ListProblemPackagesParams struct {
+	// UUID of the problem.
 	ID uuid.UUID
 }
 
@@ -15174,6 +15399,7 @@ func decodeListProblemPackagesParams(args [1]string, argsEscaped bool, r *http.R
 
 // ListProblemTeamsParams is parameters of ListProblemTeams operation.
 type ListProblemTeamsParams struct {
+	// UUID of the problem.
 	ID uuid.UUID
 }
 
@@ -15239,6 +15465,7 @@ func decodeListProblemTeamsParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // ListProblemTemplatesParams is parameters of ListProblemTemplates operation.
 type ListProblemTemplatesParams struct {
+	// UUID of the organization.
 	OrganizationID OptUUID `json:",omitempty,omitzero"`
 }
 
@@ -15303,6 +15530,7 @@ func decodeListProblemTemplatesParams(args [0]string, argsEscaped bool, r *http.
 
 // ListProblemTestsParams is parameters of ListProblemTests operation.
 type ListProblemTestsParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 
@@ -15368,6 +15596,7 @@ func decodeListProblemTestsParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // ListProblemValidatorsParams is parameters of ListProblemValidators operation.
 type ListProblemValidatorsParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 
@@ -15433,6 +15662,7 @@ func decodeListProblemValidatorsParams(args [1]string, argsEscaped bool, r *http
 
 // ListProblemWorkshopSubmissionsParams is parameters of ListProblemWorkshopSubmissions operation.
 type ListProblemWorkshopSubmissionsParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 
@@ -15501,12 +15731,17 @@ type ListProblemsParams struct {
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize       OptInt32  `json:",omitempty,omitzero"`
-	Search         OptString `json:",omitempty,omitzero"`
-	Descending     OptBool   `json:",omitempty,omitzero"`
-	Owner          OptBool   `json:",omitempty,omitzero"`
-	OrganizationID OptUUID   `json:",omitempty,omitzero"`
-	IsTemplate     OptBool   `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// Search text used to filter results.
+	Search OptString `json:",omitempty,omitzero"`
+	// Whether to sort results in descending order.
+	Descending OptBool `json:",omitempty,omitzero"`
+	// When true, return only problems owned by the current user.
+	Owner OptBool `json:",omitempty,omitzero"`
+	// UUID of the organization.
+	OrganizationID OptUUID `json:",omitempty,omitzero"`
+	// Filter problems by whether they are templates.
+	IsTemplate OptBool `json:",omitempty,omitzero"`
 }
 
 func unpackListProblemsParams(packed middleware.Parameters) (params ListProblemsParams) {
@@ -15933,10 +16168,13 @@ type ListPublicContestsParams struct {
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize  OptInt32                       `json:",omitempty,omitzero"`
-	Search    OptString                      `json:",omitempty,omitzero"`
-	SortBy    OptListPublicContestsSortBy    `json:",omitempty,omitzero"`
-	SortOrder OptListPublicContestsSortOrder `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// Search text used to filter results.
+	Search OptString `json:",omitempty,omitzero"`
+	// Field used to sort results.
+	SortBy OptSortByQuery `json:",omitempty,omitzero"`
+	// Sort direction: asc or desc.
+	SortOrder OptContestSortOrderQuery `json:",omitempty,omitzero"`
 }
 
 func unpackListPublicContestsParams(packed middleware.Parameters) (params ListPublicContestsParams) {
@@ -15973,7 +16211,7 @@ func unpackListPublicContestsParams(packed middleware.Parameters) (params ListPu
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.SortBy = v.(OptListPublicContestsSortBy)
+			params.SortBy = v.(OptSortByQuery)
 		}
 	}
 	{
@@ -15982,7 +16220,7 @@ func unpackListPublicContestsParams(packed middleware.Parameters) (params ListPu
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.SortOrder = v.(OptListPublicContestsSortOrder)
+			params.SortOrder = v.(OptContestSortOrderQuery)
 		}
 	}
 	return params
@@ -16183,7 +16421,7 @@ func decodeListPublicContestsParams(args [0]string, argsEscaped bool, r *http.Re
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortByVal ListPublicContestsSortBy
+				var paramsDotSortByVal SortByQuery
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -16195,7 +16433,7 @@ func decodeListPublicContestsParams(args [0]string, argsEscaped bool, r *http.Re
 						return err
 					}
 
-					paramsDotSortByVal = ListPublicContestsSortBy(c)
+					paramsDotSortByVal = SortByQuery(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -16239,7 +16477,7 @@ func decodeListPublicContestsParams(args [0]string, argsEscaped bool, r *http.Re
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortOrderVal ListPublicContestsSortOrder
+				var paramsDotSortOrderVal ContestSortOrderQuery
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -16251,7 +16489,7 @@ func decodeListPublicContestsParams(args [0]string, argsEscaped bool, r *http.Re
 						return err
 					}
 
-					paramsDotSortOrderVal = ListPublicContestsSortOrder(c)
+					paramsDotSortOrderVal = ContestSortOrderQuery(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -16293,13 +16531,19 @@ type ListSubmissionsParams struct {
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize  OptInt32                    `json:",omitempty,omitzero"`
-	ContestId OptUUID                     `json:",omitempty,omitzero"`
-	UserId    OptUUID                     `json:",omitempty,omitzero"`
-	ProblemId OptUUID                     `json:",omitempty,omitzero"`
-	State     OptInt32                    `json:",omitempty,omitzero"`
-	SortOrder OptListSubmissionsSortOrder `json:",omitempty,omitzero"`
-	Language  OptInt32                    `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// UUID of the contest.
+	ContestId OptUUID `json:",omitempty,omitzero"`
+	// UUID of the user.
+	UserId OptUUID `json:",omitempty,omitzero"`
+	// UUID of the problem.
+	ProblemId OptUUID `json:",omitempty,omitzero"`
+	// Filter results by processing state.
+	State OptInt32 `json:",omitempty,omitzero"`
+	// Sort direction: asc or desc.
+	SortOrder OptSubmissionSortOrderQuery `json:",omitempty,omitzero"`
+	// Programming language identifier.
+	Language OptInt32 `json:",omitempty,omitzero"`
 }
 
 func unpackListSubmissionsParams(packed middleware.Parameters) (params ListSubmissionsParams) {
@@ -16363,7 +16607,7 @@ func unpackListSubmissionsParams(packed middleware.Parameters) (params ListSubmi
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.SortOrder = v.(OptListSubmissionsSortOrder)
+			params.SortOrder = v.(OptSubmissionSortOrderQuery)
 		}
 	}
 	{
@@ -16696,7 +16940,7 @@ func decodeListSubmissionsParams(args [0]string, argsEscaped bool, r *http.Reque
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortOrderVal ListSubmissionsSortOrder
+				var paramsDotSortOrderVal SubmissionSortOrderQuery
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -16708,7 +16952,7 @@ func decodeListSubmissionsParams(args [0]string, argsEscaped bool, r *http.Reque
 						return err
 					}
 
-					paramsDotSortOrderVal = ListSubmissionsSortOrder(c)
+					paramsDotSortOrderVal = SubmissionSortOrderQuery(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -16788,6 +17032,7 @@ func decodeListSubmissionsParams(args [0]string, argsEscaped bool, r *http.Reque
 
 // ListTeamContestsParams is parameters of ListTeamContests operation.
 type ListTeamContestsParams struct {
+	// UUID of the team.
 	ID uuid.UUID
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
@@ -17018,6 +17263,7 @@ func decodeListTeamContestsParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // ListTeamMembersParams is parameters of ListTeamMembers operation.
 type ListTeamMembersParams struct {
+	// UUID of the team.
 	ID uuid.UUID
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
@@ -17248,6 +17494,7 @@ func decodeListTeamMembersParams(args [1]string, argsEscaped bool, r *http.Reque
 
 // ListTeamProblemsParams is parameters of ListTeamProblems operation.
 type ListTeamProblemsParams struct {
+	// UUID of the team.
 	ID uuid.UUID
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
@@ -17481,9 +17728,11 @@ type ListTeamsParams struct {
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize       OptInt32  `json:",omitempty,omitzero"`
-	Search         OptString `json:",omitempty,omitzero"`
-	OrganizationID OptUUID   `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// Search text used to filter results.
+	Search OptString `json:",omitempty,omitzero"`
+	// UUID of the organization.
+	OrganizationID OptUUID `json:",omitempty,omitzero"`
 }
 
 func unpackListTeamsParams(packed middleware.Parameters) (params ListTeamsParams) {
@@ -17757,14 +18006,18 @@ func decodeListTeamsParams(args [0]string, argsEscaped bool, r *http.Request) (p
 
 // ListUserContestsParams is parameters of ListUserContests operation.
 type ListUserContestsParams struct {
+	// Username of the user.
 	Username string
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize  OptInt32                     `json:",omitempty,omitzero"`
-	Search    OptString                    `json:",omitempty,omitzero"`
-	SortBy    OptListUserContestsSortBy    `json:",omitempty,omitzero"`
-	SortOrder OptListUserContestsSortOrder `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// Search text used to filter results.
+	Search OptString `json:",omitempty,omitzero"`
+	// Field used to sort results.
+	SortBy OptListUserContestsSortBy `json:",omitempty,omitzero"`
+	// Sort direction: asc or desc.
+	SortOrder OptContestSortOrderQuery `json:",omitempty,omitzero"`
 }
 
 func unpackListUserContestsParams(packed middleware.Parameters) (params ListUserContestsParams) {
@@ -17817,7 +18070,7 @@ func unpackListUserContestsParams(packed middleware.Parameters) (params ListUser
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.SortOrder = v.(OptListUserContestsSortOrder)
+			params.SortOrder = v.(OptContestSortOrderQuery)
 		}
 	}
 	return params
@@ -18119,7 +18372,7 @@ func decodeListUserContestsParams(args [1]string, argsEscaped bool, r *http.Requ
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortOrderVal ListUserContestsSortOrder
+				var paramsDotSortOrderVal ContestSortOrderQuery
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -18131,7 +18384,7 @@ func decodeListUserContestsParams(args [1]string, argsEscaped bool, r *http.Requ
 						return err
 					}
 
-					paramsDotSortOrderVal = ListUserContestsSortOrder(c)
+					paramsDotSortOrderVal = ContestSortOrderQuery(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -18170,15 +18423,20 @@ func decodeListUserContestsParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // ListUserSubmissionsParams is parameters of ListUserSubmissions operation.
 type ListUserSubmissionsParams struct {
+	// Username of the user.
 	Username string
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize  OptInt32                        `json:",omitempty,omitzero"`
-	ContestId OptUUID                         `json:",omitempty,omitzero"`
-	ProblemId OptUUID                         `json:",omitempty,omitzero"`
-	State     OptInt32                        `json:",omitempty,omitzero"`
-	SortOrder OptListUserSubmissionsSortOrder `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// UUID of the contest.
+	ContestId OptUUID `json:",omitempty,omitzero"`
+	// UUID of the problem.
+	ProblemId OptUUID `json:",omitempty,omitzero"`
+	// Filter results by processing state.
+	State OptInt32 `json:",omitempty,omitzero"`
+	// Sort direction: asc or desc.
+	SortOrder OptSubmissionSortOrderQuery `json:",omitempty,omitzero"`
 }
 
 func unpackListUserSubmissionsParams(packed middleware.Parameters) (params ListUserSubmissionsParams) {
@@ -18240,7 +18498,7 @@ func unpackListUserSubmissionsParams(packed middleware.Parameters) (params ListU
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.SortOrder = v.(OptListUserSubmissionsSortOrder)
+			params.SortOrder = v.(OptSubmissionSortOrderQuery)
 		}
 	}
 	return params
@@ -18568,7 +18826,7 @@ func decodeListUserSubmissionsParams(args [1]string, argsEscaped bool, r *http.R
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortOrderVal ListUserSubmissionsSortOrder
+				var paramsDotSortOrderVal SubmissionSortOrderQuery
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -18580,7 +18838,7 @@ func decodeListUserSubmissionsParams(args [1]string, argsEscaped bool, r *http.R
 						return err
 					}
 
-					paramsDotSortOrderVal = ListUserSubmissionsSortOrder(c)
+					paramsDotSortOrderVal = SubmissionSortOrderQuery(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -18622,9 +18880,11 @@ type ListUsersParams struct {
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize OptInt32  `json:",omitempty,omitzero"`
-	Search   OptString `json:",omitempty,omitzero"`
-	Role     OptString `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// Search text used to filter results.
+	Search OptString `json:",omitempty,omitzero"`
+	// Role to assign to the member.
+	Role OptString `json:",omitempty,omitzero"`
 }
 
 func unpackListUsersParams(packed middleware.Parameters) (params ListUsersParams) {
@@ -18901,11 +19161,15 @@ type ListWorkshopContestsParams struct {
 	// Page number.
 	Page OptInt32 `json:",omitempty,omitzero"`
 	// Number of items per page.
-	PageSize       OptInt32                         `json:",omitempty,omitzero"`
-	Search         OptString                        `json:",omitempty,omitzero"`
-	SortBy         OptListWorkshopContestsSortBy    `json:",omitempty,omitzero"`
-	SortOrder      OptListWorkshopContestsSortOrder `json:",omitempty,omitzero"`
-	OrganizationID OptUUID                          `json:",omitempty,omitzero"`
+	PageSize OptInt32 `json:",omitempty,omitzero"`
+	// Search text used to filter results.
+	Search OptString `json:",omitempty,omitzero"`
+	// Field used to sort results.
+	SortBy OptSortByQuery `json:",omitempty,omitzero"`
+	// Sort direction: asc or desc.
+	SortOrder OptContestSortOrderQuery `json:",omitempty,omitzero"`
+	// UUID of the organization.
+	OrganizationID OptUUID `json:",omitempty,omitzero"`
 }
 
 func unpackListWorkshopContestsParams(packed middleware.Parameters) (params ListWorkshopContestsParams) {
@@ -18942,7 +19206,7 @@ func unpackListWorkshopContestsParams(packed middleware.Parameters) (params List
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.SortBy = v.(OptListWorkshopContestsSortBy)
+			params.SortBy = v.(OptSortByQuery)
 		}
 	}
 	{
@@ -18951,7 +19215,7 @@ func unpackListWorkshopContestsParams(packed middleware.Parameters) (params List
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.SortOrder = v.(OptListWorkshopContestsSortOrder)
+			params.SortOrder = v.(OptContestSortOrderQuery)
 		}
 	}
 	{
@@ -19161,7 +19425,7 @@ func decodeListWorkshopContestsParams(args [0]string, argsEscaped bool, r *http.
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortByVal ListWorkshopContestsSortBy
+				var paramsDotSortByVal SortByQuery
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -19173,7 +19437,7 @@ func decodeListWorkshopContestsParams(args [0]string, argsEscaped bool, r *http.
 						return err
 					}
 
-					paramsDotSortByVal = ListWorkshopContestsSortBy(c)
+					paramsDotSortByVal = SortByQuery(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -19217,7 +19481,7 @@ func decodeListWorkshopContestsParams(args [0]string, argsEscaped bool, r *http.
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotSortOrderVal ListWorkshopContestsSortOrder
+				var paramsDotSortOrderVal ContestSortOrderQuery
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -19229,7 +19493,7 @@ func decodeListWorkshopContestsParams(args [0]string, argsEscaped bool, r *http.
 						return err
 					}
 
-					paramsDotSortOrderVal = ListWorkshopContestsSortOrder(c)
+					paramsDotSortOrderVal = ContestSortOrderQuery(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -19309,6 +19573,7 @@ func decodeListWorkshopContestsParams(args [0]string, argsEscaped bool, r *http.
 
 // MarkNotificationAsReadParams is parameters of MarkNotificationAsRead operation.
 type MarkNotificationAsReadParams struct {
+	// UUID of the notification.
 	ID uuid.UUID
 }
 
@@ -19374,6 +19639,7 @@ func decodeMarkNotificationAsReadParams(args [1]string, argsEscaped bool, r *htt
 
 // PatchPostByIdParams is parameters of PatchPostById operation.
 type PatchPostByIdParams struct {
+	// UUID of the post.
 	ID uuid.UUID
 }
 
@@ -19439,6 +19705,7 @@ func decodePatchPostByIdParams(args [1]string, argsEscaped bool, r *http.Request
 
 // PublishProblemParams is parameters of PublishProblem operation.
 type PublishProblemParams struct {
+	// UUID of the problem.
 	ID uuid.UUID
 }
 
@@ -19504,9 +19771,12 @@ func decodePublishProblemParams(args [1]string, argsEscaped bool, r *http.Reques
 
 // RejectContestJoinRequestParams is parameters of RejectContestJoinRequest operation.
 type RejectContestJoinRequestParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	ID           uuid.UUID
+	// UUID of the join request.
+	ID uuid.UUID
 }
 
 func unpackRejectContestJoinRequestParams(packed middleware.Parameters) (params RejectContestJoinRequestParams) {
@@ -19675,8 +19945,10 @@ func decodeRejectContestJoinRequestParams(args [3]string, argsEscaped bool, r *h
 
 // RejectOrganizationJoinRequestParams is parameters of RejectOrganizationJoinRequest operation.
 type RejectOrganizationJoinRequestParams struct {
+	// Organization login.
 	Login string
-	ID    uuid.UUID
+	// UUID of the join request.
+	ID uuid.UUID
 }
 
 func unpackRejectOrganizationJoinRequestParams(packed middleware.Parameters) (params RejectOrganizationJoinRequestParams) {
@@ -19793,7 +20065,9 @@ func decodeRejectOrganizationJoinRequestParams(args [2]string, argsEscaped bool,
 
 // RejudgeContestParams is parameters of RejudgeContest operation.
 type RejudgeContestParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -19911,9 +20185,12 @@ func decodeRejudgeContestParams(args [2]string, argsEscaped bool, r *http.Reques
 
 // RejudgeContestProblemParams is parameters of RejudgeContestProblem operation.
 type RejudgeContestProblemParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	ProblemID    uuid.UUID
+	// UUID of the problem.
+	ProblemID uuid.UUID
 }
 
 func unpackRejudgeContestProblemParams(packed middleware.Parameters) (params RejudgeContestProblemParams) {
@@ -20082,8 +20359,11 @@ func decodeRejudgeContestProblemParams(args [3]string, argsEscaped bool, r *http
 
 // RejudgeSubmissionParams is parameters of RejudgeSubmission operation.
 type RejudgeSubmissionParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
+	// UUID of the submission.
 	SubmissionID uuid.UUID
 }
 
@@ -20253,7 +20533,9 @@ func decodeRejudgeSubmissionParams(args [3]string, argsEscaped bool, r *http.Req
 
 // RemoveOrganizationMemberParams is parameters of RemoveOrganizationMember operation.
 type RemoveOrganizationMemberParams struct {
-	Login  string
+	// Organization login.
+	Login string
+	// UUID of the user.
 	UserID uuid.UUID
 }
 
@@ -20363,7 +20645,9 @@ func decodeRemoveOrganizationMemberParams(args [1]string, argsEscaped bool, r *h
 
 // RemoveTeamMemberParams is parameters of RemoveTeamMember operation.
 type RemoveTeamMemberParams struct {
-	ID     uuid.UUID
+	// UUID of the team.
+	ID uuid.UUID
+	// UUID of the user.
 	UserID uuid.UUID
 }
 
@@ -20473,7 +20757,9 @@ func decodeRemoveTeamMemberParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // ReorderContestProblemsParams is parameters of ReorderContestProblems operation.
 type ReorderContestProblemsParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -20591,6 +20877,7 @@ func decodeReorderContestProblemsParams(args [2]string, argsEscaped bool, r *htt
 
 // TestSolutionParams is parameters of TestSolution operation.
 type TestSolutionParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 
@@ -20656,10 +20943,15 @@ func decodeTestSolutionParams(args [1]string, argsEscaped bool, r *http.Request)
 
 // UnblockProblemForUserParams is parameters of UnblockProblemForUser operation.
 type UnblockProblemForUserParams struct {
-	OrgLogin           string
-	ContestLogin       string
-	UserID             uuid.UUID
-	ProblemID          uuid.UUID
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
+	ContestLogin string
+	// UUID of the user.
+	UserID uuid.UUID
+	// UUID of the problem.
+	ProblemID uuid.UUID
+	// Whether to rejudge existing submissions after the package update.
 	RejudgeSubmissions OptBool `json:",omitempty,omitzero"`
 }
 
@@ -20937,8 +21229,11 @@ func decodeUnblockProblemForUserParams(args [4]string, argsEscaped bool, r *http
 
 // UnblockSubmissionParams is parameters of UnblockSubmission operation.
 type UnblockSubmissionParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
+	// UUID of the submission.
 	SubmissionID uuid.UUID
 }
 
@@ -21108,7 +21403,9 @@ func decodeUnblockSubmissionParams(args [3]string, argsEscaped bool, r *http.Req
 
 // UpdateContestParams is parameters of UpdateContest operation.
 type UpdateContestParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
 }
 
@@ -21226,10 +21523,14 @@ func decodeUpdateContestParams(args [2]string, argsEscaped bool, r *http.Request
 
 // UpdateContestMemberParams is parameters of UpdateContestMember operation.
 type UpdateContestMemberParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	UserID       uuid.UUID
-	Role         string
+	// UUID of the user.
+	UserID uuid.UUID
+	// Role to assign to the member.
+	Role string
 }
 
 func unpackUpdateContestMemberParams(packed middleware.Parameters) (params UpdateContestMemberParams) {
@@ -21433,10 +21734,14 @@ func decodeUpdateContestMemberParams(args [2]string, argsEscaped bool, r *http.R
 
 // UpdateContestTeamParams is parameters of UpdateContestTeam operation.
 type UpdateContestTeamParams struct {
-	OrgLogin     string
+	// Organization login.
+	OrgLogin string
+	// Contest login within the organization.
 	ContestLogin string
-	TeamID       uuid.UUID
-	Role         string
+	// UUID of the team.
+	TeamID uuid.UUID
+	// Role to assign to the member.
+	Role string
 }
 
 func unpackUpdateContestTeamParams(packed middleware.Parameters) (params UpdateContestTeamParams) {
@@ -21640,6 +21945,7 @@ func decodeUpdateContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 
 // UpdateOrganizationParams is parameters of UpdateOrganization operation.
 type UpdateOrganizationParams struct {
+	// Organization login.
 	Login string
 }
 
@@ -21705,6 +22011,7 @@ func decodeUpdateOrganizationParams(args [1]string, argsEscaped bool, r *http.Re
 
 // UpdateProblemParams is parameters of UpdateProblem operation.
 type UpdateProblemParams struct {
+	// UUID of the problem.
 	ID uuid.UUID
 }
 
@@ -21770,8 +22077,10 @@ func decodeUpdateProblemParams(args [1]string, argsEscaped bool, r *http.Request
 
 // UpdateProblemCheckerParams is parameters of UpdateProblemChecker operation.
 type UpdateProblemCheckerParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackUpdateProblemCheckerParams(packed middleware.Parameters) (params UpdateProblemCheckerParams) {
@@ -21888,8 +22197,10 @@ func decodeUpdateProblemCheckerParams(args [2]string, argsEscaped bool, r *http.
 
 // UpdateProblemGeneratorParams is parameters of UpdateProblemGenerator operation.
 type UpdateProblemGeneratorParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackUpdateProblemGeneratorParams(packed middleware.Parameters) (params UpdateProblemGeneratorParams) {
@@ -22006,8 +22317,10 @@ func decodeUpdateProblemGeneratorParams(args [2]string, argsEscaped bool, r *htt
 
 // UpdateProblemInteractorParams is parameters of UpdateProblemInteractor operation.
 type UpdateProblemInteractorParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackUpdateProblemInteractorParams(packed middleware.Parameters) (params UpdateProblemInteractorParams) {
@@ -22124,8 +22437,10 @@ func decodeUpdateProblemInteractorParams(args [2]string, argsEscaped bool, r *ht
 
 // UpdateProblemLibParams is parameters of UpdateProblemLib operation.
 type UpdateProblemLibParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackUpdateProblemLibParams(packed middleware.Parameters) (params UpdateProblemLibParams) {
@@ -22242,6 +22557,7 @@ func decodeUpdateProblemLibParams(args [2]string, argsEscaped bool, r *http.Requ
 
 // UpdateProblemLimitsParams is parameters of UpdateProblemLimits operation.
 type UpdateProblemLimitsParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 
@@ -22307,8 +22623,10 @@ func decodeUpdateProblemLimitsParams(args [1]string, argsEscaped bool, r *http.R
 
 // UpdateProblemMediaFileParams is parameters of UpdateProblemMediaFile operation.
 type UpdateProblemMediaFileParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackUpdateProblemMediaFileParams(packed middleware.Parameters) (params UpdateProblemMediaFileParams) {
@@ -22425,9 +22743,12 @@ func decodeUpdateProblemMediaFileParams(args [2]string, argsEscaped bool, r *htt
 
 // UpdateProblemMemberParams is parameters of UpdateProblemMember operation.
 type UpdateProblemMemberParams struct {
-	ID     uuid.UUID
+	// UUID of the problem.
+	ID uuid.UUID
+	// UUID of the user.
 	UserID uuid.UUID
-	Role   string
+	// Role to assign to the member.
+	Role string
 }
 
 func unpackUpdateProblemMemberParams(packed middleware.Parameters) (params UpdateProblemMemberParams) {
@@ -22579,8 +22900,10 @@ func decodeUpdateProblemMemberParams(args [1]string, argsEscaped bool, r *http.R
 
 // UpdateProblemStatementParams is parameters of UpdateProblemStatement operation.
 type UpdateProblemStatementParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Lang      OptString `json:",omitempty,omitzero"`
+	// Language code of the problem statement.
+	Lang OptString `json:",omitempty,omitzero"`
 }
 
 func unpackUpdateProblemStatementParams(packed middleware.Parameters) (params UpdateProblemStatementParams) {
@@ -22696,8 +23019,11 @@ func decodeUpdateProblemStatementParams(args [1]string, argsEscaped bool, r *htt
 
 // UpdateProblemTeamParams is parameters of UpdateProblemTeam operation.
 type UpdateProblemTeamParams struct {
-	ID         uuid.UUID
-	TeamID     uuid.UUID
+	// UUID of the problem.
+	ID uuid.UUID
+	// UUID of the team.
+	TeamID uuid.UUID
+	// Permission level to grant.
 	Permission string
 }
 
@@ -22850,8 +23176,10 @@ func decodeUpdateProblemTeamParams(args [1]string, argsEscaped bool, r *http.Req
 
 // UpdateProblemTestFileParams is parameters of UpdateProblemTestFile operation.
 type UpdateProblemTestFileParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackUpdateProblemTestFileParams(packed middleware.Parameters) (params UpdateProblemTestFileParams) {
@@ -22968,6 +23296,7 @@ func decodeUpdateProblemTestFileParams(args [2]string, argsEscaped bool, r *http
 
 // UpdateProblemTestsConfigParams is parameters of UpdateProblemTestsConfig operation.
 type UpdateProblemTestsConfigParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 
@@ -23033,8 +23362,10 @@ func decodeUpdateProblemTestsConfigParams(args [1]string, argsEscaped bool, r *h
 
 // UpdateProblemValidatorParams is parameters of UpdateProblemValidator operation.
 type UpdateProblemValidatorParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackUpdateProblemValidatorParams(packed middleware.Parameters) (params UpdateProblemValidatorParams) {
@@ -23151,8 +23482,10 @@ func decodeUpdateProblemValidatorParams(args [2]string, argsEscaped bool, r *htt
 
 // UpdateProblemWorkshopSubmissionParams is parameters of UpdateProblemWorkshopSubmission operation.
 type UpdateProblemWorkshopSubmissionParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
-	Name      string
+	// Name of the workshop file.
+	Name string
 }
 
 func unpackUpdateProblemWorkshopSubmissionParams(packed middleware.Parameters) (params UpdateProblemWorkshopSubmissionParams) {
@@ -23269,6 +23602,7 @@ func decodeUpdateProblemWorkshopSubmissionParams(args [2]string, argsEscaped boo
 
 // UpdateTeamParams is parameters of UpdateTeam operation.
 type UpdateTeamParams struct {
+	// UUID of the team.
 	ID uuid.UUID
 }
 
@@ -23334,9 +23668,12 @@ func decodeUpdateTeamParams(args [1]string, argsEscaped bool, r *http.Request) (
 
 // UpdateTeamMemberRoleParams is parameters of UpdateTeamMemberRole operation.
 type UpdateTeamMemberRoleParams struct {
-	ID     uuid.UUID
+	// UUID of the team.
+	ID uuid.UUID
+	// UUID of the user.
 	UserID uuid.UUID
-	Role   string
+	// Role to assign to the member.
+	Role string
 }
 
 func unpackUpdateTeamMemberRoleParams(packed middleware.Parameters) (params UpdateTeamMemberRoleParams) {
@@ -23488,6 +23825,7 @@ func decodeUpdateTeamMemberRoleParams(args [1]string, argsEscaped bool, r *http.
 
 // UpdateUserParams is parameters of UpdateUser operation.
 type UpdateUserParams struct {
+	// Username of the user.
 	Username string
 }
 
@@ -23553,6 +23891,7 @@ func decodeUpdateUserParams(args [1]string, argsEscaped bool, r *http.Request) (
 
 // UploadAvatarParams is parameters of UploadAvatar operation.
 type UploadAvatarParams struct {
+	// Username of the user.
 	Username string
 }
 
@@ -23618,6 +23957,7 @@ func decodeUploadAvatarParams(args [1]string, argsEscaped bool, r *http.Request)
 
 // ValidateAllTestsParams is parameters of ValidateAllTests operation.
 type ValidateAllTestsParams struct {
+	// UUID of the problem.
 	ProblemId uuid.UUID
 }
 

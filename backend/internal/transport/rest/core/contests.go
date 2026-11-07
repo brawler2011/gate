@@ -656,7 +656,7 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 	var order *int32
 	if params.SortOrder.IsSet() {
 		var orderVal int32
-		if params.SortOrder.Value == corev1.ListContestSubmissionsSortOrderDesc {
+		if params.SortOrder.Value == corev1.SubmissionSortOrderQueryDesc {
 			orderVal = -1
 		} else {
 			orderVal = 0

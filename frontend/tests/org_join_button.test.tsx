@@ -14,7 +14,7 @@ const org: OrganizationModel = {
   created_at: "2026-10-01", updated_at: "2026-10-01",
 };
 const user: UserModel = {
-  id: "user", username: "alice", role: "user", createdAt: "2026-10-01", updatedAt: "2026-10-01",
+  id: "user", username: "alice", role: "user", created_at: "2026-10-01", updated_at: "2026-10-01",
 };
 const pendingRequest: OrganizationJoinRequestModel = {
   id: "request", organization_id: org.id, organization_name: org.name, organization_login: org.login,
