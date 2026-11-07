@@ -36,8 +36,9 @@ func (h *CoreServer) Login(ctx context.Context, req *corev1.LoginRequestModel) (
 
 func (h *CoreServer) Logout(ctx context.Context) (*corev1.LogoutOK, error) {
 	if session, err := middleware.GetSession(ctx); err == nil {
-		// FIXME: do not ignore errors
-		_ = h.identity.Logout(ctx, session.ID)
+		if err := h.identity.Logout(ctx, session.ID); err != nil {
+			return nil, err
+		}
 	}
 
 	return &corev1.LogoutOK{SetCookie: h.clearSessionCookie()}, nil
