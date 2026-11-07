@@ -14,6 +14,35 @@ type Permissions interface {
 	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error)
 }
 
+type CommandPermissions interface {
+	Permissions
+	HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error)
+}
+
+// Authorize through pool reads before opening the command transaction, so the
+// command never holds a connection while waiting for another from the same pool.
+func (uc *ContestsUseCase) authorizeContestProblem(ctx context.Context, contestID, problemID uuid.UUID) error {
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return pkg.ErrUnauthenticated
+	}
+	allowed, err := uc.permissions.HasContestPermission(ctx, contestID, user.Id, accessmodel.ActionManageContest)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return pkg.NoPermission
+	}
+	allowed, err = uc.permissions.HasProblemPermission(ctx, problemID, user.Id, accessmodel.ActionUseProblem)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return pkg.NoPermission
+	}
+	return nil
+}
+
 func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error) {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {

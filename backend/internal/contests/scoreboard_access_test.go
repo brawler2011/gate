@@ -35,6 +35,10 @@ func (r *scoreboardAccessRepo) GetContestScoreboardFromStandings(context.Context
 
 type scoreboardAccessPermissions struct{ monitor, manage bool }
 
+func (scoreboardAccessPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+	return false, nil
+}
+
 func (p scoreboardAccessPermissions) HasContestPermission(_ context.Context, _, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
 	if action == accessmodel.ActionGetMonitor {
 		return p.monitor, nil

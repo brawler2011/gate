@@ -326,22 +326,39 @@ func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter contestsmo
 }
 
 func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error {
-	packageId := c.PackageId
-	if packageId == uuid.Nil {
-		readyPkg, err := r.queries.GetReadyPackage(ctx, c.ProblemId)
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return pkg.Wrap(pkg.ErrBadInput, nil, "problem has no ready package")
-			}
-			return HandlePgErr(err)
-		}
-		packageId = readyPkg.ID
+	packageId, err := r.contestProblemPackage(ctx, c.ProblemId, c.PackageId, true)
+	if err != nil {
+		return err
 	}
 
-	err := r.queries.AddContestProblem(ctx, sqlc.AddContestProblemParams{
+	err = r.queries.AddContestProblem(ctx, sqlc.AddContestProblemParams{
 		ContestID: c.ContestId, ProblemID: c.ProblemId, PackageID: packageId,
 	})
 	return HandlePgErr(err)
+}
+
+// contestProblemPackage resolves and validates the immutable package to pin.
+func (r *ContestsRepo) contestProblemPackage(ctx context.Context, problemID, packageID uuid.UUID, allowLatest bool) (uuid.UUID, error) {
+	if packageID == uuid.Nil && !allowLatest {
+		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "package is required")
+	}
+	var row sqlc.ProblemPackage
+	var err error
+	if packageID == uuid.Nil {
+		row, err = r.queries.GetReadyPackage(ctx, problemID)
+	} else {
+		row, err = r.queries.GetProblemPackageByID(ctx, packageID)
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "ready package not found")
+	}
+	if err != nil {
+		return uuid.Nil, HandlePgErr(err)
+	}
+	if row.ProblemID != problemID || row.Status != "ready" {
+		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "package must belong to the problem and be ready")
+	}
+	return row.ID, nil
 }
 
 func (r *ContestsRepo) DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error {
@@ -422,7 +439,12 @@ func (r *ContestsRepo) GetContestProblems(ctx context.Context, contestId uuid.UU
 }
 
 func (r *ContestsRepo) UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error {
-	err := r.queries.UpdateContestProblemPackage(ctx, sqlc.UpdateContestProblemPackageParams{
+	packageId, err := r.contestProblemPackage(ctx, problemId, packageId, false)
+	if err != nil {
+		return err
+	}
+
+	err = r.queries.UpdateContestProblemPackage(ctx, sqlc.UpdateContestProblemPackageParams{
 		ContestID: contestId,
 		ProblemID: problemId,
 		PackageID: packageId,
