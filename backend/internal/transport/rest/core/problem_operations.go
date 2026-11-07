@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
@@ -66,7 +67,7 @@ func (h *CoreServer) PublishProblem(ctx context.Context, params corev1.PublishPr
 func (h *CoreServer) ListProblemPackages(ctx context.Context, params corev1.ListProblemPackagesParams) (*corev1.ListProblemPackagesOK, error) {
 	packages, err := h.problems.ListPackages(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
-		return nil, workshopWriteError(err, "failed to list packages")
+		return nil, fmt.Errorf("failed to list packages: %w", err)
 	}
 
 	items := make([]corev1.ListProblemPackagesOKPackagesItem, len(packages.Items))
