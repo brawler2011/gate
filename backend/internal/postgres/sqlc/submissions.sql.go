@@ -15,14 +15,9 @@ import (
 )
 
 const blockSubmission = `-- name: BlockSubmission :exec
-WITH version AS (
-  UPDATE contests SET submissions_revision = submissions_revision + 1
-  WHERE id = (SELECT contest_id FROM submissions WHERE id = $2::uuid)
-  RETURNING submissions_revision
-)
 UPDATE submissions
 SET generation = generation + 1, state = 300, score = 0, ban_reason = $1,
-    updated_at = NOW(), revision = (SELECT submissions_revision FROM version)
+    updated_at = NOW(), revision = revision + 1
 WHERE id = $2::uuid
 `
 
@@ -37,27 +32,20 @@ func (q *Queries) BlockSubmission(ctx context.Context, arg BlockSubmissionParams
 }
 
 const blockUserProblemSubmissions = `-- name: BlockUserProblemSubmissions :many
-WITH version AS (
- UPDATE contests SET submissions_revision = submissions_revision + 1
- WHERE id = $2::uuid RETURNING submissions_revision
-), previous AS (
- SELECT s.id, s.state, v.submissions_revision
- FROM submissions s CROSS JOIN version v
- WHERE contest_id = $2::uuid AND owner_id = $3::uuid AND problem_id = $4::uuid
- FOR UPDATE OF s
+WITH previous AS (
+  SELECT id, state FROM submissions
+  WHERE id = ANY($2::uuid[]) ORDER BY id FOR UPDATE
 )
 UPDATE submissions s
 SET generation = s.generation + 1, state = 300, score = 0, ban_reason = $1,
- updated_at = NOW(), revision = previous.submissions_revision
+    updated_at = NOW(), revision = s.revision + 1
 FROM previous WHERE s.id = previous.id
 RETURNING s.id, previous.state AS previous_state, s.revision
 `
 
 type BlockUserProblemSubmissionsParams struct {
-	BanReason *string   `json:"ban_reason"`
-	ContestID uuid.UUID `json:"contest_id"`
-	OwnerID   uuid.UUID `json:"owner_id"`
-	ProblemID uuid.UUID `json:"problem_id"`
+	BanReason *string     `json:"ban_reason"`
+	Ids       []uuid.UUID `json:"ids"`
 }
 
 type BlockUserProblemSubmissionsRow struct {
@@ -67,12 +55,7 @@ type BlockUserProblemSubmissionsRow struct {
 }
 
 func (q *Queries) BlockUserProblemSubmissions(ctx context.Context, arg BlockUserProblemSubmissionsParams) ([]BlockUserProblemSubmissionsRow, error) {
-	rows, err := q.db.Query(ctx, blockUserProblemSubmissions,
-		arg.BanReason,
-		arg.ContestID,
-		arg.OwnerID,
-		arg.ProblemID,
-	)
+	rows, err := q.db.Query(ctx, blockUserProblemSubmissions, arg.BanReason, arg.Ids)
 	if err != nil {
 		return nil, err
 	}
@@ -138,11 +121,6 @@ func (q *Queries) CountSubmissions(ctx context.Context, arg CountSubmissionsPara
 }
 
 const createSubmission = `-- name: CreateSubmission :one
-WITH version AS (
-  UPDATE contests SET submissions_revision = submissions_revision + 1
-  WHERE id = $1::uuid
-  RETURNING submissions_revision
-)
 INSERT INTO submissions (
     contest_id,
     problem_id,
@@ -163,7 +141,7 @@ VALUES (
     $6,
     COALESCE($7::integer, 1),
     $8,
-    (SELECT submissions_revision FROM version)
+    1
   )
 RETURNING id
 `
@@ -296,17 +274,21 @@ func (q *Queries) GetSubmission(ctx context.Context, id uuid.UUID) (GetSubmissio
 	return i, err
 }
 
-const getSubmissionsRevision = `-- name: GetSubmissionsRevision :one
-SELECT COALESCE(MAX(submissions_revision), 0)::bigint AS revision
-FROM contests
-WHERE $1::uuid IS NULL OR id = $1::uuid
+const getSubmissionIdentifiers = `-- name: GetSubmissionIdentifiers :one
+SELECT contest_id, owner_id, problem_id FROM submissions WHERE id = $1::uuid
 `
 
-func (q *Queries) GetSubmissionsRevision(ctx context.Context, contestID *uuid.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, getSubmissionsRevision, contestID)
-	var revision int64
-	err := row.Scan(&revision)
-	return revision, err
+type GetSubmissionIdentifiersRow struct {
+	ContestID *uuid.UUID `json:"contest_id"`
+	OwnerID   *uuid.UUID `json:"owner_id"`
+	ProblemID *uuid.UUID `json:"problem_id"`
+}
+
+func (q *Queries) GetSubmissionIdentifiers(ctx context.Context, id uuid.UUID) (GetSubmissionIdentifiersRow, error) {
+	row := q.db.QueryRow(ctx, getSubmissionIdentifiers, id)
+	var i GetSubmissionIdentifiersRow
+	err := row.Scan(&i.ContestID, &i.OwnerID, &i.ProblemID)
+	return i, err
 }
 
 const listSubmissions = `-- name: ListSubmissions :many
@@ -461,43 +443,27 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 	return items, nil
 }
 
-const resetSubmissionsState = `-- name: ResetSubmissionsState :many
-WITH version AS (
-  UPDATE contests SET submissions_revision = submissions_revision + 1
-  WHERE id = $1::uuid
-  RETURNING submissions_revision
-), previous AS (
-  SELECT s.id, s.state, v.submissions_revision
-  FROM submissions s CROSS JOIN version v
-WHERE contest_id = $1::uuid
-  AND (
-    $2::uuid IS NULL
-    OR problem_id = $2::uuid
-  )
-  AND (
-    $3::uuid IS NULL
-    OR id = $3::uuid
-  )
-  AND (
-    $4::uuid IS NULL
-    OR owner_id = $4::uuid
-  )
-  FOR UPDATE OF s
-)
-UPDATE submissions AS s
-SET generation = s.generation + 1, state = 1, score = 0, test_details = NULL, ban_reason = NULL, updated_at = NOW(),
-    revision = previous.submissions_revision
-FROM previous
-WHERE s.id = previous.id
-RETURNING s.id, previous.state AS previous_state, s.revision
+const lockSubmission = `-- name: LockSubmission :one
+SELECT id FROM submissions WHERE id = $1::uuid FOR UPDATE
 `
 
-type ResetSubmissionsStateParams struct {
-	ContestID    uuid.UUID  `json:"contest_id"`
-	ProblemID    *uuid.UUID `json:"problem_id"`
-	SubmissionID *uuid.UUID `json:"submission_id"`
-	OwnerID      *uuid.UUID `json:"owner_id"`
+func (q *Queries) LockSubmission(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockSubmission, id)
+	err := row.Scan(&id)
+	return id, err
 }
+
+const resetSubmissionsState = `-- name: ResetSubmissionsState :many
+WITH previous AS (
+  SELECT id, state FROM submissions
+  WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE
+)
+UPDATE submissions s
+SET generation = s.generation + 1, state = 1, score = 0, test_details = NULL,
+    ban_reason = NULL, updated_at = NOW(), revision = s.revision + 1
+FROM previous WHERE s.id = previous.id
+RETURNING s.id, previous.state AS previous_state, s.revision
+`
 
 type ResetSubmissionsStateRow struct {
 	ID            uuid.UUID `json:"id"`
@@ -505,13 +471,8 @@ type ResetSubmissionsStateRow struct {
 	Revision      int64     `json:"revision"`
 }
 
-func (q *Queries) ResetSubmissionsState(ctx context.Context, arg ResetSubmissionsStateParams) ([]ResetSubmissionsStateRow, error) {
-	rows, err := q.db.Query(ctx, resetSubmissionsState,
-		arg.ContestID,
-		arg.ProblemID,
-		arg.SubmissionID,
-		arg.OwnerID,
-	)
+func (q *Queries) ResetSubmissionsState(ctx context.Context, ids []uuid.UUID) ([]ResetSubmissionsStateRow, error) {
+	rows, err := q.db.Query(ctx, resetSubmissionsState, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -530,22 +491,67 @@ func (q *Queries) ResetSubmissionsState(ctx context.Context, arg ResetSubmission
 	return items, nil
 }
 
+const submissionCandidates = `-- name: SubmissionCandidates :many
+SELECT id, contest_id, owner_id, problem_id FROM submissions
+WHERE contest_id = $1::uuid
+  AND ($2::uuid IS NULL OR problem_id = $2::uuid)
+  AND ($3::uuid IS NULL OR id = $3::uuid)
+  AND ($4::uuid IS NULL OR owner_id = $4::uuid)
+ORDER BY id
+`
+
+type SubmissionCandidatesParams struct {
+	ContestID    uuid.UUID  `json:"contest_id"`
+	ProblemID    *uuid.UUID `json:"problem_id"`
+	SubmissionID *uuid.UUID `json:"submission_id"`
+	OwnerID      *uuid.UUID `json:"owner_id"`
+}
+
+type SubmissionCandidatesRow struct {
+	ID        uuid.UUID  `json:"id"`
+	ContestID *uuid.UUID `json:"contest_id"`
+	OwnerID   *uuid.UUID `json:"owner_id"`
+	ProblemID *uuid.UUID `json:"problem_id"`
+}
+
+func (q *Queries) SubmissionCandidates(ctx context.Context, arg SubmissionCandidatesParams) ([]SubmissionCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, submissionCandidates,
+		arg.ContestID,
+		arg.ProblemID,
+		arg.SubmissionID,
+		arg.OwnerID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SubmissionCandidatesRow{}
+	for rows.Next() {
+		var i SubmissionCandidatesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ContestID,
+			&i.OwnerID,
+			&i.ProblemID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateSubmission = `-- name: UpdateSubmission :one
-WITH version AS (
-  UPDATE contests SET submissions_revision = submissions_revision + 1
-  WHERE id = (SELECT contest_id FROM submissions WHERE id = $4::uuid)
-  RETURNING submissions_revision
-), previous AS (
-  SELECT s.id, s.state, COALESCE(v.submissions_revision, s.revision + 1)::bigint AS submissions_revision
-  FROM submissions s LEFT JOIN version v ON true
-  WHERE s.id = $4::uuid
-  FOR UPDATE OF s
+WITH previous AS (
+  SELECT id, state FROM submissions WHERE id = $4::uuid FOR UPDATE
 )
 UPDATE submissions s
 SET state = $1, score = $2, test_details = $3,
-    updated_at = NOW(), revision = previous.submissions_revision
-FROM previous
-WHERE s.id = previous.id
+    updated_at = NOW(), revision = s.revision + 1
+FROM previous WHERE s.id = previous.id
 RETURNING s.id, previous.state AS previous_state, s.revision
 `
 

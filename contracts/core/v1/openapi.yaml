@@ -5014,15 +5014,10 @@ components:
         - submissions
         - pagination
         - total_count
-        - revision
       properties:
         total_count:
           type: integer
           format: int32
-          minimum: 0
-        revision:
-          type: integer
-          format: int64
           minimum: 0
         since:
           type: integer
@@ -5051,6 +5046,7 @@ components:
         - created_at
       properties:
         revision:
+          description: Revision local to this submission.
           type: integer
           format: int64
           minimum: 0

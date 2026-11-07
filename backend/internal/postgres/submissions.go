@@ -102,12 +102,11 @@ func (r *SubmissionsRepo) BlockSubmission(ctx context.Context, id uuid.UUID, rea
 }
 
 func (r *SubmissionsRepo) BlockUserProblemSubmissions(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string) ([]submissionsmodel.SubmissionReset, error) {
-	rows, err := r.queries.BlockUserProblemSubmissions(ctx, sqlc.BlockUserProblemSubmissionsParams{
-		ContestID: contestID,
-		OwnerID:   userID,
-		ProblemID: problemID,
-		BanReason: reason,
-	})
+	ids, err := r.lockCandidates(ctx, sqlc.SubmissionCandidatesParams{ContestID: contestID, OwnerID: &userID, ProblemID: &problemID})
+	if err != nil {
+		return nil, err
+	}
+	rows, err := r.queries.BlockUserProblemSubmissions(ctx, sqlc.BlockUserProblemSubmissionsParams{Ids: ids, BanReason: reason})
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
@@ -118,25 +117,21 @@ func (r *SubmissionsRepo) BlockUserProblemSubmissions(ctx context.Context, conte
 	return result, nil
 }
 
-func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submissionsmodel.SubmissionsFilter) ([]submissionsmodel.Submission, int32, int64, error) {
+func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submissionsmodel.SubmissionsFilter) ([]submissionsmodel.Submission, int32, error) {
 	if r.pool != nil {
 		tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 		if err != nil {
-			return nil, 0, 0, HandlePgErr(err)
+			return nil, 0, HandlePgErr(err)
 		}
 		defer func() { _ = tx.Rollback(ctx) }()
-		rows, count, revision, err := r.WithTx(tx).ListSubmissions(ctx, filter)
+		rows, count, err := r.WithTx(tx).ListSubmissions(ctx, filter)
 		if err != nil {
-			return nil, 0, 0, err
+			return nil, 0, err
 		}
 		if err := tx.Commit(ctx); err != nil {
-			return nil, 0, 0, HandlePgErr(err)
+			return nil, 0, HandlePgErr(err)
 		}
-		return rows, count, revision, nil
-	}
-	revision, err := r.queries.GetSubmissionsRevision(ctx, filter.ContestId)
-	if err != nil {
-		return nil, 0, 0, HandlePgErr(err)
+		return rows, count, nil
 	}
 	var sortOrder *int32
 	if filter.Order != nil {
@@ -152,7 +147,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 		State:     statePtrToInt32Ptr(filter.State),
 	})
 	if err != nil {
-		return nil, 0, 0, HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	rows, err := r.queries.ListSubmissions(ctx, sqlc.ListSubmissionsParams{
@@ -166,7 +161,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 		SortOrder: sortOrder,
 	})
 	if err != nil {
-		return nil, 0, 0, HandlePgErr(err)
+		return nil, 0, HandlePgErr(err)
 	}
 
 	submissions := make([]submissionsmodel.Submission, len(rows))
@@ -174,7 +169,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 		submissions[i] = mapListSubmissionsRow(row)
 	}
 
-	return submissions, safeInt32(totalCount), revision, nil
+	return submissions, safeInt32(totalCount), nil
 }
 
 func languagePtrToInt32Ptr(l *submissionsmodel.LanguageName) *int32 {
@@ -341,12 +336,11 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) submissionsmodel.Submiss
 }
 
 func (r *SubmissionsRepo) ResetSubmissionsState(ctx context.Context, filter submissionsmodel.RejudgeFilter) ([]submissionsmodel.SubmissionReset, error) {
-	rows, err := r.queries.ResetSubmissionsState(ctx, sqlc.ResetSubmissionsStateParams{
-		ContestID:    filter.ContestID,
-		ProblemID:    filter.ProblemID,
-		SubmissionID: filter.SubmissionID,
-		OwnerID:      filter.UserID,
-	})
+	ids, err := r.lockCandidates(ctx, sqlc.SubmissionCandidatesParams{ContestID: filter.ContestID, ProblemID: filter.ProblemID, SubmissionID: filter.SubmissionID, OwnerID: filter.UserID})
+	if err != nil {
+		return nil, err
+	}
+	rows, err := r.queries.ResetSubmissionsState(ctx, ids)
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}

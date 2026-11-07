@@ -1,9 +1,4 @@
 -- name: CreateSubmission :one
-WITH version AS (
-  UPDATE contests SET submissions_revision = submissions_revision + 1
-  WHERE id = @contest_id::uuid
-  RETURNING submissions_revision
-)
 INSERT INTO submissions (
     contest_id,
     problem_id,
@@ -24,7 +19,7 @@ VALUES (
     @penalty,
     COALESCE(sqlc.narg('state')::integer, 1),
     sqlc.narg('ban_reason'),
-    (SELECT submissions_revision FROM version)
+    1
   )
 RETURNING id;
 
@@ -66,47 +61,29 @@ FROM submissions s
 WHERE s.id = @id::uuid;
 
 -- name: UpdateSubmission :one
-WITH version AS (
-  UPDATE contests SET submissions_revision = submissions_revision + 1
-  WHERE id = (SELECT contest_id FROM submissions WHERE id = @id::uuid)
-  RETURNING submissions_revision
-), previous AS (
-  SELECT s.id, s.state, COALESCE(v.submissions_revision, s.revision + 1)::bigint AS submissions_revision
-  FROM submissions s LEFT JOIN version v ON true
-  WHERE s.id = @id::uuid
-  FOR UPDATE OF s
+WITH previous AS (
+  SELECT id, state FROM submissions WHERE id = @id::uuid FOR UPDATE
 )
 UPDATE submissions s
 SET state = @state, score = @score, test_details = @test_details,
-    updated_at = NOW(), revision = previous.submissions_revision
-FROM previous
-WHERE s.id = previous.id
+    updated_at = NOW(), revision = s.revision + 1
+FROM previous WHERE s.id = previous.id
 RETURNING s.id, previous.state AS previous_state, s.revision;
 
 -- name: BlockSubmission :exec
-WITH version AS (
-  UPDATE contests SET submissions_revision = submissions_revision + 1
-  WHERE id = (SELECT contest_id FROM submissions WHERE id = @id::uuid)
-  RETURNING submissions_revision
-)
 UPDATE submissions
 SET generation = generation + 1, state = 300, score = 0, ban_reason = @ban_reason,
-    updated_at = NOW(), revision = (SELECT submissions_revision FROM version)
+    updated_at = NOW(), revision = revision + 1
 WHERE id = @id::uuid;
 
 -- name: BlockUserProblemSubmissions :many
-WITH version AS (
- UPDATE contests SET submissions_revision = submissions_revision + 1
- WHERE id = @contest_id::uuid RETURNING submissions_revision
-), previous AS (
- SELECT s.id, s.state, v.submissions_revision
- FROM submissions s CROSS JOIN version v
- WHERE contest_id = @contest_id::uuid AND owner_id = @owner_id::uuid AND problem_id = @problem_id::uuid
- FOR UPDATE OF s
+WITH previous AS (
+  SELECT id, state FROM submissions
+  WHERE id = ANY(@ids::uuid[]) ORDER BY id FOR UPDATE
 )
 UPDATE submissions s
 SET generation = s.generation + 1, state = 300, score = 0, ban_reason = @ban_reason,
- updated_at = NOW(), revision = previous.submissions_revision
+    updated_at = NOW(), revision = s.revision + 1
 FROM previous WHERE s.id = previous.id
 RETURNING s.id, previous.state AS previous_state, s.revision;
 
@@ -195,37 +172,27 @@ WHERE (
     OR s.state = sqlc.narg('state')::integer
   );
 
--- name: ResetSubmissionsState :many
-WITH version AS (
-  UPDATE contests SET submissions_revision = submissions_revision + 1
-  WHERE id = @contest_id::uuid
-  RETURNING submissions_revision
-), previous AS (
-  SELECT s.id, s.state, v.submissions_revision
-  FROM submissions s CROSS JOIN version v
+-- name: SubmissionCandidates :many
+SELECT id, contest_id, owner_id, problem_id FROM submissions
 WHERE contest_id = @contest_id::uuid
-  AND (
-    sqlc.narg('problem_id')::uuid IS NULL
-    OR problem_id = sqlc.narg('problem_id')::uuid
-  )
-  AND (
-    sqlc.narg('submission_id')::uuid IS NULL
-    OR id = sqlc.narg('submission_id')::uuid
-  )
-  AND (
-    sqlc.narg('owner_id')::uuid IS NULL
-    OR owner_id = sqlc.narg('owner_id')::uuid
-  )
-  FOR UPDATE OF s
-)
-UPDATE submissions AS s
-SET generation = s.generation + 1, state = 1, score = 0, test_details = NULL, ban_reason = NULL, updated_at = NOW(),
-    revision = previous.submissions_revision
-FROM previous
-WHERE s.id = previous.id
-RETURNING s.id, previous.state AS previous_state, s.revision;
+  AND (sqlc.narg('problem_id')::uuid IS NULL OR problem_id = sqlc.narg('problem_id')::uuid)
+  AND (sqlc.narg('submission_id')::uuid IS NULL OR id = sqlc.narg('submission_id')::uuid)
+  AND (sqlc.narg('owner_id')::uuid IS NULL OR owner_id = sqlc.narg('owner_id')::uuid)
+ORDER BY id;
 
--- name: GetSubmissionsRevision :one
-SELECT COALESCE(MAX(submissions_revision), 0)::bigint AS revision
-FROM contests
-WHERE sqlc.narg('contest_id')::uuid IS NULL OR id = sqlc.narg('contest_id')::uuid;
+-- name: LockSubmission :one
+SELECT id FROM submissions WHERE id = @id::uuid FOR UPDATE;
+
+-- name: GetSubmissionIdentifiers :one
+SELECT contest_id, owner_id, problem_id FROM submissions WHERE id = @id::uuid;
+
+-- name: ResetSubmissionsState :many
+WITH previous AS (
+  SELECT id, state FROM submissions
+  WHERE id = ANY(@ids::uuid[]) ORDER BY id FOR UPDATE
+)
+UPDATE submissions s
+SET generation = s.generation + 1, state = 1, score = 0, test_details = NULL,
+    ban_reason = NULL, updated_at = NOW(), revision = s.revision + 1
+FROM previous WHERE s.id = previous.id
+RETURNING s.id, previous.state AS previous_state, s.revision;

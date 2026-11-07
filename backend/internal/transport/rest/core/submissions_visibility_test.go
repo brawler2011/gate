@@ -126,7 +126,7 @@ type visibilityRepo struct {
 func (r *visibilityRepo) GetSubmission(context.Context, uuid.UUID) (submissionsmodel.Submission, error) {
 	return r.stub.submission, nil
 }
-func (r *visibilityRepo) ListSubmissions(context.Context, submissionsmodel.SubmissionsFilter) ([]submissionsmodel.Submission, int32, int64, error) {
+func (r *visibilityRepo) ListSubmissions(context.Context, submissionsmodel.SubmissionsFilter) ([]submissionsmodel.Submission, int32, error) {
 	r.stub.listed = true
-	return []submissionsmodel.Submission{r.stub.submission}, 1, 1, nil
+	return []submissionsmodel.Submission{r.stub.submission}, 1, nil
 }

@@ -58,17 +58,25 @@ const completeJudgeJob = `-- name: CompleteJudgeJob :execrows
 UPDATE judge_jobs j SET state='completed',completed_at=now(),lease_token=NULL,deadline_at=NULL
 FROM submissions s
 WHERE j.id=$1::uuid AND j.lease_token=$2::uuid
-  AND j.state='processing' AND j.deadline_at>now()
+  AND j.submission_id=$3::uuid AND j.generation=$4::bigint
+  AND j.state='processing' AND j.deadline_at>clock_timestamp()
   AND s.id=j.submission_id AND s.generation=j.generation AND s.state<>300
 `
 
 type CompleteJudgeJobParams struct {
-	ID         uuid.UUID `json:"id"`
-	LeaseToken uuid.UUID `json:"lease_token"`
+	ID           uuid.UUID `json:"id"`
+	LeaseToken   uuid.UUID `json:"lease_token"`
+	SubmissionID uuid.UUID `json:"submission_id"`
+	Generation   int64     `json:"generation"`
 }
 
 func (q *Queries) CompleteJudgeJob(ctx context.Context, arg CompleteJudgeJobParams) (int64, error) {
-	result, err := q.db.Exec(ctx, completeJudgeJob, arg.ID, arg.LeaseToken)
+	result, err := q.db.Exec(ctx, completeJudgeJob,
+		arg.ID,
+		arg.LeaseToken,
+		arg.SubmissionID,
+		arg.Generation,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -95,18 +103,6 @@ func (q *Queries) JudgeJobActive(ctx context.Context, arg JudgeJobActiveParams) 
 	var active bool
 	err := row.Scan(&active)
 	return active, err
-}
-
-const lockJudgeContest = `-- name: LockJudgeContest :one
-SELECT c.id FROM contests c JOIN submissions s ON s.contest_id=c.id
-WHERE s.id=$1::uuid FOR UPDATE OF c
-`
-
-func (q *Queries) LockJudgeContest(ctx context.Context, submissionID uuid.UUID) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, lockJudgeContest, submissionID)
-	var id uuid.UUID
-	err := row.Scan(&id)
-	return id, err
 }
 
 const releaseJudgeJob = `-- name: ReleaseJudgeJob :execrows

@@ -39,6 +39,7 @@ type ScoreboardStore interface {
 }
 
 type CommandTxStore interface {
+	LockSubmissionTuple(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error
 	GetContestJoinRequestByID(context.Context, uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
 	CreateNotification(context.Context, *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error)
 	GetPendingContestJoinRequest(context.Context, uuid.UUID, uuid.UUID) (*contestsmodel.ContestJoinRequest, error)

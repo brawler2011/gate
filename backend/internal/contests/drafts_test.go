@@ -212,3 +212,5 @@ func TestDraftListRejectsCallerSpoofingOutsideHTTP(t *testing.T) {
 		t.Fatalf("unexpected drafts: %+v", list)
 	}
 }
+
+func (draftTestStore) LockDraftOwner(context.Context, uuid.UUID, uuid.UUID) error { return nil }

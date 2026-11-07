@@ -2238,14 +2238,15 @@ export interface components {
             /** Format: int32 */
             total_count: number;
             /** Format: int64 */
-            revision: number;
-            /** Format: int64 */
             since?: number;
             submissions: components["schemas"]["SubmissionsListItemModel"][];
             pagination: components["schemas"]["PaginationModel"];
         };
         SubmissionsListItemModel: {
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Revision local to this submission.
+             */
             revision: number;
             frozen?: boolean;
             /** Format: uuid */

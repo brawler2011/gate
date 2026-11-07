@@ -458,19 +458,18 @@ type AuthToken struct {
 }
 
 type Contest struct {
-	ID                  uuid.UUID                       `json:"id"`
-	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             *uuid.UUID                      `json:"owner_id"`
-	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
-	Title               string                          `json:"title"`
-	Login               string                          `json:"login"`
-	Description         string                          `json:"description"`
-	Settings            []byte                          `json:"settings"`
-	StartTime           *time.Time                      `json:"start_time"`
-	EndTime             *time.Time                      `json:"end_time"`
-	CreatedAt           time.Time                       `json:"created_at"`
-	UpdatedAt           time.Time                       `json:"updated_at"`
-	SubmissionsRevision int64                           `json:"submissions_revision"`
+	ID             uuid.UUID                       `json:"id"`
+	OrganizationID uuid.UUID                       `json:"organization_id"`
+	OwnerID        *uuid.UUID                      `json:"owner_id"`
+	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
+	Title          string                          `json:"title"`
+	Login          string                          `json:"login"`
+	Description    string                          `json:"description"`
+	Settings       []byte                          `json:"settings"`
+	StartTime      *time.Time                      `json:"start_time"`
+	EndTime        *time.Time                      `json:"end_time"`
+	CreatedAt      time.Time                       `json:"created_at"`
+	UpdatedAt      time.Time                       `json:"updated_at"`
 }
 
 type ContestAnnouncement struct {

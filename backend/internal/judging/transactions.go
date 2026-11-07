@@ -14,6 +14,8 @@ import (
 type JudgeTxStore interface {
 	contests.ScoreboardStore
 	eventdata.Writer
+	// CompleteJob acquires the scoring tuple lock, then the submission row lock,
+	// and validates the current generation and lease. Retain both through commit.
 	CompleteJob(context.Context, judgingmodel.Job) (bool, error)
 	GetSubmission(context.Context, uuid.UUID) (submissionsmodel.Submission, error)
 	UpdateSubmission(context.Context, uuid.UUID, *submissionsmodel.SubmissionUpdate) (submissionsmodel.SubmissionChange, error)

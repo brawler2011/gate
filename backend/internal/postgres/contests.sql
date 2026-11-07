@@ -302,7 +302,7 @@ WHERE contest_id = $1 AND (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.
 
 
 -- name: LockContest :one
-SELECT id FROM contests WHERE id = @id::uuid FOR UPDATE;
+SELECT id FROM contests WHERE id = @id::uuid FOR NO KEY UPDATE;
 
 -- name: CountUserAccessibleContests :one
 SELECT COUNT(*) FROM contests c

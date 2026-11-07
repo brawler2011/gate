@@ -167,7 +167,7 @@ const createContest = `-- name: CreateContest :one
 
 INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, description, settings, start_time, end_time)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, organization_id, owner_id, visibility, title, login, description, settings, start_time, end_time, created_at, updated_at, submissions_revision
+RETURNING id, organization_id, owner_id, visibility, title, login, description, settings, start_time, end_time, created_at, updated_at
 `
 
 type CreateContestParams struct {
@@ -211,7 +211,6 @@ func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (C
 		&i.EndTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.SubmissionsRevision,
 	)
 	return i, err
 }
@@ -272,28 +271,27 @@ func (q *Queries) DeleteContestUserProblemBlock(ctx context.Context, arg DeleteC
 }
 
 const getContestByID = `-- name: GetContestByID :one
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision, o.login as org_login, o.name as org_name
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.id = $1
 `
 
 type GetContestByIDRow struct {
-	ID                  uuid.UUID                       `json:"id"`
-	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             *uuid.UUID                      `json:"owner_id"`
-	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
-	Title               string                          `json:"title"`
-	Login               string                          `json:"login"`
-	Description         string                          `json:"description"`
-	Settings            []byte                          `json:"settings"`
-	StartTime           *time.Time                      `json:"start_time"`
-	EndTime             *time.Time                      `json:"end_time"`
-	CreatedAt           time.Time                       `json:"created_at"`
-	UpdatedAt           time.Time                       `json:"updated_at"`
-	SubmissionsRevision int64                           `json:"submissions_revision"`
-	OrgLogin            string                          `json:"org_login"`
-	OrgName             string                          `json:"org_name"`
+	ID             uuid.UUID                       `json:"id"`
+	OrganizationID uuid.UUID                       `json:"organization_id"`
+	OwnerID        *uuid.UUID                      `json:"owner_id"`
+	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
+	Title          string                          `json:"title"`
+	Login          string                          `json:"login"`
+	Description    string                          `json:"description"`
+	Settings       []byte                          `json:"settings"`
+	StartTime      *time.Time                      `json:"start_time"`
+	EndTime        *time.Time                      `json:"end_time"`
+	CreatedAt      time.Time                       `json:"created_at"`
+	UpdatedAt      time.Time                       `json:"updated_at"`
+	OrgLogin       string                          `json:"org_login"`
+	OrgName        string                          `json:"org_name"`
 }
 
 func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (GetContestByIDRow, error) {
@@ -312,7 +310,6 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (GetContestB
 		&i.EndTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.SubmissionsRevision,
 		&i.OrgLogin,
 		&i.OrgName,
 	)
@@ -320,7 +317,7 @@ func (q *Queries) GetContestByID(ctx context.Context, id uuid.UUID) (GetContestB
 }
 
 const getContestByLogin = `-- name: GetContestByLogin :one
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision, o.login as org_login, o.name as org_name
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.organization_id = $1 AND LOWER(c.login) = LOWER($2)
@@ -332,21 +329,20 @@ type GetContestByLoginParams struct {
 }
 
 type GetContestByLoginRow struct {
-	ID                  uuid.UUID                       `json:"id"`
-	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             *uuid.UUID                      `json:"owner_id"`
-	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
-	Title               string                          `json:"title"`
-	Login               string                          `json:"login"`
-	Description         string                          `json:"description"`
-	Settings            []byte                          `json:"settings"`
-	StartTime           *time.Time                      `json:"start_time"`
-	EndTime             *time.Time                      `json:"end_time"`
-	CreatedAt           time.Time                       `json:"created_at"`
-	UpdatedAt           time.Time                       `json:"updated_at"`
-	SubmissionsRevision int64                           `json:"submissions_revision"`
-	OrgLogin            string                          `json:"org_login"`
-	OrgName             string                          `json:"org_name"`
+	ID             uuid.UUID                       `json:"id"`
+	OrganizationID uuid.UUID                       `json:"organization_id"`
+	OwnerID        *uuid.UUID                      `json:"owner_id"`
+	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
+	Title          string                          `json:"title"`
+	Login          string                          `json:"login"`
+	Description    string                          `json:"description"`
+	Settings       []byte                          `json:"settings"`
+	StartTime      *time.Time                      `json:"start_time"`
+	EndTime        *time.Time                      `json:"end_time"`
+	CreatedAt      time.Time                       `json:"created_at"`
+	UpdatedAt      time.Time                       `json:"updated_at"`
+	OrgLogin       string                          `json:"org_login"`
+	OrgName        string                          `json:"org_name"`
 }
 
 func (q *Queries) GetContestByLogin(ctx context.Context, arg GetContestByLoginParams) (GetContestByLoginRow, error) {
@@ -365,7 +361,6 @@ func (q *Queries) GetContestByLogin(ctx context.Context, arg GetContestByLoginPa
 		&i.EndTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.SubmissionsRevision,
 		&i.OrgLogin,
 		&i.OrgName,
 	)
@@ -373,7 +368,7 @@ func (q *Queries) GetContestByLogin(ctx context.Context, arg GetContestByLoginPa
 }
 
 const getContestByOrgLoginAndContestLogin = `-- name: GetContestByOrgLoginAndContestLogin :one
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision, o.login as org_login, o.name as org_name
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE LOWER(o.login) = LOWER($1) AND LOWER(c.login) = LOWER($2)
@@ -385,21 +380,20 @@ type GetContestByOrgLoginAndContestLoginParams struct {
 }
 
 type GetContestByOrgLoginAndContestLoginRow struct {
-	ID                  uuid.UUID                       `json:"id"`
-	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             *uuid.UUID                      `json:"owner_id"`
-	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
-	Title               string                          `json:"title"`
-	Login               string                          `json:"login"`
-	Description         string                          `json:"description"`
-	Settings            []byte                          `json:"settings"`
-	StartTime           *time.Time                      `json:"start_time"`
-	EndTime             *time.Time                      `json:"end_time"`
-	CreatedAt           time.Time                       `json:"created_at"`
-	UpdatedAt           time.Time                       `json:"updated_at"`
-	SubmissionsRevision int64                           `json:"submissions_revision"`
-	OrgLogin            string                          `json:"org_login"`
-	OrgName             string                          `json:"org_name"`
+	ID             uuid.UUID                       `json:"id"`
+	OrganizationID uuid.UUID                       `json:"organization_id"`
+	OwnerID        *uuid.UUID                      `json:"owner_id"`
+	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
+	Title          string                          `json:"title"`
+	Login          string                          `json:"login"`
+	Description    string                          `json:"description"`
+	Settings       []byte                          `json:"settings"`
+	StartTime      *time.Time                      `json:"start_time"`
+	EndTime        *time.Time                      `json:"end_time"`
+	CreatedAt      time.Time                       `json:"created_at"`
+	UpdatedAt      time.Time                       `json:"updated_at"`
+	OrgLogin       string                          `json:"org_login"`
+	OrgName        string                          `json:"org_name"`
 }
 
 func (q *Queries) GetContestByOrgLoginAndContestLogin(ctx context.Context, arg GetContestByOrgLoginAndContestLoginParams) (GetContestByOrgLoginAndContestLoginRow, error) {
@@ -418,7 +412,6 @@ func (q *Queries) GetContestByOrgLoginAndContestLogin(ctx context.Context, arg G
 		&i.EndTime,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.SubmissionsRevision,
 		&i.OrgLogin,
 		&i.OrgName,
 	)
@@ -732,7 +725,7 @@ func (q *Queries) GetUserScoreboardSubmissions(ctx context.Context, arg GetUserS
 }
 
 const listAllContests = `-- name: ListAllContests :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision, o.login as org_login, o.name as org_name
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE ($1::text = '' OR c.title ILIKE '%' || $1::text || '%')
@@ -758,21 +751,20 @@ type ListAllContestsParams struct {
 }
 
 type ListAllContestsRow struct {
-	ID                  uuid.UUID                       `json:"id"`
-	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             *uuid.UUID                      `json:"owner_id"`
-	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
-	Title               string                          `json:"title"`
-	Login               string                          `json:"login"`
-	Description         string                          `json:"description"`
-	Settings            []byte                          `json:"settings"`
-	StartTime           *time.Time                      `json:"start_time"`
-	EndTime             *time.Time                      `json:"end_time"`
-	CreatedAt           time.Time                       `json:"created_at"`
-	UpdatedAt           time.Time                       `json:"updated_at"`
-	SubmissionsRevision int64                           `json:"submissions_revision"`
-	OrgLogin            string                          `json:"org_login"`
-	OrgName             string                          `json:"org_name"`
+	ID             uuid.UUID                       `json:"id"`
+	OrganizationID uuid.UUID                       `json:"organization_id"`
+	OwnerID        *uuid.UUID                      `json:"owner_id"`
+	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
+	Title          string                          `json:"title"`
+	Login          string                          `json:"login"`
+	Description    string                          `json:"description"`
+	Settings       []byte                          `json:"settings"`
+	StartTime      *time.Time                      `json:"start_time"`
+	EndTime        *time.Time                      `json:"end_time"`
+	CreatedAt      time.Time                       `json:"created_at"`
+	UpdatedAt      time.Time                       `json:"updated_at"`
+	OrgLogin       string                          `json:"org_login"`
+	OrgName        string                          `json:"org_name"`
 }
 
 func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams) ([]ListAllContestsRow, error) {
@@ -804,7 +796,6 @@ func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.SubmissionsRevision,
 			&i.OrgLogin,
 			&i.OrgName,
 		); err != nil {
@@ -965,7 +956,7 @@ func (q *Queries) ListContestUserProblemBlocks(ctx context.Context, arg ListCont
 }
 
 const listContests = `-- name: ListContests :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision, o.login as org_login, o.name as org_name
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE c.organization_id = $1::uuid
@@ -987,21 +978,20 @@ type ListContestsParams struct {
 }
 
 type ListContestsRow struct {
-	ID                  uuid.UUID                       `json:"id"`
-	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             *uuid.UUID                      `json:"owner_id"`
-	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
-	Title               string                          `json:"title"`
-	Login               string                          `json:"login"`
-	Description         string                          `json:"description"`
-	Settings            []byte                          `json:"settings"`
-	StartTime           *time.Time                      `json:"start_time"`
-	EndTime             *time.Time                      `json:"end_time"`
-	CreatedAt           time.Time                       `json:"created_at"`
-	UpdatedAt           time.Time                       `json:"updated_at"`
-	SubmissionsRevision int64                           `json:"submissions_revision"`
-	OrgLogin            string                          `json:"org_login"`
-	OrgName             string                          `json:"org_name"`
+	ID             uuid.UUID                       `json:"id"`
+	OrganizationID uuid.UUID                       `json:"organization_id"`
+	OwnerID        *uuid.UUID                      `json:"owner_id"`
+	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
+	Title          string                          `json:"title"`
+	Login          string                          `json:"login"`
+	Description    string                          `json:"description"`
+	Settings       []byte                          `json:"settings"`
+	StartTime      *time.Time                      `json:"start_time"`
+	EndTime        *time.Time                      `json:"end_time"`
+	CreatedAt      time.Time                       `json:"created_at"`
+	UpdatedAt      time.Time                       `json:"updated_at"`
+	OrgLogin       string                          `json:"org_login"`
+	OrgName        string                          `json:"org_name"`
 }
 
 func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]ListContestsRow, error) {
@@ -1032,7 +1022,6 @@ func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]L
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.SubmissionsRevision,
 			&i.OrgLogin,
 			&i.OrgName,
 		); err != nil {
@@ -1131,7 +1120,7 @@ func (q *Queries) ListDashboardContests(ctx context.Context, arg ListDashboardCo
 
 const listUserAccessibleContests = `-- name: ListUserAccessibleContests :many
 
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision, o.login as org_login, o.name as org_name
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE user_has_contest_access($1::uuid, c.id)
@@ -1157,21 +1146,20 @@ type ListUserAccessibleContestsParams struct {
 }
 
 type ListUserAccessibleContestsRow struct {
-	ID                  uuid.UUID                       `json:"id"`
-	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             *uuid.UUID                      `json:"owner_id"`
-	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
-	Title               string                          `json:"title"`
-	Login               string                          `json:"login"`
-	Description         string                          `json:"description"`
-	Settings            []byte                          `json:"settings"`
-	StartTime           *time.Time                      `json:"start_time"`
-	EndTime             *time.Time                      `json:"end_time"`
-	CreatedAt           time.Time                       `json:"created_at"`
-	UpdatedAt           time.Time                       `json:"updated_at"`
-	SubmissionsRevision int64                           `json:"submissions_revision"`
-	OrgLogin            string                          `json:"org_login"`
-	OrgName             string                          `json:"org_name"`
+	ID             uuid.UUID                       `json:"id"`
+	OrganizationID uuid.UUID                       `json:"organization_id"`
+	OwnerID        *uuid.UUID                      `json:"owner_id"`
+	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
+	Title          string                          `json:"title"`
+	Login          string                          `json:"login"`
+	Description    string                          `json:"description"`
+	Settings       []byte                          `json:"settings"`
+	StartTime      *time.Time                      `json:"start_time"`
+	EndTime        *time.Time                      `json:"end_time"`
+	CreatedAt      time.Time                       `json:"created_at"`
+	UpdatedAt      time.Time                       `json:"updated_at"`
+	OrgLogin       string                          `json:"org_login"`
+	OrgName        string                          `json:"org_name"`
 }
 
 // Access check helpers
@@ -1204,7 +1192,6 @@ func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAc
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.SubmissionsRevision,
 			&i.OrgLogin,
 			&i.OrgName,
 		); err != nil {
@@ -1219,7 +1206,7 @@ func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAc
 }
 
 const listUserAccessibleContestsByOrg = `-- name: ListUserAccessibleContestsByOrg :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, c.submissions_revision, o.login as org_login, o.name as org_name
+SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
 FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE user_has_contest_access($1::uuid, c.id)
@@ -1247,21 +1234,20 @@ type ListUserAccessibleContestsByOrgParams struct {
 }
 
 type ListUserAccessibleContestsByOrgRow struct {
-	ID                  uuid.UUID                       `json:"id"`
-	OrganizationID      uuid.UUID                       `json:"organization_id"`
-	OwnerID             *uuid.UUID                      `json:"owner_id"`
-	Visibility          contestsmodel.ContestVisibility `json:"visibility"`
-	Title               string                          `json:"title"`
-	Login               string                          `json:"login"`
-	Description         string                          `json:"description"`
-	Settings            []byte                          `json:"settings"`
-	StartTime           *time.Time                      `json:"start_time"`
-	EndTime             *time.Time                      `json:"end_time"`
-	CreatedAt           time.Time                       `json:"created_at"`
-	UpdatedAt           time.Time                       `json:"updated_at"`
-	SubmissionsRevision int64                           `json:"submissions_revision"`
-	OrgLogin            string                          `json:"org_login"`
-	OrgName             string                          `json:"org_name"`
+	ID             uuid.UUID                       `json:"id"`
+	OrganizationID uuid.UUID                       `json:"organization_id"`
+	OwnerID        *uuid.UUID                      `json:"owner_id"`
+	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
+	Title          string                          `json:"title"`
+	Login          string                          `json:"login"`
+	Description    string                          `json:"description"`
+	Settings       []byte                          `json:"settings"`
+	StartTime      *time.Time                      `json:"start_time"`
+	EndTime        *time.Time                      `json:"end_time"`
+	CreatedAt      time.Time                       `json:"created_at"`
+	UpdatedAt      time.Time                       `json:"updated_at"`
+	OrgLogin       string                          `json:"org_login"`
+	OrgName        string                          `json:"org_name"`
 }
 
 func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListUserAccessibleContestsByOrgParams) ([]ListUserAccessibleContestsByOrgRow, error) {
@@ -1294,7 +1280,6 @@ func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListU
 			&i.EndTime,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.SubmissionsRevision,
 			&i.OrgLogin,
 			&i.OrgName,
 		); err != nil {
@@ -1340,7 +1325,7 @@ func (q *Queries) ListUserContestMemberships(ctx context.Context, userID uuid.UU
 }
 
 const lockContest = `-- name: LockContest :one
-SELECT id FROM contests WHERE id = $1::uuid FOR UPDATE
+SELECT id FROM contests WHERE id = $1::uuid FOR NO KEY UPDATE
 `
 
 func (q *Queries) LockContest(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
