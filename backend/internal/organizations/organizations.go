@@ -438,7 +438,7 @@ func (uc *OrganizationsUseCase) InviteMember(
 		// Check if already a member
 		_, err = tx.GetMember(ctx, org.ID, targetUserID)
 		if err == nil {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "пользователь уже является участником организации")
+			return pkg.Wrap(pkg.ErrConflict, nil, "пользователь уже является участником организации")
 		}
 
 		if err != nil && !errors.Is(err, pkg.ErrNotFound) {
@@ -451,7 +451,7 @@ func (uc *OrganizationsUseCase) InviteMember(
 			return fmt.Errorf("get pending invitation: %w", err)
 		}
 		if pending != nil {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "приглашение этому пользователю уже отправлено")
+			return pkg.Wrap(pkg.ErrConflict, nil, "приглашение этому пользователю уже отправлено")
 		}
 
 		invitation, err = tx.CreateInvitation(ctx, &organizationsmodel.CreateOrganizationInvitationInput{
@@ -611,7 +611,7 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 		// Check if already a member
 		_, err = tx.GetMember(ctx, org.ID, userID)
 		if err == nil {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "вы уже состоите в этой организации")
+			return pkg.Wrap(pkg.ErrConflict, nil, "вы уже состоите в этой организации")
 		}
 
 		if err != nil && !errors.Is(err, pkg.ErrNotFound) {
@@ -637,7 +637,7 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 			return fmt.Errorf("get pending request: %w", err)
 		}
 		if pending != nil {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "заявка на вступление уже подана и ожидает рассмотрения")
+			return pkg.Wrap(pkg.ErrConflict, nil, "заявка на вступление уже подана и ожидает рассмотрения")
 		}
 
 		req, err = tx.CreateJoinRequest(ctx, &organizationsmodel.CreateOrganizationJoinRequestInput{

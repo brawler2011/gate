@@ -451,5 +451,7 @@ func wrapOrgUCError(err error, fallbackMsg string) error {
 	if errors.Is(err, pkg.ErrBadInput) {
 		return pkg.Wrap(pkg.ErrBadInput, err, fallbackMsg)
 	}
-	return pkg.Wrap(pkg.ErrInternal, err, fallbackMsg)
+	// Adding context must not change the use case error classification.
+	// Unclassified failures still map to HTTP 500 in pkg.ToREST.
+	return pkg.Wrap(nil, err, fallbackMsg)
 }
