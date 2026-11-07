@@ -35,7 +35,7 @@ export const BlogList = ({posts, pagination}: Props): ReactNode => {
           previewImageUrl={post.preview_image_id}
         />
       ))}
-      {pagination.total > 1 && (
+      {pagination.total_pages > 1 && (
         <Stack align="center" gap="md">
           <RoutePagination
             pagination={pagination}

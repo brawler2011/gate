@@ -4,6 +4,8 @@ import (
 	"context"
 	"io"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	"github.com/brawler2011/gate/backend/internal/blogs"
 	"github.com/brawler2011/gate/backend/internal/identity"
 	problems "github.com/brawler2011/gate/backend/internal/problems"
@@ -90,8 +92,8 @@ type OrganizationsUC interface {
 	// Member management
 
 	AddMemberByLogin(ctx context.Context, login string, input *organizationsmodel.AddOrganizationMemberInput, requestUserID uuid.UUID) error
-	ListMembers(ctx context.Context, orgID, requestUserID uuid.UUID) ([]organizationsmodel.OrganizationMember, error)
-	ListMembersByLogin(ctx context.Context, login string, requestUserID uuid.UUID) ([]organizationsmodel.OrganizationMember, error)
+	ListMembers(ctx context.Context, orgID, requestUserID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.OrganizationMember], error)
+	ListMembersByLogin(ctx context.Context, login string, requestUserID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.OrganizationMember], error)
 
 	RemoveMemberByLogin(ctx context.Context, login string, userID, requestUserID uuid.UUID) error
 
@@ -157,13 +159,13 @@ type TeamsUC interface {
 
 	// Member management
 	AddTeamMember(ctx context.Context, input *organizationsmodel.AddTeamMemberInput, requestUserID uuid.UUID) error
-	ListTeamMembers(ctx context.Context, teamID, requestUserID uuid.UUID) ([]organizationsmodel.TeamMember, error)
+	ListTeamMembers(ctx context.Context, teamID, requestUserID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.TeamMember], error)
 	UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole, requestUserID uuid.UUID) error
 	RemoveTeamMember(ctx context.Context, teamID, userID, requestUserID uuid.UUID) error
 
 	// Resource associations
-	GetTeamContests(ctx context.Context, teamID, requestUserID uuid.UUID) ([]contestsmodel.Contest, error)
-	GetTeamProblems(ctx context.Context, teamID, requestUserID uuid.UUID) ([]problemsmodel.Problem, error)
+	GetTeamContests(ctx context.Context, teamID, requestUserID uuid.UUID, request paging.Request) (*paging.List[contestsmodel.Contest], error)
+	GetTeamProblems(ctx context.Context, teamID, requestUserID uuid.UUID, request paging.Request) (*paging.List[problemsmodel.Problem], error)
 }
 
 type UsersUC interface {

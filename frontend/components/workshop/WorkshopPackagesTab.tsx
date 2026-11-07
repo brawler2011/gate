@@ -1,22 +1,15 @@
 "use client";
 
-import {Badge, Box, Button, Group, Loader, Stack, Table, Text} from "@mantine/core";
+import {Pagination, Badge, Box, Button, Group, Loader, Stack, Table, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {useCallback, useEffect, useState, useTransition} from "react";
+import {useQueryClient} from "@tanstack/react-query";
+import {useTransition} from "react";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
-import {api} from "@/lib/api";
+import {usePagedQuery} from "@/hooks/usePagedQuery";
+import {api, unwrap} from "@/lib/api";
 
 import type {ReactNode} from "react";
-
-type PackageItem = {
-  id?: string;
-  version?: number;
-  status?: string;
-  package_hash?: string;
-  created_at?: string;
-  compiled_at?: string;
-};
 
 type Props = {
   problemId: string;
@@ -59,24 +52,13 @@ const formatDateTime = (iso?: string) => {
 };
 
 export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
+  const queryClient = useQueryClient();
   const [isBuilding, startBuilding] = useTransition();
-  const [packages, setPackages] = useState<PackageItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchPackages = useCallback(async () => {
-    setLoading(true);
-    const {data, error} = await api.GET("/problems/{id}/packages", {
-      params: {path: {id: problemId}},
-    });
-    if (!error && data?.packages) {
-      setPackages(data.packages as PackageItem[]);
-    }
-    setLoading(false);
-  }, [problemId]);
-
-  useEffect(() => {
-    fetchPackages();
-  }, [fetchPackages]);
+  const {data, isPending: loading, error, page, setPage} = usePagedQuery(
+    ["problem-packages", problemId],
+    (page, pageSize) => unwrap(api.GET("/problems/{id}/packages", {params: {path: {id: problemId}, query: {page, pageSize}}})),
+  );
+  const packages = data?.packages ?? [];
 
   const handleBuild = () => {
     startBuilding(async () => {
@@ -99,7 +81,8 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
             : "Пакет успешно собран",
         color: "green",
       });
-      await fetchPackages();
+      setPage(1);
+      await queryClient.invalidateQueries({queryKey: ["problem-packages", problemId]});
     });
   };
 
@@ -122,12 +105,20 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
         </SectionPaper>
 
         <SectionPaper title="История сборок">
+          {error && (
+            <Group>
+              <Text c="red">{error.message}</Text>
+              <Button onClick={() => void queryClient.invalidateQueries({queryKey: ["problem-packages", problemId]})}>
+                Повторить
+              </Button>
+            </Group>
+          )}
           {loading && (
             <Group justify="center" py="md">
               <Loader size="sm" />
             </Group>
           )}
-          {!loading && packages.length === 0 && (
+          {!loading && !error && packages.length === 0 && (
             <Text size="sm" c="dimmed">
               Пакеты ещё не собирались.
             </Text>
@@ -165,6 +156,9 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
                 ))}
               </Table.Tbody>
             </Table>
+          )}
+          {data && data.pagination.total_pages > 1 && (
+            <Pagination value={page} onChange={setPage} total={data.pagination.total_pages} />
           )}
         </SectionPaper>
       </Stack>

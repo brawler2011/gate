@@ -6,6 +6,8 @@ import (
 	"io"
 	"strings"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
@@ -22,13 +24,12 @@ type BlogsReader interface {
 }
 
 func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParams) (*corev1.ListPostsResponseModel, error) {
-	// FIXME: нужно использовать готовые модели пагинации в openapi.yaml
 	// FIXME: удалить этот бойлерплейт
 	page := int(params.Page.Or(1))
 	pageSize := int(params.PageSize.Or(10))
 	sortOrder := string(params.SortOrder.Or("desc"))
 
-	items, totalPages, err := s.blogs.ListPosts(ctx, blogsmodel.ListPostsParams{Page: page, PageSize: pageSize, SortOrder: sortOrder})
+	items, totalItems, err := s.blogs.ListPosts(ctx, blogsmodel.ListPostsParams{Page: page, PageSize: pageSize, SortOrder: sortOrder})
 	if err != nil {
 		return nil, wrapBlogError(err, "failed to list posts")
 	}
@@ -50,11 +51,8 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 	}
 
 	return &corev1.ListPostsResponseModel{
-		Pagination: corev1.PaginationModel{
-			Total: safeInt32(totalPages), // FIXME: разобраться где возникает проблема типов
-			Page:  safeInt32(page),       // FIXME: аналогично
-		},
-		Posts: posts,
+		Pagination: PaginationDTO(paging.NewPagination(safeInt32(page), safeInt32(pageSize), safeInt32(totalItems))),
+		Posts:      posts,
 	}, nil
 }
 

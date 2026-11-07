@@ -31,6 +31,20 @@ func (q *Queries) AddTeamMember(ctx context.Context, arg AddTeamMemberParams) er
 	return err
 }
 
+const countTeamMembers = `-- name: CountTeamMembers :one
+SELECT COUNT(*)
+FROM team_members tm
+JOIN users u ON tm.user_id = u.id
+WHERE tm.team_id = $1
+`
+
+func (q *Queries) CountTeamMembers(ctx context.Context, teamID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countTeamMembers, teamID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countTeams = `-- name: CountTeams :one
 SELECT COUNT(*) FROM teams t
 WHERE ($1::uuid IS NULL OR t.organization_id = $1)
@@ -293,8 +307,15 @@ SELECT tm.team_id, tm.user_id, tm.role, tm.created_at,
 FROM team_members tm
 JOIN users u ON tm.user_id = u.id
 WHERE tm.team_id = $1
-ORDER BY tm.created_at
+ORDER BY tm.created_at, tm.user_id
+LIMIT $3::int OFFSET $2::bigint
 `
+
+type ListTeamMembersParams struct {
+	TeamID     uuid.UUID `json:"team_id"`
+	PageOffset int64     `json:"page_offset"`
+	PageSize   int32     `json:"page_size"`
+}
 
 type ListTeamMembersRow struct {
 	TeamID    uuid.UUID                   `json:"team_id"`
@@ -305,8 +326,8 @@ type ListTeamMembersRow struct {
 	Email     *string                     `json:"email"`
 }
 
-func (q *Queries) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]ListTeamMembersRow, error) {
-	rows, err := q.db.Query(ctx, listTeamMembers, teamID)
+func (q *Queries) ListTeamMembers(ctx context.Context, arg ListTeamMembersParams) ([]ListTeamMembersRow, error) {
+	rows, err := q.db.Query(ctx, listTeamMembers, arg.TeamID, arg.PageOffset, arg.PageSize)
 	if err != nil {
 		return nil, err
 	}

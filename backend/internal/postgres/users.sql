@@ -52,7 +52,7 @@ WHERE (
 ORDER BY CASE
         WHEN @search != '' THEN word_similarity(LOWER(username), LOWER(@search))
     END DESC NULLS LAST,
-    created_at DESC
+    created_at DESC, id DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
 -- name: CountUsers :one

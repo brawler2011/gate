@@ -13,7 +13,7 @@ import (
 )
 
 type Reads interface {
-	ListProblemMembers(context.Context, uuid.UUID) ([]problemsmodel.ProblemMember, error)
+	ListProblemMembers(context.Context, uuid.UUID, paging.Request) ([]problemsmodel.ProblemMember, int32, error)
 	GetProblemTeams(context.Context, uuid.UUID) ([]problemsmodel.ProblemTeam, error)
 	ListProblems(context.Context, *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error)
 	ListDashboardProblems(context.Context, uuid.UUID, int32) ([]problemsmodel.DashboardProblem, error)
@@ -73,11 +73,19 @@ func (r *Reader) authorize(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *Reader) ListProblemMembers(ctx context.Context, id uuid.UUID) ([]problemsmodel.ProblemMember, error) {
+func (r *Reader) ListProblemMembers(ctx context.Context, id uuid.UUID, request paging.Request) (*paging.List[problemsmodel.ProblemMember], error) {
 	if err := r.authorize(ctx, id); err != nil {
 		return nil, err
 	}
-	return r.reads.ListProblemMembers(ctx, id)
+	request, err := request.Normalize()
+	if err != nil {
+		return nil, err
+	}
+	items, total, err := r.reads.ListProblemMembers(ctx, id, request)
+	if err != nil {
+		return nil, err
+	}
+	return &paging.List[problemsmodel.ProblemMember]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, total)}, nil
 }
 
 func (r *Reader) GetProblemTeams(ctx context.Context, id uuid.UUID) ([]problemsmodel.ProblemTeam, error) {

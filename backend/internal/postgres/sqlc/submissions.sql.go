@@ -348,7 +348,9 @@ ORDER BY CASE
   END DESC,
   CASE
     WHEN $6::int >= 0 THEN s.created_at
-  END ASC
+  END ASC,
+  CASE WHEN $6::int < 0 THEN s.id END DESC,
+  CASE WHEN $6::int >= 0 THEN s.id END ASC
 LIMIT $8 OFFSET $7
 `
 

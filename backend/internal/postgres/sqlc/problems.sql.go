@@ -115,6 +115,20 @@ func (q *Queries) CountAllProblems(ctx context.Context, arg CountAllProblemsPara
 	return count, err
 }
 
+const countProblemMembers = `-- name: CountProblemMembers :one
+SELECT COUNT(*)
+FROM problem_members pm
+JOIN users u ON pm.user_id = u.id
+WHERE pm.problem_id = $1
+`
+
+func (q *Queries) CountProblemMembers(ctx context.Context, problemID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countProblemMembers, problemID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createProblem = `-- name: CreateProblem :one
 
 INSERT INTO problems (id, organization_id, owner_id, visibility, title, short_name)
@@ -446,8 +460,15 @@ SELECT pm.problem_id, pm.user_id, pm.role, pm.created_at, u.username, u.email
 FROM problem_members pm
 JOIN users u ON pm.user_id = u.id
 WHERE pm.problem_id = $1
-ORDER BY pm.created_at
+ORDER BY pm.created_at, pm.user_id
+LIMIT $3::int OFFSET $2::bigint
 `
+
+type ListProblemMembersParams struct {
+	ProblemID  uuid.UUID `json:"problem_id"`
+	PageOffset int64     `json:"page_offset"`
+	PageSize   int32     `json:"page_size"`
+}
 
 type ListProblemMembersRow struct {
 	ProblemID uuid.UUID                 `json:"problem_id"`
@@ -458,8 +479,8 @@ type ListProblemMembersRow struct {
 	Email     *string                   `json:"email"`
 }
 
-func (q *Queries) ListProblemMembers(ctx context.Context, problemID uuid.UUID) ([]ListProblemMembersRow, error) {
-	rows, err := q.db.Query(ctx, listProblemMembers, problemID)
+func (q *Queries) ListProblemMembers(ctx context.Context, arg ListProblemMembersParams) ([]ListProblemMembersRow, error) {
+	rows, err := q.db.Query(ctx, listProblemMembers, arg.ProblemID, arg.PageOffset, arg.PageSize)
 	if err != nil {
 		return nil, err
 	}

@@ -87,8 +87,10 @@ func int32PtrToOptNilInt32(i *int32) corev1.OptNilInt32 {
 
 func PaginationDTO(p paging.Pagination) corev1.PaginationModel {
 	return corev1.PaginationModel{
-		Page:  p.Page,
-		Total: p.Total,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
+		TotalItems: p.TotalItems,
+		TotalPages: p.TotalPages,
 	}
 }
 
@@ -567,13 +569,10 @@ func organizationMemberDTO(m organizationsmodel.OrganizationMember) corev1.Organ
 	}
 }
 
-func listOrganizationMembersDTO(members []organizationsmodel.OrganizationMember, page, total int32) *corev1.ListOrganizationMembersResponseModel {
+func listOrganizationMembersDTO(members []organizationsmodel.OrganizationMember, pagination paging.Pagination) *corev1.ListOrganizationMembersResponseModel {
 	resp := corev1.ListOrganizationMembersResponseModel{
-		Members: make([]corev1.OrganizationMemberModel, len(members)),
-		Pagination: corev1.PaginationModel{
-			Page:  page,
-			Total: total,
-		},
+		Members:    make([]corev1.OrganizationMemberModel, len(members)),
+		Pagination: PaginationDTO(pagination),
 	}
 
 	for i, member := range members {
@@ -594,13 +593,10 @@ func teamDTO(t organizationsmodel.Team) corev1.TeamModel {
 	}
 }
 
-func listTeamsDTO(teams []organizationsmodel.Team, page, total int32) *corev1.ListTeamsResponseModel {
+func listTeamsDTO(teams []organizationsmodel.Team, pagination paging.Pagination) *corev1.ListTeamsResponseModel {
 	resp := corev1.ListTeamsResponseModel{
-		Teams: make([]corev1.TeamModel, len(teams)),
-		Pagination: corev1.PaginationModel{
-			Page:  page,
-			Total: total,
-		},
+		Teams:      make([]corev1.TeamModel, len(teams)),
+		Pagination: PaginationDTO(pagination),
 	}
 
 	for i, team := range teams {
@@ -620,13 +616,10 @@ func teamMemberDTO(m organizationsmodel.TeamMember) corev1.TeamMemberModel {
 	}
 }
 
-func listTeamMembersDTO(members []organizationsmodel.TeamMember, page, total int32) *corev1.ListTeamMembersResponseModel {
+func listTeamMembersDTO(members []organizationsmodel.TeamMember, pagination paging.Pagination) *corev1.ListTeamMembersResponseModel {
 	resp := corev1.ListTeamMembersResponseModel{
-		Members: make([]corev1.TeamMemberModel, len(members)),
-		Pagination: corev1.PaginationModel{
-			Page:  page,
-			Total: total,
-		},
+		Members:    make([]corev1.TeamMemberModel, len(members)),
+		Pagination: PaginationDTO(pagination),
 	}
 
 	for i, member := range members {
@@ -841,11 +834,8 @@ func usersListDTO(ul *identitymodel.UsersList) corev1.ListUsersResponseModel {
 	}
 
 	return corev1.ListUsersResponseModel{
-		Users: userDTOs,
-		Pagination: corev1.PaginationModel{
-			Page:  ul.Pagination.Page,
-			Total: ul.Pagination.Total,
-		},
+		Users:      userDTOs,
+		Pagination: PaginationDTO(ul.Pagination),
 	}
 }
 
@@ -906,13 +896,10 @@ func problemMemberDTO(pm problemsmodel.ProblemMember) corev1.ProblemMemberModel 
 	}
 }
 
-func listProblemMembersDTO(members []problemsmodel.ProblemMember, page, total int32) *corev1.ListProblemMembersResponseModel {
+func listProblemMembersDTO(members []problemsmodel.ProblemMember, pagination paging.Pagination) *corev1.ListProblemMembersResponseModel {
 	resp := corev1.ListProblemMembersResponseModel{
-		Members: make([]corev1.ProblemMemberModel, len(members)),
-		Pagination: corev1.PaginationModel{
-			Page:  page,
-			Total: total,
-		},
+		Members:    make([]corev1.ProblemMemberModel, len(members)),
+		Pagination: PaginationDTO(pagination),
 	}
 	for i, member := range members {
 		resp.Members[i] = problemMemberDTO(member)
@@ -983,8 +970,10 @@ func ListContestDraftsResponseDTO(list *contestsmodel.ContestDraftsList) *corev1
 		return &corev1.ListContestDraftsResponseModel{
 			Drafts: []corev1.ContestDraftModel{},
 			Pagination: corev1.PaginationModel{
-				Page:  1,
-				Total: 0,
+				Page:       1,
+				TotalItems: 0,
+				TotalPages: 0,
+				PageSize:   50,
 			},
 		}
 	}
@@ -1030,8 +1019,10 @@ func NotificationsListResponseDTO(list *notificationsmodel.NotificationsList) *c
 		return &corev1.NotificationsListResponseModel{
 			Notifications: []corev1.NotificationModel{},
 			Pagination: corev1.PaginationModel{
-				Page:  1,
-				Total: 0,
+				Page:       1,
+				TotalItems: 0,
+				TotalPages: 0,
+				PageSize:   50,
 			},
 		}
 	}
@@ -1051,7 +1042,7 @@ func ContestAnnouncementsListResponseDTO(list *contestsmodel.ContestAnnouncement
 	if list == nil {
 		return &corev1.ListContestAnnouncementsResponseModel{
 			Announcements: []corev1.ContestAnnouncementModel{},
-			Pagination:    corev1.PaginationModel{},
+			Pagination:    PaginationDTO(paging.NewPagination(1, 50, 0)),
 		}
 	}
 
@@ -1070,7 +1061,7 @@ func ContestClarificationsListResponseDTO(list *contestsmodel.ContestClarificati
 	if list == nil {
 		return &corev1.ListContestClarificationsResponseModel{
 			Clarifications: []corev1.ContestClarificationModel{},
-			Pagination:     corev1.PaginationModel{},
+			Pagination:     PaginationDTO(paging.NewPagination(1, 50, 0)),
 		}
 	}
 

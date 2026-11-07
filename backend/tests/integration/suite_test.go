@@ -246,7 +246,7 @@ func (s *IntegrationTestSuite) initApp() {
 			WorkshopUC:     workshopUC,
 			ImportUC:       importUC,
 			PublishUC:      publishUC,
-			PackagesReader: packagesRepo,
+			PackagesReader: publishUC,
 		},
 		coremodules.Submissions{SubmissionsUC: submissionsUC},
 		coremodules.Notifications{

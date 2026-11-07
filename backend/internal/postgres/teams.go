@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
@@ -186,10 +188,15 @@ func (r *TeamsRepo) GetTeamMember(ctx context.Context, teamID, userID uuid.UUID)
 	}, nil
 }
 
-func (r *TeamsRepo) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]organizationsmodel.TeamMember, error) {
-	members, err := r.q.ListTeamMembers(ctx, teamID)
+func (r *TeamsRepo) ListTeamMembers(ctx context.Context, teamID uuid.UUID, request paging.Request) ([]organizationsmodel.TeamMember, int32, error) {
+	request, err := request.Normalize()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list team members: %w", HandlePgErr(err))
+		return nil, 0, err
+	}
+
+	members, err := r.q.ListTeamMembers(ctx, sqlc.ListTeamMembersParams{TeamID: teamID, PageSize: request.PageSize, PageOffset: request.Offset()})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list team members: %w", HandlePgErr(err))
 	}
 
 	result := make([]organizationsmodel.TeamMember, len(members))
@@ -208,7 +215,11 @@ func (r *TeamsRepo) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]or
 		}
 	}
 
-	return result, nil
+	count, err := r.q.CountTeamMembers(ctx, teamID)
+	if err != nil {
+		return nil, 0, HandlePgErr(err)
+	}
+	return result, safeInt32(count), nil
 }
 
 func (r *TeamsRepo) UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole) error {
@@ -263,10 +274,15 @@ func mapTeams(teams []sqlc.Team) []organizationsmodel.Team {
 	return result
 }
 
-func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID, viewerID uuid.UUID) ([]contestsmodel.Contest, error) {
-	contests, err := r.q.GetTeamContests(ctx, sqlc.GetTeamContestsParams{TeamID: teamID, ViewerID: viewerID})
+func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]contestsmodel.Contest, int32, error) {
+	request, err := request.Normalize()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get team contests: %w", HandlePgErr(err))
+		return nil, 0, err
+	}
+
+	contests, err := r.q.GetTeamContests(ctx, sqlc.GetTeamContestsParams{TeamID: teamID, PageSize: request.PageSize, PageOffset: request.Offset(), ViewerID: viewerID})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get team contests: %w", HandlePgErr(err))
 	}
 
 	result := make([]contestsmodel.Contest, len(contests))
@@ -285,13 +301,22 @@ func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID, viewerID uuid.U
 		}
 	}
 
-	return result, nil
+	count, err := r.q.CountTeamContests(ctx, sqlc.CountTeamContestsParams{TeamID: teamID, ViewerID: viewerID})
+	if err != nil {
+		return nil, 0, HandlePgErr(err)
+	}
+	return result, safeInt32(count), nil
 }
 
-func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID, viewerID uuid.UUID) ([]problemsmodel.Problem, error) {
-	problems, err := r.q.GetTeamProblems(ctx, sqlc.GetTeamProblemsParams{TeamID: teamID, ViewerID: viewerID})
+func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]problemsmodel.Problem, int32, error) {
+	request, err := request.Normalize()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get team problems: %w", HandlePgErr(err))
+		return nil, 0, err
+	}
+
+	problems, err := r.q.GetTeamProblems(ctx, sqlc.GetTeamProblemsParams{TeamID: teamID, PageSize: request.PageSize, PageOffset: request.Offset(), ViewerID: viewerID})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get team problems: %w", HandlePgErr(err))
 	}
 
 	result := make([]problemsmodel.Problem, len(problems))
@@ -311,5 +336,9 @@ func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID, viewerID uuid.U
 		}
 	}
 
-	return result, nil
+	count, err := r.q.CountTeamProblems(ctx, sqlc.CountTeamProblemsParams{TeamID: teamID, ViewerID: viewerID})
+	if err != nil {
+		return nil, 0, HandlePgErr(err)
+	}
+	return result, safeInt32(count), nil
 }

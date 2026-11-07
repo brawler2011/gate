@@ -45,7 +45,7 @@ describe('SPA route tree', () => {
           created_at: '2026-10-01', updated_at: '2026-10-01'}});
       }
       if (url.pathname === '/api/users/alice/contests') {
-        return Response.json({contests: [], pagination: {page: 1, total: 0}});
+        return Response.json({contests: [], pagination: {page_size: 50, total_items: 0, page: 1, total_pages: 0}});
       }
       throw new Error(`Unexpected API request ${url.pathname}`);
     }, {preconnect: () => {}}));
@@ -90,7 +90,7 @@ describe('SPA route tree', () => {
           created_at: '2026-10-01', updated_at: '2026-10-01'}});
       }
       if (url.pathname === '/api/users/alice/contests') {
-        return Response.json({contests: [], pagination: {page: 1, total: 0}});
+        return Response.json({contests: [], pagination: {page_size: 50, total_items: 0, page: 1, total_pages: 0}});
       }
       if (url.pathname === '/api/users/me') {
         return Response.json({message: 'Unauthorized'}, {status: 401});
@@ -109,7 +109,7 @@ describe('SPA route tree', () => {
 
   it('uses native pagination links and preserves filters', async () => {
     const view = renderWithProviders(
-      <RoutePagination pagination={{page: 1, total: 3}} baseUrl="/admin/users" queryParams={{search: 'alice'}} />,
+      <RoutePagination pagination={{page_size: 50, total_items: 0, page: 1, total_pages: 3}} baseUrl="/admin/users" queryParams={{search: 'alice'}} />,
       {route: '/admin/users?search=alice&page=1'},
     );
     const page = view.container.querySelector<HTMLAnchorElement>('a[href="/admin/users?search=alice&page=2"]')!;

@@ -50,7 +50,7 @@ func TestListContestAnnouncementsReader(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			response := &contestsmodel.ContestAnnouncementsList{
 				Announcements: []contestsmodel.ContestAnnouncement{{ID: uuid.New()}},
-				Pagination:    paging.Pagination{Page: 3, Total: 4},
+				Pagination:    paging.Pagination{Page: 3, PageSize: 50, TotalItems: 175, TotalPages: 4},
 			}
 			contests := announcementsContestStub{resolve: func(gotCtx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error) {
 				require.Equal(t, ctx, gotCtx)
@@ -96,7 +96,7 @@ func TestListContestAnnouncementsReader(t *testing.T) {
 				require.True(t, called)
 				require.Equal(t, response.Announcements[0].ID, got.Announcements[0].ID)
 				require.Equal(t, response.Pagination.Page, got.Pagination.Page)
-				require.Equal(t, response.Pagination.Total, got.Pagination.Total)
+				require.Equal(t, response.Pagination.TotalPages, got.Pagination.TotalPages)
 			}
 		})
 	}

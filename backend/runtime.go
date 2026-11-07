@@ -325,7 +325,7 @@ func runApp(envFile string) error {
 			WorkshopUC:     workshopUC,
 			ImportUC:       problemImportUC,
 			PublishUC:      problemPublishUC,
-			PackagesReader: packagesRepo,
+			PackagesReader: problemPublishUC,
 		},
 		coremodules.Submissions{SubmissionsUC: submissionsUC},
 		coremodules.Notifications{

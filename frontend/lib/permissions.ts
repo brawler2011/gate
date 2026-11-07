@@ -378,7 +378,7 @@ export const canManageOrgMembers = async (orgLogin: string): Promise<boolean> =>
 
   let page = 1;
   const pageSize = 100;
-  while (page <= 20) {
+  while (true) {
     const {data, error} = await api.GET("/organizations/{login}/members", {
       params: {
         path: {login: orgLogin},
@@ -394,8 +394,8 @@ export const canManageOrgMembers = async (orgLogin: string): Promise<boolean> =>
       return member.role === "owner" || member.role === "admin";
     }
 
-    const total = data.pagination?.total ?? 0;
-    if (page * pageSize >= total || data.members.length < pageSize) {
+    const totalPages = data.pagination.total_pages;
+    if (page >= totalPages) {
       break;
     }
     page++;

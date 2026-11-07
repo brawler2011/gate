@@ -45,7 +45,7 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
   });
 
   const posts = data?.posts || [];
-  const pagination = data?.pagination || {total: 0, page: page};
+  const pagination = data?.pagination || {page_size: 50, total_items: 0, total_pages: 0, page: page};
 
   const handleCreatePost = () => {
     setEditingPost(null);
@@ -152,7 +152,7 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
     );
   }
 
-  const totalPages = pagination.total || 1;
+  const totalPages = pagination.total_pages || 1;
   const queryParams: Record<string, string | number | undefined> = {};
   if (search) {
     queryParams.search = search;
@@ -210,10 +210,7 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
             {totalPages > 1 && (
               <Stack align="center" gap="md">
                 <RoutePagination
-                  pagination={{
-                    page: page,
-                    total: totalPages,
-                  }}
+                  pagination={pagination}
                   baseUrl="/admin/blogs"
                   queryParams={queryParams}
                 />

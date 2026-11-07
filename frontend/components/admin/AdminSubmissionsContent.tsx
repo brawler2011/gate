@@ -90,7 +90,7 @@ export const AdminSubmissionsContent = ({
   });
 
   const submissions = (data?.submissions || []) as unknown as SubmissionModel[];
-  const pagination = data?.pagination || {total: 0, page: page};
+  const pagination = data?.pagination || {page_size: 50, total_items: 0, total_pages: 0, page: page};
 
   const handleRejudge = async (e: React.MouseEvent, submission: SubmissionModel) => {
     e.stopPropagation();
@@ -146,7 +146,7 @@ export const AdminSubmissionsContent = ({
     );
   }
 
-  const totalPages = pagination.total || 1;
+  const totalPages = pagination.total_pages || 1;
   const hasActiveFilters = !!(state || language || contestId || problemId || userId);
 
   const queryParams: Record<string, string | number | undefined> = {};
@@ -408,10 +408,7 @@ export const AdminSubmissionsContent = ({
             {totalPages > 1 && (
               <Stack align="center" gap="md">
                 <RoutePagination
-                  pagination={{
-                    page: page,
-                    total: totalPages,
-                  }}
+                  pagination={pagination}
                   baseUrl="/admin/submissions"
                   queryParams={queryParams}
                 />

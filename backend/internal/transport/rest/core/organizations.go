@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
@@ -164,15 +166,12 @@ func (h *CoreServer) DeleteOrganization(ctx context.Context, params corev1.Delet
 func (h *CoreServer) ListOrganizationMembers(ctx context.Context, params corev1.ListOrganizationMembersParams) (*corev1.ListOrganizationMembersResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 
-	page := params.Page.Or(1)
-
-	members, err := h.organizations.ListMembersByLogin(ctx, params.Login, user.Id)
+	members, err := h.organizations.ListMembersByLogin(ctx, params.Login, user.Id, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to list organization members")
 	}
 
-	total := safeInt32(len(members))
-	return listOrganizationMembersDTO(members, page, total), nil
+	return listOrganizationMembersDTO(members.Items, members.Pagination), nil
 }
 
 // AddOrganizationMember handles POST /organizations/{login}/members

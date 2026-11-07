@@ -18,7 +18,7 @@ import {flushMicrotasks, TestWebSocket} from "./websocket-test-utils";
 
 import type {ContestModel, UserModel} from "@/contracts/core/v1/schema";
 
-const pagination = {page: 1, total: 0};
+const pagination = {page_size: 50, total_items: 0, page: 1, total_pages: 0};
 const originalSocket = globalThis.WebSocket;
 let fetch: ReturnType<typeof spyOn<typeof globalThis, "fetch">>;
 let show: ReturnType<typeof spyOn<typeof notifications, "show">>;

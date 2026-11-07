@@ -135,7 +135,7 @@ const listNotificationsByUserID = `-- name: ListNotificationsByUserID :many
 SELECT id, user_id, type, title, body, link, data, is_read, created_at FROM notifications
 WHERE user_id = $1
   AND ($4::boolean IS NOT TRUE OR is_read = FALSE)
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id DESC
 LIMIT $2 OFFSET $3
 `
 

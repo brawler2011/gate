@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+
 	"github.com/brawler2011/gate/backend/pkg"
 
 	blogsmodel "github.com/brawler2011/gate/backend/internal/blogs/model"
@@ -58,9 +59,6 @@ func (r *BlogsRepo) ListPosts(ctx context.Context, params blogsmodel.ListPostsPa
 		return nil, 0, HandlePgErr(err)
 	}
 
-	// Calculate total pages
-	totalPages := int((totalCount + int64(params.PageSize) - 1) / int64(params.PageSize))
-
 	// Build query based on sort order
 	offset := (params.Page - 1) * params.PageSize
 	var rows []sqlc.Post
@@ -83,7 +81,7 @@ func (r *BlogsRepo) ListPosts(ctx context.Context, params blogsmodel.ListPostsPa
 		posts = append(posts, postFromSQLC(row))
 	}
 
-	return posts, totalPages, nil
+	return posts, int(totalCount), nil
 }
 
 // UpdatePost updates an existing post

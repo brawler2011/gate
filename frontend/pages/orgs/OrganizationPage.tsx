@@ -51,22 +51,26 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
 
   const currentUser = me?.user ?? null;
   const contests = contestsData?.contests ?? [];
-  const contestsPagination = contestsData?.pagination ?? {page: 1, total: 1};
+  const contestsPagination = contestsData?.pagination ?? {page_size: 50, total_items: 0, page: 1, total_pages: 0};
   const isAuthenticated = currentUser !== null;
 
   let isMember = false;
   if (currentUser) {
-    // The members endpoint returns the complete list, without server-side pagination.
-    const {data: membersData, error: membersError, response: membersResponse} = await api.GET(
-      "/organizations/{login}/members",
-      {
-        params: {path: {login: org.login}},
-      },
-    );
-    if (membersError && membersResponse.status !== 403) {
-      throw membersError;
+    let memberPage = 1;
+    while (true) {
+      const {data: membersData, error: membersError, response: membersResponse} = await api.GET(
+        "/organizations/{login}/members",
+        {params: {path: {login: org.login}, query: {page: memberPage, pageSize: 100}}},
+      );
+      if (membersError && membersResponse.status !== 403) {
+        throw membersError;
+      }
+      isMember = membersData?.members.some((member) => member.user_id === currentUser.id) ?? false;
+      if (isMember || !membersData || memberPage >= membersData.pagination.total_pages) {
+        break;
+      }
+      memberPage++;
     }
-    isMember = membersData?.members.some((member) => member.user_id === currentUser.id) ?? false;
   }
   return {search, org, contestsError, contests, contestsPagination, isAuthenticated, isMember};
 }) satisfies LoaderFunction;

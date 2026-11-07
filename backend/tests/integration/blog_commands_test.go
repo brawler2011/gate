@@ -109,6 +109,11 @@ func (s *IntegrationTestSuite) TestListPostsPagination() {
 	s.Require().NotNil(resDesc)
 	s.Require().Len(resDesc.Posts, 1)
 	s.NotEqual(resAsc.Posts[0].ID, resDesc.Posts[0].ID)
+	var count int32
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT COUNT(*) FROM posts").Scan(&count))
+	twoPerPage, err := s.client.ListPosts(s.ctx, corev1.ListPostsParams{Page: corev1.NewOptInt32(1), PageSize: corev1.NewOptInt32(2)})
+	s.Require().NoError(err)
+	s.Equal(corev1.PaginationModel{Page: 1, PageSize: 2, TotalItems: count, TotalPages: count/2 + count%2}, twoPerPage.Pagination)
 
 	got, err := s.client.GetPostById(s.ctx, corev1.GetPostByIdParams{ID: ids[0]})
 	s.Require().NoError(err)

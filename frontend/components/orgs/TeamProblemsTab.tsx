@@ -1,11 +1,11 @@
-import {Badge, Card, Center, Loader, Stack, Table, Text} from "@mantine/core";
+import {Pagination, Badge, Card, Center, Loader, Stack, Table, Text} from "@mantine/core";
 import {IconFileCode} from "@tabler/icons-react";
-import {useCallback, useEffect, useState} from "react";
 import {Link} from "react-router-dom";
 
-import {api} from "@/lib/api";
+import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
+import {usePagedQuery} from "@/hooks/usePagedQuery";
+import {api, unwrap} from "@/lib/api";
 
-import type * as corev1 from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 interface TeamProblemsTabProps {
@@ -13,27 +13,16 @@ interface TeamProblemsTabProps {
 }
 
 export const TeamProblemsTab = ({teamId}: TeamProblemsTabProps): ReactNode => {
-  const [problems, setProblems] = useState<corev1.ProblemsListItemModel[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const loadProblems = useCallback(async () => {
-    setLoading(true);
-    const {data: response, error} = await api.GET("/teams/{id}/problems", {
-      params: {path: {id: teamId}},
-    });
-    setLoading(false);
+  const {data, isPending: loading, error, page, setPage} = usePagedQuery(
+    ["team-problems", teamId],
+    (page, pageSize) => unwrap(api.GET("/teams/{id}/problems", {params: {path: {id: teamId}, query: {page, pageSize}}})),
+  );
+  const problems = data?.problems ?? [];
 
-    if (error || !response) {
-      console.error("Failed to load team problems:", error);
-      return;
-    }
-
-    setProblems(response.problems);
-  }, [teamId]);
-
-  useEffect(() => {
-    loadProblems();
-  }, [loadProblems]);
+  if (error) {
+    return <ErrorDisplay error={error} />;
+  }
 
   if (loading) {
     return (
@@ -92,6 +81,9 @@ export const TeamProblemsTab = ({teamId}: TeamProblemsTabProps): ReactNode => {
           ))}
         </Table.Tbody>
       </Table>
+      {data && data.pagination.total_pages > 1 && (
+        <Pagination value={page} onChange={setPage} total={data.pagination.total_pages} />
+      )}
     </Card>
   );
 };

@@ -42,7 +42,7 @@ JOIN users u ON ca.author_id = u.id
 LEFT JOIN problems p ON ca.problem_id = p.id
 LEFT JOIN contest_problems cp ON cp.contest_id = ca.contest_id AND cp.problem_id = ca.problem_id
 WHERE ca.contest_id = $1
-ORDER BY ca.created_at DESC
+ORDER BY ca.created_at DESC, ca.id DESC
 LIMIT $2 OFFSET $3;
 
 -- name: CountContestAnnouncements :one

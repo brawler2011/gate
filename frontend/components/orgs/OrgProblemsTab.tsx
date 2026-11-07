@@ -79,7 +79,7 @@ export const OrgProblemsTab = ({
         </SimpleGrid>
       )}
 
-      {pagination.total > 1 && (
+      {pagination.total_pages > 1 && (
         <Stack align="center">
           <RoutePagination
             pagination={pagination}

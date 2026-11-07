@@ -1131,7 +1131,7 @@ func (UnimplementedHandler) ListProblemMembers(ctx context.Context, params ListP
 
 // ListProblemPackages implements ListProblemPackages operation.
 //
-// List all packages for a problem.
+// List a page of problem packages, newest version first.
 //
 // GET /problems/{id}/packages
 func (UnimplementedHandler) ListProblemPackages(ctx context.Context, params ListProblemPackagesParams) (r *ListProblemPackagesOK, _ error) {

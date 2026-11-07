@@ -56,7 +56,7 @@ func (s *IntegrationTestSuite) TestProblemListGuestAccess() {
 				s.Equal(problemsmodel.ProblemVisibilityPublic, problem.Visibility.Or(""))
 			}
 			s.ElementsMatch(tc.want, ids)
-			s.Equal(paging.Total(int32(len(tc.want)), 50), resp.Pagination.Total)
+			s.Equal(paging.Total(int32(len(tc.want)), 50), resp.Pagination.TotalPages)
 		})
 	}
 
@@ -66,7 +66,7 @@ func (s *IntegrationTestSuite) TestProblemListGuestAccess() {
 			Page: corev1.NewOptInt32(page), PageSize: corev1.NewOptInt32(1),
 		})
 		s.Require().NoError(err)
-		s.Equal(int32(2), resp.Pagination.Total)
+		s.Equal(int32(2), resp.Pagination.TotalPages)
 		for _, problem := range resp.Problems {
 			pagedIDs = append(pagedIDs, problem.ID)
 		}
@@ -163,7 +163,7 @@ func (s *IntegrationTestSuite) TestProblemListAuthenticatedAccess() {
 			params.Page = corev1.NewOptInt32(page)
 			resp, err := s.client.ListProblems(ctx, params)
 			s.Require().NoError(err)
-			s.Equal(totalPages, resp.Pagination.Total)
+			s.Equal(totalPages, resp.Pagination.TotalPages)
 			s.Equal(page, resp.Pagination.Page)
 			if page > totalPages {
 				s.Empty(resp.Problems)

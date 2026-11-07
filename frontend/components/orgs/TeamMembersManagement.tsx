@@ -1,16 +1,17 @@
 "use client";
 
-import {ActionIcon, Autocomplete, Badge, Button, Card, Center, Group, Loader, Skeleton, Select, Stack, Table, Text} from "@mantine/core";
+import {Pagination, ActionIcon, Autocomplete, Badge, Button, Card, Center, Group, Loader, Skeleton, Select, Stack, Table, Text} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconEdit, IconPlus, IconTrash, IconUsers} from "@tabler/icons-react";
-import {useCallback, useEffect, useState} from "react";
+import {useEffect, useState} from "react";
 
 import {ChangeRoleModal} from "@/components/contests/ChangeRoleModal";
 import {LinkAnchor} from "@/components/shared";
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {StatusMessage} from "@/components/shared/StatusMessage";
-import {api, type ApiError} from "@/lib/api";
+import {usePagedQuery} from "@/hooks/usePagedQuery";
+import {api, unwrap} from "@/lib/api";
 
 import type {TeamMemberModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
@@ -28,9 +29,6 @@ const getRoleDisplay = (role: string) => {
 };
 
 export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
-  const [members, setMembers] = useState<TeamMemberModel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
   const [searchResults, setSearchResults] = useState<{ value: string; label: string }[]>([]);
@@ -48,31 +46,11 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
   } | null>(null);
   const [modalOpened, setModalOpened] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const {data, error, response} = await api.GET("/teams/{id}/members", {
-      params: {
-        path: {id: teamId},
-        query: {page: 1, pageSize: 100},
-      },
-    });
-    setLoading(false);
-    setError(
-      error
-        ? {
-          message: (error as {message?: string})?.message || response.statusText || "Ошибка",
-          status: response.status,
-        }
-        : null,
-    );
-    if (data) {
-      setMembers(data.members);
-    }
-  }, [teamId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const {data, isPending: loading, error, refetch: load, page, setPage} = usePagedQuery(
+    ["team-members", teamId],
+    (page, pageSize) => unwrap(api.GET("/teams/{id}/members", {params: {path: {id: teamId}, query: {page, pageSize}}})),
+  );
+  const members = data?.members ?? [];
 
   useEffect(() => {
     if (!debouncedQuery || debouncedQuery.length < 2) {
@@ -281,6 +259,9 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
               ))}
             </Table.Tbody>
           </Table>
+        )}
+        {data && data.pagination.total_pages > 1 && (
+          <Pagination value={page} onChange={setPage} total={data.pagination.total_pages} />
         )}
       </Stack>
 

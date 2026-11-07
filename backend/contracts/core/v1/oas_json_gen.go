@@ -10238,19 +10238,22 @@ func (s *ListProblemPackagesOK) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ListProblemPackagesOK) encodeFields(e *jx.Encoder) {
 	{
-		if s.Packages != nil {
-			e.FieldStart("packages")
-			e.ArrStart()
-			for _, elem := range s.Packages {
-				elem.Encode(e)
-			}
-			e.ArrEnd()
+		e.FieldStart("pagination")
+		s.Pagination.Encode(e)
+	}
+	{
+		e.FieldStart("packages")
+		e.ArrStart()
+		for _, elem := range s.Packages {
+			elem.Encode(e)
 		}
+		e.ArrEnd()
 	}
 }
 
-var jsonFieldsNameOfListProblemPackagesOK = [1]string{
-	0: "packages",
+var jsonFieldsNameOfListProblemPackagesOK = [2]string{
+	0: "pagination",
+	1: "packages",
 }
 
 // Decode decodes ListProblemPackagesOK from json.
@@ -10258,10 +10261,22 @@ func (s *ListProblemPackagesOK) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode ListProblemPackagesOK to nil")
 	}
+	var requiredBitSet [1]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
+		case "pagination":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Pagination.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"pagination\"")
+			}
 		case "packages":
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				s.Packages = make([]ListProblemPackagesOKPackagesItem, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -10284,6 +10299,38 @@ func (s *ListProblemPackagesOK) Decode(d *jx.Decoder) error {
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "decode ListProblemPackagesOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfListProblemPackagesOK) {
+					name = jsonFieldsNameOfListProblemPackagesOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
 	}
 
 	return nil
@@ -14110,14 +14157,24 @@ func (s *PaginationModel) encodeFields(e *jx.Encoder) {
 		e.Int32(s.Page)
 	}
 	{
-		e.FieldStart("total")
-		e.Int32(s.Total)
+		e.FieldStart("page_size")
+		e.Int32(s.PageSize)
+	}
+	{
+		e.FieldStart("total_items")
+		e.Int32(s.TotalItems)
+	}
+	{
+		e.FieldStart("total_pages")
+		e.Int32(s.TotalPages)
 	}
 }
 
-var jsonFieldsNameOfPaginationModel = [2]string{
+var jsonFieldsNameOfPaginationModel = [4]string{
 	0: "page",
-	1: "total",
+	1: "page_size",
+	2: "total_items",
+	3: "total_pages",
 }
 
 // Decode decodes PaginationModel from json.
@@ -14141,17 +14198,41 @@ func (s *PaginationModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"page\"")
 			}
-		case "total":
+		case "page_size":
 			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				v, err := d.Int32()
-				s.Total = int32(v)
+				s.PageSize = int32(v)
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"total\"")
+				return errors.Wrap(err, "decode field \"page_size\"")
+			}
+		case "total_items":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Int32()
+				s.TotalItems = int32(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"total_items\"")
+			}
+		case "total_pages":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Int32()
+				s.TotalPages = int32(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"total_pages\"")
 			}
 		default:
 			return d.Skip()
@@ -14163,7 +14244,7 @@ func (s *PaginationModel) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

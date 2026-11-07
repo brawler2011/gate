@@ -38,7 +38,7 @@ func (s *IntegrationTestSuite) TestOrganizationContestReadVisibilityAndPaginatio
 	s.Require().NoError(err)
 	s.Require().Len(first.Contests, 1)
 	s.Equal(publicIDs[1], first.Contests[0].ID)
-	s.EqualValues(2, first.Pagination.Total)
+	s.EqualValues(2, first.Pagination.TotalPages)
 	params.Page = corev1.NewOptInt32(2)
 	second, err := s.client.ListOrganizationContests(withTestUser(s.ctx, outsider.Id), params)
 	s.Require().NoError(err)
@@ -47,18 +47,18 @@ func (s *IntegrationTestSuite) TestOrganizationContestReadVisibilityAndPaginatio
 	for _, actor := range []accessmodel.User{owner, member, admin} {
 		response, err := s.client.ListOrganizationContests(withTestUser(s.ctx, actor.Id), params)
 		s.Require().NoError(err)
-		s.EqualValues(3, response.Pagination.Total)
+		s.EqualValues(3, response.Pagination.TotalPages)
 	}
 	params.Page = corev1.NewOptInt32(3)
 	empty, err := s.client.ListOrganizationContests(withTestUser(s.ctx, outsider.Id), params)
 	s.Require().NoError(err)
 	s.Empty(empty.Contests)
-	s.EqualValues(2, empty.Pagination.Total)
+	s.EqualValues(2, empty.Pagination.TotalPages)
 	params.Search = corev1.NewOptString("absent")
 	empty, err = s.client.ListOrganizationContests(withTestUser(s.ctx, owner.Id), params)
 	s.Require().NoError(err)
 	s.Empty(empty.Contests)
-	s.Zero(empty.Pagination.Total)
+	s.Zero(empty.Pagination.TotalPages)
 }
 
 func (s *IntegrationTestSuite) TestContestReadFiltersOrderingAndRosterPages() {
@@ -78,18 +78,18 @@ func (s *IntegrationTestSuite) TestContestReadFiltersOrderingAndRosterPages() {
 		s.Require().NoError(err)
 		s.Require().Len(list.Contests, 1)
 		s.Equal(ids[0], list.Contests[0].ID)
-		s.EqualValues(2, list.Pagination.Total)
+		s.EqualValues(2, list.Pagination.TotalPages)
 	}
 	list, err := reader.ListUserContests(ctx, contestsmodel.UserContestsFilter{UserId: owner.Id, Search: "Needle", SortBy: "title", SortOrder: "desc", Page: 2, PageSize: 1})
 	s.Require().NoError(err)
 	s.Require().Len(list.Contests, 1)
 	s.Equal(ids[2], list.Contests[0].ID)
-	s.EqualValues(2, list.Pagination.Total)
+	s.EqualValues(2, list.Pagination.TotalPages)
 	public, err := s.contestsRepo.ListPublicContests(s.ctx, contestsmodel.PublicContestsFilter{Search: "Needle", SortBy: "title", SortOrder: "asc", Page: 1, PageSize: 1})
 	s.Require().NoError(err)
 	s.Require().Len(public.Contests, 1)
 	s.Equal(ids[2], public.Contests[0].ID)
-	s.EqualValues(2, public.Pagination.Total)
+	s.EqualValues(2, public.Pagination.TotalPages)
 	_, err = reader.ListAdminContests(ctx, contestsmodel.AdminContestsFilter{})
 	s.ErrorIs(err, pkg.NoPermission)
 	_, err = reader.ListUserContests(ctx, contestsmodel.UserContestsFilter{UserId: other.Id})
@@ -104,7 +104,7 @@ func (s *IntegrationTestSuite) TestContestReadFiltersOrderingAndRosterPages() {
 	s.Require().Len(first.Members, 1)
 	s.Require().Len(second.Members, 1)
 	s.NotEqual(first.Members[0].UserID, second.Members[0].UserID)
-	s.EqualValues(2, first.Pagination.Total)
+	s.EqualValues(2, first.Pagination.TotalPages)
 }
 
 func (s *IntegrationTestSuite) TestProblemTemplateCatalogHidesPrivateOrganizationTemplates() {

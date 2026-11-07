@@ -149,11 +149,8 @@ func (uc *TeamsUseCase) ListTeams(ctx context.Context, filter *organizationsmode
 		return nil, err
 	}
 	return &organizationsmodel.TeamsList{
-		Teams: teams,
-		Pagination: paging.Pagination{
-			Page:  normalized.Page,
-			Total: total,
-		},
+		Teams:      teams,
+		Pagination: paging.NewPagination(normalized.Page, normalized.PageSize, total),
 	}, nil
 }
 
@@ -213,11 +210,19 @@ func (uc *TeamsUseCase) AddTeamMember(ctx context.Context, input *organizationsm
 	})
 }
 
-func (uc *TeamsUseCase) ListTeamMembers(ctx context.Context, teamID, requestUserID uuid.UUID) ([]organizationsmodel.TeamMember, error) {
+func (uc *TeamsUseCase) ListTeamMembers(ctx context.Context, teamID, requestUserID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.TeamMember], error) {
 	if _, err := uc.GetTeam(ctx, teamID, requestUserID); err != nil {
 		return nil, err
 	}
-	return uc.repo.ListTeamMembers(ctx, teamID)
+	request, err := request.Normalize()
+	if err != nil {
+		return nil, err
+	}
+	items, total, err := uc.repo.ListTeamMembers(ctx, teamID, request)
+	if err != nil {
+		return nil, err
+	}
+	return &paging.List[organizationsmodel.TeamMember]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, total)}, nil
 }
 
 func (uc *TeamsUseCase) UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole, requestUserID uuid.UUID) error {
@@ -261,18 +266,34 @@ func (uc *TeamsUseCase) RemoveTeamMember(ctx context.Context, teamID, userID, re
 	})
 }
 
-func (uc *TeamsUseCase) GetTeamContests(ctx context.Context, teamID, requestUserID uuid.UUID) ([]contestsmodel.Contest, error) {
+func (uc *TeamsUseCase) GetTeamContests(ctx context.Context, teamID, requestUserID uuid.UUID, request paging.Request) (*paging.List[contestsmodel.Contest], error) {
 	if _, err := uc.GetTeam(ctx, teamID, requestUserID); err != nil {
 		return nil, err
 	}
-	return uc.repo.GetTeamContests(ctx, teamID, requestUserID)
+	request, err := request.Normalize()
+	if err != nil {
+		return nil, err
+	}
+	items, total, err := uc.repo.GetTeamContests(ctx, teamID, requestUserID, request)
+	if err != nil {
+		return nil, err
+	}
+	return &paging.List[contestsmodel.Contest]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, total)}, nil
 }
 
-func (uc *TeamsUseCase) GetTeamProblems(ctx context.Context, teamID, requestUserID uuid.UUID) ([]problemsmodel.Problem, error) {
+func (uc *TeamsUseCase) GetTeamProblems(ctx context.Context, teamID, requestUserID uuid.UUID, request paging.Request) (*paging.List[problemsmodel.Problem], error) {
 	if _, err := uc.GetTeam(ctx, teamID, requestUserID); err != nil {
 		return nil, err
 	}
-	return uc.repo.GetTeamProblems(ctx, teamID, requestUserID)
+	request, err := request.Normalize()
+	if err != nil {
+		return nil, err
+	}
+	items, total, err := uc.repo.GetTeamProblems(ctx, teamID, requestUserID, request)
+	if err != nil {
+		return nil, err
+	}
+	return &paging.List[problemsmodel.Problem]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, total)}, nil
 }
 
 func (uc *TeamsUseCase) withinTeam(ctx context.Context, id, actor uuid.UUID, fn func(TeamTxStore, *organizationsmodel.Team) error) error {

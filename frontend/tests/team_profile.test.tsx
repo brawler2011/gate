@@ -60,14 +60,16 @@ describe("Team profile through the production page", () => {
         return membersStatus === 200 ? Response.json({members: [
           {user_id: "alice", team_id: team.id, username: "alice", role: "maintainer", created_at: "2026-10-01"},
           {user_id: "bob", team_id: team.id, username: "bob", role: "member", created_at: "2026-10-01"},
-        ], pagination: {page: 1, total: 2}}) : Response.json({message: "Members unavailable"}, {status: membersStatus});
+        ],
+        pagination: {page_size: 50, total_items: 0, page: 1, total_pages: 2}}) : Response.json({message: "Members unavailable"}, {status: membersStatus});
       }
       if (url.pathname.endsWith("/contests")) {
-        return contestsStatus === 200 ? Response.json({contests, pagination: {page: 1, total: contests.length}})
+        return contestsStatus === 200 ? Response.json({contests,
+          pagination: {page_size: 50, total_items: 0, page: 1, total_pages: contests.length}})
           : Response.json({message: "Contests unavailable"}, {status: contestsStatus});
       }
       if (url.pathname.endsWith("/problems")) {
-        return Response.json({problems: [], pagination: {page: 1, total: 0}});
+        return Response.json({problems: [], pagination: {page_size: 50, total_items: 0, page: 1, total_pages: 0}});
       }
       throw new Error(`Unexpected API request: ${url.pathname}`);
     }, {preconnect: () => {}}));

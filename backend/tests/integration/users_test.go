@@ -166,7 +166,7 @@ func (s *IntegrationTestSuite) TestUsers() {
 		s.True(hasSearchUser1)
 		s.True(hasSearchUser2)
 		s.GreaterOrEqual(len(resp.Users), 2)
-		s.Equal(int32(1), resp.Pagination.Total)
+		s.Equal(int32(1), resp.Pagination.TotalPages)
 	})
 }
 

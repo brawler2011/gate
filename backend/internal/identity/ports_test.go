@@ -3,6 +3,8 @@ package identity
 import (
 	"context"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
@@ -22,6 +24,7 @@ type OrganizationsRepo interface {
 	// Member management
 	AddMember(ctx context.Context, orgID, userID uuid.UUID, role organizationsmodel.OrganizationRole) error
 	GetMember(ctx context.Context, orgID, userID uuid.UUID) (*organizationsmodel.OrganizationMember, error)
+	ListMembersPage(ctx context.Context, orgID uuid.UUID, request paging.Request) ([]organizationsmodel.OrganizationMember, int32, error)
 	ListMembers(ctx context.Context, orgID uuid.UUID) ([]organizationsmodel.OrganizationMember, error)
 	UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role organizationsmodel.OrganizationRole) error
 	RemoveMember(ctx context.Context, orgID, userID uuid.UUID) error
@@ -72,7 +75,7 @@ type TeamsRepo interface {
 	// Member management
 	AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole) error
 	GetTeamMember(ctx context.Context, teamID, userID uuid.UUID) (*organizationsmodel.TeamMember, error)
-	ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]organizationsmodel.TeamMember, error)
+	ListTeamMembers(ctx context.Context, teamID uuid.UUID, request paging.Request) ([]organizationsmodel.TeamMember, int32, error)
 	UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole) error
 	RemoveTeamMember(ctx context.Context, teamID, userID uuid.UUID) error
 
@@ -80,8 +83,8 @@ type TeamsRepo interface {
 	GetUserTeamsByOrganization(ctx context.Context, userID, orgID uuid.UUID) ([]organizationsmodel.Team, error)
 
 	// Resource associations
-	GetTeamContests(ctx context.Context, teamID, viewerID uuid.UUID) ([]contestsmodel.Contest, error)
-	GetTeamProblems(ctx context.Context, teamID, viewerID uuid.UUID) ([]problemsmodel.Problem, error)
+	GetTeamContests(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]contestsmodel.Contest, int32, error)
+	GetTeamProblems(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]problemsmodel.Problem, int32, error)
 }
 
 type UsersUC interface {

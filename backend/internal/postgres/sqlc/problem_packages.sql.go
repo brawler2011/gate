@@ -11,6 +11,18 @@ import (
 	"github.com/google/uuid"
 )
 
+const countProblemPackages = `-- name: CountProblemPackages :one
+SELECT COUNT(*) FROM problem_packages
+WHERE problem_id = $1
+`
+
+func (q *Queries) CountProblemPackages(ctx context.Context, problemID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countProblemPackages, problemID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createProblemPackage = `-- name: CreateProblemPackage :one
 
 INSERT INTO problem_packages (id, problem_id, organization_id, package_hash, status, version, compiled_at)
@@ -128,18 +140,18 @@ func (q *Queries) GetReadyPackage(ctx context.Context, problemID uuid.UUID) (Pro
 const listProblemPackages = `-- name: ListProblemPackages :many
 SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at FROM problem_packages
 WHERE problem_id = $1
-ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
+ORDER BY version DESC
+LIMIT $3::int OFFSET $2::bigint
 `
 
 type ListProblemPackagesParams struct {
-	ProblemID uuid.UUID `json:"problem_id"`
-	Limit     int32     `json:"limit"`
-	Offset    int32     `json:"offset"`
+	ProblemID  uuid.UUID `json:"problem_id"`
+	PageOffset int64     `json:"page_offset"`
+	PageSize   int32     `json:"page_size"`
 }
 
 func (q *Queries) ListProblemPackages(ctx context.Context, arg ListProblemPackagesParams) ([]ProblemPackage, error) {
-	rows, err := q.db.Query(ctx, listProblemPackages, arg.ProblemID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listProblemPackages, arg.ProblemID, arg.PageOffset, arg.PageSize)
 	if err != nil {
 		return nil, err
 	}

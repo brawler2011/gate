@@ -24,7 +24,8 @@ const submission = (id = 'initial'): SubmissionsListItemModel => ({
   created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
 });
 const data = (...rows: SubmissionsListItemModel[]): ListSubmissionsResponseModel => ({
-  submissions: rows, pagination: {page: 1, total: Math.ceil(rows.length / 2)}, since: 7,
+  submissions: rows,
+  pagination: {page_size: 2, total_items: rows.length, page: 1, total_pages: Math.ceil(rows.length / 2)}, since: 7,
   total_count: rows.length,
 });
 const submissionsQueryOptions = (selection: SubmissionsSelection) => api.queryOptions('get', SUBMISSIONS_PATH, submissionsParams(selection));
@@ -249,7 +250,8 @@ describe('Query-owned submission lists', () => {
   });
   it('coalesces a burst in a fixed 100 ms window and keeps immediate highlights', async () => {
     const {result} = view(); const socket = await open(); const calls = fetch.mock.calls.length;
-    const snapshot = {...data(submission('new'), submission()), total_count: 51, pagination: {page: 1, total: 26}};
+    const snapshot = {...data(submission('new'), submission()), total_count: 51,
+      pagination: {page_size: 2, total_items: 51, page: 1, total_pages: 26}};
     fetch.mockImplementation(Object.assign(async () => Response.json(snapshot), {preconnect: () => {}}));
     await act(async () => {
       for (let i = 0; i < 50; i++) {
@@ -263,7 +265,7 @@ describe('Query-owned submission lists', () => {
     await advance(9); expect(fetch).toHaveBeenCalledTimes(calls);
     await advance(1); expect(fetch).toHaveBeenCalledTimes(calls + 1);
     expect(result.current.data?.total_count).toBe(51);
-    expect(result.current.data?.pagination.total).toBe(26);
+    expect(result.current.data?.pagination.total_pages).toBe(26);
     expect(result.current.submissions.map(s => s.id)).toEqual(['new', 'initial']);
     await act(async () => message(socket, 'created', submission('next')));
     await advance(100); expect(fetch).toHaveBeenCalledTimes(calls + 2);
@@ -316,7 +318,8 @@ describe('Query-owned submission lists', () => {
     const socket = await open(); const calls = fetch.mock.calls.length;
     fetch.mockImplementation(Object.assign(async (request: RequestInfo | URL) => {
       const filtered = new URL(String(request), 'http://localhost').searchParams.has('state');
-      return Response.json(filtered ? data() : {...data(submission('shifted')), total_count: 6, pagination: {page: 2, total: 3}});
+      return Response.json(filtered ? data() : {...data(submission('shifted')), total_count: 6,
+        pagination: {page_size: 2, total_items: 6, page: 2, total_pages: 3}});
     }, {preconnect: () => {}}));
     await act(async () => message(socket, 'created', {...submission(), revision: 2, state: 1, is_new: false, previous_state: 200}));
     await advance(100);
@@ -324,7 +327,7 @@ describe('Query-owned submission lists', () => {
     expect(result.current.filtered.submissions).toHaveLength(0);
     expect(result.current.filtered.data?.total_count).toBe(0);
     expect(result.current.page.submissions[0].id).toBe('shifted');
-    expect(result.current.page.data?.pagination).toEqual({page: 2, total: 3});
+    expect(result.current.page.data?.pagination).toEqual({page_size: 2, total_items: 6, page: 2, total_pages: 3});
   });
 
   it('marks inactive lists stale without fetching them', async () => {

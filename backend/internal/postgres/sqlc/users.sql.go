@@ -368,7 +368,7 @@ WHERE (
 ORDER BY CASE
         WHEN $1 != '' THEN word_similarity(LOWER(username), LOWER($1))
     END DESC NULLS LAST,
-    created_at DESC
+    created_at DESC, id DESC
 LIMIT $4 OFFSET $3
 `
 

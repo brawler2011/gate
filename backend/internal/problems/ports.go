@@ -3,6 +3,8 @@ package problems
 import (
 	"context"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
@@ -20,7 +22,7 @@ type OrganizationsRepo interface {
 
 type PackagesRepo interface {
 	GetReadyPackage(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
-	ListPackages(ctx context.Context, problemID uuid.UUID, limit, offset int32) ([]problemsmodel.ProblemPackage, error)
+	ListPackages(ctx context.Context, problemID uuid.UUID, request paging.Request) ([]problemsmodel.ProblemPackage, int32, error)
 	GetPackageByVersion(ctx context.Context, problemID uuid.UUID, version int32) (problemsmodel.ProblemPackage, error)
 }
 

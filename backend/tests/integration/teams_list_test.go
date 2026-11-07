@@ -88,7 +88,7 @@ func (s *IntegrationTestSuite) TestListTeamsSearchVisibilityAndPagination() {
 			ids[i] = team.ID
 		}
 		s.Equal(want, ids)
-		s.Equal(int32(total), response.Pagination.Total)
+		s.Equal(int32(total), response.Pagination.TotalItems)
 		s.Equal(page, response.Pagination.Page)
 	}
 
@@ -190,17 +190,19 @@ func (s *IntegrationTestSuite) TestListTeamsDefaultPageSize() {
 		s.Require().NoError(err)
 		s.Len(first.Teams, 50)
 		s.Equal(int32(1), first.Pagination.Page)
-		s.Equal(int32(105), first.Pagination.Total)
+		s.Equal(int32(105), first.Pagination.TotalItems)
+		s.Equal(int32(3), first.Pagination.TotalPages)
 		params.Page = corev1.NewOptInt32(3)
 		last, err := s.client.ListTeams(withTestUser(s.ctx, user.Id), params)
 		s.Require().NoError(err)
 		s.Len(last.Teams, 5)
-		s.Equal(int32(105), last.Pagination.Total)
+		s.Equal(int32(105), last.Pagination.TotalItems)
 		params.Page = corev1.NewOptInt32(1)
 		params.PageSize = corev1.NewOptInt32(100)
 		large, err := s.client.ListTeams(withTestUser(s.ctx, user.Id), params)
 		s.Require().NoError(err)
 		s.Len(large.Teams, 100)
-		s.Equal(int32(105), large.Pagination.Total)
+		s.Equal(int32(105), large.Pagination.TotalItems)
+		s.Equal(int32(2), large.Pagination.TotalPages)
 	}
 }

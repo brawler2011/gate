@@ -46,7 +46,7 @@ LEFT JOIN users au ON cc.answered_by = au.id
 LEFT JOIN problems p ON cc.problem_id = p.id
 LEFT JOIN contest_problems cp ON cp.contest_id = cc.contest_id AND cp.problem_id = cc.problem_id
 WHERE cc.contest_id = $1 AND cc.user_id = $2
-ORDER BY cc.created_at DESC
+ORDER BY cc.created_at DESC, cc.id DESC
 LIMIT $3 OFFSET $4;
 
 -- name: CountContestClarificationsForUser :one
@@ -68,7 +68,7 @@ LEFT JOIN contest_problems cp ON cp.contest_id = cc.contest_id AND cp.problem_id
 WHERE cc.contest_id = $1
   AND (sqlc.narg('problem_id')::uuid IS NULL OR cc.problem_id = sqlc.narg('problem_id')::uuid)
   AND (sqlc.narg('status')::text IS NULL OR sqlc.narg('status')::text = '' OR cc.status = sqlc.narg('status')::text)
-ORDER BY cc.created_at DESC
+ORDER BY cc.created_at DESC, cc.id DESC
 LIMIT $2 OFFSET $3;
 
 -- name: CountContestClarificationsForModerator :one

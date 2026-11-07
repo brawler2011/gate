@@ -14,7 +14,7 @@ SELECT * FROM organizations WHERE LOWER(login) = LOWER($1);
 -- name: ListOrganizations :many
 SELECT * FROM organizations
 WHERE ($1::text = '' OR name ILIKE '%' || $1 || '%')
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id DESC
 LIMIT $2 OFFSET $3;
 
 -- name: CountOrganizations :one
@@ -102,3 +102,18 @@ FOR SHARE;
 
 -- name: LockOrganizationMember :one
 SELECT user_id FROM organization_members WHERE organization_id = $1 AND user_id = $2 FOR UPDATE;
+
+-- name: ListOrganizationMembersPage :many
+SELECT om.organization_id, om.user_id, om.role, om.created_at,
+       u.username, u.email
+FROM organization_members om
+JOIN users u ON om.user_id = u.id
+WHERE om.organization_id = $1
+ORDER BY om.created_at, om.user_id
+LIMIT sqlc.arg('page_size')::int OFFSET sqlc.arg('page_offset')::bigint;
+
+-- name: CountOrganizationMembers :one
+SELECT COUNT(*)
+FROM organization_members om
+JOIN users u ON om.user_id = u.id
+WHERE om.organization_id = $1;

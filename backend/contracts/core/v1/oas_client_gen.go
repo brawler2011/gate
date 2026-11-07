@@ -768,7 +768,7 @@ type Invoker interface {
 	ListProblemMembers(ctx context.Context, params ListProblemMembersParams) (*ListProblemMembersResponseModel, error)
 	// ListProblemPackages invokes ListProblemPackages operation.
 	//
-	// List all packages for a problem.
+	// List a page of problem packages, newest version first.
 	//
 	// GET /problems/{id}/packages
 	ListProblemPackages(ctx context.Context, params ListProblemPackagesParams) (*ListProblemPackagesOK, error)
@@ -11234,7 +11234,7 @@ func (c *Client) sendListProblemMembers(ctx context.Context, params ListProblemM
 
 // ListProblemPackages invokes ListProblemPackages operation.
 //
-// List all packages for a problem.
+// List a page of problem packages, newest version first.
 //
 // GET /problems/{id}/packages
 func (c *Client) ListProblemPackages(ctx context.Context, params ListProblemPackagesParams) (*ListProblemPackagesOK, error) {
@@ -11267,6 +11267,43 @@ func (c *Client) sendListProblemPackages(ctx context.Context, params ListProblem
 	}
 	pathParts[2] = "/packages"
 	uri.AddPathParts(u, pathParts[:]...)
+
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "page" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "page",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Page.Get(); ok {
+				return e.EncodeValue(conv.Int32ToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "pageSize" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "pageSize",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.PageSize.Get(); ok {
+				return e.EncodeValue(conv.Int32ToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
 
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {

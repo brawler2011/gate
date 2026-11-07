@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -100,7 +102,7 @@ func TestProblemPrivateReadsRejectBeforeStorage(t *testing.T) {
 		if accessmodel.UserFromContext(ctx).IsGuest() {
 			expected = pkg.ErrUnauthenticated
 		}
-		_, err := reader.ListProblemMembers(ctx, uuid.New())
+		_, err := reader.ListProblemMembers(ctx, uuid.New(), paging.Request{})
 		require.ErrorIs(t, err, expected)
 		_, err = reader.GetProblemTeams(ctx, uuid.New())
 		require.ErrorIs(t, err, expected)

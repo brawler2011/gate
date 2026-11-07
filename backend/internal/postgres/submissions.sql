@@ -145,7 +145,9 @@ ORDER BY CASE
   END DESC,
   CASE
     WHEN sqlc.narg('sort_order')::int >= 0 THEN s.created_at
-  END ASC
+  END ASC,
+  CASE WHEN sqlc.narg('sort_order')::int < 0 THEN s.id END DESC,
+  CASE WHEN sqlc.narg('sort_order')::int >= 0 THEN s.id END ASC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
 -- name: CountSubmissions :one

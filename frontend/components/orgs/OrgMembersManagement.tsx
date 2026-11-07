@@ -1,6 +1,6 @@
 "use client";
 
-import {ActionIcon, Badge, Button, Center, Group, Loader, Modal, Select, Stack, Table, Tabs, Text, Tooltip} from "@mantine/core";
+import {Pagination, ActionIcon, Badge, Button, Center, Group, Loader, Modal, Select, Stack, Table, Tabs, Text, Tooltip} from "@mantine/core";
 import {useDebouncedValue, useDisclosure} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconCheck, IconMail, IconSend, IconTrash, IconUserCheck, IconUserPlus, IconUsers, IconX} from "@tabler/icons-react";
@@ -9,7 +9,8 @@ import {useCallback, useEffect, useState, type ReactNode} from "react";
 import {BatchCreateUsersModal} from "@/components/orgs/BatchCreateUsersModal";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {useEntityCollection, useEntityMutation} from "@/hooks/useEntityManagement";
-import {api} from "@/lib/api";
+import {usePagedQuery} from "@/hooks/usePagedQuery";
+import {api, unwrap} from "@/lib/api";
 
 import type {ApproveOrganizationJoinRequestModel, InviteOrganizationMemberRequestModel, OrganizationJoinRequestModel} from "@/contracts/core/v1/schema";
 
@@ -58,16 +59,13 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
     message: string;
   } | null>(null);
 
-  const fetchMembers = useCallback(async () => {
-    const {data} = await api.GET("/organizations/{login}/members", {
-      params: {
-        path: {login: orgLogin},
-        query: {page: 1, pageSize: 100},
-      },
-    });
-    return data?.members;
-  }, [orgLogin]);
-  const {items: members, loading: loadingMembers, reload: loadMembers} = useEntityCollection(fetchMembers);
+  const {
+    data: membersData, isPending: loadingMembers, refetch: loadMembers, page, setPage, error: membersError,
+  } = usePagedQuery(
+    ["org-members", orgLogin],
+    (page, pageSize) => unwrap(api.GET("/organizations/{login}/members", {params: {path: {login: orgLogin}, query: {page, pageSize}}})),
+  );
+  const members = membersData?.members ?? [];
 
   const fetchInvitations = useCallback(async () => {
     const {data} = await api.GET("/organizations/{login}/invitations", {
@@ -312,6 +310,10 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
 
           {/* Members Tab */}
           <Tabs.Panel value="members">
+            {membersError && <Text c="red">{membersError.message}</Text>}
+            {membersData && membersData.pagination.total_pages > 1 && (
+              <Pagination value={page} onChange={setPage} total={membersData.pagination.total_pages} />
+            )}
             {loadingMembers && (
               <Center py="xl">
                 <Loader />

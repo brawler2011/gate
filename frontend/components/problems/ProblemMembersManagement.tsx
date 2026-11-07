@@ -1,15 +1,16 @@
 "use client";
 
-import {Autocomplete, Badge, Button, Card, Group, Loader, Stack, Text} from "@mantine/core";
+import {Pagination, Autocomplete, Badge, Button, Card, Group, Loader, Stack, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconPlus, IconUser} from "@tabler/icons-react";
-import {useCallback, useEffect, useState, type ReactNode} from "react";
+import {useCallback, useState, type ReactNode} from "react";
 
 import {ChangeRoleModal} from "@/components/shared/ChangeRoleModal";
 import {EntityManagementTable} from "@/components/shared/EntityManagementTable";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {useEntitySearch} from "@/hooks/useEntitySearch";
-import {api} from "@/lib/api";
+import {usePagedQuery} from "@/hooks/usePagedQuery";
+import {api, unwrap} from "@/lib/api";
 
 import type * as corev1 from "@/contracts/core/v1/schema";
 
@@ -29,8 +30,6 @@ export interface ProblemMembersManagementProps {
 }
 
 export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementProps): ReactNode => {
-  const [members, setMembers] = useState<corev1.ProblemMemberModel[]>([]);
-  const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -45,27 +44,11 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
     message: string;
   } | null>(null);
 
-  const loadMembers = useCallback(async () => {
-    setLoading(true);
-    const {data: response, error} = await api.GET("/problems/{id}/members", {
-      params: {
-        path: {id: problemId},
-        query: {page: 1, pageSize: 100},
-      },
-    });
-    setLoading(false);
-
-    if (error || !response) {
-      console.error("Failed to load problem members:", error);
-      return;
-    }
-
-    setMembers(response.members);
-  }, [problemId]);
-
-  useEffect(() => {
-    loadMembers();
-  }, [loadMembers]);
+  const {data, isPending: loading, error, refetch: loadMembers, page, setPage} = usePagedQuery(
+    ["problem-members", problemId],
+    (page, pageSize) => unwrap(api.GET("/problems/{id}/members", {params: {path: {id: problemId}, query: {page, pageSize}}})),
+  );
+  const members = data?.members ?? [];
 
   const searchUsersFn = useCallback(async (query: string) => {
     const {data: response, error} = await api.GET("/users", {
@@ -277,6 +260,10 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
           onDelete={handleDeleteMember}
           deletingId={deletingId}
         />
+        {error && <Text c="red">{error.message}</Text>}
+        {data && data.pagination.total_pages > 1 && (
+          <Pagination value={page} onChange={setPage} total={data.pagination.total_pages} />
+        )}
       </Stack>
 
       {editingMember && (

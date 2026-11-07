@@ -25,16 +25,33 @@ func Normalize(page, size, defaultSize int32) (int32, int32, error) {
 	return page, size, Validate(page, size)
 }
 
+// Request identifies a one-based page. Normalize before calculating the offset.
+type Request struct {
+	Page     int32
+	PageSize int32
+}
+
+func (r Request) Normalize() (Request, error) {
+	p, size, err := Normalize(r.Page, r.PageSize, 50)
+	return Request{Page: p, PageSize: size}, err
+}
+
+func (r Request) Offset() int64 { return (int64(r.Page) - 1) * int64(r.PageSize) }
+
+type List[T any] struct {
+	Items      []T
+	Pagination Pagination
+}
+
 type Pagination struct {
-	Page  int32 `json:"page"`
-	Total int32 `json:"total"`
+	Page       int32 `json:"page"`
+	PageSize   int32 `json:"page_size"`
+	TotalItems int32 `json:"total_items"`
+	TotalPages int32 `json:"total_pages"`
 }
 
 func NewPagination(page int32, pageSize int32, total int32) Pagination {
-	return Pagination{
-		Page:  page,
-		Total: Total(total, pageSize),
-	}
+	return Pagination{Page: page, PageSize: pageSize, TotalItems: total, TotalPages: Total(total, pageSize)}
 }
 
 func Total(count int32, pageSize int32) int32 {

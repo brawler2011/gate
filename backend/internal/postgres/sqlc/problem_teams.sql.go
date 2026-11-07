@@ -31,6 +31,41 @@ func (q *Queries) AddProblemTeam(ctx context.Context, arg AddProblemTeamParams) 
 	return err
 }
 
+const countTeamProblems = `-- name: CountTeamProblems :one
+SELECT COUNT(*) FROM problems p
+INNER JOIN problem_teams pt ON p.id = pt.problem_id
+WHERE pt.team_id = $1::uuid
+  AND (
+    p.visibility = 'public'
+    OR p.owner_id = $2::uuid
+    OR EXISTS (SELECT 1 FROM users u
+               WHERE u.id = $2::uuid AND u.role = 'admin')
+    OR EXISTS (SELECT 1 FROM organization_members om
+               WHERE om.organization_id = p.organization_id
+                 AND om.user_id = $2::uuid
+                 AND om.role IN ('owner', 'admin'))
+    OR EXISTS (SELECT 1 FROM problem_members m
+               WHERE m.problem_id = p.id AND m.user_id = $2::uuid)
+    OR EXISTS (SELECT 1 FROM problem_teams linked
+               JOIN team_members tm ON tm.team_id = linked.team_id
+               JOIN teams t ON t.id = linked.team_id
+               WHERE linked.problem_id = p.id AND tm.user_id = $2::uuid
+                 AND t.organization_id = p.organization_id)
+  )
+`
+
+type CountTeamProblemsParams struct {
+	TeamID   uuid.UUID `json:"team_id"`
+	ViewerID uuid.UUID `json:"viewer_id"`
+}
+
+func (q *Queries) CountTeamProblems(ctx context.Context, arg CountTeamProblemsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countTeamProblems, arg.TeamID, arg.ViewerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getTeamProblems = `-- name: GetTeamProblems :many
 SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.time_limit_ms, p.memory_limit_mb, p.created_at, p.updated_at, p.is_template, p.workspace_hash FROM problems p
 INNER JOIN problem_teams pt ON p.id = pt.problem_id
@@ -52,16 +87,24 @@ WHERE pt.team_id = $1::uuid
                WHERE linked.problem_id = p.id AND tm.user_id = $2::uuid
                  AND t.organization_id = p.organization_id)
   )
-ORDER BY p.created_at DESC
+ORDER BY p.created_at DESC, p.id DESC
+LIMIT $4::int OFFSET $3::bigint
 `
 
 type GetTeamProblemsParams struct {
-	TeamID   uuid.UUID `json:"team_id"`
-	ViewerID uuid.UUID `json:"viewer_id"`
+	TeamID     uuid.UUID `json:"team_id"`
+	ViewerID   uuid.UUID `json:"viewer_id"`
+	PageOffset int64     `json:"page_offset"`
+	PageSize   int32     `json:"page_size"`
 }
 
 func (q *Queries) GetTeamProblems(ctx context.Context, arg GetTeamProblemsParams) ([]Problem, error) {
-	rows, err := q.db.Query(ctx, getTeamProblems, arg.TeamID, arg.ViewerID)
+	rows, err := q.db.Query(ctx, getTeamProblems,
+		arg.TeamID,
+		arg.ViewerID,
+		arg.PageOffset,
+		arg.PageSize,
+	)
 	if err != nil {
 		return nil, err
 	}

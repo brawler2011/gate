@@ -11328,7 +11328,7 @@ func (s *Server) handleListProblemMembersRequest(args [1]string, argsEscaped boo
 
 // handleListProblemPackagesRequest handles ListProblemPackages operation.
 //
-// List all packages for a problem.
+// List a page of problem packages, newest version first.
 //
 // GET /problems/{id}/packages
 func (s *Server) handleListProblemPackagesRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -11361,7 +11361,7 @@ func (s *Server) handleListProblemPackagesRequest(args [1]string, argsEscaped bo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListProblemPackagesOperation,
-			OperationSummary: "List all packages for a problem",
+			OperationSummary: "List a page of problem packages, newest version first",
 			OperationID:      "ListProblemPackages",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -11370,6 +11370,14 @@ func (s *Server) handleListProblemPackagesRequest(args [1]string, argsEscaped bo
 					Name: "id",
 					In:   "path",
 				}: params.ID,
+				{
+					Name: "page",
+					In:   "query",
+				}: params.Page,
+				{
+					Name: "pageSize",
+					In:   "query",
+				}: params.PageSize,
 			},
 			Raw: r,
 		}

@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
@@ -13,7 +15,10 @@ import (
 )
 
 type ProblemsReader interface {
-	problems.Reads
+	ListProblemMembers(context.Context, uuid.UUID, paging.Request) (*paging.List[problemsmodel.ProblemMember], error)
+	GetProblemTeams(context.Context, uuid.UUID) ([]problemsmodel.ProblemTeam, error)
+	ListProblems(context.Context, *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error)
+	ListDashboardProblems(context.Context, uuid.UUID, int32) ([]problemsmodel.DashboardProblem, error)
 	ListTemplates(context.Context, uuid.UUID) ([]problems.Template, error)
 }
 
@@ -173,14 +178,12 @@ func (h *CoreServer) DeleteProblemTeam(ctx context.Context, params corev1.Delete
 }
 
 func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListProblemMembersParams) (*corev1.ListProblemMembersResponseModel, error) {
-	members, err := h.problems.ListProblemMembers(ctx, params.ID)
+	members, err := h.problems.ListProblemMembers(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
 		return nil, err
 	}
 
-	total := safeInt32(len(members))
-	page := params.Page.Or(1)
-	return listProblemMembersDTO(members, page, total), nil
+	return listProblemMembersDTO(members.Items, members.Pagination), nil
 }
 
 func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.CreateProblemMemberParams) error {
