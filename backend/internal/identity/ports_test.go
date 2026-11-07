@@ -80,8 +80,8 @@ type TeamsRepo interface {
 	GetUserTeamsByOrganization(ctx context.Context, userID, orgID uuid.UUID) ([]organizationsmodel.Team, error)
 
 	// Resource associations
-	GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]contestsmodel.Contest, error)
-	GetTeamProblems(ctx context.Context, teamID uuid.UUID) ([]problemsmodel.Problem, error)
+	GetTeamContests(ctx context.Context, teamID, viewerID uuid.UUID) ([]contestsmodel.Contest, error)
+	GetTeamProblems(ctx context.Context, teamID, viewerID uuid.UUID) ([]problemsmodel.Problem, error)
 }
 
 type UsersUC interface {

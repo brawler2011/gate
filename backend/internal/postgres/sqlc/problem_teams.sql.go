@@ -34,12 +34,34 @@ func (q *Queries) AddProblemTeam(ctx context.Context, arg AddProblemTeamParams) 
 const getTeamProblems = `-- name: GetTeamProblems :many
 SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.time_limit_ms, p.memory_limit_mb, p.created_at, p.updated_at, p.is_template, p.workspace_hash FROM problems p
 INNER JOIN problem_teams pt ON p.id = pt.problem_id
-WHERE pt.team_id = $1
+WHERE pt.team_id = $1::uuid
+  AND (
+    p.visibility = 'public'
+    OR p.owner_id = $2::uuid
+    OR EXISTS (SELECT 1 FROM users u
+               WHERE u.id = $2::uuid AND u.role = 'admin')
+    OR EXISTS (SELECT 1 FROM organization_members om
+               WHERE om.organization_id = p.organization_id
+                 AND om.user_id = $2::uuid
+                 AND om.role IN ('owner', 'admin'))
+    OR EXISTS (SELECT 1 FROM problem_members m
+               WHERE m.problem_id = p.id AND m.user_id = $2::uuid)
+    OR EXISTS (SELECT 1 FROM problem_teams linked
+               JOIN team_members tm ON tm.team_id = linked.team_id
+               JOIN teams t ON t.id = linked.team_id
+               WHERE linked.problem_id = p.id AND tm.user_id = $2::uuid
+                 AND t.organization_id = p.organization_id)
+  )
 ORDER BY p.created_at DESC
 `
 
-func (q *Queries) GetTeamProblems(ctx context.Context, teamID uuid.UUID) ([]Problem, error) {
-	rows, err := q.db.Query(ctx, getTeamProblems, teamID)
+type GetTeamProblemsParams struct {
+	TeamID   uuid.UUID `json:"team_id"`
+	ViewerID uuid.UUID `json:"viewer_id"`
+}
+
+func (q *Queries) GetTeamProblems(ctx context.Context, arg GetTeamProblemsParams) ([]Problem, error) {
+	rows, err := q.db.Query(ctx, getTeamProblems, arg.TeamID, arg.ViewerID)
 	if err != nil {
 		return nil, err
 	}
