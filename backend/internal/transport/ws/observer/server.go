@@ -166,109 +166,19 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	send := func(event *WrappedEvent) error { return s.sendSubmission(ctx, filter, event, conn) }
-
-	sub := &Subscriber{
-		id:      uuid.New(),
-		conn:    conn,
-		filter:  filter,
-		outbox:  make(chan *WrappedEvent, 1000),
-		state:   StatePaused,
-		pending: make([]*WrappedEvent, 0),
+	sub, history, err := s.hub.subscribe(conn, filter, r.URL.Query().Has("since"))
+	if err != nil {
+		rejectHistory(conn, err)
+		return
 	}
-
-	// Set the barrier and register as PAUSED atomically with broadcast.
-	s.hub.mu.Lock()
-	sub.barrierSeq = s.hub.ring.MaxSeq()
-	if !r.URL.Query().Has("since") {
-		filter.Since = sub.barrierSeq
-	}
-	s.hub.subscribers[sub.id] = sub
-	s.hub.mu.Unlock()
-
-	// Cleanup on disconnect
 	defer func() {
 		s.hub.mu.Lock()
 		delete(s.hub.subscribers, sub.id)
 		s.hub.mu.Unlock()
-		conn.Close()
 	}()
-
-	readDone := startReadPump(conn)
-
-	// 3. Catch-up from ring buffer
-	var history []*WrappedEvent
-	if sub.barrierSeq != 0 {
-		history, err = s.hub.ring.GetRange(filter.Since, sub.barrierSeq)
-	}
-	if err != nil && !errors.Is(err, ErrBufferEmpty) {
-		code, message := getClosingFrameData(err)
-		if err := conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, string(message)), time.Now().Add(timeToClose)); err != nil {
-			handleWriteError(err)
-			return
-		}
-		slog.Error("cannot get history", "error", err, "since", filter.Since, "barrier", sub.barrierSeq)
-		return
-	}
-
-	for _, event := range history {
-		select {
-		case <-readDone:
-			return
-		default:
-		}
-
-		if filter.Matches(event) {
-			if err := send(event); err != nil {
-				handleWriteError(err)
-				return
-			}
-		}
-	}
-
-	// Drain batches outside locks; switch to live atomically after the last batch.
-	for {
-		sub.mu.Lock()
-		batch := sub.pending
-		sub.pending = nil
-		if len(batch) == 0 {
-			sub.state = StateLive
-			sub.mu.Unlock()
-			break
-		}
-		sub.mu.Unlock()
-		for _, event := range batch {
-			select {
-			case <-readDone:
-				return
-			default:
-			}
-			if err := send(event); err != nil {
-				handleWriteError(err)
-				return
-			}
-		}
-	}
-
-	// 5. Main write loop (live events)
-	for {
-		select {
-		case <-readDone:
-			return
-		case event := <-sub.outbox:
-			if event == nil {
-				slog.Error("event is nil")
-				if err := conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, "internal error"), time.Now().Add(timeToClose)); err != nil {
-					handleWriteError(err)
-				}
-				return
-			}
-			if err := send(event); err != nil {
-				handleWriteError(err)
-				return
-			}
-		}
-	}
+	sub.run(history, filter.Matches, func(event *WrappedEvent) error {
+		return s.sendSubmission(ctx, filter, event, conn)
+	})
 }
 
 func getClosingFrameData(err error) (int, []byte) {
@@ -286,42 +196,6 @@ func getClosingFrameData(err error) (int, []byte) {
 		return websocket.CloseInternalServerErr,
 			[]byte(err.Error())
 	}
-}
-
-func handleReadError(err error) {
-	if websocket.IsCloseError(err,
-		websocket.CloseGoingAway,
-		websocket.CloseNoStatusReceived,
-		websocket.CloseNormalClosure) {
-		return
-	}
-
-	slog.Error("cannot read client message", "error", err)
-}
-
-func handleWriteError(err error) {
-	if websocket.IsCloseError(err,
-		websocket.CloseGoingAway,
-		websocket.CloseNoStatusReceived,
-		websocket.CloseNormalClosure) {
-		return
-	}
-
-	slog.Error("cannot write message to client", "error", err)
-}
-
-func startReadPump(conn *websocket.Conn) <-chan struct{} {
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		for {
-			if _, _, err := conn.ReadMessage(); err != nil {
-				handleReadError(err)
-				return
-			}
-		}
-	}()
-	return done
 }
 
 func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
@@ -350,105 +224,17 @@ func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	send := func(event *WrappedEvent) error { return s.sendContest(ctx, parsed, event, conn) }
-
-	sub := &ContestSubscriber{
-		id:      uuid.New(),
-		conn:    conn,
-		filter:  filter,
-		outbox:  make(chan *WrappedEvent, 1000),
-		state:   StatePaused,
-		pending: make([]*WrappedEvent, 0),
+	sub, history, err := s.contestsHub.subscribe(conn, filter, r.URL.Query().Has("since"))
+	if err != nil {
+		rejectHistory(conn, err)
+		return
 	}
-
-	s.contestsHub.mu.Lock()
-	sub.barrierSeq = s.contestsHub.ring.MaxSeq()
-	if !r.URL.Query().Has("since") {
-		filter.Since = sub.barrierSeq
-	}
-	s.contestsHub.subscribers[sub.id] = sub
-	s.contestsHub.mu.Unlock()
-
 	defer func() {
 		s.contestsHub.mu.Lock()
 		delete(s.contestsHub.subscribers, sub.id)
 		s.contestsHub.mu.Unlock()
-		conn.Close()
 	}()
-
-	readDone := startReadPump(conn)
-
-	// Catch-up from ring buffer
-	var history []*WrappedEvent
-	if sub.barrierSeq != 0 {
-		history, err = s.contestsHub.ring.GetRange(filter.Since, sub.barrierSeq)
-	}
-	if err != nil && !errors.Is(err, ErrBufferEmpty) {
-		code, message := getClosingFrameData(err)
-		if err := conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, string(message)), time.Now().Add(timeToClose)); err != nil {
-			handleWriteError(err)
-			return
-		}
-		slog.Error("cannot get contest history", "error", err, "since", filter.Since, "barrier", sub.barrierSeq)
-		return
-	}
-
-	for _, event := range history {
-		select {
-		case <-readDone:
-			return
-		default:
-		}
-
-		if filter.Matches(event) {
-			if err := send(event); err != nil {
-				handleWriteError(err)
-				return
-			}
-		}
-	}
-
-	// Drain batches outside locks; switch to live atomically after the last batch.
-	for {
-		sub.mu.Lock()
-		batch := sub.pending
-		sub.pending = nil
-		if len(batch) == 0 {
-			sub.state = StateLive
-			sub.mu.Unlock()
-			break
-		}
-		sub.mu.Unlock()
-		for _, event := range batch {
-			select {
-			case <-readDone:
-				return
-			default:
-			}
-			if err := send(event); err != nil {
-				handleWriteError(err)
-				return
-			}
-		}
-	}
-
-	// Main write loop
-	for {
-		select {
-		case <-readDone:
-			return
-		case event := <-sub.outbox:
-			if event == nil {
-				slog.Error("contest event is nil")
-				if err := conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, "internal error"), time.Now().Add(timeToClose)); err != nil {
-					handleWriteError(err)
-				}
-				return
-			}
-			if err := send(event); err != nil {
-				handleWriteError(err)
-				return
-			}
-		}
-	}
+	sub.run(history, filter.Matches, func(event *WrappedEvent) error {
+		return s.sendContest(ctx, parsed, event, conn)
+	})
 }

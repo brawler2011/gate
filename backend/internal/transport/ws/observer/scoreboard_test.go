@@ -57,7 +57,7 @@ func TestScoreboardProjectionIsSharedAcrossSpectators(t *testing.T) {
 			defer h.releaseScoreboard(&contestID)
 			for i := 0; i < 5000; i++ {
 				id := uuid.New()
-				h.subscribers[id] = &Subscriber{id: id, filter: &SubmissionsFilter{ContestId: &contestID}, state: StateLive, outbox: make(chan *WrappedEvent, 2)}
+				h.subscribers[id] = &Subscriber{subscription: &subscription{id: id, outbox: make(chan *WrappedEvent, 2)}, filter: &SubmissionsFilter{ContestId: &contestID}}
 			}
 			event := submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), SubmissionEventMeta: submissionsmodel.SubmissionEventMeta{ContestId: &contestID, UserId: &userID}}
 			payload, err := json.Marshal(event)

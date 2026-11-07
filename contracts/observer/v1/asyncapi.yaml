@@ -36,7 +36,14 @@ channels:
         bindingVersion: 0.1.0
     servers:
       - $ref: "#/servers/observer"
-    description: Submission lifecycle events filtered by contest, user, problem, or language.
+    description: >-
+      Submission lifecycle events filtered by contest, user, problem, or language.
+      Each subscriber has one queue of at most 1000 events, including while history
+      is being delivered. Queue overflow disconnects the subscriber by closing the
+      transport; delivery of a close frame is not guaranteed. Every outgoing event,
+      including history and scoreboard messages, has a 10-second write timeout.
+      Incoming WebSocket messages are limited to 1024 bytes (1 KiB), including
+      fragmented messages; exceeding the limit closes the connection.
   contests:
     address: /ws/contests
     messages:
@@ -62,7 +69,14 @@ channels:
         bindingVersion: 0.1.0
     servers:
       - $ref: "#/servers/observer"
-    description: Announcements and clarifications for the required contestId.
+    description: >-
+      Announcements and clarifications for the required contestId.
+      Each subscriber has one queue of at most 1000 events, including while history
+      is being delivered. Queue overflow disconnects the subscriber by closing the
+      transport; delivery of a close frame is not guaranteed. Every outgoing event,
+      including history and scoreboard messages, has a 10-second write timeout.
+      Incoming WebSocket messages are limited to 1024 bytes (1 KiB), including
+      fragmented messages; exceeding the limit closes the connection.
 operations:
   sendSubmissions:
     action: send

@@ -75,7 +75,7 @@ func (s *Observer) checkSubscription(ctx context.Context, filter *SubmissionsFil
 	return nil
 }
 
-func closeVerification(conn *websocket.Conn, err error) error {
+func closeVerification(conn eventConnection, err error) error {
 	code := websocket.CloseInternalServerErr
 	if errors.Is(err, pkg.NoPermission) || errors.Is(err, pkg.ErrNotFound) || errors.Is(err, pkg.ErrUnauthenticated) {
 		code = websocket.ClosePolicyViolation
@@ -103,7 +103,7 @@ func eventMeta(event *WrappedEvent) *submissionsmodel.SubmissionEventMeta {
 	}
 }
 
-func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter, event *WrappedEvent, conn *websocket.Conn) error {
+func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter, event *WrappedEvent, conn eventConnection) error {
 	user, permissions, err := s.currentAccess(ctx, filter)
 	if err != nil {
 		return closeVerification(conn, err)
@@ -183,7 +183,7 @@ func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter
 	return nil
 }
 
-func (s *Observer) sendContest(ctx context.Context, filter *SubmissionsFilter, event *WrappedEvent, conn *websocket.Conn) error {
+func (s *Observer) sendContest(ctx context.Context, filter *SubmissionsFilter, event *WrappedEvent, conn eventConnection) error {
 	user, permissions, err := s.currentAccess(ctx, filter)
 	if err != nil {
 		return closeVerification(conn, err)
@@ -206,7 +206,10 @@ func (s *Observer) sendContest(ctx context.Context, filter *SubmissionsFilter, e
 	return writeEvent(conn, event.DTOPayload)
 }
 
-func writeEvent(conn *websocket.Conn, payload []byte) error {
+func writeEvent(conn eventConnection, payload []byte) error {
+	if err := conn.SetWriteDeadline(time.Now().Add(writeTimeout)); err != nil {
+		return fmt.Errorf("set observer write deadline: %w", err)
+	}
 	if err := conn.WriteMessage(websocket.TextMessage, payload); err != nil {
 		return fmt.Errorf("write observer event: %w", err)
 	}
