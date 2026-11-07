@@ -177,13 +177,13 @@ type Invoker interface {
 	// Create contest member.
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/members
-	CreateContestMember(ctx context.Context, params CreateContestMemberParams) (*CreationResponseModel, error)
+	CreateContestMember(ctx context.Context, params CreateContestMemberParams) error
 	// CreateContestProblem invokes CreateContestProblem operation.
 	//
 	// Create contest problem.
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/problems
-	CreateContestProblem(ctx context.Context, params CreateContestProblemParams) (*CreationResponseModel, error)
+	CreateContestProblem(ctx context.Context, params CreateContestProblemParams) error
 	// CreateContestTeam invokes CreateContestTeam operation.
 	//
 	// Create contest team.
@@ -3142,12 +3142,12 @@ func (c *Client) sendCreateContestJoinRequest(ctx context.Context, request OptCr
 // Create contest member.
 //
 // POST /organizations/{org_login}/contests/{contest_login}/members
-func (c *Client) CreateContestMember(ctx context.Context, params CreateContestMemberParams) (*CreationResponseModel, error) {
-	res, err := c.sendCreateContestMember(ctx, params)
-	return res, err
+func (c *Client) CreateContestMember(ctx context.Context, params CreateContestMemberParams) error {
+	_, err := c.sendCreateContestMember(ctx, params)
+	return err
 }
 
-func (c *Client) sendCreateContestMember(ctx context.Context, params CreateContestMemberParams) (res *CreationResponseModel, err error) {
+func (c *Client) sendCreateContestMember(ctx context.Context, params CreateContestMemberParams) (res *CreateContestMemberNoContent, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string
@@ -3240,12 +3240,12 @@ func (c *Client) sendCreateContestMember(ctx context.Context, params CreateConte
 // Create contest problem.
 //
 // POST /organizations/{org_login}/contests/{contest_login}/problems
-func (c *Client) CreateContestProblem(ctx context.Context, params CreateContestProblemParams) (*CreationResponseModel, error) {
-	res, err := c.sendCreateContestProblem(ctx, params)
-	return res, err
+func (c *Client) CreateContestProblem(ctx context.Context, params CreateContestProblemParams) error {
+	_, err := c.sendCreateContestProblem(ctx, params)
+	return err
 }
 
-func (c *Client) sendCreateContestProblem(ctx context.Context, params CreateContestProblemParams) (res *CreationResponseModel, err error) {
+func (c *Client) sendCreateContestProblem(ctx context.Context, params CreateContestProblemParams) (res *CreateContestProblemNoContent, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [5]string

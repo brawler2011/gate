@@ -435,10 +435,10 @@ func (h *CoreServer) ListPublicContests(ctx context.Context, params corev1.ListP
 	return ListContestsResponseDTO(contestsList), nil
 }
 
-func (h *CoreServer) CreateContestProblem(ctx context.Context, params corev1.CreateContestProblemParams) (*corev1.CreationResponseModel, error) {
+func (h *CoreServer) CreateContestProblem(ctx context.Context, params corev1.CreateContestProblemParams) error {
 	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	pkgID := uuid.Nil
@@ -451,10 +451,10 @@ func (h *CoreServer) CreateContestProblem(ctx context.Context, params corev1.Cre
 		PackageId: pkgID,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &corev1.CreationResponseModel{}, nil
+	return nil
 }
 
 func (h *CoreServer) GetContestProblem(ctx context.Context, params corev1.GetContestProblemParams) (*corev1.GetContestProblemResponseModel, error) {
@@ -516,10 +516,10 @@ func (h *CoreServer) ReorderContestProblems(ctx context.Context, req *corev1.Reo
 	return nil
 }
 
-func (h *CoreServer) CreateContestMember(ctx context.Context, params corev1.CreateContestMemberParams) (*corev1.CreationResponseModel, error) {
+func (h *CoreServer) CreateContestMember(ctx context.Context, params corev1.CreateContestMemberParams) error {
 	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = h.contests.CreateParticipant(ctx, contestsmodel.ParticipantCreation{
@@ -527,10 +527,10 @@ func (h *CoreServer) CreateContestMember(ctx context.Context, params corev1.Crea
 		UserId:    params.UserID,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &corev1.CreationResponseModel{}, nil
+	return nil
 }
 
 func (h *CoreServer) DeleteContestMember(ctx context.Context, params corev1.DeleteContestMemberParams) error {

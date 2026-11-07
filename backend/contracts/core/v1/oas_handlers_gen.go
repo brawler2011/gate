@@ -2415,7 +2415,7 @@ func (s *Server) handleCreateContestMemberRequest(args [2]string, argsEscaped bo
 
 	var rawBody []byte
 
-	var response *CreationResponseModel
+	var response *CreateContestMemberNoContent
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
@@ -2444,7 +2444,7 @@ func (s *Server) handleCreateContestMemberRequest(args [2]string, argsEscaped bo
 		type (
 			Request  = struct{}
 			Params   = CreateContestMemberParams
-			Response = *CreationResponseModel
+			Response = *CreateContestMemberNoContent
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -2455,12 +2455,12 @@ func (s *Server) handleCreateContestMemberRequest(args [2]string, argsEscaped bo
 			mreq,
 			unpackCreateContestMemberParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateContestMember(ctx, params)
+				err = s.h.CreateContestMember(ctx, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.CreateContestMember(ctx, params)
+		err = s.h.CreateContestMember(ctx, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -2507,7 +2507,7 @@ func (s *Server) handleCreateContestProblemRequest(args [2]string, argsEscaped b
 
 	var rawBody []byte
 
-	var response *CreationResponseModel
+	var response *CreateContestProblemNoContent
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
@@ -2540,7 +2540,7 @@ func (s *Server) handleCreateContestProblemRequest(args [2]string, argsEscaped b
 		type (
 			Request  = struct{}
 			Params   = CreateContestProblemParams
-			Response = *CreationResponseModel
+			Response = *CreateContestProblemNoContent
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -2551,12 +2551,12 @@ func (s *Server) handleCreateContestProblemRequest(args [2]string, argsEscaped b
 			mreq,
 			unpackCreateContestProblemParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateContestProblem(ctx, params)
+				err = s.h.CreateContestProblem(ctx, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.CreateContestProblem(ctx, params)
+		err = s.h.CreateContestProblem(ctx, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)

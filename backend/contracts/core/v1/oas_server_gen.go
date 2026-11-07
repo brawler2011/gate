@@ -163,13 +163,13 @@ type Handler interface {
 	// Create contest member.
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/members
-	CreateContestMember(ctx context.Context, params CreateContestMemberParams) (*CreationResponseModel, error)
+	CreateContestMember(ctx context.Context, params CreateContestMemberParams) error
 	// CreateContestProblem implements CreateContestProblem operation.
 	//
 	// Create contest problem.
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/problems
-	CreateContestProblem(ctx context.Context, params CreateContestProblemParams) (*CreationResponseModel, error)
+	CreateContestProblem(ctx context.Context, params CreateContestProblemParams) error
 	// CreateContestTeam implements CreateContestTeam operation.
 	//
 	// Create contest team.
