@@ -265,14 +265,14 @@ func (uc *TeamsUseCase) GetTeamContests(ctx context.Context, teamID, requestUser
 	if _, err := uc.GetTeam(ctx, teamID, requestUserID); err != nil {
 		return nil, err
 	}
-	return uc.repo.GetTeamContests(ctx, teamID)
+	return uc.repo.GetTeamContests(ctx, teamID, requestUserID)
 }
 
 func (uc *TeamsUseCase) GetTeamProblems(ctx context.Context, teamID, requestUserID uuid.UUID) ([]problemsmodel.Problem, error) {
 	if _, err := uc.GetTeam(ctx, teamID, requestUserID); err != nil {
 		return nil, err
 	}
-	return uc.repo.GetTeamProblems(ctx, teamID)
+	return uc.repo.GetTeamProblems(ctx, teamID, requestUserID)
 }
 
 func (uc *TeamsUseCase) withinTeam(ctx context.Context, id, actor uuid.UUID, fn func(TeamTxStore, *organizationsmodel.Team) error) error {

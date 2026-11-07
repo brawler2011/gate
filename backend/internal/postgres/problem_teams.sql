@@ -23,5 +23,22 @@ WHERE problem_id = $1 AND team_id = $2;
 -- name: GetTeamProblems :many
 SELECT p.* FROM problems p
 INNER JOIN problem_teams pt ON p.id = pt.problem_id
-WHERE pt.team_id = $1
+WHERE pt.team_id = sqlc.arg('team_id')::uuid
+  AND (
+    p.visibility = 'public'
+    OR p.owner_id = sqlc.arg('viewer_id')::uuid
+    OR EXISTS (SELECT 1 FROM users u
+               WHERE u.id = sqlc.arg('viewer_id')::uuid AND u.role = 'admin')
+    OR EXISTS (SELECT 1 FROM organization_members om
+               WHERE om.organization_id = p.organization_id
+                 AND om.user_id = sqlc.arg('viewer_id')::uuid
+                 AND om.role IN ('owner', 'admin'))
+    OR EXISTS (SELECT 1 FROM problem_members m
+               WHERE m.problem_id = p.id AND m.user_id = sqlc.arg('viewer_id')::uuid)
+    OR EXISTS (SELECT 1 FROM problem_teams linked
+               JOIN team_members tm ON tm.team_id = linked.team_id
+               JOIN teams t ON t.id = linked.team_id
+               WHERE linked.problem_id = p.id AND tm.user_id = sqlc.arg('viewer_id')::uuid
+                 AND t.organization_id = p.organization_id)
+  )
 ORDER BY p.created_at DESC;

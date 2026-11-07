@@ -34,12 +34,34 @@ func (q *Queries) AddContestTeam(ctx context.Context, arg AddContestTeamParams) 
 const getTeamContests = `-- name: GetTeamContests :many
 SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
 INNER JOIN contest_teams ct ON c.id = ct.contest_id
-WHERE ct.team_id = $1
+WHERE ct.team_id = $1::uuid
+  AND (
+    c.visibility = 'public'
+    OR c.owner_id = $2::uuid
+    OR EXISTS (SELECT 1 FROM users u
+               WHERE u.id = $2::uuid AND u.role = 'admin')
+    OR EXISTS (SELECT 1 FROM organization_members om
+               WHERE om.organization_id = c.organization_id
+                 AND om.user_id = $2::uuid
+                 AND om.role IN ('owner', 'admin'))
+    OR EXISTS (SELECT 1 FROM contest_members m
+               WHERE m.contest_id = c.id AND m.user_id = $2::uuid)
+    OR EXISTS (SELECT 1 FROM contest_teams linked
+               JOIN team_members tm ON tm.team_id = linked.team_id
+               JOIN teams t ON t.id = linked.team_id
+               WHERE linked.contest_id = c.id AND tm.user_id = $2::uuid
+                 AND t.organization_id = c.organization_id)
+  )
 ORDER BY c.created_at DESC
 `
 
-func (q *Queries) GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]Contest, error) {
-	rows, err := q.db.Query(ctx, getTeamContests, teamID)
+type GetTeamContestsParams struct {
+	TeamID   uuid.UUID `json:"team_id"`
+	ViewerID uuid.UUID `json:"viewer_id"`
+}
+
+func (q *Queries) GetTeamContests(ctx context.Context, arg GetTeamContestsParams) ([]Contest, error) {
+	rows, err := q.db.Query(ctx, getTeamContests, arg.TeamID, arg.ViewerID)
 	if err != nil {
 		return nil, err
 	}

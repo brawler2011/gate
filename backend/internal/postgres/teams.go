@@ -263,8 +263,8 @@ func mapTeams(teams []sqlc.Team) []organizationsmodel.Team {
 	return result
 }
 
-func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]contestsmodel.Contest, error) {
-	contests, err := r.q.GetTeamContests(ctx, teamID)
+func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID, viewerID uuid.UUID) ([]contestsmodel.Contest, error) {
+	contests, err := r.q.GetTeamContests(ctx, sqlc.GetTeamContestsParams{TeamID: teamID, ViewerID: viewerID})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get team contests: %w", HandlePgErr(err))
 	}
@@ -288,8 +288,8 @@ func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]co
 	return result, nil
 }
 
-func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID uuid.UUID) ([]problemsmodel.Problem, error) {
-	problems, err := r.q.GetTeamProblems(ctx, teamID)
+func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID, viewerID uuid.UUID) ([]problemsmodel.Problem, error) {
+	problems, err := r.q.GetTeamProblems(ctx, sqlc.GetTeamProblemsParams{TeamID: teamID, ViewerID: viewerID})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get team problems: %w", HandlePgErr(err))
 	}

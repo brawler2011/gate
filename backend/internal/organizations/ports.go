@@ -48,8 +48,8 @@ type TeamsRepo interface {
 	ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]organizationsmodel.TeamMember, error)
 
 	// Resource associations
-	GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]contestsmodel.Contest, error)
-	GetTeamProblems(ctx context.Context, teamID uuid.UUID) ([]problemsmodel.Problem, error)
+	GetTeamContests(ctx context.Context, teamID, viewerID uuid.UUID) ([]contestsmodel.Contest, error)
+	GetTeamProblems(ctx context.Context, teamID, viewerID uuid.UUID) ([]problemsmodel.Problem, error)
 }
 
 type UsersRepo interface {
