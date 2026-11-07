@@ -183,8 +183,15 @@ func (uc *OrganizationsUseCase) DeleteOrganizationByLogin(ctx context.Context, l
 	return uc.DeleteOrganization(ctx, org.ID, userID)
 }
 
+func requiredOrgMemberAction(role organizationsmodel.OrganizationRole) accessmodel.OrgAction {
+	if role == organizationsmodel.OrgRoleOwner {
+		return accessmodel.ActionDeleteOrganization
+	}
+	return accessmodel.ActionManageOrganization
+}
+
 func (uc *OrganizationsUseCase) AddMember(ctx context.Context, input *organizationsmodel.AddOrganizationMemberInput, requestUserID uuid.UUID) error {
-	return uc.withinOrganization(ctx, input.OrganizationID, requestUserID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error {
+	return uc.withinOrganization(ctx, input.OrganizationID, requestUserID, requiredOrgMemberAction(input.Role), func(tx OrganizationTxStore) error {
 		if _, err := tx.GetUserById(ctx, input.UserID); err != nil {
 			return err
 		}
@@ -232,7 +239,7 @@ func (uc *OrganizationsUseCase) ListMembersByLogin(ctx context.Context, login st
 }
 
 func (uc *OrganizationsUseCase) UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role organizationsmodel.OrganizationRole, requestUserID uuid.UUID) error {
-	return uc.withinOrganization(ctx, orgID, requestUserID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error { return tx.UpdateMemberRole(ctx, orgID, userID, role) })
+	return uc.withinOrganization(ctx, orgID, requestUserID, requiredOrgMemberAction(role), func(tx OrganizationTxStore) error { return tx.UpdateMemberRole(ctx, orgID, userID, role) })
 }
 
 func (uc *OrganizationsUseCase) RemoveMember(ctx context.Context, orgID, userID, requestUserID uuid.UUID) error {
@@ -419,7 +426,7 @@ func (uc *OrganizationsUseCase) InviteMember(
 
 	var invitation *organizationsmodel.OrganizationInvitation
 	var pendingNotifications []notificationsmodel.Notification
-	err = uc.withinOrganization(ctx, org.ID, inviterID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error {
+	err = uc.withinOrganization(ctx, org.ID, inviterID, requiredOrgMemberAction(role), func(tx OrganizationTxStore) error {
 		// Verify target user exists
 		_, err := tx.GetUserById(ctx, targetUserID)
 		if err != nil {
@@ -765,7 +772,7 @@ func (uc *OrganizationsUseCase) ApproveJoinRequest(
 	}
 
 	var pendingNotifications []notificationsmodel.Notification
-	err = uc.withinOrganization(ctx, org.ID, reviewerID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error {
+	err = uc.withinOrganization(ctx, org.ID, reviewerID, requiredOrgMemberAction(role), func(tx OrganizationTxStore) error {
 		req, err := tx.GetJoinRequestByID(ctx, requestID)
 		if err != nil {
 			return err
