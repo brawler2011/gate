@@ -25,7 +25,7 @@ func (h *CoreServer) UploadAvatar(ctx context.Context, req *corev1.UploadAvatarR
 	}
 
 	return &corev1.UploadAvatarOK{
-		ImgId: imgID,
+		ImgID: imgID,
 	}, nil
 }
 

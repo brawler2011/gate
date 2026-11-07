@@ -10,16 +10,16 @@ describe("PermissionChecker", () => {
     id: "user-admin",
     username: "admin",
     role: "admin",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
   const regularUser: UserModel = {
     id: "user-regular",
     username: "regular",
     role: "user",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
   const createContest = (overrides: Partial<ContestModel> = {}): ContestModel => ({

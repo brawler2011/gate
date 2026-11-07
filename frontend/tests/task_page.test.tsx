@@ -9,7 +9,7 @@ import Page from '@/pages/contests/task/TaskPage';
 
 import {act, cleanup, renderWithProviders, setupDOMEnvironment, waitFor} from './test-utils';
 
-const user = {id: 'user', username: 'alice', role: 'user', createdAt: '2026-10-01', updatedAt: '2026-10-01'};
+const user = {id: 'user', username: 'alice', role: 'user', created_at: '2026-10-01', updated_at: '2026-10-01'};
 const problem = {
   problem_id: 'problem', title: 'Snapshot problem', position: 1, time_limit: 1000, memory_limit: 256,
   legend_html: '', input_format_html: '', output_format_html: '', notes_html: '', scoring_html: '',

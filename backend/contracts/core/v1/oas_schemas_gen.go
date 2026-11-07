@@ -24,6 +24,7 @@ type AddTeamMemberOK struct{}
 // AdminChangeEmailOK is response for AdminChangeEmail operation.
 type AdminChangeEmailOK struct{}
 
+// Fields for the admin change email request.
 // Ref: #/components/schemas/AdminChangeEmailRequestModel
 type AdminChangeEmailRequestModel struct {
 	Email            string  `json:"email"`
@@ -59,6 +60,7 @@ type AdminSendPasswordResetOK struct{}
 // AdminSetPasswordOK is response for AdminSetPassword operation.
 type AdminSetPasswordOK struct{}
 
+// Fields for the admin set password request.
 // Ref: #/components/schemas/AdminSetPasswordRequestModel
 type AdminSetPasswordRequestModel struct {
 	Password string `json:"password"`
@@ -74,6 +76,7 @@ func (s *AdminSetPasswordRequestModel) SetPassword(val string) {
 	s.Password = val
 }
 
+// Fields for the answer contest clarification request.
 // Ref: #/components/schemas/AnswerContestClarificationRequestModel
 type AnswerContestClarificationRequestModel struct {
 	Answer                string    `json:"answer"`
@@ -114,6 +117,7 @@ func (s *AnswerContestClarificationRequestModel) SetAnnouncementTitle(val OptStr
 // ApproveContestJoinRequestOK is response for ApproveContestJoinRequest operation.
 type ApproveContestJoinRequestOK struct{}
 
+// Fields for the approve organization join request.
 // Ref: #/components/schemas/ApproveOrganizationJoinRequestModel
 type ApproveOrganizationJoinRequestModel struct {
 	Role OptApproveOrganizationJoinRequestModelRole `json:"role"`
@@ -180,6 +184,7 @@ func (s *ApproveOrganizationJoinRequestModelRole) UnmarshalText(data []byte) err
 // ApproveOrganizationJoinRequestOK is response for ApproveOrganizationJoinRequest operation.
 type ApproveOrganizationJoinRequestOK struct{}
 
+// Result of auth.
 // Ref: #/components/schemas/AuthResponseModel
 type AuthResponseModel struct {
 	User      UserModel `json:"user"`
@@ -232,6 +237,7 @@ func (s *AuthResponseModelHeaders) SetResponse(val AuthResponseModel) {
 	s.Response = val
 }
 
+// Fields for the batch create organization users request.
 // Ref: #/components/schemas/BatchCreateOrganizationUsersRequestModel
 type BatchCreateOrganizationUsersRequestModel struct {
 	Prefix  string   `json:"prefix"`
@@ -269,6 +275,7 @@ func (s *BatchCreateOrganizationUsersRequestModel) SetTTLDays(val OptInt32) {
 	s.TTLDays = val
 }
 
+// Result of batch create organization users.
 // Ref: #/components/schemas/BatchCreateOrganizationUsersResponseModel
 type BatchCreateOrganizationUsersResponseModel struct {
 	Users []BatchCreatedUserItem `json:"users"`
@@ -284,6 +291,7 @@ func (s *BatchCreateOrganizationUsersResponseModel) SetUsers(val []BatchCreatedU
 	s.Users = val
 }
 
+// Batch created user item data.
 // Ref: #/components/schemas/BatchCreatedUserItem
 type BatchCreatedUserItem struct {
 	ID        uuid.UUID   `json:"id"`
@@ -335,6 +343,7 @@ func (s *BatchCreatedUserItem) SetExpiresAt(val OptDateTime) {
 // BlockProblemForUserOK is response for BlockProblemForUser operation.
 type BlockProblemForUserOK struct{}
 
+// Fields for the block problem request.
 // Ref: #/components/schemas/BlockProblemRequestModel
 type BlockProblemRequestModel struct {
 	Reason OptString `json:"reason"`
@@ -353,6 +362,7 @@ func (s *BlockProblemRequestModel) SetReason(val OptString) {
 // BlockSubmissionOK is response for BlockSubmission operation.
 type BlockSubmissionOK struct{}
 
+// Fields for the block submission request.
 // Ref: #/components/schemas/BlockSubmissionRequestModel
 type BlockSubmissionRequestModel struct {
 	Reason OptString `json:"reason"`
@@ -377,6 +387,7 @@ type CancelOrganizationInvitationOK struct{}
 // CancelOrganizationJoinRequestOK is response for CancelOrganizationJoinRequest operation.
 type CancelOrganizationJoinRequestOK struct{}
 
+// Fields for the change password request.
 // Ref: #/components/schemas/ChangePasswordRequestModel
 type ChangePasswordRequestModel struct {
 	OldPassword string `json:"old_password"`
@@ -403,6 +414,7 @@ func (s *ChangePasswordRequestModel) SetNewPassword(val string) {
 	s.NewPassword = val
 }
 
+// Fields for the claim temporary user request.
 // Ref: #/components/schemas/ClaimTemporaryUserRequestModel
 type ClaimTemporaryUserRequestModel struct {
 	Username string `json:"username"`
@@ -429,6 +441,7 @@ func (s *ClaimTemporaryUserRequestModel) SetPassword(val string) {
 	s.Password = val
 }
 
+// Result of claim temporary user.
 // Ref: #/components/schemas/ClaimTemporaryUserResponseModel
 type ClaimTemporaryUserResponseModel struct {
 	ClaimedUserID   uuid.UUID   `json:"claimed_user_id"`
@@ -466,6 +479,7 @@ func (s *ClaimTemporaryUserResponseModel) SetContestsGranted(val []uuid.UUID) {
 	s.ContestsGranted = val
 }
 
+// Claimed account item data.
 // Ref: #/components/schemas/ClaimedAccountItem
 type ClaimedAccountItem struct {
 	ID        uuid.UUID   `json:"id"`
@@ -569,6 +583,7 @@ func (s *CompileProblemComponentComponentType) UnmarshalText(data []byte) error 
 	}
 }
 
+// Compile result data.
 // Ref: #/components/schemas/CompileResult
 type CompileResult struct {
 	Success      OptBool   `json:"success"`
@@ -631,6 +646,7 @@ func (s *CompileResult) SetCompileError(val OptString) {
 // ConfirmEmailChangeOK is response for ConfirmEmailChange operation.
 type ConfirmEmailChangeOK struct{}
 
+// Fields for the confirm email change request.
 // Ref: #/components/schemas/ConfirmEmailChangeRequestModel
 type ConfirmEmailChangeRequestModel struct {
 	Token string `json:"token"`
@@ -646,6 +662,7 @@ func (s *ConfirmEmailChangeRequestModel) SetToken(val string) {
 	s.Token = val
 }
 
+// Contest announcement data.
 // Ref: #/components/schemas/ContestAnnouncementModel
 type ContestAnnouncementModel struct {
 	ID             uuid.UUID `json:"id"`
@@ -771,6 +788,7 @@ func (s *ContestAnnouncementModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
+// Contest clarification data.
 // Ref: #/components/schemas/ContestClarificationModel
 type ContestClarificationModel struct {
 	ID                 uuid.UUID   `json:"id"`
@@ -940,6 +958,7 @@ func (s *ContestClarificationModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
+// Contest draft data.
 // Ref: #/components/schemas/ContestDraftModel
 type ContestDraftModel struct {
 	ID        uuid.UUID `json:"id"`
@@ -1021,6 +1040,7 @@ func (s *ContestDraftModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
+// Fields for the contest join request.
 // Ref: #/components/schemas/ContestJoinRequestModel
 type ContestJoinRequestModel struct {
 	ID                uuid.UUID `json:"id"`
@@ -1168,6 +1188,7 @@ func (s *ContestJoinRequestModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
+// Result of contest join request nullable.
 // Ref: #/components/schemas/ContestJoinRequestNullableResponseModel
 type ContestJoinRequestNullableResponseModel struct {
 	Request OptContestJoinRequestModel `json:"request"`
@@ -1183,6 +1204,7 @@ func (s *ContestJoinRequestNullableResponseModel) SetRequest(val OptContestJoinR
 	s.Request = val
 }
 
+// Result of contest join request.
 // Ref: #/components/schemas/ContestJoinRequestResponseModel
 type ContestJoinRequestResponseModel struct {
 	Request    OptContestJoinRequestModel `json:"request"`
@@ -1209,6 +1231,7 @@ func (s *ContestJoinRequestResponseModel) SetRegistered(val bool) {
 	s.Registered = val
 }
 
+// Contest member data.
 // Ref: #/components/schemas/ContestMemberModel
 type ContestMemberModel struct {
 	UserID      uuid.UUID `json:"user_id"`
@@ -1290,6 +1313,7 @@ func (s *ContestMemberModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
+// Contest data.
 // Ref: #/components/schemas/ContestModel
 type ContestModel struct {
 	ID                     uuid.UUID `json:"id"`
@@ -1668,6 +1692,7 @@ func (s *ContestModelParticipationMode) UnmarshalText(data []byte) error {
 	}
 }
 
+// Contest problem list item data.
 // Ref: #/components/schemas/ContestProblemListItemModel
 type ContestProblemListItemModel struct {
 	ProblemID   uuid.UUID `json:"problem_id"`
@@ -1749,6 +1774,7 @@ func (s *ContestProblemListItemModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
+// Contest problem data.
 // Ref: #/components/schemas/ContestProblemModel
 type ContestProblemModel struct {
 	ProblemID        uuid.UUID            `json:"problem_id"`
@@ -1896,6 +1922,7 @@ func (s *ContestProblemModel) SetSamples(val []ProblemSampleModel) {
 	s.Samples = val
 }
 
+// Contest problem reorder item data.
 // Ref: #/components/schemas/ContestProblemReorderItemModel
 type ContestProblemReorderItemModel struct {
 	ProblemID uuid.UUID `json:"problem_id"`
@@ -1922,6 +1949,48 @@ func (s *ContestProblemReorderItemModel) SetPosition(val int32) {
 	s.Position = val
 }
 
+type ContestSortOrderQuery string
+
+const (
+	ContestSortOrderQueryAsc  ContestSortOrderQuery = "asc"
+	ContestSortOrderQueryDesc ContestSortOrderQuery = "desc"
+)
+
+// AllValues returns all ContestSortOrderQuery values.
+func (ContestSortOrderQuery) AllValues() []ContestSortOrderQuery {
+	return []ContestSortOrderQuery{
+		ContestSortOrderQueryAsc,
+		ContestSortOrderQueryDesc,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ContestSortOrderQuery) MarshalText() ([]byte, error) {
+	switch s {
+	case ContestSortOrderQueryAsc:
+		return []byte(s), nil
+	case ContestSortOrderQueryDesc:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ContestSortOrderQuery) UnmarshalText(data []byte) error {
+	switch ContestSortOrderQuery(data) {
+	case ContestSortOrderQueryAsc:
+		*s = ContestSortOrderQueryAsc
+		return nil
+	case ContestSortOrderQueryDesc:
+		*s = ContestSortOrderQueryDesc
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Contest team data.
 // Ref: #/components/schemas/ContestTeamModel
 type ContestTeamModel struct {
 	ContestID       uuid.UUID `json:"contest_id"`
@@ -2028,6 +2097,7 @@ func (s *CookieAuth) SetRoles(val []string) {
 	s.Roles = val
 }
 
+// Fields for the create contest announcement request.
 // Ref: #/components/schemas/CreateContestAnnouncementRequestModel
 type CreateContestAnnouncementRequestModel struct {
 	ProblemID OptUUID `json:"problem_id"`
@@ -2065,6 +2135,7 @@ func (s *CreateContestAnnouncementRequestModel) SetBody(val string) {
 	s.Body = val
 }
 
+// Fields for the create contest clarification request.
 // Ref: #/components/schemas/CreateContestClarificationRequestModel
 type CreateContestClarificationRequestModel struct {
 	ProblemID OptUUID `json:"problem_id"`
@@ -2091,6 +2162,7 @@ func (s *CreateContestClarificationRequestModel) SetQuestion(val string) {
 	s.Question = val
 }
 
+// Fields for the create contest draft request.
 // Ref: #/components/schemas/CreateContestDraftRequestModel
 type CreateContestDraftRequestModel struct {
 	Code string `json:"code"`
@@ -2106,6 +2178,7 @@ func (s *CreateContestDraftRequestModel) SetCode(val string) {
 	s.Code = val
 }
 
+// Fields for the create contest join request.
 // Ref: #/components/schemas/CreateContestJoinRequestModel
 type CreateContestJoinRequestModel struct {
 	Message OptString `json:"message"`
@@ -2172,6 +2245,7 @@ func (s *CreateOrganizationJoinPolicy) UnmarshalText(data []byte) error {
 	}
 }
 
+// Fields for the create organization join request.
 // Ref: #/components/schemas/CreateOrganizationJoinRequestModel
 type CreateOrganizationJoinRequestModel struct {
 	Message OptString `json:"message"`
@@ -2187,6 +2261,7 @@ func (s *CreateOrganizationJoinRequestModel) SetMessage(val OptString) {
 	s.Message = val
 }
 
+// Result of create organization.
 // Ref: #/components/schemas/CreateOrganizationResponseModel
 type CreateOrganizationResponseModel struct {
 	ID    uuid.UUID `json:"id"`
@@ -2390,6 +2465,7 @@ func (s CreateProblemWorkshopSubmissionReq) Read(p []byte) (n int, err error) {
 	return s.Data.Read(p)
 }
 
+// Fields for the create submission request.
 // Ref: #/components/schemas/CreateSubmissionRequestModel
 type CreateSubmissionRequestModel struct {
 	Submission string `json:"submission"`
@@ -2430,6 +2506,7 @@ func (s *CreateTeamReq) SetOrganizationID(val uuid.UUID) {
 	s.OrganizationID = val
 }
 
+// Created post data.
 // Ref: #/components/schemas/CreatedPost
 type CreatedPost struct {
 	PostID OptUUID `json:"post_id"`
@@ -2447,6 +2524,7 @@ func (s *CreatedPost) SetPostID(val OptUUID) {
 
 func (*CreatedPost) createPostRes() {}
 
+// Result of creation.
 // Ref: #/components/schemas/CreationResponseModel
 type CreationResponseModel struct {
 	ID    uuid.UUID `json:"id"`
@@ -2473,6 +2551,7 @@ func (s *CreationResponseModel) SetLogin(val OptString) {
 	s.Login = val
 }
 
+// Dashboard contest data.
 // Ref: #/components/schemas/DashboardContestModel
 type DashboardContestModel struct {
 	ID                 uuid.UUID      `json:"id"`
@@ -2598,6 +2677,7 @@ func (s *DashboardContestModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
+// Dashboard problem data.
 // Ref: #/components/schemas/DashboardProblemModel
 type DashboardProblemModel struct {
 	ID                uuid.UUID `json:"id"`
@@ -2764,6 +2844,7 @@ func (s DownloadContestStatementsPdfOK) Read(p []byte) (n int, err error) {
 	return s.Data.Read(p)
 }
 
+// Error data.
 // Ref: #/components/schemas/Error
 type Error struct {
 	Error OptString `json:"error"`
@@ -2779,6 +2860,7 @@ func (s *Error) SetError(val OptString) {
 	s.Error = val
 }
 
+// Failed test detail data.
 // Ref: #/components/schemas/FailedTestDetailModel
 type FailedTestDetailModel struct {
 	TestIndex     int32  `json:"test_index"`
@@ -2860,6 +2942,7 @@ func (s *FailedTestDetailModel) SetIsTruncated(val bool) {
 	s.IsTruncated = val
 }
 
+// File entry data.
 // Ref: #/components/schemas/FileEntry
 type FileEntry struct {
 	Path        OptString `json:"path"`
@@ -2911,6 +2994,7 @@ func (s *FileEntry) SetIsMain(val OptBool) {
 // ForgotPasswordOK is response for ForgotPassword operation.
 type ForgotPasswordOK struct{}
 
+// Fields for the forgot password request.
 // Ref: #/components/schemas/ForgotPasswordRequestModel
 type ForgotPasswordRequestModel struct {
 	Identifier string `json:"identifier"`
@@ -2976,6 +3060,7 @@ func (s *GenerateTestsReq) SetArguments(val [][]string) {
 	s.Arguments = val
 }
 
+// Result of get contest problem.
 // Ref: #/components/schemas/GetContestProblemResponseModel
 type GetContestProblemResponseModel struct {
 	Problem ContestProblemModel `json:"problem"`
@@ -2991,6 +3076,7 @@ func (s *GetContestProblemResponseModel) SetProblem(val ContestProblemModel) {
 	s.Problem = val
 }
 
+// Result of get contest.
 // Ref: #/components/schemas/GetContestResponseModel
 type GetContestResponseModel struct {
 	Contest  ContestModel                  `json:"contest"`
@@ -3017,6 +3103,7 @@ func (s *GetContestResponseModel) SetProblems(val []ContestProblemListItemModel)
 	s.Problems = val
 }
 
+// Result of get health.
 // Ref: #/components/schemas/GetHealthResponseModel
 type GetHealthResponseModel struct {
 	Status  string `json:"status"`
@@ -3043,6 +3130,7 @@ func (s *GetHealthResponseModel) SetMessage(val string) {
 	s.Message = val
 }
 
+// Result of get my contest role.
 // Ref: #/components/schemas/GetMyContestRoleResponseModel
 type GetMyContestRoleResponseModel struct {
 	Role string `json:"role"`
@@ -3071,6 +3159,7 @@ func (s *GetMyContestRoleResponseModel) SetPermissionsMask(val OptInt64) {
 	s.PermissionsMask = val
 }
 
+// Result of get organization.
 // Ref: #/components/schemas/GetOrganizationResponseModel
 type GetOrganizationResponseModel struct {
 	Organization OrganizationModel `json:"organization"`
@@ -3231,6 +3320,7 @@ func (s GetProblemMediaFileOK) Read(p []byte) (n int, err error) {
 	return s.Data.Read(p)
 }
 
+// Result of get problem.
 // Ref: #/components/schemas/GetProblemResponseModel
 type GetProblemResponseModel struct {
 	Problem ProblemModel `json:"problem"`
@@ -3303,6 +3393,7 @@ func (s *GetPublishedPackageFound) SetLocation(val OptString) {
 	s.Location = val
 }
 
+// Result of get submission.
 // Ref: #/components/schemas/GetSubmissionResponseModel
 type GetSubmissionResponseModel struct {
 	Submission SubmissionModel `json:"submission"`
@@ -3318,6 +3409,7 @@ func (s *GetSubmissionResponseModel) SetSubmission(val SubmissionModel) {
 	s.Submission = val
 }
 
+// Result of get team.
 // Ref: #/components/schemas/GetTeamResponseModel
 type GetTeamResponseModel struct {
 	Team TeamModel `json:"team"`
@@ -3400,6 +3492,7 @@ func (s *GetUserAvatarOKHeaders) SetResponse(val GetUserAvatarOK) {
 
 func (*GetUserAvatarOKHeaders) getUserAvatarRes() {}
 
+// Result of get user dashboard.
 // Ref: #/components/schemas/GetUserDashboardResponseModel
 type GetUserDashboardResponseModel struct {
 	RecentContests []DashboardContestModel `json:"recent_contests"`
@@ -3426,6 +3519,7 @@ func (s *GetUserDashboardResponseModel) SetMyProblems(val []DashboardProblemMode
 	s.MyProblems = val
 }
 
+// Result of get user.
 // Ref: #/components/schemas/GetUserResponseModel
 type GetUserResponseModel struct {
 	User UserModel `json:"user"`
@@ -3470,6 +3564,7 @@ func (s *ImportProblemReq) SetPackage(val OptMultipartFile) {
 	s.Package = val
 }
 
+// Fields for the invite organization member request.
 // Ref: #/components/schemas/InviteOrganizationMemberRequestModel
 type InviteOrganizationMemberRequestModel struct {
 	UserID uuid.UUID                                `json:"user_id"`
@@ -3544,95 +3639,6 @@ func (s *InviteOrganizationMemberRequestModelRole) UnmarshalText(data []byte) er
 	}
 }
 
-type ListAdminContestsSortBy string
-
-const (
-	ListAdminContestsSortByCreatedAt ListAdminContestsSortBy = "created_at"
-	ListAdminContestsSortByUpdatedAt ListAdminContestsSortBy = "updated_at"
-	ListAdminContestsSortByTitle     ListAdminContestsSortBy = "title"
-)
-
-// AllValues returns all ListAdminContestsSortBy values.
-func (ListAdminContestsSortBy) AllValues() []ListAdminContestsSortBy {
-	return []ListAdminContestsSortBy{
-		ListAdminContestsSortByCreatedAt,
-		ListAdminContestsSortByUpdatedAt,
-		ListAdminContestsSortByTitle,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ListAdminContestsSortBy) MarshalText() ([]byte, error) {
-	switch s {
-	case ListAdminContestsSortByCreatedAt:
-		return []byte(s), nil
-	case ListAdminContestsSortByUpdatedAt:
-		return []byte(s), nil
-	case ListAdminContestsSortByTitle:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ListAdminContestsSortBy) UnmarshalText(data []byte) error {
-	switch ListAdminContestsSortBy(data) {
-	case ListAdminContestsSortByCreatedAt:
-		*s = ListAdminContestsSortByCreatedAt
-		return nil
-	case ListAdminContestsSortByUpdatedAt:
-		*s = ListAdminContestsSortByUpdatedAt
-		return nil
-	case ListAdminContestsSortByTitle:
-		*s = ListAdminContestsSortByTitle
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
-type ListAdminContestsSortOrder string
-
-const (
-	ListAdminContestsSortOrderAsc  ListAdminContestsSortOrder = "asc"
-	ListAdminContestsSortOrderDesc ListAdminContestsSortOrder = "desc"
-)
-
-// AllValues returns all ListAdminContestsSortOrder values.
-func (ListAdminContestsSortOrder) AllValues() []ListAdminContestsSortOrder {
-	return []ListAdminContestsSortOrder{
-		ListAdminContestsSortOrderAsc,
-		ListAdminContestsSortOrderDesc,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ListAdminContestsSortOrder) MarshalText() ([]byte, error) {
-	switch s {
-	case ListAdminContestsSortOrderAsc:
-		return []byte(s), nil
-	case ListAdminContestsSortOrderDesc:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ListAdminContestsSortOrder) UnmarshalText(data []byte) error {
-	switch ListAdminContestsSortOrder(data) {
-	case ListAdminContestsSortOrderAsc:
-		*s = ListAdminContestsSortOrderAsc
-		return nil
-	case ListAdminContestsSortOrderDesc:
-		*s = ListAdminContestsSortOrderDesc
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
 type ListAdminContestsVisibility string
 
 const (
@@ -3674,6 +3680,7 @@ func (s *ListAdminContestsVisibility) UnmarshalText(data []byte) error {
 	}
 }
 
+// Paginated collection of claimed accounts.
 // Ref: #/components/schemas/ListClaimedAccountsResponseModel
 type ListClaimedAccountsResponseModel struct {
 	Accounts []ClaimedAccountItem `json:"accounts"`
@@ -3689,6 +3696,7 @@ func (s *ListClaimedAccountsResponseModel) SetAccounts(val []ClaimedAccountItem)
 	s.Accounts = val
 }
 
+// Paginated collection of contest announcements.
 // Ref: #/components/schemas/ListContestAnnouncementsResponseModel
 type ListContestAnnouncementsResponseModel struct {
 	Announcements []ContestAnnouncementModel `json:"announcements"`
@@ -3715,6 +3723,7 @@ func (s *ListContestAnnouncementsResponseModel) SetPagination(val PaginationMode
 	s.Pagination = val
 }
 
+// Paginated collection of contest clarifications.
 // Ref: #/components/schemas/ListContestClarificationsResponseModel
 type ListContestClarificationsResponseModel struct {
 	Clarifications []ContestClarificationModel `json:"clarifications"`
@@ -3741,6 +3750,7 @@ func (s *ListContestClarificationsResponseModel) SetPagination(val PaginationMod
 	s.Pagination = val
 }
 
+// Paginated collection of contest drafts.
 // Ref: #/components/schemas/ListContestDraftsResponseModel
 type ListContestDraftsResponseModel struct {
 	Drafts     []ContestDraftModel `json:"drafts"`
@@ -3767,6 +3777,7 @@ func (s *ListContestDraftsResponseModel) SetPagination(val PaginationModel) {
 	s.Pagination = val
 }
 
+// Paginated collection of contest join requests.
 // Ref: #/components/schemas/ListContestJoinRequestsResponseModel
 type ListContestJoinRequestsResponseModel struct {
 	Requests []ContestJoinRequestModel `json:"requests"`
@@ -3782,6 +3793,7 @@ func (s *ListContestJoinRequestsResponseModel) SetRequests(val []ContestJoinRequ
 	s.Requests = val
 }
 
+// Paginated collection of contest members.
 // Ref: #/components/schemas/ListContestMembersResponseModel
 type ListContestMembersResponseModel struct {
 	Members    []ContestMemberModel `json:"members"`
@@ -3808,47 +3820,7 @@ func (s *ListContestMembersResponseModel) SetPagination(val PaginationModel) {
 	s.Pagination = val
 }
 
-type ListContestSubmissionsSortOrder string
-
-const (
-	ListContestSubmissionsSortOrderAsc  ListContestSubmissionsSortOrder = "asc"
-	ListContestSubmissionsSortOrderDesc ListContestSubmissionsSortOrder = "desc"
-)
-
-// AllValues returns all ListContestSubmissionsSortOrder values.
-func (ListContestSubmissionsSortOrder) AllValues() []ListContestSubmissionsSortOrder {
-	return []ListContestSubmissionsSortOrder{
-		ListContestSubmissionsSortOrderAsc,
-		ListContestSubmissionsSortOrderDesc,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ListContestSubmissionsSortOrder) MarshalText() ([]byte, error) {
-	switch s {
-	case ListContestSubmissionsSortOrderAsc:
-		return []byte(s), nil
-	case ListContestSubmissionsSortOrderDesc:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ListContestSubmissionsSortOrder) UnmarshalText(data []byte) error {
-	switch ListContestSubmissionsSortOrder(data) {
-	case ListContestSubmissionsSortOrderAsc:
-		*s = ListContestSubmissionsSortOrderAsc
-		return nil
-	case ListContestSubmissionsSortOrderDesc:
-		*s = ListContestSubmissionsSortOrderDesc
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
+// Paginated collection of contest teams.
 // Ref: #/components/schemas/ListContestTeamsResponseModel
 type ListContestTeamsResponseModel struct {
 	Teams []ContestTeamModel `json:"teams"`
@@ -3864,6 +3836,7 @@ func (s *ListContestTeamsResponseModel) SetTeams(val []ContestTeamModel) {
 	s.Teams = val
 }
 
+// Paginated collection of contests.
 // Ref: #/components/schemas/ListContestsResponseModel
 type ListContestsResponseModel struct {
 	Contests   []ContestModel  `json:"contests"`
@@ -3890,6 +3863,7 @@ func (s *ListContestsResponseModel) SetPagination(val PaginationModel) {
 	s.Pagination = val
 }
 
+// Paginated collection of organization invitations.
 // Ref: #/components/schemas/ListOrganizationInvitationsResponseModel
 type ListOrganizationInvitationsResponseModel struct {
 	Invitations []OrganizationInvitationModel `json:"invitations"`
@@ -3905,6 +3879,7 @@ func (s *ListOrganizationInvitationsResponseModel) SetInvitations(val []Organiza
 	s.Invitations = val
 }
 
+// Paginated collection of organization join requests.
 // Ref: #/components/schemas/ListOrganizationJoinRequestsResponseModel
 type ListOrganizationJoinRequestsResponseModel struct {
 	Requests []OrganizationJoinRequestModel `json:"requests"`
@@ -3920,6 +3895,7 @@ func (s *ListOrganizationJoinRequestsResponseModel) SetRequests(val []Organizati
 	s.Requests = val
 }
 
+// Paginated collection of organization members.
 // Ref: #/components/schemas/ListOrganizationMembersResponseModel
 type ListOrganizationMembersResponseModel struct {
 	Members    []OrganizationMemberModel `json:"members"`
@@ -3946,6 +3922,7 @@ func (s *ListOrganizationMembersResponseModel) SetPagination(val PaginationModel
 	s.Pagination = val
 }
 
+// Paginated collection of organizations.
 // Ref: #/components/schemas/ListOrganizationsResponseModel
 type ListOrganizationsResponseModel struct {
 	Organizations []OrganizationModel `json:"organizations"`
@@ -3972,6 +3949,7 @@ func (s *ListOrganizationsResponseModel) SetPagination(val PaginationModel) {
 	s.Pagination = val
 }
 
+// Paginated collection of posts.
 // Ref: #/components/schemas/ListPostsResponseModel
 type ListPostsResponseModel struct {
 	Pagination PaginationModel `json:"pagination"`
@@ -4039,6 +4017,7 @@ func (s *ListPostsSortOrder) UnmarshalText(data []byte) error {
 	}
 }
 
+// Paginated collection of problem members.
 // Ref: #/components/schemas/ListProblemMembersResponseModel
 type ListProblemMembersResponseModel struct {
 	Members    []ProblemMemberModel `json:"members"`
@@ -4148,6 +4127,7 @@ func (s *ListProblemPackagesOKPackagesItem) SetCompiledAt(val OptDateTime) {
 	s.CompiledAt = val
 }
 
+// Paginated collection of problem teams.
 // Ref: #/components/schemas/ListProblemTeamsResponseModel
 type ListProblemTeamsResponseModel struct {
 	Teams []ProblemTeamModel `json:"teams"`
@@ -4163,6 +4143,7 @@ func (s *ListProblemTeamsResponseModel) SetTeams(val []ProblemTeamModel) {
 	s.Teams = val
 }
 
+// Paginated collection of problems.
 // Ref: #/components/schemas/ListProblemsResponseModel
 type ListProblemsResponseModel struct {
 	Problems   []ProblemsListItemModel `json:"problems"`
@@ -4189,95 +4170,7 @@ func (s *ListProblemsResponseModel) SetPagination(val PaginationModel) {
 	s.Pagination = val
 }
 
-type ListPublicContestsSortBy string
-
-const (
-	ListPublicContestsSortByCreatedAt ListPublicContestsSortBy = "created_at"
-	ListPublicContestsSortByUpdatedAt ListPublicContestsSortBy = "updated_at"
-	ListPublicContestsSortByTitle     ListPublicContestsSortBy = "title"
-)
-
-// AllValues returns all ListPublicContestsSortBy values.
-func (ListPublicContestsSortBy) AllValues() []ListPublicContestsSortBy {
-	return []ListPublicContestsSortBy{
-		ListPublicContestsSortByCreatedAt,
-		ListPublicContestsSortByUpdatedAt,
-		ListPublicContestsSortByTitle,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ListPublicContestsSortBy) MarshalText() ([]byte, error) {
-	switch s {
-	case ListPublicContestsSortByCreatedAt:
-		return []byte(s), nil
-	case ListPublicContestsSortByUpdatedAt:
-		return []byte(s), nil
-	case ListPublicContestsSortByTitle:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ListPublicContestsSortBy) UnmarshalText(data []byte) error {
-	switch ListPublicContestsSortBy(data) {
-	case ListPublicContestsSortByCreatedAt:
-		*s = ListPublicContestsSortByCreatedAt
-		return nil
-	case ListPublicContestsSortByUpdatedAt:
-		*s = ListPublicContestsSortByUpdatedAt
-		return nil
-	case ListPublicContestsSortByTitle:
-		*s = ListPublicContestsSortByTitle
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
-type ListPublicContestsSortOrder string
-
-const (
-	ListPublicContestsSortOrderAsc  ListPublicContestsSortOrder = "asc"
-	ListPublicContestsSortOrderDesc ListPublicContestsSortOrder = "desc"
-)
-
-// AllValues returns all ListPublicContestsSortOrder values.
-func (ListPublicContestsSortOrder) AllValues() []ListPublicContestsSortOrder {
-	return []ListPublicContestsSortOrder{
-		ListPublicContestsSortOrderAsc,
-		ListPublicContestsSortOrderDesc,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ListPublicContestsSortOrder) MarshalText() ([]byte, error) {
-	switch s {
-	case ListPublicContestsSortOrderAsc:
-		return []byte(s), nil
-	case ListPublicContestsSortOrderDesc:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ListPublicContestsSortOrder) UnmarshalText(data []byte) error {
-	switch ListPublicContestsSortOrder(data) {
-	case ListPublicContestsSortOrderAsc:
-		*s = ListPublicContestsSortOrderAsc
-		return nil
-	case ListPublicContestsSortOrderDesc:
-		*s = ListPublicContestsSortOrderDesc
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
+// Paginated collection of submissions.
 // Ref: #/components/schemas/ListSubmissionsResponseModel
 type ListSubmissionsResponseModel struct {
 	TotalCount  int32                      `json:"total_count"`
@@ -4326,47 +4219,7 @@ func (s *ListSubmissionsResponseModel) SetPagination(val PaginationModel) {
 	s.Pagination = val
 }
 
-type ListSubmissionsSortOrder string
-
-const (
-	ListSubmissionsSortOrderAsc  ListSubmissionsSortOrder = "asc"
-	ListSubmissionsSortOrderDesc ListSubmissionsSortOrder = "desc"
-)
-
-// AllValues returns all ListSubmissionsSortOrder values.
-func (ListSubmissionsSortOrder) AllValues() []ListSubmissionsSortOrder {
-	return []ListSubmissionsSortOrder{
-		ListSubmissionsSortOrderAsc,
-		ListSubmissionsSortOrderDesc,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ListSubmissionsSortOrder) MarshalText() ([]byte, error) {
-	switch s {
-	case ListSubmissionsSortOrderAsc:
-		return []byte(s), nil
-	case ListSubmissionsSortOrderDesc:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ListSubmissionsSortOrder) UnmarshalText(data []byte) error {
-	switch ListSubmissionsSortOrder(data) {
-	case ListSubmissionsSortOrderAsc:
-		*s = ListSubmissionsSortOrderAsc
-		return nil
-	case ListSubmissionsSortOrderDesc:
-		*s = ListSubmissionsSortOrderDesc
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
+// Paginated collection of team members.
 // Ref: #/components/schemas/ListTeamMembersResponseModel
 type ListTeamMembersResponseModel struct {
 	Members    []TeamMemberModel `json:"members"`
@@ -4393,6 +4246,7 @@ func (s *ListTeamMembersResponseModel) SetPagination(val PaginationModel) {
 	s.Pagination = val
 }
 
+// Paginated collection of teams.
 // Ref: #/components/schemas/ListTeamsResponseModel
 type ListTeamsResponseModel struct {
 	Teams      []TeamModel     `json:"teams"`
@@ -4419,6 +4273,7 @@ func (s *ListTeamsResponseModel) SetPagination(val PaginationModel) {
 	s.Pagination = val
 }
 
+// Paginated collection of user contests.
 // Ref: #/components/schemas/ListUserContestsResponseModel
 type ListUserContestsResponseModel struct {
 	Contests   []ContestModel  `json:"contests"`
@@ -4500,88 +4355,7 @@ func (s *ListUserContestsSortBy) UnmarshalText(data []byte) error {
 	}
 }
 
-type ListUserContestsSortOrder string
-
-const (
-	ListUserContestsSortOrderAsc  ListUserContestsSortOrder = "asc"
-	ListUserContestsSortOrderDesc ListUserContestsSortOrder = "desc"
-)
-
-// AllValues returns all ListUserContestsSortOrder values.
-func (ListUserContestsSortOrder) AllValues() []ListUserContestsSortOrder {
-	return []ListUserContestsSortOrder{
-		ListUserContestsSortOrderAsc,
-		ListUserContestsSortOrderDesc,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ListUserContestsSortOrder) MarshalText() ([]byte, error) {
-	switch s {
-	case ListUserContestsSortOrderAsc:
-		return []byte(s), nil
-	case ListUserContestsSortOrderDesc:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ListUserContestsSortOrder) UnmarshalText(data []byte) error {
-	switch ListUserContestsSortOrder(data) {
-	case ListUserContestsSortOrderAsc:
-		*s = ListUserContestsSortOrderAsc
-		return nil
-	case ListUserContestsSortOrderDesc:
-		*s = ListUserContestsSortOrderDesc
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
-type ListUserSubmissionsSortOrder string
-
-const (
-	ListUserSubmissionsSortOrderAsc  ListUserSubmissionsSortOrder = "asc"
-	ListUserSubmissionsSortOrderDesc ListUserSubmissionsSortOrder = "desc"
-)
-
-// AllValues returns all ListUserSubmissionsSortOrder values.
-func (ListUserSubmissionsSortOrder) AllValues() []ListUserSubmissionsSortOrder {
-	return []ListUserSubmissionsSortOrder{
-		ListUserSubmissionsSortOrderAsc,
-		ListUserSubmissionsSortOrderDesc,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ListUserSubmissionsSortOrder) MarshalText() ([]byte, error) {
-	switch s {
-	case ListUserSubmissionsSortOrderAsc:
-		return []byte(s), nil
-	case ListUserSubmissionsSortOrderDesc:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ListUserSubmissionsSortOrder) UnmarshalText(data []byte) error {
-	switch ListUserSubmissionsSortOrder(data) {
-	case ListUserSubmissionsSortOrderAsc:
-		*s = ListUserSubmissionsSortOrderAsc
-		return nil
-	case ListUserSubmissionsSortOrderDesc:
-		*s = ListUserSubmissionsSortOrderDesc
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
+// Paginated collection of users.
 // Ref: #/components/schemas/ListUsersResponseModel
 type ListUsersResponseModel struct {
 	Users      []UserModel     `json:"users"`
@@ -4608,95 +4382,7 @@ func (s *ListUsersResponseModel) SetPagination(val PaginationModel) {
 	s.Pagination = val
 }
 
-type ListWorkshopContestsSortBy string
-
-const (
-	ListWorkshopContestsSortByCreatedAt ListWorkshopContestsSortBy = "created_at"
-	ListWorkshopContestsSortByUpdatedAt ListWorkshopContestsSortBy = "updated_at"
-	ListWorkshopContestsSortByTitle     ListWorkshopContestsSortBy = "title"
-)
-
-// AllValues returns all ListWorkshopContestsSortBy values.
-func (ListWorkshopContestsSortBy) AllValues() []ListWorkshopContestsSortBy {
-	return []ListWorkshopContestsSortBy{
-		ListWorkshopContestsSortByCreatedAt,
-		ListWorkshopContestsSortByUpdatedAt,
-		ListWorkshopContestsSortByTitle,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ListWorkshopContestsSortBy) MarshalText() ([]byte, error) {
-	switch s {
-	case ListWorkshopContestsSortByCreatedAt:
-		return []byte(s), nil
-	case ListWorkshopContestsSortByUpdatedAt:
-		return []byte(s), nil
-	case ListWorkshopContestsSortByTitle:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ListWorkshopContestsSortBy) UnmarshalText(data []byte) error {
-	switch ListWorkshopContestsSortBy(data) {
-	case ListWorkshopContestsSortByCreatedAt:
-		*s = ListWorkshopContestsSortByCreatedAt
-		return nil
-	case ListWorkshopContestsSortByUpdatedAt:
-		*s = ListWorkshopContestsSortByUpdatedAt
-		return nil
-	case ListWorkshopContestsSortByTitle:
-		*s = ListWorkshopContestsSortByTitle
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
-type ListWorkshopContestsSortOrder string
-
-const (
-	ListWorkshopContestsSortOrderAsc  ListWorkshopContestsSortOrder = "asc"
-	ListWorkshopContestsSortOrderDesc ListWorkshopContestsSortOrder = "desc"
-)
-
-// AllValues returns all ListWorkshopContestsSortOrder values.
-func (ListWorkshopContestsSortOrder) AllValues() []ListWorkshopContestsSortOrder {
-	return []ListWorkshopContestsSortOrder{
-		ListWorkshopContestsSortOrderAsc,
-		ListWorkshopContestsSortOrderDesc,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ListWorkshopContestsSortOrder) MarshalText() ([]byte, error) {
-	switch s {
-	case ListWorkshopContestsSortOrderAsc:
-		return []byte(s), nil
-	case ListWorkshopContestsSortOrderDesc:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ListWorkshopContestsSortOrder) UnmarshalText(data []byte) error {
-	switch ListWorkshopContestsSortOrder(data) {
-	case ListWorkshopContestsSortOrderAsc:
-		*s = ListWorkshopContestsSortOrderAsc
-		return nil
-	case ListWorkshopContestsSortOrderDesc:
-		*s = ListWorkshopContestsSortOrderDesc
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
+// Fields for the login request.
 // Ref: #/components/schemas/LoginRequestModel
 type LoginRequestModel struct {
 	Identifier string `json:"identifier"`
@@ -4744,6 +4430,7 @@ type MarkAllNotificationsAsReadOK struct{}
 // MarkNotificationAsReadOK is response for MarkNotificationAsRead operation.
 type MarkNotificationAsReadOK struct{}
 
+// Result of message.
 // Ref: #/components/schemas/MessageResponse
 type MessageResponse struct {
 	Message OptString `json:"message"`
@@ -4759,6 +4446,7 @@ func (s *MessageResponse) SetMessage(val OptString) {
 	s.Message = val
 }
 
+// Notification data.
 // Ref: #/components/schemas/NotificationModel
 type NotificationModel struct {
 	ID        uuid.UUID                `json:"id"`
@@ -4873,6 +4561,7 @@ func (s *NotificationModelData) init() NotificationModelData {
 	return m
 }
 
+// Result of notifications list.
 // Ref: #/components/schemas/NotificationsListResponseModel
 type NotificationsListResponseModel struct {
 	Notifications []NotificationModel `json:"notifications"`
@@ -5215,6 +4904,52 @@ func (o OptContestModelParticipationMode) Get() (v ContestModelParticipationMode
 
 // Or returns value if set, or given parameter if does not.
 func (o OptContestModelParticipationMode) Or(d ContestModelParticipationMode) ContestModelParticipationMode {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptContestSortOrderQuery returns new OptContestSortOrderQuery with value set to v.
+func NewOptContestSortOrderQuery(v ContestSortOrderQuery) OptContestSortOrderQuery {
+	return OptContestSortOrderQuery{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptContestSortOrderQuery is optional ContestSortOrderQuery.
+type OptContestSortOrderQuery struct {
+	Value ContestSortOrderQuery
+	Set   bool
+}
+
+// IsSet returns true if OptContestSortOrderQuery was set.
+func (o OptContestSortOrderQuery) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptContestSortOrderQuery) Reset() {
+	var v ContestSortOrderQuery
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptContestSortOrderQuery) SetTo(v ContestSortOrderQuery) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptContestSortOrderQuery) Get() (v ContestSortOrderQuery, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptContestSortOrderQuery) Or(d ContestSortOrderQuery) ContestSortOrderQuery {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -5589,98 +5324,6 @@ func (o OptInt64) Or(d int64) int64 {
 	return d
 }
 
-// NewOptListAdminContestsSortBy returns new OptListAdminContestsSortBy with value set to v.
-func NewOptListAdminContestsSortBy(v ListAdminContestsSortBy) OptListAdminContestsSortBy {
-	return OptListAdminContestsSortBy{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListAdminContestsSortBy is optional ListAdminContestsSortBy.
-type OptListAdminContestsSortBy struct {
-	Value ListAdminContestsSortBy
-	Set   bool
-}
-
-// IsSet returns true if OptListAdminContestsSortBy was set.
-func (o OptListAdminContestsSortBy) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListAdminContestsSortBy) Reset() {
-	var v ListAdminContestsSortBy
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListAdminContestsSortBy) SetTo(v ListAdminContestsSortBy) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListAdminContestsSortBy) Get() (v ListAdminContestsSortBy, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListAdminContestsSortBy) Or(d ListAdminContestsSortBy) ListAdminContestsSortBy {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptListAdminContestsSortOrder returns new OptListAdminContestsSortOrder with value set to v.
-func NewOptListAdminContestsSortOrder(v ListAdminContestsSortOrder) OptListAdminContestsSortOrder {
-	return OptListAdminContestsSortOrder{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListAdminContestsSortOrder is optional ListAdminContestsSortOrder.
-type OptListAdminContestsSortOrder struct {
-	Value ListAdminContestsSortOrder
-	Set   bool
-}
-
-// IsSet returns true if OptListAdminContestsSortOrder was set.
-func (o OptListAdminContestsSortOrder) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListAdminContestsSortOrder) Reset() {
-	var v ListAdminContestsSortOrder
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListAdminContestsSortOrder) SetTo(v ListAdminContestsSortOrder) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListAdminContestsSortOrder) Get() (v ListAdminContestsSortOrder, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListAdminContestsSortOrder) Or(d ListAdminContestsSortOrder) ListAdminContestsSortOrder {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewOptListAdminContestsVisibility returns new OptListAdminContestsVisibility with value set to v.
 func NewOptListAdminContestsVisibility(v ListAdminContestsVisibility) OptListAdminContestsVisibility {
 	return OptListAdminContestsVisibility{
@@ -5721,52 +5364,6 @@ func (o OptListAdminContestsVisibility) Get() (v ListAdminContestsVisibility, ok
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListAdminContestsVisibility) Or(d ListAdminContestsVisibility) ListAdminContestsVisibility {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptListContestSubmissionsSortOrder returns new OptListContestSubmissionsSortOrder with value set to v.
-func NewOptListContestSubmissionsSortOrder(v ListContestSubmissionsSortOrder) OptListContestSubmissionsSortOrder {
-	return OptListContestSubmissionsSortOrder{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListContestSubmissionsSortOrder is optional ListContestSubmissionsSortOrder.
-type OptListContestSubmissionsSortOrder struct {
-	Value ListContestSubmissionsSortOrder
-	Set   bool
-}
-
-// IsSet returns true if OptListContestSubmissionsSortOrder was set.
-func (o OptListContestSubmissionsSortOrder) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListContestSubmissionsSortOrder) Reset() {
-	var v ListContestSubmissionsSortOrder
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListContestSubmissionsSortOrder) SetTo(v ListContestSubmissionsSortOrder) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListContestSubmissionsSortOrder) Get() (v ListContestSubmissionsSortOrder, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListContestSubmissionsSortOrder) Or(d ListContestSubmissionsSortOrder) ListContestSubmissionsSortOrder {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -5819,144 +5416,6 @@ func (o OptListPostsSortOrder) Or(d ListPostsSortOrder) ListPostsSortOrder {
 	return d
 }
 
-// NewOptListPublicContestsSortBy returns new OptListPublicContestsSortBy with value set to v.
-func NewOptListPublicContestsSortBy(v ListPublicContestsSortBy) OptListPublicContestsSortBy {
-	return OptListPublicContestsSortBy{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListPublicContestsSortBy is optional ListPublicContestsSortBy.
-type OptListPublicContestsSortBy struct {
-	Value ListPublicContestsSortBy
-	Set   bool
-}
-
-// IsSet returns true if OptListPublicContestsSortBy was set.
-func (o OptListPublicContestsSortBy) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListPublicContestsSortBy) Reset() {
-	var v ListPublicContestsSortBy
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListPublicContestsSortBy) SetTo(v ListPublicContestsSortBy) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListPublicContestsSortBy) Get() (v ListPublicContestsSortBy, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListPublicContestsSortBy) Or(d ListPublicContestsSortBy) ListPublicContestsSortBy {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptListPublicContestsSortOrder returns new OptListPublicContestsSortOrder with value set to v.
-func NewOptListPublicContestsSortOrder(v ListPublicContestsSortOrder) OptListPublicContestsSortOrder {
-	return OptListPublicContestsSortOrder{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListPublicContestsSortOrder is optional ListPublicContestsSortOrder.
-type OptListPublicContestsSortOrder struct {
-	Value ListPublicContestsSortOrder
-	Set   bool
-}
-
-// IsSet returns true if OptListPublicContestsSortOrder was set.
-func (o OptListPublicContestsSortOrder) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListPublicContestsSortOrder) Reset() {
-	var v ListPublicContestsSortOrder
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListPublicContestsSortOrder) SetTo(v ListPublicContestsSortOrder) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListPublicContestsSortOrder) Get() (v ListPublicContestsSortOrder, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListPublicContestsSortOrder) Or(d ListPublicContestsSortOrder) ListPublicContestsSortOrder {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptListSubmissionsSortOrder returns new OptListSubmissionsSortOrder with value set to v.
-func NewOptListSubmissionsSortOrder(v ListSubmissionsSortOrder) OptListSubmissionsSortOrder {
-	return OptListSubmissionsSortOrder{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListSubmissionsSortOrder is optional ListSubmissionsSortOrder.
-type OptListSubmissionsSortOrder struct {
-	Value ListSubmissionsSortOrder
-	Set   bool
-}
-
-// IsSet returns true if OptListSubmissionsSortOrder was set.
-func (o OptListSubmissionsSortOrder) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListSubmissionsSortOrder) Reset() {
-	var v ListSubmissionsSortOrder
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListSubmissionsSortOrder) SetTo(v ListSubmissionsSortOrder) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListSubmissionsSortOrder) Get() (v ListSubmissionsSortOrder, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListSubmissionsSortOrder) Or(d ListSubmissionsSortOrder) ListSubmissionsSortOrder {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewOptListUserContestsSortBy returns new OptListUserContestsSortBy with value set to v.
 func NewOptListUserContestsSortBy(v ListUserContestsSortBy) OptListUserContestsSortBy {
 	return OptListUserContestsSortBy{
@@ -5997,190 +5456,6 @@ func (o OptListUserContestsSortBy) Get() (v ListUserContestsSortBy, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListUserContestsSortBy) Or(d ListUserContestsSortBy) ListUserContestsSortBy {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptListUserContestsSortOrder returns new OptListUserContestsSortOrder with value set to v.
-func NewOptListUserContestsSortOrder(v ListUserContestsSortOrder) OptListUserContestsSortOrder {
-	return OptListUserContestsSortOrder{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListUserContestsSortOrder is optional ListUserContestsSortOrder.
-type OptListUserContestsSortOrder struct {
-	Value ListUserContestsSortOrder
-	Set   bool
-}
-
-// IsSet returns true if OptListUserContestsSortOrder was set.
-func (o OptListUserContestsSortOrder) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListUserContestsSortOrder) Reset() {
-	var v ListUserContestsSortOrder
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListUserContestsSortOrder) SetTo(v ListUserContestsSortOrder) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListUserContestsSortOrder) Get() (v ListUserContestsSortOrder, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListUserContestsSortOrder) Or(d ListUserContestsSortOrder) ListUserContestsSortOrder {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptListUserSubmissionsSortOrder returns new OptListUserSubmissionsSortOrder with value set to v.
-func NewOptListUserSubmissionsSortOrder(v ListUserSubmissionsSortOrder) OptListUserSubmissionsSortOrder {
-	return OptListUserSubmissionsSortOrder{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListUserSubmissionsSortOrder is optional ListUserSubmissionsSortOrder.
-type OptListUserSubmissionsSortOrder struct {
-	Value ListUserSubmissionsSortOrder
-	Set   bool
-}
-
-// IsSet returns true if OptListUserSubmissionsSortOrder was set.
-func (o OptListUserSubmissionsSortOrder) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListUserSubmissionsSortOrder) Reset() {
-	var v ListUserSubmissionsSortOrder
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListUserSubmissionsSortOrder) SetTo(v ListUserSubmissionsSortOrder) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListUserSubmissionsSortOrder) Get() (v ListUserSubmissionsSortOrder, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListUserSubmissionsSortOrder) Or(d ListUserSubmissionsSortOrder) ListUserSubmissionsSortOrder {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptListWorkshopContestsSortBy returns new OptListWorkshopContestsSortBy with value set to v.
-func NewOptListWorkshopContestsSortBy(v ListWorkshopContestsSortBy) OptListWorkshopContestsSortBy {
-	return OptListWorkshopContestsSortBy{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListWorkshopContestsSortBy is optional ListWorkshopContestsSortBy.
-type OptListWorkshopContestsSortBy struct {
-	Value ListWorkshopContestsSortBy
-	Set   bool
-}
-
-// IsSet returns true if OptListWorkshopContestsSortBy was set.
-func (o OptListWorkshopContestsSortBy) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListWorkshopContestsSortBy) Reset() {
-	var v ListWorkshopContestsSortBy
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListWorkshopContestsSortBy) SetTo(v ListWorkshopContestsSortBy) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListWorkshopContestsSortBy) Get() (v ListWorkshopContestsSortBy, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListWorkshopContestsSortBy) Or(d ListWorkshopContestsSortBy) ListWorkshopContestsSortBy {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptListWorkshopContestsSortOrder returns new OptListWorkshopContestsSortOrder with value set to v.
-func NewOptListWorkshopContestsSortOrder(v ListWorkshopContestsSortOrder) OptListWorkshopContestsSortOrder {
-	return OptListWorkshopContestsSortOrder{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListWorkshopContestsSortOrder is optional ListWorkshopContestsSortOrder.
-type OptListWorkshopContestsSortOrder struct {
-	Value ListWorkshopContestsSortOrder
-	Set   bool
-}
-
-// IsSet returns true if OptListWorkshopContestsSortOrder was set.
-func (o OptListWorkshopContestsSortOrder) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListWorkshopContestsSortOrder) Reset() {
-	var v ListWorkshopContestsSortOrder
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListWorkshopContestsSortOrder) SetTo(v ListWorkshopContestsSortOrder) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListWorkshopContestsSortOrder) Get() (v ListWorkshopContestsSortOrder, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListWorkshopContestsSortOrder) Or(d ListWorkshopContestsSortOrder) ListWorkshopContestsSortOrder {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -6643,6 +5918,52 @@ func (o OptPatchPostByIdReq) Or(d PatchPostByIdReq) PatchPostByIdReq {
 	return d
 }
 
+// NewOptSortByQuery returns new OptSortByQuery with value set to v.
+func NewOptSortByQuery(v SortByQuery) OptSortByQuery {
+	return OptSortByQuery{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSortByQuery is optional SortByQuery.
+type OptSortByQuery struct {
+	Value SortByQuery
+	Set   bool
+}
+
+// IsSet returns true if OptSortByQuery was set.
+func (o OptSortByQuery) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSortByQuery) Reset() {
+	var v SortByQuery
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSortByQuery) SetTo(v SortByQuery) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSortByQuery) Get() (v SortByQuery, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSortByQuery) Or(d SortByQuery) SortByQuery {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptString returns new OptString with value set to v.
 func NewOptString(v string) OptString {
 	return OptString{
@@ -6683,6 +6004,52 @@ func (o OptString) Get() (v string, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptString) Or(d string) string {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSubmissionSortOrderQuery returns new OptSubmissionSortOrderQuery with value set to v.
+func NewOptSubmissionSortOrderQuery(v SubmissionSortOrderQuery) OptSubmissionSortOrderQuery {
+	return OptSubmissionSortOrderQuery{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSubmissionSortOrderQuery is optional SubmissionSortOrderQuery.
+type OptSubmissionSortOrderQuery struct {
+	Value SubmissionSortOrderQuery
+	Set   bool
+}
+
+// IsSet returns true if OptSubmissionSortOrderQuery was set.
+func (o OptSubmissionSortOrderQuery) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSubmissionSortOrderQuery) Reset() {
+	var v SubmissionSortOrderQuery
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSubmissionSortOrderQuery) SetTo(v SubmissionSortOrderQuery) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSubmissionSortOrderQuery) Get() (v SubmissionSortOrderQuery, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSubmissionSortOrderQuery) Or(d SubmissionSortOrderQuery) SubmissionSortOrderQuery {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -7011,6 +6378,7 @@ func (o OptUserModel) Or(d UserModel) UserModel {
 	return d
 }
 
+// Organization invitation data.
 // Ref: #/components/schemas/OrganizationInvitationModel
 type OrganizationInvitationModel struct {
 	ID                    uuid.UUID `json:"id"`
@@ -7169,6 +6537,7 @@ func (s *OrganizationInvitationModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
+// Fields for the organization join request.
 // Ref: #/components/schemas/OrganizationJoinRequestModel
 type OrganizationJoinRequestModel struct {
 	ID                uuid.UUID `json:"id"`
@@ -7305,6 +6674,7 @@ func (s *OrganizationJoinRequestModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
+// Result of organization join request nullable.
 // Ref: #/components/schemas/OrganizationJoinRequestNullableResponseModel
 type OrganizationJoinRequestNullableResponseModel struct {
 	Request OptOrganizationJoinRequestModel `json:"request"`
@@ -7320,6 +6690,7 @@ func (s *OrganizationJoinRequestNullableResponseModel) SetRequest(val OptOrganiz
 	s.Request = val
 }
 
+// Result of organization join request.
 // Ref: #/components/schemas/OrganizationJoinRequestResponseModel
 type OrganizationJoinRequestResponseModel struct {
 	Request OptOrganizationJoinRequestModel `json:"request"`
@@ -7346,6 +6717,7 @@ func (s *OrganizationJoinRequestResponseModel) SetJoined(val bool) {
 	s.Joined = val
 }
 
+// Organization member data.
 // Ref: #/components/schemas/OrganizationMemberModel
 type OrganizationMemberModel struct {
 	UserID         uuid.UUID `json:"user_id"`
@@ -7405,6 +6777,7 @@ func (s *OrganizationMemberModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
+// Organization data.
 // Ref: #/components/schemas/OrganizationModel
 type OrganizationModel struct {
 	ID          uuid.UUID                   `json:"id"`
@@ -7534,6 +6907,7 @@ func (s *OrganizationModelJoinPolicy) UnmarshalText(data []byte) error {
 	}
 }
 
+// Pagination data.
 // Ref: #/components/schemas/PaginationModel
 type PaginationModel struct {
 	Page  int32 `json:"page"`
@@ -7628,6 +7002,7 @@ type PatchPostByIdUnauthorized Error
 
 func (*PatchPostByIdUnauthorized) patchPostByIdRes() {}
 
+// Post data.
 // Ref: #/components/schemas/PostModel
 type PostModel struct {
 	ID             uuid.UUID `json:"id"`
@@ -7733,6 +7108,7 @@ func (s *PostModel) SetAuthorUsername(val string) {
 
 func (*PostModel) getPostByIdRes() {}
 
+// Result of problem block status.
 // Ref: #/components/schemas/ProblemBlockStatusResponseModel
 type ProblemBlockStatusResponseModel struct {
 	IsBlocked bool           `json:"is_blocked"`
@@ -7770,6 +7146,7 @@ func (s *ProblemBlockStatusResponseModel) SetCreatedAt(val OptNilDateTime) {
 	s.CreatedAt = val
 }
 
+// Problem limits data.
 // Ref: #/components/schemas/ProblemLimits
 type ProblemLimits struct {
 	ProblemType   string    `json:"problem_type"`
@@ -7818,6 +7195,7 @@ func (s *ProblemLimits) SetMaxScore(val OptNilInt) {
 	s.MaxScore = val
 }
 
+// Problem member data.
 // Ref: #/components/schemas/ProblemMemberModel
 type ProblemMemberModel struct {
 	ProblemID uuid.UUID `json:"problem_id"`
@@ -7877,6 +7255,7 @@ func (s *ProblemMemberModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
+// Problem data.
 // Ref: #/components/schemas/ProblemModel
 type ProblemModel struct {
 	ID                uuid.UUID            `json:"id"`
@@ -8134,6 +7513,7 @@ func (s *ProblemModel) SetSamples(val []ProblemSampleModel) {
 	s.Samples = val
 }
 
+// Problem sample data.
 // Ref: #/components/schemas/ProblemSampleModel
 type ProblemSampleModel struct {
 	Input  string `json:"input"`
@@ -8160,6 +7540,7 @@ func (s *ProblemSampleModel) SetOutput(val string) {
 	s.Output = val
 }
 
+// Problem statement data.
 // Ref: #/components/schemas/ProblemStatement
 type ProblemStatement struct {
 	Title        string    `json:"title"`
@@ -8263,6 +7644,7 @@ func (s *ProblemStatement) SetCurrentLang(val OptString) {
 	s.CurrentLang = val
 }
 
+// Problem team data.
 // Ref: #/components/schemas/ProblemTeamModel
 type ProblemTeamModel struct {
 	ProblemID  uuid.UUID `json:"problem_id"`
@@ -8333,6 +7715,7 @@ func (s *ProblemTeamModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
+// Problem template data.
 // Ref: #/components/schemas/ProblemTemplateModel
 type ProblemTemplateModel struct {
 	ID          string `json:"id"`
@@ -8392,6 +7775,7 @@ func (s *ProblemTemplateModel) SetIsBuiltin(val bool) {
 	s.IsBuiltin = val
 }
 
+// Problems list item data.
 // Ref: #/components/schemas/ProblemsListItemModel
 type ProblemsListItemModel struct {
 	ID                uuid.UUID `json:"id"`
@@ -8531,6 +7915,7 @@ func (s *PublishProblemOK) SetMessage(val OptString) {
 	s.Message = val
 }
 
+// Fields for the register request.
 // Ref: #/components/schemas/RegisterRequestModel
 type RegisterRequestModel struct {
 	Username string `json:"username"`
@@ -8592,6 +7977,7 @@ type RemoveTeamMemberOK struct{}
 // ReorderContestProblemsOK is response for ReorderContestProblems operation.
 type ReorderContestProblemsOK struct{}
 
+// Fields for the reorder contest problems request.
 // Ref: #/components/schemas/ReorderContestProblemsRequestModel
 type ReorderContestProblemsRequestModel struct {
 	Problems []ContestProblemReorderItemModel `json:"problems"`
@@ -8610,6 +7996,7 @@ func (s *ReorderContestProblemsRequestModel) SetProblems(val []ContestProblemReo
 // RequestEmailChangeOK is response for RequestEmailChange operation.
 type RequestEmailChangeOK struct{}
 
+// Fields for the request email change request.
 // Ref: #/components/schemas/RequestEmailChangeRequestModel
 type RequestEmailChangeRequestModel struct {
 	Password string `json:"password"`
@@ -8639,6 +8026,7 @@ func (s *RequestEmailChangeRequestModel) SetNewEmail(val string) {
 // ResendVerificationOK is response for ResendVerification operation.
 type ResendVerificationOK struct{}
 
+// Fields for the resend verification request.
 // Ref: #/components/schemas/ResendVerificationRequestModel
 type ResendVerificationRequestModel struct {
 	Identifier string `json:"identifier"`
@@ -8657,6 +8045,7 @@ func (s *ResendVerificationRequestModel) SetIdentifier(val string) {
 // ResetPasswordOK is response for ResetPassword operation.
 type ResetPasswordOK struct{}
 
+// Fields for the reset password request.
 // Ref: #/components/schemas/ResetPasswordRequestModel
 type ResetPasswordRequestModel struct {
 	Token    string `json:"token"`
@@ -8683,6 +8072,7 @@ func (s *ResetPasswordRequestModel) SetPassword(val string) {
 	s.Password = val
 }
 
+// Scoreboard item data.
 // Ref: #/components/schemas/ScoreboardItemModel
 type ScoreboardItemModel struct {
 	UserID         uuid.UUID                      `json:"user_id"`
@@ -8753,6 +8143,7 @@ func (s *ScoreboardItemModel) SetProblemResults(val []ScoreboardProblemResultMod
 	s.ProblemResults = val
 }
 
+// Scoreboard problem header data.
 // Ref: #/components/schemas/ScoreboardProblemHeaderModel
 type ScoreboardProblemHeaderModel struct {
 	ProblemID uuid.UUID `json:"problem_id"`
@@ -8801,6 +8192,7 @@ func (s *ScoreboardProblemHeaderModel) SetOrdinal(val int32) {
 	s.Ordinal = val
 }
 
+// Scoreboard problem result data.
 // Ref: #/components/schemas/ScoreboardProblemResultModel
 type ScoreboardProblemResultModel struct {
 	ProblemID      uuid.UUID `json:"problem_id"`
@@ -8883,6 +8275,7 @@ func (s *ScoreboardProblemResultModel) SetPenalty(val OptInt32) {
 	s.Penalty = val
 }
 
+// Result of scoreboard.
 // Ref: #/components/schemas/ScoreboardResponseModel
 type ScoreboardResponseModel struct {
 	Since             OptInt64  `json:"since"`
@@ -8988,6 +8381,55 @@ func (s *ScoreboardResponseModel) SetItems(val []ScoreboardItemModel) {
 	s.Items = val
 }
 
+type SortByQuery string
+
+const (
+	SortByQueryCreatedAt SortByQuery = "created_at"
+	SortByQueryUpdatedAt SortByQuery = "updated_at"
+	SortByQueryTitle     SortByQuery = "title"
+)
+
+// AllValues returns all SortByQuery values.
+func (SortByQuery) AllValues() []SortByQuery {
+	return []SortByQuery{
+		SortByQueryCreatedAt,
+		SortByQueryUpdatedAt,
+		SortByQueryTitle,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SortByQuery) MarshalText() ([]byte, error) {
+	switch s {
+	case SortByQueryCreatedAt:
+		return []byte(s), nil
+	case SortByQueryUpdatedAt:
+		return []byte(s), nil
+	case SortByQueryTitle:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SortByQuery) UnmarshalText(data []byte) error {
+	switch SortByQuery(data) {
+	case SortByQueryCreatedAt:
+		*s = SortByQueryCreatedAt
+		return nil
+	case SortByQueryUpdatedAt:
+		*s = SortByQueryUpdatedAt
+		return nil
+	case SortByQueryTitle:
+		*s = SortByQueryTitle
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Submission data.
 // Ref: #/components/schemas/SubmissionModel
 type SubmissionModel struct {
 	Frozen            OptBool                       `json:"frozen"`
@@ -9245,6 +8687,48 @@ func (s *SubmissionModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
+type SubmissionSortOrderQuery string
+
+const (
+	SubmissionSortOrderQueryAsc  SubmissionSortOrderQuery = "asc"
+	SubmissionSortOrderQueryDesc SubmissionSortOrderQuery = "desc"
+)
+
+// AllValues returns all SubmissionSortOrderQuery values.
+func (SubmissionSortOrderQuery) AllValues() []SubmissionSortOrderQuery {
+	return []SubmissionSortOrderQuery{
+		SubmissionSortOrderQueryAsc,
+		SubmissionSortOrderQueryDesc,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SubmissionSortOrderQuery) MarshalText() ([]byte, error) {
+	switch s {
+	case SubmissionSortOrderQueryAsc:
+		return []byte(s), nil
+	case SubmissionSortOrderQueryDesc:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SubmissionSortOrderQuery) UnmarshalText(data []byte) error {
+	switch SubmissionSortOrderQuery(data) {
+	case SubmissionSortOrderQueryAsc:
+		*s = SubmissionSortOrderQueryAsc
+		return nil
+	case SubmissionSortOrderQueryDesc:
+		*s = SubmissionSortOrderQueryDesc
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Submission test details data.
 // Ref: #/components/schemas/SubmissionTestDetailsModel
 type SubmissionTestDetailsModel struct {
 	CompilerOutput    OptNilString             `json:"compiler_output"`
@@ -9293,6 +8777,7 @@ func (s *SubmissionTestDetailsModel) SetFailedTestDetails(val OptFailedTestDetai
 	s.FailedTestDetails = val
 }
 
+// Submissions list item data.
 // Ref: #/components/schemas/SubmissionsListItemModel
 type SubmissionsListItemModel struct {
 	// Revision local to this submission.
@@ -9540,6 +9025,7 @@ func (s *SubmissionsListItemModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
+// Supported language data.
 // Ref: #/components/schemas/SupportedLanguage
 type SupportedLanguage struct {
 	Name      string    `json:"name"`
@@ -9577,6 +9063,7 @@ func (s *SupportedLanguage) SetType(val OptString) {
 	s.Type = val
 }
 
+// Result of supported languages.
 // Ref: #/components/schemas/SupportedLanguagesResponse
 type SupportedLanguagesResponse struct {
 	Languages []SupportedLanguage `json:"languages"`
@@ -9592,6 +9079,7 @@ func (s *SupportedLanguagesResponse) SetLanguages(val []SupportedLanguage) {
 	s.Languages = val
 }
 
+// Team member data.
 // Ref: #/components/schemas/TeamMemberModel
 type TeamMemberModel struct {
 	UserID    uuid.UUID `json:"user_id"`
@@ -9651,6 +9139,7 @@ func (s *TeamMemberModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
+// Team data.
 // Ref: #/components/schemas/TeamModel
 type TeamModel struct {
 	ID             uuid.UUID `json:"id"`
@@ -9721,6 +9210,7 @@ func (s *TeamModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
+// Test detail item data.
 // Ref: #/components/schemas/TestDetailItemModel
 type TestDetailItemModel struct {
 	TestIndex int32  `json:"test_index"`
@@ -9769,6 +9259,7 @@ func (s *TestDetailItemModel) SetMemoryKB(val int32) {
 	s.MemoryKB = val
 }
 
+// Test report data.
 // Ref: #/components/schemas/TestReport
 type TestReport struct {
 	TotalTests  OptInt       `json:"total_tests"`
@@ -9817,6 +9308,7 @@ func (s *TestReport) SetResults(val []TestResult) {
 	s.Results = val
 }
 
+// Test result data.
 // Ref: #/components/schemas/TestResult
 type TestResult struct {
 	TestNumber OptInt    `json:"test_number"`
@@ -9903,6 +9395,7 @@ func (s *TestSolutionReq) SetTestNumbers(val []int) {
 	s.TestNumbers = val
 }
 
+// Test validation result data.
 // Ref: #/components/schemas/TestValidationResult
 type TestValidationResult struct {
 	TestNumber OptInt    `json:"test_number"`
@@ -9957,6 +9450,7 @@ type UnblockProblemForUserOK struct{}
 // UnblockSubmissionOK is response for UnblockSubmission operation.
 type UnblockSubmissionOK struct{}
 
+// Result of unread notifications count.
 // Ref: #/components/schemas/UnreadNotificationsCountResponseModel
 type UnreadNotificationsCountResponseModel struct {
 	Count int32 `json:"count"`
@@ -9978,6 +9472,7 @@ type UpdateContestMemberOK struct{}
 // UpdateContestOK is response for UpdateContest operation.
 type UpdateContestOK struct{}
 
+// Fields for the update contest request.
 // Ref: #/components/schemas/UpdateContestRequestModel
 type UpdateContestRequestModel struct {
 	Login                  OptString `json:"login"`
@@ -10285,6 +9780,7 @@ type UpdateContestTeamOK struct{}
 // UpdateOrganizationOK is response for UpdateOrganization operation.
 type UpdateOrganizationOK struct{}
 
+// Fields for the update organization request.
 // Ref: #/components/schemas/UpdateOrganizationRequestModel
 type UpdateOrganizationRequestModel struct {
 	Login       OptString                                   `json:"login"`
@@ -10437,6 +9933,7 @@ func (s UpdateProblemLibReq) Read(p []byte) (n int, err error) {
 	return s.Data.Read(p)
 }
 
+// Fields for the update problem limits request.
 // Ref: #/components/schemas/UpdateProblemLimitsRequest
 type UpdateProblemLimitsRequest struct {
 	ProblemType   OptString `json:"problem_type"`
@@ -10505,6 +10002,7 @@ type UpdateProblemMemberOK struct{}
 // UpdateProblemOK is response for UpdateProblem operation.
 type UpdateProblemOK struct{}
 
+// Fields for the update problem request.
 // Ref: #/components/schemas/UpdateProblemRequestModel
 type UpdateProblemRequestModel struct {
 	Title        OptString `json:"title"`
@@ -10619,6 +10117,7 @@ func (s *UpdateProblemRequestModel) SetIsTemplate(val OptBool) {
 	s.IsTemplate = val
 }
 
+// Fields for the update problem statement request.
 // Ref: #/components/schemas/UpdateProblemStatementRequest
 type UpdateProblemStatementRequest struct {
 	Title        OptString `json:"title"`
@@ -10717,6 +10216,7 @@ func (s UpdateProblemTestFileReq) Read(p []byte) (n int, err error) {
 	return s.Data.Read(p)
 }
 
+// Fields for the update problem tests config request.
 // Ref: #/components/schemas/UpdateProblemTestsConfigRequest
 type UpdateProblemTestsConfigRequest map[string]jx.Raw
 
@@ -10763,6 +10263,7 @@ type UpdateTeamMemberRoleOK struct{}
 // UpdateTeamOK is response for UpdateTeam operation.
 type UpdateTeamOK struct{}
 
+// Fields for the update team request.
 // Ref: #/components/schemas/UpdateTeamRequestModel
 type UpdateTeamRequestModel struct {
 	Name        OptString `json:"name"`
@@ -10792,6 +10293,7 @@ func (s *UpdateTeamRequestModel) SetDescription(val OptString) {
 // UpdateUserOK is response for UpdateUser operation.
 type UpdateUserOK struct{}
 
+// Fields for the update user request.
 // Ref: #/components/schemas/UpdateUserRequestModel
 type UpdateUserRequestModel struct {
 	Username OptString                     `json:"username"`
@@ -10871,17 +10373,17 @@ func (s *UpdateUserRequestModelRole) UnmarshalText(data []byte) error {
 }
 
 type UploadAvatarOK struct {
-	ImgId uuid.UUID `json:"imgId"`
+	ImgID uuid.UUID `json:"img_id"`
 }
 
-// GetImgId returns the value of ImgId.
-func (s *UploadAvatarOK) GetImgId() uuid.UUID {
-	return s.ImgId
+// GetImgID returns the value of ImgID.
+func (s *UploadAvatarOK) GetImgID() uuid.UUID {
+	return s.ImgID
 }
 
-// SetImgId sets the value of ImgId.
-func (s *UploadAvatarOK) SetImgId(val uuid.UUID) {
-	s.ImgId = val
+// SetImgID sets the value of ImgID.
+func (s *UploadAvatarOK) SetImgID(val uuid.UUID) {
+	s.ImgID = val
 }
 
 type UploadAvatarReq struct {
@@ -10898,15 +10400,16 @@ func (s *UploadAvatarReq) SetAvatar(val ht.MultipartFile) {
 	s.Avatar = val
 }
 
+// User data.
 // Ref: #/components/schemas/UserModel
 type UserModel struct {
 	ID              uuid.UUID   `json:"id"`
 	Username        string      `json:"username"`
-	CreatedAt       time.Time   `json:"createdAt"`
-	UpdatedAt       time.Time   `json:"updatedAt"`
+	CreatedAt       time.Time   `json:"created_at"`
+	UpdatedAt       time.Time   `json:"updated_at"`
 	Role            string      `json:"role"`
 	Email           OptString   `json:"email"`
-	ImgId           OptUUID     `json:"imgId"`
+	ImgID           OptUUID     `json:"img_id"`
 	ExpiresAt       OptDateTime `json:"expires_at"`
 	ClaimedByUserID OptUUID     `json:"claimed_by_user_id"`
 	ClaimedAt       OptDateTime `json:"claimed_at"`
@@ -10943,9 +10446,9 @@ func (s *UserModel) GetEmail() OptString {
 	return s.Email
 }
 
-// GetImgId returns the value of ImgId.
-func (s *UserModel) GetImgId() OptUUID {
-	return s.ImgId
+// GetImgID returns the value of ImgID.
+func (s *UserModel) GetImgID() OptUUID {
+	return s.ImgID
 }
 
 // GetExpiresAt returns the value of ExpiresAt.
@@ -10998,9 +10501,9 @@ func (s *UserModel) SetEmail(val OptString) {
 	s.Email = val
 }
 
-// SetImgId sets the value of ImgId.
-func (s *UserModel) SetImgId(val OptUUID) {
-	s.ImgId = val
+// SetImgID sets the value of ImgID.
+func (s *UserModel) SetImgID(val OptUUID) {
+	s.ImgID = val
 }
 
 // SetExpiresAt sets the value of ExpiresAt.
@@ -11023,6 +10526,7 @@ func (s *UserModel) SetIsEmailVerified(val OptBool) {
 	s.IsEmailVerified = val
 }
 
+// Validation report data.
 // Ref: #/components/schemas/ValidationReport
 type ValidationReport struct {
 	TotalTests   OptInt                 `json:"total_tests"`
@@ -11071,6 +10575,7 @@ func (s *ValidationReport) SetResults(val []TestValidationResult) {
 	s.Results = val
 }
 
+// Fields for the verify email request.
 // Ref: #/components/schemas/VerifyEmailRequestModel
 type VerifyEmailRequestModel struct {
 	Token string `json:"token"`
@@ -11112,6 +10617,7 @@ func (s *VerifyEmailResponseHeaders) SetResponse(val AuthResponseModel) {
 	s.Response = val
 }
 
+// Result of workshop file list.
 // Ref: #/components/schemas/WorkshopFileListResponse
 type WorkshopFileListResponse struct {
 	Files []FileEntry `json:"files"`

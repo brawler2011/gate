@@ -304,6 +304,17 @@ func (s *ContestProblemModel) Validate() error {
 	return nil
 }
 
+func (s ContestSortOrderQuery) Validate() error {
+	switch s {
+	case "asc":
+		return nil
+	case "desc":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s CreateOrganizationJoinPolicy) Validate() error {
 	switch s {
 	case "open":
@@ -538,30 +549,6 @@ func (s InviteOrganizationMemberRequestModelRole) Validate() error {
 	}
 }
 
-func (s ListAdminContestsSortBy) Validate() error {
-	switch s {
-	case "created_at":
-		return nil
-	case "updated_at":
-		return nil
-	case "title":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
-func (s ListAdminContestsSortOrder) Validate() error {
-	switch s {
-	case "asc":
-		return nil
-	case "desc":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
 func (s ListAdminContestsVisibility) Validate() error {
 	switch s {
 	case "public":
@@ -709,17 +696,6 @@ func (s *ListContestMembersResponseModel) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
-}
-
-func (s ListContestSubmissionsSortOrder) Validate() error {
-	switch s {
-	case "asc":
-		return nil
-	case "desc":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
 }
 
 func (s *ListContestTeamsResponseModel) Validate() error {
@@ -997,30 +973,6 @@ func (s *ListProblemsResponseModel) Validate() error {
 	return nil
 }
 
-func (s ListPublicContestsSortBy) Validate() error {
-	switch s {
-	case "created_at":
-		return nil
-	case "updated_at":
-		return nil
-	case "title":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
-func (s ListPublicContestsSortOrder) Validate() error {
-	switch s {
-	case "asc":
-		return nil
-	case "desc":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
 func (s *ListSubmissionsResponseModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -1080,17 +1032,6 @@ func (s *ListSubmissionsResponseModel) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
-}
-
-func (s ListSubmissionsSortOrder) Validate() error {
-	switch s {
-	case "asc":
-		return nil
-	case "desc":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
 }
 
 func (s *ListTeamMembersResponseModel) Validate() error {
@@ -1194,28 +1135,6 @@ func (s ListUserContestsSortBy) Validate() error {
 	}
 }
 
-func (s ListUserContestsSortOrder) Validate() error {
-	switch s {
-	case "asc":
-		return nil
-	case "desc":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
-func (s ListUserSubmissionsSortOrder) Validate() error {
-	switch s {
-	case "asc":
-		return nil
-	case "desc":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
 func (s *ListUsersResponseModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -1237,30 +1156,6 @@ func (s *ListUsersResponseModel) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
-}
-
-func (s ListWorkshopContestsSortBy) Validate() error {
-	switch s {
-	case "created_at":
-		return nil
-	case "updated_at":
-		return nil
-	case "title":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
-func (s ListWorkshopContestsSortOrder) Validate() error {
-	switch s {
-	case "asc":
-		return nil
-	case "desc":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
 }
 
 func (s *NotificationsListResponseModel) Validate() error {
@@ -1538,6 +1433,30 @@ func (s *ScoreboardResponseModel) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s SortByQuery) Validate() error {
+	switch s {
+	case "created_at":
+		return nil
+	case "updated_at":
+		return nil
+	case "title":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s SubmissionSortOrderQuery) Validate() error {
+	switch s {
+	case "asc":
+		return nil
+	case "desc":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }
 
 func (s *SubmissionsListItemModel) Validate() error {

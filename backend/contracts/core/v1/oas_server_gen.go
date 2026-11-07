@@ -76,9 +76,13 @@ type Handler interface {
 	BatchCreateOrganizationUsers(ctx context.Context, req *BatchCreateOrganizationUsersRequestModel, params BatchCreateOrganizationUsersParams) (*BatchCreateOrganizationUsersResponseModel, error)
 	// BlockProblemForUser implements BlockProblemForUser operation.
 	//
+	// Block problem for user.
+	//
 	// POST /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 	BlockProblemForUser(ctx context.Context, req OptBlockProblemRequestModel, params BlockProblemForUserParams) error
 	// BlockSubmission implements BlockSubmission operation.
+	//
+	// Block submission.
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block
 	BlockSubmission(ctx context.Context, req OptBlockSubmissionRequestModel, params BlockSubmissionParams) error
@@ -120,9 +124,13 @@ type Handler interface {
 	CompileProblemComponent(ctx context.Context, params CompileProblemComponentParams) (*CompileResult, error)
 	// ConfirmEmailChange implements ConfirmEmailChange operation.
 	//
+	// Confirm email change.
+	//
 	// POST /auth/confirm-email-change
 	ConfirmEmailChange(ctx context.Context, req *ConfirmEmailChangeRequestModel) error
 	// CreateContest implements CreateContest operation.
+	//
+	// Create contest.
 	//
 	// POST /organizations/{org_login}/contests
 	CreateContest(ctx context.Context, params CreateContestParams) (*CreationResponseModel, error)
@@ -140,6 +148,8 @@ type Handler interface {
 	CreateContestClarification(ctx context.Context, req *CreateContestClarificationRequestModel, params CreateContestClarificationParams) (*ContestClarificationModel, error)
 	// CreateContestDraft implements CreateContestDraft operation.
 	//
+	// Create contest draft.
+	//
 	// POST /organizations/{org_login}/contests/{contest_login}/drafts
 	CreateContestDraft(ctx context.Context, req *CreateContestDraftRequestModel, params CreateContestDraftParams) (*CreationResponseModel, error)
 	// CreateContestJoinRequest implements CreateContestJoinRequest operation.
@@ -150,13 +160,19 @@ type Handler interface {
 	CreateContestJoinRequest(ctx context.Context, req OptCreateContestJoinRequestModel, params CreateContestJoinRequestParams) (*ContestJoinRequestResponseModel, error)
 	// CreateContestMember implements CreateContestMember operation.
 	//
+	// Create contest member.
+	//
 	// POST /organizations/{org_login}/contests/{contest_login}/members
 	CreateContestMember(ctx context.Context, params CreateContestMemberParams) (*CreationResponseModel, error)
 	// CreateContestProblem implements CreateContestProblem operation.
 	//
+	// Create contest problem.
+	//
 	// POST /organizations/{org_login}/contests/{contest_login}/problems
 	CreateContestProblem(ctx context.Context, params CreateContestProblemParams) (*CreationResponseModel, error)
 	// CreateContestTeam implements CreateContestTeam operation.
+	//
+	// Create contest team.
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/teams
 	CreateContestTeam(ctx context.Context, params CreateContestTeamParams) error
@@ -179,6 +195,8 @@ type Handler interface {
 	// POST /posts
 	CreatePost(ctx context.Context, req *CreatePostReq) (CreatePostRes, error)
 	// CreateProblem implements CreateProblem operation.
+	//
+	// Create problem.
 	//
 	// POST /problems
 	CreateProblem(ctx context.Context, params CreateProblemParams) (*CreationResponseModel, error)
@@ -214,9 +232,13 @@ type Handler interface {
 	CreateProblemMediaFile(ctx context.Context, req CreateProblemMediaFileReq, params CreateProblemMediaFileParams) (*MessageResponse, error)
 	// CreateProblemMember implements CreateProblemMember operation.
 	//
+	// Create problem member.
+	//
 	// POST /problems/{id}/members
 	CreateProblemMember(ctx context.Context, params CreateProblemMemberParams) error
 	// CreateProblemTeam implements CreateProblemTeam operation.
+	//
+	// Create problem team.
 	//
 	// POST /problems/{id}/teams
 	CreateProblemTeam(ctx context.Context, params CreateProblemTeamParams) error
@@ -240,6 +262,8 @@ type Handler interface {
 	CreateProblemWorkshopSubmission(ctx context.Context, req CreateProblemWorkshopSubmissionReq, params CreateProblemWorkshopSubmissionParams) (*MessageResponse, error)
 	// CreateSubmission implements CreateSubmission operation.
 	//
+	// Create submission.
+	//
 	// POST /submissions
 	CreateSubmission(ctx context.Context, req *CreateSubmissionRequestModel, params CreateSubmissionParams) (*CreationResponseModel, error)
 	// CreateTeam implements CreateTeam operation.
@@ -262,6 +286,8 @@ type Handler interface {
 	DeleteAvatar(ctx context.Context, params DeleteAvatarParams) error
 	// DeleteContest implements DeleteContest operation.
 	//
+	// Delete contest.
+	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}
 	DeleteContest(ctx context.Context, params DeleteContestParams) error
 	// DeleteContestAnnouncement implements DeleteContestAnnouncement operation.
@@ -272,17 +298,25 @@ type Handler interface {
 	DeleteContestAnnouncement(ctx context.Context, params DeleteContestAnnouncementParams) error
 	// DeleteContestDraft implements DeleteContestDraft operation.
 	//
+	// Delete contest draft.
+	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}/drafts/{draft_id}
 	DeleteContestDraft(ctx context.Context, params DeleteContestDraftParams) error
 	// DeleteContestMember implements DeleteContestMember operation.
+	//
+	// Delete contest member.
 	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}/members
 	DeleteContestMember(ctx context.Context, params DeleteContestMemberParams) error
 	// DeleteContestProblem implements DeleteContestProblem operation.
 	//
+	// Delete contest problem.
+	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
 	DeleteContestProblem(ctx context.Context, params DeleteContestProblemParams) error
 	// DeleteContestTeam implements DeleteContestTeam operation.
+	//
+	// Delete contest team.
 	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}/teams
 	DeleteContestTeam(ctx context.Context, params DeleteContestTeamParams) error
@@ -299,6 +333,8 @@ type Handler interface {
 	// DELETE /posts/{id}
 	DeletePostById(ctx context.Context, params DeletePostByIdParams) (DeletePostByIdRes, error)
 	// DeleteProblem implements DeleteProblem operation.
+	//
+	// Delete problem.
 	//
 	// DELETE /problems/{id}
 	DeleteProblem(ctx context.Context, params DeleteProblemParams) error
@@ -334,9 +370,13 @@ type Handler interface {
 	DeleteProblemMediaFile(ctx context.Context, params DeleteProblemMediaFileParams) (*MessageResponse, error)
 	// DeleteProblemMember implements DeleteProblemMember operation.
 	//
+	// Delete problem member.
+	//
 	// DELETE /problems/{id}/members
 	DeleteProblemMember(ctx context.Context, params DeleteProblemMemberParams) error
 	// DeleteProblemTeam implements DeleteProblemTeam operation.
+	//
+	// Delete problem team.
 	//
 	// DELETE /problems/{id}/teams
 	DeleteProblemTeam(ctx context.Context, params DeleteProblemTeamParams) error
@@ -372,6 +412,8 @@ type Handler interface {
 	DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (DownloadContestStatementsPdfOK, error)
 	// ForgotPassword implements ForgotPassword operation.
 	//
+	// Forgot password.
+	//
 	// POST /auth/forgot-password
 	ForgotPassword(ctx context.Context, req *ForgotPasswordRequestModel) error
 	// GenerateTests implements GenerateTests operation.
@@ -382,17 +424,25 @@ type Handler interface {
 	GenerateTests(ctx context.Context, req *GenerateTestsReq, params GenerateTestsParams) (*GenerateTestsOK, error)
 	// GetContest implements GetContest operation.
 	//
+	// Get contest.
+	//
 	// GET /organizations/{org_login}/contests/{contest_login}
 	GetContest(ctx context.Context, params GetContestParams) (*GetContestResponseModel, error)
 	// GetContestProblem implements GetContestProblem operation.
+	//
+	// Get contest problem.
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
 	GetContestProblem(ctx context.Context, params GetContestProblemParams) (*GetContestProblemResponseModel, error)
 	// GetContestScoreboard implements GetContestScoreboard operation.
 	//
+	// Get contest scoreboard.
+	//
 	// GET /organizations/{org_login}/contests/{contest_login}/scoreboard
 	GetContestScoreboard(ctx context.Context, params GetContestScoreboardParams) (*ScoreboardResponseModel, error)
 	// GetHealth implements GetHealth operation.
+	//
+	// Get health.
 	//
 	// GET /health
 	GetHealth(ctx context.Context) (*GetHealthResponseModel, error)
@@ -404,6 +454,8 @@ type Handler interface {
 	GetLanguages(ctx context.Context) (*SupportedLanguagesResponse, error)
 	// GetMe implements GetMe operation.
 	//
+	// Get me.
+	//
 	// GET /users/me
 	GetMe(ctx context.Context) (*GetUserResponseModel, error)
 	// GetMyContestJoinRequest implements GetMyContestJoinRequest operation.
@@ -414,9 +466,13 @@ type Handler interface {
 	GetMyContestJoinRequest(ctx context.Context, params GetMyContestJoinRequestParams) (*ContestJoinRequestNullableResponseModel, error)
 	// GetMyContestRole implements GetMyContestRole operation.
 	//
+	// Get my contest role.
+	//
 	// GET /organizations/{org_login}/contests/{contest_login}/my-role
 	GetMyContestRole(ctx context.Context, params GetMyContestRoleParams) (*GetMyContestRoleResponseModel, error)
 	// GetMyDashboard implements GetMyDashboard operation.
+	//
+	// Get my dashboard.
 	//
 	// GET /users/me/dashboard
 	GetMyDashboard(ctx context.Context) (*GetUserDashboardResponseModel, error)
@@ -446,9 +502,13 @@ type Handler interface {
 	GetPostImage(ctx context.Context, params GetPostImageParams) (GetPostImageRes, error)
 	// GetProblem implements GetProblem operation.
 	//
+	// Get problem.
+	//
 	// GET /problems/{id}
 	GetProblem(ctx context.Context, params GetProblemParams) (*GetProblemResponseModel, error)
 	// GetProblemBlockStatusForUser implements GetProblemBlockStatusForUser operation.
+	//
+	// Get problem block status for user.
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 	GetProblemBlockStatusForUser(ctx context.Context, params GetProblemBlockStatusForUserParams) (*ProblemBlockStatusResponseModel, error)
@@ -520,6 +580,8 @@ type Handler interface {
 	GetPublishedPackage(ctx context.Context, params GetPublishedPackageParams) (*GetPublishedPackageFound, error)
 	// GetSubmission implements GetSubmission operation.
 	//
+	// Get submission.
+	//
 	// GET /submissions/{submission_id}
 	GetSubmission(ctx context.Context, params GetSubmissionParams) (*GetSubmissionResponseModel, error)
 	// GetTeam implements GetTeam operation.
@@ -535,6 +597,8 @@ type Handler interface {
 	// GET /notifications/unread-count
 	GetUnreadNotificationsCount(ctx context.Context) (*UnreadNotificationsCountResponseModel, error)
 	// GetUser implements GetUser operation.
+	//
+	// Get user.
 	//
 	// GET /users/{username}
 	GetUser(ctx context.Context, params GetUserParams) (*GetUserResponseModel, error)
@@ -558,6 +622,8 @@ type Handler interface {
 	InviteOrganizationMember(ctx context.Context, req *InviteOrganizationMemberRequestModel, params InviteOrganizationMemberParams) (*OrganizationInvitationModel, error)
 	// ListAdminContests implements ListAdminContests operation.
 	//
+	// List admin contests.
+	//
 	// GET /admin/contests
 	ListAdminContests(ctx context.Context, params ListAdminContestsParams) (*ListContestsResponseModel, error)
 	// ListContestAnnouncements implements ListContestAnnouncements operation.
@@ -574,6 +640,8 @@ type Handler interface {
 	ListContestClarifications(ctx context.Context, params ListContestClarificationsParams) (*ListContestClarificationsResponseModel, error)
 	// ListContestDrafts implements ListContestDrafts operation.
 	//
+	// List contest drafts.
+	//
 	// GET /organizations/{org_login}/contests/{contest_login}/drafts
 	ListContestDrafts(ctx context.Context, params ListContestDraftsParams) (*ListContestDraftsResponseModel, error)
 	// ListContestJoinRequests implements ListContestJoinRequests operation.
@@ -584,13 +652,19 @@ type Handler interface {
 	ListContestJoinRequests(ctx context.Context, params ListContestJoinRequestsParams) (*ListContestJoinRequestsResponseModel, error)
 	// ListContestMembers implements ListContestMembers operation.
 	//
+	// List contest members.
+	//
 	// GET /organizations/{org_login}/contests/{contest_login}/members
 	ListContestMembers(ctx context.Context, params ListContestMembersParams) (*ListContestMembersResponseModel, error)
 	// ListContestSubmissions implements ListContestSubmissions operation.
 	//
+	// List contest submissions.
+	//
 	// GET /organizations/{org_login}/contests/{contest_login}/submissions
 	ListContestSubmissions(ctx context.Context, params ListContestSubmissionsParams) (*ListSubmissionsResponseModel, error)
 	// ListContestTeams implements ListContestTeams operation.
+	//
+	// List contest teams.
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/teams
 	ListContestTeams(ctx context.Context, params ListContestTeamsParams) (*ListContestTeamsResponseModel, error)
@@ -607,6 +681,8 @@ type Handler interface {
 	// GET /notifications
 	ListNotifications(ctx context.Context, params ListNotificationsParams) (*NotificationsListResponseModel, error)
 	// ListOrganizationContests implements ListOrganizationContests operation.
+	//
+	// List organization contests.
 	//
 	// GET /organizations/{org_login}/contests
 	ListOrganizationContests(ctx context.Context, params ListOrganizationContestsParams) (*ListContestsResponseModel, error)
@@ -672,6 +748,8 @@ type Handler interface {
 	ListProblemMediaFiles(ctx context.Context, params ListProblemMediaFilesParams) (*WorkshopFileListResponse, error)
 	// ListProblemMembers implements ListProblemMembers operation.
 	//
+	// List problem members.
+	//
 	// GET /problems/{id}/members
 	ListProblemMembers(ctx context.Context, params ListProblemMembersParams) (*ListProblemMembersResponseModel, error)
 	// ListProblemPackages implements ListProblemPackages operation.
@@ -682,9 +760,13 @@ type Handler interface {
 	ListProblemPackages(ctx context.Context, params ListProblemPackagesParams) (*ListProblemPackagesOK, error)
 	// ListProblemTeams implements ListProblemTeams operation.
 	//
+	// List problem teams.
+	//
 	// GET /problems/{id}/teams
 	ListProblemTeams(ctx context.Context, params ListProblemTeamsParams) (*ListProblemTeamsResponseModel, error)
 	// ListProblemTemplates implements ListProblemTemplates operation.
+	//
+	// List problem templates.
 	//
 	// GET /problem-templates
 	ListProblemTemplates(ctx context.Context, params ListProblemTemplatesParams) ([]ProblemTemplateModel, error)
@@ -708,13 +790,19 @@ type Handler interface {
 	ListProblemWorkshopSubmissions(ctx context.Context, params ListProblemWorkshopSubmissionsParams) (*WorkshopFileListResponse, error)
 	// ListProblems implements ListProblems operation.
 	//
+	// List problems.
+	//
 	// GET /problems
 	ListProblems(ctx context.Context, params ListProblemsParams) (*ListProblemsResponseModel, error)
 	// ListPublicContests implements ListPublicContests operation.
 	//
+	// List public contests.
+	//
 	// GET /public/contests
 	ListPublicContests(ctx context.Context, params ListPublicContestsParams) (*ListContestsResponseModel, error)
 	// ListSubmissions implements ListSubmissions operation.
+	//
+	// List submissions.
 	//
 	// GET /submissions
 	ListSubmissions(ctx context.Context, params ListSubmissionsParams) (*ListSubmissionsResponseModel, error)
@@ -744,25 +832,37 @@ type Handler interface {
 	ListTeams(ctx context.Context, params ListTeamsParams) (*ListTeamsResponseModel, error)
 	// ListUserContests implements ListUserContests operation.
 	//
+	// List user contests.
+	//
 	// GET /users/{username}/contests
 	ListUserContests(ctx context.Context, params ListUserContestsParams) (*ListUserContestsResponseModel, error)
 	// ListUserSubmissions implements ListUserSubmissions operation.
+	//
+	// List user submissions.
 	//
 	// GET /users/{username}/submissions
 	ListUserSubmissions(ctx context.Context, params ListUserSubmissionsParams) (*ListSubmissionsResponseModel, error)
 	// ListUsers implements ListUsers operation.
 	//
+	// List users.
+	//
 	// GET /users
 	ListUsers(ctx context.Context, params ListUsersParams) (*ListUsersResponseModel, error)
 	// ListWorkshopContests implements ListWorkshopContests operation.
+	//
+	// List workshop contests.
 	//
 	// GET /workshop/contests
 	ListWorkshopContests(ctx context.Context, params ListWorkshopContestsParams) (*ListContestsResponseModel, error)
 	// Login implements Login operation.
 	//
+	// Login.
+	//
 	// POST /auth/login
 	Login(ctx context.Context, req *LoginRequestModel) (*AuthResponseModelHeaders, error)
 	// Logout implements Logout operation.
+	//
+	// Logout.
 	//
 	// POST /auth/logout
 	Logout(ctx context.Context) (*LogoutOK, error)
@@ -792,6 +892,8 @@ type Handler interface {
 	PublishProblem(ctx context.Context, params PublishProblemParams) (*PublishProblemOK, error)
 	// Register implements Register operation.
 	//
+	// Register.
+	//
 	// POST /auth/register
 	Register(ctx context.Context, req *RegisterRequestModel) (*AuthResponseModel, error)
 	// RejectContestJoinRequest implements RejectContestJoinRequest operation.
@@ -808,13 +910,19 @@ type Handler interface {
 	RejectOrganizationJoinRequest(ctx context.Context, params RejectOrganizationJoinRequestParams) error
 	// RejudgeContest implements RejudgeContest operation.
 	//
+	// Rejudge contest.
+	//
 	// POST /organizations/{org_login}/contests/{contest_login}/rejudge
 	RejudgeContest(ctx context.Context, params RejudgeContestParams) error
 	// RejudgeContestProblem implements RejudgeContestProblem operation.
 	//
+	// Rejudge contest problem.
+	//
 	// POST /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge
 	RejudgeContestProblem(ctx context.Context, params RejudgeContestProblemParams) error
 	// RejudgeSubmission implements RejudgeSubmission operation.
+	//
+	// Rejudge submission.
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/rejudge
 	RejudgeSubmission(ctx context.Context, params RejudgeSubmissionParams) error
@@ -832,6 +940,8 @@ type Handler interface {
 	RemoveTeamMember(ctx context.Context, params RemoveTeamMemberParams) error
 	// ReorderContestProblems implements ReorderContestProblems operation.
 	//
+	// Reorder contest problems.
+	//
 	// PUT /organizations/{org_login}/contests/{contest_login}/problems/reorder
 	ReorderContestProblems(ctx context.Context, req *ReorderContestProblemsRequestModel, params ReorderContestProblemsParams) error
 	// RequestEmailChange implements RequestEmailChange operation.
@@ -842,9 +952,13 @@ type Handler interface {
 	RequestEmailChange(ctx context.Context, req *RequestEmailChangeRequestModel) error
 	// ResendVerification implements ResendVerification operation.
 	//
+	// Resend verification.
+	//
 	// POST /auth/resend-verification
 	ResendVerification(ctx context.Context, req *ResendVerificationRequestModel) error
 	// ResetPassword implements ResetPassword operation.
+	//
+	// Reset password.
 	//
 	// POST /auth/reset-password
 	ResetPassword(ctx context.Context, req *ResetPasswordRequestModel) error
@@ -856,21 +970,31 @@ type Handler interface {
 	TestSolution(ctx context.Context, req *TestSolutionReq, params TestSolutionParams) (*TestReport, error)
 	// UnblockProblemForUser implements UnblockProblemForUser operation.
 	//
+	// Unblock problem for user.
+	//
 	// DELETE /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 	UnblockProblemForUser(ctx context.Context, params UnblockProblemForUserParams) error
 	// UnblockSubmission implements UnblockSubmission operation.
+	//
+	// Unblock submission.
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/unblock
 	UnblockSubmission(ctx context.Context, params UnblockSubmissionParams) error
 	// UpdateContest implements UpdateContest operation.
 	//
+	// Update contest.
+	//
 	// PATCH /organizations/{org_login}/contests/{contest_login}
 	UpdateContest(ctx context.Context, req *UpdateContestRequestModel, params UpdateContestParams) error
 	// UpdateContestMember implements UpdateContestMember operation.
 	//
+	// Update contest member.
+	//
 	// PATCH /organizations/{org_login}/contests/{contest_login}/members
 	UpdateContestMember(ctx context.Context, params UpdateContestMemberParams) error
 	// UpdateContestTeam implements UpdateContestTeam operation.
+	//
+	// Update contest team.
 	//
 	// PATCH /organizations/{org_login}/contests/{contest_login}/teams
 	UpdateContestTeam(ctx context.Context, params UpdateContestTeamParams) error
@@ -881,6 +1005,8 @@ type Handler interface {
 	// PATCH /organizations/{login}
 	UpdateOrganization(ctx context.Context, req *UpdateOrganizationRequestModel, params UpdateOrganizationParams) error
 	// UpdateProblem implements UpdateProblem operation.
+	//
+	// Update problem.
 	//
 	// PATCH /problems/{id}
 	UpdateProblem(ctx context.Context, req *UpdateProblemRequestModel, params UpdateProblemParams) error
@@ -922,6 +1048,8 @@ type Handler interface {
 	UpdateProblemMediaFile(ctx context.Context, req UpdateProblemMediaFileReq, params UpdateProblemMediaFileParams) (*MessageResponse, error)
 	// UpdateProblemMember implements UpdateProblemMember operation.
 	//
+	// Update problem member.
+	//
 	// PATCH /problems/{id}/members
 	UpdateProblemMember(ctx context.Context, params UpdateProblemMemberParams) error
 	// UpdateProblemStatement implements UpdateProblemStatement operation.
@@ -931,6 +1059,8 @@ type Handler interface {
 	// PATCH /problems/{problemId}/statement
 	UpdateProblemStatement(ctx context.Context, req *UpdateProblemStatementRequest, params UpdateProblemStatementParams) (*ProblemStatement, error)
 	// UpdateProblemTeam implements UpdateProblemTeam operation.
+	//
+	// Update problem team.
 	//
 	// PATCH /problems/{id}/teams
 	UpdateProblemTeam(ctx context.Context, params UpdateProblemTeamParams) error
@@ -972,6 +1102,8 @@ type Handler interface {
 	UpdateTeamMemberRole(ctx context.Context, params UpdateTeamMemberRoleParams) error
 	// UpdateUser implements UpdateUser operation.
 	//
+	// Update user.
+	//
 	// PATCH /users/{username}
 	UpdateUser(ctx context.Context, req *UpdateUserRequestModel, params UpdateUserParams) error
 	// UploadAvatar implements UploadAvatar operation.
@@ -987,6 +1119,8 @@ type Handler interface {
 	// POST /problems/{problemId}/workshop/tests/validate
 	ValidateAllTests(ctx context.Context, params ValidateAllTestsParams) (*ValidationReport, error)
 	// VerifyEmail implements VerifyEmail operation.
+	//
+	// Verify email.
 	//
 	// POST /auth/verify-email
 	VerifyEmail(ctx context.Context, req *VerifyEmailRequestModel) (*VerifyEmailResponseHeaders, error)

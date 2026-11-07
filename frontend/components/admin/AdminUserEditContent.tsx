@@ -358,7 +358,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
               <Group justify="space-between">
                 <Text fw={500} fz={14}>Дата регистрации:</Text>
                 <Text fz={14} c="dimmed">
-                  {new Date(user.createdAt).toLocaleDateString("ru-RU", {
+                  {new Date(user.created_at).toLocaleDateString("ru-RU", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",

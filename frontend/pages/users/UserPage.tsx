@@ -47,7 +47,7 @@ const Page = (): ReactNode => {
         <ProfileHeader
           username={user.username}
           role={user.role}
-          createdAt={user.createdAt}
+          createdAt={user.created_at}
           expiresAt={user.expires_at}
           claimedAt={user.claimed_at}
           isOwnProfile={currentUser?.id === user.id}
