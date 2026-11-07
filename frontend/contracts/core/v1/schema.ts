@@ -3726,7 +3726,7 @@ export interface components {
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "alice",
-         *       "role": "user",
+         *       "role": "member",
          *       "created_at": "2026-01-01T12:00:00Z"
          *     }
          */
@@ -3748,7 +3748,7 @@ export interface components {
          *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "username": "alice",
-         *           "role": "user",
+         *           "role": "member",
          *           "created_at": "2026-01-01T12:00:00Z"
          *         }
          *       ],
@@ -3838,7 +3838,7 @@ export interface components {
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "alice",
-         *       "role": "user",
+         *       "role": "member",
          *       "created_at": "2026-01-01T12:00:00Z"
          *     }
          */
@@ -3860,7 +3860,7 @@ export interface components {
          *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "username": "alice",
-         *           "role": "user",
+         *           "role": "member",
          *           "created_at": "2026-01-01T12:00:00Z"
          *         }
          *       ],
@@ -6365,7 +6365,7 @@ export interface operations {
     UnblockProblemForUser: {
         parameters: {
             query?: {
-                /** @description Whether to rejudge existing submissions after the package update. */
+                /** @description Rejudge this user's existing submissions for this problem in this contest when removing the block. */
                 rejudge_submissions?: boolean;
             };
             header?: never;
@@ -7026,7 +7026,7 @@ export interface operations {
                  */
                 search?: string;
                 /**
-                 * @description Role to assign to the member.
+                 * @description Filter users by global account role (user or admin).
                  * @example admin
                  */
                 role?: string;

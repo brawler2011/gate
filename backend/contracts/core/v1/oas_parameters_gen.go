@@ -18883,7 +18883,7 @@ type ListUsersParams struct {
 	PageSize OptInt32 `json:",omitempty,omitzero"`
 	// Search text used to filter results.
 	Search OptString `json:",omitempty,omitzero"`
-	// Role to assign to the member.
+	// Filter users by global account role (user or admin).
 	Role OptString `json:",omitempty,omitzero"`
 }
 
@@ -20951,7 +20951,7 @@ type UnblockProblemForUserParams struct {
 	UserID uuid.UUID
 	// UUID of the problem.
 	ProblemID uuid.UUID
-	// Whether to rejudge existing submissions after the package update.
+	// Rejudge this user's existing submissions for this problem in this contest when removing the block.
 	RejudgeSubmissions OptBool `json:",omitempty,omitzero"`
 }
 

@@ -708,7 +708,7 @@ paths:
         - $ref: "#/components/parameters/UserIDPath"
         - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
         - name: rejudge_submissions
-          description: "Whether to rejudge existing submissions after the package update."
+          description: "Rejudge this user's existing submissions for this problem in this contest when removing the block."
           in: query
           required: false
           schema:
@@ -1159,7 +1159,7 @@ paths:
             type: string
           example: john
         - name: role
-          description: "Role to assign to the member."
+          description: "Filter users by global account role (user or admin)."
           in: query
           schema:
             type: string
@@ -5822,7 +5822,7 @@ components:
         user_id: 123e4567-e89b-42d3-a456-426614174000
         organization_id: 123e4567-e89b-42d3-a456-426614174000
         username: alice
-        role: user
+        role: member
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
@@ -5852,7 +5852,7 @@ components:
         - user_id: 123e4567-e89b-42d3-a456-426614174000
           organization_id: 123e4567-e89b-42d3-a456-426614174000
           username: alice
-          role: user
+          role: member
           created_at: '2026-01-01T12:00:00Z'
         pagination:
           page: 1
@@ -5955,7 +5955,7 @@ components:
         user_id: 123e4567-e89b-42d3-a456-426614174000
         team_id: 123e4567-e89b-42d3-a456-426614174000
         username: alice
-        role: user
+        role: member
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
@@ -5985,7 +5985,7 @@ components:
         - user_id: 123e4567-e89b-42d3-a456-426614174000
           team_id: 123e4567-e89b-42d3-a456-426614174000
           username: alice
-          role: user
+          role: member
           created_at: '2026-01-01T12:00:00Z'
         pagination:
           page: 1
