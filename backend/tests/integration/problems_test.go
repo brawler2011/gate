@@ -65,7 +65,57 @@ func (s *IntegrationTestSuite) TestProblems() {
 		s.GreaterOrEqual(len(resp.Problems), 1)
 	})
 
-	// 5. Delete Problem (Admin)
+	// 5. List Problems Ordering (Descending vs Ascending)
+	s.Run("ListProblemsOrdering", func() {
+		secondResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
+			Title:          "Second Problem",
+			OrganizationID: corev1.NewOptUUID(org.ID),
+			TemplateID:     "builtin:a-plus-b",
+		})
+		s.Require().NoError(err)
+		s.Require().NotNil(secondResp)
+		secondProblemID := secondResp.ID
+
+		// Listing descending: true -> secondProblemID appears before problemID
+		descResp, err := s.client.ListProblems(withTestUser(s.ctx, admin.Id), corev1.ListProblemsParams{
+			OrganizationID: corev1.NewOptUUID(org.ID),
+			Descending:     corev1.NewOptBool(true),
+		})
+		s.Require().NoError(err)
+		s.Require().NotNil(descResp)
+		s.Require().GreaterOrEqual(len(descResp.Problems), 2)
+		s.Equal(secondProblemID, descResp.Problems[0].ID)
+		s.Equal(problemID, descResp.Problems[1].ID)
+
+		// Listing default (omitted descending) -> defaults to descending = true
+		defaultResp, err := s.client.ListProblems(withTestUser(s.ctx, admin.Id), corev1.ListProblemsParams{
+			OrganizationID: corev1.NewOptUUID(org.ID),
+		})
+		s.Require().NoError(err)
+		s.Require().NotNil(defaultResp)
+		s.Require().GreaterOrEqual(len(defaultResp.Problems), 2)
+		s.Equal(secondProblemID, defaultResp.Problems[0].ID)
+		s.Equal(problemID, defaultResp.Problems[1].ID)
+
+		// Listing descending: false -> problemID appears before secondProblemID
+		ascResp, err := s.client.ListProblems(withTestUser(s.ctx, admin.Id), corev1.ListProblemsParams{
+			OrganizationID: corev1.NewOptUUID(org.ID),
+			Descending:     corev1.NewOptBool(false),
+		})
+		s.Require().NoError(err)
+		s.Require().NotNil(ascResp)
+		s.Require().GreaterOrEqual(len(ascResp.Problems), 2)
+		s.Equal(problemID, ascResp.Problems[0].ID)
+		s.Equal(secondProblemID, ascResp.Problems[1].ID)
+
+		// Clean up second problem
+		err = s.client.DeleteProblem(withTestUser(s.ctx, admin.Id), corev1.DeleteProblemParams{
+			ID: secondProblemID,
+		})
+		s.Require().NoError(err)
+	})
+
+	// 6. Delete Problem (Admin)
 	s.Run("DeleteProblem", func() {
 		err := s.client.DeleteProblem(withTestUser(s.ctx, admin.Id), corev1.DeleteProblemParams{
 			ID: problemID,

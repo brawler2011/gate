@@ -15996,6 +15996,11 @@ func decodeListProblemsParams(args [0]string, argsEscaped bool, r *http.Request)
 			Err:  err,
 		}
 	}
+	// Set default value for query: descending.
+	{
+		val := bool(true)
+		params.Descending.SetTo(val)
+	}
 	// Decode query: descending.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
