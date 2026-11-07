@@ -76,6 +76,11 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *problemsmodel.P
 		return nil, HandlePgErr(err)
 	}
 
+	descending := true
+	if filter.Descending != nil {
+		descending = *filter.Descending
+	}
+
 	rows, err := r.queries.ListAllProblems(ctx, sqlc.ListAllProblemsParams{
 		OrganizationID: filter.OrganizationID,
 		OwnerID:        filter.OwnerID,
@@ -83,6 +88,7 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *problemsmodel.P
 		Search:         filter.Search,
 		Visibility:     filter.Visibility,
 		IsTemplate:     filter.IsTemplate,
+		Descending:     descending,
 		PageLimit:      filter.PageSize,
 		PageOffset:     offset,
 	})

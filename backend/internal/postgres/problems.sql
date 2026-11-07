@@ -38,7 +38,11 @@ WHERE (sqlc.narg('organization_id')::uuid IS NULL OR p.organization_id = sqlc.na
                    AND t.organization_id = p.organization_id)
     ))
   )
-ORDER BY p.created_at DESC, p.id DESC
+ORDER BY
+  CASE WHEN sqlc.arg('descending')::boolean THEN p.created_at END DESC,
+  CASE WHEN NOT sqlc.arg('descending')::boolean THEN p.created_at END ASC,
+  CASE WHEN sqlc.arg('descending')::boolean THEN p.id END DESC,
+  CASE WHEN NOT sqlc.arg('descending')::boolean THEN p.id END ASC
 LIMIT sqlc.arg('page_limit') OFFSET sqlc.arg('page_offset');
 
 -- name: CountAllProblems :one

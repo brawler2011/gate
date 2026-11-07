@@ -20,12 +20,14 @@ type ProblemsReader interface {
 func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblemsParams) (*corev1.ListProblemsResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 	searchStr := params.Search.Or("")
+	descending := params.Descending.Or(true)
 
 	filter := &problemsmodel.ProblemsFilter{
-		ViewerID: &user.Id,
-		Page:     params.Page.Or(1),
-		PageSize: params.PageSize.Or(50),
-		Search:   searchStr,
+		ViewerID:   &user.Id,
+		Page:       params.Page.Or(1),
+		PageSize:   params.PageSize.Or(50),
+		Search:     searchStr,
+		Descending: &descending,
 	}
 
 	if params.Owner.IsSet() && params.Owner.Value {

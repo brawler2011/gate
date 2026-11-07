@@ -164,6 +164,7 @@ type ProblemsFilter struct {
 	Search         string
 	Visibility     string
 	IsTemplate     *bool
+	Descending     *bool
 }
 
 type ProblemsList struct {

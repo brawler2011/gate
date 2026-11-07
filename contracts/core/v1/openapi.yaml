@@ -57,6 +57,7 @@ paths:
           in: query
           schema:
             type: boolean
+            default: true
         - name: owner
           description: "When true, return only problems owned by the current user."
           in: query
