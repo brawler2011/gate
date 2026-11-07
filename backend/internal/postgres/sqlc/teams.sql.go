@@ -45,35 +45,6 @@ func (q *Queries) CountTeamMembers(ctx context.Context, teamID uuid.UUID) (int64
 	return count, err
 }
 
-const countTeams = `-- name: CountTeams :one
-SELECT COUNT(*) FROM teams t
-WHERE ($1::uuid IS NULL OR t.organization_id = $1)
-  AND ($2::text = '' OR t.name ILIKE '%' || $2 || '%')
-  AND (
-    ($1::uuid IS NOT NULL AND (t.privacy <> 'secret' OR $3::boolean))
-    OR EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = t.id AND tm.user_id = $4)
-  )
-`
-
-type CountTeamsParams struct {
-	OrganizationID *uuid.UUID `json:"organization_id"`
-	Search         string     `json:"search"`
-	CanManage      bool       `json:"can_manage"`
-	UserID         uuid.UUID  `json:"user_id"`
-}
-
-func (q *Queries) CountTeams(ctx context.Context, arg CountTeamsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countTeams,
-		arg.OrganizationID,
-		arg.Search,
-		arg.CanManage,
-		arg.UserID,
-	)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createTeam = `-- name: CreateTeam :one
 
 INSERT INTO teams (id, organization_id, name, slug, description, privacy, parent_team_id)
@@ -342,64 +313,6 @@ func (q *Queries) ListTeamMembers(ctx context.Context, arg ListTeamMembersParams
 			&i.CreatedAt,
 			&i.Username,
 			&i.Email,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listTeams = `-- name: ListTeams :many
-SELECT t.id, t.organization_id, t.name, t.slug, t.description, t.privacy, t.parent_team_id, t.created_at, t.updated_at FROM teams t
-WHERE ($1::uuid IS NULL OR t.organization_id = $1)
-  AND ($2::text = '' OR t.name ILIKE '%' || $2 || '%')
-  AND (
-    ($1::uuid IS NOT NULL AND (t.privacy <> 'secret' OR $3::boolean))
-    OR EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = t.id AND tm.user_id = $4)
-  )
-ORDER BY t.created_at DESC, t.id DESC
-LIMIT $6::int OFFSET $5::bigint
-`
-
-type ListTeamsParams struct {
-	OrganizationID *uuid.UUID `json:"organization_id"`
-	Search         string     `json:"search"`
-	CanManage      bool       `json:"can_manage"`
-	UserID         uuid.UUID  `json:"user_id"`
-	PageOffset     int64      `json:"page_offset"`
-	PageSize       int32      `json:"page_size"`
-}
-
-func (q *Queries) ListTeams(ctx context.Context, arg ListTeamsParams) ([]Team, error) {
-	rows, err := q.db.Query(ctx, listTeams,
-		arg.OrganizationID,
-		arg.Search,
-		arg.CanManage,
-		arg.UserID,
-		arg.PageOffset,
-		arg.PageSize,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Team{}
-	for rows.Next() {
-		var i Team
-		if err := rows.Scan(
-			&i.ID,
-			&i.OrganizationID,
-			&i.Name,
-			&i.Slug,
-			&i.Description,
-			&i.Privacy,
-			&i.ParentTeamID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

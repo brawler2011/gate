@@ -23,48 +23,9 @@ FROM contests c
 JOIN organizations o ON c.organization_id = o.id
 WHERE LOWER(o.login) = LOWER($1) AND LOWER(c.login) = LOWER($2);
 
--- name: ListContests :many
-SELECT c.*, o.login as org_login, o.name as org_name
-FROM contests c
-JOIN organizations o ON c.organization_id = o.id
-WHERE c.organization_id = sqlc.arg('organization_id')::uuid
-  AND (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
-  AND (c.visibility = 'public'
-    OR EXISTS (SELECT 1 FROM users u WHERE u.id = sqlc.arg('viewer_id')::uuid AND u.role = 'admin')
-    OR EXISTS (SELECT 1 FROM organization_members om
-               WHERE om.organization_id = c.organization_id AND om.user_id = sqlc.arg('viewer_id')::uuid))
-ORDER BY c.created_at DESC, c.id DESC
-LIMIT sqlc.arg('page_limit') OFFSET sqlc.arg('page_offset');
 
--- name: CountContests :one
-SELECT COUNT(*) FROM contests c
-WHERE c.organization_id = sqlc.arg('organization_id')::uuid
-  AND (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
-  AND (c.visibility = 'public'
-    OR EXISTS (SELECT 1 FROM users u WHERE u.id = sqlc.arg('viewer_id')::uuid AND u.role = 'admin')
-    OR EXISTS (SELECT 1 FROM organization_members om
-               WHERE om.organization_id = c.organization_id AND om.user_id = sqlc.arg('viewer_id')::uuid));
 
--- name: ListAllContests :many
-SELECT c.*, o.login as org_login, o.name as org_name
-FROM contests c
-JOIN organizations o ON c.organization_id = o.id
-WHERE (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
-  AND (sqlc.arg('visibility')::text = '' OR c.visibility = sqlc.arg('visibility')::contest_visibility)
-ORDER BY
-  CASE WHEN sqlc.arg('sort_by')::text IN ('', 'created_at') AND sqlc.arg('sort_order')::text = 'asc' THEN c.created_at END ASC,
-  CASE WHEN sqlc.arg('sort_by')::text IN ('', 'created_at') AND sqlc.arg('sort_order')::text <> 'asc' THEN c.created_at END DESC,
-  CASE WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text = 'asc' THEN c.updated_at END ASC,
-  CASE WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text <> 'asc' THEN c.updated_at END DESC,
-  CASE WHEN sqlc.arg('sort_by')::text = 'title' AND sqlc.arg('sort_order')::text = 'asc' THEN c.title END ASC,
-  CASE WHEN sqlc.arg('sort_by')::text = 'title' AND sqlc.arg('sort_order')::text <> 'asc' THEN c.title END DESC,
-  c.id DESC
-LIMIT sqlc.arg('page_limit') OFFSET sqlc.arg('page_offset');
 
--- name: CountAllContests :one
-SELECT COUNT(*) FROM contests c
-WHERE (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
-  AND (sqlc.arg('visibility')::text = '' OR c.visibility = sqlc.arg('visibility')::contest_visibility);
 
 -- name: UpdateContest :exec
 UPDATE contests
@@ -164,40 +125,15 @@ WHERE contest_id = $1 AND problem_id = $2;
 
 -- Access check helpers
 
--- name: ListUserAccessibleContests :many
-SELECT c.*, o.login as org_login, o.name as org_name
-FROM contests c
-JOIN organizations o ON c.organization_id = o.id
-WHERE user_has_contest_access(sqlc.arg('user_id')::uuid, c.id)
-  AND (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
-ORDER BY
-  CASE WHEN sqlc.arg('sort_by')::text IN ('', 'created_at') AND sqlc.arg('sort_order')::text = 'asc' THEN c.created_at END ASC,
-  CASE WHEN sqlc.arg('sort_by')::text IN ('', 'created_at') AND sqlc.arg('sort_order')::text <> 'asc' THEN c.created_at END DESC,
-  CASE WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text = 'asc' THEN c.updated_at END ASC,
-  CASE WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text <> 'asc' THEN c.updated_at END DESC,
-  CASE WHEN sqlc.arg('sort_by')::text = 'title' AND sqlc.arg('sort_order')::text = 'asc' THEN c.title END ASC,
-  CASE WHEN sqlc.arg('sort_by')::text = 'title' AND sqlc.arg('sort_order')::text <> 'asc' THEN c.title END DESC,
-  c.id DESC
-LIMIT sqlc.arg('page_limit') OFFSET sqlc.arg('page_offset');
 
--- name: ListUserAccessibleContestsByOrg :many
-SELECT c.*, o.login as org_login, o.name as org_name
-FROM contests c
-JOIN organizations o ON c.organization_id = o.id
-WHERE user_has_contest_access(sqlc.arg('user_id')::uuid, c.id)
-  AND (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
-  AND c.organization_id = sqlc.arg('organization_id')::uuid
-ORDER BY
-  CASE WHEN sqlc.arg('sort_by')::text IN ('', 'created_at') AND sqlc.arg('sort_order')::text = 'asc' THEN c.created_at END ASC,
-  CASE WHEN sqlc.arg('sort_by')::text IN ('', 'created_at') AND sqlc.arg('sort_order')::text <> 'asc' THEN c.created_at END DESC,
-  CASE WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text = 'asc' THEN c.updated_at END ASC,
-  CASE WHEN sqlc.arg('sort_by')::text = 'updated_at' AND sqlc.arg('sort_order')::text <> 'asc' THEN c.updated_at END DESC,
-  CASE WHEN sqlc.arg('sort_by')::text = 'title' AND sqlc.arg('sort_order')::text = 'asc' THEN c.title END ASC,
-  CASE WHEN sqlc.arg('sort_by')::text = 'title' AND sqlc.arg('sort_order')::text <> 'asc' THEN c.title END DESC,
-  c.id DESC
-LIMIT sqlc.arg('page_limit') OFFSET sqlc.arg('page_offset');
 
 -- name: ListDashboardContests :many
+WITH actor AS (
+  SELECT u.id, u.role FROM users u
+  WHERE u.id = sqlc.narg('viewer_id')::uuid
+    AND u.role IN ('user', 'admin')
+    AND (u.expires_at IS NULL OR u.expires_at > sqlc.arg('now')::timestamptz)
+)
 SELECT 
     c.id as contest_id,
     c.login as contest_login,
@@ -209,10 +145,10 @@ SELECT
     o.name as org_name,
     o.login as org_login,
     COALESCE(
-        (SELECT cm.role::text FROM contest_members cm WHERE cm.contest_id = c.id AND cm.user_id = $1),
+        (SELECT cm.role::text FROM contest_members cm WHERE cm.contest_id = c.id AND cm.user_id = sqlc.arg('user_id')::uuid),
         CASE WHEN EXISTS(
             SELECT 1 FROM organization_members om 
-            WHERE om.organization_id = c.organization_id AND om.user_id = $1 AND om.role IN ('owner', 'admin')
+            WHERE om.organization_id = c.organization_id AND om.user_id = sqlc.arg('user_id')::uuid AND om.role IN ('owner', 'admin')
         ) THEN 'moderator' ELSE 'participant' END
     )::text as user_role,
     sub.last_sub_time
@@ -221,12 +157,25 @@ JOIN organizations o ON c.organization_id = o.id
 LEFT JOIN (
     SELECT submissions.contest_id, MAX(submissions.created_at) as last_sub_time
     FROM submissions
-    WHERE submissions.owner_id = $1
+    WHERE submissions.owner_id = sqlc.arg('user_id')::uuid
     GROUP BY submissions.contest_id
 ) sub ON c.id = sub.contest_id
-WHERE user_has_contest_access($1, c.id)
-ORDER BY COALESCE(sub.last_sub_time, '1970-01-01 00:00:00+00'::timestamptz) DESC, c.created_at DESC
-LIMIT $2;
+WHERE (sqlc.narg('viewer_id')::uuid IS NULL OR sqlc.narg('viewer_id')::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR EXISTS (SELECT 1 FROM actor))
+AND NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = c.organization_id AND invalid.user_id = sqlc.narg('viewer_id')::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
+    AND NOT EXISTS (SELECT 1 FROM contest_members invalid WHERE invalid.contest_id = c.id AND invalid.user_id = sqlc.narg('viewer_id')::uuid AND invalid.role::text NOT IN ('participant', 'moderator', 'owner'))
+    AND NOT EXISTS (SELECT 1 FROM contest_teams link JOIN team_members tm ON tm.team_id = link.team_id WHERE link.contest_id = c.id AND tm.user_id = sqlc.narg('viewer_id')::uuid AND (tm.role::text NOT IN ('member', 'maintainer') OR link.role::text NOT IN ('participant', 'moderator')))
+    AND COALESCE(NULLIF(c.settings->>'participation_mode', ''), 'open') IN ('open', 'by_request', 'invite_only')
+AND c.visibility IN ('public', 'private') AND (c.visibility = 'public' OR EXISTS (
+    SELECT 1 FROM actor a WHERE a.role = 'admin' OR c.owner_id = a.id
+    OR EXISTS (SELECT 1 FROM organization_members om WHERE om.organization_id = c.organization_id AND om.user_id = a.id AND om.role IN ('owner', 'admin'))
+    OR EXISTS (SELECT 1 FROM contest_members m WHERE m.contest_id = c.id AND m.user_id = a.id AND m.role IN ('participant', 'moderator', 'owner'))
+    OR EXISTS (SELECT 1 FROM contest_teams ct
+      JOIN teams t ON t.id = ct.team_id JOIN team_members tm ON tm.team_id = t.id
+      WHERE ct.contest_id = c.id AND tm.user_id = a.id
+        AND t.organization_id = c.organization_id AND tm.role IN ('member', 'maintainer')
+        AND ct.role IN ('participant', 'moderator'))))
+ORDER BY COALESCE(sub.last_sub_time, '1970-01-01 00:00:00+00'::timestamptz) DESC, c.created_at DESC, c.id DESC
+LIMIT sqlc.arg('page_size')::int;
 
 -- Contest Standings (Scoreboard)
 
@@ -305,16 +254,7 @@ WHERE contest_id = $1 AND (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.
 
 
 
--- name: CountUserAccessibleContests :one
-SELECT COUNT(*) FROM contests c
-WHERE user_has_contest_access(sqlc.arg('user_id')::uuid, c.id)
-  AND (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%');
 
--- name: CountUserAccessibleContestsByOrg :one
-SELECT COUNT(*) FROM contests c
-WHERE user_has_contest_access(sqlc.arg('user_id')::uuid, c.id)
-  AND (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
-  AND c.organization_id = sqlc.arg('organization_id')::uuid;
 
 -- name: GetAuthorizationContestMember :one
 SELECT cm.*, u.username

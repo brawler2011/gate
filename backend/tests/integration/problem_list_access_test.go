@@ -112,9 +112,9 @@ func (s *IntegrationTestSuite) TestProblemListAuthenticatedAccess() {
 		want []uuid.UUID
 	}
 	cases := []accessCase{
-		{"global admin", admin, allIDs},
-		{"organization owner", orgOwner, allIDs[:5]},
-		{"organization admin", orgAdmin, allIDs[:5]},
+		{"global admin", admin, []uuid.UUID{publicID, privateID, templateID, ownedID, foreignID}},
+		{"organization owner", orgOwner, []uuid.UUID{publicID, privateID, templateID, ownedID}},
+		{"organization admin", orgAdmin, []uuid.UUID{publicID, privateID, templateID, ownedID}},
 		{"organization member", orgMember, []uuid.UUID{publicID}},
 		{"outsider", outsider, []uuid.UUID{publicID, foreignID}},
 		{"problem owner without organization membership", problemOwner, []uuid.UUID{publicID, ownedID}},
@@ -127,7 +127,7 @@ func (s *IntegrationTestSuite) TestProblemListAuthenticatedAccess() {
 				ProblemID: id, UserID: user.Id, Role: role,
 			}))
 		}
-		cases = append(cases, accessCase{"direct " + string(role), user, []uuid.UUID{publicID, privateID, unlistedID}})
+		cases = append(cases, accessCase{"direct " + string(role), user, []uuid.UUID{publicID, privateID}})
 		if role == problemsmodel.ProblemRoleViewer {
 			directViewer = user
 		}
@@ -145,7 +145,7 @@ func (s *IntegrationTestSuite) TestProblemListAuthenticatedAccess() {
 		for _, id := range []uuid.UUID{privateID, unlistedID} {
 			s.Require().NoError(s.problemsRepo.AddProblemTeam(s.ctx, id, team.ID, permission))
 		}
-		cases = append(cases, accessCase{"team " + string(permission), user, []uuid.UUID{publicID, privateID, unlistedID}})
+		cases = append(cases, accessCase{"team " + string(permission), user, []uuid.UUID{publicID, privateID}})
 		if permission == problemsmodel.ProblemPermissionRead {
 			readTeamID, teamReader = team.ID, user
 		}

@@ -2,6 +2,7 @@ package accessmodel
 
 import (
 	"context"
+	"time"
 
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
@@ -51,4 +52,18 @@ func RequireCaller(ctx context.Context, id uuid.UUID) error {
 		return pkg.NoPermission
 	}
 	return nil
+}
+
+type readTimeKey struct{}
+
+// WithReadTime fixes the authorization clock for the whole request, including
+// SQL scopes and in-memory decisions. Callers must use a server-supplied time.
+func WithReadTime(ctx context.Context, now time.Time) context.Context {
+	return context.WithValue(ctx, readTimeKey{}, now.UTC())
+}
+func ReadTime(ctx context.Context) time.Time {
+	if now, ok := ctx.Value(readTimeKey{}).(time.Time); ok {
+		return now
+	}
+	return time.Now().UTC()
 }

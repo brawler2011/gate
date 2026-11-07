@@ -3,6 +3,7 @@ package problems
 import (
 	"context"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
@@ -46,6 +47,9 @@ func NewReader(reads Reads, permissions ProblemPermissions, organizations Templa
 func (r *Reader) ListProblems(ctx context.Context, filter *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error) {
 	if filter == nil {
 		return nil, pkg.ErrBadInput
+	}
+	if err := access.CheckReadActor(ctx); err != nil {
+		return nil, err
 	}
 	copy := *filter
 	var err error

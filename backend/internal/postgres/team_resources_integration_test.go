@@ -87,18 +87,18 @@ func TestTeamResourcesViewerAccess(t *testing.T) {
 		exec(`INSERT INTO problem_members (problem_id, user_id, role) VALUES ($1, $2, 'viewer')`, problemID, users["direct member"])
 	}
 	teams := NewTeamsRepo(pool)
-	permissions := access.NewPermissionsUseCase(NewContestsRepo(pool), NewUsersRepo(pool), NewProblemsRepo(pool), teams, NewOrganizationsRepo(pool))
-	uc := organizations.NewTeamsUseCase(teams, permissions, nil)
+	permissions := access.NewMetadataPermissions(access.NewPermissionsUseCase(NewContestsRepo(pool), NewUsersRepo(pool), NewProblemsRepo(pool), teams, NewOrganizationsRepo(pool)), NewPolicyFactsRepo(pool))
+	uc := organizations.NewTeamsUseCase(teams, permissions, nil, permissions)
 	for name, viewerID := range users {
 		t.Run(name, func(t *testing.T) {
 			db := &teamResourcesCountingDB{Pool: pool}
 			repo := &TeamsRepo{q: sqlc.New(db)}
 			contests, count, err := repo.GetTeamContests(ctx, teamID, viewerID, paging.Request{})
 			require.NoError(t, err)
-			require.Equal(t, 2, db.queries)
+			require.Equal(t, 1, db.queries)
 			problems, count, err := repo.GetTeamProblems(ctx, teamID, viewerID, paging.Request{})
 			require.NoError(t, err)
-			require.Equal(t, 4, db.queries)
+			require.Equal(t, 2, db.queries)
 			viewer, err := NewUsersRepo(pool).GetUserById(ctx, viewerID)
 			require.NoError(t, err)
 			actorCtx := accessmodel.WithUser(ctx, viewer)
@@ -130,7 +130,7 @@ func TestTeamResourcesViewerAccess(t *testing.T) {
 			}
 			require.Equal(t, wantContests, gotContests)
 			require.Equal(t, wantProblems, gotProblems)
-			expected := 3
+			expected := 2
 			if name == "outsider" || name == "org member" || name == "foreign team member" {
 				expected = 1
 			}

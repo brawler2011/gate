@@ -101,9 +101,9 @@ func (s *IntegrationTestSuite) TestListTeamsSearchVisibilityAndPagination() {
 			check(user, &org.ID, "", 1, 100, orderedIDs(all), len(all))
 		}
 		check(member.Id, nil, "", 1, 100, orderedIDs(append(visible, other)), len(visible)+1)
-		// Management permission does not broaden the caller's membership list.
-		check(admin.Id, nil, "", 1, 100, []uuid.UUID{}, 0)
-		check(orgAdmin.Id, nil, "", 1, 100, []uuid.UUID{}, 0)
+		// Unscoped lists use the same view predicate as scoped lists and details.
+		check(admin.Id, nil, "", 1, 100, orderedIDs(append(all, other)), len(all)+1)
+		check(orgAdmin.Id, nil, "", 1, 100, orderedIDs(all), len(all))
 	})
 
 	s.Run("search in both modes", func() {

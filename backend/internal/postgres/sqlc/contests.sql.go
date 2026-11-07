@@ -68,91 +68,12 @@ func (q *Queries) AddContestProblem(ctx context.Context, arg AddContestProblemPa
 	return err
 }
 
-const countAllContests = `-- name: CountAllContests :one
-SELECT COUNT(*) FROM contests c
-WHERE ($1::text = '' OR c.title ILIKE '%' || $1::text || '%')
-  AND ($2::text = '' OR c.visibility = $2::contest_visibility)
-`
-
-type CountAllContestsParams struct {
-	Search     string `json:"search"`
-	Visibility string `json:"visibility"`
-}
-
-func (q *Queries) CountAllContests(ctx context.Context, arg CountAllContestsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countAllContests, arg.Search, arg.Visibility)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const countContestMembers = `-- name: CountContestMembers :one
 SELECT COUNT(*) FROM contest_members WHERE contest_id = $1
 `
 
 func (q *Queries) CountContestMembers(ctx context.Context, contestID uuid.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countContestMembers, contestID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const countContests = `-- name: CountContests :one
-SELECT COUNT(*) FROM contests c
-WHERE c.organization_id = $1::uuid
-  AND ($2::text = '' OR c.title ILIKE '%' || $2::text || '%')
-  AND (c.visibility = 'public'
-    OR EXISTS (SELECT 1 FROM users u WHERE u.id = $3::uuid AND u.role = 'admin')
-    OR EXISTS (SELECT 1 FROM organization_members om
-               WHERE om.organization_id = c.organization_id AND om.user_id = $3::uuid))
-`
-
-type CountContestsParams struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Search         string    `json:"search"`
-	ViewerID       uuid.UUID `json:"viewer_id"`
-}
-
-func (q *Queries) CountContests(ctx context.Context, arg CountContestsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countContests, arg.OrganizationID, arg.Search, arg.ViewerID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const countUserAccessibleContests = `-- name: CountUserAccessibleContests :one
-SELECT COUNT(*) FROM contests c
-WHERE user_has_contest_access($1::uuid, c.id)
-  AND ($2::text = '' OR c.title ILIKE '%' || $2::text || '%')
-`
-
-type CountUserAccessibleContestsParams struct {
-	UserID uuid.UUID `json:"user_id"`
-	Search string    `json:"search"`
-}
-
-func (q *Queries) CountUserAccessibleContests(ctx context.Context, arg CountUserAccessibleContestsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countUserAccessibleContests, arg.UserID, arg.Search)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const countUserAccessibleContestsByOrg = `-- name: CountUserAccessibleContestsByOrg :one
-SELECT COUNT(*) FROM contests c
-WHERE user_has_contest_access($1::uuid, c.id)
-  AND ($2::text = '' OR c.title ILIKE '%' || $2::text || '%')
-  AND c.organization_id = $3::uuid
-`
-
-type CountUserAccessibleContestsByOrgParams struct {
-	UserID         uuid.UUID `json:"user_id"`
-	Search         string    `json:"search"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-}
-
-func (q *Queries) CountUserAccessibleContestsByOrg(ctx context.Context, arg CountUserAccessibleContestsByOrgParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countUserAccessibleContestsByOrg, arg.UserID, arg.Search, arg.OrganizationID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -763,91 +684,6 @@ func (q *Queries) GetUserScoreboardSubmissions(ctx context.Context, arg GetUserS
 	return items, nil
 }
 
-const listAllContests = `-- name: ListAllContests :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
-FROM contests c
-JOIN organizations o ON c.organization_id = o.id
-WHERE ($1::text = '' OR c.title ILIKE '%' || $1::text || '%')
-  AND ($2::text = '' OR c.visibility = $2::contest_visibility)
-ORDER BY
-  CASE WHEN $3::text IN ('', 'created_at') AND $4::text = 'asc' THEN c.created_at END ASC,
-  CASE WHEN $3::text IN ('', 'created_at') AND $4::text <> 'asc' THEN c.created_at END DESC,
-  CASE WHEN $3::text = 'updated_at' AND $4::text = 'asc' THEN c.updated_at END ASC,
-  CASE WHEN $3::text = 'updated_at' AND $4::text <> 'asc' THEN c.updated_at END DESC,
-  CASE WHEN $3::text = 'title' AND $4::text = 'asc' THEN c.title END ASC,
-  CASE WHEN $3::text = 'title' AND $4::text <> 'asc' THEN c.title END DESC,
-  c.id DESC
-LIMIT $6 OFFSET $5
-`
-
-type ListAllContestsParams struct {
-	Search     string `json:"search"`
-	Visibility string `json:"visibility"`
-	SortBy     string `json:"sort_by"`
-	SortOrder  string `json:"sort_order"`
-	PageOffset int32  `json:"page_offset"`
-	PageLimit  int32  `json:"page_limit"`
-}
-
-type ListAllContestsRow struct {
-	ID             uuid.UUID                       `json:"id"`
-	OrganizationID uuid.UUID                       `json:"organization_id"`
-	OwnerID        *uuid.UUID                      `json:"owner_id"`
-	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
-	Title          string                          `json:"title"`
-	Login          string                          `json:"login"`
-	Description    string                          `json:"description"`
-	Settings       []byte                          `json:"settings"`
-	StartTime      *time.Time                      `json:"start_time"`
-	EndTime        *time.Time                      `json:"end_time"`
-	CreatedAt      time.Time                       `json:"created_at"`
-	UpdatedAt      time.Time                       `json:"updated_at"`
-	OrgLogin       string                          `json:"org_login"`
-	OrgName        string                          `json:"org_name"`
-}
-
-func (q *Queries) ListAllContests(ctx context.Context, arg ListAllContestsParams) ([]ListAllContestsRow, error) {
-	rows, err := q.db.Query(ctx, listAllContests,
-		arg.Search,
-		arg.Visibility,
-		arg.SortBy,
-		arg.SortOrder,
-		arg.PageOffset,
-		arg.PageLimit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListAllContestsRow{}
-	for rows.Next() {
-		var i ListAllContestsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.OrganizationID,
-			&i.OwnerID,
-			&i.Visibility,
-			&i.Title,
-			&i.Login,
-			&i.Description,
-			&i.Settings,
-			&i.StartTime,
-			&i.EndTime,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OrgLogin,
-			&i.OrgName,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listContestMembers = `-- name: ListContestMembers :many
 SELECT cm.contest_id, cm.user_id, cm.role, cm.created_at, u.username, u.email
 FROM contest_members cm
@@ -994,87 +830,16 @@ func (q *Queries) ListContestUserProblemBlocks(ctx context.Context, arg ListCont
 	return items, nil
 }
 
-const listContests = `-- name: ListContests :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
-FROM contests c
-JOIN organizations o ON c.organization_id = o.id
-WHERE c.organization_id = $1::uuid
-  AND ($2::text = '' OR c.title ILIKE '%' || $2::text || '%')
-  AND (c.visibility = 'public'
-    OR EXISTS (SELECT 1 FROM users u WHERE u.id = $3::uuid AND u.role = 'admin')
-    OR EXISTS (SELECT 1 FROM organization_members om
-               WHERE om.organization_id = c.organization_id AND om.user_id = $3::uuid))
-ORDER BY c.created_at DESC, c.id DESC
-LIMIT $5 OFFSET $4
-`
-
-type ListContestsParams struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Search         string    `json:"search"`
-	ViewerID       uuid.UUID `json:"viewer_id"`
-	PageOffset     int32     `json:"page_offset"`
-	PageLimit      int32     `json:"page_limit"`
-}
-
-type ListContestsRow struct {
-	ID             uuid.UUID                       `json:"id"`
-	OrganizationID uuid.UUID                       `json:"organization_id"`
-	OwnerID        *uuid.UUID                      `json:"owner_id"`
-	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
-	Title          string                          `json:"title"`
-	Login          string                          `json:"login"`
-	Description    string                          `json:"description"`
-	Settings       []byte                          `json:"settings"`
-	StartTime      *time.Time                      `json:"start_time"`
-	EndTime        *time.Time                      `json:"end_time"`
-	CreatedAt      time.Time                       `json:"created_at"`
-	UpdatedAt      time.Time                       `json:"updated_at"`
-	OrgLogin       string                          `json:"org_login"`
-	OrgName        string                          `json:"org_name"`
-}
-
-func (q *Queries) ListContests(ctx context.Context, arg ListContestsParams) ([]ListContestsRow, error) {
-	rows, err := q.db.Query(ctx, listContests,
-		arg.OrganizationID,
-		arg.Search,
-		arg.ViewerID,
-		arg.PageOffset,
-		arg.PageLimit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListContestsRow{}
-	for rows.Next() {
-		var i ListContestsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.OrganizationID,
-			&i.OwnerID,
-			&i.Visibility,
-			&i.Title,
-			&i.Login,
-			&i.Description,
-			&i.Settings,
-			&i.StartTime,
-			&i.EndTime,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OrgLogin,
-			&i.OrgName,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listDashboardContests = `-- name: ListDashboardContests :many
+
+
+
+WITH actor AS (
+  SELECT u.id, u.role FROM users u
+  WHERE u.id = $2::uuid
+    AND u.role IN ('user', 'admin')
+    AND (u.expires_at IS NULL OR u.expires_at > $4::timestamptz)
+)
 SELECT 
     c.id as contest_id,
     c.login as contest_login,
@@ -1086,10 +851,10 @@ SELECT
     o.name as org_name,
     o.login as org_login,
     COALESCE(
-        (SELECT cm.role::text FROM contest_members cm WHERE cm.contest_id = c.id AND cm.user_id = $1),
+        (SELECT cm.role::text FROM contest_members cm WHERE cm.contest_id = c.id AND cm.user_id = $1::uuid),
         CASE WHEN EXISTS(
             SELECT 1 FROM organization_members om 
-            WHERE om.organization_id = c.organization_id AND om.user_id = $1 AND om.role IN ('owner', 'admin')
+            WHERE om.organization_id = c.organization_id AND om.user_id = $1::uuid AND om.role IN ('owner', 'admin')
         ) THEN 'moderator' ELSE 'participant' END
     )::text as user_role,
     sub.last_sub_time
@@ -1098,17 +863,32 @@ JOIN organizations o ON c.organization_id = o.id
 LEFT JOIN (
     SELECT submissions.contest_id, MAX(submissions.created_at) as last_sub_time
     FROM submissions
-    WHERE submissions.owner_id = $1
+    WHERE submissions.owner_id = $1::uuid
     GROUP BY submissions.contest_id
 ) sub ON c.id = sub.contest_id
-WHERE user_has_contest_access($1, c.id)
-ORDER BY COALESCE(sub.last_sub_time, '1970-01-01 00:00:00+00'::timestamptz) DESC, c.created_at DESC
-LIMIT $2
+WHERE ($2::uuid IS NULL OR $2::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR EXISTS (SELECT 1 FROM actor))
+AND NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = c.organization_id AND invalid.user_id = $2::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
+    AND NOT EXISTS (SELECT 1 FROM contest_members invalid WHERE invalid.contest_id = c.id AND invalid.user_id = $2::uuid AND invalid.role::text NOT IN ('participant', 'moderator', 'owner'))
+    AND NOT EXISTS (SELECT 1 FROM contest_teams link JOIN team_members tm ON tm.team_id = link.team_id WHERE link.contest_id = c.id AND tm.user_id = $2::uuid AND (tm.role::text NOT IN ('member', 'maintainer') OR link.role::text NOT IN ('participant', 'moderator')))
+    AND COALESCE(NULLIF(c.settings->>'participation_mode', ''), 'open') IN ('open', 'by_request', 'invite_only')
+AND c.visibility IN ('public', 'private') AND (c.visibility = 'public' OR EXISTS (
+    SELECT 1 FROM actor a WHERE a.role = 'admin' OR c.owner_id = a.id
+    OR EXISTS (SELECT 1 FROM organization_members om WHERE om.organization_id = c.organization_id AND om.user_id = a.id AND om.role IN ('owner', 'admin'))
+    OR EXISTS (SELECT 1 FROM contest_members m WHERE m.contest_id = c.id AND m.user_id = a.id AND m.role IN ('participant', 'moderator', 'owner'))
+    OR EXISTS (SELECT 1 FROM contest_teams ct
+      JOIN teams t ON t.id = ct.team_id JOIN team_members tm ON tm.team_id = t.id
+      WHERE ct.contest_id = c.id AND tm.user_id = a.id
+        AND t.organization_id = c.organization_id AND tm.role IN ('member', 'maintainer')
+        AND ct.role IN ('participant', 'moderator'))))
+ORDER BY COALESCE(sub.last_sub_time, '1970-01-01 00:00:00+00'::timestamptz) DESC, c.created_at DESC, c.id DESC
+LIMIT $3::int
 `
 
 type ListDashboardContestsParams struct {
-	UserID uuid.UUID `json:"user_id"`
-	Limit  int32     `json:"limit"`
+	UserID   uuid.UUID  `json:"user_id"`
+	ViewerID *uuid.UUID `json:"viewer_id"`
+	PageSize int32      `json:"page_size"`
+	Now      time.Time  `json:"now"`
 }
 
 type ListDashboardContestsRow struct {
@@ -1125,8 +905,14 @@ type ListDashboardContestsRow struct {
 	LastSubTime      interface{} `json:"last_sub_time"`
 }
 
+// Access check helpers
 func (q *Queries) ListDashboardContests(ctx context.Context, arg ListDashboardContestsParams) ([]ListDashboardContestsRow, error) {
-	rows, err := q.db.Query(ctx, listDashboardContests, arg.UserID, arg.Limit)
+	rows, err := q.db.Query(ctx, listDashboardContests,
+		arg.UserID,
+		arg.ViewerID,
+		arg.PageSize,
+		arg.Now,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1146,181 +932,6 @@ func (q *Queries) ListDashboardContests(ctx context.Context, arg ListDashboardCo
 			&i.OrgLogin,
 			&i.UserRole,
 			&i.LastSubTime,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listUserAccessibleContests = `-- name: ListUserAccessibleContests :many
-
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
-FROM contests c
-JOIN organizations o ON c.organization_id = o.id
-WHERE user_has_contest_access($1::uuid, c.id)
-  AND ($2::text = '' OR c.title ILIKE '%' || $2::text || '%')
-ORDER BY
-  CASE WHEN $3::text IN ('', 'created_at') AND $4::text = 'asc' THEN c.created_at END ASC,
-  CASE WHEN $3::text IN ('', 'created_at') AND $4::text <> 'asc' THEN c.created_at END DESC,
-  CASE WHEN $3::text = 'updated_at' AND $4::text = 'asc' THEN c.updated_at END ASC,
-  CASE WHEN $3::text = 'updated_at' AND $4::text <> 'asc' THEN c.updated_at END DESC,
-  CASE WHEN $3::text = 'title' AND $4::text = 'asc' THEN c.title END ASC,
-  CASE WHEN $3::text = 'title' AND $4::text <> 'asc' THEN c.title END DESC,
-  c.id DESC
-LIMIT $6 OFFSET $5
-`
-
-type ListUserAccessibleContestsParams struct {
-	UserID     uuid.UUID `json:"user_id"`
-	Search     string    `json:"search"`
-	SortBy     string    `json:"sort_by"`
-	SortOrder  string    `json:"sort_order"`
-	PageOffset int32     `json:"page_offset"`
-	PageLimit  int32     `json:"page_limit"`
-}
-
-type ListUserAccessibleContestsRow struct {
-	ID             uuid.UUID                       `json:"id"`
-	OrganizationID uuid.UUID                       `json:"organization_id"`
-	OwnerID        *uuid.UUID                      `json:"owner_id"`
-	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
-	Title          string                          `json:"title"`
-	Login          string                          `json:"login"`
-	Description    string                          `json:"description"`
-	Settings       []byte                          `json:"settings"`
-	StartTime      *time.Time                      `json:"start_time"`
-	EndTime        *time.Time                      `json:"end_time"`
-	CreatedAt      time.Time                       `json:"created_at"`
-	UpdatedAt      time.Time                       `json:"updated_at"`
-	OrgLogin       string                          `json:"org_login"`
-	OrgName        string                          `json:"org_name"`
-}
-
-// Access check helpers
-func (q *Queries) ListUserAccessibleContests(ctx context.Context, arg ListUserAccessibleContestsParams) ([]ListUserAccessibleContestsRow, error) {
-	rows, err := q.db.Query(ctx, listUserAccessibleContests,
-		arg.UserID,
-		arg.Search,
-		arg.SortBy,
-		arg.SortOrder,
-		arg.PageOffset,
-		arg.PageLimit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListUserAccessibleContestsRow{}
-	for rows.Next() {
-		var i ListUserAccessibleContestsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.OrganizationID,
-			&i.OwnerID,
-			&i.Visibility,
-			&i.Title,
-			&i.Login,
-			&i.Description,
-			&i.Settings,
-			&i.StartTime,
-			&i.EndTime,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OrgLogin,
-			&i.OrgName,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listUserAccessibleContestsByOrg = `-- name: ListUserAccessibleContestsByOrg :many
-SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
-FROM contests c
-JOIN organizations o ON c.organization_id = o.id
-WHERE user_has_contest_access($1::uuid, c.id)
-  AND ($2::text = '' OR c.title ILIKE '%' || $2::text || '%')
-  AND c.organization_id = $3::uuid
-ORDER BY
-  CASE WHEN $4::text IN ('', 'created_at') AND $5::text = 'asc' THEN c.created_at END ASC,
-  CASE WHEN $4::text IN ('', 'created_at') AND $5::text <> 'asc' THEN c.created_at END DESC,
-  CASE WHEN $4::text = 'updated_at' AND $5::text = 'asc' THEN c.updated_at END ASC,
-  CASE WHEN $4::text = 'updated_at' AND $5::text <> 'asc' THEN c.updated_at END DESC,
-  CASE WHEN $4::text = 'title' AND $5::text = 'asc' THEN c.title END ASC,
-  CASE WHEN $4::text = 'title' AND $5::text <> 'asc' THEN c.title END DESC,
-  c.id DESC
-LIMIT $7 OFFSET $6
-`
-
-type ListUserAccessibleContestsByOrgParams struct {
-	UserID         uuid.UUID `json:"user_id"`
-	Search         string    `json:"search"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	SortBy         string    `json:"sort_by"`
-	SortOrder      string    `json:"sort_order"`
-	PageOffset     int32     `json:"page_offset"`
-	PageLimit      int32     `json:"page_limit"`
-}
-
-type ListUserAccessibleContestsByOrgRow struct {
-	ID             uuid.UUID                       `json:"id"`
-	OrganizationID uuid.UUID                       `json:"organization_id"`
-	OwnerID        *uuid.UUID                      `json:"owner_id"`
-	Visibility     contestsmodel.ContestVisibility `json:"visibility"`
-	Title          string                          `json:"title"`
-	Login          string                          `json:"login"`
-	Description    string                          `json:"description"`
-	Settings       []byte                          `json:"settings"`
-	StartTime      *time.Time                      `json:"start_time"`
-	EndTime        *time.Time                      `json:"end_time"`
-	CreatedAt      time.Time                       `json:"created_at"`
-	UpdatedAt      time.Time                       `json:"updated_at"`
-	OrgLogin       string                          `json:"org_login"`
-	OrgName        string                          `json:"org_name"`
-}
-
-func (q *Queries) ListUserAccessibleContestsByOrg(ctx context.Context, arg ListUserAccessibleContestsByOrgParams) ([]ListUserAccessibleContestsByOrgRow, error) {
-	rows, err := q.db.Query(ctx, listUserAccessibleContestsByOrg,
-		arg.UserID,
-		arg.Search,
-		arg.OrganizationID,
-		arg.SortBy,
-		arg.SortOrder,
-		arg.PageOffset,
-		arg.PageLimit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListUserAccessibleContestsByOrgRow{}
-	for rows.Next() {
-		var i ListUserAccessibleContestsByOrgRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.OrganizationID,
-			&i.OwnerID,
-			&i.Visibility,
-			&i.Title,
-			&i.Login,
-			&i.Description,
-			&i.Settings,
-			&i.StartTime,
-			&i.EndTime,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OrgLogin,
-			&i.OrgName,
 		); err != nil {
 			return nil, err
 		}

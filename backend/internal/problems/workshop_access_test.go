@@ -30,11 +30,11 @@ func TestWorkshopEnforcesApplicationAccess(t *testing.T) {
 		}
 		uc := NewWorkshopUseCase(nil, nil, workshopPermissions{})
 		_, err := uc.GetManifest(ctx, id)
-		require.ErrorIs(t, err, expected)
+		require.ErrorIs(t, err, pkg.NoPermission)
 		_, err = uc.ReadProblemFile(ctx, id, "checkers/source.cpp")
 		require.ErrorIs(t, err, expected)
 		_, err = uc.GetStatement(ctx, id, "en")
-		require.ErrorIs(t, err, expected)
+		require.ErrorIs(t, err, pkg.NoPermission)
 		require.ErrorIs(t, uc.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{ProblemID: id}), expected)
 		require.ErrorIs(t, uc.SaveManifest(ctx, id, &problemsmodel.ProblemManifest{}), expected)
 		require.ErrorIs(t, uc.DeleteProblemFile(ctx, id, "tests/01.in"), expected)

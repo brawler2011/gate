@@ -2,8 +2,10 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -92,42 +94,25 @@ func (r *TeamsRepo) GetTeamBySlug(ctx context.Context, orgID uuid.UUID, slug str
 	}, nil
 }
 
-func (r *TeamsRepo) ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter, userID uuid.UUID, canManage bool) ([]organizationsmodel.Team, int32, error) {
-	total, err := r.q.CountTeams(ctx, sqlc.CountTeamsParams{
-		OrganizationID: filter.OrganizationID,
-		Search:         filter.Search,
-		UserID:         userID,
-		CanManage:      canManage,
-	})
+func (r *TeamsRepo) ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter, userID uuid.UUID) ([]organizationsmodel.Team, int32, error) {
+	rows, err := r.q.ScopeTeams(ctx, sqlc.ScopeTeamsParams{ViewerID: &userID, Now: accessmodel.ReadTime(ctx), OrganizationID: filter.OrganizationID, Search: filter.Search, PageSize: filter.PageSize, PageOffset: (int64(filter.Page) - 1) * int64(filter.PageSize)})
 	if err != nil {
-		return nil, 0, fmt.Errorf("count teams: %w", HandlePgErr(err))
+		return nil, 0, HandlePgErr(err)
 	}
-	teams, err := r.q.ListTeams(ctx, sqlc.ListTeamsParams{
-		OrganizationID: filter.OrganizationID,
-		Search:         filter.Search,
-		UserID:         userID,
-		CanManage:      canManage,
-		PageSize:       filter.PageSize,
-		PageOffset:     (int64(filter.Page) - 1) * int64(filter.PageSize),
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("list teams: %w", HandlePgErr(err))
-	}
-	result := make([]organizationsmodel.Team, len(teams))
-	for i, t := range teams {
-		result[i] = organizationsmodel.Team{
-			ID:             t.ID,
-			OrganizationID: t.OrganizationID,
-			Name:           t.Name,
-			Slug:           t.Slug,
-			Description:    t.Description,
-			Privacy:        organizationsmodel.TeamPrivacy(t.Privacy),
-			ParentTeamID:   t.ParentTeamID,
-			CreatedAt:      t.CreatedAt,
-			UpdatedAt:      t.UpdatedAt,
+	teams := make([]sqlc.Team, 0, len(rows))
+	var total int32
+	for _, row := range rows {
+		total = safeInt32(row.TotalItems)
+		if emptyScopeRow(row.Resource) {
+			continue
 		}
+		var team sqlc.Team
+		if err := json.Unmarshal(row.Resource, &team); err != nil {
+			return nil, 0, fmt.Errorf("decode scoped team: %w", err)
+		}
+		teams = append(teams, team)
 	}
-	return result, safeInt32(total), nil
+	return mapTeams(teams), total, nil
 }
 
 func (r *TeamsRepo) UpdateTeam(ctx context.Context, id uuid.UUID, input *organizationsmodel.UpdateTeamInput) error {
@@ -279,66 +264,12 @@ func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID, viewerID uuid.U
 	if err != nil {
 		return nil, 0, err
 	}
-
-	contests, err := r.q.GetTeamContests(ctx, sqlc.GetTeamContestsParams{TeamID: teamID, PageSize: request.PageSize, PageOffset: request.Offset(), ViewerID: viewerID})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get team contests: %w", HandlePgErr(err))
-	}
-
-	result := make([]contestsmodel.Contest, len(contests))
-	for i, c := range contests {
-		result[i] = contestsmodel.Contest{
-			ID:             c.ID,
-			OrganizationID: c.OrganizationID,
-			OwnerID:        c.OwnerID,
-			Visibility:     string(c.Visibility),
-			Title:          c.Title,
-			Description:    c.Description,
-			StartTime:      c.StartTime,
-			EndTime:        c.EndTime,
-			CreatedAt:      c.CreatedAt,
-			UpdatedAt:      c.UpdatedAt,
-		}
-	}
-
-	count, err := r.q.CountTeamContests(ctx, sqlc.CountTeamContestsParams{TeamID: teamID, ViewerID: viewerID})
-	if err != nil {
-		return nil, 0, HandlePgErr(err)
-	}
-	return result, safeInt32(count), nil
+	return scopeContests(ctx, r.q, sqlc.ScopeContestsParams{TeamID: &teamID, ViewerID: &viewerID, Now: accessmodel.ReadTime(ctx), PageSize: request.PageSize, PageOffset: request.Offset()})
 }
-
 func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]problemsmodel.Problem, int32, error) {
 	request, err := request.Normalize()
 	if err != nil {
 		return nil, 0, err
 	}
-
-	problems, err := r.q.GetTeamProblems(ctx, sqlc.GetTeamProblemsParams{TeamID: teamID, PageSize: request.PageSize, PageOffset: request.Offset(), ViewerID: viewerID})
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get team problems: %w", HandlePgErr(err))
-	}
-
-	result := make([]problemsmodel.Problem, len(problems))
-	for i, p := range problems {
-		result[i] = problemsmodel.Problem{
-			ID:             p.ID,
-			OrganizationID: p.OrganizationID,
-			OwnerID:        p.OwnerID,
-			Visibility:     string(p.Visibility),
-			Title:          p.Title,
-			ShortName:      p.ShortName,
-			TimeLimitMs:    int(p.TimeLimitMs),
-			MemoryLimitMb:  int(p.MemoryLimitMb),
-			IsTemplate:     p.IsTemplate,
-			CreatedAt:      p.CreatedAt,
-			UpdatedAt:      p.UpdatedAt,
-		}
-	}
-
-	count, err := r.q.CountTeamProblems(ctx, sqlc.CountTeamProblemsParams{TeamID: teamID, ViewerID: viewerID})
-	if err != nil {
-		return nil, 0, HandlePgErr(err)
-	}
-	return result, safeInt32(count), nil
+	return scopeProblems(ctx, r.q, sqlc.ScopeProblemsParams{TeamID: &teamID, ViewerID: &viewerID, Now: accessmodel.ReadTime(ctx), Descending: true, PageSize: request.PageSize, PageOffset: request.Offset()})
 }

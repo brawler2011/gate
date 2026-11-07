@@ -47,7 +47,7 @@ func newWorkshop(workspace *WorkspaceStorage) *WorkshopUseCase {
 }
 func (uc *WorkshopUseCase) authorize(ctx context.Context, id uuid.UUID, action accessmodel.ProblemAction) error {
 	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
+	if user.IsGuest() && action != accessmodel.ActionViewProblem {
 		return pkg.ErrUnauthenticated
 	}
 	allowed, err := uc.permissions.HasProblemPermission(ctx, id, user.Id, action)

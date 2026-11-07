@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -22,7 +23,8 @@ const sessionCookieName = "session_id"
 func AuthMiddleware(authUC AuthUC) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
+			ctx := accessmodel.WithReadTime(r.Context(), time.Now().UTC())
+			r = r.WithContext(ctx)
 
 			cookie, err := r.Cookie(sessionCookieName)
 			if err != nil || cookie.Value == "" {

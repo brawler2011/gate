@@ -3,6 +3,7 @@ package contests
 import (
 	"context"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
@@ -30,6 +31,13 @@ type Reader struct {
 
 func NewReader(reads Reads, permissions Permissions) *Reader {
 	return &Reader{Reads: reads, permissions: permissions}
+}
+
+func (r *Reader) ListPublicContests(ctx context.Context, filter contestsmodel.PublicContestsFilter) (*contestsmodel.ContestsList, error) {
+	if err := access.CheckReadActor(ctx); err != nil {
+		return nil, err
+	}
+	return r.Reads.ListPublicContests(ctx, filter)
 }
 
 func (r *Reader) ListWorkshopContests(ctx context.Context, filter contestsmodel.WorkshopContestsFilter) (*contestsmodel.ContestsList, error) {
@@ -69,8 +77,8 @@ func (r *Reader) ListAdminContests(ctx context.Context, filter contestsmodel.Adm
 }
 
 func (r *Reader) ListOrganizationContests(ctx context.Context, login, search string, page, size int32) (*contestsmodel.ContestsList, error) {
-	if accessmodel.UserFromContext(ctx).IsGuest() {
-		return nil, pkg.ErrUnauthenticated
+	if err := access.CheckReadActor(ctx); err != nil {
+		return nil, err
 	}
 	var err error
 	page, size, err = paging.Normalize(page, size, 50)

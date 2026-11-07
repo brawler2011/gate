@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
@@ -14,7 +15,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type TeamVisibility interface {
+	HasTeamPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.TeamAction) (bool, error)
+}
+
 type TeamsUseCase struct {
+	visibility    TeamVisibility
 	repo          TeamsRepo
 	permissionsUC PermissionsUC
 	transactor    TeamTransactions
@@ -24,9 +30,11 @@ func NewTeamsUseCase(
 	repo TeamsRepo,
 	permissionsUC PermissionsUC,
 	transactor TeamTransactions,
+	visibility TeamVisibility,
 ) *TeamsUseCase {
 	return &TeamsUseCase{
 		repo:          repo,
+		visibility:    visibility,
 		permissionsUC: permissionsUC,
 		transactor:    transactor,
 	}
@@ -75,6 +83,9 @@ func (uc *TeamsUseCase) CreateTeam(ctx context.Context, input *organizationsmode
 }
 
 func (uc *TeamsUseCase) GetTeam(ctx context.Context, teamID, userID uuid.UUID) (*organizationsmodel.Team, error) {
+	if err := access.CheckReadActor(ctx); err != nil {
+		return nil, err
+	}
 	if err := accessmodel.RequireCaller(ctx, userID); err != nil {
 		return nil, err
 	}
@@ -83,34 +94,12 @@ func (uc *TeamsUseCase) GetTeam(ctx context.Context, teamID, userID uuid.UUID) (
 		return nil, err
 	}
 
-	// Check if user can view this team
-	// User can view if:
-	// 1. They are org admin/owner
-	// 2. They are team member
-	// 3. Team is not secret
-	hasOrgAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, userID, accessmodel.ActionViewOrganization)
+	allowed, err := uc.visibility.HasTeamPermission(ctx, teamID, userID, accessmodel.ActionViewTeam)
 	if err != nil {
 		return nil, err
 	}
-	if !hasOrgAccess {
+	if !allowed {
 		return nil, pkg.NoPermission
-	}
-
-	if team.Privacy == organizationsmodel.TeamPrivacySecret {
-		// For secret teams, must be a member
-		_, err := uc.repo.GetTeamMember(ctx, teamID, userID)
-		if err != nil {
-			if !errors.Is(err, pkg.ErrNotFound) {
-				return nil, err
-			}
-			hasManageAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, team.OrganizationID, userID, accessmodel.ActionManageOrganization)
-			if err != nil {
-				return nil, err
-			}
-			if !hasManageAccess {
-				return nil, pkg.NoPermission
-			}
-		}
 	}
 
 	return team, nil
@@ -118,7 +107,10 @@ func (uc *TeamsUseCase) GetTeam(ctx context.Context, teamID, userID uuid.UUID) (
 
 func (uc *TeamsUseCase) ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter) (*organizationsmodel.TeamsList, error) {
 	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() || user.IsExpired() {
+	if err := access.CheckReadActor(ctx); err != nil {
+		return nil, err
+	}
+	if user.IsGuest() {
 		return nil, pkg.ErrUnauthenticated
 	}
 	if filter == nil {
@@ -130,21 +122,7 @@ func (uc *TeamsUseCase) ListTeams(ctx context.Context, filter *organizationsmode
 	if err != nil {
 		return nil, err
 	}
-	canManage := false
-	if normalized.OrganizationID != nil {
-		allowed, err := uc.permissionsUC.HasOrganizationPermission(ctx, *normalized.OrganizationID, user.Id, accessmodel.ActionViewOrganization)
-		if err != nil {
-			return nil, fmt.Errorf("check organization visibility: %w", err)
-		}
-		if !allowed {
-			return nil, pkg.NoPermission
-		}
-		canManage, err = uc.permissionsUC.HasOrganizationPermission(ctx, *normalized.OrganizationID, user.Id, accessmodel.ActionManageOrganization)
-		if err != nil {
-			return nil, fmt.Errorf("check organization management: %w", err)
-		}
-	}
-	teams, total, err := uc.repo.ListTeams(ctx, &normalized, user.Id, canManage)
+	teams, total, err := uc.repo.ListTeams(ctx, &normalized, user.Id)
 	if err != nil {
 		return nil, err
 	}

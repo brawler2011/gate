@@ -14,14 +14,13 @@ import (
 
 type teamsListRepo struct {
 	TeamsRepo
-	filter    organizationsmodel.TeamsFilter
-	caller    uuid.UUID
-	canManage bool
-	err       error
+	filter organizationsmodel.TeamsFilter
+	caller uuid.UUID
+	err    error
 }
 
-func (r *teamsListRepo) ListTeams(_ context.Context, filter *organizationsmodel.TeamsFilter, caller uuid.UUID, canManage bool) ([]organizationsmodel.Team, int32, error) {
-	r.filter, r.caller, r.canManage = *filter, caller, canManage
+func (r *teamsListRepo) ListTeams(_ context.Context, filter *organizationsmodel.TeamsFilter, caller uuid.UUID) ([]organizationsmodel.Team, int32, error) {
+	r.filter, r.caller = *filter, caller
 	return []organizationsmodel.Team{}, 7, r.err
 }
 
@@ -60,7 +59,7 @@ func TestListTeamsScopeAndPagination(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := &teamsListRepo{}
 			permissions := &teamsListPermissions{view: true, manage: tc.manage}
-			uc := NewTeamsUseCase(repo, permissions, nil)
+			uc := NewTeamsUseCase(repo, permissions, nil, permissions)
 			filter := &organizationsmodel.TeamsFilter{OrganizationID: tc.org, Search: "КоМ_%", Page: tc.page, PageSize: tc.size}
 			original := *filter
 			result, err := uc.ListTeams(accessmodel.WithUser(context.Background(), caller), filter)
@@ -69,7 +68,6 @@ func TestListTeamsScopeAndPagination(t *testing.T) {
 			require.Equal(t, caller.Id, repo.caller)
 			require.Equal(t, tc.org, repo.filter.OrganizationID)
 			require.Equal(t, "КоМ_%", repo.filter.Search)
-			require.Equal(t, tc.manage, repo.canManage)
 			if tc.page == 0 {
 				require.Equal(t, int32(1), repo.filter.Page)
 				require.Equal(t, int32(50), repo.filter.PageSize)
@@ -79,13 +77,7 @@ func TestListTeamsScopeAndPagination(t *testing.T) {
 			}
 			require.Equal(t, repo.filter.Page, result.Pagination.Page)
 			require.Equal(t, int32(7), result.Pagination.TotalItems, "total_items counts all matching records even for an empty page")
-			if tc.org == nil {
-				require.Empty(t, permissions.actions)
-			} else {
-				require.Equal(t, []accessmodel.OrgAction{accessmodel.ActionViewOrganization, accessmodel.ActionManageOrganization}, permissions.actions)
-				require.Equal(t, caller.Id, permissions.caller)
-				require.Equal(t, org, permissions.org)
-			}
+			require.Empty(t, permissions.actions)
 		})
 	}
 }
@@ -110,7 +102,7 @@ func TestListTeamsRejectsInvalidRequests(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// Missing dependencies ensure invalid calls cannot reach permissions or storage.
-			uc := NewTeamsUseCase(nil, nil, nil)
+			uc := NewTeamsUseCase(nil, nil, nil, nil)
 			_, err := uc.ListTeams(accessmodel.WithUser(context.Background(), tc.caller), tc.filter)
 			require.ErrorIs(t, err, tc.err)
 		})
@@ -118,27 +110,16 @@ func TestListTeamsRejectsInvalidRequests(t *testing.T) {
 }
 
 func TestListTeamsPropagatesFailures(t *testing.T) {
-	org := uuid.New()
 	caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
-	for _, tc := range []struct {
-		name        string
-		permissions teamsListPermissions
-		repoErr     error
-		wantErr     error
-	}{
-		{name: "view denied", wantErr: pkg.NoPermission},
-		{name: "view check fails", permissions: teamsListPermissions{errAction: accessmodel.ActionViewOrganization}, wantErr: context.Canceled},
-		{name: "manage check fails", permissions: teamsListPermissions{view: true, errAction: accessmodel.ActionManageOrganization}, wantErr: context.Canceled},
-		{name: "storage fails", permissions: teamsListPermissions{view: true}, repoErr: context.Canceled, wantErr: context.Canceled},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			var repo TeamsRepo
-			if tc.repoErr != nil {
-				repo = &teamsListRepo{err: tc.repoErr}
-			}
-			uc := NewTeamsUseCase(repo, &tc.permissions, nil)
-			_, err := uc.ListTeams(accessmodel.WithUser(context.Background(), caller), &organizationsmodel.TeamsFilter{OrganizationID: &org})
-			require.ErrorIs(t, err, tc.wantErr)
-		})
+	repo := &teamsListRepo{err: context.Canceled}
+	uc := NewTeamsUseCase(repo, nil, nil, nil)
+	_, err := uc.ListTeams(accessmodel.WithUser(context.Background(), caller), &organizationsmodel.TeamsFilter{})
+	require.ErrorIs(t, err, context.Canceled)
+}
+
+func (p *teamsListPermissions) HasTeamPermission(_ context.Context, _, _ uuid.UUID, action accessmodel.TeamAction) (bool, error) {
+	if p.errAction != "" {
+		return false, context.Canceled
 	}
+	return p.view && action == accessmodel.ActionViewTeam, nil
 }
