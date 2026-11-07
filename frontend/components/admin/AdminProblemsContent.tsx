@@ -83,7 +83,7 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
   });
 
   const problems = data?.problems || [];
-  const pagination = data?.pagination || {total: 0, page: page};
+  const pagination = data?.pagination || {page_size: 50, total_items: 0, total_pages: 0, page: page};
 
   const handleDeleteClick = (e: React.MouseEvent, problem: ProblemsListItemModel) => {
     e.stopPropagation();
@@ -135,7 +135,7 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
     );
   }
 
-  const totalPages = pagination.total || 1;
+  const totalPages = pagination.total_pages || 1;
   const queryParams: Record<string, string | number | undefined> = {};
   if (search) {
     queryParams.search = search;
@@ -245,10 +245,7 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
             {totalPages > 1 && (
               <Stack align="center" gap="md">
                 <RoutePagination
-                  pagination={{
-                    page: page,
-                    total: totalPages,
-                  }}
+                  pagination={pagination}
                   baseUrl="/admin/problems"
                   queryParams={queryParams}
                 />

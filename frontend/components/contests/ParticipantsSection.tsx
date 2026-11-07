@@ -91,8 +91,7 @@ export const ParticipantsSection = ({
     }
 
     setParticipants(response.members);
-    const total = response?.pagination?.total || 0;
-    setTotalPages(Math.ceil(total / pageSize));
+    setTotalPages(response.pagination.total_pages);
   }, [orgLogin, contestLogin, page]);
 
   // Load requests

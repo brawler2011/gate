@@ -124,6 +124,16 @@ func (uc *OrganizationsUseCase) ListOrganizations(ctx context.Context, filter *o
 	if err := accessmodel.RequireCaller(ctx, userID); err != nil {
 		return nil, err
 	}
+	if filter == nil {
+		return nil, pkg.ErrBadInput
+	}
+	normalized := *filter
+	var err error
+	normalized.Page, normalized.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 50)
+	if err != nil {
+		return nil, err
+	}
+	filter = &normalized
 	// List all organizations
 	orgs, total, err := uc.repo.ListOrganizations(ctx, filter)
 	if err != nil {
@@ -142,17 +152,9 @@ func (uc *OrganizationsUseCase) ListOrganizations(ctx context.Context, filter *o
 		}
 	}
 
-	totalPages := int32(0)
-	if filter.PageSize > 0 {
-		totalPages = (total + filter.PageSize - 1) / filter.PageSize
-	}
-
 	return &organizationsmodel.OrganizationList{
 		Organizations: accessibleOrgs,
-		Pagination: paging.Pagination{
-			Page:  filter.Page,
-			Total: totalPages,
-		},
+		Pagination:    paging.NewPagination(filter.Page, filter.PageSize, total),
 	}, nil
 }
 
@@ -205,7 +207,7 @@ func (uc *OrganizationsUseCase) AddMemberByLogin(ctx context.Context, login stri
 	return uc.AddMember(ctx, input, requestUserID)
 }
 
-func (uc *OrganizationsUseCase) ListMembers(ctx context.Context, orgID, requestUserID uuid.UUID) ([]organizationsmodel.OrganizationMember, error) {
+func (uc *OrganizationsUseCase) ListMembers(ctx context.Context, orgID, requestUserID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.OrganizationMember], error) {
 	if err := accessmodel.RequireCaller(ctx, requestUserID); err != nil {
 		return nil, err
 	}
@@ -224,15 +226,23 @@ func (uc *OrganizationsUseCase) ListMembers(ctx context.Context, orgID, requestU
 		}
 	}
 
-	return uc.repo.ListMembers(ctx, orgID)
+	request, err = request.Normalize()
+	if err != nil {
+		return nil, err
+	}
+	items, total, err := uc.repo.ListMembersPage(ctx, orgID, request)
+	if err != nil {
+		return nil, err
+	}
+	return &paging.List[organizationsmodel.OrganizationMember]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, total)}, nil
 }
 
-func (uc *OrganizationsUseCase) ListMembersByLogin(ctx context.Context, login string, requestUserID uuid.UUID) ([]organizationsmodel.OrganizationMember, error) {
+func (uc *OrganizationsUseCase) ListMembersByLogin(ctx context.Context, login string, requestUserID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.OrganizationMember], error) {
 	org, err := uc.repo.GetOrganizationByLogin(ctx, login)
 	if err != nil {
 		return nil, err
 	}
-	return uc.ListMembers(ctx, org.ID, requestUserID)
+	return uc.ListMembers(ctx, org.ID, requestUserID, request)
 }
 
 func (uc *OrganizationsUseCase) UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role organizationsmodel.OrganizationRole, requestUserID uuid.UUID) error {

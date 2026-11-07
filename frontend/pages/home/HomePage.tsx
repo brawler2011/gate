@@ -84,7 +84,9 @@ const Page = (): ReactNode => {
                 Блог
               </Title>
             </Group>
-            <BlogList posts={blogPosts} pagination={{total: 1, page: 1}} />
+            <BlogList posts={blogPosts} pagination={{
+              page_size: 5, total_items: blogPosts.length, total_pages: blogPosts.length ? 1 : 0, page: 1,
+            }} />
           </Stack>
         </Stack>
       </Container>

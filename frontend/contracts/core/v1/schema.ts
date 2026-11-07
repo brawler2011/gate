@@ -993,7 +993,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List all packages for a problem */
+        /** List a page of problem packages, newest version first */
         get: operations["ListProblemPackages"];
         put?: never;
         post?: never;
@@ -2038,23 +2038,35 @@ export interface components {
             email?: string;
         };
         /**
-         * @description Pagination data.
+         * @description One-based pagination of the filtered, accessible result set.
          * @example {
          *       "page": 1,
-         *       "total": 10
+         *       "page_size": 50,
+         *       "total_items": 101,
+         *       "total_pages": 3
          *     }
          */
         PaginationModel: {
             /**
              * Format: int32
-             * @example 1
+             * @description Requested page number, including when beyond the last page.
              */
             page: number;
             /**
              * Format: int32
-             * @example 10
+             * @description Effective maximum number of items per page.
              */
-            total: number;
+            page_size: number;
+            /**
+             * Format: int32
+             * @description Number of matching items visible to the caller across all pages.
+             */
+            total_items: number;
+            /**
+             * Format: int32
+             * @description Ceiling of total_items divided by page_size; zero for an empty result set.
+             */
+            total_pages: number;
         };
         /**
          * @description Problem sample data.
@@ -2201,7 +2213,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -2418,7 +2432,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -2450,7 +2466,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -2664,7 +2682,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       },
          *       "total_count": 1
          *     }
@@ -3156,7 +3176,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -3180,7 +3202,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -3643,7 +3667,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -3717,7 +3743,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -3761,7 +3789,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -3829,7 +3859,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -3953,7 +3985,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -3995,7 +4029,9 @@ export interface components {
          * @example {
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       },
          *       "posts": [
          *         {
@@ -4255,7 +4291,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -4419,7 +4457,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -4779,7 +4819,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -4864,7 +4906,9 @@ export interface components {
          *       ],
          *       "pagination": {
          *         "page": 1,
-         *         "total": 10
+         *         "page_size": 50,
+         *         "total_items": 500,
+         *         "total_pages": 10
          *       }
          *     }
          */
@@ -7627,7 +7671,12 @@ export interface operations {
     };
     ListProblemPackages: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Page number */
+                page?: components["parameters"]["PageQuery"];
+                /** @description Number of items per page */
+                pageSize?: components["parameters"]["PageSizeQuery"];
+            };
             header?: never;
             path: {
                 /** @description UUID of the problem. */
@@ -7644,7 +7693,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        packages?: {
+                        pagination: components["schemas"]["PaginationModel"];
+                        packages: {
                             /** Format: uuid */
                             id?: string;
                             /** Format: int32 */

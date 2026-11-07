@@ -40,7 +40,7 @@ FROM contest_drafts cd
     LEFT JOIN users u ON cd.user_id = u.id
 WHERE cd.contest_id = @contest_id::uuid
   AND cd.user_id = @user_id::uuid
-ORDER BY cd.created_at DESC
+ORDER BY cd.created_at DESC, cd.id DESC
 LIMIT @limit_val OFFSET @offset_val;
 
 -- name: CountDrafts :one

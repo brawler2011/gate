@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -212,21 +214,48 @@ func (r *OrganizationsRepo) ListMembers(ctx context.Context, orgID uuid.UUID) ([
 
 	result := make([]organizationsmodel.OrganizationMember, len(members))
 	for i, m := range members {
-		var email string
-		if m.Email != nil {
-			email = *m.Email
-		}
-		result[i] = organizationsmodel.OrganizationMember{
-			OrganizationID: m.OrganizationID,
-			UserID:         m.UserID,
-			Role:           organizationsmodel.OrganizationRole(m.Role),
-			Username:       m.Username,
-			Email:          email,
-			CreatedAt:      m.CreatedAt,
-		}
+		result[i] = mapListedOrganizationMember(sqlc.ListOrganizationMembersRow(m))
 	}
 
 	return result, nil
+}
+
+func (r *OrganizationsRepo) ListMembersPage(ctx context.Context, orgID uuid.UUID, request paging.Request) ([]organizationsmodel.OrganizationMember, int32, error) {
+	request, err := request.Normalize()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	members, err := r.q.ListOrganizationMembersPage(ctx, sqlc.ListOrganizationMembersPageParams{OrganizationID: orgID, PageSize: request.PageSize, PageOffset: request.Offset()})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list organization members: %w", HandlePgErr(err))
+	}
+
+	result := make([]organizationsmodel.OrganizationMember, len(members))
+	for i, m := range members {
+		result[i] = mapListedOrganizationMember(sqlc.ListOrganizationMembersRow(m))
+	}
+
+	count, err := r.q.CountOrganizationMembers(ctx, orgID)
+	if err != nil {
+		return nil, 0, HandlePgErr(err)
+	}
+	return result, safeInt32(count), nil
+}
+
+func mapListedOrganizationMember(m sqlc.ListOrganizationMembersRow) organizationsmodel.OrganizationMember {
+	var email string
+	if m.Email != nil {
+		email = *m.Email
+	}
+	return organizationsmodel.OrganizationMember{
+		OrganizationID: m.OrganizationID,
+		UserID:         m.UserID,
+		Role:           organizationsmodel.OrganizationRole(m.Role),
+		Username:       m.Username,
+		Email:          email,
+		CreatedAt:      m.CreatedAt,
+	}
 }
 
 func (r *OrganizationsRepo) UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role organizationsmodel.OrganizationRole) error {

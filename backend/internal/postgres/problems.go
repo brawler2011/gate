@@ -190,10 +190,15 @@ func (r *ProblemsRepo) RemoveProblemTeam(ctx context.Context, problemID, teamID 
 	return nil
 }
 
-func (r *ProblemsRepo) ListProblemMembers(ctx context.Context, problemID uuid.UUID) ([]problemsmodel.ProblemMember, error) {
-	rows, err := r.queries.ListProblemMembers(ctx, problemID)
+func (r *ProblemsRepo) ListProblemMembers(ctx context.Context, problemID uuid.UUID, request paging.Request) ([]problemsmodel.ProblemMember, int32, error) {
+	request, err := request.Normalize()
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, 0, err
+	}
+
+	rows, err := r.queries.ListProblemMembers(ctx, sqlc.ListProblemMembersParams{ProblemID: problemID, PageSize: request.PageSize, PageOffset: request.Offset()})
+	if err != nil {
+		return nil, 0, HandlePgErr(err)
 	}
 
 	members := make([]problemsmodel.ProblemMember, len(rows))
@@ -201,7 +206,11 @@ func (r *ProblemsRepo) ListProblemMembers(ctx context.Context, problemID uuid.UU
 		members[i] = mapListProblemMembersRow(row)
 	}
 
-	return members, nil
+	count, err := r.queries.CountProblemMembers(ctx, problemID)
+	if err != nil {
+		return nil, 0, HandlePgErr(err)
+	}
+	return members, safeInt32(count), nil
 }
 
 func (r *ProblemsRepo) UpdateProblemMemberRole(ctx context.Context, problemID, userID uuid.UUID, role problemsmodel.ProblemRole) error {

@@ -218,7 +218,7 @@ LEFT JOIN contest_problems cp ON cp.contest_id = cc.contest_id AND cp.problem_id
 WHERE cc.contest_id = $1
   AND ($4::uuid IS NULL OR cc.problem_id = $4::uuid)
   AND ($5::text IS NULL OR $5::text = '' OR cc.status = $5::text)
-ORDER BY cc.created_at DESC
+ORDER BY cc.created_at DESC, cc.id DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -303,7 +303,7 @@ LEFT JOIN users au ON cc.answered_by = au.id
 LEFT JOIN problems p ON cc.problem_id = p.id
 LEFT JOIN contest_problems cp ON cp.contest_id = cc.contest_id AND cp.problem_id = cc.problem_id
 WHERE cc.contest_id = $1 AND cc.user_id = $2
-ORDER BY cc.created_at DESC
+ORDER BY cc.created_at DESC, cc.id DESC
 LIMIT $3 OFFSET $4
 `
 

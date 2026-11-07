@@ -28,7 +28,7 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const currentPage = page;
-  const totalPages = Number(pagination.total) || 1;
+  const totalPages = Number(pagination.total_pages) || 1;
 
   const handleRoleChange = async (user: UserModel, newRole: string) => {
     setUpdatingId(user.id);
@@ -163,8 +163,9 @@ export const UsersTable = ({users, pagination, page, search, role, onRefresh}: P
         <Stack align="center" gap="md">
           <RoutePagination
             pagination={{
+              ...pagination,
               page: currentPage,
-              total: totalPages,
+              total_pages: totalPages,
             }}
             baseUrl="/admin/users"
             queryParams={queryParams}

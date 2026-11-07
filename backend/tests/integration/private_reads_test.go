@@ -44,7 +44,7 @@ func (s *IntegrationTestSuite) TestPrivateReadersRejectSpoofedOwnersOutsideHTTP(
 	s.Require().NoError(err)
 	s.Require().Len(list.Notifications, 1)
 	s.Equal(notification.ID, list.Notifications[0].ID)
-	s.EqualValues(1, list.Pagination.Total)
+	s.EqualValues(1, list.Pagination.TotalPages)
 	count, err := notifications.GetUnreadCount(ownerCtx, owner.Id)
 	s.Require().NoError(err)
 	s.EqualValues(1, count)

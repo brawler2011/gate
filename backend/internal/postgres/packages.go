@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/google/uuid"
@@ -35,20 +37,25 @@ func (r *PackagesRepo) CreatePackage(ctx context.Context, params *problemsmodel.
 	return mapPackage(row), nil
 }
 
-func (r *PackagesRepo) ListPackages(ctx context.Context, problemID uuid.UUID, limit, offset int32) ([]problemsmodel.ProblemPackage, error) {
-	rows, err := r.queries.ListProblemPackages(ctx, sqlc.ListProblemPackagesParams{
-		ProblemID: problemID,
-		Limit:     limit,
-		Offset:    offset,
-	})
+func (r *PackagesRepo) ListPackages(ctx context.Context, problemID uuid.UUID, request paging.Request) ([]problemsmodel.ProblemPackage, int32, error) {
+	request, err := request.Normalize()
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, 0, err
+	}
+
+	rows, err := r.queries.ListProblemPackages(ctx, sqlc.ListProblemPackagesParams{ProblemID: problemID, PageSize: request.PageSize, PageOffset: request.Offset()})
+	if err != nil {
+		return nil, 0, HandlePgErr(err)
 	}
 	result := make([]problemsmodel.ProblemPackage, len(rows))
 	for i, row := range rows {
 		result[i] = mapPackage(row)
 	}
-	return result, nil
+	count, err := r.queries.CountProblemPackages(ctx, problemID)
+	if err != nil {
+		return nil, 0, HandlePgErr(err)
+	}
+	return result, safeInt32(count), nil
 }
 
 func (r *PackagesRepo) GetReadyPackage(ctx context.Context, problemID uuid.UUID) (problemsmodel.ProblemPackage, error) {

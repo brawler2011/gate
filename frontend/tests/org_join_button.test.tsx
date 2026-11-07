@@ -41,14 +41,15 @@ describe("Organization join status through the organization page", () => {
       const url = new URL(String(input), "http://localhost");
       if (url.pathname.endsWith("/members")) {
         return member ? Response.json({
-          members: [
+          members: (Number(url.searchParams.get("page")) === 1 ? [
             ...Array.from({length: 100}, (_, index) => ({
               user_id: `other-${index}`, organization_id: org.id, username: `other-${index}`,
               role: "member", created_at: "2026-10-01",
             })),
+          ] : [
             {user_id: user.id, organization_id: org.id, username: user.username, role: "member", created_at: "2026-10-01"},
-          ],
-          pagination: {page: 1, total: 101},
+          ]),
+          pagination: {page_size: 100, total_items: 101, page: Number(url.searchParams.get("page")), total_pages: 2},
         }) : Response.json({message: "Cannot list members"}, {status: membersError});
       }
       if (url.pathname.endsWith("/requests/mine")) {
@@ -61,7 +62,7 @@ describe("Organization join status through the organization page", () => {
         return authenticated ? Response.json({user}) : Response.json({message: "Unauthorized"}, {status: 401});
       }
       if (url.pathname.endsWith("/contests")) {
-        return Response.json({contests: [], pagination: {page: 1, total: 1}});
+        return Response.json({contests: [], pagination: {page_size: 50, total_items: 0, page: 1, total_pages: 1}});
       }
       throw new Error(`Unexpected API request: ${url.pathname}`);
     }, {preconnect: () => {}}));
@@ -91,6 +92,7 @@ describe("Organization join status through the organization page", () => {
     expect(view.getByText("Участник организации")).toBeTruthy();
     expect(view.queryByRole("button", {name: "Подать заявку на вступление"})).toBeNull();
     expect(fetch.mock.calls.some(([url]) => String(url).includes("requests/mine"))).toBe(false);
+    expect(fetch.mock.calls.some(([url]) => String(url).includes("page=2"))).toBe(true);
   });
 
   it("shows unexpected membership errors instead of offering to rejoin", async () => {

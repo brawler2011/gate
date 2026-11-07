@@ -57,7 +57,7 @@ const OrgProblemsPage = (): ReactNode => {
   const currentUser = me?.user ?? null;
   const org = orgData.organization;
   const problems = problemsData?.problems ?? [];
-  const problemsPagination = problemsData?.pagination ?? {page: 1, total: 1};
+  const problemsPagination = problemsData?.pagination ?? {page_size: 50, total_items: 0, page: 1, total_pages: 0};
   const isAuthenticated = currentUser !== null;
   return (
     <Container size="lg" py="lg">

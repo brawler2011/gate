@@ -38,7 +38,7 @@ export const AdminContestsContent = ({page, search}: AdminContestsContentProps):
   });
 
   const contests = data?.contests || [];
-  const pagination = data?.pagination || {total: 0, page: page};
+  const pagination = data?.pagination || {page_size: 50, total_items: 0, total_pages: 0, page: page};
 
   const handleDeleteContest = async (contest: {id: string; organization_login: string; login: string}) => {
     const {error: err} = await api.DELETE(
@@ -84,7 +84,7 @@ export const AdminContestsContent = ({page, search}: AdminContestsContentProps):
     );
   }
 
-  const totalPages = pagination.total || 1;
+  const totalPages = pagination.total_pages || 1;
   const queryParams: Record<string, string | number | undefined> = {};
   if (search) {
     queryParams.search = search;
@@ -123,10 +123,7 @@ export const AdminContestsContent = ({page, search}: AdminContestsContentProps):
             {totalPages > 1 && (
               <Stack align="center" gap="md">
                 <RoutePagination
-                  pagination={{
-                    page: page,
-                    total: totalPages,
-                  }}
+                  pagination={pagination}
                   baseUrl="/admin/contests"
                   queryParams={queryParams}
                 />

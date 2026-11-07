@@ -1,10 +1,10 @@
-import {Badge, Card, Center, Skeleton, Stack, Table, Text} from "@mantine/core";
+import {Pagination, Badge, Card, Center, Skeleton, Stack, Table, Text} from "@mantine/core";
 import {IconTrophy} from "@tabler/icons-react";
-import {useQuery} from "@tanstack/react-query";
 import {Link} from "react-router-dom";
 
 import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
-import {api} from "@/lib/api";
+import {usePagedQuery} from "@/hooks/usePagedQuery";
+import {api, unwrap} from "@/lib/api";
 
 import type {ContestModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
@@ -24,15 +24,13 @@ const getContestStatus = (contest: ContestModel, now: number): string => {
 };
 
 export const TeamContestsTab = ({teamId}: TeamContestsTabProps): ReactNode => {
-  const {data, isLoading} = useQuery({
-    queryKey: ["team-contests", teamId],
-    queryFn: async () => ({
-      result: await api.GET("/teams/{id}/contests", {
-        params: {path: {id: teamId}},
-      }),
-      loadedAt: Date.now(),
-    }),
-  });
+  const {data, isPending: isLoading, error, page, setPage, dataUpdatedAt} = usePagedQuery(
+    ["team-contests", teamId],
+    (page, pageSize) => unwrap(api.GET("/teams/{id}/contests", {params: {path: {id: teamId}, query: {page, pageSize}}})),
+  );
+  if (error) {
+    return <ErrorDisplay error={error} />;
+  }
 
   if (isLoading || !data) {
     return (
@@ -44,21 +42,7 @@ export const TeamContestsTab = ({teamId}: TeamContestsTabProps): ReactNode => {
     );
   }
 
-  const {error, data: response, response: rawResponse} = data.result;
-  if (error) {
-    return (
-      <ErrorDisplay
-        error={{
-          status: rawResponse.status,
-          message:
-            (error as {message?: string})?.message ||
-            rawResponse.statusText ||
-            "Ошибка",
-        }}
-      />
-    );
-  }
-  const contests = response.contests;
+  const contests = data.contests;
 
   if (contests.length === 0) {
     return (
@@ -102,7 +86,7 @@ export const TeamContestsTab = ({teamId}: TeamContestsTabProps): ReactNode => {
                 </Text>
               </Table.Td>
               <Table.Td>
-                {getContestStatus(c, data.loadedAt)}
+                {getContestStatus(c, dataUpdatedAt)}
               </Table.Td>
               <Table.Td style={{textAlign: "center"}}>
                 <Badge variant="light" color={c.visibility === "public" ? "green" : "gray"}>
@@ -113,6 +97,9 @@ export const TeamContestsTab = ({teamId}: TeamContestsTabProps): ReactNode => {
           ))}
         </Table.Tbody>
       </Table>
+      {data.pagination.total_pages > 1 && (
+        <Pagination value={page} onChange={setPage} total={data.pagination.total_pages} />
+      )}
     </Card>
   );
 };

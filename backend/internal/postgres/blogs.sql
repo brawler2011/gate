@@ -11,13 +11,13 @@ WHERE id = $1;
 -- name: ListPostsDesc :many
 SELECT id, created_at, updated_at, title, text, description, author_uuid, author_name, image_key
 FROM posts
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id DESC
 LIMIT $1 OFFSET $2;
 
 -- name: ListPostsAsc :many
 SELECT id, created_at, updated_at, title, text, description, author_uuid, author_name, image_key
 FROM posts
-ORDER BY created_at ASC
+ORDER BY created_at ASC, id ASC
 LIMIT $1 OFFSET $2;
 
 -- name: CountPosts :one

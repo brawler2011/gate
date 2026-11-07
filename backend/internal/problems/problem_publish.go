@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -159,14 +161,19 @@ func (uc *ProblemPublishUseCase) publishProblemFiles(
 	}, nil
 }
 
-func (uc *ProblemPublishUseCase) ListPackages(
-	ctx context.Context,
-	problemID uuid.UUID,
-) ([]problemsmodel.ProblemPackage, error) {
+func (uc *ProblemPublishUseCase) ListPackages(ctx context.Context, problemID uuid.UUID, request paging.Request) (*paging.List[problemsmodel.ProblemPackage], error) {
 	if err := authorizeProblem(ctx, uc.permissions, problemID, accessmodel.ActionViewProblem); err != nil {
 		return nil, err
 	}
-	return uc.packagesRepo.ListPackages(ctx, problemID, 100, 0)
+	request, err := request.Normalize()
+	if err != nil {
+		return nil, err
+	}
+	items, total, err := uc.packagesRepo.ListPackages(ctx, problemID, request)
+	if err != nil {
+		return nil, err
+	}
+	return &paging.List[problemsmodel.ProblemPackage]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, total)}, nil
 }
 
 func (uc *ProblemPublishUseCase) GetPublishedPackageURL(

@@ -21,7 +21,7 @@ export const UsersContent = ({page, search, role}: UsersContentProps): ReactNode
   });
 
   const users = data?.users || [];
-  const pagination = data?.pagination || {total: 0, page: page};
+  const pagination = data?.pagination || {page_size: 50, total_items: 0, total_pages: 0, page: page};
 
   if (error) {
     return (

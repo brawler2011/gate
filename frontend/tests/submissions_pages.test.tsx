@@ -25,7 +25,7 @@ it.each(['all', 'mine'])('keeps actual %s page selection in sync with HTTP and p
       return Response.json({submissions: [{id: `page-${page}`, username: `Page ${page}`, state: 200,
         contest_id: 'contest', contest_login: 'round', organization_login: 'school',
         problem_id: 'problem', problem_title: 'A+B', position: 1, language: 42,
-        created_at: '2026-01-01T00:00:00Z'}], pagination: {page, total: 100}});
+        created_at: '2026-01-01T00:00:00Z'}], pagination: {page, page_size: 50, total_items: 0, total_pages: 100}});
     }
     return Response.json({contest: {id: 'contest', login: 'round', organization_login: 'school', visibility: 'public'}, problems: []});
   }, {preconnect: () => {}}));

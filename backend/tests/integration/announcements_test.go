@@ -54,7 +54,9 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 		payload := get(path+query, uuid.Nil, http.StatusOK)
 		var pagination corev1.PaginationModel
 		s.Require().NoError(json.Unmarshal(payload["pagination"], &pagination))
-		s.Equal(corev1.PaginationModel{Page: page, Total: total}, pagination)
+		s.Equal(page, pagination.Page)
+		s.Equal(total, pagination.TotalPages)
+		s.Positive(pagination.PageSize)
 		var items []corev1.ContestAnnouncementModel
 		s.Require().NoError(json.Unmarshal(payload["announcements"], &items))
 		s.Require().Len(items, len(ids))
@@ -171,7 +173,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 	s.Len(items, 50)
 	var pagination corev1.PaginationModel
 	s.Require().NoError(json.Unmarshal(payload["pagination"], &pagination))
-	s.Equal(corev1.PaginationModel{Page: 1, Total: 2}, pagination)
+	s.Equal(corev1.PaginationModel{Page: 1, PageSize: 50, TotalItems: 51, TotalPages: 2}, pagination)
 
 	reader := pgstore.NewAnnouncementsRepo(s.dbPool)
 	protected := contests.NewCommunicationReader(reader, nil, nil)
@@ -192,7 +194,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 		s.Run(fmt.Sprintf("reader_page_%d_size_%d", tc.page, tc.pageSize), func() {
 			response, err := reader.ListAnnouncements(s.ctx, contestID, tc.page, tc.pageSize)
 			s.Require().NoError(err)
-			s.Equal(paging.Pagination{Page: tc.wantPage, Total: tc.wantTotal}, response.Pagination)
+			s.Equal(paging.Pagination{Page: tc.wantPage, PageSize: tc.pageSize, TotalItems: 51, TotalPages: tc.wantTotal}, response.Pagination)
 			s.Len(response.Announcements, tc.wantLength)
 			s.NotNil(response.Announcements)
 		})

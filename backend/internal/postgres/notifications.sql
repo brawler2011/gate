@@ -27,7 +27,7 @@ INSERT INTO notifications (
 SELECT * FROM notifications
 WHERE user_id = $1
   AND (sqlc.narg('unread_only')::boolean IS NOT TRUE OR is_read = FALSE)
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id DESC
 LIMIT $2 OFFSET $3;
 
 -- name: CountNotificationsByUserID :one

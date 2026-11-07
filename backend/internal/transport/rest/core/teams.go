@@ -29,7 +29,7 @@ func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParam
 	if err != nil {
 		return nil, err
 	}
-	return listTeamsDTO(result.Teams, result.Pagination.Page, result.Pagination.Total), nil
+	return listTeamsDTO(result.Teams, result.Pagination), nil
 }
 
 // CreateTeam handles POST /teams
@@ -141,18 +141,13 @@ func (h *CoreServer) ListTeamMembers(ctx context.Context, params corev1.ListTeam
 	// Get current user
 	user := accessmodel.UserFromContext(ctx)
 
-	page := params.Page.Or(1)
-
 	// Get members
-	members, err := h.organizations.ListTeamMembers(ctx, params.ID, user.Id)
+	members, err := h.organizations.ListTeamMembers(ctx, params.ID, user.Id, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to list team members")
 	}
 
-	// Calculate total for pagination (using actual count)
-	total := safeInt32(len(members))
-
-	return listTeamMembersDTO(members, page, total), nil
+	return listTeamMembersDTO(members.Items, members.Pagination), nil
 }
 
 // AddTeamMember handles POST /teams/{id}/members
@@ -206,18 +201,12 @@ func (h *CoreServer) RemoveTeamMember(ctx context.Context, params corev1.RemoveT
 func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTeamContestsParams) (*corev1.ListContestsResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 
-	contests, err := h.organizations.GetTeamContests(ctx, params.ID, user.Id)
+	contests, err := h.organizations.GetTeamContests(ctx, params.ID, user.Id, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to list team contests")
 	}
 
-	contestsList := &contestsmodel.ContestsList{
-		Contests: contests,
-		Pagination: paging.Pagination{
-			Page:  1,
-			Total: safeInt32(len(contests)),
-		},
-	}
+	contestsList := &contestsmodel.ContestsList{Contests: contests.Items, Pagination: contests.Pagination}
 
 	return ListContestsResponseDTO(contestsList), nil
 }
@@ -226,18 +215,12 @@ func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTea
 func (h *CoreServer) ListTeamProblems(ctx context.Context, params corev1.ListTeamProblemsParams) (*corev1.ListProblemsResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 
-	problems, err := h.organizations.GetTeamProblems(ctx, params.ID, user.Id)
+	problems, err := h.organizations.GetTeamProblems(ctx, params.ID, user.Id, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to list team problems")
 	}
 
-	problemsList := &problemsmodel.ProblemsList{
-		Problems: problems,
-		Pagination: paging.Pagination{
-			Page:  1,
-			Total: safeInt32(len(problems)),
-		},
-	}
+	problemsList := &problemsmodel.ProblemsList{Problems: problems.Items, Pagination: problems.Pagination}
 
 	return ListProblemsResponseDTO(problemsList), nil
 }

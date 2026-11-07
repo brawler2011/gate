@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -26,8 +28,11 @@ func TestProblemReadsAndPreflightsAuthorizeWithoutTransactions(t *testing.T) {
 		importer := NewProblemImportUseCase(nil, nil, nil, permissions)
 		id := uuid.New()
 		calls := map[string]func(context.Context) error{
-			"details":     func(ctx context.Context) error { _, err := reader.GetProblemDetails(ctx, id); return err },
-			"packages":    func(ctx context.Context) error { _, err := publisher.ListPackages(ctx, id); return err },
+			"details": func(ctx context.Context) error { _, err := reader.GetProblemDetails(ctx, id); return err },
+			"packages": func(ctx context.Context) error {
+				_, err := publisher.ListPackages(ctx, id, paging.Request{})
+				return err
+			},
 			"download":    func(ctx context.Context) error { _, err := publisher.GetPublishedPackageURL(ctx, id, "v1"); return err },
 			"template":    func(ctx context.Context) error { _, err := publisher.GetReadyPackage(ctx, id); return err },
 			"publication": func(ctx context.Context) error { _, err := publisher.PublishProblem(ctx, id); return err },

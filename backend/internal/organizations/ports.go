@@ -3,6 +3,8 @@ package organizations
 import (
 	"context"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
@@ -25,6 +27,8 @@ type OrganizationsRepo interface {
 	ListMembers(ctx context.Context, orgID uuid.UUID) ([]organizationsmodel.OrganizationMember, error)
 	ResolveUserOrganizationID(ctx context.Context, userID uuid.UUID, requestedOrgID *uuid.UUID) (uuid.UUID, bool, error)
 
+	ListMembersPage(ctx context.Context, orgID uuid.UUID, request paging.Request) ([]organizationsmodel.OrganizationMember, int32, error)
+
 	// Invitations
 	GetInvitationByID(ctx context.Context, id uuid.UUID) (*organizationsmodel.OrganizationInvitation, error)
 	ListInvitations(ctx context.Context, orgID uuid.UUID, status *string) ([]organizationsmodel.OrganizationInvitation, error)
@@ -45,11 +49,11 @@ type TeamsRepo interface {
 
 	// Member management
 	GetTeamMember(ctx context.Context, teamID, userID uuid.UUID) (*organizationsmodel.TeamMember, error)
-	ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]organizationsmodel.TeamMember, error)
+	ListTeamMembers(ctx context.Context, teamID uuid.UUID, request paging.Request) ([]organizationsmodel.TeamMember, int32, error)
 
 	// Resource associations
-	GetTeamContests(ctx context.Context, teamID, viewerID uuid.UUID) ([]contestsmodel.Contest, error)
-	GetTeamProblems(ctx context.Context, teamID, viewerID uuid.UUID) ([]problemsmodel.Problem, error)
+	GetTeamContests(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]contestsmodel.Contest, int32, error)
+	GetTeamProblems(ctx context.Context, teamID, viewerID uuid.UUID, request paging.Request) ([]problemsmodel.Problem, int32, error)
 }
 
 type UsersRepo interface {

@@ -3,7 +3,10 @@ package core
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
+
+	paging "github.com/brawler2011/gate/backend/internal/page"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -12,7 +15,7 @@ import (
 )
 
 type PackagesReader interface {
-	ListPackages(ctx context.Context, problemID uuid.UUID, limit, offset int32) ([]problemsmodel.ProblemPackage, error)
+	ListPackages(ctx context.Context, problemID uuid.UUID, request paging.Request) (*paging.List[problemsmodel.ProblemPackage], error)
 }
 
 // ImportProblem handles POST /problems/{id}/import
@@ -62,13 +65,13 @@ func (h *CoreServer) PublishProblem(ctx context.Context, params corev1.PublishPr
 
 // ListProblemPackages handles GET /problems/{id}/packages
 func (h *CoreServer) ListProblemPackages(ctx context.Context, params corev1.ListProblemPackagesParams) (*corev1.ListProblemPackagesOK, error) {
-	packages, err := h.problems.ListPackages(ctx, params.ID, 100, 0)
+	packages, err := h.problems.ListPackages(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list packages")
+		return nil, fmt.Errorf("failed to list packages: %w", err)
 	}
 
-	items := make([]corev1.ListProblemPackagesOKPackagesItem, len(packages))
-	for i, p := range packages {
+	items := make([]corev1.ListProblemPackagesOKPackagesItem, len(packages.Items))
+	for i, p := range packages.Items {
 		items[i] = corev1.ListProblemPackagesOKPackagesItem{
 			ID:          corev1.NewOptUUID(p.ID),
 			Version:     corev1.NewOptInt32(p.Version),
@@ -80,7 +83,7 @@ func (h *CoreServer) ListProblemPackages(ctx context.Context, params corev1.List
 			items[i].CompiledAt = corev1.NewOptDateTime(*p.CompiledAt)
 		}
 	}
-	return &corev1.ListProblemPackagesOK{Packages: items}, nil
+	return &corev1.ListProblemPackagesOK{Packages: items, Pagination: PaginationDTO(packages.Pagination)}, nil
 }
 
 // GetPublishedPackage handles GET /problems/{id}/package/{version}

@@ -98,7 +98,8 @@ SELECT pm.*, u.username, u.email
 FROM problem_members pm
 JOIN users u ON pm.user_id = u.id
 WHERE pm.problem_id = $1
-ORDER BY pm.created_at;
+ORDER BY pm.created_at, pm.user_id
+LIMIT sqlc.arg('page_size')::int OFFSET sqlc.arg('page_offset')::bigint;
 
 -- name: UpdateProblemMemberRole :exec
 UPDATE problem_members
@@ -146,3 +147,9 @@ LIMIT $2;
 SELECT * FROM problem_members
 WHERE problem_id = $1 AND user_id = $2
 FOR SHARE;
+
+-- name: CountProblemMembers :one
+SELECT COUNT(*)
+FROM problem_members pm
+JOIN users u ON pm.user_id = u.id
+WHERE pm.problem_id = $1;

@@ -59,3 +59,14 @@ func TestNormalize(t *testing.T) {
 		})
 	}
 }
+
+func TestPaginationMetadata(t *testing.T) {
+	for _, tc := range []struct{ items, pages int32 }{{0, 0}, {1, 1}, {50, 1}, {100, 2}, {101, 3}} {
+		for _, requested := range []int32{1, 2, 4} {
+			require.Equal(t, Pagination{Page: requested, PageSize: 50, TotalItems: tc.items, TotalPages: tc.pages}, NewPagination(requested, 50, tc.items))
+		}
+	}
+	request, err := (Request{Page: math.MaxInt32, PageSize: 100}).Normalize()
+	require.NoError(t, err)
+	require.Equal(t, (int64(math.MaxInt32)-1)*100, request.Offset())
+}

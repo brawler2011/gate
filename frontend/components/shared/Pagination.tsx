@@ -33,7 +33,7 @@ const RoutePagination = ({
   const getControlProps = (control: "first" | "previous" | "last" | "next") => {
     if (control === "next") {
       const nextPage =
-        pagination.page === pagination.total
+        pagination.page === pagination.total_pages
           ? pagination.page
           : pagination.page + 1;
       return {
@@ -56,7 +56,7 @@ const RoutePagination = ({
 
   return (
     <Pagination
-      total={pagination.total}
+      total={pagination.total_pages}
       value={pagination.page}
       getItemProps={getItemProps}
       getControlProps={getControlProps}

@@ -31,6 +31,20 @@ func (q *Queries) AddOrganizationMember(ctx context.Context, arg AddOrganization
 	return err
 }
 
+const countOrganizationMembers = `-- name: CountOrganizationMembers :one
+SELECT COUNT(*)
+FROM organization_members om
+JOIN users u ON om.user_id = u.id
+WHERE om.organization_id = $1
+`
+
+func (q *Queries) CountOrganizationMembers(ctx context.Context, organizationID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countOrganizationMembers, organizationID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countOrganizations = `-- name: CountOrganizations :one
 SELECT COUNT(*) FROM organizations
 WHERE ($1::text = '' OR name ILIKE '%' || $1 || '%')
@@ -292,10 +306,62 @@ func (q *Queries) ListOrganizationMembers(ctx context.Context, organizationID uu
 	return items, nil
 }
 
+const listOrganizationMembersPage = `-- name: ListOrganizationMembersPage :many
+SELECT om.organization_id, om.user_id, om.role, om.created_at,
+       u.username, u.email
+FROM organization_members om
+JOIN users u ON om.user_id = u.id
+WHERE om.organization_id = $1
+ORDER BY om.created_at, om.user_id
+LIMIT $3::int OFFSET $2::bigint
+`
+
+type ListOrganizationMembersPageParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	PageOffset     int64     `json:"page_offset"`
+	PageSize       int32     `json:"page_size"`
+}
+
+type ListOrganizationMembersPageRow struct {
+	OrganizationID uuid.UUID                           `json:"organization_id"`
+	UserID         uuid.UUID                           `json:"user_id"`
+	Role           organizationsmodel.OrganizationRole `json:"role"`
+	CreatedAt      time.Time                           `json:"created_at"`
+	Username       string                              `json:"username"`
+	Email          *string                             `json:"email"`
+}
+
+func (q *Queries) ListOrganizationMembersPage(ctx context.Context, arg ListOrganizationMembersPageParams) ([]ListOrganizationMembersPageRow, error) {
+	rows, err := q.db.Query(ctx, listOrganizationMembersPage, arg.OrganizationID, arg.PageOffset, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOrganizationMembersPageRow{}
+	for rows.Next() {
+		var i ListOrganizationMembersPageRow
+		if err := rows.Scan(
+			&i.OrganizationID,
+			&i.UserID,
+			&i.Role,
+			&i.CreatedAt,
+			&i.Username,
+			&i.Email,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOrganizations = `-- name: ListOrganizations :many
 SELECT id, login, name, description, avatar_url, created_at, updated_at, join_policy FROM organizations
 WHERE ($1::text = '' OR name ILIKE '%' || $1 || '%')
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id DESC
 LIMIT $2 OFFSET $3
 `
 

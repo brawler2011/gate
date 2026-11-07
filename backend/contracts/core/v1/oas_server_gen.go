@@ -754,7 +754,7 @@ type Handler interface {
 	ListProblemMembers(ctx context.Context, params ListProblemMembersParams) (*ListProblemMembersResponseModel, error)
 	// ListProblemPackages implements ListProblemPackages operation.
 	//
-	// List all packages for a problem.
+	// List a page of problem packages, newest version first.
 	//
 	// GET /problems/{id}/packages
 	ListProblemPackages(ctx context.Context, params ListProblemPackagesParams) (*ListProblemPackagesOK, error)

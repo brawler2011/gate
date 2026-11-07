@@ -136,7 +136,7 @@ FROM contest_drafts cd
     LEFT JOIN users u ON cd.user_id = u.id
 WHERE cd.contest_id = $1::uuid
   AND cd.user_id = $2::uuid
-ORDER BY cd.created_at DESC
+ORDER BY cd.created_at DESC, cd.id DESC
 LIMIT $4 OFFSET $3
 `
 

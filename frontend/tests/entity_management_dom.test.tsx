@@ -79,7 +79,7 @@ describe("Production entity management", () => {
       return Response.json({members: [
         {user_id: "owner", username: "owner", role: "owner", created_at: "2026-01-01"},
         ...removed ? [] : [{user_id: "user", username: "alice", role: "member", created_at: "2026-01-01"}],
-      ]});
+      ], pagination: {page: 1, page_size: 50, total_items: removed ? 1 : 2, total_pages: 1}});
     });
     const view = renderWithProviders(<OrgMembersManagement orgLogin="org" />);
     await waitFor(() => expect(view.getByText("@alice")).toBeTruthy());
@@ -139,7 +139,8 @@ describe("Production entity management", () => {
       if (url.pathname.endsWith("/requests")) {
         return Response.json({requests: changed ? [] : [{id: "request", username: "alice", created_at: "2026-01-01"}]});
       }
-      return Response.json({members: changed && action === "approve" ? [{user_id: "user", username: "alice", role: "member", created_at: "2026-01-01"}] : []});
+      return Response.json({members: changed && action === "approve" ? [{user_id: "user", username: "alice", role: "member", created_at: "2026-01-01"}] : [],
+        pagination: {page: 1, page_size: 50, total_items: 1, total_pages: 1}});
     });
     const view = renderWithProviders(<OrgMembersManagement orgLogin="org" />);
     fireEvent.click(view.getByRole("tab", {name: new RegExp(action === "cancel" ? "Приглашения" : "Заявки")}));
@@ -211,7 +212,7 @@ describe("Production entity management", () => {
         return Response.json({users: [{id: "user", username: "alice"}]});
       }
       if (url.pathname.endsWith("/members")) {
-        return Response.json({members: []});
+        return Response.json({members: [], pagination: {page: 1, page_size: 50, total_items: 1, total_pages: 1}});
       }
       if (url.pathname.endsWith("/requests")) {
         return Response.json({requests: []});

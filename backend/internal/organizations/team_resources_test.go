@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
@@ -25,15 +27,15 @@ type teamResourcesRepo struct {
 func (r *teamResourcesRepo) GetTeamByID(context.Context, uuid.UUID) (*organizationsmodel.Team, error) {
 	return r.team, nil
 }
-func (r *teamResourcesRepo) GetTeamContests(_ context.Context, teamID, caller uuid.UUID) ([]contestsmodel.Contest, error) {
+func (r *teamResourcesRepo) GetTeamContests(_ context.Context, teamID, caller uuid.UUID, request paging.Request) ([]contestsmodel.Contest, int32, error) {
 	r.teamID, r.caller = teamID, caller
 	r.calls++
-	return []contestsmodel.Contest{{ID: teamID}}, r.err
+	return []contestsmodel.Contest{{ID: teamID}}, 1, r.err
 }
-func (r *teamResourcesRepo) GetTeamProblems(_ context.Context, teamID, caller uuid.UUID) ([]problemsmodel.Problem, error) {
+func (r *teamResourcesRepo) GetTeamProblems(_ context.Context, teamID, caller uuid.UUID, request paging.Request) ([]problemsmodel.Problem, int32, error) {
 	r.teamID, r.caller = teamID, caller
 	r.calls++
-	return []problemsmodel.Problem{{ID: teamID}}, r.err
+	return []problemsmodel.Problem{{ID: teamID}}, 1, r.err
 }
 
 func TestTeamResourcesAuthorization(t *testing.T) {
@@ -69,16 +71,16 @@ func TestTeamResourcesAuthorization(t *testing.T) {
 				ctx := accessmodel.WithUser(context.Background(), tc.user)
 				var err error
 				if resource == "contests" {
-					var result []contestsmodel.Contest
-					result, err = uc.GetTeamContests(ctx, teamID, tc.actor)
+					var result *paging.List[contestsmodel.Contest]
+					result, err = uc.GetTeamContests(ctx, teamID, tc.actor, paging.Request{})
 					if tc.wantErr == nil {
-						require.Equal(t, []contestsmodel.Contest{{ID: teamID}}, result)
+						require.Equal(t, []contestsmodel.Contest{{ID: teamID}}, result.Items)
 					}
 				} else {
-					var result []problemsmodel.Problem
-					result, err = uc.GetTeamProblems(ctx, teamID, tc.actor)
+					var result *paging.List[problemsmodel.Problem]
+					result, err = uc.GetTeamProblems(ctx, teamID, tc.actor, paging.Request{})
 					if tc.wantErr == nil {
-						require.Equal(t, []problemsmodel.Problem{{ID: teamID}}, result)
+						require.Equal(t, []problemsmodel.Problem{{ID: teamID}}, result.Items)
 					}
 				}
 				require.ErrorIs(t, err, tc.wantErr)

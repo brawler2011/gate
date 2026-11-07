@@ -57,7 +57,8 @@ SELECT tm.team_id, tm.user_id, tm.role, tm.created_at,
 FROM team_members tm
 JOIN users u ON tm.user_id = u.id
 WHERE tm.team_id = $1
-ORDER BY tm.created_at;
+ORDER BY tm.created_at, tm.user_id
+LIMIT sqlc.arg('page_size')::int OFFSET sqlc.arg('page_offset')::bigint;
 
 -- name: UpdateTeamMemberRole :exec
 UPDATE team_members
@@ -84,3 +85,9 @@ FOR SHARE OF tm;
 
 -- name: GetAuthorizationTeamMember :one
 SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 FOR SHARE;
+
+-- name: CountTeamMembers :one
+SELECT COUNT(*)
+FROM team_members tm
+JOIN users u ON tm.user_id = u.id
+WHERE tm.team_id = $1;

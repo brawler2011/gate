@@ -5,13 +5,13 @@ import {Link} from "react-router-dom";
 import {RoutePagination} from "@/components/shared/Pagination";
 import {TimeBeautify} from "@/lib/lib";
 
-import type {ContestModel} from "@/contracts/core/v1/schema";
+import type {ContestModel, PaginationModel} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type ProfileContestsProps = {
   username: string;
   contests: ContestModel[];
-  contestsPagination?: { page: number; total: number };
+  contestsPagination?: PaginationModel;
   contestsPage: number;
 };
 
@@ -66,10 +66,10 @@ export const ProfileContests = ({
                 ))}
               </Table.Tbody>
             </Table>
-            {contestsPagination && contestsPagination.total > 1 && (
+            {contestsPagination && contestsPagination.total_pages > 1 && (
               <Stack align="center" mt="md">
                 <RoutePagination
-                  pagination={{page: contestsPage, total: contestsPagination.total}}
+                  pagination={{...contestsPagination, page: contestsPage}}
                   baseUrl={`/@${username}`}
                   queryParams={{contestsPage}}
                 />

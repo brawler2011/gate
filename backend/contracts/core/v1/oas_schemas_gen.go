@@ -4051,12 +4051,23 @@ func (s *ListProblemMembersResponseModel) SetPagination(val PaginationModel) {
 }
 
 type ListProblemPackagesOK struct {
-	Packages []ListProblemPackagesOKPackagesItem `json:"packages"`
+	Pagination PaginationModel                     `json:"pagination"`
+	Packages   []ListProblemPackagesOKPackagesItem `json:"packages"`
+}
+
+// GetPagination returns the value of Pagination.
+func (s *ListProblemPackagesOK) GetPagination() PaginationModel {
+	return s.Pagination
 }
 
 // GetPackages returns the value of Packages.
 func (s *ListProblemPackagesOK) GetPackages() []ListProblemPackagesOKPackagesItem {
 	return s.Packages
+}
+
+// SetPagination sets the value of Pagination.
+func (s *ListProblemPackagesOK) SetPagination(val PaginationModel) {
+	s.Pagination = val
 }
 
 // SetPackages sets the value of Packages.
@@ -6913,11 +6924,17 @@ func (s *OrganizationModelJoinPolicy) UnmarshalText(data []byte) error {
 	}
 }
 
-// Pagination data.
+// One-based pagination of the filtered, accessible result set.
 // Ref: #/components/schemas/PaginationModel
 type PaginationModel struct {
-	Page  int32 `json:"page"`
-	Total int32 `json:"total"`
+	// Requested page number, including when beyond the last page.
+	Page int32 `json:"page"`
+	// Effective maximum number of items per page.
+	PageSize int32 `json:"page_size"`
+	// Number of matching items visible to the caller across all pages.
+	TotalItems int32 `json:"total_items"`
+	// Ceiling of total_items divided by page_size; zero for an empty result set.
+	TotalPages int32 `json:"total_pages"`
 }
 
 // GetPage returns the value of Page.
@@ -6925,9 +6942,19 @@ func (s *PaginationModel) GetPage() int32 {
 	return s.Page
 }
 
-// GetTotal returns the value of Total.
-func (s *PaginationModel) GetTotal() int32 {
-	return s.Total
+// GetPageSize returns the value of PageSize.
+func (s *PaginationModel) GetPageSize() int32 {
+	return s.PageSize
+}
+
+// GetTotalItems returns the value of TotalItems.
+func (s *PaginationModel) GetTotalItems() int32 {
+	return s.TotalItems
+}
+
+// GetTotalPages returns the value of TotalPages.
+func (s *PaginationModel) GetTotalPages() int32 {
+	return s.TotalPages
 }
 
 // SetPage sets the value of Page.
@@ -6935,9 +6962,19 @@ func (s *PaginationModel) SetPage(val int32) {
 	s.Page = val
 }
 
-// SetTotal sets the value of Total.
-func (s *PaginationModel) SetTotal(val int32) {
-	s.Total = val
+// SetPageSize sets the value of PageSize.
+func (s *PaginationModel) SetPageSize(val int32) {
+	s.PageSize = val
+}
+
+// SetTotalItems sets the value of TotalItems.
+func (s *PaginationModel) SetTotalItems(val int32) {
+	s.TotalItems = val
+}
+
+// SetTotalPages sets the value of TotalPages.
+func (s *PaginationModel) SetTotalPages(val int32) {
+	s.TotalPages = val
 }
 
 type PatchPostByIdBadRequest Error

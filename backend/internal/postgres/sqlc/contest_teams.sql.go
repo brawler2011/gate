@@ -31,6 +31,41 @@ func (q *Queries) AddContestTeam(ctx context.Context, arg AddContestTeamParams) 
 	return err
 }
 
+const countTeamContests = `-- name: CountTeamContests :one
+SELECT COUNT(*) FROM contests c
+INNER JOIN contest_teams ct ON c.id = ct.contest_id
+WHERE ct.team_id = $1::uuid
+  AND (
+    c.visibility = 'public'
+    OR c.owner_id = $2::uuid
+    OR EXISTS (SELECT 1 FROM users u
+               WHERE u.id = $2::uuid AND u.role = 'admin')
+    OR EXISTS (SELECT 1 FROM organization_members om
+               WHERE om.organization_id = c.organization_id
+                 AND om.user_id = $2::uuid
+                 AND om.role IN ('owner', 'admin'))
+    OR EXISTS (SELECT 1 FROM contest_members m
+               WHERE m.contest_id = c.id AND m.user_id = $2::uuid)
+    OR EXISTS (SELECT 1 FROM contest_teams linked
+               JOIN team_members tm ON tm.team_id = linked.team_id
+               JOIN teams t ON t.id = linked.team_id
+               WHERE linked.contest_id = c.id AND tm.user_id = $2::uuid
+                 AND t.organization_id = c.organization_id)
+  )
+`
+
+type CountTeamContestsParams struct {
+	TeamID   uuid.UUID `json:"team_id"`
+	ViewerID uuid.UUID `json:"viewer_id"`
+}
+
+func (q *Queries) CountTeamContests(ctx context.Context, arg CountTeamContestsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countTeamContests, arg.TeamID, arg.ViewerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getTeamContests = `-- name: GetTeamContests :many
 SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at FROM contests c
 INNER JOIN contest_teams ct ON c.id = ct.contest_id
@@ -52,16 +87,24 @@ WHERE ct.team_id = $1::uuid
                WHERE linked.contest_id = c.id AND tm.user_id = $2::uuid
                  AND t.organization_id = c.organization_id)
   )
-ORDER BY c.created_at DESC
+ORDER BY c.created_at DESC, c.id DESC
+LIMIT $4::int OFFSET $3::bigint
 `
 
 type GetTeamContestsParams struct {
-	TeamID   uuid.UUID `json:"team_id"`
-	ViewerID uuid.UUID `json:"viewer_id"`
+	TeamID     uuid.UUID `json:"team_id"`
+	ViewerID   uuid.UUID `json:"viewer_id"`
+	PageOffset int64     `json:"page_offset"`
+	PageSize   int32     `json:"page_size"`
 }
 
 func (q *Queries) GetTeamContests(ctx context.Context, arg GetTeamContestsParams) ([]Contest, error) {
-	rows, err := q.db.Query(ctx, getTeamContests, arg.TeamID, arg.ViewerID)
+	rows, err := q.db.Query(ctx, getTeamContests,
+		arg.TeamID,
+		arg.ViewerID,
+		arg.PageOffset,
+		arg.PageSize,
+	)
 	if err != nil {
 		return nil, err
 	}

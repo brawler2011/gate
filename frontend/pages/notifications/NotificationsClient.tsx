@@ -38,7 +38,9 @@ export const NotificationsClient = (): ReactNode => {
   const [page, setPage] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [items, setItems] = useState<NotificationModel[]>([]);
-  const [pagination, setPagination] = useState<PaginationModel>({page: 1, total: 1});
+  const [pagination, setPagination] = useState<PaginationModel>({
+    page_size: 50, total_items: 0, page: 1, total_pages: 0,
+  });
   const [markingAll, setMarkingAll] = useState<boolean>(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
@@ -545,12 +547,12 @@ export const NotificationsClient = (): ReactNode => {
           </Stack>
         )}
 
-        {pagination.total > 1 && (
+        {pagination.total_pages > 1 && (
           <Center mt="md">
             <Pagination
               value={page}
               onChange={setPage}
-              total={pagination.total}
+              total={pagination.total_pages}
               color={APP_COLORS.actions.primary}
             />
           </Center>

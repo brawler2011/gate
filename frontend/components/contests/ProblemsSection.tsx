@@ -2,13 +2,13 @@ import {ActionIcon, Autocomplete, Badge, Button, Center, Divider, Group, Loader,
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconDeviceFloppy, IconEdit, IconGripVertical, IconPlus, IconRefresh, IconRotate2, IconTrash} from "@tabler/icons-react";
-import {useQueryClient} from "@tanstack/react-query";
+import {useInfiniteQuery, useQueryClient} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
 import {useRevalidator} from "react-router-dom";
 
 import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
-import {api} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
 import {numberToLetters} from "@/lib/lib";
 
 import classes from "./ProblemsSection.module.css";
@@ -69,9 +69,7 @@ export const ProblemsSection = ({
 
   // Modal for replacing package version
   const [replaceTarget, setReplaceTarget] = useState<{ problemId: string; title: string } | null>(null);
-  const [availablePackages, setAvailablePackages] = useState<Array<{ value: string; label: string }>>([]);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
-  const [loadingPackages, setLoadingPackages] = useState(false);
   const [replacing, setReplacing] = useState(false);
 
   const [statusMessage, setStatusMessage] = useState<{
@@ -298,40 +296,30 @@ export const ProblemsSection = ({
     setHasUnsavedChanges(false);
   };
 
-  const openReplacePackageModal = async (problemId: string, title: string) => {
+  const packageHistory = useInfiniteQuery({
+    queryKey: ["contest-package-history", replaceTarget?.problemId],
+    enabled: !!replaceTarget,
+    initialPageParam: 1,
+    queryFn: ({pageParam}) => unwrap(api.GET("/problems/{id}/packages", {
+      params: {path: {id: replaceTarget!.problemId}, query: {page: pageParam, pageSize: 50}},
+    })),
+    getNextPageParam: (last) => last.pagination.page < last.pagination.total_pages
+      ? last.pagination.page + 1 : undefined,
+  });
+  const loadingPackages = !!replaceTarget && packageHistory.isPending;
+  const availablePackages = [...new Map((packageHistory.data?.pages.flatMap((p) => p.packages) ?? [])
+    .filter((p) => p.status === "ready" && p.id)
+    .map((p) => [p.id!, {value: p.id!, label: `Версия v${p.version ?? "?"} (${new Date(p.created_at || "").toLocaleDateString("ru-RU")})`}])).values()];
+
+  const effectivePackageId = selectedPackageId ?? availablePackages[0]?.value ?? null;
+
+  const openReplacePackageModal = (problemId: string, title: string) => {
     setReplaceTarget({problemId, title});
     setSelectedPackageId(null);
-    setLoadingPackages(true);
-
-    const {data: response, error} = await api.GET("/problems/{id}/packages", {
-      params: {path: {id: problemId}},
-    });
-    setLoadingPackages(false);
-
-    if (error || !response?.packages) {
-      notifications.show({
-        title: "Ошибка",
-        message: error?.message || "Не удалось загрузить пакеты задачи",
-        color: "red",
-      });
-      return;
-    }
-
-    const readyPkgs = response.packages
-      .filter((p) => p.status === "ready" && p.id)
-      .map((p) => ({
-        value: p.id!,
-        label: `Версия v${p.version ?? "?"} (${new Date(p.created_at || "").toLocaleDateString("ru-RU")})`,
-      }));
-
-    setAvailablePackages(readyPkgs);
-    if (readyPkgs.length > 0) {
-      setSelectedPackageId(readyPkgs[0].value);
-    }
   };
 
   const handleConfirmReplacePackage = async () => {
-    if (!replaceTarget || !selectedPackageId) {
+    if (!replaceTarget || !effectivePackageId) {
       return;
     }
 
@@ -343,7 +331,7 @@ export const ProblemsSection = ({
           path: {org_login: orgLogin, contest_login: contestLogin},
           query: {
             problem_id: replaceTarget.problemId,
-            package_id: selectedPackageId,
+            package_id: effectivePackageId,
           },
         },
       },
@@ -539,6 +527,7 @@ export const ProblemsSection = ({
                       </Tooltip>
                       <Tooltip label="Заменить пакет" withArrow>
                         <ActionIcon
+                          aria-label={`Заменить пакет ${problem.title}`}
                           color="blue"
                           variant="subtle"
                           onClick={() =>
@@ -583,9 +572,10 @@ export const ProblemsSection = ({
               <Loader size="sm" />
             </Center>
           )}
-          {!loadingPackages && availablePackages.length === 0 && (
+          {packageHistory.error && <Text c="red">Не удалось загрузить пакеты задачи: {packageHistory.error.message}</Text>}
+          {!loadingPackages && !packageHistory.error && availablePackages.length === 0 && (
             <Text size="sm" c="dimmed">
-              У этой задачи пока нет скомпилированных пакетов.
+              Среди загруженных версий нет готовых пакетов.
             </Text>
           )}
           {!loadingPackages && availablePackages.length > 0 && (
@@ -593,17 +583,24 @@ export const ProblemsSection = ({
               <Select
                 label="Выберите версию пакета"
                 data={availablePackages}
-                value={selectedPackageId}
+                value={effectivePackageId}
                 onChange={setSelectedPackageId}
               />
               <Button
                 loading={replacing}
                 onClick={handleConfirmReplacePackage}
-                disabled={!selectedPackageId}
+                disabled={!effectivePackageId}
               >
                 Обновить пакет на контесте
               </Button>
             </>
+          )}
+          {(packageHistory.hasNextPage || packageHistory.error) && (
+            <Button variant="light" loading={packageHistory.isFetchingNextPage || packageHistory.isFetching}
+              onClick={() => packageHistory.error && !packageHistory.data
+                ? void packageHistory.refetch() : void packageHistory.fetchNextPage()}>
+              {packageHistory.error ? "Повторить загрузку" : "Ещё"}
+            </Button>
           )}
         </Stack>
       </Modal>

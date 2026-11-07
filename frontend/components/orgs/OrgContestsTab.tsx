@@ -115,7 +115,7 @@ export const OrgContestsTab = ({
         <ContestsTable contests={contests} />
       )}
 
-      {pagination.total > 1 && (
+      {pagination.total_pages > 1 && (
         <Center>
           <RoutePagination
             pagination={pagination}

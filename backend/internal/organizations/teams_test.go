@@ -78,7 +78,7 @@ func TestListTeamsScopeAndPagination(t *testing.T) {
 				require.Equal(t, tc.size, repo.filter.PageSize)
 			}
 			require.Equal(t, repo.filter.Page, result.Pagination.Page)
-			require.Equal(t, int32(7), result.Pagination.Total, "total is a record count even for an empty page")
+			require.Equal(t, int32(7), result.Pagination.TotalItems, "total_items counts all matching records even for an empty page")
 			if tc.org == nil {
 				require.Empty(t, permissions.actions)
 			} else {
