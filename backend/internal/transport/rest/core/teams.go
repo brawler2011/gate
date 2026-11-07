@@ -17,60 +17,19 @@ import (
 
 // ListTeams handles GET /teams
 func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParams) (*corev1.ListTeamsResponseModel, error) {
-	// Get current user
-	user := accessmodel.UserFromContext(ctx)
-
-	page := params.Page.Or(1)
-	pageSize := params.PageSize.Or(50)
-	search := params.Search.Or("")
-
-	var teams []organizationsmodel.Team
-	var err error
-
-	// If organization_id is specified, list teams for that organization
+	filter := &organizationsmodel.TeamsFilter{
+		Search:   params.Search.Or(""),
+		Page:     params.Page.Or(1),
+		PageSize: params.PageSize.Or(50),
+	}
 	if params.OrganizationID.IsSet() {
-		teams, err = h.organizations.ListOrganizationTeams(ctx, params.OrganizationID.Value, user.Id)
-		if err != nil {
-			return nil, wrapTeamUCError(err, "failed to list organization teams")
-		}
-	} else {
-		// Otherwise, list all teams the user is a member of
-		teams, err = h.organizations.GetUserTeams(ctx, user.Id)
-		if err != nil {
-			return nil, wrapTeamUCError(err, "failed to list user teams")
-		}
+		filter.OrganizationID = &params.OrganizationID.Value
 	}
-
-	// Apply search filter if provided (simple name filtering)
-	if search != "" {
-		filtered := make([]organizationsmodel.Team, 0)
-		for _, team := range teams {
-			if containsIgnoreCase(team.Name, search) {
-				filtered = append(filtered, team)
-			}
-		}
-		teams = filtered
+	result, err := h.organizations.ListTeams(ctx, filter)
+	if err != nil {
+		return nil, err
 	}
-
-	// Calculate total
-	total := safeInt32(len(teams))
-
-	// Apply pagination
-	pSize := int(pageSize)
-	pNum := int(page)
-	start := (pNum - 1) * pSize
-	end := start + pSize
-
-	switch {
-	case start > len(teams):
-		teams = []organizationsmodel.Team{}
-	case end > len(teams):
-		teams = teams[start:]
-	default:
-		teams = teams[start:end]
-	}
-
-	return listTeamsDTO(teams, page, total), nil
+	return listTeamsDTO(result.Teams, result.Pagination.Page, result.Pagination.Total), nil
 }
 
 // CreateTeam handles POST /teams
@@ -294,35 +253,4 @@ func wrapTeamUCError(err error, fallbackMsg string) error {
 		return pkg.Wrap(pkg.ErrNotFound, err, fallbackMsg)
 	}
 	return pkg.Wrap(pkg.ErrInternal, err, fallbackMsg)
-}
-
-// containsIgnoreCase is a helper function to check if a string contains a substring (case-insensitive)
-func containsIgnoreCase(str, substr string) bool {
-	return len(str) >= len(substr) &&
-		(substr == "" ||
-			len(substr) > 0 &&
-				indexIgnoreCase(str, substr) >= 0)
-}
-
-func indexIgnoreCase(str, substr string) int {
-	strLower := toLower(str)
-	substrLower := toLower(substr)
-	for i := 0; i <= len(strLower)-len(substrLower); i++ {
-		if strLower[i:i+len(substrLower)] == substrLower {
-			return i
-		}
-	}
-	return -1
-}
-
-func toLower(s string) string {
-	result := make([]rune, len(s))
-	for i, r := range s {
-		if r >= 'A' && r <= 'Z' {
-			result[i] = r + ('a' - 'A')
-		} else {
-			result[i] = r
-		}
-	}
-	return string(result)
 }
