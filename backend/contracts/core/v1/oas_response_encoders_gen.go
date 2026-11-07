@@ -249,28 +249,14 @@ func encodeCreateContestJoinRequestResponse(response *ContestJoinRequestResponse
 	return nil
 }
 
-func encodeCreateContestMemberResponse(response *CreationResponseModel, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
+func encodeCreateContestMemberResponse(response *CreateContestMemberNoContent, w http.ResponseWriter) error {
+	w.WriteHeader(204)
 
 	return nil
 }
 
-func encodeCreateContestProblemResponse(response *CreationResponseModel, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
+func encodeCreateContestProblemResponse(response *CreateContestProblemNoContent, w http.ResponseWriter) error {
+	w.WriteHeader(204)
 
 	return nil
 }

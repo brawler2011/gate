@@ -2194,6 +2194,12 @@ func (s *CreateContestJoinRequestModel) SetMessage(val OptString) {
 	s.Message = val
 }
 
+// CreateContestMemberNoContent is response for CreateContestMember operation.
+type CreateContestMemberNoContent struct{}
+
+// CreateContestProblemNoContent is response for CreateContestProblem operation.
+type CreateContestProblemNoContent struct{}
+
 // CreateContestTeamOK is response for CreateContestTeam operation.
 type CreateContestTeamOK struct{}
 

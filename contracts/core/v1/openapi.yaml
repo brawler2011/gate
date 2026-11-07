@@ -436,12 +436,8 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CreationResponseModel"
+        "204":
+          description: No Content
   /organizations/{org_login}/contests/{contest_login}/problems/reorder:
     put:
       summary: "Reorder contest problems"
@@ -513,12 +509,8 @@ paths:
         - $ref: "#/components/parameters/ContestLoginPath"
         - $ref: "#/components/parameters/UserIDQuery"
       responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CreationResponseModel"
+        "204":
+          description: No Content
     delete:
       summary: "Delete contest member"
       tags: [contests]

@@ -243,8 +243,8 @@ func (UnimplementedHandler) CreateContestJoinRequest(ctx context.Context, req Op
 // Create contest member.
 //
 // POST /organizations/{org_login}/contests/{contest_login}/members
-func (UnimplementedHandler) CreateContestMember(ctx context.Context, params CreateContestMemberParams) (r *CreationResponseModel, _ error) {
-	return r, ht.ErrNotImplemented
+func (UnimplementedHandler) CreateContestMember(ctx context.Context, params CreateContestMemberParams) error {
+	return ht.ErrNotImplemented
 }
 
 // CreateContestProblem implements CreateContestProblem operation.
@@ -252,8 +252,8 @@ func (UnimplementedHandler) CreateContestMember(ctx context.Context, params Crea
 // Create contest problem.
 //
 // POST /organizations/{org_login}/contests/{contest_login}/problems
-func (UnimplementedHandler) CreateContestProblem(ctx context.Context, params CreateContestProblemParams) (r *CreationResponseModel, _ error) {
-	return r, ht.ErrNotImplemented
+func (UnimplementedHandler) CreateContestProblem(ctx context.Context, params CreateContestProblemParams) error {
+	return ht.ErrNotImplemented
 }
 
 // CreateContestTeam implements CreateContestTeam operation.
