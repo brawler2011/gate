@@ -4116,24 +4116,24 @@ func (s *ContestProblemModel) encodeFields(e *jx.Encoder) {
 		e.Int32(s.Position)
 	}
 	{
-		e.FieldStart("legend_html")
-		e.Str(s.LegendHTML)
+		e.FieldStart("legend")
+		e.Str(s.Legend)
 	}
 	{
-		e.FieldStart("input_format_html")
-		e.Str(s.InputFormatHTML)
+		e.FieldStart("input_format")
+		e.Str(s.InputFormat)
 	}
 	{
-		e.FieldStart("output_format_html")
-		e.Str(s.OutputFormatHTML)
+		e.FieldStart("output_format")
+		e.Str(s.OutputFormat)
 	}
 	{
-		e.FieldStart("notes_html")
-		e.Str(s.NotesHTML)
+		e.FieldStart("notes")
+		e.Str(s.Notes)
 	}
 	{
-		e.FieldStart("scoring_html")
-		e.Str(s.ScoringHTML)
+		e.FieldStart("scoring")
+		e.Str(s.Scoring)
 	}
 	{
 		e.FieldStart("created_at")
@@ -4159,11 +4159,11 @@ var jsonFieldsNameOfContestProblemModel = [13]string{
 	2:  "time_limit",
 	3:  "memory_limit",
 	4:  "position",
-	5:  "legend_html",
-	6:  "input_format_html",
-	7:  "output_format_html",
-	8:  "notes_html",
-	9:  "scoring_html",
+	5:  "legend",
+	6:  "input_format",
+	7:  "output_format",
+	8:  "notes",
+	9:  "scoring",
 	10: "created_at",
 	11: "updated_at",
 	12: "samples",
@@ -4238,65 +4238,65 @@ func (s *ContestProblemModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"position\"")
 			}
-		case "legend_html":
+		case "legend":
 			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := d.Str()
-				s.LegendHTML = string(v)
+				s.Legend = string(v)
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"legend_html\"")
+				return errors.Wrap(err, "decode field \"legend\"")
 			}
-		case "input_format_html":
+		case "input_format":
 			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				v, err := d.Str()
-				s.InputFormatHTML = string(v)
+				s.InputFormat = string(v)
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"input_format_html\"")
+				return errors.Wrap(err, "decode field \"input_format\"")
 			}
-		case "output_format_html":
+		case "output_format":
 			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
 				v, err := d.Str()
-				s.OutputFormatHTML = string(v)
+				s.OutputFormat = string(v)
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"output_format_html\"")
+				return errors.Wrap(err, "decode field \"output_format\"")
 			}
-		case "notes_html":
+		case "notes":
 			requiredBitSet[1] |= 1 << 0
 			if err := func() error {
 				v, err := d.Str()
-				s.NotesHTML = string(v)
+				s.Notes = string(v)
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"notes_html\"")
+				return errors.Wrap(err, "decode field \"notes\"")
 			}
-		case "scoring_html":
+		case "scoring":
 			requiredBitSet[1] |= 1 << 1
 			if err := func() error {
 				v, err := d.Str()
-				s.ScoringHTML = string(v)
+				s.Scoring = string(v)
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"scoring_html\"")
+				return errors.Wrap(err, "decode field \"scoring\"")
 			}
 		case "created_at":
 			requiredBitSet[1] |= 1 << 2
@@ -15101,26 +15101,6 @@ func (s *ProblemModel) encodeFields(e *jx.Encoder) {
 		e.Str(s.Scoring)
 	}
 	{
-		e.FieldStart("legend_html")
-		e.Str(s.LegendHTML)
-	}
-	{
-		e.FieldStart("input_format_html")
-		e.Str(s.InputFormatHTML)
-	}
-	{
-		e.FieldStart("output_format_html")
-		e.Str(s.OutputFormatHTML)
-	}
-	{
-		e.FieldStart("notes_html")
-		e.Str(s.NotesHTML)
-	}
-	{
-		e.FieldStart("scoring_html")
-		e.Str(s.ScoringHTML)
-	}
-	{
 		if s.IsPrivate.Set {
 			e.FieldStart("is_private")
 			s.IsPrivate.Encode(e)
@@ -15144,7 +15124,7 @@ func (s *ProblemModel) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfProblemModel = [23]string{
+var jsonFieldsNameOfProblemModel = [18]string{
 	0:  "id",
 	1:  "organization_id",
 	2:  "organization_login",
@@ -15159,15 +15139,10 @@ var jsonFieldsNameOfProblemModel = [23]string{
 	11: "output_format",
 	12: "notes",
 	13: "scoring",
-	14: "legend_html",
-	15: "input_format_html",
-	16: "output_format_html",
-	17: "notes_html",
-	18: "scoring_html",
-	19: "is_private",
-	20: "created_at",
-	21: "updated_at",
-	22: "samples",
+	14: "is_private",
+	15: "created_at",
+	16: "updated_at",
+	17: "samples",
 }
 
 // Decode decodes ProblemModel from json.
@@ -15347,66 +15322,6 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"scoring\"")
 			}
-		case "legend_html":
-			requiredBitSet[1] |= 1 << 6
-			if err := func() error {
-				v, err := d.Str()
-				s.LegendHTML = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"legend_html\"")
-			}
-		case "input_format_html":
-			requiredBitSet[1] |= 1 << 7
-			if err := func() error {
-				v, err := d.Str()
-				s.InputFormatHTML = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"input_format_html\"")
-			}
-		case "output_format_html":
-			requiredBitSet[2] |= 1 << 0
-			if err := func() error {
-				v, err := d.Str()
-				s.OutputFormatHTML = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"output_format_html\"")
-			}
-		case "notes_html":
-			requiredBitSet[2] |= 1 << 1
-			if err := func() error {
-				v, err := d.Str()
-				s.NotesHTML = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"notes_html\"")
-			}
-		case "scoring_html":
-			requiredBitSet[2] |= 1 << 2
-			if err := func() error {
-				v, err := d.Str()
-				s.ScoringHTML = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"scoring_html\"")
-			}
 		case "is_private":
 			if err := func() error {
 				s.IsPrivate.Reset()
@@ -15418,7 +15333,7 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"is_private\"")
 			}
 		case "created_at":
-			requiredBitSet[2] |= 1 << 4
+			requiredBitSet[1] |= 1 << 7
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -15430,7 +15345,7 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
 		case "updated_at":
-			requiredBitSet[2] |= 1 << 5
+			requiredBitSet[2] |= 1 << 0
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.UpdatedAt = v
@@ -15442,7 +15357,7 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"updated_at\"")
 			}
 		case "samples":
-			requiredBitSet[2] |= 1 << 6
+			requiredBitSet[2] |= 1 << 1
 			if err := func() error {
 				s.Samples = make([]ProblemSampleModel, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -15470,8 +15385,8 @@ func (s *ProblemModel) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [3]uint8{
 		0b11111111,
-		0b11111111,
-		0b01110111,
+		0b10111111,
+		0b00000011,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

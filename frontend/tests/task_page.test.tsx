@@ -12,7 +12,7 @@ import {act, cleanup, renderWithProviders, setupDOMEnvironment, waitFor} from '.
 const user = {id: 'user', username: 'alice', role: 'user', created_at: '2026-10-01', updated_at: '2026-10-01'};
 const problem = {
   problem_id: 'problem', title: 'Snapshot problem', position: 1, time_limit: 1000, memory_limit: 256,
-  legend_html: '', input_format_html: '', output_format_html: '', notes_html: '', scoring_html: '',
+  legend: '', input_format: '', output_format: '', notes: '', scoring: '',
   created_at: '2026-10-01', updated_at: '2026-10-01', samples: [],
 };
 

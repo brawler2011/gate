@@ -20,11 +20,11 @@ type ProblemModelProps = {
   title: string;
   time_limit: number;
   memory_limit: number;
-  legend_html: string;
-  input_format_html: string;
-  output_format_html: string;
-  notes_html: string;
-  scoring_html: string;
+  legend: string;
+  input_format: string;
+  output_format: string;
+  notes: string;
+  scoring: string;
   created_at: string;
   updated_at: string;
   samples?: Array<{
@@ -108,21 +108,21 @@ const ProblemComponent = ({
         </Alert>
       ) : (
         <>
-          {problem.legend_html && (
-            <ProblemStatement value={problem.legend_html} problemId={activeProblemId} />
+          {problem.legend && (
+            <ProblemStatement value={problem.legend} problemId={activeProblemId} />
           )}
 
-          {problem.input_format_html && (
+          {problem.input_format && (
             <Stack gap="xs">
               <Title order={3}>Входные данные</Title>
-              <ProblemStatement value={problem.input_format_html} problemId={activeProblemId} />
+              <ProblemStatement value={problem.input_format} problemId={activeProblemId} />
             </Stack>
           )}
 
-          {problem.output_format_html && (
+          {problem.output_format && (
             <Stack gap="xs">
               <Title order={3}>Выходные данные</Title>
-              <ProblemStatement value={problem.output_format_html} problemId={activeProblemId} />
+              <ProblemStatement value={problem.output_format} problemId={activeProblemId} />
             </Stack>
           )}
 
@@ -130,10 +130,10 @@ const ProblemComponent = ({
             <ProblemSamples samples={problem.samples} />
           )}
 
-          {problem.notes_html && (
+          {problem.notes && (
             <Stack gap="xs">
               <Title order={3}>Примечание</Title>
-              <ProblemStatement value={problem.notes_html} problemId={activeProblemId} />
+              <ProblemStatement value={problem.notes} problemId={activeProblemId} />
             </Stack>
           )}
         </>
