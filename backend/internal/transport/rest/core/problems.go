@@ -103,26 +103,19 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	// Build update params
 	update := &problemsmodel.ProblemUpdate{}
 
-	// Handle title update
 	if req.Title.IsSet() {
 		update.Title = &req.Title.Value
 	}
 
-	// Handle visibility update
 	if req.Visibility.IsSet() {
 		update.Visibility = (*string)(&req.Visibility.Value)
 	}
 
-	// Handle is_template update
 	if req.IsTemplate.IsSet() {
 		update.IsTemplate = &req.IsTemplate.Value
 	}
-
-	// Note: Other fields (Legend, InputFormat, etc.) are now stored in git repos
-	// and managed through the workshop/publish workflow
 
 	err := h.problems.UpdateProblem(ctx, params.ID, update)
 	if err != nil {

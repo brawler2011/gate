@@ -363,6 +363,24 @@ func TestContestsRepo_Integration(t *testing.T) {
 	require.Equal(t, updatedTitle, updatedC.Title)
 	require.NotNil(t, updatedC.StartTime)
 	require.NotNil(t, updatedC.EndTime)
+
+	// Settings patches preserve false values and unrelated existing settings.
+	for _, allowed := range []bool{true, false} {
+		patch := map[string]interface{}{"allow_clarifications": allowed}
+		require.NoError(t, repo.UpdateContest(ctx, contestsmodel.ContestUpdateInput{ID: contestID, Settings: &patch}))
+		stored, err := repo.GetContest(ctx, contestID)
+		require.NoError(t, err)
+		require.Equal(t, allowed, stored.Settings["allow_clarifications"])
+		require.Equal(t, true, stored.Settings["freeze_monitor"])
+
+		// Omitting the flag, including when changing another setting, preserves it.
+		for _, settingsPatch := range []*map[string]interface{}{nil, {"hide_statements": true}} {
+			require.NoError(t, repo.UpdateContest(ctx, contestsmodel.ContestUpdateInput{ID: contestID, Settings: settingsPatch}))
+			stored, err = repo.GetContest(ctx, contestID)
+			require.NoError(t, err)
+			require.Equal(t, allowed, stored.Settings["allow_clarifications"])
+		}
+	}
 }
 
 func TestSubmissionsRepo_Integration(t *testing.T) {

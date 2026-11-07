@@ -221,6 +221,10 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		settingsMap["enable_drafts"] = req.EnableDrafts.Value
 		hasSettingsUpdate = true
 	}
+	if req.AllowClarifications.IsSet() {
+		settingsMap["allow_clarifications"] = req.AllowClarifications.Value
+		hasSettingsUpdate = true
+	}
 	if req.EnableUpsolving.IsSet() {
 		settingsMap["enable_upsolving"] = req.EnableUpsolving.Value
 		hasSettingsUpdate = true
