@@ -24,7 +24,7 @@ func TestPublishProblem_Validation(t *testing.T) {
 		Title:          "Test Problem",
 	}
 
-	publishUC := NewProblemPublishUseCase(mockRepo, nil, wsStorage, nil, "packages", newProblemTestTransactions(mockRepo, nil))
+	publishUC := NewProblemPublishUseCase(mockRepo, nil, wsStorage, nil, "packages", newProblemTestTransactions(mockRepo, nil), allowProblemPermissions{})
 
 	// Case 1: pass-fail without checker fails
 	yamlNoChecker := `format_version: "1.0"

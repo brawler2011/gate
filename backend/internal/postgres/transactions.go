@@ -37,10 +37,10 @@ func (p transactions[T]) Within(ctx context.Context, fn func(T) error) error {
 func NewTeamTransactions(pool *pgxpool.Pool) organizations.TeamTransactions {
 	return transactions[organizations.TeamTxStore]{pool: pool, bind: func(q *sqlc.Queries) organizations.TeamTxStore {
 		return struct {
-			*TeamsRepo
-			*OrganizationsRepo
+			authorizationTeams
+			authorizationOrganizations
 			*authorization
-		}{&TeamsRepo{q: q}, &OrganizationsRepo{q: q}, bindAuthorization(q)}
+		}{authorizationTeams{&TeamsRepo{q: q}}, authorizationOrganizations{&OrganizationsRepo{q: q}}, bindAuthorization(q)}
 	}}
 }
 
@@ -48,11 +48,11 @@ func NewProblemTransactions(pool *pgxpool.Pool) problems.ProblemTransactions {
 	return transactions[problems.ProblemTxStore]{pool: pool, bind: func(q *sqlc.Queries) problems.ProblemTxStore {
 		return struct {
 			*ProblemsRepo
-			*OrganizationsRepo
+			authorizationOrganizations
 			*authorization
 			*PackagesRepo
 			authorizationUsers
-		}{&ProblemsRepo{queries: q}, &OrganizationsRepo{q: q}, bindAuthorization(q), &PackagesRepo{queries: q}, authorizationUsers{q}}
+		}{&ProblemsRepo{queries: q}, authorizationOrganizations{&OrganizationsRepo{q: q}}, bindAuthorization(q), &PackagesRepo{queries: q}, authorizationUsers{q}}
 	}}
 }
 
@@ -69,11 +69,11 @@ func NewIdentityTransactions(pool *pgxpool.Pool) identity.IdentityTransactions {
 func NewOrganizationTransactions(pool *pgxpool.Pool) organizations.OrganizationTransactions {
 	return transactions[organizations.OrganizationTxStore]{pool: pool, bind: func(q *sqlc.Queries) organizations.OrganizationTxStore {
 		return struct {
-			*OrganizationsRepo
-			*UsersRepo
+			authorizationOrganizations
+			organizationUsers
 			*NotificationsRepo
 			*authorization
-		}{&OrganizationsRepo{q: q}, &UsersRepo{queries: q}, &NotificationsRepo{queries: q}, bindAuthorization(q)}
+		}{authorizationOrganizations{&OrganizationsRepo{q: q}}, organizationUsers{&UsersRepo{queries: q}}, &NotificationsRepo{queries: q}, bindAuthorization(q)}
 	}}
 }
 
@@ -120,9 +120,9 @@ func NewContestCommandTransactions(pool *pgxpool.Pool) contests.CommandTransacti
 			*JudgeJobs
 			*OutboxRepo
 			*authorization
-			*OrganizationsRepo
+			authorizationOrganizations
 			*NotificationsRepo
-		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}, bindAuthorization(q), &OrganizationsRepo{q: q}, &NotificationsRepo{queries: q}}
+		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}, bindAuthorization(q), authorizationOrganizations{&OrganizationsRepo{q: q}}, &NotificationsRepo{queries: q}}
 	}}
 }
 

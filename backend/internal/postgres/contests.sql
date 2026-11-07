@@ -91,8 +91,7 @@ VALUES ($1, $2, $3);
 SELECT cm.*, u.username
 FROM contest_members cm
 JOIN users u ON u.id = cm.user_id
-WHERE cm.contest_id = $1 AND cm.user_id = $2
-FOR SHARE OF cm;
+WHERE cm.contest_id = $1 AND cm.user_id = $2;
 
 -- name: ListContestMembers :many
 SELECT cm.*, u.username, u.email
@@ -129,7 +128,8 @@ ON CONFLICT (contest_id, user_id) DO NOTHING;
 
 -- name: AddContestProblem :exec
 INSERT INTO contest_problems (contest_id, problem_id, package_id, ordinal)
-VALUES ($1, $2, $3, $4);
+VALUES ($1, $2, $3, (SELECT COALESCE(MAX(ordinal), 0) + 1 FROM contest_problems WHERE contest_id = $1))
+ON CONFLICT (contest_id, problem_id) DO UPDATE SET package_id = EXCLUDED.package_id;
 
 -- name: GetContestProblem :one
 SELECT cp.*, p.title, p.short_name, p.visibility, p.time_limit_ms, p.memory_limit_mb, p.updated_at AS problem_updated_at
@@ -144,6 +144,9 @@ JOIN problems p ON cp.problem_id = p.id
 JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1
 ORDER BY cp.ordinal;
+
+-- name: GetMaxContestProblemOrdinal :one
+SELECT COALESCE(MAX(ordinal), 0)::int FROM contest_problems WHERE contest_id = $1;
 
 -- name: UpdateContestProblemOrdinal :exec
 UPDATE contest_problems
@@ -301,8 +304,6 @@ WHERE contest_id = $1 AND (sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.
 
 
 
--- name: LockContest :one
-SELECT id FROM contests WHERE id = @id::uuid FOR NO KEY UPDATE;
 
 -- name: CountUserAccessibleContests :one
 SELECT COUNT(*) FROM contests c
@@ -314,3 +315,10 @@ SELECT COUNT(*) FROM contests c
 WHERE user_has_contest_access(sqlc.arg('user_id')::uuid, c.id)
   AND (sqlc.arg('search')::text = '' OR c.title ILIKE '%' || sqlc.arg('search')::text || '%')
   AND c.organization_id = sqlc.arg('organization_id')::uuid;
+
+-- name: GetAuthorizationContestMember :one
+SELECT cm.*, u.username
+FROM contest_members cm
+JOIN users u ON u.id = cm.user_id
+WHERE cm.contest_id = $1 AND cm.user_id = $2
+FOR SHARE OF cm;

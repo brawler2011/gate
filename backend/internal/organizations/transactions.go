@@ -13,8 +13,7 @@ import (
 )
 
 type TeamTxStore interface {
-	LockOrganization(context.Context, uuid.UUID) error
-	LockTeam(context.Context, uuid.UUID) error
+	GetOrganizationByID(context.Context, uuid.UUID) (*organizationsmodel.Organization, error)
 	HasOrganizationPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.OrgAction) (bool, error)
 	GetTeamByID(context.Context, uuid.UUID) (*organizationsmodel.Team, error)
 	GetTeamMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.TeamMember, error)
@@ -32,8 +31,6 @@ type TeamTransactions interface {
 }
 
 type OrganizationTxStore interface {
-	LockUser(context.Context, uuid.UUID) error
-	LockOrganization(context.Context, uuid.UUID) error
 	HasOrganizationPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.OrgAction) (bool, error)
 	GetOrganizationByID(context.Context, uuid.UUID) (*organizationsmodel.Organization, error)
 	GetUserById(context.Context, uuid.UUID) (accessmodel.User, error)

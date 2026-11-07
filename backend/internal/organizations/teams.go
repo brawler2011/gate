@@ -41,7 +41,7 @@ func (uc *TeamsUseCase) CreateTeam(ctx context.Context, input *organizationsmode
 
 	var team *organizationsmodel.Team
 	err := uc.transactor.Within(ctx, func(tx TeamTxStore) error {
-		if err := tx.LockOrganization(ctx, input.OrganizationID); err != nil {
+		if _, err := tx.GetOrganizationByID(ctx, input.OrganizationID); err != nil {
 			return err
 		}
 		allowed, err := tx.HasOrganizationPermission(ctx, input.OrganizationID, creatorID, accessmodel.ActionManageOrganization)
@@ -283,17 +283,7 @@ func (uc *TeamsUseCase) withinTeam(ctx context.Context, id, actor uuid.UUID, fn 
 	if user.Id != actor {
 		return pkg.NoPermission
 	}
-	team, err := uc.repo.GetTeamByID(ctx, id)
-	if err != nil {
-		return err
-	}
 	return uc.transactor.Within(ctx, func(tx TeamTxStore) error {
-		if err := tx.LockOrganization(ctx, team.OrganizationID); err != nil {
-			return err
-		}
-		if err := tx.LockTeam(ctx, id); err != nil {
-			return err
-		}
 		current, err := tx.GetTeamByID(ctx, id)
 		if err != nil {
 			return err

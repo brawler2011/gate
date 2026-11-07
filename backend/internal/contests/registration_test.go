@@ -23,14 +23,10 @@ func (r registrationLookup) GetContestByOrgLoginAndContestLogin(context.Context,
 
 type registrationStore struct {
 	CommandTxStore
-	contest                   contestsmodel.Contest
-	locked, joined, requested bool
+	contest           contestsmodel.Contest
+	joined, requested bool
 }
 
-func (r *registrationStore) LockContest(context.Context, uuid.UUID) error {
-	r.locked = true
-	return nil
-}
 func (r *registrationStore) GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error) {
 	return r.contest, nil
 }
@@ -41,9 +37,6 @@ func (*registrationStore) GetMember(context.Context, uuid.UUID, uuid.UUID) (*org
 	return &organizationsmodel.OrganizationMember{Role: organizationsmodel.OrgRoleMember}, nil
 }
 func (r *registrationStore) CreateContestMember(context.Context, *contestsmodel.CreateContestMemberParams) error {
-	if !r.locked {
-		return pkg.ErrInternal
-	}
 	r.joined = true
 	return nil
 }

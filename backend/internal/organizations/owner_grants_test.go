@@ -36,8 +36,6 @@ func newMockOwnerGrantStore(org organizationsmodel.Organization) *mockOwnerGrant
 	}
 }
 
-func (s *mockOwnerGrantStore) LockOrganization(context.Context, uuid.UUID) error { return nil }
-
 func (s *mockOwnerGrantStore) HasOrganizationPermission(_ context.Context, _ uuid.UUID, userID uuid.UUID, action accessmodel.OrgAction) (bool, error) {
 	user, ok := s.users[userID]
 	if ok && user.Role == accessmodel.UserRoleAdmin {
@@ -427,4 +425,8 @@ func TestUpdateMemberRoleOwnerGrant(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, organizationsmodel.OrgRoleOwner, store.updatedRole[target.Id])
 	})
+}
+
+func (s *mockOwnerGrantStore) GetOrganizationByID(context.Context, uuid.UUID) (*organizationsmodel.Organization, error) {
+	return &s.org, nil
 }

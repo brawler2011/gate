@@ -178,7 +178,8 @@ func TestIndependentSubmissionTransactions(t *testing.T) {
 				bound := NewJudgeTransactions(f.pool).(transactions[judging.JudgeTxStore]).bind(q)
 				require.NoError(t, applyConcurrentVerdict(f.ctx, bound, first, submissionsmodel.Accepted))
 			default:
-				require.NoError(t, (&ContestsRepo{queries: q}).LockContest(f.ctx, f.contest))
+				_, err := tx.Exec(f.ctx, "SELECT id FROM contests WHERE id=$1 FOR NO KEY UPDATE", f.contest)
+				require.NoError(t, err)
 			}
 			awaitConcurrent(t, asyncConcurrent(func() error { _, err := f.create(NewSubmissionTransactions(f.pool), 2); return err }))
 			awaitConcurrent(t, asyncConcurrent(func() error { return f.complete(other, submissionsmodel.Accepted) }))
@@ -360,7 +361,7 @@ func TestConcurrentDraftLimit(t *testing.T) {
 	require.NoError(t, err)
 	tx := beginConcurrencyTx(t, f)
 	require.NoError(t, (&DraftsRepo{queries: sqlc.New(tx)}).LockDraftOwner(f.ctx, f.contest, f.users[1]))
-	uc := contests.NewDraftsUseCase(NewDraftTransactions(f.pool))
+	uc := contests.NewDraftsUseCase(NewDraftTransactions(f.pool), NewDraftsRepo(f.pool), f.permissions)
 	create := func(user int) error {
 		_, err := uc.CreateDraft(f.userContext(user), &contestsmodel.ContestDraftCreation{ContestID: f.contest, UserID: f.users[user], Code: "print(1)"})
 		return err

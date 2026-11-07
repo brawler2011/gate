@@ -40,7 +40,7 @@ func TestProblemDetailsUseOneCanonicalPackage(t *testing.T) {
 			return editor.UpdateProblemFile(ctx, problemsmodel.UpdateFileRequest{ProblemID: id, Path: "tests/01.in", Content: []byte("new sample")})
 		})
 	}
-	uc := NewProblemsUseCase(repo, NewWorkspaceStorage(objects, "workspace", repo), newProblemTestTransactions(repo, nil), nil, nil)
+	uc := NewProblemsUseCase(repo, NewWorkspaceStorage(objects, "workspace", repo), newProblemTestTransactions(repo, nil), nil, nil, allowProblemPermissions{})
 	result, err := uc.GetProblemDetails(ctx, id)
 	require.NoError(t, err)
 	require.Equal(t, "Original", result.Problem.Title)

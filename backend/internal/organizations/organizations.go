@@ -50,9 +50,6 @@ func (uc *OrganizationsUseCase) CreateOrganization(ctx context.Context, input *o
 	}
 	var org *organizationsmodel.Organization
 	err := uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
-		if err := tx.LockUser(ctx, input.CreatorID); err != nil {
-			return err
-		}
 		creator, err := tx.GetUserById(ctx, input.CreatorID)
 		if err != nil {
 			return err
@@ -548,14 +545,7 @@ func (uc *OrganizationsUseCase) AcceptInvitation(ctx context.Context, invitation
 	if user.IsGuest() || user.IsExpired() {
 		return pkg.ErrUnauthenticated
 	}
-	inv, err := uc.repo.GetInvitationByID(ctx, invitationID)
-	if err != nil {
-		return err
-	}
 	return uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
-		if err := tx.LockOrganization(ctx, inv.OrganizationID); err != nil {
-			return err
-		}
 		inv, err := tx.GetInvitationByID(ctx, invitationID)
 		if err != nil {
 			return err
@@ -566,10 +556,10 @@ func (uc *OrganizationsUseCase) AcceptInvitation(ctx context.Context, invitation
 		if inv.Status != organizationsmodel.RequestStatusPending {
 			return pkg.ErrConflict
 		}
-		if err := tx.AddMember(ctx, inv.OrganizationID, inv.UserID, inv.Role); err != nil {
+		if err := tx.UpdateInvitationStatus(ctx, inv.ID, organizationsmodel.RequestStatusAccepted); err != nil {
 			return err
 		}
-		return tx.UpdateInvitationStatus(ctx, inv.ID, organizationsmodel.RequestStatusAccepted)
+		return tx.AddMember(ctx, inv.OrganizationID, inv.UserID, inv.Role)
 	})
 }
 
@@ -578,14 +568,7 @@ func (uc *OrganizationsUseCase) DeclineInvitation(ctx context.Context, invitatio
 	if user.IsGuest() || user.IsExpired() {
 		return pkg.ErrUnauthenticated
 	}
-	inv, err := uc.repo.GetInvitationByID(ctx, invitationID)
-	if err != nil {
-		return err
-	}
 	return uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
-		if err := tx.LockOrganization(ctx, inv.OrganizationID); err != nil {
-			return err
-		}
 		inv, err := tx.GetInvitationByID(ctx, invitationID)
 		if err != nil {
 			return err
@@ -620,9 +603,6 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 	var req *organizationsmodel.OrganizationJoinRequest
 	var pendingNotifications []notificationsmodel.Notification
 	err = uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
-		if err := tx.LockOrganization(ctx, org.ID); err != nil {
-			return err
-		}
 		org, err := tx.GetOrganizationByID(ctx, org.ID)
 		if err != nil {
 			return err
@@ -746,9 +726,6 @@ func (uc *OrganizationsUseCase) CancelJoinRequest(ctx context.Context, orgLogin 
 		return pkg.ErrUnauthenticated
 	}
 	return uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
-		if err := tx.LockOrganization(ctx, org.ID); err != nil {
-			return err
-		}
 		req, err := tx.GetPendingJoinRequest(ctx, org.ID, user.Id)
 		if err != nil {
 			return err
@@ -784,12 +761,12 @@ func (uc *OrganizationsUseCase) ApproveJoinRequest(
 			return pkg.Wrap(pkg.ErrBadInput, nil, "заявка уже рассмотрена")
 		}
 
-		if err := tx.AddMember(ctx, req.OrganizationID, req.UserID, role); err != nil {
-			return fmt.Errorf("add member: %w", err)
-		}
-
 		if err := tx.UpdateJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusApproved, &reviewerID); err != nil {
 			return fmt.Errorf("update join request status: %w", err)
+		}
+
+		if err := tx.AddMember(ctx, req.OrganizationID, req.UserID, role); err != nil {
+			return fmt.Errorf("add member: %w", err)
 		}
 
 		link := fmt.Sprintf("/%s", org.Login)
@@ -903,7 +880,7 @@ func (uc *OrganizationsUseCase) withinOrganization(ctx context.Context, id, acto
 		return pkg.NoPermission
 	}
 	return uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
-		if err := tx.LockOrganization(ctx, id); err != nil {
+		if _, err := tx.GetOrganizationByID(ctx, id); err != nil {
 			return err
 		}
 		allowed, err := tx.HasOrganizationPermission(ctx, id, actor, action)

@@ -18,8 +18,6 @@ const (
 
 type DraftTxStore interface {
 	LockDraftOwner(context.Context, uuid.UUID, uuid.UUID) error
-	ListDrafts(context.Context, contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error)
-	LockContest(context.Context, uuid.UUID) error
 	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error)
 	GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error)
 	CreateDraft(context.Context, *contestsmodel.ContestDraftCreation) (uuid.UUID, error)
@@ -32,10 +30,17 @@ type DraftTransactions interface {
 	Within(context.Context, func(DraftTxStore) error) error
 }
 
-type DraftsUseCase struct{ transactions DraftTransactions }
+type DraftReads interface {
+	ListDrafts(context.Context, contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error)
+}
+type DraftsUseCase struct {
+	transactions DraftTransactions
+	reads        DraftReads
+	permissions  Permissions
+}
 
-func NewDraftsUseCase(transactions DraftTransactions) *DraftsUseCase {
-	return &DraftsUseCase{transactions: transactions}
+func NewDraftsUseCase(transactions DraftTransactions, reads DraftReads, permissions Permissions) *DraftsUseCase {
+	return &DraftsUseCase{transactions: transactions, reads: reads, permissions: permissions}
 }
 
 func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmodel.ContestDraftCreation) (uuid.UUID, error) {
@@ -96,9 +101,6 @@ func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, contestID, draftID uui
 		return pkg.ErrUnauthenticated
 	}
 	return uc.transactions.Within(ctx, func(tx DraftTxStore) error {
-		if err := tx.LockContest(ctx, contestID); err != nil {
-			return err
-		}
 		allowed, err := tx.HasContestPermission(ctx, contestID, user.Id, accessmodel.ActionGetContest)
 		if err != nil {
 			return err
@@ -139,20 +141,13 @@ func (uc *DraftsUseCase) ListDrafts(ctx context.Context, filter contestsmodel.Co
 	if err != nil {
 		return nil, err
 	}
-	var result *contestsmodel.ContestDraftsList
-	err = uc.transactions.Within(ctx, func(tx DraftTxStore) error {
-		if err := tx.LockContest(ctx, filter.ContestID); err != nil {
-			return err
-		}
-		allowed, err := tx.HasContestPermission(ctx, filter.ContestID, user.Id, accessmodel.ActionGetContest)
-		if err != nil {
-			return err
-		}
-		if !allowed {
-			return pkg.NoPermission
-		}
-		result, err = tx.ListDrafts(ctx, filter)
-		return err
-	})
-	return result, err
+
+	allowed, err := uc.permissions.HasContestPermission(ctx, filter.ContestID, user.Id, accessmodel.ActionGetContest)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		return nil, pkg.NoPermission
+	}
+	return uc.reads.ListDrafts(ctx, filter)
 }

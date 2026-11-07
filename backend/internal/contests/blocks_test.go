@@ -266,4 +266,4 @@ func (*blockingSubmissionsRepo) CreateNotification(context.Context, *notificatio
 	return nil, pkg.NotImplemented
 }
 
-func (*blockingSubmissionsRepo) LockContest(context.Context, uuid.UUID) error { return nil }
+func (*blockingSubmissionsRepo) LockContestProblemOrder(context.Context, uuid.UUID) error { return nil }

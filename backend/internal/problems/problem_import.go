@@ -19,13 +19,15 @@ import (
 )
 
 type ProblemImportUseCase struct {
+	permissions      ProblemPermissions
 	transactions     ProblemTransactions
 	problemsRepo     ProblemsRepo
 	workspaceStorage *WorkspaceStorage
 }
 
-func NewProblemImportUseCase(problemsRepo ProblemsRepo, workspaceStorage *WorkspaceStorage, transactions ProblemTransactions) *ProblemImportUseCase {
+func NewProblemImportUseCase(problemsRepo ProblemsRepo, workspaceStorage *WorkspaceStorage, transactions ProblemTransactions, permissions ProblemPermissions) *ProblemImportUseCase {
 	return &ProblemImportUseCase{transactions: transactions,
+		permissions:      permissions,
 		problemsRepo:     problemsRepo,
 		workspaceStorage: workspaceStorage,
 	}
@@ -240,7 +242,7 @@ func hasPackageMarker(dir string) bool {
 }
 
 func (uc *ProblemImportUseCase) ImportProblemPackage(ctx context.Context, zipReader io.Reader, zipSize int64, problemID uuid.UUID) (*problemsmodel.ProblemManifest, error) {
-	if err := withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionEditProblem, func(ProblemTxStore) error { return nil }); err != nil {
+	if err := authorizeProblem(ctx, uc.permissions, problemID, accessmodel.ActionEditProblem); err != nil {
 		return nil, err
 	}
 	previous, err := uc.workspaceStorage.repo.GetWorkspaceHash(ctx, problemID)

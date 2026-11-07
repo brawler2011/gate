@@ -338,30 +338,10 @@ func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c contestsmodel
 		packageId = readyPkg.ID
 	}
 
-	problems, err := r.queries.ListContestProblems(ctx, c.ContestId)
-	if err != nil {
-		return HandlePgErr(err)
-	}
-
-	ordinal := safeInt32(len(problems) + 1)
-
-	err = r.queries.AddContestProblem(ctx, sqlc.AddContestProblemParams{
-		ContestID: c.ContestId,
-		ProblemID: c.ProblemId,
-		PackageID: packageId,
-		Ordinal:   ordinal,
+	err := r.queries.AddContestProblem(ctx, sqlc.AddContestProblemParams{
+		ContestID: c.ContestId, ProblemID: c.ProblemId, PackageID: packageId,
 	})
-	if err != nil {
-		if errUpdate := r.queries.UpdateContestProblemPackage(ctx, sqlc.UpdateContestProblemPackageParams{
-			ContestID: c.ContestId,
-			ProblemID: c.ProblemId,
-			PackageID: packageId,
-		}); errUpdate == nil {
-			return nil
-		}
-		return HandlePgErr(err)
-	}
-	return nil
+	return HandlePgErr(err)
 }
 
 func (r *ContestsRepo) DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error {
@@ -378,9 +358,19 @@ func (r *ContestsRepo) DeleteContestProblem(ctx context.Context, c contestsmodel
 func (r *ContestsRepo) ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []contestsmodel.ContestProblemReorderItem) error {
 	q := r.queries
 
-	// Step 1: Temporarily assign large ordinals to avoid UNIQUE (contest_id, ordinal) constraint violations
+	// Reserve temporary positions above both existing and requested ordinals.
+	maximum, err := q.GetMaxContestProblemOrdinal(ctx, contestId)
+	if err != nil {
+		return HandlePgErr(err)
+	}
+	for _, p := range problems {
+		maximum = max(maximum, p.Position)
+	}
+	if int64(maximum)+int64(len(problems)) > math.MaxInt32 {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "problem ordinals exceed the supported range")
+	}
 	for i, p := range problems {
-		tempOrdinal := int32(10000 + i)
+		tempOrdinal := maximum + safeInt32(i+1)
 		err := q.UpdateContestProblemOrdinal(ctx, sqlc.UpdateContestProblemOrdinalParams{
 			ContestID: contestId,
 			ProblemID: p.ProblemID,
@@ -1126,9 +1116,4 @@ func mapDashboardContest(row sqlc.ListDashboardContestsRow) contestsmodel.Dashbo
 		UserRole:           row.UserRole,
 		LastSubmissionTime: lastSubTime,
 	}
-}
-
-func (r *ContestsRepo) LockContest(ctx context.Context, id uuid.UUID) error {
-	_, err := r.queries.LockContest(ctx, id)
-	return HandlePgErr(err)
 }

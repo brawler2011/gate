@@ -163,7 +163,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	// Storage & UseCases
 	workspaceStorage := problems.NewWorkspaceStorage(s3Store, "problem-workspaces", problems.NewWorkspaceCatalog(problemsRepo, pgstore.NewProblemTransactions(dbPool)))
 	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sb, access.NewPermissionsUseCase(contestsRepo, usersRepo, problemsRepo, pgstore.NewTeamsRepo(dbPool), orgsRepo))
-	publishUC := problems.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, s3Store, "problem-packages", pgstore.NewProblemTransactions(dbPool))
+	publishUC := problems.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, s3Store, "problem-packages", pgstore.NewProblemTransactions(dbPool), access.NewPermissionsUseCase(contestsRepo, usersRepo, problemsRepo, pgstore.NewTeamsRepo(dbPool), orgsRepo))
 
 	eventPublisher := judgeworker.NewEventPublisher(js)
 	tempDir := t.TempDir()
@@ -213,7 +213,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	zipBytes, err := templates.GetBuiltinTemplateZip("builtin:a-plus-b")
 	require.NoError(t, err)
 
-	importUC := problems.NewProblemImportUseCase(problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(dbPool))
+	importUC := problems.NewProblemImportUseCase(problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(dbPool), access.NewPermissionsUseCase(contestsRepo, usersRepo, problemsRepo, pgstore.NewTeamsRepo(dbPool), orgsRepo))
 	_, err = importUC.ImportProblemPackage(ctx, bytes.NewReader(zipBytes), int64(len(zipBytes)), problemID)
 	require.NoError(t, err)
 

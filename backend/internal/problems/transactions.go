@@ -12,11 +12,10 @@ import (
 )
 
 type ProblemTxStore interface {
+	LockPackageVersions(context.Context, uuid.UUID) error
 	GetUserById(context.Context, uuid.UUID) (accessmodel.User, error)
 	CreatePackage(context.Context, *problemsmodel.CreatePackageParams) (problemsmodel.ProblemPackage, error)
 	GetReadyPackage(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
-	LockProblem(context.Context, uuid.UUID) error
-	LockOrganization(context.Context, uuid.UUID) error
 	HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error)
 	GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error)
 	GetMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationMember, error)

@@ -41,8 +41,7 @@ VALUES ($1, $2, $3);
 
 -- name: GetOrganizationMember :one
 SELECT * FROM organization_members
-WHERE organization_id = $1 AND user_id = $2
-FOR SHARE;
+WHERE organization_id = $1 AND user_id = $2;
 
 -- name: ListOrganizationMembers :many
 SELECT om.organization_id, om.user_id, om.role, om.created_at,
@@ -95,5 +94,11 @@ FROM organization_members om
 WHERE om.user_id = $1 AND om.organization_id = $2
 LIMIT 1;
 
--- name: LockOrganization :one
-SELECT id FROM organizations WHERE id = $1 FOR UPDATE;
+
+-- name: GetAuthorizationOrganizationMember :one
+SELECT * FROM organization_members
+WHERE organization_id = $1 AND user_id = $2
+FOR SHARE;
+
+-- name: LockOrganizationMember :one
+SELECT user_id FROM organization_members WHERE organization_id = $1 AND user_id = $2 FOR UPDATE;

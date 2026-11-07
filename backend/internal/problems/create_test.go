@@ -81,7 +81,7 @@ func TestProblemCreationUploadsBeforeAtomicCatalogWrites(t *testing.T) {
 			object := &creationStorage{active: &tx.active, failure: failure}
 			tx.object = object
 			workspace := NewWorkspaceStorage(object, "workspace", nil)
-			uc := NewProblemsUseCase(creationCatalog{}, workspace, tx, nil, nil)
+			uc := NewProblemsUseCase(creationCatalog{}, workspace, tx, nil, nil, allowProblemPermissions{})
 			user := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 			id, err := uc.CreateProblem(accessmodel.WithUser(problemActorContext(), user), &problemsmodel.CreateProblemInput{OrganizationID: uuid.New(), Title: "New task", TemplateID: "builtin:a-plus-b"})
 			if failure != nil {
@@ -108,14 +108,12 @@ func (s inaccessibleTemplate) Within(_ context.Context, fn func(ProblemTxStore) 
 func (inaccessibleTemplate) GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error) {
 	return problemsmodel.Problem{OrganizationID: uuid.New()}, nil
 }
-func (inaccessibleTemplate) LockOrganization(context.Context, uuid.UUID) error { return nil }
-func (inaccessibleTemplate) LockProblem(context.Context, uuid.UUID) error      { return nil }
 func (inaccessibleTemplate) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	return false, nil
 }
 
 func TestCreationRejectsInaccessibleTemplateBeforeLoadingPackage(t *testing.T) {
-	uc := &ProblemsUseCase{transactions: inaccessibleTemplate{}}
+	uc := &ProblemsUseCase{permissions: inaccessibleTemplate{}}
 	_, err := uc.templatePackage(problemActorContext(), uuid.New(), uuid.NewString())
 	require.ErrorIs(t, err, pkg.NoPermission)
 }

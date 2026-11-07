@@ -19,6 +19,7 @@ type OrganizationsRepo interface {
 }
 
 type PackagesRepo interface {
+	GetReadyPackage(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
 	ListPackages(ctx context.Context, problemID uuid.UUID, limit, offset int32) ([]problemsmodel.ProblemPackage, error)
 	GetPackageByVersion(ctx context.Context, problemID uuid.UUID, version int32) (problemsmodel.ProblemPackage, error)
 }

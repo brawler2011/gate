@@ -215,7 +215,7 @@ func TestFilePackagePublicationUsesCapturedRevision(t *testing.T) {
 			return other.WriteFile(ctx, id, "checkers/check.cpp", []byte("replacement checker"))
 		})
 	}
-	publisher := NewProblemPublishUseCase(repo, filePackageRecords{}, uc.workspaceStorage, store, "packages", newProblemTestTransactions(repo, filePackageRecords{}))
+	publisher := NewProblemPublishUseCase(repo, filePackageRecords{}, uc.workspaceStorage, store, "packages", newProblemTestTransactions(repo, filePackageRecords{}), allowProblemPermissions{})
 	result, err := publisher.PublishProblem(ctx, id)
 	require.NoError(t, err)
 	require.EqualValues(t, 1, result.Version)
@@ -292,7 +292,7 @@ func TestFilePackageInitializationAndImportAreAtomic(t *testing.T) {
 		"checkers/new.cpp": "new checker",
 	})
 	transactions := newProblemTestTransactions(repo, nil)
-	importer := NewProblemImportUseCase(repo, ws, transactions)
+	importer := NewProblemImportUseCase(repo, ws, transactions, allowProblemPermissions{})
 	for _, phase := range []string{"upload", "commit"} {
 		fault := &packageFaultRepo{WorkspaceRepo: repo}
 		ws.repo = fault
@@ -429,7 +429,7 @@ func TestFilePackageRejectsInvalidImportBeforeConversion(t *testing.T) {
 			previous, err := uc.workspaceStorage.repo.GetWorkspaceHash(ctx, id)
 			require.NoError(t, err)
 			data := createZipBytes(t, map[string]string{"problem.yaml": content})
-			importer := NewProblemImportUseCase(uc.workspaceStorage.repo.(*problemImportMockProblemsRepo), uc.workspaceStorage, newProblemTestTransactions(uc.workspaceStorage.repo.(*problemImportMockProblemsRepo), nil))
+			importer := NewProblemImportUseCase(uc.workspaceStorage.repo.(*problemImportMockProblemsRepo), uc.workspaceStorage, newProblemTestTransactions(uc.workspaceStorage.repo.(*problemImportMockProblemsRepo), nil), allowProblemPermissions{})
 			_, err = importer.ImportProblemPackage(ctx, bytes.NewReader(data), int64(len(data)), id)
 			require.Error(t, err)
 			current, err := uc.workspaceStorage.repo.GetWorkspaceHash(ctx, id)
@@ -460,7 +460,7 @@ func TestFilePackagePreservesStatementBytesOnImportAndMetadataSave(t *testing.T)
 				"problem.yaml":     "format_version: '1.0'\ntitle: Canonical title\ntype: pass-fail\nlimits: {time_ms: 1000, memory_mb: 256}\nsubtasks: {}\n",
 				"statements/en.md": statement,
 			})
-			_, err := NewProblemImportUseCase(repo, ws, newProblemTestTransactions(repo, nil)).ImportProblemPackage(ctx, bytes.NewReader(data), int64(len(data)), id)
+			_, err := NewProblemImportUseCase(repo, ws, newProblemTestTransactions(repo, nil), allowProblemPermissions{}).ImportProblemPackage(ctx, bytes.NewReader(data), int64(len(data)), id)
 			require.NoError(t, err)
 			uc := NewWorkshopUseCase(ws, nil, allowProblemPermissions{})
 			raw, err := uc.ReadProblemFile(ctx, id, "statements/en.md")

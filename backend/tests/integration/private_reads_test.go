@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -67,7 +68,7 @@ func (s *IntegrationTestSuite) TestDraftListChecksCurrentAccessOutsideHTTP() {
 	repo := pgstore.NewDraftsRepo(s.dbPool)
 	id, err := repo.CreateDraft(s.ctx, &contestsmodel.ContestDraftCreation{ContestID: contest, UserID: owner, Code: "private"})
 	s.Require().NoError(err)
-	reader := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(s.dbPool))
+	reader := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(s.dbPool), pgstore.NewDraftsRepo(s.dbPool), access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo))
 	filter := contestsmodel.ContestDraftsFilter{ContestID: contest, UserID: owner}
 	_, err = reader.ListDrafts(s.ctx, filter)
 	s.ErrorIs(err, pkg.ErrUnauthenticated)

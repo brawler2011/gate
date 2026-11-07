@@ -72,8 +72,15 @@ WHERE team_id = $1 AND user_id = $2;
 SELECT t.* FROM teams t
 INNER JOIN team_members tm ON t.id = tm.team_id
 WHERE tm.user_id = $1 AND t.organization_id = $2
-ORDER BY t.created_at DESC
-FOR SHARE OF t, tm;
+ORDER BY t.created_at DESC;
 
--- name: LockTeam :one
-SELECT id FROM teams WHERE id = $1 FOR UPDATE;
+
+-- name: GetAuthorizationUserTeamsByOrganization :many
+SELECT t.* FROM teams t
+INNER JOIN team_members tm ON t.id = tm.team_id
+WHERE tm.user_id = $1 AND t.organization_id = $2
+ORDER BY t.created_at DESC
+FOR SHARE OF tm;
+
+-- name: GetAuthorizationTeamMember :one
+SELECT * FROM team_members WHERE team_id = $1 AND user_id = $2 FOR SHARE;

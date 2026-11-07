@@ -55,9 +55,6 @@ func (uc *ContestsUseCase) withinContest(ctx context.Context, id uuid.UUID, acti
 		return pkg.ErrUnauthenticated
 	}
 	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {
-		if err := tx.LockContest(ctx, id); err != nil {
-			return err
-		}
 		allowed, err := tx.HasContestPermission(ctx, id, user.Id, action)
 		if err != nil {
 			return err

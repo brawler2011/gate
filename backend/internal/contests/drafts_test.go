@@ -67,7 +67,7 @@ func (m *mockDraftsRepo) DeleteDraft(ctx context.Context, id uuid.UUID) error {
 
 func TestDraftsUseCase_Validation(t *testing.T) {
 	repo := newMockDraftsRepo()
-	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}})
+	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}}, repo, draftTestStore{repo})
 
 	contestID := uuid.New()
 	userID := uuid.New()
@@ -98,7 +98,7 @@ func TestDraftsUseCase_Validation(t *testing.T) {
 
 func TestDraftsUseCase_LimitPerUser(t *testing.T) {
 	repo := newMockDraftsRepo()
-	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}})
+	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}}, repo, draftTestStore{repo})
 
 	contestID := uuid.New()
 	userID := uuid.New()
@@ -129,7 +129,7 @@ func TestDraftsUseCase_LimitPerUser(t *testing.T) {
 
 func TestDraftsUseCase_DeletePermissions(t *testing.T) {
 	repo := newMockDraftsRepo()
-	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}})
+	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}}, repo, draftTestStore{repo})
 
 	authorID := uuid.New()
 	otherUserID := uuid.New()
@@ -171,7 +171,6 @@ func TestDraftsUseCase_DeletePermissions(t *testing.T) {
 
 type draftTestStore struct{ *mockDraftsRepo }
 
-func (draftTestStore) LockContest(context.Context, uuid.UUID) error { return nil }
 func (draftTestStore) GetContest(_ context.Context, id uuid.UUID) (contestsmodel.Contest, error) {
 	return contestsmodel.Contest{ID: id}, nil
 }
@@ -192,7 +191,7 @@ func (m *mockDraftsRepo) ListDrafts(_ context.Context, filter contestsmodel.Cont
 
 func TestDraftListRejectsCallerSpoofingOutsideHTTP(t *testing.T) {
 	repo := newMockDraftsRepo()
-	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}})
+	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}}, repo, draftTestStore{repo})
 	owner, other, contest := uuid.New(), uuid.New(), uuid.New()
 	id, err := repo.CreateDraft(context.Background(), &contestsmodel.ContestDraftCreation{ContestID: contest, UserID: owner, Code: "private"})
 	if err != nil {
@@ -237,10 +236,10 @@ func TestDraftListPagination(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := newMockDraftsRepo()
-			uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}})
+			uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}}, repo, draftTestStore{repo})
 			if tc.err != nil {
 				// Any transaction access would panic for invalid pagination.
-				uc = NewDraftsUseCase(nil)
+				uc = NewDraftsUseCase(nil, nil, nil)
 			}
 			filter := contestsmodel.ContestDraftsFilter{ContestID: uuid.New(), UserID: user.Id, Page: tc.page, PageSize: tc.size}
 			_, err := uc.ListDrafts(ctx, filter)
@@ -257,7 +256,7 @@ func TestDraftListPagination(t *testing.T) {
 }
 
 func TestDraftListAuthorizesBeforePagination(t *testing.T) {
-	uc := NewDraftsUseCase(nil)
+	uc := NewDraftsUseCase(nil, nil, nil)
 	filter := contestsmodel.ContestDraftsFilter{UserID: uuid.New(), Page: -1}
 	_, err := uc.ListDrafts(context.Background(), filter)
 	require.ErrorIs(t, err, pkg.ErrUnauthenticated)

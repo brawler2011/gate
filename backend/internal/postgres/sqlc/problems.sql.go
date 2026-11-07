@@ -168,6 +168,29 @@ func (q *Queries) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getAuthorizationProblemMember = `-- name: GetAuthorizationProblemMember :one
+SELECT problem_id, user_id, role, created_at FROM problem_members
+WHERE problem_id = $1 AND user_id = $2
+FOR SHARE
+`
+
+type GetAuthorizationProblemMemberParams struct {
+	ProblemID uuid.UUID `json:"problem_id"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetAuthorizationProblemMember(ctx context.Context, arg GetAuthorizationProblemMemberParams) (ProblemMember, error) {
+	row := q.db.QueryRow(ctx, getAuthorizationProblemMember, arg.ProblemID, arg.UserID)
+	var i ProblemMember
+	err := row.Scan(
+		&i.ProblemID,
+		&i.UserID,
+		&i.Role,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getProblemByID = `-- name: GetProblemByID :one
 SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
 FROM problems p
@@ -215,7 +238,6 @@ func (q *Queries) GetProblemByID(ctx context.Context, id uuid.UUID) (GetProblemB
 const getProblemMember = `-- name: GetProblemMember :one
 SELECT problem_id, user_id, role, created_at FROM problem_members
 WHERE problem_id = $1 AND user_id = $2
-FOR SHARE
 `
 
 type GetProblemMemberParams struct {
@@ -461,16 +483,6 @@ func (q *Queries) ListProblemMembers(ctx context.Context, problemID uuid.UUID) (
 		return nil, err
 	}
 	return items, nil
-}
-
-const lockProblem = `-- name: LockProblem :one
-SELECT id FROM problems WHERE id=$1 FOR UPDATE
-`
-
-func (q *Queries) LockProblem(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, lockProblem, id)
-	err := row.Scan(&id)
-	return id, err
 }
 
 const removeProblemMember = `-- name: RemoveProblemMember :exec

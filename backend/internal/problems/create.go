@@ -15,6 +15,7 @@ import (
 )
 
 type PackageTemplates interface {
+	GetReadyPackage(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
 	DownloadPackage(context.Context, uuid.UUID, string) (io.ReadCloser, error)
 }
 
@@ -94,26 +95,22 @@ func (uc *ProblemsUseCase) templatePackage(ctx context.Context, orgID uuid.UUID,
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid template_id format")
 	}
-	var ready problemsmodel.ProblemPackage
-	err = withinProblem(ctx, uc.transactions, id, accessmodel.ActionViewProblem, func(tx ProblemTxStore) error {
-		template, err := tx.GetProblemById(ctx, id)
-		if err != nil {
-			return err
-		}
-		if !template.IsTemplate {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "выбранная задача не является шаблоном")
-		}
-		if template.OrganizationID != orgID {
-			return pkg.Wrap(pkg.NoPermission, nil, "шаблон должен принадлежать той же организации")
-		}
-		ready, err = tx.GetReadyPackage(ctx, id)
-		if err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, err, "не удалось найти готовый пакет шаблона")
-		}
-		return nil
-	})
+	if err := authorizeProblem(ctx, uc.permissions, id, accessmodel.ActionViewProblem); err != nil {
+		return nil, err
+	}
+	template, err := uc.repo.GetProblemById(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if !template.IsTemplate {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "выбранная задача не является шаблоном")
+	}
+	if template.OrganizationID != orgID {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "шаблон должен принадлежать той же организации")
+	}
+	ready, err := uc.templates.GetReadyPackage(ctx, id)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "не удалось найти готовый пакет шаблона")
 	}
 
 	return uc.templates.DownloadPackage(ctx, id, ready.PackageHash)
