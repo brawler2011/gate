@@ -8,18 +8,11 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 )
 
 type ContestSubscriber struct {
-	id         uuid.UUID
-	conn       *websocket.Conn
-	filter     *ContestsFilter
-	outbox     chan *WrappedEvent
-	pending    []*WrappedEvent
-	state      SubscriberState
-	barrierSeq uint64
-	mu         sync.Mutex
+	*subscription
+	filter *ContestsFilter
 }
 
 type ContestsFilter struct {
@@ -105,30 +98,39 @@ func (h *ContestsHub) Handle(ctx context.Context, eventType string, payload []by
 	return nil
 }
 
-func (h *ContestsHub) broadcast(event *WrappedEvent) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+// subscribe captures history and registers the live queue under the same lock as broadcast.
+func (h *ContestsHub) subscribe(conn websocketConnection, filter *ContestsFilter, replay bool) (*ContestSubscriber, []*WrappedEvent, error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-	for _, sub := range h.subscribers {
-		sub.mu.Lock()
-		if sub.state == StatePaused {
-			if event.Seq > sub.barrierSeq && sub.filter.Matches(event) {
-				sub.pending = append(sub.pending, event)
-			}
-		} else {
-			if sub.filter.Matches(event) {
-				select {
-				case sub.outbox <- event:
-				default:
-					slog.Warn("contest subscriber outbox full, closing", "id", sub.id)
-					sub.conn.Close()
-				}
+	history, err := snapshotHistory(h.ring, filter.Since, replay)
+	if err != nil {
+		return nil, nil, err
+	}
+	sub := &ContestSubscriber{subscription: newSubscription(conn), filter: filter}
+	h.subscribers[sub.id] = sub
+	return sub, history, nil
+}
+
+func (h *ContestsHub) broadcast(event *WrappedEvent) {
+	var overflow []*subscription
+	h.mu.Lock()
+	for id, sub := range h.subscribers {
+		if sub.filter.Matches(event) {
+			select {
+			case sub.outbox <- event:
+			default:
+				delete(h.subscribers, id)
+				overflow = append(overflow, sub.subscription)
 			}
 		}
-		sub.mu.Unlock()
 	}
-
 	err := h.ring.Push(event, event.Seq)
+	h.mu.Unlock()
+
+	for _, sub := range overflow {
+		sub.close("event queue overflow", nil)
+	}
 	if err != nil {
 		slog.Error("failed to push contest event to ring buffer", "error", err)
 	}

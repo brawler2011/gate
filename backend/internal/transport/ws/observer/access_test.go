@@ -196,7 +196,7 @@ func TestHandshake(t *testing.T) {
 	})
 }
 
-func TestSubmissionHistoryPendingLiveAndRevocation(t *testing.T) {
+func TestSubmissionHistoryQueueLiveAndRevocation(t *testing.T) {
 	f := newWSFixture(t)
 	f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true}
 	f.stub.contest.Settings = map[string]any{"freeze_status": contestsmodel.FreezeStatusFrozen}
@@ -327,7 +327,7 @@ func TestFiltersNarrowAccessAndRequireMetadata(t *testing.T) {
 
 func TestCatchUpAccessLoss(t *testing.T) {
 	for _, kind := range []string{"submissions", "contests"} {
-		for _, phase := range []string{"history", "pending"} {
+		for _, phase := range []string{"history", "queue"} {
 			for _, code := range []int{1008, 1011} {
 				t.Run(fmt.Sprintf("%s/%s/%d", kind, phase, code), func(t *testing.T) {
 					f := newWSFixture(t)
@@ -355,7 +355,7 @@ func TestCatchUpAccessLoss(t *testing.T) {
 						f.stub.onPermissions = func() { f.stub.change(func() { f.stub.onPermissions = func() { publish(); revoke() } }) }
 					}
 					conn := f.connect(t, f.path(kind))
-					if phase == "pending" {
+					if phase == "queue" {
 						require.Contains(t, readPayload(t, conn), "id")
 					}
 					requireClose(t, conn, code)

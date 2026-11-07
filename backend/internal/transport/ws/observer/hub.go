@@ -10,7 +10,6 @@ import (
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 )
 
 type WrappedEvent struct {
@@ -23,22 +22,9 @@ type WrappedEvent struct {
 	scoreboardConfiguration string
 }
 
-type SubscriberState int
-
-const (
-	StatePaused SubscriberState = iota
-	StateLive
-)
-
 type Subscriber struct {
-	id         uuid.UUID
-	conn       *websocket.Conn
-	filter     *SubmissionsFilter
-	outbox     chan *WrappedEvent
-	pending    []*WrappedEvent
-	state      SubscriberState
-	barrierSeq uint64
-	mu         sync.Mutex
+	*subscription
+	filter *SubmissionsFilter
 }
 
 type Hub struct {
@@ -132,31 +118,39 @@ func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) erro
 	return nil
 }
 
-func (h *Hub) broadcast(event *WrappedEvent) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+// subscribe captures history and registers the live queue under the same lock as broadcast.
+func (h *Hub) subscribe(conn websocketConnection, filter *SubmissionsFilter, replay bool) (*Subscriber, []*WrappedEvent, error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-	for _, sub := range h.subscribers {
-		sub.mu.Lock()
-		if sub.state == StatePaused {
-			if event.Seq > sub.barrierSeq && sub.filter.Matches(event) {
-				sub.pending = append(sub.pending, event)
-			}
-		} else {
-			if sub.filter.Matches(event) {
-				select {
-				case sub.outbox <- event:
-				default:
-					// Slow client policy: close connection
-					slog.Warn("subscriber outbox full, closing", "id", sub.id)
-					sub.conn.Close()
-				}
+	history, err := snapshotHistory(h.ring, filter.Since, replay)
+	if err != nil {
+		return nil, nil, err
+	}
+	sub := &Subscriber{subscription: newSubscription(conn), filter: filter}
+	h.subscribers[sub.id] = sub
+	return sub, history, nil
+}
+
+func (h *Hub) broadcast(event *WrappedEvent) {
+	var overflow []*subscription
+	h.mu.Lock()
+	for id, sub := range h.subscribers {
+		if sub.filter.Matches(event) {
+			select {
+			case sub.outbox <- event:
+			default:
+				delete(h.subscribers, id)
+				overflow = append(overflow, sub.subscription)
 			}
 		}
-		sub.mu.Unlock()
 	}
-
 	err := h.ring.Push(event, event.Seq)
+	h.mu.Unlock()
+
+	for _, sub := range overflow {
+		sub.close("event queue overflow", nil)
+	}
 	if err != nil {
 		slog.Error("failed to push event to ring buffer", "error", err)
 	}
