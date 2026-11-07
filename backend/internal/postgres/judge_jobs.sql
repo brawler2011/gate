@@ -44,13 +44,10 @@ WHERE j.id=sqlc.arg(id)::uuid AND j.lease_token=sqlc.arg(lease_token)::uuid
 UPDATE judge_jobs SET state='pending',lease_token=NULL,deadline_at=NULL
 WHERE id=sqlc.arg(id)::uuid AND lease_token=sqlc.arg(lease_token)::uuid AND state='processing' AND deadline_at>now();
 
--- name: LockJudgeContest :one
-SELECT c.id FROM contests c JOIN submissions s ON s.contest_id=c.id
-WHERE s.id=sqlc.arg(submission_id)::uuid FOR UPDATE OF c;
-
 -- name: CompleteJudgeJob :execrows
 UPDATE judge_jobs j SET state='completed',completed_at=now(),lease_token=NULL,deadline_at=NULL
 FROM submissions s
 WHERE j.id=sqlc.arg(id)::uuid AND j.lease_token=sqlc.arg(lease_token)::uuid
-  AND j.state='processing' AND j.deadline_at>now()
+  AND j.submission_id=sqlc.arg(submission_id)::uuid AND j.generation=sqlc.arg(generation)::bigint
+  AND j.state='processing' AND j.deadline_at>clock_timestamp()
   AND s.id=j.submission_id AND s.generation=j.generation AND s.state<>300;

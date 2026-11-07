@@ -9,7 +9,7 @@ import {applySubmissionEvent, applyScoreboardEvent} from '@/lib/submissionsUpdat
 
 import type SubmissionsMessage from '@/contracts/observer/v1/SubmissionsMessage';
 import type {SubmissionsSelection} from '@/lib/submissions';
-import type {LiveSubmissions, LiveScoreboard} from '@/lib/submissionsUpdates';
+import type {LiveSubmissions, LiveScoreboard, SubmissionEvent} from '@/lib/submissionsUpdates';
 import type {ReactNode} from 'react';
 
 export const SubmissionsHighlights = createContext<ReadonlyMap<string, boolean>>(new Map());
@@ -34,18 +34,90 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
     const scoreboard = {queryKey: api.queryOptions('get',
       '/organizations/{org_login}/contests/{contest_login}/scoreboard', {params: {path}}).queryKey};
     let disposed = false;
-    const revisions = new WeakMap<Query, Map<string, number>>();
+    const revisions = new Map<string, number>();
+    const progress = new Map<string, SubmissionEvent>();
     const highlightTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    let refreshing = false;
+    let dirty = false;
+    let reconnect = false;
+    const applyProgress = (query: Query, replay = false) => {
+      if (disposed) {
+        return;
+      }
+      const selection = query.meta?.selection as SubmissionsSelection | undefined;
+      if (!selection) {
+        return;
+      }
+      client.setQueryData<LiveSubmissions>(query.queryKey, data => {
+        for (const message of progress.values()) {
+          data = applySubmissionEvent(data, message, selection, revisions, replay);
+        }
+        return data;
+      });
+    };
+    // A completed HTTP snapshot can overwrite progress received before or during
+    // the fetch. Reapply it only when its submission revision is still current.
+    const unsubscribe = client.getQueryCache().subscribe(event => {
+      if (event.type === 'updated' && event.action.type === 'success' && !event.action.manual
+        && client.getQueryCache().findAll(submissions).includes(event.query)) {
+        applyProgress(event.query, true);
+      }
+    });
     const refresh = async () => {
-      await Promise.all([client.cancelQueries(submissions), client.cancelQueries(scoreboard)]);
-      await Promise.all([client.invalidateQueries(submissions), client.invalidateQueries(scoreboard)]);
+      refreshTimer = undefined;
+      if (disposed || refreshing || !dirty) {
+        return;
+      }
+      refreshing = true;
+      dirty = false;
+      const refreshScoreboard = reconnect;
+      reconnect = false;
+      try {
+        if (refreshScoreboard) {
+          await Promise.all([client.cancelQueries(submissions), client.cancelQueries(scoreboard)]);
+        } else {
+          // A fetch already in flight may predate the triggering event. Wait
+          // for it, then request a fresh snapshot rather than reusing its result.
+          await Promise.allSettled(client.getQueryCache().findAll(submissions).map(query => query.promise));
+        }
+        if (disposed) {
+          return;
+        }
+        await Promise.all([
+          client.invalidateQueries(submissions, {cancelRefetch: false}),
+          ...(refreshScoreboard ? [client.invalidateQueries(scoreboard, {cancelRefetch: false})] : []),
+        ]);
+      } finally {
+        refreshing = false;
+        if (!disposed && dirty) {
+          refreshTimer = setTimeout(() => {
+            void refresh(); 
+          }, 100);
+        }
+      }
+    };
+    const requestRefresh = (immediate = false) => {
+      dirty = true;
+      if (refreshing || refreshTimer !== undefined) {
+        return;
+      }
+      if (immediate) {
+        void refresh();
+      } else {
+        // Fixed windows keep continuous traffic from postponing refreshes.
+        refreshTimer = setTimeout(() => {
+          void refresh(); 
+        }, 100);
+      }
     };
     const disconnect = connectSubmissions({
       url: () => `${env.getWebSocketUrl()}/submissions?contestId=${encodeURIComponent(contestId)}`,
       onStatusChange: next => {
         setStatus(next);
         if (next.phase === 'connected') {
-          void refresh();
+          reconnect = true;
+          requestRefresh(true);
         }
       },
       onMessage: event => {
@@ -58,7 +130,6 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
         if (!message?.payload || typeof message.sequence !== 'number') {
           return;
         }
-        const isScoreboard = message.event_type === 'scoreboard.updated';
         if (message.event_type === 'scoreboard.updated') {
           if (message.payload.scoreboard?.contest_id !== contestId) {
             return;
@@ -68,33 +139,39 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
           || message.payload.contest_id !== contestId || typeof message.payload.id !== 'string') {
           return;
         }
-        const queries = client.getQueryCache().findAll(isScoreboard ? scoreboard : submissions);
-        for (const query of queries) {
-          const apply = () => {
-            if (disposed) {
-              return;
-            }
-            if (message.event_type === 'scoreboard.updated') {
-              if (Boolean(query.meta?.unfrozen) !== message.payload.unfrozen) {
+        if (message.event_type === 'scoreboard.updated') {
+          for (const query of client.getQueryCache().findAll(scoreboard)) {
+            const apply = () => {
+              if (disposed || Boolean(query.meta?.unfrozen) !== message.payload.unfrozen) {
                 return;
               }
               client.setQueryData<LiveScoreboard>(query.queryKey,
                 data => applyScoreboardEvent(data, message.payload, message.sequence));
-            } else {
-              const selection = query.meta?.selection as SubmissionsSelection | undefined;
-              if (!selection) {
-                return;
-              }
-              const knownRevisions = revisions.get(query) ?? new Map<string, number>();
-              revisions.set(query, knownRevisions);
-              client.setQueryData<LiveSubmissions>(query.queryKey,
-                data => applySubmissionEvent(data, message, selection, knownRevisions));
+            };
+            apply();
+            if (query.promise) {
+              void query.promise.then(apply, () => {});
             }
-          };
-          apply();
-          // Reapply after an in-flight snapshot; DB revisions exclude changes already included.
-          if (query.promise) {
-            void query.promise.then(apply, () => {});
+          }
+        } else if (typeof message.payload.revision === 'number') {
+          const {id, revision} = message.payload;
+          const latest = revisions.get(id) ?? 0;
+          if (revision >= latest) {
+            revisions.set(id, revision);
+            if (message.event_type === 'submissions.created' || message.event_type === 'submissions.completed') {
+              const buffered = progress.get(id);
+              if (buffered && (buffered.payload.revision < revision || message.event_type === 'submissions.completed')) {
+                progress.delete(id);
+              }
+            } else if (message.sequence > (progress.get(id)?.sequence ?? 0)) {
+              progress.set(id, message);
+              for (const query of client.getQueryCache().findAll(submissions)) {
+                applyProgress(query);
+              }
+            }
+          }
+          if (message.event_type === 'submissions.created' || message.event_type === 'submissions.completed') {
+            requestRefresh();
           }
         }
         if (message.event_type === 'scoreboard.updated') {
@@ -114,6 +191,9 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
     return () => {
       disposed = true;
       disconnect();
+      unsubscribe();
+      clearTimeout(refreshTimer);
+      progress.clear();
       highlightTimers.forEach(clearTimeout);
     };
   }, [client, contestId, orgLogin, contestLogin, userId]);

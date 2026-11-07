@@ -162,7 +162,6 @@ type Submission struct {
 
 type SubmissionsList struct {
 	TotalCount  int32             `json:"total_count"`
-	Revision    int64             `json:"revision"`
 	Submissions []Submission      `json:"submissions"`
 	Pagination  paging.Pagination `json:"pagination"`
 }

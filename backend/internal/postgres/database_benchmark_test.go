@@ -222,8 +222,8 @@ func seedSubmissions(b *testing.B, pool *pgxpool.Pool, size int) submissionBench
 	org := uuid.New()
 	benchExec(b, pool, `INSERT INTO organizations(id,login,name) VALUES ($1,'benchmark','Benchmark')`, org)
 	benchExec(b, pool, `INSERT INTO users(id,username,password_hash) SELECT md5('user'||i)::uuid,'bench'||i,'unused' FROM generate_series(1,$1::int) i`, participants)
-	benchExec(b, pool, `INSERT INTO contests(id,organization_id,title,login,settings,start_time,end_time,submissions_revision)
- VALUES ($1,$2,'Benchmark','benchmark','{"freeze_status":"frozen","freeze_duration_minutes":60}', '2026-01-01 00:00Z','2026-01-01 02:00Z',$3)`, f.contest, org, size)
+	benchExec(b, pool, `INSERT INTO contests(id,organization_id,title,login,settings,start_time,end_time)
+ VALUES ($1,$2,'Benchmark','benchmark','{"freeze_status":"frozen","freeze_duration_minutes":60}', '2026-01-01 00:00Z','2026-01-01 02:00Z')`, f.contest, org)
 	benchExec(b, pool, `INSERT INTO problems(id,organization_id,title,short_name) SELECT md5('problem'||i)::uuid,$1,'Problem '||i,'p'||i FROM generate_series(1,10) i`, org)
 	benchExec(b, pool, `INSERT INTO problem_packages(id,problem_id,organization_id,package_hash,status,version)
  SELECT md5('package'||i)::uuid,md5('problem'||i)::uuid,$1,md5('package'||i)||md5('package'||i),'ready',1 FROM generate_series(1,10) i`, org)
@@ -232,7 +232,7 @@ func seedSubmissions(b *testing.B, pool *pgxpool.Pool, size int) submissionBench
 	benchExec(b, pool, `INSERT INTO contest_members(contest_id,user_id) SELECT $1,md5('user'||i)::uuid FROM generate_series(1,$2::int) i`, f.contest, participants)
 	benchExec(b, pool, `INSERT INTO submissions(id,contest_id,owner_id,problem_id,source,language,state,revision,created_at)
  SELECT md5('submission'||i)::uuid,$1,md5('user'||(((i-1)/10)%$3::int+1))::uuid,md5('problem'||((i-1)%10+1))::uuid,
- repeat('print(1)\n',32),30,CASE WHEN i%3=0 THEN 200 ELSE 106 END,i,
+ repeat('print(1)\n',32),30,CASE WHEN i%3=0 THEN 200 ELSE 106 END,1,
  '2026-01-01'::timestamptz + ((i-1)/($3::int*10))*interval '10 minutes'
  FROM generate_series(1,$2::int) i`, f.contest, size, participants)
 	benchExec(b, pool, `INSERT INTO contest_problem_results(contest_id,user_id,problem_id,solved,failed_attempts,first_ac_time,time_minutes)
@@ -261,7 +261,7 @@ func BenchmarkSubmissions(b *testing.B) {
 					filter := submissionsmodel.SubmissionsFilter{ContestId: &f.contest, Page: 1, PageSize: 50, Order: &order}
 					_, err := repo.GetSubmission(ctx, f.submission)
 					require.NoError(b, err)
-					list, count, _, err := repo.ListSubmissions(ctx, filter)
+					list, count, err := repo.ListSubmissions(ctx, filter)
 					require.NoError(b, err)
 					require.Len(b, list, 50)
 					require.EqualValues(b, size.rows, count)
@@ -296,7 +296,7 @@ func BenchmarkSubmissions(b *testing.B) {
 							if err != nil {
 								return err
 							}
-							if change.Revision <= int64(size.rows) {
+							if change.Revision <= 1 {
 								return fmt.Errorf("revision did not advance")
 							}
 						case "Get":
@@ -308,11 +308,11 @@ func BenchmarkSubmissions(b *testing.B) {
 								return fmt.Errorf("unexpected submission")
 							}
 						case "Latest":
-							items, total, revision, err := repo.ListSubmissions(ctx, filter)
+							items, total, err := repo.ListSubmissions(ctx, filter)
 							if err != nil {
 								return err
 							}
-							if len(items) != 50 || int(total) != size.rows || revision != int64(size.rows) {
+							if len(items) != 50 || int(total) != size.rows {
 								return fmt.Errorf("incomplete submission snapshot")
 							}
 						default:
@@ -324,7 +324,7 @@ func BenchmarkSubmissions(b *testing.B) {
 							if err != nil {
 								return err
 							}
-							if sub.ID != id || sub.Revision <= int64(size.rows) {
+							if sub.ID != id || sub.Revision != 1 {
 								return fmt.Errorf("invalid inserted submission")
 							}
 						}
@@ -333,7 +333,7 @@ func BenchmarkSubmissions(b *testing.B) {
 					var total int
 					var revision int64
 					require.NoError(b, pool.QueryRow(ctx, "SELECT count(*) FROM submissions").Scan(&total))
-					require.NoError(b, pool.QueryRow(ctx, "SELECT submissions_revision FROM contests WHERE id=$1", f.contest).Scan(&revision))
+					require.NoError(b, pool.QueryRow(ctx, "SELECT SUM(revision) FROM submissions").Scan(&revision))
 					expectedRows, expectedRevision := size.rows, int64(size.rows)
 					if scenario == "Create" || workers > 1 {
 						expectedRows += b.N

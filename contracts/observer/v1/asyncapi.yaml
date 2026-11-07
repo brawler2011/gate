@@ -95,6 +95,7 @@ components:
         - revision
       properties:
         revision:
+          description: Revision local to this submission.
           type: integer
           format: int64
           minimum: 0

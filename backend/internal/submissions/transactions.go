@@ -18,7 +18,7 @@ type SubmissionTxStore interface {
 	GetContestProblem(context.Context, contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error)
 	GetContestUserProblemBlock(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (*contestsmodel.ContestUserProblemBlock, error)
 	contests.ScoreboardStore
-	LockContest(context.Context, uuid.UUID) error
+	LockSubmissionTuple(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error
 	ScheduleJob(context.Context, uuid.UUID) (judgingmodel.Job, error)
 	CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error)
 	GetSubmission(ctx context.Context, id uuid.UUID) (submissionsmodel.Submission, error)

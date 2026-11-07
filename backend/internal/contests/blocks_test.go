@@ -232,7 +232,9 @@ func (r *blockingSubmissionsRepo) ScheduleJob(_ context.Context, id uuid.UUID) (
 	return judgingmodel.Job{ID: uuid.New(), SubmissionID: id, Generation: 1}, nil
 }
 
-func (*blockingSubmissionsRepo) LockContest(context.Context, uuid.UUID) error { return nil }
+func (*blockingSubmissionsRepo) LockSubmissionTuple(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error {
+	return nil
+}
 
 type contestCommandTransactions struct{ store contests.CommandTxStore }
 
@@ -263,3 +265,5 @@ func (*blockingSubmissionsRepo) GetMember(context.Context, uuid.UUID, uuid.UUID)
 func (*blockingSubmissionsRepo) CreateNotification(context.Context, *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error) {
 	return nil, pkg.NotImplemented
 }
+
+func (*blockingSubmissionsRepo) LockContest(context.Context, uuid.UUID) error { return nil }

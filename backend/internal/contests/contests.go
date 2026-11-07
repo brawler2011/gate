@@ -338,6 +338,9 @@ func (uc *ContestsUseCase) DeleteContestTeam(
 func (uc *ContestsUseCase) BlockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string) error {
 	operatorID := accessmodel.UserFromContext(ctx).Id
 	return uc.withinContest(ctx, contestID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		if err := tx.LockSubmissionTuple(ctx, contestID, userID, problemID); err != nil {
+			return err
+		}
 		if err := tx.CreateContestUserProblemBlock(ctx, &contestsmodel.CreateContestUserProblemBlockParams{ContestID: contestID, UserID: userID, ProblemID: problemID, Reason: reason, CreatedBy: &operatorID}); err != nil {
 			return err
 		}
@@ -360,6 +363,9 @@ func (uc *ContestsUseCase) BlockProblemForUser(ctx context.Context, contestID, u
 
 func (uc *ContestsUseCase) UnblockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, rejudgeSubmissions bool) error {
 	return uc.withinContest(ctx, contestID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		if err := tx.LockSubmissionTuple(ctx, contestID, userID, problemID); err != nil {
+			return err
+		}
 		if err := tx.DeleteContestUserProblemBlock(ctx, contestID, userID, problemID); err != nil {
 			return err
 		}
@@ -944,6 +950,8 @@ func calculateScoreboardProblem[T any](rules scoreboardRules, userID, problemID 
 	return contestsmodel.ContestProblemResult{}, false
 }
 
+// ApplySubmissionResult requires the transaction to hold the submission tuple
+// lock before any mutation and until the standings update commits.
 func ApplySubmissionResult(ctx context.Context, store ScoreboardStore, submission *submissionsmodel.Submission) error {
 	if submission == nil || submission.ContestID == nil || submission.CreatedBy == nil || submission.ProblemID == nil {
 		return nil

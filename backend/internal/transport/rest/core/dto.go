@@ -164,7 +164,7 @@ func GetContestProblemResponseDTO(contestProblem contestsmodel.ContestProblem, p
 
 func SubmissionsListToDTO(submissionsList *submissionsmodel.SubmissionsList) *corev1.ListSubmissionsResponseModel {
 	resp := corev1.ListSubmissionsResponseModel{
-		TotalCount: submissionsList.TotalCount, Revision: submissionsList.Revision,
+		TotalCount:  submissionsList.TotalCount,
 		Submissions: make([]corev1.SubmissionsListItemModel, len(submissionsList.Submissions)),
 		Pagination:  PaginationDTO(submissionsList.Pagination),
 	}

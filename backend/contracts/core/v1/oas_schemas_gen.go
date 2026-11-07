@@ -4281,7 +4281,6 @@ func (s *ListPublicContestsSortOrder) UnmarshalText(data []byte) error {
 // Ref: #/components/schemas/ListSubmissionsResponseModel
 type ListSubmissionsResponseModel struct {
 	TotalCount  int32                      `json:"total_count"`
-	Revision    int64                      `json:"revision"`
 	Since       OptInt64                   `json:"since"`
 	Submissions []SubmissionsListItemModel `json:"submissions"`
 	Pagination  PaginationModel            `json:"pagination"`
@@ -4290,11 +4289,6 @@ type ListSubmissionsResponseModel struct {
 // GetTotalCount returns the value of TotalCount.
 func (s *ListSubmissionsResponseModel) GetTotalCount() int32 {
 	return s.TotalCount
-}
-
-// GetRevision returns the value of Revision.
-func (s *ListSubmissionsResponseModel) GetRevision() int64 {
-	return s.Revision
 }
 
 // GetSince returns the value of Since.
@@ -4315,11 +4309,6 @@ func (s *ListSubmissionsResponseModel) GetPagination() PaginationModel {
 // SetTotalCount sets the value of TotalCount.
 func (s *ListSubmissionsResponseModel) SetTotalCount(val int32) {
 	s.TotalCount = val
-}
-
-// SetRevision sets the value of Revision.
-func (s *ListSubmissionsResponseModel) SetRevision(val int64) {
-	s.Revision = val
 }
 
 // SetSince sets the value of Since.
@@ -9306,6 +9295,7 @@ func (s *SubmissionTestDetailsModel) SetFailedTestDetails(val OptFailedTestDetai
 
 // Ref: #/components/schemas/SubmissionsListItemModel
 type SubmissionsListItemModel struct {
+	// Revision local to this submission.
 	Revision          int64        `json:"revision"`
 	Frozen            OptBool      `json:"frozen"`
 	ID                uuid.UUID    `json:"id"`

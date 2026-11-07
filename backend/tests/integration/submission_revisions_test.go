@@ -52,11 +52,13 @@ func (s *IntegrationTestSuite) TestSubmissionRevisionSnapshot() {
 	second, err := repo.CreateSubmission(s.ctx, creation)
 	s.Require().NoError(err)
 	filter := submissionsmodel.SubmissionsFilter{ContestId: &contest, Page: 1, PageSize: 15}
-	rows, count, revision, err := repo.ListSubmissions(s.ctx, filter)
+	rows, count, err := repo.ListSubmissions(s.ctx, filter)
 	s.Require().NoError(err)
 	s.Len(rows, 2)
 	s.EqualValues(2, count)
-	s.EqualValues(2, revision)
+	for _, row := range rows {
+		s.EqualValues(1, row.Revision)
+	}
 
 	tx, err := s.dbPool.Begin(s.ctx)
 	s.Require().NoError(err)
@@ -66,7 +68,7 @@ func (s *IntegrationTestSuite) TestSubmissionRevisionSnapshot() {
 	finished := make(chan error, 1)
 	go func() {
 		change, updateErr := repo.UpdateSubmission(s.ctx, second, &submissionsmodel.SubmissionUpdate{State: submissionsmodel.Accepted})
-		if updateErr == nil && change.Revision != 3 {
+		if updateErr == nil && change.Revision != 2 {
 			finished <- context.Canceled
 			return
 		}
@@ -74,15 +76,14 @@ func (s *IntegrationTestSuite) TestSubmissionRevisionSnapshot() {
 	}()
 	select {
 	case err := <-finished:
-		s.FailNow("writer passed an uncommitted contest revision", "%v", err)
-	case <-time.After(50 * time.Millisecond):
+		s.Require().NoError(err, "independent submission must finish before rollback")
+	case <-time.After(5 * time.Second):
+		s.FailNow("independent submission blocked")
 	}
-	_, count, revision, err = repo.ListSubmissions(s.ctx, filter)
+	_, count, err = repo.ListSubmissions(s.ctx, filter)
 	s.Require().NoError(err)
 	s.EqualValues(2, count)
-	s.EqualValues(2, revision)
 	s.Require().NoError(tx.Rollback(s.ctx))
-	s.Require().NoError(<-finished)
 
 	config := s.dbPool.Config()
 	var updateErr error
@@ -94,16 +95,15 @@ func (s *IntegrationTestSuite) TestSubmissionRevisionSnapshot() {
 	defer pool.Close()
 	saved := submissionsmodel.Saved
 	filter.State = &saved
-	rows, count, revision, err = pgstore.NewSubmissionsRepo(pool).ListSubmissions(s.ctx, filter)
+	rows, count, err = pgstore.NewSubmissionsRepo(pool).ListSubmissions(s.ctx, filter)
 	s.Require().NoError(err)
 	s.Require().NoError(updateErr)
-	s.EqualValues(3, revision)
 	s.EqualValues(1, count)
 	s.Require().Len(rows, 1)
 	s.Equal(submissionsmodel.Saved, rows[0].State)
-	rows, count, revision, err = repo.ListSubmissions(s.ctx, filter)
+	s.EqualValues(1, rows[0].Revision)
+	rows, count, err = repo.ListSubmissions(s.ctx, filter)
 	s.Require().NoError(err)
-	s.EqualValues(4, revision)
 	s.Zero(count)
 	s.Empty(rows)
 }

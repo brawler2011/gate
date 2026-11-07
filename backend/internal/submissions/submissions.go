@@ -104,7 +104,7 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *su
 	var id uuid.UUID
 
 	err = uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
-		if err := tx.LockContest(ctx, creation.ContestId); err != nil {
+		if err := tx.LockSubmissionTuple(ctx, creation.ContestId, creation.UserId, creation.ProblemId); err != nil {
 			return err
 		}
 		if err := requireContest(ctx, tx, creation.ContestId, accessmodel.ActionCreateSubmission); err != nil {
@@ -178,8 +178,8 @@ func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, su
 		if contestID != uuid.Nil && (sub.ContestID == nil || *sub.ContestID != contestID) {
 			return pkg.Wrap(pkg.ErrBadInput, nil, "submission does not belong to specified contest")
 		}
-		if sub.ContestID != nil {
-			if err := tx.LockContest(ctx, *sub.ContestID); err != nil {
+		if sub.ContestID != nil && sub.CreatedBy != nil && sub.ProblemID != nil {
+			if err := tx.LockSubmissionTuple(ctx, *sub.ContestID, *sub.CreatedBy, *sub.ProblemID); err != nil {
 				return err
 			}
 		}
@@ -254,7 +254,7 @@ func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submis
 		return nil, pkg.NoPermission
 	}
 
-	submissions, total, revision, err := uc.submissionsRepo.ListSubmissions(ctx, filter)
+	submissions, total, err := uc.submissionsRepo.ListSubmissions(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +267,7 @@ func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submis
 	}
 
 	return &submissionsmodel.SubmissionsList{
-		Submissions: submissions, TotalCount: total, Revision: revision,
+		Submissions: submissions, TotalCount: total,
 		Pagination: paging.NewPagination(filter.Page, filter.PageSize, total),
 	}, nil
 }
@@ -307,9 +307,6 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter sub
 	var rejudgedIDs []uuid.UUID
 
 	err = uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
-		if err := tx.LockContest(ctx, filter.ContestID); err != nil {
-			return err
-		}
 		if err := requireContest(ctx, tx, filter.ContestID, accessmodel.ActionManageContest); err != nil {
 			return err
 		}

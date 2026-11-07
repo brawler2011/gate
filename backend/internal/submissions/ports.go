@@ -19,5 +19,5 @@ type ProblemsUC interface {
 
 type SubmissionsRepo interface {
 	GetSubmission(ctx context.Context, id uuid.UUID) (submissionsmodel.Submission, error)
-	ListSubmissions(ctx context.Context, filter submissionsmodel.SubmissionsFilter) ([]submissionsmodel.Submission, int32, int64, error)
+	ListSubmissions(ctx context.Context, filter submissionsmodel.SubmissionsFilter) ([]submissionsmodel.Submission, int32, error)
 }

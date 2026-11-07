@@ -63,12 +63,22 @@ func (r *JudgeJobs) Release(ctx context.Context, job judgingmodel.Job) error {
 }
 
 func (r *JudgeJobs) CompleteJob(ctx context.Context, job judgingmodel.Job) (bool, error) {
-	// Use the same contest-first lock order as submit/rejudge and revision writes.
-	_, err := r.queries.LockJudgeContest(ctx, job.SubmissionID)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	identifiers, err := r.queries.GetSubmissionIdentifiers(ctx, job.SubmissionID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
 		return false, HandlePgErr(err)
 	}
-	count, err := r.queries.CompleteJudgeJob(ctx, sqlc.CompleteJudgeJobParams{ID: job.ID, LeaseToken: job.LeaseToken})
+	if identifiers.ContestID != nil && identifiers.OwnerID != nil && identifiers.ProblemID != nil {
+		if err := r.queries.AdvisoryTransactionLock(ctx, submissionTupleKey(*identifiers.ContestID, *identifiers.OwnerID, *identifiers.ProblemID)); err != nil {
+			return false, HandlePgErr(err)
+		}
+	}
+	if _, err := r.queries.LockSubmission(ctx, job.SubmissionID); err != nil {
+		return false, HandlePgErr(err)
+	}
+	count, err := r.queries.CompleteJudgeJob(ctx, sqlc.CompleteJudgeJobParams{ID: job.ID, SubmissionID: job.SubmissionID, Generation: job.Generation, LeaseToken: job.LeaseToken})
 	if err != nil {
 		return false, HandlePgErr(err)
 	}

@@ -16,6 +16,7 @@ const (
 )
 
 type DraftTxStore interface {
+	LockDraftOwner(context.Context, uuid.UUID, uuid.UUID) error
 	ListDrafts(context.Context, contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error)
 	LockContest(context.Context, uuid.UUID) error
 	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error)
@@ -49,7 +50,7 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmode
 	}
 	var id uuid.UUID
 	err := uc.transactions.Within(ctx, func(tx DraftTxStore) error {
-		if err := tx.LockContest(ctx, creation.ContestID); err != nil {
+		if err := tx.LockDraftOwner(ctx, creation.ContestID, creation.UserID); err != nil {
 			return err
 		}
 		allowed, err := tx.HasContestPermission(ctx, creation.ContestID, user.Id, accessmodel.ActionGetContest)
