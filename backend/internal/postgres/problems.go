@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -55,53 +56,20 @@ func (r *ProblemsRepo) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error) {
-	if r.pool != nil {
-		return readSnapshot(ctx, r.pool, func(q *sqlc.Queries) (*problemsmodel.ProblemsList, error) {
-			return (&ProblemsRepo{queries: q}).ListProblems(ctx, filter)
-		})
-	}
-
-	// Calculate offset
-	offset := Offset(filter.Page, filter.PageSize)
-
-	total, err := r.queries.CountAllProblems(ctx, sqlc.CountAllProblemsParams{
-		OrganizationID: filter.OrganizationID,
-		OwnerID:        filter.OwnerID,
-		ViewerID:       filter.ViewerID,
-		Search:         filter.Search,
-		Visibility:     filter.Visibility,
-		IsTemplate:     filter.IsTemplate,
-	})
-	if err != nil {
-		return nil, HandlePgErr(err)
-	}
-
 	descending := true
 	if filter.Descending != nil {
 		descending = *filter.Descending
 	}
-
-	rows, err := r.queries.ListAllProblems(ctx, sqlc.ListAllProblemsParams{
-		OrganizationID: filter.OrganizationID,
-		OwnerID:        filter.OwnerID,
-		ViewerID:       filter.ViewerID,
-		Search:         filter.Search,
-		Visibility:     filter.Visibility,
-		IsTemplate:     filter.IsTemplate,
-		Descending:     descending,
-		PageLimit:      filter.PageSize,
-		PageOffset:     offset,
+	items, total, err := scopeProblems(ctx, r.queries, sqlc.ScopeProblemsParams{
+		ViewerID: filter.ViewerID, Now: accessmodel.ReadTime(ctx), OrganizationID: filter.OrganizationID,
+		OwnerID: filter.OwnerID, Search: filter.Search, Visibility: filter.Visibility,
+		IsTemplate: filter.IsTemplate, Descending: descending, PageSize: filter.PageSize,
+		PageOffset: (int64(filter.Page) - 1) * int64(filter.PageSize),
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, err
 	}
-
-	problems := make([]problemsmodel.Problem, len(rows))
-	for i, row := range rows {
-		problems[i] = mapListAllProblemsRow(row)
-	}
-
-	return &problemsmodel.ProblemsList{Problems: problems, Pagination: paging.NewPagination(filter.Page, filter.PageSize, safeInt32(total))}, nil
+	return &problemsmodel.ProblemsList{Problems: items, Pagination: paging.NewPagination(filter.Page, filter.PageSize, total)}, nil
 }
 
 func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error {
@@ -304,8 +272,7 @@ func mapProblemTeam(pt sqlc.ListProblemTeamsRow) problemsmodel.ProblemTeam {
 
 func (r *ProblemsRepo) ListDashboardProblems(ctx context.Context, userID uuid.UUID, limit int32) ([]problemsmodel.DashboardProblem, error) {
 	rows, err := r.queries.ListDashboardProblems(ctx, sqlc.ListDashboardProblemsParams{
-		OwnerID: &userID,
-		Limit:   limit,
+		ViewerID: readViewerID(ctx), Now: accessmodel.ReadTime(ctx), PageSize: limit,
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)
@@ -317,23 +284,6 @@ func (r *ProblemsRepo) ListDashboardProblems(ctx context.Context, userID uuid.UU
 	}
 
 	return problems, nil
-}
-
-func mapListAllProblemsRow(p sqlc.ListAllProblemsRow) problemsmodel.Problem {
-	return problemsmodel.Problem{
-		ID:                p.ID,
-		OrganizationID:    p.OrganizationID,
-		OrganizationLogin: p.OrgLogin,
-		OwnerID:           p.OwnerID,
-		Visibility:        string(p.Visibility),
-		Title:             p.Title,
-		ShortName:         p.ShortName,
-		TimeLimitMs:       int(p.TimeLimitMs),
-		MemoryLimitMb:     int(p.MemoryLimitMb),
-		IsTemplate:        p.IsTemplate,
-		CreatedAt:         p.CreatedAt,
-		UpdatedAt:         p.UpdatedAt,
-	}
 }
 
 func mapListProblemMembersRow(pm sqlc.ListProblemMembersRow) problemsmodel.ProblemMember {

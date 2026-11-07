@@ -45,7 +45,7 @@ type PermissionsUC interface {
 type TeamsRepo interface {
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*organizationsmodel.Team, error)
 
-	ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter, userID uuid.UUID, canManage bool) ([]organizationsmodel.Team, int32, error)
+	ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter, userID uuid.UUID) ([]organizationsmodel.Team, int32, error)
 
 	// Member management
 	GetTeamMember(ctx context.Context, teamID, userID uuid.UUID) (*organizationsmodel.TeamMember, error)

@@ -172,5 +172,5 @@ func TestContestReadsPreserveValidationOrder(t *testing.T) {
 		require.ErrorIs(t, err, pkg.ErrBadInput)
 	}
 	_, err := NewReader(nil, nil).ListOrganizationContests(context.Background(), "organization", "", -1, 50)
-	require.ErrorIs(t, err, pkg.ErrUnauthenticated)
+	require.ErrorIs(t, err, pkg.ErrBadInput)
 }

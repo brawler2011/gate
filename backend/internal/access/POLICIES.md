@@ -42,9 +42,10 @@ atomically. Account expiry, deactivation and bulk removal must validate their
 resulting owner sets too. Existing owner_id/direct membership inconsistencies and
 legacy contest team owner data need auditing before adopting the new policies.
 
-Per the agreed scope of this PR, these checks are isolated from legacy
-`PermissionsUseCase` and existing endpoints. There is no new SQL, DTO contract,
-revision schema or mutation guard. A pure owner precheck cannot enforce concurrent
+Metadata reads connect these checks through `MetadataPermissions`, using
+pool-backed `PolicyFactsRepo` reads. Other actions still delegate to legacy
+`PermissionsUseCase` pending the lifecycle and command migration. There is no new
+DTO contract, revision schema or mutation guard. A pure owner precheck cannot enforce concurrent
 mutation integrity or immediate revocation. Before connecting write paths, add
 RFC §8 nonlocking facts loading, optimistic revisions/decision guards and the
 serializable owner mutation protocol (with fresh external prechecks after retry).
@@ -53,4 +54,28 @@ Do not call authorization again inside a write transaction.
 The shared RFC matrix rows live in `backend/tests/accessfixtures`; policy tests
 exercise the role columns, public/closed branches and T gates. Separate tests
 cover inheritance, admission, grant transitions, owner sets and transfer planning.
-Future SQL parity tests can reuse the same matrix rows.
+PostgreSQL parity tests in `visibility_integration_test.go` compare the same
+persisted actor/resource facts against pure policies and SQL scopes, with explicit
+expected results for every grant branch.
+
+## Metadata and list reads
+
+`visibility.sql` scopes problems, contests and teams before count and pagination
+in one statement. Team-resource lists add a link filter to those same scopes;
+viewing a closed team does not grant access to its private resources. NULL and
+zero UUID viewers are guests; expired or unknown persisted actors match no rows.
+Use cases reject expired identities with unauthenticated. `WithReadTime` fixes
+one server clock for the request, used by policies and SQL expiry checks.
+
+`total LEFT JOIN page` preserves totals past the last page. A nullable JSON
+resource represents the empty-page sentinel, which the adapter removes before
+mapping results. SQL grants use EXISTS, never per-row Go permission checks.
+Legacy `unlisted` visibility is rejected, matching the typed policy's supported
+public/private values. Unknown roles and participation modes also fail closed.
+
+`PolicyFacts` exposes batch loaders for future capability projections: pass all
+returned page IDs to the appropriate loader, then evaluate the pure policies
+with one `PolicyInput`. Each nonempty batch uses one nonlocking SQL query;
+missing IDs are absent and read errors propagate. Empty batches perform no I/O.
+The metadata adapter uses the same loaders for individual checks. Contest
+conditions and capability DTOs remain the responsibility of later PRs.

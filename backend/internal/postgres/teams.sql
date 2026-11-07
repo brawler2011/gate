@@ -11,25 +11,7 @@ SELECT * FROM teams WHERE id = $1;
 -- name: GetTeamBySlug :one
 SELECT * FROM teams WHERE organization_id = $1 AND slug = $2;
 
--- name: ListTeams :many
-SELECT t.* FROM teams t
-WHERE (sqlc.narg('organization_id')::uuid IS NULL OR t.organization_id = sqlc.narg('organization_id'))
-  AND (sqlc.arg('search')::text = '' OR t.name ILIKE '%' || sqlc.arg('search') || '%')
-  AND (
-    (sqlc.narg('organization_id')::uuid IS NOT NULL AND (t.privacy <> 'secret' OR sqlc.arg('can_manage')::boolean))
-    OR EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = t.id AND tm.user_id = sqlc.arg('user_id'))
-  )
-ORDER BY t.created_at DESC, t.id DESC
-LIMIT sqlc.arg('page_size')::int OFFSET sqlc.arg('page_offset')::bigint;
 
--- name: CountTeams :one
-SELECT COUNT(*) FROM teams t
-WHERE (sqlc.narg('organization_id')::uuid IS NULL OR t.organization_id = sqlc.narg('organization_id'))
-  AND (sqlc.arg('search')::text = '' OR t.name ILIKE '%' || sqlc.arg('search') || '%')
-  AND (
-    (sqlc.narg('organization_id')::uuid IS NOT NULL AND (t.privacy <> 'secret' OR sqlc.arg('can_manage')::boolean))
-    OR EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = t.id AND tm.user_id = sqlc.arg('user_id'))
-  );
 
 -- name: UpdateTeam :exec
 UPDATE teams

@@ -68,7 +68,7 @@ type TeamsRepo interface {
 	CreateTeam(ctx context.Context, input *organizationsmodel.CreateTeamInput) (*organizationsmodel.Team, error)
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*organizationsmodel.Team, error)
 	GetTeamBySlug(ctx context.Context, orgID uuid.UUID, slug string) (*organizationsmodel.Team, error)
-	ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter, userID uuid.UUID, canManage bool) ([]organizationsmodel.Team, int32, error)
+	ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter, userID uuid.UUID) ([]organizationsmodel.Team, int32, error)
 	UpdateTeam(ctx context.Context, id uuid.UUID, input *organizationsmodel.UpdateTeamInput) error
 	DeleteTeam(ctx context.Context, id uuid.UUID) error
 

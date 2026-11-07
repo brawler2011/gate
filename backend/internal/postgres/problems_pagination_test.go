@@ -62,12 +62,10 @@ func TestProblemsRepo_ListProblemsDescendingParameter(t *testing.T) {
 				Descending:     tc.descending,
 			})
 			require.ErrorIs(t, err, context.Canceled)
-			// Arguments to ListAllProblems:
-			// $1: organization_id, $2: owner_id, $3: search, $4: visibility, $5: is_template, $6: viewer_id, $7: descending, $8: offset, $9: limit
-			require.Len(t, db.args, 9)
-			require.Equal(t, tc.wantDescending, db.args[6])
-			require.Equal(t, int32(0), db.args[7])  // offset
-			require.Equal(t, int32(10), db.args[8]) // limit
+			require.Len(t, db.args, 11)
+			require.Equal(t, tc.wantDescending, db.args[0])
+			require.Equal(t, int64(0), db.args[9])
+			require.Equal(t, int32(10), db.args[10])
 		})
 	}
 }

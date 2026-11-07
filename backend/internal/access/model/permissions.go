@@ -88,3 +88,6 @@ type ContestPermissions struct {
 	GetSubmissionDetails   bool
 	CreateSubmission       bool
 }
+
+// ActionViewContest names the metadata read gate; retained API action is an alias.
+const ActionViewContest ContestAction = ActionGetContest

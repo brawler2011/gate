@@ -47,7 +47,11 @@ func (s *IntegrationTestSuite) TestOrganizationContestReadVisibilityAndPaginatio
 	for _, actor := range []accessmodel.User{owner, member, admin} {
 		response, err := s.client.ListOrganizationContests(withTestUser(s.ctx, actor.Id), params)
 		s.Require().NoError(err)
-		s.EqualValues(3, response.Pagination.TotalPages)
+		expected := 3
+		if actor.Id == member.Id {
+			expected = 2
+		}
+		s.EqualValues(expected, response.Pagination.TotalPages)
 	}
 	params.Page = corev1.NewOptInt32(3)
 	empty, err := s.client.ListOrganizationContests(withTestUser(s.ctx, outsider.Id), params)

@@ -3,6 +3,9 @@ package postgres
 import (
 	"context"
 	"testing"
+	"time"
+
+	"github.com/google/uuid"
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/internal/postgres/sqlc"
@@ -49,7 +52,12 @@ func TestPublicContestsPagination(t *testing.T) {
 			}
 			// Stop at the database boundary after capturing the normalized query parameters.
 			require.ErrorIs(t, err, context.Canceled)
-			require.Equal(t, []any{"search", string(contestsmodel.ContestVisibilityPublic), "title", "asc", tc.wantOffset, tc.wantSize}, db.args)
+			require.Len(t, db.args, 10)
+			require.Equal(t, "title", db.args[0])
+			require.Equal(t, "asc", db.args[1])
+			require.Equal(t, &uuid.Nil, db.args[2])
+			require.IsType(t, time.Time{}, db.args[3])
+			require.Equal(t, []any{(*uuid.UUID)(nil), "search", string(contestsmodel.ContestVisibilityPublic), (*uuid.UUID)(nil), int64(tc.wantOffset), tc.wantSize}, db.args[4:])
 		})
 	}
 }

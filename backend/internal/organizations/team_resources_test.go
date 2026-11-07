@@ -67,7 +67,7 @@ func TestTeamResourcesAuthorization(t *testing.T) {
 				if tc.permissionErr != nil {
 					permissions.errAction = accessmodel.ActionViewOrganization
 				}
-				uc := NewTeamsUseCase(repo, permissions, nil)
+				uc := NewTeamsUseCase(repo, permissions, nil, permissions)
 				ctx := accessmodel.WithUser(context.Background(), tc.user)
 				var err error
 				if resource == "contests" {

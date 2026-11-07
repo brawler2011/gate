@@ -189,7 +189,7 @@ func (s *IntegrationTestSuite) initApp() {
 	usersUC := identity.NewUsersUseCase(s.usersRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService)
 	authUC := identity.NewAuthUseCase(s.usersRepo, authRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService)
 	packagesRepo := pgstore.NewPackagesRepo(s.dbPool)
-	permissionsUC := access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
+	permissionsUC := access.NewMetadataPermissions(access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo), pgstore.NewPolicyFactsRepo(s.dbPool))
 	publishUC := problems.NewProblemPublishUseCase(s.problemsRepo, packagesRepo, workspaceStorage, testStorage, "packages", pgstore.NewProblemTransactions(s.dbPool), permissionsUC)
 	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(s.dbPool), publishUC, s.organizationsRepo, permissionsUC)
 	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissionsUC)
@@ -199,7 +199,7 @@ func (s *IntegrationTestSuite) initApp() {
 	contestsUC.SetNotificationsUC(notificationsUC)
 
 	organizationsUC := organizations.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(s.dbPool), notificationsUC)
-	teamsUC := organizations.NewTeamsUseCase(s.teamsRepo, permissionsUC, pgstore.NewTeamTransactions(s.dbPool))
+	teamsUC := organizations.NewTeamsUseCase(s.teamsRepo, permissionsUC, pgstore.NewTeamTransactions(s.dbPool), permissionsUC)
 	blogsUC := blogs.NewBlogsUseCase(pgstore.NewBlogTransactions(s.dbPool), nil, "")
 	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, nil, permissionsUC)
 

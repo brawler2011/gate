@@ -65,56 +65,6 @@ func (q *Queries) CommitWorkspace(ctx context.Context, arg CommitWorkspaceParams
 	return result.RowsAffected(), nil
 }
 
-const countAllProblems = `-- name: CountAllProblems :one
-SELECT COUNT(*) FROM problems p
-WHERE ($1::uuid IS NULL OR p.organization_id = $1::uuid)
-  AND ($2::uuid IS NULL OR p.owner_id = $2::uuid)
-  AND ($3::text = '' OR p.title ILIKE '%' || $3::text || '%')
-  AND ($4::text = '' OR p.visibility = $4::problem_visibility)
-  AND ($5::boolean IS NULL OR p.is_template = $5::boolean)
-  AND (
-    $6::uuid IS NULL
-    OR p.visibility = 'public'
-    OR ($6::uuid <> '00000000-0000-0000-0000-000000000000'::uuid AND (
-      p.owner_id = $6::uuid
-      OR EXISTS (SELECT 1 FROM users u WHERE u.id = $6::uuid AND u.role = 'admin')
-      OR EXISTS (SELECT 1 FROM organization_members om
-                 WHERE om.organization_id = p.organization_id AND om.user_id = $6::uuid
-                   AND om.role IN ('owner', 'admin'))
-      OR EXISTS (SELECT 1 FROM problem_members pm
-                 WHERE pm.problem_id = p.id AND pm.user_id = $6::uuid)
-      OR EXISTS (SELECT 1 FROM problem_teams pt
-                 JOIN team_members tm ON tm.team_id = pt.team_id
-                 JOIN teams t ON t.id = pt.team_id
-                 WHERE pt.problem_id = p.id AND tm.user_id = $6::uuid
-                   AND t.organization_id = p.organization_id)
-    ))
-  )
-`
-
-type CountAllProblemsParams struct {
-	OrganizationID *uuid.UUID `json:"organization_id"`
-	OwnerID        *uuid.UUID `json:"owner_id"`
-	Search         string     `json:"search"`
-	Visibility     string     `json:"visibility"`
-	IsTemplate     *bool      `json:"is_template"`
-	ViewerID       *uuid.UUID `json:"viewer_id"`
-}
-
-func (q *Queries) CountAllProblems(ctx context.Context, arg CountAllProblemsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countAllProblems,
-		arg.OrganizationID,
-		arg.OwnerID,
-		arg.Search,
-		arg.Visibility,
-		arg.IsTemplate,
-		arg.ViewerID,
-	)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const countProblemMembers = `-- name: CountProblemMembers :one
 SELECT COUNT(*)
 FROM problem_members pm
@@ -284,114 +234,13 @@ func (q *Queries) GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, e
 	return workspace_hash, err
 }
 
-const listAllProblems = `-- name: ListAllProblems :many
-SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
-FROM problems p
-JOIN organizations o ON p.organization_id = o.id
-WHERE ($1::uuid IS NULL OR p.organization_id = $1::uuid)
-  AND ($2::uuid IS NULL OR p.owner_id = $2::uuid)
-  AND ($3::text = '' OR p.title ILIKE '%' || $3::text || '%')
-  AND ($4::text = '' OR p.visibility = $4::problem_visibility)
-  AND ($5::boolean IS NULL OR p.is_template = $5::boolean)
-  AND (
-    $6::uuid IS NULL
-    OR p.visibility = 'public'
-    OR ($6::uuid <> '00000000-0000-0000-0000-000000000000'::uuid AND (
-      p.owner_id = $6::uuid
-      OR EXISTS (SELECT 1 FROM users u WHERE u.id = $6::uuid AND u.role = 'admin')
-      OR EXISTS (SELECT 1 FROM organization_members om
-                 WHERE om.organization_id = p.organization_id AND om.user_id = $6::uuid
-                   AND om.role IN ('owner', 'admin'))
-      OR EXISTS (SELECT 1 FROM problem_members pm
-                 WHERE pm.problem_id = p.id AND pm.user_id = $6::uuid)
-      OR EXISTS (SELECT 1 FROM problem_teams pt
-                 JOIN team_members tm ON tm.team_id = pt.team_id
-                 JOIN teams t ON t.id = pt.team_id
-                 WHERE pt.problem_id = p.id AND tm.user_id = $6::uuid
-                   AND t.organization_id = p.organization_id)
-    ))
-  )
-ORDER BY
-  CASE WHEN $7::boolean THEN p.created_at END DESC,
-  CASE WHEN NOT $7::boolean THEN p.created_at END ASC,
-  CASE WHEN $7::boolean THEN p.id END DESC,
-  CASE WHEN NOT $7::boolean THEN p.id END ASC
-LIMIT $9 OFFSET $8
-`
-
-type ListAllProblemsParams struct {
-	OrganizationID *uuid.UUID `json:"organization_id"`
-	OwnerID        *uuid.UUID `json:"owner_id"`
-	Search         string     `json:"search"`
-	Visibility     string     `json:"visibility"`
-	IsTemplate     *bool      `json:"is_template"`
-	ViewerID       *uuid.UUID `json:"viewer_id"`
-	Descending     bool       `json:"descending"`
-	PageOffset     int32      `json:"page_offset"`
-	PageLimit      int32      `json:"page_limit"`
-}
-
-type ListAllProblemsRow struct {
-	ID             uuid.UUID  `json:"id"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	OrgLogin       string     `json:"org_login"`
-	OrgName        string     `json:"org_name"`
-	OwnerID        *uuid.UUID `json:"owner_id"`
-	Visibility     string     `json:"visibility"`
-	Title          string     `json:"title"`
-	ShortName      string     `json:"short_name"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-	TimeLimitMs    int32      `json:"time_limit_ms"`
-	MemoryLimitMb  int32      `json:"memory_limit_mb"`
-	IsTemplate     bool       `json:"is_template"`
-}
-
-func (q *Queries) ListAllProblems(ctx context.Context, arg ListAllProblemsParams) ([]ListAllProblemsRow, error) {
-	rows, err := q.db.Query(ctx, listAllProblems,
-		arg.OrganizationID,
-		arg.OwnerID,
-		arg.Search,
-		arg.Visibility,
-		arg.IsTemplate,
-		arg.ViewerID,
-		arg.Descending,
-		arg.PageOffset,
-		arg.PageLimit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListAllProblemsRow{}
-	for rows.Next() {
-		var i ListAllProblemsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.OrganizationID,
-			&i.OrgLogin,
-			&i.OrgName,
-			&i.OwnerID,
-			&i.Visibility,
-			&i.Title,
-			&i.ShortName,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.TimeLimitMs,
-			&i.MemoryLimitMb,
-			&i.IsTemplate,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listDashboardProblems = `-- name: ListDashboardProblems :many
+WITH actor AS (
+  SELECT u.id, u.role FROM users u
+  WHERE u.id = $1::uuid
+    AND u.role IN ('user', 'admin')
+    AND (u.expires_at IS NULL OR u.expires_at > $3::timestamptz)
+)
 SELECT 
     p.id as problem_id,
     p.title as problem_title,
@@ -403,16 +252,27 @@ SELECT
     o.login as org_login
 FROM problems p
 JOIN organizations o ON p.organization_id = o.id
-LEFT JOIN problem_members pm ON p.id = pm.problem_id
-WHERE p.owner_id = $1 OR pm.user_id = $1
-GROUP BY p.id, o.id
-ORDER BY p.updated_at DESC
-LIMIT $2
+WHERE ($1::uuid IS NULL OR $1::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR EXISTS (SELECT 1 FROM actor))
+AND NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = p.organization_id AND invalid.user_id = $1::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
+    AND NOT EXISTS (SELECT 1 FROM problem_members invalid WHERE invalid.problem_id = p.id AND invalid.user_id = $1::uuid AND invalid.role::text NOT IN ('viewer', 'moderator', 'owner'))
+    AND NOT EXISTS (SELECT 1 FROM problem_teams link JOIN team_members tm ON tm.team_id = link.team_id WHERE link.problem_id = p.id AND tm.user_id = $1::uuid AND (tm.role::text NOT IN ('member', 'maintainer') OR link.permission::text NOT IN ('read', 'write', 'admin')))
+AND p.visibility IN ('public', 'private') AND (p.visibility = 'public' OR EXISTS (
+    SELECT 1 FROM actor a WHERE a.role = 'admin' OR p.owner_id = a.id
+    OR EXISTS (SELECT 1 FROM organization_members om WHERE om.organization_id = p.organization_id AND om.user_id = a.id AND om.role IN ('owner', 'admin'))
+    OR EXISTS (SELECT 1 FROM problem_members m WHERE m.problem_id = p.id AND m.user_id = a.id AND m.role IN ('viewer', 'moderator', 'owner'))
+    OR EXISTS (SELECT 1 FROM problem_teams pt
+      JOIN teams t ON t.id = pt.team_id JOIN team_members tm ON tm.team_id = t.id
+      WHERE pt.problem_id = p.id AND tm.user_id = a.id
+        AND t.organization_id = p.organization_id AND tm.role IN ('member', 'maintainer')
+        AND pt.permission IN ('read', 'write', 'admin'))))
+ORDER BY p.updated_at DESC, p.id DESC
+LIMIT $2::int
 `
 
 type ListDashboardProblemsParams struct {
-	OwnerID *uuid.UUID `json:"owner_id"`
-	Limit   int32      `json:"limit"`
+	ViewerID *uuid.UUID `json:"viewer_id"`
+	PageSize int32      `json:"page_size"`
+	Now      time.Time  `json:"now"`
 }
 
 type ListDashboardProblemsRow struct {
@@ -427,7 +287,7 @@ type ListDashboardProblemsRow struct {
 }
 
 func (q *Queries) ListDashboardProblems(ctx context.Context, arg ListDashboardProblemsParams) ([]ListDashboardProblemsRow, error) {
-	rows, err := q.db.Query(ctx, listDashboardProblems, arg.OwnerID, arg.Limit)
+	rows, err := q.db.Query(ctx, listDashboardProblems, arg.ViewerID, arg.PageSize, arg.Now)
 	if err != nil {
 		return nil, err
 	}

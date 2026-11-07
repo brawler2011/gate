@@ -41,7 +41,14 @@ func TestProblemReadsAndPreflightsAuthorizeWithoutTransactions(t *testing.T) {
 		}
 		for name, call := range calls {
 			t.Run(name, func(t *testing.T) {
-				require.ErrorIs(t, call(context.Background()), pkg.ErrUnauthenticated)
+				guestError := pkg.ErrUnauthenticated
+				if name == "details" || name == "packages" || name == "download" || name == "template" {
+					guestError = failure
+					if guestError == nil {
+						guestError = pkg.NoPermission
+					}
+				}
+				require.ErrorIs(t, call(context.Background()), guestError)
 				expected := failure
 				if expected == nil {
 					expected = pkg.NoPermission
