@@ -2,7 +2,28 @@ package page
 
 import (
 	"errors"
+
+	"github.com/brawler2011/gate/backend/pkg"
 )
+
+// Validate checks pagination bounds without applying defaults.
+func Validate(page, size int32) error {
+	if page < 1 || size < 1 || size > 100 {
+		return pkg.ErrBadInput
+	}
+	return nil
+}
+
+// Normalize applies defaults to zero values and validates the resulting pagination.
+func Normalize(page, size, defaultSize int32) (int32, int32, error) {
+	if page == 0 {
+		page = 1
+	}
+	if size == 0 {
+		size = defaultSize
+	}
+	return page, size, Validate(page, size)
+}
 
 type Pagination struct {
 	Page  int32 `json:"page"`

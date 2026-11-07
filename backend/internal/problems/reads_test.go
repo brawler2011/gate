@@ -53,16 +53,29 @@ func TestProblemReadsBindViewerAndPagination(t *testing.T) {
 	reader := NewReader(reads, nil, nil, nil)
 	other := uuid.New()
 	filter := &problemsmodel.ProblemsFilter{ViewerID: &other}
+	original := *filter
 	_, err := reader.ListProblems(ctx, filter)
 	require.NoError(t, err)
 	require.Equal(t, actor.Id, *reads.filter.ViewerID)
 	require.EqualValues(t, 1, reads.filter.Page)
 	require.EqualValues(t, 50, reads.filter.PageSize)
 	require.Equal(t, other, *filter.ViewerID)
-	require.Zero(t, filter.Page)
+	require.Equal(t, original, *filter)
 	for _, filter := range []*problemsmodel.ProblemsFilter{nil, {Page: -1}, {PageSize: -1}, {PageSize: 101}} {
+		reads.filter = nil
 		_, err := reader.ListProblems(ctx, filter)
 		require.ErrorIs(t, err, pkg.ErrBadInput)
+		require.Nil(t, reads.filter)
+	}
+	for _, size := range []int32{1, 100} {
+		filter := &problemsmodel.ProblemsFilter{Page: 2, PageSize: size, ViewerID: &other}
+		original := *filter
+		_, err := reader.ListProblems(ctx, filter)
+		require.NoError(t, err)
+		require.EqualValues(t, 2, reads.filter.Page)
+		require.Equal(t, size, reads.filter.PageSize)
+		require.Equal(t, actor.Id, *reads.filter.ViewerID)
+		require.Equal(t, original, *filter)
 	}
 	_, err = reader.ListProblems(context.Background(), &problemsmodel.ProblemsFilter{})
 	require.NoError(t, err)

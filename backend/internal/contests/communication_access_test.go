@@ -21,23 +21,27 @@ func (p communicationPermissions) HasContestPermission(_ context.Context, _, _ u
 }
 
 type communicationReads struct {
-	user      uuid.UUID
-	moderator bool
-	called    bool
+	user       uuid.UUID
+	moderator  bool
+	called     bool
+	page, size int32
 }
 
-func (r *communicationReads) ListAnnouncements(context.Context, uuid.UUID, int32, int32) (*contestsmodel.ContestAnnouncementsList, error) {
+func (r *communicationReads) ListAnnouncements(_ context.Context, _ uuid.UUID, page, size int32) (*contestsmodel.ContestAnnouncementsList, error) {
 	r.called = true
+	r.page, r.size = page, size
 	return &contestsmodel.ContestAnnouncementsList{}, nil
 }
-func (r *communicationReads) ListClarificationsForUser(_ context.Context, _ uuid.UUID, user uuid.UUID, _, _ int32) (*contestsmodel.ContestClarificationsList, error) {
+func (r *communicationReads) ListClarificationsForUser(_ context.Context, _ uuid.UUID, user uuid.UUID, page, size int32) (*contestsmodel.ContestClarificationsList, error) {
 	r.called = true
 	r.user = user
+	r.page, r.size = page, size
 	return &contestsmodel.ContestClarificationsList{}, nil
 }
-func (r *communicationReads) ListClarificationsForModerator(context.Context, uuid.UUID, *contestsmodel.ContestClarificationsFilter) (*contestsmodel.ContestClarificationsList, error) {
+func (r *communicationReads) ListClarificationsForModerator(_ context.Context, _ uuid.UUID, filter *contestsmodel.ContestClarificationsFilter) (*contestsmodel.ContestClarificationsList, error) {
 	r.called = true
 	r.moderator = true
+	r.page, r.size = filter.Page, filter.PageSize
 	return &contestsmodel.ContestClarificationsList{}, nil
 }
 
@@ -120,4 +124,50 @@ func TestClarificationsSettingCheckedInsideTransaction(t *testing.T) {
 	uc := NewClarificationsUseCase(testTransactions[ContestEventsTxStore]{store})
 	_, err := uc.CreateClarification(accessmodel.WithUser(context.Background(), user), &contestsmodel.CreateContestClarificationInput{ContestID: uuid.New(), UserID: user.Id, Question: "Question"})
 	require.ErrorIs(t, err, pkg.NoPermission)
+}
+
+func TestCommunicationPagination(t *testing.T) {
+	user := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
+	ctx := accessmodel.WithUser(context.Background(), user)
+	for _, method := range []string{"announcements", "user clarifications", "moderator clarifications"} {
+		t.Run(method, func(t *testing.T) {
+			for _, tc := range []struct {
+				name       string
+				page, size int32
+				err        error
+			}{
+				{name: "minimum", page: 1, size: 1},
+				{name: "maximum size", page: 2, size: 100},
+				{name: "zeros", err: pkg.ErrBadInput},
+				{name: "zero page", size: 50, err: pkg.ErrBadInput},
+				{name: "zero size", page: 1, err: pkg.ErrBadInput},
+				{name: "negative page", page: -1, size: 50, err: pkg.ErrBadInput},
+				{name: "negative size", page: 1, size: -1, err: pkg.ErrBadInput},
+				{name: "oversized", page: 1, size: 101, err: pkg.ErrBadInput},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					reads := &communicationReads{}
+					reader := NewCommunicationReader(reads, reads, communicationPermissions{view: true, manage: method == "moderator clarifications"})
+					if tc.err != nil {
+						// Invalid pagination must fail before permission or storage access.
+						reader = NewCommunicationReader(nil, nil, nil)
+					}
+					var err error
+					if method == "announcements" {
+						_, err = reader.ListAnnouncements(ctx, uuid.New(), tc.page, tc.size)
+					} else {
+						_, err = reader.ListClarifications(ctx, uuid.New(), &contestsmodel.ContestClarificationsFilter{Page: tc.page, PageSize: tc.size})
+					}
+					require.ErrorIs(t, err, tc.err)
+					require.Equal(t, tc.err == nil, reads.called)
+					if tc.err == nil {
+						require.Equal(t, tc.page, reads.page)
+						require.Equal(t, tc.size, reads.size)
+					}
+				})
+			}
+		})
+	}
+	_, err := NewCommunicationReader(nil, nil, nil).ListClarifications(context.Background(), uuid.New(), &contestsmodel.ContestClarificationsFilter{})
+	require.ErrorIs(t, err, pkg.ErrUnauthenticated)
 }

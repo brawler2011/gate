@@ -5,6 +5,7 @@ import (
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	paging "github.com/brawler2011/gate/backend/internal/page"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
@@ -21,6 +22,7 @@ type Reads interface {
 	ListDashboardContests(context.Context, uuid.UUID, int32) ([]contestsmodel.DashboardContest, error)
 }
 
+// Reader applies access checks and pagination before delegating contest reads.
 type Reader struct {
 	Reads
 	permissions Permissions
@@ -30,24 +32,13 @@ func NewReader(reads Reads, permissions Permissions) *Reader {
 	return &Reader{Reads: reads, permissions: permissions}
 }
 
-func normalizeReadPage(page, size *int32) error {
-	if *page == 0 {
-		*page = 1
-	}
-	if *size == 0 {
-		*size = 50
-	}
-	if *page < 1 || *size < 1 || *size > 100 {
-		return pkg.ErrBadInput
-	}
-	return nil
-}
-
 func (r *Reader) ListWorkshopContests(ctx context.Context, filter contestsmodel.WorkshopContestsFilter) (*contestsmodel.ContestsList, error) {
 	if err := accessmodel.RequireSelfOrAdmin(ctx, filter.UserId); err != nil {
 		return nil, err
 	}
-	if err := normalizeReadPage(&filter.Page, &filter.PageSize); err != nil {
+	var err error
+	filter.Page, filter.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 50)
+	if err != nil {
 		return nil, err
 	}
 	return r.Reads.ListWorkshopContests(ctx, filter)
@@ -57,7 +48,9 @@ func (r *Reader) ListUserContests(ctx context.Context, filter contestsmodel.User
 	if err := accessmodel.RequireSelfOrAdmin(ctx, filter.UserId); err != nil {
 		return nil, err
 	}
-	if err := normalizeReadPage(&filter.Page, &filter.PageSize); err != nil {
+	var err error
+	filter.Page, filter.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 50)
+	if err != nil {
 		return nil, err
 	}
 	return r.Reads.ListUserContests(ctx, filter)
@@ -67,7 +60,9 @@ func (r *Reader) ListAdminContests(ctx context.Context, filter contestsmodel.Adm
 	if err := accessmodel.RequireAdmin(ctx); err != nil {
 		return nil, err
 	}
-	if err := normalizeReadPage(&filter.Page, &filter.PageSize); err != nil {
+	var err error
+	filter.Page, filter.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 50)
+	if err != nil {
 		return nil, err
 	}
 	return r.Reads.ListAdminContests(ctx, filter)
@@ -77,7 +72,9 @@ func (r *Reader) ListOrganizationContests(ctx context.Context, login, search str
 	if accessmodel.UserFromContext(ctx).IsGuest() {
 		return nil, pkg.ErrUnauthenticated
 	}
-	if err := normalizeReadPage(&page, &size); err != nil {
+	var err error
+	page, size, err = paging.Normalize(page, size, 50)
+	if err != nil {
 		return nil, err
 	}
 	return r.Reads.ListOrganizationContests(ctx, login, search, page, size)
@@ -108,7 +105,9 @@ func (r *Reader) GetContestTeams(ctx context.Context, contest uuid.UUID) ([]cont
 }
 
 func (r *Reader) ListContestMembers(ctx context.Context, filter contestsmodel.ParticipantsFilter) (*contestsmodel.ContestMembersList, error) {
-	if err := normalizeReadPage(&filter.Page, &filter.PageSize); err != nil {
+	var err error
+	filter.Page, filter.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 50)
+	if err != nil {
 		return nil, err
 	}
 	if err := r.authorizeRoster(ctx, filter.ContestId); err != nil {

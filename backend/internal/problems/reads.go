@@ -5,6 +5,7 @@ import (
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
+	paging "github.com/brawler2011/gate/backend/internal/page"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -47,14 +48,10 @@ func (r *Reader) ListProblems(ctx context.Context, filter *problemsmodel.Problem
 		return nil, pkg.ErrBadInput
 	}
 	copy := *filter
-	if copy.Page == 0 {
-		copy.Page = 1
-	}
-	if copy.PageSize == 0 {
-		copy.PageSize = 50
-	}
-	if copy.Page < 1 || copy.PageSize < 1 || copy.PageSize > 100 {
-		return nil, pkg.ErrBadInput
+	var err error
+	copy.Page, copy.PageSize, err = paging.Normalize(copy.Page, copy.PageSize, 50)
+	if err != nil {
+		return nil, err
 	}
 	user := accessmodel.UserFromContext(ctx)
 	copy.ViewerID = &user.Id

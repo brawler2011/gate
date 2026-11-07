@@ -12,10 +12,12 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 )
 
 type mockDraftsRepo struct {
-	drafts map[uuid.UUID]contestsmodel.ContestDraft
+	drafts     map[uuid.UUID]contestsmodel.ContestDraft
+	listFilter *contestsmodel.ContestDraftsFilter
 }
 
 func newMockDraftsRepo() *mockDraftsRepo {
@@ -178,6 +180,7 @@ func (draftTestStore) HasContestPermission(ctx context.Context, _, _ uuid.UUID, 
 }
 
 func (m *mockDraftsRepo) ListDrafts(_ context.Context, filter contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error) {
+	m.listFilter = &filter
 	result := &contestsmodel.ContestDraftsList{}
 	for _, draft := range m.drafts {
 		if draft.ContestID == filter.ContestID && draft.UserID == filter.UserID {
@@ -214,3 +217,51 @@ func TestDraftListRejectsCallerSpoofingOutsideHTTP(t *testing.T) {
 }
 
 func (draftTestStore) LockDraftOwner(context.Context, uuid.UUID, uuid.UUID) error { return nil }
+
+func TestDraftListPagination(t *testing.T) {
+	user := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
+	ctx := accessmodel.WithUser(context.Background(), user)
+	for _, tc := range []struct {
+		name                           string
+		page, size, wantPage, wantSize int32
+		err                            error
+	}{
+		{name: "defaults", wantPage: 1, wantSize: 20},
+		{name: "default page", size: 1, wantPage: 1, wantSize: 1},
+		{name: "default size", page: 2, wantPage: 2, wantSize: 20},
+		{name: "minimum", page: 1, size: 1, wantPage: 1, wantSize: 1},
+		{name: "maximum size", page: 2, size: 100, wantPage: 2, wantSize: 100},
+		{name: "negative page", page: -1, size: 20, err: pkg.ErrBadInput},
+		{name: "negative size", page: 1, size: -1, err: pkg.ErrBadInput},
+		{name: "oversized", page: 1, size: 101, err: pkg.ErrBadInput},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := newMockDraftsRepo()
+			uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}})
+			if tc.err != nil {
+				// Any transaction access would panic for invalid pagination.
+				uc = NewDraftsUseCase(nil)
+			}
+			filter := contestsmodel.ContestDraftsFilter{ContestID: uuid.New(), UserID: user.Id, Page: tc.page, PageSize: tc.size}
+			_, err := uc.ListDrafts(ctx, filter)
+			require.ErrorIs(t, err, tc.err)
+			if tc.err != nil {
+				require.Nil(t, repo.listFilter)
+				return
+			}
+			want := filter
+			want.Page, want.PageSize = tc.wantPage, tc.wantSize
+			require.Equal(t, &want, repo.listFilter)
+		})
+	}
+}
+
+func TestDraftListAuthorizesBeforePagination(t *testing.T) {
+	uc := NewDraftsUseCase(nil)
+	filter := contestsmodel.ContestDraftsFilter{UserID: uuid.New(), Page: -1}
+	_, err := uc.ListDrafts(context.Background(), filter)
+	require.ErrorIs(t, err, pkg.ErrUnauthenticated)
+	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
+	_, err = uc.ListDrafts(ctx, filter)
+	require.ErrorIs(t, err, pkg.NoPermission)
+}
