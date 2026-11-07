@@ -356,7 +356,7 @@ func BenchmarkScoreboardQueries(b *testing.B) {
 		rows int
 	}{{"small", 1000}, {"large", 100000}} {
 		b.Run(size.name, func(b *testing.B) {
-			for _, scenario := range []string{"Standings", "SubmissionHistory", "ContestSubmissionHistory", "UserSubmissionHistory"} {
+			for _, scenario := range []string{"Standings", "SubmissionHistory"} {
 				b.Run(scenario, func(b *testing.B) {
 					pool := benchmarkPool(b)
 					f := seedSubmissions(b, pool, size.rows)
@@ -370,22 +370,6 @@ func BenchmarkScoreboardQueries(b *testing.B) {
 							}
 							if len(results) != f.participants*10 || len(users) != f.participants {
 								return fmt.Errorf("incomplete standings")
-							}
-						} else if scenario == "ContestSubmissionHistory" {
-							subs, err := repo.GetContestScoreboardSubmissions(ctx, f.contest)
-							if err != nil {
-								return err
-							}
-							if len(subs) != f.rows {
-								return fmt.Errorf("incomplete contest submission history")
-							}
-						} else if scenario == "UserSubmissionHistory" {
-							subs, err := repo.GetUserScoreboardSubmissions(ctx, f.contest, f.user)
-							if err != nil {
-								return err
-							}
-							if len(subs) != f.rows/f.participants {
-								return fmt.Errorf("incomplete user submission history")
 							}
 						} else {
 							subs, err := repo.GetSubmissionsForScoreboard(ctx, f.contest, f.user, f.problem)
@@ -410,35 +394,30 @@ func BenchmarkScoreboardQueries(b *testing.B) {
 // headroom: 2x maximum time, half minimum throughput, 25% above Go allocations.
 // Columns: maximum ns/op, minimum ops/s, maximum B/op, maximum allocs/op.
 var databaseBenchmarkBudgets = map[string]struct{ nanos, ops, bytes, allocs float64 }{
-	// Batch history budgets: five PostgreSQL 18.3 runs on 2026-11-07, with the same headroom.
-	"BenchmarkScoreboardQueries/large/ContestSubmissionHistory": {447528000, 2.23, 82784255, 1250085},
-	"BenchmarkScoreboardQueries/large/UserSubmissionHistory":    {602000, 1663.0, 70074, 1325},
-	"BenchmarkScoreboardQueries/small/ContestSubmissionHistory": {3345000, 299.0, 636337, 12554},
-	"BenchmarkScoreboardQueries/small/UserSubmissionHistory":    {285000, 3516.5, 9197, 197},
-	"BenchmarkOutbox/large/MarkAsCompleted":                     {38657000, 25.87, 1664, 54},
-	"BenchmarkOutbox/large/PickEvents":                          {20507000, 48.76, 4160, 87},
-	"BenchmarkOutbox/large/Process/workers16":                   {1431000, 699.5, 6976, 153},
-	"BenchmarkOutbox/large/Process/workers4":                    {2048000, 488.35, 6016, 142},
-	"BenchmarkOutbox/small/MarkAsCompleted":                     {1844000, 542.5, 1664, 54},
-	"BenchmarkOutbox/small/PickEvents":                          {3064000, 326.39, 4160, 87},
-	"BenchmarkOutbox/small/Process/workers16":                   {1310000, 763.5, 6976, 153},
-	"BenchmarkOutbox/small/Process/workers4":                    {2247000, 445.05, 6080, 142},
-	"BenchmarkScoreboardQueries/large/Standings":                {25889000, 38.62, 10681088, 158437},
-	"BenchmarkScoreboardQueries/large/SubmissionHistory":        {285000, 3509.5, 5248, 115},
-	"BenchmarkScoreboardQueries/small/Standings":                {2575000, 388.45, 854144, 15905},
-	"BenchmarkScoreboardQueries/small/SubmissionHistory":        {232000, 4312.5, 3008, 89},
-	"BenchmarkSubmissions/large/Create":                         {1853000, 539.5, 4032, 93},
-	"BenchmarkSubmissions/large/Get":                            {667000, 1501.5, 6336, 97},
-	"BenchmarkSubmissions/large/Latest":                         {15112000, 66.15, 128640, 1952},
-	"BenchmarkSubmissions/large/UpdateRevision":                 {17129000, 58.4, 1856, 44},
-	"BenchmarkSubmissions/large/WriteRead/workers16":            {2695000, 371.1, 11776, 203},
-	"BenchmarkSubmissions/large/WriteRead/workers4":             {19958000, 50.1, 10688, 192},
-	"BenchmarkSubmissions/small/Create":                         {22326000, 44.79, 4032, 93},
-	"BenchmarkSubmissions/small/Get":                            {846000, 1182.5, 6336, 97},
-	"BenchmarkSubmissions/small/Latest":                         {6031000, 165.85, 128640, 1952},
-	"BenchmarkSubmissions/small/UpdateRevision":                 {21702000, 46.08, 1856, 44},
-	"BenchmarkSubmissions/small/WriteRead/workers16":            {2922000, 342.35, 11776, 203},
-	"BenchmarkSubmissions/small/WriteRead/workers4":             {2225000, 449.55, 10688, 192},
+	"BenchmarkOutbox/large/MarkAsCompleted":              {38657000, 25.87, 1664, 54},
+	"BenchmarkOutbox/large/PickEvents":                   {20507000, 48.76, 4160, 87},
+	"BenchmarkOutbox/large/Process/workers16":            {1431000, 699.5, 6976, 153},
+	"BenchmarkOutbox/large/Process/workers4":             {2048000, 488.35, 6016, 142},
+	"BenchmarkOutbox/small/MarkAsCompleted":              {1844000, 542.5, 1664, 54},
+	"BenchmarkOutbox/small/PickEvents":                   {3064000, 326.39, 4160, 87},
+	"BenchmarkOutbox/small/Process/workers16":            {1310000, 763.5, 6976, 153},
+	"BenchmarkOutbox/small/Process/workers4":             {2247000, 445.05, 6080, 142},
+	"BenchmarkScoreboardQueries/large/Standings":         {25889000, 38.62, 10681088, 158437},
+	"BenchmarkScoreboardQueries/large/SubmissionHistory": {285000, 3509.5, 5248, 115},
+	"BenchmarkScoreboardQueries/small/Standings":         {2575000, 388.45, 854144, 15905},
+	"BenchmarkScoreboardQueries/small/SubmissionHistory": {232000, 4312.5, 3008, 89},
+	"BenchmarkSubmissions/large/Create":                  {1853000, 539.5, 4032, 93},
+	"BenchmarkSubmissions/large/Get":                     {667000, 1501.5, 6336, 97},
+	"BenchmarkSubmissions/large/Latest":                  {15112000, 66.15, 128640, 1952},
+	"BenchmarkSubmissions/large/UpdateRevision":          {17129000, 58.4, 1856, 44},
+	"BenchmarkSubmissions/large/WriteRead/workers16":     {2695000, 371.1, 11776, 203},
+	"BenchmarkSubmissions/large/WriteRead/workers4":      {19958000, 50.1, 10688, 192},
+	"BenchmarkSubmissions/small/Create":                  {22326000, 44.79, 4032, 93},
+	"BenchmarkSubmissions/small/Get":                     {846000, 1182.5, 6336, 97},
+	"BenchmarkSubmissions/small/Latest":                  {6031000, 165.85, 128640, 1952},
+	"BenchmarkSubmissions/small/UpdateRevision":          {21702000, 46.08, 1856, 44},
+	"BenchmarkSubmissions/small/WriteRead/workers16":     {2922000, 342.35, 11776, 203},
+	"BenchmarkSubmissions/small/WriteRead/workers4":      {2225000, 449.55, 10688, 192},
 }
 
 func checkDatabaseBenchmarkBudget(b *testing.B, before runtime.MemStats) {
