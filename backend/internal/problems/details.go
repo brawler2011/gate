@@ -9,7 +9,7 @@ import (
 )
 
 func (uc *ProblemsUseCase) GetProblemDetails(ctx context.Context, id uuid.UUID) (*problemsmodel.ProblemDetails, error) {
-	if err := withinProblem(ctx, uc.transactions, id, accessmodel.ActionViewProblem, func(ProblemTxStore) error { return nil }); err != nil {
+	if err := authorizeProblem(ctx, uc.permissions, id, accessmodel.ActionViewProblem); err != nil {
 		return nil, err
 	}
 	problem, err := uc.repo.GetProblemById(ctx, id)

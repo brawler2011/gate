@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Fixed-width UUIDs and separate namespaces distinguish scoring and draft locks.
+// Fixed-width UUIDs and separate namespaces distinguish independent lock domains.
 // Hash collisions only cause extra contention, never a loss of mutual exclusion.
 func advisoryKey(namespace string, ids ...uuid.UUID) int64 {
 	h := sha256.New()
@@ -66,4 +66,12 @@ func (r *SubmissionsRepo) lockCandidates(ctx context.Context, filter sqlc.Submis
 		}
 	}
 	return ids, nil
+}
+
+// Call only on transaction-bound repositories; acquire before reading or changing order/versions.
+func (r *ContestsRepo) LockContestProblemOrder(ctx context.Context, contest uuid.UUID) error {
+	return HandlePgErr(r.queries.AdvisoryTransactionLock(ctx, advisoryKey("gate:contest-problem-order:", contest)))
+}
+func (r *PackagesRepo) LockPackageVersions(ctx context.Context, problem uuid.UUID) error {
+	return HandlePgErr(r.queries.AdvisoryTransactionLock(ctx, advisoryKey("gate:package-versions:", problem)))
 }

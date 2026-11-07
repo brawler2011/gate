@@ -92,6 +92,29 @@ func (q *Queries) DeleteOrganization(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getAuthorizationOrganizationMember = `-- name: GetAuthorizationOrganizationMember :one
+SELECT organization_id, user_id, role, created_at FROM organization_members
+WHERE organization_id = $1 AND user_id = $2
+FOR SHARE
+`
+
+type GetAuthorizationOrganizationMemberParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	UserID         uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetAuthorizationOrganizationMember(ctx context.Context, arg GetAuthorizationOrganizationMemberParams) (OrganizationMember, error) {
+	row := q.db.QueryRow(ctx, getAuthorizationOrganizationMember, arg.OrganizationID, arg.UserID)
+	var i OrganizationMember
+	err := row.Scan(
+		&i.OrganizationID,
+		&i.UserID,
+		&i.Role,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getLatestUserOrganizationID = `-- name: GetLatestUserOrganizationID :one
 SELECT om.organization_id
 FROM organization_members om
@@ -150,7 +173,6 @@ func (q *Queries) GetOrganizationByLogin(ctx context.Context, lower string) (Org
 const getOrganizationMember = `-- name: GetOrganizationMember :one
 SELECT organization_id, user_id, role, created_at FROM organization_members
 WHERE organization_id = $1 AND user_id = $2
-FOR SHARE
 `
 
 type GetOrganizationMemberParams struct {
@@ -312,14 +334,20 @@ func (q *Queries) ListOrganizations(ctx context.Context, arg ListOrganizationsPa
 	return items, nil
 }
 
-const lockOrganization = `-- name: LockOrganization :one
-SELECT id FROM organizations WHERE id = $1 FOR UPDATE
+const lockOrganizationMember = `-- name: LockOrganizationMember :one
+SELECT user_id FROM organization_members WHERE organization_id = $1 AND user_id = $2 FOR UPDATE
 `
 
-func (q *Queries) LockOrganization(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, lockOrganization, id)
-	err := row.Scan(&id)
-	return id, err
+type LockOrganizationMemberParams struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	UserID         uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) LockOrganizationMember(ctx context.Context, arg LockOrganizationMemberParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockOrganizationMember, arg.OrganizationID, arg.UserID)
+	var user_id uuid.UUID
+	err := row.Scan(&user_id)
+	return user_id, err
 }
 
 const removeContestMembersByOrgAndUser = `-- name: RemoveContestMembersByOrgAndUser :exec

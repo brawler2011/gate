@@ -192,12 +192,16 @@ func (r *OrganizationsRepo) GetMember(ctx context.Context, orgID, userID uuid.UU
 		return nil, fmt.Errorf("failed to get organization member: %w", HandlePgErr(err))
 	}
 
+	return mapOrganizationMember(member), nil
+}
+
+func mapOrganizationMember(member sqlc.OrganizationMember) *organizationsmodel.OrganizationMember {
 	return &organizationsmodel.OrganizationMember{
 		OrganizationID: member.OrganizationID,
 		UserID:         member.UserID,
 		Role:           organizationsmodel.OrganizationRole(member.Role),
 		CreatedAt:      member.CreatedAt,
-	}, nil
+	}
 }
 
 func (r *OrganizationsRepo) ListMembers(ctx context.Context, orgID uuid.UUID) ([]organizationsmodel.OrganizationMember, error) {
@@ -237,18 +241,20 @@ func (r *OrganizationsRepo) UpdateMemberRole(ctx context.Context, orgID, userID 
 }
 
 func (r *OrganizationsRepo) RemoveMember(ctx context.Context, orgID, userID uuid.UUID) error {
-	_ = r.q.RemoveTeamMembersByOrgAndUser(ctx, sqlc.RemoveTeamMembersByOrgAndUserParams{
-		OrganizationID: orgID,
-		UserID:         userID,
-	})
-	_ = r.q.RemoveContestMembersByOrgAndUser(ctx, sqlc.RemoveContestMembersByOrgAndUserParams{
-		OrganizationID: orgID,
-		UserID:         userID,
-	})
-	_ = r.q.RemoveProblemMembersByOrgAndUser(ctx, sqlc.RemoveProblemMembersByOrgAndUserParams{
-		OrganizationID: orgID,
-		UserID:         userID,
-	})
+	// Lock only the departing membership. Concurrent attachments hold FOR SHARE on
+	// this row until commit, so cleanup sees all their committed dependent rows.
+	if _, err := r.q.LockOrganizationMember(ctx, sqlc.LockOrganizationMemberParams{OrganizationID: orgID, UserID: userID}); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return HandlePgErr(err)
+	}
+	if err := r.q.RemoveTeamMembersByOrgAndUser(ctx, sqlc.RemoveTeamMembersByOrgAndUserParams{OrganizationID: orgID, UserID: userID}); err != nil {
+		return HandlePgErr(err)
+	}
+	if err := r.q.RemoveContestMembersByOrgAndUser(ctx, sqlc.RemoveContestMembersByOrgAndUserParams{OrganizationID: orgID, UserID: userID}); err != nil {
+		return HandlePgErr(err)
+	}
+	if err := r.q.RemoveProblemMembersByOrgAndUser(ctx, sqlc.RemoveProblemMembersByOrgAndUserParams{OrganizationID: orgID, UserID: userID}); err != nil {
+		return HandlePgErr(err)
+	}
 
 	if err := r.q.RemoveOrganizationMember(ctx, sqlc.RemoveOrganizationMemberParams{
 		OrganizationID: orgID,
@@ -575,9 +581,4 @@ func (r *OrganizationsRepo) UpdateJoinRequestStatus(ctx context.Context, id uuid
 		return pkg.Wrap(pkg.ErrConflict, nil, "request is no longer pending")
 	}
 	return nil
-}
-
-func (r *OrganizationsRepo) LockOrganization(ctx context.Context, id uuid.UUID) error {
-	_, err := r.q.LockOrganization(ctx, id)
-	return HandlePgErr(err)
 }

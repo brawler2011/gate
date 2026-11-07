@@ -13,6 +13,7 @@ import (
 )
 
 type ProblemsUseCase struct {
+	permissions  ProblemPermissions
 	repo         ProblemsRepo
 	orgsRepo     OrganizationsRepo
 	workspace    *WorkspaceStorage
@@ -20,18 +21,19 @@ type ProblemsUseCase struct {
 	templates    PackageTemplates
 }
 
-func NewProblemsUseCase(repo ProblemsRepo, workspace *WorkspaceStorage, transactions ProblemTransactions, templates PackageTemplates, orgRepo OrganizationsRepo) *ProblemsUseCase {
+func NewProblemsUseCase(repo ProblemsRepo, workspace *WorkspaceStorage, transactions ProblemTransactions, templates PackageTemplates, orgRepo OrganizationsRepo, permissions ProblemPermissions) *ProblemsUseCase {
 	return &ProblemsUseCase{
 		repo:         repo,
 		workspace:    workspace,
 		transactions: transactions,
+		permissions:  permissions,
 		templates:    templates,
 		orgsRepo:     orgRepo,
 	}
 }
 
 func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error {
-	if err := withinProblem(ctx, uc.transactions, id, accessmodel.ActionEditProblem, func(ProblemTxStore) error { return nil }); err != nil {
+	if err := authorizeProblem(ctx, uc.permissions, id, accessmodel.ActionEditProblem); err != nil {
 		return err
 	}
 	var previous string

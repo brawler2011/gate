@@ -14,9 +14,6 @@ func withinContestEvents(ctx context.Context, transactions ContestEventsTransact
 		return pkg.ErrUnauthenticated
 	}
 	return transactions.Within(ctx, func(tx ContestEventsTxStore) error {
-		if err := tx.LockContest(ctx, id); err != nil {
-			return err
-		}
 		allowed, err := tx.HasContestPermission(ctx, id, user.Id, action)
 		if err != nil {
 			return err

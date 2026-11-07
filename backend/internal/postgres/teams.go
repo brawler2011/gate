@@ -241,6 +241,10 @@ func (r *TeamsRepo) GetUserTeamsByOrganization(ctx context.Context, userID, orgI
 		return nil, fmt.Errorf("failed to get user teams by organization: %w", HandlePgErr(err))
 	}
 
+	return mapTeams(teams), nil
+}
+
+func mapTeams(teams []sqlc.Team) []organizationsmodel.Team {
 	result := make([]organizationsmodel.Team, len(teams))
 	for i, t := range teams {
 		result[i] = organizationsmodel.Team{
@@ -256,7 +260,7 @@ func (r *TeamsRepo) GetUserTeamsByOrganization(ctx context.Context, userID, orgI
 		}
 	}
 
-	return result, nil
+	return result
 }
 
 func (r *TeamsRepo) GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]contestsmodel.Contest, error) {
@@ -308,11 +312,4 @@ func (r *TeamsRepo) GetTeamProblems(ctx context.Context, teamID uuid.UUID) ([]pr
 	}
 
 	return result, nil
-}
-
-// Helper functions
-
-func (r *TeamsRepo) LockTeam(ctx context.Context, id uuid.UUID) error {
-	_, err := r.q.LockTeam(ctx, id)
-	return HandlePgErr(err)
 }

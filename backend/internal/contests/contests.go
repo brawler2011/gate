@@ -106,6 +106,9 @@ func (uc *ContestsUseCase) DeleteContest(ctx context.Context, id uuid.UUID) erro
 
 func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error {
 	return uc.withinContest(ctx, c.ContestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		if err := tx.LockContestProblemOrder(ctx, c.ContestId); err != nil {
+			return err
+		}
 		return tx.CreateContestProblem(ctx, c)
 	})
 }
@@ -118,12 +121,18 @@ func (uc *ContestsUseCase) UpdateContestProblemPackage(ctx context.Context, cont
 
 func (uc *ContestsUseCase) DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error {
 	return uc.withinContest(ctx, c.ContestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		if err := tx.LockContestProblemOrder(ctx, c.ContestId); err != nil {
+			return err
+		}
 		return tx.DeleteContestProblem(ctx, c)
 	})
 }
 
 func (uc *ContestsUseCase) ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []contestsmodel.ContestProblemReorderItem) error {
 	return uc.withinContest(ctx, contestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
+		if err := tx.LockContestProblemOrder(ctx, contestId); err != nil {
+			return err
+		}
 		return tx.ReorderContestProblems(ctx, contestId, problems)
 	})
 }
@@ -438,9 +447,6 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 	registered := false
 	var pendingNotifications []notificationsmodel.Notification
 	err = uc.transactions.Within(ctx, func(tx CommandTxStore) error {
-		if err := tx.LockContest(ctx, contest.ID); err != nil {
-			return err
-		}
 		current, err := tx.GetContest(ctx, contest.ID)
 		if err != nil {
 			return err
@@ -572,9 +578,6 @@ func (uc *ContestsUseCase) CancelJoinRequest(
 	}
 
 	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {
-		if err := tx.LockContest(ctx, contest.ID); err != nil {
-			return err
-		}
 		req, err := tx.GetPendingContestJoinRequest(ctx, contest.ID, user.Id)
 		if err != nil {
 			return err
@@ -613,6 +616,10 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 			return pkg.Wrap(pkg.ErrBadInput, nil, "заявка уже рассмотрена")
 		}
 
+		if err := tx.UpdateContestJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusApproved, &reviewerID); err != nil {
+			return fmt.Errorf("update join request status: %w", err)
+		}
+
 		// Add member to contest
 		err = tx.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{
 			ContestId: contest.ID,
@@ -621,10 +628,6 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 		})
 		if err != nil {
 			return fmt.Errorf("create contest member: %w", err)
-		}
-
-		if err := tx.UpdateContestJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusApproved, &reviewerID); err != nil {
-			return fmt.Errorf("update join request status: %w", err)
 		}
 
 		link := fmt.Sprintf("/%s/%s", orgLogin, contestLogin)

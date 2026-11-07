@@ -15,7 +15,6 @@ type contestEventsTestStore struct {
 	OutboxRepo
 }
 
-func (contestEventsTestStore) LockContest(context.Context, uuid.UUID) error { return nil }
 func (contestEventsTestStore) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
 	return true, nil
 }

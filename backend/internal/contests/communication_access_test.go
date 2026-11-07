@@ -88,17 +88,9 @@ func TestCommunicationReadsEnforceVisibility(t *testing.T) {
 
 type deniedCommunicationStore struct {
 	contestEventsTestStore
-	locked bool
 }
 
-func (s *deniedCommunicationStore) LockContest(context.Context, uuid.UUID) error {
-	s.locked = true
-	return nil
-}
 func (s *deniedCommunicationStore) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
-	if !s.locked {
-		panic("permission check before lock")
-	}
 	return false, nil
 }
 

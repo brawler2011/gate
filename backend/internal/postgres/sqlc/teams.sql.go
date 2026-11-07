@@ -112,6 +112,70 @@ func (q *Queries) DeleteTeam(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getAuthorizationTeamMember = `-- name: GetAuthorizationTeamMember :one
+SELECT team_id, user_id, role, created_at FROM team_members WHERE team_id = $1 AND user_id = $2 FOR SHARE
+`
+
+type GetAuthorizationTeamMemberParams struct {
+	TeamID uuid.UUID `json:"team_id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetAuthorizationTeamMember(ctx context.Context, arg GetAuthorizationTeamMemberParams) (TeamMember, error) {
+	row := q.db.QueryRow(ctx, getAuthorizationTeamMember, arg.TeamID, arg.UserID)
+	var i TeamMember
+	err := row.Scan(
+		&i.TeamID,
+		&i.UserID,
+		&i.Role,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getAuthorizationUserTeamsByOrganization = `-- name: GetAuthorizationUserTeamsByOrganization :many
+SELECT t.id, t.organization_id, t.name, t.slug, t.description, t.privacy, t.parent_team_id, t.created_at, t.updated_at FROM teams t
+INNER JOIN team_members tm ON t.id = tm.team_id
+WHERE tm.user_id = $1 AND t.organization_id = $2
+ORDER BY t.created_at DESC
+FOR SHARE OF tm
+`
+
+type GetAuthorizationUserTeamsByOrganizationParams struct {
+	UserID         uuid.UUID `json:"user_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+}
+
+func (q *Queries) GetAuthorizationUserTeamsByOrganization(ctx context.Context, arg GetAuthorizationUserTeamsByOrganizationParams) ([]Team, error) {
+	rows, err := q.db.Query(ctx, getAuthorizationUserTeamsByOrganization, arg.UserID, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Team{}
+	for rows.Next() {
+		var i Team
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.Name,
+			&i.Slug,
+			&i.Description,
+			&i.Privacy,
+			&i.ParentTeamID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTeamByID = `-- name: GetTeamByID :one
 SELECT id, organization_id, name, slug, description, privacy, parent_team_id, created_at, updated_at FROM teams WHERE id = $1
 `
@@ -186,7 +250,6 @@ SELECT t.id, t.organization_id, t.name, t.slug, t.description, t.privacy, t.pare
 INNER JOIN team_members tm ON t.id = tm.team_id
 WHERE tm.user_id = $1 AND t.organization_id = $2
 ORDER BY t.created_at DESC
-FOR SHARE OF t, tm
 `
 
 type GetUserTeamsByOrganizationParams struct {
@@ -325,16 +388,6 @@ func (q *Queries) ListTeams(ctx context.Context, arg ListTeamsParams) ([]Team, e
 		return nil, err
 	}
 	return items, nil
-}
-
-const lockTeam = `-- name: LockTeam :one
-SELECT id FROM teams WHERE id = $1 FOR UPDATE
-`
-
-func (q *Queries) LockTeam(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, lockTeam, id)
-	err := row.Scan(&id)
-	return id, err
 }
 
 const removeTeamMember = `-- name: RemoveTeamMember :exec

@@ -52,24 +52,19 @@ func (q *Queries) AddContestMemberIfNotExists(ctx context.Context, arg AddContes
 const addContestProblem = `-- name: AddContestProblem :exec
 
 INSERT INTO contest_problems (contest_id, problem_id, package_id, ordinal)
-VALUES ($1, $2, $3, $4)
+VALUES ($1, $2, $3, (SELECT COALESCE(MAX(ordinal), 0) + 1 FROM contest_problems WHERE contest_id = $1))
+ON CONFLICT (contest_id, problem_id) DO UPDATE SET package_id = EXCLUDED.package_id
 `
 
 type AddContestProblemParams struct {
 	ContestID uuid.UUID `json:"contest_id"`
 	ProblemID uuid.UUID `json:"problem_id"`
 	PackageID uuid.UUID `json:"package_id"`
-	Ordinal   int32     `json:"ordinal"`
 }
 
 // Contest Problems (linking to packages)
 func (q *Queries) AddContestProblem(ctx context.Context, arg AddContestProblemParams) error {
-	_, err := q.db.Exec(ctx, addContestProblem,
-		arg.ContestID,
-		arg.ProblemID,
-		arg.PackageID,
-		arg.Ordinal,
-	)
+	_, err := q.db.Exec(ctx, addContestProblem, arg.ContestID, arg.ProblemID, arg.PackageID)
 	return err
 }
 
@@ -270,6 +265,40 @@ func (q *Queries) DeleteContestUserProblemBlock(ctx context.Context, arg DeleteC
 	return err
 }
 
+const getAuthorizationContestMember = `-- name: GetAuthorizationContestMember :one
+SELECT cm.contest_id, cm.user_id, cm.role, cm.created_at, u.username
+FROM contest_members cm
+JOIN users u ON u.id = cm.user_id
+WHERE cm.contest_id = $1 AND cm.user_id = $2
+FOR SHARE OF cm
+`
+
+type GetAuthorizationContestMemberParams struct {
+	ContestID uuid.UUID `json:"contest_id"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
+type GetAuthorizationContestMemberRow struct {
+	ContestID uuid.UUID                 `json:"contest_id"`
+	UserID    uuid.UUID                 `json:"user_id"`
+	Role      contestsmodel.ContestRole `json:"role"`
+	CreatedAt time.Time                 `json:"created_at"`
+	Username  string                    `json:"username"`
+}
+
+func (q *Queries) GetAuthorizationContestMember(ctx context.Context, arg GetAuthorizationContestMemberParams) (GetAuthorizationContestMemberRow, error) {
+	row := q.db.QueryRow(ctx, getAuthorizationContestMember, arg.ContestID, arg.UserID)
+	var i GetAuthorizationContestMemberRow
+	err := row.Scan(
+		&i.ContestID,
+		&i.UserID,
+		&i.Role,
+		&i.CreatedAt,
+		&i.Username,
+	)
+	return i, err
+}
+
 const getContestByID = `-- name: GetContestByID :one
 SELECT c.id, c.organization_id, c.owner_id, c.visibility, c.title, c.login, c.description, c.settings, c.start_time, c.end_time, c.created_at, c.updated_at, o.login as org_login, o.name as org_name
 FROM contests c
@@ -423,7 +452,6 @@ SELECT cm.contest_id, cm.user_id, cm.role, cm.created_at, u.username
 FROM contest_members cm
 JOIN users u ON u.id = cm.user_id
 WHERE cm.contest_id = $1 AND cm.user_id = $2
-FOR SHARE OF cm
 `
 
 type GetContestMemberParams struct {
@@ -640,6 +668,17 @@ func (q *Queries) GetContestUserProblemBlock(ctx context.Context, arg GetContest
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getMaxContestProblemOrdinal = `-- name: GetMaxContestProblemOrdinal :one
+SELECT COALESCE(MAX(ordinal), 0)::int FROM contest_problems WHERE contest_id = $1
+`
+
+func (q *Queries) GetMaxContestProblemOrdinal(ctx context.Context, contestID uuid.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, getMaxContestProblemOrdinal, contestID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const getSubmissionsForScoreboard = `-- name: GetSubmissionsForScoreboard :many
@@ -1322,16 +1361,6 @@ func (q *Queries) ListUserContestMemberships(ctx context.Context, userID uuid.UU
 		return nil, err
 	}
 	return items, nil
-}
-
-const lockContest = `-- name: LockContest :one
-SELECT id FROM contests WHERE id = $1::uuid FOR NO KEY UPDATE
-`
-
-func (q *Queries) LockContest(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, lockContest, id)
-	err := row.Scan(&id)
-	return id, err
 }
 
 const removeContestMember = `-- name: RemoveContestMember :exec

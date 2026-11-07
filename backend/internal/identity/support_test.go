@@ -228,6 +228,11 @@ func (organizationTestStore) CreateNotification(context.Context, *notificationsm
 	return nil, pkg.NotImplemented
 }
 
-func (organizationTestStore) LockOrganization(context.Context, uuid.UUID) error { return nil }
-
-func (organizationTestStore) LockUser(context.Context, uuid.UUID) error { return nil }
+func (m *mockOrgsRepo) GetOrganizationByID(_ context.Context, id uuid.UUID) (*organizationsmodel.Organization, error) {
+	for _, org := range m.organizations {
+		if org.ID == id {
+			return &org, nil
+		}
+	}
+	return nil, pkg.ErrNotFound
+}

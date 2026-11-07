@@ -25,17 +25,9 @@ type registrationStore struct {
 	org    organizationsmodel.Organization
 	member bool
 	added  bool
-	locked bool
 }
 
-func (s *registrationStore) LockOrganization(context.Context, uuid.UUID) error {
-	s.locked = true
-	return nil
-}
 func (s *registrationStore) GetOrganizationByID(context.Context, uuid.UUID) (*organizationsmodel.Organization, error) {
-	if !s.locked {
-		panic("read before lock")
-	}
 	return &s.org, nil
 }
 func (s *registrationStore) GetMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationMember, error) {
@@ -58,7 +50,7 @@ func (t registrationTransactions) Within(ctx context.Context, fn func(Organizati
 	return fn(t.store)
 }
 
-func TestRegistrationUsesLockedOrganizationState(t *testing.T) {
+func TestRegistrationUsesCurrentOrganizationState(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		policy organizationsmodel.OrganizationJoinPolicy
@@ -83,9 +75,6 @@ func TestRegistrationUsesLockedOrganizationState(t *testing.T) {
 			}
 			require.Equal(t, tc.joined, joined)
 			require.Equal(t, tc.joined, store.added)
-			require.True(t, store.locked)
 		})
 	}
 }
-
-func (*registrationStore) LockUser(context.Context, uuid.UUID) error { return nil }

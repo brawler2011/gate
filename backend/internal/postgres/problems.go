@@ -354,8 +354,3 @@ func mapDashboardProblem(row sqlc.ListDashboardProblemsRow) problemsmodel.Dashbo
 		UpdatedAt:         row.UpdatedAt,
 	}
 }
-
-func (r *ProblemsRepo) LockProblem(ctx context.Context, id uuid.UUID) error {
-	_, err := r.queries.LockProblem(ctx, id)
-	return HandlePgErr(err)
-}

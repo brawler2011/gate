@@ -34,8 +34,6 @@ func (s *updateTransactions) Within(_ context.Context, fn func(ProblemTxStore) e
 func (*updateTransactions) GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error) {
 	return problemsmodel.Problem{}, nil
 }
-func (*updateTransactions) LockOrganization(context.Context, uuid.UUID) error { return nil }
-func (*updateTransactions) LockProblem(context.Context, uuid.UUID) error      { return nil }
 func (*updateTransactions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	return true, nil
 }
@@ -90,15 +88,15 @@ func TestProblemUpdatePreparesObjectBeforeFencedCatalogChange(t *testing.T) {
 		updated                         bool
 		calls                           int
 	}{
-		{name: "success", updated: true, calls: 2},
-		{name: "upload failure", uploadError: uploadFailure, error: uploadFailure, calls: 1},
-		{name: "workspace conflict", commitError: pkg.ErrConflict, error: pkg.ErrConflict, calls: 2},
+		{name: "success", updated: true, calls: 1},
+		{name: "upload failure", uploadError: uploadFailure, error: uploadFailure, calls: 0},
+		{name: "workspace conflict", commitError: pkg.ErrConflict, error: pkg.ErrConflict, calls: 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tx := &updateTransactions{commitError: tc.commitError}
 			object := updateObjectStorage{transaction: tx, archive: createZipBytes(t, map[string]string{"problem.yaml": "title: Original\n"}), failure: tc.uploadError}
 			workspace := NewWorkspaceStorage(object, "workspace", updateWorkspaceRepo{})
-			uc := NewProblemsUseCase(nil, workspace, tx, nil, nil)
+			uc := NewProblemsUseCase(nil, workspace, tx, nil, nil, allowProblemPermissions{})
 			user := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 			title := "Changed"
 			err := uc.UpdateProblem(accessmodel.WithUser(problemActorContext(), user), uuid.New(), &problemsmodel.ProblemUpdate{Title: &title})

@@ -24,8 +24,6 @@ func (s *problemTestTransactions) Within(_ context.Context, fn func(ProblemTxSto
 func (s *problemTestTransactions) GetProblemById(ctx context.Context, id uuid.UUID) (problemsmodel.Problem, error) {
 	return s.repo.GetProblemById(ctx, id)
 }
-func (*problemTestTransactions) LockOrganization(context.Context, uuid.UUID) error { return nil }
-func (*problemTestTransactions) LockProblem(context.Context, uuid.UUID) error      { return nil }
 func (*problemTestTransactions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	return true, nil
 }
@@ -48,3 +46,5 @@ type allowProblemPermissions struct{}
 func (allowProblemPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	return true, nil
 }
+
+func (*problemTestTransactions) LockPackageVersions(context.Context, uuid.UUID) error { return nil }

@@ -29,6 +29,7 @@ type PublishResult struct {
 }
 
 type ProblemPublishUseCase struct {
+	permissions      ProblemPermissions
 	transactions     ProblemTransactions
 	problemsRepo     ProblemsRepo
 	packagesRepo     PackagesRepo
@@ -44,8 +45,10 @@ func NewProblemPublishUseCase(
 	storage storage.Storage,
 	packageBucket string,
 	transactions ProblemTransactions,
+	permissions ProblemPermissions,
 ) *ProblemPublishUseCase {
 	return &ProblemPublishUseCase{transactions: transactions,
+		permissions:      permissions,
 		problemsRepo:     problemsRepo,
 		packagesRepo:     packagesRepo,
 		workspaceStorage: workspaceStorage,
@@ -139,6 +142,9 @@ func (uc *ProblemPublishUseCase) publishProblemFiles(
 
 	var created problemsmodel.ProblemPackage
 	err = withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionEditProblem, func(tx ProblemTxStore) error {
+		if err := tx.LockPackageVersions(ctx, problemID); err != nil {
+			return err
+		}
 		var err error
 		created, err = tx.CreatePackage(ctx, &problemsmodel.CreatePackageParams{ID: packageID, ProblemID: problemID, OrganizationID: problem.OrganizationID, PackageHash: packageHash, Status: "ready"})
 		return err
@@ -157,7 +163,7 @@ func (uc *ProblemPublishUseCase) ListPackages(
 	ctx context.Context,
 	problemID uuid.UUID,
 ) ([]problemsmodel.ProblemPackage, error) {
-	if err := withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionViewProblem, func(ProblemTxStore) error { return nil }); err != nil {
+	if err := authorizeProblem(ctx, uc.permissions, problemID, accessmodel.ActionViewProblem); err != nil {
 		return nil, err
 	}
 	return uc.packagesRepo.ListPackages(ctx, problemID, 100, 0)
@@ -168,7 +174,7 @@ func (uc *ProblemPublishUseCase) GetPublishedPackageURL(
 	problemID uuid.UUID,
 	version string,
 ) (string, error) {
-	if err := withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionViewProblem, func(ProblemTxStore) error { return nil }); err != nil {
+	if err := authorizeProblem(ctx, uc.permissions, problemID, accessmodel.ActionViewProblem); err != nil {
 		return "", err
 	}
 
@@ -245,8 +251,15 @@ func ZipDirectory(srcDir string, writer io.Writer) error {
 }
 
 func (uc *ProblemPublishUseCase) PublishProblem(ctx context.Context, problemID uuid.UUID) (*PublishResult, error) {
-	if err := withinProblem(ctx, uc.transactions, problemID, accessmodel.ActionEditProblem, func(ProblemTxStore) error { return nil }); err != nil {
+	if err := authorizeProblem(ctx, uc.permissions, problemID, accessmodel.ActionEditProblem); err != nil {
 		return nil, err
 	}
 	return withWorkspaceValue(ctx, uc.workspaceStorage, problemID, func(ctx context.Context) (*PublishResult, error) { return uc.publishProblemFiles(ctx, problemID) })
+}
+
+func (uc *ProblemPublishUseCase) GetReadyPackage(ctx context.Context, id uuid.UUID) (problemsmodel.ProblemPackage, error) {
+	if err := authorizeProblem(ctx, uc.permissions, id, accessmodel.ActionViewProblem); err != nil {
+		return problemsmodel.ProblemPackage{}, err
+	}
+	return uc.packagesRepo.GetReadyPackage(ctx, id)
 }

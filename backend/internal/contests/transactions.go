@@ -17,7 +17,6 @@ import (
 )
 
 type ContestEventsTxStore interface {
-	LockContest(context.Context, uuid.UUID) error
 	GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error)
 	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error)
 	CreateAnnouncement(ctx context.Context, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error)
@@ -39,6 +38,7 @@ type ScoreboardStore interface {
 }
 
 type CommandTxStore interface {
+	LockContestProblemOrder(context.Context, uuid.UUID) error
 	LockSubmissionTuple(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error
 	GetContestJoinRequestByID(context.Context, uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
 	CreateNotification(context.Context, *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error)
@@ -62,7 +62,6 @@ type CommandTxStore interface {
 	HasOrganizationPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.OrgAction) (bool, error)
 	ScoreboardStore
 	eventdata.Writer
-	LockContest(context.Context, uuid.UUID) error
 	CreateContest(context.Context, *contestsmodel.CreateContestParams) error
 	CreateContestMember(context.Context, *contestsmodel.CreateContestMemberParams) error
 	UpdateContestJoinRequestStatus(context.Context, uuid.UUID, organizationsmodel.RequestStatus, *uuid.UUID) error
