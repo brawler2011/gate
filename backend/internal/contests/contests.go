@@ -24,11 +24,11 @@ type ContestsUseCase struct {
 	contestRepo     ContestsRepo
 	orgsRepo        OrganizationsRepo
 	transactions    CommandTransactions
-	permissions     Permissions
+	permissions     CommandPermissions
 	notificationsUC NotificationsUC
 }
 
-func NewContestsUseCase(contestRepo ContestsRepo, orgsRepo OrganizationsRepo, transactions CommandTransactions, permissions Permissions) *ContestsUseCase {
+func NewContestsUseCase(contestRepo ContestsRepo, orgsRepo OrganizationsRepo, transactions CommandTransactions, permissions CommandPermissions) *ContestsUseCase {
 	return &ContestsUseCase{contestRepo: contestRepo, orgsRepo: orgsRepo, transactions: transactions, permissions: permissions}
 }
 
@@ -105,6 +105,9 @@ func (uc *ContestsUseCase) DeleteContest(ctx context.Context, id uuid.UUID) erro
 }
 
 func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error {
+	if err := uc.authorizeContestProblem(ctx, c.ContestId, c.ProblemId); err != nil {
+		return err
+	}
 	return uc.withinContest(ctx, c.ContestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
 		if err := tx.LockContestProblemOrder(ctx, c.ContestId); err != nil {
 			return err
@@ -114,6 +117,9 @@ func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsm
 }
 
 func (uc *ContestsUseCase) UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error {
+	if err := uc.authorizeContestProblem(ctx, contestId, problemId); err != nil {
+		return err
+	}
 	return uc.withinContest(ctx, contestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
 		return tx.UpdateContestProblemPackage(ctx, contestId, problemId, packageId)
 	})

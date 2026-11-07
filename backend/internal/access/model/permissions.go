@@ -12,6 +12,7 @@ type ProblemAction string
 
 const (
 	ActionViewProblem   ProblemAction = "view_problem"
+	ActionUseProblem    ProblemAction = "use_problem"
 	ActionEditProblem   ProblemAction = "edit_problem"
 	ActionAdminProblem  ProblemAction = "admin_problem"
 	ActionDeleteProblem ProblemAction = "delete_problem"

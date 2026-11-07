@@ -362,6 +362,8 @@ func (uc *PermissionsUseCase) HasProblemPermission(
 	switch action {
 	case accessmodel.ActionViewProblem:
 		return uc.canViewProblem(pc), nil
+	case accessmodel.ActionUseProblem:
+		return !user.IsGuest() && user.Id != uuid.Nil && uc.canViewProblem(pc), nil
 	case accessmodel.ActionEditProblem:
 		return uc.canEditProblem(pc), nil
 	case accessmodel.ActionAdminProblem, accessmodel.ActionDeleteProblem:
