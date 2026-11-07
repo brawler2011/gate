@@ -410,6 +410,9 @@ func (h *CoreServer) ApproveOrganizationJoinRequest(ctx context.Context, req cor
 	role := organizationsmodel.OrgRoleMember
 	if req.IsSet() && req.Value.Role.IsSet() {
 		role = organizationsmodel.OrganizationRole(req.Value.Role.Value)
+		if !validateOrganizationRole(string(role)) {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role")
+		}
 	}
 
 	err := h.organizations.ApproveJoinRequest(ctx, params.Login, params.ID, user.Id, role)
