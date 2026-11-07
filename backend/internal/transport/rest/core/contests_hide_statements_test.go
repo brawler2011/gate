@@ -124,9 +124,9 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		assert.Equal(t, "A + B", resp.Problem.Title)
 		assert.Equal(t, int32(1000), resp.Problem.TimeLimit)
 		assert.Equal(t, int32(256), resp.Problem.MemoryLimit)
-		assert.Empty(t, resp.Problem.LegendHTML)
-		assert.Empty(t, resp.Problem.InputFormatHTML)
-		assert.Empty(t, resp.Problem.OutputFormatHTML)
+		assert.Empty(t, resp.Problem.Legend)
+		assert.Empty(t, resp.Problem.InputFormat)
+		assert.Empty(t, resp.Problem.OutputFormat)
 		assert.Empty(t, resp.Problem.Samples)
 	})
 

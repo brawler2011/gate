@@ -1777,19 +1777,19 @@ func (s *ContestProblemListItemModel) SetUpdatedAt(val time.Time) {
 // Contest problem data.
 // Ref: #/components/schemas/ContestProblemModel
 type ContestProblemModel struct {
-	ProblemID        uuid.UUID            `json:"problem_id"`
-	Title            string               `json:"title"`
-	TimeLimit        int32                `json:"time_limit"`
-	MemoryLimit      int32                `json:"memory_limit"`
-	Position         int32                `json:"position"`
-	LegendHTML       string               `json:"legend_html"`
-	InputFormatHTML  string               `json:"input_format_html"`
-	OutputFormatHTML string               `json:"output_format_html"`
-	NotesHTML        string               `json:"notes_html"`
-	ScoringHTML      string               `json:"scoring_html"`
-	CreatedAt        time.Time            `json:"created_at"`
-	UpdatedAt        time.Time            `json:"updated_at"`
-	Samples          []ProblemSampleModel `json:"samples"`
+	ProblemID    uuid.UUID            `json:"problem_id"`
+	Title        string               `json:"title"`
+	TimeLimit    int32                `json:"time_limit"`
+	MemoryLimit  int32                `json:"memory_limit"`
+	Position     int32                `json:"position"`
+	Legend       string               `json:"legend"`
+	InputFormat  string               `json:"input_format"`
+	OutputFormat string               `json:"output_format"`
+	Notes        string               `json:"notes"`
+	Scoring      string               `json:"scoring"`
+	CreatedAt    time.Time            `json:"created_at"`
+	UpdatedAt    time.Time            `json:"updated_at"`
+	Samples      []ProblemSampleModel `json:"samples"`
 }
 
 // GetProblemID returns the value of ProblemID.
@@ -1817,29 +1817,29 @@ func (s *ContestProblemModel) GetPosition() int32 {
 	return s.Position
 }
 
-// GetLegendHTML returns the value of LegendHTML.
-func (s *ContestProblemModel) GetLegendHTML() string {
-	return s.LegendHTML
+// GetLegend returns the value of Legend.
+func (s *ContestProblemModel) GetLegend() string {
+	return s.Legend
 }
 
-// GetInputFormatHTML returns the value of InputFormatHTML.
-func (s *ContestProblemModel) GetInputFormatHTML() string {
-	return s.InputFormatHTML
+// GetInputFormat returns the value of InputFormat.
+func (s *ContestProblemModel) GetInputFormat() string {
+	return s.InputFormat
 }
 
-// GetOutputFormatHTML returns the value of OutputFormatHTML.
-func (s *ContestProblemModel) GetOutputFormatHTML() string {
-	return s.OutputFormatHTML
+// GetOutputFormat returns the value of OutputFormat.
+func (s *ContestProblemModel) GetOutputFormat() string {
+	return s.OutputFormat
 }
 
-// GetNotesHTML returns the value of NotesHTML.
-func (s *ContestProblemModel) GetNotesHTML() string {
-	return s.NotesHTML
+// GetNotes returns the value of Notes.
+func (s *ContestProblemModel) GetNotes() string {
+	return s.Notes
 }
 
-// GetScoringHTML returns the value of ScoringHTML.
-func (s *ContestProblemModel) GetScoringHTML() string {
-	return s.ScoringHTML
+// GetScoring returns the value of Scoring.
+func (s *ContestProblemModel) GetScoring() string {
+	return s.Scoring
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -1882,29 +1882,29 @@ func (s *ContestProblemModel) SetPosition(val int32) {
 	s.Position = val
 }
 
-// SetLegendHTML sets the value of LegendHTML.
-func (s *ContestProblemModel) SetLegendHTML(val string) {
-	s.LegendHTML = val
+// SetLegend sets the value of Legend.
+func (s *ContestProblemModel) SetLegend(val string) {
+	s.Legend = val
 }
 
-// SetInputFormatHTML sets the value of InputFormatHTML.
-func (s *ContestProblemModel) SetInputFormatHTML(val string) {
-	s.InputFormatHTML = val
+// SetInputFormat sets the value of InputFormat.
+func (s *ContestProblemModel) SetInputFormat(val string) {
+	s.InputFormat = val
 }
 
-// SetOutputFormatHTML sets the value of OutputFormatHTML.
-func (s *ContestProblemModel) SetOutputFormatHTML(val string) {
-	s.OutputFormatHTML = val
+// SetOutputFormat sets the value of OutputFormat.
+func (s *ContestProblemModel) SetOutputFormat(val string) {
+	s.OutputFormat = val
 }
 
-// SetNotesHTML sets the value of NotesHTML.
-func (s *ContestProblemModel) SetNotesHTML(val string) {
-	s.NotesHTML = val
+// SetNotes sets the value of Notes.
+func (s *ContestProblemModel) SetNotes(val string) {
+	s.Notes = val
 }
 
-// SetScoringHTML sets the value of ScoringHTML.
-func (s *ContestProblemModel) SetScoringHTML(val string) {
-	s.ScoringHTML = val
+// SetScoring sets the value of Scoring.
+func (s *ContestProblemModel) SetScoring(val string) {
+	s.Scoring = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -7272,11 +7272,6 @@ type ProblemModel struct {
 	OutputFormat      string               `json:"output_format"`
 	Notes             string               `json:"notes"`
 	Scoring           string               `json:"scoring"`
-	LegendHTML        string               `json:"legend_html"`
-	InputFormatHTML   string               `json:"input_format_html"`
-	OutputFormatHTML  string               `json:"output_format_html"`
-	NotesHTML         string               `json:"notes_html"`
-	ScoringHTML       string               `json:"scoring_html"`
 	IsPrivate         OptBool              `json:"is_private"`
 	CreatedAt         time.Time            `json:"created_at"`
 	UpdatedAt         time.Time            `json:"updated_at"`
@@ -7351,31 +7346,6 @@ func (s *ProblemModel) GetNotes() string {
 // GetScoring returns the value of Scoring.
 func (s *ProblemModel) GetScoring() string {
 	return s.Scoring
-}
-
-// GetLegendHTML returns the value of LegendHTML.
-func (s *ProblemModel) GetLegendHTML() string {
-	return s.LegendHTML
-}
-
-// GetInputFormatHTML returns the value of InputFormatHTML.
-func (s *ProblemModel) GetInputFormatHTML() string {
-	return s.InputFormatHTML
-}
-
-// GetOutputFormatHTML returns the value of OutputFormatHTML.
-func (s *ProblemModel) GetOutputFormatHTML() string {
-	return s.OutputFormatHTML
-}
-
-// GetNotesHTML returns the value of NotesHTML.
-func (s *ProblemModel) GetNotesHTML() string {
-	return s.NotesHTML
-}
-
-// GetScoringHTML returns the value of ScoringHTML.
-func (s *ProblemModel) GetScoringHTML() string {
-	return s.ScoringHTML
 }
 
 // GetIsPrivate returns the value of IsPrivate.
@@ -7466,31 +7436,6 @@ func (s *ProblemModel) SetNotes(val string) {
 // SetScoring sets the value of Scoring.
 func (s *ProblemModel) SetScoring(val string) {
 	s.Scoring = val
-}
-
-// SetLegendHTML sets the value of LegendHTML.
-func (s *ProblemModel) SetLegendHTML(val string) {
-	s.LegendHTML = val
-}
-
-// SetInputFormatHTML sets the value of InputFormatHTML.
-func (s *ProblemModel) SetInputFormatHTML(val string) {
-	s.InputFormatHTML = val
-}
-
-// SetOutputFormatHTML sets the value of OutputFormatHTML.
-func (s *ProblemModel) SetOutputFormatHTML(val string) {
-	s.OutputFormatHTML = val
-}
-
-// SetNotesHTML sets the value of NotesHTML.
-func (s *ProblemModel) SetNotesHTML(val string) {
-	s.NotesHTML = val
-}
-
-// SetScoringHTML sets the value of ScoringHTML.
-func (s *ProblemModel) SetScoringHTML(val string) {
-	s.ScoringHTML = val
 }
 
 // SetIsPrivate sets the value of IsPrivate.

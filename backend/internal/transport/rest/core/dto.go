@@ -145,19 +145,19 @@ func GetContestProblemResponseDTO(contestProblem contestsmodel.ContestProblem, p
 
 	return &corev1.GetContestProblemResponseModel{
 		Problem: corev1.ContestProblemModel{
-			ProblemID:        contestProblem.ProblemID,
-			Title:            title,
-			TimeLimit:        safeInt32(problem.TimeLimitMs),
-			MemoryLimit:      safeInt32(problem.MemoryLimitMb),
-			Position:         safeInt32(contestProblem.Ordinal),
-			LegendHTML:       statementField(statement, func(s problemsmodel.Statement) string { return s.Legend }),
-			InputFormatHTML:  statementField(statement, func(s problemsmodel.Statement) string { return s.InputFormat }),
-			OutputFormatHTML: statementField(statement, func(s problemsmodel.Statement) string { return s.OutputFormat }),
-			NotesHTML:        statementField(statement, func(s problemsmodel.Statement) string { return s.Notes }),
-			ScoringHTML:      statementField(statement, func(s problemsmodel.Statement) string { return s.Scoring }),
-			CreatedAt:        problem.CreatedAt,
-			UpdatedAt:        problem.UpdatedAt,
-			Samples:          samples,
+			ProblemID:    contestProblem.ProblemID,
+			Title:        title,
+			TimeLimit:    safeInt32(problem.TimeLimitMs),
+			MemoryLimit:  safeInt32(problem.MemoryLimitMb),
+			Position:     safeInt32(contestProblem.Ordinal),
+			Legend:       statementField(statement, func(s problemsmodel.Statement) string { return s.Legend }),
+			InputFormat:  statementField(statement, func(s problemsmodel.Statement) string { return s.InputFormat }),
+			OutputFormat: statementField(statement, func(s problemsmodel.Statement) string { return s.OutputFormat }),
+			Notes:        statementField(statement, func(s problemsmodel.Statement) string { return s.Notes }),
+			Scoring:      statementField(statement, func(s problemsmodel.Statement) string { return s.Scoring }),
+			CreatedAt:    problem.CreatedAt,
+			UpdatedAt:    problem.UpdatedAt,
+			Samples:      samples,
 		},
 	}
 }
@@ -344,12 +344,6 @@ func ProblemDTO(p problemsmodel.Problem, statement *problemsmodel.Statement, sam
 		OutputFormat: outputFormat,
 		Notes:        notes,
 		Scoring:      scoring,
-
-		LegendHTML:       legend,
-		InputFormatHTML:  inputFormat,
-		OutputFormatHTML: outputFormat,
-		NotesHTML:        notes,
-		ScoringHTML:      scoring,
 
 		IsTemplate: p.IsTemplate,
 		CreatedAt:  p.CreatedAt,

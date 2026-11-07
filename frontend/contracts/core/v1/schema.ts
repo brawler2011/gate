@@ -2104,11 +2104,6 @@ export interface components {
          *       "output_format": "example",
          *       "notes": "example",
          *       "scoring": "example",
-         *       "legend_html": "example",
-         *       "input_format_html": "example",
-         *       "output_format_html": "example",
-         *       "notes_html": "example",
-         *       "scoring_html": "example",
          *       "is_template": false,
          *       "created_at": "2026-01-01T12:00:00Z",
          *       "updated_at": "2026-01-01T12:00:00Z",
@@ -2148,11 +2143,6 @@ export interface components {
             output_format: string;
             notes: string;
             scoring: string;
-            legend_html: string;
-            input_format_html: string;
-            output_format_html: string;
-            notes_html: string;
-            scoring_html: string;
             /** @example true */
             is_private?: boolean;
             /** Format: date-time */
@@ -2236,11 +2226,6 @@ export interface components {
          *         "output_format": "example",
          *         "notes": "example",
          *         "scoring": "example",
-         *         "legend_html": "example",
-         *         "input_format_html": "example",
-         *         "output_format_html": "example",
-         *         "notes_html": "example",
-         *         "scoring_html": "example",
          *         "is_template": false,
          *         "created_at": "2026-01-01T12:00:00Z",
          *         "updated_at": "2026-01-01T12:00:00Z",
@@ -2264,11 +2249,11 @@ export interface components {
          *       "time_limit": 1000,
          *       "memory_limit": 256,
          *       "position": 1,
-         *       "legend_html": "example",
-         *       "input_format_html": "example",
-         *       "output_format_html": "example",
-         *       "notes_html": "example",
-         *       "scoring_html": "example",
+         *       "legend": "example",
+         *       "input_format": "example",
+         *       "output_format": "example",
+         *       "notes": "example",
+         *       "scoring": "example",
          *       "created_at": "2026-01-01T12:00:00Z",
          *       "updated_at": "2026-01-01T12:00:00Z",
          *       "samples": [
@@ -2296,11 +2281,11 @@ export interface components {
             memory_limit: number;
             /** Format: int32 */
             position: number;
-            legend_html: string;
-            input_format_html: string;
-            output_format_html: string;
-            notes_html: string;
-            scoring_html: string;
+            legend: string;
+            input_format: string;
+            output_format: string;
+            notes: string;
+            scoring: string;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -2316,11 +2301,11 @@ export interface components {
          *         "time_limit": 1000,
          *         "memory_limit": 256,
          *         "position": 1,
-         *         "legend_html": "example",
-         *         "input_format_html": "example",
-         *         "output_format_html": "example",
-         *         "notes_html": "example",
-         *         "scoring_html": "example",
+         *         "legend": "example",
+         *         "input_format": "example",
+         *         "output_format": "example",
+         *         "notes": "example",
+         *         "scoring": "example",
          *         "created_at": "2026-01-01T12:00:00Z",
          *         "updated_at": "2026-01-01T12:00:00Z",
          *         "samples": [

@@ -25,11 +25,11 @@ describe("Problem Component DOM baseline test", () => {
     title: "A + B Problem",
     time_limit: 1000,
     memory_limit: 256,
-    legend_html: "Calculate $A + B$",
-    input_format_html: "Two integers",
-    output_format_html: "Single sum integer",
-    notes_html: "Note 1",
-    scoring_html: "100 points",
+    legend: "Calculate $A + B$",
+    input_format: "Two integers",
+    output_format: "Single sum integer",
+    notes: "Note 1",
+    scoring: "100 points",
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     samples: [
@@ -71,7 +71,7 @@ describe("Problem Component DOM baseline test", () => {
 
   it("renders all samples verbatim and omits empty sections", () => {
     const view = renderWithProviders(<Problem problem={{...sampleProblem,
-      input_format_html: "", output_format_html: "", notes_html: "",
+      input_format: "", output_format: "", notes: "",
       samples: [{input: "1 2\n3", output: "6\n"}, {input: "0 0", output: "0"}],
     }} />);
     expect(Array.from(view.container.querySelectorAll("pre")).map((node) => node.textContent)).toEqual([
@@ -89,9 +89,9 @@ describe("Problem Component DOM baseline test", () => {
   });
 
   it("renders and replaces statement math after client updates", () => {
-    const view = renderWithProviders(<Problem problem={{...sampleProblem, legend_html: "$x^2$"}} />);
+    const view = renderWithProviders(<Problem problem={{...sampleProblem, legend: "$x^2$"}} />);
     expect(view.container.querySelector(".katex")).toBeTruthy();
-    view.rerender(<Problem problem={{...sampleProblem, legend_html: "$y^3$"}} />);
+    view.rerender(<Problem problem={{...sampleProblem, legend: "$y^3$"}} />);
     expect(view.container.querySelector(".katex")).toBeTruthy();
     expect(view.container.querySelector(".katex")?.textContent).toContain("y");
   });
