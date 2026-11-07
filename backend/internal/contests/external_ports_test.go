@@ -12,6 +12,8 @@ import (
 )
 
 type ContestsRepo interface {
+	GetContestScoreboardSubmissions(context.Context, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
+	GetUserScoreboardSubmissions(context.Context, uuid.UUID, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
 	CreateContest(ctx context.Context, params *contestsmodel.CreateContestParams) error
 	GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error)
 	GetContestByLogin(ctx context.Context, orgID uuid.UUID, login string) (contestsmodel.Contest, error)

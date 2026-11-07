@@ -822,6 +822,32 @@ func (r *ContestsRepo) GetContestScoreboardFromStandings(ctx context.Context, co
 	return results, userMap, nil
 }
 
+func (r *ContestsRepo) GetContestScoreboardSubmissions(ctx context.Context, contestID uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
+	rows, err := r.queries.GetContestScoreboardSubmissions(ctx, &contestID)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+	subs := make([]contestsmodel.ScoreboardSubmission, len(rows))
+	for i, row := range rows {
+		subs[i] = contestsmodel.ScoreboardSubmission{UserID: *row.OwnerID, ProblemID: *row.ProblemID,
+			SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: row.State, CreatedAt: row.CreatedAt}}
+	}
+	return subs, nil
+}
+
+func (r *ContestsRepo) GetUserScoreboardSubmissions(ctx context.Context, contestID, userID uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
+	rows, err := r.queries.GetUserScoreboardSubmissions(ctx, sqlc.GetUserScoreboardSubmissionsParams{ContestID: &contestID, OwnerID: &userID})
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+	subs := make([]contestsmodel.ScoreboardSubmission, len(rows))
+	for i, row := range rows {
+		subs[i] = contestsmodel.ScoreboardSubmission{UserID: *row.OwnerID, ProblemID: *row.ProblemID,
+			SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: row.State, CreatedAt: row.CreatedAt}}
+	}
+	return subs, nil
+}
+
 func (r *ContestsRepo) GetSubmissionsForScoreboard(ctx context.Context, contestID, userID, problemID uuid.UUID) ([]contestsmodel.SubmissionForScoreboard, error) {
 	rows, err := r.queries.GetSubmissionsForScoreboard(ctx, sqlc.GetSubmissionsForScoreboardParams{
 		ContestID: &contestID,

@@ -18,6 +18,10 @@ type scoreboardAccessRepo struct {
 	reads   int
 }
 
+func (r *scoreboardAccessRepo) GetContestScoreboardSubmissions(context.Context, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
+	return nil, nil
+}
+
 func (r *scoreboardAccessRepo) GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error) {
 	return r.contest, nil
 }

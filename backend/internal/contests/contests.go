@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -255,13 +256,17 @@ func (uc *ContestsUseCase) ProjectScoreboard(ctx context.Context, contestID uuid
 		return nil, err
 	}
 
+	subs, err := uc.contestRepo.GetContestScoreboardSubmissions(ctx, contestID)
+	if err != nil {
+		return nil, err
+	}
+	userResults := scoreboardResults(contest, problems, userMap, true, subs)
 	items := make([]contestsmodel.ScoreboardItem, 0, len(userMap))
 	for uID, username := range userMap {
-		pResults, err := uc.scoreboardUserResults(ctx, contest, problems, uID, true)
-		if err != nil {
-			return nil, err
+		pResults := userResults[uID]
+		if pResults == nil {
+			pResults = []contestsmodel.ContestProblemResult{}
 		}
-
 		items = append(items, scoreboardItem(uID, username, pResults))
 	}
 
@@ -731,10 +736,6 @@ func (uc *ContestsUseCase) GetMyPendingJoinRequest(
 	return uc.contestRepo.GetPendingContestJoinRequest(ctx, contest.ID, userID)
 }
 
-func (uc *ContestsUseCase) scoreboardUserResults(ctx context.Context, contest contestsmodel.Contest, problems []contestsmodel.ContestProblem, userID uuid.UUID, frozen bool) ([]contestsmodel.ContestProblemResult, error) {
-	return scoreboardUserResults(ctx, uc.contestRepo, contest, problems, userID, frozen)
-}
-
 func scoreboardItem(userID uuid.UUID, username string, pResults []contestsmodel.ContestProblemResult) contestsmodel.ScoreboardItem {
 	var solvedCount int32
 	var totalPenalty int32
@@ -789,98 +790,158 @@ func (uc *ContestsUseCase) GetContestScoreboardUser(ctx context.Context, contest
 	if member.ContestRole != contestsmodel.ContestRoleParticipant {
 		return response, nil
 	}
-	results, err := uc.scoreboardUserResults(ctx, contest, problems, userID, response.IsFrozen && !unfrozen)
+	subs, err := uc.contestRepo.GetUserScoreboardSubmissions(ctx, contestID, userID)
 	if err != nil {
 		return nil, err
+	}
+	results := scoreboardResults(contest, problems, map[uuid.UUID]string{userID: member.Username}, response.IsFrozen && !unfrozen, subs)[userID]
+	if results == nil {
+		results = []contestsmodel.ContestProblemResult{}
 	}
 	response.Items = append(response.Items, scoreboardItem(userID, member.Username, results))
 	return response, nil
 }
 
+// Histories are ordered by user, problem and creation time by the repository.
+// Process contiguous groups without copying the submission history.
+func scoreboardResults(contest contestsmodel.Contest, problems []contestsmodel.ContestProblem, users map[uuid.UUID]string, frozen bool, subs []contestsmodel.ScoreboardSubmission) map[uuid.UUID][]contestsmodel.ContestProblemResult {
+	ordinals := make(map[uuid.UUID]int, len(problems))
+	for i, problem := range problems {
+		ordinals[problem.ProblemID] = i
+	}
+	results := make(map[uuid.UUID][]contestsmodel.ContestProblemResult, len(users))
+	rules := newScoreboardRules(contest, frozen)
+	for start := 0; start < len(subs); {
+		first := subs[start]
+		end := start + 1
+		for end < len(subs) && subs[end].UserID == first.UserID && subs[end].ProblemID == first.ProblemID {
+			end++
+		}
+		_, participant := users[first.UserID]
+		_, problem := ordinals[first.ProblemID]
+		if participant && problem {
+			result, ok := calculateScoreboardProblem(rules, first.UserID, first.ProblemID, subs[start:end], func(sub contestsmodel.ScoreboardSubmission) contestsmodel.SubmissionForScoreboard {
+				return sub.SubmissionForScoreboard
+			})
+			if ok {
+				if results[first.UserID] == nil {
+					results[first.UserID] = make([]contestsmodel.ContestProblemResult, 0, len(problems))
+				}
+				results[first.UserID] = append(results[first.UserID], result)
+			}
+		}
+		start = end
+	}
+	for _, row := range results {
+		slices.SortFunc(row, func(a, b contestsmodel.ContestProblemResult) int {
+			return ordinals[a.ProblemID] - ordinals[b.ProblemID]
+		})
+	}
+	return results
+}
+
+type scoreboardRules struct {
+	contest           contestsmodel.Contest
+	frozen            bool
+	freezeTime        *time.Time
+	manualFreeze      bool
+	penaltyPerAttempt int32
+}
+
+func newScoreboardRules(contest contestsmodel.Contest, frozen bool) scoreboardRules {
+	return scoreboardRules{contest: contest, frozen: frozen, freezeTime: contest.GetFreezeTime(), manualFreeze: contest.GetFreezeStatus() == contestsmodel.FreezeStatusFrozen, penaltyPerAttempt: contest.GetPenaltyPerAttempt()}
+}
+
 func scoreboardUserResults(ctx context.Context, store interface {
 	GetSubmissionsForScoreboard(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) ([]contestsmodel.SubmissionForScoreboard, error)
 }, contest contestsmodel.Contest, problems []contestsmodel.ContestProblem, userID uuid.UUID, frozen bool) ([]contestsmodel.ContestProblemResult, error) {
-	freezeTime := contest.GetFreezeTime()
-	penaltyPerAttempt := contest.GetPenaltyPerAttempt()
-	pResults := make([]contestsmodel.ContestProblemResult, 0, len(problems))
-
-	for _, p := range problems {
-		subs, err := store.GetSubmissionsForScoreboard(ctx, contest.ID, userID, p.ProblemID)
+	results := make([]contestsmodel.ContestProblemResult, 0, len(problems))
+	rules := newScoreboardRules(contest, frozen)
+	for _, problem := range problems {
+		subs, err := store.GetSubmissionsForScoreboard(ctx, contest.ID, userID, problem.ProblemID)
 		if err != nil {
 			return nil, err
 		}
+		if result, ok := calculateScoreboardProblem(rules, userID, problem.ProblemID, subs, func(sub contestsmodel.SubmissionForScoreboard) contestsmodel.SubmissionForScoreboard { return sub }); ok {
+			results = append(results, result)
+		}
+	}
+	return results, nil
+}
 
-		var solved bool
-		var failedAttempts int32
-		var pendingAttempts int32
-		var firstACTime *time.Time
-		var timeMinutes *int32
+func calculateScoreboardProblem[T any](rules scoreboardRules, userID, problemID uuid.UUID, subs []T, submission func(T) contestsmodel.SubmissionForScoreboard) (contestsmodel.ContestProblemResult, bool) {
+	contest, frozen, freezeTime := rules.contest, rules.frozen, rules.freezeTime
 
-		for _, sub := range subs {
-			if contest.StartTime != nil && sub.CreatedAt.Before(*contest.StartTime) {
-				continue
-			}
-			if contest.EndTime != nil && sub.CreatedAt.After(*contest.EndTime) {
-				continue
-			}
+	var solved bool
+	var failedAttempts int32
+	var pendingAttempts int32
+	var firstACTime *time.Time
+	var timeMinutes *int32
 
-			if frozen && freezeTime != nil && !sub.CreatedAt.Before(*freezeTime) {
-				pendingAttempts++
-				continue
-			}
-			if frozen && freezeTime == nil && contest.GetFreezeStatus() == contestsmodel.FreezeStatusFrozen {
-				pendingAttempts++
-				continue
-			}
-
-			if sub.State == submissionsmodel.Saved || sub.State == submissionsmodel.GotCE {
-				continue
-			}
-
-			if solved {
-				continue
-			}
-
-			if sub.State == submissionsmodel.Accepted {
-				solved = true
-				t := sub.CreatedAt
-				firstACTime = &t
-				if contest.StartTime != nil {
-					mins := int32(sub.CreatedAt.Sub(*contest.StartTime).Minutes())
-					if mins < 0 {
-						mins = 0
-					}
-					timeMinutes = &mins
-				} else {
-					zero := int32(0)
-					timeMinutes = &zero
-				}
-			} else if sub.State == submissionsmodel.GotTL || sub.State == submissionsmodel.GotML ||
-				sub.State == submissionsmodel.GotRE || sub.State == submissionsmodel.GotPE || sub.State == submissionsmodel.GotWA || sub.State == submissionsmodel.Disqualified {
-				failedAttempts++
-			}
+	for _, row := range subs {
+		sub := submission(row)
+		if contest.StartTime != nil && sub.CreatedAt.Before(*contest.StartTime) {
+			continue
+		}
+		if contest.EndTime != nil && sub.CreatedAt.After(*contest.EndTime) {
+			continue
 		}
 
-		if solved || failedAttempts > 0 || pendingAttempts > 0 || (!frozen && len(subs) > 0) {
-			var penalty int32
-			if solved {
-				penalty = failedAttempts * penaltyPerAttempt
+		if sub.State == submissionsmodel.Saved || solved {
+			continue
+		}
+
+		if frozen && freezeTime != nil && !sub.CreatedAt.Before(*freezeTime) {
+			pendingAttempts++
+			continue
+		}
+		if frozen && freezeTime == nil && rules.manualFreeze {
+			pendingAttempts++
+			continue
+		}
+
+		if sub.State == submissionsmodel.GotCE {
+			continue
+		}
+
+		if sub.State == submissionsmodel.Accepted {
+			solved = true
+			t := sub.CreatedAt
+			firstACTime = &t
+			if contest.StartTime != nil {
+				mins := int32(sub.CreatedAt.Sub(*contest.StartTime).Minutes())
+				if mins < 0 {
+					mins = 0
+				}
+				timeMinutes = &mins
+			} else {
+				zero := int32(0)
+				timeMinutes = &zero
 			}
-			pResults = append(pResults, contestsmodel.ContestProblemResult{
-				ContestID:       contest.ID,
-				UserID:          userID,
-				ProblemID:       p.ProblemID,
-				Solved:          solved,
-				FailedAttempts:  failedAttempts,
-				PendingAttempts: pendingAttempts,
-				FirstACTime:     firstACTime,
-				TimeMinutes:     timeMinutes,
-				Penalty:         penalty,
-			})
+		} else if sub.State == submissionsmodel.GotTL || sub.State == submissionsmodel.GotML ||
+			sub.State == submissionsmodel.GotRE || sub.State == submissionsmodel.GotPE || sub.State == submissionsmodel.GotWA || sub.State == submissionsmodel.Disqualified {
+			failedAttempts++
 		}
 	}
 
-	return pResults, nil
+	if solved || failedAttempts > 0 || pendingAttempts > 0 || (!frozen && len(subs) > 0) {
+		var penalty int32
+		if solved {
+			penalty = failedAttempts * rules.penaltyPerAttempt
+		}
+		return contestsmodel.ContestProblemResult{
+			ContestID:       contest.ID,
+			UserID:          userID,
+			ProblemID:       problemID,
+			Solved:          solved,
+			FailedAttempts:  failedAttempts,
+			PendingAttempts: pendingAttempts,
+			FirstACTime:     firstACTime,
+			TimeMinutes:     timeMinutes,
+			Penalty:         penalty,
+		}, true
+	}
+	return contestsmodel.ContestProblemResult{}, false
 }
 
 func ApplySubmissionResult(ctx context.Context, store ScoreboardStore, submission *submissionsmodel.Submission) error {
