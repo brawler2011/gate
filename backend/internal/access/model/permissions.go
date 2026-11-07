@@ -35,6 +35,38 @@ const (
 	ActionCreateSubmission       ContestAction = "create_submission"
 )
 
+// TeamAction describes operations on a team, never on its linked resources.
+type TeamAction string
+
+const (
+	ActionViewTeam          TeamAction = "view_team"
+	ActionListTeamMembers   TeamAction = "list_team_members"
+	ActionUpdateTeam        TeamAction = "update_team"
+	ActionDeleteTeam        TeamAction = "delete_team"
+	ActionManageTeamMembers TeamAction = "manage_team_members"
+	ActionLeaveTeam         TeamAction = "leave_team"
+	ActionListTeamResources TeamAction = "list_team_resources"
+)
+
+const (
+	ActionListOrganizationMembers       OrgAction     = "list_org_members"
+	ActionManageOrganizationMembers     OrgAction     = "manage_org_members"
+	ActionTransferOrganizationOwner     OrgAction     = "transfer_org_owner"
+	ActionLeaveOrganization             OrgAction     = "leave_org"
+	ActionCreateTeam                    OrgAction     = "create_team"
+	ActionCreateProblem                 OrgAction     = "create_problem"
+	ActionCreateContest                 OrgAction     = "create_contest"
+	ActionJoinOrganization              OrgAction     = "join_org"
+	ActionRequestOrganizationMembership OrgAction     = "request_org_membership"
+	ActionManageProblemMembers          ProblemAction = "manage_problem_members"
+	ActionTransferProblemOwner          ProblemAction = "transfer_problem_owner"
+	ActionListProblemMembers            ProblemAction = "list_problem_members"
+	ActionDeleteContest                 ContestAction = "delete_contest"
+	ActionTransferContestOwner          ContestAction = "transfer_contest_owner"
+	ActionViewLiveScoreboard            ContestAction = "view_live_scoreboard"
+	ActionListContestMembers            ContestAction = "list_contest_members"
+)
+
 // ProblemPermissions represents calculated permissions for a problem
 type ProblemPermissions struct {
 	ViewProblem  bool
