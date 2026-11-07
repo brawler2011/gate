@@ -2,6 +2,7 @@ package contests_test
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"testing"
 	"time"
@@ -17,6 +18,7 @@ import (
 type scoreboardKey struct{ contest, user, problem uuid.UUID }
 
 type scoreboardRepo struct {
+	historyErr error
 	ContestsRepo
 	contest     contestsmodel.Contest
 	problems    []contestsmodel.ContestProblem
@@ -64,6 +66,35 @@ func (r *scoreboardRepo) GetSubmissionsForScoreboard(_ context.Context, contest,
 	}
 	sort.Slice(result, func(i, j int) bool { return result[i].CreatedAt.Before(result[j].CreatedAt) })
 	return result, nil
+}
+
+func (r *scoreboardRepo) GetContestScoreboardSubmissions(_ context.Context, contest uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
+	return r.scoreboardHistory(contest, nil), r.historyErr
+}
+
+func (r *scoreboardRepo) GetUserScoreboardSubmissions(_ context.Context, contest, user uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
+	return r.scoreboardHistory(contest, &user), r.historyErr
+}
+
+func (r *scoreboardRepo) scoreboardHistory(contest uuid.UUID, user *uuid.UUID) []contestsmodel.ScoreboardSubmission {
+	var rows []contestsmodel.ScoreboardSubmission
+	for _, sub := range r.submissions {
+		if sub.ContestID == nil || *sub.ContestID != contest || sub.CreatedBy == nil || sub.ProblemID == nil || (user != nil && *sub.CreatedBy != *user) {
+			continue
+		}
+		rows = append(rows, contestsmodel.ScoreboardSubmission{UserID: *sub.CreatedBy, ProblemID: *sub.ProblemID,
+			SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: sub.State, CreatedAt: sub.CreatedAt}})
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].UserID != rows[j].UserID {
+			return rows[i].UserID.String() < rows[j].UserID.String()
+		}
+		if rows[i].ProblemID != rows[j].ProblemID {
+			return rows[i].ProblemID.String() < rows[j].ProblemID.String()
+		}
+		return rows[i].CreatedAt.Before(rows[j].CreatedAt)
+	})
+	return rows
 }
 
 func (r *scoreboardRepo) UpsertContestProblemResult(_ context.Context, p *contestsmodel.UpsertContestProblemResultParams) error {
@@ -193,7 +224,7 @@ func TestScoreboardFrozenAndLiveViews(t *testing.T) {
 		solved          bool
 		failed, pending int32
 	}{
-		{"alice", true, 1, 1}, {"bob", true, 0, 0}, {"charlie", false, 1, 1}, {"dave", false, 0, 2}, {"eve", true, 0, 2},
+		{"alice", true, 1, 0}, {"bob", true, 0, 0}, {"charlie", false, 1, 1}, {"dave", false, 0, 2}, {"eve", true, 0, 0},
 	} {
 		for _, item := range frozen.Items {
 			if item.Username == tc.user {
@@ -240,6 +271,18 @@ func TestScoreboardContestAndFreezeBoundaries(t *testing.T) {
 	for i, state := range []submissionsmodel.State{submissionsmodel.GotWA, submissionsmodel.GotTL, submissionsmodel.GotML, submissionsmodel.GotRE, submissionsmodel.GotPE} {
 		f.submit(t, "alice", 1, state, time.Duration(i+1)*5*time.Minute)
 	}
+	// B remains unsolved at the cutoff; CE is hidden, Saved is ignored,
+	// and the submission exactly at contest end still counts.
+	for _, sub := range []struct {
+		state submissionsmodel.State
+		at    time.Duration
+	}{
+		{submissionsmodel.GotCE, 30 * time.Minute}, {submissionsmodel.Saved, 35 * time.Minute},
+		{submissionsmodel.GotCE, time.Hour}, {submissionsmodel.Saved, 75 * time.Minute},
+		{submissionsmodel.Accepted, 2 * time.Hour}, {submissionsmodel.GotWA, 2*time.Hour + time.Nanosecond},
+	} {
+		f.submit(t, "alice", 1, sub.state, sub.at)
+	}
 	sb := f.scoreboard(t, false)
 	require.Len(t, sb.Items, 1)
 	require.EqualValues(t, 1, sb.Items[0].ProblemsSolved)
@@ -248,17 +291,23 @@ func TestScoreboardContestAndFreezeBoundaries(t *testing.T) {
 	a, b := sb.Items[0].ProblemResults[0], sb.Items[0].ProblemResults[1]
 	require.True(t, a.Solved)
 	require.EqualValues(t, 1, a.FailedAttempts)
-	require.EqualValues(t, 5, a.PendingAttempts)
+	require.Zero(t, a.PendingAttempts)
 	require.EqualValues(t, 59, *a.TimeMinutes)
 	require.False(t, b.Solved)
 	require.EqualValues(t, 5, b.FailedAttempts)
+	require.EqualValues(t, 2, b.PendingAttempts)
 	require.Zero(t, b.Penalty)
+	live := f.scoreboard(t, true).Items[0]
+	require.EqualValues(t, 2, live.ProblemsSolved)
+	require.EqualValues(t, 299, live.TotalPenalty)
 }
 
 func TestScoreboardManualFreezeWithoutCutoff(t *testing.T) {
 	f := newScoreboardFixture("alice")
 	f.submit(t, "alice", 0, submissionsmodel.GotWA, 10*time.Minute)
 	f.submit(t, "alice", 0, submissionsmodel.Accepted, 20*time.Minute)
+	f.submit(t, "alice", 0, submissionsmodel.Saved, 25*time.Minute)
+	f.submit(t, "alice", 0, submissionsmodel.GotCE, 30*time.Minute)
 	f.repo.contest.Settings["freeze_status"] = contestsmodel.FreezeStatusFrozen
 	f.repo.contest.Settings["freeze_duration_minutes"] = 0
 	sb := f.scoreboard(t, false)
@@ -268,7 +317,7 @@ func TestScoreboardManualFreezeWithoutCutoff(t *testing.T) {
 	require.Zero(t, sb.Items[0].ProblemsSolved)
 	require.Zero(t, sb.Items[0].TotalPenalty)
 	require.Len(t, sb.Items[0].ProblemResults, 1)
-	require.EqualValues(t, 2, sb.Items[0].ProblemResults[0].PendingAttempts)
+	require.EqualValues(t, 3, sb.Items[0].ProblemResults[0].PendingAttempts)
 	require.Zero(t, sb.Items[0].ProblemResults[0].FailedAttempts)
 }
 
@@ -332,4 +381,16 @@ func TestScoreboardUserUpdateMatchesSnapshot(t *testing.T) {
 	update, err := f.uc.GetContestScoreboardUser(context.Background(), f.repo.contest.ID, f.users["alice"], false)
 	require.NoError(t, err)
 	require.Empty(t, update.Items)
+}
+
+func TestScoreboardHistoryErrors(t *testing.T) {
+	f := newScoreboardFixture("alice")
+	f.repo.contest.Settings["freeze_status"] = contestsmodel.FreezeStatusFrozen
+	f.repo.historyErr = errors.New("history failed")
+	result, err := f.uc.ProjectScoreboard(context.Background(), f.repo.contest.ID, false)
+	require.ErrorIs(t, err, f.repo.historyErr)
+	require.Nil(t, result)
+	result, err = f.uc.GetContestScoreboardUser(context.Background(), f.repo.contest.ID, f.users["alice"], false)
+	require.ErrorIs(t, err, f.repo.historyErr)
+	require.Nil(t, result)
 }

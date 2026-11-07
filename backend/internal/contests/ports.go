@@ -10,6 +10,9 @@ import (
 )
 
 type ContestsRepo interface {
+	// Scoreboard histories group rows by user and problem, chronologically within each group.
+	GetContestScoreboardSubmissions(context.Context, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
+	GetUserScoreboardSubmissions(context.Context, uuid.UUID, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
 	GetSubmissionsForScoreboard(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) ([]contestsmodel.SubmissionForScoreboard, error)
 	GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error)
 	GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error)

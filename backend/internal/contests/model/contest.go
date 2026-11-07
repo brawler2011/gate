@@ -677,6 +677,13 @@ type ScoreboardResponse struct {
 	Items             []ScoreboardItem          `json:"items"`
 }
 
+// ScoreboardSubmission identifies a submission within a contest-wide history.
+type ScoreboardSubmission struct {
+	UserID    uuid.UUID
+	ProblemID uuid.UUID
+	SubmissionForScoreboard
+}
+
 type SubmissionForScoreboard struct {
 	State     submissionsmodel.State
 	CreatedAt time.Time

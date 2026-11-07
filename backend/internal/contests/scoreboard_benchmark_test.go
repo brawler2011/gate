@@ -16,20 +16,20 @@ import (
 	"github.com/google/uuid"
 )
 
-// Indexed, already-loaded rows isolate Go projection cost from PostgreSQL and
+// Grouped, already-loaded rows isolate Go projection cost from PostgreSQL and
 // from the scanning/sorting behavior of the general correctness-test fixture.
 type benchmarkScoreboardRepo struct {
 	*scoreboardRepo
 	standings []contestsmodel.ContestProblemResult
-	history   map[scoreboardKey][]contestsmodel.SubmissionForScoreboard
+	batch     []contestsmodel.ScoreboardSubmission
 }
 
 func (r *benchmarkScoreboardRepo) GetContestScoreboardFromStandings(context.Context, uuid.UUID) ([]contestsmodel.ContestProblemResult, map[uuid.UUID]string, error) {
 	return r.standings, r.users, nil
 }
 
-func (r *benchmarkScoreboardRepo) GetSubmissionsForScoreboard(_ context.Context, contest, user, problem uuid.UUID) ([]contestsmodel.SubmissionForScoreboard, error) {
-	return r.history[scoreboardKey{contest, user, problem}], nil
+func (r *benchmarkScoreboardRepo) GetContestScoreboardSubmissions(context.Context, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
+	return r.batch, nil
 }
 
 func BenchmarkScoreboardProjection(b *testing.B) {
@@ -49,7 +49,7 @@ func BenchmarkScoreboardProjection(b *testing.B) {
 					r := &benchmarkScoreboardRepo{scoreboardRepo: &scoreboardRepo{
 						contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, EndTime: &end, Settings: map[string]interface{}{"freeze_status": contestsmodel.FreezeStatusFrozen, "freeze_duration_minutes": 60}},
 						users:   map[uuid.UUID]string{},
-					}, history: map[scoreboardKey][]contestsmodel.SubmissionForScoreboard{}}
+					}}
 					for p := 0; p < 10; p++ {
 						r.problems = append(r.problems, contestsmodel.ContestProblem{ContestID: r.contest.ID, ProblemID: uuid.New(), Ordinal: p + 1, Title: fmt.Sprintf("Problem %d", p), ShortName: fmt.Sprintf("p%d", p)})
 					}
@@ -60,10 +60,10 @@ func BenchmarkScoreboardProjection(b *testing.B) {
 							acTime := start.Add(90 * time.Minute)
 							minutes := int32(90)
 							r.standings = append(r.standings, contestsmodel.ContestProblemResult{ContestID: r.contest.ID, UserID: user, ProblemID: p.ProblemID, Solved: true, FailedAttempts: 1, FirstACTime: &acTime, TimeMinutes: &minutes})
-							r.history[scoreboardKey{r.contest.ID, user, p.ProblemID}] = []contestsmodel.SubmissionForScoreboard{
-								{State: submissionsmodel.GotWA, CreatedAt: start.Add(10 * time.Minute)},
-								{State: submissionsmodel.Accepted, CreatedAt: acTime},
-							}
+							r.batch = append(r.batch,
+								contestsmodel.ScoreboardSubmission{UserID: user, ProblemID: p.ProblemID, SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: submissionsmodel.GotWA, CreatedAt: start.Add(10 * time.Minute)}},
+								contestsmodel.ScoreboardSubmission{UserID: user, ProblemID: p.ProblemID, SubmissionForScoreboard: contestsmodel.SubmissionForScoreboard{State: submissionsmodel.Accepted, CreatedAt: acTime}},
+							)
 						}
 					}
 					uc := contests.NewContestsUseCase(r, nil, nil, nil)

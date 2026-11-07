@@ -584,6 +584,45 @@ func (q *Queries) GetContestScoreboardFromStandings(ctx context.Context, contest
 	return items, nil
 }
 
+const getContestScoreboardSubmissions = `-- name: GetContestScoreboardSubmissions :many
+SELECT owner_id, problem_id, state, created_at
+FROM submissions
+WHERE contest_id = $1 AND owner_id IS NOT NULL AND problem_id IS NOT NULL
+ORDER BY owner_id, problem_id, created_at ASC
+`
+
+type GetContestScoreboardSubmissionsRow struct {
+	OwnerID   *uuid.UUID             `json:"owner_id"`
+	ProblemID *uuid.UUID             `json:"problem_id"`
+	State     submissionsmodel.State `json:"state"`
+	CreatedAt time.Time              `json:"created_at"`
+}
+
+func (q *Queries) GetContestScoreboardSubmissions(ctx context.Context, contestID *uuid.UUID) ([]GetContestScoreboardSubmissionsRow, error) {
+	rows, err := q.db.Query(ctx, getContestScoreboardSubmissions, contestID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetContestScoreboardSubmissionsRow{}
+	for rows.Next() {
+		var i GetContestScoreboardSubmissionsRow
+		if err := rows.Scan(
+			&i.OwnerID,
+			&i.ProblemID,
+			&i.State,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getContestUserProblemBlock = `-- name: GetContestUserProblemBlock :one
 SELECT contest_id, user_id, problem_id, reason, created_by, created_at
 FROM contest_user_problem_blocks
@@ -638,6 +677,50 @@ func (q *Queries) GetSubmissionsForScoreboard(ctx context.Context, arg GetSubmis
 	for rows.Next() {
 		var i GetSubmissionsForScoreboardRow
 		if err := rows.Scan(&i.State, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUserScoreboardSubmissions = `-- name: GetUserScoreboardSubmissions :many
+SELECT owner_id, problem_id, state, created_at
+FROM submissions
+WHERE contest_id = $1 AND owner_id = $2 AND problem_id IS NOT NULL
+ORDER BY problem_id, created_at ASC
+`
+
+type GetUserScoreboardSubmissionsParams struct {
+	ContestID *uuid.UUID `json:"contest_id"`
+	OwnerID   *uuid.UUID `json:"owner_id"`
+}
+
+type GetUserScoreboardSubmissionsRow struct {
+	OwnerID   *uuid.UUID             `json:"owner_id"`
+	ProblemID *uuid.UUID             `json:"problem_id"`
+	State     submissionsmodel.State `json:"state"`
+	CreatedAt time.Time              `json:"created_at"`
+}
+
+func (q *Queries) GetUserScoreboardSubmissions(ctx context.Context, arg GetUserScoreboardSubmissionsParams) ([]GetUserScoreboardSubmissionsRow, error) {
+	rows, err := q.db.Query(ctx, getUserScoreboardSubmissions, arg.ContestID, arg.OwnerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetUserScoreboardSubmissionsRow{}
+	for rows.Next() {
+		var i GetUserScoreboardSubmissionsRow
+		if err := rows.Scan(
+			&i.OwnerID,
+			&i.ProblemID,
+			&i.State,
+			&i.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

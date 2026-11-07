@@ -262,6 +262,18 @@ FROM submissions
 WHERE contest_id = $1 AND owner_id = $2 AND problem_id = $3
 ORDER BY created_at ASC;
 
+-- name: GetContestScoreboardSubmissions :many
+SELECT owner_id, problem_id, state, created_at
+FROM submissions
+WHERE contest_id = $1 AND owner_id IS NOT NULL AND problem_id IS NOT NULL
+ORDER BY owner_id, problem_id, created_at ASC;
+
+-- name: GetUserScoreboardSubmissions :many
+SELECT owner_id, problem_id, state, created_at
+FROM submissions
+WHERE contest_id = $1 AND owner_id = $2 AND problem_id IS NOT NULL
+ORDER BY problem_id, created_at ASC;
+
 -- Contest User Problem Blocks
 -- name: CreateContestUserProblemBlock :exec
 INSERT INTO contest_user_problem_blocks (contest_id, user_id, problem_id, reason, created_by)
