@@ -3,6 +3,7 @@ package organizationsmodel
 import (
 	"time"
 
+	paging "github.com/brawler2011/gate/backend/internal/page"
 	"github.com/google/uuid"
 )
 
@@ -67,4 +68,17 @@ type AddTeamMemberInput struct {
 	TeamID uuid.UUID
 	UserID uuid.UUID
 	Role   TeamRole
+}
+
+// TeamsFilter selects teams visible to the caller.
+type TeamsFilter struct {
+	OrganizationID *uuid.UUID
+	Search         string
+	Page           int32
+	PageSize       int32
+}
+
+type TeamsList struct {
+	Teams      []Team
+	Pagination paging.Pagination
 }

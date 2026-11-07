@@ -151,7 +151,7 @@ type SubmissionsUC interface {
 type TeamsUC interface {
 	CreateTeam(ctx context.Context, input *organizationsmodel.CreateTeamInput, creatorID uuid.UUID) (*organizationsmodel.Team, error)
 	GetTeam(ctx context.Context, teamID, userID uuid.UUID) (*organizationsmodel.Team, error)
-	ListOrganizationTeams(ctx context.Context, orgID, userID uuid.UUID) ([]organizationsmodel.Team, error)
+	ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter) (*organizationsmodel.TeamsList, error)
 	UpdateTeam(ctx context.Context, teamID, userID uuid.UUID, input *organizationsmodel.UpdateTeamInput) error
 	DeleteTeam(ctx context.Context, teamID, userID uuid.UUID) error
 
@@ -160,7 +160,6 @@ type TeamsUC interface {
 	ListTeamMembers(ctx context.Context, teamID, requestUserID uuid.UUID) ([]organizationsmodel.TeamMember, error)
 	UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole, requestUserID uuid.UUID) error
 	RemoveTeamMember(ctx context.Context, teamID, userID, requestUserID uuid.UUID) error
-	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]organizationsmodel.Team, error)
 
 	// Resource associations
 	GetTeamContests(ctx context.Context, teamID, requestUserID uuid.UUID) ([]contestsmodel.Contest, error)

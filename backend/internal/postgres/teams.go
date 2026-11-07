@@ -90,12 +90,27 @@ func (r *TeamsRepo) GetTeamBySlug(ctx context.Context, orgID uuid.UUID, slug str
 	}, nil
 }
 
-func (r *TeamsRepo) ListOrganizationTeams(ctx context.Context, orgID uuid.UUID) ([]organizationsmodel.Team, error) {
-	teams, err := r.q.ListOrganizationTeams(ctx, orgID)
+func (r *TeamsRepo) ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter, userID uuid.UUID, canManage bool) ([]organizationsmodel.Team, int32, error) {
+	total, err := r.q.CountTeams(ctx, sqlc.CountTeamsParams{
+		OrganizationID: filter.OrganizationID,
+		Search:         filter.Search,
+		UserID:         userID,
+		CanManage:      canManage,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list organization teams: %w", HandlePgErr(err))
+		return nil, 0, fmt.Errorf("count teams: %w", HandlePgErr(err))
 	}
-
+	teams, err := r.q.ListTeams(ctx, sqlc.ListTeamsParams{
+		OrganizationID: filter.OrganizationID,
+		Search:         filter.Search,
+		UserID:         userID,
+		CanManage:      canManage,
+		PageSize:       filter.PageSize,
+		PageOffset:     (int64(filter.Page) - 1) * int64(filter.PageSize),
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("list teams: %w", HandlePgErr(err))
+	}
 	result := make([]organizationsmodel.Team, len(teams))
 	for i, t := range teams {
 		result[i] = organizationsmodel.Team{
@@ -110,8 +125,7 @@ func (r *TeamsRepo) ListOrganizationTeams(ctx context.Context, orgID uuid.UUID) 
 			UpdatedAt:      t.UpdatedAt,
 		}
 	}
-
-	return result, nil
+	return result, safeInt32(total), nil
 }
 
 func (r *TeamsRepo) UpdateTeam(ctx context.Context, id uuid.UUID, input *organizationsmodel.UpdateTeamInput) error {
@@ -216,30 +230,6 @@ func (r *TeamsRepo) RemoveTeamMember(ctx context.Context, teamID, userID uuid.UU
 		return fmt.Errorf("failed to remove team member: %w", HandlePgErr(err))
 	}
 	return nil
-}
-
-func (r *TeamsRepo) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]organizationsmodel.Team, error) {
-	teams, err := r.q.GetUserTeams(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user teams: %w", HandlePgErr(err))
-	}
-
-	result := make([]organizationsmodel.Team, len(teams))
-	for i, t := range teams {
-		result[i] = organizationsmodel.Team{
-			ID:             t.ID,
-			OrganizationID: t.OrganizationID,
-			Name:           t.Name,
-			Slug:           t.Slug,
-			Description:    t.Description,
-			Privacy:        organizationsmodel.TeamPrivacy(t.Privacy),
-			ParentTeamID:   t.ParentTeamID,
-			CreatedAt:      t.CreatedAt,
-			UpdatedAt:      t.UpdatedAt,
-		}
-	}
-
-	return result, nil
 }
 
 func (r *TeamsRepo) GetUserTeamsByOrganization(ctx context.Context, userID, orgID uuid.UUID) ([]organizationsmodel.Team, error) {

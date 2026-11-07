@@ -41,14 +41,11 @@ type PermissionsUC interface {
 type TeamsRepo interface {
 	GetTeamByID(ctx context.Context, id uuid.UUID) (*organizationsmodel.Team, error)
 
-	ListOrganizationTeams(ctx context.Context, orgID uuid.UUID) ([]organizationsmodel.Team, error)
+	ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter, userID uuid.UUID, canManage bool) ([]organizationsmodel.Team, int32, error)
 
 	// Member management
 	GetTeamMember(ctx context.Context, teamID, userID uuid.UUID) (*organizationsmodel.TeamMember, error)
 	ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]organizationsmodel.TeamMember, error)
-
-	// User's teams
-	GetUserTeams(ctx context.Context, userID uuid.UUID) ([]organizationsmodel.Team, error)
 
 	// Resource associations
 	GetTeamContests(ctx context.Context, teamID uuid.UUID) ([]contestsmodel.Contest, error)
