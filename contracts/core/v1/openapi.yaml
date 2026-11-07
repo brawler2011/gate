@@ -4392,41 +4392,22 @@ components:
           type: integer
           format: int32
     UpdateProblemRequestModel:
-      description: "Fields for the update problem request."
+      description: >-
+        Updates problem metadata only. Omitted fields remain unchanged.
+        Statement fields (legend, input_format, output_format, notes, scoring)
+        and limits (memory_limit, time_limit) are no longer accepted here.
+        Edit them through the workshop statement and limits endpoints, then
+        publish the workspace. Unknown fields reject the entire request.
       example:
         title: Test problem
-        legend: example
-        input_format: example
-        output_format: example
-        notes: example
-        scoring: example
-        memory_limit: 256
-        time_limit: 1000
         visibility: private
         is_template: false
       type: object
+      additionalProperties: false
       properties:
         title:
           type: string
           example: Test problem
-        legend:
-          type: string
-        input_format:
-          type: string
-        output_format:
-          type: string
-        notes:
-          type: string
-        scoring:
-          type: string
-        memory_limit:
-          type: integer
-          format: int32
-          example: 256
-        time_limit:
-          type: integer
-          format: int32
-          example: 1000
         visibility:
           type: string
           example: private

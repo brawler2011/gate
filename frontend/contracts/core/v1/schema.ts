@@ -2557,16 +2557,9 @@ export interface components {
             position: number;
         };
         /**
-         * @description Fields for the update problem request.
+         * @description Updates problem metadata only. Omitted fields remain unchanged. Statement fields (legend, input_format, output_format, notes, scoring) and limits (memory_limit, time_limit) are no longer accepted here. Edit them through the workshop statement and limits endpoints, then publish the workspace. Unknown fields reject the entire request.
          * @example {
          *       "title": "Test problem",
-         *       "legend": "example",
-         *       "input_format": "example",
-         *       "output_format": "example",
-         *       "notes": "example",
-         *       "scoring": "example",
-         *       "memory_limit": 256,
-         *       "time_limit": 1000,
          *       "visibility": "private",
          *       "is_template": false
          *     }
@@ -2574,21 +2567,6 @@ export interface components {
         UpdateProblemRequestModel: {
             /** @example Test problem */
             title?: string;
-            legend?: string;
-            input_format?: string;
-            output_format?: string;
-            notes?: string;
-            scoring?: string;
-            /**
-             * Format: int32
-             * @example 256
-             */
-            memory_limit?: number;
-            /**
-             * Format: int32
-             * @example 1000
-             */
-            time_limit?: number;
             /** @example private */
             visibility?: string;
             is_template?: boolean;

@@ -9953,59 +9953,20 @@ type UpdateProblemMemberOK struct{}
 // UpdateProblemOK is response for UpdateProblem operation.
 type UpdateProblemOK struct{}
 
-// Fields for the update problem request.
+// Updates problem metadata only. Omitted fields remain unchanged. Statement fields (legend,
+// input_format, output_format, notes, scoring) and limits (memory_limit, time_limit) are no longer
+// accepted here. Edit them through the workshop statement and limits endpoints, then publish the
+// workspace. Unknown fields reject the entire request.
 // Ref: #/components/schemas/UpdateProblemRequestModel
 type UpdateProblemRequestModel struct {
-	Title        OptString `json:"title"`
-	Legend       OptString `json:"legend"`
-	InputFormat  OptString `json:"input_format"`
-	OutputFormat OptString `json:"output_format"`
-	Notes        OptString `json:"notes"`
-	Scoring      OptString `json:"scoring"`
-	MemoryLimit  OptInt32  `json:"memory_limit"`
-	TimeLimit    OptInt32  `json:"time_limit"`
-	Visibility   OptString `json:"visibility"`
-	IsTemplate   OptBool   `json:"is_template"`
+	Title      OptString `json:"title"`
+	Visibility OptString `json:"visibility"`
+	IsTemplate OptBool   `json:"is_template"`
 }
 
 // GetTitle returns the value of Title.
 func (s *UpdateProblemRequestModel) GetTitle() OptString {
 	return s.Title
-}
-
-// GetLegend returns the value of Legend.
-func (s *UpdateProblemRequestModel) GetLegend() OptString {
-	return s.Legend
-}
-
-// GetInputFormat returns the value of InputFormat.
-func (s *UpdateProblemRequestModel) GetInputFormat() OptString {
-	return s.InputFormat
-}
-
-// GetOutputFormat returns the value of OutputFormat.
-func (s *UpdateProblemRequestModel) GetOutputFormat() OptString {
-	return s.OutputFormat
-}
-
-// GetNotes returns the value of Notes.
-func (s *UpdateProblemRequestModel) GetNotes() OptString {
-	return s.Notes
-}
-
-// GetScoring returns the value of Scoring.
-func (s *UpdateProblemRequestModel) GetScoring() OptString {
-	return s.Scoring
-}
-
-// GetMemoryLimit returns the value of MemoryLimit.
-func (s *UpdateProblemRequestModel) GetMemoryLimit() OptInt32 {
-	return s.MemoryLimit
-}
-
-// GetTimeLimit returns the value of TimeLimit.
-func (s *UpdateProblemRequestModel) GetTimeLimit() OptInt32 {
-	return s.TimeLimit
 }
 
 // GetVisibility returns the value of Visibility.
@@ -10021,41 +9982,6 @@ func (s *UpdateProblemRequestModel) GetIsTemplate() OptBool {
 // SetTitle sets the value of Title.
 func (s *UpdateProblemRequestModel) SetTitle(val OptString) {
 	s.Title = val
-}
-
-// SetLegend sets the value of Legend.
-func (s *UpdateProblemRequestModel) SetLegend(val OptString) {
-	s.Legend = val
-}
-
-// SetInputFormat sets the value of InputFormat.
-func (s *UpdateProblemRequestModel) SetInputFormat(val OptString) {
-	s.InputFormat = val
-}
-
-// SetOutputFormat sets the value of OutputFormat.
-func (s *UpdateProblemRequestModel) SetOutputFormat(val OptString) {
-	s.OutputFormat = val
-}
-
-// SetNotes sets the value of Notes.
-func (s *UpdateProblemRequestModel) SetNotes(val OptString) {
-	s.Notes = val
-}
-
-// SetScoring sets the value of Scoring.
-func (s *UpdateProblemRequestModel) SetScoring(val OptString) {
-	s.Scoring = val
-}
-
-// SetMemoryLimit sets the value of MemoryLimit.
-func (s *UpdateProblemRequestModel) SetMemoryLimit(val OptInt32) {
-	s.MemoryLimit = val
-}
-
-// SetTimeLimit sets the value of TimeLimit.
-func (s *UpdateProblemRequestModel) SetTimeLimit(val OptInt32) {
-	s.TimeLimit = val
 }
 
 // SetVisibility sets the value of Visibility.

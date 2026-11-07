@@ -20908,48 +20908,6 @@ func (s *UpdateProblemRequestModel) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.Legend.Set {
-			e.FieldStart("legend")
-			s.Legend.Encode(e)
-		}
-	}
-	{
-		if s.InputFormat.Set {
-			e.FieldStart("input_format")
-			s.InputFormat.Encode(e)
-		}
-	}
-	{
-		if s.OutputFormat.Set {
-			e.FieldStart("output_format")
-			s.OutputFormat.Encode(e)
-		}
-	}
-	{
-		if s.Notes.Set {
-			e.FieldStart("notes")
-			s.Notes.Encode(e)
-		}
-	}
-	{
-		if s.Scoring.Set {
-			e.FieldStart("scoring")
-			s.Scoring.Encode(e)
-		}
-	}
-	{
-		if s.MemoryLimit.Set {
-			e.FieldStart("memory_limit")
-			s.MemoryLimit.Encode(e)
-		}
-	}
-	{
-		if s.TimeLimit.Set {
-			e.FieldStart("time_limit")
-			s.TimeLimit.Encode(e)
-		}
-	}
-	{
 		if s.Visibility.Set {
 			e.FieldStart("visibility")
 			s.Visibility.Encode(e)
@@ -20963,17 +20921,10 @@ func (s *UpdateProblemRequestModel) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfUpdateProblemRequestModel = [10]string{
+var jsonFieldsNameOfUpdateProblemRequestModel = [3]string{
 	0: "title",
-	1: "legend",
-	2: "input_format",
-	3: "output_format",
-	4: "notes",
-	5: "scoring",
-	6: "memory_limit",
-	7: "time_limit",
-	8: "visibility",
-	9: "is_template",
+	1: "visibility",
+	2: "is_template",
 }
 
 // Decode decodes UpdateProblemRequestModel from json.
@@ -20993,76 +20944,6 @@ func (s *UpdateProblemRequestModel) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"title\"")
-			}
-		case "legend":
-			if err := func() error {
-				s.Legend.Reset()
-				if err := s.Legend.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"legend\"")
-			}
-		case "input_format":
-			if err := func() error {
-				s.InputFormat.Reset()
-				if err := s.InputFormat.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"input_format\"")
-			}
-		case "output_format":
-			if err := func() error {
-				s.OutputFormat.Reset()
-				if err := s.OutputFormat.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"output_format\"")
-			}
-		case "notes":
-			if err := func() error {
-				s.Notes.Reset()
-				if err := s.Notes.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"notes\"")
-			}
-		case "scoring":
-			if err := func() error {
-				s.Scoring.Reset()
-				if err := s.Scoring.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"scoring\"")
-			}
-		case "memory_limit":
-			if err := func() error {
-				s.MemoryLimit.Reset()
-				if err := s.MemoryLimit.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"memory_limit\"")
-			}
-		case "time_limit":
-			if err := func() error {
-				s.TimeLimit.Reset()
-				if err := s.TimeLimit.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"time_limit\"")
 			}
 		case "visibility":
 			if err := func() error {
@@ -21085,7 +20966,7 @@ func (s *UpdateProblemRequestModel) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"is_template\"")
 			}
 		default:
-			return d.Skip()
+			return errors.Errorf("unexpected field %q", k)
 		}
 		return nil
 	}); err != nil {
