@@ -460,7 +460,7 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 		contest = current
 		_, err = tx.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{ContestId: contest.ID, UserId: userID})
 		if err == nil {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "вы уже являетесь участником этого контеста")
+			return pkg.Wrap(pkg.ErrConflict, nil, "вы уже являетесь участником этого контеста")
 		}
 		if !errors.Is(err, pkg.ErrNotFound) {
 			return err
@@ -484,7 +484,7 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 			return err
 		}
 		if pending != nil {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "заявка на участие уже отправлена и ожидает рассмотрения")
+			return pkg.Wrap(pkg.ErrConflict, nil, "заявка на участие уже отправлена и ожидает рассмотрения")
 		}
 		req, err = tx.CreateContestJoinRequest(ctx, &contestsmodel.CreateContestJoinRequestInput{ContestID: contest.ID, UserID: userID, Message: message})
 		if err != nil {

@@ -114,7 +114,7 @@ func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateCont
 		login = strings.ToLower(params.Login.Value)
 		existing, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, login)
 		if err == nil && existing.ID != uuid.Nil {
-			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "contest with this login already exists in organization")
+			return nil, pkg.Wrap(pkg.ErrConflict, nil, "contest with this login already exists in organization")
 		}
 	} else {
 		login = h.generateUniqueContestLogin(ctx, params.OrgLogin, params.Title)
@@ -180,7 +180,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		if cleaned != strings.ToLower(existingContest.Login) {
 			existing, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, cleaned)
 			if err == nil && existing.ID != uuid.Nil {
-				return pkg.Wrap(pkg.ErrBadInput, nil, "contest with this login already exists in organization")
+				return pkg.Wrap(pkg.ErrConflict, nil, "contest with this login already exists in organization")
 			}
 			newLogin = &cleaned
 		}
@@ -984,5 +984,7 @@ func wrapContestUCError(err error, fallbackMsg string) error {
 	if errors.Is(err, pkg.ErrBadInput) {
 		return pkg.Wrap(pkg.ErrBadInput, err, fallbackMsg)
 	}
-	return pkg.Wrap(pkg.ErrInternal, err, fallbackMsg)
+	// Adding context must not change the use case error classification.
+	// Unclassified failures still map to HTTP 500 in pkg.ToREST.
+	return pkg.Wrap(nil, err, fallbackMsg)
 }

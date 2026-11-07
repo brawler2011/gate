@@ -30,7 +30,7 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 
 	items, totalPages, err := s.blogs.ListPosts(ctx, blogsmodel.ListPostsParams{Page: page, PageSize: pageSize, SortOrder: sortOrder})
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to list posts")
+		return nil, wrapBlogError(err, "failed to list posts")
 	}
 
 	// Convert to response model
@@ -77,7 +77,7 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 
 	postID, err := s.blogs.CreatePost(ctx, title, text, description, file.File, file.Name)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrInternal, err, "failed to create post")
+		return nil, wrapBlogError(err, "failed to create post")
 	}
 
 	// FIXME: вроде как в схеме есть reusable структура для таких ответов
@@ -187,5 +187,7 @@ func wrapBlogError(err error, fallbackMsg string) error {
 	if errors.Is(err, pkg.ErrBadInput) {
 		return pkg.Wrap(pkg.ErrBadInput, err, fallbackMsg)
 	}
-	return pkg.Wrap(pkg.ErrInternal, err, fallbackMsg)
+	// Adding context must not change the use case error classification.
+	// Unclassified failures still map to HTTP 500 in pkg.ToREST.
+	return pkg.Wrap(nil, err, fallbackMsg)
 }

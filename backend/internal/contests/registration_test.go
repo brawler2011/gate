@@ -2,6 +2,7 @@ package contests
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -25,12 +26,16 @@ type registrationStore struct {
 	CommandTxStore
 	contest           contestsmodel.Contest
 	joined, requested bool
+	member, pending   bool
 }
 
 func (r *registrationStore) GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error) {
 	return r.contest, nil
 }
-func (*registrationStore) GetContestMember(context.Context, *contestsmodel.ContestPermissionGet) (contestsmodel.ContestMember, error) {
+func (r *registrationStore) GetContestMember(context.Context, *contestsmodel.ContestPermissionGet) (contestsmodel.ContestMember, error) {
+	if r.member {
+		return contestsmodel.ContestMember{}, nil
+	}
 	return contestsmodel.ContestMember{}, pkg.ErrNotFound
 }
 func (*registrationStore) GetMember(context.Context, uuid.UUID, uuid.UUID) (*organizationsmodel.OrganizationMember, error) {
@@ -40,7 +45,10 @@ func (r *registrationStore) CreateContestMember(context.Context, *contestsmodel.
 	r.joined = true
 	return nil
 }
-func (*registrationStore) GetPendingContestJoinRequest(context.Context, uuid.UUID, uuid.UUID) (*contestsmodel.ContestJoinRequest, error) {
+func (r *registrationStore) GetPendingContestJoinRequest(context.Context, uuid.UUID, uuid.UUID) (*contestsmodel.ContestJoinRequest, error) {
+	if r.pending {
+		return &contestsmodel.ContestJoinRequest{}, nil
+	}
 	return nil, nil
 }
 func (r *registrationStore) CreateContestJoinRequest(_ context.Context, input *contestsmodel.CreateContestJoinRequestInput) (*contestsmodel.ContestJoinRequest, error) {
@@ -72,6 +80,30 @@ func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
 				require.False(t, store.joined)
 				require.False(t, store.requested)
 			}
+		})
+	}
+}
+
+func TestContestRegistrationRejectsDuplicates(t *testing.T) {
+	for _, tc := range []struct {
+		name            string
+		member, pending bool
+	}{
+		{name: "existing member", member: true},
+		{name: "pending request", pending: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			contest := contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Settings: map[string]interface{}{"participation_mode": contestsmodel.ParticipationModeByRequest}}
+			store := &registrationStore{contest: contest, member: tc.member, pending: tc.pending}
+			uc := NewContestsUseCase(registrationLookup{contest: contest}, nil, testTransactions[CommandTxStore]{store}, nil)
+			caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
+			request, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), "org", "contest", nil)
+			require.ErrorIs(t, err, pkg.ErrConflict)
+			require.Equal(t, http.StatusConflict, pkg.ToREST(err))
+			require.Nil(t, request)
+			require.False(t, joined)
+			require.False(t, store.joined)
+			require.False(t, store.requested)
 		})
 	}
 }
