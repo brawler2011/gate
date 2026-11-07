@@ -354,7 +354,7 @@ func runApp(envFile string) error {
 
 	apiHandler := middleware.AuthMiddleware(authUC)(
 		middleware.UsersMiddleware(usersRepo)(
-			apiServer,
+			middleware.RequestLimits(apiServer, handlers.RequestBodyLimit, middleware.ResponseErrorHandler(logger)),
 		),
 	)
 

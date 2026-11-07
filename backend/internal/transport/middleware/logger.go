@@ -107,11 +107,17 @@ func ResponseErrorHandler(logger *slog.Logger) func(ctx context.Context, w http.
 		}
 
 		var cErr *pkg.CustomError
-		if errors.As(err, &cErr) {
+		var sizeErr *http.MaxBytesError
+		switch {
+		case errors.As(err, &sizeErr):
+			statusCode = http.StatusRequestEntityTooLarge
+			resp.Err = http.StatusText(statusCode)
+			resp.Msg = "request body exceeds maximum allowed size"
+		case errors.As(err, &cErr):
 			statusCode = pkg.ToREST(err)
 			resp.Err = http.StatusText(statusCode)
 			resp.Msg = cErr.Message
-		} else {
+		default:
 			statusCode = pkg.ToREST(err)
 			if statusCode == http.StatusInternalServerError {
 				if code := ogenerrors.ErrorCode(err); code != http.StatusInternalServerError {

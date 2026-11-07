@@ -150,156 +150,180 @@ func RequireProblemPermission(action accessmodel.ProblemAction) AccessEvaluator 
 
 var endpointPolicies = buildEndpointPolicies()
 
-func buildEndpointPolicies() map[string][]AccessEvaluator {
-	policies := map[string][]AccessEvaluator{
-		"GetHealth":           {Public},
-		"ListPublicContests":  {Public},
-		"ListPosts":           {Public},
-		"GetPostById":         {Public},
-		"GetPostImage":        {Public},
-		"GetPublishedPackage": {Public},
-		"ListProblems":        {Public},
-		"ListUsers":           {RequireAuth},
-		"GetUser":             {Public},
-		"GetUserAvatar":       {Public},
-		"GetLanguages":        {Public},
-		"Register":            {Public},
-		"Login":               {Public},
-		"Logout":              {Public},
-		"VerifyEmail":         {Public},
-		"ResendVerification":  {Public},
-		"ForgotPassword":      {Public},
-		"ResetPassword":       {Public},
-		"ConfirmEmailChange":  {Public},
+// endpointPolicy keeps body-independent identity checks alongside the full policy.
+type endpointPolicy struct {
+	beforeBody []AccessEvaluator
+	evaluators []AccessEvaluator
+}
 
-		"GetMe":              {RequireAuth},
-		"GetMyDashboard":     {RequireAuth},
-		"ChangePassword":     {RequireAuth},
-		"RequestEmailChange": {RequireAuth},
-		"CreateContest":      {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
-		"GetMyContestRole":   {RequireAuth},
+func policy(evaluators ...AccessEvaluator) endpointPolicy {
+	return endpointPolicy{evaluators: evaluators}
+}
 
-		"ListOrganizations":              {RequireAuth},
-		"CreateOrganization":             {RequireAuth},
-		"GetOrganization":                {RequireAuth, RequireOrgPermission(accessmodel.ActionViewOrganization)},
-		"UpdateOrganization":             {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
-		"DeleteOrganization":             {RequireAuth, RequireOrgPermission(accessmodel.ActionDeleteOrganization)},
-		"ListOrganizationMembers":        {RequireAuth, RequireOrgPermission(accessmodel.ActionViewOrganization)},
-		"AddOrganizationMember":          {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
-		"RemoveOrganizationMember":       {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
-		"BatchCreateOrganizationUsers":   {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
-		"ListOrganizationContests":       {RequireAuth, RequireOrgPermission(accessmodel.ActionViewOrganization)},
-		"ListOrganizationInvitations":    {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
-		"InviteOrganizationMember":       {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
-		"CancelOrganizationInvitation":   {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
-		"AcceptOrganizationInvitation":   {RequireAuth},
-		"DeclineOrganizationInvitation":  {RequireAuth},
-		"ListOrganizationJoinRequests":   {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
-		"CreateOrganizationJoinRequest":  {RequireAuth},
-		"GetMyOrganizationJoinRequest":   {RequireAuth},
-		"CancelOrganizationJoinRequest":  {RequireAuth},
-		"ApproveOrganizationJoinRequest": {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
-		"RejectOrganizationJoinRequest":  {RequireAuth, RequireOrgPermission(accessmodel.ActionManageOrganization)},
+func authenticatedPolicy(evaluators ...AccessEvaluator) endpointPolicy {
+	return endpointPolicy{
+		beforeBody: []AccessEvaluator{RequireAuth},
+		evaluators: append([]AccessEvaluator{RequireAuth}, evaluators...),
+	}
+}
 
-		"ListNotifications":           {RequireAuth},
-		"GetUnreadNotificationsCount": {RequireAuth},
-		"MarkNotificationAsRead":      {RequireAuth},
-		"MarkAllNotificationsAsRead":  {RequireAuth},
+func adminPolicy() endpointPolicy {
+	return endpointPolicy{
+		beforeBody: []AccessEvaluator{RequireAuth, RequireAdmin},
+		evaluators: []AccessEvaluator{RequireAuth, RequireAdmin},
+	}
+}
 
-		"ListTeams":            {RequireAuth},
-		"CreateTeam":           {RequireAuth},
-		"GetTeam":              {RequireAuth},
-		"UpdateTeam":           {RequireAuth},
-		"DeleteTeam":           {RequireAuth},
-		"ListTeamMembers":      {RequireAuth},
-		"AddTeamMember":        {RequireAuth},
-		"UpdateTeamMemberRole": {RequireAuth},
-		"RemoveTeamMember":     {RequireAuth},
-		"ListTeamContests":     {RequireAuth},
-		"ListTeamProblems":     {RequireAuth},
+func buildEndpointPolicies() map[string]endpointPolicy {
+	policies := map[string]endpointPolicy{
+		"GetHealth":           policy(Public),
+		"ListPublicContests":  policy(Public),
+		"ListPosts":           policy(Public),
+		"GetPostById":         policy(Public),
+		"GetPostImage":        policy(Public),
+		"GetPublishedPackage": policy(Public),
+		"ListProblems":        policy(Public),
+		"ListUsers":           authenticatedPolicy(),
+		"GetUser":             policy(Public),
+		"GetUserAvatar":       policy(Public),
+		"GetLanguages":        policy(Public),
+		"Register":            policy(Public),
+		"Login":               policy(Public),
+		"Logout":              policy(Public),
+		"VerifyEmail":         policy(Public),
+		"ResendVerification":  policy(Public),
+		"ForgotPassword":      policy(Public),
+		"ResetPassword":       policy(Public),
+		"ConfirmEmailChange":  policy(Public),
 
-		"CreateProblem":         {RequireAuth},
-		"ListProblemTemplates":  {RequireAuth},
-		"ListUserContests":      {RequireAuth, checkListUserContestsAccess},
-		"ListUserSubmissions":   {RequireAuth, checkListUserSubmissionsAccess},
-		"ListWorkshopContests":  {RequireAuth},
-		"GetSubmission":         {RequireAuth, checkGetSubmissionAccess},
-		"UploadAvatar":          {RequireAuth, RequireSelfOrAdmin()},
-		"DeleteAvatar":          {RequireAuth, RequireSelfOrAdmin()},
-		"UpdateUser":            {RequireAuth, RequireSelfOrAdmin()},
-		"ClaimTemporaryUser":    {RequireAuth},
-		"ListMyClaimedAccounts": {RequireAuth},
+		"GetMe":              authenticatedPolicy(),
+		"GetMyDashboard":     authenticatedPolicy(),
+		"ChangePassword":     authenticatedPolicy(),
+		"RequestEmailChange": authenticatedPolicy(),
+		"CreateContest":      authenticatedPolicy(RequireOrgPermission(accessmodel.ActionManageOrganization)),
+		"GetMyContestRole":   authenticatedPolicy(),
 
-		"ListAdminContests":       {RequireAuth, RequireAdmin},
-		"CreatePost":              {RequireAuth, RequireAdmin},
-		"PatchPostById":           {RequireAuth, RequireAdmin},
-		"DeletePostById":          {RequireAuth, RequireAdmin},
-		"ListSubmissions":         {RequireAuth, RequireAdmin},
-		"AdminChangeEmail":        {RequireAuth, RequireAdmin},
-		"AdminSetPassword":        {RequireAuth, RequireAdmin},
-		"AdminSendPasswordReset":  {RequireAuth, RequireAdmin},
-		"AdminResendVerification": {RequireAuth, RequireAdmin},
+		"ListOrganizations":              authenticatedPolicy(),
+		"CreateOrganization":             authenticatedPolicy(),
+		"GetOrganization":                authenticatedPolicy(RequireOrgPermission(accessmodel.ActionViewOrganization)),
+		"UpdateOrganization":             authenticatedPolicy(RequireOrgPermission(accessmodel.ActionManageOrganization)),
+		"DeleteOrganization":             authenticatedPolicy(RequireOrgPermission(accessmodel.ActionDeleteOrganization)),
+		"ListOrganizationMembers":        authenticatedPolicy(RequireOrgPermission(accessmodel.ActionViewOrganization)),
+		"AddOrganizationMember":          authenticatedPolicy(RequireOrgPermission(accessmodel.ActionManageOrganization)),
+		"RemoveOrganizationMember":       authenticatedPolicy(RequireOrgPermission(accessmodel.ActionManageOrganization)),
+		"BatchCreateOrganizationUsers":   authenticatedPolicy(RequireOrgPermission(accessmodel.ActionManageOrganization)),
+		"ListOrganizationContests":       authenticatedPolicy(RequireOrgPermission(accessmodel.ActionViewOrganization)),
+		"ListOrganizationInvitations":    authenticatedPolicy(RequireOrgPermission(accessmodel.ActionManageOrganization)),
+		"InviteOrganizationMember":       authenticatedPolicy(RequireOrgPermission(accessmodel.ActionManageOrganization)),
+		"CancelOrganizationInvitation":   authenticatedPolicy(RequireOrgPermission(accessmodel.ActionManageOrganization)),
+		"AcceptOrganizationInvitation":   authenticatedPolicy(),
+		"DeclineOrganizationInvitation":  authenticatedPolicy(),
+		"ListOrganizationJoinRequests":   authenticatedPolicy(RequireOrgPermission(accessmodel.ActionManageOrganization)),
+		"CreateOrganizationJoinRequest":  authenticatedPolicy(),
+		"GetMyOrganizationJoinRequest":   authenticatedPolicy(),
+		"CancelOrganizationJoinRequest":  authenticatedPolicy(),
+		"ApproveOrganizationJoinRequest": authenticatedPolicy(RequireOrgPermission(accessmodel.ActionManageOrganization)),
+		"RejectOrganizationJoinRequest":  authenticatedPolicy(RequireOrgPermission(accessmodel.ActionManageOrganization)),
 
-		"GetContest":                   {RequireContestPermission(accessmodel.ActionGetContest)},
-		"DownloadContestStatementsPdf": {RequireContestPermission(accessmodel.ActionGetContest)},
-		"GetContestScoreboard":         {RequireContestPermission(accessmodel.ActionGetMonitor)},
-		"UpdateContest":                {RequireAuth, RequireContestPermission(accessmodel.ActionUpdateContest)},
-		"DeleteContest":                {RequireAuth, RequireContestPermission(accessmodel.ActionAdminContest)},
-		"CreateContestProblem":         {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"GetContestProblem":            {RequireContestPermission(accessmodel.ActionGetContestProblem)},
-		"DeleteContestProblem":         {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"ReorderContestProblems":       {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"CreateContestMember":          {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"UpdateContestMember":          {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"DeleteContestMember":          {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"ListContestMembers":           {RequireAuth, checkListContestMembersAccess},
-		"ListContestTeams":             {RequireAuth, checkListContestMembersAccess},
-		"CreateContestTeam":            {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"UpdateContestTeam":            {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"DeleteContestTeam":            {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"ListContestSubmissions":       {RequireAuth, checkListContestSubmissionsAccess},
-		"CreateSubmission":             {RequireAuth, RequireContestPermission(accessmodel.ActionCreateSubmission)},
-		"ListContestDrafts":            {RequireAuth, checkListContestDraftsAccess},
-		"CreateContestDraft":           {RequireAuth, RequireContestPermission(accessmodel.ActionGetContest)},
-		"DeleteContestDraft":           {RequireAuth, RequireContestPermission(accessmodel.ActionGetContest)},
-		"RejudgeSubmission":            {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"RejudgeContestProblem":        {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"RejudgeContest":               {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"BlockSubmission":              {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"UnblockSubmission":            {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"BlockProblemForUser":          {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"UnblockProblemForUser":        {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"GetProblemBlockStatusForUser": {RequireAuth, checkGetProblemBlockStatusAccess},
-		"ListContestJoinRequests":      {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"CreateContestJoinRequest":     {RequireAuth},
-		"GetMyContestJoinRequest":      {RequireAuth},
-		"CancelContestJoinRequest":     {RequireAuth},
-		"ApproveContestJoinRequest":    {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"RejectContestJoinRequest":     {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"ListNotifications":           authenticatedPolicy(),
+		"GetUnreadNotificationsCount": authenticatedPolicy(),
+		"MarkNotificationAsRead":      authenticatedPolicy(),
+		"MarkAllNotificationsAsRead":  authenticatedPolicy(),
 
-		"ListContestAnnouncements":   {RequireContestPermission(accessmodel.ActionGetContest)},
-		"CreateContestAnnouncement":  {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"DeleteContestAnnouncement":  {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
-		"ListContestClarifications":  {RequireAuth, RequireContestPermission(accessmodel.ActionGetContest)},
-		"CreateContestClarification": {RequireAuth, RequireContestPermission(accessmodel.ActionGetContest)},
-		"AnswerContestClarification": {RequireAuth, RequireContestPermission(accessmodel.ActionManageContest)},
+		"ListTeams":            authenticatedPolicy(),
+		"CreateTeam":           authenticatedPolicy(),
+		"GetTeam":              authenticatedPolicy(),
+		"UpdateTeam":           authenticatedPolicy(),
+		"DeleteTeam":           authenticatedPolicy(),
+		"ListTeamMembers":      authenticatedPolicy(),
+		"AddTeamMember":        authenticatedPolicy(),
+		"UpdateTeamMemberRole": authenticatedPolicy(),
+		"RemoveTeamMember":     authenticatedPolicy(),
+		"ListTeamContests":     authenticatedPolicy(),
+		"ListTeamProblems":     authenticatedPolicy(),
 
-		"GetProblem":          {RequireAuth, RequireProblemPermission(accessmodel.ActionViewProblem)},
-		"GetProblemLimits":    {RequireAuth, RequireProblemPermission(accessmodel.ActionViewProblem)},
-		"GetProblemStatement": {RequireAuth, RequireProblemPermission(accessmodel.ActionViewProblem)},
-		"UpdateProblem":       {RequireAuth, RequireProblemPermission(accessmodel.ActionEditProblem)},
-		"DeleteProblem":       {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
-		"ImportProblem":       {RequireAuth, RequireProblemPermission(accessmodel.ActionEditProblem)},
-		"PublishProblem":      {RequireAuth, RequireProblemPermission(accessmodel.ActionEditProblem)},
-		"ListProblemPackages": {RequireAuth, RequireProblemPermission(accessmodel.ActionViewProblem)},
-		"ListProblemMembers":  {RequireAuth, RequireProblemPermission(accessmodel.ActionViewProblem)},
-		"CreateProblemMember": {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
-		"UpdateProblemMember": {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
-		"DeleteProblemMember": {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
-		"ListProblemTeams":    {RequireAuth, RequireProblemPermission(accessmodel.ActionViewProblem)},
-		"CreateProblemTeam":   {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
-		"UpdateProblemTeam":   {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
-		"DeleteProblemTeam":   {RequireAuth, RequireProblemPermission(accessmodel.ActionAdminProblem)},
+		"CreateProblem":         authenticatedPolicy(),
+		"ListProblemTemplates":  authenticatedPolicy(),
+		"ListUserContests":      authenticatedPolicy(checkListUserContestsAccess),
+		"ListUserSubmissions":   authenticatedPolicy(checkListUserSubmissionsAccess),
+		"ListWorkshopContests":  authenticatedPolicy(),
+		"GetSubmission":         authenticatedPolicy(checkGetSubmissionAccess),
+		"UploadAvatar":          authenticatedPolicy(RequireSelfOrAdmin()),
+		"DeleteAvatar":          authenticatedPolicy(RequireSelfOrAdmin()),
+		"UpdateUser":            authenticatedPolicy(RequireSelfOrAdmin()),
+		"ClaimTemporaryUser":    authenticatedPolicy(),
+		"ListMyClaimedAccounts": authenticatedPolicy(),
+
+		"ListAdminContests":       adminPolicy(),
+		"CreatePost":              adminPolicy(),
+		"PatchPostById":           adminPolicy(),
+		"DeletePostById":          adminPolicy(),
+		"ListSubmissions":         adminPolicy(),
+		"AdminChangeEmail":        adminPolicy(),
+		"AdminSetPassword":        adminPolicy(),
+		"AdminSendPasswordReset":  adminPolicy(),
+		"AdminResendVerification": adminPolicy(),
+
+		"GetContest":                   policy(RequireContestPermission(accessmodel.ActionGetContest)),
+		"DownloadContestStatementsPdf": policy(RequireContestPermission(accessmodel.ActionGetContest)),
+		"GetContestScoreboard":         policy(RequireContestPermission(accessmodel.ActionGetMonitor)),
+		"UpdateContest":                authenticatedPolicy(RequireContestPermission(accessmodel.ActionUpdateContest)),
+		"DeleteContest":                authenticatedPolicy(RequireContestPermission(accessmodel.ActionAdminContest)),
+		"CreateContestProblem":         authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"GetContestProblem":            policy(RequireContestPermission(accessmodel.ActionGetContestProblem)),
+		"DeleteContestProblem":         authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"ReorderContestProblems":       authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"CreateContestMember":          authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"UpdateContestMember":          authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"DeleteContestMember":          authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"ListContestMembers":           authenticatedPolicy(checkListContestMembersAccess),
+		"ListContestTeams":             authenticatedPolicy(checkListContestMembersAccess),
+		"CreateContestTeam":            authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"UpdateContestTeam":            authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"DeleteContestTeam":            authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"ListContestSubmissions":       authenticatedPolicy(checkListContestSubmissionsAccess),
+		"CreateSubmission":             authenticatedPolicy(RequireContestPermission(accessmodel.ActionCreateSubmission)),
+		"ListContestDrafts":            authenticatedPolicy(checkListContestDraftsAccess),
+		"CreateContestDraft":           authenticatedPolicy(RequireContestPermission(accessmodel.ActionGetContest)),
+		"DeleteContestDraft":           authenticatedPolicy(RequireContestPermission(accessmodel.ActionGetContest)),
+		"RejudgeSubmission":            authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"RejudgeContestProblem":        authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"RejudgeContest":               authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"BlockSubmission":              authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"UnblockSubmission":            authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"BlockProblemForUser":          authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"UnblockProblemForUser":        authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"GetProblemBlockStatusForUser": authenticatedPolicy(checkGetProblemBlockStatusAccess),
+		"ListContestJoinRequests":      authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"CreateContestJoinRequest":     authenticatedPolicy(),
+		"GetMyContestJoinRequest":      authenticatedPolicy(),
+		"CancelContestJoinRequest":     authenticatedPolicy(),
+		"ApproveContestJoinRequest":    authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"RejectContestJoinRequest":     authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+
+		"ListContestAnnouncements":   policy(RequireContestPermission(accessmodel.ActionGetContest)),
+		"CreateContestAnnouncement":  authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"DeleteContestAnnouncement":  authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"ListContestClarifications":  authenticatedPolicy(RequireContestPermission(accessmodel.ActionGetContest)),
+		"CreateContestClarification": authenticatedPolicy(RequireContestPermission(accessmodel.ActionGetContest)),
+		"AnswerContestClarification": authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+
+		"GetProblem":          authenticatedPolicy(RequireProblemPermission(accessmodel.ActionViewProblem)),
+		"GetProblemLimits":    authenticatedPolicy(RequireProblemPermission(accessmodel.ActionViewProblem)),
+		"GetProblemStatement": authenticatedPolicy(RequireProblemPermission(accessmodel.ActionViewProblem)),
+		"UpdateProblem":       authenticatedPolicy(RequireProblemPermission(accessmodel.ActionEditProblem)),
+		"DeleteProblem":       authenticatedPolicy(RequireProblemPermission(accessmodel.ActionAdminProblem)),
+		"ImportProblem":       authenticatedPolicy(RequireProblemPermission(accessmodel.ActionEditProblem)),
+		"PublishProblem":      authenticatedPolicy(RequireProblemPermission(accessmodel.ActionEditProblem)),
+		"ListProblemPackages": authenticatedPolicy(RequireProblemPermission(accessmodel.ActionViewProblem)),
+		"ListProblemMembers":  authenticatedPolicy(RequireProblemPermission(accessmodel.ActionViewProblem)),
+		"CreateProblemMember": authenticatedPolicy(RequireProblemPermission(accessmodel.ActionAdminProblem)),
+		"UpdateProblemMember": authenticatedPolicy(RequireProblemPermission(accessmodel.ActionAdminProblem)),
+		"DeleteProblemMember": authenticatedPolicy(RequireProblemPermission(accessmodel.ActionAdminProblem)),
+		"ListProblemTeams":    authenticatedPolicy(RequireProblemPermission(accessmodel.ActionViewProblem)),
+		"CreateProblemTeam":   authenticatedPolicy(RequireProblemPermission(accessmodel.ActionAdminProblem)),
+		"UpdateProblemTeam":   authenticatedPolicy(RequireProblemPermission(accessmodel.ActionAdminProblem)),
+		"DeleteProblemTeam":   authenticatedPolicy(RequireProblemPermission(accessmodel.ActionAdminProblem)),
 	}
 
 	for _, operationID := range []string{
@@ -351,10 +375,26 @@ func buildEndpointPolicies() map[string][]AccessEvaluator {
 		"ValidateAllTests",
 		"TestSolution",
 	} {
-		policies[operationID] = []AccessEvaluator{RequireAuth, RequireProblemPermission(accessmodel.ActionEditProblem)}
+		policies[operationID] = authenticatedPolicy(RequireProblemPermission(accessmodel.ActionEditProblem))
 	}
 
 	return policies
+}
+
+// authorizeBeforeBody rejects missing identities and admin access without decoding
+// request bodies. Resource-specific checks still use ogen's decoded parameters.
+func authorizeBeforeBody(ctx context.Context, operationID string) error {
+	policy, ok := endpointPolicies[operationID]
+	if !ok || len(policy.evaluators) == 0 {
+		return pkg.Wrap(pkg.NoPermission, nil, "endpoint not permitted by authorization policy")
+	}
+	evalCtx := &EvalContext{User: accessmodel.UserFromContext(ctx), OperationID: operationID}
+	for _, evaluator := range policy.beforeBody {
+		if err := evaluator(ctx, evalCtx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // AuthzMiddleware validates operation access before handlers are called.
@@ -368,8 +408,8 @@ func AuthzMiddleware(permissionsUC PermissionsUC, submissionsUC SubmissionsUC, o
 
 	return func(req ogenMiddleware.Request, next func(req ogenMiddleware.Request) (ogenMiddleware.Response, error)) (ogenMiddleware.Response, error) {
 		operationID := req.OperationID
-		evaluators, ok := endpointPolicies[operationID]
-		if !ok || len(evaluators) == 0 {
+		policy, ok := endpointPolicies[operationID]
+		if !ok || len(policy.evaluators) == 0 {
 			// Zero-Trust Default Deny
 			return ogenMiddleware.Response{}, pkg.Wrap(pkg.NoPermission, nil, "endpoint not permitted by authorization policy")
 		}
@@ -382,7 +422,7 @@ func AuthzMiddleware(permissionsUC PermissionsUC, submissionsUC SubmissionsUC, o
 			Deps:        deps,
 		}
 
-		for _, evaluator := range evaluators {
+		for _, evaluator := range policy.evaluators {
 			if err := evaluator(req.Context, evalCtx); err != nil {
 				return ogenMiddleware.Response{}, err
 			}

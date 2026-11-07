@@ -128,9 +128,9 @@ func (h *CoreServer) ListProblemCheckers(ctx context.Context, params corev1.List
 
 // CreateProblemChecker handles POST /problems/{problemId}/checkers
 func (h *CoreServer) CreateProblemChecker(ctx context.Context, req corev1.CreateProblemCheckerReq, params corev1.CreateProblemCheckerParams) (*corev1.MessageResponse, error) {
-	contentBytes, err := io.ReadAll(req.Data)
+	contentBytes, err := readWorkshopBody(req.Data, MaxSourceFileSize)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
+		return nil, err
 	}
 	if err := h.createWorkshopCollectionTextFile(ctx, params.ProblemId, checkerDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
@@ -149,9 +149,9 @@ func (h *CoreServer) GetProblemChecker(ctx context.Context, params corev1.GetPro
 
 // UpdateProblemChecker handles PUT /problems/{problemId}/checkers/{name}
 func (h *CoreServer) UpdateProblemChecker(ctx context.Context, req corev1.UpdateProblemCheckerReq, params corev1.UpdateProblemCheckerParams) (*corev1.MessageResponse, error) {
-	contentBytes, err := io.ReadAll(req.Data)
+	contentBytes, err := readWorkshopBody(req.Data, MaxSourceFileSize)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
+		return nil, err
 	}
 	if err := h.updateWorkshopCollectionTextFile(ctx, params.ProblemId, checkerDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
@@ -178,9 +178,9 @@ func (h *CoreServer) ListProblemGenerators(ctx context.Context, params corev1.Li
 
 // CreateProblemGenerator handles POST /problems/{problemId}/generators
 func (h *CoreServer) CreateProblemGenerator(ctx context.Context, req corev1.CreateProblemGeneratorReq, params corev1.CreateProblemGeneratorParams) (*corev1.MessageResponse, error) {
-	contentBytes, err := io.ReadAll(req.Data)
+	contentBytes, err := readWorkshopBody(req.Data, MaxSourceFileSize)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
+		return nil, err
 	}
 	if err := h.createWorkshopCollectionTextFile(ctx, params.ProblemId, generatorDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
@@ -199,9 +199,9 @@ func (h *CoreServer) GetProblemGenerator(ctx context.Context, params corev1.GetP
 
 // UpdateProblemGenerator handles PUT /problems/{problemId}/generators/{name}
 func (h *CoreServer) UpdateProblemGenerator(ctx context.Context, req corev1.UpdateProblemGeneratorReq, params corev1.UpdateProblemGeneratorParams) (*corev1.MessageResponse, error) {
-	contentBytes, err := io.ReadAll(req.Data)
+	contentBytes, err := readWorkshopBody(req.Data, MaxSourceFileSize)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
+		return nil, err
 	}
 	if err := h.updateWorkshopCollectionTextFile(ctx, params.ProblemId, generatorDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
@@ -228,9 +228,9 @@ func (h *CoreServer) ListProblemInteractors(ctx context.Context, params corev1.L
 
 // CreateProblemInteractor handles POST /problems/{problemId}/interactors
 func (h *CoreServer) CreateProblemInteractor(ctx context.Context, req corev1.CreateProblemInteractorReq, params corev1.CreateProblemInteractorParams) (*corev1.MessageResponse, error) {
-	contentBytes, err := io.ReadAll(req.Data)
+	contentBytes, err := readWorkshopBody(req.Data, MaxSourceFileSize)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
+		return nil, err
 	}
 	if err := h.createWorkshopCollectionTextFile(ctx, params.ProblemId, interactorDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
@@ -249,9 +249,9 @@ func (h *CoreServer) GetProblemInteractor(ctx context.Context, params corev1.Get
 
 // UpdateProblemInteractor handles PUT /problems/{problemId}/interactors/{name}
 func (h *CoreServer) UpdateProblemInteractor(ctx context.Context, req corev1.UpdateProblemInteractorReq, params corev1.UpdateProblemInteractorParams) (*corev1.MessageResponse, error) {
-	contentBytes, err := io.ReadAll(req.Data)
+	contentBytes, err := readWorkshopBody(req.Data, MaxSourceFileSize)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
+		return nil, err
 	}
 	if err := h.updateWorkshopCollectionTextFile(ctx, params.ProblemId, interactorDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
@@ -278,9 +278,9 @@ func (h *CoreServer) ListProblemValidators(ctx context.Context, params corev1.Li
 
 // CreateProblemValidator handles POST /problems/{problemId}/validators
 func (h *CoreServer) CreateProblemValidator(ctx context.Context, req corev1.CreateProblemValidatorReq, params corev1.CreateProblemValidatorParams) (*corev1.MessageResponse, error) {
-	contentBytes, err := io.ReadAll(req.Data)
+	contentBytes, err := readWorkshopBody(req.Data, MaxSourceFileSize)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
+		return nil, err
 	}
 	if err := h.createWorkshopCollectionTextFile(ctx, params.ProblemId, validatorDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
@@ -299,9 +299,9 @@ func (h *CoreServer) GetProblemValidator(ctx context.Context, params corev1.GetP
 
 // UpdateProblemValidator handles PUT /problems/{problemId}/validators/{name}
 func (h *CoreServer) UpdateProblemValidator(ctx context.Context, req corev1.UpdateProblemValidatorReq, params corev1.UpdateProblemValidatorParams) (*corev1.MessageResponse, error) {
-	contentBytes, err := io.ReadAll(req.Data)
+	contentBytes, err := readWorkshopBody(req.Data, MaxSourceFileSize)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
+		return nil, err
 	}
 	if err := h.updateWorkshopCollectionTextFile(ctx, params.ProblemId, validatorDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
@@ -328,9 +328,9 @@ func (h *CoreServer) ListProblemLibs(ctx context.Context, params corev1.ListProb
 
 // CreateProblemLib handles POST /problems/{problemId}/lib
 func (h *CoreServer) CreateProblemLib(ctx context.Context, req corev1.CreateProblemLibReq, params corev1.CreateProblemLibParams) (*corev1.MessageResponse, error) {
-	contentBytes, err := io.ReadAll(req.Data)
+	contentBytes, err := readWorkshopBody(req.Data, MaxSourceFileSize)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
+		return nil, err
 	}
 	if err := h.createWorkshopCollectionTextFile(ctx, params.ProblemId, libDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
@@ -349,9 +349,9 @@ func (h *CoreServer) GetProblemLib(ctx context.Context, params corev1.GetProblem
 
 // UpdateProblemLib handles PUT /problems/{problemId}/lib/{name}
 func (h *CoreServer) UpdateProblemLib(ctx context.Context, req corev1.UpdateProblemLibReq, params corev1.UpdateProblemLibParams) (*corev1.MessageResponse, error) {
-	contentBytes, err := io.ReadAll(req.Data)
+	contentBytes, err := readWorkshopBody(req.Data, MaxSourceFileSize)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
+		return nil, err
 	}
 	if err := h.updateWorkshopCollectionTextFile(ctx, params.ProblemId, libDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
@@ -391,10 +391,11 @@ func (h *CoreServer) ListProblemMediaFiles(ctx context.Context, params corev1.Li
 func (h *CoreServer) CreateProblemMediaFile(ctx context.Context, req corev1.CreateProblemMediaFileReq, params corev1.CreateProblemMediaFileParams) (*corev1.MessageResponse, error) {
 	var bodyReader io.Reader = req.Data
 	if strings.HasSuffix(strings.ToLower(params.Name), ".svg") {
-		if bodyBytes, err := io.ReadAll(req.Data); err == nil {
-			sanitized := sanitizeSVG(bodyBytes)
-			bodyReader = bytes.NewReader(sanitized)
+		bodyBytes, err := readWorkshopBody(req.Data, MaxMediaFileSize)
+		if err != nil {
+			return nil, err
 		}
+		bodyReader = bytes.NewReader(sanitizeSVG(bodyBytes))
 	}
 	if err := h.createWorkshopCollectionFile(ctx, params.ProblemId, mediaDir, params.Name, bodyReader); err != nil {
 		return nil, err
@@ -415,10 +416,11 @@ func (h *CoreServer) GetProblemMediaFile(ctx context.Context, params corev1.GetP
 func (h *CoreServer) UpdateProblemMediaFile(ctx context.Context, req corev1.UpdateProblemMediaFileReq, params corev1.UpdateProblemMediaFileParams) (*corev1.MessageResponse, error) {
 	var bodyReader io.Reader = req.Data
 	if strings.HasSuffix(strings.ToLower(params.Name), ".svg") {
-		if bodyBytes, err := io.ReadAll(req.Data); err == nil {
-			sanitized := sanitizeSVG(bodyBytes)
-			bodyReader = bytes.NewReader(sanitized)
+		bodyBytes, err := readWorkshopBody(req.Data, MaxMediaFileSize)
+		if err != nil {
+			return nil, err
 		}
+		bodyReader = bytes.NewReader(sanitizeSVG(bodyBytes))
 	}
 	if err := h.updateWorkshopCollectionFile(ctx, params.ProblemId, mediaDir, params.Name, bodyReader); err != nil {
 		return nil, err
@@ -445,9 +447,9 @@ func (h *CoreServer) ListProblemWorkshopSubmissions(ctx context.Context, params 
 
 // CreateProblemWorkshopSubmission handles POST /problems/{problemId}/submissions
 func (h *CoreServer) CreateProblemWorkshopSubmission(ctx context.Context, req corev1.CreateProblemWorkshopSubmissionReq, params corev1.CreateProblemWorkshopSubmissionParams) (*corev1.MessageResponse, error) {
-	contentBytes, err := io.ReadAll(req.Data)
+	contentBytes, err := readWorkshopBody(req.Data, MaxSourceFileSize)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
+		return nil, err
 	}
 	if err := h.createWorkshopCollectionTextFile(ctx, params.ProblemId, solutionDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
@@ -466,9 +468,9 @@ func (h *CoreServer) GetProblemWorkshopSubmission(ctx context.Context, params co
 
 // UpdateProblemWorkshopSubmission handles PUT /problems/{problemId}/submissions/{name}
 func (h *CoreServer) UpdateProblemWorkshopSubmission(ctx context.Context, req corev1.UpdateProblemWorkshopSubmissionReq, params corev1.UpdateProblemWorkshopSubmissionParams) (*corev1.MessageResponse, error) {
-	contentBytes, err := io.ReadAll(req.Data)
+	contentBytes, err := readWorkshopBody(req.Data, MaxSourceFileSize)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read body")
+		return nil, err
 	}
 	if err := h.updateWorkshopCollectionTextFile(ctx, params.ProblemId, solutionDir, params.Name, string(contentBytes)); err != nil {
 		return nil, err
@@ -799,6 +801,18 @@ func (h *CoreServer) saveWorkshopCollectionBytes(ctx context.Context, problemID 
 	return nil
 }
 
+// Read one extra byte so oversized streams fail without buffering the rest.
+func readWorkshopBody(body io.Reader, limit int64) ([]byte, error) {
+	content, err := io.ReadAll(io.LimitReader(body, limit+1))
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to read request body")
+	}
+	if int64(len(content)) > limit {
+		return nil, pkg.Wrap(pkg.ErrPayloadTooLarge, nil, fmt.Sprintf("file size exceeds maximum allowed limit of %d bytes", limit))
+	}
+	return content, nil
+}
+
 func (h *CoreServer) saveWorkshopCollectionFile(ctx context.Context, problemID uuid.UUID, dir, name string, body io.Reader, actionErrMsg string) error {
 	if body == nil {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "request body is required")
@@ -814,13 +828,9 @@ func (h *CoreServer) saveWorkshopCollectionFile(ctx context.Context, problemID u
 		maxLimit = MaxSourceFileSize
 	}
 
-	limitedReader := io.LimitReader(body, maxLimit+1)
-	content, err := io.ReadAll(limitedReader)
+	content, err := readWorkshopBody(body, maxLimit)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "failed to read request body")
-	}
-	if int64(len(content)) > maxLimit {
-		return pkg.Wrap(pkg.ErrPayloadTooLarge, nil, fmt.Sprintf("file size exceeds maximum allowed limit of %d bytes", maxLimit))
+		return err
 	}
 
 	return h.saveWorkshopCollectionBytes(ctx, problemID, dir, name, content, actionErrMsg)
