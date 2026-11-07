@@ -275,8 +275,12 @@ WHERE ($1::uuid IS NULL OR p.organization_id = $1::uuid)
                    AND t.organization_id = p.organization_id)
     ))
   )
-ORDER BY p.created_at DESC, p.id DESC
-LIMIT $8 OFFSET $7
+ORDER BY
+  CASE WHEN $7::boolean THEN p.created_at END DESC,
+  CASE WHEN NOT $7::boolean THEN p.created_at END ASC,
+  CASE WHEN $7::boolean THEN p.id END DESC,
+  CASE WHEN NOT $7::boolean THEN p.id END ASC
+LIMIT $9 OFFSET $8
 `
 
 type ListAllProblemsParams struct {
@@ -286,6 +290,7 @@ type ListAllProblemsParams struct {
 	Visibility     string     `json:"visibility"`
 	IsTemplate     *bool      `json:"is_template"`
 	ViewerID       *uuid.UUID `json:"viewer_id"`
+	Descending     bool       `json:"descending"`
 	PageOffset     int32      `json:"page_offset"`
 	PageLimit      int32      `json:"page_limit"`
 }
@@ -314,6 +319,7 @@ func (q *Queries) ListAllProblems(ctx context.Context, arg ListAllProblemsParams
 		arg.Visibility,
 		arg.IsTemplate,
 		arg.ViewerID,
+		arg.Descending,
 		arg.PageOffset,
 		arg.PageLimit,
 	)

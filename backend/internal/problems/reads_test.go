@@ -77,6 +77,16 @@ func TestProblemReadsBindViewerAndPagination(t *testing.T) {
 		require.Equal(t, actor.Id, *reads.filter.ViewerID)
 		require.Equal(t, original, *filter)
 	}
+	for _, desc := range []bool{true, false} {
+		descVal := desc
+		filter := &problemsmodel.ProblemsFilter{Descending: &descVal, ViewerID: &other}
+		original := *filter
+		_, err := reader.ListProblems(ctx, filter)
+		require.NoError(t, err)
+		require.NotNil(t, reads.filter.Descending)
+		require.Equal(t, desc, *reads.filter.Descending)
+		require.Equal(t, original, *filter)
+	}
 	_, err = reader.ListProblems(context.Background(), &problemsmodel.ProblemsFilter{})
 	require.NoError(t, err)
 	require.Equal(t, uuid.Nil, *reads.filter.ViewerID)
