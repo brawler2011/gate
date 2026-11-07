@@ -286,14 +286,10 @@ func (r *ContestsRepo) ListWorkshopContests(ctx context.Context, filter contests
 }
 
 func (r *ContestsRepo) ListPublicContests(ctx context.Context, filter contestsmodel.PublicContestsFilter) (*contestsmodel.ContestsList, error) {
-	if filter.Page == 0 {
-		filter.Page = 1
-	}
-	if filter.PageSize == 0 {
-		filter.PageSize = 50
-	}
-	if filter.Page < 1 || filter.PageSize < 1 || filter.PageSize > 100 {
-		return nil, pkg.ErrBadInput
+	var err error
+	filter.Page, filter.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 50)
+	if err != nil {
+		return nil, err
 	}
 
 	if r.pool != nil {
