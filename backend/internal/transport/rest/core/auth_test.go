@@ -124,13 +124,17 @@ func TestAuthHandlerCookies(t *testing.T) {
 			assert.Equal(t, uuid.Nil, identity.loggedOut)
 			assertSessionCookie(t, logout.SetCookie, "", -1, secure)
 
-			for _, logoutErr := range []error{nil, errors.New("logout failed")} {
-				identity.err = logoutErr
-				logout, err = h.Logout(authCtx)
-				require.NoError(t, err)
-				assert.Equal(t, oldSessionID, identity.loggedOut)
-				assertSessionCookie(t, logout.SetCookie, "", -1, secure)
-			}
+			identity.err = nil
+			logout, err = h.Logout(authCtx)
+			require.NoError(t, err)
+			assert.Equal(t, oldSessionID, identity.loggedOut)
+			assertSessionCookie(t, logout.SetCookie, "", -1, secure)
+
+			logoutFailure := errors.New("logout failed")
+			identity.err = logoutFailure
+			logout, err = h.Logout(authCtx)
+			require.ErrorIs(t, err, logoutFailure)
+			assert.Nil(t, logout)
 		})
 	}
 }
