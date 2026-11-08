@@ -101,3 +101,19 @@ func CheckReadActor(ctx context.Context) error {
 	in := m.PolicyInput{Actor: m.UserFromContext(ctx), Now: m.ReadTime(ctx)}
 	return validateInput(in)
 }
+
+func (uc *MetadataPermissions) AuthorizeContestAudience(ctx context.Context, id, user uuid.UUID, audience string, owner uuid.UUID) error {
+	in, err := uc.input(ctx, user)
+	if err != nil {
+		return err
+	}
+	facts, err := uc.facts.LoadContestFacts(ctx, user, []uuid.UUID{id})
+	if err != nil {
+		return err
+	}
+	c, ok := facts[id]
+	if !ok {
+		return pkg.ErrNotFound
+	}
+	return RequireContestAudience(in, c, audience, owner)
+}

@@ -66,6 +66,8 @@ describe("Problem Component DOM baseline test", () => {
     view.rerender(<Problem problem={sampleProblem} hideStatements isManager orgLogin="school" />);
     expect(view.queryByText("Условия задач скрыты")).toBeNull();
     expect(view.container.textContent).toContain("Calculate");
+    expect(view.container.querySelector("a")).toBeNull();
+    view.rerender(<Problem problem={{...sampleProblem, capabilities: ["edit"]}} hideStatements isManager orgLogin="school" />);
     expect(view.container.querySelector("a")?.getAttribute("href")).toBe("/school/problems/prob-1");
   });
 

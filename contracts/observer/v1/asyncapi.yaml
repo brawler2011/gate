@@ -1,6 +1,17 @@
 asyncapi: 3.0.0
 info:
-  description: Submission and contest events over WebSocket.
+  description: >-
+    Submission and contest events over WebSocket. The server admits subscriptions
+    to contest/<id>/public, contest/<id>/participants, contest/<id>/managers and
+    contest/<id>/own/<user_id> topics using access policies; query filters only
+    narrow those audiences. Public topics admit guests when the configured action
+    scope allows it. Source, verdict and scoreboard projections are shared per
+    audience before publication and replay. Public and participant standings are
+    masked during freeze; managers receive live standings and own topics retain
+    authorized own verdicts. Revision, session or account invalidation clears the
+    queued projection and closes the connection. Reconnect reauthorizes; replay
+    from an incompatible lifecycle projection is rejected and requires a fresh
+    REST snapshot. Failed validation closes the subscription.
   title: ObserverService API
   version: 0.0.1
 channels:

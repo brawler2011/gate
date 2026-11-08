@@ -3,7 +3,7 @@ import {useLoaderData, redirect} from "react-router-dom";
 
 import {ContestMessagesClient} from "@/components/contests/messages/ContestMessagesClient";
 import {api, unwrap} from "@/lib/api";
-import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
+import {PermissionChecker} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
@@ -25,21 +25,15 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
   }
 
   const user = me?.user ?? null;
-  const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
 
-  const checker = new PermissionChecker(
-    user,
-    contestRole?.role ?? null,
-    null,
-    contestRole?.permissionsMask ?? null,
-  );
+  const checker = new PermissionChecker();
 
   if (!checker.canViewContest(contestResponse.contest)) {
     throw redirect(`/${slug}/${contestLogin}`);
   }
 
   const isModerator =
-    contestRole?.role === "moderator" || contestRole?.role === "owner" || user?.role === "admin";
+    contestResponse.contest.capabilities.includes("manage");
 
   return {slug, contestLogin, contestResponse, user, isModerator};
 }) satisfies LoaderFunction;

@@ -11,10 +11,12 @@ import {cleanup, fireEvent, renderRoute, renderWithProviders, setupDOMEnvironmen
 import type {ContestModel, TeamModel} from "@/contracts/core/v1/schema";
 
 const team: TeamModel = {
+  capabilities: [],
   id: "team", organization_id: "org", name: "Gate Team", description: "Our team",
   created_at: "2026-10-01", updated_at: "2026-10-01",
 };
 const contest = (id: string, schedule: Partial<ContestModel> = {}): ContestModel => ({
+  capabilities: [],
   id, login: id, organization_id: "org", organization_login: "school", title: id,
   description: "", visibility: "public", monitor_scope: "public", submissions_list_scope: "public",
   submissions_review_scope: "public", submission_details_scope: "public", freeze_status: "auto" as ContestModel["freeze_status"],
@@ -58,8 +60,8 @@ describe("Team profile through the production page", () => {
       }
       if (url.pathname.endsWith("/members")) {
         return membersStatus === 200 ? Response.json({members: [
-          {user_id: "alice", team_id: team.id, username: "alice", role: "maintainer", created_at: "2026-10-01"},
-          {user_id: "bob", team_id: team.id, username: "bob", role: "member", created_at: "2026-10-01"},
+          {capabilities: [], user_id: "alice", team_id: team.id, username: "alice", role: "maintainer", created_at: "2026-10-01"},
+          {capabilities: [], user_id: "bob", team_id: team.id, username: "bob", role: "member", created_at: "2026-10-01"},
         ],
         pagination: {page_size: 50, total_items: 0, page: 1, total_pages: 2}}) : Response.json({message: "Members unavailable"}, {status: membersStatus});
       }

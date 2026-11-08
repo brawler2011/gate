@@ -26,8 +26,8 @@ const ContestLayout = (): ReactNode => {
   const {response, user, contestRole} = contest.data;
   const org = organization.data.organization;
   const isModerator =
-    contestRole?.role === "moderator" || contestRole?.role === "owner" || user?.role === "admin";
-  const checker = new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null);
+    response.contest.capabilities.includes("manage");
+  const checker = new PermissionChecker();
   const canSubscribe = checker.canViewMySubmissions(response.contest) || checker.canViewAllSubmissions(response.contest)
     || checker.canViewMonitor(response.contest);
   return (

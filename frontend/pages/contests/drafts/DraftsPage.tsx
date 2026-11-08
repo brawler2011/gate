@@ -2,7 +2,7 @@ import {Container} from "@mantine/core";
 import {useLoaderData, redirect} from "react-router-dom";
 
 import {api, unwrap} from "@/lib/api";
-import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
+import {PermissionChecker} from "@/lib/permissions";
 
 import {DraftsClient} from "./DraftsClient";
 
@@ -30,21 +30,12 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
     throw redirect(`/${slug}/${contestLogin}`);
   }
 
-  const contestRole = await getMyContestRole(slug, contestLogin);
-
-  const checker = new PermissionChecker(
-    user,
-    contestRole?.role ?? null,
-    null,
-    contestRole?.permissionsMask ?? null,
-  );
+  const checker = new PermissionChecker();
 
   const isManager = checker.canManageContest(contestResponse.contest);
-  const hasStarted =
-    !contestResponse.contest.start_time || new Date(contestResponse.contest.start_time) <= new Date();
 
   const draftsDisabled = contestResponse.contest.enable_drafts === false;
-  if (!checker.canViewProblems(contestResponse.contest) || (!isManager && (!hasStarted || draftsDisabled))) {
+  if (!checker.canViewProblems(contestResponse.contest) || (!isManager && draftsDisabled)) {
     throw redirect(`/${slug}/${contestLogin}`);
   }
 

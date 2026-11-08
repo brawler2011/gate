@@ -17,7 +17,6 @@ export type ContestHeaderNavProps = {
 
 export const ContestHeaderNav = ({
   contest,
-  contestRole,
   orgLogin,
   user: propUser,
 }: ContestHeaderNavProps): ReactNode => {
@@ -28,12 +27,7 @@ export const ContestHeaderNav = ({
   const org = orgLogin || contest.organization_login;
   const contestBase = `/${org}/${contest.login}`;
 
-  const checker = new PermissionChecker(
-    user,
-    contestRole?.role ?? null,
-    null,
-    contestRole?.permissionsMask ?? null,
-  );
+  const checker = new PermissionChecker();
 
   const getActiveTabKey = (): string => {
     if (!pathname) {

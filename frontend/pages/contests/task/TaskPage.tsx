@@ -55,19 +55,12 @@ const Page = (): ReactNode => {
   if (!problemQuery.data) {
     return <QueryState error={problemQuery.error} />;
   }
-  const {response: contestResponse, contestRole} = contest.data;
+  const {response: contestResponse} = contest.data;
   const problemResponse = problemQuery.data;
   const submissionsResponse = submissionsQuery.data;
-  const checker = new PermissionChecker(
-    user,
-    contestRole?.role ?? null,
-    null,
-    contestRole?.permissionsMask ?? null,
-  );
+  const checker = new PermissionChecker();
   const isManager = checker.canManageContest(contestResponse.contest);
-  const hasStarted =
-    !contestResponse.contest.start_time || new Date(contestResponse.contest.start_time) <= new Date();
-  if (!checker.canViewProblems(contestResponse.contest) || (!isManager && !hasStarted)) {
+  if (!checker.canViewProblems(contestResponse.contest)) {
     return <Navigate to={`/${params.slug}/${params.contestLogin}`} replace />;
   }
   if (user && submissionsQuery.isPending) {

@@ -51,7 +51,7 @@ func (h *CoreServer) GetMyDashboard(ctx context.Context) (*corev1.GetUserDashboa
 	}
 
 	resp := DashboardResponseDTO(contests, problems)
-	return &resp, nil
+	return projectResponse(h, ctx, &resp)
 }
 
 func (h *CoreServer) ListUsers(ctx context.Context, params corev1.ListUsersParams) (*corev1.ListUsersResponseModel, error) {

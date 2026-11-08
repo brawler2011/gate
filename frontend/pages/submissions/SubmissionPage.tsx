@@ -43,9 +43,9 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
 
 const Page = (): ReactNode => {
   const data = useLoaderData<typeof loader>();
-  const {submission, user, contestRole, contestData} = data;
+  const {submission, user, contestData} = data;
   const checker = contestData?.contest
-    ? new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null)
+    ? new PermissionChecker()
     : null;
   const canRejudge =
     contestData?.contest && checker ? checker.canRejudgeSubmissions(contestData.contest) : false;

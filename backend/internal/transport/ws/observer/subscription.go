@@ -32,11 +32,14 @@ type websocketConnection interface {
 // The queue is never closed: broadcast may race with connection cleanup.
 // done and closeOnce coordinate all sources of disconnection instead.
 type subscription struct {
-	id        uuid.UUID
-	conn      websocketConnection
-	outbox    chan *WrappedEvent
-	done      chan struct{}
-	closeOnce sync.Once
+	id           uuid.UUID
+	conn         websocketConnection
+	outbox       chan *WrappedEvent
+	done         chan struct{}
+	closeOnce    sync.Once
+	queueMu      sync.Mutex
+	verify       func() error
+	onInvalidate func(error)
 }
 
 func newSubscription(conn websocketConnection) *subscription {
@@ -47,9 +50,35 @@ func newSubscription(conn websocketConnection) *subscription {
 	}
 }
 
+// enqueue and invalidation share a lock so a closed queue cannot be repopulated.
+func (s *subscription) enqueue(event *WrappedEvent) bool {
+	s.queueMu.Lock()
+	defer s.queueMu.Unlock()
+	select {
+	case <-s.done:
+		return true
+	default:
+	}
+	select {
+	case s.outbox <- event:
+		return true
+	default:
+		return false
+	}
+}
 func (s *subscription) close(reason string, err error) {
 	s.closeOnce.Do(func() {
+		s.queueMu.Lock()
 		close(s.done)
+	drain:
+		for {
+			select {
+			case <-s.outbox:
+			default:
+				break drain
+			}
+		}
+		s.queueMu.Unlock()
 		_ = s.conn.Close()
 		slog.Info("websocket disconnected", "id", s.id, "reason", reason, "error", err)
 	})
@@ -103,6 +132,16 @@ func (s *subscription) run(history []*WrappedEvent, matches func(*WrappedEvent) 
 			return false
 		default:
 		}
+		if s.verify != nil {
+			if err := s.verify(); err != nil {
+				if s.onInvalidate != nil {
+					s.onInvalidate(err)
+				}
+				_ = closeVerification(s.conn, err)
+				s.close("access invalidated", err)
+				return false
+			}
+		}
 		if err := send(event); err != nil {
 			s.close("write failed", err)
 			return false
@@ -114,8 +153,20 @@ func (s *subscription) run(history []*WrappedEvent, matches func(*WrappedEvent) 
 			return
 		}
 	}
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
 	for {
 		select {
+		case <-ticker.C:
+			if s.verify != nil {
+				if err := s.verify(); err != nil {
+					if s.onInvalidate != nil {
+						s.onInvalidate(err)
+					}
+					_ = closeVerification(s.conn, err)
+					return
+				}
+			}
 		case <-s.done:
 			return
 		case event := <-s.outbox:

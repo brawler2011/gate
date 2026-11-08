@@ -360,7 +360,7 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
                           </Text>
                         </Table.Td>
                         <Table.Td>
-                          {m.role !== "owner" && (
+                          {m.capabilities.includes("remove") && (
                             <Tooltip label="Удалить из организации">
                               <ActionIcon
                                 color="red"

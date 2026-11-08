@@ -2128,6 +2128,7 @@ export interface components {
          *     }
          */
         ProblemModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -2178,6 +2179,7 @@ export interface components {
          *     }
          */
         ProblemsListItemModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -2279,6 +2281,7 @@ export interface components {
          *     }
          */
         ContestProblemModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             problem_id: string;
             /** @example Test problem */
@@ -2355,6 +2358,7 @@ export interface components {
          *     }
          */
         ContestModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             id: string;
             /** @example contest-1 */
@@ -2489,6 +2493,7 @@ export interface components {
          *     }
          */
         ContestProblemListItemModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             problem_id: string;
             /** Format: int32 */
@@ -3035,6 +3040,7 @@ export interface components {
          *     }
          */
         DashboardContestModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             id: string;
             /** @example contest-1 */
@@ -3068,6 +3074,7 @@ export interface components {
          *     }
          */
         DashboardProblemModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             id: string;
             title: string;
@@ -3238,6 +3245,7 @@ export interface components {
          *     }
          */
         ContestMemberModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             user_id: string;
             /** Format: uuid */
@@ -3258,14 +3266,9 @@ export interface components {
          *     }
          */
         GetMyContestRoleResponseModel: {
+            readonly capabilities: string[];
             /** @example owner */
             role: string;
-            /**
-             * Format: int64
-             * @description Effective permissions bitmask for the user in this contest, derived from direct membership and team-based access
-             * @example 255
-             */
-            permissions_mask?: number;
         };
         /**
          * ScoreboardProblemResultModel
@@ -3637,6 +3640,7 @@ export interface components {
          *     }
          */
         OrganizationModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             id: string;
             login: string;
@@ -3720,6 +3724,7 @@ export interface components {
          *     }
          */
         OrganizationMemberModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             user_id: string;
             /** Format: uuid */
@@ -3764,6 +3769,7 @@ export interface components {
          *     }
          */
         TeamModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             id: string;
             name: string;
@@ -3836,6 +3842,7 @@ export interface components {
          *     }
          */
         TeamMemberModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             user_id: string;
             /** Format: uuid */
@@ -3881,6 +3888,7 @@ export interface components {
          *     }
          */
         ContestTeamModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             contest_id: string;
             /** Format: uuid */
@@ -3888,8 +3896,6 @@ export interface components {
             team_name: string;
             team_slug: string;
             contest_role: string;
-            /** Format: int64 */
-            permissions_mask?: number;
             /** Format: date-time */
             created_at: string;
         };
@@ -3923,6 +3929,7 @@ export interface components {
          *     }
          */
         ProblemTeamModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             problem_id: string;
             /** Format: uuid */
@@ -3962,6 +3969,7 @@ export interface components {
          *     }
          */
         ProblemMemberModel: {
+            readonly capabilities: string[];
             /** Format: uuid */
             problem_id: string;
             /** Format: uuid */

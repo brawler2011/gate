@@ -93,6 +93,7 @@ const (
 )
 
 type OrganizationContext struct {
+	Owners     []User
 	ID         uuid.UUID
 	Role       OrganizationRole
 	JoinPolicy JoinPolicy
@@ -113,6 +114,7 @@ type TeamGrant[R ~string] struct {
 	Role           R
 }
 type ProblemContext struct {
+	Owners       []User
 	ID           uuid.UUID
 	Organization OrganizationContext
 	OwnerID      uuid.UUID
@@ -135,6 +137,8 @@ type SubmissionContext struct {
 	ContestID uuid.UUID
 }
 type ContestContext struct {
+	BlockedProblems   []uuid.UUID
+	Owners            []User
 	StartTime         *time.Time
 	EndTime           *time.Time
 	Settings          map[string]interface{}

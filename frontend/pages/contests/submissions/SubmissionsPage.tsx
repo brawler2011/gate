@@ -5,7 +5,7 @@ import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {SubmissionsListClient} from "@/components/submissions";
 import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
-import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
+import {PermissionChecker} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
@@ -50,27 +50,21 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     parsedParams.language = Number(queryParams.language);
   }
 
-  const [contestData, {data: me}] = await Promise.all([
+  const [contestData] = await Promise.all([
     unwrap(
       api.GET("/organizations/{org_login}/contests/{contest_login}", {
         params: {path: {org_login: slug, contest_login: contestLogin}},
       }),
     ),
-    api.GET("/users/me"),
   ]);
-  const user = me?.user ?? null;
-  const contestRole = user ? await getMyContestRole(slug, contestLogin) : null;
 
   const checker = contestData?.contest
-    ? new PermissionChecker(user, contestRole?.role ?? null, null, contestRole?.permissionsMask ?? null)
+    ? new PermissionChecker()
     : null;
 
   if (contestData?.contest && checker) {
-    const isManager = checker.canManageContest(contestData.contest);
-    const hasStarted =
-      !contestData.contest.start_time || new Date(contestData.contest.start_time) <= new Date();
 
-    if (!checker.canViewAllSubmissions(contestData.contest) || (!isManager && !hasStarted)) {
+    if (!checker.canViewAllSubmissions(contestData.contest)) {
       throw redirect(`/${slug}/${contestLogin}`);
     }
   }

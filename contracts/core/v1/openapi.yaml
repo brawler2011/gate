@@ -3846,6 +3846,7 @@ components:
           output: '3'
       type: object
       required:
+        - capabilities
         - id
         - organization_id
         - organization_login
@@ -3864,6 +3865,12 @@ components:
         - updated_at
         - samples
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         id:
           type: string
           format: uuid
@@ -3928,6 +3935,7 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - capabilities
         - id
         - organization_id
         - organization_login
@@ -3938,6 +3946,12 @@ components:
         - created_at
         - updated_at
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         id:
           type: string
           format: uuid
@@ -4042,6 +4056,7 @@ components:
           output: '3'
       type: object
       required:
+        - capabilities
         - problem_id
         - title
         - time_limit
@@ -4056,6 +4071,12 @@ components:
         - updated_at
         - samples
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         problem_id:
           type: string
           format: uuid
@@ -4138,6 +4159,7 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - capabilities
         - id
         - login
         - organization_id
@@ -4154,6 +4176,12 @@ components:
         - created_at
         - updated_at
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         id:
           type: string
           format: uuid
@@ -4317,6 +4345,7 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - capabilities
         - problem_id
         - position
         - title
@@ -4325,6 +4354,12 @@ components:
         - created_at
         - updated_at
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         problem_id:
           type: string
           format: uuid
@@ -4966,6 +5001,7 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - capabilities
         - id
         - login
         - title
@@ -4975,6 +5011,12 @@ components:
         - user_role
         - created_at
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         id:
           type: string
           format: uuid
@@ -5020,6 +5062,7 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - capabilities
         - id
         - title
         - organization_id
@@ -5029,6 +5072,12 @@ components:
         - memory_limit
         - updated_at
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         id:
           type: string
           format: uuid
@@ -5226,6 +5275,7 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - capabilities
         - user_id
         - contest_id
         - username
@@ -5234,6 +5284,12 @@ components:
         - created_at
         - updated_at
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         user_id:
           type: string
           format: uuid
@@ -5259,16 +5315,18 @@ components:
         role: owner
       type: object
       required:
+        - capabilities
         - role
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         role:
           type: string
           example: owner
-        permissions_mask:
-          type: integer
-          format: int64
-          description: Effective permissions bitmask for the user in this contest, derived from direct membership and team-based access
-          example: 255
     ScoreboardProblemResultModel:
       description: "Scoreboard problem result data."
       example:
@@ -5712,6 +5770,7 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - capabilities
         - id
         - login
         - name
@@ -5719,6 +5778,12 @@ components:
         - created_at
         - updated_at
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         id:
           type: string
           format: uuid
@@ -5808,12 +5873,19 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - capabilities
         - user_id
         - organization_id
         - username
         - role
         - created_at
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         user_id:
           type: string
           format: uuid
@@ -5862,12 +5934,19 @@ components:
         updated_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - capabilities
         - id
         - name
         - organization_id
         - created_at
         - updated_at
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         id:
           type: string
           format: uuid
@@ -5945,12 +6024,19 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - capabilities
         - user_id
         - team_id
         - username
         - role
         - created_at
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         user_id:
           type: string
           format: uuid
@@ -6000,6 +6086,7 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - capabilities
         - contest_id
         - team_id
         - team_name
@@ -6007,6 +6094,12 @@ components:
         - contest_role
         - created_at
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         contest_id:
           type: string
           format: uuid
@@ -6019,9 +6112,6 @@ components:
           type: string
         contest_role:
           type: string
-        permissions_mask:
-          type: integer
-          format: int64
         created_at:
           type: string
           format: date-time
@@ -6054,6 +6144,7 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - capabilities
         - problem_id
         - team_id
         - team_name
@@ -6061,6 +6152,12 @@ components:
         - permission
         - created_at
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         problem_id:
           type: string
           format: uuid
@@ -6104,12 +6201,19 @@ components:
         created_at: '2026-01-01T12:00:00Z'
       type: object
       required:
+        - capabilities
         - problem_id
         - user_id
         - username
         - role
         - created_at
       properties:
+        capabilities:
+          type: array
+          readOnly: true
+          uniqueItems: true
+          items:
+            type: string
         problem_id:
           type: string
           format: uuid

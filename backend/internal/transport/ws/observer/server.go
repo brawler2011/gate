@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-
 	observerv1 "github.com/brawler2011/gate/backend/contracts/observer/v1"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
@@ -26,9 +24,10 @@ type Observer struct {
 	auth        AuthUC
 	permissions PermissionsUC
 	contests    ContestReader
+	revisions   RevisionReader
 }
 
-func NewObserver(hub *Hub, contestsHub *ContestsHub, middleware func(http.Handler) http.Handler, auth AuthUC, permissions PermissionsUC, contests ContestReader) *Observer {
+func NewObserver(hub *Hub, contestsHub *ContestsHub, middleware func(http.Handler) http.Handler, auth AuthUC, permissions PermissionsUC, contests ContestReader, revisions ...RevisionReader) *Observer {
 	mux := http.NewServeMux()
 
 	observer := &Observer{
@@ -40,6 +39,9 @@ func NewObserver(hub *Hub, contestsHub *ContestsHub, middleware func(http.Handle
 		contests:    contests,
 	}
 
+	if len(revisions) > 0 {
+		observer.revisions = revisions[0]
+	}
 	mux.HandleFunc("/ws/submissions", observer.HandleSubmissions)
 	mux.HandleFunc("/ws/contests", observer.HandleContests)
 	observer.handler = middleware(mux)
@@ -52,11 +54,15 @@ func (s *Observer) Handler() http.Handler {
 }
 
 type SubmissionsFilter struct {
-	Since     uint64
-	ContestId *uuid.UUID
-	UserId    *uuid.UUID
-	ProblemId *uuid.UUID
-	Language  *int32
+	Topics        []string
+	audience      string
+	viewer        uuid.UUID
+	configuration string
+	Since         uint64
+	ContestId     *uuid.UUID
+	UserId        *uuid.UUID
+	ProblemId     *uuid.UUID
+	Language      *int32
 }
 
 func metaMatches(meta *submissionsmodel.SubmissionEventMeta, filter *SubmissionsFilter) bool {
@@ -140,18 +146,13 @@ func parseSubmissionsFilter(r *http.Request) (*SubmissionsFilter, error) {
 func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
 	filter, err := parseSubmissionsFilter(r)
 	if err != nil {
 		http.Error(w, "invalid filter", http.StatusBadRequest)
 		return
 	}
-	if err := s.checkSubscription(ctx, filter, false); err != nil {
+	lease, err := s.admit(ctx, filter, false)
+	if err != nil {
 		subscriptionError(w, err)
 		return
 	}
@@ -176,6 +177,8 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 		delete(s.hub.subscribers, sub.id)
 		s.hub.mu.Unlock()
 	}()
+	sub.verify = lease
+	sub.onInvalidate = func(err error) { s.sendFinalSnapshot(ctx, filter, conn, err) }
 	sub.run(history, filter.Matches, func(event *WrappedEvent) error {
 		return s.sendSubmission(ctx, filter, event, conn)
 	})
@@ -201,22 +204,17 @@ func getClosingFrameData(err error) (int, []byte) {
 func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
 	parsed, err := parseSubmissionsFilter(r)
 	if err != nil || parsed.ContestId == nil {
 		http.Error(w, "invalid filter", http.StatusBadRequest)
 		return
 	}
-	if err := s.checkSubscription(ctx, parsed, true); err != nil {
+	lease, err := s.admit(ctx, parsed, true)
+	if err != nil {
 		subscriptionError(w, err)
 		return
 	}
-	filter := &ContestsFilter{Since: parsed.Since, ContestId: *parsed.ContestId}
+	filter := &ContestsFilter{Since: parsed.Since, ContestId: *parsed.ContestId, Topics: parsed.Topics}
 
 	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Request-ID": w.Header().Values("X-Request-ID")})
 	if err != nil {
@@ -234,7 +232,8 @@ func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 		delete(s.contestsHub.subscribers, sub.id)
 		s.contestsHub.mu.Unlock()
 	}()
+	sub.verify = lease
 	sub.run(history, filter.Matches, func(event *WrappedEvent) error {
-		return s.sendContest(ctx, parsed, event, conn)
+		return s.sendContest(parsed, event, conn)
 	})
 }

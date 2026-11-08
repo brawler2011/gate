@@ -148,7 +148,7 @@ func (h *CoreServer) ListOrganizationContests(ctx context.Context, params corev1
 	if err != nil {
 		return nil, err
 	}
-	return ListContestsResponseDTO(list), nil
+	return projectResponse(h, ctx, ListContestsResponseDTO(list))
 }
 
 func (h *CoreServer) GetContest(ctx context.Context, params corev1.GetContestParams) (*corev1.GetContestResponseModel, error) {
@@ -156,7 +156,7 @@ func (h *CoreServer) GetContest(ctx context.Context, params corev1.GetContestPar
 	if err != nil {
 		return nil, err
 	}
-	return GetContestResponseDTO(details.Contest, details.Problems, details.Owner), nil
+	return projectResponse(h, ctx, GetContestResponseDTO(details.Contest, details.Problems, details.Owner))
 }
 
 func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContestRequestModel, params corev1.UpdateContestParams) error {
@@ -333,7 +333,7 @@ func (h *CoreServer) ListAdminContests(ctx context.Context, params corev1.ListAd
 		return nil, err
 	}
 
-	return ListContestsResponseDTO(contestsList), nil
+	return projectResponse(h, ctx, ListContestsResponseDTO(contestsList))
 }
 
 func (h *CoreServer) ListUserContests(ctx context.Context, params corev1.ListUserContestsParams) (*corev1.ListUserContestsResponseModel, error) {
@@ -369,7 +369,7 @@ func (h *CoreServer) ListUserContests(ctx context.Context, params corev1.ListUse
 		return nil, err
 	}
 
-	return ListUserContestsResponseDTO(contestsList), nil
+	return projectResponse(h, ctx, ListUserContestsResponseDTO(contestsList))
 }
 
 func (h *CoreServer) ListWorkshopContests(ctx context.Context, params corev1.ListWorkshopContestsParams) (*corev1.ListContestsResponseModel, error) {
@@ -406,7 +406,7 @@ func (h *CoreServer) ListWorkshopContests(ctx context.Context, params corev1.Lis
 		return nil, err
 	}
 
-	return ListContestsResponseDTO(contestsList), nil
+	return projectResponse(h, ctx, ListContestsResponseDTO(contestsList))
 }
 
 func (h *CoreServer) ListPublicContests(ctx context.Context, params corev1.ListPublicContestsParams) (*corev1.ListContestsResponseModel, error) {
@@ -436,7 +436,7 @@ func (h *CoreServer) ListPublicContests(ctx context.Context, params corev1.ListP
 		return nil, err
 	}
 
-	return ListContestsResponseDTO(contestsList), nil
+	return projectResponse(h, ctx, ListContestsResponseDTO(contestsList))
 }
 
 func (h *CoreServer) CreateContestProblem(ctx context.Context, params corev1.CreateContestProblemParams) error {
@@ -466,7 +466,7 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, params corev1.GetCon
 	if err != nil {
 		return nil, err
 	}
-	return GetContestProblemResponseDTO(details.Link, details.Problem, details.Statement, SamplesDTO(details.Samples)), nil
+	return projectResponse(h, ctx, GetContestProblemResponseDTO(details.Link, details.Problem, details.Statement, SamplesDTO(details.Samples)), details.Link.ContestID)
 }
 
 func (h *CoreServer) DownloadContestStatementsPdf(ctx context.Context, params corev1.DownloadContestStatementsPdfParams) (corev1.DownloadContestStatementsPdfOK, error) {
@@ -615,7 +615,7 @@ func (h *CoreServer) ListContestMembers(ctx context.Context, params corev1.ListC
 		}
 	}
 
-	return &resp, nil
+	return projectResponse(h, ctx, &resp, contest.ID)
 }
 
 func (h *CoreServer) GetMyContestRole(ctx context.Context, params corev1.GetMyContestRoleParams) (*corev1.GetMyContestRoleResponseModel, error) {
@@ -626,21 +626,18 @@ func (h *CoreServer) GetMyContestRole(ctx context.Context, params corev1.GetMyCo
 
 	user := accessmodel.UserFromContext(ctx)
 
-	contestRole, permissionsMask, err := h.contests.GetEffectiveContestRole(ctx, contest.ID, user.Id)
+	contestRole, err := h.contests.GetEffectiveContestRole(ctx, contest.ID, user.Id)
 	if err != nil {
 		return nil, err
 	}
 
 	if contestRole == nil {
-		return &corev1.GetMyContestRoleResponseModel{}, nil
+		return projectResponse(h, ctx, &corev1.GetMyContestRoleResponseModel{}, contest.ID)
 	}
 
-	permissionsMaskValue := safeInt64(permissionsMask)
-
-	return &corev1.GetMyContestRoleResponseModel{
-		Role:            *contestRole,
-		PermissionsMask: corev1.NewOptInt64(permissionsMaskValue),
-	}, nil
+	return projectResponse(h, ctx, &corev1.GetMyContestRoleResponseModel{
+		Role: *contestRole,
+	}, contest.ID)
 }
 
 func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.ListContestSubmissionsParams) (*corev1.ListSubmissionsResponseModel, error) {
@@ -756,7 +753,7 @@ func (h *CoreServer) ListContestTeams(ctx context.Context, params corev1.ListCon
 		return nil, err
 	}
 
-	return listContestTeamsDTO(teams), nil
+	return projectResponse(h, ctx, listContestTeamsDTO(teams), contest.ID)
 }
 
 func (h *CoreServer) CreateContestTeam(ctx context.Context, params corev1.CreateContestTeamParams) error {

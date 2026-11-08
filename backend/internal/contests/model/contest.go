@@ -40,55 +40,6 @@ const (
 	FreezeStatusUnfrozen ContestFreezeStatus = "unfrozen"
 )
 
-// ContestPermissionMask stores action permissions as bit flags.
-type ContestPermissionMask uint64
-
-const (
-	ContestPermissionGetContest ContestPermissionMask = 1 << iota
-	ContestPermissionManageContest
-	ContestPermissionGetMonitor
-	ContestPermissionListUsersSubmissions
-	ContestPermissionListOwnSubmissions
-	ContestPermissionGetOwnSubmission
-	ContestPermissionGetOtherUserSubmission
-	ContestPermissionGetSubmissionDetails
-	ContestPermissionCreateSubmission
-)
-
-const (
-	ContestPermissionMaskParticipantDefault = ContestPermissionGetContest |
-		ContestPermissionListOwnSubmissions |
-		ContestPermissionGetOwnSubmission |
-		ContestPermissionCreateSubmission
-	ContestPermissionMaskModeratorDefault = ContestPermissionGetContest |
-		ContestPermissionManageContest |
-		ContestPermissionGetMonitor |
-		ContestPermissionListUsersSubmissions |
-		ContestPermissionListOwnSubmissions |
-		ContestPermissionGetOwnSubmission |
-		ContestPermissionGetOtherUserSubmission |
-		ContestPermissionGetSubmissionDetails |
-		ContestPermissionCreateSubmission
-	ContestPermissionMaskOwnerDefault = ContestPermissionMaskModeratorDefault
-)
-
-func (m ContestPermissionMask) Has(permission ContestPermissionMask) bool {
-	return m&permission == permission
-}
-
-func ContestRoleDefaultPermissionMask(role ContestRole) (ContestPermissionMask, bool) {
-	switch role {
-	case ContestRoleOwner:
-		return ContestPermissionMaskOwnerDefault, true
-	case ContestRoleModerator:
-		return ContestPermissionMaskModeratorDefault, true
-	case ContestRoleParticipant:
-		return ContestPermissionMaskParticipantDefault, true
-	default:
-		return 0, false
-	}
-}
-
 type CreateContestParams struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
@@ -306,14 +257,13 @@ type ContestProblem struct {
 }
 
 type ContestMember struct {
-	UserID          uuid.UUID
-	ContestID       uuid.UUID
-	Username        string
-	Role            accessmodel.UserRole
-	ContestRole     ContestRole
-	PermissionsMask *ContestPermissionMask
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	UserID      uuid.UUID
+	ContestID   uuid.UUID
+	Username    string
+	Role        accessmodel.UserRole
+	ContestRole ContestRole
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type ContestParticipationMode = string

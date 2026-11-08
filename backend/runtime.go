@@ -256,7 +256,7 @@ func runApp(envFile string) error {
 	}
 
 	submissionDispatcher := outbox.NewEventDispatcher()
-	observerHub := wsobserver.NewHub(submissionsRingBufferSize, contestsRepo, contestsUC)
+	observerHub := wsobserver.NewHub(submissionsRingBufferSize, contestsRepo, contestsUC, pgstore.NewPolicyFactsRepo(pool))
 
 	for _, event := range []submissionsmodel.SubmissionEventType{
 		submissionsmodel.SubmissionEventCreated,
@@ -291,7 +291,7 @@ func runApp(envFile string) error {
 		return fmt.Errorf("create contests subscriber: %w", err)
 	}
 
-	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersRepo, authUC), authUC, permissionsUC, contestsRepo)
+	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersRepo, authUC), authUC, permissionsUC, contestsRepo, pgstore.NewPolicyFactsRepo(pool))
 
 	publicMux := http.NewServeMux()
 	publicMux.Handle("/ws/", observer.Handler())
@@ -338,6 +338,7 @@ func runApp(envFile string) error {
 		},
 		natsJS,
 		cfg.Env != "local",
+		access.NewCapabilities(pgstore.NewPolicyFactsRepo(pool)),
 	)
 
 	secHandler := middleware.NewSecurityHandler()

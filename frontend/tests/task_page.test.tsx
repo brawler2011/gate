@@ -11,6 +11,7 @@ import {act, cleanup, renderWithProviders, setupDOMEnvironment, waitFor} from '.
 
 const user = {id: 'user', username: 'alice', role: 'user', created_at: '2026-10-01', updated_at: '2026-10-01'};
 const problem = {
+  capabilities: ['view_statements'],
   problem_id: 'problem', title: 'Snapshot problem', position: 1, time_limit: 1000, memory_limit: 256,
   legend: '', input_format: '', output_format: '', notes: '', scoring: '',
   created_at: '2026-10-01', updated_at: '2026-10-01', samples: [],
@@ -45,7 +46,7 @@ it.each(['success', 'failure', 'guest'])('handles the initial submissions snapsh
       return pendingSubmissions;
     }
     if (url.pathname === '/api/organizations/school/contests/round') {
-      return Response.json({contest: {id: 'contest', login: 'round', organization_login: 'school',
+      return Response.json({contest: {capabilities: ['view', 'view_statements'], id: 'contest', login: 'round', organization_login: 'school',
         visibility: 'public'}, problems: [problem]});
     }
     throw new Error(`Unexpected API request ${url.pathname}`);

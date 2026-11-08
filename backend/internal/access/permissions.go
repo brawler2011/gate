@@ -392,25 +392,18 @@ func (uc *PermissionsUseCase) GetEffectiveContestRole(
 	ctx context.Context,
 	contestID uuid.UUID,
 	userID uuid.UUID,
-) (*contestsmodel.ContestRole, contestsmodel.ContestPermissionMask, error) {
+) (*contestsmodel.ContestRole, error) {
 	contest, err := uc.contestsRepo.GetContest(ctx, contestID)
 	if err != nil {
-		return nil, 0, fmt.Errorf("get contest: %w", err)
+		return nil, fmt.Errorf("get contest: %w", err)
 	}
 
 	role, err := uc.resolveEffectiveContestRole(ctx, &contest, userID)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
-	var mask contestsmodel.ContestPermissionMask
-	if role != nil {
-		if defaultMask, ok := contestsmodel.ContestRoleDefaultPermissionMask(*role); ok {
-			mask = defaultMask
-		}
-	}
-
-	return role, mask, nil
+	return role, nil
 }
 
 func (uc *PermissionsUseCase) GetContestPermissions(

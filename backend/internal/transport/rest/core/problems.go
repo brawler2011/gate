@@ -62,7 +62,7 @@ func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblem
 	for i, problem := range problemsList.Problems {
 		resp.Problems[i] = ProblemsListItemDTO(problem)
 	}
-	return &resp, nil
+	return projectResponse(h, ctx, &resp)
 }
 
 func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.ListProblemTemplatesParams) ([]corev1.ProblemTemplateModel, error) {
@@ -99,7 +99,7 @@ func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemPar
 	if err != nil {
 		return nil, err
 	}
-	return &corev1.GetProblemResponseModel{Problem: *ProblemDTO(details.Problem, details.Statement, SamplesDTO(details.Samples))}, nil
+	return projectResponse(h, ctx, &corev1.GetProblemResponseModel{Problem: *ProblemDTO(details.Problem, details.Statement, SamplesDTO(details.Samples))})
 
 }
 
@@ -136,7 +136,7 @@ func (h *CoreServer) ListProblemTeams(ctx context.Context, params corev1.ListPro
 		return nil, err
 	}
 
-	return listProblemTeamsDTO(teams), nil
+	return projectResponse(h, ctx, listProblemTeamsDTO(teams))
 }
 
 func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.CreateProblemTeamParams) error {
@@ -183,7 +183,7 @@ func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListP
 		return nil, err
 	}
 
-	return listProblemMembersDTO(members.Items, members.Pagination), nil
+	return projectResponse(h, ctx, listProblemMembersDTO(members.Items, members.Pagination))
 }
 
 func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.CreateProblemMemberParams) error {

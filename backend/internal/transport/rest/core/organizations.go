@@ -43,7 +43,7 @@ func (h *CoreServer) ListOrganizations(ctx context.Context, params corev1.ListOr
 		return nil, wrapOrgUCError(err, "failed to list organizations")
 	}
 
-	return listOrganizationsDTO(organizationsList), nil
+	return projectResponse(h, ctx, listOrganizationsDTO(organizationsList))
 }
 
 // CreateOrganization handles POST /organizations
@@ -104,9 +104,9 @@ func (h *CoreServer) GetOrganization(ctx context.Context, params corev1.GetOrgan
 		return nil, wrapOrgUCError(err, "failed to get organization")
 	}
 
-	return &corev1.GetOrganizationResponseModel{
+	return projectResponse(h, ctx, &corev1.GetOrganizationResponseModel{
 		Organization: organizationDTO(*org),
-	}, nil
+	})
 }
 
 // UpdateOrganization handles PATCH /organizations/{login}
@@ -171,7 +171,7 @@ func (h *CoreServer) ListOrganizationMembers(ctx context.Context, params corev1.
 		return nil, wrapOrgUCError(err, "failed to list organization members")
 	}
 
-	return listOrganizationMembersDTO(members.Items, members.Pagination), nil
+	return projectResponse(h, ctx, listOrganizationMembersDTO(members.Items, members.Pagination))
 }
 
 // AddOrganizationMember handles POST /organizations/{login}/members

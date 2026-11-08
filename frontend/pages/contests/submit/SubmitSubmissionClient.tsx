@@ -21,13 +21,14 @@ type Props = {
 export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactNode => {
   const navigate = useNavigate();
   const [selectedProblemId, setSelectedProblemId] = useState<string | null>(
-    problems.length > 0 ? problems[0].problem_id : null,
+    problems.find((problem) => problem.capabilities.includes("submit"))?.problem_id ?? null,
   );
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const problemOptions = problems.map((problem) => ({
     value: problem.problem_id,
     label: `${numberToLetters(problem.position)}. ${problem.title}`,
+    disabled: !problem.capabilities.includes("submit"),
   }));
 
   const handleSubmit = async (submission: FormData, language: string) => {
@@ -109,7 +110,7 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
         <CreateSubmissionForm
           onSubmit={handleSubmit}
           large
-          disabled={isSubmitted}
+          disabled={isSubmitted || !contest.capabilities.includes("submit") || !problems.some((problem) => problem.problem_id === selectedProblemId && problem.capabilities.includes("submit"))}
           problemSelect={
             <Select
               placeholder="Выберите задачу"
