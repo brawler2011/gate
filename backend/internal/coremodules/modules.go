@@ -1,6 +1,11 @@
 package coremodules
 
-import "github.com/brawler2011/gate/backend/internal/transport/rest/core"
+import (
+	"context"
+
+	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	"github.com/brawler2011/gate/backend/internal/transport/rest/core"
+)
 
 type Identity struct {
 	core.AuthUC
@@ -25,6 +30,16 @@ type Contests struct {
 	core.AnnouncementsReader
 	core.ClarificationsUC
 	core.ClarificationsReader
+}
+
+func (c Contests) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error) {
+	if c.ContestsUC != nil {
+		return c.ContestsUC.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	}
+	if c.ContestsReader != nil {
+		return c.ContestsReader.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	}
+	return contestsmodel.Contest{}, nil
 }
 
 type Problems struct {
