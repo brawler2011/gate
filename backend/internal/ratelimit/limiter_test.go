@@ -143,3 +143,20 @@ func TestLoginFailureSlidingWindow(t *testing.T) {
 	require.ErrorAs(t, l.LoginFailure(ctx, "user"), &limited)
 	require.Equal(t, 2*time.Minute, limited.RetryAfter)
 }
+
+func TestLoginIdentifierCaseInsensitive(t *testing.T) {
+	l, server := testLimiter(t)
+	ctx := context.Background()
+	for attempt := range 15 {
+		name := "test_user"
+		if attempt%2 == 0 {
+			name = "TEST_USER"
+		}
+		require.NoError(t, l.LoginFailure(ctx, name))
+	}
+	var limited *pkg.RateLimitError
+	require.ErrorAs(t, l.LoginFailure(ctx, "Test_User"), &limited)
+	l.LoginSuccess(ctx, "tEST_uSER")
+	require.False(t, server.Exists("rl:fail:login:test_user"))
+	require.NoError(t, l.LoginFailure(ctx, "TEST_USER"))
+}

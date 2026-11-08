@@ -8,7 +8,8 @@ import (
 type Config struct {
 	Env string `env:"ENV" env-default:"prod"`
 
-	Address string `env:"ADDRESS" required:"true"`
+	Address      string `env:"ADDRESS" required:"true"`
+	TrustedProxy string `env:"RATE_LIMIT_TRUSTED_PROXY"`
 
 	PostgresDSN      string `env:"POSTGRES_DSN"`
 	PostgresUser     string `env:"POSTGRES_USER" env-default:"postgres"`
@@ -90,4 +91,3 @@ func (c *Config) GetInboxRetention() time.Duration {
 	}
 	return time.Duration(days) * 24 * time.Hour
 }
-

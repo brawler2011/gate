@@ -98,7 +98,7 @@ func (l *Limiter) LoginFailure(ctx context.Context, identifier string) error {
 	}
 	ctx, cancel := context.WithTimeout(ctx, 250*time.Millisecond)
 	defer cancel()
-	ms, err := failureScript.Run(ctx, l.client, []string{"rl:fail:login:" + identifier}, uuid.NewString()).Int64()
+	ms, err := failureScript.Run(ctx, l.client, []string{"rl:fail:login:" + strings.ToLower(identifier)}, uuid.NewString()).Int64()
 	return result(ms, err)
 }
 
@@ -109,7 +109,7 @@ func (l *Limiter) LoginSuccess(ctx context.Context, identifier string) {
 	ctx, cancel := context.WithTimeout(ctx, 250*time.Millisecond)
 	defer cancel()
 	// Scripter deliberately keeps the dependency small; deleting through Lua is atomic.
-	_, err := l.client.Eval(ctx, `return redis.call('DEL', KEYS[1])`, []string{"rl:fail:login:" + identifier}).Result()
+	_, err := l.client.Eval(ctx, `return redis.call('DEL', KEYS[1])`, []string{"rl:fail:login:" + strings.ToLower(identifier)}).Result()
 	if err != nil {
 		slog.Warn("rate limiter unavailable; allowing request", "error", err)
 	}

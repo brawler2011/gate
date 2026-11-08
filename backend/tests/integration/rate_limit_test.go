@@ -5,6 +5,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -32,16 +33,23 @@ func (s *IntegrationTestSuite) TestRateLimitedLogin() {
 	s.Require().NoError(err)
 	_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", registered.User.ID)
 	s.Require().NoError(err)
+	identifier := name
 	login := func(password string) error {
-		_, err := s.client.Login(s.ctx, &corev1.LoginRequestModel{Identifier: name, Password: password})
+		_, err := s.client.Login(s.ctx, &corev1.LoginRequestModel{Identifier: identifier, Password: password})
 		return err
 	}
-	for range 15 {
+	for attempt := range 15 {
+		identifier = name
+		if attempt%2 == 0 {
+			identifier = strings.ToUpper(name)
+		}
 		s.Equal(http.StatusUnauthorized, s.getStatusCode(login("wrong-password")))
 	}
+	identifier = name
 	s.requireRateLimited(login("wrong-password"))
 	s.Equal("120", s.transport.lastResponse.Header.Get("Retry-After"))
-	// Correct credentials must work even during cooldown and clear failures.
+	// Correct credentials with different casing must clear the same failure key.
+	identifier = strings.ToUpper(name)
 	s.Require().NoError(login(password))
 	s.False(s.rateRedis.Exists("rl:fail:login:" + name))
 	for range 15 {
@@ -156,4 +164,27 @@ func (s *IntegrationTestSuite) TestRateLimitRedisOutage() {
 	_, err = s.client.Register(s.ctx, &corev1.RegisterRequestModel{Username: "redis_outage", Email: "redis_outage@example.com", Password: "Password12345"})
 	s.Require().NoError(err)
 	s.Require().NoError(s.client.ForgotPassword(s.ctx, &corev1.ForgotPasswordRequestModel{Identifier: "redis_outage"}))
+}
+
+func (s *IntegrationTestSuite) TestRateLimitedProxyClients() {
+	send := func(peer, forwarded string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodGet, "/health", nil)
+		r.RemoteAddr = peer + ":1234"
+		r.Header.Set("X-Forwarded-For", forwarded)
+		rr := httptest.NewRecorder()
+		s.handler.ServeHTTP(rr, r)
+		return rr
+	}
+	for attempt := range 300 {
+		// A changing attacker-controlled prefix must not change the selected IP.
+		s.Require().Equal(http.StatusOK, send("192.0.2.254", fmt.Sprintf("198.51.100.%d, 203.0.113.1", attempt%255)).Code)
+	}
+	blocked := send("192.0.2.254", "203.0.113.1")
+	s.Equal(http.StatusTooManyRequests, blocked.Code)
+	s.NotEmpty(blocked.Header().Get("Retry-After"))
+	s.Equal(http.StatusOK, send("192.0.2.254", "203.0.113.2").Code)
+	for attempt := range 300 {
+		s.Require().Equal(http.StatusOK, send("192.0.2.3", fmt.Sprintf("198.51.100.%d", attempt%255)).Code)
+	}
+	s.Equal(http.StatusTooManyRequests, send("192.0.2.3", "203.0.113.2").Code)
 }

@@ -295,7 +295,7 @@ func (s *IntegrationTestSuite) initApp() {
 		middleware.AuthMiddleware(authUC)(
 			middleware.UsersMiddleware(s.usersRepo)(
 				s.testMiddleware(
-					middleware.RateLimit(s.limiter)(server),
+					middleware.RateLimit(s.limiter, "192.0.2.254")(server),
 				),
 			),
 		),

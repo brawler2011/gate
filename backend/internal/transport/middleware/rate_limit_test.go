@@ -29,7 +29,7 @@ func TestRateLimit(t *testing.T) {
 			server := miniredis.RunT(t)
 			client := redis.NewClient(&redis.Options{Addr: server.Addr(), MaxRetries: -1})
 			defer func() { _ = client.Close() }()
-			handler := RateLimit(ratelimit.New(client))(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
+			handler := RateLimit(ratelimit.New(client), "")(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
 			ctx := context.Background()
 			if tc.authenticated {
 				ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.New()})
