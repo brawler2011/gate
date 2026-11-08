@@ -448,13 +448,20 @@ func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams
 }
 
 const lockSubmission = `-- name: LockSubmission :one
-SELECT id FROM submissions WHERE id = $1::uuid FOR UPDATE
+SELECT id, generation, state FROM submissions WHERE id = $1::uuid FOR UPDATE
 `
 
-func (q *Queries) LockSubmission(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+type LockSubmissionRow struct {
+	ID         uuid.UUID              `json:"id"`
+	Generation int64                  `json:"generation"`
+	State      submissionsmodel.State `json:"state"`
+}
+
+func (q *Queries) LockSubmission(ctx context.Context, id uuid.UUID) (LockSubmissionRow, error) {
 	row := q.db.QueryRow(ctx, lockSubmission, id)
-	err := row.Scan(&id)
-	return id, err
+	var i LockSubmissionRow
+	err := row.Scan(&i.ID, &i.Generation, &i.State)
+	return i, err
 }
 
 const resetSubmissionsState = `-- name: ResetSubmissionsState :many

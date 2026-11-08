@@ -74,10 +74,36 @@ func (w *OutboxWorker) processBatch(ctx context.Context) {
 }
 
 func (w *OutboxWorker) processEvent(ctx context.Context, event *eventdata.OutboxEvent) {
-	handlerCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), eventTimeoutSec*time.Second)
-	defer cancel()
+	baseCtx := context.WithoutCancel(ctx)
+	leaseCtx, cancelLease := context.WithCancel(baseCtx)
+	defer cancelLease()
 
-	handlerCtx = requestid.With(handlerCtx, event.Headers[requestid.Header])
+	stopped := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		renewalInterval := (eventTimeoutSec * time.Second) / 3
+		if renewalInterval < 100*time.Millisecond {
+			renewalInterval = 100 * time.Millisecond
+		}
+		ticker := time.NewTicker(renewalInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-leaseCtx.Done():
+				return
+			case <-ticker.C:
+				if err := w.outboxRepo.RenewLease(leaseCtx, event.Id, event.LeaseToken, eventTimeoutSec); err != nil {
+					cancelLease()
+					return
+				}
+			}
+		}
+	}()
+
+	handlerCtx := requestid.With(leaseCtx, event.Headers[requestid.Header])
 	handlerCtx = queuecontext.With(handlerCtx, queuecontext.Metadata{EventID: event.Id, QueuedAt: event.CreatedAt, AggregateID: event.AggregateID, AggregateVersion: event.AggregateVersion})
 	logger := slog.Default().With("event_id", event.Id, "aggregate_id", event.AggregateID, "request_id", requestid.Get(handlerCtx))
 
@@ -85,15 +111,22 @@ func (w *OutboxWorker) processEvent(ctx context.Context, event *eventdata.Outbox
 		logger = logger.With("submission_id", event.AggregateID)
 	}
 	err := w.dispatcher.Dispatch(handlerCtx, event.EventType, event.Payload)
+
+	close(done)
+	<-stopped
+
+	completionCtx, cancelCompletion := context.WithTimeout(baseCtx, 5*time.Second)
+	defer cancelCompletion()
+
 	if err != nil {
 		logger.Error("failed to dispatch event", "operation", "outbox_dispatch", "error_type", fmt.Sprintf("%T", err))
-		if markErr := w.outboxRepo.MarkAsFailed(handlerCtx, event.Id, event.LeaseToken, err.Error(), eventdata.IsPermanent(err)); markErr != nil {
+		if markErr := w.outboxRepo.MarkAsFailed(completionCtx, event.Id, event.LeaseToken, err.Error(), eventdata.IsPermanent(err)); markErr != nil {
 			logger.Error("failed to mark event as failed", "operation", "outbox_mark_failed", "error_type", fmt.Sprintf("%T", markErr))
 		}
 		return
 	}
 
-	if markErr := w.outboxRepo.MarkAsCompleted(handlerCtx, event.Id, event.LeaseToken); markErr != nil {
+	if markErr := w.outboxRepo.MarkAsCompleted(completionCtx, event.Id, event.LeaseToken); markErr != nil {
 		logger.Error("failed to mark event as completed", "operation", "outbox_mark_completed", "error_type", fmt.Sprintf("%T", markErr))
 	}
 }

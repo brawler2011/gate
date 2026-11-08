@@ -247,8 +247,10 @@ func runApp(envFile string) error {
 	inboxRepo := pgstore.NewInbox(pool)
 	inboxPruner := inbox.NewPruner(inboxRepo, cfg.GetInboxRetention(), inbox.DefaultPruneInterval)
 
+	judgeJobs := pgstore.NewJudgeJobs(pool)
+	judgeTransactions := pgstore.NewJudgeTransactions(pool)
 	judgeUC := judging.NewJudgeUseCase(
-		pgstore.NewJudgeJobs(pool), pgstore.NewJudgeTransactions(pool),
+		judgeJobs, judgeTransactions,
 		submissionsRepo,
 		store,
 		defaultS3PackageBucket,
@@ -261,6 +263,14 @@ func runApp(envFile string) error {
 	if err != nil {
 		return fmt.Errorf("create judge worker: %w", err)
 	}
+
+	judgeRecovery := judging.NewJudgeRecovery(
+		judgeJobs,
+		judgeTransactions,
+		judging.DefaultMaxJobAttempts,
+		judging.DefaultRecoveryBatchSize,
+		judging.DefaultRecoveryInterval,
+	)
 
 	submissionDispatcher := outbox.NewEventDispatcher()
 	observerHub := wsobserver.NewHub(submissionsRingBufferSize, contestsRepo, contestsUC, pgstore.NewPolicyFactsRepo(pool))
@@ -403,6 +413,16 @@ func runApp(envFile string) error {
 			judgeWorker.Start,
 			func(context.Context) error {
 				judgeWorker.Stop()
+				return nil
+			},
+		),
+		newService(
+			"judge recovery worker",
+			func(ctx context.Context) error {
+				judgeRecovery.Start(ctx)
+				return nil
+			},
+			func(context.Context) error {
 				return nil
 			},
 		),

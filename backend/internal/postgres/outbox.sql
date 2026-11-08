@@ -34,6 +34,12 @@ RETURNING e.*;
 UPDATE outbox_events
 SET status = 'completed', processed_at = now(), lease_token = NULL, deadline_at = NULL
 WHERE id = sqlc.arg(id)::uuid AND lease_token = sqlc.arg(lease_token)::uuid
+  AND status = 'processing';
+
+-- name: RenewOutboxLease :execrows
+UPDATE outbox_events
+SET deadline_at = now() + (sqlc.arg(timeout_sec)::int * INTERVAL '1 second')
+WHERE id = sqlc.arg(id)::uuid AND lease_token = sqlc.arg(lease_token)::uuid
   AND status = 'processing' AND deadline_at > now();
 
 -- name: MarkAsFailed :execrows

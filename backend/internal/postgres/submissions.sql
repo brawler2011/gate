@@ -185,7 +185,7 @@ WHERE contest_id = @contest_id::uuid
 ORDER BY id;
 
 -- name: LockSubmission :one
-SELECT id FROM submissions WHERE id = @id::uuid FOR UPDATE;
+SELECT id, generation, state FROM submissions WHERE id = @id::uuid FOR UPDATE;
 
 -- name: GetSubmissionIdentifiers :one
 SELECT contest_id, owner_id, problem_id FROM submissions WHERE id = @id::uuid;

@@ -27,6 +27,10 @@ type outboxRepository struct {
 	markErr           error
 }
 
+func (r *outboxRepository) RenewLease(context.Context, uuid.UUID, uuid.UUID, int32) error {
+	return nil
+}
+
 func (r *outboxRepository) MarkAsCompleted(context.Context, uuid.UUID, uuid.UUID) error {
 	r.completed++
 	return r.markErr
@@ -132,6 +136,9 @@ func (r *sequentialOutbox) PickEvents(_ context.Context, limit, _ int32) ([]even
 	require.Equal(r.t, r.claimed, r.marked, "the previous lease must be processed before claiming another")
 	r.claimed++
 	return []eventdata.OutboxEvent{{Id: uuid.New(), LeaseToken: uuid.New(), EventType: "test"}}, nil
+}
+func (r *sequentialOutbox) RenewLease(context.Context, uuid.UUID, uuid.UUID, int32) error {
+	return nil
 }
 func (r *sequentialOutbox) MarkAsCompleted(context.Context, uuid.UUID, uuid.UUID) error {
 	r.marked++

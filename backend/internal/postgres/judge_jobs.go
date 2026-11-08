@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 
 	judging "github.com/brawler2011/gate/backend/internal/judging"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
@@ -75,10 +76,90 @@ func (r *JudgeJobs) CompleteJob(ctx context.Context, job judgingmodel.Job) (bool
 			return false, HandlePgErr(err)
 		}
 	}
-	if _, err := r.queries.LockSubmission(ctx, job.SubmissionID); err != nil {
+	sub, err := r.queries.LockSubmission(ctx, job.SubmissionID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
 		return false, HandlePgErr(err)
 	}
 	count, err := r.queries.CompleteJudgeJob(ctx, sqlc.CompleteJudgeJobParams{ID: job.ID, SubmissionID: job.SubmissionID, Generation: job.Generation, LeaseToken: job.LeaseToken})
+	if err != nil {
+		return false, HandlePgErr(err)
+	}
+	if count > 0 {
+		return true, nil
+	}
+	if sub.Generation != job.Generation || sub.State == submissionsmodel.Disqualified {
+		return false, nil
+	}
+	return false, judging.ErrLeaseLost
+}
+
+func (r *JudgeJobs) PickStalledJobs(ctx context.Context, limit int32) ([]judgingmodel.Job, error) {
+	rows, err := r.queries.PickStalledJudgeJobs(ctx, limit)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+	jobs := make([]judgingmodel.Job, len(rows))
+	for i, row := range rows {
+		jobs[i] = judgingmodel.Job{
+			ID:           row.ID,
+			SubmissionID: row.SubmissionID,
+			Generation:   row.Generation,
+			Attempt:      row.Attempt,
+		}
+	}
+	return jobs, nil
+}
+
+func (r *JudgeJobs) FailStalledJob(ctx context.Context, reference judgingmodel.JobRef) (bool, error) {
+	identifiers, err := r.queries.GetSubmissionIdentifiers(ctx, reference.SubmissionID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		_, _ = r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
+		return false, nil
+	}
+	if err != nil {
+		return false, HandlePgErr(err)
+	}
+	if identifiers.ContestID != nil && identifiers.OwnerID != nil && identifiers.ProblemID != nil {
+		if err := r.queries.AdvisoryTransactionLock(ctx, submissionTupleKey(*identifiers.ContestID, *identifiers.OwnerID, *identifiers.ProblemID)); err != nil {
+			return false, HandlePgErr(err)
+		}
+	}
+	sub, err := r.queries.LockSubmission(ctx, reference.SubmissionID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			_, _ = r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
+			return false, nil
+		}
+		return false, HandlePgErr(err)
+	}
+	if sub.Generation != reference.Generation || sub.State == submissionsmodel.Disqualified {
+		_, _ = r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
+		return false, nil
+	}
+	count, err := r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
+	if err != nil {
+		return false, HandlePgErr(err)
+	}
+	return count > 0, nil
+}
+
+func (r *JudgeJobs) RequeueStalledJob(ctx context.Context, reference judgingmodel.JobRef) (bool, error) {
+	sub, err := r.queries.LockSubmission(ctx, reference.SubmissionID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			_, _ = r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
+			return false, nil
+		}
+		return false, HandlePgErr(err)
+	}
+	if sub.Generation != reference.Generation || sub.State == submissionsmodel.Disqualified {
+		_, _ = r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
+		return false, nil
+	}
+	count, err := r.queries.RequeueStalledJudgeJob(ctx, sqlc.RequeueStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
 	if err != nil {
 		return false, HandlePgErr(err)
 	}

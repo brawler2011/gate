@@ -263,3 +263,69 @@ func (s *IntegrationTestSuite) TestInboxRetentionPrunesExpiredReceiptsAndPreserv
 	s.Zero(calls, "recent receipt must prevent duplicate execution")
 }
 
+func (s *IntegrationTestSuite) TestOutboxDispatchTimeoutDoesNotCauseDuplicateStorm() {
+	s.resetDeliveryTables()
+	repo := pgstore.NewOutboxRepo(s.dbPool)
+	aggregate := uuid.New()
+	s.Require().NoError(repo.Record(s.ctx, eventdata.Event{
+		AggregateID: aggregate,
+		Type:        eventdata.OutboxEventSubmissionCreated,
+		Payload:     submissionsmodel.SubmissionCreatedEvent{Id: aggregate},
+	}))
+
+	// Pick with a short timeout of 1 second
+	picked, err := repo.PickEvents(s.ctx, 1, 1)
+	s.Require().NoError(err)
+	s.Require().Len(picked, 1)
+	event := picked[0]
+
+	// Simulate dispatch taking longer than the 1s timeout
+	time.Sleep(1100 * time.Millisecond)
+
+	// Verify that deadline has expired
+	var expired bool
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT deadline_at < now() FROM outbox_events WHERE id=$1", event.Id).Scan(&expired))
+	s.True(expired, "deadline should be expired")
+
+	// Even though deadline expired, no other worker claimed it, so MarkAsCompleted must succeed
+	s.Require().NoError(repo.MarkAsCompleted(s.ctx, event.Id, event.LeaseToken), "must not reject completion and cause duplicate storm")
+
+	var status string
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT status FROM outbox_events WHERE id=$1", event.Id).Scan(&status))
+	s.Equal("completed", status)
+
+	// Subsequent PickEvents must NOT pick this event again
+	again, err := repo.PickEvents(s.ctx, 10, 30)
+	s.Require().NoError(err)
+	s.Empty(again, "completed event must not be picked again")
+}
+
+func (s *IntegrationTestSuite) TestOutboxWorkerHeartbeatRenewsLongDispatch() {
+	s.resetDeliveryTables()
+	repo := pgstore.NewOutboxRepo(s.dbPool)
+	aggregate := uuid.New()
+	s.Require().NoError(repo.Record(s.ctx, eventdata.Event{
+		AggregateID: aggregate,
+		Type:        "test.heartbeat",
+		Payload:     map[string]string{"foo": "bar"},
+	}))
+
+	// Pick event with 1 second timeout
+	picked, err := repo.PickEvents(s.ctx, 1, 1)
+	s.Require().NoError(err)
+	s.Require().Len(picked, 1)
+	event := picked[0]
+
+	initialDeadline := *event.DeadlineAt
+
+	// Renew lease
+	s.Require().NoError(repo.RenewLease(s.ctx, event.Id, event.LeaseToken, 10))
+
+	var newDeadline time.Time
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT deadline_at FROM outbox_events WHERE id=$1", event.Id).Scan(&newDeadline))
+	s.True(newDeadline.After(initialDeadline), "deadline must be extended")
+
+	// Complete successfully
+	s.Require().NoError(repo.MarkAsCompleted(s.ctx, event.Id, event.LeaseToken))
+}
+

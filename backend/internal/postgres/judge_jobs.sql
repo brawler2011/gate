@@ -50,3 +50,22 @@ WHERE j.id=sqlc.arg(id)::uuid AND j.lease_token=sqlc.arg(lease_token)::uuid
   AND j.submission_id=sqlc.arg(submission_id)::uuid AND j.generation=sqlc.arg(generation)::bigint
   AND j.state='processing' AND j.deadline_at>clock_timestamp()
   AND s.id=j.submission_id AND s.generation=j.generation AND s.state<>300;
+
+-- name: PickStalledJudgeJobs :many
+SELECT j.id, j.submission_id, j.generation, j.attempt
+FROM judge_jobs j
+WHERE j.state = 'processing' AND j.deadline_at < clock_timestamp()
+ORDER BY j.deadline_at
+LIMIT sqlc.arg(limit_count)::int;
+
+-- name: CompleteStalledJudgeJob :execrows
+UPDATE judge_jobs
+SET state = 'completed', completed_at = clock_timestamp(), lease_token = NULL, deadline_at = NULL
+WHERE id = sqlc.arg(id)::uuid AND generation = sqlc.arg(generation)::bigint
+  AND state = 'processing' AND deadline_at < clock_timestamp();
+
+-- name: RequeueStalledJudgeJob :execrows
+UPDATE judge_jobs
+SET state = 'pending', lease_token = NULL, deadline_at = NULL
+WHERE id = sqlc.arg(id)::uuid AND generation = sqlc.arg(generation)::bigint
+  AND state = 'processing' AND deadline_at < clock_timestamp();
