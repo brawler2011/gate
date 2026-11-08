@@ -46,7 +46,14 @@ func (e *CustomError) Error() string {
 }
 
 func (e *CustomError) Unwrap() []error {
-	return []error{e.Basic, e.Cause}
+	var errs []error
+	if e.Basic != nil {
+		errs = append(errs, e.Basic)
+	}
+	if e.Cause != nil {
+		errs = append(errs, e.Cause)
+	}
+	return errs
 }
 
 func getCallerInfo() string {

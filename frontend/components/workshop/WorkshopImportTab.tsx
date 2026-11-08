@@ -28,7 +28,7 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
       body.append("package", packageFile);
       const {error} = await api.POST("/problems/{id}/import", {
         params: {path: {id: problemId}},
-        body: body as unknown as {package?: string},
+        body: body as unknown as {package: string},
       });
       if (error) {
         notifications.show({

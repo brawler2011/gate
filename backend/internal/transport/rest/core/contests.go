@@ -567,12 +567,13 @@ func (h *CoreServer) UpdateContestMember(ctx context.Context, params corev1.Upda
 		return pkg.Wrap(pkg.ErrBadInput, nil, "cannot update own role")
 	}
 
+	roleStr := string(params.Role)
 	// Validate role value
-	if params.Role != contestsmodel.ContestRoleOwner && params.Role != contestsmodel.ContestRoleModerator && params.Role != contestsmodel.ContestRoleParticipant {
+	if roleStr != contestsmodel.ContestRoleOwner && roleStr != contestsmodel.ContestRoleModerator && roleStr != contestsmodel.ContestRoleParticipant {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role value")
 	}
 
-	err = h.contests.UpdateContestMember(ctx, contest.ID, params.UserID, params.Role)
+	err = h.contests.UpdateContestMember(ctx, contest.ID, params.UserID, roleStr)
 	if err != nil {
 		return err
 	}
@@ -606,10 +607,10 @@ func (h *CoreServer) ListContestMembers(ctx context.Context, params corev1.ListC
 	for i, user := range participantsList.Members {
 		resp.Members[i] = corev1.ContestMemberModel{
 			ContestID:   contest.ID,
-			ContestRole: user.ContestRole,
+			ContestRole: corev1.ContestMemberModelContestRole(user.ContestRole),
 			UserID:      user.UserID,
 			Username:    user.Username,
-			Role:        string(user.Role),
+			Role:        corev1.ContestMemberModelRole(user.Role),
 			CreatedAt:   user.CreatedAt,
 			UpdatedAt:   user.UpdatedAt,
 		}

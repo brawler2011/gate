@@ -165,7 +165,10 @@ export const ProblemMembersManagement = ({problemId}: ProblemMembersManagementPr
     const {error} = await api.PATCH("/problems/{id}/members", {
       params: {
         path: {id: problemId},
-        query: {user_id: editingMember.userId, role: newRole},
+        query: {
+          user_id: editingMember.userId,
+          role: newRole as "owner" | "moderator" | "viewer",
+        },
       },
     });
 

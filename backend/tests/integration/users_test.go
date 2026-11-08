@@ -5,6 +5,8 @@ package integration
 
 import (
 	"bytes"
+	"image"
+	"image/png"
 	"io"
 	"net/http"
 	"net/textproto"
@@ -20,7 +22,11 @@ import (
 func (s *IntegrationTestSuite) TestUserAvatar() {
 	user := s.createUser("avataruser", accessmodel.UserRoleUser)
 
-	avatarContent := []byte("fake image content")
+	testImg := image.NewRGBA(image.Rect(0, 0, 8, 8))
+	var imgBuf bytes.Buffer
+	s.Require().NoError(png.Encode(&imgBuf, testImg))
+	avatarContent := imgBuf.Bytes()
+
 	file := ht.MultipartFile{
 		Name:   "avatar.png",
 		File:   bytes.NewReader(avatarContent),
@@ -69,6 +75,7 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 
 		data, err := io.ReadAll(okResp.Response.Data)
 		s.Require().NoError(err)
+		s.True(bytes.HasPrefix(data, []byte("\x89PNG\r\n\x1a\n")), "avatar must have valid PNG signature")
 		s.Equal(avatarContent, data)
 	})
 

@@ -1186,28 +1186,23 @@ func (s *Server) decodeCreatePostRequest(r *http.Request) (
 			}
 			if err := q.HasParam(cfg); err == nil {
 				if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-					var requestDotTitleVal string
-					if err := func() error {
-						val, err := d.DecodeValue()
-						if err != nil {
-							return err
-						}
-
-						c, err := conv.ToString(val)
-						if err != nil {
-							return err
-						}
-
-						requestDotTitleVal = c
-						return nil
-					}(); err != nil {
+					val, err := d.DecodeValue()
+					if err != nil {
 						return err
 					}
-					request.Title.SetTo(requestDotTitleVal)
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					request.Title = c
 					return nil
 				}); err != nil {
 					return req, rawBody, close, errors.Wrap(err, "decode \"title\"")
 				}
+			} else {
+				return req, rawBody, close, errors.Wrap(err, "query")
 			}
 		}
 		{
@@ -1218,28 +1213,23 @@ func (s *Server) decodeCreatePostRequest(r *http.Request) (
 			}
 			if err := q.HasParam(cfg); err == nil {
 				if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-					var requestDotDescriptionVal string
-					if err := func() error {
-						val, err := d.DecodeValue()
-						if err != nil {
-							return err
-						}
-
-						c, err := conv.ToString(val)
-						if err != nil {
-							return err
-						}
-
-						requestDotDescriptionVal = c
-						return nil
-					}(); err != nil {
+					val, err := d.DecodeValue()
+					if err != nil {
 						return err
 					}
-					request.Description.SetTo(requestDotDescriptionVal)
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					request.Description = c
 					return nil
 				}); err != nil {
 					return req, rawBody, close, errors.Wrap(err, "decode \"description\"")
 				}
+			} else {
+				return req, rawBody, close, errors.Wrap(err, "query")
 			}
 		}
 		{
@@ -1250,35 +1240,30 @@ func (s *Server) decodeCreatePostRequest(r *http.Request) (
 			}
 			if err := q.HasParam(cfg); err == nil {
 				if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-					var requestDotTextVal string
-					if err := func() error {
-						val, err := d.DecodeValue()
-						if err != nil {
-							return err
-						}
-
-						c, err := conv.ToString(val)
-						if err != nil {
-							return err
-						}
-
-						requestDotTextVal = c
-						return nil
-					}(); err != nil {
+					val, err := d.DecodeValue()
+					if err != nil {
 						return err
 					}
-					request.Text.SetTo(requestDotTextVal)
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					request.Text = c
 					return nil
 				}); err != nil {
 					return req, rawBody, close, errors.Wrap(err, "decode \"text\"")
 				}
+			} else {
+				return req, rawBody, close, errors.Wrap(err, "query")
 			}
 		}
 		{
 			if err := func() error {
 				files, ok := r.MultipartForm.File["preview_image"]
 				if !ok || len(files) < 1 {
-					return nil
+					return validate.ErrFieldRequired
 				}
 				fh := files[0]
 
@@ -1287,12 +1272,12 @@ func (s *Server) decodeCreatePostRequest(r *http.Request) (
 					return errors.Wrap(err, "open")
 				}
 				closers = append(closers, f.Close)
-				request.PreviewImage.SetTo(ht.MultipartFile{
+				request.PreviewImage = ht.MultipartFile{
 					Name:   fh.Filename,
 					File:   f,
 					Size:   fh.Size,
 					Header: fh.Header,
-				})
+				}
 				return nil
 			}(); err != nil {
 				return req, rawBody, close, errors.Wrap(err, "decode \"preview_image\"")
@@ -1720,6 +1705,14 @@ func (s *Server) decodeCreateTeamRequest(r *http.Request) (
 			}
 			return req, rawBody, close, err
 		}
+		if err := func() error {
+			if err := request.Validate(); err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return req, rawBody, close, errors.Wrap(err, "validate")
+		}
 		return &request, rawBody, close, nil
 	default:
 		return req, rawBody, close, validate.InvalidContentType(ct)
@@ -1923,7 +1916,7 @@ func (s *Server) decodeImportProblemRequest(r *http.Request) (
 			if err := func() error {
 				files, ok := r.MultipartForm.File["package"]
 				if !ok || len(files) < 1 {
-					return nil
+					return validate.ErrFieldRequired
 				}
 				fh := files[0]
 
@@ -1932,12 +1925,12 @@ func (s *Server) decodeImportProblemRequest(r *http.Request) (
 					return errors.Wrap(err, "open")
 				}
 				closers = append(closers, f.Close)
-				request.Package.SetTo(ht.MultipartFile{
+				request.Package = ht.MultipartFile{
 					Name:   fh.Filename,
 					File:   f,
 					Size:   fh.Size,
 					Header: fh.Header,
-				})
+				}
 				return nil
 			}(); err != nil {
 				return req, rawBody, close, errors.Wrap(err, "decode \"package\"")
@@ -3515,6 +3508,14 @@ func (s *Server) decodeUpdateTeamRequest(r *http.Request) (
 				Err:         err,
 			}
 			return req, rawBody, close, err
+		}
+		if err := func() error {
+			if err := request.Validate(); err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return req, rawBody, close, errors.Wrap(err, "validate")
 		}
 		return &request, rawBody, close, nil
 	default:

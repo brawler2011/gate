@@ -1,8 +1,14 @@
 package identity
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	"image/png"
 	"io"
 	"log/slog"
 	"path/filepath"
@@ -13,6 +19,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
+	_ "golang.org/x/image/webp"
 )
 
 type AvatarsUseCase struct {
@@ -79,12 +86,24 @@ func (uc *AvatarsUseCase) UploadAvatar(
 		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid avatar file extension")
 	}
 
+	// Decode image to validate content and normalize supported formats to PNG
+	img, _, err := image.Decode(fileReader)
+	if err != nil {
+		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to decode avatar image")
+	}
+
+	// Encode to PNG
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		return uuid.Nil, fmt.Errorf("failed to encode avatar to PNG: %w", err)
+	}
+
 	// Generate unique image ID
 	imgID := uuid.New()
 	key := imgID.String()
 
-	// Upload to storage
-	err = uc.storage.UploadFile(ctx, uc.avatarBucket, key, fileReader, contentType)
+	// Upload normalized PNG to storage
+	err = uc.storage.UploadFile(ctx, uc.avatarBucket, key, &buf, "image/png")
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to upload avatar: %w", err)
 	}
@@ -147,6 +166,9 @@ func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, username string) err
 func (uc *AvatarsUseCase) GetAvatar(ctx context.Context, username string, ifNoneMatch *string) (AvatarImage, error) {
 	user, err := uc.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
+		if errors.Is(err, pkg.ErrNotFound) {
+			return AvatarImage{}, storage.ErrNotFound
+		}
 		return AvatarImage{}, fmt.Errorf("failed to get user: %w", err)
 	}
 
@@ -160,8 +182,45 @@ func (uc *AvatarsUseCase) GetAvatar(ctx context.Context, username string, ifNone
 		return AvatarImage{}, err
 	}
 
+	// Read magic bytes to determine if the stored file is already a PNG.
+	// PNG signature: \x89PNG\r\n\x1a\n (8 bytes)
+	const pngSig = "\x89PNG\r\n\x1a\n"
+	header := make([]byte, len(pngSig))
+	n, readErr := io.ReadFull(body, header)
+	if readErr == nil && string(header) == pngSig {
+		// Valid PNG already, stream as-is
+		reader := io.MultiReader(bytes.NewReader(header), body)
+		return AvatarImage{
+			readCloser: struct {
+				io.Reader
+				io.Closer
+			}{reader, body},
+			etag: etag,
+		}, nil
+	}
+
+	// Stored object is not PNG (e.g. legacy JPEG/GIF/WebP before upload normalization).
+	// Decode stored bytes and convert to PNG to guarantee Content-Type: image/png invariant.
+	var fullData []byte
+	if n > 0 {
+		fullData = append(fullData, header[:n]...)
+	}
+	rest, _ := io.ReadAll(body)
+	_ = body.Close()
+	fullData = append(fullData, rest...)
+
+	img, _, decodeErr := image.Decode(bytes.NewReader(fullData))
+	if decodeErr != nil {
+		return AvatarImage{}, fmt.Errorf("failed to decode stored avatar: %w", decodeErr)
+	}
+
+	var buf bytes.Buffer
+	if encodeErr := png.Encode(&buf, img); encodeErr != nil {
+		return AvatarImage{}, fmt.Errorf("failed to encode stored avatar to PNG: %w", encodeErr)
+	}
+
 	return AvatarImage{
-		readCloser: body,
+		readCloser: io.NopCloser(&buf),
 		etag:       etag,
 	}, nil
 }

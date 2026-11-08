@@ -236,7 +236,10 @@ export const ParticipantsSection = ({
       {
         params: {
           path: {org_login: orgLogin, contest_login: contestLogin},
-          query: {user_id: editingParticipant.userId, role: newRole},
+          query: {
+            user_id: editingParticipant.userId,
+            role: newRole as "owner" | "moderator" | "participant",
+          },
         },
       },
     );

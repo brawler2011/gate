@@ -64,14 +64,14 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	if req == nil || !req.Title.IsSet() || !req.Description.IsSet() || !req.Text.IsSet() || !req.PreviewImage.IsSet() {
+	if req == nil || req.Title == "" || req.Description == "" || req.Text == "" || req.PreviewImage.File == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "title, description, text, and preview_image are required")
 	}
 
-	file := req.PreviewImage.Value // FIXME: эта хуйня не должна быть optional
-	title := req.Title.Value
-	description := req.Description.Value
-	text := req.Text.Value
+	file := req.PreviewImage
+	title := req.Title
+	description := req.Description
+	text := req.Text
 
 	postID, err := s.blogs.CreatePost(ctx, title, text, description, file.File, file.Name)
 	if err != nil {

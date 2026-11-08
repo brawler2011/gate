@@ -113,22 +113,22 @@ func capabilitySlots(response any, parent ...uuid.UUID) []capabilitySlot {
 	case *corev1.ListProblemMembersResponseModel:
 		for i := range r.Members {
 			v := &r.Members[i]
-			row("problem", "member", v.ProblemID, v.UserID, v.Role, &v.Capabilities)
+			row("problem", "member", v.ProblemID, v.UserID, string(v.Role), &v.Capabilities)
 		}
 	case *corev1.ListContestMembersResponseModel:
 		for i := range r.Members {
 			v := &r.Members[i]
-			row("contest", "member", v.ContestID, v.UserID, v.ContestRole, &v.Capabilities)
+			row("contest", "member", v.ContestID, v.UserID, string(v.ContestRole), &v.Capabilities)
 		}
 	case *corev1.ListProblemTeamsResponseModel:
 		for i := range r.Teams {
 			v := &r.Teams[i]
-			row("problem", "link", v.ProblemID, v.TeamID, v.Permission, &v.Capabilities)
+			row("problem", "link", v.ProblemID, v.TeamID, string(v.Permission), &v.Capabilities)
 		}
 	case *corev1.ListContestTeamsResponseModel:
 		for i := range r.Teams {
 			v := &r.Teams[i]
-			row("contest", "link", v.ContestID, v.TeamID, v.ContestRole, &v.Capabilities)
+			row("contest", "link", v.ContestID, v.TeamID, string(v.ContestRole), &v.Capabilities)
 		}
 	}
 	return slots

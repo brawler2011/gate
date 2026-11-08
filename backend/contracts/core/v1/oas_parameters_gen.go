@@ -87,8 +87,8 @@ type AddOrganizationMemberParams struct {
 	Login string
 	// UUID of the user.
 	UserID uuid.UUID
-	// Role to assign to the member.
-	Role string
+	// Role to assign to the organization member.
+	Role OrganizationRoleQuery
 }
 
 func unpackAddOrganizationMemberParams(packed middleware.Parameters) (params AddOrganizationMemberParams) {
@@ -111,7 +111,7 @@ func unpackAddOrganizationMemberParams(packed middleware.Parameters) (params Add
 			Name: "role",
 			In:   "query",
 		}
-		params.Role = packed[key].(string)
+		params.Role = packed[key].(OrganizationRoleQuery)
 	}
 	return params
 }
@@ -219,9 +219,17 @@ func decodeAddOrganizationMemberParams(args [1]string, argsEscaped bool, r *http
 					return err
 				}
 
-				params.Role = c
+				params.Role = OrganizationRoleQuery(c)
 				return nil
 			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.Role.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		} else {
@@ -245,7 +253,7 @@ type AddTeamMemberParams struct {
 	// UUID of the user.
 	UserID uuid.UUID
 	// Role to assign to the member.
-	Role OptString `json:",omitempty,omitzero"`
+	Role OptAddTeamMemberRole `json:",omitempty,omitzero"`
 }
 
 func unpackAddTeamMemberParams(packed middleware.Parameters) (params AddTeamMemberParams) {
@@ -269,7 +277,7 @@ func unpackAddTeamMemberParams(packed middleware.Parameters) (params AddTeamMemb
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.Role = v.(OptString)
+			params.Role = v.(OptAddTeamMemberRole)
 		}
 	}
 	return params
@@ -360,7 +368,7 @@ func decodeAddTeamMemberParams(args [1]string, argsEscaped bool, r *http.Request
 	}
 	// Set default value for query: role.
 	{
-		val := string("member")
+		val := AddTeamMemberRole("member")
 		params.Role.SetTo(val)
 	}
 	// Decode query: role.
@@ -373,7 +381,7 @@ func decodeAddTeamMemberParams(args [1]string, argsEscaped bool, r *http.Request
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotRoleVal string
+				var paramsDotRoleVal AddTeamMemberRole
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -385,7 +393,7 @@ func decodeAddTeamMemberParams(args [1]string, argsEscaped bool, r *http.Request
 						return err
 					}
 
-					paramsDotRoleVal = c
+					paramsDotRoleVal = AddTeamMemberRole(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -393,6 +401,21 @@ func decodeAddTeamMemberParams(args [1]string, argsEscaped bool, r *http.Request
 				params.Role.SetTo(paramsDotRoleVal)
 				return nil
 			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Role.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		}
@@ -3078,7 +3101,7 @@ type CreateContestTeamParams struct {
 	// UUID of the team.
 	TeamID uuid.UUID
 	// Role to assign to the member.
-	Role OptString `json:",omitempty,omitzero"`
+	Role OptCreateContestTeamRole `json:",omitempty,omitzero"`
 }
 
 func unpackCreateContestTeamParams(packed middleware.Parameters) (params CreateContestTeamParams) {
@@ -3109,7 +3132,7 @@ func unpackCreateContestTeamParams(packed middleware.Parameters) (params CreateC
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.Role = v.(OptString)
+			params.Role = v.(OptCreateContestTeamRole)
 		}
 	}
 	return params
@@ -3245,7 +3268,7 @@ func decodeCreateContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 	}
 	// Set default value for query: role.
 	{
-		val := string("participant")
+		val := CreateContestTeamRole("participant")
 		params.Role.SetTo(val)
 	}
 	// Decode query: role.
@@ -3258,7 +3281,7 @@ func decodeCreateContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotRoleVal string
+				var paramsDotRoleVal CreateContestTeamRole
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -3270,7 +3293,7 @@ func decodeCreateContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 						return err
 					}
 
-					paramsDotRoleVal = c
+					paramsDotRoleVal = CreateContestTeamRole(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -3278,6 +3301,21 @@ func decodeCreateContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 				params.Role.SetTo(paramsDotRoleVal)
 				return nil
 			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Role.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		}
@@ -21699,8 +21737,8 @@ type UpdateContestMemberParams struct {
 	ContestLogin string
 	// UUID of the user.
 	UserID uuid.UUID
-	// Role to assign to the member.
-	Role string
+	// Role to assign to the contest member.
+	Role ContestRoleQuery
 }
 
 func unpackUpdateContestMemberParams(packed middleware.Parameters) (params UpdateContestMemberParams) {
@@ -21730,7 +21768,7 @@ func unpackUpdateContestMemberParams(packed middleware.Parameters) (params Updat
 			Name: "role",
 			In:   "query",
 		}
-		params.Role = packed[key].(string)
+		params.Role = packed[key].(ContestRoleQuery)
 	}
 	return params
 }
@@ -21883,9 +21921,17 @@ func decodeUpdateContestMemberParams(args [2]string, argsEscaped bool, r *http.R
 					return err
 				}
 
-				params.Role = c
+				params.Role = ContestRoleQuery(c)
 				return nil
 			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.Role.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		} else {
@@ -21910,8 +21956,8 @@ type UpdateContestTeamParams struct {
 	ContestLogin string
 	// UUID of the team.
 	TeamID uuid.UUID
-	// Role to assign to the member.
-	Role string
+	// Role to assign to the contest team.
+	Role ContestTeamRoleQuery
 }
 
 func unpackUpdateContestTeamParams(packed middleware.Parameters) (params UpdateContestTeamParams) {
@@ -21941,7 +21987,7 @@ func unpackUpdateContestTeamParams(packed middleware.Parameters) (params UpdateC
 			Name: "role",
 			In:   "query",
 		}
-		params.Role = packed[key].(string)
+		params.Role = packed[key].(ContestTeamRoleQuery)
 	}
 	return params
 }
@@ -22094,9 +22140,17 @@ func decodeUpdateContestTeamParams(args [2]string, argsEscaped bool, r *http.Req
 					return err
 				}
 
-				params.Role = c
+				params.Role = ContestTeamRoleQuery(c)
 				return nil
 			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.Role.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		} else {
@@ -22917,8 +22971,8 @@ type UpdateProblemMemberParams struct {
 	ID uuid.UUID
 	// UUID of the user.
 	UserID uuid.UUID
-	// Role to assign to the member.
-	Role string
+	// Role to assign to the problem member.
+	Role ProblemRoleQuery
 }
 
 func unpackUpdateProblemMemberParams(packed middleware.Parameters) (params UpdateProblemMemberParams) {
@@ -22941,7 +22995,7 @@ func unpackUpdateProblemMemberParams(packed middleware.Parameters) (params Updat
 			Name: "role",
 			In:   "query",
 		}
-		params.Role = packed[key].(string)
+		params.Role = packed[key].(ProblemRoleQuery)
 	}
 	return params
 }
@@ -23049,9 +23103,17 @@ func decodeUpdateProblemMemberParams(args [1]string, argsEscaped bool, r *http.R
 					return err
 				}
 
-				params.Role = c
+				params.Role = ProblemRoleQuery(c)
 				return nil
 			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.Role.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		} else {
@@ -23842,8 +23904,8 @@ type UpdateTeamMemberRoleParams struct {
 	ID uuid.UUID
 	// UUID of the user.
 	UserID uuid.UUID
-	// Role to assign to the member.
-	Role string
+	// Role to assign to the team member.
+	Role TeamRoleQuery
 }
 
 func unpackUpdateTeamMemberRoleParams(packed middleware.Parameters) (params UpdateTeamMemberRoleParams) {
@@ -23866,7 +23928,7 @@ func unpackUpdateTeamMemberRoleParams(packed middleware.Parameters) (params Upda
 			Name: "role",
 			In:   "query",
 		}
-		params.Role = packed[key].(string)
+		params.Role = packed[key].(TeamRoleQuery)
 	}
 	return params
 }
@@ -23974,9 +24036,17 @@ func decodeUpdateTeamMemberRoleParams(args [1]string, argsEscaped bool, r *http.
 					return err
 				}
 
-				params.Role = c
+				params.Role = TeamRoleQuery(c)
 				return nil
 			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.Role.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		} else {

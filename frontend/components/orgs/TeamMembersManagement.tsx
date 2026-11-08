@@ -76,7 +76,10 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
     const {error} = await api.POST("/teams/{id}/members", {
       params: {
         path: {id: teamId},
-        query: {user_id: selectedUserId, role: selectedRole},
+        query: {
+          user_id: selectedUserId,
+          role: selectedRole as "maintainer" | "member",
+        },
       },
     });
     setAdding(false);
@@ -128,7 +131,10 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
     const {error} = await api.PATCH("/teams/{id}/members", {
       params: {
         path: {id: teamId},
-        query: {user_id: editingMember.userId, role: newRole},
+        query: {
+          user_id: editingMember.userId,
+          role: newRole as "maintainer" | "member",
+        },
       },
     });
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
@@ -12,6 +13,7 @@ import (
 	blogsmodel "github.com/brawler2011/gate/backend/internal/blogs/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
+	ht "github.com/ogen-go/ogen/http"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,7 +44,7 @@ func TestBlogHandlersPreserveErrors(t *testing.T) {
 			ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 			t.Run("create", func(t *testing.T) {
 				response, err := server.CreatePost(ctx, &corev1.CreatePostReq{
-					Title: corev1.NewOptString("Post"), Description: corev1.NewOptString("Description"), Text: corev1.NewOptString("Text"), PreviewImage: corev1.OptMultipartFile{Set: true},
+					Title: "Post", Description: "Description", Text: "Text", PreviewImage: ht.MultipartFile{File: strings.NewReader("fake image"), Name: "preview.png"},
 				})
 				require.ErrorIs(t, err, tc.err)
 				require.Equal(t, tc.status, pkg.ToREST(err))
