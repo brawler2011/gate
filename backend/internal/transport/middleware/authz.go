@@ -247,7 +247,7 @@ func buildEndpointPolicies() map[string]endpointPolicy {
 		"ListUserContests":      authenticatedPolicy(checkListUserContestsAccess),
 		"ListUserSubmissions":   authenticatedPolicy(checkListUserSubmissionsAccess),
 		"ListWorkshopContests":  authenticatedPolicy(),
-		"GetSubmission":         authenticatedPolicy(checkGetSubmissionAccess),
+		"GetSubmission":         authenticatedPolicy(),
 		"UploadAvatar":          authenticatedPolicy(RequireSelfOrAdmin()),
 		"DeleteAvatar":          authenticatedPolicy(RequireSelfOrAdmin()),
 		"UpdateUser":            authenticatedPolicy(RequireSelfOrAdmin()),
@@ -265,35 +265,35 @@ func buildEndpointPolicies() map[string]endpointPolicy {
 		"AdminResendVerification": adminPolicy(),
 
 		"GetContest":                   policy(Public),
-		"DownloadContestStatementsPdf": policy(RequireContestPermission(accessmodel.ActionGetContest)),
-		"GetContestScoreboard":         policy(RequireContestPermission(accessmodel.ActionGetMonitor)),
-		"UpdateContest":                authenticatedPolicy(RequireContestPermission(accessmodel.ActionUpdateContest)),
-		"DeleteContest":                authenticatedPolicy(RequireContestPermission(accessmodel.ActionAdminContest)),
-		"CreateContestProblem":         authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
-		"GetContestProblem":            policy(RequireContestPermission(accessmodel.ActionGetContestProblem)),
-		"DeleteContestProblem":         authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
-		"ReorderContestProblems":       authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"DownloadContestStatementsPdf": policy(Public),
+		"GetContestScoreboard":         policy(Public),
+		"UpdateContest":                authenticatedPolicy(),
+		"DeleteContest":                authenticatedPolicy(),
+		"CreateContestProblem":         authenticatedPolicy(),
+		"GetContestProblem":            policy(Public),
+		"DeleteContestProblem":         authenticatedPolicy(),
+		"ReorderContestProblems":       authenticatedPolicy(),
 		"CreateContestMember":          authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
 		"UpdateContestMember":          authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
 		"DeleteContestMember":          authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
-		"ListContestMembers":           authenticatedPolicy(checkListContestMembersAccess),
-		"ListContestTeams":             authenticatedPolicy(checkListContestMembersAccess),
+		"ListContestMembers":           authenticatedPolicy(),
+		"ListContestTeams":             authenticatedPolicy(),
 		"CreateContestTeam":            authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
 		"UpdateContestTeam":            authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
 		"DeleteContestTeam":            authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
-		"ListContestSubmissions":       authenticatedPolicy(checkListContestSubmissionsAccess),
-		"CreateSubmission":             authenticatedPolicy(RequireContestPermission(accessmodel.ActionCreateSubmission)),
-		"ListContestDrafts":            authenticatedPolicy(checkListContestDraftsAccess),
-		"CreateContestDraft":           authenticatedPolicy(RequireContestPermission(accessmodel.ActionGetContest)),
-		"DeleteContestDraft":           authenticatedPolicy(RequireContestPermission(accessmodel.ActionGetContest)),
-		"RejudgeSubmission":            authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
-		"RejudgeContestProblem":        authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
-		"RejudgeContest":               authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
-		"BlockSubmission":              authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
-		"UnblockSubmission":            authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
-		"BlockProblemForUser":          authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
-		"UnblockProblemForUser":        authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
-		"GetProblemBlockStatusForUser": authenticatedPolicy(checkGetProblemBlockStatusAccess),
+		"ListContestSubmissions":       authenticatedPolicy(),
+		"CreateSubmission":             authenticatedPolicy(),
+		"ListContestDrafts":            authenticatedPolicy(),
+		"CreateContestDraft":           authenticatedPolicy(),
+		"DeleteContestDraft":           authenticatedPolicy(),
+		"RejudgeSubmission":            authenticatedPolicy(),
+		"RejudgeContestProblem":        authenticatedPolicy(),
+		"RejudgeContest":               authenticatedPolicy(),
+		"BlockSubmission":              authenticatedPolicy(),
+		"UnblockSubmission":            authenticatedPolicy(),
+		"BlockProblemForUser":          authenticatedPolicy(),
+		"UnblockProblemForUser":        authenticatedPolicy(),
+		"GetProblemBlockStatusForUser": authenticatedPolicy(),
 		"ListContestJoinRequests":      authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
 		"CreateContestJoinRequest":     authenticatedPolicy(),
 		"GetMyContestJoinRequest":      authenticatedPolicy(),
@@ -301,12 +301,12 @@ func buildEndpointPolicies() map[string]endpointPolicy {
 		"ApproveContestJoinRequest":    authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
 		"RejectContestJoinRequest":     authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
 
-		"ListContestAnnouncements":   policy(RequireContestPermission(accessmodel.ActionGetContest)),
-		"CreateContestAnnouncement":  authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
-		"DeleteContestAnnouncement":  authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
-		"ListContestClarifications":  authenticatedPolicy(RequireContestPermission(accessmodel.ActionGetContest)),
-		"CreateContestClarification": authenticatedPolicy(RequireContestPermission(accessmodel.ActionGetContest)),
-		"AnswerContestClarification": authenticatedPolicy(RequireContestPermission(accessmodel.ActionManageContest)),
+		"ListContestAnnouncements":   policy(Public),
+		"CreateContestAnnouncement":  authenticatedPolicy(),
+		"DeleteContestAnnouncement":  authenticatedPolicy(),
+		"ListContestClarifications":  authenticatedPolicy(),
+		"CreateContestClarification": authenticatedPolicy(),
+		"AnswerContestClarification": authenticatedPolicy(),
 
 		"GetProblem":          policy(Public),
 		"GetProblemLimits":    policy(Public),
@@ -479,163 +479,6 @@ func checkListUserSubmissionsAccess(ctx context.Context, evalCtx *EvalContext) e
 	}
 
 	return nil
-}
-
-func checkListContestMembersAccess(ctx context.Context, evalCtx *EvalContext) error {
-	contestLogin, err := pathString(evalCtx.Request, "contest_login")
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "contest login is required for authorization")
-	}
-	orgLogin, err := pathString(evalCtx.Request, "org_login")
-	if err != nil || orgLogin == "" {
-		return pkg.Wrap(pkg.ErrBadInput, err, "organization login is required for contest authorization")
-	}
-	if evalCtx.Deps.contestsRepo == nil {
-		return pkg.Wrap(pkg.ErrInternal, nil, "contests repository dependency is missing")
-	}
-	contest, err := evalCtx.Deps.contestsRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrNotFound, err, "contest not found")
-	}
-	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contest.ID, evalCtx.User.Id, accessmodel.ActionGetMonitor)
-	if err != nil {
-		return err
-	}
-	if allowed {
-		return nil
-	}
-
-	allowed, err = evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contest.ID, evalCtx.User.Id, accessmodel.ActionListOwnSubmissions)
-	if err != nil {
-		return err
-	}
-	if allowed {
-		return nil
-	}
-
-	return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest")
-}
-
-func checkListContestSubmissionsAccess(ctx context.Context, evalCtx *EvalContext) error {
-	orgLogin, err := pathString(evalCtx.Request, "org_login")
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "organization login is required")
-	}
-	contestLogin, err := pathString(evalCtx.Request, "contest_login")
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "contest login is required")
-	}
-
-	if evalCtx.Deps.contestsRepo == nil {
-		return pkg.Wrap(pkg.ErrInternal, nil, "contests repository dependency is missing")
-	}
-	contest, err := evalCtx.Deps.contestsRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrNotFound, err, "contest not found")
-	}
-
-	action := accessmodel.ActionListUsersSubmissions
-	errMessage := "insufficient permission to list all contest submissions"
-
-	if targetUserID, err := queryUUID(evalCtx.Request, "userId"); err == nil && targetUserID != uuid.Nil {
-		if targetUserID == evalCtx.User.Id {
-			action = accessmodel.ActionListOwnSubmissions
-			errMessage = "insufficient permission to view own submissions in this contest"
-		} else {
-			action = accessmodel.ActionListUsersSubmissions
-			errMessage = "insufficient permission to view other users' submissions"
-		}
-	}
-
-	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contest.ID, evalCtx.User.Id, action)
-	if err != nil {
-		return err
-	}
-	if !allowed {
-		return pkg.Wrap(pkg.NoPermission, nil, errMessage)
-	}
-
-	return nil
-}
-
-func checkListContestDraftsAccess(ctx context.Context, evalCtx *EvalContext) error {
-	orgLogin, err := pathString(evalCtx.Request, "org_login")
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "organization login is required")
-	}
-	contestLogin, err := pathString(evalCtx.Request, "contest_login")
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "contest login is required")
-	}
-
-	if evalCtx.Deps.contestsRepo == nil {
-		return pkg.Wrap(pkg.ErrInternal, nil, "contests repository dependency is missing")
-	}
-	contest, err := evalCtx.Deps.contestsRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
-	if err != nil {
-		return pkg.Wrap(pkg.ErrNotFound, err, "contest not found")
-	}
-
-	allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(ctx, contest.ID, evalCtx.User.Id, accessmodel.ActionGetContest)
-	if err != nil {
-		return err
-	}
-	if !allowed {
-		return pkg.Wrap(pkg.NoPermission, nil, "insufficient permission to view contest")
-	}
-
-	return nil
-}
-
-func checkGetSubmissionAccess(ctx context.Context, evalCtx *EvalContext) error {
-	if evalCtx.Deps.submissionsUC == nil {
-		return pkg.Wrap(pkg.ErrInternal, nil, "submissions authorization dependency is not configured")
-	}
-
-	submissionID, err := pathUUID(evalCtx.Request, "submission_id")
-	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "submission id is required for authorization")
-	}
-
-	submission, err := evalCtx.Deps.submissionsUC.GetSubmission(ctx, submissionID)
-	if err != nil {
-		return err
-	}
-
-	if evalCtx.User.IsAdmin() {
-		return nil
-	}
-
-	if submission.CreatedBy != nil && *submission.CreatedBy == evalCtx.User.Id {
-		return nil
-	}
-
-	if submission.ContestID != nil {
-		allowed, err := evalCtx.Deps.permissionsUC.HasContestPermission(
-			ctx,
-			*submission.ContestID,
-			evalCtx.User.Id,
-			accessmodel.ActionGetOtherUserSubmission,
-		)
-		if err == nil && allowed {
-			return nil
-		}
-	}
-
-	return pkg.Wrap(pkg.NoPermission, nil, "insufficient permissions to view this submission")
-}
-
-func checkGetProblemBlockStatusAccess(ctx context.Context, evalCtx *EvalContext) error {
-	if evalCtx.User.IsAdmin() {
-		return nil
-	}
-
-	targetUserID, err := pathUUID(evalCtx.Request, "user_id")
-	if err == nil && targetUserID == evalCtx.User.Id {
-		return nil
-	}
-
-	return RequireContestPermission(accessmodel.ActionManageContest)(ctx, evalCtx)
 }
 
 func pathString(req ogenMiddleware.Request, names ...string) (string, error) {

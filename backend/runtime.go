@@ -211,7 +211,7 @@ func runApp(envFile string) error {
 	}
 
 	sandboxInstance := sandbox.NewSandbox(sandboxClient, sandboxCfg)
-	contestDetails := contests.NewDetailsReader(contestsRepo, problemsRepo, problems.NewStatementReader(workspaceStorage, packagesRepo, problemPublishUC), permissionsUC, sandboxInstance, usersRepo)
+	contestDetails := contests.NewDetailsReader(contestsRepo, problems.NewStatementReader(workspaceStorage, packagesRepo, problemPublishUC), permissionsUC, sandboxInstance, usersRepo)
 	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sandboxInstance, permissionsUC)
 
 	natsJS, err := pkg.NewNatsJetStream(cfg.GetNatsURL())

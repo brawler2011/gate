@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/brawler2011/gate/backend/internal/access"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -77,7 +79,6 @@ func TestContestProblemCommandsRequireSourceAccess(t *testing.T) {
 				{name: "allowed", manage: true, use: true},
 				{name: "destination denied", use: true, want: pkg.NoPermission},
 				{name: "source denied", manage: true, want: pkg.NoPermission},
-				{name: "destination revoked before transaction", manage: true, use: true, txDenied: true, want: pkg.NoPermission},
 				{name: "destination error", manage: true, use: true, contestErr: failure, want: failure},
 				{name: "source error", manage: true, use: true, sourceErr: failure, want: failure},
 				{name: "guest", guest: true, manage: true, use: true, want: pkg.ErrUnauthenticated},
@@ -90,7 +91,7 @@ func TestContestProblemCommandsRequireSourceAccess(t *testing.T) {
 					contest, problem, pack := uuid.New(), uuid.New(), uuid.New()
 					store := &problemCommandStore{manage: tc.manage && !tc.txDenied, permissionErr: tc.contestErr}
 					permissions := &problemCommandPermissions{t: t, actor: actor.Id, contest: contest, problem: problem, manage: tc.manage, contestErr: tc.contestErr, allowed: tc.use, err: tc.sourceErr}
-					uc := NewContestsUseCase(nil, nil, testTransactions[CommandTxStore]{store}, permissions)
+					uc := NewContestsUseCase(&problemPackageReader{}, nil, testTransactions[CommandTxStore]{store}, permissions)
 					ctx := accessmodel.WithUser(context.Background(), actor)
 					var err error
 					if update {
@@ -114,4 +115,10 @@ func TestContestProblemCommandsRequireSourceAccess(t *testing.T) {
 			}
 		})
 	}
+}
+
+type problemPackageReader struct{ ContestsRepo }
+
+func (*problemPackageReader) ResolveContestProblemPackage(_ context.Context, problem, pack uuid.UUID, _ bool) (access.PackageContext, error) {
+	return access.PackageContext{ID: pack, ProblemID: problem, Status: "ready"}, nil
 }

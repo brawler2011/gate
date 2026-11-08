@@ -93,15 +93,14 @@ VALUES ($1, $2, $3, (SELECT COALESCE(MAX(ordinal), 0) + 1 FROM contest_problems 
 ON CONFLICT (contest_id, problem_id) DO UPDATE SET package_id = EXCLUDED.package_id;
 
 -- name: GetContestProblem :one
-SELECT cp.*, p.title, p.short_name, p.visibility, p.time_limit_ms, p.memory_limit_mb, p.updated_at AS problem_updated_at
+SELECT cp.*, pp.title, pp.short_name, 'private'::text AS visibility, pp.time_limit_ms, pp.memory_limit_mb, pp.created_at AS problem_updated_at
 FROM contest_problems cp
-JOIN problems p ON cp.problem_id = p.id
+JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1 AND cp.problem_id = $2;
 
 -- name: ListContestProblems :many
-SELECT cp.*, p.title, p.short_name, p.visibility, p.time_limit_ms, p.memory_limit_mb, p.updated_at AS problem_updated_at, pp.url as package_url
+SELECT cp.*, pp.title, pp.short_name, 'private'::text AS visibility, pp.time_limit_ms, pp.memory_limit_mb, pp.created_at AS problem_updated_at, pp.url as package_url
 FROM contest_problems cp
-JOIN problems p ON cp.problem_id = p.id
 JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1
 ORDER BY cp.ordinal;
@@ -215,16 +214,22 @@ WHERE contest_id = $1 AND owner_id = $2 AND problem_id = $3
 ORDER BY created_at ASC;
 
 -- name: GetContestScoreboardSubmissions :many
-SELECT owner_id, problem_id, state, created_at
-FROM submissions
-WHERE contest_id = $1 AND owner_id IS NOT NULL AND problem_id IS NOT NULL
-ORDER BY owner_id, problem_id, created_at ASC;
+SELECT s.owner_id, s.problem_id,
+ CASE WHEN sqlc.narg('freeze_time')::timestamptz IS NULL THEN s.state ELSE COALESCE(
+ (SELECT NULLIF(h.state, 1) FROM submission_state_history h WHERE h.submission_id=s.id AND h.observed_at < sqlc.narg('freeze_time')::timestamptz ORDER BY h.observed_at DESC,h.id DESC LIMIT 1),0) END::integer AS state,
+ s.created_at
+FROM submissions s
+WHERE s.contest_id = sqlc.arg('contest_id')::uuid AND s.owner_id IS NOT NULL AND s.problem_id IS NOT NULL
+ORDER BY s.owner_id, s.problem_id, s.created_at ASC;
 
 -- name: GetUserScoreboardSubmissions :many
-SELECT owner_id, problem_id, state, created_at
-FROM submissions
-WHERE contest_id = $1 AND owner_id = $2 AND problem_id IS NOT NULL
-ORDER BY problem_id, created_at ASC;
+SELECT s.owner_id, s.problem_id,
+ CASE WHEN sqlc.narg('freeze_time')::timestamptz IS NULL THEN s.state ELSE COALESCE(
+ (SELECT NULLIF(h.state, 1) FROM submission_state_history h WHERE h.submission_id=s.id AND h.observed_at < sqlc.narg('freeze_time')::timestamptz ORDER BY h.observed_at DESC,h.id DESC LIMIT 1),0) END::integer AS state,
+ s.created_at
+FROM submissions s
+WHERE s.contest_id = sqlc.arg('contest_id')::uuid AND s.owner_id = sqlc.arg('owner_id')::uuid AND s.problem_id IS NOT NULL
+ORDER BY s.problem_id, s.created_at ASC;
 
 -- Contest User Problem Blocks
 -- name: CreateContestUserProblemBlock :exec

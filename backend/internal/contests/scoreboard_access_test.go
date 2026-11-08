@@ -57,8 +57,8 @@ func TestScoreboardAccessAndFreezeWithoutHTTP(t *testing.T) {
 		{name: "moderator live monitor", monitor: true, manage: true, unfrozen: true},
 		{name: "admin live monitor", monitor: true, manage: true, unfrozen: true, admin: true},
 		{name: "participant before start", monitor: true, future: true, want: pkg.NoPermission},
-		{name: "owner before start", monitor: true, future: true, owner: true},
-		{name: "moderator before start", monitor: true, manage: true, future: true, want: pkg.NoPermission},
+		{name: "owner before start", monitor: true, future: true, owner: true, manage: true},
+		{name: "moderator before start", monitor: true, manage: true, future: true},
 		{name: "missing monitor permission", want: pkg.NoPermission},
 		{name: "guest", guest: true, want: pkg.ErrUnauthenticated},
 	} {
@@ -87,7 +87,7 @@ func TestScoreboardAccessAndFreezeWithoutHTTP(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			require.True(t, response.IsFrozen)
+			require.Equal(t, !tc.future, response.IsFrozen)
 			require.Equal(t, 1, repo.reads)
 		})
 	}

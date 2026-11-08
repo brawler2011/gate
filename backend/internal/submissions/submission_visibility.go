@@ -18,7 +18,7 @@ type SubmissionVisibility struct {
 
 func SubmissionView(contest *contestsmodel.Contest, author *uuid.UUID, createdAt time.Time, viewer uuid.UUID, permissions *accessmodel.ContestPermissions, now time.Time) SubmissionVisibility {
 	own := author != nil && *author == viewer
-	view := SubmissionVisibility{Source: own || permissions.GetOtherUserSubmission, Details: permissions.GetSubmissionDetails}
+	view := SubmissionVisibility{Source: own || permissions.GetOtherUserSubmission, Details: permissions.GetSubmissionDetails && (own || permissions.GetOtherUserSubmission)}
 	if !own && !permissions.ManageContest && contest.IsFrozenAt(now) {
 		boundary := contest.GetFreezeTime()
 		view.Frozen = boundary == nil || !createdAt.Before(*boundary)

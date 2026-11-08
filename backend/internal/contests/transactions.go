@@ -74,5 +74,6 @@ type CommandTxStore interface {
 }
 
 type CommandTransactions interface {
+	Prepare(context.Context) (context.Context, error)
 	Within(context.Context, func(CommandTxStore) error) error
 }

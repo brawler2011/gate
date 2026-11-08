@@ -22,10 +22,10 @@ contribute nothing. Problem direct roles remain owner/moderator/viewer; team
 read/write/admin roles use a distinct type. Contest teams cannot be owners.
 Org/global admin contributes operational administration, never ownership.
 
-`ContestConditions` supplies the matrix's T predicates. It intentionally does
-not implement contest phases, settings normalization, freeze or snapshots in
-this PR. A later context builder must derive these conditions from validated
-settings and one server clock. Nil conditions deny gated operations. Conditions
+`ApplyContestLifecycle` derives `ContestConditions` from persisted settings and
+one server clock. Official submissions require participant admission and the
+start-inclusive, end-exclusive window, including for managers. Freeze ends at
+the contest end; only managers may request live scoreboard projections. Nil conditions deny gated operations. Conditions
 must include the relevant audience/business restrictions; they must never come
 from a client. Submission-specific checks also require the actual submission's
 owner and contest IDs. Manager access does not bypass official submission gates
@@ -44,8 +44,8 @@ legacy contest team owner data need auditing before adopting the new policies.
 
 Metadata reads connect these checks through `MetadataPermissions`, using
 pool-backed `PolicyFactsRepo` reads. Other actions still delegate to legacy
-`PermissionsUseCase` pending the lifecycle and command migration. There is no new
-DTO contract, revision schema or mutation guard. A pure owner precheck cannot enforce concurrent
+`PermissionsUseCase` for unmigrated actions. Contest lifecycle reads and commands
+use `MetadataPermissions`; DTO capabilities remain for the contracts PR. A pure owner precheck cannot enforce concurrent
 mutation integrity or immediate revocation. Before connecting write paths, add
 RFC §8 nonlocking facts loading, optimistic revisions/decision guards and the
 serializable owner mutation protocol (with fresh external prechecks after retry).
@@ -77,5 +77,34 @@ public/private values. Unknown roles and participation modes also fail closed.
 returned page IDs to the appropriate loader, then evaluate the pure policies
 with one `PolicyInput`. Each nonempty batch uses one nonlocking SQL query;
 missing IDs are absent and read errors propagate. Empty batches perform no I/O.
-The metadata adapter uses the same loaders for individual checks. Contest
-conditions and capability DTOs remain the responsibility of later PRs.
+The metadata adapter uses the same loaders for individual checks. Capability DTOs remain the responsibility of the contracts PR.
+
+
+## Contest commands, snapshots and freeze
+
+Attach/relink policies require destination management, source use permission,
+matching package ownership and ready status. Source and package facts are read
+through the pool before the write transaction. Contest problem reads join only
+the link and pinned package, including catalog metadata captured at publication.
+Statements and samples never fall back to workspace for a supplied package ID.
+Submission creation captures the pinned package in the INSERT; judging and
+rejudging retain that package even after a contest relink. Referenced packages
+cannot be deleted; a linked source problem must first be detached.
+
+Migrated contest commands and submission creation capture a conservative global
+security revision before their external policy checks. Statement triggers bump
+it atomically on changes to actors, grants, resources, links and problem blocks.
+A SERIALIZABLE write transaction compares that revision without row locks and
+checks the account/contest deadline using the database clock before commit.
+Serialization failures restart eligible commands with a fresh external precheck;
+there is no policy evaluation inside their write transaction. The shared revision
+can reject commands after unrelated security changes; resource-specific revisions
+would reduce such conflicts. Legacy ACL mutation authorization still needs its
+separate migration; this guard does not claim to repair those older write paths.
+
+Submission state history records verdict observation time. Masked standings use
+states observed strictly before the freeze boundary, preventing late verdicts or
+rejudges of pre-freeze submissions from leaking into the frozen board. Existing
+rows have no trustworthy historical observation time, so migration records them
+at migration time and masks them conservatively for older freeze boundaries.
+Manual freezes record their boundary in server-owned contest settings.

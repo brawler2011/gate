@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -154,7 +156,7 @@ func (f *scoreboardFixture) submit(t *testing.T, user string, problem int, state
 
 func (f *scoreboardFixture) scoreboard(t *testing.T, unfrozen bool) *contestsmodel.ScoreboardResponse {
 	t.Helper()
-	result, err := f.uc.ProjectScoreboard(context.Background(), f.repo.contest.ID, unfrozen)
+	result, err := f.uc.ProjectScoreboard(accessmodel.WithReadTime(context.Background(), f.repo.contest.EndTime.Add(-time.Nanosecond)), f.repo.contest.ID, unfrozen)
 	require.NoError(t, err)
 	return result
 }
@@ -272,7 +274,7 @@ func TestScoreboardContestAndFreezeBoundaries(t *testing.T) {
 		f.submit(t, "alice", 1, state, time.Duration(i+1)*5*time.Minute)
 	}
 	// B remains unsolved at the cutoff; CE is hidden, Saved is ignored,
-	// and the submission exactly at contest end still counts.
+	// submissions at the end boundary are outside the official window.
 	for _, sub := range []struct {
 		state submissionsmodel.State
 		at    time.Duration
@@ -295,11 +297,11 @@ func TestScoreboardContestAndFreezeBoundaries(t *testing.T) {
 	require.EqualValues(t, 59, *a.TimeMinutes)
 	require.False(t, b.Solved)
 	require.EqualValues(t, 5, b.FailedAttempts)
-	require.EqualValues(t, 2, b.PendingAttempts)
+	require.EqualValues(t, 1, b.PendingAttempts)
 	require.Zero(t, b.Penalty)
 	live := f.scoreboard(t, true).Items[0]
-	require.EqualValues(t, 2, live.ProblemsSolved)
-	require.EqualValues(t, 299, live.TotalPenalty)
+	require.EqualValues(t, 1, live.ProblemsSolved)
+	require.EqualValues(t, 79, live.TotalPenalty)
 }
 
 func TestScoreboardManualFreezeWithoutCutoff(t *testing.T) {
@@ -356,7 +358,7 @@ func TestScoreboardUserUpdateMatchesSnapshot(t *testing.T) {
 			for _, unfrozen := range []bool{false, true} {
 				snapshot := f.scoreboard(t, unfrozen)
 				for _, item := range snapshot.Items {
-					update, err := f.uc.GetContestScoreboardUser(context.Background(), f.repo.contest.ID, item.UserID, unfrozen)
+					update, err := f.uc.GetContestScoreboardUser(accessmodel.WithReadTime(context.Background(), f.repo.contest.EndTime.Add(-time.Nanosecond)), f.repo.contest.ID, item.UserID, unfrozen)
 					require.NoError(t, err)
 					require.Equal(t, snapshot.Problems, update.Problems)
 					require.Equal(t, snapshot.IsFrozen, update.IsFrozen)
@@ -378,7 +380,7 @@ func TestScoreboardUserUpdateMatchesSnapshot(t *testing.T) {
 	require.NoError(t, contests.ApplySubmissionResult(context.Background(), f.repo, &sub))
 	check()
 	delete(f.repo.roles, f.users["alice"])
-	update, err := f.uc.GetContestScoreboardUser(context.Background(), f.repo.contest.ID, f.users["alice"], false)
+	update, err := f.uc.GetContestScoreboardUser(accessmodel.WithReadTime(context.Background(), f.repo.contest.EndTime.Add(-time.Nanosecond)), f.repo.contest.ID, f.users["alice"], false)
 	require.NoError(t, err)
 	require.Empty(t, update.Items)
 }
@@ -387,10 +389,10 @@ func TestScoreboardHistoryErrors(t *testing.T) {
 	f := newScoreboardFixture("alice")
 	f.repo.contest.Settings["freeze_status"] = contestsmodel.FreezeStatusFrozen
 	f.repo.historyErr = errors.New("history failed")
-	result, err := f.uc.ProjectScoreboard(context.Background(), f.repo.contest.ID, false)
+	result, err := f.uc.ProjectScoreboard(accessmodel.WithReadTime(context.Background(), f.repo.contest.EndTime.Add(-time.Nanosecond)), f.repo.contest.ID, false)
 	require.ErrorIs(t, err, f.repo.historyErr)
 	require.Nil(t, result)
-	result, err = f.uc.GetContestScoreboardUser(context.Background(), f.repo.contest.ID, f.users["alice"], false)
+	result, err = f.uc.GetContestScoreboardUser(accessmodel.WithReadTime(context.Background(), f.repo.contest.EndTime.Add(-time.Nanosecond)), f.repo.contest.ID, f.users["alice"], false)
 	require.ErrorIs(t, err, f.repo.historyErr)
 	require.Nil(t, result)
 }

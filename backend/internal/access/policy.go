@@ -282,7 +282,7 @@ func RequireContest(in m.PolicyInput, c m.ContestContext, action m.ContestAction
 	}
 	view := c.Visibility == m.VisibilityPublic || r > 0
 	manager := r >= 2
-	eligible := !in.Actor.IsGuest() && (r == 1 || c.DirectRole != "" || hasContestParticipation(c) || (c.Visibility == m.VisibilityPublic && c.ParticipationMode == m.ParticipationOpen))
+	eligible := !in.Actor.IsGuest() && (c.OwnerID == in.Actor.Id || c.DirectRole != "" || hasContestParticipation(c) || (c.Visibility == m.VisibilityPublic && c.ParticipationMode == m.ParticipationOpen))
 	t := m.ContestConditions{}
 	if c.Conditions != nil {
 		t = *c.Conditions

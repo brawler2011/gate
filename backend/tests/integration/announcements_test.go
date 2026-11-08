@@ -156,7 +156,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 		get(path+query, owner.Id, http.StatusBadRequest)
 	}
 	privatePath := "/organizations/" + org.Login + "/contests/ann-private/announcements"
-	get(privatePath, uuid.Nil, http.StatusUnauthorized)
+	get(privatePath, uuid.Nil, http.StatusForbidden)
 	get(privatePath, outsider.Id, http.StatusForbidden)
 	get(privatePath, owner.Id, http.StatusOK)
 	get(path, outsider.Id, http.StatusOK)

@@ -19,7 +19,7 @@ func HandlePgErr(err error) error {
 
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
-		if pgErr.Code == pgerrcode.UniqueViolation || pgErr.Code == pgerrcode.ExclusionViolation {
+		if pgErr.Code == pgerrcode.UniqueViolation || pgErr.Code == pgerrcode.ExclusionViolation || pgErr.Code == pgerrcode.SerializationFailure || pgErr.Code == pgerrcode.DeadlockDetected {
 			return pkg.Wrap(pkg.ErrConflict, err, "conflicting data")
 		}
 		if pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {

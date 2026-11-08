@@ -121,9 +121,7 @@ type ProblemContext struct {
 	Visibility   Visibility
 }
 
-// ContestConditions supplies the T gates from RFC §3. Computing lifecycle,
-// settings audiences, business blocks and projections belongs to PR 3. Nil
-// conditions deny gated operations; static policies never infer a time bypass.
+// ContestConditions supplies the lifecycle and audience gates from RFC §5.
 type ContestConditions struct {
 	ViewStatements        bool
 	ViewScoreboard        bool
@@ -137,6 +135,9 @@ type SubmissionContext struct {
 	ContestID uuid.UUID
 }
 type ContestContext struct {
+	StartTime         *time.Time
+	EndTime           *time.Time
+	Settings          map[string]interface{}
 	ID                uuid.UUID
 	Organization      OrganizationContext
 	OwnerID           uuid.UUID

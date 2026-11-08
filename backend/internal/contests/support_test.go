@@ -21,3 +21,5 @@ func recordTestEvent(ctx context.Context, e eventdata.Event, create func(context
 type testTransactions[T any] struct{ store T }
 
 func (t testTransactions[T]) Within(_ context.Context, fn func(T) error) error { return fn(t.store) }
+
+func (t testTransactions[T]) Prepare(ctx context.Context) (context.Context, error) { return ctx, nil }

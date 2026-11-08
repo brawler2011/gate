@@ -3,6 +3,10 @@ package postgres
 import (
 	"context"
 
+	m "github.com/brawler2011/gate/backend/internal/access/model"
+	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/jackc/pgx/v5"
+
 	"github.com/brawler2011/gate/backend/internal/blogs"
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
@@ -20,13 +24,36 @@ type transactions[T any] struct {
 }
 
 func (p transactions[T]) Within(ctx context.Context, fn func(T) error) error {
-	tx, err := p.pool.Begin(ctx)
+	decision, guarded := m.DecisionFromContext(ctx)
+	options := pgx.TxOptions{}
+	if guarded {
+		options.IsoLevel = pgx.Serializable
+	}
+	tx, err := p.pool.BeginTx(ctx, options)
 	if err != nil {
 		return HandlePgErr(err)
 	}
 	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
+	if guarded {
+		revision, err := sqlc.New(tx).GetAccessRevision(ctx)
+		if err != nil {
+			return HandlePgErr(err)
+		}
+		if revision != decision.Revision {
+			return pkg.ErrConflict
+		}
+	}
 	if err := fn(p.bind(sqlc.New(tx))); err != nil {
 		return err
+	}
+	if guarded && decision.ValidUntil != nil {
+		now, err := sqlc.New(tx).GetCommandTime(ctx)
+		if err != nil {
+			return HandlePgErr(err)
+		}
+		if !now.Before(*decision.ValidUntil) {
+			return pkg.NoPermission
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return HandlePgErr(err)
@@ -78,7 +105,7 @@ func NewOrganizationTransactions(pool *pgxpool.Pool) organizations.OrganizationT
 }
 
 func NewSubmissionTransactions(pool *pgxpool.Pool) submissions.SubmissionTransactions {
-	return transactions[submissions.SubmissionTxStore]{pool: pool, bind: func(q *sqlc.Queries) submissions.SubmissionTxStore {
+	return newGuardedTransactions(pool, transactions[submissions.SubmissionTxStore]{pool: pool, bind: func(q *sqlc.Queries) submissions.SubmissionTxStore {
 		return struct {
 			*SubmissionsRepo
 			*OutboxRepo
@@ -86,7 +113,7 @@ func NewSubmissionTransactions(pool *pgxpool.Pool) submissions.SubmissionTransac
 			*ContestsRepo
 			*authorization
 		}{&SubmissionsRepo{queries: q}, &OutboxRepo{queries: q}, &JudgeJobs{queries: q}, &ContestsRepo{queries: q}, bindAuthorization(q)}
-	}}
+	}})
 }
 
 func NewContestEventsTransactions(pool *pgxpool.Pool) contests.ContestEventsTransactions {
@@ -113,7 +140,7 @@ func NewJudgeTransactions(pool *pgxpool.Pool) judging.JudgeTransactions {
 }
 
 func NewContestCommandTransactions(pool *pgxpool.Pool) contests.CommandTransactions {
-	return transactions[contests.CommandTxStore]{pool: pool, bind: func(q *sqlc.Queries) contests.CommandTxStore {
+	return newGuardedTransactions(pool, transactions[contests.CommandTxStore]{pool: pool, bind: func(q *sqlc.Queries) contests.CommandTxStore {
 		return struct {
 			*ContestsRepo
 			*SubmissionsRepo
@@ -123,7 +150,7 @@ func NewContestCommandTransactions(pool *pgxpool.Pool) contests.CommandTransacti
 			authorizationOrganizations
 			*NotificationsRepo
 		}{&ContestsRepo{queries: q}, &SubmissionsRepo{queries: q}, &JudgeJobs{queries: q}, &OutboxRepo{queries: q}, bindAuthorization(q), authorizationOrganizations{&OrganizationsRepo{q: q}}, &NotificationsRepo{queries: q}}
-	}}
+	}})
 }
 
 func NewDraftTransactions(pool *pgxpool.Pool) contests.DraftTransactions {

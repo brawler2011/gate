@@ -18,7 +18,7 @@ func (denySubmissionPermissions) HasContestPermission(context.Context, uuid.UUID
 }
 
 func TestCommandsEnforceAccessWithoutHTTP(t *testing.T) {
-	uc := &SubmissionsUseCase{permissions: denySubmissionPermissions{}}
+	uc := &SubmissionsUseCase{permissions: denySubmissionPermissions{}, transactor: diagnosticTransactor{}}
 	contestID, submissionID := uuid.New(), uuid.New()
 	for _, caller := range []accessmodel.User{accessmodel.Guest, {Id: uuid.New(), Role: accessmodel.UserRoleUser}} {
 		ctx := accessmodel.WithUser(context.Background(), caller)

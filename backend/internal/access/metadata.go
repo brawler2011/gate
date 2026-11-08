@@ -17,8 +17,8 @@ type PolicyFacts interface {
 	LoadTeamFacts(context.Context, uuid.UUID, []uuid.UUID) (map[uuid.UUID]m.TeamContext, error)
 }
 
-// MetadataPermissions migrates metadata actions to pure policies while leaving
-// lifecycle and command authorization on their existing ports until PR 3.
+// MetadataPermissions evaluates metadata and contest lifecycle policies through
+// pool-backed facts. Unmigrated problem actions retain their existing adapter.
 type MetadataPermissions struct {
 	*PermissionsUseCase
 	facts PolicyFacts
@@ -45,7 +45,7 @@ func metadataDecision(err error) (bool, error) {
 	return err == nil, err
 }
 func (uc *MetadataPermissions) HasProblemPermission(ctx context.Context, id, user uuid.UUID, action m.ProblemAction) (bool, error) {
-	if action != m.ActionViewProblem {
+	if action != m.ActionViewProblem && action != m.ActionUseProblem {
 		return uc.PermissionsUseCase.HasProblemPermission(ctx, id, user, action)
 	}
 	in, err := uc.input(ctx, user)
@@ -63,9 +63,6 @@ func (uc *MetadataPermissions) HasProblemPermission(ctx context.Context, id, use
 	return metadataDecision(RequireProblem(in, c, action))
 }
 func (uc *MetadataPermissions) HasContestPermission(ctx context.Context, id, user uuid.UUID, action m.ContestAction) (bool, error) {
-	if action != m.ActionViewContest {
-		return uc.PermissionsUseCase.HasContestPermission(ctx, id, user, action)
-	}
 	in, err := uc.input(ctx, user)
 	if err != nil {
 		return false, err
@@ -77,6 +74,9 @@ func (uc *MetadataPermissions) HasContestPermission(ctx context.Context, id, use
 	c, ok := facts[id]
 	if !ok {
 		return false, pkg.ErrNotFound
+	}
+	if err := ApplyContestLifecycle(in, &c); err != nil {
+		return metadataDecision(err)
 	}
 	return metadataDecision(RequireContest(in, c, action))
 }

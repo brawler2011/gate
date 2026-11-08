@@ -68,6 +68,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 	}
 
 	contestProblem := contestsmodel.ContestProblem{
+		TimeLimitMs: 1000, MemoryLimitMb: 256,
 		ContestID: contestID,
 		ProblemID: problemID,
 		Ordinal:   1,
@@ -89,7 +90,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		server := core.NewCoreServer(
 			nil,
 			nil,
-			coremodules.Contests{ContestsUC: mockContests, PermissionsUC: mockPerms, ContestsReader: mockContests, ContestDetails: contests.NewDetailsReader(mockContests, mockProblems, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil)},
+			coremodules.Contests{ContestsUC: mockContests, PermissionsUC: mockPerms, ContestsReader: mockContests, ContestDetails: contests.NewDetailsReader(mockContests, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil)},
 			coremodules.Problems{ProblemsUC: mockProblems},
 			nil,
 			nil,
@@ -138,7 +139,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		server := core.NewCoreServer(
 			nil,
 			nil,
-			coremodules.Contests{ContestsUC: mockContests, PermissionsUC: mockPerms, ContestsReader: mockContests, ContestDetails: contests.NewDetailsReader(mockContests, mockProblems, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil)},
+			coremodules.Contests{ContestsUC: mockContests, PermissionsUC: mockPerms, ContestsReader: mockContests, ContestDetails: contests.NewDetailsReader(mockContests, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil)},
 			coremodules.Problems{ProblemsUC: mockProblems},
 			nil,
 			nil,
@@ -172,7 +173,7 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 		server := core.NewCoreServer(
 			nil,
 			nil,
-			coremodules.Contests{ContestsUC: mockContests, PermissionsUC: mockPerms, ContestsReader: mockContests, ContestDetails: contests.NewDetailsReader(mockContests, mockProblems, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil)},
+			coremodules.Contests{ContestsUC: mockContests, PermissionsUC: mockPerms, ContestsReader: mockContests, ContestDetails: contests.NewDetailsReader(mockContests, hiddenStatementSource{}, mockPerms, stubBookletCompiler{}, nil)},
 			coremodules.Problems{ProblemsUC: mockProblems},
 			nil,
 			nil,

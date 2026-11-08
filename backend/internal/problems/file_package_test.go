@@ -486,3 +486,19 @@ func TestFilePackagePreservesStatementBytesOnImportAndMetadataSave(t *testing.T)
 		})
 	}
 }
+
+func TestPinnedStatementNeverFallsBackToWorkspace(t *testing.T) {
+	ctx := problemActorContext()
+	repo := newProblemImportMockProblemsRepo()
+	ws := NewWorkspaceStorage(storage.NewLocalStorage(t.TempDir()), "workspaces", repo)
+	workshop := NewWorkshopUseCase(ws, nil, allowProblemPermissions{})
+	id := uuid.New()
+	require.NoError(t, workshop.InitProblemWorkshop(ctx, id, "Mutable workspace"))
+	reader := NewStatementReader(ws, nil, nil)
+	statement, _ := reader.ReadStatement(ctx, id, uuid.Nil, "")
+	require.NotNil(t, statement)
+	require.Equal(t, "Mutable workspace", statement.Title)
+	statement, samples := reader.ReadStatement(ctx, id, uuid.New(), "")
+	require.Nil(t, statement, "unavailable pinned packages must not reveal workspace content")
+	require.Empty(t, samples)
+}

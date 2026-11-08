@@ -12,7 +12,7 @@ import (
 )
 
 const loadContestFacts = `-- name: LoadContestFacts :many
-SELECT c.id, jsonb_build_object('ID', c.id, 'Organization', jsonb_build_object('ID', o.id, 'Role', COALESCE(om.role::text, ''), 'JoinPolicy', o.join_policy), 'OwnerID', COALESCE(c.owner_id, '00000000-0000-0000-0000-000000000000'::uuid),
+SELECT c.id, jsonb_build_object('ID', c.id, 'StartTime', c.start_time, 'EndTime', c.end_time, 'Settings', c.settings, 'Organization', jsonb_build_object('ID', o.id, 'Role', COALESCE(om.role::text, ''), 'JoinPolicy', o.join_policy), 'OwnerID', COALESCE(c.owner_id, '00000000-0000-0000-0000-000000000000'::uuid),
     'Visibility', c.visibility, 'DirectRole', COALESCE(m.role::text, ''),
     'Teams', COALESCE((SELECT jsonb_agg(jsonb_build_object(
       'OrganizationID', t.organization_id, 'Membership', tm.role, 'Active', true, 'Role', link.role))

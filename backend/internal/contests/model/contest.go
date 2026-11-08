@@ -602,21 +602,36 @@ func (c *Contest) GetFreezeStatus() string {
 }
 
 func (c *Contest) GetFreezeTime() *time.Time {
+	if c.GetFreezeStatus() == FreezeStatusFrozen {
+		if raw, ok := c.Settings["freeze_started_at"].(string); ok {
+			if t, err := time.Parse(time.RFC3339Nano, raw); err == nil {
+				return &t
+			}
+		}
+		return nil
+	}
 	durPtr := c.GetFreezeDurationMinutes()
 	if durPtr == nil || *durPtr <= 0 || c.EndTime == nil {
 		return nil
 	}
 	freezeTime := c.EndTime.Add(-time.Duration(*durPtr) * time.Minute)
+	if c.StartTime != nil && freezeTime.Before(*c.StartTime) {
+		freezeTime = *c.StartTime
+	}
 	return &freezeTime
 }
 
 func (c *Contest) IsFrozenAt(t time.Time) bool {
+	if c.StartTime != nil && t.Before(*c.StartTime) || c.EndTime != nil && !t.Before(*c.EndTime) {
+		return false
+	}
 	status := c.GetFreezeStatus()
 	switch status {
 	case FreezeStatusUnfrozen:
 		return false
 	case FreezeStatusFrozen:
-		return true
+		boundary := c.GetFreezeTime()
+		return boundary == nil || !t.Before(*boundary)
 	case FreezeStatusAuto:
 		freezeTime := c.GetFreezeTime()
 		if freezeTime == nil {

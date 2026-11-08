@@ -214,7 +214,7 @@ func (s *IntegrationTestSuite) initApp() {
 	clarificationsRepo := pgstore.NewClarificationsRepo(s.dbPool)
 	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(s.dbPool))
 	communicationReader := contests.NewCommunicationReader(announcementsRepo, clarificationsRepo, permissionsUC)
-	contestDetails := contests.NewDetailsReader(s.contestsRepo, s.problemsRepo, problems.NewStatementReader(workspaceStorage, packagesRepo, publishUC), permissionsUC, nil, s.usersRepo)
+	contestDetails := contests.NewDetailsReader(s.contestsRepo, problems.NewStatementReader(workspaceStorage, packagesRepo, publishUC), permissionsUC, nil, s.usersRepo)
 
 	// Handler
 	coreServer := handlers.NewCoreServer(
