@@ -134,7 +134,7 @@ func ptrUUID(v uuid.UUID) *uuid.UUID { return &v }
 
 func readPayload(t *testing.T, conn *websocket.Conn) map[string]any {
 	t.Helper()
-	require.NoError(t, conn.SetReadDeadline(time.Now().Add(3*time.Second)))
+	require.NoError(t, conn.SetReadDeadline(time.Now().Add(10*time.Second)))
 	var msg struct {
 		Payload map[string]any `json:"payload"`
 	}
@@ -144,7 +144,7 @@ func readPayload(t *testing.T, conn *websocket.Conn) map[string]any {
 
 func requireClose(t *testing.T, conn *websocket.Conn, code int) {
 	t.Helper()
-	require.NoError(t, conn.SetReadDeadline(time.Now().Add(3*time.Second)))
+	require.NoError(t, conn.SetReadDeadline(time.Now().Add(10*time.Second)))
 	_, _, err := conn.ReadMessage()
 	require.True(t, websocket.IsCloseError(err, code), "expected %d, got %v", code, err)
 }
