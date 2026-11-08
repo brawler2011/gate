@@ -107,7 +107,7 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		})
 	})
 
-	s.Run("ListUserSubmissions custom check", func() {
+	s.Run("ListUserSubmissions domain access", func() {
 		suffix := uuid.NewString()[:8]
 		contestOwner := s.createUser("authz_lus_owner_"+suffix, accessmodel.UserRoleUser)
 		requestUser := s.createUser("authz_lus_user_"+suffix, accessmodel.UserRoleUser)
@@ -162,6 +162,15 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 				Username: anotherUser.Username,
 				Page:     corev1.NewOptInt32(1),
 				PageSize: corev1.NewOptInt32(10),
+			})
+			s.Require().Error(err)
+			s.Equal(http.StatusForbidden, s.getStatusCode(err))
+		})
+
+		s.Run("Contest owner cannot list another user submissions through user endpoint", func() {
+			_, err := s.client.ListUserSubmissions(withTestUser(s.ctx, contestOwner.Id), corev1.ListUserSubmissionsParams{
+				Username:  requestUser.Username,
+				ContestId: corev1.NewOptUUID(allowedContestID),
 			})
 			s.Require().Error(err)
 			s.Equal(http.StatusForbidden, s.getStatusCode(err))
@@ -405,6 +414,19 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		})
 		s.Require().NoError(err)
 		s.Require().NotNil(resp)
+		for _, caller := range []accessmodel.User{mixedUser, admin, otherUser} {
+			_, err := s.client.ListContestJoinRequests(withTestUser(s.ctx, caller.Id), corev1.ListContestJoinRequestsParams{
+				OrgLogin:     org.Login,
+				ContestLogin: "mixed-role-" + suffix,
+			})
+			if caller.Id == otherUser.Id {
+				s.Require().Error(err)
+				s.Equal(http.StatusForbidden, s.getStatusCode(err))
+			} else {
+				s.Require().NoError(err)
+			}
+		}
+
 	})
 
 	s.Run("Problem access through team permission", func() {

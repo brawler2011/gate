@@ -265,7 +265,7 @@ func (s *IntegrationTestSuite) initApp() {
 	// Server setup
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	secHandler := middleware.NewSecurityHandler()
-	authzMw := middleware.AuthzMiddleware(permissionsUC, submissionsUC, s.organizationsRepo, s.contestsRepo)
+	authzMw := middleware.AuthzMiddleware()
 	server, err := corev1.NewServer(
 		coreServer,
 		secHandler,

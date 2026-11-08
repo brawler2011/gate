@@ -82,6 +82,11 @@ func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.List
 		return nil, err
 	}
 
+	caller := accessmodel.UserFromContext(ctx)
+	if caller.Id != user.Id && !caller.IsAdmin() {
+		return nil, pkg.Wrap(pkg.NoPermission, nil, "only admins can view other users' submissions")
+	}
+
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(50)
 

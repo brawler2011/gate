@@ -54,59 +54,6 @@ func TestSelfOrAdminUsesUsernamePathParameter(t *testing.T) {
 	}
 }
 
-func TestAuthorizationUUIDParameters(t *testing.T) {
-	id := uuid.New()
-	otherID := uuid.New()
-	for _, tc := range []struct {
-		name   string
-		params ogenMiddleware.Parameters
-		read   func(ogenMiddleware.Request) (uuid.UUID, error)
-		wantID uuid.UUID
-	}{
-		{name: "problem path", params: ogenMiddleware.Parameters{{Name: "problemId", In: "path"}: id, {Name: "id", In: "path"}: otherID}, read: func(req ogenMiddleware.Request) (uuid.UUID, error) { return pathUUID(req, "problemId", "id") }, wantID: id},
-		{name: "problem id path", params: ogenMiddleware.Parameters{{Name: "id", In: "path"}: id}, read: func(req ogenMiddleware.Request) (uuid.UUID, error) { return pathUUID(req, "problemId", "id") }, wantID: id},
-		{name: "submission path", params: ogenMiddleware.Parameters{{Name: "submission_id", In: "path"}: id}, read: func(req ogenMiddleware.Request) (uuid.UUID, error) { return pathUUID(req, "submission_id") }, wantID: id},
-		{name: "query cannot replace path", params: ogenMiddleware.Parameters{{Name: "user_id", In: "query"}: corev1.NewOptUUID(id)}, read: func(req ogenMiddleware.Request) (uuid.UUID, error) { return pathUUID(req, "user_id") }},
-		{name: "contest query", params: ogenMiddleware.Parameters{{Name: "contestId", In: "query"}: corev1.NewOptUUID(id)}, read: func(req ogenMiddleware.Request) (uuid.UUID, error) { return queryUUID(req, "contestId") }, wantID: id},
-		{name: "user query", params: ogenMiddleware.Parameters{{Name: "userId", In: "query"}: corev1.NewOptUUID(id)}, read: func(req ogenMiddleware.Request) (uuid.UUID, error) { return queryUUID(req, "userId") }, wantID: id},
-		{name: "unset query", params: ogenMiddleware.Parameters{{Name: "userId", In: "query"}: corev1.OptUUID{}}, read: func(req ogenMiddleware.Request) (uuid.UUID, error) { return queryUUID(req, "userId") }},
-		{name: "string path rejected", params: ogenMiddleware.Parameters{{Name: "id", In: "path"}: id.String()}, read: func(req ogenMiddleware.Request) (uuid.UUID, error) { return pathUUID(req, "id") }},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			got, err := tc.read(ogenMiddleware.Request{Params: tc.params})
-			if tc.wantID == uuid.Nil {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-			require.Equal(t, tc.wantID, got)
-		})
-	}
-}
-
-func TestContestAuthorizationLogins(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		req  ogenMiddleware.Request
-	}{
-		{name: "contest path", req: ogenMiddleware.Request{OperationID: "GetContest", Params: ogenMiddleware.Parameters{
-			{Name: "org_login", In: "path"}:     "org",
-			{Name: "contest_login", In: "path"}: "contest",
-		}}},
-		{name: "submission query", req: ogenMiddleware.Request{OperationID: "CreateSubmission", Params: ogenMiddleware.Parameters{
-			{Name: "organization_login", In: "query"}: "org",
-			{Name: "contest_login", In: "query"}:      "contest",
-		}}},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			orgLogin, contestLogin, err := contestLogins(tc.req)
-			require.NoError(t, err)
-			require.Equal(t, "org", orgLogin)
-			require.Equal(t, "contest", contestLogin)
-		})
-	}
-}
-
 func TestStrictAuthzPoliciesContainOnlyStrictOperations(t *testing.T) {
 	handlerInterfaceType := reflect.TypeOf((*corev1.Handler)(nil)).Elem()
 
@@ -114,5 +61,35 @@ func TestStrictAuthzPoliciesContainOnlyStrictOperations(t *testing.T) {
 		if _, ok := handlerInterfaceType.MethodByName(operationID); !ok {
 			t.Errorf("unknown operation in authz policy map %q", operationID)
 		}
+	}
+}
+
+func TestResourceAuthorizationIsDelegatedToHandlers(t *testing.T) {
+	for _, operation := range []string{
+		"CreateContest", "GetOrganization", "UpdateOrganization", "DeleteOrganization",
+		"AddOrganizationMember", "ListOrganizationInvitations", "ApproveOrganizationJoinRequest",
+		"CreateContestMember", "UpdateContestMember", "DeleteContestMember",
+		"CreateContestTeam", "UpdateContestTeam", "DeleteContestTeam", "ListContestJoinRequests",
+		"GetProblemStatement", "UpdateProblem", "DeleteProblem", "ImportProblem", "PublishProblem",
+		"CreateProblemMember", "CreateProblemTeam", "UpdateProblemLimits", "GenerateTests",
+		"ListUserSubmissions",
+	} {
+		t.Run(operation, func(t *testing.T) {
+			for _, user := range []accessmodel.User{accessmodel.Guest, {Id: uuid.New(), Role: accessmodel.UserRoleUser}} {
+				ctx := accessmodel.WithUser(context.Background(), user)
+				called := false
+				_, err := AuthzMiddleware()(ogenMiddleware.Request{Context: ctx, OperationID: operation}, func(req ogenMiddleware.Request) (ogenMiddleware.Response, error) {
+					called = true
+					return ogenMiddleware.Response{}, nil
+				})
+				if user.IsGuest() {
+					require.ErrorIs(t, err, pkg.ErrUnauthenticated)
+					require.False(t, called)
+				} else {
+					require.NoError(t, err)
+					require.True(t, called)
+				}
+			}
+		})
 	}
 }

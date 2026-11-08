@@ -342,7 +342,7 @@ func runApp(envFile string) error {
 	)
 
 	secHandler := middleware.NewSecurityHandler()
-	authzMw := middleware.AuthzMiddleware(permissionsUC, submissionsUC, orgsRepo, contestsRepo)
+	authzMw := middleware.AuthzMiddleware()
 	apiServer, err := corev1.NewServer(
 		coreServer,
 		secHandler,

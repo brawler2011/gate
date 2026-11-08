@@ -2,6 +2,7 @@ package contests
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 
@@ -105,5 +106,69 @@ func TestContestRegistrationRejectsDuplicates(t *testing.T) {
 			require.False(t, store.joined)
 			require.False(t, store.requested)
 		})
+	}
+}
+
+type joinRequestsLookup struct {
+	registrationLookup
+	listed bool
+}
+
+func (r *joinRequestsLookup) ListContestJoinRequests(_ context.Context, id uuid.UUID, status *string) ([]contestsmodel.ContestJoinRequest, error) {
+	r.listed = true
+	return []contestsmodel.ContestJoinRequest{{ContestID: id}}, nil
+}
+
+type joinRequestsPermissions struct{ *rosterPermissions }
+
+func (joinRequestsPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+	panic("unexpected problem authorization")
+}
+
+func TestListJoinRequestsUsesDomainPermission(t *testing.T) {
+	failure := errors.New("authorization unavailable")
+	for _, tc := range []struct {
+		name                string
+		allow               accessmodel.ContestAction
+		permissionErr, want error
+	}{
+		{name: "manager", allow: accessmodel.ActionManageContest},
+		{name: "outsider", want: pkg.NoPermission},
+		{name: "permission error", permissionErr: failure, want: failure},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			lookup := &joinRequestsLookup{registrationLookup: registrationLookup{contest: contestsmodel.Contest{ID: uuid.New()}}}
+			permissions := &rosterPermissions{allow: tc.allow, err: tc.permissionErr}
+			uc := NewContestsUseCase(lookup, nil, nil, joinRequestsPermissions{permissions})
+			actor := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
+			_, err := uc.ListJoinRequests(accessmodel.WithUser(context.Background(), actor), "org", "contest", actor.Id)
+			require.ErrorIs(t, err, tc.want)
+			require.Equal(t, tc.want == nil, lookup.listed)
+			require.Equal(t, []accessmodel.ContestAction{accessmodel.ActionManageContest}, permissions.actions)
+		})
+	}
+}
+
+type deniedContestCommands struct{ CommandPermissions }
+
+func (deniedContestCommands) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
+	return false, nil
+}
+
+func TestContestRosterMutationsAuthorizeWithoutHTTP(t *testing.T) {
+	contest, target := uuid.New(), uuid.New()
+	uc := NewContestsUseCase(nil, nil, testTransactions[CommandTxStore]{}, deniedContestCommands{})
+	for _, caller := range []accessmodel.User{accessmodel.Guest, {Id: uuid.New(), Role: accessmodel.UserRoleUser}} {
+		ctx := accessmodel.WithUser(context.Background(), caller)
+		want := pkg.NoPermission
+		if caller.IsGuest() {
+			want = pkg.ErrUnauthenticated
+		}
+		require.ErrorIs(t, uc.CreateParticipant(ctx, contestsmodel.ParticipantCreation{ContestId: contest, UserId: target}), want)
+		require.ErrorIs(t, uc.UpdateContestMember(ctx, contest, target, "participant"), want)
+		require.ErrorIs(t, uc.DeleteParticipant(ctx, contestsmodel.ParticipantDeletion{ContestId: contest, UserId: target}), want)
+		require.ErrorIs(t, uc.CreateContestTeam(ctx, contest, target, caller.Id, contestsmodel.ContestRoleParticipant), want)
+		require.ErrorIs(t, uc.UpdateContestTeamRole(ctx, contest, target, caller.Id, contestsmodel.ContestRoleParticipant), want)
+		require.ErrorIs(t, uc.DeleteContestTeam(ctx, contest, target, caller.Id), want)
 	}
 }
