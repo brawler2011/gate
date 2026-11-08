@@ -26,10 +26,39 @@ type ContestsUseCase struct {
 	transactions    CommandTransactions
 	permissions     CommandPermissions
 	notificationsUC NotificationsUC
+	cache           *contestCache
 }
 
 func NewContestsUseCase(contestRepo ContestsRepo, orgsRepo OrganizationsRepo, transactions CommandTransactions, permissions CommandPermissions) *ContestsUseCase {
-	return &ContestsUseCase{contestRepo: contestRepo, orgsRepo: orgsRepo, transactions: transactions, permissions: permissions}
+	return &ContestsUseCase{
+		contestRepo:  contestRepo,
+		orgsRepo:     orgsRepo,
+		transactions: transactions,
+		permissions:  permissions,
+		cache:        newContestCache(5 * time.Minute),
+	}
+}
+
+func (uc *ContestsUseCase) GetContestByOrgLoginAndContestLogin(
+	ctx context.Context,
+	orgLogin, contestLogin string,
+) (contestsmodel.Contest, error) {
+	if uc.cache != nil {
+		if c, found := uc.cache.Get(orgLogin, contestLogin); found {
+			return c, nil
+		}
+	}
+
+	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	if err != nil {
+		return contestsmodel.Contest{}, err
+	}
+
+	if uc.cache != nil {
+		uc.cache.Set(orgLogin, contestLogin, contest)
+	}
+
+	return contest, nil
 }
 
 func (uc *ContestsUseCase) SetNotificationsUC(n NotificationsUC) {
@@ -93,15 +122,63 @@ func (uc *ContestsUseCase) CreateContest(
 }
 
 func (uc *ContestsUseCase) UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error {
-	return uc.withinContest(ctx, c.ID, accessmodel.ActionUpdateContest, func(tx CommandTxStore) error {
+	var oldContest contestsmodel.Contest
+	if uc.cache != nil {
+		if cached, ok := uc.cache.GetByID(c.ID); ok {
+			oldContest = cached
+		}
+	}
+
+	err := uc.withinContest(ctx, c.ID, accessmodel.ActionUpdateContest, func(tx CommandTxStore) error {
+		if oldContest.ID == uuid.Nil {
+			if existing, err := tx.GetContest(ctx, c.ID); err == nil {
+				oldContest = existing
+			}
+		}
 		return tx.UpdateContest(ctx, c)
 	})
+	if err != nil {
+		return err
+	}
+
+	if uc.cache != nil {
+		if oldContest.ID != uuid.Nil {
+			uc.cache.Delete(oldContest.OrganizationLogin, oldContest.Login)
+		}
+		uc.cache.DeleteByID(c.ID)
+	}
+
+	return nil
 }
 
 func (uc *ContestsUseCase) DeleteContest(ctx context.Context, id uuid.UUID) error {
-	return uc.withinContest(ctx, id, accessmodel.ActionDeleteContest, func(tx CommandTxStore) error {
+	var oldContest contestsmodel.Contest
+	if uc.cache != nil {
+		if cached, ok := uc.cache.GetByID(id); ok {
+			oldContest = cached
+		}
+	}
+
+	err := uc.withinContest(ctx, id, accessmodel.ActionDeleteContest, func(tx CommandTxStore) error {
+		if oldContest.ID == uuid.Nil {
+			if existing, err := tx.GetContest(ctx, id); err == nil {
+				oldContest = existing
+			}
+		}
 		return tx.DeleteContest(ctx, id)
 	})
+	if err != nil {
+		return err
+	}
+
+	if uc.cache != nil {
+		if oldContest.ID != uuid.Nil {
+			uc.cache.Delete(oldContest.OrganizationLogin, oldContest.Login)
+		}
+		uc.cache.DeleteByID(id)
+	}
+
+	return nil
 }
 
 func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error {
@@ -451,7 +528,7 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 	orgLogin, contestLogin string,
 	message *string,
 ) (*contestsmodel.ContestJoinRequest, bool, error) {
-	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 	if err != nil {
 		return nil, false, err
 	}
@@ -554,7 +631,7 @@ func (uc *ContestsUseCase) ListJoinRequests(
 	if err := accessmodel.RequireCaller(ctx, requestUserID); err != nil {
 		return nil, err
 	}
-	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -575,7 +652,7 @@ func (uc *ContestsUseCase) CancelJoinRequest(
 	ctx context.Context,
 	orgLogin, contestLogin string,
 ) error {
-	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 	if err != nil {
 		return err
 	}
@@ -602,7 +679,7 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 	orgLogin, contestLogin string,
 	requestID, reviewerID uuid.UUID,
 ) error {
-	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 	if err != nil {
 		return err
 	}
@@ -678,7 +755,7 @@ func (uc *ContestsUseCase) RejectJoinRequest(
 	orgLogin, contestLogin string,
 	requestID, reviewerID uuid.UUID,
 ) error {
-	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 	if err != nil {
 		return err
 	}
@@ -746,7 +823,7 @@ func (uc *ContestsUseCase) GetMyPendingJoinRequest(
 	if err := accessmodel.RequireCaller(ctx, userID); err != nil {
 		return nil, err
 	}
-	contest, err := uc.contestRepo.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
+	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 	if err != nil {
 		return nil, err
 	}

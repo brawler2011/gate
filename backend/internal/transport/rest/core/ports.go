@@ -36,6 +36,7 @@ type AuthUC interface {
 }
 
 type ContestsUC interface {
+	GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error)
 	CreateContest(ctx context.Context, c *contestsmodel.CreateContestInput) (uuid.UUID, error)
 	UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error
 	DeleteContest(ctx context.Context, id uuid.UUID) error
