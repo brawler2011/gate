@@ -72,7 +72,7 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 			OrgLogin:     org.Login,
 			ContestLogin: "priv-" + suffix,
 			TeamID:       team.ID,
-			Role:         corev1.NewOptString("participant"),
+			Role:         corev1.NewOptCreateContestTeamRole(corev1.CreateContestTeamRoleParticipant),
 		})
 		s.Require().NoError(err)
 

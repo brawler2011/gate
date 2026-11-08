@@ -21,6 +21,47 @@ type AddOrganizationMemberOK struct{}
 // AddTeamMemberOK is response for AddTeamMember operation.
 type AddTeamMemberOK struct{}
 
+type AddTeamMemberRole string
+
+const (
+	AddTeamMemberRoleMaintainer AddTeamMemberRole = "maintainer"
+	AddTeamMemberRoleMember     AddTeamMemberRole = "member"
+)
+
+// AllValues returns all AddTeamMemberRole values.
+func (AddTeamMemberRole) AllValues() []AddTeamMemberRole {
+	return []AddTeamMemberRole{
+		AddTeamMemberRoleMaintainer,
+		AddTeamMemberRoleMember,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AddTeamMemberRole) MarshalText() ([]byte, error) {
+	switch s {
+	case AddTeamMemberRoleMaintainer:
+		return []byte(s), nil
+	case AddTeamMemberRoleMember:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AddTeamMemberRole) UnmarshalText(data []byte) error {
+	switch AddTeamMemberRole(data) {
+	case AddTeamMemberRoleMaintainer:
+		*s = AddTeamMemberRoleMaintainer
+		return nil
+	case AddTeamMemberRoleMember:
+		*s = AddTeamMemberRoleMember
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // AdminChangeEmailOK is response for AdminChangeEmail operation.
 type AdminChangeEmailOK struct{}
 
@@ -1234,14 +1275,14 @@ func (s *ContestJoinRequestResponseModel) SetRegistered(val bool) {
 // Contest member data.
 // Ref: #/components/schemas/ContestMemberModel
 type ContestMemberModel struct {
-	Capabilities []string  `json:"capabilities"`
-	UserID       uuid.UUID `json:"user_id"`
-	ContestID    uuid.UUID `json:"contest_id"`
-	Username     string    `json:"username"`
-	Role         string    `json:"role"`
-	ContestRole  string    `json:"contest_role"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	Capabilities []string                      `json:"capabilities"`
+	UserID       uuid.UUID                     `json:"user_id"`
+	ContestID    uuid.UUID                     `json:"contest_id"`
+	Username     string                        `json:"username"`
+	Role         ContestMemberModelRole        `json:"role"`
+	ContestRole  ContestMemberModelContestRole `json:"contest_role"`
+	CreatedAt    time.Time                     `json:"created_at"`
+	UpdatedAt    time.Time                     `json:"updated_at"`
 }
 
 // GetCapabilities returns the value of Capabilities.
@@ -1265,12 +1306,12 @@ func (s *ContestMemberModel) GetUsername() string {
 }
 
 // GetRole returns the value of Role.
-func (s *ContestMemberModel) GetRole() string {
+func (s *ContestMemberModel) GetRole() ContestMemberModelRole {
 	return s.Role
 }
 
 // GetContestRole returns the value of ContestRole.
-func (s *ContestMemberModel) GetContestRole() string {
+func (s *ContestMemberModel) GetContestRole() ContestMemberModelContestRole {
 	return s.ContestRole
 }
 
@@ -1305,12 +1346,12 @@ func (s *ContestMemberModel) SetUsername(val string) {
 }
 
 // SetRole sets the value of Role.
-func (s *ContestMemberModel) SetRole(val string) {
+func (s *ContestMemberModel) SetRole(val ContestMemberModelRole) {
 	s.Role = val
 }
 
 // SetContestRole sets the value of ContestRole.
-func (s *ContestMemberModel) SetContestRole(val string) {
+func (s *ContestMemberModel) SetContestRole(val ContestMemberModelContestRole) {
 	s.ContestRole = val
 }
 
@@ -1322,6 +1363,95 @@ func (s *ContestMemberModel) SetCreatedAt(val time.Time) {
 // SetUpdatedAt sets the value of UpdatedAt.
 func (s *ContestMemberModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
+}
+
+type ContestMemberModelContestRole string
+
+const (
+	ContestMemberModelContestRoleOwner       ContestMemberModelContestRole = "owner"
+	ContestMemberModelContestRoleModerator   ContestMemberModelContestRole = "moderator"
+	ContestMemberModelContestRoleParticipant ContestMemberModelContestRole = "participant"
+)
+
+// AllValues returns all ContestMemberModelContestRole values.
+func (ContestMemberModelContestRole) AllValues() []ContestMemberModelContestRole {
+	return []ContestMemberModelContestRole{
+		ContestMemberModelContestRoleOwner,
+		ContestMemberModelContestRoleModerator,
+		ContestMemberModelContestRoleParticipant,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ContestMemberModelContestRole) MarshalText() ([]byte, error) {
+	switch s {
+	case ContestMemberModelContestRoleOwner:
+		return []byte(s), nil
+	case ContestMemberModelContestRoleModerator:
+		return []byte(s), nil
+	case ContestMemberModelContestRoleParticipant:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ContestMemberModelContestRole) UnmarshalText(data []byte) error {
+	switch ContestMemberModelContestRole(data) {
+	case ContestMemberModelContestRoleOwner:
+		*s = ContestMemberModelContestRoleOwner
+		return nil
+	case ContestMemberModelContestRoleModerator:
+		*s = ContestMemberModelContestRoleModerator
+		return nil
+	case ContestMemberModelContestRoleParticipant:
+		*s = ContestMemberModelContestRoleParticipant
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ContestMemberModelRole string
+
+const (
+	ContestMemberModelRoleUser  ContestMemberModelRole = "user"
+	ContestMemberModelRoleAdmin ContestMemberModelRole = "admin"
+)
+
+// AllValues returns all ContestMemberModelRole values.
+func (ContestMemberModelRole) AllValues() []ContestMemberModelRole {
+	return []ContestMemberModelRole{
+		ContestMemberModelRoleUser,
+		ContestMemberModelRoleAdmin,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ContestMemberModelRole) MarshalText() ([]byte, error) {
+	switch s {
+	case ContestMemberModelRoleUser:
+		return []byte(s), nil
+	case ContestMemberModelRoleAdmin:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ContestMemberModelRole) UnmarshalText(data []byte) error {
+	switch ContestMemberModelRole(data) {
+	case ContestMemberModelRoleUser:
+		*s = ContestMemberModelRoleUser
+		return nil
+	case ContestMemberModelRoleAdmin:
+		*s = ContestMemberModelRoleAdmin
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Contest data.
@@ -1993,6 +2123,54 @@ func (s *ContestProblemReorderItemModel) SetPosition(val int32) {
 	s.Position = val
 }
 
+type ContestRoleQuery string
+
+const (
+	ContestRoleQueryOwner       ContestRoleQuery = "owner"
+	ContestRoleQueryModerator   ContestRoleQuery = "moderator"
+	ContestRoleQueryParticipant ContestRoleQuery = "participant"
+)
+
+// AllValues returns all ContestRoleQuery values.
+func (ContestRoleQuery) AllValues() []ContestRoleQuery {
+	return []ContestRoleQuery{
+		ContestRoleQueryOwner,
+		ContestRoleQueryModerator,
+		ContestRoleQueryParticipant,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ContestRoleQuery) MarshalText() ([]byte, error) {
+	switch s {
+	case ContestRoleQueryOwner:
+		return []byte(s), nil
+	case ContestRoleQueryModerator:
+		return []byte(s), nil
+	case ContestRoleQueryParticipant:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ContestRoleQuery) UnmarshalText(data []byte) error {
+	switch ContestRoleQuery(data) {
+	case ContestRoleQueryOwner:
+		*s = ContestRoleQueryOwner
+		return nil
+	case ContestRoleQueryModerator:
+		*s = ContestRoleQueryModerator
+		return nil
+	case ContestRoleQueryParticipant:
+		*s = ContestRoleQueryParticipant
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type ContestSortOrderQuery string
 
 const (
@@ -2037,13 +2215,13 @@ func (s *ContestSortOrderQuery) UnmarshalText(data []byte) error {
 // Contest team data.
 // Ref: #/components/schemas/ContestTeamModel
 type ContestTeamModel struct {
-	Capabilities []string  `json:"capabilities"`
-	ContestID    uuid.UUID `json:"contest_id"`
-	TeamID       uuid.UUID `json:"team_id"`
-	TeamName     string    `json:"team_name"`
-	TeamSlug     string    `json:"team_slug"`
-	ContestRole  string    `json:"contest_role"`
-	CreatedAt    time.Time `json:"created_at"`
+	Capabilities []string                    `json:"capabilities"`
+	ContestID    uuid.UUID                   `json:"contest_id"`
+	TeamID       uuid.UUID                   `json:"team_id"`
+	TeamName     string                      `json:"team_name"`
+	TeamSlug     string                      `json:"team_slug"`
+	ContestRole  ContestTeamModelContestRole `json:"contest_role"`
+	CreatedAt    time.Time                   `json:"created_at"`
 }
 
 // GetCapabilities returns the value of Capabilities.
@@ -2072,7 +2250,7 @@ func (s *ContestTeamModel) GetTeamSlug() string {
 }
 
 // GetContestRole returns the value of ContestRole.
-func (s *ContestTeamModel) GetContestRole() string {
+func (s *ContestTeamModel) GetContestRole() ContestTeamModelContestRole {
 	return s.ContestRole
 }
 
@@ -2107,13 +2285,95 @@ func (s *ContestTeamModel) SetTeamSlug(val string) {
 }
 
 // SetContestRole sets the value of ContestRole.
-func (s *ContestTeamModel) SetContestRole(val string) {
+func (s *ContestTeamModel) SetContestRole(val ContestTeamModelContestRole) {
 	s.ContestRole = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
 func (s *ContestTeamModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
+}
+
+type ContestTeamModelContestRole string
+
+const (
+	ContestTeamModelContestRoleModerator   ContestTeamModelContestRole = "moderator"
+	ContestTeamModelContestRoleParticipant ContestTeamModelContestRole = "participant"
+)
+
+// AllValues returns all ContestTeamModelContestRole values.
+func (ContestTeamModelContestRole) AllValues() []ContestTeamModelContestRole {
+	return []ContestTeamModelContestRole{
+		ContestTeamModelContestRoleModerator,
+		ContestTeamModelContestRoleParticipant,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ContestTeamModelContestRole) MarshalText() ([]byte, error) {
+	switch s {
+	case ContestTeamModelContestRoleModerator:
+		return []byte(s), nil
+	case ContestTeamModelContestRoleParticipant:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ContestTeamModelContestRole) UnmarshalText(data []byte) error {
+	switch ContestTeamModelContestRole(data) {
+	case ContestTeamModelContestRoleModerator:
+		*s = ContestTeamModelContestRoleModerator
+		return nil
+	case ContestTeamModelContestRoleParticipant:
+		*s = ContestTeamModelContestRoleParticipant
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ContestTeamRoleQuery string
+
+const (
+	ContestTeamRoleQueryModerator   ContestTeamRoleQuery = "moderator"
+	ContestTeamRoleQueryParticipant ContestTeamRoleQuery = "participant"
+)
+
+// AllValues returns all ContestTeamRoleQuery values.
+func (ContestTeamRoleQuery) AllValues() []ContestTeamRoleQuery {
+	return []ContestTeamRoleQuery{
+		ContestTeamRoleQueryModerator,
+		ContestTeamRoleQueryParticipant,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ContestTeamRoleQuery) MarshalText() ([]byte, error) {
+	switch s {
+	case ContestTeamRoleQueryModerator:
+		return []byte(s), nil
+	case ContestTeamRoleQueryParticipant:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ContestTeamRoleQuery) UnmarshalText(data []byte) error {
+	switch ContestTeamRoleQuery(data) {
+	case ContestTeamRoleQueryModerator:
+		*s = ContestTeamRoleQueryModerator
+		return nil
+	case ContestTeamRoleQueryParticipant:
+		*s = ContestTeamRoleQueryParticipant
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 type CookieAuth struct {
@@ -2247,6 +2507,47 @@ type CreateContestProblemNoContent struct{}
 // CreateContestTeamOK is response for CreateContestTeam operation.
 type CreateContestTeamOK struct{}
 
+type CreateContestTeamRole string
+
+const (
+	CreateContestTeamRoleModerator   CreateContestTeamRole = "moderator"
+	CreateContestTeamRoleParticipant CreateContestTeamRole = "participant"
+)
+
+// AllValues returns all CreateContestTeamRole values.
+func (CreateContestTeamRole) AllValues() []CreateContestTeamRole {
+	return []CreateContestTeamRole{
+		CreateContestTeamRoleModerator,
+		CreateContestTeamRoleParticipant,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateContestTeamRole) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateContestTeamRoleModerator:
+		return []byte(s), nil
+	case CreateContestTeamRoleParticipant:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateContestTeamRole) UnmarshalText(data []byte) error {
+	switch CreateContestTeamRole(data) {
+	case CreateContestTeamRoleModerator:
+		*s = CreateContestTeamRoleModerator
+		return nil
+	case CreateContestTeamRoleParticipant:
+		*s = CreateContestTeamRoleParticipant
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type CreateOrganizationJoinPolicy string
 
 const (
@@ -2347,49 +2648,49 @@ type CreatePostForbidden Error
 func (*CreatePostForbidden) createPostRes() {}
 
 type CreatePostReq struct {
-	Title        OptString        `json:"title"`
-	Description  OptString        `json:"description"`
-	Text         OptString        `json:"text"`
-	PreviewImage OptMultipartFile `json:"preview_image"`
+	Title        string           `json:"title"`
+	Description  string           `json:"description"`
+	Text         string           `json:"text"`
+	PreviewImage ht.MultipartFile `json:"preview_image"`
 }
 
 // GetTitle returns the value of Title.
-func (s *CreatePostReq) GetTitle() OptString {
+func (s *CreatePostReq) GetTitle() string {
 	return s.Title
 }
 
 // GetDescription returns the value of Description.
-func (s *CreatePostReq) GetDescription() OptString {
+func (s *CreatePostReq) GetDescription() string {
 	return s.Description
 }
 
 // GetText returns the value of Text.
-func (s *CreatePostReq) GetText() OptString {
+func (s *CreatePostReq) GetText() string {
 	return s.Text
 }
 
 // GetPreviewImage returns the value of PreviewImage.
-func (s *CreatePostReq) GetPreviewImage() OptMultipartFile {
+func (s *CreatePostReq) GetPreviewImage() ht.MultipartFile {
 	return s.PreviewImage
 }
 
 // SetTitle sets the value of Title.
-func (s *CreatePostReq) SetTitle(val OptString) {
+func (s *CreatePostReq) SetTitle(val string) {
 	s.Title = val
 }
 
 // SetDescription sets the value of Description.
-func (s *CreatePostReq) SetDescription(val OptString) {
+func (s *CreatePostReq) SetDescription(val string) {
 	s.Description = val
 }
 
 // SetText sets the value of Text.
-func (s *CreatePostReq) SetText(val OptString) {
+func (s *CreatePostReq) SetText(val string) {
 	s.Text = val
 }
 
 // SetPreviewImage sets the value of PreviewImage.
-func (s *CreatePostReq) SetPreviewImage(val OptMultipartFile) {
+func (s *CreatePostReq) SetPreviewImage(val ht.MultipartFile) {
 	s.PreviewImage = val
 }
 
@@ -2919,7 +3220,9 @@ func (s DownloadContestStatementsPdfOK) Read(p []byte) (n int, err error) {
 // Error data.
 // Ref: #/components/schemas/Error
 type Error struct {
-	Error OptString `json:"error"`
+	Error     OptString `json:"error"`
+	Message   OptString `json:"message"`
+	RequestID OptString `json:"request_id"`
 }
 
 // GetError returns the value of Error.
@@ -2927,9 +3230,29 @@ func (s *Error) GetError() OptString {
 	return s.Error
 }
 
+// GetMessage returns the value of Message.
+func (s *Error) GetMessage() OptString {
+	return s.Message
+}
+
+// GetRequestID returns the value of RequestID.
+func (s *Error) GetRequestID() OptString {
+	return s.RequestID
+}
+
 // SetError sets the value of Error.
 func (s *Error) SetError(val OptString) {
 	s.Error = val
+}
+
+// SetMessage sets the value of Message.
+func (s *Error) SetMessage(val OptString) {
+	s.Message = val
+}
+
+// SetRequestID sets the value of RequestID.
+func (s *Error) SetRequestID(val OptString) {
+	s.RequestID = val
 }
 
 // Failed test detail data.
@@ -3621,16 +3944,16 @@ func (s *ImportProblemOK) SetMessage(val OptString) {
 
 type ImportProblemReq struct {
 	// Problem package archive (zip).
-	Package OptMultipartFile `json:"package"`
+	Package ht.MultipartFile `json:"package"`
 }
 
 // GetPackage returns the value of Package.
-func (s *ImportProblemReq) GetPackage() OptMultipartFile {
+func (s *ImportProblemReq) GetPackage() ht.MultipartFile {
 	return s.Package
 }
 
 // SetPackage sets the value of Package.
-func (s *ImportProblemReq) SetPackage(val OptMultipartFile) {
+func (s *ImportProblemReq) SetPackage(val ht.MultipartFile) {
 	s.Package = val
 }
 
@@ -4669,6 +4992,52 @@ func (s *NotificationsListResponseModel) SetPagination(val PaginationModel) {
 	s.Pagination = val
 }
 
+// NewOptAddTeamMemberRole returns new OptAddTeamMemberRole with value set to v.
+func NewOptAddTeamMemberRole(v AddTeamMemberRole) OptAddTeamMemberRole {
+	return OptAddTeamMemberRole{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptAddTeamMemberRole is optional AddTeamMemberRole.
+type OptAddTeamMemberRole struct {
+	Value AddTeamMemberRole
+	Set   bool
+}
+
+// IsSet returns true if OptAddTeamMemberRole was set.
+func (o OptAddTeamMemberRole) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptAddTeamMemberRole) Reset() {
+	var v AddTeamMemberRole
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptAddTeamMemberRole) SetTo(v AddTeamMemberRole) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptAddTeamMemberRole) Get() (v AddTeamMemberRole, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptAddTeamMemberRole) Or(d AddTeamMemberRole) AddTeamMemberRole {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptApproveOrganizationJoinRequestModel returns new OptApproveOrganizationJoinRequestModel with value set to v.
 func NewOptApproveOrganizationJoinRequestModel(v ApproveOrganizationJoinRequestModel) OptApproveOrganizationJoinRequestModel {
 	return OptApproveOrganizationJoinRequestModel{
@@ -5077,6 +5446,52 @@ func (o OptCreateContestJoinRequestModel) Get() (v CreateContestJoinRequestModel
 
 // Or returns value if set, or given parameter if does not.
 func (o OptCreateContestJoinRequestModel) Or(d CreateContestJoinRequestModel) CreateContestJoinRequestModel {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCreateContestTeamRole returns new OptCreateContestTeamRole with value set to v.
+func NewOptCreateContestTeamRole(v CreateContestTeamRole) OptCreateContestTeamRole {
+	return OptCreateContestTeamRole{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCreateContestTeamRole is optional CreateContestTeamRole.
+type OptCreateContestTeamRole struct {
+	Value CreateContestTeamRole
+	Set   bool
+}
+
+// IsSet returns true if OptCreateContestTeamRole was set.
+func (o OptCreateContestTeamRole) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCreateContestTeamRole) Reset() {
+	var v CreateContestTeamRole
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCreateContestTeamRole) SetTo(v CreateContestTeamRole) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCreateContestTeamRole) Get() (v CreateContestTeamRole, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCreateContestTeamRole) Or(d CreateContestTeamRole) CreateContestTeamRole {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -6801,12 +7216,12 @@ func (s *OrganizationJoinRequestResponseModel) SetJoined(val bool) {
 // Organization member data.
 // Ref: #/components/schemas/OrganizationMemberModel
 type OrganizationMemberModel struct {
-	Capabilities   []string  `json:"capabilities"`
-	UserID         uuid.UUID `json:"user_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	Username       string    `json:"username"`
-	Role           string    `json:"role"`
-	CreatedAt      time.Time `json:"created_at"`
+	Capabilities   []string                    `json:"capabilities"`
+	UserID         uuid.UUID                   `json:"user_id"`
+	OrganizationID uuid.UUID                   `json:"organization_id"`
+	Username       string                      `json:"username"`
+	Role           OrganizationMemberModelRole `json:"role"`
+	CreatedAt      time.Time                   `json:"created_at"`
 }
 
 // GetCapabilities returns the value of Capabilities.
@@ -6830,7 +7245,7 @@ func (s *OrganizationMemberModel) GetUsername() string {
 }
 
 // GetRole returns the value of Role.
-func (s *OrganizationMemberModel) GetRole() string {
+func (s *OrganizationMemberModel) GetRole() OrganizationMemberModelRole {
 	return s.Role
 }
 
@@ -6860,13 +7275,61 @@ func (s *OrganizationMemberModel) SetUsername(val string) {
 }
 
 // SetRole sets the value of Role.
-func (s *OrganizationMemberModel) SetRole(val string) {
+func (s *OrganizationMemberModel) SetRole(val OrganizationMemberModelRole) {
 	s.Role = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
 func (s *OrganizationMemberModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
+}
+
+type OrganizationMemberModelRole string
+
+const (
+	OrganizationMemberModelRoleOwner  OrganizationMemberModelRole = "owner"
+	OrganizationMemberModelRoleAdmin  OrganizationMemberModelRole = "admin"
+	OrganizationMemberModelRoleMember OrganizationMemberModelRole = "member"
+)
+
+// AllValues returns all OrganizationMemberModelRole values.
+func (OrganizationMemberModelRole) AllValues() []OrganizationMemberModelRole {
+	return []OrganizationMemberModelRole{
+		OrganizationMemberModelRoleOwner,
+		OrganizationMemberModelRoleAdmin,
+		OrganizationMemberModelRoleMember,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s OrganizationMemberModelRole) MarshalText() ([]byte, error) {
+	switch s {
+	case OrganizationMemberModelRoleOwner:
+		return []byte(s), nil
+	case OrganizationMemberModelRoleAdmin:
+		return []byte(s), nil
+	case OrganizationMemberModelRoleMember:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *OrganizationMemberModelRole) UnmarshalText(data []byte) error {
+	switch OrganizationMemberModelRole(data) {
+	case OrganizationMemberModelRoleOwner:
+		*s = OrganizationMemberModelRoleOwner
+		return nil
+	case OrganizationMemberModelRoleAdmin:
+		*s = OrganizationMemberModelRoleAdmin
+		return nil
+	case OrganizationMemberModelRoleMember:
+		*s = OrganizationMemberModelRoleMember
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Organization data.
@@ -7004,6 +7467,54 @@ func (s *OrganizationModelJoinPolicy) UnmarshalText(data []byte) error {
 		return nil
 	case OrganizationModelJoinPolicyInviteOnly:
 		*s = OrganizationModelJoinPolicyInviteOnly
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type OrganizationRoleQuery string
+
+const (
+	OrganizationRoleQueryOwner  OrganizationRoleQuery = "owner"
+	OrganizationRoleQueryAdmin  OrganizationRoleQuery = "admin"
+	OrganizationRoleQueryMember OrganizationRoleQuery = "member"
+)
+
+// AllValues returns all OrganizationRoleQuery values.
+func (OrganizationRoleQuery) AllValues() []OrganizationRoleQuery {
+	return []OrganizationRoleQuery{
+		OrganizationRoleQueryOwner,
+		OrganizationRoleQueryAdmin,
+		OrganizationRoleQueryMember,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s OrganizationRoleQuery) MarshalText() ([]byte, error) {
+	switch s {
+	case OrganizationRoleQueryOwner:
+		return []byte(s), nil
+	case OrganizationRoleQueryAdmin:
+		return []byte(s), nil
+	case OrganizationRoleQueryMember:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *OrganizationRoleQuery) UnmarshalText(data []byte) error {
+	switch OrganizationRoleQuery(data) {
+	case OrganizationRoleQueryOwner:
+		*s = OrganizationRoleQueryOwner
+		return nil
+	case OrganizationRoleQueryAdmin:
+		*s = OrganizationRoleQueryAdmin
+		return nil
+	case OrganizationRoleQueryMember:
+		*s = OrganizationRoleQueryMember
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -7327,12 +7838,12 @@ func (s *ProblemLimits) SetMaxScore(val OptNilInt) {
 // Problem member data.
 // Ref: #/components/schemas/ProblemMemberModel
 type ProblemMemberModel struct {
-	Capabilities []string  `json:"capabilities"`
-	ProblemID    uuid.UUID `json:"problem_id"`
-	UserID       uuid.UUID `json:"user_id"`
-	Username     string    `json:"username"`
-	Role         string    `json:"role"`
-	CreatedAt    time.Time `json:"created_at"`
+	Capabilities []string               `json:"capabilities"`
+	ProblemID    uuid.UUID              `json:"problem_id"`
+	UserID       uuid.UUID              `json:"user_id"`
+	Username     string                 `json:"username"`
+	Role         ProblemMemberModelRole `json:"role"`
+	CreatedAt    time.Time              `json:"created_at"`
 }
 
 // GetCapabilities returns the value of Capabilities.
@@ -7356,7 +7867,7 @@ func (s *ProblemMemberModel) GetUsername() string {
 }
 
 // GetRole returns the value of Role.
-func (s *ProblemMemberModel) GetRole() string {
+func (s *ProblemMemberModel) GetRole() ProblemMemberModelRole {
 	return s.Role
 }
 
@@ -7386,13 +7897,61 @@ func (s *ProblemMemberModel) SetUsername(val string) {
 }
 
 // SetRole sets the value of Role.
-func (s *ProblemMemberModel) SetRole(val string) {
+func (s *ProblemMemberModel) SetRole(val ProblemMemberModelRole) {
 	s.Role = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
 func (s *ProblemMemberModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
+}
+
+type ProblemMemberModelRole string
+
+const (
+	ProblemMemberModelRoleOwner     ProblemMemberModelRole = "owner"
+	ProblemMemberModelRoleModerator ProblemMemberModelRole = "moderator"
+	ProblemMemberModelRoleViewer    ProblemMemberModelRole = "viewer"
+)
+
+// AllValues returns all ProblemMemberModelRole values.
+func (ProblemMemberModelRole) AllValues() []ProblemMemberModelRole {
+	return []ProblemMemberModelRole{
+		ProblemMemberModelRoleOwner,
+		ProblemMemberModelRoleModerator,
+		ProblemMemberModelRoleViewer,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemMemberModelRole) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemMemberModelRoleOwner:
+		return []byte(s), nil
+	case ProblemMemberModelRoleModerator:
+		return []byte(s), nil
+	case ProblemMemberModelRoleViewer:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemMemberModelRole) UnmarshalText(data []byte) error {
+	switch ProblemMemberModelRole(data) {
+	case ProblemMemberModelRoleOwner:
+		*s = ProblemMemberModelRoleOwner
+		return nil
+	case ProblemMemberModelRoleModerator:
+		*s = ProblemMemberModelRoleModerator
+		return nil
+	case ProblemMemberModelRoleViewer:
+		*s = ProblemMemberModelRoleViewer
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Problem data.
@@ -7609,6 +8168,54 @@ func (s *ProblemModel) SetSamples(val []ProblemSampleModel) {
 	s.Samples = val
 }
 
+type ProblemRoleQuery string
+
+const (
+	ProblemRoleQueryOwner     ProblemRoleQuery = "owner"
+	ProblemRoleQueryModerator ProblemRoleQuery = "moderator"
+	ProblemRoleQueryViewer    ProblemRoleQuery = "viewer"
+)
+
+// AllValues returns all ProblemRoleQuery values.
+func (ProblemRoleQuery) AllValues() []ProblemRoleQuery {
+	return []ProblemRoleQuery{
+		ProblemRoleQueryOwner,
+		ProblemRoleQueryModerator,
+		ProblemRoleQueryViewer,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemRoleQuery) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemRoleQueryOwner:
+		return []byte(s), nil
+	case ProblemRoleQueryModerator:
+		return []byte(s), nil
+	case ProblemRoleQueryViewer:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemRoleQuery) UnmarshalText(data []byte) error {
+	switch ProblemRoleQuery(data) {
+	case ProblemRoleQueryOwner:
+		*s = ProblemRoleQueryOwner
+		return nil
+	case ProblemRoleQueryModerator:
+		*s = ProblemRoleQueryModerator
+		return nil
+	case ProblemRoleQueryViewer:
+		*s = ProblemRoleQueryViewer
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Problem sample data.
 // Ref: #/components/schemas/ProblemSampleModel
 type ProblemSampleModel struct {
@@ -7743,13 +8350,13 @@ func (s *ProblemStatement) SetCurrentLang(val OptString) {
 // Problem team data.
 // Ref: #/components/schemas/ProblemTeamModel
 type ProblemTeamModel struct {
-	Capabilities []string  `json:"capabilities"`
-	ProblemID    uuid.UUID `json:"problem_id"`
-	TeamID       uuid.UUID `json:"team_id"`
-	TeamName     string    `json:"team_name"`
-	TeamSlug     string    `json:"team_slug"`
-	Permission   string    `json:"permission"`
-	CreatedAt    time.Time `json:"created_at"`
+	Capabilities []string                   `json:"capabilities"`
+	ProblemID    uuid.UUID                  `json:"problem_id"`
+	TeamID       uuid.UUID                  `json:"team_id"`
+	TeamName     string                     `json:"team_name"`
+	TeamSlug     string                     `json:"team_slug"`
+	Permission   ProblemTeamModelPermission `json:"permission"`
+	CreatedAt    time.Time                  `json:"created_at"`
 }
 
 // GetCapabilities returns the value of Capabilities.
@@ -7778,7 +8385,7 @@ func (s *ProblemTeamModel) GetTeamSlug() string {
 }
 
 // GetPermission returns the value of Permission.
-func (s *ProblemTeamModel) GetPermission() string {
+func (s *ProblemTeamModel) GetPermission() ProblemTeamModelPermission {
 	return s.Permission
 }
 
@@ -7813,13 +8420,61 @@ func (s *ProblemTeamModel) SetTeamSlug(val string) {
 }
 
 // SetPermission sets the value of Permission.
-func (s *ProblemTeamModel) SetPermission(val string) {
+func (s *ProblemTeamModel) SetPermission(val ProblemTeamModelPermission) {
 	s.Permission = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
 func (s *ProblemTeamModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
+}
+
+type ProblemTeamModelPermission string
+
+const (
+	ProblemTeamModelPermissionAdmin ProblemTeamModelPermission = "admin"
+	ProblemTeamModelPermissionWrite ProblemTeamModelPermission = "write"
+	ProblemTeamModelPermissionRead  ProblemTeamModelPermission = "read"
+)
+
+// AllValues returns all ProblemTeamModelPermission values.
+func (ProblemTeamModelPermission) AllValues() []ProblemTeamModelPermission {
+	return []ProblemTeamModelPermission{
+		ProblemTeamModelPermissionAdmin,
+		ProblemTeamModelPermissionWrite,
+		ProblemTeamModelPermissionRead,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemTeamModelPermission) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemTeamModelPermissionAdmin:
+		return []byte(s), nil
+	case ProblemTeamModelPermissionWrite:
+		return []byte(s), nil
+	case ProblemTeamModelPermissionRead:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemTeamModelPermission) UnmarshalText(data []byte) error {
+	switch ProblemTeamModelPermission(data) {
+	case ProblemTeamModelPermissionAdmin:
+		*s = ProblemTeamModelPermissionAdmin
+		return nil
+	case ProblemTeamModelPermissionWrite:
+		*s = ProblemTeamModelPermissionWrite
+		return nil
+	case ProblemTeamModelPermissionRead:
+		*s = ProblemTeamModelPermissionRead
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Problem template data.
@@ -9200,12 +9855,12 @@ func (s *SupportedLanguagesResponse) SetLanguages(val []SupportedLanguage) {
 // Team member data.
 // Ref: #/components/schemas/TeamMemberModel
 type TeamMemberModel struct {
-	Capabilities []string  `json:"capabilities"`
-	UserID       uuid.UUID `json:"user_id"`
-	TeamID       uuid.UUID `json:"team_id"`
-	Username     string    `json:"username"`
-	Role         string    `json:"role"`
-	CreatedAt    time.Time `json:"created_at"`
+	Capabilities []string            `json:"capabilities"`
+	UserID       uuid.UUID           `json:"user_id"`
+	TeamID       uuid.UUID           `json:"team_id"`
+	Username     string              `json:"username"`
+	Role         TeamMemberModelRole `json:"role"`
+	CreatedAt    time.Time           `json:"created_at"`
 }
 
 // GetCapabilities returns the value of Capabilities.
@@ -9229,7 +9884,7 @@ func (s *TeamMemberModel) GetUsername() string {
 }
 
 // GetRole returns the value of Role.
-func (s *TeamMemberModel) GetRole() string {
+func (s *TeamMemberModel) GetRole() TeamMemberModelRole {
 	return s.Role
 }
 
@@ -9259,13 +9914,54 @@ func (s *TeamMemberModel) SetUsername(val string) {
 }
 
 // SetRole sets the value of Role.
-func (s *TeamMemberModel) SetRole(val string) {
+func (s *TeamMemberModel) SetRole(val TeamMemberModelRole) {
 	s.Role = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
 func (s *TeamMemberModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
+}
+
+type TeamMemberModelRole string
+
+const (
+	TeamMemberModelRoleMaintainer TeamMemberModelRole = "maintainer"
+	TeamMemberModelRoleMember     TeamMemberModelRole = "member"
+)
+
+// AllValues returns all TeamMemberModelRole values.
+func (TeamMemberModelRole) AllValues() []TeamMemberModelRole {
+	return []TeamMemberModelRole{
+		TeamMemberModelRoleMaintainer,
+		TeamMemberModelRoleMember,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s TeamMemberModelRole) MarshalText() ([]byte, error) {
+	switch s {
+	case TeamMemberModelRoleMaintainer:
+		return []byte(s), nil
+	case TeamMemberModelRoleMember:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *TeamMemberModelRole) UnmarshalText(data []byte) error {
+	switch TeamMemberModelRole(data) {
+	case TeamMemberModelRoleMaintainer:
+		*s = TeamMemberModelRoleMaintainer
+		return nil
+	case TeamMemberModelRoleMember:
+		*s = TeamMemberModelRoleMember
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Team data.
@@ -9348,6 +10044,47 @@ func (s *TeamModel) SetCreatedAt(val time.Time) {
 // SetUpdatedAt sets the value of UpdatedAt.
 func (s *TeamModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
+}
+
+type TeamRoleQuery string
+
+const (
+	TeamRoleQueryMaintainer TeamRoleQuery = "maintainer"
+	TeamRoleQueryMember     TeamRoleQuery = "member"
+)
+
+// AllValues returns all TeamRoleQuery values.
+func (TeamRoleQuery) AllValues() []TeamRoleQuery {
+	return []TeamRoleQuery{
+		TeamRoleQueryMaintainer,
+		TeamRoleQueryMember,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s TeamRoleQuery) MarshalText() ([]byte, error) {
+	switch s {
+	case TeamRoleQueryMaintainer:
+		return []byte(s), nil
+	case TeamRoleQueryMember:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *TeamRoleQuery) UnmarshalText(data []byte) error {
+	switch TeamRoleQuery(data) {
+	case TeamRoleQueryMaintainer:
+		*s = TeamRoleQueryMaintainer
+		return nil
+	case TeamRoleQueryMember:
+		*s = TeamRoleQueryMember
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Test detail item data.

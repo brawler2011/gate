@@ -2005,12 +2005,18 @@ export interface components {
         /**
          * @description Error data.
          * @example {
-         *       "error": "Resource not found"
+         *       "error": "Not Found",
+         *       "message": "Post not found",
+         *       "request_id": "req-123e4567-e89b-42d3-a456-426614174000"
          *     }
          */
         Error: {
-            /** @example Resource not found */
+            /** @example Not Found */
             error?: string;
+            /** @example Post not found */
+            message?: string;
+            /** @example req-123e4567-e89b-42d3-a456-426614174000 */
+            request_id?: string;
         };
         /**
          * @description Result of creation.
@@ -2103,6 +2109,9 @@ export interface components {
         /**
          * @description Problem data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "organization_login": "example",
@@ -2167,6 +2176,9 @@ export interface components {
         /**
          * @description Problems list item data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "organization_login": "example",
@@ -2202,6 +2214,9 @@ export interface components {
          * @example {
          *       "problems": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "organization_login": "example",
@@ -2229,6 +2244,9 @@ export interface components {
          * @description Result of get problem.
          * @example {
          *       "problem": {
+         *         "capabilities": [
+         *           "view"
+         *         ],
          *         "id": "123e4567-e89b-42d3-a456-426614174000",
          *         "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *         "organization_login": "example",
@@ -2260,6 +2278,9 @@ export interface components {
         /**
          * @description Contest problem data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "title": "Test problem",
          *       "time_limit": 1000,
@@ -2313,6 +2334,9 @@ export interface components {
          * @description Result of get contest problem.
          * @example {
          *       "problem": {
+         *         "capabilities": [
+         *           "view"
+         *         ],
          *         "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *         "title": "Test problem",
          *         "time_limit": 1000,
@@ -2340,6 +2364,9 @@ export interface components {
         /**
          * @description Contest data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "login": "contest-1",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -2417,6 +2444,9 @@ export interface components {
          * @example {
          *       "contests": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "login": "contest-1",
          *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -2451,6 +2481,9 @@ export interface components {
          * @example {
          *       "contests": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "login": "contest-1",
          *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -2483,6 +2516,9 @@ export interface components {
         /**
          * @description Contest problem list item data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "position": 1,
          *       "title": "Test task",
@@ -2519,6 +2555,9 @@ export interface components {
          * @description Result of get contest.
          * @example {
          *       "contest": {
+         *         "capabilities": [
+         *           "view"
+         *         ],
          *         "id": "123e4567-e89b-42d3-a456-426614174000",
          *         "login": "contest-1",
          *         "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -2537,6 +2576,9 @@ export interface components {
          *       },
          *       "problems": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "position": 1,
          *           "title": "Test task",
@@ -3029,6 +3071,9 @@ export interface components {
         /**
          * @description Dashboard contest data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "login": "contest-1",
          *       "title": "A + B",
@@ -3063,6 +3108,9 @@ export interface components {
         /**
          * @description Dashboard problem data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "title": "A + B",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -3094,6 +3142,9 @@ export interface components {
          * @example {
          *       "recent_contests": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "login": "contest-1",
          *           "title": "A + B",
@@ -3106,6 +3157,9 @@ export interface components {
          *       ],
          *       "my_problems": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "title": "A + B",
          *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -3198,11 +3252,14 @@ export interface components {
          * @example {
          *       "members": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "contest_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "username": "user123",
          *           "role": "user",
-         *           "contest_role": "example",
+         *           "contest_role": "participant",
          *           "created_at": "2026-01-01T12:00:00Z",
          *           "updated_at": "2026-01-01T12:00:00Z"
          *         }
@@ -3235,11 +3292,14 @@ export interface components {
         /**
          * @description Contest member data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "contest_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "user123",
          *       "role": "user",
-         *       "contest_role": "example",
+         *       "contest_role": "participant",
          *       "created_at": "2026-01-01T12:00:00Z",
          *       "updated_at": "2026-01-01T12:00:00Z"
          *     }
@@ -3252,8 +3312,10 @@ export interface components {
             contest_id: string;
             /** @example user123 */
             username: string;
-            role: string;
-            contest_role: string;
+            /** @enum {string} */
+            role: "user" | "admin";
+            /** @enum {string} */
+            contest_role: "owner" | "moderator" | "participant";
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -3262,6 +3324,9 @@ export interface components {
         /**
          * @description Result of get my contest role.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "role": "owner"
          *     }
          */
@@ -3631,6 +3696,9 @@ export interface components {
         /**
          * @description Organization data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "login": "example",
          *       "name": "main.cpp",
@@ -3661,6 +3729,9 @@ export interface components {
          * @example {
          *       "organizations": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "login": "example",
          *           "name": "main.cpp",
@@ -3685,6 +3756,9 @@ export interface components {
          * @description Result of get organization.
          * @example {
          *       "organization": {
+         *         "capabilities": [
+         *           "view"
+         *         ],
          *         "id": "123e4567-e89b-42d3-a456-426614174000",
          *         "login": "example",
          *         "name": "main.cpp",
@@ -3716,6 +3790,9 @@ export interface components {
         /**
          * @description Organization member data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "alice",
@@ -3730,7 +3807,8 @@ export interface components {
             /** Format: uuid */
             organization_id: string;
             username: string;
-            role: string;
+            /** @enum {string} */
+            role: "owner" | "admin" | "member";
             /** Format: date-time */
             created_at: string;
         };
@@ -3739,6 +3817,9 @@ export interface components {
          * @example {
          *       "members": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "username": "alice",
@@ -3761,6 +3842,9 @@ export interface components {
         /**
          * @description Team data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "name": "main.cpp",
          *       "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -3786,6 +3870,9 @@ export interface components {
          * @example {
          *       "teams": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "name": "main.cpp",
          *           "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -3809,6 +3896,9 @@ export interface components {
          * @description Result of get team.
          * @example {
          *       "team": {
+         *         "capabilities": [
+         *           "view"
+         *         ],
          *         "id": "123e4567-e89b-42d3-a456-426614174000",
          *         "name": "main.cpp",
          *         "organization_id": "123e4567-e89b-42d3-a456-426614174000",
@@ -3834,6 +3924,9 @@ export interface components {
         /**
          * @description Team member data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "alice",
@@ -3848,7 +3941,8 @@ export interface components {
             /** Format: uuid */
             team_id: string;
             username: string;
-            role: string;
+            /** @enum {string} */
+            role: "maintainer" | "member";
             /** Format: date-time */
             created_at: string;
         };
@@ -3857,6 +3951,9 @@ export interface components {
          * @example {
          *       "members": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "username": "alice",
@@ -3879,11 +3976,14 @@ export interface components {
         /**
          * @description Contest team data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "contest_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "team_name": "example",
          *       "team_slug": "example",
-         *       "contest_role": "example",
+         *       "contest_role": "participant",
          *       "created_at": "2026-01-01T12:00:00Z"
          *     }
          */
@@ -3895,7 +3995,8 @@ export interface components {
             team_id: string;
             team_name: string;
             team_slug: string;
-            contest_role: string;
+            /** @enum {string} */
+            contest_role: "moderator" | "participant";
             /** Format: date-time */
             created_at: string;
         };
@@ -3904,11 +4005,14 @@ export interface components {
          * @example {
          *       "teams": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "contest_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "team_name": "example",
          *           "team_slug": "example",
-         *           "contest_role": "example",
+         *           "contest_role": "participant",
          *           "created_at": "2026-01-01T12:00:00Z"
          *         }
          *       ]
@@ -3920,11 +4024,14 @@ export interface components {
         /**
          * @description Problem team data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "team_name": "example",
          *       "team_slug": "example",
-         *       "permission": "example",
+         *       "permission": "read",
          *       "created_at": "2026-01-01T12:00:00Z"
          *     }
          */
@@ -3936,7 +4043,8 @@ export interface components {
             team_id: string;
             team_name: string;
             team_slug: string;
-            permission: string;
+            /** @enum {string} */
+            permission: "admin" | "write" | "read";
             /** Format: date-time */
             created_at: string;
         };
@@ -3945,11 +4053,14 @@ export interface components {
          * @example {
          *       "teams": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "team_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "team_name": "example",
          *           "team_slug": "example",
-         *           "permission": "example",
+         *           "permission": "read",
          *           "created_at": "2026-01-01T12:00:00Z"
          *         }
          *       ]
@@ -3961,10 +4072,13 @@ export interface components {
         /**
          * @description Problem member data.
          * @example {
+         *       "capabilities": [
+         *         "view"
+         *       ],
          *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "alice",
-         *       "role": "user",
+         *       "role": "viewer",
          *       "created_at": "2026-01-01T12:00:00Z"
          *     }
          */
@@ -3975,7 +4089,8 @@ export interface components {
             /** Format: uuid */
             user_id: string;
             username: string;
-            role: string;
+            /** @enum {string} */
+            role: "owner" | "moderator" | "viewer";
             /** Format: date-time */
             created_at: string;
         };
@@ -3984,10 +4099,13 @@ export interface components {
          * @example {
          *       "members": [
          *         {
+         *           "capabilities": [
+         *             "view"
+         *           ],
          *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "username": "alice",
-         *           "role": "user",
+         *           "role": "viewer",
          *           "created_at": "2026-01-01T12:00:00Z"
          *         }
          *       ],
@@ -4977,8 +5095,16 @@ export interface components {
         ProblemIDPathBySnakeName: string;
         /** @description UUID of the user. */
         UserIDQuery: string;
-        /** @description Role to assign to the member. */
-        RoleQuery: string;
+        /** @description Role to assign to the organization member. */
+        OrganizationRoleQuery: "owner" | "admin" | "member";
+        /** @description Role to assign to the team member. */
+        TeamRoleQuery: "maintainer" | "member";
+        /** @description Role to assign to the problem member. */
+        ProblemRoleQuery: "owner" | "moderator" | "viewer";
+        /** @description Role to assign to the contest member. */
+        ContestRoleQuery: "owner" | "moderator" | "participant";
+        /** @description Role to assign to the contest team. */
+        ContestTeamRoleQuery: "moderator" | "participant";
         /** @description UUID of the team. */
         TeamIDQuery: string;
         /** @description UUID of the user. */
@@ -5176,7 +5302,11 @@ export type ParameterContestLoginPath = components['parameters']['ContestLoginPa
 export type ParameterProblemIdQuery = components['parameters']['ProblemIDQuery'];
 export type ParameterProblemIdPathBySnakeName = components['parameters']['ProblemIDPathBySnakeName'];
 export type ParameterUserIdQuery = components['parameters']['UserIDQuery'];
-export type ParameterRoleQuery = components['parameters']['RoleQuery'];
+export type ParameterOrganizationRoleQuery = components['parameters']['OrganizationRoleQuery'];
+export type ParameterTeamRoleQuery = components['parameters']['TeamRoleQuery'];
+export type ParameterProblemRoleQuery = components['parameters']['ProblemRoleQuery'];
+export type ParameterContestRoleQuery = components['parameters']['ContestRoleQuery'];
+export type ParameterContestTeamRoleQuery = components['parameters']['ContestTeamRoleQuery'];
 export type ParameterTeamIdQuery = components['parameters']['TeamIDQuery'];
 export type ParameterOptionalUserIdQuery = components['parameters']['OptionalUserIDQuery'];
 export type ParameterOptionalProblemIdQuery = components['parameters']['OptionalProblemIDQuery'];
@@ -6028,8 +6158,8 @@ export interface operations {
             query: {
                 /** @description UUID of the user. */
                 user_id: components["parameters"]["UserIDQuery"];
-                /** @description Role to assign to the member. */
-                role: components["parameters"]["RoleQuery"];
+                /** @description Role to assign to the contest member. */
+                role: components["parameters"]["ContestRoleQuery"];
             };
             header?: never;
             path: {
@@ -6082,7 +6212,7 @@ export interface operations {
                 /** @description UUID of the team. */
                 team_id: components["parameters"]["TeamIDQuery"];
                 /** @description Role to assign to the member. */
-                role?: string;
+                role?: "moderator" | "participant";
             };
             header?: never;
             path: {
@@ -6135,8 +6265,8 @@ export interface operations {
             query: {
                 /** @description UUID of the team. */
                 team_id: components["parameters"]["TeamIDQuery"];
-                /** @description Role to assign to the member. */
-                role: components["parameters"]["RoleQuery"];
+                /** @description Role to assign to the contest team. */
+                role: components["parameters"]["ContestTeamRoleQuery"];
             };
             header?: never;
             path: {
@@ -7319,7 +7449,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "image/png": unknown;
+                    "image/png": string;
                 };
             };
             /** @description Not modified */
@@ -7593,8 +7723,8 @@ export interface operations {
             query: {
                 /** @description UUID of the user. */
                 user_id: components["parameters"]["UserIDQuery"];
-                /** @description Role to assign to the member. */
-                role: components["parameters"]["RoleQuery"];
+                /** @description Role to assign to the problem member. */
+                role: components["parameters"]["ProblemRoleQuery"];
             };
             header?: never;
             path: {
@@ -7632,7 +7762,7 @@ export interface operations {
                      * Format: binary
                      * @description Problem package archive (zip)
                      */
-                    package?: string;
+                    package: string;
                 };
             };
         };
@@ -9223,8 +9353,8 @@ export interface operations {
             query: {
                 /** @description UUID of the user. */
                 user_id: components["parameters"]["UserIDQuery"];
-                /** @description Role to assign to the member. */
-                role: components["parameters"]["RoleQuery"];
+                /** @description Role to assign to the organization member. */
+                role: components["parameters"]["OrganizationRoleQuery"];
             };
             header?: never;
             path: {
@@ -9806,7 +9936,7 @@ export interface operations {
                 /** @description UUID of the user. */
                 user_id: components["parameters"]["UserIDQuery"];
                 /** @description Role to assign to the member. */
-                role?: string;
+                role?: "maintainer" | "member";
             };
             header?: never;
             path: {
@@ -9855,8 +9985,8 @@ export interface operations {
             query: {
                 /** @description UUID of the user. */
                 user_id: components["parameters"]["UserIDQuery"];
-                /** @description Role to assign to the member. */
-                role: components["parameters"]["RoleQuery"];
+                /** @description Role to assign to the team member. */
+                role: components["parameters"]["TeamRoleQuery"];
             };
             header?: never;
             path: {
@@ -9970,11 +10100,11 @@ export interface operations {
         requestBody: {
             content: {
                 "multipart/form-data": {
-                    title?: string;
-                    description?: string;
-                    text?: string;
+                    title: string;
+                    description: string;
+                    text: string;
                     /** Format: binary */
-                    preview_image?: string;
+                    preview_image: string;
                 };
             };
         };
@@ -10205,7 +10335,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "image/png": unknown;
+                    "image/png": string;
                 };
             };
             /** @description Not modified */

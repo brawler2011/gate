@@ -20,11 +20,11 @@ type PackagesReader interface {
 
 // ImportProblem handles POST /problems/{id}/import
 func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProblemReq, params corev1.ImportProblemParams) (*corev1.ImportProblemOK, error) {
-	if req == nil || !req.Package.IsSet() {
+	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "expected 'package' field")
 	}
 
-	mpFile := req.Package.Value
+	mpFile := req.Package
 	if mpFile.File == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing file content")
 	}

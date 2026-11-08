@@ -3131,11 +3131,11 @@ func (s *ContestMemberModel) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("role")
-		e.Str(s.Role)
+		s.Role.Encode(e)
 	}
 	{
 		e.FieldStart("contest_role")
-		e.Str(s.ContestRole)
+		s.ContestRole.Encode(e)
 	}
 	{
 		e.FieldStart("created_at")
@@ -3226,9 +3226,7 @@ func (s *ContestMemberModel) Decode(d *jx.Decoder) error {
 		case "role":
 			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
-				v, err := d.Str()
-				s.Role = string(v)
-				if err != nil {
+				if err := s.Role.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -3238,9 +3236,7 @@ func (s *ContestMemberModel) Decode(d *jx.Decoder) error {
 		case "contest_role":
 			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
-				v, err := d.Str()
-				s.ContestRole = string(v)
-				if err != nil {
+				if err := s.ContestRole.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -3323,6 +3319,88 @@ func (s *ContestMemberModel) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ContestMemberModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ContestMemberModelContestRole as json.
+func (s ContestMemberModelContestRole) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ContestMemberModelContestRole from json.
+func (s *ContestMemberModelContestRole) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ContestMemberModelContestRole to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ContestMemberModelContestRole(v) {
+	case ContestMemberModelContestRoleOwner:
+		*s = ContestMemberModelContestRoleOwner
+	case ContestMemberModelContestRoleModerator:
+		*s = ContestMemberModelContestRoleModerator
+	case ContestMemberModelContestRoleParticipant:
+		*s = ContestMemberModelContestRoleParticipant
+	default:
+		*s = ContestMemberModelContestRole(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ContestMemberModelContestRole) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ContestMemberModelContestRole) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ContestMemberModelRole as json.
+func (s ContestMemberModelRole) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ContestMemberModelRole from json.
+func (s *ContestMemberModelRole) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ContestMemberModelRole to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ContestMemberModelRole(v) {
+	case ContestMemberModelRoleUser:
+		*s = ContestMemberModelRoleUser
+	case ContestMemberModelRoleAdmin:
+		*s = ContestMemberModelRoleAdmin
+	default:
+		*s = ContestMemberModelRole(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ContestMemberModelRole) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ContestMemberModelRole) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -4661,7 +4739,7 @@ func (s *ContestTeamModel) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("contest_role")
-		e.Str(s.ContestRole)
+		s.ContestRole.Encode(e)
 	}
 	{
 		e.FieldStart("created_at")
@@ -4759,9 +4837,7 @@ func (s *ContestTeamModel) Decode(d *jx.Decoder) error {
 		case "contest_role":
 			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
-				v, err := d.Str()
-				s.ContestRole = string(v)
-				if err != nil {
+				if err := s.ContestRole.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -4832,6 +4908,46 @@ func (s *ContestTeamModel) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ContestTeamModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ContestTeamModelContestRole as json.
+func (s ContestTeamModelContestRole) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ContestTeamModelContestRole from json.
+func (s *ContestTeamModelContestRole) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ContestTeamModelContestRole to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ContestTeamModelContestRole(v) {
+	case ContestTeamModelContestRoleModerator:
+		*s = ContestTeamModelContestRoleModerator
+	case ContestTeamModelContestRoleParticipant:
+		*s = ContestTeamModelContestRoleParticipant
+	default:
+		*s = ContestTeamModelContestRole(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ContestTeamModelContestRole) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ContestTeamModelContestRole) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -6621,10 +6737,24 @@ func (s *Error) encodeFields(e *jx.Encoder) {
 			s.Error.Encode(e)
 		}
 	}
+	{
+		if s.Message.Set {
+			e.FieldStart("message")
+			s.Message.Encode(e)
+		}
+	}
+	{
+		if s.RequestID.Set {
+			e.FieldStart("request_id")
+			s.RequestID.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfError = [1]string{
+var jsonFieldsNameOfError = [3]string{
 	0: "error",
+	1: "message",
+	2: "request_id",
 }
 
 // Decode decodes Error from json.
@@ -6644,6 +6774,26 @@ func (s *Error) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"error\"")
+			}
+		case "message":
+			if err := func() error {
+				s.Message.Reset()
+				if err := s.Message.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"message\"")
+			}
+		case "request_id":
+			if err := func() error {
+				s.RequestID.Reset()
+				if err := s.RequestID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"request_id\"")
 			}
 		default:
 			return d.Skip()
@@ -13970,7 +14120,7 @@ func (s *OrganizationMemberModel) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("role")
-		e.Str(s.Role)
+		s.Role.Encode(e)
 	}
 	{
 		e.FieldStart("created_at")
@@ -14055,9 +14205,7 @@ func (s *OrganizationMemberModel) Decode(d *jx.Decoder) error {
 		case "role":
 			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
-				v, err := d.Str()
-				s.Role = string(v)
-				if err != nil {
+				if err := s.Role.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -14128,6 +14276,48 @@ func (s *OrganizationMemberModel) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OrganizationMemberModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes OrganizationMemberModelRole as json.
+func (s OrganizationMemberModelRole) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes OrganizationMemberModelRole from json.
+func (s *OrganizationMemberModelRole) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode OrganizationMemberModelRole to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch OrganizationMemberModelRole(v) {
+	case OrganizationMemberModelRoleOwner:
+		*s = OrganizationMemberModelRoleOwner
+	case OrganizationMemberModelRoleAdmin:
+		*s = OrganizationMemberModelRoleAdmin
+	case OrganizationMemberModelRoleMember:
+		*s = OrganizationMemberModelRoleMember
+	default:
+		*s = OrganizationMemberModelRole(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OrganizationMemberModelRole) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OrganizationMemberModelRole) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -15240,7 +15430,7 @@ func (s *ProblemMemberModel) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("role")
-		e.Str(s.Role)
+		s.Role.Encode(e)
 	}
 	{
 		e.FieldStart("created_at")
@@ -15325,9 +15515,7 @@ func (s *ProblemMemberModel) Decode(d *jx.Decoder) error {
 		case "role":
 			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
-				v, err := d.Str()
-				s.Role = string(v)
-				if err != nil {
+				if err := s.Role.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -15398,6 +15586,48 @@ func (s *ProblemMemberModel) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ProblemMemberModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ProblemMemberModelRole as json.
+func (s ProblemMemberModelRole) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ProblemMemberModelRole from json.
+func (s *ProblemMemberModelRole) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ProblemMemberModelRole to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ProblemMemberModelRole(v) {
+	case ProblemMemberModelRoleOwner:
+		*s = ProblemMemberModelRoleOwner
+	case ProblemMemberModelRoleModerator:
+		*s = ProblemMemberModelRoleModerator
+	case ProblemMemberModelRoleViewer:
+		*s = ProblemMemberModelRoleViewer
+	default:
+		*s = ProblemMemberModelRole(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ProblemMemberModelRole) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ProblemMemberModelRole) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -16222,7 +16452,7 @@ func (s *ProblemTeamModel) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("permission")
-		e.Str(s.Permission)
+		s.Permission.Encode(e)
 	}
 	{
 		e.FieldStart("created_at")
@@ -16320,9 +16550,7 @@ func (s *ProblemTeamModel) Decode(d *jx.Decoder) error {
 		case "permission":
 			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
-				v, err := d.Str()
-				s.Permission = string(v)
-				if err != nil {
+				if err := s.Permission.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -16393,6 +16621,48 @@ func (s *ProblemTeamModel) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ProblemTeamModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ProblemTeamModelPermission as json.
+func (s ProblemTeamModelPermission) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ProblemTeamModelPermission from json.
+func (s *ProblemTeamModelPermission) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ProblemTeamModelPermission to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ProblemTeamModelPermission(v) {
+	case ProblemTeamModelPermissionAdmin:
+		*s = ProblemTeamModelPermissionAdmin
+	case ProblemTeamModelPermissionWrite:
+		*s = ProblemTeamModelPermissionWrite
+	case ProblemTeamModelPermissionRead:
+		*s = ProblemTeamModelPermissionRead
+	default:
+		*s = ProblemTeamModelPermission(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ProblemTeamModelPermission) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ProblemTeamModelPermission) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -19586,7 +19856,7 @@ func (s *TeamMemberModel) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("role")
-		e.Str(s.Role)
+		s.Role.Encode(e)
 	}
 	{
 		e.FieldStart("created_at")
@@ -19671,9 +19941,7 @@ func (s *TeamMemberModel) Decode(d *jx.Decoder) error {
 		case "role":
 			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
-				v, err := d.Str()
-				s.Role = string(v)
-				if err != nil {
+				if err := s.Role.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -19744,6 +20012,46 @@ func (s *TeamMemberModel) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *TeamMemberModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes TeamMemberModelRole as json.
+func (s TeamMemberModelRole) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes TeamMemberModelRole from json.
+func (s *TeamMemberModelRole) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode TeamMemberModelRole to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch TeamMemberModelRole(v) {
+	case TeamMemberModelRoleMaintainer:
+		*s = TeamMemberModelRoleMaintainer
+	case TeamMemberModelRoleMember:
+		*s = TeamMemberModelRoleMember
+	default:
+		*s = TeamMemberModelRole(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s TeamMemberModelRole) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *TeamMemberModelRole) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

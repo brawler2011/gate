@@ -199,7 +199,10 @@ export const ContestTeamsManagement = ({
       {
         params: {
           path: {org_login: orgLogin, contest_login: contestLogin},
-          query: {team_id: editingTeam.teamId, role: newRole},
+          query: {
+            team_id: editingTeam.teamId,
+            role: newRole as "moderator" | "participant",
+          },
         },
       },
     );

@@ -89,6 +89,7 @@ type IntegrationTestSuite struct {
 	organizationsRepo *pgstore.OrganizationsRepo
 	teamsRepo         *pgstore.TeamsRepo
 	problemsRepo      *pgstore.ProblemsRepo
+	storage           storage.Storage
 }
 
 func (s *IntegrationTestSuite) getStatusCode(err error) int {
@@ -165,7 +166,7 @@ func (s *IntegrationTestSuite) SetupTest() {
 func (s *IntegrationTestSuite) TearDownTest() {
 	s.ctrl.Finish()
 	// Clean up tables (in reverse dependency order with CASCADE)
-	_, err := s.dbPool.Exec(s.ctx, "TRUNCATE TABLE organizations CASCADE")
+	_, err := s.dbPool.Exec(s.ctx, "TRUNCATE TABLE organizations, users CASCADE")
 	s.Require().NoError(err)
 }
 
@@ -180,6 +181,7 @@ func (s *IntegrationTestSuite) initApp() {
 	blogsRepo := pgstore.NewBlogsRepo(s.dbPool)
 	tempStoragePath := s.T().TempDir()
 	testStorage := storage.NewLocalStorage(tempStoragePath)
+	s.storage = testStorage
 	workspaceStorage := problems.NewWorkspaceStorage(testStorage, "integration-workshop", problems.NewWorkspaceCatalog(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool)))
 
 	authRepo := pgstore.NewAuthRepo(s.dbPool)

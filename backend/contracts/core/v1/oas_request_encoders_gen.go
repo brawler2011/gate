@@ -271,10 +271,7 @@ func encodeCreatePostRequest(
 			Explode: true,
 		}
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := request.Title.Get(); ok {
-				return e.EncodeValue(conv.StringToString(val))
-			}
-			return nil
+			return e.EncodeValue(conv.StringToString(request.Title))
 		}); err != nil {
 			return errors.Wrap(err, "encode query")
 		}
@@ -287,10 +284,7 @@ func encodeCreatePostRequest(
 			Explode: true,
 		}
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := request.Description.Get(); ok {
-				return e.EncodeValue(conv.StringToString(val))
-			}
-			return nil
+			return e.EncodeValue(conv.StringToString(request.Description))
 		}); err != nil {
 			return errors.Wrap(err, "encode query")
 		}
@@ -303,19 +297,14 @@ func encodeCreatePostRequest(
 			Explode: true,
 		}
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := request.Text.Get(); ok {
-				return e.EncodeValue(conv.StringToString(val))
-			}
-			return nil
+			return e.EncodeValue(conv.StringToString(request.Text))
 		}); err != nil {
 			return errors.Wrap(err, "encode query")
 		}
 	}
 	body, boundary := ht.CreateMultipartBody(func(w *multipart.Writer) error {
-		if val, ok := request.PreviewImage.Get(); ok {
-			if err := val.WriteMultipart("preview_image", w); err != nil {
-				return errors.Wrap(err, "write \"preview_image\"")
-			}
+		if err := request.PreviewImage.WriteMultipart("preview_image", w); err != nil {
+			return errors.Wrap(err, "write \"preview_image\"")
 		}
 		if err := q.WriteMultipart(w); err != nil {
 			return errors.Wrap(err, "write multipart")
@@ -471,10 +460,8 @@ func encodeImportProblemRequest(
 
 	q := uri.NewFormEncoder(map[string]string{})
 	body, boundary := ht.CreateMultipartBody(func(w *multipart.Writer) error {
-		if val, ok := request.Package.Get(); ok {
-			if err := val.WriteMultipart("package", w); err != nil {
-				return errors.Wrap(err, "write \"package\"")
-			}
+		if err := request.Package.WriteMultipart("package", w); err != nil {
+			return errors.Wrap(err, "write \"package\"")
 		}
 		if err := q.WriteMultipart(w); err != nil {
 			return errors.Wrap(err, "write multipart")

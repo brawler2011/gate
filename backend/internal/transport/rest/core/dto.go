@@ -564,7 +564,7 @@ func organizationMemberDTO(m organizationsmodel.OrganizationMember) corev1.Organ
 		UserID:         m.UserID,
 		OrganizationID: m.OrganizationID,
 		Username:       m.Username,
-		Role:           string(m.Role),
+		Role:           corev1.OrganizationMemberModelRole(m.Role),
 		CreatedAt:      m.CreatedAt,
 	}
 }
@@ -611,7 +611,7 @@ func teamMemberDTO(m organizationsmodel.TeamMember) corev1.TeamMemberModel {
 		UserID:    m.UserID,
 		TeamID:    m.TeamID,
 		Username:  m.Username,
-		Role:      string(m.Role),
+		Role:      corev1.TeamMemberModelRole(m.Role),
 		CreatedAt: m.CreatedAt,
 	}
 }
@@ -845,7 +845,7 @@ func contestTeamDTO(ct contestsmodel.ContestTeam) corev1.ContestTeamModel {
 		TeamID:      ct.TeamID,
 		TeamName:    ct.TeamName,
 		TeamSlug:    ct.TeamSlug,
-		ContestRole: string(ct.Role),
+		ContestRole: corev1.ContestTeamModelContestRole(ct.Role),
 
 		CreatedAt: ct.CreatedAt,
 	}
@@ -867,7 +867,7 @@ func problemTeamDTO(pt problemsmodel.ProblemTeam) corev1.ProblemTeamModel {
 		TeamID:     pt.TeamID,
 		TeamName:   pt.TeamName,
 		TeamSlug:   pt.TeamSlug,
-		Permission: string(pt.Permission),
+		Permission: corev1.ProblemTeamModelPermission(pt.Permission),
 		CreatedAt:  pt.CreatedAt,
 	}
 }
@@ -887,7 +887,7 @@ func problemMemberDTO(pm problemsmodel.ProblemMember) corev1.ProblemMemberModel 
 		ProblemID: pm.ProblemID,
 		UserID:    pm.UserID,
 		Username:  pm.Username,
-		Role:      string(pm.Role),
+		Role:      corev1.ProblemMemberModelRole(pm.Role),
 		CreatedAt: pm.CreatedAt,
 	}
 }

@@ -1303,7 +1303,7 @@ func (c *Client) sendAddOrganizationMember(ctx context.Context, params AddOrgani
 		}
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Role))
+			return e.EncodeValue(conv.StringToString(string(params.Role)))
 		}); err != nil {
 			return res, errors.Wrap(err, "encode query")
 		}
@@ -1397,7 +1397,7 @@ func (c *Client) sendAddTeamMember(ctx context.Context, params AddTeamMemberPara
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Role.Get(); ok {
-				return e.EncodeValue(conv.StringToString(val))
+				return e.EncodeValue(conv.StringToString(string(val)))
 			}
 			return nil
 		}); err != nil {
@@ -3430,7 +3430,7 @@ func (c *Client) sendCreateContestTeam(ctx context.Context, params CreateContest
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Role.Get(); ok {
-				return e.EncodeValue(conv.StringToString(val))
+				return e.EncodeValue(conv.StringToString(string(val)))
 			}
 			return nil
 		}); err != nil {
@@ -14817,7 +14817,7 @@ func (c *Client) sendUpdateContestMember(ctx context.Context, params UpdateConte
 		}
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Role))
+			return e.EncodeValue(conv.StringToString(string(params.Role)))
 		}); err != nil {
 			return res, errors.Wrap(err, "encode query")
 		}
@@ -14929,7 +14929,7 @@ func (c *Client) sendUpdateContestTeam(ctx context.Context, params UpdateContest
 		}
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Role))
+			return e.EncodeValue(conv.StringToString(string(params.Role)))
 		}); err != nil {
 			return res, errors.Wrap(err, "encode query")
 		}
@@ -15630,7 +15630,7 @@ func (c *Client) sendUpdateProblemMember(ctx context.Context, params UpdateProbl
 		}
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Role))
+			return e.EncodeValue(conv.StringToString(string(params.Role)))
 		}); err != nil {
 			return res, errors.Wrap(err, "encode query")
 		}
@@ -16279,7 +16279,7 @@ func (c *Client) sendUpdateTeamMemberRole(ctx context.Context, params UpdateTeam
 		}
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Role))
+			return e.EncodeValue(conv.StringToString(string(params.Role)))
 		}); err != nil {
 			return res, errors.Wrap(err, "encode query")
 		}
