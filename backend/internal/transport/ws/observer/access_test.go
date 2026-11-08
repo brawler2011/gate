@@ -109,6 +109,24 @@ func (f *wsFixture) connect(t *testing.T, path string) *websocket.Conn {
 	return conn
 }
 
+func (f *wsFixture) waitSubscribed(t *testing.T) {
+	t.Helper()
+	require.Eventually(t, func() bool {
+		f.hub.mu.RLock()
+		defer f.hub.mu.RUnlock()
+		return len(f.hub.subscribers) == 1
+	}, 5*time.Second, 5*time.Millisecond)
+}
+
+func (f *wsFixture) waitContestSubscribed(t *testing.T) {
+	t.Helper()
+	require.Eventually(t, func() bool {
+		f.contests.mu.RLock()
+		defer f.contests.mu.RUnlock()
+		return len(f.contests.subscribers) == 1
+	}, 5*time.Second, 5*time.Millisecond)
+}
+
 func (f *wsFixture) path(kind string) string {
 	return "/ws/" + kind + "?contestId=" + f.stub.contest.ID.String() + "&since=0"
 }
@@ -276,6 +294,7 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	f.stub.change(func() { f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true} })
 	requireClose(t, conn, 1011)
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
+	f.waitSubscribed(t)
 	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	require.Equal(t, true, readPayload(t, conn)["frozen"])
 	f.stub.change(func() {
@@ -283,6 +302,7 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	})
 	requireClose(t, conn, 1011)
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
+	f.waitSubscribed(t)
 	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	payload := readPayload(t, conn)
 	require.NotContains(t, payload, "source")
@@ -294,6 +314,7 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	f.stub.change(func() { f.stub.permissions.ListOwnSubmissions = true })
 	requireClose(t, conn, 1011)
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
+	f.waitSubscribed(t)
 	created.SubmissionEventMeta = f.meta(f.stub.user.Id)
 	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	require.Equal(t, "code", readPayload(t, conn)["source"])
@@ -310,6 +331,7 @@ func TestClarificationsUseCurrentManagePermission(t *testing.T) {
 	f.stub.change(func() { f.stub.permissions.ManageContest = false; f.stub.permissions.ListOwnSubmissions = true })
 	requireClose(t, conn, 1011)
 	conn = f.connect(t, "/ws/contests?contestId="+f.stub.contest.ID.String())
+	f.waitContestSubscribed(t)
 	f.publish(t, contestsmodel.ContestEventClarificationCreated, event)
 	eventCopy := *event
 	eventCopy.UserID = f.stub.user.Id
@@ -491,6 +513,7 @@ func TestReplayRejectsFormerLiveProjectionAfterFreeze(t *testing.T) {
 	requireClose(t, conn, 1011)
 	// A fresh subscription receives only the newly projected, masked payload.
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
+	f.waitSubscribed(t)
 	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), State: 200, SubmissionEventMeta: f.meta(uuid.New())})
 	p := readPayload(t, conn)
 	require.Equal(t, true, p["frozen"])
