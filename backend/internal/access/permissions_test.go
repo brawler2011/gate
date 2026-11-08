@@ -232,7 +232,7 @@ func TestEffectiveContestRole_Resolution(t *testing.T) {
 			Visibility:     contestsmodel.ContestVisibilityPrivate,
 		}
 
-		role, _, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, adminID)
+		role, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, adminID)
 		require.NoError(t, err)
 		require.NotNil(t, role)
 		assert.Equal(t, contestsmodel.ContestRoleOwner, *role)
@@ -260,7 +260,7 @@ func TestEffectiveContestRole_Resolution(t *testing.T) {
 				Visibility:     contestsmodel.ContestVisibilityPrivate,
 			}
 
-			role, _, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, memberID)
+			role, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, memberID)
 			require.NoError(t, err)
 			require.NotNil(t, role)
 			assert.Equal(t, contestsmodel.ContestRoleOwner, *role)
@@ -278,7 +278,7 @@ func TestEffectiveContestRole_Resolution(t *testing.T) {
 			Visibility:     contestsmodel.ContestVisibilityPrivate,
 		}
 
-		role, _, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, contestOwnerID)
+		role, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, contestOwnerID)
 		require.NoError(t, err)
 		require.NotNil(t, role)
 		assert.Equal(t, contestsmodel.ContestRoleOwner, *role)
@@ -299,7 +299,7 @@ func TestEffectiveContestRole_Resolution(t *testing.T) {
 			ContestRole: contestsmodel.ContestRoleModerator,
 		}
 
-		role, _, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
+		role, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
 		require.NoError(t, err)
 		require.NotNil(t, role)
 		assert.Equal(t, contestsmodel.ContestRoleModerator, *role)
@@ -322,7 +322,7 @@ func TestEffectiveContestRole_Resolution(t *testing.T) {
 			{ContestID: f.contestID, TeamID: teamID, Role: contestsmodel.ContestRoleModerator},
 		}
 
-		role, _, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
+		role, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
 		require.NoError(t, err)
 		require.NotNil(t, role)
 		assert.Equal(t, contestsmodel.ContestRoleModerator, *role)
@@ -348,7 +348,7 @@ func TestEffectiveContestRole_Resolution(t *testing.T) {
 			{ContestID: f.contestID, TeamID: team2ID, Role: contestsmodel.ContestRoleModerator},
 		}
 
-		role, _, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
+		role, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
 		require.NoError(t, err)
 		require.NotNil(t, role)
 		assert.Equal(t, contestsmodel.ContestRoleModerator, *role)
@@ -367,7 +367,7 @@ func TestEffectiveContestRole_Resolution(t *testing.T) {
 			},
 		}
 
-		role, _, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
+		role, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
 		require.NoError(t, err)
 		require.NotNil(t, role)
 		assert.Equal(t, contestsmodel.ContestRoleParticipant, *role)
@@ -386,7 +386,7 @@ func TestEffectiveContestRole_Resolution(t *testing.T) {
 			},
 		}
 
-		role, _, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
+		role, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
 		require.NoError(t, err)
 		assert.Nil(t, role)
 	})
@@ -401,7 +401,7 @@ func TestEffectiveContestRole_Resolution(t *testing.T) {
 			Visibility:     contestsmodel.ContestVisibilityPrivate,
 		}
 
-		role, _, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
+		role, err := f.permUC.GetEffectiveContestRole(ctx, f.contestID, userID)
 		require.NoError(t, err)
 		assert.Nil(t, role)
 	})

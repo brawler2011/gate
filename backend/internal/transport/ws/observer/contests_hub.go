@@ -16,6 +16,7 @@ type ContestSubscriber struct {
 }
 
 type ContestsFilter struct {
+	Topics    []string
 	Since     uint64
 	ContestId uuid.UUID
 }
@@ -88,12 +89,14 @@ func (h *ContestsHub) Handle(ctx context.Context, eventType string, payload []by
 		return nil
 	}
 
-	h.broadcast(&WrappedEvent{
+	wrapped := &WrappedEvent{
 		Seq:        seq,
 		EventType:  eventType,
 		RawEvent:   event,
 		DTOPayload: clientPayload,
-	})
+	}
+	projectContestTopics(wrapped)
+	h.broadcast(wrapped)
 
 	return nil
 }
@@ -109,7 +112,7 @@ func (h *ContestsHub) subscribe(conn websocketConnection, filter *ContestsFilter
 	}
 	sub := &ContestSubscriber{subscription: newSubscription(conn), filter: filter}
 	h.subscribers[sub.id] = sub
-	return sub, history, nil
+	return sub, scopeHistory(history, filter.Topics), nil
 }
 
 func (h *ContestsHub) broadcast(event *WrappedEvent) {
@@ -117,9 +120,7 @@ func (h *ContestsHub) broadcast(event *WrappedEvent) {
 	h.mu.Lock()
 	for id, sub := range h.subscribers {
 		if sub.filter.Matches(event) {
-			select {
-			case sub.outbox <- event:
-			default:
+			if !sub.enqueue(scopeEvent(event, sub.filter.Topics)) {
 				delete(h.subscribers, id)
 				overflow = append(overflow, sub.subscription)
 			}

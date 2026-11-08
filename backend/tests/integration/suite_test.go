@@ -259,6 +259,7 @@ func (s *IntegrationTestSuite) initApp() {
 		},
 		nil,
 		false,
+		access.NewCapabilities(pgstore.NewPolicyFactsRepo(s.dbPool)),
 	)
 
 	// Server setup

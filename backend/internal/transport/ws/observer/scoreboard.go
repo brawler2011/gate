@@ -3,18 +3,27 @@ package observer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"time"
 
+	"github.com/brawler2011/gate/backend/pkg"
+
 	observerv1 "github.com/brawler2011/gate/backend/contracts/observer/v1"
+	m "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 )
 
 func scoreboardConfiguration(contest contestsmodel.Contest) string {
-	return fmt.Sprintf("%t/%v/%v/%v/%s/%d", contest.IsFrozenAt(time.Now()), contest.StartTime, contest.EndTime,
+	return scoreboardConfigurationAt(contest, time.Now().UTC())
+}
+func scoreboardConfigurationAt(contest contestsmodel.Contest, now time.Time) string {
+	started := contest.StartTime == nil || !now.Before(*contest.StartTime)
+	finished := contest.EndTime != nil && !now.Before(*contest.EndTime)
+	return fmt.Sprintf("%t/%t/%t/%v/%v/%v/%s/%d", started, finished, contest.IsFrozenAt(now), contest.StartTime, contest.EndTime,
 		contest.GetFreezeTime(), contest.GetFreezeStatus(), contest.GetPenaltyPerAttempt())
 }
 
@@ -79,7 +88,8 @@ func (h *Hub) projectScoreboard(ctx context.Context, event *WrappedEvent) error 
 	if err != nil {
 		return err
 	}
-	configuration := scoreboardConfiguration(contest)
+	event.projectionContest = &contest
+	configuration := scoreboardConfigurationAt(contest, m.ReadTime(ctx))
 	replace := configuration != previous
 	var public *contestsmodel.ScoreboardResponse
 	if replace {
@@ -123,6 +133,52 @@ func (h *Hub) releaseScoreboard(contestID *uuid.UUID) {
 	h.scoreboardReferences[*contestID]--
 	if h.scoreboardReferences[*contestID] == 0 {
 		delete(h.scoreboardReferences, *contestID)
+		delete(h.finalSnapshots, *contestID)
 		delete(h.scoreboardConfigurations, *contestID)
 	}
+}
+
+// A finish invalidates the running lease even without new judge events. Publish
+// one shared final snapshot before closing that lease; reconnect refreshes REST.
+type finalSnapshot struct {
+	configuration string
+	payload       []byte
+}
+
+func (s *Observer) sendFinalSnapshot(ctx context.Context, filter *SubmissionsFilter, conn eventConnection, cause error) {
+	ctx = m.WithReadTime(ctx, time.Now().UTC())
+	if !errors.Is(cause, pkg.ErrConflict) || filter.ContestId == nil || s.hub.scoreboard == nil {
+		return
+	}
+	_, p, err := s.currentAccess(ctx, filter)
+	if err != nil || !p.GetMonitor {
+		return
+	}
+	c, err := s.contests.GetContest(ctx, *filter.ContestId)
+	if err != nil || c.EndTime == nil || time.Now().Before(*c.EndTime) {
+		return
+	}
+	h := s.hub
+	h.scoreboardMu.Lock()
+	configuration := topicConfiguration(c)
+	cached, ok := h.finalSnapshots[c.ID]
+	if !ok || cached.configuration != configuration {
+		snapshot, err := h.scoreboard.ProjectScoreboard(ctx, c.ID, false)
+		if err != nil {
+			h.scoreboardMu.Unlock()
+			return
+		}
+		h.mu.RLock()
+		sequence := h.ring.MaxSeq()
+		h.mu.RUnlock()
+		payload, err := scoreboardEnvelope(snapshot, uuid.Nil, false, true, sequence)
+		if err != nil {
+			h.scoreboardMu.Unlock()
+			return
+		}
+		cached = finalSnapshot{configuration: configuration, payload: payload}
+		h.finalSnapshots[c.ID] = cached
+	}
+	h.scoreboardMu.Unlock()
+	_ = writeEvent(conn, cached.payload)
 }

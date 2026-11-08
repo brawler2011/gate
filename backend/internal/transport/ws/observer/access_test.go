@@ -75,8 +75,8 @@ type wsFixture struct {
 
 func newWSFixture(t *testing.T) *wsFixture {
 	t.Helper()
-	stub := &accessStub{user: accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}, contest: contestsmodel.Contest{ID: uuid.New()}, permissions: accessmodel.ContestPermissions{GetContest: true, ListOwnSubmissions: true}}
-	f := &wsFixture{stub: stub, hub: NewHub(100, nil, nil), contests: NewContestsHub(100), session: uuid.New()}
+	stub := &accessStub{user: accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}, contest: contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: "public"}, permissions: accessmodel.ContestPermissions{GetContest: true, ListOwnSubmissions: true}}
+	f := &wsFixture{stub: stub, hub: NewHub(100, stub, nil), contests: NewContestsHub(100), session: uuid.New()}
 	observer := NewObserver(f.hub, f.contests, middleware.AuthMiddleware(stub), stub, stub, stub)
 	f.server = httptest.NewServer(observer.Handler())
 	t.Cleanup(f.server.Close)
@@ -159,7 +159,7 @@ func TestHandshake(t *testing.T) {
 			permissions accessmodel.ContestPermissions
 			status      int
 		}{
-			{name: "guest", status: 401},
+			{name: "guest without audience", status: 403},
 			{name: "malformed contest", auth: true, suffix: "&contestId=bad", status: 400},
 			{name: "malformed since", auth: true, suffix: "&since=bad", status: 400},
 			{name: "empty since", auth: true, suffix: "&since=", status: 400},
@@ -198,8 +198,8 @@ func TestHandshake(t *testing.T) {
 
 func TestSubmissionHistoryQueueLiveAndRevocation(t *testing.T) {
 	f := newWSFixture(t)
-	f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true}
-	f.stub.contest.Settings = map[string]any{"freeze_status": contestsmodel.FreezeStatusFrozen}
+	f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ListOwnSubmissions: true}
+	f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusFrozen}
 	other := uuid.New()
 	meta := f.meta(other)
 	created := &submissionsmodel.SubmissionCreatedEvent{SubmissionEventMeta: meta, Id: uuid.New(), State: submissionsmodel.Saved, Source: "secret code"}
@@ -264,7 +264,7 @@ func TestDeliveryRevalidates(t *testing.T) {
 func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	f := newWSFixture(t)
 	f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ManageContest: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}
-	f.stub.contest.Settings = map[string]any{"freeze_status": contestsmodel.FreezeStatusFrozen}
+	f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusFrozen}
 	conn := f.connect(t, f.path("submissions"))
 	meta := f.meta(uuid.New())
 	id := uuid.New()
@@ -274,9 +274,15 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	f.publish(t, submissionsmodel.SubmissionEventTestStarted, &submissionsmodel.SubmissionTestStartedEvent{SubmissionEventMeta: meta, Id: id, Number: 7})
 	require.InDelta(t, float64(7), readPayload(t, conn)["number"], 0)
 	f.stub.change(func() { f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true} })
+	requireClose(t, conn, 1011)
+	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
 	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	require.Equal(t, true, readPayload(t, conn)["frozen"])
-	f.stub.change(func() { f.stub.contest.Settings = map[string]any{"freeze_status": contestsmodel.FreezeStatusUnfrozen} })
+	f.stub.change(func() {
+		f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusUnfrozen}
+	})
+	requireClose(t, conn, 1011)
+	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
 	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	payload := readPayload(t, conn)
 	require.NotContains(t, payload, "source")
@@ -284,7 +290,10 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	f.publish(t, submissionsmodel.SubmissionEventTestStarted, &submissionsmodel.SubmissionTestStartedEvent{SubmissionEventMeta: meta, Id: id, Number: 7})
 	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{SubmissionEventMeta: meta, Id: id, State: 200})
 	require.InDelta(t, float64(200), readPayload(t, conn)["state"], 0)
-	// Source belongs to author even without review permission.
+	// A participant can reconnect to the own projection without review permission.
+	f.stub.change(func() { f.stub.permissions.ListOwnSubmissions = true })
+	requireClose(t, conn, 1011)
+	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
 	created.SubmissionEventMeta = f.meta(f.stub.user.Id)
 	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
 	require.Equal(t, "code", readPayload(t, conn)["source"])
@@ -298,7 +307,9 @@ func TestClarificationsUseCurrentManagePermission(t *testing.T) {
 	f.publish(t, contestsmodel.ContestEventClarificationCreated, event)
 	conn := f.connect(t, f.path("contests"))
 	require.Equal(t, "private", readPayload(t, conn)["question"])
-	f.stub.change(func() { f.stub.permissions.ManageContest = false })
+	f.stub.change(func() { f.stub.permissions.ManageContest = false; f.stub.permissions.ListOwnSubmissions = true })
+	requireClose(t, conn, 1011)
+	conn = f.connect(t, "/ws/contests?contestId="+f.stub.contest.ID.String())
 	f.publish(t, contestsmodel.ContestEventClarificationCreated, event)
 	eventCopy := *event
 	eventCopy.UserID = f.stub.user.Id
@@ -354,11 +365,20 @@ func TestCatchUpAccessLoss(t *testing.T) {
 					} else {
 						f.stub.onPermissions = func() { f.stub.change(func() { f.stub.onPermissions = func() { publish(); revoke() } }) }
 					}
-					conn := f.connect(t, f.path(kind))
-					if phase == "queue" {
-						require.Contains(t, readPayload(t, conn), "id")
+					if phase == "history" {
+						conn, response, err := f.dial(t, f.path(kind), true)
+						require.Error(t, err)
+						require.Nil(t, conn)
+						expected := 500
+						if code == 1008 {
+							expected = 401
+						}
+						require.Equal(t, expected, response.StatusCode)
+						require.NoError(t, response.Body.Close())
+					} else {
+						conn := f.connect(t, f.path(kind))
+						requireClose(t, conn, code)
 					}
-					requireClose(t, conn, code)
 				})
 			}
 		}
@@ -371,7 +391,7 @@ func TestFreezeBoundaryJSON(t *testing.T) {
 		offset                             time.Duration
 		own, moderator, noBoundary, frozen bool
 	}{
-		{name: "before", status: "auto", offset: -time.Nanosecond},
+		{name: "before (late verdict remains hidden)", status: "auto", offset: -time.Nanosecond, frozen: true},
 		{name: "boundary", status: "auto", frozen: true},
 		{name: "after", status: "auto", offset: time.Nanosecond, frozen: true},
 		{name: "own", status: "auto", own: true},
@@ -381,11 +401,11 @@ func TestFreezeBoundaryJSON(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			f := newWSFixture(t)
-			f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ManageContest: test.moderator}
+			f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ManageContest: test.moderator, ListOwnSubmissions: test.own}
 			end := time.Now().Add(30 * time.Minute)
 			boundary := end.Add(-time.Hour)
 			f.stub.contest.EndTime = &end
-			f.stub.contest.Settings = map[string]any{"freeze_status": test.status, "freeze_duration_minutes": 60}
+			f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": test.status, "freeze_duration_minutes": 60}
 			if test.noBoundary {
 				f.stub.contest.EndTime = nil
 			}
@@ -410,4 +430,80 @@ func TestFreezeBoundaryJSON(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPublicGuestAudience(t *testing.T) {
+	f := newWSFixture(t)
+	f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
+	f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": "frozen"}
+	conn, resp, err := f.dial(t, f.path("submissions"), false)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), State: 200, SubmissionEventMeta: f.meta(uuid.New())})
+	payload := readPayload(t, conn)
+	require.Equal(t, true, payload["frozen"])
+	require.NotContains(t, payload, "state")
+}
+
+type revisionStub struct {
+	mu    sync.Mutex
+	value int64
+	err   error
+}
+
+func (r *revisionStub) AccessRevision(context.Context) (int64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.value, r.err
+}
+func TestIdleRevisionInvalidation(t *testing.T) {
+	for _, failure := range []bool{false, true} {
+		t.Run(fmt.Sprint(failure), func(t *testing.T) {
+			f := newWSFixture(t)
+			r := &revisionStub{value: 1}
+			server := httptest.NewServer(NewObserver(f.hub, f.contests, middleware.AuthMiddleware(f.stub), f.stub, f.stub, f.stub, r).Handler())
+			defer server.Close()
+			conn, resp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+f.path("submissions"), http.Header{"Cookie": {"session_id=" + f.session.String()}})
+			require.NoError(t, err)
+			require.NoError(t, resp.Body.Close())
+			defer conn.Close()
+			r.mu.Lock()
+			if failure {
+				r.err = errors.New("revision channel unavailable")
+			} else {
+				r.value++
+			}
+			r.mu.Unlock()
+			requireClose(t, conn, 1011)
+		})
+	}
+}
+
+func TestReplayRejectsFormerLiveProjectionAfterFreeze(t *testing.T) {
+	f := newWSFixture(t)
+	f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
+	f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": "unfrozen"}
+	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), State: 200, SubmissionEventMeta: f.meta(uuid.New())})
+	f.stub.change(func() {
+		f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": "frozen"}
+	})
+	conn := f.connect(t, f.path("submissions"))
+	requireClose(t, conn, 1011)
+	// A fresh subscription receives only the newly projected, masked payload.
+	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
+	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), State: 200, SubmissionEventMeta: f.meta(uuid.New())})
+	p := readPayload(t, conn)
+	require.Equal(t, true, p["frozen"])
+	require.NotContains(t, p, "state")
+}
+
+func TestInvalidSessionNeverDowngradesToPublicGuest(t *testing.T) {
+	f := newWSFixture(t)
+	f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
+	f.stub.authErr = pkg.ErrUnauthenticated
+	conn, response, err := f.dial(t, f.path("submissions"), true)
+	require.Error(t, err)
+	require.Nil(t, conn)
+	require.Equal(t, 401, response.StatusCode)
+	require.NoError(t, response.Body.Close())
 }

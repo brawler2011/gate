@@ -432,7 +432,7 @@ export const ParticipantsSection = ({
                         </Table.Td>
                         <Table.Td>
                           <Group gap="xs" wrap="nowrap">
-                            {user.contest_role !== "owner" ? (
+                            {user.capabilities.includes("change_role") ? (
                               <ActionIcon
                                 color="blue"
                                 variant="subtle"
@@ -444,6 +444,7 @@ export const ParticipantsSection = ({
                               <div style={{width: 28}} />
                             )}
                             <ActionIcon
+                              disabled={!user.capabilities.includes("remove")}
                               color="red"
                               variant="subtle"
                               onClick={() => handleDeleteParticipant(user.user_id)}

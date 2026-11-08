@@ -17,6 +17,7 @@ type CoreServer struct {
 	blogs         BlogsModule
 	natsJS        jetstream.JetStream
 	secureCookies bool
+	capabilities  CapabilityProjector
 }
 
 func NewCoreServer(
@@ -29,8 +30,9 @@ func NewCoreServer(
 	blogs BlogsModule,
 	natsJS jetstream.JetStream,
 	secureCookies bool,
+	capabilities ...CapabilityProjector,
 ) *CoreServer {
-	return &CoreServer{
+	server := &CoreServer{
 		identity:      identity,
 		organizations: organizations,
 		contests:      contests,
@@ -41,4 +43,8 @@ func NewCoreServer(
 		natsJS:        natsJS,
 		secureCookies: secureCookies,
 	}
+	if len(capabilities) > 0 {
+		server.capabilities = capabilities[0]
+	}
+	return server
 }

@@ -120,7 +120,7 @@ type PermissionsUC interface {
 
 	HasContestPermission(ctx context.Context, contestID uuid.UUID, userID uuid.UUID, action accessmodel.ContestAction) (bool, error)
 
-	GetEffectiveContestRole(ctx context.Context, contestID uuid.UUID, userID uuid.UUID) (*contestsmodel.ContestRole, contestsmodel.ContestPermissionMask, error)
+	GetEffectiveContestRole(ctx context.Context, contestID uuid.UUID, userID uuid.UUID) (*contestsmodel.ContestRole, error)
 }
 
 type ProblemsUC interface {

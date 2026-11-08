@@ -14,6 +14,7 @@ import {ProblemStatement} from "./ProblemStatement";
 import "./Problem.css";
 
 type ProblemModelProps = {
+  capabilities?: readonly string[];
   id?: string;
   problem_id?: string;
   organization_login?: string;
@@ -90,7 +91,7 @@ const ProblemComponent = ({
         letter={letter}
         timeLimit={problem.time_limit}
         memoryLimit={problem.memory_limit}
-        isManager={isManager}
+        isManager={Boolean(problem.capabilities?.includes("edit"))}
         problemId={activeProblemId}
         orgLogin={org}
       />

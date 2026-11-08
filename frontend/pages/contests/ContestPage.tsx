@@ -66,15 +66,10 @@ const Page = (): ReactNode => {
   if (!routeQuery.data) {
     return <QueryState error={routeQuery.error} />;
   }
-  const {response, user, contestRole} = routeQuery.data;
-  const checker = new PermissionChecker(
-    user,
-    contestRole?.role ?? null,
-    null,
-    contestRole?.permissionsMask ?? null,
-  );
+  const {response, user} = routeQuery.data;
+  const checker = new PermissionChecker();
   const isManager = checker.canManageContest(response.contest);
-  const hasAccess = Boolean(contestRole?.role);
+  const hasAccess = response.contest.capabilities.includes("list_own_submissions");
   return (
     <>
       <title>{response.contest.title}</title>

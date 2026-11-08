@@ -11,8 +11,37 @@ import (
 	"github.com/google/uuid"
 )
 
+const loadCapabilityUsers = `-- name: LoadCapabilityUsers :many
+SELECT id, jsonb_build_object('Id', id, 'Role', role, 'ExpiresAt', expires_at) AS facts FROM users WHERE id = ANY($1::uuid[])
+`
+
+type LoadCapabilityUsersRow struct {
+	ID    uuid.UUID `json:"id"`
+	Facts []byte    `json:"facts"`
+}
+
+func (q *Queries) LoadCapabilityUsers(ctx context.Context, ids []uuid.UUID) ([]LoadCapabilityUsersRow, error) {
+	rows, err := q.db.Query(ctx, loadCapabilityUsers, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LoadCapabilityUsersRow{}
+	for rows.Next() {
+		var i LoadCapabilityUsersRow
+		if err := rows.Scan(&i.ID, &i.Facts); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const loadContestFacts = `-- name: LoadContestFacts :many
-SELECT c.id, jsonb_build_object('ID', c.id, 'StartTime', c.start_time, 'EndTime', c.end_time, 'Settings', c.settings, 'Organization', jsonb_build_object('ID', o.id, 'Role', COALESCE(om.role::text, ''), 'JoinPolicy', o.join_policy), 'OwnerID', COALESCE(c.owner_id, '00000000-0000-0000-0000-000000000000'::uuid),
+SELECT c.id, jsonb_build_object('BlockedProblems', (SELECT COALESCE(jsonb_agg(b.problem_id), '[]'::jsonb) FROM contest_user_problem_blocks b WHERE b.contest_id=c.id AND b.user_id=$1::uuid), 'Owners', (SELECT jsonb_agg(jsonb_build_object('Id', u.id, 'Role', u.role, 'ExpiresAt', u.expires_at)) FROM users u WHERE u.expires_at IS NULL AND (u.id = c.owner_id OR EXISTS (SELECT 1 FROM contest_members own WHERE own.contest_id = c.id AND own.user_id = u.id AND own.role = 'owner'))), 'ID', c.id, 'StartTime', c.start_time, 'EndTime', c.end_time, 'Settings', c.settings, 'Organization', jsonb_build_object('ID', o.id, 'Role', COALESCE(om.role::text, ''), 'JoinPolicy', o.join_policy), 'OwnerID', COALESCE(c.owner_id, '00000000-0000-0000-0000-000000000000'::uuid),
     'Visibility', c.visibility, 'DirectRole', COALESCE(m.role::text, ''),
     'Teams', COALESCE((SELECT jsonb_agg(jsonb_build_object(
       'OrganizationID', t.organization_id, 'Membership', tm.role, 'Active', true, 'Role', link.role))
@@ -55,9 +84,46 @@ func (q *Queries) LoadContestFacts(ctx context.Context, arg LoadContestFactsPara
 	return items, nil
 }
 
+const loadOrganizationFacts = `-- name: LoadOrganizationFacts :many
+SELECT o.id, jsonb_build_object('ID', o.id, 'Role', COALESCE(om.role::text, ''), 'JoinPolicy', o.join_policy,
+ 'Owners', (SELECT jsonb_agg(jsonb_build_object('Id', u.id, 'Role', u.role, 'ExpiresAt', u.expires_at)) FROM organization_members own JOIN users u ON u.id = own.user_id WHERE own.organization_id = o.id AND own.role = 'owner' AND u.expires_at IS NULL)) AS facts
+FROM organizations o LEFT JOIN organization_members om ON om.organization_id = o.id AND om.user_id = $1::uuid
+WHERE o.id = ANY($2::uuid[])
+`
+
+type LoadOrganizationFactsParams struct {
+	ViewerID *uuid.UUID  `json:"viewer_id"`
+	Ids      []uuid.UUID `json:"ids"`
+}
+
+type LoadOrganizationFactsRow struct {
+	ID    uuid.UUID `json:"id"`
+	Facts []byte    `json:"facts"`
+}
+
+func (q *Queries) LoadOrganizationFacts(ctx context.Context, arg LoadOrganizationFactsParams) ([]LoadOrganizationFactsRow, error) {
+	rows, err := q.db.Query(ctx, loadOrganizationFacts, arg.ViewerID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LoadOrganizationFactsRow{}
+	for rows.Next() {
+		var i LoadOrganizationFactsRow
+		if err := rows.Scan(&i.ID, &i.Facts); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const loadProblemFacts = `-- name: LoadProblemFacts :many
 
-SELECT p.id, jsonb_build_object('ID', p.id, 'Organization', jsonb_build_object('ID', o.id, 'Role', COALESCE(om.role::text, ''), 'JoinPolicy', o.join_policy), 'OwnerID', COALESCE(p.owner_id, '00000000-0000-0000-0000-000000000000'::uuid),
+SELECT p.id, jsonb_build_object('Owners', (SELECT jsonb_agg(jsonb_build_object('Id', u.id, 'Role', u.role, 'ExpiresAt', u.expires_at)) FROM users u WHERE u.expires_at IS NULL AND (u.id = p.owner_id OR EXISTS (SELECT 1 FROM problem_members own WHERE own.problem_id = p.id AND own.user_id = u.id AND own.role = 'owner'))), 'ID', p.id, 'Organization', jsonb_build_object('ID', o.id, 'Role', COALESCE(om.role::text, ''), 'JoinPolicy', o.join_policy), 'OwnerID', COALESCE(p.owner_id, '00000000-0000-0000-0000-000000000000'::uuid),
     'Visibility', p.visibility, 'DirectRole', COALESCE(m.role::text, ''),
     'Teams', COALESCE((SELECT jsonb_agg(jsonb_build_object(
       'OrganizationID', t.organization_id, 'Membership', tm.role, 'Active', true, 'Role', link.permission))

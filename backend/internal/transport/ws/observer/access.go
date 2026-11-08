@@ -2,18 +2,16 @@ package observer
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	submissions "github.com/brawler2011/gate/backend/internal/submissions"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -28,29 +26,49 @@ func subscriptionError(w http.ResponseWriter, err error) {
 	http.Error(w, http.StatusText(code), code)
 }
 
-func (s *Observer) currentAccess(ctx context.Context, filter *SubmissionsFilter) (accessmodel.User, *accessmodel.ContestPermissions, error) {
+func (s *Observer) sessionActor(ctx context.Context) (accessmodel.User, error) {
+	if err := middleware.AuthenticationError(ctx); err != nil {
+		return accessmodel.User{}, err
+	}
+	if accessmodel.UserFromContext(ctx).IsGuest() {
+		return accessmodel.Guest, nil
+	}
 	session, err := middleware.GetSession(ctx)
 	if err != nil {
-		return accessmodel.User{}, nil, err
+		return accessmodel.User{}, err
 	}
-	user, err := s.auth.Authenticate(ctx, session.ID)
+	authenticate := s.auth.Authenticate
+	if validator, ok := s.auth.(interface {
+		ValidateSession(context.Context, uuid.UUID) (accessmodel.User, error)
+	}); ok {
+		authenticate = validator.ValidateSession
+	}
+	user, err := authenticate(ctx, session.ID)
 	if err != nil {
-		return accessmodel.User{}, nil, err
+		return user, err
 	}
 	if user.IsGuest() || user.Id != session.UserID {
-		return user, nil, pkg.ErrUnauthenticated
+		return user, pkg.ErrUnauthenticated
+	}
+	return user, nil
+}
+func (s *Observer) currentAccess(ctx context.Context, filter *SubmissionsFilter) (accessmodel.User, *accessmodel.ContestPermissions, error) {
+	ctx = accessmodel.WithReadTime(ctx, time.Now().UTC())
+	user, err := s.sessionActor(ctx)
+	if err != nil {
+		return user, nil, err
 	}
 	if filter.ContestId == nil {
+		if user.IsGuest() {
+			return user, nil, pkg.ErrUnauthenticated
+		}
 		if !user.IsAdmin() {
 			return user, nil, pkg.NoPermission
 		}
 		return user, nil, nil
 	}
 	permissions, err := s.permissions.GetContestPermissions(ctx, *filter.ContestId, user.Id)
-	if err != nil {
-		return user, nil, err
-	}
-	return user, permissions, nil
+	return user, permissions, err
 }
 
 func submissionAccess(user accessmodel.User, permissions *accessmodel.ContestPermissions, filter *SubmissionsFilter) bool {
@@ -58,21 +76,6 @@ func submissionAccess(user accessmodel.User, permissions *accessmodel.ContestPer
 		return user.IsAdmin()
 	}
 	return permissions.ListUsersSubmissions || permissions.GetMonitor || (permissions.ListOwnSubmissions && (filter.UserId == nil || *filter.UserId == user.Id))
-}
-
-func (s *Observer) checkSubscription(ctx context.Context, filter *SubmissionsFilter, contest bool) error {
-	user, permissions, err := s.currentAccess(ctx, filter)
-	if err != nil {
-		return err
-	}
-	if contest {
-		if !permissions.GetContest {
-			return pkg.NoPermission
-		}
-	} else if !submissionAccess(user, permissions, filter) {
-		return pkg.NoPermission
-	}
-	return nil
 }
 
 func closeVerification(conn eventConnection, err error) error {
@@ -104,13 +107,7 @@ func eventMeta(event *WrappedEvent) *submissionsmodel.SubmissionEventMeta {
 }
 
 func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter, event *WrappedEvent, conn eventConnection) error {
-	user, permissions, err := s.currentAccess(ctx, filter)
-	if err != nil {
-		return closeVerification(conn, err)
-	}
-	if !submissionAccess(user, permissions, filter) {
-		return closeVerification(conn, pkg.NoPermission)
-	}
+	ctx = accessmodel.WithReadTime(ctx, time.Now().UTC())
 	if !filter.Matches(event) {
 		return nil
 	}
@@ -118,92 +115,58 @@ func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter
 	if meta == nil {
 		return closeVerification(conn, pkg.ErrInternal)
 	}
-	if filter.ContestId == nil { // Global admin still checks that the event's contest exists.
-		if meta.ContestId == nil {
-			return writeEvent(conn, event.DTOPayload)
-		}
-		permissions, err = s.permissions.GetContestPermissions(ctx, *meta.ContestId, user.Id)
+	audience, viewer, configuration := filter.audience, filter.viewer, filter.configuration
+	if filter.ContestId == nil {
+		// The global feed is available only to a currently authenticated global admin.
+		user, _, err := s.currentAccess(ctx, filter)
 		if err != nil {
 			return closeVerification(conn, err)
 		}
-	}
-	own := meta.UserId != nil && *meta.UserId == user.Id
-	if !permissions.ListUsersSubmissions && !permissions.GetMonitor && (!own || !permissions.ListOwnSubmissions) {
-		return nil
-	}
-	contest, err := s.contests.GetContest(ctx, *meta.ContestId)
-	if err != nil {
-		return closeVerification(conn, err)
-	}
-	view := submissions.SubmissionView(&contest, meta.UserId, meta.CreatedAt, user.Id, permissions, time.Now())
-	if view.Frozen && event.EventType != submissionsmodel.SubmissionEventCreated && event.EventType != submissionsmodel.SubmissionEventCompleted {
-		return nil
-	}
-	if event.EventType == submissionsmodel.SubmissionEventTestStarted && !view.Details {
-		return nil
-	}
-	// Decode the contract envelope to remove fields rather than inventing result values.
-	var envelope struct {
-		EventType string                     `json:"event_type"`
-		Sequence  uint64                     `json:"sequence"`
-		Payload   map[string]json.RawMessage `json:"payload"`
-	}
-	if err := json.Unmarshal(event.DTOPayload, &envelope); err != nil {
-		return closeVerification(conn, err)
-	}
-	if !view.Source {
-		delete(envelope.Payload, "source")
-	}
-	if view.Frozen {
-		for _, field := range []string{"state", "score", "penalty", "time_stat", "memory_stat", "failed_test", "test_details", "source", "previous_state"} {
-			delete(envelope.Payload, field)
+		if !user.IsAdmin() {
+			return closeVerification(conn, pkg.NoPermission)
 		}
-		envelope.Payload["frozen"] = json.RawMessage("true")
-	}
-	envelope.Sequence = event.Seq
-	payload, err := json.Marshal(envelope)
-	if err != nil {
-		return closeVerification(conn, err)
-	}
-	if err := writeEvent(conn, payload); err != nil {
-		return err
-	}
-	isManager := user.IsAdmin() || (contest.OwnerID != nil && *contest.OwnerID == user.Id)
-	if permissions.GetMonitor && event.scoreboardConfiguration == scoreboardConfiguration(contest) &&
-		(isManager || contest.StartTime == nil || !time.Now().Before(*contest.StartTime)) {
-		if len(event.scoreboardPublic) > 0 {
-			if err := writeEvent(conn, event.scoreboardPublic); err != nil {
-				return err
-			}
+		if meta.ContestId == nil {
+			return writeEvent(conn, event.DTOPayload)
 		}
-		if permissions.ManageContest && len(event.scoreboardUnfrozen) > 0 {
-			return writeEvent(conn, event.scoreboardUnfrozen)
+		p, err := s.permissions.GetContestPermissions(ctx, *meta.ContestId, user.Id)
+		if err != nil {
+			return closeVerification(conn, err)
+		}
+		if !p.ManageContest {
+			return closeVerification(conn, pkg.NoPermission)
+		}
+		c, err := s.contests.GetContest(ctx, *meta.ContestId)
+		if err != nil {
+			return closeVerification(conn, err)
+		}
+		audience, viewer, configuration = "managers", user.Id, topicConfiguration(c)
+	}
+	if meta.ContestId == nil || event.configuration != configuration {
+		return closeVerification(conn, pkg.ErrConflict)
+	}
+	p := event.topics[contestTopic(*meta.ContestId, audience)]
+	if own, ok := event.topics[ownTopic(*meta.ContestId, viewer)]; ok && audience != "managers" {
+		p.submissions = own.submissions
+	}
+	for _, payload := range append(p.submissions, p.scoreboard...) {
+		if err := writeEvent(conn, payload); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func (s *Observer) sendContest(ctx context.Context, filter *SubmissionsFilter, event *WrappedEvent, conn eventConnection) error {
-	user, permissions, err := s.currentAccess(ctx, filter)
-	if err != nil {
-		return closeVerification(conn, err)
+func (s *Observer) sendContest(filter *SubmissionsFilter, event *WrappedEvent, conn eventConnection) error {
+	p, ok := event.topics[contestTopic(*filter.ContestId, filter.audience)]
+	if !ok {
+		p = event.topics[ownTopic(*filter.ContestId, filter.viewer)]
 	}
-	if !permissions.GetContest {
-		return closeVerification(conn, pkg.NoPermission)
+	for _, payload := range p.submissions {
+		if err := writeEvent(conn, payload); err != nil {
+			return err
+		}
 	}
-	var author accessmodel.User
-	switch e := event.RawEvent.(type) {
-	case *contestsmodel.ContestClarificationCreatedEvent:
-		author.Id = e.UserID
-	case *contestsmodel.ContestClarificationAnsweredEvent:
-		author.Id = e.UserID
-	default:
-		return writeEvent(conn, event.DTOPayload)
-	}
-	if author.Id != user.Id && !permissions.ManageContest {
-		return nil
-	}
-	return writeEvent(conn, event.DTOPayload)
+	return nil
 }
 
 func writeEvent(conn eventConnection, payload []byte) error {

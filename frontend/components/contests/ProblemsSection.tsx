@@ -1,7 +1,7 @@
 import {ActionIcon, Autocomplete, Badge, Button, Center, Divider, Group, Loader, Modal, Select, Stack, Table, Text, Tooltip} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {IconDeviceFloppy, IconEdit, IconGripVertical, IconPlus, IconRefresh, IconRotate2, IconTrash} from "@tabler/icons-react";
+import {IconDeviceFloppy, IconGripVertical, IconPlus, IconRefresh, IconRotate2, IconTrash} from "@tabler/icons-react";
 import {useInfiniteQuery, useQueryClient} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
 import {useRevalidator} from "react-router-dom";
@@ -417,7 +417,7 @@ export const ProblemsSection = ({
               size="xs"
               leftSection={<IconRefresh size={14} />}
               onClick={handleRecalculatePositions}
-              disabled={problems.length === 0}
+              disabled={problems.length === 0 || !problems.every((problem) => problem.capabilities.includes("reorder"))}
             >
               Пересчитать позиции
             </Button>
@@ -475,7 +475,7 @@ export const ProblemsSection = ({
               {problems.map((problem, index) => (
                 <Table.Tr
                   key={problem.problem_id}
-                  draggable
+                  draggable={problem.capabilities.includes("reorder")}
                   onDragStart={(e) => handleDragStart(e, index)}
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDragEnd={handleDragEnd}
@@ -513,21 +513,10 @@ export const ProblemsSection = ({
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs" wrap="nowrap">
-                      <Tooltip label="Редактировать задачу" withArrow>
-                        <ActionIcon
-                          color="gray"
-                          variant="subtle"
-                          component="a"
-                          href={orgLogin ? `/${orgLogin}/problems/${problem.problem_id}` : `/problems/${problem.problem_id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <IconEdit size={16} />
-                        </ActionIcon>
-                      </Tooltip>
                       <Tooltip label="Заменить пакет" withArrow>
                         <ActionIcon
                           aria-label={`Заменить пакет ${problem.title}`}
+                          disabled={!problem.capabilities.includes("relink_package")}
                           color="blue"
                           variant="subtle"
                           onClick={() =>
@@ -544,6 +533,7 @@ export const ProblemsSection = ({
                         <ActionIcon
                           color="red"
                           variant="subtle"
+                          disabled={!problem.capabilities.includes("remove")}
                           onClick={() => handleDeleteProblem(problem.problem_id)}
                           loading={deletingId === problem.problem_id}
                         >

@@ -186,12 +186,68 @@ func (s CompileProblemComponentComponentType) Validate() error {
 	}
 }
 
+func (s *ContestMemberModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *ContestModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
 	}
 
 	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
+			Error: err,
+		})
+	}
 	if err := func() error {
 		if value, ok := s.FreezeDurationMinutes.Get(); ok {
 			if err := func() error {
@@ -281,12 +337,68 @@ func (s ContestModelParticipationMode) Validate() error {
 	}
 }
 
+func (s *ContestProblemListItemModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *ContestProblemModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
 	}
 
 	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
+			Error: err,
+		})
+	}
 	if err := func() error {
 		if s.Samples == nil {
 			return errors.New("nil is invalid value")
@@ -315,6 +427,40 @@ func (s ContestSortOrderQuery) Validate() error {
 	}
 }
 
+func (s *ContestTeamModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s CreateOrganizationJoinPolicy) Validate() error {
 	switch s {
 	case "open":
@@ -326,6 +472,74 @@ func (s CreateOrganizationJoinPolicy) Validate() error {
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}
+}
+
+func (s *DashboardContestModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *DashboardProblemModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s *GenerateTestsReq) Validate() error {
@@ -420,10 +634,61 @@ func (s *GetContestResponseModel) Validate() error {
 		if s.Problems == nil {
 			return errors.New("nil is invalid value")
 		}
+		var failures []validate.FieldError
+		for i, elem := range s.Problems {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "problems",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *GetMyContestRoleResponseModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
 			Error: err,
 		})
 	}
@@ -479,6 +744,29 @@ func (s *GetProblemResponseModel) Validate() error {
 	return nil
 }
 
+func (s *GetTeamResponseModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Team.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "team",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *GetUserDashboardResponseModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -488,6 +776,23 @@ func (s *GetUserDashboardResponseModel) Validate() error {
 	if err := func() error {
 		if s.RecentContests == nil {
 			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.RecentContests {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {
@@ -499,6 +804,23 @@ func (s *GetUserDashboardResponseModel) Validate() error {
 	if err := func() error {
 		if s.MyProblems == nil {
 			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.MyProblems {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {
@@ -718,6 +1040,23 @@ func (s *ListContestMembersResponseModel) Validate() error {
 		if s.Members == nil {
 			return errors.New("nil is invalid value")
 		}
+		var failures []validate.FieldError
+		for i, elem := range s.Members {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
@@ -751,6 +1090,23 @@ func (s *ListContestTeamsResponseModel) Validate() error {
 	if err := func() error {
 		if s.Teams == nil {
 			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Teams {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {
@@ -871,6 +1227,23 @@ func (s *ListOrganizationMembersResponseModel) Validate() error {
 	if err := func() error {
 		if s.Members == nil {
 			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Members {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {
@@ -1002,6 +1375,23 @@ func (s *ListProblemMembersResponseModel) Validate() error {
 		if s.Members == nil {
 			return errors.New("nil is invalid value")
 		}
+		var failures []validate.FieldError
+		for i, elem := range s.Members {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
@@ -1070,6 +1460,23 @@ func (s *ListProblemTeamsResponseModel) Validate() error {
 		if s.Teams == nil {
 			return errors.New("nil is invalid value")
 		}
+		var failures []validate.FieldError
+		for i, elem := range s.Teams {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
@@ -1092,6 +1499,23 @@ func (s *ListProblemsResponseModel) Validate() error {
 	if err := func() error {
 		if s.Problems == nil {
 			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Problems {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {
@@ -1199,6 +1623,23 @@ func (s *ListTeamMembersResponseModel) Validate() error {
 		if s.Members == nil {
 			return errors.New("nil is invalid value")
 		}
+		var failures []validate.FieldError
+		for i, elem := range s.Members {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
@@ -1232,6 +1673,23 @@ func (s *ListTeamsResponseModel) Validate() error {
 	if err := func() error {
 		if s.Teams == nil {
 			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Teams {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {
@@ -1391,12 +1849,68 @@ func (s *NotificationsListResponseModel) Validate() error {
 	return nil
 }
 
+func (s *OrganizationMemberModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *OrganizationModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
 	}
 
 	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
+			Error: err,
+		})
+	}
 	if err := func() error {
 		if err := s.JoinPolicy.Validate(); err != nil {
 			return err
@@ -1523,12 +2037,68 @@ func (s *PaginationModel) Validate() error {
 	return nil
 }
 
+func (s *ProblemMemberModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *ProblemModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
 	}
 
 	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
+			Error: err,
+		})
+	}
 	if err := func() error {
 		if s.Samples == nil {
 			return errors.New("nil is invalid value")
@@ -1537,6 +2107,74 @@ func (s *ProblemModel) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "samples",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *ProblemTeamModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *ProblemsListItemModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
 			Error: err,
 		})
 	}
@@ -1812,6 +2450,74 @@ func (s *SupportedLanguagesResponse) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "languages",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *TeamMemberModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *TeamModel) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Capabilities == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Capabilities)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		if err := validate.UniqueItems(s.Capabilities); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "capabilities",
 			Error: err,
 		})
 	}

@@ -47,9 +47,9 @@ func TestScoreboardProjectionIsSharedAcrossSpectators(t *testing.T) {
 	for _, frozen := range []bool{false, true} {
 		t.Run(map[bool]string{false: "live", true: "frozen"}[frozen], func(t *testing.T) {
 			contestID, userID := uuid.New(), uuid.New()
-			contest := contestsmodel.Contest{ID: contestID}
+			contest := contestsmodel.Contest{ID: contestID, OrganizationID: uuid.New(), Visibility: "public"}
 			if frozen {
-				contest.Settings = map[string]interface{}{"freeze_status": contestsmodel.FreezeStatusFrozen}
+				contest.Settings = map[string]interface{}{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusFrozen}
 			}
 			source := &scoreboardStub{accessStub: &accessStub{contest: contest}}
 			h := NewHub(10, source, source)
@@ -79,7 +79,7 @@ func TestScoreboardProjectionIsSharedAcrossSpectators(t *testing.T) {
 			}
 			require.NotEmpty(t, first.scoreboardPublic)
 			require.NotEmpty(t, first.scoreboardUnfrozen)
-			source.contest.Settings = map[string]interface{}{"freeze_status": contestsmodel.FreezeStatusUnfrozen, "penalty_per_attempt": 30}
+			source.contest.Settings = map[string]interface{}{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusUnfrozen, "penalty_per_attempt": 30}
 			require.NoError(t, h.Handle(context.WithValue(context.Background(), eventdata.MessageStreamSequenceKey, uint64(2)), submissionsmodel.SubmissionEventCompleted, payload))
 			require.Equal(t, 1, source.snapshots)
 			for _, sub := range h.subscribers {
@@ -101,7 +101,7 @@ func TestScoreboardFramesRespectCurrentPermissions(t *testing.T) {
 		t.Run(map[bool]string{false: "spectator", true: "manager"}[manager], func(t *testing.T) {
 			f := newWSFixture(t)
 			f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true, ManageContest: manager}
-			f.stub.contest.Settings = map[string]interface{}{"freeze_status": contestsmodel.FreezeStatusFrozen}
+			f.stub.contest.Settings = map[string]interface{}{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusFrozen}
 			source := &scoreboardStub{accessStub: f.stub}
 			f.hub.contests = source
 			f.hub.scoreboard = source
@@ -157,4 +157,42 @@ func TestContestLiveSubscriptionSkipsLostHistoryWithoutCursor(t *testing.T) {
 	}, time.Second, time.Millisecond)
 	f.publish(t, contestsmodel.ContestEventAnnouncementCreated, &contestsmodel.ContestAnnouncementCreatedEvent{ID: newID, ContestID: f.stub.contest.ID})
 	require.Equal(t, newID.String(), readPayload(t, conn)["id"])
+}
+
+func TestFinishPublishesFinalSnapshotWithoutJudgeEvent(t *testing.T) {
+	for _, status := range []string{"frozen", "unfrozen"} {
+		t.Run(status, func(t *testing.T) {
+			f := newWSFixture(t)
+			end := time.Now().Add(300 * time.Millisecond)
+			f.stub.contest.EndTime = &end
+			f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": status}
+			f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
+			source := &scoreboardStub{accessStub: f.stub}
+			f.hub.contests = source
+			f.hub.scoreboard = source
+			conn := f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
+			p := readPayload(t, conn)
+			require.Equal(t, true, p["replace"])
+			sb := p["scoreboard"].(map[string]any)
+			require.Equal(t, false, sb["is_frozen"])
+			require.InDelta(t, 1, sb["items"].([]any)[0].(map[string]any)["problems_solved"], 0)
+			requireClose(t, conn, 1011)
+		})
+	}
+
+}
+
+func TestMonitorAudienceDoesNotPublishModeratorOnlySubmissions(t *testing.T) {
+	f := newWSFixture(t)
+	f.stub.permissions = accessmodel.ContestPermissions{GetContest: true, GetMonitor: true}
+	f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "moderator", "freeze_status": "frozen"}
+	source := &scoreboardStub{accessStub: f.stub}
+	f.hub.contests = source
+	f.hub.scoreboard = source
+	conn := f.connect(t, f.path("submissions"))
+	f.publish(t, submissionsmodel.SubmissionEventCompleted, &submissionsmodel.SubmissionCompletedEvent{Id: uuid.New(), State: 200, SubmissionEventMeta: f.meta(uuid.New())})
+	p := readPayload(t, conn)
+	require.Contains(t, p, "scoreboard")
+	require.NotContains(t, p, "id")
+	require.NotContains(t, p, "state")
 }

@@ -29,7 +29,7 @@ func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParam
 	if err != nil {
 		return nil, err
 	}
-	return listTeamsDTO(result.Teams, result.Pagination), nil
+	return projectResponse(h, ctx, listTeamsDTO(result.Teams, result.Pagination))
 }
 
 // CreateTeam handles POST /teams
@@ -81,9 +81,9 @@ func (h *CoreServer) GetTeam(ctx context.Context, params corev1.GetTeamParams) (
 		return nil, wrapTeamUCError(err, "failed to get team")
 	}
 
-	return &corev1.GetTeamResponseModel{
+	return projectResponse(h, ctx, &corev1.GetTeamResponseModel{
 		Team: teamDTO(*team),
-	}, nil
+	})
 }
 
 // UpdateTeam handles PATCH /teams/{id}
@@ -147,7 +147,7 @@ func (h *CoreServer) ListTeamMembers(ctx context.Context, params corev1.ListTeam
 		return nil, wrapTeamUCError(err, "failed to list team members")
 	}
 
-	return listTeamMembersDTO(members.Items, members.Pagination), nil
+	return projectResponse(h, ctx, listTeamMembersDTO(members.Items, members.Pagination))
 }
 
 // AddTeamMember handles POST /teams/{id}/members
@@ -208,7 +208,7 @@ func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTea
 
 	contestsList := &contestsmodel.ContestsList{Contests: contests.Items, Pagination: contests.Pagination}
 
-	return ListContestsResponseDTO(contestsList), nil
+	return projectResponse(h, ctx, ListContestsResponseDTO(contestsList))
 }
 
 // ListTeamProblems handles GET /teams/{id}/problems
@@ -222,7 +222,7 @@ func (h *CoreServer) ListTeamProblems(ctx context.Context, params corev1.ListTea
 
 	problemsList := &problemsmodel.ProblemsList{Problems: problems.Items, Pagination: problems.Pagination}
 
-	return ListProblemsResponseDTO(problemsList), nil
+	return projectResponse(h, ctx, ListProblemsResponseDTO(problemsList))
 }
 
 func wrapTeamUCError(err error, fallbackMsg string) error {

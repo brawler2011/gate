@@ -37,11 +37,11 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 	authRepo := pgstore.NewAuthRepo(s.dbPool)
 	tx := pgstore.NewIdentityTransactions(s.dbPool)
 	auth := identity.NewAuthUseCase(s.usersRepo, authRepo, tx, nil)
-	permissions := access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
+	permissions := access.NewMetadataPermissions(access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo), pgstore.NewPolicyFactsRepo(s.dbPool))
 	contests := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissions)
-	hub := observer.NewHub(100, s.contestsRepo, contests)
+	hub := observer.NewHub(100, s.contestsRepo, contests, pgstore.NewPolicyFactsRepo(s.dbPool))
 	contestHub := observer.NewContestsHub(100)
-	server := httptest.NewServer(observer.NewObserver(hub, contestHub, middleware.AuthMiddleware(auth), auth, permissions, s.contestsRepo).Handler())
+	server := httptest.NewServer(observer.NewObserver(hub, contestHub, middleware.AuthMiddleware(auth), auth, permissions, s.contestsRepo, pgstore.NewPolicyFactsRepo(s.dbPool)).Handler())
 	defer server.Close()
 	team, err := s.teamsRepo.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{OrganizationID: org.ID, Name: "WS team", Slug: "ws-" + suffix, Privacy: organizationsmodel.TeamPrivacyClosed})
 	s.Require().NoError(err)
@@ -95,20 +95,65 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 			}
 			s.Require().NoError(conn.ReadJSON(&msg))
 			if source == "participant" {
-				s.Require().Equal(true, msg.Payload["frozen"])
+				// Monitor access alone cannot reveal moderator-only submission events.
+				s.Require().Contains(msg.Payload, "scoreboard")
+				s.Require().NotContains(msg.Payload, "id")
 				s.Require().NotContains(msg.Payload, "state")
 			} else {
 				s.Require().InDelta(200, msg.Payload["state"], 0)
 			}
 			access, accessErr := permissions.GetContestPermissions(s.ctx, contestID, user.Id)
 			s.Require().NoError(accessErr)
-			if access.GetMonitor {
+			if access.GetMonitor && source != "participant" {
 				s.Require().NoError(conn.ReadJSON(&msg))
 				s.Require().Equal(false, msg.Payload["unfrozen"])
 				if access.ManageContest {
 					s.Require().NoError(conn.ReadJSON(&msg))
 					s.Require().Equal(true, msg.Payload["unfrozen"])
 				}
+			}
+			// Replay is read from the same precomputed audience, including freeze masking.
+			replay, response, replayErr := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/submissions?contestId="+contestID.String()+"&since="+strconv.FormatUint(seq-1, 10), headers)
+			s.Require().NoError(replayErr)
+			s.Require().NoError(response.Body.Close())
+			s.Require().NoError(replay.SetReadDeadline(time.Now().Add(3 * time.Second)))
+			var replayMsg struct {
+				Payload map[string]any `json:"payload"`
+			}
+			s.Require().NoError(replay.ReadJSON(&replayMsg))
+			if source == "participant" {
+				s.Contains(replayMsg.Payload, "scoreboard")
+				s.NotContains(replayMsg.Payload, "id")
+				s.NotContains(replayMsg.Payload, "state")
+			} else {
+				s.InDelta(200, replayMsg.Payload["state"], 0)
+			}
+			s.Require().NoError(replay.Close())
+			if source == "direct moderator" {
+				s.Require().NoError(s.contestsRepo.UpdateContestMember(s.ctx, contestID, user.Id, contestsmodel.ContestRoleParticipant))
+				_, _, closed := conn.ReadMessage()
+				s.Require().True(websocket.IsCloseError(closed, 1011), "%v", closed)
+				var response *http.Response
+				conn, response, dialErr = websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/submissions?contestId="+contestID.String()+"&since="+strconv.FormatUint(seq-1, 10), headers)
+				s.Require().NoError(dialErr)
+				s.Require().NoError(response.Body.Close())
+				defer conn.Close()
+				s.Require().NoError(conn.SetReadDeadline(time.Now().Add(3 * time.Second)))
+				// JSON decoding into a non-nil map retains absent keys from the previous
+				// manager frame; each assertion must examine only this frame's fields.
+				replayMsg.Payload = nil
+				s.Require().NoError(conn.ReadJSON(&replayMsg))
+				s.Contains(replayMsg.Payload, "scoreboard")
+				s.NotContains(replayMsg.Payload, "id")
+				s.NotContains(replayMsg.Payload, "state")
+				s.Equal(false, replayMsg.Payload["unfrozen"])
+				// Lease checks must not keep an idle browser session alive.
+				before, err := authRepo.GetSession(s.ctx, sessionID)
+				s.Require().NoError(err)
+				time.Sleep(300 * time.Millisecond)
+				after, err := authRepo.GetSession(s.ctx, sessionID)
+				s.Require().NoError(err)
+				s.Equal(before.ExpiresAt, after.ExpiresAt)
 			}
 			s.Require().NoError(authRepo.DeleteSession(s.ctx, sessionID))
 			seq++

@@ -45,7 +45,8 @@ legacy contest team owner data need auditing before adopting the new policies.
 Metadata reads connect these checks through `MetadataPermissions`, using
 pool-backed `PolicyFactsRepo` reads. Other actions still delegate to legacy
 `PermissionsUseCase` for unmigrated actions. Contest lifecycle reads and commands
-use `MetadataPermissions`; DTO capabilities remain for the contracts PR. A pure owner precheck cannot enforce concurrent
+use `MetadataPermissions`; DTO capabilities use `Capabilities.Project` over the same
+policies and pool-backed batch facts. A pure owner precheck cannot enforce concurrent
 mutation integrity or immediate revocation. Before connecting write paths, add
 RFC §8 nonlocking facts loading, optimistic revisions/decision guards and the
 serializable owner mutation protocol (with fresh external prechecks after retry).
@@ -73,11 +74,14 @@ mapping results. SQL grants use EXISTS, never per-row Go permission checks.
 Legacy `unlisted` visibility is rejected, matching the typed policy's supported
 public/private values. Unknown roles and participation modes also fail closed.
 
-`PolicyFacts` exposes batch loaders for future capability projections: pass all
+`PolicyFacts` exposes batch loaders for capability projections: pass all
 returned page IDs to the appropriate loader, then evaluate the pure policies
 with one `PolicyInput`. Each nonempty batch uses one nonlocking SQL query;
 missing IDs are absent and read errors propagate. Empty batches perform no I/O.
-The metadata adapter uses the same loaders for individual checks. Capability DTOs remain the responsibility of the contracts PR.
+The metadata adapter uses the same loaders for individual checks. Relationship
+projections load target accounts and complete explicit owner sets in batches;
+capabilities are sorted, required arrays. ContestProblem projections contain only
+contest-link actions, including per-problem submit blocks.
 
 
 ## Contest commands, snapshots and freeze
@@ -108,3 +112,19 @@ rejudges of pre-freeze submissions from leaking into the frozen board. Existing
 rows have no trustworthy historical observation time, so migration records them
 at migration time and masks them conservatively for older freeze boundaries.
 Manual freezes record their boundary in server-owned contest settings.
+
+## Observer audiences
+
+Observers admit `contest/<id>/public`, `participants`, `managers` and
+`own/<user_id>` through access. Submission and scoreboard payloads are projected
+once per audience before history and queues. Replay across incompatible settings
+or temporal phases is rejected instead of redacting an old live frame at delivery.
+One server clock and revision checks protect projection construction. Delivery
+checks the fixed audience lease and current credentials; it never filters fields.
+Session validation does not extend an idle session. Idle validation runs every
+250 ms, and every queued/replayed delivery validates again. Revision read failure
+closes the connection; close clears the queue under the same lock as enqueue.
+The conservative shared revision can reconnect unrelated subscriptions. Finish
+publishes a shared final snapshot before retiring the running lease. Reconnect
+refreshes REST snapshots and viewer capabilities. API responses are private and
+not stored by shared caches; the UI refreshes contest capabilities at start/end.

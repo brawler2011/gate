@@ -42,7 +42,7 @@ describe("Production entity management", () => {
         deleted = true;
         return new Response(null, {status: 204});
       }
-      return Response.json({teams: deleted ? [] : [{team_id: "team", team_name: "Team A", contest_role: "participant"}]});
+      return Response.json({teams: deleted ? [] : [{capabilities: ["change_role", "remove"], team_id: "team", team_name: "Team A", contest_role: "participant"}]});
     });
     const view = renderWithProviders(<ContestTeamsManagement orgLogin="org" contestLogin="round" />);
     expect(view.queryByText("Team A")).toBeNull();
@@ -77,8 +77,8 @@ describe("Production entity management", () => {
         return Response.json({requests: []});
       }
       return Response.json({members: [
-        {user_id: "owner", username: "owner", role: "owner", created_at: "2026-01-01"},
-        ...removed ? [] : [{user_id: "user", username: "alice", role: "member", created_at: "2026-01-01"}],
+        {capabilities: [], user_id: "owner", username: "owner", role: "owner", created_at: "2026-01-01"},
+        ...removed ? [] : [{capabilities: ["change_role", "remove"], user_id: "user", username: "alice", role: "member", created_at: "2026-01-01"}],
       ], pagination: {page: 1, page_size: 50, total_items: removed ? 1 : 2, total_pages: 1}});
     });
     const view = renderWithProviders(<OrgMembersManagement orgLogin="org" />);
@@ -109,7 +109,7 @@ describe("Production entity management", () => {
         role = url.searchParams.get("role") ?? role;
         return new Response(null, {status: 204});
       }
-      return Response.json({teams: [{team_id: "team", team_name: "Team A", contest_role: role}]});
+      return Response.json({teams: [{capabilities: ["change_role", "remove"], team_id: "team", team_name: "Team A", contest_role: role}]});
     });
     const view = renderWithProviders(<ContestTeamsManagement orgLogin="org" contestLogin="round" />);
     await waitFor(() => expect(view.getByText("Team A")).toBeTruthy());
@@ -139,7 +139,7 @@ describe("Production entity management", () => {
       if (url.pathname.endsWith("/requests")) {
         return Response.json({requests: changed ? [] : [{id: "request", username: "alice", created_at: "2026-01-01"}]});
       }
-      return Response.json({members: changed && action === "approve" ? [{user_id: "user", username: "alice", role: "member", created_at: "2026-01-01"}] : [],
+      return Response.json({members: changed && action === "approve" ? [{capabilities: ["change_role", "remove"], user_id: "user", username: "alice", role: "member", created_at: "2026-01-01"}] : [],
         pagination: {page: 1, page_size: 50, total_items: 1, total_pages: 1}});
     });
     const view = renderWithProviders(<OrgMembersManagement orgLogin="org" />);
@@ -162,14 +162,14 @@ describe("Production entity management", () => {
   });
 
   it("adds a searched team as participant, clears selection and refreshes the list", async () => {
-    let added: {team_id: string; team_name: string; contest_role: string} | undefined;
+    let added: {capabilities: ["change_role", "remove"], team_id: string; team_name: string; contest_role: string} | undefined;
     mockFetch(async (url, init) => {
       if (init?.method === "POST") {
         const teamId = url.searchParams.get("team_id");
         if (teamId !== "team") {
           return Response.json({message: "Unknown team"}, {status: 404});
         }
-        added = {team_id: teamId, team_name: "Team A", contest_role: url.searchParams.get("role") ?? ""};
+        added = {capabilities: ["change_role", "remove"], team_id: teamId, team_name: "Team A", contest_role: url.searchParams.get("role") ?? ""};
         return new Response(null, {status: 204});
       }
       if (url.pathname === "/teams") {
@@ -201,7 +201,7 @@ describe("Production entity management", () => {
         if (failure) {
           return Response.json({message: "Denied"}, {status: 403});
         }
-        const body = JSON.parse(String(init.body)) as {user_id: string; role: string};
+        const body = JSON.parse(String(init.body)) as {capabilities: ["change_role", "remove"], user_id: string; role: string};
         if (body.user_id !== "user") {
           return Response.json({message: "Unknown user"}, {status: 404});
         }

@@ -1,227 +1,27 @@
-import {describe, it, expect} from "bun:test";
+import {describe, expect, it} from "bun:test";
 
-import {type ProblemModel, type UserModel} from "@/contracts/core/v1/schema";
-import {PermissionChecker} from "@/lib/permissions";
+import {PermissionChecker, parseContestRoleResponse} from "@/lib/permissions";
 
-import type {ContestModel} from "@/contracts/core/v1/schema";
+import type {ContestModel, ProblemModel} from "@/contracts/core/v1/schema";
 
-describe("PermissionChecker", () => {
-  const globalAdmin: UserModel = {
-    id: "user-admin",
-    username: "admin",
-    role: "admin",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-
-  const regularUser: UserModel = {
-    id: "user-regular",
-    username: "regular",
-    role: "user",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-
-  const createContest = (overrides: Partial<ContestModel> = {}): ContestModel => ({
-    id: "contest-1",
-    login: "contest-1",
-    organization_id: "org-1",
-    organization_login: "org-1",
-    title: "Test Contest",
-    description: "Contest description",
-    visibility: "private",
-    monitor_scope: "participant",
-    submissions_list_scope: "moderator",
-    submissions_review_scope: "moderator",
-    submission_details_scope: "moderator",
-    freeze_status: 'auto',
-    freeze_duration_minutes: 60,
-    created_by: "creator-id",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    start_time: new Date(Date.now() - 3600000).toISOString(), // started 1 hr ago
-    end_time: new Date(Date.now() + 3600000).toISOString(),   // ends in 1 hr
-    enable_drafts: true,
-    enable_upsolving: true,
-    enable_virtual_contests: false,
-    participation_mode: 'open',
-    hide_statements: false,
-    allow_clarifications: true,
-    ...overrides,
+describe("server capability decisions", () => {
+  const checker = new PermissionChecker();
+  it("does not infer submit or deletion from identity, public visibility or upsolving", () => {
+    const contest = {capabilities: ["view", "manage"], visibility: "public", enable_upsolving: true} as ContestModel;
+    expect(checker.canViewContest(contest)).toBe(true);
+    expect(checker.canManageContest(contest)).toBe(true);
+    expect(checker.canDeleteContest(contest)).toBe(false);
+    expect(checker.canSubmitSolution(contest)).toBe(false);
+    expect(checker.canViewProblems(contest)).toBe(false);
   });
-
-  const createProblem = (overrides: Partial<ProblemModel> = {}): ProblemModel => ({
-    id: "prob-1",
-    organization_id: "org-1",
-    organization_login: "org-1",
-    title: "Test Problem",
-    visibility: "private",
-    created_by: "creator-id",
-    time_limit: 1000,
-    memory_limit: 256,
-    is_template: false,
-    legend: "",
-    input_format: "",
-    output_format: "",
-    notes: "",
-    scoring: "",
-    samples: [],
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    ...overrides,
+  it("honors server grants independently for source problems and contest operations", () => {
+    expect(checker.canSubmitSolution({capabilities: ["submit"]} as ContestModel)).toBe(true);
+    expect(checker.canEditProblem({capabilities: ["view"]} as ProblemModel)).toBe(false);
+    expect(checker.canDeleteProblem({capabilities: ["edit"]} as ProblemModel)).toBe(false);
   });
-
-  describe("Role inheritance & scopes", () => {
-    it("Global Admin has full management access on everything", () => {
-      const checker = new PermissionChecker(globalAdmin);
-      const contest = createContest({visibility: "private"});
-
-      expect(checker.isGlobalAdmin()).toBe(true);
-      expect(checker.canViewContest(contest)).toBe(true);
-      expect(checker.canViewProblems(contest)).toBe(true);
-      expect(checker.canSubmitSolution(contest)).toBe(true);
-      expect(checker.canManageContest(contest)).toBe(true);
-      expect(checker.canDeleteContest(contest)).toBe(true);
-      expect(checker.canViewMonitor(contest)).toBe(true);
-    });
-
-    it("Org Owner / Org Admin inherits owner permissions on all org contests", () => {
-      const ownerChecker = new PermissionChecker(regularUser, null, "owner");
-      const adminChecker = new PermissionChecker(regularUser, null, "admin");
-      const memberChecker = new PermissionChecker(regularUser, null, "member");
-      const contest = createContest({visibility: "private"});
-
-      expect(ownerChecker.canManageContest(contest)).toBe(true);
-      expect(ownerChecker.canDeleteContest(contest)).toBe(true);
-      expect(adminChecker.canManageContest(contest)).toBe(true);
-      expect(adminChecker.canDeleteContest(contest)).toBe(true);
-
-      // Regular member does not have manage/delete access by default
-      expect(memberChecker.canManageContest(contest)).toBe(false);
-      expect(memberChecker.canDeleteContest(contest)).toBe(false);
-    });
-
-    it("Contest Owner has full management access", () => {
-      const checker = new PermissionChecker(regularUser, "owner");
-      const contest = createContest({visibility: "private"});
-
-      expect(checker.canManageContest(contest)).toBe(true);
-      expect(checker.canDeleteContest(contest)).toBe(true);
-    });
-
-    it("Contest Moderator can manage but cannot delete contest", () => {
-      const checker = new PermissionChecker(regularUser, "moderator");
-      const contest = createContest({visibility: "private"});
-
-      expect(checker.canManageContest(contest)).toBe(true);
-      expect(checker.canDeleteContest(contest)).toBe(false);
-    });
-  });
-
-  describe("Participation mode & Public/Private contests", () => {
-    it("Public contest with participation_mode=open grants submission to authenticated user", () => {
-      const checker = new PermissionChecker(regularUser, null);
-      const contest = createContest({
-        visibility: "public",
-        participation_mode: 'open',
-      });
-
-      expect(checker.canViewContest(contest)).toBe(true);
-      expect(checker.canSubmitSolution(contest)).toBe(true);
-    });
-
-    it("Public contest with participation_mode=invite_only does NOT grant submission to uninvited user", () => {
-      const checker = new PermissionChecker(regularUser, null);
-      const contest = createContest({
-        visibility: "public",
-        participation_mode: 'invite_only',
-      });
-
-      expect(checker.canViewContest(contest)).toBe(true);
-      expect(checker.canSubmitSolution(contest)).toBe(false);
-    });
-
-    it("Unauthenticated guest cannot submit even in public open contest", () => {
-      const checker = new PermissionChecker(null, null);
-      const contest = createContest({
-        visibility: "public",
-        participation_mode: 'open',
-      });
-
-      expect(checker.canViewContest(contest)).toBe(true);
-      expect(checker.canSubmitSolution(contest)).toBe(false);
-    });
-  });
-
-  describe("Timing & Upsolving ABAC", () => {
-    it("Before contest start, participant cannot view problems or submit, but moderator can", () => {
-      const futureContest = createContest({
-        start_time: new Date(Date.now() + 3600000).toISOString(),
-        end_time: new Date(Date.now() + 7200000).toISOString(),
-      });
-
-      const participantChecker = new PermissionChecker(regularUser, "participant");
-      const modChecker = new PermissionChecker(regularUser, "moderator");
-
-      expect(participantChecker.canViewProblems(futureContest)).toBe(false);
-      expect(participantChecker.canSubmitSolution(futureContest)).toBe(false);
-
-      expect(modChecker.canViewProblems(futureContest)).toBe(true);
-      expect(modChecker.canSubmitSolution(futureContest)).toBe(true);
-    });
-
-    it("After contest end, upsolving enabled allows submissions for users who can view contest", () => {
-      const finishedContest = createContest({
-        visibility: "public",
-        start_time: new Date(Date.now() - 7200000).toISOString(),
-        end_time: new Date(Date.now() - 3600000).toISOString(),
-        enable_upsolving: true,
-      });
-
-      const userChecker = new PermissionChecker(regularUser, null);
-      const guestChecker = new PermissionChecker(null, null);
-
-      expect(userChecker.canSubmitSolution(finishedContest)).toBe(true);
-      expect(guestChecker.canSubmitSolution(finishedContest)).toBe(false);
-    });
-
-    it("After contest end, upsolving disabled blocks submissions for regular users", () => {
-      const finishedContest = createContest({
-        visibility: "public",
-        start_time: new Date(Date.now() - 7200000).toISOString(),
-        end_time: new Date(Date.now() - 3600000).toISOString(),
-        enable_upsolving: false,
-      });
-
-      const participantChecker = new PermissionChecker(regularUser, "participant");
-      const modChecker = new PermissionChecker(regularUser, "moderator");
-
-      expect(participantChecker.canSubmitSolution(finishedContest)).toBe(false);
-      expect(modChecker.canSubmitSolution(finishedContest)).toBe(true);
-    });
-  });
-
-  describe("Problem permissions", () => {
-    it("Org Owner and Org Admin can edit and delete org problems", () => {
-      const ownerChecker = new PermissionChecker(regularUser, null, "owner");
-      const adminChecker = new PermissionChecker(regularUser, null, "admin");
-      const memberChecker = new PermissionChecker(regularUser, null, "member");
-      const problem = createProblem({visibility: "private"});
-
-      expect(ownerChecker.canEditProblem(problem)).toBe(true);
-      expect(ownerChecker.canDeleteProblem(problem)).toBe(true);
-      expect(adminChecker.canEditProblem(problem)).toBe(true);
-      expect(adminChecker.canDeleteProblem(problem)).toBe(true);
-
-      expect(memberChecker.canEditProblem(problem)).toBe(false);
-      expect(memberChecker.canDeleteProblem(problem)).toBe(false);
-    });
-
-    it("Public problem is viewable by anyone", () => {
-      const checker = new PermissionChecker(null);
-      const problem = createProblem({visibility: "public"});
-
-      expect(checker.canViewProblem(problem)).toBe(true);
-    });
+  it("preserves capabilities even without a direct contest role", () => {
+    expect(parseContestRoleResponse({role: "", capabilities: ["view"]})).toEqual({role: "", capabilities: ["view"]});
+    expect(parseContestRoleResponse({role: "owner"})).toBeNull();
+    expect(parseContestRoleResponse({role: "participant", capabilities: [1]})).toBeNull();
   });
 });

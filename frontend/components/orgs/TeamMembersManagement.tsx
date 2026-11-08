@@ -239,6 +239,7 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
                   <Table.Td>
                     <Group gap="xs" wrap="nowrap">
                       <ActionIcon
+                        disabled={!m.capabilities.includes("change_role")}
                         color="blue"
                         variant="subtle"
                         onClick={() => handleEditRole(m)}
@@ -246,6 +247,7 @@ export const TeamMembersManagement = ({teamId}: Props): ReactNode => {
                         <IconEdit size={16} />
                       </ActionIcon>
                       <ActionIcon
+                        disabled={!m.capabilities.includes("remove")}
                         color="red"
                         variant="subtle"
                         onClick={() => handleRemove(m.user_id)}

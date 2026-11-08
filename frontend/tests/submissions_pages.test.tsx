@@ -27,7 +27,7 @@ it.each(['all', 'mine'])('keeps actual %s page selection in sync with HTTP and p
         problem_id: 'problem', problem_title: 'A+B', position: 1, language: 42,
         created_at: '2026-01-01T00:00:00Z'}], pagination: {page, page_size: 50, total_items: 0, total_pages: 100}});
     }
-    return Response.json({contest: {id: 'contest', login: 'round', organization_login: 'school', visibility: 'public'}, problems: []});
+    return Response.json({contest: {capabilities: ['view', 'list_submissions', 'list_own_submissions', 'manage'], id: 'contest', login: 'round', organization_login: 'school', visibility: 'public'}, problems: []});
   }, {preconnect: () => {}}));
   const segment = mode === 'mine' ? 'mysubmissions' : 'submissions';
   const element = mode === 'mine' ? <MySubmissionsPage /> : <SubmissionsPage />;

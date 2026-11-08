@@ -5,7 +5,7 @@ import {ErrorDisplay} from "@/components/shared/ErrorDisplay";
 import {SubmissionsListClient} from "@/components/submissions";
 import {api, unwrap} from "@/lib/api";
 import {parsePage} from "@/lib/lib";
-import {getMyContestRole, PermissionChecker} from "@/lib/permissions";
+import {PermissionChecker} from "@/lib/permissions";
 
 import type {ReactNode} from "react";
 import type {LoaderFunction, LoaderFunctionArgs} from "react-router-dom";
@@ -61,9 +61,8 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   }
   parsedParams.userId = user.id;
   const selection = {orgLogin: slug, contestLogin, contestId: contestData.contest.id, ...parsedParams};
-  const contestRole = await getMyContestRole(slug, contestLogin);
   return {
-    slug, contestLogin, contestData, user, contestRole, selection,
+    slug, contestLogin, contestData, user, selection,
   };
 }) satisfies LoaderFunction;
 
@@ -76,21 +75,11 @@ const Page = (): ReactNode => {
     contestLogin,
     selection,
     contestData,
-    user,
-    contestRole,
   } = data;
   if (contestData?.contest) {
-    const checker = new PermissionChecker(
-      user,
-      contestRole?.role ?? null,
-      null,
-      contestRole?.permissionsMask ?? null,
-    );
-    const isManager = checker.canManageContest(contestData.contest);
-    const hasStarted =
-      !contestData.contest.start_time || new Date(contestData.contest.start_time) <= new Date();
+    const checker = new PermissionChecker();
 
-    if (!checker.canViewMySubmissions(contestData.contest) || (!isManager && !hasStarted)) {
+    if (!checker.canViewMySubmissions(contestData.contest)) {
       return <Navigate to={`/${slug}/${contestLogin}`} replace />;
     }
   }

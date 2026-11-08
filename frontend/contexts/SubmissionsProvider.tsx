@@ -115,6 +115,12 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
       url: () => `${env.getWebSocketUrl()}/submissions?contestId=${encodeURIComponent(contestId)}`,
       onStatusChange: next => {
         setStatus(next);
+        if (next.phase === 'connected' || next.phase === 'reconnecting') {
+          void client.invalidateQueries({queryKey: api.queryOptions('get',
+            '/organizations/{org_login}/contests/{contest_login}', {params: {path}}).queryKey});
+          void client.invalidateQueries({queryKey: api.queryOptions('get',
+            '/organizations/{org_login}/contests/{contest_login}/my-role', {params: {path}}).queryKey});
+        }
         if (next.phase === 'connected') {
           reconnect = true;
           requestRefresh(true);

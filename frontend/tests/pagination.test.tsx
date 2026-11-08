@@ -45,7 +45,7 @@ describe("List pagination through production components", () => {
     mockApi((url) => {
       if (url.pathname.endsWith("/members")) {
         const page = Number(url.searchParams.get("page"));
-        return Response.json({members: [{user_id: `user-${page}`, username: `user-${page}`, contest_role: "participant"}],
+        return Response.json({members: [{capabilities: ["change_role", "remove"], user_id: `user-${page}`, username: `user-${page}`, contest_role: "participant"}],
           pagination: pagination(page)});
       }
       return Response.json({requests: [], teams: []});
@@ -88,7 +88,7 @@ describe("List pagination through production components", () => {
       }
       return Response.json({});
     });
-    const problem = {problem_id: "problem", title: "Example", position: 0, time_limit: 1000, memory_limit: 256} as ContestProblemListItemModel;
+    const problem = {capabilities: ["relink_package", "remove", "reorder"], problem_id: "problem", title: "Example", position: 0, time_limit: 1000, memory_limit: 256} as ContestProblemListItemModel;
     const view = renderWithProviders(<ProblemsSection orgLogin="org" contestLogin="round" initialProblems={[problem]} />);
     fireEvent.click(view.getByRole("button", {name: "Заменить пакет Example"}));
     await waitFor(() => expect(view.getByRole("button", {name: "Ещё"})).toBeTruthy());
@@ -104,18 +104,10 @@ describe("List pagination through production components", () => {
     await waitFor(() => expect(submitted).toBe("package-1"));
   });
 
-  it("finds management membership beyond the former twenty-page cap", async () => {
-    const fetch = mockApi((url) => {
-      if (url.pathname.endsWith("/me")) {
-        return Response.json({user: {id: "owner", role: "user"}});
-      }
-      const page = Number(url.searchParams.get("page"));
-      return Response.json({members: page === 21 ? [{user_id: "owner", role: "owner"}]
-        : Array.from({length: 100}, (_, index) => ({user_id: `${page}-${index}`, role: "member"})),
-      pagination: {page, page_size: 100, total_items: 2001, total_pages: 21}});
-    });
+  it("uses organization capabilities without fetching member pages", async () => {
+    const fetch = mockApi(() => Response.json({organization: {capabilities: ["manage_members"]}}));
     expect(await canManageOrgMembers("org")).toBe(true);
-    expect(fetch.mock.calls.some(([url]) => String(url).includes("page=21"))).toBe(true);
+    expect(fetch.mock.calls).toHaveLength(1);
   });
 
   it("moves back when deletion empties the last member page", async () => {
@@ -127,7 +119,7 @@ describe("List pagination through production components", () => {
       }
       const page = Number(url.searchParams.get("page"));
       return Response.json({members: removed && page === 3 ? [] : [{
-        user_id: `user-${page}`, username: `user-${page}`, role: "viewer", created_at: "2026-01-01",
+        capabilities: ["change_role", "remove"], user_id: `user-${page}`, username: `user-${page}`, role: "viewer", created_at: "2026-01-01",
       }], pagination: pagination(page, removed ? 100 : 101)});
     });
     const view = renderWithProviders(<ProblemMembersManagement problemId="problem" />);

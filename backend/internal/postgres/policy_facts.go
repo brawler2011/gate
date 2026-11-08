@@ -75,3 +75,46 @@ func (r *PolicyFactsRepo) LoadTeamFacts(ctx context.Context, viewer uuid.UUID, i
 	}
 	return result, nil
 }
+
+func (r *PolicyFactsRepo) LoadOrganizationFacts(ctx context.Context, viewer uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]m.OrganizationContext, error) {
+	result := make(map[uuid.UUID]m.OrganizationContext, len(ids))
+	if len(ids) == 0 {
+		return result, nil
+	}
+	rows, err := r.q.LoadOrganizationFacts(ctx, sqlc.LoadOrganizationFactsParams{ViewerID: &viewer, Ids: ids})
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+	for _, row := range rows {
+		var facts m.OrganizationContext
+		if err := json.Unmarshal(row.Facts, &facts); err != nil {
+			return nil, fmt.Errorf("decode policy facts: %w", err)
+		}
+		result[row.ID] = facts
+	}
+	return result, nil
+}
+
+func (r *PolicyFactsRepo) LoadCapabilityUsers(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]m.User, error) {
+	result := make(map[uuid.UUID]m.User, len(ids))
+	if len(ids) == 0 {
+		return result, nil
+	}
+	rows, err := r.q.LoadCapabilityUsers(ctx, ids)
+	if err != nil {
+		return nil, HandlePgErr(err)
+	}
+	for _, row := range rows {
+		var u m.User
+		if err := json.Unmarshal(row.Facts, &u); err != nil {
+			return nil, fmt.Errorf("decode capability user: %w", err)
+		}
+		result[row.ID] = u
+	}
+	return result, nil
+}
+
+// AccessRevision is a pool read. Failure invalidates WS leases immediately.
+func (r *PolicyFactsRepo) AccessRevision(ctx context.Context) (int64, error) {
+	return r.q.GetAccessRevision(ctx)
+}

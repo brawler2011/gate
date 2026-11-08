@@ -255,6 +255,14 @@ func (uc *AuthUseCase) Logout(ctx context.Context, sessionID uuid.UUID) error {
 }
 
 func (uc *AuthUseCase) Authenticate(ctx context.Context, sessionID uuid.UUID) (accessmodel.User, error) {
+	return uc.authenticate(ctx, sessionID, true)
+}
+
+// ValidateSession checks an observer lease without extending an idle session.
+func (uc *AuthUseCase) ValidateSession(ctx context.Context, sessionID uuid.UUID) (accessmodel.User, error) {
+	return uc.authenticate(ctx, sessionID, false)
+}
+func (uc *AuthUseCase) authenticate(ctx context.Context, sessionID uuid.UUID, touch bool) (accessmodel.User, error) {
 	session, err := uc.authRepo.GetSession(ctx, sessionID)
 	if err != nil {
 		if errors.Is(err, pkg.ErrNotFound) {
@@ -266,24 +274,30 @@ func (uc *AuthUseCase) Authenticate(ctx context.Context, sessionID uuid.UUID) (a
 	// 1. Hard lifetime check: expires 7 days after creation
 	hardExpiry := session.CreatedAt.Add(sessionHardLifetime)
 	if time.Now().After(hardExpiry) {
-		_ = uc.authRepo.DeleteSession(ctx, sessionID)
+		if touch {
+			_ = uc.authRepo.DeleteSession(ctx, sessionID)
+		}
 		return accessmodel.User{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "session expired (hard limit)")
 	}
 
 	// 2. Soft lifetime check: expires if user was inactive for 40 minutes (session.ExpiresAt is the soft expiry)
 	if session.IsExpired() {
-		_ = uc.authRepo.DeleteSession(ctx, sessionID)
+		if touch {
+			_ = uc.authRepo.DeleteSession(ctx, sessionID)
+		}
 		return accessmodel.User{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "session expired (soft limit)")
 	}
 
-	// Update session expiry in database (sliding session)
-	newExpiry := time.Now().Add(sessionSoftLifetime)
-	if newExpiry.After(hardExpiry) {
-		newExpiry = hardExpiry
-	}
-	err = uc.authRepo.UpdateSessionExpiry(ctx, sessionID, newExpiry)
-	if err != nil {
-		slog.Debug("failed to update session expiry", "error", err)
+	if touch {
+		// Update session expiry in database (sliding session)
+		newExpiry := time.Now().Add(sessionSoftLifetime)
+		if newExpiry.After(hardExpiry) {
+			newExpiry = hardExpiry
+		}
+		err = uc.authRepo.UpdateSessionExpiry(ctx, sessionID, newExpiry)
+		if err != nil {
+			slog.Debug("failed to update session expiry", "error", err)
+		}
 	}
 
 	user, err := uc.usersRepo.GetUserById(ctx, session.UserID)
@@ -295,7 +309,9 @@ func (uc *AuthUseCase) Authenticate(ctx context.Context, sessionID uuid.UUID) (a
 	}
 
 	if user.IsExpired() {
-		_ = uc.authRepo.DeleteSession(ctx, sessionID)
+		if touch {
+			_ = uc.authRepo.DeleteSession(ctx, sessionID)
+		}
 		return accessmodel.User{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "account has expired")
 	}
 

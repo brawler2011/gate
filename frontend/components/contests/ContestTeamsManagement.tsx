@@ -291,6 +291,8 @@ export const ContestTeamsManagement = ({
               },
             },
           ]}
+          canEdit={(row) => row.capabilities.includes("change_role")}
+          canDelete={(row) => row.capabilities.includes("remove")}
           onEdit={handleEditRole}
           onDelete={handleDeleteTeam}
           deletingId={deletingId}

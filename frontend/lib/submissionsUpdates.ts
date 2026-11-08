@@ -37,7 +37,7 @@ export const applySubmissionEvent = (data: LiveSubmissions | undefined, event: S
 
 export const applyScoreboardEvent = (data: LiveScoreboard | undefined, payload: MessageScoreboardUpdated,
   sequence: number): LiveScoreboard | undefined => {
-  if (!data || sequence <= (data.since ?? 0)) {
+  if (!data || sequence < (data.since ?? 0) || (sequence === (data.since ?? 0) && !payload.replace)) {
     return data;
   }
   const next = payload.scoreboard;

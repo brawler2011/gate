@@ -228,7 +228,7 @@ func TestQueueOverflowIsolatesSlowSubscriber(t *testing.T) {
 				require.EqualValues(t, 1, slow.closeCount.Load())
 				q.broadcast(q.event(seq+1, true))
 				require.Equal(t, fmt.Sprint(seq+1), receive(t, healthy.writes))
-				require.Len(t, sub.outbox, eventQueueCapacity)
+				require.Empty(t, sub.outbox)
 			})
 		}
 	}

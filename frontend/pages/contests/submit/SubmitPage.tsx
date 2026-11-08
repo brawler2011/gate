@@ -16,16 +16,9 @@ const Page = (): ReactNode => {
   if (!routeQuery.data) {
     return <QueryState error={routeQuery.error} />;
   }
-  const {response, user, contestRole} = routeQuery.data;
-  const checker = new PermissionChecker(
-    user,
-    contestRole?.role ?? null,
-    null,
-    contestRole?.permissionsMask ?? null,
-  );
-  const isManager = checker.canManageContest(response.contest);
-  const hasStarted = !response.contest.start_time || new Date(response.contest.start_time) <= new Date();
-  if (!checker.canSubmitSolution(response.contest) || (!isManager && !hasStarted)) {
+  const {response, user} = routeQuery.data;
+  const checker = new PermissionChecker();
+  if (!checker.canSubmitSolution(response.contest)) {
     return <Navigate to={`/${slug}/${contestLogin}`} replace />;
   }
   return (
