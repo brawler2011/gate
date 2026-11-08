@@ -53,7 +53,7 @@ func (m *visibilityStub) ListSubmissions(context.Context, submissionsmodel.Submi
 
 func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 	viewer, author, contestID := uuid.New(), uuid.New(), uuid.New()
-	stub := &visibilityStub{contest: contestsmodel.Contest{ID: contestID, Settings: map[string]any{"freeze_status": contestsmodel.FreezeStatusFrozen}}, permissions: accessmodel.ContestPermissions{ListUsersSubmissions: true, ListOwnSubmissions: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}, submission: submissionsmodel.Submission{ID: uuid.New(), ContestID: &contestID, CreatedBy: &author, CreatedAt: time.Now(), State: 200, Score: 100, TimeStat: 5, Submission: "secret", TestDetails: &submissionsmodel.SubmissionTestDetails{}, FailedTest: new(int32), BanReason: new(string)}}
+	stub := &visibilityStub{contest: contestsmodel.Contest{ID: contestID, Settings: map[string]any{"freeze_status": contestsmodel.FreezeStatusFrozen}}, permissions: accessmodel.ContestPermissions{ListUsersSubmissions: true, ListOwnSubmissions: true, GetOwnSubmission: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}, submission: submissionsmodel.Submission{ID: uuid.New(), ContestID: &contestID, CreatedBy: &author, CreatedAt: time.Now(), State: 200, Score: 100, TimeStat: 5, Submission: "secret", TestDetails: &submissionsmodel.SubmissionTestDetails{}, FailedTest: new(int32), BanReason: new(string)}}
 	application := submissions.NewSubmissionsUseCase(&visibilityRepo{stub: stub}, stub, nil, nil, stub)
 	h := NewCoreServer(
 		nil,

@@ -2,6 +2,7 @@ package submissions
 
 import (
 	"context"
+
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 
@@ -42,7 +43,7 @@ func (allowSubmissionPermissions) HasContestPermission(context.Context, uuid.UUI
 	return true, nil
 }
 func (allowSubmissionPermissions) GetContestPermissions(context.Context, uuid.UUID, uuid.UUID) (*accessmodel.ContestPermissions, error) {
-	return &accessmodel.ContestPermissions{GetOtherUserSubmission: true, GetSubmissionDetails: true, ManageContest: true}, nil
+	return &accessmodel.ContestPermissions{GetOwnSubmission: true, GetOtherUserSubmission: true, GetSubmissionDetails: true, ManageContest: true}, nil
 }
 
 func (submissionTestStore) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {

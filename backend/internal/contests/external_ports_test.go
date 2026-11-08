@@ -3,6 +3,8 @@ package contests_test
 import (
 	"context"
 
+	"github.com/brawler2011/gate/backend/internal/access"
+
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
@@ -12,6 +14,7 @@ import (
 )
 
 type ContestsRepo interface {
+	ResolveContestProblemPackage(context.Context, uuid.UUID, uuid.UUID, bool) (access.PackageContext, error)
 	GetContestScoreboardSubmissions(context.Context, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
 	GetUserScoreboardSubmissions(context.Context, uuid.UUID, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
 	CreateContest(ctx context.Context, params *contestsmodel.CreateContestParams) error

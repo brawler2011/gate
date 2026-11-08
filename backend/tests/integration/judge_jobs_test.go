@@ -201,14 +201,16 @@ func (s *IntegrationTestSuite) TestJudgeJobAndOutboxRollbackTogether() {
 	s.Zero(count)
 }
 
-func (s *IntegrationTestSuite) TestJudgePackageIsFixedForGeneration() {
-	sub, contest, problem, _ := s.newJobSubmission()
+func (s *IntegrationTestSuite) TestJudgePackageIsFixedForSubmission() {
+	sub, contest, problem, user := s.newJobSubmission()
 	original, err := s.problemsRepo.GetProblemById(s.ctx, problem)
 	s.Require().NoError(err)
 	packages := pgstore.NewPackagesRepo(s.dbPool)
 	first, err := packages.CreatePackage(s.ctx, &problemsmodel.CreatePackageParams{ID: uuid.New(), ProblemID: problem, OrganizationID: original.OrganizationID, PackageHash: strings.Repeat("a", 64), Status: "ready"})
 	s.Require().NoError(err)
 	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{ContestId: contest, ProblemId: problem, PackageId: first.ID}))
+	sub, err = pgstore.NewSubmissionsRepo(s.dbPool).CreateSubmission(s.ctx, &submissionsmodel.SubmissionCreation{ContestId: contest, ProblemId: problem, UserId: user, Language: submissionsmodel.Python, Solution: "print(1)"})
+	s.Require().NoError(err)
 	jobs := pgstore.NewJudgeJobs(s.dbPool)
 	initial, err := jobs.ScheduleJob(s.ctx, sub)
 	s.Require().NoError(err)
@@ -223,7 +225,7 @@ func (s *IntegrationTestSuite) TestJudgePackageIsFixedForGeneration() {
 	s.Require().NoError(err)
 	next, err := jobs.ScheduleJob(s.ctx, sub)
 	s.Require().NoError(err)
-	s.Equal(strings.Repeat("b", 64), next.PackageHash)
+	s.Equal(strings.Repeat("a", 64), next.PackageHash)
 	s.EqualValues(2, next.Generation)
 }
 

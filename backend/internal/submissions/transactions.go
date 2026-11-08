@@ -29,5 +29,6 @@ type SubmissionTxStore interface {
 }
 
 type SubmissionTransactions interface {
+	Prepare(context.Context) (context.Context, error)
 	Within(context.Context, func(SubmissionTxStore) error) error
 }

@@ -27,7 +27,7 @@ const createProblemPackage = `-- name: CreateProblemPackage :one
 
 INSERT INTO problem_packages (id, problem_id, organization_id, package_hash, status, version, compiled_at)
 VALUES ($1, $2, $3, $4, $5, (SELECT COALESCE(MAX(version), 0) + 1 FROM problem_packages WHERE problem_id = $2), CASE WHEN $5::package_status = 'ready'::package_status THEN NOW() ELSE NULL END)
-RETURNING id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at
+RETURNING id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at, title, short_name, time_limit_ms, memory_limit_mb
 `
 
 type CreateProblemPackageParams struct {
@@ -59,12 +59,16 @@ func (q *Queries) CreateProblemPackage(ctx context.Context, arg CreateProblemPac
 		&i.BuildLog,
 		&i.CreatedAt,
 		&i.CompiledAt,
+		&i.Title,
+		&i.ShortName,
+		&i.TimeLimitMs,
+		&i.MemoryLimitMb,
 	)
 	return i, err
 }
 
 const getProblemPackageByID = `-- name: GetProblemPackageByID :one
-SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at FROM problem_packages WHERE id = $1
+SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at, title, short_name, time_limit_ms, memory_limit_mb FROM problem_packages WHERE id = $1
 `
 
 func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (ProblemPackage, error) {
@@ -81,12 +85,16 @@ func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (Prob
 		&i.BuildLog,
 		&i.CreatedAt,
 		&i.CompiledAt,
+		&i.Title,
+		&i.ShortName,
+		&i.TimeLimitMs,
+		&i.MemoryLimitMb,
 	)
 	return i, err
 }
 
 const getProblemPackageByVersion = `-- name: GetProblemPackageByVersion :one
-SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at FROM problem_packages WHERE problem_id = $1 AND version = $2
+SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at, title, short_name, time_limit_ms, memory_limit_mb FROM problem_packages WHERE problem_id = $1 AND version = $2
 `
 
 type GetProblemPackageByVersionParams struct {
@@ -108,12 +116,16 @@ func (q *Queries) GetProblemPackageByVersion(ctx context.Context, arg GetProblem
 		&i.BuildLog,
 		&i.CreatedAt,
 		&i.CompiledAt,
+		&i.Title,
+		&i.ShortName,
+		&i.TimeLimitMs,
+		&i.MemoryLimitMb,
 	)
 	return i, err
 }
 
 const getReadyPackage = `-- name: GetReadyPackage :one
-SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at FROM problem_packages
+SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at, title, short_name, time_limit_ms, memory_limit_mb FROM problem_packages
 WHERE problem_id = $1 AND status = 'ready'
 ORDER BY created_at DESC
 LIMIT 1
@@ -133,12 +145,16 @@ func (q *Queries) GetReadyPackage(ctx context.Context, problemID uuid.UUID) (Pro
 		&i.BuildLog,
 		&i.CreatedAt,
 		&i.CompiledAt,
+		&i.Title,
+		&i.ShortName,
+		&i.TimeLimitMs,
+		&i.MemoryLimitMb,
 	)
 	return i, err
 }
 
 const listProblemPackages = `-- name: ListProblemPackages :many
-SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at FROM problem_packages
+SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at, title, short_name, time_limit_ms, memory_limit_mb FROM problem_packages
 WHERE problem_id = $1
 ORDER BY version DESC
 LIMIT $3::int OFFSET $2::bigint
@@ -170,6 +186,10 @@ func (q *Queries) ListProblemPackages(ctx context.Context, arg ListProblemPackag
 			&i.BuildLog,
 			&i.CreatedAt,
 			&i.CompiledAt,
+			&i.Title,
+			&i.ShortName,
+			&i.TimeLimitMs,
+			&i.MemoryLimitMb,
 		); err != nil {
 			return nil, err
 		}

@@ -1,6 +1,7 @@
 -- name: CreateSubmission :one
 INSERT INTO submissions (
     contest_id,
+    package_id,
     problem_id,
     owner_id,
     source,
@@ -12,6 +13,7 @@ INSERT INTO submissions (
   )
 VALUES (
     @contest_id::uuid,
+    (SELECT cp.package_id FROM contest_problems cp WHERE cp.contest_id = @contest_id::uuid AND cp.problem_id = @problem_id::uuid),
     @problem_id::uuid,
     @owner_id::uuid,
     @source,

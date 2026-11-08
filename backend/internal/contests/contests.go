@@ -99,13 +99,19 @@ func (uc *ContestsUseCase) UpdateContest(ctx context.Context, c contestsmodel.Co
 }
 
 func (uc *ContestsUseCase) DeleteContest(ctx context.Context, id uuid.UUID) error {
-	return uc.withinContest(ctx, id, accessmodel.ActionAdminContest, func(tx CommandTxStore) error {
+	return uc.withinContest(ctx, id, accessmodel.ActionDeleteContest, func(tx CommandTxStore) error {
 		return tx.DeleteContest(ctx, id)
 	})
 }
 
 func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error {
-	if err := uc.authorizeContestProblem(ctx, c.ContestId, c.ProblemId); err != nil {
+	var err error
+	ctx, err = uc.transactions.Prepare(ctx)
+	if err != nil {
+		return err
+	}
+	c.PackageId, err = uc.authorizeContestProblem(ctx, c.ContestId, c.ProblemId, c.PackageId, true)
+	if err != nil {
 		return err
 	}
 	return uc.withinContest(ctx, c.ContestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
@@ -117,7 +123,13 @@ func (uc *ContestsUseCase) CreateContestProblem(ctx context.Context, c contestsm
 }
 
 func (uc *ContestsUseCase) UpdateContestProblemPackage(ctx context.Context, contestId, problemId, packageId uuid.UUID) error {
-	if err := uc.authorizeContestProblem(ctx, contestId, problemId); err != nil {
+	var err error
+	ctx, err = uc.transactions.Prepare(ctx)
+	if err != nil {
+		return err
+	}
+	packageId, err = uc.authorizeContestProblem(ctx, contestId, problemId, packageId, false)
+	if err != nil {
 		return err
 	}
 	return uc.withinContest(ctx, contestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
@@ -207,7 +219,7 @@ func (uc *ContestsUseCase) ProjectScoreboard(ctx context.Context, contestID uuid
 		return nil, err
 	}
 
-	isFrozen := contest.IsFrozenAt(time.Now())
+	isFrozen := contest.IsFrozenAt(accessmodel.ReadTime(ctx))
 	freezeTime := contest.GetFreezeTime()
 	penaltyPerAttempt := contest.GetPenaltyPerAttempt()
 
@@ -271,7 +283,7 @@ func (uc *ContestsUseCase) ProjectScoreboard(ctx context.Context, contestID uuid
 		return nil, err
 	}
 
-	subs, err := uc.contestRepo.GetContestScoreboardSubmissions(ctx, contestID)
+	subs, err := uc.contestRepo.GetContestScoreboardSubmissions(accessmodel.WithScoreboardFreeze(ctx, freezeTime), contestID)
 	if err != nil {
 		return nil, err
 	}
@@ -797,7 +809,7 @@ func (uc *ContestsUseCase) GetContestScoreboardUser(ctx context.Context, contest
 		return nil, err
 	}
 	response := &contestsmodel.ScoreboardResponse{ContestID: contestID, ContestLogin: contest.Login, OrganizationLogin: contest.OrganizationLogin,
-		IsFrozen: contest.IsFrozenAt(time.Now()), FreezeTime: contest.GetFreezeTime(), PenaltyPerAttempt: contest.GetPenaltyPerAttempt(),
+		IsFrozen: contest.IsFrozenAt(accessmodel.ReadTime(ctx)), FreezeTime: contest.GetFreezeTime(), PenaltyPerAttempt: contest.GetPenaltyPerAttempt(),
 		Items: []contestsmodel.ScoreboardItem{}, Problems: make([]contestsmodel.ScoreboardProblemHeader, len(problems))}
 	for i, problem := range problems {
 		response.Problems[i] = contestsmodel.ScoreboardProblemHeader{ProblemID: problem.ProblemID, Title: problem.Title, ShortName: problem.ShortName, Ordinal: int32(problem.Ordinal)} // #nosec G115
@@ -805,7 +817,11 @@ func (uc *ContestsUseCase) GetContestScoreboardUser(ctx context.Context, contest
 	if member.ContestRole != contestsmodel.ContestRoleParticipant {
 		return response, nil
 	}
-	subs, err := uc.contestRepo.GetUserScoreboardSubmissions(ctx, contestID, userID)
+	historyCtx := ctx
+	if response.IsFrozen && !unfrozen {
+		historyCtx = accessmodel.WithScoreboardFreeze(ctx, response.FreezeTime)
+	}
+	subs, err := uc.contestRepo.GetUserScoreboardSubmissions(historyCtx, contestID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -898,10 +914,14 @@ func calculateScoreboardProblem[T any](rules scoreboardRules, userID, problemID 
 		if contest.StartTime != nil && sub.CreatedAt.Before(*contest.StartTime) {
 			continue
 		}
-		if contest.EndTime != nil && sub.CreatedAt.After(*contest.EndTime) {
+		if contest.EndTime != nil && !sub.CreatedAt.Before(*contest.EndTime) {
 			continue
 		}
 
+		if sub.State == 0 && !solved {
+			pendingAttempts++
+			continue
+		}
 		if sub.State == submissionsmodel.Saved || solved {
 			continue
 		}

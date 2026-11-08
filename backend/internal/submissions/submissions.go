@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
@@ -72,17 +71,34 @@ func (uc *SubmissionsUseCase) submissionView(ctx context.Context, sub submission
 	if err != nil {
 		return submissionsmodel.Submission{}, err
 	}
-	if requireReadPermission && !own && !user.IsAdmin() && !permissions.GetOtherUserSubmission {
+	if requireReadPermission && (own && !permissions.GetOwnSubmission || !own && !permissions.GetOtherUserSubmission) {
 		return submissionsmodel.Submission{}, pkg.NoPermission
 	}
 	contest, err := uc.contestsUC.GetContest(ctx, *sub.ContestID)
 	if err != nil {
 		return submissionsmodel.Submission{}, err
 	}
-	return SubmissionView(&contest, sub.CreatedBy, sub.CreatedAt, user.Id, permissions, time.Now()).Apply(sub), nil
+	return SubmissionView(&contest, sub.CreatedBy, sub.CreatedAt, user.Id, permissions, accessmodel.ReadTime(ctx)).Apply(sub), nil
 }
 
 func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error) {
+	var id uuid.UUID
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		id, err = uc.createSubmission(ctx, creation)
+		if !errors.Is(err, pkg.ErrConflict) {
+			return id, err
+		}
+	}
+	return uuid.Nil, err
+}
+
+func (uc *SubmissionsUseCase) createSubmission(ctx context.Context, creation *submissionsmodel.SubmissionCreation) (uuid.UUID, error) {
+	var err error
+	ctx, err = uc.transactor.Prepare(ctx)
+	if err != nil {
+		return uuid.Nil, err
+	}
 	if err := uc.requireContest(ctx, creation.ContestId, accessmodel.ActionCreateSubmission); err != nil {
 		return uuid.Nil, err
 	}
@@ -91,23 +107,16 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *su
 		return uuid.Nil, pkg.NoPermission
 	}
 
-	_, err := uc.contestsUC.GetContest(ctx, creation.ContestId)
+	contest, err := uc.contestsUC.GetContest(ctx, creation.ContestId)
 	if err != nil {
 		return uuid.Nil, err
 	}
 
-	_, err = uc.problemsUC.GetProblemById(ctx, creation.ProblemId)
-	if err != nil {
-		return uuid.Nil, err
-	}
-
+	ctx = accessmodel.WithDecisionDeadline(ctx, contest.EndTime)
 	var id uuid.UUID
 
 	err = uc.transactor.Within(ctx, func(tx SubmissionTxStore) error {
 		if err := tx.LockSubmissionTuple(ctx, creation.ContestId, creation.UserId, creation.ProblemId); err != nil {
-			return err
-		}
-		if err := requireContest(ctx, tx, creation.ContestId, accessmodel.ActionCreateSubmission); err != nil {
 			return err
 		}
 
@@ -247,7 +256,7 @@ func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submis
 		if err != nil {
 			return nil, err
 		}
-		if filter.State != nil && contest.IsFrozenAt(time.Now()) && !permissions.ManageContest && !ownOnly {
+		if filter.State != nil && contest.IsFrozenAt(accessmodel.ReadTime(ctx)) && !permissions.ManageContest && !ownOnly {
 			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "state filter is unavailable during freeze")
 		}
 	} else if !ownOnly && !user.IsAdmin() {

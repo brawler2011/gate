@@ -173,7 +173,7 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 		*scoreboardRepo
 		*blockingSubmissionsRepo
 		OutboxRepo
-	}{f.repo, repo, outbox}}, nil)
+	}{f.repo, repo, outbox}}, allowSubmissionPermissions{})
 	uc := submissions.NewSubmissionsUseCase(repo, f.repo, blockingProblems{}, blockingTransactor{struct {
 		*blockingSubmissionsRepo
 		OutboxRepo
@@ -248,7 +248,7 @@ func (allowSubmissionPermissions) HasContestPermission(context.Context, uuid.UUI
 	return true, nil
 }
 func (allowSubmissionPermissions) GetContestPermissions(context.Context, uuid.UUID, uuid.UUID) (*accessmodel.ContestPermissions, error) {
-	return &accessmodel.ContestPermissions{GetOtherUserSubmission: true, GetSubmissionDetails: true, ManageContest: true}, nil
+	return &accessmodel.ContestPermissions{GetOwnSubmission: true, GetOtherUserSubmission: true, GetSubmissionDetails: true, ManageContest: true}, nil
 }
 
 func (*blockingSubmissionsRepo) HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error) {
@@ -267,3 +267,13 @@ func (*blockingSubmissionsRepo) CreateNotification(context.Context, *notificatio
 }
 
 func (*blockingSubmissionsRepo) LockContestProblemOrder(context.Context, uuid.UUID) error { return nil }
+
+func (t blockingTransactor) Prepare(ctx context.Context) (context.Context, error) { return ctx, nil }
+
+func (t contestCommandTransactions) Prepare(ctx context.Context) (context.Context, error) {
+	return ctx, nil
+}
+
+func (allowSubmissionPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+	return false, nil
+}

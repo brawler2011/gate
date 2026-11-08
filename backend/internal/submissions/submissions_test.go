@@ -139,3 +139,5 @@ func (r *diagnosticOutboxRepo) Record(ctx context.Context, event eventdata.Event
 func (r *diagnosticSubmissionsRepo) ScheduleJob(_ context.Context, id uuid.UUID) (judgingmodel.Job, error) {
 	return judgingmodel.Job{ID: uuid.New(), SubmissionID: id, Generation: 1}, nil
 }
+
+func (t diagnosticTransactor) Prepare(ctx context.Context) (context.Context, error) { return ctx, nil }

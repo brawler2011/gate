@@ -171,7 +171,7 @@ func TestIndependentSubmissionTransactions(t *testing.T) {
 			q := sqlc.New(tx)
 			switch held {
 			case "creation":
-				bound := NewSubmissionTransactions(f.pool).(transactions[submissions.SubmissionTxStore]).bind(q)
+				bound := NewSubmissionTransactions(f.pool).(guardedTransactions[submissions.SubmissionTxStore]).transactions.bind(q)
 				_, err := f.create(fixedSubmissionTransaction{bound}, 1)
 				require.NoError(t, err)
 			case "completion":
@@ -413,4 +413,8 @@ func TestCompletionChecksDeadlineAfterLockWait(t *testing.T) {
 	var events int
 	require.NoError(t, f.pool.QueryRow(f.ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type='submissions.completed'", job.SubmissionID).Scan(&events))
 	require.Zero(t, events, fmt.Sprint(sub))
+}
+
+func (t fixedSubmissionTransaction) Prepare(ctx context.Context) (context.Context, error) {
+	return ctx, nil
 }

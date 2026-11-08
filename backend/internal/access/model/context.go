@@ -67,3 +67,13 @@ func ReadTime(ctx context.Context) time.Time {
 	}
 	return time.Now().UTC()
 }
+
+type scoreboardFreezeKey struct{}
+
+func WithScoreboardFreeze(ctx context.Context, boundary *time.Time) context.Context {
+	return context.WithValue(ctx, scoreboardFreezeKey{}, boundary)
+}
+func ScoreboardFreeze(ctx context.Context) *time.Time {
+	t, _ := ctx.Value(scoreboardFreezeKey{}).(*time.Time)
+	return t
+}

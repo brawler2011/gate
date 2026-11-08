@@ -235,7 +235,7 @@ func (r *StatementReader) ReadStatement(ctx context.Context, problemID, packageI
 	var statement *problemsmodel.Statement
 	var samples []problemsmodel.Sample
 	if packageID != uuid.Nil {
-		statement, samples = r.loadPackageStatementAndSamplesWithLang(ctx, problemID, packageID, lang)
+		return r.loadPackageStatementAndSamplesWithLang(ctx, problemID, packageID, lang)
 	}
 	if statement == nil || len(samples) == 0 {
 		fallback, fallbackSamples := r.loadWorkspaceStatementAndSamples(ctx, problemID, lang)

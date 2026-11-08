@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"strings"
-	"time"
 
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
 
@@ -30,9 +29,6 @@ type ContestDetailsStore interface {
 	GetContestProblem(context.Context, contestsmodel.ContestProblemGet) (contestsmodel.ContestProblem, error)
 	GetContestProblems(context.Context, uuid.UUID) ([]contestsmodel.ContestProblem, error)
 }
-type ProblemCatalog interface {
-	GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error)
-}
 type StatementSource interface {
 	ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) (*problemsmodel.Statement, []problemsmodel.Sample)
 }
@@ -45,14 +41,13 @@ type ContestOwners interface {
 type DetailsReader struct {
 	users       ContestOwners
 	contests    ContestDetailsStore
-	problems    ProblemCatalog
 	statements  StatementSource
 	permissions Permissions
 	compiler    BookletCompiler
 }
 
-func NewDetailsReader(contests ContestDetailsStore, problems ProblemCatalog, statements StatementSource, permissions Permissions, compiler BookletCompiler, users ContestOwners) *DetailsReader {
-	return &DetailsReader{users: users, contests: contests, problems: problems, statements: statements, permissions: permissions, compiler: compiler}
+func NewDetailsReader(contests ContestDetailsStore, statements StatementSource, permissions Permissions, compiler BookletCompiler, users ContestOwners) *DetailsReader {
+	return &DetailsReader{users: users, contests: contests, statements: statements, permissions: permissions, compiler: compiler}
 }
 func (r *DetailsReader) authorizedContest(ctx context.Context, org, login string, action accessmodel.ContestAction) (contestsmodel.Contest, error) {
 	contest, err := r.contests.GetContestByOrgLoginAndContestLogin(ctx, org, login)
@@ -99,10 +94,7 @@ func (r *DetailsReader) GetContestProblemDetails(ctx context.Context, org, login
 	if err != nil {
 		return nil, err
 	}
-	problem, err := r.problems.GetProblemById(ctx, id)
-	if err != nil {
-		return nil, err
-	}
+	problem := problemsmodel.Problem{ID: link.ProblemID, Title: link.Title, ShortName: link.ShortName, TimeLimitMs: link.TimeLimitMs, MemoryLimitMb: link.MemoryLimitMb, CreatedAt: link.CreatedAt, UpdatedAt: link.UpdatedAt}
 	user := accessmodel.UserFromContext(ctx)
 	manager := false
 	if !user.IsGuest() {
@@ -137,7 +129,7 @@ func (r *DetailsReader) ReadBooklet(ctx context.Context, orgLogin, contestLogin,
 		if contest.GetHideStatements() {
 			return nil, pkg.Wrap(pkg.NoPermission, nil, "statements are hidden for this contest")
 		}
-		if contest.StartTime != nil && time.Now().Before(*contest.StartTime) {
+		if contest.StartTime != nil && accessmodel.ReadTime(ctx).Before(*contest.StartTime) {
 			return nil, pkg.Wrap(pkg.NoPermission, nil, "contest has not started yet")
 		}
 	}
@@ -151,17 +143,9 @@ func (r *DetailsReader) ReadBooklet(ctx context.Context, orgLogin, contestLogin,
 
 	var problemDatas []booklet.ProblemData
 	for _, cp := range problems {
-		prob, err := r.problems.GetProblemById(ctx, cp.ProblemID)
-		if err != nil {
-			continue
-		}
-
 		statement, samples := r.statements.ReadStatement(ctx, cp.ProblemID, cp.PackageID, lang)
 
-		title := strings.TrimSpace(prob.Title)
-		if title == "" {
-			title = strings.TrimSpace(cp.Title)
-		}
+		title := strings.TrimSpace(cp.Title)
 		if statement != nil && strings.TrimSpace(statement.Title) != "" {
 			title = strings.TrimSpace(statement.Title)
 		}
@@ -192,8 +176,8 @@ func (r *DetailsReader) ReadBooklet(ctx context.Context, orgLogin, contestLogin,
 		problemDatas = append(problemDatas, booklet.ProblemData{
 			Letter:        ordinalToLetter(cp.Ordinal),
 			Title:         title,
-			TimeLimitMs:   prob.TimeLimitMs,
-			MemoryLimitMb: prob.MemoryLimitMb,
+			TimeLimitMs:   cp.TimeLimitMs,
+			MemoryLimitMb: cp.MemoryLimitMb,
 			InputFile:     "stdin",
 			OutputFile:    "stdout",
 			Legend:        legend,
@@ -206,7 +190,7 @@ func (r *DetailsReader) ReadBooklet(ctx context.Context, orgLogin, contestLogin,
 		})
 	}
 
-	dateStr := time.Now().Format("02.01.2006")
+	dateStr := accessmodel.ReadTime(ctx).Format("02.01.2006")
 	if contest.StartTime != nil {
 		dateStr = contest.StartTime.Format("02.01.2006")
 	}

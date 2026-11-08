@@ -2,7 +2,9 @@ package contests
 
 import (
 	"context"
-	"time"
+	"errors"
+
+	"github.com/brawler2011/gate/backend/internal/access"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -19,35 +21,14 @@ type CommandPermissions interface {
 	HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error)
 }
 
-// Authorize through pool reads before opening the command transaction, so the
-// command never holds a connection while waiting for another from the same pool.
-func (uc *ContestsUseCase) authorizeContestProblem(ctx context.Context, contestID, problemID uuid.UUID) error {
-	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return pkg.ErrUnauthenticated
-	}
-	allowed, err := uc.permissions.HasContestPermission(ctx, contestID, user.Id, accessmodel.ActionManageContest)
-	if err != nil {
-		return err
-	}
-	if !allowed {
-		return pkg.NoPermission
-	}
-	allowed, err = uc.permissions.HasProblemPermission(ctx, problemID, user.Id, accessmodel.ActionUseProblem)
-	if err != nil {
-		return err
-	}
-	if !allowed {
-		return pkg.NoPermission
-	}
-	return nil
+func (uc *ContestsUseCase) authorizeContestProblem(ctx context.Context, contestID, problemID, packageID uuid.UUID, allowLatest bool) (uuid.UUID, error) {
+	return access.AuthorizeContestProblem(ctx, uc.permissions, contestID, problemID, func() (access.PackageContext, error) {
+		return uc.contestRepo.ResolveContestProblemPackage(ctx, problemID, packageID, allowLatest)
+	})
 }
 
 func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error) {
 	user := accessmodel.UserFromContext(ctx)
-	if user.IsGuest() {
-		return nil, pkg.ErrUnauthenticated
-	}
 	if user.Id != userID {
 		return nil, pkg.NoPermission
 	}
@@ -60,10 +41,16 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, 
 		return nil, err
 	}
 	if !allowed {
+		if user.IsGuest() {
+			return nil, pkg.ErrUnauthenticated
+		}
 		return nil, pkg.NoPermission
 	}
-	manager := user.IsAdmin() || contest.OwnerID != nil && *contest.OwnerID == userID
-	if !manager && contest.StartTime != nil && time.Now().Before(*contest.StartTime) {
+	manager, err := uc.permissions.HasContestPermission(ctx, contestID, userID, accessmodel.ActionManageContest)
+	if err != nil {
+		return nil, err
+	}
+	if !manager && contest.StartTime != nil && accessmodel.ReadTime(ctx).Before(*contest.StartTime) {
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "contest has not started yet")
 	}
 	if unfrozen {
@@ -79,18 +66,37 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, 
 }
 
 func (uc *ContestsUseCase) withinContest(ctx context.Context, id uuid.UUID, action accessmodel.ContestAction, fn func(CommandTxStore) error) error {
+	// Serialization failures require a fresh external precheck, never a replay
+	// of the decision inside the transaction.
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		err = uc.withinContestOnce(ctx, id, action, fn)
+		_, prepared := accessmodel.DecisionFromContext(ctx)
+		if prepared || !errors.Is(err, pkg.ErrConflict) {
+			return err
+		}
+	}
+	return err
+}
+
+func (uc *ContestsUseCase) withinContestOnce(ctx context.Context, id uuid.UUID, action accessmodel.ContestAction, fn func(CommandTxStore) error) error {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.ErrUnauthenticated
 	}
+	var err error
+	ctx, err = uc.transactions.Prepare(ctx)
+	if err != nil {
+		return err
+	}
+	allowed, err := uc.permissions.HasContestPermission(ctx, id, user.Id, action)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return pkg.NoPermission
+	}
 	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {
-		allowed, err := tx.HasContestPermission(ctx, id, user.Id, action)
-		if err != nil {
-			return err
-		}
-		if !allowed {
-			return pkg.NoPermission
-		}
 		return fn(tx)
 	})
 }

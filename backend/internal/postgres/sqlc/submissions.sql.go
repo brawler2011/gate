@@ -123,6 +123,7 @@ func (q *Queries) CountSubmissions(ctx context.Context, arg CountSubmissionsPara
 const createSubmission = `-- name: CreateSubmission :one
 INSERT INTO submissions (
     contest_id,
+    package_id,
     problem_id,
     owner_id,
     source,
@@ -134,6 +135,7 @@ INSERT INTO submissions (
   )
 VALUES (
     $1::uuid,
+    (SELECT cp.package_id FROM contest_problems cp WHERE cp.contest_id = $1::uuid AND cp.problem_id = $2::uuid),
     $2::uuid,
     $3::uuid,
     $4,

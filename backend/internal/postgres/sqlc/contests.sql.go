@@ -402,9 +402,9 @@ func (q *Queries) GetContestMember(ctx context.Context, arg GetContestMemberPara
 }
 
 const getContestProblem = `-- name: GetContestProblem :one
-SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, p.title, p.short_name, p.visibility, p.time_limit_ms, p.memory_limit_mb, p.updated_at AS problem_updated_at
+SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, pp.title, pp.short_name, 'private'::text AS visibility, pp.time_limit_ms, pp.memory_limit_mb, pp.created_at AS problem_updated_at
 FROM contest_problems cp
-JOIN problems p ON cp.problem_id = p.id
+JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1 AND cp.problem_id = $2
 `
 
@@ -527,21 +527,29 @@ func (q *Queries) GetContestScoreboardFromStandings(ctx context.Context, contest
 }
 
 const getContestScoreboardSubmissions = `-- name: GetContestScoreboardSubmissions :many
-SELECT owner_id, problem_id, state, created_at
-FROM submissions
-WHERE contest_id = $1 AND owner_id IS NOT NULL AND problem_id IS NOT NULL
-ORDER BY owner_id, problem_id, created_at ASC
+SELECT s.owner_id, s.problem_id,
+ CASE WHEN $1::timestamptz IS NULL THEN s.state ELSE COALESCE(
+ (SELECT NULLIF(h.state, 1) FROM submission_state_history h WHERE h.submission_id=s.id AND h.observed_at < $1::timestamptz ORDER BY h.observed_at DESC,h.id DESC LIMIT 1),0) END::integer AS state,
+ s.created_at
+FROM submissions s
+WHERE s.contest_id = $2::uuid AND s.owner_id IS NOT NULL AND s.problem_id IS NOT NULL
+ORDER BY s.owner_id, s.problem_id, s.created_at ASC
 `
 
-type GetContestScoreboardSubmissionsRow struct {
-	OwnerID   *uuid.UUID             `json:"owner_id"`
-	ProblemID *uuid.UUID             `json:"problem_id"`
-	State     submissionsmodel.State `json:"state"`
-	CreatedAt time.Time              `json:"created_at"`
+type GetContestScoreboardSubmissionsParams struct {
+	FreezeTime *time.Time `json:"freeze_time"`
+	ContestID  uuid.UUID  `json:"contest_id"`
 }
 
-func (q *Queries) GetContestScoreboardSubmissions(ctx context.Context, contestID *uuid.UUID) ([]GetContestScoreboardSubmissionsRow, error) {
-	rows, err := q.db.Query(ctx, getContestScoreboardSubmissions, contestID)
+type GetContestScoreboardSubmissionsRow struct {
+	OwnerID   *uuid.UUID `json:"owner_id"`
+	ProblemID *uuid.UUID `json:"problem_id"`
+	State     int32      `json:"state"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+func (q *Queries) GetContestScoreboardSubmissions(ctx context.Context, arg GetContestScoreboardSubmissionsParams) ([]GetContestScoreboardSubmissionsRow, error) {
+	rows, err := q.db.Query(ctx, getContestScoreboardSubmissions, arg.FreezeTime, arg.ContestID)
 	if err != nil {
 		return nil, err
 	}
@@ -641,26 +649,30 @@ func (q *Queries) GetSubmissionsForScoreboard(ctx context.Context, arg GetSubmis
 }
 
 const getUserScoreboardSubmissions = `-- name: GetUserScoreboardSubmissions :many
-SELECT owner_id, problem_id, state, created_at
-FROM submissions
-WHERE contest_id = $1 AND owner_id = $2 AND problem_id IS NOT NULL
-ORDER BY problem_id, created_at ASC
+SELECT s.owner_id, s.problem_id,
+ CASE WHEN $1::timestamptz IS NULL THEN s.state ELSE COALESCE(
+ (SELECT NULLIF(h.state, 1) FROM submission_state_history h WHERE h.submission_id=s.id AND h.observed_at < $1::timestamptz ORDER BY h.observed_at DESC,h.id DESC LIMIT 1),0) END::integer AS state,
+ s.created_at
+FROM submissions s
+WHERE s.contest_id = $2::uuid AND s.owner_id = $3::uuid AND s.problem_id IS NOT NULL
+ORDER BY s.problem_id, s.created_at ASC
 `
 
 type GetUserScoreboardSubmissionsParams struct {
-	ContestID *uuid.UUID `json:"contest_id"`
-	OwnerID   *uuid.UUID `json:"owner_id"`
+	FreezeTime *time.Time `json:"freeze_time"`
+	ContestID  uuid.UUID  `json:"contest_id"`
+	OwnerID    uuid.UUID  `json:"owner_id"`
 }
 
 type GetUserScoreboardSubmissionsRow struct {
-	OwnerID   *uuid.UUID             `json:"owner_id"`
-	ProblemID *uuid.UUID             `json:"problem_id"`
-	State     submissionsmodel.State `json:"state"`
-	CreatedAt time.Time              `json:"created_at"`
+	OwnerID   *uuid.UUID `json:"owner_id"`
+	ProblemID *uuid.UUID `json:"problem_id"`
+	State     int32      `json:"state"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
 func (q *Queries) GetUserScoreboardSubmissions(ctx context.Context, arg GetUserScoreboardSubmissionsParams) ([]GetUserScoreboardSubmissionsRow, error) {
-	rows, err := q.db.Query(ctx, getUserScoreboardSubmissions, arg.ContestID, arg.OwnerID)
+	rows, err := q.db.Query(ctx, getUserScoreboardSubmissions, arg.FreezeTime, arg.ContestID, arg.OwnerID)
 	if err != nil {
 		return nil, err
 	}
@@ -736,9 +748,8 @@ func (q *Queries) ListContestMembers(ctx context.Context, arg ListContestMembers
 }
 
 const listContestProblems = `-- name: ListContestProblems :many
-SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, p.title, p.short_name, p.visibility, p.time_limit_ms, p.memory_limit_mb, p.updated_at AS problem_updated_at, pp.url as package_url
+SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, pp.title, pp.short_name, 'private'::text AS visibility, pp.time_limit_ms, pp.memory_limit_mb, pp.created_at AS problem_updated_at, pp.url as package_url
 FROM contest_problems cp
-JOIN problems p ON cp.problem_id = p.id
 JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1
 ORDER BY cp.ordinal

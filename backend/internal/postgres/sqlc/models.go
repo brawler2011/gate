@@ -447,6 +447,11 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 	return string(ns.UserRole), nil
 }
 
+type AccessRevision struct {
+	Singleton bool  `json:"singleton"`
+	Revision  int64 `json:"revision"`
+}
+
 type AuthToken struct {
 	ID        uuid.UUID   `json:"id"`
 	UserID    uuid.UUID   `json:"user_id"`
@@ -699,6 +704,10 @@ type ProblemPackage struct {
 	BuildLog       *string    `json:"build_log"`
 	CreatedAt      time.Time  `json:"created_at"`
 	CompiledAt     *time.Time `json:"compiled_at"`
+	Title          string     `json:"title"`
+	ShortName      string     `json:"short_name"`
+	TimeLimitMs    int32      `json:"time_limit_ms"`
+	MemoryLimitMb  int32      `json:"memory_limit_mb"`
 }
 
 type ProblemTeam struct {
@@ -731,6 +740,14 @@ type Submission struct {
 	BanReason   *string                       `json:"ban_reason"`
 	Revision    int64                         `json:"revision"`
 	Generation  int64                         `json:"generation"`
+	PackageID   *uuid.UUID                    `json:"package_id"`
+}
+
+type SubmissionStateHistory struct {
+	ID           int64     `json:"id"`
+	SubmissionID uuid.UUID `json:"submission_id"`
+	ObservedAt   time.Time `json:"observed_at"`
+	State        int32     `json:"state"`
 }
 
 type Team struct {

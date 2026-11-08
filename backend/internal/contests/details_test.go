@@ -79,7 +79,7 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 			}
 			store := &detailStore{contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, Settings: map[string]interface{}{"hide_statements": tc.hidden}}, link: contestsmodel.ContestProblem{ProblemID: uuid.New(), Ordinal: 1}}
 			statements, compiler := &detailStatements{}, &detailCompiler{}
-			reader := NewDetailsReader(store, store, statements, detailPermissions{view: true, problems: tc.allowed, manage: tc.manage}, compiler, nil)
+			reader := NewDetailsReader(store, statements, detailPermissions{view: true, problems: tc.allowed, manage: tc.manage}, compiler, nil)
 			ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 			result, err := reader.GetContestProblemDetails(ctx, "org", "contest", store.link.ProblemID)
 			if tc.allowed {
@@ -107,7 +107,7 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 
 func TestContestListUsesFlatProjection(t *testing.T) {
 	store := &detailStore{contest: contestsmodel.Contest{ID: uuid.New()}, link: contestsmodel.ContestProblem{Title: "Projected", TimeLimitMs: 1234, MemoryLimitMb: 512}}
-	reader := NewDetailsReader(store, store, nil, detailPermissions{view: true, problems: true}, nil, nil)
+	reader := NewDetailsReader(store, nil, detailPermissions{view: true, problems: true}, nil, nil)
 	result, err := reader.GetContestDetails(context.Background(), "org", "contest")
 	require.NoError(t, err)
 	require.Len(t, result.Problems, 1)

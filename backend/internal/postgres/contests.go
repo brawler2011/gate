@@ -188,9 +188,9 @@ func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c contestsmodel
 }
 
 // contestProblemPackage resolves and validates the immutable package to pin.
-func (r *ContestsRepo) contestProblemPackage(ctx context.Context, problemID, packageID uuid.UUID, allowLatest bool) (uuid.UUID, error) {
+func (r *ContestsRepo) ResolveContestProblemPackage(ctx context.Context, problemID, packageID uuid.UUID, allowLatest bool) (access.PackageContext, error) {
 	if packageID == uuid.Nil && !allowLatest {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "package is required")
+		return access.PackageContext{}, pkg.Wrap(pkg.ErrBadInput, nil, "package is required")
 	}
 	var row sqlc.ProblemPackage
 	var err error
@@ -200,15 +200,23 @@ func (r *ContestsRepo) contestProblemPackage(ctx context.Context, problemID, pac
 		row, err = r.queries.GetProblemPackageByID(ctx, packageID)
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "ready package not found")
+		return access.PackageContext{}, pkg.Wrap(pkg.ErrBadInput, nil, "ready package not found")
 	}
 	if err != nil {
-		return uuid.Nil, HandlePgErr(err)
+		return access.PackageContext{}, HandlePgErr(err)
 	}
-	if row.ProblemID != problemID || row.Status != "ready" {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "package must belong to the problem and be ready")
+	return access.PackageContext{ID: row.ID, ProblemID: row.ProblemID, Status: string(row.Status)}, nil
+}
+
+func (r *ContestsRepo) contestProblemPackage(ctx context.Context, problemID, packageID uuid.UUID, allowLatest bool) (uuid.UUID, error) {
+	pack, err := r.ResolveContestProblemPackage(ctx, problemID, packageID, allowLatest)
+	if err != nil {
+		return uuid.Nil, err
 	}
-	return row.ID, nil
+	if err := access.RequireReadyPackage(problemID, pack); err != nil {
+		return uuid.Nil, err
+	}
+	return pack.ID, nil
 }
 
 func (r *ContestsRepo) DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error {
@@ -548,7 +556,6 @@ func mapListContestProblemsRow(c sqlc.ListContestProblemsRow) contestsmodel.Cont
 		Title:      c.Title,
 		ShortName:  c.ShortName,
 		Visibility: string(c.Visibility),
-		PackageURL: c.PackageUrl,
 		CreatedAt:  c.CreatedAt,
 	}
 }
@@ -680,7 +687,7 @@ func (r *ContestsRepo) GetContestScoreboardFromStandings(ctx context.Context, co
 }
 
 func (r *ContestsRepo) GetContestScoreboardSubmissions(ctx context.Context, contestID uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
-	rows, err := r.queries.GetContestScoreboardSubmissions(ctx, &contestID)
+	rows, err := r.queries.GetContestScoreboardSubmissions(ctx, sqlc.GetContestScoreboardSubmissionsParams{ContestID: contestID, FreezeTime: accessmodel.ScoreboardFreeze(ctx)})
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}
@@ -693,7 +700,7 @@ func (r *ContestsRepo) GetContestScoreboardSubmissions(ctx context.Context, cont
 }
 
 func (r *ContestsRepo) GetUserScoreboardSubmissions(ctx context.Context, contestID, userID uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
-	rows, err := r.queries.GetUserScoreboardSubmissions(ctx, sqlc.GetUserScoreboardSubmissionsParams{ContestID: &contestID, OwnerID: &userID})
+	rows, err := r.queries.GetUserScoreboardSubmissions(ctx, sqlc.GetUserScoreboardSubmissionsParams{ContestID: contestID, OwnerID: userID, FreezeTime: accessmodel.ScoreboardFreeze(ctx)})
 	if err != nil {
 		return nil, HandlePgErr(err)
 	}

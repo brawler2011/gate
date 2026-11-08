@@ -7,6 +7,7 @@ import (
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -124,7 +125,7 @@ func (s *IntegrationTestSuite) TestUnblockProblemQueuesOneGeneration() {
 	actor, err := s.usersRepo.GetUserById(s.ctx, userID)
 	s.Require().NoError(err)
 	ctx := accessmodel.WithUser(s.ctx, actor)
-	uc := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), nil)
+	uc := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), access.NewMetadataPermissions(access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo), pgstore.NewPolicyFactsRepo(s.dbPool)))
 	s.Require().NoError(uc.BlockProblemForUser(ctx, contestID, userID, problemID, nil))
 	repo := pgstore.NewSubmissionsRepo(s.dbPool)
 	before, err := repo.GetSubmission(s.ctx, sub)
