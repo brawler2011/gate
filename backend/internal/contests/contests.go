@@ -559,21 +559,11 @@ func (uc *ContestsUseCase) ListJoinRequests(
 		return nil, err
 	}
 
-	// Verify user is moderator/owner or org admin
-	member, err := uc.contestRepo.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{
-		ContestId: contest.ID,
-		UserId:    requestUserID,
-	})
-	isModerator := err == nil && (member.ContestRole == contestsmodel.ContestRoleOwner || member.ContestRole == contestsmodel.ContestRoleModerator)
-
-	if !isModerator && uc.orgsRepo != nil {
-		orgMember, err := uc.orgsRepo.GetMember(ctx, contest.OrganizationID, requestUserID)
-		if err == nil && (orgMember.Role == organizationsmodel.OrgRoleOwner || orgMember.Role == organizationsmodel.OrgRoleAdmin) {
-			isModerator = true
-		}
+	allowed, err := uc.permissions.HasContestPermission(ctx, contest.ID, requestUserID, accessmodel.ActionManageContest)
+	if err != nil {
+		return nil, err
 	}
-
-	if !isModerator {
+	if !allowed {
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "access denied")
 	}
 
