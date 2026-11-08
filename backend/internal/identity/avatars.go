@@ -182,45 +182,8 @@ func (uc *AvatarsUseCase) GetAvatar(ctx context.Context, username string, ifNone
 		return AvatarImage{}, err
 	}
 
-	// Read magic bytes to determine if the stored file is already a PNG.
-	// PNG signature: \x89PNG\r\n\x1a\n (8 bytes)
-	const pngSig = "\x89PNG\r\n\x1a\n"
-	header := make([]byte, len(pngSig))
-	n, readErr := io.ReadFull(body, header)
-	if readErr == nil && string(header) == pngSig {
-		// Valid PNG already, stream as-is
-		reader := io.MultiReader(bytes.NewReader(header), body)
-		return AvatarImage{
-			readCloser: struct {
-				io.Reader
-				io.Closer
-			}{reader, body},
-			etag: etag,
-		}, nil
-	}
-
-	// Stored object is not PNG (e.g. legacy JPEG/GIF/WebP before upload normalization).
-	// Decode stored bytes and convert to PNG to guarantee Content-Type: image/png invariant.
-	var fullData []byte
-	if n > 0 {
-		fullData = append(fullData, header[:n]...)
-	}
-	rest, _ := io.ReadAll(body)
-	_ = body.Close()
-	fullData = append(fullData, rest...)
-
-	img, _, decodeErr := image.Decode(bytes.NewReader(fullData))
-	if decodeErr != nil {
-		return AvatarImage{}, fmt.Errorf("failed to decode stored avatar: %w", decodeErr)
-	}
-
-	var buf bytes.Buffer
-	if encodeErr := png.Encode(&buf, img); encodeErr != nil {
-		return AvatarImage{}, fmt.Errorf("failed to encode stored avatar to PNG: %w", encodeErr)
-	}
-
 	return AvatarImage{
-		readCloser: io.NopCloser(&buf),
+		readCloser: body,
 		etag:       etag,
 	}, nil
 }

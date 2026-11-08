@@ -129,43 +129,6 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Equal(http.StatusBadRequest, s.getStatusCode(err))
 	})
 
-	s.Run("LegacyNonPNGStoredAvatarConversion", func() {
-		// Simulate a user whose avatar was stored as raw JPEG prior to normalization
-		user := s.createUser("align_legacy_usr", accessmodel.UserRoleUser)
-		legacyKey := uuid.NewString()
-		jpegBytes := makeJPEGBytes()
-
-		// Directly write raw JPEG into storage bucket
-		err := s.storage.UploadFile(s.ctx, "avatars", legacyKey, bytes.NewReader(jpegBytes), "image/jpeg")
-		s.Require().NoError(err)
-
-		// Update user avatar_url in database directly
-		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET avatar_url=$1 WHERE id=$2", legacyKey, user.Id)
-		s.Require().NoError(err)
-
-		// GetUserAvatar on the legacy object must convert on-the-fly and emit valid PNG
-		avatarRes, err := s.client.GetUserAvatar(s.ctx, corev1.GetUserAvatarParams{Username: user.Username})
-		s.Require().NoError(err)
-		okResp, ok := avatarRes.(*corev1.GetUserAvatarOKHeaders)
-		s.Require().True(ok)
-		s.True(okResp.ETag.IsSet())
-		legacyEtag := okResp.ETag.Value
-		s.NotEmpty(legacyEtag)
-
-		servedBytes, err := io.ReadAll(okResp.Response.Data)
-		s.Require().NoError(err)
-		s.True(bytes.HasPrefix(servedBytes, pngSig), "legacy JPEG avatar must be served as PNG")
-
-		// ETag/304 caching still functions for legacy avatars
-		cachedRes, err := s.client.GetUserAvatar(s.ctx, corev1.GetUserAvatarParams{
-			Username:    user.Username,
-			IfNoneMatch: corev1.NewOptString(legacyEtag),
-		})
-		s.Require().NoError(err)
-		_, is304 := cachedRes.(*corev1.GetUserAvatarNotModified)
-		s.True(is304)
-	})
-
 	// 2. Missing Multipart Required Fields Validation
 	s.Run("MissingMultipartRequiredFields", func() {
 		admin := s.createUser("align_blog_adm", accessmodel.UserRoleAdmin)
