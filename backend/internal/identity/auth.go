@@ -9,10 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime"
 	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
+	"github.com/brawler2011/gate/backend/internal/ratelimit"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/google/uuid"
@@ -33,6 +35,8 @@ type AuthUseCase struct {
 	authRepo     AuthRepo
 	txManager    IdentityTransactions
 	emailService email.EmailService
+	limiter      *ratelimit.Limiter
+	bcryptSlots  chan struct{}
 }
 
 func NewAuthUseCase(
@@ -40,8 +44,13 @@ func NewAuthUseCase(
 	authRepo AuthRepo,
 	txManager IdentityTransactions,
 	emailService email.EmailService,
+	limiter *ratelimit.Limiter,
 ) *AuthUseCase {
-	return &AuthUseCase{usersRepo: usersRepo, authRepo: authRepo, txManager: txManager, emailService: emailService}
+	return &AuthUseCase{
+		usersRepo: usersRepo, authRepo: authRepo, txManager: txManager,
+		emailService: emailService, limiter: limiter,
+		bcryptSlots: make(chan struct{}, runtime.GOMAXPROCS(0)*2),
+	}
 }
 
 func generateSecureToken() (string, string, error) {
@@ -71,6 +80,9 @@ func (uc *AuthUseCase) Register(ctx context.Context, username, emailAddr, passwo
 		return accessmodel.User{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid password")
 	}
 
+	if err := uc.limiter.Email(ctx, emailAddr); err != nil {
+		return accessmodel.User{}, err
+	}
 	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return accessmodel.User{}, pkg.Wrap(pkg.ErrInternal, err, "failed to hash password")
@@ -204,10 +216,22 @@ func (uc *AuthUseCase) Register(ctx context.Context, username, emailAddr, passwo
 	return user, nil
 }
 
-func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (accessmodel.User, uuid.UUID, error) {
+func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (result accessmodel.User, session uuid.UUID, loginErr error) {
+	defer func() {
+		if errors.Is(loginErr, pkg.ErrUnauthenticated) {
+			if err := uc.limiter.LoginFailure(ctx, identifier); err != nil {
+				loginErr = err
+			}
+		} else if loginErr == nil {
+			uc.limiter.LoginSuccess(ctx, identifier)
+		}
+	}()
 	user, err := uc.usersRepo.GetUserByUsernameOrEmail(ctx, identifier)
 	if err != nil {
-		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, err, "invalid credentials")
+		if errors.Is(err, pkg.ErrNotFound) {
+			return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, err, "invalid credentials")
+		}
+		return accessmodel.User{}, uuid.Nil, err
 	}
 
 	if user.IsExpired() {
@@ -218,7 +242,15 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrBadInput, errors.New("email not verified"), "email not verified")
 	}
 
+	// Verify credentials even during cooldown so a valid login can clear it.
+	// The semaphore bounds CPU work independently of Redis availability.
+	select {
+	case uc.bcryptSlots <- struct{}{}:
+	case <-ctx.Done():
+		return accessmodel.User{}, uuid.Nil, ctx.Err()
+	}
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
+	<-uc.bcryptSlots
 	if err != nil {
 		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, err, "invalid credentials")
 	}
@@ -406,10 +438,10 @@ func (uc *AuthUseCase) ResendVerificationEmail(ctx context.Context, identifier s
 	return uc.emailService.SendVerificationEmail(ctx, *user.Email, user.Username, token)
 }
 
+//nolint:nilerr // Do not reveal whether the account exists.
 func (uc *AuthUseCase) ForgotPassword(ctx context.Context, identifier string) error {
 	user, err := uc.usersRepo.GetUserByUsernameOrEmail(ctx, identifier)
 	if err != nil {
-		//nolint:nilerr // do not reveal if user does not exist to prevent enumeration attacks
 		return nil
 	}
 
@@ -417,6 +449,9 @@ func (uc *AuthUseCase) ForgotPassword(ctx context.Context, identifier string) er
 		return nil
 	}
 
+	if err := uc.limiter.Email(ctx, *user.Email); err != nil {
+		return err
+	}
 	token, tokenHash, err := generateSecureToken()
 	if err != nil {
 		return pkg.Wrap(pkg.ErrInternal, err, "failed to generate token")

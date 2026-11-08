@@ -12,6 +12,8 @@ services:
     environment:
     - ENV=${ENV:-prod}
     - ADDRESS=${BACKEND_ADDRESS:-:8080}
+    # Only this Docker DNS peer may supply forwarded client IPs.
+    - RATE_LIMIT_TRUSTED_PROXY=traefik-global
     - PRIVATE_ADDRESS=${BACKEND_PRIVATE_ADDRESS:-:8081}
     - POSTGRES_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_APP_DB:-gate}?sslmode=disable
     - REDIS_URL=redis://:${REDIS_PASSWORD}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/${REDIS_DB_INDEX:-0}

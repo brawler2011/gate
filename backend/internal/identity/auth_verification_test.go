@@ -323,7 +323,7 @@ func TestRegistrationAndEmailVerification(t *testing.T) {
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
 
-	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc, nil)
 
 	// 1. Register new user
 	user, err := authUC.Register(ctx, "testuser", "test@example.com", "SecretPass123")
@@ -356,7 +356,7 @@ func TestRegistrationRetryUnverifiedUser(t *testing.T) {
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
 
-	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc, nil)
 
 	// 1. Initial registration (email not verified yet)
 	user1, err := authUC.Register(ctx, "unverifieduser", "unverified@example.com", "FirstPassword123")
@@ -409,7 +409,7 @@ func TestPasswordResetFlow(t *testing.T) {
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
 
-	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc, nil)
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("OldPassword123"), bcrypt.DefaultCost)
 	emailStr := "user@example.com"
@@ -458,7 +458,7 @@ func TestEmailChangeFlow(t *testing.T) {
 	authRepo := newFullMockAuthRepo()
 	emailSvc := &mockEmailService{}
 
-	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc, nil)
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("MyPassword123"), bcrypt.DefaultCost)
 	oldEmail := "old@example.com"
@@ -563,7 +563,7 @@ func TestLoginRejectsPasswordChangedBeforeSessionCommit(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, users.CreateUser(context.Background(), identitymodel.CreateUserParams{Id: uuid.New(), Username: "login_race", Role: accessmodel.UserRoleUser, PasswordHash: string(hash), IsEmailVerified: true}))
 	store := changedPasswordStore{identityTestStore{identityUsersStore: users, identityAuthStore: sessions}}
-	uc := NewAuthUseCase(users, sessions, testTransactions[IdentityTxStore]{store}, nil)
+	uc := NewAuthUseCase(users, sessions, testTransactions[IdentityTxStore]{store}, nil, nil)
 	_, id, err := uc.Login(context.Background(), "login_race", "OldPassword123")
 	require.ErrorIs(t, err, pkg.ErrUnauthenticated)
 	require.Equal(t, uuid.Nil, id)

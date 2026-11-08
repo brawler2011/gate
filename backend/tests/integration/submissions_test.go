@@ -96,6 +96,16 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 		s.Require().NotNil(resp)
 		submissionID = resp.ID
 		s.checkDiagnosticDelivery(submissionID, admin.Id, contestOrg.Login)
+		// Rapid consecutive submissions are valid; quotas impose no inter-submit delay.
+		for range 2 {
+			_, err := s.client.CreateSubmission(withTestUser(s.ctx, user.Id), &corev1.CreateSubmissionRequestModel{
+				Submission: "print('hello')",
+			}, corev1.CreateSubmissionParams{
+				ProblemID: problemID, OrganizationLogin: contestOrg.Login,
+				ContestLogin: "submission-contest", Language: 30,
+			})
+			s.Require().NoError(err)
+		}
 	})
 
 	// 4. Get Submission

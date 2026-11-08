@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/brawler2011/gate/backend/pkg"
@@ -108,7 +109,14 @@ func ResponseErrorHandler(logger *slog.Logger) func(ctx context.Context, w http.
 
 		var cErr *pkg.CustomError
 		var sizeErr *http.MaxBytesError
+		var rateErr *pkg.RateLimitError
 		switch {
+		case errors.As(err, &rateErr):
+			statusCode = http.StatusTooManyRequests
+			resp.Err = http.StatusText(statusCode)
+			resp.Msg = rateErr.Error()
+			seconds := max(1, int64((rateErr.RetryAfter+time.Second-1)/time.Second))
+			w.Header().Set("Retry-After", strconv.FormatInt(seconds, 10))
 		case errors.As(err, &sizeErr):
 			statusCode = http.StatusRequestEntityTooLarge
 			resp.Err = http.StatusText(statusCode)

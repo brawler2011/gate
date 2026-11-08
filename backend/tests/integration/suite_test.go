@@ -19,6 +19,7 @@ import (
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
+	"github.com/alicebob/miniredis/v2"
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	access "github.com/brawler2011/gate/backend/internal/access"
 	blogs "github.com/brawler2011/gate/backend/internal/blogs"
@@ -29,6 +30,7 @@ import (
 	organizations "github.com/brawler2011/gate/backend/internal/organizations"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	problems "github.com/brawler2011/gate/backend/internal/problems"
+	"github.com/brawler2011/gate/backend/internal/ratelimit"
 	submissions "github.com/brawler2011/gate/backend/internal/submissions"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	handlers "github.com/brawler2011/gate/backend/internal/transport/rest/core"
@@ -41,6 +43,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ogen-go/ogen/validate"
 	"github.com/pressly/goose/v3"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -90,6 +93,8 @@ type IntegrationTestSuite struct {
 	teamsRepo         *pgstore.TeamsRepo
 	problemsRepo      *pgstore.ProblemsRepo
 	storage           storage.Storage
+	rateRedis         *miniredis.Miniredis
+	limiter           *ratelimit.Limiter
 }
 
 func (s *IntegrationTestSuite) getStatusCode(err error) int {
@@ -171,6 +176,10 @@ func (s *IntegrationTestSuite) TearDownTest() {
 }
 
 func (s *IntegrationTestSuite) initApp() {
+	s.rateRedis = miniredis.RunT(s.T())
+	rateClient := redis.NewClient(&redis.Options{Addr: s.rateRedis.Addr(), MaxRetries: -1})
+	s.T().Cleanup(func() { _ = rateClient.Close() })
+	s.limiter = ratelimit.New(rateClient)
 	// Repositories
 	s.usersRepo = pgstore.NewUsersRepo(s.dbPool)
 	s.contestsRepo = pgstore.NewContestsRepo(s.dbPool)
@@ -189,7 +198,7 @@ func (s *IntegrationTestSuite) initApp() {
 
 	// UseCases
 	usersUC := identity.NewUsersUseCase(s.usersRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService)
-	authUC := identity.NewAuthUseCase(s.usersRepo, authRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService)
+	authUC := identity.NewAuthUseCase(s.usersRepo, authRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService, s.limiter)
 	packagesRepo := pgstore.NewPackagesRepo(s.dbPool)
 	permissionsUC := access.NewMetadataPermissions(access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo), pgstore.NewPolicyFactsRepo(s.dbPool))
 	publishUC := problems.NewProblemPublishUseCase(s.problemsRepo, packagesRepo, workspaceStorage, testStorage, "packages", pgstore.NewProblemTransactions(s.dbPool), permissionsUC)
@@ -286,7 +295,7 @@ func (s *IntegrationTestSuite) initApp() {
 		middleware.AuthMiddleware(authUC)(
 			middleware.UsersMiddleware(s.usersRepo)(
 				s.testMiddleware(
-					server,
+					middleware.RateLimit(s.limiter, "192.0.2.254")(server),
 				),
 			),
 		),

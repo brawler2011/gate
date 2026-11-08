@@ -31,6 +31,7 @@ import (
 	organizations "github.com/brawler2011/gate/backend/internal/organizations"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	problems "github.com/brawler2011/gate/backend/internal/problems"
+	"github.com/brawler2011/gate/backend/internal/ratelimit"
 	submissions "github.com/brawler2011/gate/backend/internal/submissions"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
@@ -168,11 +169,17 @@ func runApp(envFile string) error {
 
 	workspaceStorage := problems.NewWorkspaceStorage(store, defaultS3WorkshopBucket, problems.NewWorkspaceCatalog(problemsRepo, pgstore.NewProblemTransactions(pool)))
 
+	redisClient, err := pkg.NewRedisClient(cfg.GetRedisURL())
+	if err != nil {
+		return fmt.Errorf("create rate limiter redis client: %w", err)
+	}
+	defer func() { _ = redisClient.Close() }()
+	limiter := ratelimit.New(redisClient)
 	authRepo := pgstore.NewAuthRepo(pool)
 	emailService := email.NewEmailService(cfg.Env, cfg.ResendAPIKey, cfg.EmailFrom, cfg.AppBaseURL)
 
 	usersUC := identity.NewUsersUseCase(usersRepo, pgstore.NewIdentityTransactions(pool), emailService)
-	authUC := identity.NewAuthUseCase(usersRepo, authRepo, pgstore.NewIdentityTransactions(pool), emailService)
+	authUC := identity.NewAuthUseCase(usersRepo, authRepo, pgstore.NewIdentityTransactions(pool), emailService, limiter)
 	notificationsUC := notifications.NewNotificationsUseCase(notificationsRepo, usersRepo, emailService)
 
 	avatarsUC := identity.NewAvatarsUseCase(usersRepo, pgstore.NewIdentityTransactions(pool), store, defaultS3AvatarBucket)
@@ -355,7 +362,7 @@ func runApp(envFile string) error {
 
 	apiHandler := middleware.AuthMiddleware(authUC)(
 		middleware.UsersMiddleware(usersRepo)(
-			middleware.RequestLimits(apiServer, handlers.RequestBodyLimit, middleware.ResponseErrorHandler(logger)),
+			middleware.RateLimit(limiter, cfg.TrustedProxy)(middleware.RequestLimits(apiServer, handlers.RequestBodyLimit, middleware.ResponseErrorHandler(logger))),
 		),
 	)
 
