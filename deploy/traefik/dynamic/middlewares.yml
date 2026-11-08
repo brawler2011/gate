@@ -13,8 +13,9 @@ http:
     # API middleware
     gate-api-ratelimit:
       rateLimit:
-        average: 10
-        burst: 20
+        average: 200
+        burst: 400
+        period: 1s
 
     # IP allowlist to block external access (localhost only)
     gate-block-ip:

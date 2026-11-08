@@ -299,7 +299,7 @@ func TestAuth_ExpiredAccount(t *testing.T) {
 	ctx := context.Background()
 	usersRepo := newMockUsersRepoForTemp()
 	authRepo := &mockAuthRepo{sessions: make(map[uuid.UUID]identitymodel.Session)}
-	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, nil)
+	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, nil, nil)
 
 	pastExpiry := time.Now().Add(-1 * time.Hour)
 	password := "GoodPassword1"

@@ -3,6 +3,7 @@ package pkg
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -16,6 +17,7 @@ func NewRedisClient(dsn string) (*redis.Client, error) {
 	}
 
 	// Configure connection pool
+	opts.ContextTimeoutEnabled = true
 	opts.PoolSize = 10
 	opts.MinIdleConns = 5
 	opts.ConnMaxLifetime = 30 * time.Minute
@@ -33,7 +35,7 @@ func NewRedisClient(dsn string) (*redis.Client, error) {
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("failed to ping redis: %w", err)
+		slog.Warn("redis unavailable at startup; rate limits will fail open", "error", err)
 	}
 
 	return client, nil
