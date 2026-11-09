@@ -100,11 +100,11 @@ func (s *IntegrationTestSuite) TestJudgeJobsFenceDuplicateLeasesAndGenerations()
 	s.Require().NoError(jobs.Release(s.ctx, active))
 	s.Require().NoError(jobs.Renew(s.ctx, replacement), "a stale release cannot clear the replacement lease")
 	txs := pgstore.NewJudgeTransactions(s.dbPool)
-	s.Require().NoError(txs.Within(s.ctx, func(tx judging.JudgeTxStore) error {
+	s.ErrorIs(txs.Within(s.ctx, func(tx judging.JudgeTxStore) error {
 		current, err := tx.CompleteJob(s.ctx, active)
 		s.False(current)
 		return err
-	}))
+	}), judging.ErrLeaseLost)
 	repo := pgstore.NewSubmissionsRepo(s.dbPool)
 	_, err = repo.ResetSubmissionsState(s.ctx, submissionsmodel.RejudgeFilter{ContestID: contest, SubmissionID: &sub})
 	s.Require().NoError(err)
@@ -308,4 +308,158 @@ func (s *IntegrationTestSuite) TestJudgeRecoversAfterRelatedEntityDeletion() {
 			s.Equal(1, completedCount)
 		})
 	}
+}
+
+func (s *IntegrationTestSuite) TestJudgeLeaseExpirationDuringApplyResultDoesNotAckSilently() {
+	sub, _, _, _ := s.newJobSubmission()
+	jobs := pgstore.NewJudgeJobs(s.dbPool)
+	scheduled, err := jobs.ScheduleJob(s.ctx, sub)
+	s.Require().NoError(err)
+	claim, err := jobs.Claim(s.ctx, scheduled.Ref())
+	s.Require().NoError(err)
+	s.Require().NotEqual(uuid.Nil, claim.ID)
+
+	// Expire the lease to simulate runner delay or database timeout before completing
+	_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET deadline_at=now()-interval '1 second' WHERE id=$1", scheduled.ID)
+	s.Require().NoError(err)
+
+	txs := pgstore.NewJudgeTransactions(s.dbPool)
+	err = txs.Within(s.ctx, func(tx judging.JudgeTxStore) error {
+		current, err := tx.CompleteJob(s.ctx, claim)
+		s.False(current)
+		return err
+	})
+	s.ErrorIs(err, judging.ErrLeaseLost, "must return ErrLeaseLost instead of silent success")
+
+	// Verify submission is NOT updated to terminal state
+	saved, err := pgstore.NewSubmissionsRepo(s.dbPool).GetSubmission(s.ctx, sub)
+	s.Require().NoError(err)
+	s.Equal(submissionsmodel.Saved, saved.State, "submission must not silently transition or finalize")
+}
+
+func (s *IntegrationTestSuite) TestJudgeStaleGenerationAndBlockedSubmissionAckSafely() {
+	sub, contest, _, _ := s.newJobSubmission()
+	jobs := pgstore.NewJudgeJobs(s.dbPool)
+	first, err := jobs.ScheduleJob(s.ctx, sub)
+	s.Require().NoError(err)
+
+	claim, err := jobs.Claim(s.ctx, first.Ref())
+	s.Require().NoError(err)
+
+	// Rejudge submission: bump generation
+	repo := pgstore.NewSubmissionsRepo(s.dbPool)
+	_, err = repo.ResetSubmissionsState(s.ctx, submissionsmodel.RejudgeFilter{ContestID: contest, SubmissionID: &sub})
+	s.Require().NoError(err)
+
+	txs := pgstore.NewJudgeTransactions(s.dbPool)
+	// CompleteJob for stale generation must return (false, nil) without error
+	var accepted bool
+	err = txs.Within(s.ctx, func(tx judging.JudgeTxStore) error {
+		var completeErr error
+		accepted, completeErr = tx.CompleteJob(s.ctx, claim)
+		return completeErr
+	})
+	s.Require().NoError(err, "stale generation must safely return nil without error")
+	s.False(accepted)
+
+	// Schedule second generation and block it
+	second, err := jobs.ScheduleJob(s.ctx, sub)
+	s.Require().NoError(err)
+	claim2, err := jobs.Claim(s.ctx, second.Ref())
+	s.Require().NoError(err)
+
+	s.Require().NoError(repo.BlockSubmission(s.ctx, sub, nil))
+	err = txs.Within(s.ctx, func(tx judging.JudgeTxStore) error {
+		var completeErr error
+		accepted, completeErr = tx.CompleteJob(s.ctx, claim2)
+		return completeErr
+	})
+	s.Require().NoError(err, "blocked submission must safely return nil without error")
+	s.False(accepted)
+}
+
+func (s *IntegrationTestSuite) TestJudgeRecoveryForStalledJobs() {
+	jobs := pgstore.NewJudgeJobs(s.dbPool)
+	txs := pgstore.NewJudgeTransactions(s.dbPool)
+	repo := pgstore.NewSubmissionsRepo(s.dbPool)
+	recovery := judging.NewJudgeRecovery(jobs, txs, 3, 10, 5*time.Second)
+
+	// Case 1: Stalled job with attempt < maxAttempts (retryable)
+	sub1, _, _, _ := s.newJobSubmission()
+	job1, err := jobs.ScheduleJob(s.ctx, sub1)
+	s.Require().NoError(err)
+	claimed1, err := jobs.Claim(s.ctx, job1.Ref())
+	s.Require().NoError(err)
+	s.EqualValues(1, claimed1.Attempt)
+
+	// Simulate worker crash / lease expiry
+	_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET deadline_at=now()-interval '5 seconds' WHERE id=$1", job1.ID)
+	s.Require().NoError(err)
+
+	recoveredCount, err := recovery.RecoverStalledJobs(s.ctx)
+	s.Require().NoError(err)
+	s.Equal(1, recoveredCount)
+
+	// Verify job was reset to pending
+	var state1 string
+	var attempt1 int
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT state, attempt FROM judge_jobs WHERE id=$1", job1.ID).Scan(&state1, &attempt1))
+	s.Equal("pending", state1)
+	s.Equal(1, attempt1, "attempt preserved for next claim")
+
+	// Verify outbox has submissions.created event
+	var createdCount int
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type=$2", sub1, eventdata.OutboxEventSubmissionCreated).Scan(&createdCount))
+	s.Equal(1, createdCount)
+
+	// Case 2: Stalled job with attempt >= maxAttempts (exceeded -> GotIE)
+	sub2, _, _, _ := s.newJobSubmission()
+	job2, err := jobs.ScheduleJob(s.ctx, sub2)
+	s.Require().NoError(err)
+	claimed2, err := jobs.Claim(s.ctx, job2.Ref())
+	s.Require().NoError(err)
+	s.EqualValues(1, claimed2.Attempt)
+	// Set attempt to maxAttempts (3) and expire deadline
+	_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET attempt=3, deadline_at=now()-interval '5 seconds' WHERE id=$1", job2.ID)
+	s.Require().NoError(err)
+
+	recoveredCount, err = recovery.RecoverStalledJobs(s.ctx)
+	s.Require().NoError(err)
+	s.Equal(1, recoveredCount)
+
+	var state2 string
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT state FROM judge_jobs WHERE id=$1", job2.ID).Scan(&state2))
+	s.Equal("completed", state2)
+
+	saved2, err := repo.GetSubmission(s.ctx, sub2)
+	s.Require().NoError(err)
+	s.Equal(submissionsmodel.GotIE, saved2.State, "exhausted attempts must transition to GotIE")
+
+	var completedCount int
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type='submissions.completed'", sub2).Scan(&completedCount))
+	s.Equal(1, completedCount)
+
+	// Case 3: Stalled job whose submission was rejudged (generation changed)
+	sub3, contest3, _, _ := s.newJobSubmission()
+	job3, err := jobs.ScheduleJob(s.ctx, sub3)
+	s.Require().NoError(err)
+	_, err = jobs.Claim(s.ctx, job3.Ref())
+	s.Require().NoError(err)
+	_, err = repo.ResetSubmissionsState(s.ctx, submissionsmodel.RejudgeFilter{ContestID: contest3, SubmissionID: &sub3})
+	s.Require().NoError(err)
+	// Rejudging bumped generation to 2; job3 is generation 1
+	_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET deadline_at=now()-interval '5 seconds' WHERE id=$1", job3.ID)
+	s.Require().NoError(err)
+
+	recoveredCount, err = recovery.RecoverStalledJobs(s.ctx)
+	s.Require().NoError(err)
+	s.Equal(1, recoveredCount)
+
+	// The obsolete job should be completed without overwriting the submission
+	var state3 string
+	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT state FROM judge_jobs WHERE id=$1", job3.ID).Scan(&state3))
+	s.Equal("completed", state3)
+	saved3, err := repo.GetSubmission(s.ctx, sub3)
+	s.Require().NoError(err)
+	s.Equal(submissionsmodel.Saved, saved3.State, "rejudged submission must remain Saved for new generation")
 }

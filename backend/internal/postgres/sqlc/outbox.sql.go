@@ -58,7 +58,7 @@ const markAsCompleted = `-- name: MarkAsCompleted :execrows
 UPDATE outbox_events
 SET status = 'completed', processed_at = now(), lease_token = NULL, deadline_at = NULL
 WHERE id = $1::uuid AND lease_token = $2::uuid
-  AND status = 'processing' AND deadline_at > now()
+  AND status = 'processing'
 `
 
 type MarkAsCompletedParams struct {
@@ -184,4 +184,25 @@ func (q *Queries) RecordInboxReceipt(ctx context.Context, arg RecordInboxReceipt
 	var event_id uuid.UUID
 	err := row.Scan(&event_id)
 	return event_id, err
+}
+
+const renewOutboxLease = `-- name: RenewOutboxLease :execrows
+UPDATE outbox_events
+SET deadline_at = now() + ($1::int * INTERVAL '1 second')
+WHERE id = $2::uuid AND lease_token = $3::uuid
+  AND status = 'processing' AND deadline_at > now()
+`
+
+type RenewOutboxLeaseParams struct {
+	TimeoutSec int32     `json:"timeout_sec"`
+	ID         uuid.UUID `json:"id"`
+	LeaseToken uuid.UUID `json:"lease_token"`
+}
+
+func (q *Queries) RenewOutboxLease(ctx context.Context, arg RenewOutboxLeaseParams) (int64, error) {
+	result, err := q.db.Exec(ctx, renewOutboxLease, arg.TimeoutSec, arg.ID, arg.LeaseToken)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

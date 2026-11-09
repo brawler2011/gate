@@ -406,7 +406,12 @@ func TestCompletionChecksDeadlineAfterLockWait(t *testing.T) {
 		return err == nil && expired
 	}, time.Second, 5*time.Millisecond)
 	require.NoError(t, tx.Commit(f.ctx))
-	awaitConcurrent(t, result)
+	select {
+	case err := <-result:
+		require.ErrorIs(t, err, judging.ErrLeaseLost)
+	case <-time.After(5 * time.Second):
+		t.Fatal("operation blocked behind an independent transaction")
+	}
 	sub, err := NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, job.SubmissionID)
 	require.NoError(t, err)
 	require.Equal(t, submissionsmodel.Saved, sub.State)

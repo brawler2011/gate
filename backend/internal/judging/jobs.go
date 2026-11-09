@@ -18,6 +18,7 @@ type Jobs interface {
 	Claim(context.Context, judgingmodel.JobRef) (judgingmodel.Job, error)
 	Renew(context.Context, judgingmodel.Job) error
 	Release(context.Context, judgingmodel.Job) error
+	PickStalledJobs(context.Context, int32) ([]judgingmodel.Job, error)
 }
 
 type Progress interface {

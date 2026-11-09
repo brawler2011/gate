@@ -37,6 +37,12 @@ type terminalStore struct {
 func (s *terminalStore) CompleteJob(context.Context, judgingmodel.Job) (bool, error) {
 	return s.current, nil
 }
+func (s *terminalStore) FailStalledJob(context.Context, judgingmodel.JobRef) (bool, error) {
+	return s.current, nil
+}
+func (s *terminalStore) RequeueStalledJob(context.Context, judgingmodel.JobRef) (bool, error) {
+	return s.current, nil
+}
 func (s *terminalStore) GetSubmission(context.Context, uuid.UUID) (submissionsmodel.Submission, error) {
 	return s.submission, nil
 }

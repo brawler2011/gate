@@ -81,6 +81,15 @@ func (r *OutboxRepo) PickEvents(ctx context.Context, limit int32, timeoutSec int
 	return events, nil
 }
 
+func (r *OutboxRepo) RenewLease(ctx context.Context, id, leaseToken uuid.UUID, timeoutSec int32) error {
+	count, err := r.queries.RenewOutboxLease(ctx, sqlc.RenewOutboxLeaseParams{
+		ID:         id,
+		LeaseToken: leaseToken,
+		TimeoutSec: timeoutSec,
+	})
+	return checkOutboxLease(count, err)
+}
+
 func (r *OutboxRepo) MarkAsCompleted(ctx context.Context, id, leaseToken uuid.UUID) error {
 	count, err := r.queries.MarkAsCompleted(ctx, sqlc.MarkAsCompletedParams{ID: id, LeaseToken: leaseToken})
 	return checkOutboxLease(count, err)

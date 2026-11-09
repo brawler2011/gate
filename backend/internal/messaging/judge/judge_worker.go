@@ -11,6 +11,7 @@ import (
 
 	messaging "github.com/brawler2011/gate/backend/internal/messaging"
 
+	judging "github.com/brawler2011/gate/backend/internal/judging"
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
 
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -193,6 +194,8 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 		errorKind := "judging_error"
 		if errors.Is(err, context.DeadlineExceeded) {
 			errorKind = "timeout"
+		} else if errors.Is(err, judging.ErrLeaseLost) {
+			errorKind = "lease_lost"
 		}
 		logger.Error("submission_judging_failed", "error_kind", errorKind, "event", "submission_judging_failed", "operation", "judge_submission",
 			"error_type", fmt.Sprintf("%T", err),

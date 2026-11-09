@@ -19,6 +19,7 @@ type OutboxRepo interface {
 	eventdata.Writer
 	DeleteOldEvents(ctx context.Context, retentionDays int32) error
 	PickEvents(ctx context.Context, limit int32, timeoutSec int32) ([]eventdata.OutboxEvent, error)
+	RenewLease(ctx context.Context, id, leaseToken uuid.UUID, timeoutSec int32) error
 
 	MarkAsCompleted(ctx context.Context, id, leaseToken uuid.UUID) error
 	MarkAsFailed(ctx context.Context, id, leaseToken uuid.UUID, errorMsg string, permanent bool) error

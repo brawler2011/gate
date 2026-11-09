@@ -83,6 +83,26 @@ func (q *Queries) CompleteJudgeJob(ctx context.Context, arg CompleteJudgeJobPara
 	return result.RowsAffected(), nil
 }
 
+const completeStalledJudgeJob = `-- name: CompleteStalledJudgeJob :execrows
+UPDATE judge_jobs
+SET state = 'completed', completed_at = clock_timestamp(), lease_token = NULL, deadline_at = NULL
+WHERE id = $1::uuid AND generation = $2::bigint
+  AND state = 'processing' AND deadline_at < clock_timestamp()
+`
+
+type CompleteStalledJudgeJobParams struct {
+	ID         uuid.UUID `json:"id"`
+	Generation int64     `json:"generation"`
+}
+
+func (q *Queries) CompleteStalledJudgeJob(ctx context.Context, arg CompleteStalledJudgeJobParams) (int64, error) {
+	result, err := q.db.Exec(ctx, completeStalledJudgeJob, arg.ID, arg.Generation)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const judgeJobActive = `-- name: JudgeJobActive :one
 SELECT EXISTS (
     SELECT 1 FROM judge_jobs j JOIN submissions s ON s.id=j.submission_id
@@ -103,6 +123,46 @@ func (q *Queries) JudgeJobActive(ctx context.Context, arg JudgeJobActiveParams) 
 	var active bool
 	err := row.Scan(&active)
 	return active, err
+}
+
+const pickStalledJudgeJobs = `-- name: PickStalledJudgeJobs :many
+SELECT j.id, j.submission_id, j.generation, j.attempt
+FROM judge_jobs j
+WHERE j.state = 'processing' AND j.deadline_at < clock_timestamp()
+ORDER BY j.deadline_at
+LIMIT $1::int
+`
+
+type PickStalledJudgeJobsRow struct {
+	ID           uuid.UUID `json:"id"`
+	SubmissionID uuid.UUID `json:"submission_id"`
+	Generation   int64     `json:"generation"`
+	Attempt      int32     `json:"attempt"`
+}
+
+func (q *Queries) PickStalledJudgeJobs(ctx context.Context, limitCount int32) ([]PickStalledJudgeJobsRow, error) {
+	rows, err := q.db.Query(ctx, pickStalledJudgeJobs, limitCount)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PickStalledJudgeJobsRow{}
+	for rows.Next() {
+		var i PickStalledJudgeJobsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SubmissionID,
+			&i.Generation,
+			&i.Attempt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const releaseJudgeJob = `-- name: ReleaseJudgeJob :execrows
@@ -138,6 +198,26 @@ type RenewJudgeJobParams struct {
 
 func (q *Queries) RenewJudgeJob(ctx context.Context, arg RenewJudgeJobParams) (int64, error) {
 	result, err := q.db.Exec(ctx, renewJudgeJob, arg.ID, arg.LeaseToken)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const requeueStalledJudgeJob = `-- name: RequeueStalledJudgeJob :execrows
+UPDATE judge_jobs
+SET state = 'pending', lease_token = NULL, deadline_at = NULL
+WHERE id = $1::uuid AND generation = $2::bigint
+  AND state = 'processing' AND deadline_at < clock_timestamp()
+`
+
+type RequeueStalledJudgeJobParams struct {
+	ID         uuid.UUID `json:"id"`
+	Generation int64     `json:"generation"`
+}
+
+func (q *Queries) RequeueStalledJudgeJob(ctx context.Context, arg RequeueStalledJudgeJobParams) (int64, error) {
+	result, err := q.db.Exec(ctx, requeueStalledJudgeJob, arg.ID, arg.Generation)
 	if err != nil {
 		return 0, err
 	}
