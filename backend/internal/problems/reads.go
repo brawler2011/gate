@@ -25,7 +25,7 @@ type TemplateOrganizations interface {
 }
 
 type TemplateManifests interface {
-	GetManifest(context.Context, uuid.UUID) (*problemsmodel.ProblemManifest, error)
+	GetDraft(context.Context, uuid.UUID) (problemsmodel.Draft, error)
 }
 
 type Template struct {
@@ -137,16 +137,16 @@ func (r *Reader) ListTemplates(ctx context.Context, orgID uuid.UUID) ([]Template
 	}
 	for _, p := range list.Problems {
 		template := Template{ID: p.ID.String(), Title: p.Title, Description: "Пользовательский шаблон организации", ProblemType: "pass-fail"}
-		manifest, err := r.manifests.GetManifest(ctx, p.ID)
+		manifest, err := r.manifests.GetDraft(ctx, p.ID)
 		if err != nil {
 			return nil, err
 		}
-		if manifest != nil {
-			if manifest.ProblemType != "" {
-				template.ProblemType = manifest.ProblemType
+		{
+			if manifest.Type != "" {
+				template.ProblemType = manifest.Type
 			}
-			if manifest.Statement.Legend != "" {
-				template.Description = manifest.Statement.Legend
+			if statementFromDraft(manifest, "").Legend != "" {
+				template.Description = statementFromDraft(manifest, "").Legend
 			}
 		}
 		result = append(result, template)

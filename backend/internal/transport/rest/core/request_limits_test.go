@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -43,16 +42,6 @@ func (h *bodyLimitHandler) UploadAvatar(_ context.Context, req *corev1.UploadAva
 	h.bytes = n
 	if err != nil {
 		return nil, fmt.Errorf("read avatar: %w", err)
-	}
-	return nil, pkg.ErrConflict
-}
-
-func (h *bodyLimitHandler) UpdateProblemLib(_ context.Context, req corev1.UpdateProblemLibReq, _ corev1.UpdateProblemLibParams) (*corev1.MessageResponse, error) {
-	h.calls++
-	n, err := io.Copy(io.Discard, req.Data)
-	h.bytes = n
-	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "read upload")
 	}
 	return nil, pkg.ErrConflict
 }
@@ -204,76 +193,14 @@ func TestMultipartTotalBodyLimit(t *testing.T) {
 	}
 }
 
-func TestRawUploadRetainsSourceLimit(t *testing.T) {
-	for _, size := range []int{DefaultRequestBodyLimit + 1, MaxSourceFileSize, MaxSourceFileSize + 1} {
-		t.Run(fmt.Sprint(size), func(t *testing.T) {
-			stub := &bodyLimitHandler{}
-			req := httptest.NewRequest(http.MethodPut, "/problems/"+uuid.NewString()+"/lib/main.cpp", strings.NewReader(strings.Repeat("x", size)))
-			req = req.WithContext(accessmodel.WithUser(req.Context(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}))
-			req.ContentLength = -1
-			req.Header.Set("Content-Type", "text/plain")
-			rr := httptest.NewRecorder()
-			limitedHTTPHandler(t, stub, RequestBodyLimit).ServeHTTP(rr, req)
-			want := http.StatusConflict
-			if size > MaxSourceFileSize {
-				want = http.StatusRequestEntityTooLarge
-			}
-			require.Equal(t, want, rr.Code, rr.Body.String())
-		})
-	}
-}
-
 func TestUploadLimits(t *testing.T) {
 	for operation, want := range map[string]int64{
-		"Login":                           DefaultRequestBodyLimit,
-		"CreateSubmission":                DefaultRequestBodyLimit,
-		"ImportProblem":                   MaxPackageZipSize + multipartOverheadLimit,
-		"UploadAvatar":                    MaxMediaFileSize + multipartOverheadLimit,
-		"CreatePost":                      MaxMediaFileSize + multipartOverheadLimit,
-		"PatchPostById":                   MaxMediaFileSize + multipartOverheadLimit,
-		"CreateProblemMediaFile":          MaxMediaFileSize,
-		"UpdateProblemMediaFile":          MaxMediaFileSize,
-		"CreateProblemTestFile":           MaxTestFileSize,
-		"UpdateProblemTestFile":           MaxTestFileSize,
-		"CreateProblemChecker":            MaxSourceFileSize,
-		"UpdateProblemWorkshopSubmission": MaxSourceFileSize,
+		"Login":            DefaultRequestBodyLimit,
+		"CreateSubmission": DefaultRequestBodyLimit,
+		"UploadAvatar":     MaxMediaFileSize + multipartOverheadLimit,
+		"CreatePost":       MaxMediaFileSize + multipartOverheadLimit,
+		"PatchPostById":    MaxMediaFileSize + multipartOverheadLimit,
 	} {
 		require.Equal(t, want, RequestBodyLimit(operation), operation)
 	}
-}
-
-func TestWorkshopReadsAreBounded(t *testing.T) {
-	for _, size := range []int{7, 8, 9, 1000} {
-		body := &countedBody{Reader: strings.NewReader(strings.Repeat("x", size))}
-		data, err := readWorkshopBody(body, 8)
-		if size > 8 {
-			require.ErrorIs(t, err, pkg.ErrPayloadTooLarge)
-			require.Equal(t, http.StatusRequestEntityTooLarge, pkg.ToREST(err))
-		} else {
-			require.NoError(t, err)
-			require.Len(t, data, size)
-		}
-		require.LessOrEqual(t, body.read, 9)
-	}
-}
-
-type failedBody struct{}
-
-func (failedBody) Read([]byte) (int, error) { return 0, errors.New("upload interrupted") }
-
-func TestSVGReadFailureIsReturned(t *testing.T) {
-	h := &CoreServer{}
-	_, err := h.CreateProblemMediaFile(context.Background(), corev1.CreateProblemMediaFileReq{Data: failedBody{}}, corev1.CreateProblemMediaFileParams{Name: "image.svg"})
-	require.ErrorContains(t, err, "upload interrupted")
-	_, err = h.UpdateProblemMediaFile(context.Background(), corev1.UpdateProblemMediaFileReq{Data: failedBody{}}, corev1.UpdateProblemMediaFileParams{Name: "image.svg"})
-	require.ErrorContains(t, err, "upload interrupted")
-}
-
-func TestWorkshopSourceRejectsBeforeProcessing(t *testing.T) {
-	h := &CoreServer{}
-	body := &countedBody{Reader: strings.NewReader(strings.Repeat("x", MaxSourceFileSize+100))}
-	_, err := h.CreateProblemChecker(context.Background(), corev1.CreateProblemCheckerReq{Data: body}, corev1.CreateProblemCheckerParams{Name: "checker.cpp"})
-	require.ErrorIs(t, err, pkg.ErrPayloadTooLarge)
-	require.Equal(t, http.StatusRequestEntityTooLarge, pkg.ToREST(err))
-	require.Equal(t, MaxSourceFileSize+1, body.read)
 }

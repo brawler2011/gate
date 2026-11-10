@@ -8,7 +8,7 @@ SELECT p.id, jsonb_build_object('Owners', (SELECT jsonb_agg(jsonb_build_object('
       FROM problem_teams link JOIN teams t ON t.id = link.team_id
       JOIN team_members tm ON tm.team_id = t.id
       WHERE link.problem_id = p.id AND tm.user_id = sqlc.narg('viewer_id')::uuid), '[]'::jsonb)) AS facts
-FROM problems p JOIN organizations o ON o.id = p.organization_id
+FROM problem_catalog p JOIN organizations o ON o.id = p.organization_id
 LEFT JOIN organization_members om ON om.organization_id = o.id AND om.user_id = sqlc.narg('viewer_id')::uuid
 LEFT JOIN problem_members m ON m.problem_id = p.id AND m.user_id = sqlc.narg('viewer_id')::uuid
 WHERE p.id = ANY(sqlc.arg('ids')::uuid[]);

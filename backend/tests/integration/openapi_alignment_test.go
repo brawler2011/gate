@@ -151,7 +151,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 
 		// POST /problems/{id}/import missing package field returns 400
 		org := s.createOrganization("import_prob_org", "Import Prob Org", admin.Id)
-		problemResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
+		problemResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
 			Title:          "Import Problem",
 			OrganizationID: corev1.NewOptUUID(org.ID),
 			TemplateID:     "builtin:a-plus-b",

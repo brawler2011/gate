@@ -1,11 +1,13 @@
 package storage
 
 import (
-	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -53,18 +55,75 @@ func NewS3Storage(cfg S3Config) *S3Storage {
 
 // UploadFile uploads a file to S3
 func (s *S3Storage) UploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string) error {
-	all, err := io.ReadAll(reader)
-	if err != nil {
-		return fmt.Errorf("failed to read input for S3 upload: %w", err)
+	// The SDK needs a seekable body for signing and retries. Callers already
+	// holding a file avoid a copy; streams are spooled to disk, never the heap.
+	body, ok := reader.(io.ReadSeeker)
+	if !ok {
+		file, err := os.CreateTemp("", "gate-s3-upload-*")
+		if err != nil {
+			return fmt.Errorf("create S3 spool: %w", err)
+		}
+		defer os.Remove(file.Name())
+		defer file.Close()
+		if _, err := io.Copy(file, reader); err != nil {
+			return fmt.Errorf("spool S3 upload: %w", err)
+		}
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			return fmt.Errorf("rewind S3 spool: %w", err)
+		}
+		body = file
 	}
-	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
+	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(bucket),
 		Key:         aws.String(key),
-		Body:        bytes.NewReader(all),
+		Body:        body,
 		ContentType: aws.String(contentType),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to upload file to S3: %w", err)
+	}
+	return nil
+}
+
+// PutImmutable writes a unique registry key once, then verifies the persisted
+// bytes by reading them back. It does not treat ETag or user metadata as SHA-256.
+func (s *S3Storage) PutImmutable(ctx context.Context, bucket, key string, file *os.File, size int64, digest string) error {
+	if size < 0 || size > 5*1024*1024*1024 {
+		return fmt.Errorf("object exceeds single upload quota")
+	}
+	if raw, err := hex.DecodeString(digest); err != nil || len(raw) != sha256.Size {
+		return fmt.Errorf("invalid object SHA-256")
+	}
+	stat, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("stat object upload: %w", err)
+	}
+	if !stat.Mode().IsRegular() || stat.Size() != size {
+		return fmt.Errorf("object upload size mismatch")
+	}
+	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(bucket), Key: aws.String(key), Body: io.NewSectionReader(file, 0, size), ContentLength: aws.Int64(size),
+		IfNoneMatch: aws.String("*"), ContentType: aws.String("application/octet-stream"),
+	})
+	if err != nil {
+		return fmt.Errorf("put immutable object: %w", err)
+	}
+	return s.VerifyObject(ctx, bucket, key, size, digest)
+}
+
+func (s *S3Storage) VerifyObject(ctx context.Context, bucket, key string, size int64, digest string) error {
+	r, _, err := s.DownloadFile(ctx, bucket, key, nil)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	hash := sha256.New()
+	n, err := io.Copy(hash, io.LimitReader(r, size+1))
+	if err != nil {
+		return fmt.Errorf("verify object bytes: %w", err)
+	}
+	if n != size || hex.EncodeToString(hash.Sum(nil)) != digest {
+		return fmt.Errorf("stored object checksum or size mismatch")
 	}
 	return nil
 }
@@ -129,25 +188,28 @@ func (s *S3Storage) DeleteFile(ctx context.Context, bucket, key string) error {
 
 // ListObjects lists objects with metadata in an S3 bucket with the given prefix
 func (s *S3Storage) ListObjects(ctx context.Context, bucket, prefix string) ([]ObjectInfo, error) {
-	result, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+	paginator := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucket),
 		Prefix: aws.String(prefix),
 	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to list objects from S3: %w", err)
-	}
-
-	objects := make([]ObjectInfo, 0, len(result.Contents))
-	for _, obj := range result.Contents {
-		if obj.Key != nil {
-			size := int64(0)
-			if obj.Size != nil {
-				size = *obj.Size
+	objects := make([]ObjectInfo, 0)
+	for paginator.HasMorePages() {
+		result, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list S3 page: %w", err)
+		}
+		for _, obj := range result.Contents {
+			if obj.Key != nil {
+				size := int64(0)
+				if obj.Size != nil {
+					size = *obj.Size
+				}
+				objects = append(objects, ObjectInfo{
+					Key:          *obj.Key,
+					Size:         size,
+					LastModified: aws.ToTime(obj.LastModified),
+				})
 			}
-			objects = append(objects, ObjectInfo{
-				Key:  *obj.Key,
-				Size: size,
-			})
 		}
 	}
 

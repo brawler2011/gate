@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/brawler2011/gate/backend/pkg/points"
+
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 )
@@ -90,7 +92,7 @@ type TestResult struct {
 // FinalVerdict represents the final judging result
 type FinalVerdict struct {
 	State       submissionsmodel.State
-	Score       int32
+	Score       points.Value
 	MaxTime     int32 // milliseconds
 	MaxMemory   int32 // megabytes
 	Message     string
@@ -216,7 +218,7 @@ func (vc *VerdictCalculator) CalculateStandardVerdict(results []TestResult) *Fin
 
 	return &FinalVerdict{
 		State:       submissionsmodel.Accepted,
-		Score:       100,
+		Score:       vc.maxScore(),
 		MaxTime:     safeInt32(maxTime / 1_000_000),
 		MaxMemory:   safeInt32(maxMemory / 1024 / 1024),
 		Message:     "All tests passed",
@@ -224,163 +226,93 @@ func (vc *VerdictCalculator) CalculateStandardVerdict(results []TestResult) *Fin
 	}
 }
 
-// CalculateScoringVerdict calculates verdict for scoring problems with test groups
+// CalculateScoringVerdict uses explicit test weights and complete dependency
+// groups. No group score is divided by test count or rescaled to a percentage.
 func (vc *VerdictCalculator) CalculateScoringVerdict(results []TestResult) *FinalVerdict {
-	var maxTime int64
-	var maxMemory int64
-	totalScore := 0.0
-
-	testResults := make(map[int]TestResult)
-	for _, result := range results {
-		testResults[result.TestNumber] = result
-		if result.Time > maxTime {
-			maxTime = result.Time
+	byTest := make(map[int]TestResult, len(results))
+	var maxTime, maxMemory int64
+	for _, r := range results {
+		byTest[r.TestNumber] = r
+		if r.Time > maxTime {
+			maxTime = r.Time
 		}
-		if result.Memory > maxMemory {
-			maxMemory = result.Memory
+		if r.Memory > maxMemory {
+			maxMemory = r.Memory
 		}
 	}
-
-	for subName, sub := range vc.problem.Subtasks {
-		if !vc.checkSubtaskDependencies(sub, testResults) {
-			continue
+	passed := func(index int) bool {
+		r, ok := byTest[index]
+		return ok && (r.Verdict == "OK" || r.Verdict == "AC" || r.Verdict == "Accepted")
+	}
+	full := map[string]bool{}
+	visited := map[string]bool{}
+	var groupPassed func(string) bool
+	groupPassed = func(name string) bool {
+		if visited[name] {
+			return full[name]
 		}
-		totalScore += vc.calculateSubtaskScore(subName, sub, testResults)
-	}
-
-	maxPossibleScore := 0
-	for _, sub := range vc.problem.Subtasks {
-		maxPossibleScore += sub.Points
-	}
-
-	normalizedScore := int32(0)
-	if maxPossibleScore > 0 {
-		normalizedScore = safeInt32((totalScore / float64(maxPossibleScore)) * 100)
-	}
-
-	return &FinalVerdict{
-		State:       submissionsmodel.Accepted, // scoring problems always "Accepted" with a score
-		Score:       normalizedScore,
-		MaxTime:     safeInt32(maxTime / 1_000_000),
-		MaxMemory:   safeInt32(maxMemory / 1024 / 1024),
-		Message:     fmt.Sprintf("Score: %d/%d points", int(totalScore), maxPossibleScore),
-		TestDetails: buildSubmissionTestDetails(results),
-	}
-}
-
-func (vc *VerdictCalculator) getSubtaskTestIndexes(subName string) []int {
-	var idxs []int
-	flat := collectFlatTests(vc.problem)
-	for _, ft := range flat {
-		if ft.SubtaskName == subName {
-			idxs = append(idxs, ft.TestIndex)
+		visited[name] = true
+		group, ok := vc.problem.Subtasks[name]
+		if !ok || len(group.Tests) == 0 {
+			return false
 		}
-	}
-	return idxs
-}
-
-func (vc *VerdictCalculator) checkSubtaskDependencies(subtask gfmt.Subtask, results map[int]TestResult) bool {
-	for _, depName := range subtask.Dependencies {
-		depTests := vc.getSubtaskTestIndexes(depName)
-		for _, testNum := range depTests {
-			res, exists := results[testNum]
-			if !exists || (res.Verdict != "OK" && res.Verdict != "AC" && res.Verdict != "Accepted") {
+		for _, dep := range group.Dependencies {
+			if !groupPassed(dep) {
 				return false
 			}
 		}
-	}
-	return true
-}
-
-func (vc *VerdictCalculator) calculateSubtaskScore(subName string, subtask gfmt.Subtask, results map[int]TestResult) float64 {
-	testIdxs := vc.getSubtaskTestIndexes(subName)
-	if len(testIdxs) == 0 {
-		return 0
-	}
-
-	if subtask.Policy == "complete" {
-		for _, testNum := range testIdxs {
-			res, exists := results[testNum]
-			if !exists || (res.Verdict != "OK" && res.Verdict != "AC" && res.Verdict != "Accepted") {
-				return 0
+		for _, test := range group.Tests {
+			if !passed(test.Ordinal) {
+				return false
 			}
 		}
-		return float64(subtask.Points)
+		full[name] = true
+		return true
 	}
-
-	passedTests := 0
-	totalTestScore := 0.0
-	for _, testNum := range testIdxs {
-		res, exists := results[testNum]
-		if exists && (res.Verdict == "OK" || res.Verdict == "AC" || res.Verdict == "Accepted") {
-			if res.Score != nil {
-				totalTestScore += *res.Score
+	var score points.Value
+	for name, group := range vc.problem.Subtasks {
+		allowed := true
+		for _, dep := range group.Dependencies {
+			if !groupPassed(dep) {
+				allowed = false
+				break
+			}
+		}
+		if !allowed {
+			continue
+		}
+		if group.Policy == "complete" {
+			if groupPassed(name) {
+				for _, test := range group.Tests {
+					score += test.Points
+				}
+			}
+		} else {
+			for _, test := range group.Tests {
+				if passed(test.Ordinal) {
+					score += test.Points
+				}
+			}
+		}
+	}
+	verdict := &FinalVerdict{State: submissionsmodel.Accepted, Score: score, MaxTime: safeInt32(maxTime / 1000000), MaxMemory: safeInt32(maxMemory / 1024 / 1024), Message: "Score: " + score.String(), TestDetails: buildSubmissionTestDetails(results)}
+	for _, test := range collectFlatTests(vc.problem) {
+		if !passed(test.TestIndex) {
+			n := test.TestIndex
+			verdict.FailedTest = &n
+			if r, ok := byTest[n]; ok {
+				verdict.State = MapSandboxVerdict(r.Verdict)
 			} else {
-				passedTests++
+				verdict.State = submissionsmodel.GotIE
 			}
+			break
 		}
 	}
-
-	if totalTestScore > 0 {
-		return (totalTestScore / float64(len(testIdxs))) * float64(subtask.Points) / 100.0
-	}
-	return (float64(passedTests) / float64(len(testIdxs))) * float64(subtask.Points)
+	return verdict
 }
 
-// CalculateInteractiveVerdict calculates verdict for interactive problems
 func (vc *VerdictCalculator) CalculateInteractiveVerdict(results []TestResult) *FinalVerdict {
-	var maxTime int64
-	var maxMemory int64
-	totalScore := 0.0
-	hasScore := false
-
-	for _, result := range results {
-		if result.Time > maxTime {
-			maxTime = result.Time
-		}
-		if result.Memory > maxMemory {
-			maxMemory = result.Memory
-		}
-
-		if result.Score != nil {
-			hasScore = true
-			totalScore += *result.Score
-		}
-
-		if result.Verdict != "OK" && result.Verdict != "AC" && result.Verdict != "Accepted" && result.Score == nil {
-			testNum := result.TestNumber
-			return &FinalVerdict{
-				State:       MapSandboxVerdict(result.Verdict),
-				Score:       0,
-				MaxTime:     safeInt32(maxTime / 1_000_000),
-				MaxMemory:   safeInt32(maxMemory / 1024 / 1024),
-				Message:     fmt.Sprintf("Failed on test %d: %s", result.TestNumber, result.Message),
-				FailedTest:  &testNum,
-				TestDetails: buildSubmissionTestDetails(results),
-			}
-		}
-	}
-
-	if hasScore && len(results) > 0 {
-		avgScore := totalScore / float64(len(results))
-		return &FinalVerdict{
-			State:       submissionsmodel.Accepted,
-			Score:       safeInt32(avgScore),
-			MaxTime:     safeInt32(maxTime / 1_000_000),
-			MaxMemory:   safeInt32(maxMemory / 1024 / 1024),
-			Message:     fmt.Sprintf("Score: %.1f points", avgScore),
-			TestDetails: buildSubmissionTestDetails(results),
-		}
-	}
-
-	return &FinalVerdict{
-		State:       submissionsmodel.Accepted,
-		Score:       100,
-		MaxTime:     safeInt32(maxTime / 1_000_000),
-		MaxMemory:   safeInt32(maxMemory / 1024 / 1024),
-		Message:     "All tests passed",
-		TestDetails: buildSubmissionTestDetails(results),
-	}
+	return vc.CalculateStandardVerdict(results)
 }
 
 // Calculate determines final verdict based on problem type
@@ -393,4 +325,16 @@ func (vc *VerdictCalculator) Calculate(results []TestResult) *FinalVerdict {
 	default:
 		return vc.CalculateStandardVerdict(results)
 	}
+}
+
+// maxScore is the sum of every explicit test weight: the score of a fully
+// accepted solution.
+func (vc *VerdictCalculator) maxScore() points.Value {
+	var total points.Value
+	for _, group := range vc.problem.Subtasks {
+		for _, test := range group.Tests {
+			total += test.Points
+		}
+	}
+	return total
 }

@@ -1,14 +1,9 @@
 package judging
 
 import (
-	"archive/zip"
 	"context"
-	"crypto/sha256"
 	"fmt"
-	"io"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"time"
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
@@ -17,119 +12,23 @@ import (
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
-	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/queuecontext"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
-	"github.com/brawler2011/gate/backend/pkg/sandbox"
-	"github.com/brawler2011/gate/backend/pkg/storage"
-	ziputil "github.com/brawler2011/gate/backend/pkg/ziputil"
 	"github.com/google/uuid"
 )
-
-type LoadedPackage struct {
-	Dir    string
-	Format *gfmt.GateFormat
-}
-
-func (l *LoadedPackage) Cleanup() {
-	_ = os.RemoveAll(l.Dir)
-}
-
-type PackageLoader struct {
-	storage storage.Storage
-	bucket  string
-	tempDir string
-}
-
-func NewPackageLoader(storage storage.Storage, bucket string, tempDir string) *PackageLoader {
-	return &PackageLoader{
-		storage: storage,
-		bucket:  bucket,
-		tempDir: tempDir,
-	}
-}
-
-func (l *PackageLoader) LoadPackage(ctx context.Context, problemID string, packageHash string) (*LoadedPackage, error) {
-	pkgDir, err := os.MkdirTemp(l.tempDir, "package-*")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temp dir: %w", err)
-	}
-
-	s3Key := fmt.Sprintf("problems/%s/%s.zip", problemID, packageHash)
-	rc, _, err := l.storage.DownloadFile(ctx, l.bucket, s3Key, nil)
-	if err != nil {
-		os.RemoveAll(pkgDir)
-		return nil, err
-	}
-	defer rc.Close()
-
-	tmpZip := filepath.Join(pkgDir, "package.zip")
-	f, err := os.Create(tmpZip)
-	if err != nil {
-		os.RemoveAll(pkgDir)
-		return nil, fmt.Errorf("failed to create temp zip file %s: %w", tmpZip, err)
-	}
-	if _, err := io.Copy(f, rc); err != nil {
-		f.Close()
-		os.RemoveAll(pkgDir)
-		return nil, fmt.Errorf("failed to write package zip content: %w", err)
-	}
-	f.Close()
-
-	zipReader, err := zip.OpenReader(tmpZip)
-	if err != nil {
-		os.RemoveAll(pkgDir)
-		return nil, fmt.Errorf("failed to open package zip %s: %w", tmpZip, err)
-	}
-	defer zipReader.Close()
-
-	if err := ziputil.ExtractZip(&zipReader.Reader, pkgDir); err != nil {
-		os.RemoveAll(pkgDir)
-		return nil, err
-	}
-	_ = os.Remove(tmpZip)
-
-	gfmtPkg, err := gfmt.OpenPackage(pkgDir)
-	if err != nil {
-		os.RemoveAll(pkgDir)
-		return nil, err
-	}
-
-	return &LoadedPackage{
-		Dir:    pkgDir,
-		Format: gfmtPkg,
-	}, nil
-}
 
 type JudgeUseCase struct {
 	jobs            Jobs
 	transactions    JudgeTransactions
 	submissionsRepo SubmissionsRepo
 	packageLoader   *PackageLoader
-	sandbox         Sandbox
+	executor        *PackageJudge
 	eventPublisher  Progress
-	componentCache  *ComponentCache
 	logger          *slog.Logger
 }
 
-func NewJudgeUseCase(
-	jobs Jobs,
-	transactions JudgeTransactions,
-	submissionsRepo SubmissionsRepo,
-	storage storage.Storage,
-	packageBucket string,
-	tempDir string,
-	sandbox Sandbox,
-	eventPublisher Progress,
-) *JudgeUseCase {
-	return &JudgeUseCase{jobs: jobs, transactions: transactions,
-		submissionsRepo: submissionsRepo,
-		packageLoader:   NewPackageLoader(storage, packageBucket, tempDir),
-		sandbox:         sandbox,
-		eventPublisher:  eventPublisher,
-		componentCache:  NewComponentCache(sandbox),
-		logger:          slog.Default().With("component", "judge_usecase"),
-	}
+func NewJudgeUseCase(jobs Jobs, transactions JudgeTransactions, submissionsRepo SubmissionsRepo, loader *PackageLoader, executor *PackageJudge, eventPublisher Progress) *JudgeUseCase {
+	return &JudgeUseCase{jobs: jobs, transactions: transactions, submissionsRepo: submissionsRepo, packageLoader: loader, executor: executor, eventPublisher: eventPublisher, logger: slog.Default().With("component", "judge_usecase")}
 }
 
 func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmodel.JobRef) error {
@@ -207,10 +106,10 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmo
 		return uc.markInternalError(ctx, job, fmt.Errorf("submission has no problem ID"))
 	}
 
-	if job.PackageHash == "" {
+	if job.PackageID == nil {
 		return uc.markInternalError(ctx, job, fmt.Errorf("problem has no published version"))
 	}
-	pkg, err := uc.packageLoader.LoadPackage(ctx, submission.ProblemID.String(), job.PackageHash)
+	pkg, err := uc.packageLoader.LoadPackage(ctx, *job.PackageID)
 	if err != nil {
 		if IsTemporary(err) {
 			return err
@@ -223,25 +122,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmo
 		logger.Error("failed to publish compiling started event", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))
 	}
 
-	compiledComponents, err := uc.compileComponents(ctx, pkg.Format, *submission.ProblemID)
-	if err != nil {
-		if IsTemporary(err) {
-			return err
-		}
-		return uc.markInternalError(ctx, job, fmt.Errorf("failed to compile components: %w", err))
-	}
-
-	var strategy JudgingStrategy
-	switch pkg.Format.Problem.Type {
-	case "scoring":
-		strategy = NewScoringStrategy(uc.sandbox, uc.eventPublisher, pkg.Format, compiledComponents)
-	case "interactive":
-		strategy = NewInteractiveStrategy(uc.sandbox, uc.eventPublisher, pkg.Format, compiledComponents)
-	default:
-		strategy = NewStandardStrategy(uc.sandbox, uc.eventPublisher, pkg.Format, compiledComponents)
-	}
-
-	verdict, err := strategy.Judge(ctx, submissionID, submission.Submission, submission.Language, meta)
+	verdict, err := uc.executor.Judge(ctx, pkg, submissionID, submission.Submission, submission.Language, uc.eventPublisher, meta)
 	if err != nil {
 		if IsTemporary(err) {
 			return err
@@ -298,52 +179,4 @@ func (uc *JudgeUseCase) applyJudgeResult(ctx context.Context, job judgingmodel.J
 		event := sub.CompletedEvent(change.PreviousState)
 		return tx.Record(ctx, eventdata.Event{AggregateID: sub.ID, Type: eventdata.OutboxEventSubmissionCompleted, Payload: event})
 	})
-}
-
-func (uc *JudgeUseCase) compileComponents(ctx context.Context, g *gfmt.GateFormat, problemID uuid.UUID) (map[string]sandbox.Executable, error) {
-	compiled := make(map[string]sandbox.Executable)
-
-	components := map[string]string{
-		"checker":    g.Problem.Checker,
-		"validator":  g.Problem.Validator,
-		"interactor": g.Problem.Interactor,
-	}
-
-	for compType, relativePath := range components {
-		if relativePath == "" {
-			continue
-		}
-
-		filePath := filepath.Join(g.Path, relativePath)
-		data, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read configured %s file %s: %w", compType, relativePath, err)
-		}
-
-		filename := filepath.Base(relativePath)
-		hash := sha256.Sum256(data)
-		cacheKey := fmt.Sprintf("%s:%s:%x", problemID.String(), compType, hash)
-		if fileID, found := uc.componentCache.Get(cacheKey); found {
-			compiled[compType] = sandbox.Executable{PrimaryFileID: fileID}
-			uc.logger.Debug("component cache hit", "type", compType, "cache_key", cacheKey)
-			continue
-		}
-
-		deps, err := loadLibDependencies(g.Path)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load library dependencies for %s: %w", compType, err)
-		}
-
-		lang := detectLanguage(filepath.Ext(filename))
-		exec, err := uc.sandbox.Compile(ctx, data, lang, deps)
-		if err != nil {
-			return nil, fmt.Errorf("failed to compile component %s (%s): %w", compType, filename, err)
-		}
-
-		compiled[compType] = exec
-		uc.componentCache.Set(cacheKey, exec.PrimaryFileID)
-		uc.logger.Debug("component compiled and cached", "type", compType, "file_id", exec.PrimaryFileID)
-	}
-
-	return compiled, nil
 }

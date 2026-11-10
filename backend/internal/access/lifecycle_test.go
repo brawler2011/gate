@@ -57,15 +57,10 @@ func TestContestCompositePolicyIsStrictAcrossOrganizations(t *testing.T) {
 	in, _, source, destination := policyFixture()
 	destination.OwnerID = in.Actor.Id
 	source.Organization.ID = uuid.New()
-	pack := PackageContext{ID: uuid.New(), ProblemID: source.ID, Status: "ready"}
+	pack := PackageContext{ID: uuid.New(), ProblemID: source.ID}
 	require.ErrorIs(t, RequireAttachProblem(in, destination, source, pack), pkg.NoPermission)
 	source.DirectRole = m.ProblemViewer
 	require.NoError(t, RequireAttachProblem(in, destination, source, pack))
-	for _, status := range []string{"pending", "building", "failed", "unknown"} {
-		bad := pack
-		bad.Status = status
-		require.ErrorIs(t, RequireAttachProblem(in, destination, source, bad), pkg.ErrBadInput)
-	}
 	bad := pack
 	bad.ProblemID = uuid.New()
 	require.ErrorIs(t, RequireAttachProblem(in, destination, source, bad), pkg.ErrBadInput)

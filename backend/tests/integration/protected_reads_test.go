@@ -115,7 +115,7 @@ func (s *IntegrationTestSuite) TestProblemTemplateCatalogHidesPrivateOrganizatio
 	owner := s.createUser("template_read_owner", accessmodel.UserRoleUser)
 	outsider := s.createUser("template_read_outsider", accessmodel.UserRoleUser)
 	org := s.createOrganization("private-template-reads", "Private templates", owner.Id)
-	created, err := s.client.CreateProblem(withTestUser(s.ctx, owner.Id), corev1.CreateProblemParams{Title: "Private template", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
+	created, err := s.client.CreateProblem(withTestUser(s.ctx, owner.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(), Title: "Private template", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
 	s.Require().NoError(err)
 	_, err = s.dbPool.Exec(s.ctx, "UPDATE problems SET is_template=true WHERE id=$1", created.ID)
 	s.Require().NoError(err)

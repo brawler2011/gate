@@ -1,6 +1,7 @@
 package problemsmodel
 
 import (
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"time"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
@@ -13,7 +14,7 @@ type ProblemManifest struct {
 	LastUpdated time.Time `json:"last_updated"`
 	ProblemType string    `json:"problem_type"` // "pass-fail", "scoring", etc
 
-	MaxScore      *int           `json:"max_score"` // null для pass-fail задач
+	MaxScore      *points.Value  `json:"max_score"` // null для pass-fail задач
 	FilesMetadata []FileMetadata `json:"meta_files"`
 
 	TimeLimitMs   int `json:"time_limit_ms"`
@@ -52,12 +53,12 @@ type TestsMetadata struct {
 }
 
 type TestGroup struct {
-	Ordinal      int    `json:"ordinal"`
-	Name         string `json:"name"`
-	Points       int    `json:"points"`
-	PointsPolicy string `json:"points_policy"` // "complete-group", "each-test"
-	DependsOn    []int  `json:"depends_on"`    // номера групп или null
-	Tests        [2]int `json:"tests"`         // диапазон [start, end]
+	Ordinal      int          `json:"ordinal"`
+	Name         string       `json:"name"`
+	Points       points.Value `json:"points"`
+	PointsPolicy string       `json:"points_policy"` // "complete-group", "each-test"
+	DependsOn    []int        `json:"depends_on"`    // номера групп или null
+	Tests        [2]int       `json:"tests"`         // диапазон [start, end]
 }
 
 type TestCase struct {
@@ -122,24 +123,15 @@ type ProblemPackage struct {
 	ID             uuid.UUID
 	ProblemID      uuid.UUID
 	OrganizationID uuid.UUID
-	Version        int32
+	BuildID        uuid.UUID
+	ObjectID       uuid.UUID
+	Revision       int64
 	PackageHash    string
-	URL            *string
-	Status         string // "pending", "building", "ready", "failed"
-	BuildLog       *string
 	CreatedAt      time.Time
-	CompiledAt     *time.Time
-}
-
-type CreatePackageParams struct {
-	ID             uuid.UUID
-	ProblemID      uuid.UUID
-	OrganizationID uuid.UUID
-	PackageHash    string
-	Status         string
 }
 
 type CreateProblemInput struct {
+	IdempotencyKey string
 	OrganizationID uuid.UUID
 	Title          string
 	TemplateID     string
@@ -173,7 +165,6 @@ type ProblemsList struct {
 }
 
 type ProblemUpdate struct {
-	Title      *string
 	Visibility *string
 	OwnerID    *uuid.UUID
 	IsTemplate *bool
@@ -183,14 +174,6 @@ type CreateProblemMemberParams struct {
 	ProblemID uuid.UUID
 	UserID    uuid.UUID
 	Role      ProblemRole
-}
-
-// WorkspaceMetadata is the searchable catalog entry extracted from problem.yaml.
-// Package readers always use the referenced GFMT archive.
-type WorkspaceMetadata struct {
-	Title         string
-	TimeLimitMs   int
-	MemoryLimitMb int
 }
 
 type DashboardProblem struct {

@@ -90,7 +90,7 @@ tasks:
   test:be:integration:
     desc: Run all backend tests, including integration tests
     cmds:
-      - go test -v -p 1 -tags=integration ./...
+      - go test -v -p 1 -tags=integration {{.CLI_ARGS | default "./..."}}
 
   bench:be:
     desc: Run PostgreSQL and scoreboard performance benchmarks

@@ -93,9 +93,6 @@ type patchProblemsModule struct {
 
 func (m *patchProblemsModule) UpdateProblem(_ context.Context, _ uuid.UUID, update *problemsmodel.ProblemUpdate) error {
 	m.updates++
-	if update.Title != nil {
-		m.problem.Title = *update.Title
-	}
 	if update.Visibility != nil {
 		m.problem.Visibility = *update.Visibility
 	}
@@ -117,9 +114,8 @@ func TestPatchProblemMetadata(t *testing.T) {
 		visibility string
 		template   bool
 	}{
-		{"all", `{"title":"Updated","visibility":"public","is_template":false}`, "Updated", "public", false},
+		{"all", `{"visibility":"public","is_template":false}`, "Original", "public", false},
 		{"omitted", `{}`, "Original", "private", true},
-		{"title only", `{"title":"Updated"}`, "Updated", "private", true},
 		{"false", `{"is_template":false}`, "Original", "private", false},
 	}
 	for _, tc := range tests {
@@ -146,7 +142,7 @@ func TestPatchProblemMetadata(t *testing.T) {
 }
 
 func TestPatchProblemRejectsObsoleteFields(t *testing.T) {
-	for _, field := range []string{"legend", "input_format", "output_format", "notes", "scoring", "memory_limit", "time_limit"} {
+	for _, field := range []string{"title", "legend", "input_format", "output_format", "notes", "scoring", "memory_limit", "time_limit"} {
 		for _, mixed := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/mixed=%t", field, mixed), func(t *testing.T) {
 				value := `"obsolete"`
@@ -155,7 +151,7 @@ func TestPatchProblemRejectsObsoleteFields(t *testing.T) {
 				}
 				body := fmt.Sprintf(`{"%s":%s`, field, value)
 				if mixed {
-					body += `,"title":"Updated"`
+					body += `,"visibility":"public"`
 				}
 				body += "}"
 				store := &patchProblemsModule{problem: problemsmodel.Problem{ID: uuid.New(), Title: "Original"}}

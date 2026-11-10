@@ -39,7 +39,7 @@ func (s *IntegrationTestSuite) TestSubmissionRevisionSnapshot() {
 	suffix := uuid.NewString()[:8]
 	user := s.createUser("revision_"+suffix, accessmodel.UserRoleAdmin)
 	org := s.createOrganization("revision-"+suffix, "Revisions", user.Id)
-	problem, err := s.client.CreateProblem(withTestUser(s.ctx, user.Id), corev1.CreateProblemParams{
+	problem, err := s.client.CreateProblem(withTestUser(s.ctx, user.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
 		Title: "Revision", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
 	s.Require().NoError(err)
 	contest := uuid.New()

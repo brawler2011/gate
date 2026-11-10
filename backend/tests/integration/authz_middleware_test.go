@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"net/http"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
@@ -438,15 +439,8 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		problemID := uuid.New()
 		ownerID := owner.Id
 
-		_, err := s.dbPool.Exec(s.ctx,
-			"INSERT INTO problems (id, organization_id, owner_id, visibility, title, short_name) VALUES ($1, $2, $3, $4, $5, $6)",
-			problemID,
-			org.ID,
-			ownerID,
-			problemsmodel.ProblemVisibilityPrivate,
-			"Team Problem",
-			"team-problem-"+suffix,
-		)
+		err := dbfixtures.InsertProblem(s.ctx, s.dbPool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: org.ID, OwnerID: &ownerID,
+			Visibility: problemsmodel.ProblemVisibilityPrivate, Title: "Team Problem", ShortName: "team-problem-" + suffix})
 		s.Require().NoError(err)
 
 		teamID := uuid.New()

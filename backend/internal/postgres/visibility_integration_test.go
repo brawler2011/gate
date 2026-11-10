@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
+
 	"github.com/brawler2011/gate/backend/internal/access"
 	m "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -93,7 +95,8 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 		p, c := uuid.New(), uuid.New()
 		problemIDs = append(problemIDs, p)
 		contestIDs = append(contestIDs, c)
-		exec(`INSERT INTO problems(id,organization_id,owner_id,title,short_name,visibility) VALUES($1,$2,$3,'Parity',$4,$5)`, p, org, users["primary owner"].Id, p.String(), visibility)
+		owner := users["primary owner"].Id
+		require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: p, OrganizationID: org, OwnerID: &owner, Visibility: visibility, Title: "Parity", ShortName: p.String()}))
 		exec(`INSERT INTO contests(id,organization_id,owner_id,title,login,visibility,settings) VALUES($1,$2,$3,'Parity',$4,$5,'{"participation_mode":"open"}')`, c, org, users["primary owner"].Id, c.String(), visibility)
 		for _, team := range []uuid.UUID{closed, secret, wrong} {
 			exec(`INSERT INTO problem_teams(problem_id,team_id,permission) VALUES($1,$2,'read')`, p, team)

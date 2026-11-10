@@ -1,10 +1,10 @@
 "use client";
 
-import {ActionIcon, Box, Button, Flex, Group, Modal, Paper, Select, Stack, Text, TextInput, Textarea, Title, Tooltip} from "@mantine/core";
+import {ActionIcon, Anchor, Box, Button, FileInput, Group, Select, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Tooltip} from "@mantine/core";
 import {useClipboard} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {IconCheck, IconCopy} from "@tabler/icons-react";
-import {useDeferredValue, useEffect, useState, useTransition, type ReactNode} from "react";
+import {IconCopy, IconTrash, IconUpload} from "@tabler/icons-react";
+import {useDeferredValue, useState} from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
@@ -13,801 +13,252 @@ import remarkMath from "remark-math";
 import "katex/dist/katex.min.css";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
-import {api} from "@/lib/api";
 
-import classes from "./WorkshopStatementTab.module.css";
+import {DraftGate} from "./draft/DraftGate";
+import {isValidPath, setFile, statementLanguages, STATEMENT_FOLDER} from "./draft/draftOps";
+import {objectUrl, useSaveDraft, useUploadToDraft} from "./draft/useDraft";
 
 import "../problems/Problem.css";
 
-type StatementData = {
-  title: string;
-  legend: string;
-  input_format: string;
-  output_format: string;
-  notes: string;
-  interaction: string;
-  scoring: string;
+import type {ProblemDraft} from "@/contracts/core/v1/schema";
+import type {ReactNode} from "react";
+
+const SECTION_MARKERS = /<!--\s*(title|legend|input|output|notes|interaction|scoring)\s*-->/gi;
+
+const SECTION_TITLES: Record<string, string> = {
+  legend: "Условие",
+  input: "Формат входных данных",
+  output: "Формат выходных данных",
+  interaction: "Протокол взаимодействия",
+  notes: "Примечания",
+  scoring: "Система оценки",
 };
 
-type PreviewMeta = {
-  problem_type?: string;
-  max_score?: number | null;
-  time_limit_ms?: number;
-  memory_limit_mb?: number;
+type Section = {key: string; body: string};
+
+/** Splits a statement the same way the server does: text before the first marker is the legend. */
+const splitSections = (markdown: string): Section[] => {
+  const markers = [...markdown.matchAll(SECTION_MARKERS)];
+  if (markers.length === 0) {
+    return [{key: "legend", body: markdown.trim()}];
+  }
+  const sections: Section[] = [{key: "legend", body: markdown.slice(0, markers[0].index).trim()}];
+  markers.forEach((marker, index) => {
+    const end = markers[index + 1]?.index ?? markdown.length;
+    const start = (marker.index ?? 0) + marker[0].length;
+    sections.push({key: marker[1].toLowerCase(), body: markdown.slice(start, end).trim()});
+  });
+  return sections.filter((section) => section.body !== "" && section.key !== "title");
 };
 
-type LoadedPreviewMeta = {
-  problem_type: string;
-  max_score: number | null;
-  time_limit_ms: number;
-  memory_limit_mb: number;
+const Preview = ({title, markdown}: {title: string; markdown: string}): ReactNode => {
+  const deferred = useDeferredValue(markdown);
+  return (
+    <Stack gap="md" className="problem-statement">
+      <Text fw={700} size="xl">
+        {title}
+      </Text>
+      {splitSections(deferred).map((section, index) => (
+        <Box key={`${section.key}-${index}`}>
+          {section.key !== "legend" || index > 0 ? (
+            <Text fw={600} mb={4}>
+              {SECTION_TITLES[section.key] ?? section.key}
+            </Text>
+          ) : null}
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+            {section.body}
+          </ReactMarkdown>
+        </Box>
+      ))}
+    </Stack>
+  );
+};
+
+const StatementEditor = ({draft, problemId}: {draft: ProblemDraft; problemId: string}): ReactNode => {
+  const {save, isSaving} = useSaveDraft(problemId);
+  const languages = statementLanguages(draft);
+  const [language, setLanguage] = useState<string>(languages[0] ?? "ru");
+  const [newLanguage, setNewLanguage] = useState("");
+  const path = `${STATEMENT_FOLDER}/${language}.md`;
+  const stored = draft.files[path] ?? "";
+  const [text, setText] = useState(stored);
+
+  const selectLanguage = (value: string | null) => {
+    if (value) {
+      setLanguage(value);
+      setText(draft.files[`${STATEMENT_FOLDER}/${value}.md`] ?? "");
+    }
+  };
+
+  const addLanguage = async () => {
+    const code = newLanguage.trim().toLowerCase();
+    if (!/^[a-z]{2,8}(-[a-z0-9]{2,8})*$/.test(code)) {
+      notifications.show({title: "Недопустимый код языка", message: "Например: ru или en", color: "red"});
+      return;
+    }
+    if (languages.includes(code)) {
+      selectLanguage(code);
+      return;
+    }
+    if (await save((current) => setFile(current, `${STATEMENT_FOLDER}/${code}.md`, ""))) {
+      setNewLanguage("");
+      selectLanguage(code);
+    }
+  };
+
+  const options = [...new Set([...languages, language])].map((value) => ({value, label: value.toUpperCase()}));
+
+  return (
+    <SectionPaper title="Условие">
+      <Stack gap="md">
+        <Group align="flex-end" wrap="wrap">
+          <Select label="Язык" data={options} value={language} allowDeselect={false} onChange={selectLanguage} w={120} />
+          <TextInput label="Новый язык" placeholder="en" value={newLanguage} onChange={(e) => setNewLanguage(e.currentTarget.value)} w={120} />
+          <Button variant="light" disabled={newLanguage.trim() === ""} onClick={() => void addLanguage()}>
+            Добавить
+          </Button>
+        </Group>
+        <Text size="xs" c="dimmed">
+          Название задачи берётся из черновика. Разделы отделяются маркерами: {"<!-- input -->"}, {"<!-- output -->"},{" "}
+          {"<!-- notes -->"}, {"<!-- interaction -->"}, {"<!-- scoring -->"}; текст до первого маркера — условие.
+        </Text>
+        <SimpleGrid cols={{base: 1, md: 2}} spacing="md">
+          <Textarea
+            label="Markdown"
+            value={text}
+            onChange={(e) => setText(e.currentTarget.value)}
+            autosize
+            minRows={16}
+            maxRows={40}
+            styles={{input: {fontFamily: "var(--mantine-font-family-monospace)"}}}
+          />
+          <Box>
+            <Text size="sm" fw={500} mb={4}>
+              Предпросмотр
+            </Text>
+            <Preview title={draft.title} markdown={text} />
+          </Box>
+        </SimpleGrid>
+        <Group justify="flex-end">
+          <Button
+            disabled={text === stored}
+            loading={isSaving}
+            onClick={() => void save((current) => setFile(current, path, text))}
+          >
+            Сохранить условие
+          </Button>
+        </Group>
+      </Stack>
+    </SectionPaper>
+  );
+};
+
+const AssetsSection = ({draft, problemId}: {draft: ProblemDraft; problemId: string}): ReactNode => {
+  const {save, isSaving} = useSaveDraft(problemId);
+  const {upload, isUploading} = useUploadToDraft(problemId);
+  const clipboard = useClipboard();
+  const [file, setFile] = useState<File | null>(null);
+  const [assetPath, setAssetPath] = useState("");
+
+  const handleUpload = async () => {
+    const target = assetPath.trim() || file?.name || "";
+    if (!file || !isValidPath(target) || target.startsWith(`${STATEMENT_FOLDER}/`)) {
+      notifications.show({title: "Недопустимый путь ресурса", message: "Укажите относительный путь, например images/pic.png", color: "red"});
+      return;
+    }
+    try {
+      await upload({part: "asset", assetPath: target, file});
+      setFile(null);
+      setAssetPath("");
+    } catch {
+      // The mutation already reported the failure.
+    }
+  };
+
+  return (
+    <SectionPaper title="Ресурсы условия">
+      <Stack gap="sm">
+        <Group align="flex-end" wrap="wrap">
+          <FileInput label="Файл" value={file} onChange={setFile} placeholder="Изображение, PDF…" style={{minWidth: 240}} />
+          <TextInput
+            label="Путь в условии"
+            placeholder={file?.name ?? "images/pic.png"}
+            value={assetPath}
+            onChange={(e) => setAssetPath(e.currentTarget.value)}
+            style={{minWidth: 240}}
+          />
+          <Button
+            leftSection={<IconUpload size={16} />}
+            disabled={!file}
+            loading={isUploading}
+            onClick={() => void handleUpload()}
+          >
+            Загрузить
+          </Button>
+        </Group>
+        {draft.assets.length === 0 ? (
+          <Text size="sm" c="dimmed">
+            Ресурсов нет.
+          </Text>
+        ) : (
+          <Table withTableBorder>
+            <Table.Tbody>
+              {draft.assets.map((asset) => (
+                <Table.Tr key={asset.path}>
+                  <Table.Td>
+                    <Anchor href={objectUrl(problemId, asset.object_id)} target="_blank" rel="noreferrer" size="sm">
+                      {asset.path}
+                    </Anchor>
+                  </Table.Td>
+                  <Table.Td w={90}>
+                    <Group gap={4} wrap="nowrap">
+                      <Tooltip label="Копировать Markdown-ссылку">
+                        <ActionIcon variant="subtle" onClick={() => clipboard.copy(`![](${asset.path})`)}>
+                          <IconCopy size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Удалить">
+                        <ActionIcon
+                          variant="subtle"
+                          color="red"
+                          disabled={isSaving}
+                          onClick={() =>
+                            void save((current) => ({
+                              ...current,
+                              assets: current.assets.filter((a) => a.path !== asset.path),
+                            }))
+                          }
+                        >
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        )}
+      </Stack>
+    </SectionPaper>
+  );
 };
 
 type Props = {
   problemId: string;
 };
 
-const prettifyTimeLimit = (timeLimit: number) => {
-  if (timeLimit % 1000 === 0) {
-    return `${timeLimit / 1000} сек`;
-  }
-
-  return `${timeLimit} мс`;
-};
-
-const prettifyMemoryLimit = (memoryLimit: number) => {
-  if (memoryLimit % 1000 === 0) {
-    return `${memoryLimit / 1000} ГБ`;
-  }
-
-  return `${memoryLimit} МБ`;
-};
-
-const hasPreviewMeta = (meta: PreviewMeta | null): meta is LoadedPreviewMeta => {
-  return (
-    meta?.problem_type !== undefined &&
-    meta.max_score !== undefined &&
-    meta.time_limit_ms !== undefined &&
-    meta.memory_limit_mb !== undefined
-  );
-};
-
-const renderSafeImage = (problemId?: string) => {
-  const SafeImage = ({
-    node: _node,
-    src,
-    alt,
-    ...props
-  }: React.ImgHTMLAttributes<HTMLImageElement> & { node?: unknown }) => {
-    if (!src) {
-      return null;
-    }
-
-    let width: string | undefined;
-    let height: string | undefined;
-    let isCentered = false;
-    let cleanSrc = src;
-
-    const hashIndex = src.indexOf("#");
-    if (hashIndex !== -1) {
-      cleanSrc = src.slice(0, hashIndex);
-      const hashParts = src.slice(hashIndex + 1).split("#");
-
-      for (const part of hashParts) {
-        if (part === "center" || part === "middle") {
-          isCentered = true;
-        } else if (/^\d+(x\d*)?$/.test(part)) {
-          if (part.includes("x")) {
-            const [w, h] = part.split("x");
-            if (w) {
-              width = `${w}px`;
-            }
-            if (h) {
-              height = `${h}px`;
-            }
-          } else {
-            width = `${part}px`;
-          }
-        } else if (/^(\d+(x\d*)?)-center$/.test(part) || /^center-(\d+(x\d*)?)$/.test(part)) {
-          isCentered = true;
-          const num = part.replace(/-?center-?/, "");
-          if (num.includes("x")) {
-            const [w, h] = num.split("x");
-            if (w) {
-              width = `${w}px`;
-            }
-            if (h) {
-              height = `${h}px`;
-            }
-          } else {
-            width = `${num}px`;
-          }
-        }
-      }
-    }
-
-    if (
-      problemId &&
-      !cleanSrc.startsWith("http://") &&
-      !cleanSrc.startsWith("https://") &&
-      !cleanSrc.startsWith("data:") &&
-      !cleanSrc.startsWith("/api/")
-    ) {
-      const filename = cleanSrc.replace(/^\.\//, "").replace(/^media\//, "");
-      cleanSrc = `/api/problems/${problemId}/media/${filename}`;
-    }
-
-    return (
-      <img
-        src={cleanSrc}
-        alt={alt || ""}
-        style={{
-          maxWidth: "100%",
-          width: width,
-          height: height || "auto",
-          display: isCentered ? "block" : undefined,
-          margin: isCentered ? "0 auto" : undefined,
-        }}
-        {...props}
-      />
-    );
-  };
-  return SafeImage;
-};
-
-const MarkdownBlock = ({value, problemId}: { value: string; problemId?: string }) => {
-  return (
-    <div className="content">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex]}
-        components={{
-          img: renderSafeImage(problemId),
-        }}
-      >
-        {value}
-      </ReactMarkdown>
-    </div>
-  );
-};
-
-const PreviewSection = ({title, value, problemId}: { title: string; value: string; problemId?: string }) => {
-  if (!value.trim()) {
-    return null;
-  }
-
-  return (
-    <Stack gap="xs">
-      <Title order={3} className={classes.sectionTitle}>
-        {title}
-      </Title>
-      <MarkdownBlock value={value} problemId={problemId} />
+export const WorkshopStatementTab = ({problemId}: Props): ReactNode => (
+  <Box p="lg">
+    <Stack gap="lg" maw={1200} mx="auto">
+      <DraftGate problemId={problemId}>
+        {(draft) => (
+          <>
+            <StatementEditor draft={draft} problemId={problemId} />
+            <AssetsSection draft={draft} problemId={problemId} />
+          </>
+        )}
+      </DraftGate>
     </Stack>
-  );
-};
-
-const CopyableSection = ({label, value}: { label: string; value: string }) => {
-  const clipboard = useClipboard({timeout: 2000});
-  return (
-    <Stack gap="xs" style={{flex: "1 1 300px", minWidth: 0}}>
-      <Group justify="space-between" align="center" h={28}>
-        <Text fw={600} size="sm">{label}</Text>
-        <Tooltip label={clipboard.copied ? "Скопировано!" : "Скопировать"} position="top" withArrow>
-          <ActionIcon
-            variant="subtle"
-            color={clipboard.copied ? "green" : "gray"}
-            onClick={() => clipboard.copy(value)}
-            size="sm"
-          >
-            {clipboard.copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-          </ActionIcon>
-        </Tooltip>
-      </Group>
-      <Box
-        component="pre"
-        p="xs"
-        bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))"
-        style={{
-          border: "1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-5))",
-          borderRadius: "var(--mantine-radius-sm)",
-          overflowX: "auto",
-          fontFamily: "var(--mantine-font-monospace)",
-          fontSize: "var(--mantine-font-size-sm)",
-          whiteSpace: "pre",
-          margin: 0,
-        }}
-      >
-        {value}
-      </Box>
-    </Stack>
-  );
-};
-
-const WorkshopStatementPreview = ({
-  statement,
-  previewMeta,
-  samples,
-  problemId,
-}: {
-  statement: StatementData;
-  previewMeta: LoadedPreviewMeta;
-  samples: Array<{ input: string; output: string }>;
-  problemId?: string;
-}) => {
-  const hasContent = [
-    statement.legend,
-    statement.input_format,
-    statement.output_format,
-    statement.notes,
-    statement.scoring,
-  ].some((value) => value.trim()) || (samples && samples.length > 0);
-
-  return (
-    <Stack className="container" gap="md">
-      <Stack align="center" gap={0} w="fit-content" mx="auto" mb="sm">
-        <Title
-          order={2}
-        >{`A. ${statement.title.trim() || "Без названия"}`}</Title>
-        <Stack align="center" gap={0}>
-          <Text>
-            ограничение по времени:{" "}
-            {prettifyTimeLimit(previewMeta.time_limit_ms)}
-          </Text>
-          <Text>
-            ограничение по памяти:{" "}
-            {prettifyMemoryLimit(previewMeta.memory_limit_mb)}
-          </Text>
-          {previewMeta.problem_type === "scoring" &&
-          previewMeta.max_score !== null ? (
-              <Text>максимальный балл: {previewMeta.max_score}</Text>
-            ) : null}
-        </Stack>
-      </Stack>
-
-      {hasContent ? (
-        <>
-          {statement.legend.trim() ? (
-            <MarkdownBlock value={statement.legend} problemId={problemId} />
-          ) : null}
-          <PreviewSection
-            title="Входные данные"
-            value={statement.input_format}
-            problemId={problemId}
-          />
-          <PreviewSection
-            title="Выходные данные"
-            value={statement.output_format}
-            problemId={problemId}
-          />
-          {samples && samples.length > 0 && (
-            <Stack gap="xs">
-              <Title order={3} className={classes.sectionTitle}>
-                Примеры
-              </Title>
-              <Stack gap="md">
-                {samples.map((sample, index) => (
-                  <Paper
-                    key={index}
-                    withBorder
-                    p="md"
-                    radius="md"
-                    bg="light-dark(var(--mantine-color-white), var(--mantine-color-dark-7))"
-                  >
-                    <Stack gap="xs">
-                      <Text fw={700} size="sm" c="dimmed">
-                        Пример {index + 1}
-                      </Text>
-                      <Flex gap="md" wrap="wrap">
-                        <CopyableSection label="Входные данные" value={sample.input} />
-                        <CopyableSection label="Выходные данные" value={sample.output} />
-                      </Flex>
-                    </Stack>
-                  </Paper>
-                ))}
-              </Stack>
-            </Stack>
-          )}
-          <PreviewSection title="Система оценки" value={statement.scoring} problemId={problemId} />
-          <PreviewSection title="Примечание" value={statement.notes} problemId={problemId} />
-        </>
-      ) : (
-        <Text c="dimmed" ta="center">
-          Начни заполнять поля слева, и здесь появится preview условия.
-        </Text>
-      )}
-    </Stack>
-  );
-};
-
-export const WorkshopStatementTab = ({problemId}: Props): ReactNode => {
-  const [statement, setStatement] = useState<StatementData | null>(null);
-  const [previewMeta, setPreviewMeta] = useState<PreviewMeta | null>(null);
-  const [samples, setSamples] = useState<Array<{ input: string; output: string }>>([]);
-  const [languages, setLanguages] = useState<string[]>(["en"]);
-  const [activeLang, setActiveLang] = useState<string>("en");
-  const [isDirty, setIsDirty] = useState(false);
-  const [isLoading, startLoading] = useTransition();
-  const [isSaving, startSaving] = useTransition();
-  const deferredStatement = useDeferredValue(statement);
-
-  // States for custom Mantine modals
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [pendingLang, setPendingLang] = useState<string | null>(null);
-  const [pendingAction, setPendingAction] = useState<"switch" | "add" | null>(null);
-  const [isAddLangOpen, setIsAddLangOpen] = useState(false);
-  const [newLangCode, setNewLangCode] = useState("");
-  const [newLangError, setNewLangError] = useState("");
-  const [isAddingServerLang, setIsAddingServerLang] = useState(false);
-
-  const loadStatement = (lang: string) => {
-    startLoading(async () => {
-      const [
-        {data: limits, error: limitsError},
-        {data: statementData, error: statementError},
-        {data: problemData, error: problemError},
-      ] = await Promise.all([
-        api.GET("/problems/{problemId}/limits", {
-          params: {path: {problemId}},
-        }),
-        api.GET("/problems/{problemId}/statement", {
-          params: {path: {problemId}, query: {lang}},
-        }),
-        api.GET("/problems/{id}", {
-          params: {path: {id: problemId}},
-        }),
-      ]);
-
-      if (limitsError || !limits) {
-        notifications.show({
-          title: "Ошибка загрузки лимитов",
-          message:
-            limitsError?.message ?? "Не удалось загрузить лимиты для preview",
-          color: "red",
-        });
-        return;
-      }
-
-      if (statementError || !statementData) {
-        notifications.show({
-          title: "Ошибка загрузки условия",
-          message: statementError?.message ?? "Не удалось загрузить statement",
-          color: "red",
-        });
-        return;
-      }
-
-      if (!problemError && problemData?.problem) {
-        setSamples(problemData.problem.samples || []);
-      } else {
-        setSamples([]);
-      }
-
-      setPreviewMeta({
-        problem_type: limits.problem_type,
-        max_score: limits.max_score ?? null,
-        time_limit_ms: limits.time_limit_ms,
-        memory_limit_mb: limits.memory_limit_mb,
-      });
-      setStatement({
-        title: statementData.title ?? "",
-        legend: statementData.legend ?? "",
-        input_format: statementData.input_format ?? "",
-        output_format: statementData.output_format ?? "",
-        notes: statementData.notes ?? "",
-        interaction: statementData.interaction ?? "",
-        scoring: statementData.scoring ?? "",
-      });
-      setLanguages(statementData.languages ?? [lang]);
-      setActiveLang(statementData.current_lang ?? lang);
-      setIsDirty(false);
-    });
-  };
-
-  useEffect(() => {
-    loadStatement(activeLang);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [problemId]);
-
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
-        e.preventDefault();
-        e.returnValue = "У вас есть несохраненные изменения.";
-        return e.returnValue;
-      }
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [isDirty]);
-
-  const handleLangChange = (newValue: string | null) => {
-    if (!newValue) {
-      return;
-    }
-    if (newValue === "add_new_lang") {
-      if (isDirty) {
-        setPendingAction("add");
-        setIsConfirmOpen(true);
-      } else {
-        handleAddLanguageClick();
-      }
-    } else {
-      if (isDirty) {
-        setPendingLang(newValue);
-        setPendingAction("switch");
-        setIsConfirmOpen(true);
-      } else {
-        loadStatement(newValue);
-      }
-    }
-  };
-
-  const confirmDiscardChanges = () => {
-    if (pendingAction === "switch" && pendingLang) {
-      loadStatement(pendingLang);
-    } else if (pendingAction === "add") {
-      handleAddLanguageClick();
-    }
-    setIsConfirmOpen(false);
-    setPendingLang(null);
-    setPendingAction(null);
-  };
-
-  const handleAddLanguageClick = () => {
-    setNewLangCode("");
-    setNewLangError("");
-    setIsAddLangOpen(true);
-  };
-
-  const submitAddLanguage = async () => {
-    const cleanLang = newLangCode.trim().toLowerCase();
-    if (!cleanLang) {
-      setNewLangError("Код языка не может быть пустым");
-      return;
-    }
-    if (cleanLang.length !== 2 || !/^[a-zA-Z]{2}$/.test(cleanLang)) {
-      setNewLangError("Код языка должен состоять ровно из 2 букв на английском языке (например: ru, en)");
-      return;
-    }
-    if (languages.includes(cleanLang)) {
-      setNewLangError("Этот язык уже добавлен");
-      return;
-    }
-
-    setIsAddingServerLang(true);
-    const {error: saveError} = await api.PATCH(
-      "/problems/{problemId}/statement",
-      {
-        params: {path: {problemId}, query: {lang: cleanLang}},
-        body: {
-          title: statement?.title ?? "",
-          legend: "",
-          input_format: "",
-          output_format: "",
-          notes: "",
-          interaction: "",
-          scoring: "",
-        },
-      },
-    );
-
-    if (saveError) {
-      setNewLangError(saveError.message ?? "Не удалось создать файл на сервере");
-      setIsAddingServerLang(false);
-      return;
-    }
-
-    setIsAddingServerLang(false);
-    setIsAddLangOpen(false);
-
-    notifications.show({
-      title: "Создано",
-      message: `Создано новое условие для языка ${cleanLang.toUpperCase()}`,
-      color: "green",
-    });
-
-    loadStatement(cleanLang);
-  };
-
-  const patchStatement = (patch: Partial<StatementData>) => {
-    setStatement((prev) => ({
-      title: "",
-      legend: "",
-      input_format: "",
-      output_format: "",
-      notes: "",
-      interaction: "",
-      scoring: "",
-      ...prev,
-      ...patch,
-    }));
-    setIsDirty(true);
-  };
-
-  const handleSave = () => {
-    startSaving(async () => {
-      if (!statement) {
-        return;
-      }
-
-      const {error: saveError} = await api.PATCH(
-        "/problems/{problemId}/statement",
-        {
-          params: {path: {problemId}, query: {lang: activeLang}},
-          body: {
-            title: statement.title,
-            legend: statement.legend,
-            input_format: statement.input_format,
-            output_format: statement.output_format,
-            notes: statement.notes,
-            interaction: statement.interaction,
-            scoring: statement.scoring,
-          },
-        },
-      );
-
-      if (saveError) {
-        notifications.show({
-          title: "Ошибка сохранения",
-          message: saveError.message ?? "Не удалось сохранить условие",
-          color: "red",
-        });
-        return;
-      }
-
-      setIsDirty(false);
-      notifications.show({
-        title: "Сохранено",
-        message: "Условие задачи обновлено",
-        color: "green",
-      });
-
-      // Reload to update list of languages
-      loadStatement(activeLang);
-    });
-  };
-
-  return (
-    <Box className={classes.outerRoot}>
-      <Box className={classes.topBar}>
-        <Group justify="flex-end" align="center" px="lg" py="sm" gap="lg">
-          {isDirty && (
-            <Text size="xs" c="orange" fw={500}>
-              Несохраненные изменения
-            </Text>
-          )}
-          <Button
-            size="sm"
-            disabled={!isDirty}
-            loading={isSaving}
-            onClick={handleSave}
-          >
-            Сохранить
-          </Button>
-          <Group gap="xs" align="center">
-            <Text size="sm" fw={500} c="dimmed">
-              Язык:
-            </Text>
-            <Select
-              value={activeLang}
-              onChange={handleLangChange}
-              data={[
-                ...languages.map((l) => ({
-                  label: l.toUpperCase(),
-                  value: l,
-                })),
-                {label: "+ Добавить язык...", value: "add_new_lang"},
-              ]}
-              allowDeselect={false}
-              w={180}
-              disabled={isLoading}
-            />
-          </Group>
-        </Group>
-      </Box>
-
-      <Box className={classes.root}>
-        <Box className={classes.editorPane}>
-          <Box p="lg">
-            <Stack gap="lg" maw={900} mx="auto">
-              <SectionPaper>
-                {isLoading ? (
-                  <Text c="dimmed" size="sm">
-                    Загрузка...
-                  </Text>
-                ) : (
-                  <Stack gap="md">
-                    {!statement ? null : (
-                      <>
-                        <TextInput
-                          label="Заголовок"
-                          value={statement.title}
-                          onChange={(e) =>
-                            patchStatement({title: e.currentTarget.value})
-                          }
-                        />
-
-                        <Textarea
-                          label="Легенда"
-                          value={statement.legend}
-                          onChange={(e) =>
-                            patchStatement({legend: e.currentTarget.value})
-                          }
-                          minRows={6}
-                          autosize
-                        />
-
-                        <Textarea
-                          label="Формат входных данных"
-                          value={statement.input_format}
-                          onChange={(e) =>
-                            patchStatement({
-                              input_format: e.currentTarget.value,
-                            })
-                          }
-                          minRows={4}
-                          autosize
-                        />
-
-                        <Textarea
-                          label="Формат выходных данных"
-                          value={statement.output_format}
-                          onChange={(e) =>
-                            patchStatement({
-                              output_format: e.currentTarget.value,
-                            })
-                          }
-                          minRows={4}
-                          autosize
-                        />
-
-                        <Textarea
-                          label="Примечания"
-                          value={statement.notes}
-                          onChange={(e) =>
-                            patchStatement({notes: e.currentTarget.value})
-                          }
-                          minRows={3}
-                          autosize
-                        />
-
-                        <Textarea
-                          label="Интерактивное взаимодействие"
-                          value={statement.interaction}
-                          onChange={(e) =>
-                            patchStatement({interaction: e.currentTarget.value})
-                          }
-                          minRows={3}
-                          autosize
-                        />
-
-                        <Textarea
-                          label="Система оценки"
-                          value={statement.scoring}
-                          onChange={(e) =>
-                            patchStatement({scoring: e.currentTarget.value})
-                          }
-                          minRows={3}
-                          autosize
-                        />
-
-                      </>
-                    )}
-                  </Stack>
-                )}
-              </SectionPaper>
-            </Stack>
-          </Box>
-        </Box>
-
-        <Box className={classes.previewPane} visibleFrom="md">
-          <Box p="lg">
-            <Stack gap="lg" maw={900} mx="auto">
-              {isLoading || !deferredStatement || !hasPreviewMeta(previewMeta) ? (
-                <Text c="dimmed" size="sm">
-                Загрузка...
-                </Text>
-              ) : (
-                <WorkshopStatementPreview
-                  statement={deferredStatement}
-                  previewMeta={previewMeta}
-                  samples={samples}
-                  problemId={problemId}
-                />
-              )}
-            </Stack>
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Confirmation Modal for Unsaved Changes */}
-      <Modal
-        opened={isConfirmOpen}
-        onClose={() => setIsConfirmOpen(false)}
-        title="Несохраненные изменения"
-        centered
-      >
-        <Stack gap="md">
-          <Text size="sm">
-            У вас есть несохраненные изменения. При переходе на другой язык
-            или добавлении нового все несохраненные изменения будут потеряны.
-            Вы уверены, что хотите продолжить?
-          </Text>
-          <Group justify="flex-end" gap="xs">
-            <Button variant="subtle" color="gray" onClick={() => setIsConfirmOpen(false)}>
-              Отмена
-            </Button>
-            <Button color="red" onClick={confirmDiscardChanges}>
-              Продолжить без сохранения
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-
-      {/* Modal for Adding New Language */}
-      <Modal
-        opened={isAddLangOpen}
-        onClose={() => !isAddingServerLang && setIsAddLangOpen(false)}
-        title="Добавить язык условия"
-        centered
-      >
-        <Stack gap="md">
-          <Text size="sm" c="dimmed">
-            Введите двухсимвольный ISO-код языка на английском (например, ru, en, de)
-            или выберите из быстрых вариантов ниже.
-          </Text>
-
-          <TextInput
-            label="Код языка"
-            placeholder="например: ru, en"
-            value={newLangCode}
-            onChange={(e) => {
-              setNewLangCode(e.currentTarget.value);
-              setNewLangError("");
-            }}
-            error={newLangError}
-            maxLength={2}
-            autoFocus
-            disabled={isAddingServerLang}
-          />
-
-          <Group gap="xs">
-            {["ru", "en", "de"].map((code) => (
-              <Button
-                key={code}
-                variant="light"
-                size="xs"
-                disabled={isAddingServerLang}
-                onClick={() => {
-                  setNewLangCode(code);
-                  setNewLangError("");
-                }}
-              >
-                {code.toUpperCase()}
-              </Button>
-            ))}
-          </Group>
-
-          <Group justify="flex-end" gap="xs" mt="sm">
-            <Button
-              variant="subtle"
-              color="gray"
-              onClick={() => setIsAddLangOpen(false)}
-              disabled={isAddingServerLang}
-            >
-              Отмена
-            </Button>
-            <Button
-              onClick={submitAddLanguage}
-              loading={isAddingServerLang}
-            >
-              Добавить
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-    </Box>
-  );
-};
+  </Box>
+);

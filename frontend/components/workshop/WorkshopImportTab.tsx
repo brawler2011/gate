@@ -5,8 +5,11 @@ import {useQueryClient} from "@tanstack/react-query";
 import {useState, useTransition} from "react";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
-import {api} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
 
+import {draftKey} from "./draft/useDraft";
+
+import type {ProblemDraft} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 type Props = {
@@ -24,16 +27,27 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
     }
 
     startImport(async () => {
+      // Import replaces the whole draft, so it is guarded by the revision the author last saw.
+      const draft: ProblemDraft =
+        queryClient.getQueryData<ProblemDraft>(draftKey(problemId)) ??
+        (await queryClient.fetchQuery<ProblemDraft>({
+          queryKey: draftKey(problemId),
+          queryFn: () => unwrap(api.GET("/problems/{id}/draft", {params: {path: {id: problemId}}})),
+        }));
       const body = new FormData();
       body.append("package", packageFile);
-      const {error} = await api.POST("/problems/{id}/import", {
-        params: {path: {id: problemId}},
+      const {data, error} = await api.POST("/problems/{id}/import", {
+        params: {
+          path: {id: problemId},
+          query: {expected_revision: draft.revision},
+          header: {"Idempotency-Key": crypto.randomUUID()},
+        },
         body: body as unknown as {package: string},
       });
-      if (error) {
+      if (error || !data) {
         notifications.show({
           title: "Ошибка импорта",
-          message: error.message ?? "Не удалось импортировать пакет",
+          message: error?.message ?? "Не удалось импортировать пакет",
           color: "red",
         });
         return;
@@ -41,19 +55,12 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
 
       notifications.show({
         title: "Пакет импортирован",
-        message: "Воркшоп обновлен из загруженного архива",
+        message: "Черновик заменён содержимым архива",
         color: "green",
       });
       setPackageFile(null);
-      void queryClient.invalidateQueries({
-        queryKey: api.queryOptions("get", "/problems/{id}", {
-          params: {path: {id: problemId}},
-        }).queryKey,
-      });
+      queryClient.setQueryData(draftKey(problemId), data);
       void queryClient.invalidateQueries({queryKey: ["problem", problemId]});
-      void queryClient.invalidateQueries({queryKey: ["problem-limits", problemId]});
-      void queryClient.invalidateQueries({queryKey: ["workshop-files", problemId]});
-      void queryClient.invalidateQueries({queryKey: ["workshop-single-component-files", problemId]});
     });
   };
 
@@ -63,7 +70,7 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
         <SectionPaper title="Импорт пакета">
           <Stack gap="sm">
             <Text size="sm" c="dimmed">
-              Загрузите zip-архив задачи для импорта в текущий воркшоп.
+              Загрузите zip-архив задачи: он заменит текущий черновик.
               Поддерживаются форматы ICPC и Polygon, а также native-пакеты Gate.
             </Text>
 
@@ -72,7 +79,7 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
               variant="light"
               icon={<IconInfoCircle size={16} />}
             >
-              Импорт перезапишет файлы воркшопа для этой задачи.
+              Импорт заменит весь черновик этой задачи. Ранее собранные пакеты не изменятся.
             </Alert>
 
             <Group align="flex-end" wrap="wrap">

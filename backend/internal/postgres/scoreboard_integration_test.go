@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
+
 	"github.com/brawler2011/gate/backend/pkg"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -56,13 +58,12 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 			var problems []uuid.UUID
 			for i := 0; i < size+1; i++ {
 				problem := uuid.New()
-				exec(`INSERT INTO problems(id,organization_id,title,short_name) VALUES ($1,$2,'Problem',$3)`, problem, org, fmt.Sprint(i))
+				require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: problem, OrganizationID: org, Title: "Problem", ShortName: fmt.Sprint(i)}))
 				problems = append(problems, problem)
 				// The final problem is deliberately absent from the contest.
 				if i < size {
-					pack := uuid.New()
-					hash := strings.ReplaceAll(pack.String(), "-", "")
-					exec(`INSERT INTO problem_packages(id,problem_id,organization_id,package_hash,status,version) VALUES ($1,$2,$3,$4,'ready',1)`, pack, problem, org, hash+hash)
+					pack, err := dbfixtures.InsertPackage(ctx, pool, problem, org, time.Time{})
+					require.NoError(t, err)
 					require.NoError(t, repo.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{ContestId: contest, ProblemId: problem, PackageId: pack}))
 				}
 			}

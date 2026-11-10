@@ -70,8 +70,8 @@ func TestResourceAuthorizationIsDelegatedToHandlers(t *testing.T) {
 		"AddOrganizationMember", "ListOrganizationInvitations", "ApproveOrganizationJoinRequest",
 		"CreateContestMember", "UpdateContestMember", "DeleteContestMember",
 		"CreateContestTeam", "UpdateContestTeam", "DeleteContestTeam", "ListContestJoinRequests",
-		"GetProblemStatement", "UpdateProblem", "DeleteProblem", "ImportProblem", "PublishProblem",
-		"CreateProblemMember", "CreateProblemTeam", "UpdateProblemLimits", "GenerateTests",
+		"UpdateProblem", "DeleteProblem", "ImportProblem", "BuildProblemPackage", "SaveProblemDraft",
+		"DownloadProblemPackage", "CreateProblemMember", "CreateProblemTeam",
 		"ListUserSubmissions",
 	} {
 		t.Run(operation, func(t *testing.T) {

@@ -4,27 +4,20 @@ import {useLocation} from "react-router-dom";
 import {AdaptiveTabs, type AdaptiveTabItem} from "@/components/shared/AdaptiveTabs";
 
 const GENERAL_TAB = "general";
-const WORKSHOP_FOLDER_TABS = [
-  "checkers",
-  "generators",
-  "interactors",
-  "lib",
-  "media",
-  "solutions",
-  "tests",
-  "validators",
-] as const;
-
-const TAB_LABELS: Record<string, string> = {
-  checkers: "Чекер",
-  generators: "Генератор",
-  interactors: "Интерактор",
-  lib: "Библиотека",
-  media: "Медиа",
-  solutions: "Решения",
-  tests: "Тесты",
-  validators: "Валидатор",
-};
+const TABS: Array<{key: string; label: string}> = [
+  {key: GENERAL_TAB, label: "Общее"},
+  {key: "statement", label: "Условие"},
+  {key: "tests", label: "Тесты"},
+  {key: "solutions", label: "Решения"},
+  {key: "checkers", label: "Чекер"},
+  {key: "validators", label: "Валидатор"},
+  {key: "generators", label: "Генератор"},
+  {key: "interactors", label: "Интерактор"},
+  {key: "lib", label: "Библиотека"},
+  {key: "packages", label: "Пакеты"},
+  {key: "import", label: "Импорт"},
+  {key: "access", label: "Доступ"},
+];
 
 export type ProblemHeaderNavProps = {
   slug: string;
@@ -51,19 +44,7 @@ export const ProblemHeaderNav = ({
 
   const activeTab = getActiveTabKey();
 
-  const tabs: Array<{ key: string; label: string }> = [
-    {key: GENERAL_TAB, label: "Общее"},
-    {key: "statement", label: "Условие"},
-    {key: "access", label: "Доступ"},
-    {key: "packages", label: "Пакеты"},
-    {key: "import", label: "Импорт"},
-    ...WORKSHOP_FOLDER_TABS.map((tab) => ({
-      key: tab,
-      label: TAB_LABELS[tab],
-    })),
-  ];
-
-  const items: AdaptiveTabItem[] = tabs.map((tab) => {
+  const items: AdaptiveTabItem[] = TABS.map((tab) => {
     const path =
       tab.key === GENERAL_TAB
         ? `/${slug}/problems/${problemId}`

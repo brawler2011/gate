@@ -120,5 +120,5 @@ func TestContestProblemCommandsRequireSourceAccess(t *testing.T) {
 type problemPackageReader struct{ ContestsRepo }
 
 func (*problemPackageReader) ResolveContestProblemPackage(_ context.Context, problem, pack uuid.UUID, _ bool) (access.PackageContext, error) {
-	return access.PackageContext{ID: pack, ProblemID: problem, Status: "ready"}, nil
+	return access.PackageContext{ID: pack, ProblemID: problem}, nil
 }

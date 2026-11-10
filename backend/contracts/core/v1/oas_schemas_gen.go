@@ -419,6 +419,20 @@ func (s *BlockSubmissionRequestModel) SetReason(val OptString) {
 	s.Reason = val
 }
 
+type BuildProblemPackageReq struct {
+	ExpectedRevision int64 `json:"expected_revision"`
+}
+
+// GetExpectedRevision returns the value of ExpectedRevision.
+func (s *BuildProblemPackageReq) GetExpectedRevision() int64 {
+	return s.ExpectedRevision
+}
+
+// SetExpectedRevision sets the value of ExpectedRevision.
+func (s *BuildProblemPackageReq) SetExpectedRevision(val int64) {
+	s.ExpectedRevision = val
+}
+
 // CancelContestJoinRequestOK is response for CancelContestJoinRequest operation.
 type CancelContestJoinRequestOK struct{}
 
@@ -567,121 +581,6 @@ func (s *ClaimedAccountItem) SetClaimedAt(val time.Time) {
 // SetExpiresAt sets the value of ExpiresAt.
 func (s *ClaimedAccountItem) SetExpiresAt(val OptDateTime) {
 	s.ExpiresAt = val
-}
-
-type CompileProblemComponentComponentType string
-
-const (
-	CompileProblemComponentComponentTypeChecker    CompileProblemComponentComponentType = "checker"
-	CompileProblemComponentComponentTypeValidator  CompileProblemComponentComponentType = "validator"
-	CompileProblemComponentComponentTypeGenerator  CompileProblemComponentComponentType = "generator"
-	CompileProblemComponentComponentTypeInteractor CompileProblemComponentComponentType = "interactor"
-)
-
-// AllValues returns all CompileProblemComponentComponentType values.
-func (CompileProblemComponentComponentType) AllValues() []CompileProblemComponentComponentType {
-	return []CompileProblemComponentComponentType{
-		CompileProblemComponentComponentTypeChecker,
-		CompileProblemComponentComponentTypeValidator,
-		CompileProblemComponentComponentTypeGenerator,
-		CompileProblemComponentComponentTypeInteractor,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s CompileProblemComponentComponentType) MarshalText() ([]byte, error) {
-	switch s {
-	case CompileProblemComponentComponentTypeChecker:
-		return []byte(s), nil
-	case CompileProblemComponentComponentTypeValidator:
-		return []byte(s), nil
-	case CompileProblemComponentComponentTypeGenerator:
-		return []byte(s), nil
-	case CompileProblemComponentComponentTypeInteractor:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *CompileProblemComponentComponentType) UnmarshalText(data []byte) error {
-	switch CompileProblemComponentComponentType(data) {
-	case CompileProblemComponentComponentTypeChecker:
-		*s = CompileProblemComponentComponentTypeChecker
-		return nil
-	case CompileProblemComponentComponentTypeValidator:
-		*s = CompileProblemComponentComponentTypeValidator
-		return nil
-	case CompileProblemComponentComponentTypeGenerator:
-		*s = CompileProblemComponentComponentTypeGenerator
-		return nil
-	case CompileProblemComponentComponentTypeInteractor:
-		*s = CompileProblemComponentComponentTypeInteractor
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
-// Compile result data.
-// Ref: #/components/schemas/CompileResult
-type CompileResult struct {
-	Success      OptBool   `json:"success"`
-	FileID       OptString `json:"file_id"`
-	SHA256       OptString `json:"sha256"`
-	CompileLog   OptString `json:"compile_log"`
-	CompileError OptString `json:"compile_error"`
-}
-
-// GetSuccess returns the value of Success.
-func (s *CompileResult) GetSuccess() OptBool {
-	return s.Success
-}
-
-// GetFileID returns the value of FileID.
-func (s *CompileResult) GetFileID() OptString {
-	return s.FileID
-}
-
-// GetSHA256 returns the value of SHA256.
-func (s *CompileResult) GetSHA256() OptString {
-	return s.SHA256
-}
-
-// GetCompileLog returns the value of CompileLog.
-func (s *CompileResult) GetCompileLog() OptString {
-	return s.CompileLog
-}
-
-// GetCompileError returns the value of CompileError.
-func (s *CompileResult) GetCompileError() OptString {
-	return s.CompileError
-}
-
-// SetSuccess sets the value of Success.
-func (s *CompileResult) SetSuccess(val OptBool) {
-	s.Success = val
-}
-
-// SetFileID sets the value of FileID.
-func (s *CompileResult) SetFileID(val OptString) {
-	s.FileID = val
-}
-
-// SetSHA256 sets the value of SHA256.
-func (s *CompileResult) SetSHA256(val OptString) {
-	s.SHA256 = val
-}
-
-// SetCompileLog sets the value of CompileLog.
-func (s *CompileResult) SetCompileLog(val OptString) {
-	s.CompileLog = val
-}
-
-// SetCompileError sets the value of CompileError.
-func (s *CompileResult) SetCompileError(val OptString) {
-	s.CompileError = val
 }
 
 // ConfirmEmailChangeOK is response for ConfirmEmailChange operation.
@@ -2698,123 +2597,11 @@ type CreatePostUnauthorized Error
 
 func (*CreatePostUnauthorized) createPostRes() {}
 
-type CreateProblemCheckerReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s CreateProblemCheckerReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type CreateProblemGeneratorReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s CreateProblemGeneratorReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type CreateProblemInteractorReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s CreateProblemInteractorReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type CreateProblemLibReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s CreateProblemLibReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type CreateProblemMediaFileReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s CreateProblemMediaFileReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
 // CreateProblemMemberOK is response for CreateProblemMember operation.
 type CreateProblemMemberOK struct{}
 
 // CreateProblemTeamOK is response for CreateProblemTeam operation.
 type CreateProblemTeamOK struct{}
-
-type CreateProblemTestFileReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s CreateProblemTestFileReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type CreateProblemValidatorReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s CreateProblemValidatorReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type CreateProblemWorkshopSubmissionReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s CreateProblemWorkshopSubmissionReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
 
 // Fields for the create submission request.
 // Ref: #/components/schemas/CreateSubmissionRequestModel
@@ -3217,6 +3004,20 @@ func (s DownloadContestStatementsPdfOK) Read(p []byte) (n int, err error) {
 	return s.Data.Read(p)
 }
 
+type DownloadProblemPackageOK struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s DownloadProblemPackageOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
 // Error data.
 // Ref: #/components/schemas/Error
 type Error struct {
@@ -3337,55 +3138,6 @@ func (s *FailedTestDetailModel) SetIsTruncated(val bool) {
 	s.IsTruncated = val
 }
 
-// File entry data.
-// Ref: #/components/schemas/FileEntry
-type FileEntry struct {
-	Path        OptString `json:"path"`
-	IsDirectory OptBool   `json:"is_directory"`
-	Size        OptInt64  `json:"size"`
-	IsMain      OptBool   `json:"is_main"`
-}
-
-// GetPath returns the value of Path.
-func (s *FileEntry) GetPath() OptString {
-	return s.Path
-}
-
-// GetIsDirectory returns the value of IsDirectory.
-func (s *FileEntry) GetIsDirectory() OptBool {
-	return s.IsDirectory
-}
-
-// GetSize returns the value of Size.
-func (s *FileEntry) GetSize() OptInt64 {
-	return s.Size
-}
-
-// GetIsMain returns the value of IsMain.
-func (s *FileEntry) GetIsMain() OptBool {
-	return s.IsMain
-}
-
-// SetPath sets the value of Path.
-func (s *FileEntry) SetPath(val OptString) {
-	s.Path = val
-}
-
-// SetIsDirectory sets the value of IsDirectory.
-func (s *FileEntry) SetIsDirectory(val OptBool) {
-	s.IsDirectory = val
-}
-
-// SetSize sets the value of Size.
-func (s *FileEntry) SetSize(val OptInt64) {
-	s.Size = val
-}
-
-// SetIsMain sets the value of IsMain.
-func (s *FileEntry) SetIsMain(val OptBool) {
-	s.IsMain = val
-}
-
 // ForgotPasswordOK is response for ForgotPassword operation.
 type ForgotPasswordOK struct{}
 
@@ -3403,56 +3155,6 @@ func (s *ForgotPasswordRequestModel) GetIdentifier() string {
 // SetIdentifier sets the value of Identifier.
 func (s *ForgotPasswordRequestModel) SetIdentifier(val string) {
 	s.Identifier = val
-}
-
-type GenerateTestsOK struct {
-	Message OptString `json:"message"`
-}
-
-// GetMessage returns the value of Message.
-func (s *GenerateTestsOK) GetMessage() OptString {
-	return s.Message
-}
-
-// SetMessage sets the value of Message.
-func (s *GenerateTestsOK) SetMessage(val OptString) {
-	s.Message = val
-}
-
-type GenerateTestsReq struct {
-	GeneratorName string     `json:"generator_name"`
-	TestNumbers   []int      `json:"test_numbers"`
-	Arguments     [][]string `json:"arguments"`
-}
-
-// GetGeneratorName returns the value of GeneratorName.
-func (s *GenerateTestsReq) GetGeneratorName() string {
-	return s.GeneratorName
-}
-
-// GetTestNumbers returns the value of TestNumbers.
-func (s *GenerateTestsReq) GetTestNumbers() []int {
-	return s.TestNumbers
-}
-
-// GetArguments returns the value of Arguments.
-func (s *GenerateTestsReq) GetArguments() [][]string {
-	return s.Arguments
-}
-
-// SetGeneratorName sets the value of GeneratorName.
-func (s *GenerateTestsReq) SetGeneratorName(val string) {
-	s.GeneratorName = val
-}
-
-// SetTestNumbers sets the value of TestNumbers.
-func (s *GenerateTestsReq) SetTestNumbers(val []int) {
-	s.TestNumbers = val
-}
-
-// SetArguments sets the value of Arguments.
-func (s *GenerateTestsReq) SetArguments(val [][]string) {
-	s.Arguments = val
 }
 
 // Result of get contest problem.
@@ -3643,70 +3345,14 @@ func (s *GetPostImageOKHeaders) SetResponse(val GetPostImageOK) {
 
 func (*GetPostImageOKHeaders) getPostImageRes() {}
 
-type GetProblemCheckerOK struct {
+type GetProblemDraftObjectOK struct {
 	Data io.Reader
 }
 
 // Read reads data from the Data reader.
 //
 // Kept to satisfy the io.Reader interface.
-func (s GetProblemCheckerOK) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type GetProblemGeneratorOK struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s GetProblemGeneratorOK) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type GetProblemInteractorOK struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s GetProblemInteractorOK) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type GetProblemLibOK struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s GetProblemLibOK) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type GetProblemMediaFileOK struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s GetProblemMediaFileOK) Read(p []byte) (n int, err error) {
+func (s GetProblemDraftObjectOK) Read(p []byte) (n int, err error) {
 	if s.Data == nil {
 		return 0, io.EOF
 	}
@@ -3727,63 +3373,6 @@ func (s *GetProblemResponseModel) GetProblem() ProblemModel {
 // SetProblem sets the value of Problem.
 func (s *GetProblemResponseModel) SetProblem(val ProblemModel) {
 	s.Problem = val
-}
-
-type GetProblemTestFileOK struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s GetProblemTestFileOK) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type GetProblemValidatorOK struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s GetProblemValidatorOK) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type GetProblemWorkshopSubmissionOK struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s GetProblemWorkshopSubmissionOK) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-// GetPublishedPackageFound is response for GetPublishedPackage operation.
-type GetPublishedPackageFound struct {
-	Location OptString
-}
-
-// GetLocation returns the value of Location.
-func (s *GetPublishedPackageFound) GetLocation() OptString {
-	return s.Location
-}
-
-// SetLocation sets the value of Location.
-func (s *GetPublishedPackageFound) SetLocation(val OptString) {
-	s.Location = val
 }
 
 // Result of get submission.
@@ -3926,20 +3515,6 @@ func (s *GetUserResponseModel) GetUser() UserModel {
 // SetUser sets the value of User.
 func (s *GetUserResponseModel) SetUser(val UserModel) {
 	s.User = val
-}
-
-type ImportProblemOK struct {
-	Message OptString `json:"message"`
-}
-
-// GetMessage returns the value of Message.
-func (s *ImportProblemOK) GetMessage() OptString {
-	return s.Message
-}
-
-// SetMessage sets the value of Message.
-func (s *ImportProblemOK) SetMessage(val OptString) {
-	s.Message = val
 }
 
 type ImportProblemReq struct {
@@ -4438,8 +4013,8 @@ func (s *ListProblemMembersResponseModel) SetPagination(val PaginationModel) {
 }
 
 type ListProblemPackagesOK struct {
-	Pagination PaginationModel                     `json:"pagination"`
-	Packages   []ListProblemPackagesOKPackagesItem `json:"packages"`
+	Pagination PaginationModel  `json:"pagination"`
+	Packages   []ProblemPackage `json:"packages"`
 }
 
 // GetPagination returns the value of Pagination.
@@ -4448,7 +4023,7 @@ func (s *ListProblemPackagesOK) GetPagination() PaginationModel {
 }
 
 // GetPackages returns the value of Packages.
-func (s *ListProblemPackagesOK) GetPackages() []ListProblemPackagesOKPackagesItem {
+func (s *ListProblemPackagesOK) GetPackages() []ProblemPackage {
 	return s.Packages
 }
 
@@ -4458,77 +4033,8 @@ func (s *ListProblemPackagesOK) SetPagination(val PaginationModel) {
 }
 
 // SetPackages sets the value of Packages.
-func (s *ListProblemPackagesOK) SetPackages(val []ListProblemPackagesOKPackagesItem) {
+func (s *ListProblemPackagesOK) SetPackages(val []ProblemPackage) {
 	s.Packages = val
-}
-
-type ListProblemPackagesOKPackagesItem struct {
-	ID          OptUUID     `json:"id"`
-	Version     OptInt32    `json:"version"`
-	Status      OptString   `json:"status"`
-	PackageHash OptString   `json:"package_hash"`
-	CreatedAt   OptDateTime `json:"created_at"`
-	CompiledAt  OptDateTime `json:"compiled_at"`
-}
-
-// GetID returns the value of ID.
-func (s *ListProblemPackagesOKPackagesItem) GetID() OptUUID {
-	return s.ID
-}
-
-// GetVersion returns the value of Version.
-func (s *ListProblemPackagesOKPackagesItem) GetVersion() OptInt32 {
-	return s.Version
-}
-
-// GetStatus returns the value of Status.
-func (s *ListProblemPackagesOKPackagesItem) GetStatus() OptString {
-	return s.Status
-}
-
-// GetPackageHash returns the value of PackageHash.
-func (s *ListProblemPackagesOKPackagesItem) GetPackageHash() OptString {
-	return s.PackageHash
-}
-
-// GetCreatedAt returns the value of CreatedAt.
-func (s *ListProblemPackagesOKPackagesItem) GetCreatedAt() OptDateTime {
-	return s.CreatedAt
-}
-
-// GetCompiledAt returns the value of CompiledAt.
-func (s *ListProblemPackagesOKPackagesItem) GetCompiledAt() OptDateTime {
-	return s.CompiledAt
-}
-
-// SetID sets the value of ID.
-func (s *ListProblemPackagesOKPackagesItem) SetID(val OptUUID) {
-	s.ID = val
-}
-
-// SetVersion sets the value of Version.
-func (s *ListProblemPackagesOKPackagesItem) SetVersion(val OptInt32) {
-	s.Version = val
-}
-
-// SetStatus sets the value of Status.
-func (s *ListProblemPackagesOKPackagesItem) SetStatus(val OptString) {
-	s.Status = val
-}
-
-// SetPackageHash sets the value of PackageHash.
-func (s *ListProblemPackagesOKPackagesItem) SetPackageHash(val OptString) {
-	s.PackageHash = val
-}
-
-// SetCreatedAt sets the value of CreatedAt.
-func (s *ListProblemPackagesOKPackagesItem) SetCreatedAt(val OptDateTime) {
-	s.CreatedAt = val
-}
-
-// SetCompiledAt sets the value of CompiledAt.
-func (s *ListProblemPackagesOKPackagesItem) SetCompiledAt(val OptDateTime) {
-	s.CompiledAt = val
 }
 
 // Paginated collection of problem teams.
@@ -4834,20 +4340,229 @@ type MarkAllNotificationsAsReadOK struct{}
 // MarkNotificationAsReadOK is response for MarkNotificationAsRead operation.
 type MarkNotificationAsReadOK struct{}
 
-// Result of message.
-// Ref: #/components/schemas/MessageResponse
-type MessageResponse struct {
-	Message OptString `json:"message"`
+// NewNilDateTime returns new NilDateTime with value set to v.
+func NewNilDateTime(v time.Time) NilDateTime {
+	return NilDateTime{
+		Value: v,
+	}
 }
 
-// GetMessage returns the value of Message.
-func (s *MessageResponse) GetMessage() OptString {
-	return s.Message
+// NilDateTime is nullable time.Time.
+type NilDateTime struct {
+	Value time.Time
+	Null  bool
 }
 
-// SetMessage sets the value of Message.
-func (s *MessageResponse) SetMessage(val OptString) {
-	s.Message = val
+// SetTo sets value to v.
+func (o *NilDateTime) SetTo(v time.Time) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilDateTime) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilDateTime) SetToNull() {
+	o.Null = true
+	var v time.Time
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilDateTime) Get() (v time.Time, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilDateTime) Or(d time.Time) time.Time {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilFloat64 returns new NilFloat64 with value set to v.
+func NewNilFloat64(v float64) NilFloat64 {
+	return NilFloat64{
+		Value: v,
+	}
+}
+
+// NilFloat64 is nullable float64.
+type NilFloat64 struct {
+	Value float64
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilFloat64) SetTo(v float64) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilFloat64) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilFloat64) SetToNull() {
+	o.Null = true
+	var v float64
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilFloat64) Get() (v float64, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilFloat64) Or(d float64) float64 {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilInt64 returns new NilInt64 with value set to v.
+func NewNilInt64(v int64) NilInt64 {
+	return NilInt64{
+		Value: v,
+	}
+}
+
+// NilInt64 is nullable int64.
+type NilInt64 struct {
+	Value int64
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilInt64) SetTo(v int64) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilInt64) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilInt64) SetToNull() {
+	o.Null = true
+	var v int64
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilInt64) Get() (v int64, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilInt64) Or(d int64) int64 {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilProblemBuildDiagnostic returns new NilProblemBuildDiagnostic with value set to v.
+func NewNilProblemBuildDiagnostic(v ProblemBuildDiagnostic) NilProblemBuildDiagnostic {
+	return NilProblemBuildDiagnostic{
+		Value: v,
+	}
+}
+
+// NilProblemBuildDiagnostic is nullable ProblemBuildDiagnostic.
+type NilProblemBuildDiagnostic struct {
+	Value ProblemBuildDiagnostic
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilProblemBuildDiagnostic) SetTo(v ProblemBuildDiagnostic) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilProblemBuildDiagnostic) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilProblemBuildDiagnostic) SetToNull() {
+	o.Null = true
+	var v ProblemBuildDiagnostic
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilProblemBuildDiagnostic) Get() (v ProblemBuildDiagnostic, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilProblemBuildDiagnostic) Or(d ProblemBuildDiagnostic) ProblemBuildDiagnostic {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilUUID returns new NilUUID with value set to v.
+func NewNilUUID(v uuid.UUID) NilUUID {
+	return NilUUID{
+		Value: v,
+	}
+}
+
+// NilUUID is nullable uuid.UUID.
+type NilUUID struct {
+	Value uuid.UUID
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilUUID) SetTo(v uuid.UUID) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilUUID) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilUUID) SetToNull() {
+	o.Null = true
+	var v uuid.UUID
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilUUID) Get() (v uuid.UUID, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilUUID) Or(d uuid.UUID) uuid.UUID {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
 }
 
 // Notification data.
@@ -5682,38 +5397,38 @@ func (o OptFailedTestDetailModel) Or(d FailedTestDetailModel) FailedTestDetailMo
 	return d
 }
 
-// NewOptInt returns new OptInt with value set to v.
-func NewOptInt(v int) OptInt {
-	return OptInt{
+// NewOptFloat64 returns new OptFloat64 with value set to v.
+func NewOptFloat64(v float64) OptFloat64 {
+	return OptFloat64{
 		Value: v,
 		Set:   true,
 	}
 }
 
-// OptInt is optional int.
-type OptInt struct {
-	Value int
+// OptFloat64 is optional float64.
+type OptFloat64 struct {
+	Value float64
 	Set   bool
 }
 
-// IsSet returns true if OptInt was set.
-func (o OptInt) IsSet() bool { return o.Set }
+// IsSet returns true if OptFloat64 was set.
+func (o OptFloat64) IsSet() bool { return o.Set }
 
 // Reset unsets value.
-func (o *OptInt) Reset() {
-	var v int
+func (o *OptFloat64) Reset() {
+	var v float64
 	o.Value = v
 	o.Set = false
 }
 
 // SetTo sets value to v.
-func (o *OptInt) SetTo(v int) {
+func (o *OptFloat64) SetTo(v float64) {
 	o.Set = true
 	o.Value = v
 }
 
 // Get returns value and boolean that denotes whether value was set.
-func (o OptInt) Get() (v int, ok bool) {
+func (o OptFloat64) Get() (v float64, ok bool) {
 	if !o.Set {
 		return v, false
 	}
@@ -5721,7 +5436,7 @@ func (o OptInt) Get() (v int, ok bool) {
 }
 
 // Or returns value if set, or given parameter if does not.
-func (o OptInt) Or(d int) int {
+func (o OptFloat64) Or(d float64) float64 {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -6066,74 +5781,6 @@ func (o OptNilDateTime) Get() (v time.Time, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilDateTime) Or(d time.Time) time.Time {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptNilInt returns new OptNilInt with value set to v.
-func NewOptNilInt(v int) OptNilInt {
-	return OptNilInt{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptNilInt is optional nullable int.
-type OptNilInt struct {
-	Value int
-	Set   bool
-	Null  bool
-}
-
-// IsSet returns true if OptNilInt was set.
-func (o OptNilInt) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptNilInt) Reset() {
-	var v int
-	o.Value = v
-	o.Set = false
-	o.Null = false
-}
-
-// SetTo sets value to v.
-func (o *OptNilInt) SetTo(v int) {
-	o.Set = true
-	o.Null = false
-	o.Value = v
-}
-
-// IsNull returns true if value is Null.
-func (o OptNilInt) IsNull() bool { return o.Null }
-
-// SetToNull sets value to null.
-func (o *OptNilInt) SetToNull() {
-	o.Set = true
-	o.Null = true
-	var v int
-	o.Value = v
-}
-
-// IsEmpty returns true if the field was omitted from the payload (not Set and not Null).
-func (o OptNilInt) IsEmpty() bool {
-	return !o.Set && !o.Null
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptNilInt) Get() (v int, ok bool) {
-	if o.Null {
-		return v, false
-	}
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptNilInt) Or(d int) int {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -7786,53 +7433,1073 @@ func (s *ProblemBlockStatusResponseModel) SetCreatedAt(val OptNilDateTime) {
 	s.CreatedAt = val
 }
 
-// Problem limits data.
-// Ref: #/components/schemas/ProblemLimits
-type ProblemLimits struct {
-	ProblemType   string    `json:"problem_type"`
-	TimeLimitMs   int       `json:"time_limit_ms"`
-	MemoryLimitMB int       `json:"memory_limit_mb"`
-	MaxScore      OptNilInt `json:"max_score"`
+// Ref: #/components/schemas/ProblemBuild
+type ProblemBuild struct {
+	ID             uuid.UUID                 `json:"id"`
+	ProblemID      uuid.UUID                 `json:"problem_id"`
+	OrganizationID uuid.UUID                 `json:"organization_id"`
+	Revision       int64                     `json:"revision"`
+	State          ProblemBuildState         `json:"state"`
+	Attempt        int64                     `json:"attempt"`
+	MaxAttempts    int64                     `json:"max_attempts"`
+	Deadline       time.Time                 `json:"deadline"`
+	CreatedAt      time.Time                 `json:"created_at"`
+	FinishedAt     NilDateTime               `json:"finished_at"`
+	Diagnostic     NilProblemBuildDiagnostic `json:"diagnostic"`
 }
 
-// GetProblemType returns the value of ProblemType.
-func (s *ProblemLimits) GetProblemType() string {
-	return s.ProblemType
+// GetID returns the value of ID.
+func (s *ProblemBuild) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetProblemID returns the value of ProblemID.
+func (s *ProblemBuild) GetProblemID() uuid.UUID {
+	return s.ProblemID
+}
+
+// GetOrganizationID returns the value of OrganizationID.
+func (s *ProblemBuild) GetOrganizationID() uuid.UUID {
+	return s.OrganizationID
+}
+
+// GetRevision returns the value of Revision.
+func (s *ProblemBuild) GetRevision() int64 {
+	return s.Revision
+}
+
+// GetState returns the value of State.
+func (s *ProblemBuild) GetState() ProblemBuildState {
+	return s.State
+}
+
+// GetAttempt returns the value of Attempt.
+func (s *ProblemBuild) GetAttempt() int64 {
+	return s.Attempt
+}
+
+// GetMaxAttempts returns the value of MaxAttempts.
+func (s *ProblemBuild) GetMaxAttempts() int64 {
+	return s.MaxAttempts
+}
+
+// GetDeadline returns the value of Deadline.
+func (s *ProblemBuild) GetDeadline() time.Time {
+	return s.Deadline
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *ProblemBuild) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetFinishedAt returns the value of FinishedAt.
+func (s *ProblemBuild) GetFinishedAt() NilDateTime {
+	return s.FinishedAt
+}
+
+// GetDiagnostic returns the value of Diagnostic.
+func (s *ProblemBuild) GetDiagnostic() NilProblemBuildDiagnostic {
+	return s.Diagnostic
+}
+
+// SetID sets the value of ID.
+func (s *ProblemBuild) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetProblemID sets the value of ProblemID.
+func (s *ProblemBuild) SetProblemID(val uuid.UUID) {
+	s.ProblemID = val
+}
+
+// SetOrganizationID sets the value of OrganizationID.
+func (s *ProblemBuild) SetOrganizationID(val uuid.UUID) {
+	s.OrganizationID = val
+}
+
+// SetRevision sets the value of Revision.
+func (s *ProblemBuild) SetRevision(val int64) {
+	s.Revision = val
+}
+
+// SetState sets the value of State.
+func (s *ProblemBuild) SetState(val ProblemBuildState) {
+	s.State = val
+}
+
+// SetAttempt sets the value of Attempt.
+func (s *ProblemBuild) SetAttempt(val int64) {
+	s.Attempt = val
+}
+
+// SetMaxAttempts sets the value of MaxAttempts.
+func (s *ProblemBuild) SetMaxAttempts(val int64) {
+	s.MaxAttempts = val
+}
+
+// SetDeadline sets the value of Deadline.
+func (s *ProblemBuild) SetDeadline(val time.Time) {
+	s.Deadline = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *ProblemBuild) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetFinishedAt sets the value of FinishedAt.
+func (s *ProblemBuild) SetFinishedAt(val NilDateTime) {
+	s.FinishedAt = val
+}
+
+// SetDiagnostic sets the value of Diagnostic.
+func (s *ProblemBuild) SetDiagnostic(val NilProblemBuildDiagnostic) {
+	s.Diagnostic = val
+}
+
+// Ref: #/components/schemas/ProblemBuildAccepted
+type ProblemBuildAccepted struct {
+	BuildID  uuid.UUID `json:"build_id"`
+	Revision int64     `json:"revision"`
+}
+
+// GetBuildID returns the value of BuildID.
+func (s *ProblemBuildAccepted) GetBuildID() uuid.UUID {
+	return s.BuildID
+}
+
+// GetRevision returns the value of Revision.
+func (s *ProblemBuildAccepted) GetRevision() int64 {
+	return s.Revision
+}
+
+// SetBuildID sets the value of BuildID.
+func (s *ProblemBuildAccepted) SetBuildID(val uuid.UUID) {
+	s.BuildID = val
+}
+
+// SetRevision sets the value of Revision.
+func (s *ProblemBuildAccepted) SetRevision(val int64) {
+	s.Revision = val
+}
+
+// Ref: #/components/schemas/ProblemBuildCancelled
+type ProblemBuildCancelled struct {
+	BuildID uuid.UUID                  `json:"build_id"`
+	State   ProblemBuildCancelledState `json:"state"`
+}
+
+// GetBuildID returns the value of BuildID.
+func (s *ProblemBuildCancelled) GetBuildID() uuid.UUID {
+	return s.BuildID
+}
+
+// GetState returns the value of State.
+func (s *ProblemBuildCancelled) GetState() ProblemBuildCancelledState {
+	return s.State
+}
+
+// SetBuildID sets the value of BuildID.
+func (s *ProblemBuildCancelled) SetBuildID(val uuid.UUID) {
+	s.BuildID = val
+}
+
+// SetState sets the value of State.
+func (s *ProblemBuildCancelled) SetState(val ProblemBuildCancelledState) {
+	s.State = val
+}
+
+type ProblemBuildCancelledState string
+
+const (
+	ProblemBuildCancelledStateCancelled ProblemBuildCancelledState = "cancelled"
+)
+
+// AllValues returns all ProblemBuildCancelledState values.
+func (ProblemBuildCancelledState) AllValues() []ProblemBuildCancelledState {
+	return []ProblemBuildCancelledState{
+		ProblemBuildCancelledStateCancelled,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemBuildCancelledState) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemBuildCancelledStateCancelled:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemBuildCancelledState) UnmarshalText(data []byte) error {
+	switch ProblemBuildCancelledState(data) {
+	case ProblemBuildCancelledStateCancelled:
+		*s = ProblemBuildCancelledStateCancelled
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ProblemBuildDiagnostic map[string]jx.Raw
+
+func (s *ProblemBuildDiagnostic) init() ProblemBuildDiagnostic {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type ProblemBuildState string
+
+const (
+	ProblemBuildStateQueued    ProblemBuildState = "queued"
+	ProblemBuildStateRunning   ProblemBuildState = "running"
+	ProblemBuildStateSucceeded ProblemBuildState = "succeeded"
+	ProblemBuildStateFailed    ProblemBuildState = "failed"
+	ProblemBuildStateCancelled ProblemBuildState = "cancelled"
+)
+
+// AllValues returns all ProblemBuildState values.
+func (ProblemBuildState) AllValues() []ProblemBuildState {
+	return []ProblemBuildState{
+		ProblemBuildStateQueued,
+		ProblemBuildStateRunning,
+		ProblemBuildStateSucceeded,
+		ProblemBuildStateFailed,
+		ProblemBuildStateCancelled,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemBuildState) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemBuildStateQueued:
+		return []byte(s), nil
+	case ProblemBuildStateRunning:
+		return []byte(s), nil
+	case ProblemBuildStateSucceeded:
+		return []byte(s), nil
+	case ProblemBuildStateFailed:
+		return []byte(s), nil
+	case ProblemBuildStateCancelled:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemBuildState) UnmarshalText(data []byte) error {
+	switch ProblemBuildState(data) {
+	case ProblemBuildStateQueued:
+		*s = ProblemBuildStateQueued
+		return nil
+	case ProblemBuildStateRunning:
+		*s = ProblemBuildStateRunning
+		return nil
+	case ProblemBuildStateSucceeded:
+		*s = ProblemBuildStateSucceeded
+		return nil
+	case ProblemBuildStateFailed:
+		*s = ProblemBuildStateFailed
+		return nil
+	case ProblemBuildStateCancelled:
+		*s = ProblemBuildStateCancelled
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/ProblemDraft
+type ProblemDraft struct {
+	ProblemID      uuid.UUID               `json:"problem_id"`
+	Revision       int64                   `json:"revision"`
+	Title          string                  `json:"title"`
+	ShortName      string                  `json:"short_name"`
+	Type           ProblemDraftType        `json:"type"`
+	TimeLimitMs    int64                   `json:"time_limit_ms"`
+	MemoryLimitMB  int64                   `json:"memory_limit_mb"`
+	MaxScore       NilFloat64              `json:"max_score"`
+	CheckerID      NilUUID                 `json:"checker_id"`
+	ValidatorID    NilUUID                 `json:"validator_id"`
+	InteractorID   NilUUID                 `json:"interactor_id"`
+	MainSolutionID NilUUID                 `json:"main_solution_id"`
+	Files          ProblemDraftFiles       `json:"files"`
+	Components     []ProblemDraftComponent `json:"components"`
+	Subtasks       []ProblemDraftSubtask   `json:"subtasks"`
+	Tests          []ProblemDraftTest      `json:"tests"`
+	Assets         []ProblemDraftAsset     `json:"assets"`
+}
+
+// GetProblemID returns the value of ProblemID.
+func (s *ProblemDraft) GetProblemID() uuid.UUID {
+	return s.ProblemID
+}
+
+// GetRevision returns the value of Revision.
+func (s *ProblemDraft) GetRevision() int64 {
+	return s.Revision
+}
+
+// GetTitle returns the value of Title.
+func (s *ProblemDraft) GetTitle() string {
+	return s.Title
+}
+
+// GetShortName returns the value of ShortName.
+func (s *ProblemDraft) GetShortName() string {
+	return s.ShortName
+}
+
+// GetType returns the value of Type.
+func (s *ProblemDraft) GetType() ProblemDraftType {
+	return s.Type
 }
 
 // GetTimeLimitMs returns the value of TimeLimitMs.
-func (s *ProblemLimits) GetTimeLimitMs() int {
+func (s *ProblemDraft) GetTimeLimitMs() int64 {
 	return s.TimeLimitMs
 }
 
 // GetMemoryLimitMB returns the value of MemoryLimitMB.
-func (s *ProblemLimits) GetMemoryLimitMB() int {
+func (s *ProblemDraft) GetMemoryLimitMB() int64 {
 	return s.MemoryLimitMB
 }
 
 // GetMaxScore returns the value of MaxScore.
-func (s *ProblemLimits) GetMaxScore() OptNilInt {
+func (s *ProblemDraft) GetMaxScore() NilFloat64 {
 	return s.MaxScore
 }
 
-// SetProblemType sets the value of ProblemType.
-func (s *ProblemLimits) SetProblemType(val string) {
-	s.ProblemType = val
+// GetCheckerID returns the value of CheckerID.
+func (s *ProblemDraft) GetCheckerID() NilUUID {
+	return s.CheckerID
+}
+
+// GetValidatorID returns the value of ValidatorID.
+func (s *ProblemDraft) GetValidatorID() NilUUID {
+	return s.ValidatorID
+}
+
+// GetInteractorID returns the value of InteractorID.
+func (s *ProblemDraft) GetInteractorID() NilUUID {
+	return s.InteractorID
+}
+
+// GetMainSolutionID returns the value of MainSolutionID.
+func (s *ProblemDraft) GetMainSolutionID() NilUUID {
+	return s.MainSolutionID
+}
+
+// GetFiles returns the value of Files.
+func (s *ProblemDraft) GetFiles() ProblemDraftFiles {
+	return s.Files
+}
+
+// GetComponents returns the value of Components.
+func (s *ProblemDraft) GetComponents() []ProblemDraftComponent {
+	return s.Components
+}
+
+// GetSubtasks returns the value of Subtasks.
+func (s *ProblemDraft) GetSubtasks() []ProblemDraftSubtask {
+	return s.Subtasks
+}
+
+// GetTests returns the value of Tests.
+func (s *ProblemDraft) GetTests() []ProblemDraftTest {
+	return s.Tests
+}
+
+// GetAssets returns the value of Assets.
+func (s *ProblemDraft) GetAssets() []ProblemDraftAsset {
+	return s.Assets
+}
+
+// SetProblemID sets the value of ProblemID.
+func (s *ProblemDraft) SetProblemID(val uuid.UUID) {
+	s.ProblemID = val
+}
+
+// SetRevision sets the value of Revision.
+func (s *ProblemDraft) SetRevision(val int64) {
+	s.Revision = val
+}
+
+// SetTitle sets the value of Title.
+func (s *ProblemDraft) SetTitle(val string) {
+	s.Title = val
+}
+
+// SetShortName sets the value of ShortName.
+func (s *ProblemDraft) SetShortName(val string) {
+	s.ShortName = val
+}
+
+// SetType sets the value of Type.
+func (s *ProblemDraft) SetType(val ProblemDraftType) {
+	s.Type = val
 }
 
 // SetTimeLimitMs sets the value of TimeLimitMs.
-func (s *ProblemLimits) SetTimeLimitMs(val int) {
+func (s *ProblemDraft) SetTimeLimitMs(val int64) {
 	s.TimeLimitMs = val
 }
 
 // SetMemoryLimitMB sets the value of MemoryLimitMB.
-func (s *ProblemLimits) SetMemoryLimitMB(val int) {
+func (s *ProblemDraft) SetMemoryLimitMB(val int64) {
 	s.MemoryLimitMB = val
 }
 
 // SetMaxScore sets the value of MaxScore.
-func (s *ProblemLimits) SetMaxScore(val OptNilInt) {
+func (s *ProblemDraft) SetMaxScore(val NilFloat64) {
 	s.MaxScore = val
+}
+
+// SetCheckerID sets the value of CheckerID.
+func (s *ProblemDraft) SetCheckerID(val NilUUID) {
+	s.CheckerID = val
+}
+
+// SetValidatorID sets the value of ValidatorID.
+func (s *ProblemDraft) SetValidatorID(val NilUUID) {
+	s.ValidatorID = val
+}
+
+// SetInteractorID sets the value of InteractorID.
+func (s *ProblemDraft) SetInteractorID(val NilUUID) {
+	s.InteractorID = val
+}
+
+// SetMainSolutionID sets the value of MainSolutionID.
+func (s *ProblemDraft) SetMainSolutionID(val NilUUID) {
+	s.MainSolutionID = val
+}
+
+// SetFiles sets the value of Files.
+func (s *ProblemDraft) SetFiles(val ProblemDraftFiles) {
+	s.Files = val
+}
+
+// SetComponents sets the value of Components.
+func (s *ProblemDraft) SetComponents(val []ProblemDraftComponent) {
+	s.Components = val
+}
+
+// SetSubtasks sets the value of Subtasks.
+func (s *ProblemDraft) SetSubtasks(val []ProblemDraftSubtask) {
+	s.Subtasks = val
+}
+
+// SetTests sets the value of Tests.
+func (s *ProblemDraft) SetTests(val []ProblemDraftTest) {
+	s.Tests = val
+}
+
+// SetAssets sets the value of Assets.
+func (s *ProblemDraft) SetAssets(val []ProblemDraftAsset) {
+	s.Assets = val
+}
+
+// Ref: #/components/schemas/ProblemDraftAnswer
+type ProblemDraftAnswer struct {
+	Mode        ProblemDraftAnswerMode `json:"mode"`
+	ObjectID    NilUUID                `json:"object_id"`
+	ComponentID NilUUID                `json:"component_id"`
+}
+
+// GetMode returns the value of Mode.
+func (s *ProblemDraftAnswer) GetMode() ProblemDraftAnswerMode {
+	return s.Mode
+}
+
+// GetObjectID returns the value of ObjectID.
+func (s *ProblemDraftAnswer) GetObjectID() NilUUID {
+	return s.ObjectID
+}
+
+// GetComponentID returns the value of ComponentID.
+func (s *ProblemDraftAnswer) GetComponentID() NilUUID {
+	return s.ComponentID
+}
+
+// SetMode sets the value of Mode.
+func (s *ProblemDraftAnswer) SetMode(val ProblemDraftAnswerMode) {
+	s.Mode = val
+}
+
+// SetObjectID sets the value of ObjectID.
+func (s *ProblemDraftAnswer) SetObjectID(val NilUUID) {
+	s.ObjectID = val
+}
+
+// SetComponentID sets the value of ComponentID.
+func (s *ProblemDraftAnswer) SetComponentID(val NilUUID) {
+	s.ComponentID = val
+}
+
+type ProblemDraftAnswerMode string
+
+const (
+	ProblemDraftAnswerModeProvided    ProblemDraftAnswerMode = "provided"
+	ProblemDraftAnswerModeGenerated   ProblemDraftAnswerMode = "generated"
+	ProblemDraftAnswerModeInteractive ProblemDraftAnswerMode = "interactive"
+)
+
+// AllValues returns all ProblemDraftAnswerMode values.
+func (ProblemDraftAnswerMode) AllValues() []ProblemDraftAnswerMode {
+	return []ProblemDraftAnswerMode{
+		ProblemDraftAnswerModeProvided,
+		ProblemDraftAnswerModeGenerated,
+		ProblemDraftAnswerModeInteractive,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemDraftAnswerMode) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemDraftAnswerModeProvided:
+		return []byte(s), nil
+	case ProblemDraftAnswerModeGenerated:
+		return []byte(s), nil
+	case ProblemDraftAnswerModeInteractive:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemDraftAnswerMode) UnmarshalText(data []byte) error {
+	switch ProblemDraftAnswerMode(data) {
+	case ProblemDraftAnswerModeProvided:
+		*s = ProblemDraftAnswerModeProvided
+		return nil
+	case ProblemDraftAnswerModeGenerated:
+		*s = ProblemDraftAnswerModeGenerated
+		return nil
+	case ProblemDraftAnswerModeInteractive:
+		*s = ProblemDraftAnswerModeInteractive
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/ProblemDraftAsset
+type ProblemDraftAsset struct {
+	Path     string    `json:"path"`
+	ObjectID uuid.UUID `json:"object_id"`
+}
+
+// GetPath returns the value of Path.
+func (s *ProblemDraftAsset) GetPath() string {
+	return s.Path
+}
+
+// GetObjectID returns the value of ObjectID.
+func (s *ProblemDraftAsset) GetObjectID() uuid.UUID {
+	return s.ObjectID
+}
+
+// SetPath sets the value of Path.
+func (s *ProblemDraftAsset) SetPath(val string) {
+	s.Path = val
+}
+
+// SetObjectID sets the value of ObjectID.
+func (s *ProblemDraftAsset) SetObjectID(val uuid.UUID) {
+	s.ObjectID = val
+}
+
+// Ref: #/components/schemas/ProblemDraftComponent
+type ProblemDraftComponent struct {
+	ID           uuid.UUID                         `json:"id"`
+	Role         ProblemDraftComponentRole         `json:"role"`
+	Path         string                            `json:"path"`
+	Language     string                            `json:"language"`
+	Dependencies ProblemDraftComponentDependencies `json:"dependencies"`
+}
+
+// GetID returns the value of ID.
+func (s *ProblemDraftComponent) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetRole returns the value of Role.
+func (s *ProblemDraftComponent) GetRole() ProblemDraftComponentRole {
+	return s.Role
+}
+
+// GetPath returns the value of Path.
+func (s *ProblemDraftComponent) GetPath() string {
+	return s.Path
+}
+
+// GetLanguage returns the value of Language.
+func (s *ProblemDraftComponent) GetLanguage() string {
+	return s.Language
+}
+
+// GetDependencies returns the value of Dependencies.
+func (s *ProblemDraftComponent) GetDependencies() ProblemDraftComponentDependencies {
+	return s.Dependencies
+}
+
+// SetID sets the value of ID.
+func (s *ProblemDraftComponent) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetRole sets the value of Role.
+func (s *ProblemDraftComponent) SetRole(val ProblemDraftComponentRole) {
+	s.Role = val
+}
+
+// SetPath sets the value of Path.
+func (s *ProblemDraftComponent) SetPath(val string) {
+	s.Path = val
+}
+
+// SetLanguage sets the value of Language.
+func (s *ProblemDraftComponent) SetLanguage(val string) {
+	s.Language = val
+}
+
+// SetDependencies sets the value of Dependencies.
+func (s *ProblemDraftComponent) SetDependencies(val ProblemDraftComponentDependencies) {
+	s.Dependencies = val
+}
+
+type ProblemDraftComponentDependencies map[string]string
+
+func (s *ProblemDraftComponentDependencies) init() ProblemDraftComponentDependencies {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
+}
+
+type ProblemDraftComponentRole string
+
+const (
+	ProblemDraftComponentRoleChecker    ProblemDraftComponentRole = "checker"
+	ProblemDraftComponentRoleValidator  ProblemDraftComponentRole = "validator"
+	ProblemDraftComponentRoleInteractor ProblemDraftComponentRole = "interactor"
+	ProblemDraftComponentRoleGenerator  ProblemDraftComponentRole = "generator"
+	ProblemDraftComponentRoleSolution   ProblemDraftComponentRole = "solution"
+)
+
+// AllValues returns all ProblemDraftComponentRole values.
+func (ProblemDraftComponentRole) AllValues() []ProblemDraftComponentRole {
+	return []ProblemDraftComponentRole{
+		ProblemDraftComponentRoleChecker,
+		ProblemDraftComponentRoleValidator,
+		ProblemDraftComponentRoleInteractor,
+		ProblemDraftComponentRoleGenerator,
+		ProblemDraftComponentRoleSolution,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemDraftComponentRole) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemDraftComponentRoleChecker:
+		return []byte(s), nil
+	case ProblemDraftComponentRoleValidator:
+		return []byte(s), nil
+	case ProblemDraftComponentRoleInteractor:
+		return []byte(s), nil
+	case ProblemDraftComponentRoleGenerator:
+		return []byte(s), nil
+	case ProblemDraftComponentRoleSolution:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemDraftComponentRole) UnmarshalText(data []byte) error {
+	switch ProblemDraftComponentRole(data) {
+	case ProblemDraftComponentRoleChecker:
+		*s = ProblemDraftComponentRoleChecker
+		return nil
+	case ProblemDraftComponentRoleValidator:
+		*s = ProblemDraftComponentRoleValidator
+		return nil
+	case ProblemDraftComponentRoleInteractor:
+		*s = ProblemDraftComponentRoleInteractor
+		return nil
+	case ProblemDraftComponentRoleGenerator:
+		*s = ProblemDraftComponentRoleGenerator
+		return nil
+	case ProblemDraftComponentRoleSolution:
+		*s = ProblemDraftComponentRoleSolution
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ProblemDraftFiles map[string]string
+
+func (s *ProblemDraftFiles) init() ProblemDraftFiles {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
+}
+
+// Ref: #/components/schemas/ProblemDraftInput
+type ProblemDraftInput struct {
+	Mode        ProblemDraftInputMode `json:"mode"`
+	ObjectID    NilUUID               `json:"object_id"`
+	ComponentID NilUUID               `json:"component_id"`
+	Args        []string              `json:"args"`
+	Seed        NilInt64              `json:"seed"`
+}
+
+// GetMode returns the value of Mode.
+func (s *ProblemDraftInput) GetMode() ProblemDraftInputMode {
+	return s.Mode
+}
+
+// GetObjectID returns the value of ObjectID.
+func (s *ProblemDraftInput) GetObjectID() NilUUID {
+	return s.ObjectID
+}
+
+// GetComponentID returns the value of ComponentID.
+func (s *ProblemDraftInput) GetComponentID() NilUUID {
+	return s.ComponentID
+}
+
+// GetArgs returns the value of Args.
+func (s *ProblemDraftInput) GetArgs() []string {
+	return s.Args
+}
+
+// GetSeed returns the value of Seed.
+func (s *ProblemDraftInput) GetSeed() NilInt64 {
+	return s.Seed
+}
+
+// SetMode sets the value of Mode.
+func (s *ProblemDraftInput) SetMode(val ProblemDraftInputMode) {
+	s.Mode = val
+}
+
+// SetObjectID sets the value of ObjectID.
+func (s *ProblemDraftInput) SetObjectID(val NilUUID) {
+	s.ObjectID = val
+}
+
+// SetComponentID sets the value of ComponentID.
+func (s *ProblemDraftInput) SetComponentID(val NilUUID) {
+	s.ComponentID = val
+}
+
+// SetArgs sets the value of Args.
+func (s *ProblemDraftInput) SetArgs(val []string) {
+	s.Args = val
+}
+
+// SetSeed sets the value of Seed.
+func (s *ProblemDraftInput) SetSeed(val NilInt64) {
+	s.Seed = val
+}
+
+type ProblemDraftInputMode string
+
+const (
+	ProblemDraftInputModeManual    ProblemDraftInputMode = "manual"
+	ProblemDraftInputModeGenerator ProblemDraftInputMode = "generator"
+)
+
+// AllValues returns all ProblemDraftInputMode values.
+func (ProblemDraftInputMode) AllValues() []ProblemDraftInputMode {
+	return []ProblemDraftInputMode{
+		ProblemDraftInputModeManual,
+		ProblemDraftInputModeGenerator,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemDraftInputMode) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemDraftInputModeManual:
+		return []byte(s), nil
+	case ProblemDraftInputModeGenerator:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemDraftInputMode) UnmarshalText(data []byte) error {
+	switch ProblemDraftInputMode(data) {
+	case ProblemDraftInputModeManual:
+		*s = ProblemDraftInputModeManual
+		return nil
+	case ProblemDraftInputModeGenerator:
+		*s = ProblemDraftInputModeGenerator
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/ProblemDraftSubtask
+type ProblemDraftSubtask struct {
+	ID        uuid.UUID                 `json:"id"`
+	Ordinal   int64                     `json:"ordinal"`
+	Name      string                    `json:"name"`
+	Points    float64                   `json:"points"`
+	Policy    ProblemDraftSubtaskPolicy `json:"policy"`
+	DependsOn []uuid.UUID               `json:"depends_on"`
+}
+
+// GetID returns the value of ID.
+func (s *ProblemDraftSubtask) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetOrdinal returns the value of Ordinal.
+func (s *ProblemDraftSubtask) GetOrdinal() int64 {
+	return s.Ordinal
+}
+
+// GetName returns the value of Name.
+func (s *ProblemDraftSubtask) GetName() string {
+	return s.Name
+}
+
+// GetPoints returns the value of Points.
+func (s *ProblemDraftSubtask) GetPoints() float64 {
+	return s.Points
+}
+
+// GetPolicy returns the value of Policy.
+func (s *ProblemDraftSubtask) GetPolicy() ProblemDraftSubtaskPolicy {
+	return s.Policy
+}
+
+// GetDependsOn returns the value of DependsOn.
+func (s *ProblemDraftSubtask) GetDependsOn() []uuid.UUID {
+	return s.DependsOn
+}
+
+// SetID sets the value of ID.
+func (s *ProblemDraftSubtask) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetOrdinal sets the value of Ordinal.
+func (s *ProblemDraftSubtask) SetOrdinal(val int64) {
+	s.Ordinal = val
+}
+
+// SetName sets the value of Name.
+func (s *ProblemDraftSubtask) SetName(val string) {
+	s.Name = val
+}
+
+// SetPoints sets the value of Points.
+func (s *ProblemDraftSubtask) SetPoints(val float64) {
+	s.Points = val
+}
+
+// SetPolicy sets the value of Policy.
+func (s *ProblemDraftSubtask) SetPolicy(val ProblemDraftSubtaskPolicy) {
+	s.Policy = val
+}
+
+// SetDependsOn sets the value of DependsOn.
+func (s *ProblemDraftSubtask) SetDependsOn(val []uuid.UUID) {
+	s.DependsOn = val
+}
+
+type ProblemDraftSubtaskPolicy string
+
+const (
+	ProblemDraftSubtaskPolicyComplete ProblemDraftSubtaskPolicy = "complete"
+	ProblemDraftSubtaskPolicyEach     ProblemDraftSubtaskPolicy = "each"
+)
+
+// AllValues returns all ProblemDraftSubtaskPolicy values.
+func (ProblemDraftSubtaskPolicy) AllValues() []ProblemDraftSubtaskPolicy {
+	return []ProblemDraftSubtaskPolicy{
+		ProblemDraftSubtaskPolicyComplete,
+		ProblemDraftSubtaskPolicyEach,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemDraftSubtaskPolicy) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemDraftSubtaskPolicyComplete:
+		return []byte(s), nil
+	case ProblemDraftSubtaskPolicyEach:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemDraftSubtaskPolicy) UnmarshalText(data []byte) error {
+	switch ProblemDraftSubtaskPolicy(data) {
+	case ProblemDraftSubtaskPolicyComplete:
+		*s = ProblemDraftSubtaskPolicyComplete
+		return nil
+	case ProblemDraftSubtaskPolicyEach:
+		*s = ProblemDraftSubtaskPolicyEach
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/ProblemDraftTest
+type ProblemDraftTest struct {
+	Points    float64            `json:"points"`
+	ID        uuid.UUID          `json:"id"`
+	Ordinal   int64              `json:"ordinal"`
+	SubtaskID uuid.UUID          `json:"subtask_id"`
+	Sample    bool               `json:"sample"`
+	Input     ProblemDraftInput  `json:"input"`
+	Answer    ProblemDraftAnswer `json:"answer"`
+}
+
+// GetPoints returns the value of Points.
+func (s *ProblemDraftTest) GetPoints() float64 {
+	return s.Points
+}
+
+// GetID returns the value of ID.
+func (s *ProblemDraftTest) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetOrdinal returns the value of Ordinal.
+func (s *ProblemDraftTest) GetOrdinal() int64 {
+	return s.Ordinal
+}
+
+// GetSubtaskID returns the value of SubtaskID.
+func (s *ProblemDraftTest) GetSubtaskID() uuid.UUID {
+	return s.SubtaskID
+}
+
+// GetSample returns the value of Sample.
+func (s *ProblemDraftTest) GetSample() bool {
+	return s.Sample
+}
+
+// GetInput returns the value of Input.
+func (s *ProblemDraftTest) GetInput() ProblemDraftInput {
+	return s.Input
+}
+
+// GetAnswer returns the value of Answer.
+func (s *ProblemDraftTest) GetAnswer() ProblemDraftAnswer {
+	return s.Answer
+}
+
+// SetPoints sets the value of Points.
+func (s *ProblemDraftTest) SetPoints(val float64) {
+	s.Points = val
+}
+
+// SetID sets the value of ID.
+func (s *ProblemDraftTest) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetOrdinal sets the value of Ordinal.
+func (s *ProblemDraftTest) SetOrdinal(val int64) {
+	s.Ordinal = val
+}
+
+// SetSubtaskID sets the value of SubtaskID.
+func (s *ProblemDraftTest) SetSubtaskID(val uuid.UUID) {
+	s.SubtaskID = val
+}
+
+// SetSample sets the value of Sample.
+func (s *ProblemDraftTest) SetSample(val bool) {
+	s.Sample = val
+}
+
+// SetInput sets the value of Input.
+func (s *ProblemDraftTest) SetInput(val ProblemDraftInput) {
+	s.Input = val
+}
+
+// SetAnswer sets the value of Answer.
+func (s *ProblemDraftTest) SetAnswer(val ProblemDraftAnswer) {
+	s.Answer = val
+}
+
+type ProblemDraftType string
+
+const (
+	ProblemDraftTypePassFail    ProblemDraftType = "pass-fail"
+	ProblemDraftTypeScoring     ProblemDraftType = "scoring"
+	ProblemDraftTypeInteractive ProblemDraftType = "interactive"
+)
+
+// AllValues returns all ProblemDraftType values.
+func (ProblemDraftType) AllValues() []ProblemDraftType {
+	return []ProblemDraftType{
+		ProblemDraftTypePassFail,
+		ProblemDraftTypeScoring,
+		ProblemDraftTypeInteractive,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemDraftType) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemDraftTypePassFail:
+		return []byte(s), nil
+	case ProblemDraftTypeScoring:
+		return []byte(s), nil
+	case ProblemDraftTypeInteractive:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemDraftType) UnmarshalText(data []byte) error {
+	switch ProblemDraftType(data) {
+	case ProblemDraftTypePassFail:
+		*s = ProblemDraftTypePassFail
+		return nil
+	case ProblemDraftTypeScoring:
+		*s = ProblemDraftTypeScoring
+		return nil
+	case ProblemDraftTypeInteractive:
+		*s = ProblemDraftTypeInteractive
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Problem member data.
@@ -8168,6 +8835,77 @@ func (s *ProblemModel) SetSamples(val []ProblemSampleModel) {
 	s.Samples = val
 }
 
+// Ref: #/components/schemas/ProblemPackage
+type ProblemPackage struct {
+	ID        uuid.UUID `json:"id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+	BuildID   uuid.UUID `json:"build_id"`
+	Revision  int64     `json:"revision"`
+	// Full SHA-256 of the archive.
+	PackageHash string    `json:"package_hash"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// GetID returns the value of ID.
+func (s *ProblemPackage) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetProblemID returns the value of ProblemID.
+func (s *ProblemPackage) GetProblemID() uuid.UUID {
+	return s.ProblemID
+}
+
+// GetBuildID returns the value of BuildID.
+func (s *ProblemPackage) GetBuildID() uuid.UUID {
+	return s.BuildID
+}
+
+// GetRevision returns the value of Revision.
+func (s *ProblemPackage) GetRevision() int64 {
+	return s.Revision
+}
+
+// GetPackageHash returns the value of PackageHash.
+func (s *ProblemPackage) GetPackageHash() string {
+	return s.PackageHash
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *ProblemPackage) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// SetID sets the value of ID.
+func (s *ProblemPackage) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetProblemID sets the value of ProblemID.
+func (s *ProblemPackage) SetProblemID(val uuid.UUID) {
+	s.ProblemID = val
+}
+
+// SetBuildID sets the value of BuildID.
+func (s *ProblemPackage) SetBuildID(val uuid.UUID) {
+	s.BuildID = val
+}
+
+// SetRevision sets the value of Revision.
+func (s *ProblemPackage) SetRevision(val int64) {
+	s.Revision = val
+}
+
+// SetPackageHash sets the value of PackageHash.
+func (s *ProblemPackage) SetPackageHash(val string) {
+	s.PackageHash = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *ProblemPackage) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
 type ProblemRoleQuery string
 
 const (
@@ -8241,110 +8979,6 @@ func (s *ProblemSampleModel) SetInput(val string) {
 // SetOutput sets the value of Output.
 func (s *ProblemSampleModel) SetOutput(val string) {
 	s.Output = val
-}
-
-// Problem statement data.
-// Ref: #/components/schemas/ProblemStatement
-type ProblemStatement struct {
-	Title        string    `json:"title"`
-	Legend       string    `json:"legend"`
-	InputFormat  string    `json:"input_format"`
-	OutputFormat string    `json:"output_format"`
-	Notes        OptString `json:"notes"`
-	Interaction  OptString `json:"interaction"`
-	Scoring      OptString `json:"scoring"`
-	Languages    []string  `json:"languages"`
-	CurrentLang  OptString `json:"current_lang"`
-}
-
-// GetTitle returns the value of Title.
-func (s *ProblemStatement) GetTitle() string {
-	return s.Title
-}
-
-// GetLegend returns the value of Legend.
-func (s *ProblemStatement) GetLegend() string {
-	return s.Legend
-}
-
-// GetInputFormat returns the value of InputFormat.
-func (s *ProblemStatement) GetInputFormat() string {
-	return s.InputFormat
-}
-
-// GetOutputFormat returns the value of OutputFormat.
-func (s *ProblemStatement) GetOutputFormat() string {
-	return s.OutputFormat
-}
-
-// GetNotes returns the value of Notes.
-func (s *ProblemStatement) GetNotes() OptString {
-	return s.Notes
-}
-
-// GetInteraction returns the value of Interaction.
-func (s *ProblemStatement) GetInteraction() OptString {
-	return s.Interaction
-}
-
-// GetScoring returns the value of Scoring.
-func (s *ProblemStatement) GetScoring() OptString {
-	return s.Scoring
-}
-
-// GetLanguages returns the value of Languages.
-func (s *ProblemStatement) GetLanguages() []string {
-	return s.Languages
-}
-
-// GetCurrentLang returns the value of CurrentLang.
-func (s *ProblemStatement) GetCurrentLang() OptString {
-	return s.CurrentLang
-}
-
-// SetTitle sets the value of Title.
-func (s *ProblemStatement) SetTitle(val string) {
-	s.Title = val
-}
-
-// SetLegend sets the value of Legend.
-func (s *ProblemStatement) SetLegend(val string) {
-	s.Legend = val
-}
-
-// SetInputFormat sets the value of InputFormat.
-func (s *ProblemStatement) SetInputFormat(val string) {
-	s.InputFormat = val
-}
-
-// SetOutputFormat sets the value of OutputFormat.
-func (s *ProblemStatement) SetOutputFormat(val string) {
-	s.OutputFormat = val
-}
-
-// SetNotes sets the value of Notes.
-func (s *ProblemStatement) SetNotes(val OptString) {
-	s.Notes = val
-}
-
-// SetInteraction sets the value of Interaction.
-func (s *ProblemStatement) SetInteraction(val OptString) {
-	s.Interaction = val
-}
-
-// SetScoring sets the value of Scoring.
-func (s *ProblemStatement) SetScoring(val OptString) {
-	s.Scoring = val
-}
-
-// SetLanguages sets the value of Languages.
-func (s *ProblemStatement) SetLanguages(val []string) {
-	s.Languages = val
-}
-
-// SetCurrentLang sets the value of CurrentLang.
-func (s *ProblemStatement) SetCurrentLang(val OptString) {
-	s.CurrentLang = val
 }
 
 // Problem team data.
@@ -8661,31 +9295,6 @@ func (s *ProblemsListItemModel) SetCreatedAt(val time.Time) {
 // SetUpdatedAt sets the value of UpdatedAt.
 func (s *ProblemsListItemModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
-}
-
-type PublishProblemOK struct {
-	Version OptInt32  `json:"version"`
-	Message OptString `json:"message"`
-}
-
-// GetVersion returns the value of Version.
-func (s *PublishProblemOK) GetVersion() OptInt32 {
-	return s.Version
-}
-
-// GetMessage returns the value of Message.
-func (s *PublishProblemOK) GetMessage() OptString {
-	return s.Message
-}
-
-// SetVersion sets the value of Version.
-func (s *PublishProblemOK) SetVersion(val OptInt32) {
-	s.Version = val
-}
-
-// SetMessage sets the value of Message.
-func (s *PublishProblemOK) SetMessage(val OptString) {
-	s.Message = val
 }
 
 // Fields for the register request.
@@ -9211,7 +9820,7 @@ type SubmissionModel struct {
 	Username          string                        `json:"username"`
 	Submission        OptString                     `json:"submission"`
 	State             OptInt32                      `json:"state"`
-	Score             OptInt32                      `json:"score"`
+	Score             OptFloat64                    `json:"score"`
 	Penalty           OptInt32                      `json:"penalty"`
 	TimeStat          OptInt32                      `json:"time_stat"`
 	MemoryStat        OptInt32                      `json:"memory_stat"`
@@ -9261,7 +9870,7 @@ func (s *SubmissionModel) GetState() OptInt32 {
 }
 
 // GetScore returns the value of Score.
-func (s *SubmissionModel) GetScore() OptInt32 {
+func (s *SubmissionModel) GetScore() OptFloat64 {
 	return s.Score
 }
 
@@ -9376,7 +9985,7 @@ func (s *SubmissionModel) SetState(val OptInt32) {
 }
 
 // SetScore sets the value of Score.
-func (s *SubmissionModel) SetScore(val OptInt32) {
+func (s *SubmissionModel) SetScore(val OptFloat64) {
 	s.Score = val
 }
 
@@ -9560,7 +10169,7 @@ type SubmissionsListItemModel struct {
 	UserID            uuid.UUID    `json:"user_id"`
 	Username          string       `json:"username"`
 	State             OptInt32     `json:"state"`
-	Score             OptInt32     `json:"score"`
+	Score             OptFloat64   `json:"score"`
 	Penalty           OptInt32     `json:"penalty"`
 	TimeStat          OptInt32     `json:"time_stat"`
 	MemoryStat        OptInt32     `json:"memory_stat"`
@@ -9609,7 +10218,7 @@ func (s *SubmissionsListItemModel) GetState() OptInt32 {
 }
 
 // GetScore returns the value of Score.
-func (s *SubmissionsListItemModel) GetScore() OptInt32 {
+func (s *SubmissionsListItemModel) GetScore() OptFloat64 {
 	return s.Score
 }
 
@@ -9719,7 +10328,7 @@ func (s *SubmissionsListItemModel) SetState(val OptInt32) {
 }
 
 // SetScore sets the value of Score.
-func (s *SubmissionsListItemModel) SetScore(val OptInt32) {
+func (s *SubmissionsListItemModel) SetScore(val OptFloat64) {
 	s.Score = val
 }
 
@@ -10134,191 +10743,6 @@ func (s *TestDetailItemModel) SetTimeMs(val int32) {
 // SetMemoryKB sets the value of MemoryKB.
 func (s *TestDetailItemModel) SetMemoryKB(val int32) {
 	s.MemoryKB = val
-}
-
-// Test report data.
-// Ref: #/components/schemas/TestReport
-type TestReport struct {
-	TotalTests  OptInt       `json:"total_tests"`
-	PassedTests OptInt       `json:"passed_tests"`
-	FailedTests OptInt       `json:"failed_tests"`
-	Results     []TestResult `json:"results"`
-}
-
-// GetTotalTests returns the value of TotalTests.
-func (s *TestReport) GetTotalTests() OptInt {
-	return s.TotalTests
-}
-
-// GetPassedTests returns the value of PassedTests.
-func (s *TestReport) GetPassedTests() OptInt {
-	return s.PassedTests
-}
-
-// GetFailedTests returns the value of FailedTests.
-func (s *TestReport) GetFailedTests() OptInt {
-	return s.FailedTests
-}
-
-// GetResults returns the value of Results.
-func (s *TestReport) GetResults() []TestResult {
-	return s.Results
-}
-
-// SetTotalTests sets the value of TotalTests.
-func (s *TestReport) SetTotalTests(val OptInt) {
-	s.TotalTests = val
-}
-
-// SetPassedTests sets the value of PassedTests.
-func (s *TestReport) SetPassedTests(val OptInt) {
-	s.PassedTests = val
-}
-
-// SetFailedTests sets the value of FailedTests.
-func (s *TestReport) SetFailedTests(val OptInt) {
-	s.FailedTests = val
-}
-
-// SetResults sets the value of Results.
-func (s *TestReport) SetResults(val []TestResult) {
-	s.Results = val
-}
-
-// Test result data.
-// Ref: #/components/schemas/TestResult
-type TestResult struct {
-	TestNumber OptInt    `json:"test_number"`
-	Verdict    OptString `json:"verdict"`
-	Time       OptInt64  `json:"time"`
-	Memory     OptInt64  `json:"memory"`
-	Message    OptString `json:"message"`
-}
-
-// GetTestNumber returns the value of TestNumber.
-func (s *TestResult) GetTestNumber() OptInt {
-	return s.TestNumber
-}
-
-// GetVerdict returns the value of Verdict.
-func (s *TestResult) GetVerdict() OptString {
-	return s.Verdict
-}
-
-// GetTime returns the value of Time.
-func (s *TestResult) GetTime() OptInt64 {
-	return s.Time
-}
-
-// GetMemory returns the value of Memory.
-func (s *TestResult) GetMemory() OptInt64 {
-	return s.Memory
-}
-
-// GetMessage returns the value of Message.
-func (s *TestResult) GetMessage() OptString {
-	return s.Message
-}
-
-// SetTestNumber sets the value of TestNumber.
-func (s *TestResult) SetTestNumber(val OptInt) {
-	s.TestNumber = val
-}
-
-// SetVerdict sets the value of Verdict.
-func (s *TestResult) SetVerdict(val OptString) {
-	s.Verdict = val
-}
-
-// SetTime sets the value of Time.
-func (s *TestResult) SetTime(val OptInt64) {
-	s.Time = val
-}
-
-// SetMemory sets the value of Memory.
-func (s *TestResult) SetMemory(val OptInt64) {
-	s.Memory = val
-}
-
-// SetMessage sets the value of Message.
-func (s *TestResult) SetMessage(val OptString) {
-	s.Message = val
-}
-
-type TestSolutionReq struct {
-	// Path to solution file in repository.
-	SolutionPath string `json:"solution_path"`
-	// Specific test numbers to run (empty = all tests).
-	TestNumbers []int `json:"test_numbers"`
-}
-
-// GetSolutionPath returns the value of SolutionPath.
-func (s *TestSolutionReq) GetSolutionPath() string {
-	return s.SolutionPath
-}
-
-// GetTestNumbers returns the value of TestNumbers.
-func (s *TestSolutionReq) GetTestNumbers() []int {
-	return s.TestNumbers
-}
-
-// SetSolutionPath sets the value of SolutionPath.
-func (s *TestSolutionReq) SetSolutionPath(val string) {
-	s.SolutionPath = val
-}
-
-// SetTestNumbers sets the value of TestNumbers.
-func (s *TestSolutionReq) SetTestNumbers(val []int) {
-	s.TestNumbers = val
-}
-
-// Test validation result data.
-// Ref: #/components/schemas/TestValidationResult
-type TestValidationResult struct {
-	TestNumber OptInt    `json:"test_number"`
-	Valid      OptBool   `json:"valid"`
-	Message    OptString `json:"message"`
-	Error      OptString `json:"error"`
-}
-
-// GetTestNumber returns the value of TestNumber.
-func (s *TestValidationResult) GetTestNumber() OptInt {
-	return s.TestNumber
-}
-
-// GetValid returns the value of Valid.
-func (s *TestValidationResult) GetValid() OptBool {
-	return s.Valid
-}
-
-// GetMessage returns the value of Message.
-func (s *TestValidationResult) GetMessage() OptString {
-	return s.Message
-}
-
-// GetError returns the value of Error.
-func (s *TestValidationResult) GetError() OptString {
-	return s.Error
-}
-
-// SetTestNumber sets the value of TestNumber.
-func (s *TestValidationResult) SetTestNumber(val OptInt) {
-	s.TestNumber = val
-}
-
-// SetValid sets the value of Valid.
-func (s *TestValidationResult) SetValid(val OptBool) {
-	s.Valid = val
-}
-
-// SetMessage sets the value of Message.
-func (s *TestValidationResult) SetMessage(val OptString) {
-	s.Message = val
-}
-
-// SetError sets the value of Error.
-func (s *TestValidationResult) SetError(val OptString) {
-	s.Error = val
 }
 
 // UnblockProblemForUserOK is response for UnblockProblemForUser operation.
@@ -10754,145 +11178,19 @@ func (s *UpdateOrganizationRequestModelJoinPolicy) UnmarshalText(data []byte) er
 	}
 }
 
-type UpdateProblemCheckerReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s UpdateProblemCheckerReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type UpdateProblemGeneratorReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s UpdateProblemGeneratorReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type UpdateProblemInteractorReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s UpdateProblemInteractorReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type UpdateProblemLibReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s UpdateProblemLibReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-// Fields for the update problem limits request.
-// Ref: #/components/schemas/UpdateProblemLimitsRequest
-type UpdateProblemLimitsRequest struct {
-	ProblemType   OptString `json:"problem_type"`
-	TimeLimitMs   OptInt    `json:"time_limit_ms"`
-	MemoryLimitMB OptInt    `json:"memory_limit_mb"`
-	MaxScore      OptNilInt `json:"max_score"`
-}
-
-// GetProblemType returns the value of ProblemType.
-func (s *UpdateProblemLimitsRequest) GetProblemType() OptString {
-	return s.ProblemType
-}
-
-// GetTimeLimitMs returns the value of TimeLimitMs.
-func (s *UpdateProblemLimitsRequest) GetTimeLimitMs() OptInt {
-	return s.TimeLimitMs
-}
-
-// GetMemoryLimitMB returns the value of MemoryLimitMB.
-func (s *UpdateProblemLimitsRequest) GetMemoryLimitMB() OptInt {
-	return s.MemoryLimitMB
-}
-
-// GetMaxScore returns the value of MaxScore.
-func (s *UpdateProblemLimitsRequest) GetMaxScore() OptNilInt {
-	return s.MaxScore
-}
-
-// SetProblemType sets the value of ProblemType.
-func (s *UpdateProblemLimitsRequest) SetProblemType(val OptString) {
-	s.ProblemType = val
-}
-
-// SetTimeLimitMs sets the value of TimeLimitMs.
-func (s *UpdateProblemLimitsRequest) SetTimeLimitMs(val OptInt) {
-	s.TimeLimitMs = val
-}
-
-// SetMemoryLimitMB sets the value of MemoryLimitMB.
-func (s *UpdateProblemLimitsRequest) SetMemoryLimitMB(val OptInt) {
-	s.MemoryLimitMB = val
-}
-
-// SetMaxScore sets the value of MaxScore.
-func (s *UpdateProblemLimitsRequest) SetMaxScore(val OptNilInt) {
-	s.MaxScore = val
-}
-
-type UpdateProblemMediaFileReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s UpdateProblemMediaFileReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
 // UpdateProblemMemberOK is response for UpdateProblemMember operation.
 type UpdateProblemMemberOK struct{}
 
 // UpdateProblemOK is response for UpdateProblem operation.
 type UpdateProblemOK struct{}
 
-// Updates problem metadata only. Omitted fields remain unchanged. Statement fields (legend,
-// input_format, output_format, notes, scoring) and limits (memory_limit, time_limit) are no longer
-// accepted here. Edit them through the workshop statement and limits endpoints, then publish the
-// workspace. Unknown fields reject the entire request.
+// Updates catalog metadata only. Omitted fields remain unchanged. The title, statement and limits
+// belong to the draft and are edited through the draft endpoints. Unknown fields reject the entire
+// request.
 // Ref: #/components/schemas/UpdateProblemRequestModel
 type UpdateProblemRequestModel struct {
-	Title      OptString `json:"title"`
 	Visibility OptString `json:"visibility"`
 	IsTemplate OptBool   `json:"is_template"`
-}
-
-// GetTitle returns the value of Title.
-func (s *UpdateProblemRequestModel) GetTitle() OptString {
-	return s.Title
 }
 
 // GetVisibility returns the value of Visibility.
@@ -10905,11 +11203,6 @@ func (s *UpdateProblemRequestModel) GetIsTemplate() OptBool {
 	return s.IsTemplate
 }
 
-// SetTitle sets the value of Title.
-func (s *UpdateProblemRequestModel) SetTitle(val OptString) {
-	s.Title = val
-}
-
 // SetVisibility sets the value of Visibility.
 func (s *UpdateProblemRequestModel) SetVisibility(val OptString) {
 	s.Visibility = val
@@ -10920,145 +11213,8 @@ func (s *UpdateProblemRequestModel) SetIsTemplate(val OptBool) {
 	s.IsTemplate = val
 }
 
-// Fields for the update problem statement request.
-// Ref: #/components/schemas/UpdateProblemStatementRequest
-type UpdateProblemStatementRequest struct {
-	Title        OptString `json:"title"`
-	Legend       OptString `json:"legend"`
-	InputFormat  OptString `json:"input_format"`
-	OutputFormat OptString `json:"output_format"`
-	Notes        OptString `json:"notes"`
-	Interaction  OptString `json:"interaction"`
-	Scoring      OptString `json:"scoring"`
-}
-
-// GetTitle returns the value of Title.
-func (s *UpdateProblemStatementRequest) GetTitle() OptString {
-	return s.Title
-}
-
-// GetLegend returns the value of Legend.
-func (s *UpdateProblemStatementRequest) GetLegend() OptString {
-	return s.Legend
-}
-
-// GetInputFormat returns the value of InputFormat.
-func (s *UpdateProblemStatementRequest) GetInputFormat() OptString {
-	return s.InputFormat
-}
-
-// GetOutputFormat returns the value of OutputFormat.
-func (s *UpdateProblemStatementRequest) GetOutputFormat() OptString {
-	return s.OutputFormat
-}
-
-// GetNotes returns the value of Notes.
-func (s *UpdateProblemStatementRequest) GetNotes() OptString {
-	return s.Notes
-}
-
-// GetInteraction returns the value of Interaction.
-func (s *UpdateProblemStatementRequest) GetInteraction() OptString {
-	return s.Interaction
-}
-
-// GetScoring returns the value of Scoring.
-func (s *UpdateProblemStatementRequest) GetScoring() OptString {
-	return s.Scoring
-}
-
-// SetTitle sets the value of Title.
-func (s *UpdateProblemStatementRequest) SetTitle(val OptString) {
-	s.Title = val
-}
-
-// SetLegend sets the value of Legend.
-func (s *UpdateProblemStatementRequest) SetLegend(val OptString) {
-	s.Legend = val
-}
-
-// SetInputFormat sets the value of InputFormat.
-func (s *UpdateProblemStatementRequest) SetInputFormat(val OptString) {
-	s.InputFormat = val
-}
-
-// SetOutputFormat sets the value of OutputFormat.
-func (s *UpdateProblemStatementRequest) SetOutputFormat(val OptString) {
-	s.OutputFormat = val
-}
-
-// SetNotes sets the value of Notes.
-func (s *UpdateProblemStatementRequest) SetNotes(val OptString) {
-	s.Notes = val
-}
-
-// SetInteraction sets the value of Interaction.
-func (s *UpdateProblemStatementRequest) SetInteraction(val OptString) {
-	s.Interaction = val
-}
-
-// SetScoring sets the value of Scoring.
-func (s *UpdateProblemStatementRequest) SetScoring(val OptString) {
-	s.Scoring = val
-}
-
 // UpdateProblemTeamOK is response for UpdateProblemTeam operation.
 type UpdateProblemTeamOK struct{}
-
-type UpdateProblemTestFileReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s UpdateProblemTestFileReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-// Fields for the update problem tests config request.
-// Ref: #/components/schemas/UpdateProblemTestsConfigRequest
-type UpdateProblemTestsConfigRequest map[string]jx.Raw
-
-func (s *UpdateProblemTestsConfigRequest) init() UpdateProblemTestsConfigRequest {
-	m := *s
-	if m == nil {
-		m = map[string]jx.Raw{}
-		*s = m
-	}
-	return m
-}
-
-type UpdateProblemValidatorReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s UpdateProblemValidatorReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-type UpdateProblemWorkshopSubmissionReq struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s UpdateProblemWorkshopSubmissionReq) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
 
 // UpdateTeamMemberRoleOK is response for UpdateTeamMemberRole operation.
 type UpdateTeamMemberRoleOK struct{}
@@ -11203,6 +11359,44 @@ func (s *UploadAvatarReq) SetAvatar(val ht.MultipartFile) {
 	s.Avatar = val
 }
 
+type UploadProblemDraftReq struct {
+	// JSON UploadChange: part (asset/input/answer/pair), asset_path or full test metadata. For pair, file
+	// is the input and answer is the answer.
+	Metadata string           `json:"metadata"`
+	File     ht.MultipartFile `json:"file"`
+	Answer   OptMultipartFile `json:"answer"`
+}
+
+// GetMetadata returns the value of Metadata.
+func (s *UploadProblemDraftReq) GetMetadata() string {
+	return s.Metadata
+}
+
+// GetFile returns the value of File.
+func (s *UploadProblemDraftReq) GetFile() ht.MultipartFile {
+	return s.File
+}
+
+// GetAnswer returns the value of Answer.
+func (s *UploadProblemDraftReq) GetAnswer() OptMultipartFile {
+	return s.Answer
+}
+
+// SetMetadata sets the value of Metadata.
+func (s *UploadProblemDraftReq) SetMetadata(val string) {
+	s.Metadata = val
+}
+
+// SetFile sets the value of File.
+func (s *UploadProblemDraftReq) SetFile(val ht.MultipartFile) {
+	s.File = val
+}
+
+// SetAnswer sets the value of Answer.
+func (s *UploadProblemDraftReq) SetAnswer(val OptMultipartFile) {
+	s.Answer = val
+}
+
 // User data.
 // Ref: #/components/schemas/UserModel
 type UserModel struct {
@@ -11329,55 +11523,6 @@ func (s *UserModel) SetIsEmailVerified(val OptBool) {
 	s.IsEmailVerified = val
 }
 
-// Validation report data.
-// Ref: #/components/schemas/ValidationReport
-type ValidationReport struct {
-	TotalTests   OptInt                 `json:"total_tests"`
-	ValidTests   OptInt                 `json:"valid_tests"`
-	InvalidTests OptInt                 `json:"invalid_tests"`
-	Results      []TestValidationResult `json:"results"`
-}
-
-// GetTotalTests returns the value of TotalTests.
-func (s *ValidationReport) GetTotalTests() OptInt {
-	return s.TotalTests
-}
-
-// GetValidTests returns the value of ValidTests.
-func (s *ValidationReport) GetValidTests() OptInt {
-	return s.ValidTests
-}
-
-// GetInvalidTests returns the value of InvalidTests.
-func (s *ValidationReport) GetInvalidTests() OptInt {
-	return s.InvalidTests
-}
-
-// GetResults returns the value of Results.
-func (s *ValidationReport) GetResults() []TestValidationResult {
-	return s.Results
-}
-
-// SetTotalTests sets the value of TotalTests.
-func (s *ValidationReport) SetTotalTests(val OptInt) {
-	s.TotalTests = val
-}
-
-// SetValidTests sets the value of ValidTests.
-func (s *ValidationReport) SetValidTests(val OptInt) {
-	s.ValidTests = val
-}
-
-// SetInvalidTests sets the value of InvalidTests.
-func (s *ValidationReport) SetInvalidTests(val OptInt) {
-	s.InvalidTests = val
-}
-
-// SetResults sets the value of Results.
-func (s *ValidationReport) SetResults(val []TestValidationResult) {
-	s.Results = val
-}
-
 // Fields for the verify email request.
 // Ref: #/components/schemas/VerifyEmailRequestModel
 type VerifyEmailRequestModel struct {
@@ -11418,20 +11563,4 @@ func (s *VerifyEmailResponseHeaders) SetSetCookie(val OptString) {
 // SetResponse sets the value of Response.
 func (s *VerifyEmailResponseHeaders) SetResponse(val AuthResponseModel) {
 	s.Response = val
-}
-
-// Result of workshop file list.
-// Ref: #/components/schemas/WorkshopFileListResponse
-type WorkshopFileListResponse struct {
-	Files []FileEntry `json:"files"`
-}
-
-// GetFiles returns the value of Files.
-func (s *WorkshopFileListResponse) GetFiles() []FileEntry {
-	return s.Files
-}
-
-// SetFiles sets the value of Files.
-func (s *WorkshopFileListResponse) SetFiles(val []FileEntry) {
-	s.Files = val
 }

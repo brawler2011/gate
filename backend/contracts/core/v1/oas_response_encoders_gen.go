@@ -104,6 +104,19 @@ func encodeBlockSubmissionResponse(response *BlockSubmissionOK, w http.ResponseW
 	return nil
 }
 
+func encodeBuildProblemPackageResponse(response *ProblemBuildAccepted, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(202)
+
+	e := new(jx.Encoder)
+	response.Encode(e)
+	if _, err := e.WriteTo(w); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
 func encodeCancelContestJoinRequestResponse(response *CancelContestJoinRequestOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
@@ -118,6 +131,19 @@ func encodeCancelOrganizationInvitationResponse(response *CancelOrganizationInvi
 
 func encodeCancelOrganizationJoinRequestResponse(response *CancelOrganizationJoinRequestOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
+
+	return nil
+}
+
+func encodeCancelProblemBuildResponse(response *ProblemBuildCancelled, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(200)
+
+	e := new(jx.Encoder)
+	response.Encode(e)
+	if _, err := e.WriteTo(w); err != nil {
+		return errors.Wrap(err, "write")
+	}
 
 	return nil
 }
@@ -153,19 +179,6 @@ func encodeChangePasswordResponse(response *AuthResponseModelHeaders, w http.Res
 }
 
 func encodeClaimTemporaryUserResponse(response *ClaimTemporaryUserResponseModel, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeCompileProblemComponentResponse(response *CompileResult, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -361,71 +374,6 @@ func encodeCreateProblemResponse(response *CreationResponseModel, w http.Respons
 	return nil
 }
 
-func encodeCreateProblemCheckerResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeCreateProblemGeneratorResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeCreateProblemInteractorResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeCreateProblemLibResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeCreateProblemMediaFileResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
 func encodeCreateProblemMemberResponse(response *CreateProblemMemberOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
@@ -434,45 +382,6 @@ func encodeCreateProblemMemberResponse(response *CreateProblemMemberOK, w http.R
 
 func encodeCreateProblemTeamResponse(response *CreateProblemTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
-
-	return nil
-}
-
-func encodeCreateProblemTestFileResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeCreateProblemValidatorResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeCreateProblemWorkshopSubmissionResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
 
 	return nil
 }
@@ -623,71 +532,6 @@ func encodeDeleteProblemResponse(response *DeleteProblemOK, w http.ResponseWrite
 	return nil
 }
 
-func encodeDeleteProblemCheckerResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeDeleteProblemGeneratorResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeDeleteProblemInteractorResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeDeleteProblemLibResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeDeleteProblemMediaFileResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
 func encodeDeleteProblemMemberResponse(response *DeleteProblemMemberOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
@@ -696,45 +540,6 @@ func encodeDeleteProblemMemberResponse(response *DeleteProblemMemberOK, w http.R
 
 func encodeDeleteProblemTeamResponse(response *DeleteProblemTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
-
-	return nil
-}
-
-func encodeDeleteProblemTestFileResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeDeleteProblemValidatorResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeDeleteProblemWorkshopSubmissionResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
 
 	return nil
 }
@@ -760,21 +565,23 @@ func encodeDownloadContestStatementsPdfResponse(response DownloadContestStatemen
 	return nil
 }
 
-func encodeForgotPasswordResponse(response *ForgotPasswordOK, w http.ResponseWriter) error {
+func encodeDownloadProblemPackageResponse(response DownloadProblemPackageOK, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/zip")
 	w.WriteHeader(200)
+
+	writer := w
+	if closer, ok := response.Data.(io.Closer); ok {
+		defer closer.Close()
+	}
+	if _, err := io.Copy(writer, response); err != nil {
+		return errors.Wrap(err, "write")
+	}
 
 	return nil
 }
 
-func encodeGenerateTestsResponse(response *GenerateTestsOK, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+func encodeForgotPasswordResponse(response *ForgotPasswordOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
 
 	return nil
 }
@@ -1081,67 +888,7 @@ func encodeGetProblemBlockStatusForUserResponse(response *ProblemBlockStatusResp
 	return nil
 }
 
-func encodeGetProblemCheckerResponse(response GetProblemCheckerOK, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(200)
-
-	writer := w
-	if closer, ok := response.Data.(io.Closer); ok {
-		defer closer.Close()
-	}
-	if _, err := io.Copy(writer, response); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeGetProblemGeneratorResponse(response GetProblemGeneratorOK, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(200)
-
-	writer := w
-	if closer, ok := response.Data.(io.Closer); ok {
-		defer closer.Close()
-	}
-	if _, err := io.Copy(writer, response); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeGetProblemInteractorResponse(response GetProblemInteractorOK, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(200)
-
-	writer := w
-	if closer, ok := response.Data.(io.Closer); ok {
-		defer closer.Close()
-	}
-	if _, err := io.Copy(writer, response); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeGetProblemLibResponse(response GetProblemLibOK, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(200)
-
-	writer := w
-	if closer, ok := response.Data.(io.Closer); ok {
-		defer closer.Close()
-	}
-	if _, err := io.Copy(writer, response); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeGetProblemLimitsResponse(response *ProblemLimits, w http.ResponseWriter) error {
+func encodeGetProblemBuildResponse(response *ProblemBuild, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1154,22 +901,7 @@ func encodeGetProblemLimitsResponse(response *ProblemLimits, w http.ResponseWrit
 	return nil
 }
 
-func encodeGetProblemMediaFileResponse(response GetProblemMediaFileOK, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/octet-stream")
-	w.WriteHeader(200)
-
-	writer := w
-	if closer, ok := response.Data.(io.Closer); ok {
-		defer closer.Close()
-	}
-	if _, err := io.Copy(writer, response); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeGetProblemStatementResponse(response *ProblemStatement, w http.ResponseWriter) error {
+func encodeGetProblemDraftResponse(response *ProblemDraft, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1182,7 +914,7 @@ func encodeGetProblemStatementResponse(response *ProblemStatement, w http.Respon
 	return nil
 }
 
-func encodeGetProblemTestFileResponse(response GetProblemTestFileOK, w http.ResponseWriter) error {
+func encodeGetProblemDraftObjectResponse(response GetProblemDraftObjectOK, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.WriteHeader(200)
 
@@ -1193,62 +925,6 @@ func encodeGetProblemTestFileResponse(response GetProblemTestFileOK, w http.Resp
 	if _, err := io.Copy(writer, response); err != nil {
 		return errors.Wrap(err, "write")
 	}
-
-	return nil
-}
-
-func encodeGetProblemValidatorResponse(response GetProblemValidatorOK, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(200)
-
-	writer := w
-	if closer, ok := response.Data.(io.Closer); ok {
-		defer closer.Close()
-	}
-	if _, err := io.Copy(writer, response); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeGetProblemWorkshopSubmissionResponse(response GetProblemWorkshopSubmissionOK, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(200)
-
-	writer := w
-	if closer, ok := response.Data.(io.Closer); ok {
-		defer closer.Close()
-	}
-	if _, err := io.Copy(writer, response); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeGetPublishedPackageResponse(response *GetPublishedPackageFound, w http.ResponseWriter) error {
-	w.Header().Set("Access-Control-Expose-Headers", "Location")
-	// Encoding response headers.
-	{
-		h := uri.NewHeaderEncoder(w.Header())
-		// Encode "Location" header.
-		{
-			cfg := uri.HeaderParameterEncodingConfig{
-				Name:    "Location",
-				Explode: false,
-			}
-			if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-				if val, ok := response.Location.Get(); ok {
-					return e.EncodeValue(conv.StringToString(val))
-				}
-				return nil
-			}); err != nil {
-				return errors.Wrap(err, "encode Location header")
-			}
-		}
-	}
-	w.WriteHeader(302)
 
 	return nil
 }
@@ -1395,7 +1071,7 @@ func encodeGetUserAvatarResponse(response GetUserAvatarRes, w http.ResponseWrite
 	}
 }
 
-func encodeImportProblemResponse(response *ImportProblemOK, w http.ResponseWriter) error {
+func encodeImportProblemResponse(response *ProblemDraft, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -1629,64 +1305,16 @@ func encodeListPostsResponse(response *ListPostsResponseModel, w http.ResponseWr
 	return nil
 }
 
-func encodeListProblemCheckersResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
+func encodeListProblemBuildsResponse(response []ProblemBuild, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
 	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
+	e.ArrStart()
+	for _, elem := range response {
+		elem.Encode(e)
 	}
-
-	return nil
-}
-
-func encodeListProblemGeneratorsResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeListProblemInteractorsResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeListProblemLibsResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeListProblemMediaFilesResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
+	e.ArrEnd()
 	if _, err := e.WriteTo(w); err != nil {
 		return errors.Wrap(err, "write")
 	}
@@ -1743,45 +1371,6 @@ func encodeListProblemTemplatesResponse(response []ProblemTemplateModel, w http.
 		elem.Encode(e)
 	}
 	e.ArrEnd()
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeListProblemTestsResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeListProblemValidatorsResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeListProblemWorkshopSubmissionsResponse(response *WorkshopFileListResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
 	if _, err := e.WriteTo(w); err != nil {
 		return errors.Wrap(err, "write")
 	}
@@ -2057,19 +1646,6 @@ func encodePatchPostByIdResponse(response PatchPostByIdRes, w http.ResponseWrite
 	}
 }
 
-func encodePublishProblemResponse(response *PublishProblemOK, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
 func encodeRegisterResponse(response *AuthResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
@@ -2149,7 +1725,7 @@ func encodeResetPasswordResponse(response *ResetPasswordOK, w http.ResponseWrite
 	return nil
 }
 
-func encodeTestSolutionResponse(response *TestReport, w http.ResponseWriter) error {
+func encodeSaveProblemDraftResponse(response *ProblemDraft, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 
@@ -2204,157 +1780,14 @@ func encodeUpdateProblemResponse(response *UpdateProblemOK, w http.ResponseWrite
 	return nil
 }
 
-func encodeUpdateProblemCheckerResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeUpdateProblemGeneratorResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeUpdateProblemInteractorResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeUpdateProblemLibResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeUpdateProblemLimitsResponse(response *ProblemLimits, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeUpdateProblemMediaFileResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
 func encodeUpdateProblemMemberResponse(response *UpdateProblemMemberOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 
 	return nil
 }
 
-func encodeUpdateProblemStatementResponse(response *ProblemStatement, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
 func encodeUpdateProblemTeamResponse(response *UpdateProblemTeamOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
-
-	return nil
-}
-
-func encodeUpdateProblemTestFileResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeUpdateProblemTestsConfigResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeUpdateProblemValidatorResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
-func encodeUpdateProblemWorkshopSubmissionResponse(response *MessageResponse, w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
 
 	return nil
 }
@@ -2390,7 +1823,7 @@ func encodeUploadAvatarResponse(response *UploadAvatarOK, w http.ResponseWriter)
 	return nil
 }
 
-func encodeValidateAllTestsResponse(response *ValidationReport, w http.ResponseWriter) error {
+func encodeUploadProblemDraftResponse(response *ProblemDraft, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 

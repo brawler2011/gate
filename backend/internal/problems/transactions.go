@@ -12,9 +12,7 @@ import (
 )
 
 type ProblemTxStore interface {
-	LockPackageVersions(context.Context, uuid.UUID) error
 	GetUserById(context.Context, uuid.UUID) (accessmodel.User, error)
-	CreatePackage(context.Context, *problemsmodel.CreatePackageParams) (problemsmodel.ProblemPackage, error)
 	GetReadyPackage(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
 	HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error)
 	GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error)
@@ -26,7 +24,6 @@ type ProblemTxStore interface {
 	RemoveProblemTeam(context.Context, uuid.UUID, uuid.UUID) error
 	UpdateProblemMemberRole(context.Context, uuid.UUID, uuid.UUID, problemsmodel.ProblemRole) error
 	RemoveProblemMember(context.Context, uuid.UUID, uuid.UUID) error
-	CommitWorkspace(context.Context, uuid.UUID, string, string, *problemsmodel.WorkspaceMetadata) error
 	CreateProblem(ctx context.Context, params *problemsmodel.CreateProblemParams) error
 	CreateProblemMember(ctx context.Context, params *problemsmodel.CreateProblemMemberParams) error
 }

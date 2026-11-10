@@ -16,6 +16,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/pkg/points"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
+
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	blogsmodel "github.com/brawler2011/gate/backend/internal/blogs/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -115,13 +118,7 @@ func helperCreateOrg(t *testing.T, ctx context.Context, pool *pgxpool.Pool, logi
 
 func helperCreatePackage(t *testing.T, ctx context.Context, pool *pgxpool.Pool, problemID, orgID uuid.UUID) uuid.UUID {
 	t.Helper()
-	pkgID := uuid.New()
-	hash := "1111111111111111111111111111111111111111111111111111111111111111"
-	_, err := pool.Exec(ctx,
-		`INSERT INTO problem_packages (id, problem_id, organization_id, package_hash, status, version)
-		 VALUES ($1, $2, $3, $4, 'ready', 1)`,
-		pkgID, problemID, orgID, hash,
-	)
+	pkgID, err := dbfixtures.InsertPackage(ctx, pool, problemID, orgID, time.Time{})
 	require.NoError(t, err)
 	return pkgID
 }
@@ -411,11 +408,7 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 
 	// Create problem
 	problemID := uuid.New()
-	_, err = pool.Exec(ctx,
-		`INSERT INTO problems (id, organization_id, title, short_name, time_limit_ms, memory_limit_mb)
-		 VALUES ($1, $2, 'Sub Problem', $3, 1000, 256)`,
-		problemID, orgID, "sub_p_"+suffix,
-	)
+	err = dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: orgID, Title: "Sub Problem", ShortName: "sub_p_" + suffix})
 	require.NoError(t, err)
 
 	pkgID := helperCreatePackage(t, ctx, pool, problemID, orgID)
@@ -469,7 +462,7 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 	updatedSub, err := repo.GetSubmission(ctx, subID)
 	require.NoError(t, err)
 	require.Equal(t, submissionsmodel.Accepted, updatedSub.State)
-	require.Equal(t, int32(100), updatedSub.Score)
+	require.Equal(t, points.Value(100), updatedSub.Score)
 	require.Equal(t, int32(75), updatedSub.TimeStat)
 	require.Equal(t, int32(4096), updatedSub.MemoryStat)
 	require.Equal(t, &failedTestIdx, updatedSub.FailedTest)

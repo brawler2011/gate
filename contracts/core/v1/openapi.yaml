@@ -29,6 +29,186 @@ tags:
   description: Service health and supported languages.
 
 paths:
+  /problems/{id}/draft:
+    get:
+      tags:
+      - problems
+      operationId: GetProblemDraft
+      summary: Read the editable problem draft
+      parameters:
+      - $ref: '#/components/parameters/ProblemIDPath'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDraft'
+    put:
+      tags:
+      - problems
+      operationId: SaveProblemDraft
+      summary: Replace the draft in one revision change
+      parameters:
+      - $ref: '#/components/parameters/ProblemIDPath'
+      - $ref: '#/components/parameters/ExpectedRevisionQuery'
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDraft'
+      requestBody:
+        required: true
+        description: Revision-safe draft operation.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProblemDraft'
+  /problems/{id}/packages/build:
+    post:
+      tags:
+      - problems
+      operationId: BuildProblemPackage
+      summary: Queue an immutable draft snapshot
+      parameters:
+      - $ref: '#/components/parameters/ProblemIDPath'
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      responses:
+        '202':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemBuildAccepted'
+      requestBody:
+        required: true
+        description: Revision-safe draft operation.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - expected_revision
+              properties:
+                expected_revision:
+                  type: integer
+                  format: int64
+  /problems/{id}/builds:
+    get:
+      tags:
+      - problems
+      operationId: ListProblemBuilds
+      summary: List the latest 100 builds
+      parameters:
+      - $ref: '#/components/parameters/ProblemIDPath'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProblemBuild'
+  /problems/{id}/builds/{buildId}:
+    get:
+      tags:
+      - problems
+      operationId: GetProblemBuild
+      summary: Read build progress and diagnostics
+      parameters:
+      - $ref: '#/components/parameters/ProblemIDPath'
+      - $ref: '#/components/parameters/BuildIDPath'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemBuild'
+  /problems/{id}/builds/{buildId}/cancel:
+    post:
+      tags:
+      - problems
+      operationId: CancelProblemBuild
+      summary: Cancel a queued or running build
+      parameters:
+      - $ref: '#/components/parameters/ProblemIDPath'
+      - $ref: '#/components/parameters/BuildIDPath'
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemBuildCancelled'
+  /problems/{id}/draft/uploads:
+    post:
+      tags:
+      - problems
+      operationId: UploadProblemDraft
+      summary: Upload immutable test bodies or a resource
+      parameters:
+      - $ref: '#/components/parameters/ProblemIDPath'
+      - $ref: '#/components/parameters/ExpectedRevisionQuery'
+      - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDraft'
+      requestBody:
+        required: true
+        description: Revision-safe draft operation.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - metadata
+              - file
+              properties:
+                metadata:
+                  type: string
+                  maxLength: 65536
+                  description: 'JSON UploadChange: part (asset/input/answer/pair), asset_path
+                    or full test metadata. For pair, file is the input and answer is
+                    the answer.'
+                file:
+                  type: string
+                  format: binary
+                answer:
+                  type: string
+                  format: binary
+  /problems/{id}/draft/objects/{objectId}:
+    get:
+      tags:
+      - problems
+      operationId: GetProblemDraftObject
+      summary: Download a binary referenced by this draft
+      parameters:
+      - $ref: '#/components/parameters/ProblemIDPath'
+      - name: objectId
+        in: path
+        required: true
+        description: Referenced stored object.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
   /languages:
     get:
       tags: [system]
@@ -92,6 +272,7 @@ paths:
           schema:
             type: string
           example: Problem 1
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
         - $ref: "#/components/parameters/OrganizationIDQuery"
         - name: template_id
           description: "Problem template identifier, including the builtin: prefix for built-in templates."
@@ -1514,17 +1695,16 @@ paths:
     post:
       tags: [problems]
       operationId: ImportProblem
-      summary: Import package into existing problem
+      summary: Replace the draft with the contents of a problem archive
       parameters:
-        - $ref: "#/components/parameters/ProblemIDPath"
+        - $ref: '#/components/parameters/ProblemIDPath'
+        - $ref: '#/components/parameters/ExpectedRevisionQuery'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
       requestBody:
-        description: "Request payload for import problem."
         required: true
         content:
           multipart/form-data:
             schema:
-              example:
-                package: (ZIP archive content)
               type: object
               required:
                 - package
@@ -1535,46 +1715,18 @@ paths:
                   description: Problem package archive (zip)
       responses:
         "200":
-          description: Problem imported successfully
+          description: Draft after the import
           content:
             application/json:
               schema:
-                example:
-                  message: Operation completed successfully
-                type: object
-                properties:
-                  message:
-                    type: string
-  /problems/{id}/publish:
-    post:
-      tags: [problems]
-      operationId: PublishProblem
-      summary: Publish problem package
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPath"
-      responses:
-        "200":
-          description: Problem published successfully
-          content:
-            application/json:
-              schema:
-                example:
-                  version: 1
-                  message: Operation completed successfully
-                type: object
-                properties:
-                  version:
-                    type: integer
-                    format: int32
-                  message:
-                    type: string
+                $ref: "#/components/schemas/ProblemDraft"
   /problems/{id}/packages:
     get:
       tags: [problems]
       operationId: ListProblemPackages
-      summary: List a page of problem packages, newest version first
+      summary: List a page of built problem packages, newest first
       parameters:
-        - $ref: "#/components/parameters/ProblemIDPath"
+        - $ref: '#/components/parameters/ProblemIDPath'
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
@@ -1583,9 +1735,6 @@ paths:
           content:
             application/json:
               schema:
-                example:
-                  packages: []
-                  pagination: {page: 1, page_size: 50, total_items: 0, total_pages: 0}
                 type: object
                 required: [packages, pagination]
                 properties:
@@ -1594,944 +1743,28 @@ paths:
                   packages:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                          format: uuid
-                        version:
-                          type: integer
-                          format: int32
-                        status:
-                          type: string
-                        package_hash:
-                          type: string
-                        created_at:
-                          type: string
-                          format: date-time
-                        compiled_at:
-                          type: string
-                          format: date-time
-  /problems/{id}/package/{version}:
+                      $ref: "#/components/schemas/ProblemPackage"
+  /problems/{id}/packages/{packageId}/download:
     get:
       tags: [problems]
-      operationId: GetPublishedPackage
-      summary: Get redirect to published problem package
+      operationId: DownloadProblemPackage
+      summary: Download a built problem package archive
       parameters:
-        - $ref: "#/components/parameters/ProblemIDPath"
-        - name: version
-          description: "Problem package version."
+        - $ref: '#/components/parameters/ProblemIDPath'
+        - name: packageId
           in: path
           required: true
           schema:
             type: string
-      responses:
-        "302":
-          description: Redirect to package download URL
-          headers:
-            Location:
-              schema:
-                type: string
-                description: Presigned S3 URL for package download
-  /problems/{problemId}/limits:
-    get:
-      tags: [problems]
-      operationId: GetProblemLimits
-      summary: Get problem limits and type settings
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
+            format: uuid
       responses:
         "200":
-          description: Problem limits
+          description: Package archive
           content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProblemLimits"
-    patch:
-      tags: [problems]
-      operationId: UpdateProblemLimits
-      summary: Update problem limits and type settings
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-      requestBody:
-        description: "Request payload for update problem limits."
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateProblemLimitsRequest"
-      responses:
-        "200":
-          description: Limits updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProblemLimits"
-  /problems/{problemId}/statement:
-    get:
-      tags: [problems]
-      operationId: GetProblemStatement
-      summary: Get problem statement
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/LangQuery"
-      responses:
-        "200":
-          description: Problem statement
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProblemStatement"
-    patch:
-      tags: [problems]
-      operationId: UpdateProblemStatement
-      summary: Update problem statement
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/LangQuery"
-      requestBody:
-        description: "Request payload for update problem statement."
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateProblemStatementRequest"
-      responses:
-        "200":
-          description: Statement updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProblemStatement"
-  /problems/{problemId}/checkers:
-    get:
-      tags: [problems]
-      operationId: ListProblemCheckers
-      summary: List checker files
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-      responses:
-        "200":
-          description: List of checkers
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
-    post:
-      tags: [problems]
-      operationId: CreateProblemChecker
-      summary: Create checker file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NameQuery"
-      requestBody:
-        description: "Request payload for create problem checker."
-        required: true
-        content:
-          text/plain:
-            schema:
-              type: string
-      responses:
-        "200":
-          description: Checker created successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/checkers/{name}:
-    get:
-      tags: [problems]
-      operationId: GetProblemChecker
-      summary: Get checker file content
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Checker content
-          content:
-            text/plain:
-              schema:
-                type: string
-    put:
-      tags: [problems]
-      operationId: UpdateProblemChecker
-      summary: Update checker file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      requestBody:
-        description: "Request payload for update problem checker."
-        required: true
-        content:
-          text/plain:
-            schema:
-              type: string
-      responses:
-        "200":
-          description: Checker updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-    delete:
-      tags: [problems]
-      operationId: DeleteProblemChecker
-      summary: Delete checker file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Checker deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-
-  /problems/{problemId}/generators:
-    get:
-      tags: [problems]
-      operationId: ListProblemGenerators
-      summary: List generator files
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-      responses:
-        "200":
-          description: List of generators
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
-    post:
-      tags: [problems]
-      operationId: CreateProblemGenerator
-      summary: Create generator file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NameQuery"
-      requestBody:
-        description: "Request payload for create problem generator."
-        required: true
-        content:
-          text/plain:
-            schema:
-              type: string
-      responses:
-        "200":
-          description: Generator created successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/generators/{name}:
-    get:
-      tags: [problems]
-      operationId: GetProblemGenerator
-      summary: Get generator file content
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Generator content
-          content:
-            text/plain:
-              schema:
-                type: string
-    put:
-      tags: [problems]
-      operationId: UpdateProblemGenerator
-      summary: Update generator file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      requestBody:
-        description: "Request payload for update problem generator."
-        required: true
-        content:
-          text/plain:
-            schema:
-              type: string
-      responses:
-        "200":
-          description: Generator updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-    delete:
-      tags: [problems]
-      operationId: DeleteProblemGenerator
-      summary: Delete generator file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Generator deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-
-  /problems/{problemId}/interactors:
-    get:
-      tags: [problems]
-      operationId: ListProblemInteractors
-      summary: List interactor files
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-      responses:
-        "200":
-          description: List of interactors
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
-    post:
-      tags: [problems]
-      operationId: CreateProblemInteractor
-      summary: Create interactor file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NameQuery"
-      requestBody:
-        description: "Request payload for create problem interactor."
-        required: true
-        content:
-          text/plain:
-            schema:
-              type: string
-      responses:
-        "200":
-          description: Interactor created successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/interactors/{name}:
-    get:
-      tags: [problems]
-      operationId: GetProblemInteractor
-      summary: Get interactor file content
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Interactor content
-          content:
-            text/plain:
-              schema:
-                type: string
-    put:
-      tags: [problems]
-      operationId: UpdateProblemInteractor
-      summary: Update interactor file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      requestBody:
-        description: "Request payload for update problem interactor."
-        required: true
-        content:
-          text/plain:
-            schema:
-              type: string
-      responses:
-        "200":
-          description: Interactor updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-    delete:
-      tags: [problems]
-      operationId: DeleteProblemInteractor
-      summary: Delete interactor file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Interactor deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-
-  /problems/{problemId}/media:
-    get:
-      tags: [problems]
-      operationId: ListProblemMediaFiles
-      summary: List media files
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-      responses:
-        "200":
-          description: List of media files
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
-    post:
-      tags: [problems]
-      operationId: CreateProblemMediaFile
-      summary: Create media file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NameQuery"
-      requestBody:
-        description: "Request payload for create problem media file."
-        required: true
-        content:
-          application/octet-stream:
-            schema:
-              type: string
-              format: binary
-      responses:
-        "200":
-          description: Media file created successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/media/{name}:
-    get:
-      tags: [problems]
-      operationId: GetProblemMediaFile
-      summary: Get media file content
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Media file content
-          content:
-            application/octet-stream:
+            application/zip:
               schema:
                 type: string
                 format: binary
-    put:
-      tags: [problems]
-      operationId: UpdateProblemMediaFile
-      summary: Update media file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      requestBody:
-        description: "Request payload for update problem media file."
-        required: true
-        content:
-          application/octet-stream:
-            schema:
-              type: string
-              format: binary
-      responses:
-        "200":
-          description: Media file updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-    delete:
-      tags: [problems]
-      operationId: DeleteProblemMediaFile
-      summary: Delete media file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Media file deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/lib:
-    get:
-      tags: [problems]
-      operationId: ListProblemLibs
-      summary: List library files
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-      responses:
-        "200":
-          description: List of library files
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
-    post:
-      tags: [problems]
-      operationId: CreateProblemLib
-      summary: Create library file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NameQuery"
-      requestBody:
-        description: "Request payload for create problem lib."
-        required: true
-        content:
-          text/plain:
-            schema:
-              type: string
-      responses:
-        "200":
-          description: Library file created successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/lib/{name}:
-    get:
-      tags: [problems]
-      operationId: GetProblemLib
-      summary: Get library file content
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Library file content
-          content:
-            text/plain:
-              schema:
-                type: string
-    put:
-      tags: [problems]
-      operationId: UpdateProblemLib
-      summary: Update library file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      requestBody:
-        description: "Request payload for update problem lib."
-        required: true
-        content:
-          text/plain:
-            schema:
-              type: string
-      responses:
-        "200":
-          description: Library file updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-    delete:
-      tags: [problems]
-      operationId: DeleteProblemLib
-      summary: Delete library file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Library file deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/submissions:
-    get:
-      tags: [problems]
-      operationId: ListProblemWorkshopSubmissions
-      summary: List author solution files
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-      responses:
-        "200":
-          description: List of author solutions
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
-    post:
-      tags: [problems]
-      operationId: CreateProblemWorkshopSubmission
-      summary: Create author solution file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NameQuery"
-      requestBody:
-        description: "Request payload for create problem workshop submission."
-        required: true
-        content:
-          text/plain:
-            schema:
-              type: string
-      responses:
-        "200":
-          description: Author solution file created successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/submissions/{name}:
-    get:
-      tags: [problems]
-      operationId: GetProblemWorkshopSubmission
-      summary: Get author solution file content
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Author solution file content
-          content:
-            text/plain:
-              schema:
-                type: string
-    put:
-      tags: [problems]
-      operationId: UpdateProblemWorkshopSubmission
-      summary: Update author solution file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      requestBody:
-        description: "Request payload for update problem workshop submission."
-        required: true
-        content:
-          text/plain:
-            schema:
-              type: string
-      responses:
-        "200":
-          description: Author solution file updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-    delete:
-      tags: [problems]
-      operationId: DeleteProblemWorkshopSubmission
-      summary: Delete author solution file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Author solution file deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/tests:
-    get:
-      tags: [problems]
-      operationId: ListProblemTests
-      summary: List test files
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-      responses:
-        "200":
-          description: List of tests
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
-    post:
-      tags: [problems]
-      operationId: CreateProblemTestFile
-      summary: Create test file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NameQuery"
-      requestBody:
-        description: "Request payload for create problem test file."
-        required: true
-        content:
-          application/octet-stream:
-            schema:
-              type: string
-              format: binary
-      responses:
-        "200":
-          description: Test file created successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/tests/config:
-    patch:
-      tags: [problems]
-      operationId: UpdateProblemTestsConfig
-      summary: Update tests.json configuration
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-      requestBody:
-        description: "Request payload for update problem tests config."
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateProblemTestsConfigRequest"
-      responses:
-        "200":
-          description: Tests config updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/tests/{name}:
-    get:
-      tags: [problems]
-      operationId: GetProblemTestFile
-      summary: Get test file content
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Test file content
-          content:
-            application/octet-stream:
-              schema:
-                type: string
-                format: binary
-    put:
-      tags: [problems]
-      operationId: UpdateProblemTestFile
-      summary: Update test file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      requestBody:
-        description: "Request payload for update problem test file."
-        required: true
-        content:
-          application/octet-stream:
-            schema:
-              type: string
-              format: binary
-      responses:
-        "200":
-          description: Test file updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-    delete:
-      tags: [problems]
-      operationId: DeleteProblemTestFile
-      summary: Delete test file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Test file deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/validators:
-    get:
-      tags: [problems]
-      operationId: ListProblemValidators
-      summary: List validator files
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-      responses:
-        "200":
-          description: List of validators
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkshopFileListResponse"
-    post:
-      tags: [problems]
-      operationId: CreateProblemValidator
-      summary: Create validator file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NameQuery"
-      requestBody:
-        description: "Request payload for create problem validator."
-        required: true
-        content:
-          text/plain:
-            schema:
-              type: string
-      responses:
-        "200":
-          description: Validator created successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-  /problems/{problemId}/validators/{name}:
-    get:
-      tags: [problems]
-      operationId: GetProblemValidator
-      summary: Get validator file content
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Validator content
-          content:
-            text/plain:
-              schema:
-                type: string
-    put:
-      tags: [problems]
-      operationId: UpdateProblemValidator
-      summary: Update validator file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      requestBody:
-        description: "Request payload for update problem validator."
-        required: true
-        content:
-          text/plain:
-            schema:
-              type: string
-      responses:
-        "200":
-          description: Validator updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-    delete:
-      tags: [problems]
-      operationId: DeleteProblemValidator
-      summary: Delete validator file
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - $ref: "#/components/parameters/NamePath"
-      responses:
-        "200":
-          description: Validator deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-
-  /problems/{problemId}/workshop/components/{componentType}/compile:
-    post:
-      tags: [problems]
-      operationId: CompileProblemComponent
-      summary: Compile checker/validator/generator/interactor
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-        - name: componentType
-          description: "Workshop component category."
-          in: path
-          required: true
-          schema:
-            type: string
-            enum:
-              - checker
-              - validator
-              - generator
-              - interactor
-      responses:
-        "200":
-          description: Compilation result
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CompileResult"
-  /problems/{problemId}/workshop/tests/generate:
-    post:
-      tags: [problems]
-      operationId: GenerateTests
-      summary: Generate tests using generator
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-      requestBody:
-        description: "Request payload for generate tests."
-        required: true
-        content:
-          application/json:
-            schema:
-              example:
-                generator_name: generator.cpp
-                test_numbers: []
-              type: object
-              required:
-                - generator_name
-                - test_numbers
-              properties:
-                generator_name:
-                  type: string
-                test_numbers:
-                  type: array
-                  items:
-                    type: integer
-                arguments:
-                  type: array
-                  items:
-                    type: array
-                    items:
-                      type: string
-      responses:
-        "200":
-          description: Tests generated successfully
-          content:
-            application/json:
-              schema:
-                example:
-                  message: Operation completed successfully
-                type: object
-                properties:
-                  message:
-                    type: string
-  /problems/{problemId}/workshop/tests/validate:
-    post:
-      tags: [problems]
-      operationId: ValidateAllTests
-      summary: Validate all test inputs
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-      responses:
-        "200":
-          description: Validation report
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ValidationReport"
-  /problems/{problemId}/workshop/solutions/test:
-    post:
-      tags: [problems]
-      operationId: TestSolution
-      summary: Test solution against tests
-      parameters:
-        - $ref: "#/components/parameters/ProblemIDPathByCamelName"
-      requestBody:
-        description: "Request payload for test solution."
-        required: true
-        content:
-          application/json:
-            schema:
-              example:
-                solution_path: submissions/main.cpp
-              type: object
-              required:
-                - solution_path
-              properties:
-                solution_path:
-                  type: string
-                  description: Path to solution file in repository
-                test_numbers:
-                  type: array
-                  items:
-                    type: integer
-                  description: Specific test numbers to run (empty = all tests)
-      responses:
-        "200":
-          description: Test report
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TestReport"
   /organizations:
     get:
       tags: [organizations]
@@ -3457,6 +2690,32 @@ components:
       name: session_id
 
   parameters:
+    ExpectedRevisionQuery:
+      name: expected_revision
+      in: query
+      required: true
+      description: Revision last read by the author. A different current revision returns 409.
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Stable identifier for retries of exactly this request.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
+    BuildIDPath:
+      name: buildId
+      in: path
+      required: true
+      description: Build identifier.
+      schema:
+        type: string
+        format: uuid
     PageQuery:
       name: page
       in: query
@@ -3761,6 +3020,344 @@ components:
         format: uuid
 
   schemas:
+    ProblemDraftInput:
+      type: object
+      required:
+      - mode
+      - object_id
+      - component_id
+      - args
+      - seed
+      properties:
+        mode:
+          type: string
+          enum:
+          - manual
+          - generator
+        object_id:
+          type: string
+          format: uuid
+          nullable: true
+        component_id:
+          type: string
+          format: uuid
+          nullable: true
+        args:
+          type: array
+          items:
+            type: string
+        seed:
+          type: integer
+          format: int64
+          nullable: true
+    ProblemDraftAnswer:
+      type: object
+      required:
+      - mode
+      - object_id
+      - component_id
+      properties:
+        mode:
+          type: string
+          enum:
+          - provided
+          - generated
+          - interactive
+        object_id:
+          type: string
+          format: uuid
+          nullable: true
+        component_id:
+          type: string
+          format: uuid
+          nullable: true
+    ProblemDraftComponent:
+      type: object
+      required:
+      - id
+      - role
+      - path
+      - language
+      - dependencies
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+          - checker
+          - validator
+          - interactor
+          - generator
+          - solution
+        path:
+          type: string
+        language:
+          type: string
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+    ProblemDraftSubtask:
+      type: object
+      required:
+      - id
+      - ordinal
+      - name
+      - points
+      - policy
+      - depends_on
+      properties:
+        id:
+          type: string
+          format: uuid
+        ordinal:
+          type: integer
+          format: int64
+        name:
+          type: string
+        points:
+          type: number
+          format: double
+        policy:
+          type: string
+          enum:
+          - complete
+          - each
+        depends_on:
+          type: array
+          items:
+            type: string
+            format: uuid
+    ProblemDraftTest:
+      type: object
+      required:
+      - points
+      - id
+      - ordinal
+      - subtask_id
+      - sample
+      - input
+      - answer
+      properties:
+        points:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1000000000
+          multipleOf: 0.01
+        id:
+          type: string
+          format: uuid
+        ordinal:
+          type: integer
+          format: int64
+        subtask_id:
+          type: string
+          format: uuid
+        sample:
+          type: boolean
+        input:
+          $ref: '#/components/schemas/ProblemDraftInput'
+        answer:
+          $ref: '#/components/schemas/ProblemDraftAnswer'
+    ProblemDraftAsset:
+      type: object
+      required:
+      - path
+      - object_id
+      properties:
+        path:
+          type: string
+        object_id:
+          type: string
+          format: uuid
+    ProblemDraft:
+      type: object
+      required:
+      - problem_id
+      - revision
+      - title
+      - short_name
+      - type
+      - time_limit_ms
+      - memory_limit_mb
+      - max_score
+      - checker_id
+      - validator_id
+      - interactor_id
+      - main_solution_id
+      - files
+      - components
+      - subtasks
+      - tests
+      - assets
+      properties:
+        problem_id:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          format: int64
+        title:
+          type: string
+        short_name:
+          type: string
+        type:
+          type: string
+          enum:
+          - pass-fail
+          - scoring
+          - interactive
+        time_limit_ms:
+          type: integer
+          format: int64
+        memory_limit_mb:
+          type: integer
+          format: int64
+        max_score:
+          type: number
+          format: double
+          nullable: true
+        checker_id:
+          type: string
+          format: uuid
+          nullable: true
+        validator_id:
+          type: string
+          format: uuid
+          nullable: true
+        interactor_id:
+          type: string
+          format: uuid
+          nullable: true
+        main_solution_id:
+          type: string
+          format: uuid
+          nullable: true
+        files:
+          type: object
+          additionalProperties:
+            type: string
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemDraftComponent'
+        subtasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemDraftSubtask'
+        tests:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemDraftTest'
+        assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemDraftAsset'
+    ProblemPackage:
+      type: object
+      required: [id, problem_id, build_id, revision, package_hash, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        problem_id:
+          type: string
+          format: uuid
+        build_id:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          format: int64
+        package_hash:
+          type: string
+          description: Full SHA-256 of the archive.
+        created_at:
+          type: string
+          format: date-time
+    ProblemBuild:
+      type: object
+      required:
+      - id
+      - problem_id
+      - organization_id
+      - revision
+      - state
+      - attempt
+      - max_attempts
+      - deadline
+      - created_at
+      - finished_at
+      - diagnostic
+      properties:
+        id:
+          type: string
+          format: uuid
+        problem_id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          format: int64
+        state:
+          type: string
+          enum:
+          - queued
+          - running
+          - succeeded
+          - failed
+          - cancelled
+        attempt:
+          type: integer
+          format: int64
+        max_attempts:
+          type: integer
+          format: int64
+        deadline:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        diagnostic:
+          type: object
+          nullable: true
+          additionalProperties: true
+    ProblemBuildAccepted:
+      type: object
+      required:
+      - build_id
+      - revision
+      properties:
+        build_id:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          format: int64
+    ProblemBuildCancelled:
+      type: object
+      required:
+      - build_id
+      - state
+      properties:
+        build_id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum:
+          - cancelled
     Error:
       description: "Error data."
       example:
@@ -4526,21 +4123,15 @@ components:
           format: int32
     UpdateProblemRequestModel:
       description: >-
-        Updates problem metadata only. Omitted fields remain unchanged.
-        Statement fields (legend, input_format, output_format, notes, scoring)
-        and limits (memory_limit, time_limit) are no longer accepted here.
-        Edit them through the workshop statement and limits endpoints, then
-        publish the workspace. Unknown fields reject the entire request.
+        Updates catalog metadata only. Omitted fields remain unchanged.
+        The title, statement and limits belong to the draft and are edited
+        through the draft endpoints. Unknown fields reject the entire request.
       example:
-        title: Test problem
         visibility: private
         is_template: false
       type: object
       additionalProperties: false
       properties:
-        title:
-          type: string
-          example: Test problem
         visibility:
           type: string
           example: private
@@ -4735,8 +4326,8 @@ components:
           format: int32
           example: 1
         score:
-          type: integer
-          format: int32
+          type: number
+          format: double
           example: 100
         penalty:
           type: integer
@@ -4948,8 +4539,8 @@ components:
           format: int32
           example: 1
         score:
-          type: integer
-          format: int32
+          type: number
+          format: double
           example: 100
         penalty:
           type: integer

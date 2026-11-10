@@ -99,7 +99,7 @@ JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1 AND cp.problem_id = $2;
 
 -- name: ListContestProblems :many
-SELECT cp.*, pp.title, pp.short_name, 'private'::text AS visibility, pp.time_limit_ms, pp.memory_limit_mb, pp.created_at AS problem_updated_at, pp.url as package_url
+SELECT cp.*, pp.title, pp.short_name, 'private'::text AS visibility, pp.time_limit_ms, pp.memory_limit_mb, pp.created_at AS problem_updated_at
 FROM contest_problems cp
 JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1

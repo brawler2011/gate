@@ -558,7 +558,7 @@ func (uc *PermissionsUseCase) HasOrganizationPermission(
 	switch action {
 	case accessmodel.ActionViewOrganization:
 		return true, nil
-	case accessmodel.ActionManageOrganization:
+	case accessmodel.ActionManageOrganization, accessmodel.ActionCreateProblem:
 		return member.Role == organizationsmodel.OrgRoleOwner || member.Role == organizationsmodel.OrgRoleAdmin, nil
 	case accessmodel.ActionDeleteOrganization:
 		return member.Role == organizationsmodel.OrgRoleOwner, nil

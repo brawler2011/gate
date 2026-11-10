@@ -6,6 +6,7 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"net/http"
 	"net/http/httptest"
 	"time"
@@ -77,15 +78,12 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 		if i == 4 {
 			id, title = uuid.Nil, ""
 		}
-		_, err := s.dbPool.Exec(s.ctx,
-			"INSERT INTO problems (id, organization_id, owner_id, visibility, title, short_name) VALUES ($1,$2,$3,$4,$5,$6)",
-			id, org.ID, owner.Id, problemsmodel.ProblemVisibilityPrivate, title, fmt.Sprintf("ann-problem-%d", i))
+		ownerID := owner.Id
+		err := dbfixtures.InsertProblem(s.ctx, s.dbPool, dbfixtures.ProblemSpec{ID: id, OrganizationID: org.ID, OwnerID: &ownerID,
+			Visibility: problemsmodel.ProblemVisibilityPrivate, Title: title, ShortName: fmt.Sprintf("ann-problem-%d", i)})
 		s.Require().NoError(err)
 		if i < 3 {
-			packageID := uuid.New()
-			_, err = s.dbPool.Exec(s.ctx,
-				"INSERT INTO problem_packages (id, problem_id, organization_id, package_hash, status, version) VALUES ($1,$2,$3,$4,'ready',1)",
-				packageID, id, org.ID, fmt.Sprintf("%064d", i+1))
+			packageID, err := dbfixtures.InsertPackage(s.ctx, s.dbPool, id, org.ID, time.Time{})
 			s.Require().NoError(err)
 			_, err = s.dbPool.Exec(s.ctx,
 				"INSERT INTO contest_problems (contest_id, problem_id, package_id, ordinal) VALUES ($1,$2,$3,$4)",

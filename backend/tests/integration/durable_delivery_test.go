@@ -328,4 +328,3 @@ func (s *IntegrationTestSuite) TestOutboxWorkerHeartbeatRenewsLongDispatch() {
 	// Complete successfully
 	s.Require().NoError(repo.MarkAsCompleted(s.ctx, event.Id, event.LeaseToken))
 }
-

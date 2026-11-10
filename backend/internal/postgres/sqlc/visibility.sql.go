@@ -115,7 +115,7 @@ WITH actor AS (
     AND u.role IN ('user', 'admin')
     AND (u.expires_at IS NULL OR u.expires_at > $3::timestamptz)
 ), visible AS (
-  SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.title, p.short_name, p.time_limit_ms, p.memory_limit_mb, p.created_at, p.updated_at, p.is_template, p.workspace_hash, o.login AS org_login, o.name AS org_name FROM problems p JOIN organizations o ON o.id = p.organization_id
+  SELECT p.id, p.organization_id, p.owner_id, p.visibility, p.is_template, p.created_at, p.updated_at, p.title, p.short_name, p.time_limit_ms, p.memory_limit_mb, o.login AS org_login, o.name AS org_name FROM problem_catalog p JOIN organizations o ON o.id = p.organization_id
   WHERE NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = p.organization_id AND invalid.user_id = $2::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
     AND NOT EXISTS (SELECT 1 FROM problem_members invalid WHERE invalid.problem_id = p.id AND invalid.user_id = $2::uuid AND invalid.role::text NOT IN ('viewer', 'moderator', 'owner'))
     AND NOT EXISTS (SELECT 1 FROM problem_teams link JOIN team_members tm ON tm.team_id = link.team_id WHERE link.problem_id = p.id AND tm.user_id = $2::uuid AND (tm.role::text NOT IN ('member', 'maintainer') OR link.permission::text NOT IN ('read', 'write', 'admin')))
@@ -137,7 +137,7 @@ WITH actor AS (
     AND ($8::uuid IS NULL OR p.owner_id = $8::uuid)
     AND ($9::boolean IS NULL OR p.is_template = $9::boolean)
 ), total AS (SELECT COUNT(*) AS total_items FROM visible), page AS (
-  SELECT id, organization_id, owner_id, visibility, title, short_name, time_limit_ms, memory_limit_mb, created_at, updated_at, is_template, workspace_hash, org_login, org_name FROM visible p ORDER BY CASE WHEN $1::boolean THEN p.created_at END DESC,
+  SELECT id, organization_id, owner_id, visibility, is_template, created_at, updated_at, title, short_name, time_limit_ms, memory_limit_mb, org_login, org_name FROM visible p ORDER BY CASE WHEN $1::boolean THEN p.created_at END DESC,
     CASE WHEN NOT $1::boolean THEN p.created_at END ASC,
     CASE WHEN $1::boolean THEN p.id END DESC,
     CASE WHEN NOT $1::boolean THEN p.id END ASC

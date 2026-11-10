@@ -26,7 +26,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 
 	// 1. Create Problem
 	problemTitle := "Submission Problem"
-	probResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
+	probResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
 		Title:          problemTitle,
 		OrganizationID: corev1.NewOptUUID(problemOrg.ID),
 		TemplateID:     "builtin:a-plus-b",

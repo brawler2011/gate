@@ -41,11 +41,6 @@ const (
 	// Small size for dummy command pipe collectors (1 KB)
 	dummyPipeCollectorSize = 1024
 
-	// Compile limits for interpreters (dummy run)
-	interpreterCompileCpuTimeLimit = 5 * time.Second
-	interpreterCompileMemoryLimit  = 256 * 1024 * 1024
-	interpreterCompileProcLimit    = 150
-
 	// Compile limits for compilers
 	compilerCompileCpuTimeLimit = 10 * time.Second
 	compilerCompileMemoryLimit  = 512 * 1024 * 1024
@@ -141,6 +136,14 @@ func NewSandbox(client *Client, config *Config) *Sandbox {
 // Compile compiles the source code using the configured compiler and returns the Executable descriptor.
 // For interpreted languages, it caches the source code and all its dependencies.
 func (s *Sandbox) Compile(ctx context.Context, sourceCode []byte, langKey string, dependencies map[string][]byte) (Executable, error) {
+	return s.CompileWithLimits(ctx, sourceCode, langKey, dependencies, FileRunLimits{CPU: compilerCompileCpuTimeLimit, Wall: 2 * compilerCompileCpuTimeLimit, Memory: compilerCompileMemoryLimit, Processes: compilerCompileProcLimit, Output: 64 * 1024 * 1024, Diagnostic: 64 * 1024})
+}
+
+func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, langKey string, dependencies map[string][]byte, limits FileRunLimits) (Executable, error) {
+	if limits.CPU <= 0 || limits.Wall <= 0 || limits.Memory == 0 || limits.Processes == 0 || limits.Output <= 0 || limits.Diagnostic <= 0 || limits.Diagnostic > 64*1024 {
+		return Executable{}, fmt.Errorf("invalid compilation limits")
+	}
+
 	lang, ok := s.config.Langs[langKey]
 	if !ok {
 		return Executable{}, fmt.Errorf("unsupported language: %s", langKey)
@@ -169,12 +172,14 @@ func (s *Sandbox) Compile(ctx context.Context, sourceCode []byte, langKey string
 				newPipeCollector("stdout", dummyPipeCollectorSize),
 				newPipeCollector("stderr", dummyPipeCollectorSize),
 			},
-			CopyIn:        copyIn,
-			CopyOutCached: copyOutCached,
-			CpuTimeLimit:  safeUint64(interpreterCompileCpuTimeLimit.Nanoseconds()),
-			MemoryLimit:   interpreterCompileMemoryLimit,
-			ProcLimit:     interpreterCompileProcLimit,
-			Env:           []string{"PATH=/usr/local/go/bin:/usr/bin:/bin", "GOCACHE=/tmp", "HOME=/tmp"},
+			CopyIn:         copyIn,
+			CopyOutCached:  copyOutCached,
+			ClockTimeLimit: uint64(limits.Wall),
+			CopyOutMax:     uint64(limits.Output),
+			CpuTimeLimit:   uint64(limits.CPU),
+			MemoryLimit:    limits.Memory,
+			ProcLimit:      limits.Processes,
+			Env:            []string{"PATH=/usr/local/go/bin:/usr/bin:/bin", "GOCACHE=/tmp", "HOME=/tmp"},
 		}.Build()
 
 		req := pb.Request_builder{
@@ -234,17 +239,19 @@ func (s *Sandbox) Compile(ctx context.Context, sourceCode []byte, langKey string
 		Args: compileCmdArgs,
 		Files: []*pb.Request_File{
 			newMemoryFile([]byte("")),
-			newPipeCollector("stdout", defaultPipeCollectorSize),
-			newPipeCollector("stderr", defaultPipeCollectorSize),
+			newPipeCollector("stdout", limits.Diagnostic),
+			newPipeCollector("stderr", limits.Diagnostic),
 		},
 		CopyIn: copyIn,
 		CopyOutCached: []*pb.Request_CmdCopyOutFile{
 			pb.Request_CmdCopyOutFile_builder{Name: outputName}.Build(),
 		},
-		CpuTimeLimit: safeUint64(compilerCompileCpuTimeLimit.Nanoseconds()),
-		MemoryLimit:  compilerCompileMemoryLimit,
-		ProcLimit:    compilerCompileProcLimit,
-		Env:          []string{"PATH=/usr/local/go/bin:/usr/bin:/bin", "GOCACHE=/tmp", "HOME=/tmp"},
+		ClockTimeLimit: uint64(limits.Wall),
+		CopyOutMax:     uint64(limits.Output),
+		CpuTimeLimit:   uint64(limits.CPU),
+		MemoryLimit:    limits.Memory,
+		ProcLimit:      limits.Processes,
+		Env:            []string{"PATH=/usr/local/go/bin:/usr/bin:/bin", "GOCACHE=/tmp", "HOME=/tmp"},
 	}.Build()
 
 	req := pb.Request_builder{

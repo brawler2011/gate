@@ -130,6 +130,15 @@ func (UnimplementedHandler) BlockSubmission(ctx context.Context, req OptBlockSub
 	return ht.ErrNotImplemented
 }
 
+// BuildProblemPackage implements BuildProblemPackage operation.
+//
+// Queue an immutable draft snapshot.
+//
+// POST /problems/{id}/packages/build
+func (UnimplementedHandler) BuildProblemPackage(ctx context.Context, req *BuildProblemPackageReq, params BuildProblemPackageParams) (r *ProblemBuildAccepted, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CancelContestJoinRequest implements CancelContestJoinRequest operation.
 //
 // Cancel my contest join request.
@@ -157,6 +166,15 @@ func (UnimplementedHandler) CancelOrganizationJoinRequest(ctx context.Context, p
 	return ht.ErrNotImplemented
 }
 
+// CancelProblemBuild implements CancelProblemBuild operation.
+//
+// Cancel a queued or running build.
+//
+// POST /problems/{id}/builds/{buildId}/cancel
+func (UnimplementedHandler) CancelProblemBuild(ctx context.Context, params CancelProblemBuildParams) (r *ProblemBuildCancelled, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ChangePassword implements ChangePassword operation.
 //
 // Change password for current user.
@@ -172,15 +190,6 @@ func (UnimplementedHandler) ChangePassword(ctx context.Context, req *ChangePassw
 //
 // POST /users/claim-temporary
 func (UnimplementedHandler) ClaimTemporaryUser(ctx context.Context, req *ClaimTemporaryUserRequestModel) (r *ClaimTemporaryUserResponseModel, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// CompileProblemComponent implements CompileProblemComponent operation.
-//
-// Compile checker/validator/generator/interactor.
-//
-// POST /problems/{problemId}/workshop/components/{componentType}/compile
-func (UnimplementedHandler) CompileProblemComponent(ctx context.Context, params CompileProblemComponentParams) (r *CompileResult, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -301,51 +310,6 @@ func (UnimplementedHandler) CreateProblem(ctx context.Context, params CreateProb
 	return r, ht.ErrNotImplemented
 }
 
-// CreateProblemChecker implements CreateProblemChecker operation.
-//
-// Create checker file.
-//
-// POST /problems/{problemId}/checkers
-func (UnimplementedHandler) CreateProblemChecker(ctx context.Context, req CreateProblemCheckerReq, params CreateProblemCheckerParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// CreateProblemGenerator implements CreateProblemGenerator operation.
-//
-// Create generator file.
-//
-// POST /problems/{problemId}/generators
-func (UnimplementedHandler) CreateProblemGenerator(ctx context.Context, req CreateProblemGeneratorReq, params CreateProblemGeneratorParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// CreateProblemInteractor implements CreateProblemInteractor operation.
-//
-// Create interactor file.
-//
-// POST /problems/{problemId}/interactors
-func (UnimplementedHandler) CreateProblemInteractor(ctx context.Context, req CreateProblemInteractorReq, params CreateProblemInteractorParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// CreateProblemLib implements CreateProblemLib operation.
-//
-// Create library file.
-//
-// POST /problems/{problemId}/lib
-func (UnimplementedHandler) CreateProblemLib(ctx context.Context, req CreateProblemLibReq, params CreateProblemLibParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// CreateProblemMediaFile implements CreateProblemMediaFile operation.
-//
-// Create media file.
-//
-// POST /problems/{problemId}/media
-func (UnimplementedHandler) CreateProblemMediaFile(ctx context.Context, req CreateProblemMediaFileReq, params CreateProblemMediaFileParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
 // CreateProblemMember implements CreateProblemMember operation.
 //
 // Create problem member.
@@ -362,33 +326,6 @@ func (UnimplementedHandler) CreateProblemMember(ctx context.Context, params Crea
 // POST /problems/{id}/teams
 func (UnimplementedHandler) CreateProblemTeam(ctx context.Context, params CreateProblemTeamParams) error {
 	return ht.ErrNotImplemented
-}
-
-// CreateProblemTestFile implements CreateProblemTestFile operation.
-//
-// Create test file.
-//
-// POST /problems/{problemId}/tests
-func (UnimplementedHandler) CreateProblemTestFile(ctx context.Context, req CreateProblemTestFileReq, params CreateProblemTestFileParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// CreateProblemValidator implements CreateProblemValidator operation.
-//
-// Create validator file.
-//
-// POST /problems/{problemId}/validators
-func (UnimplementedHandler) CreateProblemValidator(ctx context.Context, req CreateProblemValidatorReq, params CreateProblemValidatorParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// CreateProblemWorkshopSubmission implements CreateProblemWorkshopSubmission operation.
-//
-// Create author solution file.
-//
-// POST /problems/{problemId}/submissions
-func (UnimplementedHandler) CreateProblemWorkshopSubmission(ctx context.Context, req CreateProblemWorkshopSubmissionReq, params CreateProblemWorkshopSubmissionParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
 }
 
 // CreateSubmission implements CreateSubmission operation.
@@ -508,51 +445,6 @@ func (UnimplementedHandler) DeleteProblem(ctx context.Context, params DeleteProb
 	return ht.ErrNotImplemented
 }
 
-// DeleteProblemChecker implements DeleteProblemChecker operation.
-//
-// Delete checker file.
-//
-// DELETE /problems/{problemId}/checkers/{name}
-func (UnimplementedHandler) DeleteProblemChecker(ctx context.Context, params DeleteProblemCheckerParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// DeleteProblemGenerator implements DeleteProblemGenerator operation.
-//
-// Delete generator file.
-//
-// DELETE /problems/{problemId}/generators/{name}
-func (UnimplementedHandler) DeleteProblemGenerator(ctx context.Context, params DeleteProblemGeneratorParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// DeleteProblemInteractor implements DeleteProblemInteractor operation.
-//
-// Delete interactor file.
-//
-// DELETE /problems/{problemId}/interactors/{name}
-func (UnimplementedHandler) DeleteProblemInteractor(ctx context.Context, params DeleteProblemInteractorParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// DeleteProblemLib implements DeleteProblemLib operation.
-//
-// Delete library file.
-//
-// DELETE /problems/{problemId}/lib/{name}
-func (UnimplementedHandler) DeleteProblemLib(ctx context.Context, params DeleteProblemLibParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// DeleteProblemMediaFile implements DeleteProblemMediaFile operation.
-//
-// Delete media file.
-//
-// DELETE /problems/{problemId}/media/{name}
-func (UnimplementedHandler) DeleteProblemMediaFile(ctx context.Context, params DeleteProblemMediaFileParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
 // DeleteProblemMember implements DeleteProblemMember operation.
 //
 // Delete problem member.
@@ -569,33 +461,6 @@ func (UnimplementedHandler) DeleteProblemMember(ctx context.Context, params Dele
 // DELETE /problems/{id}/teams
 func (UnimplementedHandler) DeleteProblemTeam(ctx context.Context, params DeleteProblemTeamParams) error {
 	return ht.ErrNotImplemented
-}
-
-// DeleteProblemTestFile implements DeleteProblemTestFile operation.
-//
-// Delete test file.
-//
-// DELETE /problems/{problemId}/tests/{name}
-func (UnimplementedHandler) DeleteProblemTestFile(ctx context.Context, params DeleteProblemTestFileParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// DeleteProblemValidator implements DeleteProblemValidator operation.
-//
-// Delete validator file.
-//
-// DELETE /problems/{problemId}/validators/{name}
-func (UnimplementedHandler) DeleteProblemValidator(ctx context.Context, params DeleteProblemValidatorParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// DeleteProblemWorkshopSubmission implements DeleteProblemWorkshopSubmission operation.
-//
-// Delete author solution file.
-//
-// DELETE /problems/{problemId}/submissions/{name}
-func (UnimplementedHandler) DeleteProblemWorkshopSubmission(ctx context.Context, params DeleteProblemWorkshopSubmissionParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
 }
 
 // DeleteTeam implements DeleteTeam operation.
@@ -616,6 +481,15 @@ func (UnimplementedHandler) DownloadContestStatementsPdf(ctx context.Context, pa
 	return r, ht.ErrNotImplemented
 }
 
+// DownloadProblemPackage implements DownloadProblemPackage operation.
+//
+// Download a built problem package archive.
+//
+// GET /problems/{id}/packages/{packageId}/download
+func (UnimplementedHandler) DownloadProblemPackage(ctx context.Context, params DownloadProblemPackageParams) (r DownloadProblemPackageOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ForgotPassword implements ForgotPassword operation.
 //
 // Forgot password.
@@ -623,15 +497,6 @@ func (UnimplementedHandler) DownloadContestStatementsPdf(ctx context.Context, pa
 // POST /auth/forgot-password
 func (UnimplementedHandler) ForgotPassword(ctx context.Context, req *ForgotPasswordRequestModel) error {
 	return ht.ErrNotImplemented
-}
-
-// GenerateTests implements GenerateTests operation.
-//
-// Generate tests using generator.
-//
-// POST /problems/{problemId}/workshop/tests/generate
-func (UnimplementedHandler) GenerateTests(ctx context.Context, req *GenerateTestsReq, params GenerateTestsParams) (r *GenerateTestsOK, _ error) {
-	return r, ht.ErrNotImplemented
 }
 
 // GetContest implements GetContest operation.
@@ -769,102 +634,30 @@ func (UnimplementedHandler) GetProblemBlockStatusForUser(ctx context.Context, pa
 	return r, ht.ErrNotImplemented
 }
 
-// GetProblemChecker implements GetProblemChecker operation.
+// GetProblemBuild implements GetProblemBuild operation.
 //
-// Get checker file content.
+// Read build progress and diagnostics.
 //
-// GET /problems/{problemId}/checkers/{name}
-func (UnimplementedHandler) GetProblemChecker(ctx context.Context, params GetProblemCheckerParams) (r GetProblemCheckerOK, _ error) {
+// GET /problems/{id}/builds/{buildId}
+func (UnimplementedHandler) GetProblemBuild(ctx context.Context, params GetProblemBuildParams) (r *ProblemBuild, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// GetProblemGenerator implements GetProblemGenerator operation.
+// GetProblemDraft implements GetProblemDraft operation.
 //
-// Get generator file content.
+// Read the editable problem draft.
 //
-// GET /problems/{problemId}/generators/{name}
-func (UnimplementedHandler) GetProblemGenerator(ctx context.Context, params GetProblemGeneratorParams) (r GetProblemGeneratorOK, _ error) {
+// GET /problems/{id}/draft
+func (UnimplementedHandler) GetProblemDraft(ctx context.Context, params GetProblemDraftParams) (r *ProblemDraft, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// GetProblemInteractor implements GetProblemInteractor operation.
+// GetProblemDraftObject implements GetProblemDraftObject operation.
 //
-// Get interactor file content.
+// Download a binary referenced by this draft.
 //
-// GET /problems/{problemId}/interactors/{name}
-func (UnimplementedHandler) GetProblemInteractor(ctx context.Context, params GetProblemInteractorParams) (r GetProblemInteractorOK, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// GetProblemLib implements GetProblemLib operation.
-//
-// Get library file content.
-//
-// GET /problems/{problemId}/lib/{name}
-func (UnimplementedHandler) GetProblemLib(ctx context.Context, params GetProblemLibParams) (r GetProblemLibOK, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// GetProblemLimits implements GetProblemLimits operation.
-//
-// Get problem limits and type settings.
-//
-// GET /problems/{problemId}/limits
-func (UnimplementedHandler) GetProblemLimits(ctx context.Context, params GetProblemLimitsParams) (r *ProblemLimits, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// GetProblemMediaFile implements GetProblemMediaFile operation.
-//
-// Get media file content.
-//
-// GET /problems/{problemId}/media/{name}
-func (UnimplementedHandler) GetProblemMediaFile(ctx context.Context, params GetProblemMediaFileParams) (r GetProblemMediaFileOK, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// GetProblemStatement implements GetProblemStatement operation.
-//
-// Get problem statement.
-//
-// GET /problems/{problemId}/statement
-func (UnimplementedHandler) GetProblemStatement(ctx context.Context, params GetProblemStatementParams) (r *ProblemStatement, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// GetProblemTestFile implements GetProblemTestFile operation.
-//
-// Get test file content.
-//
-// GET /problems/{problemId}/tests/{name}
-func (UnimplementedHandler) GetProblemTestFile(ctx context.Context, params GetProblemTestFileParams) (r GetProblemTestFileOK, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// GetProblemValidator implements GetProblemValidator operation.
-//
-// Get validator file content.
-//
-// GET /problems/{problemId}/validators/{name}
-func (UnimplementedHandler) GetProblemValidator(ctx context.Context, params GetProblemValidatorParams) (r GetProblemValidatorOK, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// GetProblemWorkshopSubmission implements GetProblemWorkshopSubmission operation.
-//
-// Get author solution file content.
-//
-// GET /problems/{problemId}/submissions/{name}
-func (UnimplementedHandler) GetProblemWorkshopSubmission(ctx context.Context, params GetProblemWorkshopSubmissionParams) (r GetProblemWorkshopSubmissionOK, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// GetPublishedPackage implements GetPublishedPackage operation.
-//
-// Get redirect to published problem package.
-//
-// GET /problems/{id}/package/{version}
-func (UnimplementedHandler) GetPublishedPackage(ctx context.Context, params GetPublishedPackageParams) (r *GetPublishedPackageFound, _ error) {
+// GET /problems/{id}/draft/objects/{objectId}
+func (UnimplementedHandler) GetProblemDraftObject(ctx context.Context, params GetProblemDraftObjectParams) (r GetProblemDraftObjectOK, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -915,10 +708,10 @@ func (UnimplementedHandler) GetUserAvatar(ctx context.Context, params GetUserAva
 
 // ImportProblem implements ImportProblem operation.
 //
-// Import package into existing problem.
+// Replace the draft with the contents of a problem archive.
 //
 // POST /problems/{id}/import
-func (UnimplementedHandler) ImportProblem(ctx context.Context, req *ImportProblemReq, params ImportProblemParams) (r *ImportProblemOK, _ error) {
+func (UnimplementedHandler) ImportProblem(ctx context.Context, req *ImportProblemReq, params ImportProblemParams) (r *ProblemDraft, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1075,48 +868,12 @@ func (UnimplementedHandler) ListPosts(ctx context.Context, params ListPostsParam
 	return r, ht.ErrNotImplemented
 }
 
-// ListProblemCheckers implements ListProblemCheckers operation.
+// ListProblemBuilds implements ListProblemBuilds operation.
 //
-// List checker files.
+// List the latest 100 builds.
 //
-// GET /problems/{problemId}/checkers
-func (UnimplementedHandler) ListProblemCheckers(ctx context.Context, params ListProblemCheckersParams) (r *WorkshopFileListResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// ListProblemGenerators implements ListProblemGenerators operation.
-//
-// List generator files.
-//
-// GET /problems/{problemId}/generators
-func (UnimplementedHandler) ListProblemGenerators(ctx context.Context, params ListProblemGeneratorsParams) (r *WorkshopFileListResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// ListProblemInteractors implements ListProblemInteractors operation.
-//
-// List interactor files.
-//
-// GET /problems/{problemId}/interactors
-func (UnimplementedHandler) ListProblemInteractors(ctx context.Context, params ListProblemInteractorsParams) (r *WorkshopFileListResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// ListProblemLibs implements ListProblemLibs operation.
-//
-// List library files.
-//
-// GET /problems/{problemId}/lib
-func (UnimplementedHandler) ListProblemLibs(ctx context.Context, params ListProblemLibsParams) (r *WorkshopFileListResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// ListProblemMediaFiles implements ListProblemMediaFiles operation.
-//
-// List media files.
-//
-// GET /problems/{problemId}/media
-func (UnimplementedHandler) ListProblemMediaFiles(ctx context.Context, params ListProblemMediaFilesParams) (r *WorkshopFileListResponse, _ error) {
+// GET /problems/{id}/builds
+func (UnimplementedHandler) ListProblemBuilds(ctx context.Context, params ListProblemBuildsParams) (r []ProblemBuild, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1131,7 +888,7 @@ func (UnimplementedHandler) ListProblemMembers(ctx context.Context, params ListP
 
 // ListProblemPackages implements ListProblemPackages operation.
 //
-// List a page of problem packages, newest version first.
+// List a page of built problem packages, newest first.
 //
 // GET /problems/{id}/packages
 func (UnimplementedHandler) ListProblemPackages(ctx context.Context, params ListProblemPackagesParams) (r *ListProblemPackagesOK, _ error) {
@@ -1153,33 +910,6 @@ func (UnimplementedHandler) ListProblemTeams(ctx context.Context, params ListPro
 //
 // GET /problem-templates
 func (UnimplementedHandler) ListProblemTemplates(ctx context.Context, params ListProblemTemplatesParams) (r []ProblemTemplateModel, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// ListProblemTests implements ListProblemTests operation.
-//
-// List test files.
-//
-// GET /problems/{problemId}/tests
-func (UnimplementedHandler) ListProblemTests(ctx context.Context, params ListProblemTestsParams) (r *WorkshopFileListResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// ListProblemValidators implements ListProblemValidators operation.
-//
-// List validator files.
-//
-// GET /problems/{problemId}/validators
-func (UnimplementedHandler) ListProblemValidators(ctx context.Context, params ListProblemValidatorsParams) (r *WorkshopFileListResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// ListProblemWorkshopSubmissions implements ListProblemWorkshopSubmissions operation.
-//
-// List author solution files.
-//
-// GET /problems/{problemId}/submissions
-func (UnimplementedHandler) ListProblemWorkshopSubmissions(ctx context.Context, params ListProblemWorkshopSubmissionsParams) (r *WorkshopFileListResponse, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1327,15 +1057,6 @@ func (UnimplementedHandler) PatchPostById(ctx context.Context, req OptPatchPostB
 	return r, ht.ErrNotImplemented
 }
 
-// PublishProblem implements PublishProblem operation.
-//
-// Publish problem package.
-//
-// POST /problems/{id}/publish
-func (UnimplementedHandler) PublishProblem(ctx context.Context, params PublishProblemParams) (r *PublishProblemOK, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
 // Register implements Register operation.
 //
 // Register.
@@ -1444,12 +1165,12 @@ func (UnimplementedHandler) ResetPassword(ctx context.Context, req *ResetPasswor
 	return ht.ErrNotImplemented
 }
 
-// TestSolution implements TestSolution operation.
+// SaveProblemDraft implements SaveProblemDraft operation.
 //
-// Test solution against tests.
+// Replace the draft in one revision change.
 //
-// POST /problems/{problemId}/workshop/solutions/test
-func (UnimplementedHandler) TestSolution(ctx context.Context, req *TestSolutionReq, params TestSolutionParams) (r *TestReport, _ error) {
+// PUT /problems/{id}/draft
+func (UnimplementedHandler) SaveProblemDraft(ctx context.Context, req *ProblemDraft, params SaveProblemDraftParams) (r *ProblemDraft, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1516,60 +1237,6 @@ func (UnimplementedHandler) UpdateProblem(ctx context.Context, req *UpdateProble
 	return ht.ErrNotImplemented
 }
 
-// UpdateProblemChecker implements UpdateProblemChecker operation.
-//
-// Update checker file.
-//
-// PUT /problems/{problemId}/checkers/{name}
-func (UnimplementedHandler) UpdateProblemChecker(ctx context.Context, req UpdateProblemCheckerReq, params UpdateProblemCheckerParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// UpdateProblemGenerator implements UpdateProblemGenerator operation.
-//
-// Update generator file.
-//
-// PUT /problems/{problemId}/generators/{name}
-func (UnimplementedHandler) UpdateProblemGenerator(ctx context.Context, req UpdateProblemGeneratorReq, params UpdateProblemGeneratorParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// UpdateProblemInteractor implements UpdateProblemInteractor operation.
-//
-// Update interactor file.
-//
-// PUT /problems/{problemId}/interactors/{name}
-func (UnimplementedHandler) UpdateProblemInteractor(ctx context.Context, req UpdateProblemInteractorReq, params UpdateProblemInteractorParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// UpdateProblemLib implements UpdateProblemLib operation.
-//
-// Update library file.
-//
-// PUT /problems/{problemId}/lib/{name}
-func (UnimplementedHandler) UpdateProblemLib(ctx context.Context, req UpdateProblemLibReq, params UpdateProblemLibParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// UpdateProblemLimits implements UpdateProblemLimits operation.
-//
-// Update problem limits and type settings.
-//
-// PATCH /problems/{problemId}/limits
-func (UnimplementedHandler) UpdateProblemLimits(ctx context.Context, req *UpdateProblemLimitsRequest, params UpdateProblemLimitsParams) (r *ProblemLimits, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// UpdateProblemMediaFile implements UpdateProblemMediaFile operation.
-//
-// Update media file.
-//
-// PUT /problems/{problemId}/media/{name}
-func (UnimplementedHandler) UpdateProblemMediaFile(ctx context.Context, req UpdateProblemMediaFileReq, params UpdateProblemMediaFileParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
 // UpdateProblemMember implements UpdateProblemMember operation.
 //
 // Update problem member.
@@ -1579,15 +1246,6 @@ func (UnimplementedHandler) UpdateProblemMember(ctx context.Context, params Upda
 	return ht.ErrNotImplemented
 }
 
-// UpdateProblemStatement implements UpdateProblemStatement operation.
-//
-// Update problem statement.
-//
-// PATCH /problems/{problemId}/statement
-func (UnimplementedHandler) UpdateProblemStatement(ctx context.Context, req *UpdateProblemStatementRequest, params UpdateProblemStatementParams) (r *ProblemStatement, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
 // UpdateProblemTeam implements UpdateProblemTeam operation.
 //
 // Update problem team.
@@ -1595,42 +1253,6 @@ func (UnimplementedHandler) UpdateProblemStatement(ctx context.Context, req *Upd
 // PATCH /problems/{id}/teams
 func (UnimplementedHandler) UpdateProblemTeam(ctx context.Context, params UpdateProblemTeamParams) error {
 	return ht.ErrNotImplemented
-}
-
-// UpdateProblemTestFile implements UpdateProblemTestFile operation.
-//
-// Update test file.
-//
-// PUT /problems/{problemId}/tests/{name}
-func (UnimplementedHandler) UpdateProblemTestFile(ctx context.Context, req UpdateProblemTestFileReq, params UpdateProblemTestFileParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// UpdateProblemTestsConfig implements UpdateProblemTestsConfig operation.
-//
-// Update tests.json configuration.
-//
-// PATCH /problems/{problemId}/tests/config
-func (UnimplementedHandler) UpdateProblemTestsConfig(ctx context.Context, req UpdateProblemTestsConfigRequest, params UpdateProblemTestsConfigParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// UpdateProblemValidator implements UpdateProblemValidator operation.
-//
-// Update validator file.
-//
-// PUT /problems/{problemId}/validators/{name}
-func (UnimplementedHandler) UpdateProblemValidator(ctx context.Context, req UpdateProblemValidatorReq, params UpdateProblemValidatorParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// UpdateProblemWorkshopSubmission implements UpdateProblemWorkshopSubmission operation.
-//
-// Update author solution file.
-//
-// PUT /problems/{problemId}/submissions/{name}
-func (UnimplementedHandler) UpdateProblemWorkshopSubmission(ctx context.Context, req UpdateProblemWorkshopSubmissionReq, params UpdateProblemWorkshopSubmissionParams) (r *MessageResponse, _ error) {
-	return r, ht.ErrNotImplemented
 }
 
 // UpdateTeam implements UpdateTeam operation.
@@ -1669,12 +1291,12 @@ func (UnimplementedHandler) UploadAvatar(ctx context.Context, req *UploadAvatarR
 	return r, ht.ErrNotImplemented
 }
 
-// ValidateAllTests implements ValidateAllTests operation.
+// UploadProblemDraft implements UploadProblemDraft operation.
 //
-// Validate all test inputs.
+// Upload immutable test bodies or a resource.
 //
-// POST /problems/{problemId}/workshop/tests/validate
-func (UnimplementedHandler) ValidateAllTests(ctx context.Context, params ValidateAllTestsParams) (r *ValidationReport, _ error) {
+// POST /problems/{id}/draft/uploads
+func (UnimplementedHandler) UploadProblemDraft(ctx context.Context, req *UploadProblemDraftReq, params UploadProblemDraftParams) (r *ProblemDraft, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

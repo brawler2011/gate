@@ -1,25 +1,19 @@
 "use client";
 
-import {Box, Button, Divider, Grid, Group, NumberInput, Select, Stack, Switch, Text} from "@mantine/core";
+import {Box, Button, Divider, Grid, Group, NumberInput, Select, Stack, Switch, Text, TextInput} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useQuery, useQueryClient} from "@tanstack/react-query";
-import {useEffect, useState, useTransition} from "react";
+import {useState, useTransition} from "react";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
-import {api} from "@/lib/api";
+import {api, unwrap} from "@/lib/api";
 
+import {DraftGate} from "./draft/DraftGate";
+import {formatPoints, ROLE_LABELS, type ComponentRole} from "./draft/draftOps";
+import {useSaveDraft} from "./draft/useDraft";
+
+import type {ProblemDraft} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
-
-type LimitsData = {
-  problem_type: string;
-  max_score: number | null;
-  time_limit_ms: number;
-  memory_limit_mb: number;
-};
-
-type Props = {
-  problemId: string;
-};
 
 const PROBLEM_TYPE_OPTIONS = [
   {value: "pass-fail", label: "Pass-Fail"},
@@ -27,215 +21,200 @@ const PROBLEM_TYPE_OPTIONS = [
   {value: "interactive", label: "Interactive"},
 ];
 
-export const WorkshopGeneralTab = ({problemId}: Props): ReactNode => {
-  const queryClient = useQueryClient();
-  const [limits, setLimits] = useState<LimitsData>({
-    problem_type: "pass-fail",
-    max_score: null,
-    time_limit_ms: 2000,
-    memory_limit_mb: 256,
-  });
-  const [isTemplate, setIsTemplate] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const [isDirty, setIsDirty] = useState(false);
+type Props = {
+  problemId: string;
+};
 
-  const {data: problemData, isLoading: isLoadingProblem} = useQuery({
-    queryKey: ["problem", problemId],
-    queryFn: async () => {
-      const {data: res, error: err} = await api.GET("/problems/{id}", {
-        params: {path: {id: problemId}},
-      });
-      if (err) {
-        throw new Error(err.message || "Не удалось загрузить задачу");
-      }
-      return res;
-    },
-  });
+type ComponentSelectProps = {
+  draft: ProblemDraft;
+  role: ComponentRole;
+  value: string | null;
+  required?: boolean;
+  onChange: (value: string | null) => void;
+};
 
-  const {data: limitsData, isLoading: isLoadingLimits} = useQuery({
-    queryKey: ["problem-limits", problemId],
-    queryFn: async () => {
-      const {data: res, error: err} = await api.GET(
-        "/problems/{problemId}/limits",
-        {
-          params: {path: {problemId}},
-        },
-      );
-      if (err) {
-        throw new Error(err.message || "Не удалось загрузить ограничения");
-      }
-      return res;
-    },
-  });
+const ComponentSelect = ({draft, role, value, required, onChange}: ComponentSelectProps): ReactNode => (
+  <Select
+    label={ROLE_LABELS[role]}
+    placeholder={required ? "Не выбран" : "Не используется"}
+    clearable={!required}
+    data={draft.components.filter((c) => c.role === role).map((c) => ({value: c.id, label: c.path}))}
+    value={value}
+    onChange={onChange}
+  />
+);
 
-  const isLoading = isLoadingProblem || isLoadingLimits;
+const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string}): ReactNode => {
+  const {save, isSaving} = useSaveDraft(problemId);
+  const [title, setTitle] = useState(draft.title);
+  const [shortName, setShortName] = useState(draft.short_name);
+  const [type, setType] = useState<ProblemDraft["type"]>(draft.type);
+  const [timeLimit, setTimeLimit] = useState<number>(draft.time_limit_ms);
+  const [memoryLimit, setMemoryLimit] = useState<number>(draft.memory_limit_mb);
+  const [checker, setChecker] = useState(draft.checker_id);
+  const [validator, setValidator] = useState(draft.validator_id);
+  const [interactor, setInteractor] = useState(draft.interactor_id);
+  const [mainSolution, setMainSolution] = useState(draft.main_solution_id);
 
-  useEffect(() => {
-    if (limitsData) {
-      setLimits({
-        problem_type: limitsData.problem_type ?? "pass-fail",
-        max_score: limitsData.max_score ?? null,
-        time_limit_ms: limitsData.time_limit_ms ?? 2000,
-        memory_limit_mb: limitsData.memory_limit_mb ?? 256,
-      });
+  const changed =
+    title !== draft.title ||
+    shortName !== draft.short_name ||
+    type !== draft.type ||
+    timeLimit !== draft.time_limit_ms ||
+    memoryLimit !== draft.memory_limit_mb ||
+    checker !== draft.checker_id ||
+    validator !== draft.validator_id ||
+    interactor !== draft.interactor_id ||
+    mainSolution !== draft.main_solution_id;
+
+  const handleSave = async () => {
+    const ok = await save((current) => ({
+      ...current,
+      title: title.trim(),
+      short_name: shortName.trim(),
+      type,
+      time_limit_ms: timeLimit,
+      memory_limit_mb: memoryLimit,
+      checker_id: checker,
+      validator_id: validator,
+      interactor_id: type === "interactive" ? interactor : null,
+      main_solution_id: mainSolution,
+    }));
+    if (ok) {
+      notifications.show({title: "Сохранено", message: "Черновик обновлён", color: "green"});
     }
-  }, [limitsData]);
-
-  useEffect(() => {
-    if (problemData?.problem) {
-      setIsTemplate(problemData.problem.is_template ?? false);
-    }
-  }, [problemData]);
-
-  const patchLimits = (patch: Partial<LimitsData>) => {
-    setLimits((prev) => ({...prev, ...patch}));
-    setIsDirty(true);
   };
 
-  const handleSave = () => {
+  return (
+    <SectionPaper title="Черновик задачи">
+      <Stack gap="md">
+        <Grid gutter="md">
+          <Grid.Col span={{base: 12, sm: 8}}>
+            <TextInput label="Название" value={title} onChange={(e) => setTitle(e.currentTarget.value)} required />
+          </Grid.Col>
+          <Grid.Col span={{base: 12, sm: 4}}>
+            <TextInput label="Короткое имя" value={shortName} onChange={(e) => setShortName(e.currentTarget.value)} required />
+          </Grid.Col>
+          <Grid.Col span={{base: 12, sm: 6}}>
+            <Select
+              label="Тип задачи"
+              data={PROBLEM_TYPE_OPTIONS}
+              value={type}
+              allowDeselect={false}
+              onChange={(value) => setType((value as ProblemDraft["type"] | null) ?? "pass-fail")}
+            />
+          </Grid.Col>
+          {type === "scoring" && (
+            <Grid.Col span={{base: 12, sm: 6}}>
+              <TextInput
+                label="Максимальный балл"
+                description="Сумма весов всех тестов"
+                value={draft.max_score === null ? "—" : formatPoints(draft.max_score)}
+                readOnly
+              />
+            </Grid.Col>
+          )}
+          <Grid.Col span={{base: 12, sm: 6}}>
+            <NumberInput
+              label="Ограничение по времени (мс)"
+              value={timeLimit}
+              onChange={(value) => setTimeLimit(typeof value === "number" ? value : timeLimit)}
+              min={100}
+              max={60000}
+              step={100}
+            />
+          </Grid.Col>
+          <Grid.Col span={{base: 12, sm: 6}}>
+            <NumberInput
+              label="Ограничение по памяти (МБ)"
+              value={memoryLimit}
+              onChange={(value) => setMemoryLimit(typeof value === "number" ? value : memoryLimit)}
+              min={16}
+              max={2048}
+              step={16}
+            />
+          </Grid.Col>
+        </Grid>
+
+        <Divider label="Компоненты сборки" labelPosition="left" />
+        <Grid gutter="md">
+          <Grid.Col span={{base: 12, sm: 6}}>
+            <ComponentSelect draft={draft} role="checker" value={checker} required onChange={setChecker} />
+          </Grid.Col>
+          <Grid.Col span={{base: 12, sm: 6}}>
+            <ComponentSelect draft={draft} role="validator" value={validator} onChange={setValidator} />
+          </Grid.Col>
+          <Grid.Col span={{base: 12, sm: 6}}>
+            <ComponentSelect draft={draft} role="solution" value={mainSolution} onChange={setMainSolution} />
+          </Grid.Col>
+          {type === "interactive" && (
+            <Grid.Col span={{base: 12, sm: 6}}>
+              <ComponentSelect draft={draft} role="interactor" value={interactor} required onChange={setInteractor} />
+            </Grid.Col>
+          )}
+        </Grid>
+        <Text size="xs" c="dimmed">
+          Главное решение формирует ответы для тестов в режиме «генерируется». Файлы компонентов
+          редактируются на вкладках чекера, валидатора, генератора, интерактора и решений.
+        </Text>
+
+        <Group justify="flex-end">
+          <Button disabled={!changed} loading={isSaving} onClick={() => void handleSave()}>
+            Сохранить
+          </Button>
+        </Group>
+      </Stack>
+    </SectionPaper>
+  );
+};
+
+const CatalogSettings = ({problemId}: Props): ReactNode => {
+  const queryClient = useQueryClient();
+  const [isPending, startTransition] = useTransition();
+  const {data} = useQuery({
+    queryKey: ["problem", problemId],
+    queryFn: () => unwrap(api.GET("/problems/{id}", {params: {path: {id: problemId}}})),
+  });
+  const isTemplate = data?.problem.is_template ?? false;
+
+  const toggle = (checked: boolean) => {
     startTransition(async () => {
-      const {error: limitsError} = await api.PATCH(
-        "/problems/{problemId}/limits",
-        {
-          params: {path: {problemId}},
-          body: {
-            problem_type: limits.problem_type,
-            max_score:
-              limits.problem_type === "scoring" ? limits.max_score : null,
-            time_limit_ms: limits.time_limit_ms,
-            memory_limit_mb: limits.memory_limit_mb,
-          },
-        },
-      );
-
-      if (limitsError) {
-        notifications.show({
-          title: "Ошибка сохранения",
-          message: limitsError.message || "Не удалось сохранить лимиты",
-          color: "red",
-        });
-        return;
-      }
-
-      const {error: problemError} = await api.PATCH("/problems/{id}", {
+      const {error} = await api.PATCH("/problems/{id}", {
         params: {path: {id: problemId}},
-        body: {
-          is_template: isTemplate,
-        },
+        body: {is_template: checked},
       });
-
-      if (problemError) {
+      if (error) {
         notifications.show({
-          title: "Ошибка сохранения шаблона",
-          message: problemError.message || "Не удалось обновить настройки шаблона",
+          title: "Ошибка",
+          message: error.message ?? "Не удалось обновить настройки шаблона",
           color: "red",
         });
         return;
       }
-
-      setIsDirty(false);
-      notifications.show({
-        title: "Сохранено",
-        message: "Настройки задачи обновлены",
-        color: "green",
-      });
-
-      queryClient.invalidateQueries({queryKey: ["problem", problemId]});
-      queryClient.invalidateQueries({queryKey: ["problem-limits", problemId]});
+      await queryClient.invalidateQueries({queryKey: ["problem", problemId]});
     });
   };
 
   return (
-    <Box p="lg">
-      <Stack gap="lg" maw={900} mx="auto">
-        <SectionPaper title="Настройки задачи">
-          {isLoading || !limits ? (
-            <Text size="sm" c="dimmed">
-              Загрузка настроек...
-            </Text>
-          ) : (
-            <Stack gap="md">
-              <Grid gutter="md">
-                <Grid.Col span={{base: 12, sm: 6}}>
-                  <Select
-                    label="Тип задачи"
-                    data={PROBLEM_TYPE_OPTIONS}
-                    value={limits.problem_type}
-                    onChange={(val) =>
-                      patchLimits({problem_type: val || "pass-fail"})
-                    }
-                  />
-                </Grid.Col>
-                {limits.problem_type === "scoring" && (
-                  <Grid.Col span={{base: 12, sm: 6}}>
-                    <NumberInput
-                      label="Максимальный балл"
-                      value={limits.max_score ?? 100}
-                      onChange={(val) =>
-                        patchLimits({
-                          max_score: typeof val === "number" ? val : null,
-                        })
-                      }
-                      min={0}
-                    />
-                  </Grid.Col>
-                )}
-                <Grid.Col span={{base: 12, sm: 6}}>
-                  <NumberInput
-                    label="Ограничение по времени (мс)"
-                    value={limits.time_limit_ms}
-                    onChange={(val) =>
-                      patchLimits({
-                        time_limit_ms: typeof val === "number" ? val : 2000,
-                      })
-                    }
-                    min={100}
-                    max={60000}
-                    step={100}
-                  />
-                </Grid.Col>
-                <Grid.Col span={{base: 12, sm: 6}}>
-                  <NumberInput
-                    label="Ограничение по памяти (МБ)"
-                    value={limits.memory_limit_mb}
-                    onChange={(val) =>
-                      patchLimits({
-                        memory_limit_mb: typeof val === "number" ? val : 256,
-                      })
-                    }
-                    min={16}
-                    max={2048}
-                    step={16}
-                  />
-                </Grid.Col>
-
-                <Grid.Col span={12}>
-                  <Divider my="xs" />
-                  <Switch
-                    label="Шаблонная задача (доступна при создании других задач)"
-                    checked={isTemplate}
-                    onChange={(event) => {
-                      setIsTemplate(event.currentTarget.checked);
-                      setIsDirty(true);
-                    }}
-                  />
-                </Grid.Col>
-              </Grid>
-
-              <Group justify="flex-end">
-                <Button
-                  size="sm"
-                  disabled={!isDirty}
-                  loading={isPending}
-                  onClick={handleSave}
-                >
-                  Сохранить настройки
-                </Button>
-              </Group>
-            </Stack>
-          )}
-        </SectionPaper>
-      </Stack>
-    </Box>
+    <SectionPaper title="Каталог">
+      <Switch
+        label="Шаблонная задача (доступна при создании других задач)"
+        description="Для шаблона требуется хотя бы один успешно собранный пакет"
+        checked={isTemplate}
+        disabled={!data || isPending}
+        onChange={(event) => toggle(event.currentTarget.checked)}
+      />
+    </SectionPaper>
   );
 };
+
+export const WorkshopGeneralTab = ({problemId}: Props): ReactNode => (
+  <Box p="lg">
+    <Stack gap="lg" maw={900} mx="auto">
+      <DraftGate problemId={problemId}>
+        {(draft) => <DraftForm key={draft.revision} draft={draft} problemId={problemId} />}
+      </DraftGate>
+      <CatalogSettings problemId={problemId} />
+    </Stack>
+  </Box>
+);

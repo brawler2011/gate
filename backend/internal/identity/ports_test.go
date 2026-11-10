@@ -61,7 +61,6 @@ type ProblemsRepo interface {
 	UpdateProblemMemberRole(ctx context.Context, problemID, userID uuid.UUID, role problemsmodel.ProblemRole) error
 	RemoveProblemMember(ctx context.Context, problemID, userID uuid.UUID) error
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error
-	WorkspaceRepo
 }
 
 type TeamsRepo interface {
@@ -97,12 +96,4 @@ type UsersUC interface {
 	AdminSendPasswordReset(ctx context.Context, username string) error
 	AdminChangeEmail(ctx context.Context, username, newEmail string, withConfirmation bool) error
 	AdminResendVerification(ctx context.Context, username string) error
-}
-
-// WorkspaceRepo stores only the location of the canonical GFMT package and its
-// searchable catalog fields. CommitWorkspace atomically checks the old hash,
-// switches the package reference and updates the catalog.
-type WorkspaceRepo interface {
-	GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, error)
-	CommitWorkspace(ctx context.Context, id uuid.UUID, previousHash, hash string, metadata *problemsmodel.WorkspaceMetadata) error
 }

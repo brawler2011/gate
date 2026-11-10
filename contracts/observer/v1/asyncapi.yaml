@@ -247,8 +247,8 @@ components:
               type: integer
               format: int32
             score:
-              type: integer
-              format: int32
+              type: number
+              format: double
             penalty:
               type: integer
               format: int32

@@ -200,6 +200,7 @@ func SubmissionTestStartedDTO(e submissionsmodel.SubmissionTestStartedEvent) obs
 }
 
 func SubmissionCompletedDTO(e submissionsmodel.SubmissionCompletedEvent) observerv1.MessageSubmissionCompleted {
+	score := e.Score.Float64()
 	previous := e.PreviousState
 	return observerv1.MessageSubmissionCompleted{
 		PreviousState: &previous,
@@ -216,7 +217,7 @@ func SubmissionCompletedDTO(e submissionsmodel.SubmissionCompletedEvent) observe
 		Position:      int32Ptr(e.Position),
 		ProblemId:     e.ProblemId,
 		ProblemTitle:  strPtrIfNotEmpty(e.ProblemTitle),
-		Score:         &e.Score,
+		Score:         &score,
 		State:         &e.State,
 		TimeStat:      &e.TimeStat,
 		UserId:        e.UserId,

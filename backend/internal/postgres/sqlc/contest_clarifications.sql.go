@@ -157,7 +157,7 @@ SELECT
 FROM contest_clarifications cc
 JOIN users u ON cc.user_id = u.id
 LEFT JOIN users au ON cc.answered_by = au.id
-LEFT JOIN problems p ON cc.problem_id = p.id
+LEFT JOIN problem_catalog p ON cc.problem_id = p.id
 LEFT JOIN contest_problems cp ON cp.contest_id = cc.contest_id AND cp.problem_id = cc.problem_id
 WHERE cc.id = $1
 `
@@ -213,7 +213,7 @@ SELECT
 FROM contest_clarifications cc
 JOIN users u ON cc.user_id = u.id
 LEFT JOIN users au ON cc.answered_by = au.id
-LEFT JOIN problems p ON cc.problem_id = p.id
+LEFT JOIN problem_catalog p ON cc.problem_id = p.id
 LEFT JOIN contest_problems cp ON cp.contest_id = cc.contest_id AND cp.problem_id = cc.problem_id
 WHERE cc.contest_id = $1
   AND ($4::uuid IS NULL OR cc.problem_id = $4::uuid)
@@ -300,7 +300,7 @@ SELECT
 FROM contest_clarifications cc
 JOIN users u ON cc.user_id = u.id
 LEFT JOIN users au ON cc.answered_by = au.id
-LEFT JOIN problems p ON cc.problem_id = p.id
+LEFT JOIN problem_catalog p ON cc.problem_id = p.id
 LEFT JOIN contest_problems cp ON cp.contest_id = cc.contest_id AND cp.problem_id = cc.problem_id
 WHERE cc.contest_id = $1 AND cc.user_id = $2
 ORDER BY cc.created_at DESC, cc.id DESC

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/brawler2011/gate/backend/pkg/points"
 )
 
 var formats = []string{"gfmt", "polygon", "pcms2", "icpc"}
@@ -88,8 +90,8 @@ func TestParsers_APlusB(t *testing.T) {
 			if !ok {
 				t.Fatalf("missing 'secret' subtask")
 			}
-			if secret.Points != 100 {
-				t.Errorf("expected secret points 100, got %d", secret.Points)
+			if secret.Points != 100*points.Unit {
+				t.Errorf("expected secret points 100, got %s", secret.Points)
 			}
 			if secret.Policy != "each" {
 				t.Errorf("expected secret policy 'each', got %q", secret.Policy)
@@ -211,8 +213,8 @@ func TestParsers_SubtasksGroups(t *testing.T) {
 			if !ok {
 				t.Fatalf("missing 'even_subtask' subtask")
 			}
-			if even.Points != 40 {
-				t.Errorf("expected even_subtask points 40, got %d", even.Points)
+			if even.Points != 40*points.Unit {
+				t.Errorf("expected even_subtask points 40, got %s", even.Points)
 			}
 			if len(even.Tests) != 1 {
 				t.Errorf("expected 1 test in even_subtask, got %d", len(even.Tests))
@@ -222,8 +224,8 @@ func TestParsers_SubtasksGroups(t *testing.T) {
 			if !ok {
 				t.Fatalf("missing 'odd_subtask' subtask")
 			}
-			if odd.Points != 60 {
-				t.Errorf("expected odd_subtask points 60, got %d", odd.Points)
+			if odd.Points != 60*points.Unit {
+				t.Errorf("expected odd_subtask points 60, got %s", odd.Points)
 			}
 			if len(odd.Tests) != 1 {
 				t.Errorf("expected 1 test in odd_subtask, got %d", len(odd.Tests))

@@ -3,6 +3,8 @@
 package corev1
 
 import (
+	"fmt"
+	"math/big"
 	"net/http"
 	"strings"
 
@@ -10,6 +12,16 @@ import (
 	"github.com/ogen-go/ogen/middleware"
 	"github.com/ogen-go/ogen/ogenerrors"
 )
+
+var ratMap = map[string]*big.Rat{
+	"1/100": func() *big.Rat {
+		r, ok := new(big.Rat).SetString("1/100")
+		if !ok {
+			panic(fmt.Sprintf("rat %q: can't parse", "1/100"))
+		}
+		return r
+	}(),
+}
 
 type (
 	optionFunc[C any] func(*C)

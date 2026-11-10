@@ -78,7 +78,7 @@ func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.Lis
 }
 
 func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProblemParams) (*corev1.CreationResponseModel, error) {
-	id, err := h.problems.CreateProblem(ctx, &problemsmodel.CreateProblemInput{OrganizationID: params.OrganizationID.Or(uuid.Nil), Title: params.Title, TemplateID: params.TemplateID})
+	id, err := h.problems.CreateProblem(ctx, &problemsmodel.CreateProblemInput{OrganizationID: params.OrganizationID.Or(uuid.Nil), Title: params.Title, TemplateID: params.TemplateID, IdempotencyKey: params.IdempotencyKey})
 	if err != nil {
 		return nil, err
 	}
@@ -109,10 +109,6 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 	}
 
 	update := &problemsmodel.ProblemUpdate{}
-
-	if req.Title.IsSet() {
-		update.Title = &req.Title.Value
-	}
 
 	if req.Visibility.IsSet() {
 		update.Visibility = (*string)(&req.Visibility.Value)

@@ -2,6 +2,7 @@ package icpc
 
 import (
 	"fmt"
+	pointvalue "github.com/brawler2011/gate/backend/pkg/points"
 	"os"
 	"path/filepath"
 	"sort"
@@ -116,7 +117,7 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 			}
 
 			subtasks[sd] = gfmt.Subtask{
-				Points: points,
+				Points: pointvalue.Value(points) * pointvalue.Unit,
 				Policy: policy,
 				Tests:  tests,
 			}
@@ -139,12 +140,12 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 			probType = "scoring"
 			// Special-case "subtasks-groups" test case
 			subtasks["even_subtask"] = gfmt.Subtask{
-				Points: 40,
+				Points: pointvalue.Value(40) * pointvalue.Unit,
 				Policy: "complete",
 				Tests:  samples,
 			}
 			subtasks["odd_subtask"] = gfmt.Subtask{
-				Points: 60,
+				Points: pointvalue.Value(60) * pointvalue.Unit,
 				Policy: "complete",
 				Tests:  secrets,
 			}
@@ -157,20 +158,20 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 					Tests:  samples,
 				}
 				subtasks["secret"] = gfmt.Subtask{
-					Points:       100,
+					Points:       pointvalue.Value(100) * pointvalue.Unit,
 					Policy:       "each",
 					Dependencies: []string{"samples"},
 					Tests:        secrets,
 				}
 			case len(samples) > 0:
 				subtasks["samples"] = gfmt.Subtask{
-					Points: 100,
+					Points: pointvalue.Value(100) * pointvalue.Unit,
 					Policy: "each",
 					Tests:  samples,
 				}
 			case len(secrets) > 0:
 				subtasks["secret"] = gfmt.Subtask{
-					Points: 100,
+					Points: pointvalue.Value(100) * pointvalue.Unit,
 					Policy: "each",
 					Tests:  secrets,
 				}

@@ -252,7 +252,6 @@ type ContestProblem struct {
 	Title         string
 	ShortName     string
 	Visibility    string
-	PackageURL    *string
 	CreatedAt     time.Time
 }
 

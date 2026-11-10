@@ -1,13 +1,13 @@
 -- Problems queries (new schema with Organizations)
 
 -- name: CreateProblem :one
-INSERT INTO problems (id, organization_id, owner_id, visibility, title, short_name)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO problems (id, organization_id, owner_id, visibility)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetProblemByID :one
 SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
-FROM problems p
+FROM problem_catalog p
 JOIN organizations o ON p.organization_id = o.id
 WHERE p.id = $1;
 
@@ -15,8 +15,7 @@ WHERE p.id = $1;
 
 -- name: UpdateProblem :exec
 UPDATE problems
-SET title = CASE WHEN workspace_hash = '' THEN COALESCE(sqlc.narg('title'), title) ELSE title END,
-    visibility = COALESCE(sqlc.narg('visibility'), visibility),
+SET visibility = COALESCE(sqlc.narg('visibility'), visibility),
     owner_id = COALESCE(sqlc.narg('owner_id'), owner_id),
     is_template = COALESCE(sqlc.narg('is_template'), is_template)
 WHERE id = $1;
@@ -51,20 +50,6 @@ WHERE problem_id = $1 AND user_id = $2;
 DELETE FROM problem_members
 WHERE problem_id = $1 AND user_id = $2;
 
--- Workshop integration queries
-
--- name: GetWorkspaceHash :one
-SELECT workspace_hash FROM problems WHERE id = $1;
-
--- name: CommitWorkspace :execrows
-UPDATE problems
-SET workspace_hash = sqlc.arg('hash'),
-    title = COALESCE(sqlc.narg('title')::text, title),
-    time_limit_ms = COALESCE(sqlc.narg('time_ms')::integer, time_limit_ms),
-    memory_limit_mb = COALESCE(sqlc.narg('memory_mb')::integer, memory_limit_mb),
-    updated_at = NOW()
-WHERE id = sqlc.arg('id') AND workspace_hash = sqlc.arg('previous_hash');
-
 -- name: ListDashboardProblems :many
 WITH actor AS (
   SELECT u.id, u.role FROM users u
@@ -81,7 +66,7 @@ SELECT
     o.id as org_id,
     o.name as org_name,
     o.login as org_login
-FROM problems p
+FROM problem_catalog p
 JOIN organizations o ON p.organization_id = o.id
 WHERE (sqlc.narg('viewer_id')::uuid IS NULL OR sqlc.narg('viewer_id')::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR EXISTS (SELECT 1 FROM actor))
 AND NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = p.organization_id AND invalid.user_id = sqlc.narg('viewer_id')::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))

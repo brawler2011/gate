@@ -205,7 +205,7 @@ func (r *ContestsRepo) ResolveContestProblemPackage(ctx context.Context, problem
 	if err != nil {
 		return access.PackageContext{}, HandlePgErr(err)
 	}
-	return access.PackageContext{ID: row.ID, ProblemID: row.ProblemID, Status: string(row.Status)}, nil
+	return access.PackageContext{ID: row.ID, ProblemID: row.ProblemID}, nil
 }
 
 func (r *ContestsRepo) contestProblemPackage(ctx context.Context, problemID, packageID uuid.UUID, allowLatest bool) (uuid.UUID, error) {

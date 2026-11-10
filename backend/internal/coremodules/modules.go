@@ -45,9 +45,7 @@ func (c Contests) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLo
 type Problems struct {
 	core.ProblemsUC
 	core.ProblemsReader
-	core.WorkshopUC
-	core.ImportUC
-	core.PublishUC
+	core.ProblemDraftUC
 	core.PackagesReader
 }
 

@@ -1,15 +1,7 @@
 -- name: ScheduleJudgeJob :one
-INSERT INTO judge_jobs (id,submission_id,generation,package_id,package_hash)
-SELECT sqlc.arg(id)::uuid,s.id,s.generation,
-       COALESCE(pinned.id,ready.id),
-       COALESCE(pinned.package_hash,ready.package_hash,'')
-FROM submissions s
-LEFT JOIN problem_packages pinned ON pinned.id=s.package_id
-LEFT JOIN LATERAL (
-    SELECT p.id,p.package_hash FROM problem_packages p
-    WHERE p.problem_id=s.problem_id AND p.status='ready'
-    ORDER BY p.created_at DESC LIMIT 1
-) ready ON s.contest_id IS NULL
+INSERT INTO judge_jobs(id,submission_id,generation,package_id,package_hash)
+SELECT sqlc.arg(id)::uuid,s.id,s.generation,p.id,p.package_hash
+FROM submissions s JOIN problem_packages p ON p.id=s.package_id
 WHERE s.id=sqlc.arg(submission_id)::uuid
 RETURNING *;
 

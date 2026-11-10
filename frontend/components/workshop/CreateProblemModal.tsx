@@ -1,6 +1,6 @@
 import {Button, Modal, Select, Stack, Text, TextInput} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {useNavigate} from "react-router-dom";
 
 import {api} from "@/lib/api";
@@ -105,6 +105,16 @@ export const CreateProblemModal = ({
   const orgData = orgs.map((o) => ({value: o.id, label: o.name}));
   const selectedTemplate = templateList.find((t) => t.id === templateId);
 
+  // A retry of the same request (for example after a lost response) reuses its
+  // idempotency key; changing any field is a different request with a new key.
+  const attempt = useRef<{signature: string; key: string} | null>(null);
+  const idempotencyKeyFor = (signature: string): string => {
+    if (attempt.current?.signature !== signature) {
+      attempt.current = {signature, key: crypto.randomUUID()};
+    }
+    return attempt.current.key;
+  };
+
   const handleSubmit = async () => {
     if (!orgId || !templateId) {
       return;
@@ -112,14 +122,18 @@ export const CreateProblemModal = ({
 
     setLoading(true);
     try {
+      const problemTitle = title.trim() || "New Problem";
       const {data: createResponse, error: createError} = await api.POST(
         "/problems",
         {
           params: {
             query: {
-              title: title.trim() || "New Problem",
+              title: problemTitle,
               organization_id: orgId || undefined,
               template_id: templateId,
+            },
+            header: {
+              "Idempotency-Key": idempotencyKeyFor(JSON.stringify([orgId, templateId, problemTitle])),
             },
           },
         },
@@ -131,6 +145,7 @@ export const CreateProblemModal = ({
         throw new Error("Не получен ID задачи");
       }
 
+      attempt.current = null;
       const problemId = createResponse.id;
       const selectedOrg = orgs.find((o) => o.id === orgId);
       const orgSlug = selectedOrg?.login || selectedOrg?.id || "org";

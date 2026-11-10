@@ -43,9 +43,9 @@ func (r templateOrganizations) GetUserOrganizations(context.Context, uuid.UUID) 
 
 type templateManifests struct{ id uuid.UUID }
 
-func (r *templateManifests) GetManifest(_ context.Context, id uuid.UUID) (*problemsmodel.ProblemManifest, error) {
+func (r *templateManifests) GetDraft(_ context.Context, id uuid.UUID) (problemsmodel.Draft, error) {
 	r.id = id
-	return &problemsmodel.ProblemManifest{ProblemType: "interactive", Statement: problemsmodel.Statement{Legend: "Template description"}}, nil
+	return problemsmodel.Draft{Type: "interactive", Files: map[string]string{"statements/en.md": "Template description"}}, nil
 }
 
 func TestProblemReadsBindViewerAndPagination(t *testing.T) {
@@ -95,7 +95,7 @@ func TestProblemReadsBindViewerAndPagination(t *testing.T) {
 }
 
 func TestProblemPrivateReadsRejectBeforeStorage(t *testing.T) {
-	reader := NewReader(nil, workshopPermissions{}, nil, nil)
+	reader := NewReader(nil, denyProblemPermissions{}, nil, nil)
 	user := uuid.New()
 	for _, ctx := range []context.Context{context.Background(), problemActorContext()} {
 		expected := pkg.NoPermission
@@ -131,4 +131,10 @@ func TestTemplateCatalogUsesVisibleProblemsAndApplicationMapping(t *testing.T) {
 	expected := errors.New("organizations unavailable")
 	_, err = NewReader(nil, nil, templateOrganizations{err: expected}, nil).ListTemplates(ctx, uuid.Nil)
 	require.ErrorIs(t, err, expected)
+}
+
+type denyProblemPermissions struct{}
+
+func (denyProblemPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+	return false, nil
 }

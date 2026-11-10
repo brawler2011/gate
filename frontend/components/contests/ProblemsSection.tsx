@@ -308,8 +308,7 @@ export const ProblemsSection = ({
   });
   const loadingPackages = !!replaceTarget && packageHistory.isPending;
   const availablePackages = [...new Map((packageHistory.data?.pages.flatMap((p) => p.packages) ?? [])
-    .filter((p) => p.status === "ready" && p.id)
-    .map((p) => [p.id!, {value: p.id!, label: `Версия v${p.version ?? "?"} (${new Date(p.created_at || "").toLocaleDateString("ru-RU")})`}])).values()];
+    .map((p) => [p.id, {value: p.id, label: `Ревизия ${p.revision} · ${p.package_hash.slice(0, 8)} (${new Date(p.created_at).toLocaleString("ru-RU")})`}])).values()];
 
   const effectivePackageId = selectedPackageId ?? availablePackages[0]?.value ?? null;
 

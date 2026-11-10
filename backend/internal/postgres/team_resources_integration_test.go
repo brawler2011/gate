@@ -5,6 +5,9 @@ package postgres
 import (
 	"context"
 	"testing"
+	"time"
+
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
@@ -77,8 +80,9 @@ func TestTeamResourcesViewerAccess(t *testing.T) {
 		// Distinct timestamps make preservation of the existing descending order verifiable.
 		exec(`INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, settings, created_at)
         VALUES ($1, $2, $3, $4, 'Contest', $5, '{}', '2026-01-01'::timestamptz + $6 * interval '1 day')`, contestID, orgID, users["owner"], visibility, contestID.String(), i)
-		exec(`INSERT INTO problems (id, organization_id, owner_id, visibility, title, short_name, created_at)
-        VALUES ($1, $2, $3, $4, 'Problem', $5, '2026-01-01'::timestamptz + $6 * interval '1 day')`, problemID, orgID, users["owner"], visibility, problemID.String(), i)
+		owner := users["owner"]
+		require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: orgID, OwnerID: &owner, Visibility: visibility,
+			Title: "Problem", ShortName: problemID.String(), CreatedAt: time.Date(2026, 1, 1+i, 0, 0, 0, 0, time.UTC)}))
 		for _, id := range []uuid.UUID{teamID, otherTeamID, foreignTeamID} {
 			exec(`INSERT INTO contest_teams (contest_id, team_id, role) VALUES ($1, $2, 'participant')`, contestID, id)
 			exec(`INSERT INTO problem_teams (problem_id, team_id, permission) VALUES ($1, $2, 'read')`, problemID, id)

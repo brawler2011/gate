@@ -4,6 +4,126 @@
  */
 
 export interface paths {
+    "/problems/{id}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the editable problem draft */
+        get: operations["GetProblemDraft"];
+        /** Replace the draft in one revision change */
+        put: operations["SaveProblemDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/problems/{id}/packages/build": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue an immutable draft snapshot */
+        post: operations["BuildProblemPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/problems/{id}/builds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the latest 100 builds */
+        get: operations["ListProblemBuilds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/problems/{id}/builds/{buildId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read build progress and diagnostics */
+        get: operations["GetProblemBuild"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/problems/{id}/builds/{buildId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a queued or running build */
+        post: operations["CancelProblemBuild"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/problems/{id}/draft/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload immutable test bodies or a resource */
+        post: operations["UploadProblemDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/problems/{id}/draft/objects/{objectId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a binary referenced by this draft */
+        get: operations["GetProblemDraftObject"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/languages": {
         parameters: {
             query?: never;
@@ -961,25 +1081,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Import package into existing problem */
+        /** Replace the draft with the contents of a problem archive */
         post: operations["ImportProblem"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{id}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Publish problem package */
-        post: operations["PublishProblem"];
         delete?: never;
         options?: never;
         head?: never;
@@ -993,7 +1096,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List a page of problem packages, newest version first */
+        /** List a page of built problem packages, newest first */
         get: operations["ListProblemPackages"];
         put?: never;
         post?: never;
@@ -1003,434 +1106,17 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/problems/{id}/package/{version}": {
+    "/problems/{id}/packages/{packageId}/download": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get redirect to published problem package */
-        get: operations["GetPublishedPackage"];
+        /** Download a built problem package archive */
+        get: operations["DownloadProblemPackage"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/limits": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get problem limits and type settings */
-        get: operations["GetProblemLimits"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update problem limits and type settings */
-        patch: operations["UpdateProblemLimits"];
-        trace?: never;
-    };
-    "/problems/{problemId}/statement": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get problem statement */
-        get: operations["GetProblemStatement"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update problem statement */
-        patch: operations["UpdateProblemStatement"];
-        trace?: never;
-    };
-    "/problems/{problemId}/checkers": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List checker files */
-        get: operations["ListProblemCheckers"];
-        put?: never;
-        /** Create checker file */
-        post: operations["CreateProblemChecker"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/checkers/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get checker file content */
-        get: operations["GetProblemChecker"];
-        /** Update checker file */
-        put: operations["UpdateProblemChecker"];
-        post?: never;
-        /** Delete checker file */
-        delete: operations["DeleteProblemChecker"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/generators": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List generator files */
-        get: operations["ListProblemGenerators"];
-        put?: never;
-        /** Create generator file */
-        post: operations["CreateProblemGenerator"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/generators/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get generator file content */
-        get: operations["GetProblemGenerator"];
-        /** Update generator file */
-        put: operations["UpdateProblemGenerator"];
-        post?: never;
-        /** Delete generator file */
-        delete: operations["DeleteProblemGenerator"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/interactors": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List interactor files */
-        get: operations["ListProblemInteractors"];
-        put?: never;
-        /** Create interactor file */
-        post: operations["CreateProblemInteractor"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/interactors/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get interactor file content */
-        get: operations["GetProblemInteractor"];
-        /** Update interactor file */
-        put: operations["UpdateProblemInteractor"];
-        post?: never;
-        /** Delete interactor file */
-        delete: operations["DeleteProblemInteractor"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/media": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List media files */
-        get: operations["ListProblemMediaFiles"];
-        put?: never;
-        /** Create media file */
-        post: operations["CreateProblemMediaFile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/media/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get media file content */
-        get: operations["GetProblemMediaFile"];
-        /** Update media file */
-        put: operations["UpdateProblemMediaFile"];
-        post?: never;
-        /** Delete media file */
-        delete: operations["DeleteProblemMediaFile"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/lib": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List library files */
-        get: operations["ListProblemLibs"];
-        put?: never;
-        /** Create library file */
-        post: operations["CreateProblemLib"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/lib/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get library file content */
-        get: operations["GetProblemLib"];
-        /** Update library file */
-        put: operations["UpdateProblemLib"];
-        post?: never;
-        /** Delete library file */
-        delete: operations["DeleteProblemLib"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/submissions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List author solution files */
-        get: operations["ListProblemWorkshopSubmissions"];
-        put?: never;
-        /** Create author solution file */
-        post: operations["CreateProblemWorkshopSubmission"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/submissions/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get author solution file content */
-        get: operations["GetProblemWorkshopSubmission"];
-        /** Update author solution file */
-        put: operations["UpdateProblemWorkshopSubmission"];
-        post?: never;
-        /** Delete author solution file */
-        delete: operations["DeleteProblemWorkshopSubmission"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/tests": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List test files */
-        get: operations["ListProblemTests"];
-        put?: never;
-        /** Create test file */
-        post: operations["CreateProblemTestFile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/tests/config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update tests.json configuration */
-        patch: operations["UpdateProblemTestsConfig"];
-        trace?: never;
-    };
-    "/problems/{problemId}/tests/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get test file content */
-        get: operations["GetProblemTestFile"];
-        /** Update test file */
-        put: operations["UpdateProblemTestFile"];
-        post?: never;
-        /** Delete test file */
-        delete: operations["DeleteProblemTestFile"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/validators": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List validator files */
-        get: operations["ListProblemValidators"];
-        put?: never;
-        /** Create validator file */
-        post: operations["CreateProblemValidator"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/validators/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get validator file content */
-        get: operations["GetProblemValidator"];
-        /** Update validator file */
-        put: operations["UpdateProblemValidator"];
-        post?: never;
-        /** Delete validator file */
-        delete: operations["DeleteProblemValidator"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/workshop/components/{componentType}/compile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Compile checker/validator/generator/interactor */
-        post: operations["CompileProblemComponent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/workshop/tests/generate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Generate tests using generator */
-        post: operations["GenerateTests"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/workshop/tests/validate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Validate all test inputs */
-        post: operations["ValidateAllTests"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/problems/{problemId}/workshop/solutions/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Test solution against tests */
-        post: operations["TestSolution"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2002,6 +1688,148 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ProblemDraftInput: {
+            /** @enum {string} */
+            mode: "manual" | "generator";
+            /** Format: uuid */
+            object_id: string | null;
+            /** Format: uuid */
+            component_id: string | null;
+            args: string[];
+            /** Format: int64 */
+            seed: number | null;
+        };
+        ProblemDraftAnswer: {
+            /** @enum {string} */
+            mode: "provided" | "generated" | "interactive";
+            /** Format: uuid */
+            object_id: string | null;
+            /** Format: uuid */
+            component_id: string | null;
+        };
+        ProblemDraftComponent: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            role: "checker" | "validator" | "interactor" | "generator" | "solution";
+            path: string;
+            language: string;
+            dependencies: {
+                [key: string]: string;
+            };
+        };
+        ProblemDraftSubtask: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            ordinal: number;
+            name: string;
+            /** Format: double */
+            points: number;
+            /** @enum {string} */
+            policy: "complete" | "each";
+            depends_on: string[];
+        };
+        ProblemDraftTest: {
+            /** Format: double */
+            points: number;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            ordinal: number;
+            /** Format: uuid */
+            subtask_id: string;
+            sample: boolean;
+            input: components["schemas"]["ProblemDraftInput"];
+            answer: components["schemas"]["ProblemDraftAnswer"];
+        };
+        ProblemDraftAsset: {
+            path: string;
+            /** Format: uuid */
+            object_id: string;
+        };
+        ProblemDraft: {
+            /** Format: uuid */
+            problem_id: string;
+            /** Format: int64 */
+            revision: number;
+            title: string;
+            short_name: string;
+            /** @enum {string} */
+            type: "pass-fail" | "scoring" | "interactive";
+            /** Format: int64 */
+            time_limit_ms: number;
+            /** Format: int64 */
+            memory_limit_mb: number;
+            /** Format: double */
+            max_score: number | null;
+            /** Format: uuid */
+            checker_id: string | null;
+            /** Format: uuid */
+            validator_id: string | null;
+            /** Format: uuid */
+            interactor_id: string | null;
+            /** Format: uuid */
+            main_solution_id: string | null;
+            files: {
+                [key: string]: string;
+            };
+            components: components["schemas"]["ProblemDraftComponent"][];
+            subtasks: components["schemas"]["ProblemDraftSubtask"][];
+            tests: components["schemas"]["ProblemDraftTest"][];
+            assets: components["schemas"]["ProblemDraftAsset"][];
+        };
+        ProblemPackage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            problem_id: string;
+            /** Format: uuid */
+            build_id: string;
+            /** Format: int64 */
+            revision: number;
+            /** @description Full SHA-256 of the archive. */
+            package_hash: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ProblemBuild: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            problem_id: string;
+            /** Format: uuid */
+            organization_id: string;
+            /** Format: int64 */
+            revision: number;
+            /** @enum {string} */
+            state: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+            /** Format: int64 */
+            attempt: number;
+            /** Format: int64 */
+            max_attempts: number;
+            /** Format: date-time */
+            deadline: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            finished_at: string | null;
+            diagnostic: {
+                [key: string]: unknown;
+            } | null;
+        };
+        ProblemBuildAccepted: {
+            /** Format: uuid */
+            build_id: string;
+            /** Format: int64 */
+            revision: number;
+        };
+        ProblemBuildCancelled: {
+            /** Format: uuid */
+            build_id: string;
+            /** @enum {string} */
+            state: "cancelled";
+        };
         /**
          * @description Error data.
          * @example {
@@ -2622,16 +2450,13 @@ export interface components {
             position: number;
         };
         /**
-         * @description Updates problem metadata only. Omitted fields remain unchanged. Statement fields (legend, input_format, output_format, notes, scoring) and limits (memory_limit, time_limit) are no longer accepted here. Edit them through the workshop statement and limits endpoints, then publish the workspace. Unknown fields reject the entire request.
+         * @description Updates catalog metadata only. Omitted fields remain unchanged. The title, statement and limits belong to the draft and are edited through the draft endpoints. Unknown fields reject the entire request.
          * @example {
-         *       "title": "Test problem",
          *       "visibility": "private",
          *       "is_template": false
          *     }
          */
         UpdateProblemRequestModel: {
-            /** @example Test problem */
-            title?: string;
             /** @example private */
             visibility?: string;
             is_template?: boolean;
@@ -2781,7 +2606,7 @@ export interface components {
              */
             state?: number;
             /**
-             * Format: int32
+             * Format: double
              * @example 100
              */
             score?: number;
@@ -2962,7 +2787,7 @@ export interface components {
              */
             state?: number;
             /**
-             * Format: int32
+             * Format: double
              * @example 100
              */
             score?: number;
@@ -5057,6 +4882,12 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Revision last read by the author. A different current revision returns 409. */
+        ExpectedRevisionQuery: number;
+        /** @description Stable identifier for retries of exactly this request. */
+        IdempotencyKeyHeader: string;
+        /** @description Build identifier. */
+        BuildIDPath: string;
         /** @description Page number */
         PageQuery: number;
         /** @description Number of items per page */
@@ -5159,6 +4990,17 @@ export interface components {
     headers: never;
     pathItems: never;
 }
+export type ProblemDraftInput = components['schemas']['ProblemDraftInput'];
+export type ProblemDraftAnswer = components['schemas']['ProblemDraftAnswer'];
+export type ProblemDraftComponent = components['schemas']['ProblemDraftComponent'];
+export type ProblemDraftSubtask = components['schemas']['ProblemDraftSubtask'];
+export type ProblemDraftTest = components['schemas']['ProblemDraftTest'];
+export type ProblemDraftAsset = components['schemas']['ProblemDraftAsset'];
+export type ProblemDraft = components['schemas']['ProblemDraft'];
+export type ProblemPackage = components['schemas']['ProblemPackage'];
+export type ProblemBuild = components['schemas']['ProblemBuild'];
+export type ProblemBuildAccepted = components['schemas']['ProblemBuildAccepted'];
+export type ProblemBuildCancelled = components['schemas']['ProblemBuildCancelled'];
 export type Error = components['schemas']['Error'];
 export type CreationResponseModel = components['schemas']['CreationResponseModel'];
 export type UpdateUserRequestModel = components['schemas']['UpdateUserRequestModel'];
@@ -5289,6 +5131,9 @@ export type CreateContestClarificationRequestModel = components['schemas']['Crea
 export type AnswerContestClarificationRequestModel = components['schemas']['AnswerContestClarificationRequestModel'];
 export type ListContestClarificationsResponseModel = components['schemas']['ListContestClarificationsResponseModel'];
 export type ResponseVerifyEmailResponse = components['responses']['VerifyEmailResponse'];
+export type ParameterExpectedRevisionQuery = components['parameters']['ExpectedRevisionQuery'];
+export type ParameterIdempotencyKeyHeader = components['parameters']['IdempotencyKeyHeader'];
+export type ParameterBuildIdPath = components['parameters']['BuildIDPath'];
 export type ParameterPageQuery = components['parameters']['PageQuery'];
 export type ParameterPageSizeQuery = components['parameters']['PageSizeQuery'];
 export type ParameterOrganizationIdQuery = components['parameters']['OrganizationIDQuery'];
@@ -5329,6 +5174,239 @@ export type ParameterTeamIdPath = components['parameters']['TeamIDPath'];
 export type ParameterPostIdPath = components['parameters']['PostIDPath'];
 export type $defs = Record<string, never>;
 export interface operations {
+    GetProblemDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDraft"];
+                };
+            };
+        };
+    };
+    SaveProblemDraft: {
+        parameters: {
+            query: {
+                /** @description Revision last read by the author. A different current revision returns 409. */
+                expected_revision: components["parameters"]["ExpectedRevisionQuery"];
+            };
+            header: {
+                /** @description Stable identifier for retries of exactly this request. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+            };
+            path: {
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+            };
+            cookie?: never;
+        };
+        /** @description Revision-safe draft operation. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProblemDraft"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDraft"];
+                };
+            };
+        };
+    };
+    BuildProblemPackage: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Stable identifier for retries of exactly this request. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+            };
+            path: {
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+            };
+            cookie?: never;
+        };
+        /** @description Revision-safe draft operation. */
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: int64 */
+                    expected_revision: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemBuildAccepted"];
+                };
+            };
+        };
+    };
+    ListProblemBuilds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemBuild"][];
+                };
+            };
+        };
+    };
+    GetProblemBuild: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+                /** @description Build identifier. */
+                buildId: components["parameters"]["BuildIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemBuild"];
+                };
+            };
+        };
+    };
+    CancelProblemBuild: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Stable identifier for retries of exactly this request. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+            };
+            path: {
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+                /** @description Build identifier. */
+                buildId: components["parameters"]["BuildIDPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemBuildCancelled"];
+                };
+            };
+        };
+    };
+    UploadProblemDraft: {
+        parameters: {
+            query: {
+                /** @description Revision last read by the author. A different current revision returns 409. */
+                expected_revision: components["parameters"]["ExpectedRevisionQuery"];
+            };
+            header: {
+                /** @description Stable identifier for retries of exactly this request. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+            };
+            path: {
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+            };
+            cookie?: never;
+        };
+        /** @description Revision-safe draft operation. */
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** @description JSON UploadChange: part (asset/input/answer/pair), asset_path or full test metadata. For pair, file is the input and answer is the answer. */
+                    metadata: string;
+                    /** Format: binary */
+                    file: string;
+                    /** Format: binary */
+                    answer?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDraft"];
+                };
+            };
+        };
+    };
+    GetProblemDraftObject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the problem. */
+                id: components["parameters"]["ProblemIDPath"];
+                /** @description Referenced stored object. */
+                objectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+        };
+    };
     GetLanguages: {
         parameters: {
             query?: never;
@@ -5406,7 +5484,10 @@ export interface operations {
                  */
                 template_id: string;
             };
-            header?: never;
+            header: {
+                /** @description Stable identifier for retries of exactly this request. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -7746,15 +7827,20 @@ export interface operations {
     };
     ImportProblem: {
         parameters: {
-            query?: never;
-            header?: never;
+            query: {
+                /** @description Revision last read by the author. A different current revision returns 409. */
+                expected_revision: components["parameters"]["ExpectedRevisionQuery"];
+            };
+            header: {
+                /** @description Stable identifier for retries of exactly this request. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+            };
             path: {
                 /** @description UUID of the problem. */
                 id: components["parameters"]["ProblemIDPath"];
             };
             cookie?: never;
         };
-        /** @description Request payload for import problem. */
         requestBody: {
             content: {
                 "multipart/form-data": {
@@ -7767,42 +7853,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Problem imported successfully */
+            /** @description Draft after the import */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        message?: string;
-                    };
-                };
-            };
-        };
-    };
-    PublishProblem: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                id: components["parameters"]["ProblemIDPath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Problem published successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** Format: int32 */
-                        version?: number;
-                        message?: string;
-                    };
+                    "application/json": components["schemas"]["ProblemDraft"];
                 };
             };
         };
@@ -7832,1366 +7889,32 @@ export interface operations {
                 content: {
                     "application/json": {
                         pagination: components["schemas"]["PaginationModel"];
-                        packages: {
-                            /** Format: uuid */
-                            id?: string;
-                            /** Format: int32 */
-                            version?: number;
-                            status?: string;
-                            package_hash?: string;
-                            /** Format: date-time */
-                            created_at?: string;
-                            /** Format: date-time */
-                            compiled_at?: string;
-                        }[];
+                        packages: components["schemas"]["ProblemPackage"][];
                     };
                 };
             };
         };
     };
-    GetPublishedPackage: {
+    DownloadProblemPackage: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 /** @description UUID of the problem. */
                 id: components["parameters"]["ProblemIDPath"];
-                /** @description Problem package version. */
-                version: string;
+                packageId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Redirect to package download URL */
-            302: {
-                headers: {
-                    Location?: string;
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    GetProblemLimits: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Problem limits */
+            /** @description Package archive */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProblemLimits"];
-                };
-            };
-        };
-    };
-    UpdateProblemLimits: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for update problem limits. */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateProblemLimitsRequest"];
-            };
-        };
-        responses: {
-            /** @description Limits updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemLimits"];
-                };
-            };
-        };
-    };
-    GetProblemStatement: {
-        parameters: {
-            query?: {
-                /** @description Language code of the problem statement. */
-                lang?: components["parameters"]["LangQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Problem statement */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemStatement"];
-                };
-            };
-        };
-    };
-    UpdateProblemStatement: {
-        parameters: {
-            query?: {
-                /** @description Language code of the problem statement. */
-                lang?: components["parameters"]["LangQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for update problem statement. */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateProblemStatementRequest"];
-            };
-        };
-        responses: {
-            /** @description Statement updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProblemStatement"];
-                };
-            };
-        };
-    };
-    ListProblemCheckers: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of checkers */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkshopFileListResponse"];
-                };
-            };
-        };
-    };
-    CreateProblemChecker: {
-        parameters: {
-            query: {
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NameQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for create problem checker. */
-        requestBody: {
-            content: {
-                "text/plain": string;
-            };
-        };
-        responses: {
-            /** @description Checker created successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    GetProblemChecker: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Checker content */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": string;
-                };
-            };
-        };
-    };
-    UpdateProblemChecker: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for update problem checker. */
-        requestBody: {
-            content: {
-                "text/plain": string;
-            };
-        };
-        responses: {
-            /** @description Checker updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    DeleteProblemChecker: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Checker deleted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    ListProblemGenerators: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of generators */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkshopFileListResponse"];
-                };
-            };
-        };
-    };
-    CreateProblemGenerator: {
-        parameters: {
-            query: {
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NameQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for create problem generator. */
-        requestBody: {
-            content: {
-                "text/plain": string;
-            };
-        };
-        responses: {
-            /** @description Generator created successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    GetProblemGenerator: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Generator content */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": string;
-                };
-            };
-        };
-    };
-    UpdateProblemGenerator: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for update problem generator. */
-        requestBody: {
-            content: {
-                "text/plain": string;
-            };
-        };
-        responses: {
-            /** @description Generator updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    DeleteProblemGenerator: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Generator deleted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    ListProblemInteractors: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of interactors */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkshopFileListResponse"];
-                };
-            };
-        };
-    };
-    CreateProblemInteractor: {
-        parameters: {
-            query: {
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NameQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for create problem interactor. */
-        requestBody: {
-            content: {
-                "text/plain": string;
-            };
-        };
-        responses: {
-            /** @description Interactor created successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    GetProblemInteractor: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Interactor content */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": string;
-                };
-            };
-        };
-    };
-    UpdateProblemInteractor: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for update problem interactor. */
-        requestBody: {
-            content: {
-                "text/plain": string;
-            };
-        };
-        responses: {
-            /** @description Interactor updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    DeleteProblemInteractor: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Interactor deleted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    ListProblemMediaFiles: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of media files */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkshopFileListResponse"];
-                };
-            };
-        };
-    };
-    CreateProblemMediaFile: {
-        parameters: {
-            query: {
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NameQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for create problem media file. */
-        requestBody: {
-            content: {
-                "application/octet-stream": string;
-            };
-        };
-        responses: {
-            /** @description Media file created successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    GetProblemMediaFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Media file content */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/octet-stream": string;
-                };
-            };
-        };
-    };
-    UpdateProblemMediaFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for update problem media file. */
-        requestBody: {
-            content: {
-                "application/octet-stream": string;
-            };
-        };
-        responses: {
-            /** @description Media file updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    DeleteProblemMediaFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Media file deleted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    ListProblemLibs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of library files */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkshopFileListResponse"];
-                };
-            };
-        };
-    };
-    CreateProblemLib: {
-        parameters: {
-            query: {
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NameQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for create problem lib. */
-        requestBody: {
-            content: {
-                "text/plain": string;
-            };
-        };
-        responses: {
-            /** @description Library file created successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    GetProblemLib: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Library file content */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": string;
-                };
-            };
-        };
-    };
-    UpdateProblemLib: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for update problem lib. */
-        requestBody: {
-            content: {
-                "text/plain": string;
-            };
-        };
-        responses: {
-            /** @description Library file updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    DeleteProblemLib: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Library file deleted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    ListProblemWorkshopSubmissions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of author solutions */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkshopFileListResponse"];
-                };
-            };
-        };
-    };
-    CreateProblemWorkshopSubmission: {
-        parameters: {
-            query: {
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NameQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for create problem workshop submission. */
-        requestBody: {
-            content: {
-                "text/plain": string;
-            };
-        };
-        responses: {
-            /** @description Author solution file created successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    GetProblemWorkshopSubmission: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Author solution file content */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": string;
-                };
-            };
-        };
-    };
-    UpdateProblemWorkshopSubmission: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for update problem workshop submission. */
-        requestBody: {
-            content: {
-                "text/plain": string;
-            };
-        };
-        responses: {
-            /** @description Author solution file updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    DeleteProblemWorkshopSubmission: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Author solution file deleted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    ListProblemTests: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of tests */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkshopFileListResponse"];
-                };
-            };
-        };
-    };
-    CreateProblemTestFile: {
-        parameters: {
-            query: {
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NameQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for create problem test file. */
-        requestBody: {
-            content: {
-                "application/octet-stream": string;
-            };
-        };
-        responses: {
-            /** @description Test file created successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    UpdateProblemTestsConfig: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for update problem tests config. */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateProblemTestsConfigRequest"];
-            };
-        };
-        responses: {
-            /** @description Tests config updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    GetProblemTestFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Test file content */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/octet-stream": string;
-                };
-            };
-        };
-    };
-    UpdateProblemTestFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for update problem test file. */
-        requestBody: {
-            content: {
-                "application/octet-stream": string;
-            };
-        };
-        responses: {
-            /** @description Test file updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    DeleteProblemTestFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Test file deleted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    ListProblemValidators: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of validators */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkshopFileListResponse"];
-                };
-            };
-        };
-    };
-    CreateProblemValidator: {
-        parameters: {
-            query: {
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NameQuery"];
-            };
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for create problem validator. */
-        requestBody: {
-            content: {
-                "text/plain": string;
-            };
-        };
-        responses: {
-            /** @description Validator created successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    GetProblemValidator: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Validator content */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": string;
-                };
-            };
-        };
-    };
-    UpdateProblemValidator: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for update problem validator. */
-        requestBody: {
-            content: {
-                "text/plain": string;
-            };
-        };
-        responses: {
-            /** @description Validator updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    DeleteProblemValidator: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Name of the workshop file. */
-                name: components["parameters"]["NamePath"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Validator deleted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    CompileProblemComponent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-                /** @description Workshop component category. */
-                componentType: "checker" | "validator" | "generator" | "interactor";
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Compilation result */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompileResult"];
-                };
-            };
-        };
-    };
-    GenerateTests: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for generate tests. */
-        requestBody: {
-            content: {
-                "application/json": {
-                    generator_name: string;
-                    test_numbers: number[];
-                    arguments?: string[][];
-                };
-            };
-        };
-        responses: {
-            /** @description Tests generated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        message?: string;
-                    };
-                };
-            };
-        };
-    };
-    ValidateAllTests: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Validation report */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ValidationReport"];
-                };
-            };
-        };
-    };
-    TestSolution: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the problem. */
-                problemId: components["parameters"]["ProblemIDPathByCamelName"];
-            };
-            cookie?: never;
-        };
-        /** @description Request payload for test solution. */
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Path to solution file in repository */
-                    solution_path: string;
-                    /** @description Specific test numbers to run (empty = all tests) */
-                    test_numbers?: number[];
-                };
-            };
-        };
-        responses: {
-            /** @description Test report */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TestReport"];
+                    "application/zip": string;
                 };
             };
         };

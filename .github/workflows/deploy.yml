@@ -217,6 +217,8 @@ jobs:
             fi
             echo "$GITHUB_TOKEN" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
             docker compose pull --ignore-buildable
+            # The sandbox image identity is pinned into every problem build.
+            export GOJUDGE_TOOLCHAIN_DIGEST="$(docker image inspect ghcr.io/brawler2011/gate-go-judge:${IMAGE_TAG} --format '{{.Id}}')"
             docker compose up -d --remove-orphans
             docker image prune -f
             echo "Waiting for services to become healthy..."
