@@ -124,7 +124,7 @@ func runApp(envFile string) error {
 	logger := slog.Default()
 
 	logger.Info("connecting to postgres")
-	pool, err := pkg.NewPostgresDB(cfg.GetPostgresDSN())
+	pool, err := pkg.NewPostgresDB(cfg.PostgresDSN)
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func runApp(envFile string) error {
 		}
 	}
 
-	redisClient, err := pkg.NewRedisClient(cfg.GetRedisURL())
+	redisClient, err := pkg.NewRedisClient(cfg.RedisURL)
 	if err != nil {
 		return fmt.Errorf("create rate limiter redis client: %w", err)
 	}
@@ -238,7 +238,7 @@ func runApp(envFile string) error {
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Permissions: permissionsUC}
 	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, permissionsUC, sandboxInstance, usersRepo)
 
-	natsJS, err := pkg.NewNatsJetStream(cfg.GetNatsURL())
+	natsJS, err := pkg.NewNatsJetStream(cfg.NatsURL)
 	if err != nil {
 		return fmt.Errorf("create nats jetstream connection: %w", err)
 	}
