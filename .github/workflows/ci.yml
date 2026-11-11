@@ -17,6 +17,35 @@ env:
   PUSH_IMAGES: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      integration: ${{ github.event_name != 'pull_request' || steps.filter.outputs.integration == 'true' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Filter changed paths
+        id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3.0.2
+        with:
+          # Everything that can change the outcome of the integration tests.
+          filters: |
+            integration:
+              - 'backend/**'
+              - 'judge/**'
+              - 'contracts/**'
+              - 'go.mod'
+              - 'go.sum'
+              - 'mise.toml'
+              - 'Taskfile.yml'
+              - '.github/workflows/ci.yml'
+
   codegen-check:
     name: Codegen Verification
     runs-on: ubuntu-latest
@@ -207,7 +236,8 @@ jobs:
 
   backend-integration-tests:
     name: Backend Integration Tests
-    needs: judge-image
+    needs: [changes, judge-image]
+    if: needs.changes.outputs.integration == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -283,6 +313,7 @@ jobs:
   ci-status:
     name: All CI Checks Passed
     needs:
+      - changes
       - codegen-check
       - backend-lint
       - backend-unit-tests
@@ -303,10 +334,12 @@ jobs:
           echo "Judge Image: ${{ needs.judge-image.result }}"
           echo "Backend Image: ${{ needs.backend-image.result }}"
 
-          if [[ "${{ needs.codegen-check.result }}" != "success" || \
+          # Integration tests are skipped when no relevant path changed.
+          if [[ "${{ needs.changes.result }}" != "success" || \
+                "${{ needs.codegen-check.result }}" != "success" || \
                 "${{ needs.backend-lint.result }}" != "success" || \
                 "${{ needs.backend-unit-tests.result }}" != "success" || \
-                "${{ needs.backend-integration-tests.result }}" != "success" || \
+                ! "${{ needs.backend-integration-tests.result }}" =~ ^(success|skipped)$ || \
                 "${{ needs.frontend-checks.result }}" != "success" || \
                 "${{ needs.judge-image.result }}" != "success" || \
                 "${{ needs.backend-image.result }}" != "success" ]]; then
