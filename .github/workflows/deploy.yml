@@ -25,6 +25,7 @@ jobs:
     permissions:
       contents: read
       actions: write
+      packages: write
     uses: ./.github/workflows/ci.yml
 
   build-backend:
