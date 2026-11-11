@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
+	"github.com/brawler2011/gate/backend/tests/judgeimage"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -25,15 +26,13 @@ import (
 func TestIntegrationSandboxFiles(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
+	image, err := judgeimage.Ref()
+	require.NoError(t, err)
 	req := testcontainers.ContainerRequest{
+		Image:        image,
 		ExposedPorts: []string{"5050/tcp", "5051/tcp"}, Privileged: true,
 		Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-file-store", "-parallelism=1", "-output-limit=256m"},
 		WaitingFor: wait.ForHTTP("/version").WithPort("5050/tcp"),
-	}
-	if image := os.Getenv("GOJUDGE_TEST_IMAGE"); image != "" {
-		req.Image = image
-	} else {
-		req.FromDockerfile = testcontainers.FromDockerfile{Context: "../../../judge", Dockerfile: "Dockerfile", KeepImage: true}
 	}
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: req, Started: true})
 	require.NoError(t, err)

@@ -15,6 +15,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
+	"github.com/brawler2011/gate/backend/tests/judgeimage"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -104,16 +105,13 @@ func newGoJudge(t *testing.T) (*sandbox.Client, *sandbox.FileTransport) {
 	sharedMu.Lock()
 	defer sharedMu.Unlock()
 	if shared.judge == nil {
+		image, err := judgeimage.Ref()
+		require.NoError(t, err)
 		request := testcontainers.ContainerRequest{
-			FromDockerfile: testcontainers.FromDockerfile{Context: "../../../judge", Dockerfile: "Dockerfile", KeepImage: true},
-			ExposedPorts:   []string{goJudgeHTTPPort, goJudgeGRPCPort}, Privileged: true,
+			Image:        image,
+			ExposedPorts: []string{goJudgeHTTPPort, goJudgeGRPCPort}, Privileged: true,
 			Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", "-parallelism=2"},
 			WaitingFor: wait.ForHTTP("/version").WithPort(goJudgeHTTPPort).WithStartupTimeout(e2eSandboxTimout)}
-		// CI prebuilds the image; locally it is built from the project's Dockerfile.
-		if image := os.Getenv("GOJUDGE_TEST_IMAGE"); image != "" {
-			request.FromDockerfile = testcontainers.FromDockerfile{}
-			request.Image = image
-		}
 		c, err := startShared(ctx, "go-judge", request)
 		require.NoError(t, err)
 		host, err := c.Host(ctx)

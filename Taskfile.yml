@@ -77,8 +77,16 @@ tasks:
     cmds:
       - go test -v ./...
 
+  judge:image:
+    desc: Make the go-judge image for the current judge/ sources available locally (pull, else build)
+    cmds:
+      - |
+        ref="$(go run ./tools/judgeimage)"
+        docker image inspect "$ref" > /dev/null 2>&1 || docker pull "$ref" || docker build -t "$ref" judge
+
   test:be:integration:
     desc: Run all backend tests, including integration tests
+    deps: [judge:image]
     cmds:
       - go test -v -timeout 15m -tags=integration {{.CLI_ARGS | default "./..."}}
 

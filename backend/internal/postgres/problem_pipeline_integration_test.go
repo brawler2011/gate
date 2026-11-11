@@ -10,7 +10,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -20,6 +19,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
+	"github.com/brawler2011/gate/backend/tests/judgeimage"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -49,16 +49,13 @@ func startPipelineServices(t *testing.T) pipelineServices {
 	require.NoError(t, err)
 	store := storage.NewS3Storage(storage.S3Config{Endpoint: fmt.Sprintf("http://%s:%s", s3host, s3port.Port()), AccessKey: "test", SecretKey: "test", Region: "us-east-1"})
 	require.NoError(t, store.EnsureBucket(ctx, "objects"))
+	image, err := judgeimage.Ref()
+	require.NoError(t, err)
 	request := testcontainers.ContainerRequest{
-		FromDockerfile: testcontainers.FromDockerfile{Context: "../../../judge", Dockerfile: "Dockerfile", KeepImage: true},
-		ExposedPorts:   []string{"5050/tcp", "5051/tcp"}, Privileged: true,
+		Image:        image,
+		ExposedPorts: []string{"5050/tcp", "5051/tcp"}, Privileged: true,
 		Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", "-parallelism=1"},
 		WaitingFor: wait.ForHTTP("/version").WithPort("5050/tcp")}
-	// CI prebuilds the image; locally it is built from the project's Dockerfile.
-	if image := os.Getenv("GOJUDGE_TEST_IMAGE"); image != "" {
-		request.FromDockerfile = testcontainers.FromDockerfile{}
-		request.Image = image
-	}
 	judge, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: request, Started: true})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, judge.Terminate(context.Background(), testcontainers.StopTimeout(0))) })

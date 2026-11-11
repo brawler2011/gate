@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/tests/judgeimage"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -25,28 +25,18 @@ func TestIntegrationSandbox(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, thisFile, _, ok := runtime.Caller(0)
-	judgeContext := "../../../judge"
-	if ok {
-		judgeContext = filepath.Join(filepath.Dir(thisFile), "../../../judge")
-	}
-
 	// Spin up go-judge container using testcontainers-go and the unified Dockerfile
 	t.Log("Starting go-judge container...")
+	image, err := judgeimage.Ref()
+	if err != nil {
+		t.Fatalf("Failed to name go-judge image: %v", err)
+	}
 	req := testcontainers.ContainerRequest{
+		Image:        image,
 		ExposedPorts: []string{"5051/tcp"},
 		WaitingFor:   wait.ForListeningPort("5051/tcp"),
 		Privileged:   true,
 		Cmd:          []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051"},
-	}
-	if image := os.Getenv("GOJUDGE_TEST_IMAGE"); image != "" {
-		req.Image = image
-	} else {
-		req.FromDockerfile = testcontainers.FromDockerfile{
-			Context:    judgeContext,
-			Dockerfile: "Dockerfile",
-			KeepImage:  true,
-		}
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
