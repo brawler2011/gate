@@ -141,9 +141,9 @@ func (tx barrierSubmissionTransactions) Within(ctx context.Context, fn func(subm
 // holdTuple keeps the scoring tuple of a user locked by an open transaction on blockers.
 func (f *concurrencyFixture) holdTuple(t *testing.T, blockers blockerPool, user int) (release func(commit bool) error) {
 	t.Helper()
-	return holdTransaction(t, func(barrier func() error) error {
-		return postgres.NewSubmissionTransactions(blockers.Pool).Within(f.ctx, func(tx submissions.SubmissionTxStore) error {
-			if err := tx.LockSubmissionTuple(f.ctx, f.contest, f.users[user], f.problem); err != nil {
+	return holdTransaction(t, func(ctx context.Context, barrier func() error) error {
+		return postgres.NewSubmissionTransactions(blockers.Pool).Within(ctx, func(tx submissions.SubmissionTxStore) error {
+			if err := tx.LockSubmissionTuple(ctx, f.contest, f.users[user], f.problem); err != nil {
 				return err
 			}
 			return barrier()
@@ -180,14 +180,14 @@ func TestIndependentSubmissionTransactions(t *testing.T) {
 			first, other := f.job(t, 1, 10), f.job(t, 2, 20)
 			switch held {
 			case "creation":
-				holdTransaction(t, func(barrier func() error) error {
+				holdTransaction(t, func(_ context.Context, barrier func() error) error {
 					_, err := f.create(barrierSubmissionTransactions{postgres.NewSubmissionTransactions(f.blockers.Pool), barrier}, 1)
 					return err
 				})
 			case "completion":
-				holdTransaction(t, func(barrier func() error) error {
-					return postgres.NewJudgeTransactions(f.blockers.Pool).Within(f.ctx, func(tx judging.JudgeTxStore) error {
-						if err := applyConcurrentVerdict(f.ctx, tx, first, submissionsmodel.Accepted); err != nil {
+				holdTransaction(t, func(ctx context.Context, barrier func() error) error {
+					return postgres.NewJudgeTransactions(f.blockers.Pool).Within(ctx, func(tx judging.JudgeTxStore) error {
+						if err := applyConcurrentVerdict(ctx, tx, first, submissionsmodel.Accepted); err != nil {
 							return err
 						}
 						return barrier()
@@ -385,9 +385,9 @@ func TestConcurrentDraftLimit(t *testing.T) {
 	f := newConcurrencyFixture(t)
 	_, err := f.pool.Exec(f.ctx, `INSERT INTO contest_drafts(contest_id,user_id,code) SELECT $1,$2,'draft' FROM generate_series(1,49)`, f.contest, f.users[1])
 	require.NoError(t, err)
-	release := holdTransaction(t, func(barrier func() error) error {
-		return postgres.NewDraftTransactions(f.blockers.Pool).Within(f.ctx, func(tx contests.DraftTxStore) error {
-			if err := tx.LockDraftOwner(f.ctx, f.contest, f.users[1]); err != nil {
+	release := holdTransaction(t, func(ctx context.Context, barrier func() error) error {
+		return postgres.NewDraftTransactions(f.blockers.Pool).Within(ctx, func(tx contests.DraftTxStore) error {
+			if err := tx.LockDraftOwner(ctx, f.contest, f.users[1]); err != nil {
 				return err
 			}
 			return barrier()

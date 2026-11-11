@@ -317,6 +317,17 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 			require.NoError(t, err)
 			require.Empty(t, ec)
 			require.EqualValues(t, count, scopeTotal)
+			// The repositories must drop the null row of a page beyond the end
+			// rather than decode it into an empty resource.
+			beyondEnd := paging.Request{Page: 100, PageSize: 1}
+			tp, total, err = teamsRepo.GetTeamProblems(actorCtx, closed, u.Id, beyondEnd)
+			require.NoError(t, err)
+			require.Empty(t, tp)
+			require.EqualValues(t, count, total)
+			tc, total, err = teamsRepo.GetTeamContests(actorCtx, closed, u.Id, beyondEnd)
+			require.NoError(t, err)
+			require.Empty(t, tc)
+			require.EqualValues(t, count, total)
 			// Authorization queries must contain neither transactions nor row locks.
 			for _, query := range recorder.recorded() {
 				upper := strings.ToUpper(query)

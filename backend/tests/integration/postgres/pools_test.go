@@ -115,12 +115,14 @@ var errReleased = errors.New("held transaction rolled back")
 // holdTransaction starts run, which must call barrier inside its transaction once
 // the work whose locks are held is done. The transaction stays open until the
 // returned release is called; release(true) commits and release(false) rolls back.
-// Uncommitted transactions are rolled back at cleanup.
-func holdTransaction(t *testing.T, run func(barrier func() error) error) (release func(commit bool) error) {
+// Uncommitted transactions are rolled back at cleanup, which also cancels ctx so
+// a run stuck before its barrier cannot keep a connection and hang pool.Close.
+func holdTransaction(t *testing.T, run func(ctx context.Context, barrier func() error) error) (release func(commit bool) error) {
 	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
 	ready, commit, done := make(chan struct{}), make(chan bool, 1), make(chan error, 1)
 	go func() {
-		done <- run(func() error {
+		done <- run(ctx, func() error {
 			close(ready)
 			if <-commit {
 				return nil
@@ -128,14 +130,6 @@ func holdTransaction(t *testing.T, run func(barrier func() error) error) (releas
 			return errReleased
 		})
 	}()
-	select {
-	case <-ready:
-	case err := <-done:
-		require.NoError(t, err)
-		t.Fatal("held transaction finished without reaching its barrier")
-	case <-time.After(5 * time.Second):
-		t.Fatal("held transaction did not reach its barrier")
-	}
 	var once sync.Once
 	var result error
 	release = func(c bool) error {
@@ -148,6 +142,18 @@ func holdTransaction(t *testing.T, run func(barrier func() error) error) (releas
 		})
 		return result
 	}
-	t.Cleanup(func() { _ = release(false) })
+	t.Cleanup(func() {
+		cancel()
+		_ = release(false)
+	})
+	select {
+	case <-ready:
+	case err := <-done:
+		done <- err // Keep the result for release.
+		require.NoError(t, err)
+		t.Fatal("held transaction finished without reaching its barrier")
+	case <-time.After(5 * time.Second):
+		t.Fatal("held transaction did not reach its barrier")
+	}
 	return release
 }
