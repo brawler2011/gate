@@ -59,8 +59,7 @@ func (r *queryRecorder) count(fragment string) int {
 
 func newTestPool(t *testing.T, configure func(*pgxpool.Config)) *pgxpool.Pool {
 	t.Helper()
-	getSharedTestPool(t) // Starts and migrates the shared database.
-	config, err := pgxpool.ParseConfig(testDSN)
+	config, err := pgxpool.ParseConfig(testDSN(t))
 	require.NoError(t, err)
 	configure(config)
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)

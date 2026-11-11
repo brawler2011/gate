@@ -20,7 +20,8 @@ import (
 )
 
 func TestTeamResourcesViewerAccess(t *testing.T) {
-	pool := getSharedTestPool(t)
+	t.Parallel()
+	pool := getTestPool(t)
 	ctx := context.Background()
 	exec := func(query string, args ...any) {
 		t.Helper()

@@ -77,6 +77,7 @@ func startPipelineServices(t *testing.T) pipelineServices {
 }
 
 func TestProblemPipelineRealServices(t *testing.T) {
+	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
 	services := startPipelineServices(t)
 	store, client, files := services.store, services.client, services.files

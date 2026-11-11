@@ -234,13 +234,22 @@ jobs:
           version: "2026.10.25"
           install_args: go task
 
+      # Its own key: the shared key is usually saved by a job that never builds the
+      # integration-tagged packages, so this job downloaded and compiled them every run.
       - name: Cache Go modules and build artifacts
         uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('mise.toml', '**/go.sum') }}
+          key: ${{ runner.os }}-go-integration-${{ hashFiles('mise.toml', '**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-integration-
+            ${{ runner.os }}-go-
+
+      # A separate step, so compile time shows apart from test time.
+      - name: Build integration tests
+        run: go test -tags=integration -run '^$' ./backend/tests/integration/...
 
       - name: Log in to GitHub Container Registry
         if: env.PUSH_IMAGES == 'true'

@@ -61,6 +61,7 @@ func countRows(t *testing.T, ctx context.Context, pool *pgxpool.Pool, query stri
 // An editor and a build request race for the same draft: the build either conflicts (the edit
 // won) or snapshots exactly the revision it was requested for, never a mixture with the edit.
 func TestBuildRequestSnapshotsOneRevisionWhileEditing(t *testing.T) {
+	t.Parallel()
 	ctx, _, repo, org, d, _ := buildableFixture(t)
 	built, conflicted := 0, 0
 	for attempt := 0; attempt < 8; attempt++ {
@@ -109,6 +110,7 @@ func TestBuildRequestSnapshotsOneRevisionWhileEditing(t *testing.T) {
 // The snapshot's object set and the held input references are enforced to be equal by the
 // database itself, so a writer that gets them out of sync cannot commit.
 func TestBuildSnapshotInputSetMustMatchReferences(t *testing.T) {
+	t.Parallel()
 	ctx, pool, _, org, d, oid := buildableFixture(t)
 	snapshot := `{"schema_version":1,"organization_id":"` + org.String() + `","toolchain":{"digest":"sha256:` + strings.Repeat("a", 64) + `"},` +
 		`"input_objects":["` + oid.String() + `"],"draft":{"problem_id":"` + d.ProblemID.String() + `","revision":` + "2" + `,` +
@@ -122,6 +124,7 @@ func TestBuildSnapshotInputSetMustMatchReferences(t *testing.T) {
 // Closing a stale attempt releases only that attempt's output hold and never the snapshot
 // inputs or a newer attempt's hold; a stale worker cannot finish or publish.
 func TestStaleAttemptCannotTouchNewerAttempt(t *testing.T) {
+	t.Parallel()
 	ctx, pool, repo, org, d, _ := buildableFixture(t)
 	enqueue(t, ctx, repo, org, d)
 	first, err := repo.ClaimBuild(ctx, time.Minute)
@@ -155,6 +158,7 @@ func TestStaleAttemptCannotTouchNewerAttempt(t *testing.T) {
 
 // Publication moves ownership of the archive from the attempt to the Package in one commit.
 func TestPublishBuildHandsOwnershipToPackageAtomically(t *testing.T) {
+	t.Parallel()
 	ctx, pool, repo, org, d, _ := buildableFixture(t)
 	enqueue(t, ctx, repo, org, d)
 	build, err := repo.ClaimBuild(ctx, time.Minute)
@@ -192,6 +196,7 @@ func makeUnreferenced(t *testing.T, ctx context.Context, pool *pgxpool.Pool, obj
 // A collector that is already waiting for the object lock must observe a reference committed
 // while it waited: the reference check is a separate statement after the lock arrives.
 func TestObjectDeletionSeesReferenceCommittedWhileWaitingForLock(t *testing.T) {
+	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
 	object := insertAvailableObject(t, ctx, pool, org)
 	makeUnreferenced(t, ctx, pool, object)
@@ -230,6 +235,7 @@ func TestObjectDeletionSeesReferenceCommittedWhileWaitingForLock(t *testing.T) {
 }
 
 func TestObjectDeletionProtocolIsOneWay(t *testing.T) {
+	t.Parallel()
 	ctx, pool, repo, org, _ := draftFixture(t)
 	object := insertAvailableObject(t, ctx, pool, org)
 
@@ -258,6 +264,7 @@ func TestObjectDeletionProtocolIsOneWay(t *testing.T) {
 // An upload that missed its deadline can never become a working reference, and its
 // operation is closed so the object becomes collectable.
 func TestExpiredUploadIsNeverPublishedAndBecomesCollectable(t *testing.T) {
+	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
 	change := model.UploadChange{Part: "asset", AssetPath: "images/late.png"}
 	key := mutationKey(org, "upload", struct {
@@ -292,6 +299,7 @@ func TestExpiredUploadIsNeverPublishedAndBecomesCollectable(t *testing.T) {
 // Concurrent GC and a new reference never delete a working object: whichever side takes the
 // object lock first decides, and the loser observes the outcome.
 func TestObjectDeletionRacingWithNewReference(t *testing.T) {
+	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
 	for attempt := 0; attempt < 10; attempt++ {
 		object := insertAvailableObject(t, ctx, pool, org)
@@ -341,6 +349,7 @@ func TestObjectDeletionRacingWithNewReference(t *testing.T) {
 // Retention removes only Packages without consumers: a Package pinned by a contest survives
 // any age, an unused one is deleted and its archive is released for collection.
 func TestPackageRetentionKeepsPinnedPackages(t *testing.T) {
+	t.Parallel()
 	f := newContestProblemFixture(t)
 	f.grantRead(t)
 	require.NoError(t, f.create(f.original))

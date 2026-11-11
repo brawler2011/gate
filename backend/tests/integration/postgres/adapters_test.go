@@ -8,7 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"os"
+	"net/url"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -28,6 +28,7 @@ import (
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -37,72 +38,100 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+// One PostgreSQL container per package run; migrations run once into a template
+// database, and every top-level test gets its own clone, so tests can run in parallel.
 var (
-	testContainerOnce sync.Once
-	testDSN           string
-	testInitErr       error
+	templateOnce sync.Once
+	adminDSN     string
+	templateErr  error
+
+	testDBsMu sync.Mutex
+	testDBs   = map[string]string{} // top-level test name -> DSN of its database
 )
 
-func getSharedTestPool(t *testing.T) *pgxpool.Pool {
+const templateDatabase = "gate_template"
+
+// testDSN returns the DSN of the database owned by t's top-level test; its subtests
+// share it.
+func testDSN(t *testing.T) string {
 	t.Helper()
 	ctx := context.Background()
+	templateOnce.Do(func() { adminDSN, templateErr = startTemplate(ctx) })
+	require.NoError(t, templateErr)
 
-	testContainerOnce.Do(func() {
-		dsn := os.Getenv("TEST_DATABASE_URL")
-		if dsn == "" {
-			dsn = os.Getenv("WORKSPACE_TEST_DSN")
-		}
+	root, _, _ := strings.Cut(t.Name(), "/")
+	testDBsMu.Lock()
+	defer testDBsMu.Unlock()
+	if dsn, ok := testDBs[root]; ok {
+		return dsn
+	}
+	name := "t_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	conn, err := pgx.Connect(ctx, adminDSN)
+	require.NoError(t, err)
+	_, err = conn.Exec(ctx, "CREATE DATABASE "+name+" TEMPLATE "+templateDatabase)
+	require.NoError(t, errors.Join(err, conn.Close(ctx)))
+	dsn, err := withDatabase(adminDSN, name)
+	require.NoError(t, err)
+	testDBs[root] = dsn
+	return dsn
+}
 
-		if dsn == "" {
-			container, err := tcpostgres.Run(ctx,
-				"postgres:18-alpine",
-				tcpostgres.WithDatabase("gate_adapters_test"),
-				tcpostgres.WithUsername("postgres"),
-				tcpostgres.WithPassword("postgres"),
-				testcontainers.WithWaitStrategy(
-					wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(15*time.Second),
-				),
-			)
-			if err != nil {
-				testInitErr = fmt.Errorf("start postgres container: %w", err)
-				return
-			}
-			dsn, err = container.ConnectionString(ctx, "sslmode=disable")
-			if err != nil {
-				testInitErr = fmt.Errorf("get container dsn: %w", err)
-				return
-			}
-		}
+// startTemplate starts the package's PostgreSQL container, migrates the template
+// database and returns the maintenance database's DSN.
+func startTemplate(ctx context.Context) (string, error) {
+	container, err := tcpostgres.Run(ctx,
+		"postgres:18-alpine",
+		tcpostgres.WithDatabase(templateDatabase),
+		tcpostgres.WithUsername("postgres"),
+		tcpostgres.WithPassword("postgres"),
+		// Every parallel test holds its own pools; durability is irrelevant for throwaway data.
+		testcontainers.WithCmd("postgres", "-c", "max_connections=1000", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(60*time.Second),
+		),
+	)
+	if err != nil {
+		return "", fmt.Errorf("start postgres container: %w", err)
+	}
+	template, err := container.ConnectionString(ctx, "sslmode=disable")
+	if err != nil {
+		return "", fmt.Errorf("get container dsn: %w", err)
+	}
 
-		_, b, _, _ := runtime.Caller(0)
-		basepath := filepath.Dir(b)
-		migrationsPath := filepath.Join(basepath, "../../../migrations")
+	_, b, _, _ := runtime.Caller(0)
+	migrationsPath := filepath.Join(filepath.Dir(b), "../../../migrations")
+	db, err := sql.Open("pgx", template)
+	if err != nil {
+		return "", fmt.Errorf("open sql db for migrations: %w", err)
+	}
+	if err := goose.SetDialect("postgres"); err != nil {
+		return "", errors.Join(fmt.Errorf("set goose dialect: %w", err), db.Close())
+	}
+	if err := goose.Up(db, migrationsPath); err != nil {
+		return "", errors.Join(fmt.Errorf("run goose migrations: %w", err), db.Close())
+	}
+	// A template database cannot be cloned while anyone is connected to it.
+	if err := db.Close(); err != nil {
+		return "", fmt.Errorf("close migration db: %w", err)
+	}
+	return withDatabase(template, "postgres")
+}
 
-		db, err := sql.Open("pgx", dsn)
-		if err != nil {
-			testInitErr = fmt.Errorf("open sql db for migrations: %w", err)
-			return
-		}
-		defer db.Close()
+func withDatabase(dsn, database string) (string, error) {
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return "", fmt.Errorf("parse dsn: %w", err)
+	}
+	u.Path = "/" + database
+	return u.String(), nil
+}
 
-		if err := goose.SetDialect("postgres"); err != nil {
-			testInitErr = fmt.Errorf("set goose dialect: %w", err)
-			return
-		}
-		if err := goose.Up(db, migrationsPath); err != nil {
-			testInitErr = fmt.Errorf("run goose migrations: %w", err)
-			return
-		}
-
-		testDSN = dsn
-	})
-
-	require.NoError(t, testInitErr)
-
-	pool, err := pkg.NewPostgresDB(testDSN)
+// getTestPool returns a pool on the database owned by t's top-level test.
+func getTestPool(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	pool, err := pkg.NewPostgresDB(testDSN(t))
 	require.NoError(t, err)
 	t.Cleanup(pool.Close)
-
 	return pool
 }
 
@@ -125,7 +154,8 @@ func helperCreatePackage(t *testing.T, ctx context.Context, pool *pgxpool.Pool, 
 }
 
 func TestUsersRepo_Integration(t *testing.T) {
-	pool := getSharedTestPool(t)
+	t.Parallel()
+	pool := getTestPool(t)
 	repo := postgres.NewUsersRepo(pool)
 	ctx := context.Background()
 
@@ -206,7 +236,8 @@ func TestUsersRepo_Integration(t *testing.T) {
 }
 
 func TestProblemsRepo_Integration(t *testing.T) {
-	pool := getSharedTestPool(t)
+	t.Parallel()
+	pool := getTestPool(t)
 	repo := postgres.NewProblemsRepo(pool)
 	ctx := context.Background()
 
@@ -276,7 +307,8 @@ func TestProblemsRepo_Integration(t *testing.T) {
 }
 
 func TestContestsRepo_Integration(t *testing.T) {
-	pool := getSharedTestPool(t)
+	t.Parallel()
+	pool := getTestPool(t)
 	repo := postgres.NewContestsRepo(pool)
 	ctx := context.Background()
 
@@ -382,7 +414,8 @@ func TestContestsRepo_Integration(t *testing.T) {
 }
 
 func TestSubmissionsRepo_Integration(t *testing.T) {
-	pool := getSharedTestPool(t)
+	t.Parallel()
+	pool := getTestPool(t)
 	repo := postgres.NewSubmissionsRepo(pool)
 	ctx := context.Background()
 
@@ -487,7 +520,8 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 }
 
 func TestBlogsRepo_Integration(t *testing.T) {
-	pool := getSharedTestPool(t)
+	t.Parallel()
+	pool := getTestPool(t)
 	repo := postgres.NewBlogsRepo(pool)
 	ctx := context.Background()
 

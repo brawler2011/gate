@@ -133,6 +133,8 @@ const acceptEverythingChecker = "int main(){return 0;}\n"
 // Heap use is bounded by buffers and concurrency, not by the total size of the tests: the
 // build transfers hundreds of megabytes of incompressible data through a small heap.
 func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
+	// Not parallel: it measures the heap of the whole test process, and Go runs
+	// sequential tests before any parallel one starts.
 	const perFile, tests = 24 << 20, 3
 	h := newPipelineHarness(t, 64<<20, 2<<30)
 	checker, subtask := uuid.New(), uuid.New()
@@ -253,6 +255,7 @@ func (h *pipelineHarness) runWorker(t *testing.T) context.CancelFunc {
 // A generator that exceeds the output budget fails the build as an author error with a
 // bounded diagnostic, and nothing is published.
 func TestPipelineOutputOverflowFailsBuildWithBoundedDiagnostic(t *testing.T) {
+	t.Parallel()
 	h := newPipelineHarness(t, 1<<20, 256<<20)
 	h.generatorBuild(t, "import sys\nsys.stdout.write('x' * (8 << 20))\n")
 	_, err := h.repo.EnqueueBuild(h.ctx, mutationKey(h.org, "build", "overflow"), h.draft.ProblemID, mustRevision(t, h), h.options)
@@ -278,6 +281,7 @@ func TestPipelineOutputOverflowFailsBuildWithBoundedDiagnostic(t *testing.T) {
 // Cancelling a running build frees the single worker slot: a generator that would sleep for
 // minutes is abandoned within a few heartbeats, and the next build completes.
 func TestPipelineCancelFreesWorkerForNextBuild(t *testing.T) {
+	t.Parallel()
 	h := newPipelineHarness(t, 1<<20, 256<<20)
 	h.options.Limits.Auxiliary.Wall = 10 * time.Minute
 	h.options.Limits.Auxiliary.CPU = 10 * time.Minute
@@ -340,6 +344,7 @@ func mustBuildID(t *testing.T, h *pipelineHarness) uuid.UUID {
 
 // The disk budget is enforced while materializing the snapshot, before any sandbox work.
 func TestPipelineDiskQuotaRejectsOversizedSnapshot(t *testing.T) {
+	t.Parallel()
 	h := newPipelineHarness(t, 16<<20, 4<<20)
 	checker, subtask := uuid.New(), uuid.New()
 	h.save(t, func(d *model.Draft) {

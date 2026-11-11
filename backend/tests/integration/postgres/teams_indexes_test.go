@@ -12,7 +12,8 @@ import (
 )
 
 func TestTeamOrganizationNameTrigramMigration(t *testing.T) {
-	pool := getSharedTestPool(t)
+	t.Parallel()
+	pool := getTestPool(t)
 	ctx := context.Background()
 	tx, err := pool.Begin(ctx)
 	require.NoError(t, err)
