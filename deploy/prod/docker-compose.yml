@@ -5,7 +5,7 @@ services:
       options:
         max-size: 10m
         max-file: '3'
-    image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG:-prod}
+    image: ghcr.io/brawler2011/gate-backend:${RELEASE_TAG:?set by the deploy workflow}
     container_name: gate-backend-prod
     hostname: backend
     restart: unless-stopped
@@ -80,7 +80,7 @@ services:
       options:
         max-size: 10m
         max-file: '3'
-    image: ghcr.io/brawler2011/gate-backend:${IMAGE_TAG:-prod}
+    image: ghcr.io/brawler2011/gate-backend:${RELEASE_TAG:?set by the deploy workflow}
     container_name: gate-backend-migrate-prod
     depends_on:
       postgres:
@@ -192,7 +192,7 @@ services:
       options:
         max-size: 10m
         max-file: '3'
-    image: ghcr.io/brawler2011/gate-go-judge:${IMAGE_TAG:-prod}
+    image: ghcr.io/brawler2011/gate-go-judge:${RELEASE_TAG:?set by the deploy workflow}
     container_name: gate-go-judge-prod
     hostname: go-judge
     restart: unless-stopped

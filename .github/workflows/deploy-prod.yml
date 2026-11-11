@@ -3,7 +3,13 @@ name: Deploy Production
 on:
   push:
     branches: [main]
+  # Rollback: run with the commit of a previous release.
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'Full SHA of a main commit to redeploy (default: the head of main)'
+        required: false
+        type: string
 
 concurrency:
   group: deploy-prod
@@ -14,10 +20,10 @@ jobs:
     permissions:
       contents: read
       packages: write
-      actions: write
     uses: ./.github/workflows/deploy.yml
     with:
       environment: prod
       domain_name: steins.ru
       deploy_dir: ~/gate/deploy/prod
+      release: ${{ inputs.release || github.sha }}
     secrets: inherit

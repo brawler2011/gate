@@ -1,18 +1,25 @@
 name: Deploy Template
 
+# Promotes images that PR CI already built and tested; it runs no tests and builds
+# nothing. A new environment needs deploy/<environment>/ (docker-compose.yml,
+# config.yaml), a GitHub environment with its secrets, and a caller workflow.
 on:
   workflow_call:
     inputs:
       environment:
-        description: 'Environment tag (e.g. dev, prod)'
+        description: 'Environment name; selects deploy/<environment>/ and the GitHub environment'
         required: true
         type: string
       domain_name:
-        description: 'Domain name for frontend configuration'
+        description: 'Public domain of the environment'
         required: true
         type: string
       deploy_dir:
         description: 'Target directory on VPS'
+        required: true
+        type: string
+      release:
+        description: 'Commit to deploy; a previous release redeploys (rolls back to) its images'
         required: true
         type: string
 
@@ -20,27 +27,30 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  ci:
-    name: Run CI Checks
-    permissions:
-      contents: read
-      actions: write
-      packages: write
-    uses: ./.github/workflows/ci.yml
-
-  build-backend:
-    needs: ci
+  promote:
+    name: Promote Images
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
     steps:
-      - name: Checkout repository
+      - name: Checkout release
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release }}
+          fetch-depth: 0
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+      # Only merged code is deployed, also when a run is started by hand.
+      - name: Require a commit on main
+        run: git merge-base --is-ancestor HEAD origin/main
+
+      - name: Set up project tools
+        uses: jdx/mise-action@v4
+        with:
+          version: "2026.10.25"
+          install_args: go
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
@@ -49,87 +59,54 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Convert owner to lowercase
+      # CI names images by their sources (see ci.yml). The release tag names the
+      # commit; a release that already has it is reused. If CI images were cleaned
+      # up (unreleased for 30 days), run CI on main and deploy again.
+      - name: Tag tested images as the release
+        id: release
         run: |
-          echo "OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
-        env:
-          OWNER: ${{ github.repository_owner }}
-
-      - name: Extract Docker metadata for Backend
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.OWNER_LC }}/gate-backend
-          tags: |
-            type=raw,value=${{ inputs.environment }}
-
-      - name: Build and push Backend image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  build-judge:
-    needs: ci
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Convert owner to lowercase
-        run: |
-          echo "OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
-        env:
-          OWNER: ${{ github.repository_owner }}
-
-      - name: Extract Docker metadata for Judge
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.OWNER_LC }}/gate-go-judge
-          tags: |
-            type=raw,value=${{ inputs.environment }}
-
-      - name: Build and push Judge image
-        uses: docker/build-push-action@v7
-        with:
-          context: ./judge
-          file: ./judge/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          set -euo pipefail
+          commit="$(git rev-parse HEAD)"
+          tag="release-$commit"
+          backend="ghcr.io/brawler2011/gate-backend:$(git rev-parse 'HEAD^{tree}')"
+          judge="$(go run ./tools/judgeimage)"
+          digest() { docker buildx imagetools inspect "$1" --format '{{json .Manifest}}' | jq -r .digest; }
+          # promote <tested image>: tags that exact manifest as the release of this commit.
+          promote() {
+            release="${1%:*}:$tag"
+            if ! tested="$(digest "$1" 2> /dev/null)"; then
+              if docker buildx imagetools inspect "$release" > /dev/null 2>&1; then
+                echo "$release already exists."
+                return
+              fi
+              echo "::error::$1 was not built by CI for commit $commit; deploy builds nothing."
+              exit 1
+            fi
+            # Copy the manifest as is; the default would wrap it in a new index.
+            docker buildx imagetools create --prefer-index=false --tag "$release" "$1"
+            if [ "$(digest "$release")" != "$tested" ]; then
+              echo "::error::$release does not have the tested digest $tested."
+              exit 1
+            fi
+            echo "$release = $tested"
+          }
+          promote "$backend"
+          promote "$judge"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
   deploy:
-    needs: [build-backend, build-judge]
+    name: Deploy
+    needs: promote
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     permissions:
       contents: read
       packages: read
     steps:
-      - name: Checkout repository
+      - name: Checkout release
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release }}
 
       - name: Copy environment configuration to VPS
         uses: appleboy/scp-action@v0.1.7
@@ -148,7 +125,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOMAIN_NAME: ${{ inputs.domain_name }}
-          IMAGE_TAG: ${{ inputs.environment }}
+          RELEASE_TAG: ${{ needs.promote.outputs.tag }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
@@ -159,7 +136,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          envs: GITHUB_TOKEN,DOMAIN_NAME,IMAGE_TAG,POSTGRES_PASSWORD,REDIS_PASSWORD,S3_ACCESS_KEY,S3_SECRET_KEY,RESEND_API_KEY
+          envs: GITHUB_TOKEN,DOMAIN_NAME,RELEASE_TAG,POSTGRES_PASSWORD,REDIS_PASSWORD,S3_ACCESS_KEY,S3_SECRET_KEY,RESEND_API_KEY
           script: |
             set -eu
             cd ${{ inputs.deploy_dir }}
@@ -190,8 +167,15 @@ jobs:
             EOF
             fi
             echo "$GITHUB_TOKEN" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-            docker compose pull --ignore-buildable
+            echo "Deploying $RELEASE_TAG"
+            docker compose pull
             docker compose up -d --remove-orphans
+            # Release tags never move, so old releases are removed explicitly; a
+            # rollback pulls its images again.
+            docker images --format '{{.Repository}}:{{.Tag}}' \
+              | grep -E '^ghcr\.io/brawler2011/gate-(backend|go-judge):' \
+              | grep -v ":$RELEASE_TAG\$" \
+              | xargs -r docker rmi || true
             docker image prune -f
             echo "Waiting for services to become healthy..."
             HEALTHY=0
