@@ -3,9 +3,9 @@ tmp_dir = ".air"
 
 [build]
 cmd = "go build -o ./.air/backend ./backend"
-entrypoint = ["./.air/backend", "-env=deploy/local/.env"]
+entrypoint = ["./.air/backend", "-config=deploy/local/config.yaml", "-env=deploy/local/.env"]
 include_dir = ["backend"]
-include_file = ["go.mod", "go.sum", "judge/langs.toml"]
+include_file = ["go.mod", "go.sum", "judge/langs.toml", "deploy/local/config.yaml"]
 include_ext = ["go", "mod", "sum", "yaml", "toml", "sql", "sty"]
 exclude_regex = ["_test\\.go$"]
 delay = 500

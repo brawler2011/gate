@@ -11,10 +11,11 @@ import (
 
 func main() {
 	slog.SetDefault(logging.New(os.Stdout))
-	var envFile string
+	var configFile, envFile string
 	var migrate bool
 
-	flag.StringVar(&envFile, "env", "", "path to environment file")
+	flag.StringVar(&configFile, "config", "", "path to the YAML config file")
+	flag.StringVar(&envFile, "env", "", "path to an environment file with secrets for local runs")
 	flag.BoolVar(&migrate, "migrate", false, "run database migrations and exit")
 	flag.Parse()
 
@@ -25,10 +26,15 @@ func main() {
 	}
 
 	var err error
-	if migrate {
+	switch {
+	case migrate:
 		err = runMigrations(envFile)
-	} else {
-		err = runApp(envFile)
+	case configFile == "":
+		slog.Error("missing -config")
+		flag.Usage()
+		os.Exit(2)
+	default:
+		err = runApp(configFile, envFile)
 	}
 
 	if err == nil || errors.Is(err, os.ErrClosed) {

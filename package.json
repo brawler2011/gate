@@ -3,10 +3,8 @@
   "private": true,
   "scripts": {
     "commit:validate": "commitlint --strict",
-    "dev": "bun --env-file=deploy/local/.env vite",
+    "dev": "vite",
     "build": "vite build",
-    "build:local": "bun --env-file=deploy/local/.env run build",
-    "build:prod": "bun --env-file=deploy/prod/.env run build",
     "start": "vite preview",
     "lint": "eslint frontend vite.config.ts && stylelint \"frontend/**/*.css\"",
     "lint:fix": "bun run lint:ts:fix && bun run lint:css:fix",

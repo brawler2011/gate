@@ -21,18 +21,10 @@ beforeAll(async () => {
     }
     return new Response('backend missing', {status: 404});
   }});
-  const previous = process.env.BACKEND_API_URL;
-  process.env.BACKEND_API_URL = `http://127.0.0.1:${backend.port}`;
-  try {
-    vite = await createServer({configFile: `${import.meta.dir}/../../vite.config.ts`,
-      root: `${import.meta.dir}/../..`, optimizeDeps: {noDiscovery: true, include: []}, server: {host: '127.0.0.1', port: 0}});
-  } finally {
-    if (previous === undefined) {
-      delete process.env.BACKEND_API_URL;
-    } else {
-      process.env.BACKEND_API_URL = previous;
-    }
-  }
+  const target = `http://127.0.0.1:${backend.port}`;
+  vite = await createServer({configFile: `${import.meta.dir}/../../vite.config.ts`,
+    root: `${import.meta.dir}/../..`, optimizeDeps: {noDiscovery: true, include: []}, server: {host: '127.0.0.1', port: 0,
+      proxy: {'^/api(?:/|$)': {target, changeOrigin: true}, '^/ws(?:/|$)': {target, ws: true}}}});
   await vite.listen();
   const address = vite.httpServer!.address();
   if (!address || typeof address === 'string') {
