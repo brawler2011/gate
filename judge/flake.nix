@@ -1,13 +1,20 @@
 {
-  description = "Language runtime for the go-judge sandbox";
+  description = "go-judge sandbox image with the language runtime";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    nix2container = {
+      url = "github:nlewo/nix2container";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
 
   outputs =
-    { nixpkgs, ... }:
+    { nixpkgs, nix2container, ... }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+      n2c = nix2container.packages.${system}.nix2container;
 
       # langs.toml is shared with the backend: each language names its nixpkgs package.
       langs = builtins.fromTOML (builtins.readFile ./langs.toml);
@@ -60,21 +67,73 @@
           .${system};
         abi = "linux-gnu";
       };
+
+      # What the backend reads from the sandbox at startup (mounted at /etc/judge).
+      manifest = pkgs.runCommand "judge-manifest" {
+        identity = builtins.toJSON identity;
+        passAsFile = [ "identity" ];
+      } ''
+        mkdir $out
+        cp "$identityPath" $out/identity.json
+        cp ${./langs.toml} $out/langs.toml
+      '';
+
+      # The image root: /opt as mount.yaml expects it, and a writable /tmp.
+      root = pkgs.runCommand "judge-root" { } ''
+        mkdir -p $out/opt $out/tmp
+        ln -s ${runtime} $out/opt/runtime
+        ln -s ${goCache} $out/opt/go-cache
+        ln -s ${manifest} $out/opt/manifest
+        ln -s ${pkgs.go-judge}/bin/go-judge $out/opt/go-judge
+        ln -s ${./mount.yaml} $out/opt/mount.yaml
+      '';
+
+      # One layer for the shared base, one per language, then TeX, the Go cache
+      # and go-judge. Each layer skips the store paths of the layers before it, so
+      # changing a language rebuilds and pushes only its own layer and the small
+      # last one (runtime env, manifest, /opt).
+      layers = builtins.foldl' (built: deps: built ++ [ (n2c.buildLayer { inherit deps; layers = built; }) ]) [ ] (
+        [
+          [
+            pkgs.bash
+            pkgs.coreutils
+          ]
+        ]
+        ++ map (pkg: [ pkg ]) langPackages
+        ++ [
+          [ tex ]
+          [ goCache ]
+          [ pkgs.go-judge ]
+        ]
+      );
+
+      image = n2c.buildImage {
+        name = "gate-go-judge";
+        copyToRoot = root;
+        inherit layers;
+        perms = [
+          {
+            path = root;
+            regex = "/tmp$";
+            mode = "1777";
+          }
+        ];
+        config = {
+          entrypoint = [
+            "/opt/go-judge"
+            "-mount-conf=/opt/mount.yaml"
+          ];
+          # Lets `docker exec` reach the runtime tools for debugging; sandboxed commands get their own PATH.
+          env = [ "PATH=/opt/runtime/bin" ];
+          workingDir = "/opt";
+          exposedPorts = {
+            "5050/tcp" = { };
+            "5051/tcp" = { };
+          };
+        };
+      };
     in
     {
-      packages.${system} = {
-        default = runtime;
-        go-cache = goCache;
-
-        # What the backend reads from the sandbox at startup (mounted at /etc/judge).
-        manifest = pkgs.runCommand "judge-manifest" {
-          identity = builtins.toJSON identity;
-          passAsFile = [ "identity" ];
-        } ''
-          mkdir $out
-          cp "$identityPath" $out/identity.json
-          cp ${./langs.toml} $out/langs.toml
-        '';
-      };
+      packages.${system}.default = image;
     };
 }

@@ -144,22 +144,32 @@ jobs:
           IMAGE: ${{ steps.tag.outputs.image }}
 
       # Forks cannot push; their integration job builds the image instead.
-      - name: Set up Docker Buildx
+      - name: Install Nix
         if: env.PUSH_IMAGES == 'true' && steps.existing.outputs.found != 'true'
-        uses: docker/setup-buildx-action@v4
+        uses: cachix/install-nix-action@v31
 
-      - name: Build judge image
+      # Keeps the store between runs, so only derivations whose inputs changed are
+      # rebuilt or substituted again. One cache per ref; older ones are purged.
+      - name: Cache Nix store
         if: env.PUSH_IMAGES == 'true' && steps.existing.outputs.found != 'true'
-        uses: docker/build-push-action@v7
+        uses: nix-community/cache-nix-action@v7
         with:
-          context: judge
-          file: judge/Dockerfile
-          tags: ${{ steps.tag.outputs.image }}
-          push: ${{ env.PUSH_IMAGES == 'true' }}
-          # One plain manifest per tag: rebuilding identical sources keeps the digest.
-          provenance: false
-          cache-from: type=gha,scope=gojudge
-          cache-to: type=gha,scope=gojudge,mode=max
+          primary-key: nix-judge-${{ hashFiles('judge/**') }}
+          restore-prefixes-first-match: nix-judge-
+          gc-max-store-size-linux: 8G
+          purge: true
+          purge-prefixes: nix-judge-
+          purge-created: 0
+          purge-primary-key: never
+
+      # Pushes the layers as Nix built them (uncompressed, digests known before the
+      # push), so the registry skips existing layers and identical sources give the
+      # same image digest.
+      - name: Build and push judge image
+        if: env.PUSH_IMAGES == 'true' && steps.existing.outputs.found != 'true'
+        run: nix run ./judge#default.copyTo -- --preserve-digests "docker://$IMAGE"
+        env:
+          IMAGE: ${{ steps.tag.outputs.image }}
 
   backend-image:
     name: Backend Image
