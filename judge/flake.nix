@@ -22,6 +22,10 @@
 
       go = pkgs.${langs.go.package};
 
+      # A file of this directory by content only: copying the path itself would keep
+      # the checkout's file mode, and a different mode gives a different image.
+      source = name: pkgs.writeText name (builtins.readFile (./. + "/${name}"));
+
       # pdflatex with the packages needed for contest booklets (olymp.sty, Cyrillic).
       # metafont generates the Cyrillic (LH) font metrics on demand.
       tex = pkgs.texliveBasic.withPackages (
@@ -49,6 +53,11 @@
       goCache = pkgs.runCommand "go-std-cache" { nativeBuildInputs = [ go ]; } ''
         export HOME=$TMPDIR GOCACHE=$out CGO_ENABLED=0
         go build std
+        # Go stamps each action entry and trim.txt with the current time. Fix both,
+        # so the same toolchain gives the same cache and image layer. Entries keep
+        # their fixed width (the time is the last 20 characters).
+        find $out -name '*-a' -exec sed -i -E 's/.{20}$/                   0/' {} +
+        echo 0 > $out/trim.txt
       '';
 
       # Toolchain identity pinned into every problem build. The store paths change
@@ -75,7 +84,7 @@
       } ''
         mkdir $out
         cp "$identityPath" $out/identity.json
-        cp ${./langs.toml} $out/langs.toml
+        cp ${source "langs.toml"} $out/langs.toml
       '';
 
       # The image root: /opt as mount.yaml expects it, and a writable /tmp.
@@ -85,7 +94,7 @@
         ln -s ${goCache} $out/opt/go-cache
         ln -s ${manifest} $out/opt/manifest
         ln -s ${pkgs.go-judge}/bin/go-judge $out/opt/go-judge
-        ln -s ${./mount.yaml} $out/opt/mount.yaml
+        ln -s ${source "mount.yaml"} $out/opt/mount.yaml
       '';
 
       # One layer for the shared base, one per language, then TeX, the Go cache
