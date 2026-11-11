@@ -96,6 +96,7 @@ type IntegrationTestSuite struct {
 	problemsRepo      *pgstore.ProblemsRepo
 	storage           storage.Storage
 	objectStore       *storage.S3Storage
+	bucket            string
 	problemDrafts     *pgstore.ProblemDraftsRepo
 	rateRedis         *miniredis.Miniredis
 	limiter           *ratelimit.Limiter
@@ -159,7 +160,7 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 		s.dbPool.Close()
 	}
 	if s.pgContainer != nil {
-		if err := s.pgContainer.Terminate(s.ctx); err != nil {
+		if err := terminate(s.pgContainer); err != nil {
 			log.Printf("failed to terminate container: %s", err)
 		}
 	}
@@ -207,10 +208,10 @@ func (s *IntegrationTestSuite) initApp() {
 	quotas := problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 100, Subtasks: 100}
 	problemDrafts := pgstore.NewProblemDraftsRepo(s.dbPool, quotas, time.Minute)
 	// Problem objects live in a real S3-compatible store, as in production.
-	objectStore := newSeaweedBackedS3Storage(s.T())
-	s.objectStore, s.problemDrafts = objectStore, problemDrafts
-	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: objectsBucket, TempDir: diskTempDir(s.T()), MaxArchiveBytes: 1 << 30, MaxEntries: 1000}
-	draftUC := &problems.DraftUseCase{DraftQuotas: quotas, Organizations: s.organizationsRepo, Templates: packagesRepo, PackageContent: packageContent, Repo: problemDrafts, Problems: s.problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: objectsBucket, TempDir: diskTempDir(s.T()), UploadTTL: time.Minute, ObjectBytes: 32 << 20, BuildOptions: testBuildOptions(s.T())}
+	objectStore, bucket := newSeaweedBackedS3Storage(s.T())
+	s.objectStore, s.bucket, s.problemDrafts = objectStore, bucket, problemDrafts
+	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: bucket, TempDir: diskTempDir(s.T()), MaxArchiveBytes: 1 << 30, MaxEntries: 1000}
+	draftUC := &problems.DraftUseCase{DraftQuotas: quotas, Organizations: s.organizationsRepo, Templates: packagesRepo, PackageContent: packageContent, Repo: problemDrafts, Problems: s.problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: bucket, TempDir: diskTempDir(s.T()), UploadTTL: time.Minute, ObjectBytes: 32 << 20, BuildOptions: testBuildOptions(s.T())}
 	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool), s.organizationsRepo, permissionsUC, draftUC, packagesRepo, packageContent)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Permissions: permissionsUC}
 	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissionsUC)

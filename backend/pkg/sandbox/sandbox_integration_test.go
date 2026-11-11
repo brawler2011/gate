@@ -57,7 +57,7 @@ func TestIntegrationSandbox(t *testing.T) {
 		t.Fatalf("Failed to start go-judge container: %v", err)
 	}
 	defer func() {
-		if err := container.Terminate(ctx); err != nil {
+		if err := container.Terminate(context.Background(), testcontainers.StopTimeout(0)); err != nil {
 			t.Errorf("Failed to terminate container: %v", err)
 		}
 	}()

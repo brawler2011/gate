@@ -100,7 +100,7 @@ func newNATSJetStream(t *testing.T) (jetstream.JetStream, *nats.Conn) {
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
-		_ = container.Terminate(context.Background())
+		_ = terminate(container)
 	})
 
 	host, err := container.Host(ctx)

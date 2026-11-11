@@ -59,7 +59,7 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 		Image: "nats:2.10-alpine", ExposedPorts: []string{"4222/tcp"}, Cmd: []string{"-js"}, WaitingFor: wait.ForListeningPort("4222/tcp"),
 	}, Started: true})
 	s.Require().NoError(err)
-	defer func() { s.NoError(container.Terminate(context.Background())) }()
+	defer func() { s.NoError(terminate(container)) }()
 	host, err := container.Host(s.ctx)
 	s.Require().NoError(err)
 	port, err := container.MappedPort(s.ctx, "4222/tcp")

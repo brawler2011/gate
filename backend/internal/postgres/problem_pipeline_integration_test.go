@@ -42,7 +42,7 @@ func startPipelineServices(t *testing.T) pipelineServices {
 		Cmd:        []string{"server", "-s3", "-filer", "-ip.bind=0.0.0.0", "-volume.max=100", "-master.volumeSizeLimitMB=1024", "-dir=/data"},
 		WaitingFor: wait.ForHTTP("/").WithPort("8333/tcp").WithStartupTimeout(time.Minute)}, Started: true})
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, s3container.Terminate(context.Background())) })
+	t.Cleanup(func() { require.NoError(t, s3container.Terminate(context.Background(), testcontainers.StopTimeout(0))) })
 	s3host, err := s3container.Host(ctx)
 	require.NoError(t, err)
 	s3port, err := s3container.MappedPort(ctx, "8333/tcp")
@@ -61,7 +61,7 @@ func startPipelineServices(t *testing.T) pipelineServices {
 	}
 	judge, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: request, Started: true})
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, judge.Terminate(context.Background())) })
+	t.Cleanup(func() { require.NoError(t, judge.Terminate(context.Background(), testcontainers.StopTimeout(0))) })
 	host, err := judge.Host(ctx)
 	require.NoError(t, err)
 	hp, err := judge.MappedPort(ctx, "5050/tcp")

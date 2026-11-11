@@ -11,22 +11,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestS3ClientOperations(t *testing.T) {
-	ctx, s3Client := context.Background(), newSeaweedBackedS3Storage(t)
-
-	bucket := "test-bucket-" + uuid.New().String()
-
-	err := s3Client.EnsureBucket(ctx, bucket)
-	require.NoError(t, err)
+	ctx := context.Background()
+	s3Client, bucket := newSeaweedBackedS3Storage(t)
 
 	testContent := []byte("Hello, S3!")
 	testKey := "test-file.txt"
-	err = s3Client.UploadFile(ctx, bucket, testKey, bytes.NewReader(testContent), "text/plain")
+	err := s3Client.UploadFile(ctx, bucket, testKey, bytes.NewReader(testContent), "text/plain")
 	require.NoError(t, err)
 
 	body, _, err := s3Client.DownloadFile(ctx, bucket, testKey, nil)

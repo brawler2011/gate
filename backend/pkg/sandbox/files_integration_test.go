@@ -37,7 +37,7 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	}
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: req, Started: true})
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, c.Terminate(context.Background())) })
+	t.Cleanup(func() { require.NoError(t, c.Terminate(context.Background(), testcontainers.StopTimeout(0))) })
 	host, err := c.Host(ctx)
 	require.NoError(t, err)
 	httpPort, err := c.MappedPort(ctx, "5050/tcp")
