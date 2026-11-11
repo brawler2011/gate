@@ -82,7 +82,9 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	store, bucket := newSeaweedBackedS3Storage(t)
 	client, files := newGoJudge(t)
 	// The toolchain identity and languages come from the judge image, as in production.
-	image, err := sandbox.ReadImage(ctx, client)
+	imageCtx, cancel := context.WithTimeout(ctx, e2eSandboxTimout)
+	image, err := sandbox.ReadImage(imageCtx, client)
+	cancel()
 	require.NoError(t, err)
 	source, err := sandbox.LoadConfig("../../../judge/langs.toml")
 	require.NoError(t, err)

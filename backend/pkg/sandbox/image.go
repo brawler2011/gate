@@ -3,11 +3,15 @@ package sandbox
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"time"
 
 	pb "github.com/criyle/go-judge/pb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // manifestDir is where the judge image mounts its manifest inside the sandbox (judge/mount.yaml).
@@ -30,20 +34,31 @@ type Image struct {
 	Config   *Config
 }
 
-// ReadImage reads the manifest the judge image was built with, retrying until
-// go-judge accepts requests or ctx ends.
+// ReadImage reads the manifest the judge image was built with. It waits while
+// go-judge is unreachable (still starting) until ctx ends; any other error, such
+// as a missing or invalid manifest, fails at once.
 func ReadImage(ctx context.Context, client *Client) (Image, error) {
 	for {
 		image, err := readImage(ctx, client)
 		if err == nil {
 			return image, nil
 		}
+		if !unavailable(err) {
+			return Image{}, fmt.Errorf("read judge image manifest: %w", err)
+		}
+		slog.Warn("go-judge is not reachable yet; retrying", "error", err)
 		select {
 		case <-ctx.Done():
-			return Image{}, fmt.Errorf("read judge image manifest: %w", err)
+			return Image{}, fmt.Errorf("read judge image manifest: go-judge unreachable: %w", err)
 		case <-time.After(time.Second):
 		}
 	}
+}
+
+// unavailable reports whether err means go-judge could not be reached.
+func unavailable(err error) bool {
+	var s interface{ GRPCStatus() *status.Status }
+	return errors.As(err, &s) && s.GRPCStatus().Code() == codes.Unavailable
 }
 
 func readImage(ctx context.Context, client *Client) (Image, error) {
