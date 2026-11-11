@@ -1,6 +1,6 @@
 //go:build integration
 
-package postgres
+package postgres_test
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
@@ -70,7 +71,7 @@ func startPipelineServices(t *testing.T) pipelineServices {
 	t.Cleanup(func() { require.NoError(t, client.Close()) })
 	files, err := sandbox.NewFileTransport("http://"+host+":"+hp.Port(), &http.Client{Timeout: time.Minute})
 	require.NoError(t, err)
-	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml")
+	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml")
 	require.NoError(t, err)
 	return pipelineServices{store: store, client: client, files: files, langs: cfg.Langs}
 }
@@ -107,7 +108,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	compile.Processes = 150
 	environment := model.Toolchain{Digest: "sha256:" + strings.Repeat("a", 64), Architecture: "amd64", ABI: "linux-gnu", Languages: cfg.Langs}
 	limits := model.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux}
-	_, err = repo.EnqueueBuild(ctx, mutationKey(org, "build", d.Revision), d.ProblemID, d.Revision, ProblemBuildOptions{Toolchain: environment, Limits: limits, MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute})
+	_, err = repo.EnqueueBuild(ctx, mutationKey(org, "build", d.Revision), d.ProblemID, d.Revision, postgres.ProblemBuildOptions{Toolchain: environment, Limits: limits, MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute})
 	require.NoError(t, err)
 	d.Title = "Changed after enqueue"
 	d.Files["solutions/main.cpp"] = "invalid later source"

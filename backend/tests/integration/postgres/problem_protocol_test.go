@@ -1,6 +1,6 @@
 //go:build integration
 
-package postgres
+package postgres_test
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/postgres"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -18,15 +19,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testBuildOptions() ProblemBuildOptions {
-	return ProblemBuildOptions{
+func testBuildOptions() postgres.ProblemBuildOptions {
+	return postgres.ProblemBuildOptions{
 		Toolchain:   model.Toolchain{Digest: "sha256:" + strings.Repeat("a", 64), Architecture: "amd64", ABI: "linux-gnu", Languages: map[string]sandbox.Language{"cpp": {Type: "compiler"}}},
 		MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute,
 	}
 }
 
 // buildableFixture is a saved, buildable draft that references one available object.
-func buildableFixture(t *testing.T) (context.Context, *pgxpool.Pool, *ProblemDraftsRepo, uuid.UUID, model.Draft, uuid.UUID) {
+func buildableFixture(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.ProblemDraftsRepo, uuid.UUID, model.Draft, uuid.UUID) {
 	t.Helper()
 	ctx, pool, repo, org, d := draftFixture(t)
 	oid := insertAvailableObject(t, ctx, pool, org)
@@ -38,7 +39,7 @@ func buildableFixture(t *testing.T) (context.Context, *pgxpool.Pool, *ProblemDra
 	return ctx, pool, repo, org, d, oid
 }
 
-func enqueue(t *testing.T, ctx context.Context, repo *ProblemDraftsRepo, org uuid.UUID, d model.Draft) {
+func enqueue(t *testing.T, ctx context.Context, repo *postgres.ProblemDraftsRepo, org uuid.UUID, d model.Draft) {
 	t.Helper()
 	_, err := repo.EnqueueBuild(ctx, mutationKey(org, "build", d.Revision), d.ProblemID, d.Revision, testBuildOptions())
 	require.NoError(t, err)
@@ -344,7 +345,7 @@ func TestPackageRetentionKeepsPinnedPackages(t *testing.T) {
 	f.grantRead(t)
 	require.NoError(t, f.create(f.original))
 	unused := f.pack(t, f.problem, time.Now().Add(-2*time.Hour))
-	drafts := NewProblemDraftsRepo(f.pool, model.DraftQuotas{Files: 10, Tests: 10, Components: 10, Subtasks: 10}, time.Minute)
+	drafts := postgres.NewProblemDraftsRepo(f.pool, model.DraftQuotas{Files: 10, Tests: 10, Components: 10, Subtasks: 10}, time.Minute)
 
 	var unusedObject uuid.UUID
 	require.NoError(t, f.pool.QueryRow(f.ctx, `SELECT object_id FROM problem_packages WHERE id=$1`, unused).Scan(&unusedObject))

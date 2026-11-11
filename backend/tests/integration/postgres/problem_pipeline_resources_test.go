@@ -1,6 +1,6 @@
 //go:build integration
 
-package postgres
+package postgres_test
 
 import (
 	"context"
@@ -18,6 +18,7 @@ import (
 	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	"github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/internal/problems"
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -44,13 +45,13 @@ func (f fixedProblem) GetProblemById(_ context.Context, id uuid.UUID) (model.Pro
 type pipelineHarness struct {
 	ctx      context.Context
 	pool     *pgxpool.Pool
-	repo     *ProblemDraftsRepo
+	repo     *postgres.ProblemDraftsRepo
 	org      uuid.UUID
 	draft    model.Draft
 	services pipelineServices
 	work     string
 	limits   model.BuildLimits
-	options  ProblemBuildOptions
+	options  postgres.ProblemBuildOptions
 	uploads  *problems.DraftUseCase
 }
 
@@ -63,7 +64,7 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 	compile := aux
 	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 10*time.Second, 30*time.Second, 512<<20, 150
 	limits := model.BuildLimits{DiskBytes: bytesize.Size(diskBytes), FileCount: 100, ObjectBytes: bytesize.Size(objectBytes), TestOutputBytes: bytesize.Size(objectBytes), Compile: compile, Auxiliary: aux}
-	options := ProblemBuildOptions{
+	options := postgres.ProblemBuildOptions{
 		Toolchain: model.Toolchain{Digest: "sha256:" + strings.Repeat("a", 64), Architecture: "amd64", ABI: "linux-gnu", Languages: services.langs},
 		Limits:    limits, MaxAttempts: 1, Duration: 5 * time.Minute, Lease: 3 * time.Second,
 	}

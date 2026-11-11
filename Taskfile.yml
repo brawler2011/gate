@@ -73,9 +73,15 @@ tasks:
       - bun test
 
   test:be:
-    desc: Run backend unit and repository tests
+    desc: Run backend unit tests
     cmds:
       - go test -v ./...
+
+  test:be:all:
+    desc: Run backend unit and integration tests
+    cmds:
+      - task: test:be
+      - task: test:be:integration
 
   judge:image:
     desc: Make the go-judge image for the current judge/ sources available locally (pull, else build)
@@ -85,10 +91,10 @@ tasks:
         docker image inspect "$ref" > /dev/null 2>&1 || docker pull "$ref" || docker build -t "$ref" judge
 
   test:be:integration:
-    desc: Run all backend tests, including integration tests
+    desc: Run backend integration tests, which live in backend/tests/integration
     deps: [judge:image]
     cmds:
-      - go test -v -timeout 15m -tags=integration {{.CLI_ARGS | default "./..."}}
+      - go test -v -timeout 15m -tags=integration {{.CLI_ARGS | default "./backend/tests/integration/..."}}
 
   bench:be:
     desc: Run PostgreSQL and scoreboard performance benchmarks

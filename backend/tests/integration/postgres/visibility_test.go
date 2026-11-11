@@ -1,12 +1,16 @@
 //go:build integration
 
-package postgres
+package postgres_test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brawler2011/gate/backend/internal/postgres"
 
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
@@ -20,23 +24,61 @@ import (
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 )
 
-type metadataCountingDB struct {
-	*pgxpool.Pool
-	queries []string
+// scopeRow is the shape shared by the generated scope query rows.
+type scopeRow struct {
+	TotalItems int64
+	Resource   []byte
 }
 
-func (db *metadataCountingDB) Query(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
-	db.queries = append(db.queries, query)
-	return db.Pool.Query(ctx, query, args...)
+// emptyScopeRow reports the single null resource SQL emits for an empty page,
+// including when the offset exceeds the total.
+func emptyScopeRow(data []byte) bool { return len(data) == 0 || string(data) == "null" }
+
+// scopedIDs decodes a scope page read straight from SQL into resource IDs and the total.
+func scopedIDs(rows []scopeRow) ([]uuid.UUID, int64, error) {
+	ids := make([]uuid.UUID, 0, len(rows))
+	var total int64
+	for _, row := range rows {
+		total = row.TotalItems
+		if emptyScopeRow(row.Resource) {
+			continue
+		}
+		var resource struct {
+			ID uuid.UUID `json:"id"`
+		}
+		if err := json.Unmarshal(row.Resource, &resource); err != nil {
+			return nil, 0, fmt.Errorf("decode scoped resource: %w", err)
+		}
+		ids = append(ids, resource.ID)
+	}
+	return ids, total, nil
 }
-func (db *metadataCountingDB) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
-	db.queries = append(db.queries, query)
-	return db.Pool.QueryRow(ctx, query, args...)
+
+func scopeProblems(ctx context.Context, q *sqlc.Queries, params sqlc.ScopeProblemsParams) ([]uuid.UUID, int64, error) {
+	rows, err := q.ScopeProblems(ctx, params)
+	if err != nil {
+		return nil, 0, fmt.Errorf("scope problems: %w", err)
+	}
+	converted := make([]scopeRow, len(rows))
+	for i, row := range rows {
+		converted[i] = scopeRow(row)
+	}
+	return scopedIDs(converted)
+}
+
+func scopeContests(ctx context.Context, q *sqlc.Queries, params sqlc.ScopeContestsParams) ([]uuid.UUID, int64, error) {
+	rows, err := q.ScopeContests(ctx, params)
+	if err != nil {
+		return nil, 0, fmt.Errorf("scope contests: %w", err)
+	}
+	converted := make([]scopeRow, len(rows))
+	for i, row := range rows {
+		converted[i] = scopeRow(row)
+	}
+	return scopedIDs(converted)
 }
 
 // All scopes, details and future capability projections use the same persisted
@@ -132,25 +174,27 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 	for _, team := range []uuid.UUID{closed, secret} {
 		exec(`INSERT INTO team_members(team_id,user_id,role) VALUES($1,$2,'member')`, team, users["multiple teams"].Id)
 	}
+	recordingPool, recorder := newRecordingPool(t)
+	teamsRepo := postgres.NewTeamsRepo(recordingPool)
 	for name, u := range users {
 		t.Run(name, func(t *testing.T) {
 			actorCtx := m.WithUser(ctx, u)
 			in := m.PolicyInput{Actor: u, Now: now}
-			db := &metadataCountingDB{Pool: pool}
-			q := sqlc.New(db)
-			factsRepo := &PolicyFactsRepo{q: q}
+			recorder.reset()
+			q := sqlc.New(recordingPool)
+			factsRepo := postgres.NewPolicyFactsRepo(recordingPool)
 			pf, err := factsRepo.LoadProblemFacts(actorCtx, u.Id, problemIDs)
 			require.NoError(t, err)
 			cf, err := factsRepo.LoadContestFacts(actorCtx, u.Id, contestIDs)
 			require.NoError(t, err)
 			tf, err := factsRepo.LoadTeamFacts(actorCtx, u.Id, teamIDs)
 			require.NoError(t, err)
-			require.Len(t, db.queries, 3, "one query per fact type, independent of page length")
+			require.Len(t, recorder.recorded(), 3, "one query per fact type, independent of page length")
 			empty, err := factsRepo.LoadProblemFacts(actorCtx, u.Id, nil)
 			require.NoError(t, err)
 			require.Empty(t, empty)
-			require.Len(t, db.queries, 3)
-			metadataLegacy := access.NewPermissionsUseCase(nil, &UsersRepo{queries: q}, nil, nil, nil)
+			require.Len(t, recorder.recorded(), 3)
+			metadataLegacy := access.NewPermissionsUseCase(nil, postgres.NewUsersRepo(recordingPool), nil, nil, nil)
 			permissions := access.NewMetadataPermissions(metadataLegacy, factsRepo)
 			wantP, wantC, wantT := []uuid.UUID{}, []uuid.UUID{}, []uuid.UUID{}
 			for i, p := range problemIDs {
@@ -198,18 +242,11 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 			require.NoError(t, err)
 			cs, ct, err := scopeContests(actorCtx, q, sqlc.ScopeContestsParams{ViewerID: &u.Id, Now: now, OrganizationID: &org, PageSize: 100})
 			require.NoError(t, err)
-			gotP, gotC := []uuid.UUID{}, []uuid.UUID{}
-			for _, p := range ps {
-				gotP = append(gotP, p.ID)
-			}
-			for _, c := range cs {
-				gotC = append(gotC, c.ID)
-			}
-			require.ElementsMatch(t, wantP, gotP)
-			require.ElementsMatch(t, wantC, gotC)
+			require.ElementsMatch(t, wantP, ps)
+			require.ElementsMatch(t, wantC, cs)
 			require.EqualValues(t, len(wantP), pt)
 			require.EqualValues(t, len(wantC), ct)
-			ts, tt, err := (&TeamsRepo{q: q}).ListTeams(actorCtx, &organizationsmodel.TeamsFilter{OrganizationID: &org, Page: 1, PageSize: 100}, u.Id)
+			ts, tt, err := teamsRepo.ListTeams(actorCtx, &organizationsmodel.TeamsFilter{OrganizationID: &org, Page: 1, PageSize: 100}, u.Id)
 			require.NoError(t, err)
 			gotT := []uuid.UUID{}
 			for _, team := range ts {
@@ -220,7 +257,7 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 			require.ElementsMatch(t, wantT, gotT)
 			require.GreaterOrEqual(t, int(tt), len(wantT))
 
-			allTeams, _, err := (&TeamsRepo{q: q}).ListTeams(actorCtx, &organizationsmodel.TeamsFilter{Page: 1, PageSize: 100}, u.Id)
+			allTeams, _, err := teamsRepo.ListTeams(actorCtx, &organizationsmodel.TeamsFilter{Page: 1, PageSize: 100}, u.Id)
 			require.NoError(t, err)
 			allIDs := []uuid.UUID{}
 			for _, team := range allTeams {
@@ -229,7 +266,7 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 				}
 			}
 			require.ElementsMatch(t, wantT, allIDs)
-			et, etTotal, err := (&TeamsRepo{q: q}).ListTeams(actorCtx, &organizationsmodel.TeamsFilter{OrganizationID: &org, Page: 100, PageSize: 1}, u.Id)
+			et, etTotal, err := teamsRepo.ListTeams(actorCtx, &organizationsmodel.TeamsFilter{OrganizationID: &org, Page: 100, PageSize: 1}, u.Id)
 			require.NoError(t, err)
 			require.Empty(t, et)
 			require.Equal(t, tt, etTotal)
@@ -243,9 +280,9 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 				require.Equal(t, access.RequireTeam(in, tf[team], m.ActionViewTeam) == nil, allowed)
 			}
 			// Dashboard short lists use identical scopes before their LIMIT as well.
-			dp, err := (&ProblemsRepo{queries: q}).ListDashboardProblems(actorCtx, u.Id, 100)
+			dp, err := postgres.NewProblemsRepo(recordingPool).ListDashboardProblems(actorCtx, u.Id, 100)
 			require.NoError(t, err)
-			dc, err := (&ContestsRepo{queries: q}).ListDashboardContests(actorCtx, u.Id, 100)
+			dc, err := postgres.NewContestsRepo(recordingPool).ListDashboardContests(actorCtx, u.Id, 100)
 			require.NoError(t, err)
 			dashboardP, dashboardC := []uuid.UUID{}, []uuid.UUID{}
 			for _, p := range dp {
@@ -263,25 +300,36 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 
 			// Team visibility is not resource visibility (#145), including direct and
 			// other-team grants, duplicate grants, and foreign organization rejection.
-			tp, total, err := (&TeamsRepo{q: q}).GetTeamProblems(actorCtx, closed, u.Id, paging.Request{})
+			tp, total, err := teamsRepo.GetTeamProblems(actorCtx, closed, u.Id, paging.Request{})
 			require.NoError(t, err)
 			require.Len(t, tp, count)
 			require.EqualValues(t, count, total)
-			tc, total, err := (&TeamsRepo{q: q}).GetTeamContests(actorCtx, closed, u.Id, paging.Request{})
+			tc, total, err := teamsRepo.GetTeamContests(actorCtx, closed, u.Id, paging.Request{})
 			require.NoError(t, err)
 			require.Len(t, tc, count)
 			require.EqualValues(t, count, total)
 			// One statement must preserve totals on pages beyond the end.
-			ep, total, err := scopeProblems(actorCtx, q, sqlc.ScopeProblemsParams{ViewerID: &u.Id, Now: now, OrganizationID: &org, PageSize: 1, PageOffset: 100})
+			ep, scopeTotal, err := scopeProblems(actorCtx, q, sqlc.ScopeProblemsParams{ViewerID: &u.Id, Now: now, OrganizationID: &org, PageSize: 1, PageOffset: 100})
 			require.NoError(t, err)
 			require.Empty(t, ep)
-			require.EqualValues(t, count, total)
-			ec, total, err := scopeContests(actorCtx, q, sqlc.ScopeContestsParams{ViewerID: &u.Id, Now: now, OrganizationID: &org, PageSize: 1, PageOffset: 100})
+			require.EqualValues(t, count, scopeTotal)
+			ec, scopeTotal, err := scopeContests(actorCtx, q, sqlc.ScopeContestsParams{ViewerID: &u.Id, Now: now, OrganizationID: &org, PageSize: 1, PageOffset: 100})
 			require.NoError(t, err)
 			require.Empty(t, ec)
+			require.EqualValues(t, count, scopeTotal)
+			// The repositories must drop the null row of a page beyond the end
+			// rather than decode it into an empty resource.
+			beyondEnd := paging.Request{Page: 100, PageSize: 1}
+			tp, total, err = teamsRepo.GetTeamProblems(actorCtx, closed, u.Id, beyondEnd)
+			require.NoError(t, err)
+			require.Empty(t, tp)
+			require.EqualValues(t, count, total)
+			tc, total, err = teamsRepo.GetTeamContests(actorCtx, closed, u.Id, beyondEnd)
+			require.NoError(t, err)
+			require.Empty(t, tc)
 			require.EqualValues(t, count, total)
 			// Authorization queries must contain neither transactions nor row locks.
-			for _, query := range db.queries {
+			for _, query := range recorder.recorded() {
 				upper := strings.ToUpper(query)
 				require.NotContains(t, upper, "FOR UPDATE")
 				require.NotContains(t, upper, "FOR SHARE")
@@ -292,13 +340,13 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 	// Public wrappers and ordinary filters must only narrow visibility.
 	outsider := users["outsider"]
 	actorCtx := m.WithUser(ctx, outsider)
-	list, err := NewProblemsRepo(pool).ListProblems(actorCtx, &problemsmodel.ProblemsFilter{OrganizationID: &org, ViewerID: &outsider.Id, Page: 1, PageSize: 100})
+	list, err := postgres.NewProblemsRepo(pool).ListProblems(actorCtx, &problemsmodel.ProblemsFilter{OrganizationID: &org, ViewerID: &outsider.Id, Page: 1, PageSize: 100})
 	require.NoError(t, err)
 	require.Len(t, list.Problems, 1)
-	contests, err := NewContestsRepo(pool).ListOrganizationContests(actorCtx, "parity_"+suffix, "", 1, 100)
+	contests, err := postgres.NewContestsRepo(pool).ListOrganizationContests(actorCtx, "parity_"+suffix, "", 1, 100)
 	require.NoError(t, err)
 	require.Len(t, contests.Contests, 1)
-	_, err = NewContestsRepo(pool).ListPublicContests(actorCtx, contestsmodel.PublicContestsFilter{})
+	_, err = postgres.NewContestsRepo(pool).ListPublicContests(actorCtx, contestsmodel.PublicContestsFilter{})
 	require.NoError(t, err)
 
 	t.Run("NULL viewer never disables visibility", func(t *testing.T) {
@@ -306,12 +354,12 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 1, total)
 		require.Len(t, ps, 1)
-		require.Equal(t, problemIDs[0], ps[0].ID)
+		require.Equal(t, problemIDs[0], ps[0])
 		cs, total, err := scopeContests(ctx, sqlc.New(pool), sqlc.ScopeContestsParams{Now: now, OrganizationID: &org, PageSize: 100})
 		require.NoError(t, err)
 		require.EqualValues(t, 1, total)
 		require.Len(t, cs, 1)
-		require.Equal(t, contestIDs[0], cs[0].ID)
+		require.Equal(t, contestIDs[0], cs[0])
 		teams, err := sqlc.New(pool).ScopeTeams(ctx, sqlc.ScopeTeamsParams{Now: now, OrganizationID: &org, PageSize: 100})
 		require.NoError(t, err)
 		require.Len(t, teams, 1)
@@ -339,20 +387,20 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 		lock(`SELECT team_id FROM team_members WHERE user_id=$1 FOR UPDATE`, actor.Id)
 		readCtx, cancel := context.WithTimeout(m.WithUser(ctx, actor), 2*time.Second)
 		defer cancel()
-		legacy := access.NewPermissionsUseCase(nil, NewUsersRepo(pool), nil, nil, nil)
-		permissions := access.NewMetadataPermissions(legacy, NewPolicyFactsRepo(pool))
+		legacy := access.NewPermissionsUseCase(nil, postgres.NewUsersRepo(pool), nil, nil, nil)
+		permissions := access.NewMetadataPermissions(legacy, postgres.NewPolicyFactsRepo(pool))
 		allowed, err := permissions.HasProblemPermission(readCtx, problemIDs[1], actor.Id, m.ActionViewProblem)
 		require.NoError(t, err)
 		require.True(t, allowed)
 		allowed, err = permissions.HasContestPermission(readCtx, contestIDs[1], actor.Id, m.ActionViewContest)
 		require.NoError(t, err)
 		require.True(t, allowed)
-		teamUC := organizations.NewTeamsUseCase(NewTeamsRepo(pool), permissions, nil, permissions)
+		teamUC := organizations.NewTeamsUseCase(postgres.NewTeamsRepo(pool), permissions, nil, permissions)
 		_, err = teamUC.GetTeam(readCtx, secret, actor.Id)
 		require.NoError(t, err)
-		_, err = NewProblemsRepo(pool).ListProblems(readCtx, &problemsmodel.ProblemsFilter{OrganizationID: &org, ViewerID: &actor.Id, Page: 1, PageSize: 100})
+		_, err = postgres.NewProblemsRepo(pool).ListProblems(readCtx, &problemsmodel.ProblemsFilter{OrganizationID: &org, ViewerID: &actor.Id, Page: 1, PageSize: 100})
 		require.NoError(t, err)
-		_, err = NewContestsRepo(pool).ListOrganizationContests(readCtx, "parity_"+suffix, "", 1, 100)
+		_, err = postgres.NewContestsRepo(pool).ListOrganizationContests(readCtx, "parity_"+suffix, "", 1, 100)
 		require.NoError(t, err)
 	})
 
@@ -364,8 +412,8 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 		}
 		actor := users["outsider"]
 		actorCtx := m.WithUser(ctx, actor)
-		facts := NewPolicyFactsRepo(pool)
-		permissions := access.NewMetadataPermissions(access.NewPermissionsUseCase(nil, NewUsersRepo(pool), nil, nil, nil), facts)
+		facts := postgres.NewPolicyFactsRepo(pool)
+		permissions := access.NewMetadataPermissions(access.NewPermissionsUseCase(nil, postgres.NewUsersRepo(pool), nil, nil, nil), facts)
 		verify := func() {
 			t.Helper()
 			pf, err := facts.LoadProblemFacts(actorCtx, actor.Id, problemIDs)
@@ -378,10 +426,10 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 			require.NoError(t, err)
 			gotP, gotC := map[uuid.UUID]bool{}, map[uuid.UUID]bool{}
 			for _, p := range ps {
-				gotP[p.ID] = true
+				gotP[p] = true
 			}
 			for _, c := range cs {
-				gotC[c.ID] = true
+				gotC[c] = true
 			}
 			in := m.PolicyInput{Actor: actor, Now: now}
 			for i, p := range problemIDs {
@@ -412,7 +460,7 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 		allowed, err := permissions.HasTeamPermission(actorCtx, closed, actor.Id, m.ActionViewTeam)
 		require.NoError(t, err)
 		require.False(t, allowed)
-		ts, _, err := NewTeamsRepo(pool).ListTeams(actorCtx, &organizationsmodel.TeamsFilter{OrganizationID: &org, Page: 1, PageSize: 100}, actor.Id)
+		ts, _, err := postgres.NewTeamsRepo(pool).ListTeams(actorCtx, &organizationsmodel.TeamsFilter{OrganizationID: &org, Page: 1, PageSize: 100}, actor.Id)
 		require.NoError(t, err)
 		for _, team := range ts {
 			require.NotEqual(t, closed, team.ID)

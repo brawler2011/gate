@@ -1,6 +1,6 @@
 //go:build integration
 
-package sandbox
+package sandbox_test
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/tests/judgeimage"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -66,19 +67,19 @@ func TestIntegrationSandbox(t *testing.T) {
 	t.Logf("go-judge container started at gRPC address: %s", grpcAddr)
 
 	// Create gRPC client
-	client, err := NewClient(grpcAddr)
+	client, err := sandbox.NewClient(grpcAddr)
 	if err != nil {
 		t.Fatalf("Failed to create sandbox client: %v", err)
 	}
 	defer client.Close()
 
 	// Load languages config
-	cfg, err := LoadConfig("../../../judge/langs.toml")
+	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml")
 	if err != nil {
 		t.Fatalf("Failed to load languages config: %v", err)
 	}
 
-	sb := NewSandbox(client, cfg)
+	sb := sandbox.NewSandbox(client, cfg)
 
 	// Wait for go-judge gRPC server to be fully ready
 	for i := 0; i < 30; i++ {
@@ -92,7 +93,7 @@ func TestIntegrationSandbox(t *testing.T) {
 	}
 
 	// Dynamically scan testdata/gfmt/ for packages
-	gfmtRoot := "../testdata/gfmt"
+	gfmtRoot := "../../../pkg/testdata/gfmt"
 	entries, err := os.ReadDir(gfmtRoot)
 	if err != nil {
 		t.Fatalf("failed to read gfmt directory: %v", err)
@@ -129,7 +130,7 @@ func TestIntegrationSandbox(t *testing.T) {
 				}
 
 				// Compile checker if it exists
-				var checker Executable
+				var checker sandbox.Executable
 				checkersDir := filepath.Join(pkgPath, "checkers")
 				if checkerFiles, err := os.ReadDir(checkersDir); err == nil && len(checkerFiles) > 0 {
 					for _, f := range checkerFiles {
@@ -153,7 +154,7 @@ func TestIntegrationSandbox(t *testing.T) {
 				}
 
 				// Compile interactor if it exists
-				var interactor Executable
+				var interactor sandbox.Executable
 				interactorsDir := filepath.Join(pkgPath, "interactors")
 				if interactorFiles, err := os.ReadDir(interactorsDir); err == nil && len(interactorFiles) > 0 {
 					for _, f := range interactorFiles {
@@ -177,7 +178,7 @@ func TestIntegrationSandbox(t *testing.T) {
 				}
 
 				// Compile generators if they exist
-				generators := make(map[string]Executable)
+				generators := make(map[string]sandbox.Executable)
 				generatorsDir := filepath.Join(pkgPath, "generators")
 				if genFiles, err := os.ReadDir(generatorsDir); err == nil {
 					for _, f := range genFiles {
@@ -330,7 +331,7 @@ func TestIntegrationSandbox(t *testing.T) {
 						if err != nil {
 							t.Fatalf("failed to run reference solution on test %s: %v", tc.Name, err)
 						}
-						if solResult.Status != StatusOK {
+						if solResult.Status != sandbox.StatusOK {
 							t.Fatalf("reference solution did not return OK on test %s: status=%s, stderr=%s",
 								tc.Name, solResult.Status, string(solResult.Stderr))
 						}
@@ -363,7 +364,7 @@ func TestIntegrationSandbox(t *testing.T) {
 							t.Fatalf("failed to compile solution %s: %v", sol.Filename, err)
 						}
 
-						finalStatus := StatusOK
+						finalStatus := sandbox.StatusOK
 						var lastStderr []byte
 						var lastExitStatus int
 						for _, tcd := range testCasesData {
@@ -381,7 +382,7 @@ func TestIntegrationSandbox(t *testing.T) {
 								if err != nil {
 									t.Fatalf("interact failed: %v", err)
 								}
-								if interactRes.Status != StatusOK {
+								if interactRes.Status != sandbox.StatusOK {
 									finalStatus = interactRes.Status
 									lastStderr = interactRes.SolutionResult.Stderr
 									lastExitStatus = interactRes.SolutionResult.ExitStatus
@@ -392,7 +393,7 @@ func TestIntegrationSandbox(t *testing.T) {
 								if err != nil {
 									t.Fatalf("solution execution failed: %v", err)
 								}
-								if runRes.Status != StatusOK {
+								if runRes.Status != sandbox.StatusOK {
 									finalStatus = runRes.Status
 									lastStderr = runRes.Stderr
 									lastExitStatus = runRes.ExitStatus
@@ -402,7 +403,7 @@ func TestIntegrationSandbox(t *testing.T) {
 								if err != nil {
 									t.Fatalf("checker failed: %v", err)
 								}
-								if checkRes.Status != StatusOK {
+								if checkRes.Status != sandbox.StatusOK {
 									finalStatus = checkRes.Status
 									break
 								}
@@ -410,7 +411,7 @@ func TestIntegrationSandbox(t *testing.T) {
 						}
 
 						if string(finalStatus) != sol.Expected {
-							if sol.Expected == "MLE" && finalStatus == StatusRE {
+							if sol.Expected == "MLE" && finalStatus == sandbox.StatusRE {
 								t.Logf("Solution %s evaluated as RE (accepted fallback for MLE in rlimit environments)", sol.Filename)
 							} else {
 								t.Errorf("verdict mismatch for %s: expected %s, got %s (ExitStatus: %d, Stderr: %q)",

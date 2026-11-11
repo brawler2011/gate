@@ -1,6 +1,6 @@
 //go:build integration
 
-package sandbox
+package sandbox_test
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/tests/judgeimage"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -43,14 +44,14 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	require.NoError(t, err)
 	grpcPort, err := c.MappedPort(ctx, "5051/tcp")
 	require.NoError(t, err)
-	transport, err := NewFileTransport(fmt.Sprintf("http://%s:%s", host, httpPort.Port()), &http.Client{Timeout: time.Minute})
+	transport, err := sandbox.NewFileTransport(fmt.Sprintf("http://%s:%s", host, httpPort.Port()), &http.Client{Timeout: time.Minute})
 	require.NoError(t, err)
-	client, err := NewClient(host + ":" + grpcPort.Port())
+	client, err := sandbox.NewClient(host + ":" + grpcPort.Port())
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, client.Close()) })
-	cfg, err := LoadConfig("../../../judge/langs.toml")
+	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml")
 	require.NoError(t, err)
-	sb := NewSandbox(client, cfg)
+	sb := sandbox.NewSandbox(client, cfg)
 	program, err := sb.Compile(ctx, []byte("#include <unistd.h>\nint main(){char b[32768]; ssize_t n; while((n=read(0,b,sizeof b))>0){ssize_t p=0; while(p<n){ssize_t w=write(1,b+p,n-p); if(w<=0)return 2;p+=w;}} return n<0;}"), "cpp", nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, transport.Delete(context.Background(), program.PrimaryFileID)) })
@@ -62,7 +63,7 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	_, err = io.CopyN(io.MultiWriter(f, hash), rand.Reader, size)
 	require.NoError(t, err)
 	expected := fmt.Sprintf("%x", hash.Sum(nil))
-	limits := FileRunLimits{CPU: 10 * time.Second, Wall: 30 * time.Second, Memory: 64 * 1024 * 1024, Processes: 10, Output: bytesize.Size(size), Diagnostic: 4096}
+	limits := sandbox.FileRunLimits{CPU: 10 * time.Second, Wall: 30 * time.Second, Memory: 64 * 1024 * 1024, Processes: 10, Output: bytesize.Size(size), Diagnostic: 4096}
 	runtime.GC()
 	var initial runtime.MemStats
 	runtime.ReadMemStats(&initial)
@@ -95,7 +96,7 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 		require.NoError(t, err)
 		result, err := sb.RunFiles(ctx, program, "cpp", id, nil, nil, limits)
 		require.NoError(t, err)
-		require.Equal(t, StatusOK, result.Status, "%s", result.Stderr)
+		require.Equal(t, sandbox.StatusOK, result.Status, "%s", result.Stderr)
 		require.NotEmpty(t, result.OutputID)
 		hash.Reset()
 		n, err := transport.Download(ctx, result.OutputID, hash, size)
@@ -117,7 +118,7 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	limits.Output = 1024
 	r, err := sb.RunFiles(ctx, program, "cpp", inputID, nil, nil, limits)
 	require.NoError(t, err)
-	require.Equal(t, StatusOLE, r.Status)
+	require.Equal(t, sandbox.StatusOLE, r.Status)
 	if r.OutputID != "" {
 		require.NoError(t, transport.Delete(ctx, r.OutputID))
 	}

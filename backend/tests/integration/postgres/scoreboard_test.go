@@ -1,14 +1,14 @@
 //go:build integration
 
-package postgres
+package postgres_test
 
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
 	"github.com/brawler2011/gate/backend/pkg"
@@ -17,25 +17,10 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	"github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 )
-
-// Count actual history queries, including any accidental per-problem reads.
-type scoreboardQueryCounter struct {
-	sqlc.DBTX
-	history int
-}
-
-func (c *scoreboardQueryCounter) Query(ctx context.Context, query string, args ...interface{}) (pgx.Rows, error) {
-	if strings.Contains(query, "FROM submissions") {
-		c.history++
-	}
-	return c.DBTX.Query(ctx, query, args...)
-}
 
 func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 	pool := getSharedTestPool(t)
@@ -48,7 +33,7 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 			}
 			suffix := uuid.NewString()
 			org := helperCreateOrg(t, ctx, pool, "scoreboard_"+suffix, "Scoreboard")
-			repo := NewContestsRepo(pool)
+			repo := postgres.NewContestsRepo(pool)
 			start := time.Date(2020, 1, 1, 10, 0, 0, 0, time.UTC)
 			end := start.Add(2 * time.Hour)
 			contest, otherContest := uuid.New(), uuid.New()
@@ -104,18 +89,19 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 					require.NoError(t, contests.ApplySubmissionResult(ctx, repo, &submissionsmodel.Submission{ContestID: &contest, CreatedBy: &user, ProblemID: &problem}))
 				}
 			}
-			counter := &scoreboardQueryCounter{DBTX: pool}
-			repo.queries = sqlc.New(counter)
-			uc := contests.NewContestsUseCase(repo, nil, nil, nil)
+			// Count actual history queries, including any accidental per-problem reads.
+			recordingPool, recorder := newRecordingPool(t)
+			history := func() int { return recorder.count("FROM submissions") }
+			uc := contests.NewContestsUseCase(postgres.NewContestsRepo(recordingPool), nil, nil, nil)
 			for _, unfrozen := range []bool{false, true} {
-				counter.history = 0
+				recorder.reset()
 				snapshot, err := uc.ProjectScoreboard(ctx, contest, unfrozen)
 				require.NoError(t, err)
 				expectedHistory, pending := 1, 3
 				if unfrozen {
 					expectedHistory, pending = 0, 0
 				}
-				require.Equal(t, expectedHistory, counter.history)
+				require.Equal(t, expectedHistory, history())
 				require.Len(t, snapshot.Items, size+1)
 				require.Len(t, snapshot.Problems, size)
 				for _, item := range snapshot.Items {
@@ -134,10 +120,10 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 							require.Zero(t, item.TotalPenalty)
 						}
 					}
-					counter.history = 0
+					recorder.reset()
 					row, err := uc.GetContestScoreboardUser(ctx, contest, item.UserID, unfrozen)
 					require.NoError(t, err)
-					require.Equal(t, 1, counter.history)
+					require.Equal(t, 1, history())
 					require.Len(t, row.Items, 1)
 					actual := row.Items[0]
 					require.ElementsMatch(t, item.ProblemResults, actual.ProblemResults)

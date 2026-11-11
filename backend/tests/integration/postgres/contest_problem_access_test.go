@@ -1,6 +1,6 @@
 //go:build integration
 
-package postgres
+package postgres_test
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
+	"github.com/brawler2011/gate/backend/internal/postgres"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
@@ -23,7 +24,7 @@ type contestProblemFixture struct {
 	pool                                                *pgxpool.Pool
 	ctx                                                 context.Context
 	actor, sourceOrg, problem, other, contest, original uuid.UUID
-	repo                                                *ContestsRepo
+	repo                                                *postgres.ContestsRepo
 	permissions                                         *access.MetadataPermissions
 	uc                                                  *contests.ContestsUseCase
 }
@@ -36,15 +37,15 @@ func newContestProblemFixture(t *testing.T) *contestProblemFixture {
 	require.NoError(t, err)
 	destination := helperCreateOrg(t, f.ctx, f.pool, uuid.NewString(), "Destination")
 	f.sourceOrg = helperCreateOrg(t, f.ctx, f.pool, uuid.NewString(), "Source")
-	f.repo = NewContestsRepo(f.pool)
+	f.repo = postgres.NewContestsRepo(f.pool)
 	require.NoError(t, f.repo.CreateContest(f.ctx, &contestsmodel.CreateContestParams{ID: f.contest, OrganizationID: destination, OwnerID: &f.actor, Title: "Attachment", Login: uuid.NewString(), Visibility: contestsmodel.ContestVisibilityPublic}))
 	for _, problem := range []uuid.UUID{f.problem, f.other} {
 		err = dbfixtures.InsertProblem(f.ctx, f.pool, dbfixtures.ProblemSpec{ID: problem, OrganizationID: f.sourceOrg, Title: "Source problem", ShortName: uuid.NewString()})
 		require.NoError(t, err)
 	}
 	f.original = f.pack(t, f.problem, time.Now().Add(-time.Hour))
-	f.permissions = access.NewMetadataPermissions(access.NewPermissionsUseCase(f.repo, NewUsersRepo(f.pool), NewProblemsRepo(f.pool), NewTeamsRepo(f.pool), NewOrganizationsRepo(f.pool)), NewPolicyFactsRepo(f.pool))
-	f.uc = contests.NewContestsUseCase(f.repo, NewOrganizationsRepo(f.pool), NewContestCommandTransactions(f.pool), f.permissions)
+	f.permissions = access.NewMetadataPermissions(access.NewPermissionsUseCase(f.repo, postgres.NewUsersRepo(f.pool), postgres.NewProblemsRepo(f.pool), postgres.NewTeamsRepo(f.pool), postgres.NewOrganizationsRepo(f.pool)), postgres.NewPolicyFactsRepo(f.pool))
+	f.uc = contests.NewContestsUseCase(f.repo, postgres.NewOrganizationsRepo(f.pool), postgres.NewContestCommandTransactions(f.pool), f.permissions)
 	return f
 }
 
@@ -213,9 +214,9 @@ func TestContestProblemCommandsWorkWithSingleConnectionPool(t *testing.T) {
 	pool, err := pgxpool.NewWithConfig(f.ctx, config)
 	require.NoError(t, err)
 	defer pool.Close()
-	repo := NewContestsRepo(pool)
-	permissions := access.NewPermissionsUseCase(repo, NewUsersRepo(pool), NewProblemsRepo(pool), NewTeamsRepo(pool), NewOrganizationsRepo(pool))
-	uc := contests.NewContestsUseCase(repo, NewOrganizationsRepo(pool), NewContestCommandTransactions(pool), permissions)
+	repo := postgres.NewContestsRepo(pool)
+	permissions := access.NewPermissionsUseCase(repo, postgres.NewUsersRepo(pool), postgres.NewProblemsRepo(pool), postgres.NewTeamsRepo(pool), postgres.NewOrganizationsRepo(pool))
+	uc := contests.NewContestsUseCase(repo, postgres.NewOrganizationsRepo(pool), postgres.NewContestCommandTransactions(pool), permissions)
 	ctx, cancel := context.WithTimeout(f.ctx, 5*time.Second)
 	defer cancel()
 	require.NoError(t, uc.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{ContestId: f.contest, ProblemId: f.problem, PackageId: f.original}))
@@ -257,7 +258,7 @@ func TestContestSnapshotSurvivesSourceChanges(t *testing.T) {
 func TestContestCommandGuardRejectsRevokedDecision(t *testing.T) {
 	f := newContestProblemFixture(t)
 	f.grantRead(t)
-	transactions := NewContestCommandTransactions(f.pool)
+	transactions := postgres.NewContestCommandTransactions(f.pool)
 	decision, err := transactions.Prepare(f.ctx)
 	require.NoError(t, err)
 	allowed, err := f.permissions.HasProblemPermission(decision, f.problem, f.actor, accessmodel.ActionUseProblem)
@@ -310,7 +311,7 @@ func TestContestLifecyclePostgresBoundaries(t *testing.T) {
 func TestContestCommandDeadlineRollsBackMutation(t *testing.T) {
 	f := newContestProblemFixture(t)
 	f.grantRead(t)
-	txs := NewContestCommandTransactions(f.pool)
+	txs := postgres.NewContestCommandTransactions(f.pool)
 	ctx, err := txs.Prepare(f.ctx)
 	require.NoError(t, err)
 	expired := time.Now().Add(-time.Second)

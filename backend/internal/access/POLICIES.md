@@ -55,7 +55,7 @@ Do not call authorization again inside a write transaction.
 The shared RFC matrix rows live in `backend/tests/accessfixtures`; policy tests
 exercise the role columns, public/closed branches and T gates. Separate tests
 cover inheritance, admission, grant transitions, owner sets and transfer planning.
-PostgreSQL parity tests in `visibility_integration_test.go` compare the same
+PostgreSQL parity tests in `backend/tests/integration/postgres/visibility_test.go` compare the same
 persisted actor/resource facts against pure policies and SQL scopes, with explicit
 expected results for every grant branch.
 
