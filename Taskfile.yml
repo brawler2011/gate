@@ -183,6 +183,18 @@ tasks:
           exit 1
         fi
 
+  update:judge:
+    desc: Update the judge runtime's nixpkgs pin (judge/flake.lock) without a local Nix install
+    cmds:
+      - >-
+        docker run --rm -v ./judge:/src -w /src nixos/nix:2.35.6
+        sh -c 'nix --extra-experimental-features "nix-command flakes" flake update && chown {{.UID}}:{{.GID}} flake.lock'
+    vars:
+      UID:
+        sh: id -u
+      GID:
+        sh: id -g
+
   clean:
     desc: Remove generated contract files
     cmds:

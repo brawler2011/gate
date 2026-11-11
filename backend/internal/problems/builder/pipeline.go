@@ -14,6 +14,7 @@ import (
 	"time"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
+	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
@@ -25,8 +26,7 @@ import (
 
 type ObjectStore interface {
 	DownloadFile(context.Context, string, string, *string) (io.ReadCloser, string, error)
-	PutImmutable(context.Context, string, string, *os.File, int64, string) error
-	VerifyObject(context.Context, string, string, int64, string) error
+	UploadFile(context.Context, string, string, io.Reader, string) error
 }
 type BuildRepository interface {
 	ClaimBuild(context.Context, time.Duration) (model.ProblemBuild, error)
@@ -124,7 +124,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := os.Mkdir(tree, 0700); err != nil {
 		return uuid.Nil, fmt.Errorf("mkdir: %w", err)
 	}
-	e := &execution{pipeline: p, build: b, dir: &directory{root: tree, remaining: s.Limits.DiskBytes, maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, &sandbox.Config{Langs: s.Toolchain.Languages}), compiled: make(map[uuid.UUID]compilation)}
+	e := &execution{pipeline: p, build: b, dir: &directory{root: tree, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, &sandbox.Config{Langs: s.Toolchain.Languages}), compiled: make(map[uuid.UUID]compilation)}
 	defer e.releaseComponents()
 	if err := e.materialize(ctx); err != nil {
 		return uuid.Nil, fail("materialize", 0, "infrastructure", err)
@@ -162,12 +162,8 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 		return uuid.Nil, fmt.Errorf("open: %w", err)
 	}
 	defer f.Close()
-	if err := p.Store.PutImmutable(ctx, p.Bucket, object.Key, f, size, digest); err != nil {
-		// A lost S3 response or a retry may find the immutable key already present.
-		// Confirm its original bytes; never overwrite it to repair an unknown result.
-		if verifyErr := p.Store.VerifyObject(ctx, p.Bucket, object.Key, size, digest); verifyErr != nil {
-			return uuid.Nil, fail("upload", 0, "infrastructure", errors.Join(err, verifyErr))
-		}
+	if err := p.Store.UploadFile(ctx, p.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/octet-stream"); err != nil {
+		return uuid.Nil, fail("upload", 0, "infrastructure", err)
 	}
 	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object.ID)
 	if err != nil {
@@ -194,7 +190,7 @@ func (e *execution) materialize(ctx context.Context) error {
 		return fmt.Errorf("snapshot root mismatch")
 	}
 	for _, o := range objects {
-		if !expected[o.ID] || o.State != "available" || o.OrganizationID != s.OrganizationID || o.Size > s.Limits.ObjectBytes {
+		if !expected[o.ID] || o.State != "available" || o.OrganizationID != s.OrganizationID || o.Size > int64(s.Limits.ObjectBytes) {
 			return fmt.Errorf("invalid snapshot object")
 		}
 		r, _, err := e.pipeline.Store.DownloadFile(ctx, e.pipeline.Bucket, o.Key, nil)
@@ -215,7 +211,7 @@ func (e *execution) materialize(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("open: %w", err)
 		}
-		_, _, copyErr := e.dir.copy(a.Path, f, s.Limits.ObjectBytes)
+		_, _, copyErr := e.dir.copy(a.Path, f, int64(s.Limits.ObjectBytes))
 		closeErr := f.Close()
 		if err := errors.Join(copyErr, closeErr); err != nil {
 			return err
@@ -287,7 +283,7 @@ func (e *execution) upload(ctx context.Context, path string) (string, error) {
 		return "", fmt.Errorf("open: %w", err)
 	}
 	defer f.Close()
-	return e.pipeline.Files.Upload(ctx, f, e.build.Snapshot.Limits.ObjectBytes)
+	return e.pipeline.Files.Upload(ctx, f, int64(e.build.Snapshot.Limits.ObjectBytes))
 }
 func (e *execution) compile(ctx context.Context) error {
 	s := e.build.Snapshot
@@ -319,13 +315,13 @@ func (e *execution) compile(ctx context.Context) error {
 		}
 		e.compiled[c.ID] = compilation{source: c, executable: executable}
 		entry := ".gate/bin/" + c.ID.String() + "/entry"
-		if err := e.download(ctx, entry, executable.PrimaryFileID, s.Limits.Compile.Output); err != nil {
+		if err := e.download(ctx, entry, executable.PrimaryFileID, int64(s.Limits.Compile.Output)); err != nil {
 			return fail("export", 0, "infrastructure", err)
 		}
 		artifact := gfmt.CompiledComponent{Role: c.Role, Language: c.Language, Entry: entry, Dependencies: map[string]string{}}
 		for path, id := range executable.Dependencies {
 			dest := ".gate/bin/" + c.ID.String() + "/dependencies/" + path
-			if err := e.download(ctx, dest, id, s.Limits.Compile.Output); err != nil {
+			if err := e.download(ctx, dest, id, int64(s.Limits.Compile.Output)); err != nil {
 				return fail("export", 0, "infrastructure", err)
 			}
 			artifact.Dependencies[path] = dest
@@ -340,7 +336,7 @@ func (e *execution) solutionLimits() sandbox.FileRunLimits {
 	limits := e.build.Snapshot.Limits.Auxiliary
 	limits.CPU = time.Duration(d.TimeLimitMs) * time.Millisecond
 	limits.Wall = limits.CPU * 2
-	limits.Memory = uint64(d.MemoryLimitMb) * 1024 * 1024 //nolint:gosec // the memory limit was validated positive when the draft was saved
+	limits.Memory = bytesize.Size(d.MemoryLimitMb) * bytesize.MiB
 	limits.Output = e.build.Snapshot.Limits.TestOutputBytes
 	return limits
 }
@@ -376,7 +372,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		}
 		inputID = result.OutputID
 		inputPath = ".gate/tests/" + test.ID.String() + ".in"
-		if err := e.download(ctx, inputPath, inputID, s.Limits.ObjectBytes); err != nil {
+		if err := e.download(ctx, inputPath, inputID, int64(s.Limits.ObjectBytes)); err != nil {
 			return fail("generate", test.Ordinal, "infrastructure", err)
 		}
 	}
@@ -432,7 +428,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			if test.Answer.Mode == "generated" {
 				answerID = outputID
 				answerPath = ".gate/tests/" + test.ID.String() + ".ans"
-				if err := e.download(ctx, answerPath, answerID, s.Limits.ObjectBytes); err != nil {
+				if err := e.download(ctx, answerPath, answerID, int64(s.Limits.ObjectBytes)); err != nil {
 					return fail("answer", test.Ordinal, "infrastructure", err)
 				}
 			}

@@ -37,6 +37,7 @@ import (
 	handlers "github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/email"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/brawler2011/gate/backend/tests/mocks"
 	"github.com/google/uuid"
@@ -276,6 +277,9 @@ func (s *IntegrationTestSuite) initApp() {
 		false,
 		access.NewCapabilities(pgstore.NewPolicyFactsRepo(s.dbPool)),
 	)
+	langs, err := sandbox.LoadConfig("../../../judge/langs.toml")
+	s.Require().NoError(err)
+	coreServer.WithLanguages(langs.Langs)
 
 	// Server setup
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))

@@ -118,8 +118,8 @@ jobs:
       - name: Prepare go-judge image
         uses: docker/build-push-action@v7
         with:
-          context: deploy/common/judge
-          file: deploy/common/judge/Dockerfile
+          context: judge
+          file: judge/Dockerfile
           tags: gate-gojudge:ci
           load: true
           cache-from: type=gha,scope=gojudge

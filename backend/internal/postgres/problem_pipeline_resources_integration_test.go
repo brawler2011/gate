@@ -21,6 +21,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/problems"
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
+	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"github.com/google/uuid"
@@ -58,10 +59,10 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 	ctx, pool, repo, org, d := draftFixture(t)
 	services := startPipelineServices(t)
 	work := dbfixtures.DiskTempDir(t)
-	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 20 * time.Second, Memory: 256 << 20, Processes: 50, Output: objectBytes, Diagnostic: 4096}
+	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 20 * time.Second, Memory: 256 << 20, Processes: 50, Output: bytesize.Size(objectBytes), Diagnostic: 4096}
 	compile := aux
 	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 10*time.Second, 30*time.Second, 512<<20, 150
-	limits := model.BuildLimits{DiskBytes: diskBytes, FileCount: 100, ObjectBytes: objectBytes, TestOutputBytes: objectBytes, Compile: compile, Auxiliary: aux}
+	limits := model.BuildLimits{DiskBytes: bytesize.Size(diskBytes), FileCount: 100, ObjectBytes: bytesize.Size(objectBytes), TestOutputBytes: bytesize.Size(objectBytes), Compile: compile, Auxiliary: aux}
 	options := ProblemBuildOptions{
 		Toolchain: model.Toolchain{Digest: "sha256:" + strings.Repeat("a", 64), Architecture: "amd64", ABI: "linux-gnu", Languages: services.langs},
 		Limits:    limits, MaxAttempts: 1, Duration: 5 * time.Minute, Lease: 3 * time.Second,
@@ -182,7 +183,7 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 	require.NoError(t, h.pool.QueryRow(h.ctx, `SELECT o.size,o.sha256,o.key FROM problem_packages p JOIN stored_objects o ON o.id=p.object_id WHERE p.id=$1`, packageID).Scan(&size, &digest, &key))
 	total := int64(2 * perFile * tests)
 	require.Greater(t, size, total, "the archive holds every incompressible test body")
-	require.NoError(t, h.services.store.VerifyObject(h.ctx, "objects", key, size, digest))
+	requireStoredObject(t, h.ctx, h.services.store, "objects", key, size, digest)
 	growth := int64(peak.Load()) - int64(baseline.HeapAlloc)
 	t.Logf("tests=%d MiB archive=%d MiB heap growth=%d MiB", total>>20, size>>20, growth>>20)
 	require.Less(t, growth, int64(48<<20), "heap must not grow with the total size of the tests (%d MiB of data)", total>>20)

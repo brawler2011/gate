@@ -32,8 +32,7 @@ type DraftRepository interface {
 	GetObject(context.Context, uuid.UUID) (model.StoredObject, error)
 }
 type DraftObjectStore interface {
-	PutImmutable(context.Context, string, string, *os.File, int64, string) error
-	VerifyObject(context.Context, string, string, int64, string) error
+	UploadFile(context.Context, string, string, io.Reader, string) error
 	DownloadFile(context.Context, string, string, *string) (io.ReadCloser, string, error)
 }
 type DraftUseCase struct {
@@ -243,10 +242,8 @@ func (uc *DraftUseCase) Upload(ctx context.Context, id uuid.UUID, expected int64
 		return *reservation.Replay, nil
 	}
 	for i, object := range reservation.Objects {
-		if err := uc.Store.PutImmutable(ctx, uc.Bucket, object.Key, uploads[i].file, object.Size, object.SHA256); err != nil {
-			if verifyErr := uc.Store.VerifyObject(ctx, uc.Bucket, object.Key, object.Size, object.SHA256); verifyErr != nil {
-				return model.MutationResult{}, errors.Join(err, verifyErr)
-			}
+		if err := uc.Store.UploadFile(ctx, uc.Bucket, object.Key, io.NewSectionReader(uploads[i].file, 0, object.Size), "application/octet-stream"); err != nil {
+			return model.MutationResult{}, err
 		}
 	}
 	return uc.Repo.FinalizeUploads(ctx, k, id, expected, change)

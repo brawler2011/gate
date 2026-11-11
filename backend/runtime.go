@@ -39,6 +39,7 @@ import (
 	handlers "github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	wsobserver "github.com/brawler2011/gate/backend/internal/transport/ws/observer"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
@@ -202,7 +203,7 @@ func runApp(envFile string) error {
 	defer sandboxClient.Close()
 	logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudgeGRPCAddr))
 
-	sandboxCfg, err := sandbox.LoadConfig("languages.yaml")
+	sandboxCfg, err := sandbox.LoadConfig("judge/langs.toml")
 	if err != nil {
 		return fmt.Errorf("failed to load sandbox config: %w", err)
 	}
@@ -219,19 +220,19 @@ func runApp(envFile string) error {
 	if err != nil {
 		return err
 	}
-	objectStore := storage.NewS3Storage(storage.S3Config{Endpoint: cfg.S3Endpoint, AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey, Region: defaultS3Region})
+	objectStore := store
 	if err := objectStore.EnsureBucket(context.Background(), defaultS3ObjectBucket); err != nil {
 		return err
 	}
 	problemDrafts := pgstore.NewProblemDraftsRepo(pool, problemPolicy.Draft, problemPolicy.OperationLease)
 	toolchain := problemsmodel.Toolchain{Digest: cfg.GoJudgeToolchainDigest, Architecture: cfg.GoJudgeArchitecture, ABI: cfg.GoJudgeABI, Languages: sandboxCfg.Langs}
 	buildOptions := problemsmodel.BuildOptions{Toolchain: toolchain, Limits: problemPolicy.Limits, MaxAttempts: problemPolicy.Attempts, Duration: problemPolicy.Duration, Lease: problemPolicy.Lease}
-	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, UploadTTL: problemPolicy.UploadTTL, ObjectBytes: problemPolicy.Limits.ObjectBytes, BuildOptions: buildOptions}
+	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, UploadTTL: problemPolicy.UploadTTL, ObjectBytes: int64(problemPolicy.Limits.ObjectBytes), BuildOptions: buildOptions}
 	pipeline := &builder.Pipeline{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, Client: sandboxClient, Files: fileTransport, Environment: toolchain, UploadTTL: problemPolicy.UploadTTL, Logger: logger}
 	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll}
 	problemGC := &builder.GC{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: logger}
 
-	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, MaxArchiveBytes: problemPolicy.Limits.ObjectBytes, MaxEntries: problemPolicy.Limits.FileCount}
+	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, MaxArchiveBytes: int64(problemPolicy.Limits.ObjectBytes), MaxEntries: problemPolicy.Limits.FileCount}
 	draftUC.PackageContent = packageContent
 	problemsUC := problems.NewProblemsUseCase(problemsRepo, pgstore.NewProblemTransactions(pool), orgsRepo, permissionsUC, draftUC, packagesRepo, packageContent)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Permissions: permissionsUC}
@@ -364,7 +365,7 @@ func runApp(envFile string) error {
 		natsJS,
 		cfg.Env != "local",
 		access.NewCapabilities(pgstore.NewPolicyFactsRepo(pool)),
-	)
+	).WithLanguages(sandboxCfg.Langs)
 
 	secHandler := middleware.NewSecurityHandler()
 	authzMw := middleware.AuthzMiddleware()
@@ -384,11 +385,11 @@ func runApp(envFile string) error {
 			middleware.RateLimit(limiter, cfg.TrustedProxy)(middleware.RequestLimits(apiServer, func(operation string) int64 {
 				switch operation {
 				case "SaveProblemDraft":
-					return problemPolicy.RequestBytes
+					return int64(problemPolicy.RequestBytes)
 				case "ImportProblem":
-					return problemPolicy.Limits.ObjectBytes + 1024*1024
+					return int64(problemPolicy.Limits.ObjectBytes + bytesize.MiB)
 				case "UploadProblemDraft":
-					return 2*problemPolicy.Limits.ObjectBytes + 1024*1024
+					return int64(2*problemPolicy.Limits.ObjectBytes + bytesize.MiB)
 				default:
 					return handlers.RequestBodyLimit(operation)
 				}

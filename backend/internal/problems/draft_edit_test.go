@@ -3,7 +3,6 @@ package problems
 import (
 	"context"
 	"io"
-	"os"
 	"testing"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -15,12 +14,7 @@ import (
 // recordingStore fails the test on any object-store access.
 type recordingStore struct{ calls int }
 
-func (s *recordingStore) PutImmutable(context.Context, string, string, *os.File, int64, string) error {
-	s.calls++
-	return nil
-}
-
-func (s *recordingStore) VerifyObject(context.Context, string, string, int64, string) error {
+func (s *recordingStore) UploadFile(context.Context, string, string, io.Reader, string) error {
 	s.calls++
 	return nil
 }

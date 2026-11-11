@@ -2,36 +2,41 @@ package sandbox
 
 import (
 	"fmt"
-	"os"
 
-	"gopkg.in/yaml.v3"
+	"github.com/BurntSushi/toml"
 )
 
 // Language defines the compile and execute configurations for a programming language.
 type Language struct {
-	Type        string `yaml:"type"`
-	Compile     string `yaml:"compile"`
-	CodeFile    string `yaml:"code_file"`
-	CompileFile string `yaml:"compile_file"`
-	Execute     string `yaml:"execute"`
+	Type        string `toml:"type"`
+	Compile     string `toml:"compile"`
+	CodeFile    string `toml:"code_file"`
+	CompileFile string `toml:"compile_file"`
+	Execute     string `toml:"execute"`
 }
 
 // Config wraps the langs map.
 type Config struct {
-	Langs map[string]Language `yaml:"langs"`
+	Langs map[string]Language
 }
 
-// LoadConfig reads the languages configuration from the specified YAML file.
+// LoadConfig reads the languages configuration (judge/langs.toml).
+// Each language's "package" key is consumed by the judge image build and ignored here.
 func LoadConfig(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+	var langs map[string]Language
+	meta, err := toml.DecodeFile(path, &langs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read sandbox languages config: %w", err)
 	}
-
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse sandbox languages config: %w", err)
+	for _, key := range meta.Undecoded() {
+		if len(key) == 2 && key[1] == "package" {
+			continue
+		}
+		return nil, fmt.Errorf("unknown key %q in sandbox languages config", key.String())
+	}
+	if len(langs) == 0 {
+		return nil, fmt.Errorf("sandbox languages config %s defines no languages", path)
 	}
 
-	return &cfg, nil
+	return &Config{Langs: langs}, nil
 }

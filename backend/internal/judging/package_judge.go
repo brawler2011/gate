@@ -13,6 +13,7 @@ import (
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
+	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
@@ -45,13 +46,13 @@ func (j *PackageJudge) upload(ctx context.Context, root, path string, limit int6
 }
 func (j *PackageJudge) restore(ctx context.Context, pkg *LoadedPackage, component gfmt.CompiledComponent) (sandbox.Executable, error) {
 	executable := sandbox.Executable{Dependencies: map[string]string{}}
-	id, err := j.upload(ctx, pkg.Format.Path, component.Entry, pkg.Descriptor.Snapshot.Limits.Compile.Output)
+	id, err := j.upload(ctx, pkg.Format.Path, component.Entry, int64(pkg.Descriptor.Snapshot.Limits.Compile.Output))
 	if err != nil {
 		return executable, err
 	}
 	executable.PrimaryFileID = id
 	for path, artifact := range component.Dependencies {
-		id, err := j.upload(ctx, pkg.Format.Path, artifact, pkg.Descriptor.Snapshot.Limits.Compile.Output)
+		id, err := j.upload(ctx, pkg.Format.Path, artifact, int64(pkg.Descriptor.Snapshot.Limits.Compile.Output))
 		if err != nil {
 			j.release(executable.PrimaryFileID)
 			for _, id := range executable.Dependencies {
@@ -140,9 +141,9 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 	limits := s.Limits.Auxiliary
 	limits.CPU = time.Duration(s.Draft.TimeLimitMs) * time.Millisecond
 	limits.Wall = 2 * limits.CPU
-	limits.Memory = uint64(s.Draft.MemoryLimitMb) * 1024 * 1024 //nolint:gosec // the memory limit was validated positive when the draft was saved
+	limits.Memory = bytesize.Size(s.Draft.MemoryLimitMb) * bytesize.MiB
 	limits.Output = s.Limits.TestOutputBytes
-	input, err := j.upload(ctx, pkg.Format.Path, test.Test.Manual, s.Limits.ObjectBytes)
+	input, err := j.upload(ctx, pkg.Format.Path, test.Test.Manual, int64(s.Limits.ObjectBytes))
 	if err != nil {
 		return TestResult{}, err
 	}
@@ -159,7 +160,7 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 		result.Memory = r.SolutionResult.Memory
 		result.Score = r.Score
 	} else {
-		answer, err := j.upload(ctx, pkg.Format.Path, test.Test.Answer, s.Limits.ObjectBytes)
+		answer, err := j.upload(ctx, pkg.Format.Path, test.Test.Answer, int64(s.Limits.ObjectBytes))
 		if err != nil {
 			return result, err
 		}

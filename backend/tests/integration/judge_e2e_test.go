@@ -84,7 +84,7 @@ func newGoJudge(t *testing.T) (*sandbox.Client, *sandbox.FileTransport) {
 	t.Helper()
 	ctx := context.Background()
 	request := testcontainers.ContainerRequest{
-		FromDockerfile: testcontainers.FromDockerfile{Context: "../../../deploy/common/judge", Dockerfile: "Dockerfile", KeepImage: true},
+		FromDockerfile: testcontainers.FromDockerfile{Context: "../../../judge", Dockerfile: "Dockerfile", KeepImage: true},
 		ExposedPorts:   []string{goJudgeHTTPPort, goJudgeGRPCPort}, Privileged: true,
 		Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", "-parallelism=2"},
 		WaitingFor: wait.ForHTTP("/version").WithPort(goJudgeHTTPPort).WithStartupTimeout(e2eSandboxTimout)}
@@ -141,7 +141,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	ctx, dbPool, js := setupE2EEnvironment(t)
 	store := newSeaweedBackedS3Storage(t)
 	client, files := newGoJudge(t)
-	cfg, err := sandbox.LoadConfig("../../../languages.yaml")
+	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml")
 	require.NoError(t, err)
 
 	orgsRepo := pgstore.NewOrganizationsRepo(dbPool)

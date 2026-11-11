@@ -42,7 +42,7 @@ func (l *PackageLoader) LoadPackage(ctx context.Context, id uuid.UUID) (result *
 	if err != nil {
 		return nil, err
 	}
-	if p.Object.State != "available" || p.Object.Size < 0 || p.Object.Size >= l.Limits.DiskBytes {
+	if p.Object.State != "available" || p.Object.Size < 0 || p.Object.Size >= int64(l.Limits.DiskBytes) {
 		return nil, fmt.Errorf("package object is unavailable or exceeds disk quota")
 	}
 	root, err := os.MkdirTemp(l.TempDir, "package-")
@@ -79,7 +79,7 @@ func (l *PackageLoader) LoadPackage(ctx context.Context, id uuid.UUID) (result *
 	}
 	defer z.Close()
 	tree := filepath.Join(root, "tree")
-	if err := ziputil.ExtractZipLimited(&z.Reader, tree, l.Limits.DiskBytes-p.Object.Size, l.Limits.FileCount); err != nil {
+	if err := ziputil.ExtractZipLimited(&z.Reader, tree, int64(l.Limits.DiskBytes)-p.Object.Size, l.Limits.FileCount); err != nil {
 		return nil, err
 	}
 	format, err := gfmt.OpenBuiltPackage(tree)

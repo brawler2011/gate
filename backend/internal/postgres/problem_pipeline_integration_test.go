@@ -4,6 +4,8 @@ package postgres
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log/slog"
@@ -48,7 +50,7 @@ func startPipelineServices(t *testing.T) pipelineServices {
 	store := storage.NewS3Storage(storage.S3Config{Endpoint: fmt.Sprintf("http://%s:%s", s3host, s3port.Port()), AccessKey: "test", SecretKey: "test", Region: "us-east-1"})
 	require.NoError(t, store.EnsureBucket(ctx, "objects"))
 	request := testcontainers.ContainerRequest{
-		FromDockerfile: testcontainers.FromDockerfile{Context: "../../../deploy/common/judge", Dockerfile: "Dockerfile", KeepImage: true},
+		FromDockerfile: testcontainers.FromDockerfile{Context: "../../../judge", Dockerfile: "Dockerfile", KeepImage: true},
 		ExposedPorts:   []string{"5050/tcp", "5051/tcp"}, Privileged: true,
 		Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", "-parallelism=1"},
 		WaitingFor: wait.ForHTTP("/version").WithPort("5050/tcp")}
@@ -71,7 +73,7 @@ func startPipelineServices(t *testing.T) pipelineServices {
 	t.Cleanup(func() { require.NoError(t, client.Close()) })
 	files, err := sandbox.NewFileTransport("http://"+host+":"+hp.Port(), &http.Client{Timeout: time.Minute})
 	require.NoError(t, err)
-	cfg, err := sandbox.LoadConfig("../../../languages.yaml")
+	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml")
 	require.NoError(t, err)
 	return pipelineServices{store: store, client: client, files: files, langs: cfg.Langs}
 }
@@ -128,7 +130,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	var size int64
 	require.NoError(t, pool.QueryRow(ctx, `SELECT p.title,o.key,o.sha256,o.size FROM problem_packages p JOIN stored_objects o ON o.id=p.object_id WHERE p.id=$1`, pid).Scan(&title, &key, &digest, &size))
 	require.Equal(t, "Initial", title)
-	require.NoError(t, store.VerifyObject(ctx, "objects", key, size, digest))
+	requireStoredObject(t, ctx, store, "objects", key, size, digest)
 	// The second finalization resolves the original success, never a second Package.
 	again, err := repo.PublishBuild(ctx, b.ID, *b.LeaseToken, uuid.New())
 	require.NoError(t, err)
@@ -136,4 +138,16 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	var outputs int
 	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM problem_build_objects WHERE build_id=$1 AND role='output'`, b.ID).Scan(&outputs))
 	require.Zero(t, outputs)
+}
+
+func requireStoredObject(t *testing.T, ctx context.Context, store storage.Storage, bucket, key string, size int64, digest string) {
+	t.Helper()
+	r, _, err := store.DownloadFile(ctx, bucket, key, nil)
+	require.NoError(t, err)
+	defer r.Close()
+	h := sha256.New()
+	n, err := io.Copy(h, r)
+	require.NoError(t, err)
+	require.Equal(t, size, n)
+	require.Equal(t, digest, hex.EncodeToString(h.Sum(nil)))
 }

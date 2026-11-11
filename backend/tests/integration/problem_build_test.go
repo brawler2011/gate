@@ -44,7 +44,7 @@ func (s *IntegrationTestSuite) buildPackage(userID, problemID uuid.UUID) uuid.UU
 // testBuildOptions are the build settings the HTTP suite and its worker share.
 func testBuildOptions(t *testing.T) problemsmodel.BuildOptions {
 	t.Helper()
-	cfg, err := sandbox.LoadConfig("../../../languages.yaml")
+	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml")
 	require.NoError(t, err)
 	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 256 << 20, Processes: 50, Output: 32 << 20, Diagnostic: 4096}
 	compile := aux

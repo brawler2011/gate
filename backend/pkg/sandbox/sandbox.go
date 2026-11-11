@@ -177,9 +177,9 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 			ClockTimeLimit: uint64(limits.Wall),
 			CopyOutMax:     uint64(limits.Output),
 			CpuTimeLimit:   uint64(limits.CPU),
-			MemoryLimit:    limits.Memory,
+			MemoryLimit:    limits.Memory.Uint64(),
 			ProcLimit:      limits.Processes,
-			Env:            []string{"PATH=/usr/local/go/bin:/usr/bin:/bin", "GOCACHE=/tmp", "HOME=/tmp"},
+			Env:            []string{"PATH=/usr/bin:/bin", "GOCACHE=/var/cache/go", "CGO_ENABLED=0", "HOME=/tmp"},
 		}.Build()
 
 		req := pb.Request_builder{
@@ -239,8 +239,8 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 		Args: compileCmdArgs,
 		Files: []*pb.Request_File{
 			newMemoryFile([]byte("")),
-			newPipeCollector("stdout", limits.Diagnostic),
-			newPipeCollector("stderr", limits.Diagnostic),
+			newPipeCollector("stdout", int64(limits.Diagnostic)),
+			newPipeCollector("stderr", int64(limits.Diagnostic)),
 		},
 		CopyIn: copyIn,
 		CopyOutCached: []*pb.Request_CmdCopyOutFile{
@@ -249,9 +249,9 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 		ClockTimeLimit: uint64(limits.Wall),
 		CopyOutMax:     uint64(limits.Output),
 		CpuTimeLimit:   uint64(limits.CPU),
-		MemoryLimit:    limits.Memory,
+		MemoryLimit:    limits.Memory.Uint64(),
 		ProcLimit:      limits.Processes,
-		Env:            []string{"PATH=/usr/local/go/bin:/usr/bin:/bin", "GOCACHE=/tmp", "HOME=/tmp"},
+		Env:            []string{"PATH=/usr/bin:/bin", "GOCACHE=/var/cache/go", "CGO_ENABLED=0", "HOME=/tmp"},
 	}.Build()
 
 	req := pb.Request_builder{
@@ -650,7 +650,7 @@ func (s *Sandbox) CompilePDF(ctx context.Context, texSource string) ([]byte, err
 		ClockTimeLimit: safeUint64(bookletCompileClockTimeLimit.Nanoseconds()),
 		MemoryLimit:    bookletCompileMemoryLimit,
 		ProcLimit:      bookletCompileProcLimit,
-		Env:            []string{"PATH=/usr/local/bin:/usr/bin:/bin", "HOME=/tmp", "TEXMFVAR=/tmp/texmf-var", "TEXMFCONFIG=/tmp/texmf-config"},
+		Env:            []string{"PATH=/usr/bin:/bin", "HOME=/tmp", "TEXMFVAR=/tmp/texmf-var", "TEXMFCONFIG=/tmp/texmf-config"},
 	}.Build()
 
 	req := pb.Request_builder{

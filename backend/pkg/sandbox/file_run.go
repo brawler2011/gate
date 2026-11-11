@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	pb "github.com/criyle/go-judge/pb"
 )
 
@@ -15,10 +16,10 @@ import (
 type FileRunLimits struct {
 	CPU        time.Duration `yaml:"cpu" json:"cpu"`
 	Wall       time.Duration `yaml:"wall" json:"wall"`
-	Memory     uint64        `yaml:"memory" json:"memory"`
+	Memory     bytesize.Size `yaml:"memory" json:"memory"`
 	Processes  uint64        `yaml:"processes" json:"processes"`
-	Output     int64         `yaml:"output" json:"output"`
-	Diagnostic int64         `yaml:"diagnostic" json:"diagnostic"`
+	Output     bytesize.Size `yaml:"output" json:"output"`
+	Diagnostic bytesize.Size `yaml:"diagnostic" json:"diagnostic"`
 }
 
 type FileRunResult struct {
@@ -61,8 +62,8 @@ func (s *Sandbox) fileCommand(executable Executable, language, inputID string, a
 	}
 	// A pipe keeps disk page-cache charges for large outputs in the trusted
 	// transport, rather than charging them as contestant process memory.
-	stdout := pb.Request_File_builder{Pipe: pb.Request_PipeCollector_builder{Name: "stdout", Max: limits.Output, Pipe: true}.Build()}.Build()
-	files := []*pb.Request_File{stdin, stdout, newPipeCollector("stderr", limits.Diagnostic)}
+	stdout := pb.Request_File_builder{Pipe: pb.Request_PipeCollector_builder{Name: "stdout", Max: int64(limits.Output), Pipe: true}.Build()}.Build()
+	files := []*pb.Request_File{stdin, stdout, newPipeCollector("stderr", int64(limits.Diagnostic))}
 	for _, id := range extraIDs {
 		if !validFileID(id) {
 			return nil, fmt.Errorf("invalid extra file ID")
@@ -72,9 +73,9 @@ func (s *Sandbox) fileCommand(executable Executable, language, inputID string, a
 	argv := strings.Fields(strings.NewReplacer("${name}", name, "${dir}", ".").Replace(lang.Execute))
 	argv = append(argv, args...)
 	cmd := pb.Request_CmdType_builder{
-		Args: argv, Env: []string{"PATH=/usr/local/go/bin:/usr/bin:/bin"}, Files: files, CopyIn: copyIn,
+		Args: argv, Env: []string{"PATH=/usr/bin:/bin"}, Files: files, CopyIn: copyIn,
 		CopyOutCached: []*pb.Request_CmdCopyOutFile{pb.Request_CmdCopyOutFile_builder{Name: "stdout"}.Build()},
-		CpuTimeLimit:  uint64(limits.CPU), ClockTimeLimit: uint64(limits.Wall), MemoryLimit: limits.Memory, ProcLimit: limits.Processes,
+		CpuTimeLimit:  uint64(limits.CPU), ClockTimeLimit: uint64(limits.Wall), MemoryLimit: limits.Memory.Uint64(), ProcLimit: limits.Processes,
 		CopyOutMax: uint64(limits.Output),
 	}.Build()
 	return cmd, nil

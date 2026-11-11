@@ -2,8 +2,6 @@ package storage
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -81,49 +79,6 @@ func (s *S3Storage) UploadFile(ctx context.Context, bucket, key string, reader i
 	})
 	if err != nil {
 		return fmt.Errorf("failed to upload file to S3: %w", err)
-	}
-	return nil
-}
-
-// PutImmutable writes a unique registry key once, then verifies the persisted
-// bytes by reading them back. It does not treat ETag or user metadata as SHA-256.
-func (s *S3Storage) PutImmutable(ctx context.Context, bucket, key string, file *os.File, size int64, digest string) error {
-	if size < 0 || size > 5*1024*1024*1024 {
-		return fmt.Errorf("object exceeds single upload quota")
-	}
-	if raw, err := hex.DecodeString(digest); err != nil || len(raw) != sha256.Size {
-		return fmt.Errorf("invalid object SHA-256")
-	}
-	stat, err := file.Stat()
-	if err != nil {
-		return fmt.Errorf("stat object upload: %w", err)
-	}
-	if !stat.Mode().IsRegular() || stat.Size() != size {
-		return fmt.Errorf("object upload size mismatch")
-	}
-	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(bucket), Key: aws.String(key), Body: io.NewSectionReader(file, 0, size), ContentLength: aws.Int64(size),
-		IfNoneMatch: aws.String("*"), ContentType: aws.String("application/octet-stream"),
-	})
-	if err != nil {
-		return fmt.Errorf("put immutable object: %w", err)
-	}
-	return s.VerifyObject(ctx, bucket, key, size, digest)
-}
-
-func (s *S3Storage) VerifyObject(ctx context.Context, bucket, key string, size int64, digest string) error {
-	r, _, err := s.DownloadFile(ctx, bucket, key, nil)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-	hash := sha256.New()
-	n, err := io.Copy(hash, io.LimitReader(r, size+1))
-	if err != nil {
-		return fmt.Errorf("verify object bytes: %w", err)
-	}
-	if n != size || hex.EncodeToString(hash.Sum(nil)) != digest {
-		return fmt.Errorf("stored object checksum or size mismatch")
 	}
 	return nil
 }

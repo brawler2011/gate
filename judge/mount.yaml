@@ -1,0 +1,70 @@
+# go-judge sandbox filesystem. All tools come from the Nix runtime (flake.nix):
+# its bin/ is exposed as /usr/bin and /bin, and the binaries resolve their
+# libraries and data through /nix/store.
+mount:
+  - type: bind
+    source: /nix/store
+    target: /nix/store
+    readonly: true
+  - type: bind
+    source: /opt/runtime/bin
+    target: /usr/bin
+    readonly: true
+  - type: bind
+    source: /opt/runtime/bin
+    target: /bin
+    readonly: true
+  # Prebuilt Go standard library (flake.nix go-cache).
+  - type: bind
+    source: /opt/go-cache
+    target: /var/cache/go
+    readonly: true
+  - type: bind
+    source: /dev/null
+    target: /dev/null
+  - type: bind
+    source: /dev/urandom
+    target: /dev/urandom
+  - type: bind
+    source: /dev/random
+    target: /dev/random
+  - type: bind
+    source: /dev/zero
+    target: /dev/zero
+  - type: bind
+    source: /dev/full
+    target: /dev/full
+  - type: tmpfs
+    target: /w
+    data: size=128m,nr_inodes=4k
+  - type: tmpfs
+    target: /tmp
+    data: size=128m,nr_inodes=4k
+# Java resolves its home through /proc/self/exe.
+proc: true
+symLink:
+  - linkPath: /dev/fd
+    target: /proc/self/fd
+  - linkPath: /dev/stdin
+    target: /proc/self/fd/0
+  - linkPath: /dev/stdout
+    target: /proc/self/fd/1
+  - linkPath: /dev/stderr
+    target: /proc/self/fd/2
+maskPath:
+  - /sys/firmware
+  - /sys/devices/virtual/powercap
+  - /proc/acpi
+  - /proc/asound
+  - /proc/kcore
+  - /proc/keys
+  - /proc/latency_stats
+  - /proc/timer_list
+  - /proc/timer_stats
+  - /proc/sched_debug
+  - /proc/scsi
+workDir: /w
+hostName: go-judge
+domainName: go-judge
+uid: 1536
+gid: 1536

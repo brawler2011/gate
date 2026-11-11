@@ -74,7 +74,7 @@ services:
         max-size: "10m"
         max-file: "3"
     build:
-      context: ../common/judge
+      context: ../../judge
       dockerfile: Dockerfile
     image: ghcr.io/brawler2011/gate-go-judge:latest
     container_name: gate-go-judge-local

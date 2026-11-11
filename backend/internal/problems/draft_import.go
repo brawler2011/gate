@@ -85,7 +85,7 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid import ZIP")
 	}
 	tree := filepath.Join(root, "tree")
-	if err := ziputil.ExtractZipLimited(z, tree, uc.BuildOptions.Limits.DiskBytes-archive.spec.Size, uc.BuildOptions.Limits.FileCount); err != nil {
+	if err := ziputil.ExtractZipLimited(z, tree, int64(uc.BuildOptions.Limits.DiskBytes)-archive.spec.Size, uc.BuildOptions.Limits.FileCount); err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid import archive")
 	}
 	packageRoot, err := detectImportRoot(tree)
@@ -221,7 +221,7 @@ func (uc *DraftUseCase) convertImport(result *draftImport, root string, plan *gf
 			if err != nil {
 				return fmt.Errorf("stat: %w", err)
 			}
-			if info.Size() > uc.DraftQuotas.FileBytes {
+			if info.Size() > int64(uc.DraftQuotas.FileBytes) {
 				return pkg.ErrPayloadTooLarge
 			}
 			data, err := os.ReadFile(paths[path])

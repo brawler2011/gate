@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -32,7 +33,7 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	if image := os.Getenv("GOJUDGE_TEST_IMAGE"); image != "" {
 		req.Image = image
 	} else {
-		req.FromDockerfile = testcontainers.FromDockerfile{Context: "../../../deploy/common/judge", Dockerfile: "Dockerfile", KeepImage: true}
+		req.FromDockerfile = testcontainers.FromDockerfile{Context: "../../../judge", Dockerfile: "Dockerfile", KeepImage: true}
 	}
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: req, Started: true})
 	require.NoError(t, err)
@@ -48,7 +49,7 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	client, err := NewClient(host + ":" + grpcPort.Port())
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, client.Close()) })
-	cfg, err := LoadConfig("../../../languages.yaml")
+	cfg, err := LoadConfig("../../../judge/langs.toml")
 	require.NoError(t, err)
 	sb := NewSandbox(client, cfg)
 	program, err := sb.Compile(ctx, []byte("#include <unistd.h>\nint main(){char b[32768]; ssize_t n; while((n=read(0,b,sizeof b))>0){ssize_t p=0; while(p<n){ssize_t w=write(1,b+p,n-p); if(w<=0)return 2;p+=w;}} return n<0;}"), "cpp", nil)
@@ -62,7 +63,7 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	_, err = io.CopyN(io.MultiWriter(f, hash), rand.Reader, size)
 	require.NoError(t, err)
 	expected := fmt.Sprintf("%x", hash.Sum(nil))
-	limits := FileRunLimits{CPU: 10 * time.Second, Wall: 30 * time.Second, Memory: 64 * 1024 * 1024, Processes: 10, Output: size, Diagnostic: 4096}
+	limits := FileRunLimits{CPU: 10 * time.Second, Wall: 30 * time.Second, Memory: 64 * 1024 * 1024, Processes: 10, Output: bytesize.Size(size), Diagnostic: 4096}
 	runtime.GC()
 	var initial runtime.MemStats
 	runtime.ReadMemStats(&initial)

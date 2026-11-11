@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
@@ -92,10 +93,10 @@ type BuildSnapshot struct {
 }
 
 type BuildLimits struct {
-	DiskBytes       int64                 `json:"disk_bytes" yaml:"disk_bytes"`
+	DiskBytes       bytesize.Size         `json:"disk_bytes" yaml:"disk_bytes"`
 	FileCount       int                   `json:"file_count" yaml:"file_count"`
-	ObjectBytes     int64                 `json:"object_bytes" yaml:"object_bytes"`
-	TestOutputBytes int64                 `json:"test_output_bytes" yaml:"test_output_bytes"`
+	ObjectBytes     bytesize.Size         `json:"object_bytes" yaml:"object_bytes"`
+	TestOutputBytes bytesize.Size         `json:"test_output_bytes" yaml:"test_output_bytes"`
 	Compile         sandbox.FileRunLimits `json:"compile" yaml:"compile"`
 	Auxiliary       sandbox.FileRunLimits `json:"auxiliary" yaml:"auxiliary"`
 }
@@ -108,12 +109,12 @@ type Toolchain struct {
 }
 
 type DraftQuotas struct {
-	FileBytes  int64 `yaml:"file_bytes"`
-	TextBytes  int64 `yaml:"text_bytes"`
-	Files      int   `yaml:"files"`
-	Tests      int   `yaml:"tests"`
-	Components int   `yaml:"components"`
-	Subtasks   int   `yaml:"subtasks"`
+	FileBytes  bytesize.Size `yaml:"file_bytes"`
+	TextBytes  bytesize.Size `yaml:"text_bytes"`
+	Files      int           `yaml:"files"`
+	Tests      int           `yaml:"tests"`
+	Components int           `yaml:"components"`
+	Subtasks   int           `yaml:"subtasks"`
 }
 
 func ValidDraftPath(path string) bool {
@@ -159,13 +160,13 @@ func (d *Draft) Validate(q DraftQuotas, build bool) error {
 	var total int64
 	paths := make(map[string]bool)
 	for path, text := range d.Files {
-		if !ValidDraftPath(path) || !utf8.ValidString(text) || int64(len(text)) > q.FileBytes {
+		if !ValidDraftPath(path) || !utf8.ValidString(text) || int64(len(text)) > int64(q.FileBytes) {
 			return fmt.Errorf("invalid text file %q or size exceeded", path)
 		}
 		total += int64(len(text))
 		paths[path] = true
 	}
-	if total > q.TextBytes {
+	if total > int64(q.TextBytes) {
 		return fmt.Errorf("draft text quota exceeded")
 	}
 	for _, asset := range d.Assets {

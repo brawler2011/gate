@@ -36,15 +36,10 @@ func (uc *DraftUseCase) uploadImport(ctx context.Context, k model.MutationKey, p
 		if err != nil {
 			return nil, fmt.Errorf("open: %w", err)
 		}
-		uploadErr := uc.Store.PutImmutable(ctx, uc.Bucket, o.Key, f, o.Size, o.SHA256)
+		uploadErr := uc.Store.UploadFile(ctx, uc.Bucket, o.Key, io.NewSectionReader(f, 0, o.Size), "application/octet-stream")
 		closeErr := f.Close()
-		if closeErr != nil {
-			return nil, fmt.Errorf("close: %w", closeErr)
-		}
-		if uploadErr != nil {
-			if err := uc.Store.VerifyObject(ctx, uc.Bucket, o.Key, o.Size, o.SHA256); err != nil {
-				return nil, errors.Join(uploadErr, err)
-			}
+		if err := errors.Join(uploadErr, closeErr); err != nil {
+			return nil, err
 		}
 	}
 	if err := plan.bind(ids); err != nil {
