@@ -109,6 +109,21 @@ func (f *wsFixture) connect(t *testing.T, path string) *websocket.Conn {
 	return conn
 }
 
+// requireUnsubscribed checks, without waiting, that no subscription is registered.
+// The server unregisters a subscription before writing its close frame, so once
+// a client observed the close, a reconnect cannot be confused with the old one.
+func (f *wsFixture) requireUnsubscribed(t *testing.T) {
+	t.Helper()
+	f.hub.mu.RLock()
+	submissions := len(f.hub.subscribers)
+	f.hub.mu.RUnlock()
+	f.contests.mu.RLock()
+	contests := len(f.contests.subscribers)
+	f.contests.mu.RUnlock()
+	require.Zero(t, submissions, "submission subscriptions after close")
+	require.Zero(t, contests, "contest subscriptions after close")
+}
+
 func (f *wsFixture) waitSubscribed(t *testing.T) {
 	t.Helper()
 	require.Eventually(t, func() bool {
@@ -293,6 +308,7 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	require.InDelta(t, float64(7), readPayload(t, conn)["number"], 0)
 	f.stub.change(func() { f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true} })
 	requireClose(t, conn, 1011)
+	f.requireUnsubscribed(t)
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
 	f.waitSubscribed(t)
 	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
@@ -301,6 +317,7 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 		f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusUnfrozen}
 	})
 	requireClose(t, conn, 1011)
+	f.requireUnsubscribed(t)
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
 	f.waitSubscribed(t)
 	f.publish(t, submissionsmodel.SubmissionEventCreated, created)
@@ -313,6 +330,7 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	// A participant can reconnect to the own projection without review permission.
 	f.stub.change(func() { f.stub.permissions.ListOwnSubmissions = true })
 	requireClose(t, conn, 1011)
+	f.requireUnsubscribed(t)
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
 	f.waitSubscribed(t)
 	created.SubmissionEventMeta = f.meta(f.stub.user.Id)
@@ -330,6 +348,7 @@ func TestClarificationsUseCurrentManagePermission(t *testing.T) {
 	require.Equal(t, "private", readPayload(t, conn)["question"])
 	f.stub.change(func() { f.stub.permissions.ManageContest = false; f.stub.permissions.ListOwnSubmissions = true })
 	requireClose(t, conn, 1011)
+	f.requireUnsubscribed(t)
 	conn = f.connect(t, "/ws/contests?contestId="+f.stub.contest.ID.String())
 	f.waitContestSubscribed(t)
 	f.publish(t, contestsmodel.ContestEventClarificationCreated, event)
@@ -511,6 +530,7 @@ func TestReplayRejectsFormerLiveProjectionAfterFreeze(t *testing.T) {
 	})
 	conn := f.connect(t, f.path("submissions"))
 	requireClose(t, conn, 1011)
+	f.requireUnsubscribed(t)
 	// A fresh subscription receives only the newly projected, masked payload.
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
 	f.waitSubscribed(t)

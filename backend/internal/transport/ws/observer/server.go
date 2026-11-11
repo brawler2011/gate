@@ -172,15 +172,10 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 		rejectHistory(conn, err)
 		return
 	}
-	defer func() {
-		s.hub.mu.Lock()
-		delete(s.hub.subscribers, sub.id)
-		s.hub.mu.Unlock()
-	}()
 	sub.verify = lease
-	sub.onInvalidate = func(err error) { s.sendFinalSnapshot(ctx, filter, conn, err) }
+	sub.onInvalidate = func(err error) { s.sendFinalSnapshot(ctx, filter, sub.conn, err) }
 	sub.run(history, filter.Matches, func(event *WrappedEvent) error {
-		return s.sendSubmission(ctx, filter, event, conn)
+		return s.sendSubmission(ctx, filter, event, sub.conn)
 	})
 }
 
@@ -227,13 +222,8 @@ func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 		rejectHistory(conn, err)
 		return
 	}
-	defer func() {
-		s.contestsHub.mu.Lock()
-		delete(s.contestsHub.subscribers, sub.id)
-		s.contestsHub.mu.Unlock()
-	}()
 	sub.verify = lease
 	sub.run(history, filter.Matches, func(event *WrappedEvent) error {
-		return s.sendContest(parsed, event, conn)
+		return s.sendContest(parsed, event, sub.conn)
 	})
 }
