@@ -40,14 +40,42 @@ type subscription struct {
 	queueMu      sync.Mutex
 	verify       func() error
 	onInvalidate func(error)
+	// detach removes the subscription from its hub. It must not be called while
+	// holding the hub lock and must tolerate repeated calls.
+	detach func()
 }
 
 func newSubscription(conn websocketConnection) *subscription {
-	return &subscription{
-		id: uuid.New(), conn: conn,
+	s := &subscription{
+		id:     uuid.New(),
 		outbox: make(chan *WrappedEvent, eventQueueCapacity),
 		done:   make(chan struct{}),
 	}
+	s.conn = unregisteringConnection{websocketConnection: conn, sub: s}
+	return s
+}
+
+// unregister detaches the subscription before the client can observe its end,
+// so a client that saw the close frame and reconnected is never matched with
+// its previous, still registered subscription.
+func (s *subscription) unregister() {
+	if s.detach != nil {
+		s.detach()
+	}
+}
+
+// unregisteringConnection unregisters the subscription before every close frame,
+// whichever code path writes it.
+type unregisteringConnection struct {
+	websocketConnection
+	sub *subscription
+}
+
+func (c unregisteringConnection) WriteControl(messageType int, data []byte, deadline time.Time) error {
+	if messageType == websocket.CloseMessage {
+		c.sub.unregister()
+	}
+	return c.websocketConnection.WriteControl(messageType, data, deadline)
 }
 
 // enqueue and invalidation share a lock so a closed queue cannot be repopulated.
@@ -68,6 +96,7 @@ func (s *subscription) enqueue(event *WrappedEvent) bool {
 }
 func (s *subscription) close(reason string, err error) {
 	s.closeOnce.Do(func() {
+		s.unregister()
 		s.queueMu.Lock()
 		close(s.done)
 	drain:

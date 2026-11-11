@@ -164,6 +164,11 @@ func (h *Hub) subscribe(conn websocketConnection, filter *SubmissionsFilter, rep
 	}
 	sub := &Subscriber{subscription: newSubscription(conn), filter: filter}
 	h.subscribers[sub.id] = sub
+	sub.detach = func() {
+		h.mu.Lock()
+		delete(h.subscribers, sub.id)
+		h.mu.Unlock()
+	}
 	return sub, scopeHistory(history, filter.Topics), nil
 }
 
