@@ -138,18 +138,21 @@ jobs:
         env:
           IMAGE: ${{ steps.tag.outputs.image }}
 
+      # Forks cannot push; their integration job builds the image instead.
       - name: Set up Docker Buildx
-        if: steps.existing.outputs.found != 'true'
+        if: env.PUSH_IMAGES == 'true' && steps.existing.outputs.found != 'true'
         uses: docker/setup-buildx-action@v4
 
       - name: Build judge image
-        if: steps.existing.outputs.found != 'true'
+        if: env.PUSH_IMAGES == 'true' && steps.existing.outputs.found != 'true'
         uses: docker/build-push-action@v7
         with:
           context: judge
           file: judge/Dockerfile
           tags: ${{ steps.tag.outputs.image }}
           push: ${{ env.PUSH_IMAGES == 'true' }}
+          # One plain manifest per tag: rebuilding identical sources keeps the digest.
+          provenance: false
           cache-from: type=gha,scope=gojudge
           cache-to: type=gha,scope=gojudge,mode=max
 
@@ -165,9 +168,7 @@ jobs:
 
       - name: Compute image tag
         id: tag
-        run: echo "image=ghcr.io/${OWNER,,}/gate-backend:$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
-        env:
-          OWNER: ${{ github.repository_owner }}
+        run: echo "image=ghcr.io/brawler2011/gate-backend:$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
         if: env.PUSH_IMAGES == 'true'
@@ -200,6 +201,8 @@ jobs:
           file: Dockerfile
           tags: ${{ steps.tag.outputs.image }}
           push: ${{ env.PUSH_IMAGES == 'true' }}
+          # One plain manifest per tag: rebuilding identical sources keeps the digest.
+          provenance: false
           cache-from: type=gha,scope=backend
           cache-to: type=gha,scope=backend,mode=max
 
@@ -236,9 +239,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Pulls the image the Judge Image job pushed (forks build it here).
+      # Judge Image pushed it, so a failed pull is an error, not a reason to build.
+      # Forks skip this; `task judge:image` builds the image for them.
       - name: Prepare go-judge image
-        run: task judge:image
+        if: env.PUSH_IMAGES == 'true'
+        run: docker pull "$(go run ./tools/judgeimage)"
 
       - name: Run integration tests
         run: task test:be:integration
