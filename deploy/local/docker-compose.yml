@@ -76,7 +76,7 @@ services:
     build:
       context: ../../judge
       dockerfile: Dockerfile
-    image: ghcr.io/brawler2011/gate-go-judge:latest
+    image: gate-go-judge:local
     container_name: gate-go-judge-local
     hostname: go-judge
     restart: unless-stopped

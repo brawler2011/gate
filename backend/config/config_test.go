@@ -16,7 +16,6 @@ func setSecrets(t *testing.T) {
 	for k, v := range map[string]string{
 		"POSTGRES_DSN": "postgres://db:5432/app", "REDIS_URL": "redis://redis:6379/0", "NATS_URL": "nats://nats:4222",
 		"S3_ACCESS_KEY": "key", "S3_SECRET_KEY": "secret", "RESEND_API_KEY": "re_key",
-		"GOJUDGE_TOOLCHAIN_DIGEST": "sha256:abc", "GOJUDGE_ARCHITECTURE": "amd64", "GOJUDGE_ABI": "linux-gnu",
 	} {
 		t.Setenv(k, v)
 	}
