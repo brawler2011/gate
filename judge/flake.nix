@@ -25,25 +25,55 @@
           metafont
         ]
       );
+
+      # Everything visible inside the sandbox: its bin/ is mounted as /usr/bin and /bin.
+      runtime = pkgs.buildEnv {
+        name = "judge-runtime";
+        paths = [
+          pkgs.bash
+          pkgs.coreutils
+          tex
+        ]
+        ++ langPackages;
+      };
+
+      # Go 1.20+ ships no precompiled standard library, so a cold build exceeds
+      # the compile limit. The sandbox mounts this cache read-only as GOCACHE.
+      goCache = pkgs.runCommand "go-std-cache" { nativeBuildInputs = [ go ]; } ''
+        export HOME=$TMPDIR GOCACHE=$out CGO_ENABLED=0
+        go build std
+      '';
+
+      # Toolchain identity pinned into every problem build. The store paths change
+      # whenever any compiler, library or flake input changes, and only then.
+      identity = {
+        digest =
+          "sha256:"
+          + builtins.hashString "sha256" (
+            builtins.unsafeDiscardStringContext "${runtime}\n${goCache}"
+          );
+        architecture =
+          {
+            x86_64-linux = "amd64";
+            aarch64-linux = "arm64";
+          }
+          .${system};
+        abi = "linux-gnu";
+      };
     in
     {
       packages.${system} = {
-        # Everything visible inside the sandbox: its bin/ is mounted as /usr/bin and /bin.
-        default = pkgs.buildEnv {
-          name = "judge-runtime";
-          paths = [
-            pkgs.bash
-            pkgs.coreutils
-            tex
-          ]
-          ++ langPackages;
-        };
+        default = runtime;
+        go-cache = goCache;
 
-        # Go 1.20+ ships no precompiled standard library, so a cold build exceeds
-        # the compile limit. The sandbox mounts this cache read-only as GOCACHE.
-        go-cache = pkgs.runCommand "go-std-cache" { nativeBuildInputs = [ go ]; } ''
-          export HOME=$TMPDIR GOCACHE=$out CGO_ENABLED=0
-          go build std
+        # What the backend reads from the sandbox at startup (mounted at /etc/judge).
+        manifest = pkgs.runCommand "judge-manifest" {
+          identity = builtins.toJSON identity;
+          passAsFile = [ "identity" ];
+        } ''
+          mkdir $out
+          cp "$identityPath" $out/identity.json
+          cp ${./langs.toml} $out/langs.toml
         '';
       };
     };

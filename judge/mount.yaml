@@ -19,6 +19,11 @@ mount:
     source: /opt/go-cache
     target: /var/cache/go
     readonly: true
+  # Toolchain identity and languages, read by the backend at startup (flake.nix manifest).
+  - type: bind
+    source: /opt/manifest
+    target: /etc/judge
+    readonly: true
   - type: bind
     source: /dev/null
     target: /dev/null

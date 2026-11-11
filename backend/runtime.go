@@ -196,10 +196,15 @@ func runApp(configFile, envFile string) error {
 	defer sandboxClient.Close()
 	logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudge.GRPCAddr))
 
-	sandboxCfg, err := sandbox.LoadConfig("judge/langs.toml")
+	// The toolchain identity and languages come from the running judge image itself.
+	imageCtx, cancelImage := context.WithTimeout(context.Background(), time.Minute)
+	judgeImage, err := sandbox.ReadImage(imageCtx, sandboxClient)
+	cancelImage()
 	if err != nil {
-		return fmt.Errorf("failed to load sandbox config: %w", err)
+		return err
 	}
+	sandboxCfg := judgeImage.Config
+	logger.Info("read judge image manifest", slog.String("toolchain_digest", judgeImage.Identity.Digest))
 
 	sandboxInstance := sandbox.NewSandbox(sandboxClient, sandboxCfg)
 	problemPolicy := cfg.Problems
@@ -215,7 +220,7 @@ func runApp(configFile, envFile string) error {
 		return err
 	}
 	problemDrafts := pgstore.NewProblemDraftsRepo(pool, problemPolicy.Draft, problemPolicy.OperationLease)
-	toolchain := problemsmodel.Toolchain{Digest: cfg.Toolchain.Digest, Architecture: cfg.Toolchain.Architecture, ABI: cfg.Toolchain.ABI, Languages: sandboxCfg.Langs}
+	toolchain := problemsmodel.Toolchain{Digest: judgeImage.Identity.Digest, Architecture: judgeImage.Identity.Architecture, ABI: judgeImage.Identity.ABI, Languages: sandboxCfg.Langs}
 	buildOptions := problemsmodel.BuildOptions{Toolchain: toolchain, Limits: problemPolicy.Limits, MaxAttempts: problemPolicy.Attempts, Duration: problemPolicy.Duration, Lease: problemPolicy.Lease}
 	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, UploadTTL: problemPolicy.UploadTTL, ObjectBytes: int64(problemPolicy.Limits.ObjectBytes), BuildOptions: buildOptions}
 	pipeline := &builder.Pipeline{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Environment: toolchain, UploadTTL: problemPolicy.UploadTTL, Logger: logger}

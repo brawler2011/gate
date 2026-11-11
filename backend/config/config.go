@@ -24,8 +24,6 @@ type Config struct {
 	Problems ProblemPolicy `yaml:"problems"`
 
 	Secrets Secrets `yaml:"-"`
-	// Toolchain is the go-judge image identity pinned into every build.
-	Toolchain Toolchain `yaml:"-"`
 }
 
 type HTTP struct {
@@ -74,12 +72,6 @@ type Secrets struct {
 	ResendAPIKey string `env:"RESEND_API_KEY"`
 }
 
-type Toolchain struct {
-	Digest       string `env:"GOJUDGE_TOOLCHAIN_DIGEST"`
-	Architecture string `env:"GOJUDGE_ARCHITECTURE"`
-	ABI          string `env:"GOJUDGE_ABI"`
-}
-
 // Load reads the YAML file at path, rejecting unknown fields, then the secrets
 // from the environment, and validates the result.
 func Load(path string) (Config, error) {
@@ -96,9 +88,6 @@ func Load(path string) (Config, error) {
 	}
 	if err := cleanenv.ReadEnv(&cfg.Secrets); err != nil {
 		return cfg, fmt.Errorf("read secrets: %w", err)
-	}
-	if err := cleanenv.ReadEnv(&cfg.Toolchain); err != nil {
-		return cfg, fmt.Errorf("read toolchain: %w", err)
 	}
 	if err := cfg.Validate(); err != nil {
 		return cfg, fmt.Errorf("invalid config %s: %w", path, err)
@@ -132,9 +121,6 @@ func (c Config) Validate() error {
 	v.required("NATS_URL", c.Secrets.NatsURL)
 	v.required("S3_ACCESS_KEY", c.Secrets.S3AccessKey)
 	v.required("S3_SECRET_KEY", c.Secrets.S3SecretKey)
-	v.required("GOJUDGE_TOOLCHAIN_DIGEST", c.Toolchain.Digest)
-	v.required("GOJUDGE_ARCHITECTURE", c.Toolchain.Architecture)
-	v.required("GOJUDGE_ABI", c.Toolchain.ABI)
 	return errors.Join(v.errs...)
 }
 
