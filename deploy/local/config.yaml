@@ -1,0 +1,62 @@
+# Backend configuration for local development (task dev).
+# Secrets and connection strings come from the environment; see deploy/local/.env.example.
+http:
+  address: 0.0.0.0:8080
+  # Empty: only direct clients, no forwarded client IPs.
+  trusted_proxy: ""
+  secure_cookies: false
+go_judge:
+  grpc_addr: localhost:5051
+  http_url: http://localhost:5050
+storage:
+  s3_endpoint: http://localhost:8333
+email:
+  # Emails are only logged.
+  provider: log
+  from: Gate <no-reply@gate.local>
+  app_base_url: http://localhost:3000
+inbox:
+  retention: 168h
+judge:
+  workers: 4
+problems:
+  # Disk-backed scratch space for builds and judging; must not be tmpfs.
+  work_dir: backend/data/problem-work
+  draft:
+    file_bytes: 1MiB
+    text_bytes: 8MiB
+    files: 1000
+    tests: 10000
+    components: 100
+    subtasks: 100
+  limits:
+    disk_bytes: 8GiB
+    file_count: 25000
+    object_bytes: 512MiB
+    test_output_bytes: 512MiB
+    compile:
+      cpu: 10s
+      wall: 30s
+      memory: 512MiB
+      processes: 150
+      output: 64MiB
+      diagnostic: 64KiB
+    auxiliary:
+      cpu: 5s
+      wall: 15s
+      memory: 256MiB
+      processes: 50
+      output: 512MiB
+      diagnostic: 64KiB
+  parallelism: 1
+  attempts: 3
+  lease: 30s
+  poll: 1s
+  duration: 30m
+  operation_lease: 10m
+  upload_ttl: 5m
+  gc_interval: 1m
+  object_retention: 24h
+  build_retention: 168h
+  package_retention: 720h
+  request_bytes: 16MiB

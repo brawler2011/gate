@@ -8,7 +8,6 @@ afterEach(() => {
 });
 
 it("API errors retain requestId and log only safe operation metadata", async () => {
-  process.env.BACKEND_API_URL = "http://backend.test";
   const {api} = await import("../lib/api");
   const logged = spyOn(console, "error").mockImplementation(() => {});
   try {

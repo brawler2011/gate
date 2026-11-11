@@ -6,24 +6,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewEmailService_Environments(t *testing.T) {
-	// 1. Local environment always uses LogEmailService (even if API key is provided)
-	svcLocal := NewEmailService("local", "re_test_key", "no-reply@example.com", "http://localhost:3000")
-	_, isLogLocal := svcLocal.(*LogEmailService)
-	assert.True(t, isLogLocal, "expected LogEmailService for local env")
+func TestNewEmailServiceProvider(t *testing.T) {
+	_, logs := NewEmailService(false, "re_test_key", "no-reply@example.com", "http://localhost:3000").(*LogEmailService)
+	assert.True(t, logs, "expected LogEmailService when delivery is disabled")
 
-	// 2. Dev environment with API key uses ResendEmailService
-	svcDev := NewEmailService("dev", "re_test_key", "no-reply@example.com", "http://dev.gate.example.com")
-	_, isResendDev := svcDev.(*ResendEmailService)
-	assert.True(t, isResendDev, "expected ResendEmailService for dev env with API key")
-
-	// 3. Prod environment with API key uses ResendEmailService
-	svcProd := NewEmailService("prod", "re_test_key", "Gate <no-reply@gate.example.com>", "https://gate.example.com")
-	_, isResendProd := svcProd.(*ResendEmailService)
-	assert.True(t, isResendProd, "expected ResendEmailService for prod env with API key")
-
-	// 4. Non-local without API key falls back to LogEmailService
-	svcDevNoKey := NewEmailService("dev", "", "no-reply@example.com", "http://dev.gate.example.com")
-	_, isLogDevNoKey := svcDevNoKey.(*LogEmailService)
-	assert.True(t, isLogDevNoKey, "expected LogEmailService fallback when API key is empty")
+	svc, delivers := NewEmailService(true, "re_test_key", "Gate <no-reply@gate.example.com>", "https://gate.example.com/").(*ResendEmailService)
+	assert.True(t, delivers, "expected ResendEmailService when delivery is enabled")
+	assert.Equal(t, "https://gate.example.com", svc.AppBaseURL)
 }

@@ -24,30 +24,15 @@ type EmailService interface {
 	SendContestJoinRequestResolvedEmail(ctx context.Context, toEmail, username, contestTitle, orgLogin, contestLogin string, approved bool) error
 }
 
-func NewEmailService(envName, apiKey, fromEmail, appBaseURL string) EmailService {
+// NewEmailService delivers mail through Resend when deliver is set and only logs it otherwise.
+// The configuration has already been validated.
+func NewEmailService(deliver bool, apiKey, fromEmail, appBaseURL string) EmailService {
 	appBaseURL = strings.TrimRight(appBaseURL, "/")
-	if appBaseURL == "" {
-		appBaseURL = "http://localhost:3000"
+	if !deliver {
+		slog.Info("email delivery disabled; using LogEmailService")
+		return &LogEmailService{AppBaseURL: appBaseURL}
 	}
-	if fromEmail == "" {
-		fromEmail = "Gate <no-reply@gate.local>"
-	}
-
-	if envName == "local" {
-		slog.Info("running in local environment; using LogEmailService for email delivery", "env", envName)
-		return &LogEmailService{
-			AppBaseURL: appBaseURL,
-		}
-	}
-
-	if apiKey == "" {
-		slog.Warn("no RESEND_API_KEY provided in non-local environment; falling back to LogEmailService", "env", envName)
-		return &LogEmailService{
-			AppBaseURL: appBaseURL,
-		}
-	}
-
-	slog.Info("initializing Resend email delivery service", "env", envName, "from", fromEmail)
+	slog.Info("initializing Resend email delivery service", "from", fromEmail)
 	return &ResendEmailService{
 		APIKey:     apiKey,
 		FromEmail:  fromEmail,
