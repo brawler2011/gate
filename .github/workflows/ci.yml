@@ -3,8 +3,8 @@ name: CI
 on:
   workflow_dispatch:
   workflow_call:
+  # Every PR, including PRs stacked on other PR branches.
   pull_request:
-    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,6 +12,10 @@ concurrency:
 
 permissions:
   contents: read
+
+env:
+  # Images are pushed only from this repository; PRs from forks cannot write to GHCR.
+  PUSH_IMAGES: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
 jobs:
   codegen-check:
@@ -91,9 +95,136 @@ jobs:
       - name: Run unit tests
         run: task test:be
 
+  # Images are built once per content and pushed under immutable tags, so deploy
+  # promotes exactly what CI tested. The judge image is named by tools/judgeimage
+  # (content hash of judge/), the backend tag is the git tree of the whole checkout
+  # (unchanged by a squash merge of an up-to-date PR).
+  judge-image:
+    name: Judge Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up project tools
+        uses: jdx/mise-action@v4
+        with:
+          version: "2026.10.25"
+          install_args: go
+
+      - name: Compute image name
+        id: tag
+        run: echo "image=$(go run ./tools/judgeimage)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        if: env.PUSH_IMAGES == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for an existing image
+        id: existing
+        if: env.PUSH_IMAGES == 'true'
+        # Only a single image manifest counts: tags pushed with attestations are
+        # indexes with another digest per build, so they are rebuilt and replaced.
+        run: |
+          media="$(docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' 2> /dev/null | jq -r .mediaType || true)"
+          case "$media" in
+            application/vnd.oci.image.manifest.v1+json|application/vnd.docker.distribution.manifest.v2+json)
+              echo "found=true" >> "$GITHUB_OUTPUT"
+              echo "$IMAGE already exists; skipping the build." ;;
+            "") echo "$IMAGE does not exist yet." ;;
+            *) echo "$IMAGE is a $media; rebuilding it as a single manifest." ;;
+          esac
+        env:
+          IMAGE: ${{ steps.tag.outputs.image }}
+
+      # Forks cannot push; their integration job builds the image instead.
+      - name: Set up Docker Buildx
+        if: env.PUSH_IMAGES == 'true' && steps.existing.outputs.found != 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build judge image
+        if: env.PUSH_IMAGES == 'true' && steps.existing.outputs.found != 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: judge
+          file: judge/Dockerfile
+          tags: ${{ steps.tag.outputs.image }}
+          push: ${{ env.PUSH_IMAGES == 'true' }}
+          # One plain manifest per tag: rebuilding identical sources keeps the digest.
+          provenance: false
+          cache-from: type=gha,scope=gojudge
+          cache-to: type=gha,scope=gojudge,mode=max
+
+  backend-image:
+    name: Backend Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Compute image tag
+        id: tag
+        run: echo "image=ghcr.io/brawler2011/gate-backend:$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        if: env.PUSH_IMAGES == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for an existing image
+        id: existing
+        if: env.PUSH_IMAGES == 'true'
+        # Only a single image manifest counts: tags pushed with attestations are
+        # indexes with another digest per build, so they are rebuilt and replaced.
+        run: |
+          media="$(docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' 2> /dev/null | jq -r .mediaType || true)"
+          case "$media" in
+            application/vnd.oci.image.manifest.v1+json|application/vnd.docker.distribution.manifest.v2+json)
+              echo "found=true" >> "$GITHUB_OUTPUT"
+              echo "$IMAGE already exists; skipping the build." ;;
+            "") echo "$IMAGE does not exist yet." ;;
+            *) echo "$IMAGE is a $media; rebuilding it as a single manifest." ;;
+          esac
+        env:
+          IMAGE: ${{ steps.tag.outputs.image }}
+
+      - name: Set up Docker Buildx
+        if: steps.existing.outputs.found != 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build backend image
+        if: steps.existing.outputs.found != 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          tags: ${{ steps.tag.outputs.image }}
+          push: ${{ env.PUSH_IMAGES == 'true' }}
+          # One plain manifest per tag: rebuilding identical sources keeps the digest.
+          provenance: false
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
   backend-integration-tests:
     name: Backend Integration Tests
+    needs: judge-image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -112,23 +243,22 @@ jobs:
             ~/.cache/go-build
           key: ${{ runner.os }}-go-${{ hashFiles('mise.toml', '**/go.sum') }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Prepare go-judge image
-        uses: docker/build-push-action@v7
+      - name: Log in to GitHub Container Registry
+        if: env.PUSH_IMAGES == 'true'
+        uses: docker/login-action@v4
         with:
-          context: judge
-          file: judge/Dockerfile
-          tags: gate-gojudge:ci
-          load: true
-          cache-from: type=gha,scope=gojudge
-          cache-to: type=gha,scope=gojudge,mode=max
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Judge Image pushed it, so a failed pull is an error, not a reason to build.
+      # Forks skip this; `task judge:image` builds the image for them.
+      - name: Prepare go-judge image
+        if: env.PUSH_IMAGES == 'true'
+        run: docker pull "$(go run ./tools/judgeimage)"
 
       - name: Run integration tests
         run: task test:be:integration
-        env:
-          GOJUDGE_TEST_IMAGE: gate-gojudge:ci
 
   frontend-checks:
     name: Frontend Typecheck & Lint
@@ -163,15 +293,6 @@ jobs:
         env:
           NODE_ENV: production
 
-  app-docker-build:
-    name: Application Docker Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-      - name: Build Go application with static SPA
-        run: docker build --progress=plain --file Dockerfile --tag gate:ci .
-
   ci-status:
     name: All CI Checks Passed
     needs:
@@ -180,7 +301,8 @@ jobs:
       - backend-unit-tests
       - backend-integration-tests
       - frontend-checks
-      - app-docker-build
+      - judge-image
+      - backend-image
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -191,14 +313,16 @@ jobs:
           echo "Backend Unit Tests: ${{ needs.backend-unit-tests.result }}"
           echo "Backend Integration Tests: ${{ needs.backend-integration-tests.result }}"
           echo "Frontend Checks: ${{ needs.frontend-checks.result }}"
-          echo "Frontend Docker Build: ${{ needs.app-docker-build.result }}"
+          echo "Judge Image: ${{ needs.judge-image.result }}"
+          echo "Backend Image: ${{ needs.backend-image.result }}"
 
           if [[ "${{ needs.codegen-check.result }}" != "success" || \
                 "${{ needs.backend-lint.result }}" != "success" || \
                 "${{ needs.backend-unit-tests.result }}" != "success" || \
                 "${{ needs.backend-integration-tests.result }}" != "success" || \
                 "${{ needs.frontend-checks.result }}" != "success" || \
-                "${{ needs.app-docker-build.result }}" != "success" ]]; then
+                "${{ needs.judge-image.result }}" != "success" || \
+                "${{ needs.backend-image.result }}" != "success" ]]; then
             echo "ERROR: One or more CI checks failed!"
             exit 1
           fi
