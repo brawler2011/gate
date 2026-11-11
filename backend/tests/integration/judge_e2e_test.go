@@ -9,11 +9,8 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
-	"net/http"
-	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -32,7 +29,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
-	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -48,67 +44,11 @@ import (
 
 const (
 	seaweedS3Port    = "8333/tcp"
-	objectsBucket    = "problem-objects"
 	toolchainDigest  = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	goJudgeHTTPPort  = "5050/tcp"
 	goJudgeGRPCPort  = "5051/tcp"
 	e2eSandboxTimout = 90 * time.Second
 )
-
-// newSeaweedBackedS3Storage starts a real S3-compatible store with the immutable-object bucket.
-func newSeaweedBackedS3Storage(t *testing.T) *storage.S3Storage {
-	t.Helper()
-	ctx := context.Background()
-	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "chrislusf/seaweedfs:4.53_full",
-			ExposedPorts: []string{seaweedS3Port},
-			Cmd:          []string{"server", "-s3", "-filer", "-ip.bind=0.0.0.0", "-volume.max=100", "-master.volumeSizeLimitMB=32", "-dir=/data"},
-			WaitingFor:   wait.ForHTTP("/").WithPort(seaweedS3Port).WithStartupTimeout(60 * time.Second),
-		},
-		Started: true,
-	})
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = container.Terminate(context.Background()) })
-	host, err := container.Host(ctx)
-	require.NoError(t, err)
-	port, err := container.MappedPort(ctx, seaweedS3Port)
-	require.NoError(t, err)
-	store := storage.NewS3Storage(storage.S3Config{Endpoint: fmt.Sprintf("http://%s:%s", host, port.Port()), AccessKey: "any", SecretKey: "any", Region: "us-east-1"})
-	require.NoError(t, store.EnsureBucket(ctx, objectsBucket))
-	return store
-}
-
-// newGoJudge starts the project's real sandbox image and returns its gRPC client and file transport.
-func newGoJudge(t *testing.T) (*sandbox.Client, *sandbox.FileTransport) {
-	t.Helper()
-	ctx := context.Background()
-	request := testcontainers.ContainerRequest{
-		FromDockerfile: testcontainers.FromDockerfile{Context: "../../../judge", Dockerfile: "Dockerfile", KeepImage: true},
-		ExposedPorts:   []string{goJudgeHTTPPort, goJudgeGRPCPort}, Privileged: true,
-		Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", "-parallelism=2"},
-		WaitingFor: wait.ForHTTP("/version").WithPort(goJudgeHTTPPort).WithStartupTimeout(e2eSandboxTimout)}
-	// CI prebuilds the image; locally it is built from the project's Dockerfile.
-	if image := os.Getenv("GOJUDGE_TEST_IMAGE"); image != "" {
-		request.FromDockerfile = testcontainers.FromDockerfile{}
-		request.Image = image
-	}
-	judge, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: request, Started: true})
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = judge.Terminate(context.Background()) })
-	host, err := judge.Host(ctx)
-	require.NoError(t, err)
-	httpPort, err := judge.MappedPort(ctx, goJudgeHTTPPort)
-	require.NoError(t, err)
-	grpcPort, err := judge.MappedPort(ctx, goJudgeGRPCPort)
-	require.NoError(t, err)
-	client, err := sandbox.NewClient(host + ":" + grpcPort.Port())
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = client.Close() })
-	files, err := sandbox.NewFileTransport("http://"+host+":"+httpPort.Port(), &http.Client{Timeout: time.Minute})
-	require.NoError(t, err)
-	return client, files
-}
 
 func setupE2EEnvironment(t *testing.T) (context.Context, *pgxpool.Pool, jetstream.JetStream) {
 	t.Helper()
@@ -117,7 +57,7 @@ func setupE2EEnvironment(t *testing.T) (context.Context, *pgxpool.Pool, jetstrea
 		postgres.WithDatabase("gate_e2e"), postgres.WithUsername("postgres"), postgres.WithPassword("postgres"),
 		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(30*time.Second)))
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = pgContainer.Terminate(context.Background()) })
+	t.Cleanup(func() { _ = terminate(pgContainer) })
 	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
 	require.NoError(t, err)
 	dbPool, err := pkg.NewPostgresDB(connStr)
@@ -139,7 +79,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		t.Skip("Skipping E2E test in short mode")
 	}
 	ctx, dbPool, js := setupE2EEnvironment(t)
-	store := newSeaweedBackedS3Storage(t)
+	store, bucket := newSeaweedBackedS3Storage(t)
 	client, files := newGoJudge(t)
 	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml")
 	require.NoError(t, err)
@@ -200,12 +140,12 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	build, err := drafts.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)
 	work := diskTempDir(t)
-	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: objectsBucket, TempDir: work, Client: client, Files: files, Environment: toolchain, UploadTTL: time.Minute, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Environment: toolchain, UploadTTL: time.Minute, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	packageID, err := pipeline.Execute(ctx, build)
 	require.NoError(t, err)
 
 	judgeUC := judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), submissionsRepo,
-		&judging.PackageLoader{Store: store, Bucket: objectsBucket, TempDir: diskTempDir(t), Packages: drafts, Limits: limits},
+		&judging.PackageLoader{Store: store, Bucket: bucket, TempDir: diskTempDir(t), Packages: drafts, Limits: limits},
 		&judging.PackageJudge{Client: client, Files: files, Environment: toolchain, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))},
 		judgeworker.NewEventPublisher(js))
 

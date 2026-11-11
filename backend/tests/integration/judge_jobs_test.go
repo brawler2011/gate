@@ -483,5 +483,5 @@ func (s *IntegrationTestSuite) packageHash(packages *pgstore.PackagesRepo, id uu
 // unreadablePackageLoader loads packages from the real object store; the fixture packages
 // have no archive, so every judgement ends in an internal error without touching a sandbox.
 func (s *IntegrationTestSuite) unreadablePackageLoader() *judging.PackageLoader {
-	return &judging.PackageLoader{Store: s.objectStore, Bucket: objectsBucket, TempDir: diskTempDir(s.T()), Packages: s.problemDrafts, Limits: testBuildOptions(s.T()).Limits}
+	return &judging.PackageLoader{Store: s.objectStore, Bucket: s.bucket, TempDir: diskTempDir(s.T()), Packages: s.problemDrafts, Limits: testBuildOptions(s.T()).Limits}
 }
