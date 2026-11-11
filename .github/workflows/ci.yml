@@ -26,13 +26,11 @@ jobs:
     outputs:
       integration: ${{ github.event_name != 'pull_request' || steps.filter.outputs.integration == 'true' }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
+      # On pull requests the filter lists changed files through the API; no checkout needed.
       - name: Filter changed paths
         id: filter
         if: github.event_name == 'pull_request'
-        uses: dorny/paths-filter@v3.0.2
+        uses: dorny/paths-filter@v4.0.3
         with:
           # Everything that can change the outcome of the integration tests.
           filters: |
