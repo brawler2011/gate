@@ -59,26 +59,34 @@ jobs:
       - name: Tag tested images as the release
         id: release
         run: |
-          set -eu
+          set -euo pipefail
           commit="$(git rev-parse HEAD)"
           tag="release-$commit"
-          # promote <tested image>: tags it as the release of this commit.
+          backend="ghcr.io/brawler2011/gate-backend:$(git rev-parse 'HEAD^{tree}')"
+          judge="$(go run ./tools/judgeimage)"
+          digest() { docker buildx imagetools inspect "$1" --format '{{json .Manifest}}' | jq -r .digest; }
+          # promote <tested image>: tags that exact manifest as the release of this commit.
           promote() {
             release="${1%:*}:$tag"
-            if docker buildx imagetools inspect "$release" > /dev/null 2>&1; then
-              echo "$release already exists."
-            elif docker buildx imagetools inspect "$1" > /dev/null 2>&1; then
-              docker buildx imagetools create --tag "$release" "$1"
-            else
+            if ! tested="$(digest "$1" 2> /dev/null)"; then
+              if docker buildx imagetools inspect "$release" > /dev/null 2>&1; then
+                echo "$release already exists."
+                return
+              fi
               echo "::error::$1 was not built by CI for commit $commit; deploy builds nothing."
               exit 1
             fi
+            # Copy the manifest as is; the default would wrap it in a new index.
+            docker buildx imagetools create --prefer-index=false --tag "$release" "$1"
+            if [ "$(digest "$release")" != "$tested" ]; then
+              echo "::error::$release does not have the tested digest $tested."
+              exit 1
+            fi
+            echo "$release = $tested"
           }
-          promote "$REGISTRY/${OWNER,,}/gate-backend:$(git rev-parse 'HEAD^{tree}')"
-          promote "$(go run ./tools/judgeimage)"
+          promote "$backend"
+          promote "$judge"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-        env:
-          OWNER: ${{ github.repository_owner }}
 
   deploy:
     name: Deploy
