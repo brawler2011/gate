@@ -43,7 +43,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
-	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
 	"golang.org/x/sync/errgroup"
 )
@@ -115,8 +114,8 @@ func newHTTPService(name string, server *http.Server) appService {
 	)
 }
 
-func runApp(envFile string) error {
-	cfg, err := loadConfig(envFile)
+func runApp(configFile, envFile string) error {
+	cfg, err := loadConfig(configFile, envFile)
 	if err != nil {
 		return err
 	}
@@ -124,7 +123,7 @@ func runApp(envFile string) error {
 	logger := slog.Default()
 
 	logger.Info("connecting to postgres")
-	pool, err := pkg.NewPostgresDB(cfg.PostgresDSN)
+	pool, err := pkg.NewPostgresDB(cfg.Secrets.PostgresDSN)
 	if err != nil {
 		return err
 	}
@@ -145,19 +144,13 @@ func runApp(envFile string) error {
 	clarificationsRepo := pgstore.NewClarificationsRepo(pool)
 	logger.Info("successfully initialized repositories")
 
-	var store storage.Storage
-	if cfg.StorageType == "s3" || (cfg.StorageType != "local" && cfg.S3Endpoint != "") {
-		store = storage.NewS3Storage(storage.S3Config{
-			Endpoint:  cfg.S3Endpoint,
-			AccessKey: cfg.S3AccessKey,
-			SecretKey: cfg.S3SecretKey,
-			Region:    defaultS3Region,
-		})
-		logger.Info("successfully initialized S3 storage client")
-	} else {
-		store = storage.NewLocalStorage(cfg.LocalStoragePath)
-		logger.Info("successfully initialized Local filesystem storage client", slog.String("path", cfg.LocalStoragePath))
-	}
+	store := storage.NewS3Storage(storage.S3Config{
+		Endpoint:  cfg.Storage.S3Endpoint,
+		AccessKey: cfg.Secrets.S3AccessKey,
+		SecretKey: cfg.Secrets.S3SecretKey,
+		Region:    defaultS3Region,
+	})
+	logger.Info("successfully initialized S3 storage client")
 
 	for bucket, name := range map[string]string{
 		defaultS3AvatarBucket: "avatar",
@@ -168,14 +161,14 @@ func runApp(envFile string) error {
 		}
 	}
 
-	redisClient, err := pkg.NewRedisClient(cfg.RedisURL)
+	redisClient, err := pkg.NewRedisClient(cfg.Secrets.RedisURL)
 	if err != nil {
 		return fmt.Errorf("create rate limiter redis client: %w", err)
 	}
 	defer func() { _ = redisClient.Close() }()
 	limiter := ratelimit.New(redisClient)
 	authRepo := pgstore.NewAuthRepo(pool)
-	emailService := email.NewEmailService(cfg.Env, cfg.ResendAPIKey, cfg.EmailFrom, cfg.AppBaseURL)
+	emailService := email.NewEmailService(cfg.Email.Provider == config.EmailProviderResend, cfg.Secrets.ResendAPIKey, cfg.Email.From, cfg.Email.AppBaseURL)
 
 	usersUC := identity.NewUsersUseCase(usersRepo, pgstore.NewIdentityTransactions(pool), emailService)
 	authUC := identity.NewAuthUseCase(usersRepo, authRepo, pgstore.NewIdentityTransactions(pool), emailService, limiter)
@@ -196,12 +189,12 @@ func runApp(envFile string) error {
 	communicationReader := contests.NewCommunicationReader(announcementsRepo, clarificationsRepo, permissionsUC)
 	logger.Info("successfully initialized use cases")
 
-	sandboxClient, err := sandbox.NewClient(cfg.GoJudgeGRPCAddr)
+	sandboxClient, err := sandbox.NewClient(cfg.GoJudge.GRPCAddr)
 	if err != nil {
 		return fmt.Errorf("initialize sandbox client: %w", err)
 	}
 	defer sandboxClient.Close()
-	logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudgeGRPCAddr))
+	logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudge.GRPCAddr))
 
 	sandboxCfg, err := sandbox.LoadConfig("judge/langs.toml")
 	if err != nil {
@@ -209,14 +202,11 @@ func runApp(envFile string) error {
 	}
 
 	sandboxInstance := sandbox.NewSandbox(sandboxClient, sandboxCfg)
-	problemPolicy, err := config.LoadProblemPolicy(cfg.ProblemPolicyPath)
-	if err != nil {
-		return fmt.Errorf("load problem policy: %w", err)
-	}
-	if err := os.MkdirAll(cfg.ProblemWorkDir, 0700); err != nil {
+	problemPolicy := cfg.Problems
+	if err := os.MkdirAll(problemPolicy.WorkDir, 0700); err != nil {
 		return fmt.Errorf("create problem work directory: %w", err)
 	}
-	fileTransport, err := sandbox.NewFileTransport(cfg.GoJudgeHTTPURL, &http.Client{Timeout: problemPolicy.UploadTTL})
+	fileTransport, err := sandbox.NewFileTransport(cfg.GoJudge.HTTPURL, &http.Client{Timeout: problemPolicy.UploadTTL})
 	if err != nil {
 		return err
 	}
@@ -225,20 +215,20 @@ func runApp(envFile string) error {
 		return err
 	}
 	problemDrafts := pgstore.NewProblemDraftsRepo(pool, problemPolicy.Draft, problemPolicy.OperationLease)
-	toolchain := problemsmodel.Toolchain{Digest: cfg.GoJudgeToolchainDigest, Architecture: cfg.GoJudgeArchitecture, ABI: cfg.GoJudgeABI, Languages: sandboxCfg.Langs}
+	toolchain := problemsmodel.Toolchain{Digest: cfg.Toolchain.Digest, Architecture: cfg.Toolchain.Architecture, ABI: cfg.Toolchain.ABI, Languages: sandboxCfg.Langs}
 	buildOptions := problemsmodel.BuildOptions{Toolchain: toolchain, Limits: problemPolicy.Limits, MaxAttempts: problemPolicy.Attempts, Duration: problemPolicy.Duration, Lease: problemPolicy.Lease}
-	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, UploadTTL: problemPolicy.UploadTTL, ObjectBytes: int64(problemPolicy.Limits.ObjectBytes), BuildOptions: buildOptions}
-	pipeline := &builder.Pipeline{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, Client: sandboxClient, Files: fileTransport, Environment: toolchain, UploadTTL: problemPolicy.UploadTTL, Logger: logger}
+	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, UploadTTL: problemPolicy.UploadTTL, ObjectBytes: int64(problemPolicy.Limits.ObjectBytes), BuildOptions: buildOptions}
+	pipeline := &builder.Pipeline{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Environment: toolchain, UploadTTL: problemPolicy.UploadTTL, Logger: logger}
 	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll}
-	problemGC := &builder.GC{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: logger}
+	problemGC := &builder.GC{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: logger}
 
-	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, MaxArchiveBytes: int64(problemPolicy.Limits.ObjectBytes), MaxEntries: problemPolicy.Limits.FileCount}
+	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, MaxArchiveBytes: int64(problemPolicy.Limits.ObjectBytes), MaxEntries: problemPolicy.Limits.FileCount}
 	draftUC.PackageContent = packageContent
 	problemsUC := problems.NewProblemsUseCase(problemsRepo, pgstore.NewProblemTransactions(pool), orgsRepo, permissionsUC, draftUC, packagesRepo, packageContent)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Permissions: permissionsUC}
 	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, permissionsUC, sandboxInstance, usersRepo)
 
-	natsJS, err := pkg.NewNatsJetStream(cfg.NatsURL)
+	natsJS, err := pkg.NewNatsJetStream(cfg.Secrets.NatsURL)
 	if err != nil {
 		return fmt.Errorf("create nats jetstream connection: %w", err)
 	}
@@ -262,15 +252,15 @@ func runApp(envFile string) error {
 	outboxDispatcher.Register(eventdata.OutboxEventContestClarificationAnswered, contestEventsPublisher)
 	outboxWorker := outbox.NewOutboxWorker(outboxDispatcher, outboxRepo)
 	inboxRepo := pgstore.NewInbox(pool)
-	inboxPruner := inbox.NewPruner(inboxRepo, cfg.GetInboxRetention(), inbox.DefaultPruneInterval)
+	inboxPruner := inbox.NewPruner(inboxRepo, cfg.Inbox.Retention, inbox.DefaultPruneInterval)
 
 	judgeJobs := pgstore.NewJudgeJobs(pool)
 	judgeTransactions := pgstore.NewJudgeTransactions(pool)
 	judgeUC := judging.NewJudgeUseCase(judgeJobs, judgeTransactions, submissionsRepo,
-		&judging.PackageLoader{Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, Packages: problemDrafts, Limits: problemPolicy.Limits},
+		&judging.PackageLoader{Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Packages: problemDrafts, Limits: problemPolicy.Limits},
 		&judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Environment: toolchain, Logger: logger}, judgeworker.NewEventPublisher(natsJS))
 
-	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), natsJS, judgeUC, cfg.JudgeWorkerCount)
+	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), natsJS, judgeUC, cfg.Judge.Workers)
 	if err != nil {
 		return fmt.Errorf("create judge worker: %w", err)
 	}
@@ -363,7 +353,7 @@ func runApp(envFile string) error {
 			BlogsReader: blogsRepo,
 		},
 		natsJS,
-		cfg.Env != "local",
+		cfg.HTTP.SecureCookies,
 		access.NewCapabilities(pgstore.NewPolicyFactsRepo(pool)),
 	).WithLanguages(sandboxCfg.Langs)
 
@@ -382,7 +372,7 @@ func runApp(envFile string) error {
 
 	apiHandler := middleware.AuthMiddleware(authUC)(
 		middleware.UsersMiddleware(usersRepo)(
-			middleware.RateLimit(limiter, cfg.TrustedProxy)(middleware.RequestLimits(apiServer, func(operation string) int64 {
+			middleware.RateLimit(limiter, cfg.HTTP.TrustedProxy)(middleware.RequestLimits(apiServer, func(operation string) int64 {
 				switch operation {
 				case "SaveProblemDraft":
 					return int64(problemPolicy.RequestBytes)
@@ -402,7 +392,7 @@ func runApp(envFile string) error {
 	publicMux.Handle("/", spaHandler("dist"))
 
 	publicServer := &http.Server{
-		Addr: cfg.Address,
+		Addr: cfg.HTTP.Address,
 		Handler: middleware.RequestLoggerMiddleware(logger, func(r *http.Request) string {
 			if strings.HasPrefix(r.URL.Path, "/ws/") {
 				return "/ws/*"
@@ -508,20 +498,14 @@ func runApp(envFile string) error {
 	return runServices(ctx, logger, services)
 }
 
-func loadConfig(envFile string) (config.Config, error) {
-	var cfg config.Config
-
+// loadConfig reads the YAML config; envFile, when set, supplies secrets for local runs.
+func loadConfig(configFile, envFile string) (config.Config, error) {
 	if envFile != "" {
 		if err := godotenv.Load(envFile); err != nil {
-			return cfg, fmt.Errorf("load env file %s: %w", envFile, err)
+			return config.Config{}, fmt.Errorf("load env file %s: %w", envFile, err)
 		}
 	}
-
-	if err := cleanenv.ReadEnv(&cfg); err != nil {
-		return cfg, fmt.Errorf("read config: %w", err)
-	}
-
-	return cfg, nil
+	return config.Load(configFile)
 }
 
 func newObserverMiddleware(users middleware.UsersUC, authUC middleware.AuthUC) func(http.Handler) http.Handler {

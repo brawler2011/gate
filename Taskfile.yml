@@ -66,16 +66,6 @@ tasks:
     cmds:
       - bun run build
 
-  build:fe:local:
-    desc: Build production bundle with local env
-    cmds:
-      - bun run build:local
-
-  build:fe:prod:
-    desc: Build production bundle with prod env
-    cmds:
-      - bun run build:prod
-
   test:
     desc: Run backend unit, repository, and frontend tests
     cmds:
