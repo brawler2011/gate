@@ -64,8 +64,10 @@ func (s *subscription) unregister() {
 	}
 }
 
-// unregisteringConnection unregisters the subscription before every close frame,
-// whichever code path writes it.
+// unregisteringConnection unregisters the subscription before every close frame
+// the observer writes. Close frames written by the websocket library itself
+// (close echoes, oversized messages, protocol errors) bypass it; those
+// subscriptions are unregistered by close once the read pump fails.
 type unregisteringConnection struct {
 	websocketConnection
 	sub *subscription

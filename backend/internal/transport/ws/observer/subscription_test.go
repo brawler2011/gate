@@ -97,7 +97,6 @@ type queueHarness struct {
 	subscribe func(websocketConnection, uint64, bool) (*subscription, []*WrappedEvent, error)
 	broadcast func(*WrappedEvent)
 	count     func() int
-	remove    func(uuid.UUID)
 	event     func(uint64, bool) *WrappedEvent
 }
 
@@ -115,7 +114,6 @@ func newQueueHarness(kind string) *queueHarness {
 		}
 		q.broadcast = h.broadcast
 		q.count = func() int { h.mu.RLock(); defer h.mu.RUnlock(); return len(h.subscribers) }
-		q.remove = func(id uuid.UUID) { h.mu.Lock(); defer h.mu.Unlock(); delete(h.subscribers, id) }
 		q.event = func(seq uint64, matches bool) *WrappedEvent {
 			id := contestID
 			if !matches {
@@ -134,7 +132,6 @@ func newQueueHarness(kind string) *queueHarness {
 		}
 		q.broadcast = h.broadcast
 		q.count = func() int { h.mu.RLock(); defer h.mu.RUnlock(); return len(h.subscribers) }
-		q.remove = func(id uuid.UUID) { h.mu.Lock(); defer h.mu.Unlock(); delete(h.subscribers, id) }
 		q.event = func(seq uint64, matches bool) *WrappedEvent {
 			id := contestID
 			if !matches {
@@ -150,7 +147,6 @@ func (q *queueHarness) run(sub *subscription, history []*WrappedEvent) <-chan st
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		defer q.remove(sub.id)
 		sub.run(history, func(*WrappedEvent) bool { return true }, func(event *WrappedEvent) error {
 			return writeEvent(sub.conn, event.DTOPayload)
 		})
