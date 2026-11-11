@@ -1,0 +1,45 @@
+name: GHCR Cleanup
+
+# Keeps the newest releases for rollback and drops CI images nobody released.
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  packages: write
+
+env:
+  KEEP_RELEASES: 20
+  KEEP_DAYS: 30
+
+jobs:
+  cleanup:
+    name: Delete old image versions
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [gate-backend, gate-go-judge]
+    steps:
+      - name: Delete old versions
+        run: |
+          set -euo pipefail
+          api="/users/$OWNER/packages/container/$PACKAGE/versions"
+          gh api --paginate "$api?per_page=100" --jq '.[]' > versions.json
+          cutoff="$(date -u -d "-$KEEP_DAYS days" +%Y-%m-%dT%H:%M:%SZ)"
+          # Untagged versions are left alone: they may be referenced by a tagged index.
+          jq -rs --arg cutoff "$cutoff" --argjson keep "$KEEP_RELEASES" '
+            map(select(.metadata.container.tags | length > 0))
+            | (map(select(any(.metadata.container.tags[]; startswith("release-"))))
+                | sort_by(.updated_at) | reverse | .[$keep:]) as $old_releases
+            | (map(select(all(.metadata.container.tags[]; startswith("release-") | not)
+                and .updated_at < $cutoff))) as $stale
+            | ($old_releases + $stale)[] | "\(.id) \(.metadata.container.tags | join(","))"
+          ' versions.json | while read -r id tags; do
+            echo "Deleting $PACKAGE version $id ($tags)"
+            gh api --method DELETE "$api/$id"
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          PACKAGE: ${{ matrix.package }}
