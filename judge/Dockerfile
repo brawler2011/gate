@@ -7,10 +7,12 @@ COPY flake.nix flake.lock langs.toml ./
 ENV NIX_CONFIG="experimental-features = nix-command flakes"
 RUN nix build --out-link /runtime .#default \
     && nix build --out-link /go-cache .#go-cache \
+    && nix build --out-link /manifest .#manifest \
     && mkdir -p /rootfs/nix/store /rootfs/opt \
-    && cp -a $(nix-store --query --requisites /runtime /go-cache) /rootfs/nix/store/ \
+    && cp -a $(nix-store --query --requisites /runtime /go-cache /manifest) /rootfs/nix/store/ \
     && ln -s "$(readlink /runtime)" /rootfs/opt/runtime \
     && ln -s "$(readlink /go-cache)" /rootfs/opt/go-cache \
+    && ln -s "$(readlink /manifest)" /rootfs/opt/manifest \
     && mkdir -m 1777 /rootfs/tmp
 COPY --from=gojudge /opt/go-judge /rootfs/opt/go-judge
 COPY mount.yaml /rootfs/opt/mount.yaml

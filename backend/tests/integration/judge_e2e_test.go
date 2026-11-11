@@ -81,8 +81,15 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	ctx, dbPool, js := setupE2EEnvironment(t)
 	store, bucket := newSeaweedBackedS3Storage(t)
 	client, files := newGoJudge(t)
-	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml")
+	// The toolchain identity and languages come from the judge image, as in production.
+	imageCtx, cancel := context.WithTimeout(ctx, e2eSandboxTimout)
+	image, err := sandbox.ReadImage(imageCtx, client)
+	cancel()
 	require.NoError(t, err)
+	source, err := sandbox.LoadConfig("../../../judge/langs.toml")
+	require.NoError(t, err)
+	require.Equal(t, source.Langs, image.Config.Langs)
+	cfg := image.Config
 
 	orgsRepo := pgstore.NewOrganizationsRepo(dbPool)
 	usersRepo := pgstore.NewUsersRepo(dbPool)
@@ -134,7 +141,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	compile := aux
 	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 10*time.Second, 20*time.Second, 512<<20, 150
 	limits := problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux}
-	toolchain := problemsmodel.Toolchain{Digest: toolchainDigest, Architecture: "amd64", ABI: "linux-gnu", Languages: cfg.Langs}
+	toolchain := problemsmodel.Toolchain{Digest: image.Identity.Digest, Architecture: image.Identity.Architecture, ABI: image.Identity.ABI, Languages: cfg.Langs}
 	_, err = drafts.EnqueueBuild(ctx, mutationKey(org.ID, "build", d.Revision), problemID, d.Revision, problemsmodel.BuildOptions{Toolchain: toolchain, Limits: limits, MaxAttempts: 3, Duration: 2 * time.Minute, Lease: time.Minute})
 	require.NoError(t, err)
 	build, err := drafts.ClaimBuild(ctx, time.Minute)
@@ -143,6 +150,9 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Environment: toolchain, UploadTTL: time.Minute, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	packageID, err := pipeline.Execute(ctx, build)
 	require.NoError(t, err)
+	var recorded string
+	require.NoError(t, dbPool.QueryRow(ctx, "SELECT toolchain_digest FROM problem_builds WHERE id=$1", build.ID).Scan(&recorded))
+	assert.Equal(t, image.Identity.Digest, recorded)
 
 	judgeUC := judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), submissionsRepo,
 		&judging.PackageLoader{Store: store, Bucket: bucket, TempDir: diskTempDir(t), Packages: drafts, Limits: limits},
