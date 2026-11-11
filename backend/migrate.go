@@ -17,7 +17,7 @@ func runMigrations(envFile string) error {
 		return err
 	}
 
-	db, err := pkg.NewPostgresDBForMigrations(cfg.GetPostgresDSN())
+	db, err := pkg.NewPostgresDBForMigrations(cfg.PostgresDSN)
 	if err != nil {
 		return err
 	}
