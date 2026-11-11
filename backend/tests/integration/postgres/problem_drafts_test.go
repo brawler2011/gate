@@ -1,6 +1,6 @@
 //go:build integration
 
-package postgres
+package postgres_test
 
 import (
 	"context"
@@ -8,11 +8,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/brawler2011/gate/backend/internal/postgres"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -22,14 +24,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func draftFixture(t *testing.T) (context.Context, *pgxpool.Pool, *ProblemDraftsRepo, uuid.UUID, model.Draft) {
+func draftFixture(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.ProblemDraftsRepo, uuid.UUID, model.Draft) {
 	t.Helper()
 	ctx := context.Background()
 	pool := getSharedTestPool(t)
 	org := helperCreateOrg(t, ctx, pool, "draft-"+uuid.NewString(), "Drafts")
 	id := uuid.New()
 	require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: id, OrganizationID: org, Title: "Initial", ShortName: "draft"}))
-	repo := NewProblemDraftsRepo(pool, model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10}, time.Minute)
+	repo := postgres.NewProblemDraftsRepo(pool, model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10}, time.Minute)
 	d, err := repo.GetDraft(ctx, id)
 	require.NoError(t, err)
 	return ctx, pool, repo, org, d
@@ -117,7 +119,7 @@ func TestProblemBuildSnapshotAndRecovery(t *testing.T) {
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
-	options := ProblemBuildOptions{Toolchain: model.Toolchain{Digest: "sha256:" + strings.Repeat("a", 64), Architecture: "amd64", ABI: "linux-gnu", Languages: map[string]sandbox.Language{"cpp": {Type: "compiler"}}}, MaxAttempts: 3, Duration: time.Minute, Lease: time.Second}
+	options := postgres.ProblemBuildOptions{Toolchain: model.Toolchain{Digest: "sha256:" + strings.Repeat("a", 64), Architecture: "amd64", ABI: "linux-gnu", Languages: map[string]sandbox.Language{"cpp": {Type: "compiler"}}}, MaxAttempts: 3, Duration: time.Minute, Lease: time.Second}
 	key := mutationKey(org, "build", d.Revision)
 	result, err := repo.EnqueueBuild(ctx, key, d.ProblemID, d.Revision, options)
 	require.NoError(t, err)

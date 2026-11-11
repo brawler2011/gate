@@ -1,12 +1,13 @@
 //go:build integration
 
-package postgres
+package postgres_test
 
 import (
 	"context"
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
@@ -14,27 +15,9 @@ import (
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/organizations"
-	"github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 )
-
-type teamResourcesCountingDB struct {
-	*pgxpool.Pool
-	queries int
-}
-
-func (db *teamResourcesCountingDB) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
-	db.queries++
-	return db.Pool.QueryRow(ctx, query, args...)
-}
-
-func (db *teamResourcesCountingDB) Query(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
-	db.queries++
-	return db.Pool.Query(ctx, query, args...)
-}
 
 func TestTeamResourcesViewerAccess(t *testing.T) {
 	pool := getSharedTestPool(t)
@@ -90,20 +73,21 @@ func TestTeamResourcesViewerAccess(t *testing.T) {
 		exec(`INSERT INTO contest_members (contest_id, user_id, role) VALUES ($1, $2, 'participant')`, contestID, users["direct member"])
 		exec(`INSERT INTO problem_members (problem_id, user_id, role) VALUES ($1, $2, 'viewer')`, problemID, users["direct member"])
 	}
-	teams := NewTeamsRepo(pool)
-	permissions := access.NewMetadataPermissions(access.NewPermissionsUseCase(NewContestsRepo(pool), NewUsersRepo(pool), NewProblemsRepo(pool), teams, NewOrganizationsRepo(pool)), NewPolicyFactsRepo(pool))
+	teams := postgres.NewTeamsRepo(pool)
+	permissions := access.NewMetadataPermissions(access.NewPermissionsUseCase(postgres.NewContestsRepo(pool), postgres.NewUsersRepo(pool), postgres.NewProblemsRepo(pool), teams, postgres.NewOrganizationsRepo(pool)), postgres.NewPolicyFactsRepo(pool))
 	uc := organizations.NewTeamsUseCase(teams, permissions, nil, permissions)
+	recordingPool, recorder := newRecordingPool(t)
+	repo := postgres.NewTeamsRepo(recordingPool)
 	for name, viewerID := range users {
 		t.Run(name, func(t *testing.T) {
-			db := &teamResourcesCountingDB{Pool: pool}
-			repo := &TeamsRepo{q: sqlc.New(db)}
+			recorder.reset()
 			contests, count, err := repo.GetTeamContests(ctx, teamID, viewerID, paging.Request{})
 			require.NoError(t, err)
-			require.Equal(t, 1, db.queries)
+			require.Len(t, recorder.recorded(), 1)
 			problems, count, err := repo.GetTeamProblems(ctx, teamID, viewerID, paging.Request{})
 			require.NoError(t, err)
-			require.Equal(t, 2, db.queries)
-			viewer, err := NewUsersRepo(pool).GetUserById(ctx, viewerID)
+			require.Len(t, recorder.recorded(), 2)
+			viewer, err := postgres.NewUsersRepo(pool).GetUserById(ctx, viewerID)
 			require.NoError(t, err)
 			actorCtx := accessmodel.WithUser(ctx, viewer)
 			visibleContests, err := uc.GetTeamContests(actorCtx, teamID, viewerID, paging.Request{})
