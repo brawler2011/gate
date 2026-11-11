@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       release:
-        description: 'Commit to deploy (default: the selected branch head)'
+        description: 'Full SHA of a main commit to redeploy (default: the head of main)'
         required: false
         type: string
 
