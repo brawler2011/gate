@@ -1,7 +1,7 @@
 import {afterAll, beforeAll, describe, expect, it} from 'bun:test';
-import {createServer} from 'vite';
+import {createServer, loadConfigFromFile} from 'vite';
 
-import type {ViteDevServer} from 'vite';
+import type {ProxyOptions, ViteDevServer} from 'vite';
 
 let vite: ViteDevServer;
 let backend: ReturnType<typeof Bun.serve>;
@@ -21,10 +21,19 @@ beforeAll(async () => {
     }
     return new Response('backend missing', {status: 404});
   }});
+  // The proxy rules come from vite.config.ts; only their localhost:8080 target is
+  // redirected to this test backend.
+  const configFile = `${import.meta.dir}/../../vite.config.ts`;
+  const loaded = await loadConfigFromFile({command: 'serve', mode: 'development'}, configFile);
+  const rules = loaded!.config.server!.proxy as Record<string, ProxyOptions>;
+  expect(Object.keys(rules).sort()).toEqual(['^/api(?:/|$)', '^/ws(?:/|$)']);
   const target = `http://127.0.0.1:${backend.port}`;
-  vite = await createServer({configFile: `${import.meta.dir}/../../vite.config.ts`,
-    root: `${import.meta.dir}/../..`, optimizeDeps: {noDiscovery: true, include: []}, server: {host: '127.0.0.1', port: 0,
-      proxy: {'^/api(?:/|$)': {target, changeOrigin: true}, '^/ws(?:/|$)': {target, ws: true}}}});
+  const proxy = Object.fromEntries(Object.entries(rules).map(([path, rule]) => {
+    expect(rule.target).toBe('http://localhost:8080');
+    return [path, {...rule, target}];
+  }));
+  vite = await createServer({configFile: false, ...loaded!.config,
+    root: `${import.meta.dir}/../..`, optimizeDeps: {noDiscovery: true, include: []}, server: {host: '127.0.0.1', port: 0, proxy}});
   await vite.listen();
   const address = vite.httpServer!.address();
   if (!address || typeof address === 'string') {
