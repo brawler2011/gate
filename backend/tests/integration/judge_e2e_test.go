@@ -6,13 +6,10 @@ package integration
 import (
 	"context"
 	"crypto/sha256"
-	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"io"
 	"log/slog"
-	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -34,12 +31,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const (
@@ -53,22 +46,7 @@ const (
 func setupE2EEnvironment(t *testing.T) (context.Context, *pgxpool.Pool, jetstream.JetStream) {
 	t.Helper()
 	ctx := context.Background()
-	pgContainer, err := postgres.Run(ctx, "postgres:18-alpine",
-		postgres.WithDatabase("gate_e2e"), postgres.WithUsername("postgres"), postgres.WithPassword("postgres"),
-		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(30*time.Second)))
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = terminate(pgContainer) })
-	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
-	require.NoError(t, err)
-	dbPool, err := pkg.NewPostgresDB(connStr)
-	require.NoError(t, err)
-	t.Cleanup(dbPool.Close)
-	_, b, _, _ := runtime.Caller(0)
-	sqlDB, err := sql.Open("pgx", connStr)
-	require.NoError(t, err)
-	defer sqlDB.Close()
-	require.NoError(t, goose.SetDialect("postgres"))
-	require.NoError(t, goose.Up(sqlDB, filepath.Join(filepath.Dir(b), "../../migrations")))
+	dbPool := newTestDB(t)
 	js, _ := newNATSJetStream(t)
 	require.NoError(t, pkg.EnsureSubmissionsStream(ctx, js))
 	return ctx, dbPool, js
@@ -78,6 +56,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping E2E test in short mode")
 	}
+	t.Parallel()
 	ctx, dbPool, js := setupE2EEnvironment(t)
 	store, bucket := newSeaweedBackedS3Storage(t)
 	client, files := newGoJudge(t)

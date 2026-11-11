@@ -5,18 +5,17 @@ package integration
 
 import (
 	"context"
-	"database/sql"
 	"errors"
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
-	"runtime"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
+
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
@@ -35,7 +34,6 @@ import (
 	submissions "github.com/brawler2011/gate/backend/internal/submissions"
 	"github.com/brawler2011/gate/backend/internal/transport/middleware"
 	handlers "github.com/brawler2011/gate/backend/internal/transport/rest/core"
-	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
@@ -44,12 +42,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ogen-go/ogen/validate"
-	"github.com/pressly/goose/v3"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/suite"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/mock/gomock"
 )
 
@@ -76,13 +70,12 @@ func (testSecuritySource) CookieAuth(ctx context.Context, operationName corev1.O
 
 type IntegrationTestSuite struct {
 	suite.Suite
-	ctx         context.Context
-	pgContainer *postgres.PostgresContainer
-	dbPool      *pgxpool.Pool
-	handler     http.Handler
-	transport   *testTransport
-	testServer  *httptest.Server
-	client      *corev1.Client
+	ctx        context.Context
+	dbPool     *pgxpool.Pool
+	handler    http.Handler
+	transport  *testTransport
+	testServer *httptest.Server
+	client     *corev1.Client
 
 	ctrl *gomock.Controller
 
@@ -113,71 +106,28 @@ func (s *IntegrationTestSuite) getStatusCode(err error) int {
 	return 0
 }
 
+// TestIntegrationSuite runs every Test method of IntegrationTestSuite as a parallel
+// subtest on its own suite instance, database and bucket. testify's suite.Run shares
+// one instance between tests and cannot run them in parallel.
 func TestIntegrationSuite(t *testing.T) {
-	suite.Run(t, new(IntegrationTestSuite))
-}
-
-func (s *IntegrationTestSuite) SetupSuite() {
-	s.ctx = context.Background()
-
-	// 1. Start Postgres Container
-	var err error
-	s.pgContainer, err = postgres.Run(s.ctx,
-		"postgres:18-alpine",
-		postgres.WithDatabase("tester"),
-		postgres.WithUsername("postgres"),
-		postgres.WithPassword("postgres"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(5*time.Second),
-		),
-	)
-	s.Require().NoError(err)
-
-	connStr, err := s.pgContainer.ConnectionString(s.ctx, "sslmode=disable")
-	s.Require().NoError(err)
-
-	// 2. Connect to DB
-	s.dbPool, err = pkg.NewPostgresDB(connStr)
-	s.Require().NoError(err)
-
-	// 3. Run Migrations
-	_, b, _, _ := runtime.Caller(0)
-	basepath := filepath.Dir(b)
-	migrationsPath := filepath.Join(basepath, "../../migrations")
-
-	db, err := sql.Open("pgx", connStr)
-	s.Require().NoError(err)
-	defer db.Close()
-
-	err = goose.SetDialect("postgres")
-	s.Require().NoError(err)
-	err = goose.Up(db, migrationsPath)
-	s.Require().NoError(err)
-}
-
-func (s *IntegrationTestSuite) TearDownSuite() {
-	if s.dbPool != nil {
-		s.dbPool.Close()
-	}
-	if s.pgContainer != nil {
-		if err := terminate(s.pgContainer); err != nil {
-			log.Printf("failed to terminate container: %s", err)
+	typ := reflect.TypeOf(&IntegrationTestSuite{})
+	for i := range typ.NumMethod() {
+		method := typ.Method(i)
+		if !strings.HasPrefix(method.Name, "Test") || method.Type.NumIn() != 1 || method.Type.NumOut() != 0 {
+			continue
 		}
+		t.Run(method.Name, func(t *testing.T) {
+			t.Parallel()
+			s := new(IntegrationTestSuite)
+			s.SetT(t)
+			s.ctx = context.Background()
+			s.dbPool = newTestDB(t)
+			s.ctrl = gomock.NewController(t)
+			s.mockNats = mocks.NewMockPublisher(s.ctrl)
+			s.initApp()
+			method.Func.Call([]reflect.Value{reflect.ValueOf(s)})
+		})
 	}
-}
-
-func (s *IntegrationTestSuite) SetupTest() {
-	s.ctrl = gomock.NewController(s.T())
-	s.mockNats = mocks.NewMockPublisher(s.ctrl)
-
-	s.initApp()
-}
-
-func (s *IntegrationTestSuite) TearDownTest() {
-	s.ctrl.Finish()
-	// Clean up tables (in reverse dependency order with CASCADE)
-	_, err := s.dbPool.Exec(s.ctx, "TRUNCATE TABLE organizations, users CASCADE")
-	s.Require().NoError(err)
 }
 
 func (s *IntegrationTestSuite) initApp() {
