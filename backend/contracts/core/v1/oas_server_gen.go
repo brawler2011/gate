@@ -86,6 +86,12 @@ type Handler interface {
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block
 	BlockSubmission(ctx context.Context, req OptBlockSubmissionRequestModel, params BlockSubmissionParams) error
+	// BuildProblemPackage implements BuildProblemPackage operation.
+	//
+	// Queue an immutable draft snapshot.
+	//
+	// POST /problems/{id}/packages/build
+	BuildProblemPackage(ctx context.Context, req *BuildProblemPackageReq, params BuildProblemPackageParams) (*ProblemBuildAccepted, error)
 	// CancelContestJoinRequest implements CancelContestJoinRequest operation.
 	//
 	// Cancel my contest join request.
@@ -104,6 +110,12 @@ type Handler interface {
 	//
 	// DELETE /organizations/{login}/requests/mine
 	CancelOrganizationJoinRequest(ctx context.Context, params CancelOrganizationJoinRequestParams) error
+	// CancelProblemBuild implements CancelProblemBuild operation.
+	//
+	// Cancel a queued or running build.
+	//
+	// POST /problems/{id}/builds/{buildId}/cancel
+	CancelProblemBuild(ctx context.Context, params CancelProblemBuildParams) (*ProblemBuildCancelled, error)
 	// ChangePassword implements ChangePassword operation.
 	//
 	// Change password for current user.
@@ -116,12 +128,6 @@ type Handler interface {
 	//
 	// POST /users/claim-temporary
 	ClaimTemporaryUser(ctx context.Context, req *ClaimTemporaryUserRequestModel) (*ClaimTemporaryUserResponseModel, error)
-	// CompileProblemComponent implements CompileProblemComponent operation.
-	//
-	// Compile checker/validator/generator/interactor.
-	//
-	// POST /problems/{problemId}/workshop/components/{componentType}/compile
-	CompileProblemComponent(ctx context.Context, params CompileProblemComponentParams) (*CompileResult, error)
 	// ConfirmEmailChange implements ConfirmEmailChange operation.
 	//
 	// Confirm email change.
@@ -200,36 +206,6 @@ type Handler interface {
 	//
 	// POST /problems
 	CreateProblem(ctx context.Context, params CreateProblemParams) (*CreationResponseModel, error)
-	// CreateProblemChecker implements CreateProblemChecker operation.
-	//
-	// Create checker file.
-	//
-	// POST /problems/{problemId}/checkers
-	CreateProblemChecker(ctx context.Context, req CreateProblemCheckerReq, params CreateProblemCheckerParams) (*MessageResponse, error)
-	// CreateProblemGenerator implements CreateProblemGenerator operation.
-	//
-	// Create generator file.
-	//
-	// POST /problems/{problemId}/generators
-	CreateProblemGenerator(ctx context.Context, req CreateProblemGeneratorReq, params CreateProblemGeneratorParams) (*MessageResponse, error)
-	// CreateProblemInteractor implements CreateProblemInteractor operation.
-	//
-	// Create interactor file.
-	//
-	// POST /problems/{problemId}/interactors
-	CreateProblemInteractor(ctx context.Context, req CreateProblemInteractorReq, params CreateProblemInteractorParams) (*MessageResponse, error)
-	// CreateProblemLib implements CreateProblemLib operation.
-	//
-	// Create library file.
-	//
-	// POST /problems/{problemId}/lib
-	CreateProblemLib(ctx context.Context, req CreateProblemLibReq, params CreateProblemLibParams) (*MessageResponse, error)
-	// CreateProblemMediaFile implements CreateProblemMediaFile operation.
-	//
-	// Create media file.
-	//
-	// POST /problems/{problemId}/media
-	CreateProblemMediaFile(ctx context.Context, req CreateProblemMediaFileReq, params CreateProblemMediaFileParams) (*MessageResponse, error)
 	// CreateProblemMember implements CreateProblemMember operation.
 	//
 	// Create problem member.
@@ -242,24 +218,6 @@ type Handler interface {
 	//
 	// POST /problems/{id}/teams
 	CreateProblemTeam(ctx context.Context, params CreateProblemTeamParams) error
-	// CreateProblemTestFile implements CreateProblemTestFile operation.
-	//
-	// Create test file.
-	//
-	// POST /problems/{problemId}/tests
-	CreateProblemTestFile(ctx context.Context, req CreateProblemTestFileReq, params CreateProblemTestFileParams) (*MessageResponse, error)
-	// CreateProblemValidator implements CreateProblemValidator operation.
-	//
-	// Create validator file.
-	//
-	// POST /problems/{problemId}/validators
-	CreateProblemValidator(ctx context.Context, req CreateProblemValidatorReq, params CreateProblemValidatorParams) (*MessageResponse, error)
-	// CreateProblemWorkshopSubmission implements CreateProblemWorkshopSubmission operation.
-	//
-	// Create author solution file.
-	//
-	// POST /problems/{problemId}/submissions
-	CreateProblemWorkshopSubmission(ctx context.Context, req CreateProblemWorkshopSubmissionReq, params CreateProblemWorkshopSubmissionParams) (*MessageResponse, error)
 	// CreateSubmission implements CreateSubmission operation.
 	//
 	// Create submission.
@@ -338,36 +296,6 @@ type Handler interface {
 	//
 	// DELETE /problems/{id}
 	DeleteProblem(ctx context.Context, params DeleteProblemParams) error
-	// DeleteProblemChecker implements DeleteProblemChecker operation.
-	//
-	// Delete checker file.
-	//
-	// DELETE /problems/{problemId}/checkers/{name}
-	DeleteProblemChecker(ctx context.Context, params DeleteProblemCheckerParams) (*MessageResponse, error)
-	// DeleteProblemGenerator implements DeleteProblemGenerator operation.
-	//
-	// Delete generator file.
-	//
-	// DELETE /problems/{problemId}/generators/{name}
-	DeleteProblemGenerator(ctx context.Context, params DeleteProblemGeneratorParams) (*MessageResponse, error)
-	// DeleteProblemInteractor implements DeleteProblemInteractor operation.
-	//
-	// Delete interactor file.
-	//
-	// DELETE /problems/{problemId}/interactors/{name}
-	DeleteProblemInteractor(ctx context.Context, params DeleteProblemInteractorParams) (*MessageResponse, error)
-	// DeleteProblemLib implements DeleteProblemLib operation.
-	//
-	// Delete library file.
-	//
-	// DELETE /problems/{problemId}/lib/{name}
-	DeleteProblemLib(ctx context.Context, params DeleteProblemLibParams) (*MessageResponse, error)
-	// DeleteProblemMediaFile implements DeleteProblemMediaFile operation.
-	//
-	// Delete media file.
-	//
-	// DELETE /problems/{problemId}/media/{name}
-	DeleteProblemMediaFile(ctx context.Context, params DeleteProblemMediaFileParams) (*MessageResponse, error)
 	// DeleteProblemMember implements DeleteProblemMember operation.
 	//
 	// Delete problem member.
@@ -380,24 +308,6 @@ type Handler interface {
 	//
 	// DELETE /problems/{id}/teams
 	DeleteProblemTeam(ctx context.Context, params DeleteProblemTeamParams) error
-	// DeleteProblemTestFile implements DeleteProblemTestFile operation.
-	//
-	// Delete test file.
-	//
-	// DELETE /problems/{problemId}/tests/{name}
-	DeleteProblemTestFile(ctx context.Context, params DeleteProblemTestFileParams) (*MessageResponse, error)
-	// DeleteProblemValidator implements DeleteProblemValidator operation.
-	//
-	// Delete validator file.
-	//
-	// DELETE /problems/{problemId}/validators/{name}
-	DeleteProblemValidator(ctx context.Context, params DeleteProblemValidatorParams) (*MessageResponse, error)
-	// DeleteProblemWorkshopSubmission implements DeleteProblemWorkshopSubmission operation.
-	//
-	// Delete author solution file.
-	//
-	// DELETE /problems/{problemId}/submissions/{name}
-	DeleteProblemWorkshopSubmission(ctx context.Context, params DeleteProblemWorkshopSubmissionParams) (*MessageResponse, error)
 	// DeleteTeam implements DeleteTeam operation.
 	//
 	// Delete team.
@@ -410,18 +320,18 @@ type Handler interface {
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/statements.pdf
 	DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (DownloadContestStatementsPdfOK, error)
+	// DownloadProblemPackage implements DownloadProblemPackage operation.
+	//
+	// Download a built problem package archive.
+	//
+	// GET /problems/{id}/packages/{packageId}/download
+	DownloadProblemPackage(ctx context.Context, params DownloadProblemPackageParams) (DownloadProblemPackageOK, error)
 	// ForgotPassword implements ForgotPassword operation.
 	//
 	// Forgot password.
 	//
 	// POST /auth/forgot-password
 	ForgotPassword(ctx context.Context, req *ForgotPasswordRequestModel) error
-	// GenerateTests implements GenerateTests operation.
-	//
-	// Generate tests using generator.
-	//
-	// POST /problems/{problemId}/workshop/tests/generate
-	GenerateTests(ctx context.Context, req *GenerateTestsReq, params GenerateTestsParams) (*GenerateTestsOK, error)
 	// GetContest implements GetContest operation.
 	//
 	// Get contest.
@@ -512,72 +422,24 @@ type Handler interface {
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 	GetProblemBlockStatusForUser(ctx context.Context, params GetProblemBlockStatusForUserParams) (*ProblemBlockStatusResponseModel, error)
-	// GetProblemChecker implements GetProblemChecker operation.
+	// GetProblemBuild implements GetProblemBuild operation.
 	//
-	// Get checker file content.
+	// Read build progress and diagnostics.
 	//
-	// GET /problems/{problemId}/checkers/{name}
-	GetProblemChecker(ctx context.Context, params GetProblemCheckerParams) (GetProblemCheckerOK, error)
-	// GetProblemGenerator implements GetProblemGenerator operation.
+	// GET /problems/{id}/builds/{buildId}
+	GetProblemBuild(ctx context.Context, params GetProblemBuildParams) (*ProblemBuild, error)
+	// GetProblemDraft implements GetProblemDraft operation.
 	//
-	// Get generator file content.
+	// Read the editable problem draft.
 	//
-	// GET /problems/{problemId}/generators/{name}
-	GetProblemGenerator(ctx context.Context, params GetProblemGeneratorParams) (GetProblemGeneratorOK, error)
-	// GetProblemInteractor implements GetProblemInteractor operation.
+	// GET /problems/{id}/draft
+	GetProblemDraft(ctx context.Context, params GetProblemDraftParams) (*ProblemDraft, error)
+	// GetProblemDraftObject implements GetProblemDraftObject operation.
 	//
-	// Get interactor file content.
+	// Download a binary referenced by this draft.
 	//
-	// GET /problems/{problemId}/interactors/{name}
-	GetProblemInteractor(ctx context.Context, params GetProblemInteractorParams) (GetProblemInteractorOK, error)
-	// GetProblemLib implements GetProblemLib operation.
-	//
-	// Get library file content.
-	//
-	// GET /problems/{problemId}/lib/{name}
-	GetProblemLib(ctx context.Context, params GetProblemLibParams) (GetProblemLibOK, error)
-	// GetProblemLimits implements GetProblemLimits operation.
-	//
-	// Get problem limits and type settings.
-	//
-	// GET /problems/{problemId}/limits
-	GetProblemLimits(ctx context.Context, params GetProblemLimitsParams) (*ProblemLimits, error)
-	// GetProblemMediaFile implements GetProblemMediaFile operation.
-	//
-	// Get media file content.
-	//
-	// GET /problems/{problemId}/media/{name}
-	GetProblemMediaFile(ctx context.Context, params GetProblemMediaFileParams) (GetProblemMediaFileOK, error)
-	// GetProblemStatement implements GetProblemStatement operation.
-	//
-	// Get problem statement.
-	//
-	// GET /problems/{problemId}/statement
-	GetProblemStatement(ctx context.Context, params GetProblemStatementParams) (*ProblemStatement, error)
-	// GetProblemTestFile implements GetProblemTestFile operation.
-	//
-	// Get test file content.
-	//
-	// GET /problems/{problemId}/tests/{name}
-	GetProblemTestFile(ctx context.Context, params GetProblemTestFileParams) (GetProblemTestFileOK, error)
-	// GetProblemValidator implements GetProblemValidator operation.
-	//
-	// Get validator file content.
-	//
-	// GET /problems/{problemId}/validators/{name}
-	GetProblemValidator(ctx context.Context, params GetProblemValidatorParams) (GetProblemValidatorOK, error)
-	// GetProblemWorkshopSubmission implements GetProblemWorkshopSubmission operation.
-	//
-	// Get author solution file content.
-	//
-	// GET /problems/{problemId}/submissions/{name}
-	GetProblemWorkshopSubmission(ctx context.Context, params GetProblemWorkshopSubmissionParams) (GetProblemWorkshopSubmissionOK, error)
-	// GetPublishedPackage implements GetPublishedPackage operation.
-	//
-	// Get redirect to published problem package.
-	//
-	// GET /problems/{id}/package/{version}
-	GetPublishedPackage(ctx context.Context, params GetPublishedPackageParams) (*GetPublishedPackageFound, error)
+	// GET /problems/{id}/draft/objects/{objectId}
+	GetProblemDraftObject(ctx context.Context, params GetProblemDraftObjectParams) (GetProblemDraftObjectOK, error)
 	// GetSubmission implements GetSubmission operation.
 	//
 	// Get submission.
@@ -610,10 +472,10 @@ type Handler interface {
 	GetUserAvatar(ctx context.Context, params GetUserAvatarParams) (GetUserAvatarRes, error)
 	// ImportProblem implements ImportProblem operation.
 	//
-	// Import package into existing problem.
+	// Replace the draft with the contents of a problem archive.
 	//
 	// POST /problems/{id}/import
-	ImportProblem(ctx context.Context, req *ImportProblemReq, params ImportProblemParams) (*ImportProblemOK, error)
+	ImportProblem(ctx context.Context, req *ImportProblemReq, params ImportProblemParams) (*ProblemDraft, error)
 	// InviteOrganizationMember implements InviteOrganizationMember operation.
 	//
 	// Invite user to organization.
@@ -716,36 +578,12 @@ type Handler interface {
 	//
 	// GET /posts
 	ListPosts(ctx context.Context, params ListPostsParams) (*ListPostsResponseModel, error)
-	// ListProblemCheckers implements ListProblemCheckers operation.
+	// ListProblemBuilds implements ListProblemBuilds operation.
 	//
-	// List checker files.
+	// List the latest 100 builds.
 	//
-	// GET /problems/{problemId}/checkers
-	ListProblemCheckers(ctx context.Context, params ListProblemCheckersParams) (*WorkshopFileListResponse, error)
-	// ListProblemGenerators implements ListProblemGenerators operation.
-	//
-	// List generator files.
-	//
-	// GET /problems/{problemId}/generators
-	ListProblemGenerators(ctx context.Context, params ListProblemGeneratorsParams) (*WorkshopFileListResponse, error)
-	// ListProblemInteractors implements ListProblemInteractors operation.
-	//
-	// List interactor files.
-	//
-	// GET /problems/{problemId}/interactors
-	ListProblemInteractors(ctx context.Context, params ListProblemInteractorsParams) (*WorkshopFileListResponse, error)
-	// ListProblemLibs implements ListProblemLibs operation.
-	//
-	// List library files.
-	//
-	// GET /problems/{problemId}/lib
-	ListProblemLibs(ctx context.Context, params ListProblemLibsParams) (*WorkshopFileListResponse, error)
-	// ListProblemMediaFiles implements ListProblemMediaFiles operation.
-	//
-	// List media files.
-	//
-	// GET /problems/{problemId}/media
-	ListProblemMediaFiles(ctx context.Context, params ListProblemMediaFilesParams) (*WorkshopFileListResponse, error)
+	// GET /problems/{id}/builds
+	ListProblemBuilds(ctx context.Context, params ListProblemBuildsParams) ([]ProblemBuild, error)
 	// ListProblemMembers implements ListProblemMembers operation.
 	//
 	// List problem members.
@@ -754,7 +592,7 @@ type Handler interface {
 	ListProblemMembers(ctx context.Context, params ListProblemMembersParams) (*ListProblemMembersResponseModel, error)
 	// ListProblemPackages implements ListProblemPackages operation.
 	//
-	// List a page of problem packages, newest version first.
+	// List a page of built problem packages, newest first.
 	//
 	// GET /problems/{id}/packages
 	ListProblemPackages(ctx context.Context, params ListProblemPackagesParams) (*ListProblemPackagesOK, error)
@@ -770,24 +608,6 @@ type Handler interface {
 	//
 	// GET /problem-templates
 	ListProblemTemplates(ctx context.Context, params ListProblemTemplatesParams) ([]ProblemTemplateModel, error)
-	// ListProblemTests implements ListProblemTests operation.
-	//
-	// List test files.
-	//
-	// GET /problems/{problemId}/tests
-	ListProblemTests(ctx context.Context, params ListProblemTestsParams) (*WorkshopFileListResponse, error)
-	// ListProblemValidators implements ListProblemValidators operation.
-	//
-	// List validator files.
-	//
-	// GET /problems/{problemId}/validators
-	ListProblemValidators(ctx context.Context, params ListProblemValidatorsParams) (*WorkshopFileListResponse, error)
-	// ListProblemWorkshopSubmissions implements ListProblemWorkshopSubmissions operation.
-	//
-	// List author solution files.
-	//
-	// GET /problems/{problemId}/submissions
-	ListProblemWorkshopSubmissions(ctx context.Context, params ListProblemWorkshopSubmissionsParams) (*WorkshopFileListResponse, error)
 	// ListProblems implements ListProblems operation.
 	//
 	// List problems.
@@ -884,12 +704,6 @@ type Handler interface {
 	//
 	// PATCH /posts/{id}
 	PatchPostById(ctx context.Context, req OptPatchPostByIdReq, params PatchPostByIdParams) (PatchPostByIdRes, error)
-	// PublishProblem implements PublishProblem operation.
-	//
-	// Publish problem package.
-	//
-	// POST /problems/{id}/publish
-	PublishProblem(ctx context.Context, params PublishProblemParams) (*PublishProblemOK, error)
 	// Register implements Register operation.
 	//
 	// Register.
@@ -962,12 +776,12 @@ type Handler interface {
 	//
 	// POST /auth/reset-password
 	ResetPassword(ctx context.Context, req *ResetPasswordRequestModel) error
-	// TestSolution implements TestSolution operation.
+	// SaveProblemDraft implements SaveProblemDraft operation.
 	//
-	// Test solution against tests.
+	// Replace the draft in one revision change.
 	//
-	// POST /problems/{problemId}/workshop/solutions/test
-	TestSolution(ctx context.Context, req *TestSolutionReq, params TestSolutionParams) (*TestReport, error)
+	// PUT /problems/{id}/draft
+	SaveProblemDraft(ctx context.Context, req *ProblemDraft, params SaveProblemDraftParams) (*ProblemDraft, error)
 	// UnblockProblemForUser implements UnblockProblemForUser operation.
 	//
 	// Unblock problem for user.
@@ -1010,84 +824,18 @@ type Handler interface {
 	//
 	// PATCH /problems/{id}
 	UpdateProblem(ctx context.Context, req *UpdateProblemRequestModel, params UpdateProblemParams) error
-	// UpdateProblemChecker implements UpdateProblemChecker operation.
-	//
-	// Update checker file.
-	//
-	// PUT /problems/{problemId}/checkers/{name}
-	UpdateProblemChecker(ctx context.Context, req UpdateProblemCheckerReq, params UpdateProblemCheckerParams) (*MessageResponse, error)
-	// UpdateProblemGenerator implements UpdateProblemGenerator operation.
-	//
-	// Update generator file.
-	//
-	// PUT /problems/{problemId}/generators/{name}
-	UpdateProblemGenerator(ctx context.Context, req UpdateProblemGeneratorReq, params UpdateProblemGeneratorParams) (*MessageResponse, error)
-	// UpdateProblemInteractor implements UpdateProblemInteractor operation.
-	//
-	// Update interactor file.
-	//
-	// PUT /problems/{problemId}/interactors/{name}
-	UpdateProblemInteractor(ctx context.Context, req UpdateProblemInteractorReq, params UpdateProblemInteractorParams) (*MessageResponse, error)
-	// UpdateProblemLib implements UpdateProblemLib operation.
-	//
-	// Update library file.
-	//
-	// PUT /problems/{problemId}/lib/{name}
-	UpdateProblemLib(ctx context.Context, req UpdateProblemLibReq, params UpdateProblemLibParams) (*MessageResponse, error)
-	// UpdateProblemLimits implements UpdateProblemLimits operation.
-	//
-	// Update problem limits and type settings.
-	//
-	// PATCH /problems/{problemId}/limits
-	UpdateProblemLimits(ctx context.Context, req *UpdateProblemLimitsRequest, params UpdateProblemLimitsParams) (*ProblemLimits, error)
-	// UpdateProblemMediaFile implements UpdateProblemMediaFile operation.
-	//
-	// Update media file.
-	//
-	// PUT /problems/{problemId}/media/{name}
-	UpdateProblemMediaFile(ctx context.Context, req UpdateProblemMediaFileReq, params UpdateProblemMediaFileParams) (*MessageResponse, error)
 	// UpdateProblemMember implements UpdateProblemMember operation.
 	//
 	// Update problem member.
 	//
 	// PATCH /problems/{id}/members
 	UpdateProblemMember(ctx context.Context, params UpdateProblemMemberParams) error
-	// UpdateProblemStatement implements UpdateProblemStatement operation.
-	//
-	// Update problem statement.
-	//
-	// PATCH /problems/{problemId}/statement
-	UpdateProblemStatement(ctx context.Context, req *UpdateProblemStatementRequest, params UpdateProblemStatementParams) (*ProblemStatement, error)
 	// UpdateProblemTeam implements UpdateProblemTeam operation.
 	//
 	// Update problem team.
 	//
 	// PATCH /problems/{id}/teams
 	UpdateProblemTeam(ctx context.Context, params UpdateProblemTeamParams) error
-	// UpdateProblemTestFile implements UpdateProblemTestFile operation.
-	//
-	// Update test file.
-	//
-	// PUT /problems/{problemId}/tests/{name}
-	UpdateProblemTestFile(ctx context.Context, req UpdateProblemTestFileReq, params UpdateProblemTestFileParams) (*MessageResponse, error)
-	// UpdateProblemTestsConfig implements UpdateProblemTestsConfig operation.
-	//
-	// Update tests.json configuration.
-	//
-	// PATCH /problems/{problemId}/tests/config
-	UpdateProblemTestsConfig(ctx context.Context, req UpdateProblemTestsConfigRequest, params UpdateProblemTestsConfigParams) (*MessageResponse, error)
-	// UpdateProblemValidator implements UpdateProblemValidator operation.
-	//
-	// Update validator file.
-	//
-	// PUT /problems/{problemId}/validators/{name}
-	UpdateProblemValidator(ctx context.Context, req UpdateProblemValidatorReq, params UpdateProblemValidatorParams) (*MessageResponse, error)
-	// UpdateProblemWorkshopSubmission implements UpdateProblemWorkshopSubmission operation.
-	//
-	// Update author solution file.
-	//
-	// PUT /problems/{problemId}/submissions/{name}
-	UpdateProblemWorkshopSubmission(ctx context.Context, req UpdateProblemWorkshopSubmissionReq, params UpdateProblemWorkshopSubmissionParams) (*MessageResponse, error)
 	// UpdateTeam implements UpdateTeam operation.
 	//
 	// Update team.
@@ -1112,12 +860,12 @@ type Handler interface {
 	//
 	// POST /users/{username}/avatar
 	UploadAvatar(ctx context.Context, req *UploadAvatarReq, params UploadAvatarParams) (*UploadAvatarOK, error)
-	// ValidateAllTests implements ValidateAllTests operation.
+	// UploadProblemDraft implements UploadProblemDraft operation.
 	//
-	// Validate all test inputs.
+	// Upload immutable test bodies or a resource.
 	//
-	// POST /problems/{problemId}/workshop/tests/validate
-	ValidateAllTests(ctx context.Context, params ValidateAllTestsParams) (*ValidationReport, error)
+	// POST /problems/{id}/draft/uploads
+	UploadProblemDraft(ctx context.Context, req *UploadProblemDraftReq, params UploadProblemDraftParams) (*ProblemDraft, error)
 	// VerifyEmail implements VerifyEmail operation.
 	//
 	// Verify email.

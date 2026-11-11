@@ -16,29 +16,9 @@ func (uc *ProblemsUseCase) GetProblemDetails(ctx context.Context, id uuid.UUID) 
 	if err != nil {
 		return nil, err
 	}
-	result := &problemsmodel.ProblemDetails{Problem: problem}
-	editor := newWorkshop(uc.workspace)
-	err = uc.workspace.withPackage(ctx, id, func(ctx context.Context, _ *workspacePackage) error {
-		initialized, err := editor.isInitialized(ctx, id)
-		if err != nil {
-			return err
-		}
-		if !initialized {
-			return nil
-		}
-		manifest, err := editor.loadManifest(ctx, id)
-		if err != nil {
-			return err
-		}
-		result.Problem.Title = manifest.Statement.Title
-		result.Problem.TimeLimitMs = manifest.TimeLimitMs
-		result.Problem.MemoryLimitMb = manifest.MemoryLimitMb
-		source := NewStatementReader(uc.workspace, nil, nil)
-		result.Statement, result.Samples = source.loadWorkspaceStatementAndSamples(ctx, id, "")
-		return nil
-	})
+	draft, err := uc.drafts.GetDraft(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return result, nil
+	return &problemsmodel.ProblemDetails{Problem: problem, Statement: statementFromDraft(draft, "")}, nil
 }

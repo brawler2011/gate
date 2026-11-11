@@ -6,35 +6,20 @@ import (
 	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/pkg/sandbox"
 )
 
 func (h *CoreServer) GetLanguages(ctx context.Context) (*corev1.SupportedLanguagesResponse, error) {
-	cfg, err := sandbox.LoadConfig("languages.yaml")
-	if err != nil {
-		cfg, _ = sandbox.LoadConfig("../../../../../languages.yaml")
-	}
-
-	var langItems []corev1.SupportedLanguage
-	if cfg != nil && cfg.Langs != nil && len(cfg.Langs) > 0 {
-		for key, l := range cfg.Langs {
-			ext := strings.TrimPrefix(filepath.Ext(l.CodeFile), ".")
-			if ext == "" || key == "cpp" {
-				ext = key
-			}
-			langItems = append(langItems, corev1.SupportedLanguage{
-				Name:      key,
-				Extension: ext,
-				Type:      corev1.NewOptString(l.Type),
-			})
+	langItems := make([]corev1.SupportedLanguage, 0, len(h.languages))
+	for key, l := range h.languages {
+		ext := strings.TrimPrefix(filepath.Ext(l.CodeFile), ".")
+		if ext == "" || key == "cpp" {
+			ext = key
 		}
-	} else {
-		langItems = []corev1.SupportedLanguage{
-			{Name: "cpp", Extension: "cpp"},
-			{Name: "python", Extension: "py"},
-			{Name: "go", Extension: "go"},
-			{Name: "java", Extension: "java"},
-		}
+		langItems = append(langItems, corev1.SupportedLanguage{
+			Name:      key,
+			Extension: ext,
+			Type:      corev1.NewOptString(l.Type),
+		})
 	}
 
 	return &corev1.SupportedLanguagesResponse{

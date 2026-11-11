@@ -101,7 +101,7 @@ SELECT
     cp.ordinal AS problem_ordinal
 FROM contest_announcements ca
 JOIN users u ON ca.author_id = u.id
-LEFT JOIN problems p ON ca.problem_id = p.id
+LEFT JOIN problem_catalog p ON ca.problem_id = p.id
 LEFT JOIN contest_problems cp ON cp.contest_id = ca.contest_id AND cp.problem_id = ca.problem_id
 WHERE ca.id = $1
 `
@@ -147,7 +147,7 @@ SELECT
     cp.ordinal AS problem_ordinal
 FROM contest_announcements ca
 JOIN users u ON ca.author_id = u.id
-LEFT JOIN problems p ON ca.problem_id = p.id
+LEFT JOIN problem_catalog p ON ca.problem_id = p.id
 LEFT JOIN contest_problems cp ON cp.contest_id = ca.contest_id AND cp.problem_id = ca.problem_id
 WHERE ca.contest_id = $1
 ORDER BY ca.created_at DESC, ca.id DESC

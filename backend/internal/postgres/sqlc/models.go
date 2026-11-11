@@ -14,6 +14,7 @@ import (
 	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
 )
 
@@ -676,14 +677,119 @@ type Problem struct {
 	OrganizationID uuid.UUID  `json:"organization_id"`
 	OwnerID        *uuid.UUID `json:"owner_id"`
 	Visibility     string     `json:"visibility"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	IsTemplate     bool       `json:"is_template"`
+}
+
+type ProblemBuild struct {
+	ID              uuid.UUID  `json:"id"`
+	ProblemID       uuid.UUID  `json:"problem_id"`
+	OrganizationID  uuid.UUID  `json:"organization_id"`
+	Revision        int64      `json:"revision"`
+	Snapshot        []byte     `json:"snapshot"`
+	SchemaVersion   int32      `json:"schema_version"`
+	ToolchainDigest string     `json:"toolchain_digest"`
+	State           string     `json:"state"`
+	LeaseToken      *uuid.UUID `json:"lease_token"`
+	LeaseDeadline   *time.Time `json:"lease_deadline"`
+	Attempt         int32      `json:"attempt"`
+	MaxAttempts     int32      `json:"max_attempts"`
+	Deadline        time.Time  `json:"deadline"`
+	Diagnostic      []byte     `json:"diagnostic"`
+	CreatedAt       time.Time  `json:"created_at"`
+	FinishedAt      *time.Time `json:"finished_at"`
+}
+
+type ProblemBuildObject struct {
+	BuildID      uuid.UUID  `json:"build_id"`
+	ObjectID     uuid.UUID  `json:"object_id"`
+	Role         string     `json:"role"`
+	AttemptToken *uuid.UUID `json:"attempt_token"`
+}
+
+type ProblemCatalog struct {
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	OwnerID        *uuid.UUID `json:"owner_id"`
+	Visibility     string     `json:"visibility"`
+	IsTemplate     bool       `json:"is_template"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 	Title          string     `json:"title"`
 	ShortName      string     `json:"short_name"`
 	TimeLimitMs    int32      `json:"time_limit_ms"`
 	MemoryLimitMb  int32      `json:"memory_limit_mb"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-	IsTemplate     bool       `json:"is_template"`
-	WorkspaceHash  string     `json:"workspace_hash"`
+}
+
+type ProblemDraft struct {
+	ProblemID      uuid.UUID     `json:"problem_id"`
+	OrganizationID uuid.UUID     `json:"organization_id"`
+	Revision       int64         `json:"revision"`
+	UpdatedAt      time.Time     `json:"updated_at"`
+	Title          string        `json:"title"`
+	ShortName      string        `json:"short_name"`
+	Type           string        `json:"type"`
+	TimeLimitMs    int32         `json:"time_limit_ms"`
+	MemoryLimitMb  int32         `json:"memory_limit_mb"`
+	MaxScore       *points.Value `json:"max_score"`
+	CheckerID      *uuid.UUID    `json:"checker_id"`
+	ValidatorID    *uuid.UUID    `json:"validator_id"`
+	InteractorID   *uuid.UUID    `json:"interactor_id"`
+	MainSolutionID *uuid.UUID    `json:"main_solution_id"`
+}
+
+type ProblemDraftAsset struct {
+	ProblemID uuid.UUID `json:"problem_id"`
+	Path      string    `json:"path"`
+	ObjectID  uuid.UUID `json:"object_id"`
+}
+
+type ProblemDraftComponent struct {
+	ProblemID    uuid.UUID `json:"problem_id"`
+	ID           uuid.UUID `json:"id"`
+	Role         string    `json:"role"`
+	Path         string    `json:"path"`
+	Language     string    `json:"language"`
+	Dependencies []byte    `json:"dependencies"`
+}
+
+type ProblemDraftFile struct {
+	ProblemID uuid.UUID `json:"problem_id"`
+	Path      string    `json:"path"`
+	Content   string    `json:"content"`
+}
+
+type ProblemDraftSubtask struct {
+	ProblemID uuid.UUID    `json:"problem_id"`
+	ID        uuid.UUID    `json:"id"`
+	Ordinal   int32        `json:"ordinal"`
+	Name      string       `json:"name"`
+	Points    points.Value `json:"points"`
+	Policy    string       `json:"policy"`
+}
+
+type ProblemDraftSubtaskDependency struct {
+	ProblemID uuid.UUID `json:"problem_id"`
+	SubtaskID uuid.UUID `json:"subtask_id"`
+	DependsOn uuid.UUID `json:"depends_on"`
+}
+
+type ProblemDraftTest struct {
+	ProblemID      uuid.UUID    `json:"problem_id"`
+	ID             uuid.UUID    `json:"id"`
+	Ordinal        int32        `json:"ordinal"`
+	SubtaskID      uuid.UUID    `json:"subtask_id"`
+	Sample         bool         `json:"sample"`
+	Points         points.Value `json:"points"`
+	InputMode      string       `json:"input_mode"`
+	InputObjectID  *uuid.UUID   `json:"input_object_id"`
+	GeneratorID    *uuid.UUID   `json:"generator_id"`
+	GeneratorArgs  []string     `json:"generator_args"`
+	Seed           *int64       `json:"seed"`
+	AnswerMode     string       `json:"answer_mode"`
+	AnswerObjectID *uuid.UUID   `json:"answer_object_id"`
+	SolutionID     *uuid.UUID   `json:"solution_id"`
 }
 
 type ProblemMember struct {
@@ -694,20 +800,18 @@ type ProblemMember struct {
 }
 
 type ProblemPackage struct {
-	ID             uuid.UUID  `json:"id"`
-	ProblemID      uuid.UUID  `json:"problem_id"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	Version        int32      `json:"version"`
-	PackageHash    string     `json:"package_hash"`
-	Url            *string    `json:"url"`
-	Status         string     `json:"status"`
-	BuildLog       *string    `json:"build_log"`
-	CreatedAt      time.Time  `json:"created_at"`
-	CompiledAt     *time.Time `json:"compiled_at"`
-	Title          string     `json:"title"`
-	ShortName      string     `json:"short_name"`
-	TimeLimitMs    int32      `json:"time_limit_ms"`
-	MemoryLimitMb  int32      `json:"memory_limit_mb"`
+	ID             uuid.UUID `json:"id"`
+	ProblemID      uuid.UUID `json:"problem_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	PackageHash    string    `json:"package_hash"`
+	CreatedAt      time.Time `json:"created_at"`
+	Title          string    `json:"title"`
+	ShortName      string    `json:"short_name"`
+	TimeLimitMs    int32     `json:"time_limit_ms"`
+	MemoryLimitMb  int32     `json:"memory_limit_mb"`
+	BuildID        uuid.UUID `json:"build_id"`
+	ObjectID       uuid.UUID `json:"object_id"`
+	Revision       int64     `json:"revision"`
 }
 
 type ProblemTeam struct {
@@ -717,11 +821,46 @@ type ProblemTeam struct {
 	CreatedAt  time.Time                       `json:"created_at"`
 }
 
+type RequestIdempotency struct {
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	Operation      string     `json:"operation"`
+	Key            string     `json:"key"`
+	Fingerprint    string     `json:"fingerprint"`
+	Token          uuid.UUID  `json:"token"`
+	LeaseDeadline  time.Time  `json:"lease_deadline"`
+	UploadID       *uuid.UUID `json:"upload_id"`
+	Result         []byte     `json:"result"`
+	HttpStatus     *int32     `json:"http_status"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
+type RequestUploadObject struct {
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Operation      string    `json:"operation"`
+	Key            string    `json:"key"`
+	Ordinal        int32     `json:"ordinal"`
+	ObjectID       uuid.UUID `json:"object_id"`
+}
+
 type Session struct {
 	ID        uuid.UUID `json:"id"`
 	UserID    uuid.UUID `json:"user_id"`
 	ExpiresAt time.Time `json:"expires_at"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type StoredObject struct {
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	Purpose        string     `json:"purpose"`
+	Key            string     `json:"key"`
+	Sha256         string     `json:"sha256"`
+	Size           int64      `json:"size"`
+	State          string     `json:"state"`
+	UploadDeadline time.Time  `json:"upload_deadline"`
+	UnreferencedAt *time.Time `json:"unreferenced_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 type Submission struct {
@@ -732,7 +871,7 @@ type Submission struct {
 	Source      string                        `json:"source"`
 	Language    submissionsmodel.LanguageName `json:"language"`
 	State       submissionsmodel.State        `json:"state"`
-	Score       int32                         `json:"score"`
+	Score       points.Value                  `json:"score"`
 	Penalty     int32                         `json:"penalty"`
 	CreatedAt   time.Time                     `json:"created_at"`
 	UpdatedAt   time.Time                     `json:"updated_at"`

@@ -28,12 +28,3 @@ func (m testContestsModule) GetContestByOrgLoginAndContestLogin(ctx context.Cont
 	}
 	return contestsmodel.Contest{}, nil
 }
-
-type testProblemsModule struct {
-	ProblemsUC
-	ProblemsReader
-	WorkshopUC
-	ImportUC
-	PublishUC
-	PackagesReader
-}

@@ -11,6 +11,7 @@ import (
 
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
 )
 
@@ -190,8 +191,8 @@ SELECT s.id,
   s.test_details,
   s.ban_reason,
   s.problem_id,
-  p.title AS problem_title,
-  p.short_name AS problem_short_name,
+  pp.title AS problem_title,
+  pp.short_name AS problem_short_name,
   cp.ordinal AS problem_ordinal,
   s.contest_id,
   c.title AS contest_title,
@@ -204,7 +205,8 @@ SELECT s.id,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
-  LEFT JOIN problems p ON s.problem_id = p.id
+  LEFT JOIN problem_catalog p ON s.problem_id = p.id
+ LEFT JOIN problem_packages pp ON pp.id=s.package_id
   LEFT JOIN organizations op ON p.organization_id = op.id
   LEFT JOIN contest_problems cp ON p.id = cp.problem_id
   AND cp.contest_id = s.contest_id
@@ -219,7 +221,7 @@ type GetSubmissionRow struct {
 	Username          *string                          `json:"username"`
 	Source            string                           `json:"source"`
 	State             submissionsmodel.State           `json:"state"`
-	Score             int32                            `json:"score"`
+	Score             points.Value                     `json:"score"`
 	Penalty           int32                            `json:"penalty"`
 	TimeStat          int32                            `json:"time_stat"`
 	MemoryStat        int32                            `json:"memory_stat"`
@@ -306,8 +308,8 @@ SELECT s.id,
   COALESCE((s.test_details->>'failed_test')::integer, 0)::integer AS failed_test,
   s.ban_reason,
   s.problem_id,
-  p.title AS problem_title,
-  p.short_name AS problem_short_name,
+  pp.title AS problem_title,
+  pp.short_name AS problem_short_name,
   cp.ordinal AS problem_ordinal,
   s.contest_id,
   c.title AS contest_title,
@@ -319,7 +321,8 @@ SELECT s.id,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
-  LEFT JOIN problems p ON s.problem_id = p.id
+  LEFT JOIN problem_catalog p ON s.problem_id = p.id
+ LEFT JOIN problem_packages pp ON pp.id=s.package_id
   LEFT JOIN organizations op ON p.organization_id = op.id
   LEFT JOIN contest_problems cp ON p.id = cp.problem_id
   AND cp.contest_id = s.contest_id
@@ -372,7 +375,7 @@ type ListSubmissionsRow struct {
 	OwnerID           *uuid.UUID                    `json:"owner_id"`
 	Username          *string                       `json:"username"`
 	State             submissionsmodel.State        `json:"state"`
-	Score             int32                         `json:"score"`
+	Score             points.Value                  `json:"score"`
 	Penalty           int32                         `json:"penalty"`
 	TimeStat          int32                         `json:"time_stat"`
 	MemoryStat        int32                         `json:"memory_stat"`
@@ -568,7 +571,7 @@ RETURNING s.id, previous.state AS previous_state, s.revision
 
 type UpdateSubmissionParams struct {
 	State       submissionsmodel.State `json:"state"`
-	Score       int32                  `json:"score"`
+	Score       points.Value           `json:"score"`
 	TestDetails []byte                 `json:"test_details"`
 	ID          uuid.UUID              `json:"id"`
 }

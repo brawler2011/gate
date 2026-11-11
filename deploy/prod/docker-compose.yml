@@ -19,6 +19,13 @@ services:
     - REDIS_URL=redis://:${REDIS_PASSWORD}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/${REDIS_DB_INDEX:-0}
     - NATS_URL=nats://${NATS_HOST:-nats}:${NATS_PORT:-4222}
     - GOJUDGE_GRPC_ADDR=go-judge:5051
+    - GOJUDGE_HTTP_URL=http://go-judge:5050
+    # Set by the deploy script from the pulled go-judge image.
+    - GOJUDGE_TOOLCHAIN_DIGEST=${GOJUDGE_TOOLCHAIN_DIGEST:?set from the go-judge image id}
+    - GOJUDGE_ARCHITECTURE=amd64
+    - GOJUDGE_ABI=linux-gnu
+    - PROBLEM_POLICY_PATH=/judge/limits.yaml
+    - PROBLEM_WORK_DIR=/problem-work
     - S3_ENDPOINT=${S3_ENDPOINT:-http://s3:8333}
     - S3_ACCESS_KEY=${S3_ACCESS_KEY}
     - S3_SECRET_KEY=${S3_SECRET_KEY}
@@ -26,6 +33,9 @@ services:
     - RESEND_API_KEY=${RESEND_API_KEY}
     - EMAIL_FROM=${EMAIL_FROM:-Gate <no-reply@${DOMAIN_NAME}>}
     - APP_BASE_URL=${APP_BASE_URL:-https://${DOMAIN_NAME}}
+    volumes:
+    # Disk-backed scratch space for builds and judging; large files never use tmpfs.
+    - problem-work:/problem-work
     networks:
     - gate-prod
     - traefik-network
@@ -202,6 +212,9 @@ services:
     command:
     - -enable-grpc
     - -grpc-addr=0.0.0.0:5051
+    - -http-addr=0.0.0.0:5050
+    # File store on disk: large inputs and answers are not kept in sandbox memory.
+    - -dir=/data
     privileged: true
     volumes:
     - ./go-judge-data:/data
@@ -221,7 +234,7 @@ services:
       options:
         max-size: 10m
         max-file: '3'
-    image: chrislusf/seaweedfs:3.77_full
+    image: chrislusf/seaweedfs:4.53_full
     container_name: gate-seaweed-master-prod
     volumes:
     - seaweedfs-master:/data
@@ -235,7 +248,7 @@ services:
       options:
         max-size: 10m
         max-file: '3'
-    image: chrislusf/seaweedfs:3.77_full
+    image: chrislusf/seaweedfs:4.53_full
     container_name: gate-seaweed-volume-prod
     volumes:
     - seaweedfs-volume:/data
@@ -251,7 +264,7 @@ services:
       options:
         max-size: 10m
         max-file: '3'
-    image: chrislusf/seaweedfs:3.77_full
+    image: chrislusf/seaweedfs:4.53_full
     container_name: gate-seaweed-filer-prod
     volumes:
     - seaweedfs-filer:/data
@@ -268,7 +281,7 @@ services:
       options:
         max-size: 10m
         max-file: '3'
-    image: chrislusf/seaweedfs:3.77_full
+    image: chrislusf/seaweedfs:4.53_full
     container_name: gate-seaweed-s3-prod
     hostname: s3
     environment:
@@ -285,6 +298,8 @@ services:
     - filer
     restart: always
 volumes:
+  problem-work:
+    name: gate-problem-work-prod
   postgres-data:
     name: gate-postgres-data-prod
   redis-data:

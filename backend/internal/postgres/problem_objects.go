@@ -1,0 +1,234 @@
+package postgres
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
+	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
+	model "github.com/brawler2011/gate/backend/internal/problems/model"
+	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+)
+
+func mapStoredObject(o sqlc.StoredObject) model.StoredObject {
+	return model.StoredObject{ID: o.ID, OrganizationID: o.OrganizationID, Purpose: o.Purpose, Key: o.Key, SHA256: o.Sha256, Size: o.Size, State: o.State, UploadDeadline: o.UploadDeadline}
+}
+func (r *ProblemDraftsRepo) BuildInputObjects(ctx context.Context, id uuid.UUID) ([]model.StoredObject, error) {
+	rows, err := sqlc.New(r.pool).ListBuildInputObjects(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("list build inputs: %w", err)
+	}
+	objects := make([]model.StoredObject, 0, len(rows))
+	for _, o := range rows {
+		objects = append(objects, mapStoredObject(o))
+	}
+	return objects, nil
+}
+
+func (r *ProblemDraftsRepo) RegisterBuildOutput(ctx context.Context, id, token uuid.UUID, digest string, size int64, uploadTTL time.Duration) (model.StoredObject, error) {
+	if uploadTTL <= 0 || size < 0 {
+		return model.StoredObject{}, pkg.ErrBadInput
+	}
+	tx, err := beginReadCommitted(ctx, r.pool)
+	if err != nil {
+		return model.StoredObject{}, err
+	}
+	defer rollback(ctx, tx)
+	q := sqlc.New(tx)
+	b, err := q.LockProblemBuild(ctx, id)
+	if err != nil {
+		return model.StoredObject{}, HandlePgErr(err)
+	}
+	active, err := q.BuildLeaseValid(ctx, sqlc.BuildLeaseValidParams{Token: &token, ID: id})
+	if err != nil {
+		return model.StoredObject{}, fmt.Errorf("check build lease: %w", err)
+	}
+	if !active {
+		return model.StoredObject{}, pkg.ErrConflict
+	}
+	// Resolves registration with a lost commit response without a second UUID.
+	existing, err := q.BuildOutputObjectID(ctx, sqlc.BuildOutputObjectIDParams{BuildID: id, AttemptToken: &token})
+	if err == nil {
+		if _, err := lockObjects(ctx, tx, []uuid.UUID{existing}); err != nil {
+			return model.StoredObject{}, err
+		}
+		o, err := q.ReadStoredObject(ctx, existing)
+		if err != nil {
+			return model.StoredObject{}, fmt.Errorf("read registered output: %w", err)
+		}
+		if o.Sha256 != digest || o.Size != size {
+			return model.StoredObject{}, pkg.ErrConflict
+		}
+		return mapStoredObject(o), nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return model.StoredObject{}, fmt.Errorf("read output registration: %w", err)
+	}
+	oid := uuid.New()
+	if err := q.InsertPackageObject(ctx, sqlc.InsertPackageObjectParams{
+		ID: oid, OrganizationID: b.OrganizationID, Key: fmt.Sprintf("objects/%s/%s", b.OrganizationID, oid),
+		Sha256: digest, Size: size, BuildDeadline: b.Deadline, TtlMs: uploadTTL.Milliseconds(),
+	}); err != nil {
+		return model.StoredObject{}, fmt.Errorf("register output object: %w", err)
+	}
+	if err := q.InsertBuildOutput(ctx, sqlc.InsertBuildOutputParams{BuildID: id, ObjectID: oid, AttemptToken: &token}); err != nil {
+		return model.StoredObject{}, fmt.Errorf("hold output object: %w", err)
+	}
+	o, err := q.ReadStoredObject(ctx, oid)
+	if err != nil {
+		return model.StoredObject{}, fmt.Errorf("read output object: %w", err)
+	}
+	if err := commitTx(ctx, tx); err != nil {
+		return model.StoredObject{}, err
+	}
+	return mapStoredObject(o), nil
+}
+
+// PublishBuild is called only after the trusted worker confirmed upload bytes.
+// The single transaction hands ownership from the attempt to Package.
+func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token, oid uuid.UUID) (uuid.UUID, error) {
+	tx, err := beginReadCommitted(ctx, r.pool)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	defer rollback(ctx, tx)
+	q := sqlc.New(tx)
+	b, err := q.LockProblemBuild(ctx, id)
+	if err != nil {
+		return uuid.Nil, HandlePgErr(err)
+	}
+	if b.State == "succeeded" {
+		pid, err := q.BuildPackageID(ctx, id)
+		if err != nil {
+			return uuid.Nil, HandlePgErr(err)
+		}
+		return pid, nil
+	}
+	active, err := q.BuildLeaseValid(ctx, sqlc.BuildLeaseValidParams{Token: &token, ID: id})
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("check build lease: %w", err)
+	}
+	if !active {
+		return uuid.Nil, pkg.ErrConflict
+	}
+	objects, err := lockObjects(ctx, tx, []uuid.UUID{oid})
+	if err != nil {
+		return uuid.Nil, err
+	}
+	o := objects[oid]
+	if o.OrganizationID != b.OrganizationID || o.Purpose != "package" || o.State != "uploading" {
+		return uuid.Nil, pkg.ErrConflict
+	}
+	held, err := q.OutputUploadActive(ctx, sqlc.OutputUploadActiveParams{BuildID: id, ObjectID: oid, Token: &token})
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("check output hold: %w", err)
+	}
+	if !held {
+		return uuid.Nil, pkg.ErrConflict
+	}
+	if err := q.PublishStoredObject(ctx, oid); err != nil {
+		return uuid.Nil, fmt.Errorf("publish package object: %w", err)
+	}
+	pid := uuid.New()
+	if err := q.InsertProblemPackage(ctx, sqlc.InsertProblemPackageParams{
+		ID: pid, ProblemID: b.ProblemID, OrganizationID: b.OrganizationID, BuildID: id, ObjectID: oid, PackageHash: o.Sha256, Revision: b.Revision,
+	}); err != nil {
+		return uuid.Nil, fmt.Errorf("insert package: %w", err)
+	}
+	if err := q.DeleteBuildOutput(ctx, sqlc.DeleteBuildOutputParams{BuildID: id, ObjectID: oid, AttemptToken: &token}); err != nil {
+		return uuid.Nil, fmt.Errorf("release output hold: %w", err)
+	}
+	if err := q.MarkBuildSucceeded(ctx, sqlc.MarkBuildSucceededParams{ID: id, LeaseToken: &token}); err != nil {
+		return uuid.Nil, fmt.Errorf("finish build: %w", err)
+	}
+	if err := commitTx(ctx, tx); err != nil {
+		resolveCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		durable, readErr := sqlc.New(r.pool).SucceededBuildPackageID(resolveCtx, id)
+		if readErr == nil {
+			return durable, nil
+		}
+		return uuid.Nil, err
+	}
+	return pid, nil
+}
+
+// BeginObjectDeletion intentionally uses two statements: a lock waiter must
+// check references using a fresh READ COMMITTED snapshot after the lock arrives.
+func (r *ProblemDraftsRepo) BeginObjectDeletion(ctx context.Context, id uuid.UUID, retention time.Duration) (bool, error) {
+	if retention <= 0 {
+		return false, pkg.ErrBadInput
+	}
+	tx, err := beginReadCommitted(ctx, r.pool)
+	if err != nil {
+		return false, err
+	}
+	defer rollback(ctx, tx)
+	q := sqlc.New(tx)
+	o, err := q.LockStoredObject(ctx, id)
+	if err != nil {
+		return false, HandlePgErr(err)
+	}
+	if o.State == "deleting" {
+		return true, nil
+	}
+	if o.State == "deleted" {
+		return false, nil
+	}
+	eligible, err := q.ObjectDeletionEligible(ctx, sqlc.ObjectDeletionEligibleParams{RetentionMs: retention.Milliseconds(), ID: id})
+	if err != nil {
+		return false, fmt.Errorf("check object references: %w", err)
+	}
+	if !eligible {
+		return false, nil
+	}
+	if err := q.MarkObjectDeleting(ctx, id); err != nil {
+		return false, fmt.Errorf("mark object deleting: %w", err)
+	}
+	return true, commitTx(ctx, tx)
+}
+
+func (r *ProblemDraftsRepo) CompleteObjectDeletion(ctx context.Context, id uuid.UUID) error {
+	tx, err := beginReadCommitted(ctx, r.pool)
+	if err != nil {
+		return err
+	}
+	defer rollback(ctx, tx)
+	q := sqlc.New(tx)
+	if _, err := q.LockStoredObject(ctx, id); err != nil {
+		return HandlePgErr(err)
+	}
+	updated, err := q.MarkObjectDeleted(ctx, id)
+	if err != nil {
+		return fmt.Errorf("mark object deleted: %w", err)
+	}
+	if updated != 1 {
+		return pkg.ErrConflict
+	}
+	return commitTx(ctx, tx)
+}
+
+func (r *ProblemDraftsRepo) GetObject(ctx context.Context, id uuid.UUID) (model.StoredObject, error) {
+	o, err := sqlc.New(r.pool).ReadStoredObject(ctx, id)
+	if err != nil {
+		return model.StoredObject{}, HandlePgErr(err)
+	}
+	return mapStoredObject(o), nil
+}
+
+func (r *ProblemDraftsRepo) GetPackageDescriptor(ctx context.Context, id uuid.UUID) (model.PackageDescriptor, error) {
+	row, err := sqlc.New(r.pool).ReadPackageDescriptor(ctx, id)
+	if err != nil {
+		return model.PackageDescriptor{}, HandlePgErr(err)
+	}
+	p := model.PackageDescriptor{ID: row.ID, BuildID: row.BuildID, ProblemID: row.ProblemID}
+	if err := json.Unmarshal(row.Snapshot, &p.Snapshot); err != nil {
+		return p, fmt.Errorf("decode package snapshot: %w", err)
+	}
+	p.Object, err = r.GetObject(ctx, row.ObjectID)
+	return p, err
+}

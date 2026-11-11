@@ -21,7 +21,7 @@ func (s *IntegrationTestSuite) TestProblems() {
 	// 1. Create Problem (Admin)
 	s.Run("CreateProblem", func() {
 		title := "Test Problem"
-		resp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
+		resp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
 			Title:          title,
 			OrganizationID: corev1.NewOptUUID(org.ID),
 			TemplateID:     "builtin:a-plus-b",
@@ -43,10 +43,8 @@ func (s *IntegrationTestSuite) TestProblems() {
 
 	// 3. Update Problem (Admin)
 	s.Run("UpdateProblem", func() {
-		newTitle := "Updated Problem"
 		visibility := "public"
 		err := s.client.UpdateProblem(withTestUser(s.ctx, admin.Id), &corev1.UpdateProblemRequestModel{
-			Title:      corev1.NewOptString(newTitle),
 			Visibility: corev1.NewOptString(visibility),
 		}, corev1.UpdateProblemParams{
 			ID: problemID,
@@ -67,7 +65,7 @@ func (s *IntegrationTestSuite) TestProblems() {
 
 	// 5. List Problems Ordering (Descending vs Ascending)
 	s.Run("ListProblemsOrdering", func() {
-		secondResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
+		secondResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
 			Title:          "Second Problem",
 			OrganizationID: corev1.NewOptUUID(org.ID),
 			TemplateID:     "builtin:a-plus-b",
@@ -133,7 +131,7 @@ func (s *IntegrationTestSuite) TestProblemTemplates() {
 	// 1. Create Problem A
 	s.Run("CreateProblemA", func() {
 		title := "Problem A"
-		resp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
+		resp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
 			Title:          title,
 			OrganizationID: corev1.NewOptUUID(org.ID),
 			TemplateID:     "builtin:a-plus-b",
@@ -155,12 +153,9 @@ func (s *IntegrationTestSuite) TestProblemTemplates() {
 		s.Equal(http.StatusBadRequest, s.getStatusCode(err))
 	})
 
-	// 3. Publish a package for Problem A
-	s.Run("PublishPackage", func() {
-		_, err := s.client.PublishProblem(withTestUser(s.ctx, admin.Id), corev1.PublishProblemParams{
-			ID: problemID,
-		})
-		s.Require().NoError(err)
+	// 3. Build a package for Problem A from its draft with the real sandbox
+	s.Run("BuildPackage", func() {
+		s.Require().NotEqual(uuid.Nil, s.buildPackage(admin.Id, problemID))
 	})
 
 	// 4. Set as template (should succeed now)
@@ -196,7 +191,7 @@ func (s *IntegrationTestSuite) TestProblemTemplates() {
 	s.Run("CreateProblemFromTemplate", func() {
 		title := "Problem B"
 		templateID := problemID.String()
-		resp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{
+		resp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
 			Title:          title,
 			OrganizationID: corev1.NewOptUUID(org.ID),
 			TemplateID:     templateID,

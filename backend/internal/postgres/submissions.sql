@@ -40,8 +40,8 @@ SELECT s.id,
   s.test_details,
   s.ban_reason,
   s.problem_id,
-  p.title AS problem_title,
-  p.short_name AS problem_short_name,
+  pp.title AS problem_title,
+  pp.short_name AS problem_short_name,
   cp.ordinal AS problem_ordinal,
   s.contest_id,
   c.title AS contest_title,
@@ -54,7 +54,8 @@ SELECT s.id,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
-  LEFT JOIN problems p ON s.problem_id = p.id
+  LEFT JOIN problem_catalog p ON s.problem_id = p.id
+ LEFT JOIN problem_packages pp ON pp.id=s.package_id
   LEFT JOIN organizations op ON p.organization_id = op.id
   LEFT JOIN contest_problems cp ON p.id = cp.problem_id
   AND cp.contest_id = s.contest_id
@@ -103,8 +104,8 @@ SELECT s.id,
   COALESCE((s.test_details->>'failed_test')::integer, 0)::integer AS failed_test,
   s.ban_reason,
   s.problem_id,
-  p.title AS problem_title,
-  p.short_name AS problem_short_name,
+  pp.title AS problem_title,
+  pp.short_name AS problem_short_name,
   cp.ordinal AS problem_ordinal,
   s.contest_id,
   c.title AS contest_title,
@@ -116,7 +117,8 @@ SELECT s.id,
   s.created_at
 FROM submissions s
   LEFT JOIN users u ON s.owner_id = u.id
-  LEFT JOIN problems p ON s.problem_id = p.id
+  LEFT JOIN problem_catalog p ON s.problem_id = p.id
+ LEFT JOIN problem_packages pp ON pp.id=s.package_id
   LEFT JOIN organizations op ON p.organization_id = op.id
   LEFT JOIN contest_problems cp ON p.id = cp.problem_id
   AND cp.contest_id = s.contest_id

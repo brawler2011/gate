@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -31,6 +30,8 @@ import (
 	organizations "github.com/brawler2011/gate/backend/internal/organizations"
 	pgstore "github.com/brawler2011/gate/backend/internal/postgres"
 	problems "github.com/brawler2011/gate/backend/internal/problems"
+	"github.com/brawler2011/gate/backend/internal/problems/builder"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/ratelimit"
 	submissions "github.com/brawler2011/gate/backend/internal/submissions"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -38,6 +39,7 @@ import (
 	handlers "github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	wsobserver "github.com/brawler2011/gate/backend/internal/transport/ws/observer"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
@@ -51,6 +53,7 @@ const submissionsRingBufferSize = 10000
 const serviceShutdownTimeout = 5 * time.Second
 
 const (
+	defaultS3ObjectBucket   = "problem-objects"
 	defaultS3Region         = "us-east-1"
 	defaultS3AvatarBucket   = "avatars"
 	defaultS3PackageBucket  = "problem-packages"
@@ -157,17 +160,13 @@ func runApp(envFile string) error {
 	}
 
 	for bucket, name := range map[string]string{
-		defaultS3AvatarBucket:   "avatar",
-		defaultS3PackageBucket:  "package",
-		defaultS3WorkshopBucket: "workshop",
-		defaultS3BlogBucket:     "blog",
+		defaultS3AvatarBucket: "avatar",
+		defaultS3BlogBucket:   "blog",
 	} {
 		if err := store.EnsureBucket(context.Background(), bucket); err != nil {
 			return fmt.Errorf("ensure %s bucket %q: %w", name, bucket, err)
 		}
 	}
-
-	workspaceStorage := problems.NewWorkspaceStorage(store, defaultS3WorkshopBucket, problems.NewWorkspaceCatalog(problemsRepo, pgstore.NewProblemTransactions(pool)))
 
 	redisClient, err := pkg.NewRedisClient(cfg.GetRedisURL())
 	if err != nil {
@@ -184,9 +183,6 @@ func runApp(envFile string) error {
 
 	avatarsUC := identity.NewAvatarsUseCase(usersRepo, pgstore.NewIdentityTransactions(pool), store, defaultS3AvatarBucket)
 	permissionsUC := access.NewMetadataPermissions(access.NewPermissionsUseCase(contestsRepo, usersRepo, problemsRepo, teamsRepo, orgsRepo), pgstore.NewPolicyFactsRepo(pool))
-	problemImportUC := problems.NewProblemImportUseCase(problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(pool), permissionsUC)
-	problemPublishUC := problems.NewProblemPublishUseCase(problemsRepo, packagesRepo, workspaceStorage, store, defaultS3PackageBucket, pgstore.NewProblemTransactions(pool), permissionsUC)
-	problemsUC := problems.NewProblemsUseCase(problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(pool), problemPublishUC, orgsRepo, permissionsUC)
 	contestsUC := contests.NewContestsUseCase(contestsRepo, orgsRepo, pgstore.NewContestCommandTransactions(pool), permissionsUC)
 	contestsUC.SetNotificationsUC(notificationsUC)
 
@@ -200,11 +196,6 @@ func runApp(envFile string) error {
 	communicationReader := contests.NewCommunicationReader(announcementsRepo, clarificationsRepo, permissionsUC)
 	logger.Info("successfully initialized use cases")
 
-	judgeTempDir, err := prepareJudgeTempDir(cfg.JudgeTempDir)
-	if err != nil {
-		return fmt.Errorf("prepare judge temp directory: %w", err)
-	}
-
 	sandboxClient, err := sandbox.NewClient(cfg.GoJudgeGRPCAddr)
 	if err != nil {
 		return fmt.Errorf("initialize sandbox client: %w", err)
@@ -212,14 +203,40 @@ func runApp(envFile string) error {
 	defer sandboxClient.Close()
 	logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudgeGRPCAddr))
 
-	sandboxCfg, err := sandbox.LoadConfig("languages.yaml")
+	sandboxCfg, err := sandbox.LoadConfig("judge/langs.toml")
 	if err != nil {
 		return fmt.Errorf("failed to load sandbox config: %w", err)
 	}
 
 	sandboxInstance := sandbox.NewSandbox(sandboxClient, sandboxCfg)
-	contestDetails := contests.NewDetailsReader(contestsRepo, problems.NewStatementReader(workspaceStorage, packagesRepo, problemPublishUC), permissionsUC, sandboxInstance, usersRepo)
-	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, sandboxInstance, permissionsUC)
+	problemPolicy, err := config.LoadProblemPolicy(cfg.ProblemPolicyPath)
+	if err != nil {
+		return fmt.Errorf("load problem policy: %w", err)
+	}
+	if err := os.MkdirAll(cfg.ProblemWorkDir, 0700); err != nil {
+		return fmt.Errorf("create problem work directory: %w", err)
+	}
+	fileTransport, err := sandbox.NewFileTransport(cfg.GoJudgeHTTPURL, &http.Client{Timeout: problemPolicy.UploadTTL})
+	if err != nil {
+		return err
+	}
+	objectStore := store
+	if err := objectStore.EnsureBucket(context.Background(), defaultS3ObjectBucket); err != nil {
+		return err
+	}
+	problemDrafts := pgstore.NewProblemDraftsRepo(pool, problemPolicy.Draft, problemPolicy.OperationLease)
+	toolchain := problemsmodel.Toolchain{Digest: cfg.GoJudgeToolchainDigest, Architecture: cfg.GoJudgeArchitecture, ABI: cfg.GoJudgeABI, Languages: sandboxCfg.Langs}
+	buildOptions := problemsmodel.BuildOptions{Toolchain: toolchain, Limits: problemPolicy.Limits, MaxAttempts: problemPolicy.Attempts, Duration: problemPolicy.Duration, Lease: problemPolicy.Lease}
+	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, UploadTTL: problemPolicy.UploadTTL, ObjectBytes: int64(problemPolicy.Limits.ObjectBytes), BuildOptions: buildOptions}
+	pipeline := &builder.Pipeline{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, Client: sandboxClient, Files: fileTransport, Environment: toolchain, UploadTTL: problemPolicy.UploadTTL, Logger: logger}
+	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll}
+	problemGC := &builder.GC{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: logger}
+
+	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, MaxArchiveBytes: int64(problemPolicy.Limits.ObjectBytes), MaxEntries: problemPolicy.Limits.FileCount}
+	draftUC.PackageContent = packageContent
+	problemsUC := problems.NewProblemsUseCase(problemsRepo, pgstore.NewProblemTransactions(pool), orgsRepo, permissionsUC, draftUC, packagesRepo, packageContent)
+	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Permissions: permissionsUC}
+	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, permissionsUC, sandboxInstance, usersRepo)
 
 	natsJS, err := pkg.NewNatsJetStream(cfg.GetNatsURL())
 	if err != nil {
@@ -249,15 +266,9 @@ func runApp(envFile string) error {
 
 	judgeJobs := pgstore.NewJudgeJobs(pool)
 	judgeTransactions := pgstore.NewJudgeTransactions(pool)
-	judgeUC := judging.NewJudgeUseCase(
-		judgeJobs, judgeTransactions,
-		submissionsRepo,
-		store,
-		defaultS3PackageBucket,
-		judgeTempDir,
-		sandboxInstance,
-		judgeworker.NewEventPublisher(natsJS),
-	)
+	judgeUC := judging.NewJudgeUseCase(judgeJobs, judgeTransactions, submissionsRepo,
+		&judging.PackageLoader{Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: cfg.ProblemWorkDir, Packages: problemDrafts, Limits: problemPolicy.Limits},
+		&judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Environment: toolchain, Logger: logger}, judgeworker.NewEventPublisher(natsJS))
 
 	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), natsJS, judgeUC, cfg.JudgeWorkerCount)
 	if err != nil {
@@ -338,11 +349,9 @@ func runApp(envFile string) error {
 		},
 		coremodules.Problems{
 			ProblemsUC:     problemsUC,
-			ProblemsReader: problems.NewReader(problemsRepo, permissionsUC, orgsRepo, workshopUC),
-			WorkshopUC:     workshopUC,
-			ImportUC:       problemImportUC,
-			PublishUC:      problemPublishUC,
-			PackagesReader: problemPublishUC,
+			ProblemsReader: problems.NewReader(problemsRepo, permissionsUC, orgsRepo, problemDrafts),
+			ProblemDraftUC: draftUC,
+			PackagesReader: packagesUC,
 		},
 		coremodules.Submissions{SubmissionsUC: submissionsUC},
 		coremodules.Notifications{
@@ -356,7 +365,7 @@ func runApp(envFile string) error {
 		natsJS,
 		cfg.Env != "local",
 		access.NewCapabilities(pgstore.NewPolicyFactsRepo(pool)),
-	)
+	).WithLanguages(sandboxCfg.Langs)
 
 	secHandler := middleware.NewSecurityHandler()
 	authzMw := middleware.AuthzMiddleware()
@@ -364,6 +373,7 @@ func runApp(envFile string) error {
 		coreServer,
 		secHandler,
 		corev1.WithMiddleware(authzMw),
+		corev1.WithMaxMultipartMemory(64*1024),
 		corev1.WithErrorHandler(middleware.ResponseErrorHandler(logger)),
 	)
 	if err != nil {
@@ -372,7 +382,18 @@ func runApp(envFile string) error {
 
 	apiHandler := middleware.AuthMiddleware(authUC)(
 		middleware.UsersMiddleware(usersRepo)(
-			middleware.RateLimit(limiter, cfg.TrustedProxy)(middleware.RequestLimits(apiServer, handlers.RequestBodyLimit, middleware.ResponseErrorHandler(logger))),
+			middleware.RateLimit(limiter, cfg.TrustedProxy)(middleware.RequestLimits(apiServer, func(operation string) int64 {
+				switch operation {
+				case "SaveProblemDraft":
+					return int64(problemPolicy.RequestBytes)
+				case "ImportProblem":
+					return int64(problemPolicy.Limits.ObjectBytes + bytesize.MiB)
+				case "UploadProblemDraft":
+					return int64(2*problemPolicy.Limits.ObjectBytes + bytesize.MiB)
+				default:
+					return handlers.RequestBodyLimit(operation)
+				}
+			}, middleware.ResponseErrorHandler(logger))),
 		),
 	)
 
@@ -392,12 +413,15 @@ func runApp(envFile string) error {
 			return "unmatched"
 		})(publicMux),
 		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       problemPolicy.UploadTTL,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	services := []appService{
+		newService("problem build worker", buildWorker.Run, func(context.Context) error { return nil }),
+		newService("problem object GC", problemGC.Run, func(context.Context) error { return nil }),
 		newService(
 			"outbox worker",
 			func(ctx context.Context) error {
@@ -506,18 +530,6 @@ func newObserverMiddleware(users middleware.UsersUC, authUC middleware.AuthUC) f
 			middleware.UsersMiddleware(users)(next),
 		)
 	}
-}
-
-func prepareJudgeTempDir(tempDir string) (string, error) {
-	if tempDir == "" {
-		tempDir = filepath.Join(os.TempDir(), "judge")
-	}
-
-	if err := os.MkdirAll(tempDir, 0o755); err != nil {
-		return "", fmt.Errorf("create judge temp directory: %w", err)
-	}
-
-	return tempDir, nil
 }
 
 func runServices(ctx context.Context, logger *slog.Logger, services []appService) error {

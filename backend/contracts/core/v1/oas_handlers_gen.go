@@ -1281,6 +1281,109 @@ func (s *Server) handleBlockSubmissionRequest(args [3]string, argsEscaped bool, 
 	}
 }
 
+// handleBuildProblemPackageRequest handles BuildProblemPackage operation.
+//
+// Queue an immutable draft snapshot.
+//
+// POST /problems/{id}/packages/build
+func (s *Server) handleBuildProblemPackageRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: BuildProblemPackageOperation,
+			ID:   "BuildProblemPackage",
+		}
+	)
+	params, err := decodeBuildProblemPackageParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeBuildProblemPackageRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response *ProblemBuildAccepted
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    BuildProblemPackageOperation,
+			OperationSummary: "Queue an immutable draft snapshot",
+			OperationID:      "BuildProblemPackage",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *BuildProblemPackageReq
+			Params   = BuildProblemPackageParams
+			Response = *ProblemBuildAccepted
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackBuildProblemPackageParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.BuildProblemPackage(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.BuildProblemPackage(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeBuildProblemPackageResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleCancelContestJoinRequestRequest handles CancelContestJoinRequest operation.
 //
 // Cancel my contest join request.
@@ -1541,6 +1644,98 @@ func (s *Server) handleCancelOrganizationJoinRequestRequest(args [1]string, args
 	}
 }
 
+// handleCancelProblemBuildRequest handles CancelProblemBuild operation.
+//
+// Cancel a queued or running build.
+//
+// POST /problems/{id}/builds/{buildId}/cancel
+func (s *Server) handleCancelProblemBuildRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: CancelProblemBuildOperation,
+			ID:   "CancelProblemBuild",
+		}
+	)
+	params, err := decodeCancelProblemBuildParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *ProblemBuildCancelled
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    CancelProblemBuildOperation,
+			OperationSummary: "Cancel a queued or running build",
+			OperationID:      "CancelProblemBuild",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+				{
+					Name: "buildId",
+					In:   "path",
+				}: params.BuildId,
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = CancelProblemBuildParams
+			Response = *ProblemBuildCancelled
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackCancelProblemBuildParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.CancelProblemBuild(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.CancelProblemBuild(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeCancelProblemBuildResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleChangePasswordRequest handles ChangePassword operation.
 //
 // Change password for current user.
@@ -1701,94 +1896,6 @@ func (s *Server) handleClaimTemporaryUserRequest(args [0]string, argsEscaped boo
 	}
 
 	if err := encodeClaimTemporaryUserResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleCompileProblemComponentRequest handles CompileProblemComponent operation.
-//
-// Compile checker/validator/generator/interactor.
-//
-// POST /problems/{problemId}/workshop/components/{componentType}/compile
-func (s *Server) handleCompileProblemComponentRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: CompileProblemComponentOperation,
-			ID:   "CompileProblemComponent",
-		}
-	)
-	params, err := decodeCompileProblemComponentParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *CompileResult
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    CompileProblemComponentOperation,
-			OperationSummary: "Compile checker/validator/generator/interactor",
-			OperationID:      "CompileProblemComponent",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "componentType",
-					In:   "path",
-				}: params.ComponentType,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = CompileProblemComponentParams
-			Response = *CompileResult
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackCompileProblemComponentParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CompileProblemComponent(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.CompileProblemComponent(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeCompileProblemComponentResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -3033,6 +3140,10 @@ func (s *Server) handleCreateProblemRequest(args [0]string, argsEscaped bool, w 
 					In:   "query",
 				}: params.Title,
 				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+				{
 					Name: "organization_id",
 					In:   "query",
 				}: params.OrganizationID,
@@ -3072,521 +3183,6 @@ func (s *Server) handleCreateProblemRequest(args [0]string, argsEscaped bool, w 
 	}
 
 	if err := encodeCreateProblemResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleCreateProblemCheckerRequest handles CreateProblemChecker operation.
-//
-// Create checker file.
-//
-// POST /problems/{problemId}/checkers
-func (s *Server) handleCreateProblemCheckerRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: CreateProblemCheckerOperation,
-			ID:   "CreateProblemChecker",
-		}
-	)
-	params, err := decodeCreateProblemCheckerParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeCreateProblemCheckerRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    CreateProblemCheckerOperation,
-			OperationSummary: "Create checker file",
-			OperationID:      "CreateProblemChecker",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "query",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = CreateProblemCheckerReq
-			Params   = CreateProblemCheckerParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackCreateProblemCheckerParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateProblemChecker(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.CreateProblemChecker(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeCreateProblemCheckerResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleCreateProblemGeneratorRequest handles CreateProblemGenerator operation.
-//
-// Create generator file.
-//
-// POST /problems/{problemId}/generators
-func (s *Server) handleCreateProblemGeneratorRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: CreateProblemGeneratorOperation,
-			ID:   "CreateProblemGenerator",
-		}
-	)
-	params, err := decodeCreateProblemGeneratorParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeCreateProblemGeneratorRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    CreateProblemGeneratorOperation,
-			OperationSummary: "Create generator file",
-			OperationID:      "CreateProblemGenerator",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "query",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = CreateProblemGeneratorReq
-			Params   = CreateProblemGeneratorParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackCreateProblemGeneratorParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateProblemGenerator(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.CreateProblemGenerator(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeCreateProblemGeneratorResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleCreateProblemInteractorRequest handles CreateProblemInteractor operation.
-//
-// Create interactor file.
-//
-// POST /problems/{problemId}/interactors
-func (s *Server) handleCreateProblemInteractorRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: CreateProblemInteractorOperation,
-			ID:   "CreateProblemInteractor",
-		}
-	)
-	params, err := decodeCreateProblemInteractorParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeCreateProblemInteractorRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    CreateProblemInteractorOperation,
-			OperationSummary: "Create interactor file",
-			OperationID:      "CreateProblemInteractor",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "query",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = CreateProblemInteractorReq
-			Params   = CreateProblemInteractorParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackCreateProblemInteractorParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateProblemInteractor(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.CreateProblemInteractor(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeCreateProblemInteractorResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleCreateProblemLibRequest handles CreateProblemLib operation.
-//
-// Create library file.
-//
-// POST /problems/{problemId}/lib
-func (s *Server) handleCreateProblemLibRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: CreateProblemLibOperation,
-			ID:   "CreateProblemLib",
-		}
-	)
-	params, err := decodeCreateProblemLibParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeCreateProblemLibRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    CreateProblemLibOperation,
-			OperationSummary: "Create library file",
-			OperationID:      "CreateProblemLib",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "query",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = CreateProblemLibReq
-			Params   = CreateProblemLibParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackCreateProblemLibParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateProblemLib(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.CreateProblemLib(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeCreateProblemLibResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleCreateProblemMediaFileRequest handles CreateProblemMediaFile operation.
-//
-// Create media file.
-//
-// POST /problems/{problemId}/media
-func (s *Server) handleCreateProblemMediaFileRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: CreateProblemMediaFileOperation,
-			ID:   "CreateProblemMediaFile",
-		}
-	)
-	params, err := decodeCreateProblemMediaFileParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeCreateProblemMediaFileRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    CreateProblemMediaFileOperation,
-			OperationSummary: "Create media file",
-			OperationID:      "CreateProblemMediaFile",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "query",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = CreateProblemMediaFileReq
-			Params   = CreateProblemMediaFileParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackCreateProblemMediaFileParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateProblemMediaFile(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.CreateProblemMediaFile(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeCreateProblemMediaFileResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -3771,315 +3367,6 @@ func (s *Server) handleCreateProblemTeamRequest(args [1]string, argsEscaped bool
 	}
 
 	if err := encodeCreateProblemTeamResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleCreateProblemTestFileRequest handles CreateProblemTestFile operation.
-//
-// Create test file.
-//
-// POST /problems/{problemId}/tests
-func (s *Server) handleCreateProblemTestFileRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: CreateProblemTestFileOperation,
-			ID:   "CreateProblemTestFile",
-		}
-	)
-	params, err := decodeCreateProblemTestFileParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeCreateProblemTestFileRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    CreateProblemTestFileOperation,
-			OperationSummary: "Create test file",
-			OperationID:      "CreateProblemTestFile",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "query",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = CreateProblemTestFileReq
-			Params   = CreateProblemTestFileParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackCreateProblemTestFileParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateProblemTestFile(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.CreateProblemTestFile(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeCreateProblemTestFileResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleCreateProblemValidatorRequest handles CreateProblemValidator operation.
-//
-// Create validator file.
-//
-// POST /problems/{problemId}/validators
-func (s *Server) handleCreateProblemValidatorRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: CreateProblemValidatorOperation,
-			ID:   "CreateProblemValidator",
-		}
-	)
-	params, err := decodeCreateProblemValidatorParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeCreateProblemValidatorRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    CreateProblemValidatorOperation,
-			OperationSummary: "Create validator file",
-			OperationID:      "CreateProblemValidator",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "query",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = CreateProblemValidatorReq
-			Params   = CreateProblemValidatorParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackCreateProblemValidatorParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateProblemValidator(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.CreateProblemValidator(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeCreateProblemValidatorResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleCreateProblemWorkshopSubmissionRequest handles CreateProblemWorkshopSubmission operation.
-//
-// Create author solution file.
-//
-// POST /problems/{problemId}/submissions
-func (s *Server) handleCreateProblemWorkshopSubmissionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: CreateProblemWorkshopSubmissionOperation,
-			ID:   "CreateProblemWorkshopSubmission",
-		}
-	)
-	params, err := decodeCreateProblemWorkshopSubmissionParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeCreateProblemWorkshopSubmissionRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    CreateProblemWorkshopSubmissionOperation,
-			OperationSummary: "Create author solution file",
-			OperationID:      "CreateProblemWorkshopSubmission",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "query",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = CreateProblemWorkshopSubmissionReq
-			Params   = CreateProblemWorkshopSubmissionParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackCreateProblemWorkshopSubmissionParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateProblemWorkshopSubmission(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.CreateProblemWorkshopSubmission(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeCreateProblemWorkshopSubmissionResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -5295,446 +4582,6 @@ func (s *Server) handleDeleteProblemRequest(args [1]string, argsEscaped bool, w 
 	}
 }
 
-// handleDeleteProblemCheckerRequest handles DeleteProblemChecker operation.
-//
-// Delete checker file.
-//
-// DELETE /problems/{problemId}/checkers/{name}
-func (s *Server) handleDeleteProblemCheckerRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: DeleteProblemCheckerOperation,
-			ID:   "DeleteProblemChecker",
-		}
-	)
-	params, err := decodeDeleteProblemCheckerParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    DeleteProblemCheckerOperation,
-			OperationSummary: "Delete checker file",
-			OperationID:      "DeleteProblemChecker",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = DeleteProblemCheckerParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackDeleteProblemCheckerParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.DeleteProblemChecker(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.DeleteProblemChecker(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeDeleteProblemCheckerResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleDeleteProblemGeneratorRequest handles DeleteProblemGenerator operation.
-//
-// Delete generator file.
-//
-// DELETE /problems/{problemId}/generators/{name}
-func (s *Server) handleDeleteProblemGeneratorRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: DeleteProblemGeneratorOperation,
-			ID:   "DeleteProblemGenerator",
-		}
-	)
-	params, err := decodeDeleteProblemGeneratorParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    DeleteProblemGeneratorOperation,
-			OperationSummary: "Delete generator file",
-			OperationID:      "DeleteProblemGenerator",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = DeleteProblemGeneratorParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackDeleteProblemGeneratorParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.DeleteProblemGenerator(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.DeleteProblemGenerator(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeDeleteProblemGeneratorResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleDeleteProblemInteractorRequest handles DeleteProblemInteractor operation.
-//
-// Delete interactor file.
-//
-// DELETE /problems/{problemId}/interactors/{name}
-func (s *Server) handleDeleteProblemInteractorRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: DeleteProblemInteractorOperation,
-			ID:   "DeleteProblemInteractor",
-		}
-	)
-	params, err := decodeDeleteProblemInteractorParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    DeleteProblemInteractorOperation,
-			OperationSummary: "Delete interactor file",
-			OperationID:      "DeleteProblemInteractor",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = DeleteProblemInteractorParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackDeleteProblemInteractorParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.DeleteProblemInteractor(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.DeleteProblemInteractor(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeDeleteProblemInteractorResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleDeleteProblemLibRequest handles DeleteProblemLib operation.
-//
-// Delete library file.
-//
-// DELETE /problems/{problemId}/lib/{name}
-func (s *Server) handleDeleteProblemLibRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: DeleteProblemLibOperation,
-			ID:   "DeleteProblemLib",
-		}
-	)
-	params, err := decodeDeleteProblemLibParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    DeleteProblemLibOperation,
-			OperationSummary: "Delete library file",
-			OperationID:      "DeleteProblemLib",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = DeleteProblemLibParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackDeleteProblemLibParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.DeleteProblemLib(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.DeleteProblemLib(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeDeleteProblemLibResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleDeleteProblemMediaFileRequest handles DeleteProblemMediaFile operation.
-//
-// Delete media file.
-//
-// DELETE /problems/{problemId}/media/{name}
-func (s *Server) handleDeleteProblemMediaFileRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: DeleteProblemMediaFileOperation,
-			ID:   "DeleteProblemMediaFile",
-		}
-	)
-	params, err := decodeDeleteProblemMediaFileParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    DeleteProblemMediaFileOperation,
-			OperationSummary: "Delete media file",
-			OperationID:      "DeleteProblemMediaFile",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = DeleteProblemMediaFileParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackDeleteProblemMediaFileParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.DeleteProblemMediaFile(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.DeleteProblemMediaFile(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeDeleteProblemMediaFileResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
 // handleDeleteProblemMemberRequest handles DeleteProblemMember operation.
 //
 // Delete problem member.
@@ -5903,270 +4750,6 @@ func (s *Server) handleDeleteProblemTeamRequest(args [1]string, argsEscaped bool
 	}
 
 	if err := encodeDeleteProblemTeamResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleDeleteProblemTestFileRequest handles DeleteProblemTestFile operation.
-//
-// Delete test file.
-//
-// DELETE /problems/{problemId}/tests/{name}
-func (s *Server) handleDeleteProblemTestFileRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: DeleteProblemTestFileOperation,
-			ID:   "DeleteProblemTestFile",
-		}
-	)
-	params, err := decodeDeleteProblemTestFileParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    DeleteProblemTestFileOperation,
-			OperationSummary: "Delete test file",
-			OperationID:      "DeleteProblemTestFile",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = DeleteProblemTestFileParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackDeleteProblemTestFileParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.DeleteProblemTestFile(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.DeleteProblemTestFile(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeDeleteProblemTestFileResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleDeleteProblemValidatorRequest handles DeleteProblemValidator operation.
-//
-// Delete validator file.
-//
-// DELETE /problems/{problemId}/validators/{name}
-func (s *Server) handleDeleteProblemValidatorRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: DeleteProblemValidatorOperation,
-			ID:   "DeleteProblemValidator",
-		}
-	)
-	params, err := decodeDeleteProblemValidatorParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    DeleteProblemValidatorOperation,
-			OperationSummary: "Delete validator file",
-			OperationID:      "DeleteProblemValidator",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = DeleteProblemValidatorParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackDeleteProblemValidatorParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.DeleteProblemValidator(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.DeleteProblemValidator(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeDeleteProblemValidatorResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleDeleteProblemWorkshopSubmissionRequest handles DeleteProblemWorkshopSubmission operation.
-//
-// Delete author solution file.
-//
-// DELETE /problems/{problemId}/submissions/{name}
-func (s *Server) handleDeleteProblemWorkshopSubmissionRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: DeleteProblemWorkshopSubmissionOperation,
-			ID:   "DeleteProblemWorkshopSubmission",
-		}
-	)
-	params, err := decodeDeleteProblemWorkshopSubmissionParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    DeleteProblemWorkshopSubmissionOperation,
-			OperationSummary: "Delete author solution file",
-			OperationID:      "DeleteProblemWorkshopSubmission",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = DeleteProblemWorkshopSubmissionParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackDeleteProblemWorkshopSubmissionParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.DeleteProblemWorkshopSubmission(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.DeleteProblemWorkshopSubmission(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeDeleteProblemWorkshopSubmissionResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -6351,6 +4934,94 @@ func (s *Server) handleDownloadContestStatementsPdfRequest(args [2]string, argsE
 	}
 }
 
+// handleDownloadProblemPackageRequest handles DownloadProblemPackage operation.
+//
+// Download a built problem package archive.
+//
+// GET /problems/{id}/packages/{packageId}/download
+func (s *Server) handleDownloadProblemPackageRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: DownloadProblemPackageOperation,
+			ID:   "DownloadProblemPackage",
+		}
+	)
+	params, err := decodeDownloadProblemPackageParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response DownloadProblemPackageOK
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    DownloadProblemPackageOperation,
+			OperationSummary: "Download a built problem package archive",
+			OperationID:      "DownloadProblemPackage",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+				{
+					Name: "packageId",
+					In:   "path",
+				}: params.PackageId,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = DownloadProblemPackageParams
+			Response = DownloadProblemPackageOK
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackDownloadProblemPackageParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.DownloadProblemPackage(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.DownloadProblemPackage(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeDownloadProblemPackageResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleForgotPasswordRequest handles ForgotPassword operation.
 //
 // Forgot password.
@@ -6427,105 +5098,6 @@ func (s *Server) handleForgotPasswordRequest(args [0]string, argsEscaped bool, w
 	}
 
 	if err := encodeForgotPasswordResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleGenerateTestsRequest handles GenerateTests operation.
-//
-// Generate tests using generator.
-//
-// POST /problems/{problemId}/workshop/tests/generate
-func (s *Server) handleGenerateTestsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: GenerateTestsOperation,
-			ID:   "GenerateTests",
-		}
-	)
-	params, err := decodeGenerateTestsParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeGenerateTestsRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *GenerateTestsOK
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    GenerateTestsOperation,
-			OperationSummary: "Generate tests using generator",
-			OperationID:      "GenerateTests",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = *GenerateTestsReq
-			Params   = GenerateTestsParams
-			Response = *GenerateTestsOK
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackGenerateTestsParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GenerateTests(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.GenerateTests(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeGenerateTestsResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -7762,12 +6334,12 @@ func (s *Server) handleGetProblemBlockStatusForUserRequest(args [4]string, argsE
 	}
 }
 
-// handleGetProblemCheckerRequest handles GetProblemChecker operation.
+// handleGetProblemBuildRequest handles GetProblemBuild operation.
 //
-// Get checker file content.
+// Read build progress and diagnostics.
 //
-// GET /problems/{problemId}/checkers/{name}
-func (s *Server) handleGetProblemCheckerRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+// GET /problems/{id}/builds/{buildId}
+func (s *Server) handleGetProblemBuildRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	ctx := r.Context()
@@ -7775,11 +6347,11 @@ func (s *Server) handleGetProblemCheckerRequest(args [2]string, argsEscaped bool
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: GetProblemCheckerOperation,
-			ID:   "GetProblemChecker",
+			Name: GetProblemBuildOperation,
+			ID:   "GetProblemBuild",
 		}
 	)
-	params, err := decodeGetProblemCheckerParams(args, argsEscaped, r)
+	params, err := decodeGetProblemBuildParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -7792,889 +6364,13 @@ func (s *Server) handleGetProblemCheckerRequest(args [2]string, argsEscaped bool
 
 	var rawBody []byte
 
-	var response GetProblemCheckerOK
+	var response *ProblemBuild
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    GetProblemCheckerOperation,
-			OperationSummary: "Get checker file content",
-			OperationID:      "GetProblemChecker",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = GetProblemCheckerParams
-			Response = GetProblemCheckerOK
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackGetProblemCheckerParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetProblemChecker(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.GetProblemChecker(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeGetProblemCheckerResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleGetProblemGeneratorRequest handles GetProblemGenerator operation.
-//
-// Get generator file content.
-//
-// GET /problems/{problemId}/generators/{name}
-func (s *Server) handleGetProblemGeneratorRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: GetProblemGeneratorOperation,
-			ID:   "GetProblemGenerator",
-		}
-	)
-	params, err := decodeGetProblemGeneratorParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response GetProblemGeneratorOK
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    GetProblemGeneratorOperation,
-			OperationSummary: "Get generator file content",
-			OperationID:      "GetProblemGenerator",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = GetProblemGeneratorParams
-			Response = GetProblemGeneratorOK
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackGetProblemGeneratorParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetProblemGenerator(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.GetProblemGenerator(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeGetProblemGeneratorResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleGetProblemInteractorRequest handles GetProblemInteractor operation.
-//
-// Get interactor file content.
-//
-// GET /problems/{problemId}/interactors/{name}
-func (s *Server) handleGetProblemInteractorRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: GetProblemInteractorOperation,
-			ID:   "GetProblemInteractor",
-		}
-	)
-	params, err := decodeGetProblemInteractorParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response GetProblemInteractorOK
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    GetProblemInteractorOperation,
-			OperationSummary: "Get interactor file content",
-			OperationID:      "GetProblemInteractor",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = GetProblemInteractorParams
-			Response = GetProblemInteractorOK
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackGetProblemInteractorParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetProblemInteractor(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.GetProblemInteractor(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeGetProblemInteractorResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleGetProblemLibRequest handles GetProblemLib operation.
-//
-// Get library file content.
-//
-// GET /problems/{problemId}/lib/{name}
-func (s *Server) handleGetProblemLibRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: GetProblemLibOperation,
-			ID:   "GetProblemLib",
-		}
-	)
-	params, err := decodeGetProblemLibParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response GetProblemLibOK
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    GetProblemLibOperation,
-			OperationSummary: "Get library file content",
-			OperationID:      "GetProblemLib",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = GetProblemLibParams
-			Response = GetProblemLibOK
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackGetProblemLibParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetProblemLib(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.GetProblemLib(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeGetProblemLibResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleGetProblemLimitsRequest handles GetProblemLimits operation.
-//
-// Get problem limits and type settings.
-//
-// GET /problems/{problemId}/limits
-func (s *Server) handleGetProblemLimitsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: GetProblemLimitsOperation,
-			ID:   "GetProblemLimits",
-		}
-	)
-	params, err := decodeGetProblemLimitsParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *ProblemLimits
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    GetProblemLimitsOperation,
-			OperationSummary: "Get problem limits and type settings",
-			OperationID:      "GetProblemLimits",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = GetProblemLimitsParams
-			Response = *ProblemLimits
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackGetProblemLimitsParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetProblemLimits(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.GetProblemLimits(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeGetProblemLimitsResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleGetProblemMediaFileRequest handles GetProblemMediaFile operation.
-//
-// Get media file content.
-//
-// GET /problems/{problemId}/media/{name}
-func (s *Server) handleGetProblemMediaFileRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: GetProblemMediaFileOperation,
-			ID:   "GetProblemMediaFile",
-		}
-	)
-	params, err := decodeGetProblemMediaFileParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response GetProblemMediaFileOK
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    GetProblemMediaFileOperation,
-			OperationSummary: "Get media file content",
-			OperationID:      "GetProblemMediaFile",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = GetProblemMediaFileParams
-			Response = GetProblemMediaFileOK
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackGetProblemMediaFileParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetProblemMediaFile(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.GetProblemMediaFile(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeGetProblemMediaFileResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleGetProblemStatementRequest handles GetProblemStatement operation.
-//
-// Get problem statement.
-//
-// GET /problems/{problemId}/statement
-func (s *Server) handleGetProblemStatementRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: GetProblemStatementOperation,
-			ID:   "GetProblemStatement",
-		}
-	)
-	params, err := decodeGetProblemStatementParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *ProblemStatement
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    GetProblemStatementOperation,
-			OperationSummary: "Get problem statement",
-			OperationID:      "GetProblemStatement",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "lang",
-					In:   "query",
-				}: params.Lang,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = GetProblemStatementParams
-			Response = *ProblemStatement
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackGetProblemStatementParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetProblemStatement(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.GetProblemStatement(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeGetProblemStatementResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleGetProblemTestFileRequest handles GetProblemTestFile operation.
-//
-// Get test file content.
-//
-// GET /problems/{problemId}/tests/{name}
-func (s *Server) handleGetProblemTestFileRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: GetProblemTestFileOperation,
-			ID:   "GetProblemTestFile",
-		}
-	)
-	params, err := decodeGetProblemTestFileParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response GetProblemTestFileOK
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    GetProblemTestFileOperation,
-			OperationSummary: "Get test file content",
-			OperationID:      "GetProblemTestFile",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = GetProblemTestFileParams
-			Response = GetProblemTestFileOK
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackGetProblemTestFileParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetProblemTestFile(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.GetProblemTestFile(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeGetProblemTestFileResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleGetProblemValidatorRequest handles GetProblemValidator operation.
-//
-// Get validator file content.
-//
-// GET /problems/{problemId}/validators/{name}
-func (s *Server) handleGetProblemValidatorRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: GetProblemValidatorOperation,
-			ID:   "GetProblemValidator",
-		}
-	)
-	params, err := decodeGetProblemValidatorParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response GetProblemValidatorOK
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    GetProblemValidatorOperation,
-			OperationSummary: "Get validator file content",
-			OperationID:      "GetProblemValidator",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = GetProblemValidatorParams
-			Response = GetProblemValidatorOK
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackGetProblemValidatorParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetProblemValidator(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.GetProblemValidator(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeGetProblemValidatorResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleGetProblemWorkshopSubmissionRequest handles GetProblemWorkshopSubmission operation.
-//
-// Get author solution file content.
-//
-// GET /problems/{problemId}/submissions/{name}
-func (s *Server) handleGetProblemWorkshopSubmissionRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: GetProblemWorkshopSubmissionOperation,
-			ID:   "GetProblemWorkshopSubmission",
-		}
-	)
-	params, err := decodeGetProblemWorkshopSubmissionParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response GetProblemWorkshopSubmissionOK
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    GetProblemWorkshopSubmissionOperation,
-			OperationSummary: "Get author solution file content",
-			OperationID:      "GetProblemWorkshopSubmission",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = GetProblemWorkshopSubmissionParams
-			Response = GetProblemWorkshopSubmissionOK
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackGetProblemWorkshopSubmissionParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetProblemWorkshopSubmission(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.GetProblemWorkshopSubmission(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeGetProblemWorkshopSubmissionResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleGetPublishedPackageRequest handles GetPublishedPackage operation.
-//
-// Get redirect to published problem package.
-//
-// GET /problems/{id}/package/{version}
-func (s *Server) handleGetPublishedPackageRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: GetPublishedPackageOperation,
-			ID:   "GetPublishedPackage",
-		}
-	)
-	params, err := decodeGetPublishedPackageParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *GetPublishedPackageFound
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    GetPublishedPackageOperation,
-			OperationSummary: "Get redirect to published problem package",
-			OperationID:      "GetPublishedPackage",
+			OperationName:    GetProblemBuildOperation,
+			OperationSummary: "Read build progress and diagnostics",
+			OperationID:      "GetProblemBuild",
 			Body:             nil,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
@@ -8683,17 +6379,17 @@ func (s *Server) handleGetPublishedPackageRequest(args [2]string, argsEscaped bo
 					In:   "path",
 				}: params.ID,
 				{
-					Name: "version",
+					Name: "buildId",
 					In:   "path",
-				}: params.Version,
+				}: params.BuildId,
 			},
 			Raw: r,
 		}
 
 		type (
 			Request  = struct{}
-			Params   = GetPublishedPackageParams
-			Response = *GetPublishedPackageFound
+			Params   = GetProblemBuildParams
+			Response = *ProblemBuild
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -8702,14 +6398,14 @@ func (s *Server) handleGetPublishedPackageRequest(args [2]string, argsEscaped bo
 		](
 			m,
 			mreq,
-			unpackGetPublishedPackageParams,
+			unpackGetProblemBuildParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetPublishedPackage(ctx, params)
+				response, err = s.h.GetProblemBuild(ctx, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.GetPublishedPackage(ctx, params)
+		response, err = s.h.GetProblemBuild(ctx, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -8717,7 +6413,179 @@ func (s *Server) handleGetPublishedPackageRequest(args [2]string, argsEscaped bo
 		return
 	}
 
-	if err := encodeGetPublishedPackageResponse(response, w); err != nil {
+	if err := encodeGetProblemBuildResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleGetProblemDraftRequest handles GetProblemDraft operation.
+//
+// Read the editable problem draft.
+//
+// GET /problems/{id}/draft
+func (s *Server) handleGetProblemDraftRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetProblemDraftOperation,
+			ID:   "GetProblemDraft",
+		}
+	)
+	params, err := decodeGetProblemDraftParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *ProblemDraft
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetProblemDraftOperation,
+			OperationSummary: "Read the editable problem draft",
+			OperationID:      "GetProblemDraft",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = GetProblemDraftParams
+			Response = *ProblemDraft
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackGetProblemDraftParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetProblemDraft(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetProblemDraft(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeGetProblemDraftResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleGetProblemDraftObjectRequest handles GetProblemDraftObject operation.
+//
+// Download a binary referenced by this draft.
+//
+// GET /problems/{id}/draft/objects/{objectId}
+func (s *Server) handleGetProblemDraftObjectRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetProblemDraftObjectOperation,
+			ID:   "GetProblemDraftObject",
+		}
+	)
+	params, err := decodeGetProblemDraftObjectParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response GetProblemDraftObjectOK
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetProblemDraftObjectOperation,
+			OperationSummary: "Download a binary referenced by this draft",
+			OperationID:      "GetProblemDraftObject",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+				{
+					Name: "objectId",
+					In:   "path",
+				}: params.ObjectId,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = GetProblemDraftObjectParams
+			Response = GetProblemDraftObjectOK
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackGetProblemDraftObjectParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetProblemDraftObject(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetProblemDraftObject(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeGetProblemDraftObjectResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -9133,7 +7001,7 @@ func (s *Server) handleGetUserAvatarRequest(args [1]string, argsEscaped bool, w 
 
 // handleImportProblemRequest handles ImportProblem operation.
 //
-// Import package into existing problem.
+// Replace the draft with the contents of a problem archive.
 //
 // POST /problems/{id}/import
 func (s *Server) handleImportProblemRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -9176,12 +7044,12 @@ func (s *Server) handleImportProblemRequest(args [1]string, argsEscaped bool, w 
 		}
 	}()
 
-	var response *ImportProblemOK
+	var response *ProblemDraft
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ImportProblemOperation,
-			OperationSummary: "Import package into existing problem",
+			OperationSummary: "Replace the draft with the contents of a problem archive",
 			OperationID:      "ImportProblem",
 			Body:             request,
 			RawBody:          rawBody,
@@ -9190,6 +7058,14 @@ func (s *Server) handleImportProblemRequest(args [1]string, argsEscaped bool, w 
 					Name: "id",
 					In:   "path",
 				}: params.ID,
+				{
+					Name: "expected_revision",
+					In:   "query",
+				}: params.ExpectedRevision,
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
 			},
 			Raw: r,
 		}
@@ -9197,7 +7073,7 @@ func (s *Server) handleImportProblemRequest(args [1]string, argsEscaped bool, w 
 		type (
 			Request  = *ImportProblemReq
 			Params   = ImportProblemParams
-			Response = *ImportProblemOK
+			Response = *ProblemDraft
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -10814,12 +8690,12 @@ func (s *Server) handleListPostsRequest(args [0]string, argsEscaped bool, w http
 	}
 }
 
-// handleListProblemCheckersRequest handles ListProblemCheckers operation.
+// handleListProblemBuildsRequest handles ListProblemBuilds operation.
 //
-// List checker files.
+// List the latest 100 builds.
 //
-// GET /problems/{problemId}/checkers
-func (s *Server) handleListProblemCheckersRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+// GET /problems/{id}/builds
+func (s *Server) handleListProblemBuildsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	ctx := r.Context()
@@ -10827,11 +8703,11 @@ func (s *Server) handleListProblemCheckersRequest(args [1]string, argsEscaped bo
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: ListProblemCheckersOperation,
-			ID:   "ListProblemCheckers",
+			Name: ListProblemBuildsOperation,
+			ID:   "ListProblemBuilds",
 		}
 	)
-	params, err := decodeListProblemCheckersParams(args, argsEscaped, r)
+	params, err := decodeListProblemBuildsParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -10844,28 +8720,28 @@ func (s *Server) handleListProblemCheckersRequest(args [1]string, argsEscaped bo
 
 	var rawBody []byte
 
-	var response *WorkshopFileListResponse
+	var response []ProblemBuild
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    ListProblemCheckersOperation,
-			OperationSummary: "List checker files",
-			OperationID:      "ListProblemCheckers",
+			OperationName:    ListProblemBuildsOperation,
+			OperationSummary: "List the latest 100 builds",
+			OperationID:      "ListProblemBuilds",
 			Body:             nil,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
 				{
-					Name: "problemId",
+					Name: "id",
 					In:   "path",
-				}: params.ProblemId,
+				}: params.ID,
 			},
 			Raw: r,
 		}
 
 		type (
 			Request  = struct{}
-			Params   = ListProblemCheckersParams
-			Response = *WorkshopFileListResponse
+			Params   = ListProblemBuildsParams
+			Response = []ProblemBuild
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -10874,14 +8750,14 @@ func (s *Server) handleListProblemCheckersRequest(args [1]string, argsEscaped bo
 		](
 			m,
 			mreq,
-			unpackListProblemCheckersParams,
+			unpackListProblemBuildsParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ListProblemCheckers(ctx, params)
+				response, err = s.h.ListProblemBuilds(ctx, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.ListProblemCheckers(ctx, params)
+		response, err = s.h.ListProblemBuilds(ctx, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -10889,343 +8765,7 @@ func (s *Server) handleListProblemCheckersRequest(args [1]string, argsEscaped bo
 		return
 	}
 
-	if err := encodeListProblemCheckersResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleListProblemGeneratorsRequest handles ListProblemGenerators operation.
-//
-// List generator files.
-//
-// GET /problems/{problemId}/generators
-func (s *Server) handleListProblemGeneratorsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: ListProblemGeneratorsOperation,
-			ID:   "ListProblemGenerators",
-		}
-	)
-	params, err := decodeListProblemGeneratorsParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *WorkshopFileListResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    ListProblemGeneratorsOperation,
-			OperationSummary: "List generator files",
-			OperationID:      "ListProblemGenerators",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = ListProblemGeneratorsParams
-			Response = *WorkshopFileListResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackListProblemGeneratorsParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ListProblemGenerators(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.ListProblemGenerators(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeListProblemGeneratorsResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleListProblemInteractorsRequest handles ListProblemInteractors operation.
-//
-// List interactor files.
-//
-// GET /problems/{problemId}/interactors
-func (s *Server) handleListProblemInteractorsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: ListProblemInteractorsOperation,
-			ID:   "ListProblemInteractors",
-		}
-	)
-	params, err := decodeListProblemInteractorsParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *WorkshopFileListResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    ListProblemInteractorsOperation,
-			OperationSummary: "List interactor files",
-			OperationID:      "ListProblemInteractors",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = ListProblemInteractorsParams
-			Response = *WorkshopFileListResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackListProblemInteractorsParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ListProblemInteractors(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.ListProblemInteractors(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeListProblemInteractorsResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleListProblemLibsRequest handles ListProblemLibs operation.
-//
-// List library files.
-//
-// GET /problems/{problemId}/lib
-func (s *Server) handleListProblemLibsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: ListProblemLibsOperation,
-			ID:   "ListProblemLibs",
-		}
-	)
-	params, err := decodeListProblemLibsParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *WorkshopFileListResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    ListProblemLibsOperation,
-			OperationSummary: "List library files",
-			OperationID:      "ListProblemLibs",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = ListProblemLibsParams
-			Response = *WorkshopFileListResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackListProblemLibsParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ListProblemLibs(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.ListProblemLibs(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeListProblemLibsResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleListProblemMediaFilesRequest handles ListProblemMediaFiles operation.
-//
-// List media files.
-//
-// GET /problems/{problemId}/media
-func (s *Server) handleListProblemMediaFilesRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: ListProblemMediaFilesOperation,
-			ID:   "ListProblemMediaFiles",
-		}
-	)
-	params, err := decodeListProblemMediaFilesParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *WorkshopFileListResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    ListProblemMediaFilesOperation,
-			OperationSummary: "List media files",
-			OperationID:      "ListProblemMediaFiles",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = ListProblemMediaFilesParams
-			Response = *WorkshopFileListResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackListProblemMediaFilesParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ListProblemMediaFiles(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.ListProblemMediaFiles(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeListProblemMediaFilesResponse(response, w); err != nil {
+	if err := encodeListProblemBuildsResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -11328,7 +8868,7 @@ func (s *Server) handleListProblemMembersRequest(args [1]string, argsEscaped boo
 
 // handleListProblemPackagesRequest handles ListProblemPackages operation.
 //
-// List a page of problem packages, newest version first.
+// List a page of built problem packages, newest first.
 //
 // GET /problems/{id}/packages
 func (s *Server) handleListProblemPackagesRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -11361,7 +8901,7 @@ func (s *Server) handleListProblemPackagesRequest(args [1]string, argsEscaped bo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListProblemPackagesOperation,
-			OperationSummary: "List a page of problem packages, newest version first",
+			OperationSummary: "List a page of built problem packages, newest first",
 			OperationID:      "ListProblemPackages",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -11578,258 +9118,6 @@ func (s *Server) handleListProblemTemplatesRequest(args [0]string, argsEscaped b
 	}
 
 	if err := encodeListProblemTemplatesResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleListProblemTestsRequest handles ListProblemTests operation.
-//
-// List test files.
-//
-// GET /problems/{problemId}/tests
-func (s *Server) handleListProblemTestsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: ListProblemTestsOperation,
-			ID:   "ListProblemTests",
-		}
-	)
-	params, err := decodeListProblemTestsParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *WorkshopFileListResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    ListProblemTestsOperation,
-			OperationSummary: "List test files",
-			OperationID:      "ListProblemTests",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = ListProblemTestsParams
-			Response = *WorkshopFileListResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackListProblemTestsParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ListProblemTests(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.ListProblemTests(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeListProblemTestsResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleListProblemValidatorsRequest handles ListProblemValidators operation.
-//
-// List validator files.
-//
-// GET /problems/{problemId}/validators
-func (s *Server) handleListProblemValidatorsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: ListProblemValidatorsOperation,
-			ID:   "ListProblemValidators",
-		}
-	)
-	params, err := decodeListProblemValidatorsParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *WorkshopFileListResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    ListProblemValidatorsOperation,
-			OperationSummary: "List validator files",
-			OperationID:      "ListProblemValidators",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = ListProblemValidatorsParams
-			Response = *WorkshopFileListResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackListProblemValidatorsParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ListProblemValidators(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.ListProblemValidators(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeListProblemValidatorsResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleListProblemWorkshopSubmissionsRequest handles ListProblemWorkshopSubmissions operation.
-//
-// List author solution files.
-//
-// GET /problems/{problemId}/submissions
-func (s *Server) handleListProblemWorkshopSubmissionsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: ListProblemWorkshopSubmissionsOperation,
-			ID:   "ListProblemWorkshopSubmissions",
-		}
-	)
-	params, err := decodeListProblemWorkshopSubmissionsParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *WorkshopFileListResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    ListProblemWorkshopSubmissionsOperation,
-			OperationSummary: "List author solution files",
-			OperationID:      "ListProblemWorkshopSubmissions",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = ListProblemWorkshopSubmissionsParams
-			Response = *WorkshopFileListResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackListProblemWorkshopSubmissionsParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ListProblemWorkshopSubmissions(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.ListProblemWorkshopSubmissions(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeListProblemWorkshopSubmissionsResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -13383,90 +10671,6 @@ func (s *Server) handlePatchPostByIdRequest(args [1]string, argsEscaped bool, w 
 	}
 }
 
-// handlePublishProblemRequest handles PublishProblem operation.
-//
-// Publish problem package.
-//
-// POST /problems/{id}/publish
-func (s *Server) handlePublishProblemRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: PublishProblemOperation,
-			ID:   "PublishProblem",
-		}
-	)
-	params, err := decodePublishProblemParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response *PublishProblemOK
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    PublishProblemOperation,
-			OperationSummary: "Publish problem package",
-			OperationID:      "PublishProblem",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "id",
-					In:   "path",
-				}: params.ID,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = PublishProblemParams
-			Response = *PublishProblemOK
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackPublishProblemParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.PublishProblem(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.PublishProblem(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodePublishProblemResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
 // handleRegisterRequest handles Register operation.
 //
 // Register.
@@ -14534,12 +11738,12 @@ func (s *Server) handleResetPasswordRequest(args [0]string, argsEscaped bool, w 
 	}
 }
 
-// handleTestSolutionRequest handles TestSolution operation.
+// handleSaveProblemDraftRequest handles SaveProblemDraft operation.
 //
-// Test solution against tests.
+// Replace the draft in one revision change.
 //
-// POST /problems/{problemId}/workshop/solutions/test
-func (s *Server) handleTestSolutionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+// PUT /problems/{id}/draft
+func (s *Server) handleSaveProblemDraftRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	ctx := r.Context()
@@ -14547,11 +11751,11 @@ func (s *Server) handleTestSolutionRequest(args [1]string, argsEscaped bool, w h
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: TestSolutionOperation,
-			ID:   "TestSolution",
+			Name: SaveProblemDraftOperation,
+			ID:   "SaveProblemDraft",
 		}
 	)
-	params, err := decodeTestSolutionParams(args, argsEscaped, r)
+	params, err := decodeSaveProblemDraftParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -14563,7 +11767,7 @@ func (s *Server) handleTestSolutionRequest(args [1]string, argsEscaped bool, w h
 	}
 
 	var rawBody []byte
-	request, rawBody, close, err := s.decodeTestSolutionRequest(r)
+	request, rawBody, close, err := s.decodeSaveProblemDraftRequest(r)
 	if err != nil {
 		err = &ogenerrors.DecodeRequestError{
 			OperationContext: opErrContext,
@@ -14579,28 +11783,36 @@ func (s *Server) handleTestSolutionRequest(args [1]string, argsEscaped bool, w h
 		}
 	}()
 
-	var response *TestReport
+	var response *ProblemDraft
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    TestSolutionOperation,
-			OperationSummary: "Test solution against tests",
-			OperationID:      "TestSolution",
+			OperationName:    SaveProblemDraftOperation,
+			OperationSummary: "Replace the draft in one revision change",
+			OperationID:      "SaveProblemDraft",
 			Body:             request,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
 				{
-					Name: "problemId",
+					Name: "id",
 					In:   "path",
-				}: params.ProblemId,
+				}: params.ID,
+				{
+					Name: "expected_revision",
+					In:   "query",
+				}: params.ExpectedRevision,
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
 			},
 			Raw: r,
 		}
 
 		type (
-			Request  = *TestSolutionReq
-			Params   = TestSolutionParams
-			Response = *TestReport
+			Request  = *ProblemDraft
+			Params   = SaveProblemDraftParams
+			Response = *ProblemDraft
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -14609,14 +11821,14 @@ func (s *Server) handleTestSolutionRequest(args [1]string, argsEscaped bool, w h
 		](
 			m,
 			mreq,
-			unpackTestSolutionParams,
+			unpackSaveProblemDraftParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.TestSolution(ctx, request, params)
+				response, err = s.h.SaveProblemDraft(ctx, request, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.TestSolution(ctx, request, params)
+		response, err = s.h.SaveProblemDraft(ctx, request, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -14624,7 +11836,7 @@ func (s *Server) handleTestSolutionRequest(args [1]string, argsEscaped bool, w h
 		return
 	}
 
-	if err := encodeTestSolutionResponse(response, w); err != nil {
+	if err := encodeSaveProblemDraftResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -15318,620 +12530,6 @@ func (s *Server) handleUpdateProblemRequest(args [1]string, argsEscaped bool, w 
 	}
 }
 
-// handleUpdateProblemCheckerRequest handles UpdateProblemChecker operation.
-//
-// Update checker file.
-//
-// PUT /problems/{problemId}/checkers/{name}
-func (s *Server) handleUpdateProblemCheckerRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: UpdateProblemCheckerOperation,
-			ID:   "UpdateProblemChecker",
-		}
-	)
-	params, err := decodeUpdateProblemCheckerParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeUpdateProblemCheckerRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    UpdateProblemCheckerOperation,
-			OperationSummary: "Update checker file",
-			OperationID:      "UpdateProblemChecker",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = UpdateProblemCheckerReq
-			Params   = UpdateProblemCheckerParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackUpdateProblemCheckerParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.UpdateProblemChecker(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.UpdateProblemChecker(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeUpdateProblemCheckerResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleUpdateProblemGeneratorRequest handles UpdateProblemGenerator operation.
-//
-// Update generator file.
-//
-// PUT /problems/{problemId}/generators/{name}
-func (s *Server) handleUpdateProblemGeneratorRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: UpdateProblemGeneratorOperation,
-			ID:   "UpdateProblemGenerator",
-		}
-	)
-	params, err := decodeUpdateProblemGeneratorParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeUpdateProblemGeneratorRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    UpdateProblemGeneratorOperation,
-			OperationSummary: "Update generator file",
-			OperationID:      "UpdateProblemGenerator",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = UpdateProblemGeneratorReq
-			Params   = UpdateProblemGeneratorParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackUpdateProblemGeneratorParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.UpdateProblemGenerator(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.UpdateProblemGenerator(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeUpdateProblemGeneratorResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleUpdateProblemInteractorRequest handles UpdateProblemInteractor operation.
-//
-// Update interactor file.
-//
-// PUT /problems/{problemId}/interactors/{name}
-func (s *Server) handleUpdateProblemInteractorRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: UpdateProblemInteractorOperation,
-			ID:   "UpdateProblemInteractor",
-		}
-	)
-	params, err := decodeUpdateProblemInteractorParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeUpdateProblemInteractorRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    UpdateProblemInteractorOperation,
-			OperationSummary: "Update interactor file",
-			OperationID:      "UpdateProblemInteractor",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = UpdateProblemInteractorReq
-			Params   = UpdateProblemInteractorParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackUpdateProblemInteractorParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.UpdateProblemInteractor(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.UpdateProblemInteractor(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeUpdateProblemInteractorResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleUpdateProblemLibRequest handles UpdateProblemLib operation.
-//
-// Update library file.
-//
-// PUT /problems/{problemId}/lib/{name}
-func (s *Server) handleUpdateProblemLibRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: UpdateProblemLibOperation,
-			ID:   "UpdateProblemLib",
-		}
-	)
-	params, err := decodeUpdateProblemLibParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeUpdateProblemLibRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    UpdateProblemLibOperation,
-			OperationSummary: "Update library file",
-			OperationID:      "UpdateProblemLib",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = UpdateProblemLibReq
-			Params   = UpdateProblemLibParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackUpdateProblemLibParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.UpdateProblemLib(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.UpdateProblemLib(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeUpdateProblemLibResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleUpdateProblemLimitsRequest handles UpdateProblemLimits operation.
-//
-// Update problem limits and type settings.
-//
-// PATCH /problems/{problemId}/limits
-func (s *Server) handleUpdateProblemLimitsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: UpdateProblemLimitsOperation,
-			ID:   "UpdateProblemLimits",
-		}
-	)
-	params, err := decodeUpdateProblemLimitsParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeUpdateProblemLimitsRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *ProblemLimits
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    UpdateProblemLimitsOperation,
-			OperationSummary: "Update problem limits and type settings",
-			OperationID:      "UpdateProblemLimits",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = *UpdateProblemLimitsRequest
-			Params   = UpdateProblemLimitsParams
-			Response = *ProblemLimits
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackUpdateProblemLimitsParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.UpdateProblemLimits(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.UpdateProblemLimits(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeUpdateProblemLimitsResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleUpdateProblemMediaFileRequest handles UpdateProblemMediaFile operation.
-//
-// Update media file.
-//
-// PUT /problems/{problemId}/media/{name}
-func (s *Server) handleUpdateProblemMediaFileRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: UpdateProblemMediaFileOperation,
-			ID:   "UpdateProblemMediaFile",
-		}
-	)
-	params, err := decodeUpdateProblemMediaFileParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeUpdateProblemMediaFileRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    UpdateProblemMediaFileOperation,
-			OperationSummary: "Update media file",
-			OperationID:      "UpdateProblemMediaFile",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = UpdateProblemMediaFileReq
-			Params   = UpdateProblemMediaFileParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackUpdateProblemMediaFileParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.UpdateProblemMediaFile(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.UpdateProblemMediaFile(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeUpdateProblemMediaFileResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
 // handleUpdateProblemMemberRequest handles UpdateProblemMember operation.
 //
 // Update problem member.
@@ -16024,109 +12622,6 @@ func (s *Server) handleUpdateProblemMemberRequest(args [1]string, argsEscaped bo
 	}
 }
 
-// handleUpdateProblemStatementRequest handles UpdateProblemStatement operation.
-//
-// Update problem statement.
-//
-// PATCH /problems/{problemId}/statement
-func (s *Server) handleUpdateProblemStatementRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: UpdateProblemStatementOperation,
-			ID:   "UpdateProblemStatement",
-		}
-	)
-	params, err := decodeUpdateProblemStatementParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeUpdateProblemStatementRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *ProblemStatement
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    UpdateProblemStatementOperation,
-			OperationSummary: "Update problem statement",
-			OperationID:      "UpdateProblemStatement",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "lang",
-					In:   "query",
-				}: params.Lang,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = *UpdateProblemStatementRequest
-			Params   = UpdateProblemStatementParams
-			Response = *ProblemStatement
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackUpdateProblemStatementParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.UpdateProblemStatement(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.UpdateProblemStatement(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeUpdateProblemStatementResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
 // handleUpdateProblemTeamRequest handles UpdateProblemTeam operation.
 //
 // Update problem team.
@@ -16211,414 +12706,6 @@ func (s *Server) handleUpdateProblemTeamRequest(args [1]string, argsEscaped bool
 	}
 
 	if err := encodeUpdateProblemTeamResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleUpdateProblemTestFileRequest handles UpdateProblemTestFile operation.
-//
-// Update test file.
-//
-// PUT /problems/{problemId}/tests/{name}
-func (s *Server) handleUpdateProblemTestFileRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: UpdateProblemTestFileOperation,
-			ID:   "UpdateProblemTestFile",
-		}
-	)
-	params, err := decodeUpdateProblemTestFileParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeUpdateProblemTestFileRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    UpdateProblemTestFileOperation,
-			OperationSummary: "Update test file",
-			OperationID:      "UpdateProblemTestFile",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = UpdateProblemTestFileReq
-			Params   = UpdateProblemTestFileParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackUpdateProblemTestFileParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.UpdateProblemTestFile(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.UpdateProblemTestFile(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeUpdateProblemTestFileResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleUpdateProblemTestsConfigRequest handles UpdateProblemTestsConfig operation.
-//
-// Update tests.json configuration.
-//
-// PATCH /problems/{problemId}/tests/config
-func (s *Server) handleUpdateProblemTestsConfigRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: UpdateProblemTestsConfigOperation,
-			ID:   "UpdateProblemTestsConfig",
-		}
-	)
-	params, err := decodeUpdateProblemTestsConfigParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeUpdateProblemTestsConfigRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    UpdateProblemTestsConfigOperation,
-			OperationSummary: "Update tests.json configuration",
-			OperationID:      "UpdateProblemTestsConfig",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = UpdateProblemTestsConfigRequest
-			Params   = UpdateProblemTestsConfigParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackUpdateProblemTestsConfigParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.UpdateProblemTestsConfig(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.UpdateProblemTestsConfig(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeUpdateProblemTestsConfigResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleUpdateProblemValidatorRequest handles UpdateProblemValidator operation.
-//
-// Update validator file.
-//
-// PUT /problems/{problemId}/validators/{name}
-func (s *Server) handleUpdateProblemValidatorRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: UpdateProblemValidatorOperation,
-			ID:   "UpdateProblemValidator",
-		}
-	)
-	params, err := decodeUpdateProblemValidatorParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeUpdateProblemValidatorRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    UpdateProblemValidatorOperation,
-			OperationSummary: "Update validator file",
-			OperationID:      "UpdateProblemValidator",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = UpdateProblemValidatorReq
-			Params   = UpdateProblemValidatorParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackUpdateProblemValidatorParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.UpdateProblemValidator(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.UpdateProblemValidator(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeUpdateProblemValidatorResponse(response, w); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleUpdateProblemWorkshopSubmissionRequest handles UpdateProblemWorkshopSubmission operation.
-//
-// Update author solution file.
-//
-// PUT /problems/{problemId}/submissions/{name}
-func (s *Server) handleUpdateProblemWorkshopSubmissionRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	ctx := r.Context()
-
-	var (
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: UpdateProblemWorkshopSubmissionOperation,
-			ID:   "UpdateProblemWorkshopSubmission",
-		}
-	)
-	params, err := decodeUpdateProblemWorkshopSubmissionParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeUpdateProblemWorkshopSubmissionRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response *MessageResponse
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    UpdateProblemWorkshopSubmissionOperation,
-			OperationSummary: "Update author solution file",
-			OperationID:      "UpdateProblemWorkshopSubmission",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "problemId",
-					In:   "path",
-				}: params.ProblemId,
-				{
-					Name: "name",
-					In:   "path",
-				}: params.Name,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = UpdateProblemWorkshopSubmissionReq
-			Params   = UpdateProblemWorkshopSubmissionParams
-			Response = *MessageResponse
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackUpdateProblemWorkshopSubmissionParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.UpdateProblemWorkshopSubmission(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.UpdateProblemWorkshopSubmission(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeUpdateProblemWorkshopSubmissionResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -17016,12 +13103,12 @@ func (s *Server) handleUploadAvatarRequest(args [1]string, argsEscaped bool, w h
 	}
 }
 
-// handleValidateAllTestsRequest handles ValidateAllTests operation.
+// handleUploadProblemDraftRequest handles UploadProblemDraft operation.
 //
-// Validate all test inputs.
+// Upload immutable test bodies or a resource.
 //
-// POST /problems/{problemId}/workshop/tests/validate
-func (s *Server) handleValidateAllTestsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+// POST /problems/{id}/draft/uploads
+func (s *Server) handleUploadProblemDraftRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	ctx := r.Context()
@@ -17029,11 +13116,11 @@ func (s *Server) handleValidateAllTestsRequest(args [1]string, argsEscaped bool,
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: ValidateAllTestsOperation,
-			ID:   "ValidateAllTests",
+			Name: UploadProblemDraftOperation,
+			ID:   "UploadProblemDraft",
 		}
 	)
-	params, err := decodeValidateAllTestsParams(args, argsEscaped, r)
+	params, err := decodeUploadProblemDraftParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -17045,29 +13132,52 @@ func (s *Server) handleValidateAllTestsRequest(args [1]string, argsEscaped bool,
 	}
 
 	var rawBody []byte
+	request, rawBody, close, err := s.decodeUploadProblemDraftRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
 
-	var response *ValidationReport
+	var response *ProblemDraft
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    ValidateAllTestsOperation,
-			OperationSummary: "Validate all test inputs",
-			OperationID:      "ValidateAllTests",
-			Body:             nil,
+			OperationName:    UploadProblemDraftOperation,
+			OperationSummary: "Upload immutable test bodies or a resource",
+			OperationID:      "UploadProblemDraft",
+			Body:             request,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
 				{
-					Name: "problemId",
+					Name: "id",
 					In:   "path",
-				}: params.ProblemId,
+				}: params.ID,
+				{
+					Name: "expected_revision",
+					In:   "query",
+				}: params.ExpectedRevision,
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
 			},
 			Raw: r,
 		}
 
 		type (
-			Request  = struct{}
-			Params   = ValidateAllTestsParams
-			Response = *ValidationReport
+			Request  = *UploadProblemDraftReq
+			Params   = UploadProblemDraftParams
+			Response = *ProblemDraft
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -17076,14 +13186,14 @@ func (s *Server) handleValidateAllTestsRequest(args [1]string, argsEscaped bool,
 		](
 			m,
 			mreq,
-			unpackValidateAllTestsParams,
+			unpackUploadProblemDraftParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ValidateAllTests(ctx, params)
+				response, err = s.h.UploadProblemDraft(ctx, request, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.ValidateAllTests(ctx, params)
+		response, err = s.h.UploadProblemDraft(ctx, request, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -17091,7 +13201,7 @@ func (s *Server) handleValidateAllTestsRequest(args [1]string, argsEscaped bool,
 		return
 	}
 
-	if err := encodeValidateAllTestsResponse(response, w); err != nil {
+	if err := encodeUploadProblemDraftResponse(response, w); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

@@ -4,7 +4,9 @@ package integration
 
 import (
 	"fmt"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"net/http"
+	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -16,17 +18,12 @@ func (s *IntegrationTestSuite) TestListPaginationAndPackageHistory() {
 	owner := s.createUser("pagination_owner", accessmodel.UserRoleUser)
 	org := s.createOrganization("list-pagination", "Pagination", owner.Id)
 	userIDs := []uuid.UUID{owner.Id}
-	defer func() {
-		_, err := s.dbPool.Exec(s.ctx, "DELETE FROM organizations WHERE id=$1", org.ID)
-		s.Require().NoError(err)
-		_, err = s.dbPool.Exec(s.ctx, "DELETE FROM users WHERE id=ANY($1::uuid[])", userIDs)
-		s.Require().NoError(err)
-	}()
+	// Organizations that own packages cannot be deleted by design; the suite database is disposable.
 	ctx := withTestUser(s.ctx, owner.Id)
 	teamID, problemID := uuid.New(), uuid.New()
 	_, err := s.dbPool.Exec(s.ctx, `INSERT INTO teams(id, organization_id, name, slug) VALUES ($1,$2,'Pagination','pagination')`, teamID, org.ID)
 	s.Require().NoError(err)
-	_, err = s.dbPool.Exec(s.ctx, `INSERT INTO problems(id, organization_id, owner_id, title, short_name, visibility) VALUES ($1,$2,$3,'Pagination','pagination','private')`, problemID, org.ID, owner.Id)
+	err = dbfixtures.InsertProblem(s.ctx, s.dbPool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Pagination", ShortName: "pagination"})
 	s.Require().NoError(err)
 	for i := range 3 {
 		user := owner
@@ -90,10 +87,14 @@ func (s *IntegrationTestSuite) TestListPaginationAndPackageHistory() {
 			s.Len(seen, 3)
 		})
 	}
-	_, err = s.dbPool.Exec(s.ctx, `INSERT INTO problem_packages (id,problem_id,organization_id,package_hash,status,version,created_at)
- SELECT gen_random_uuid(),$1,$2,md5($1::uuid::text || version::text) || md5($2::uuid::text || version::text),'ready',version,'2026-01-01' FROM generate_series(1,101) version`, problemID, org.ID)
-	s.Require().NoError(err)
-	versions := []int32{}
+	created := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	var newestFirst []uuid.UUID
+	for i := range 101 {
+		id, err := dbfixtures.InsertPackage(s.ctx, s.dbPool, problemID, org.ID, created.Add(time.Duration(i)*time.Second))
+		s.Require().NoError(err)
+		newestFirst = append([]uuid.UUID{id}, newestFirst...)
+	}
+	listed := []uuid.UUID{}
 	for page := int32(1); page <= 4; page++ {
 		result, err := s.client.ListProblemPackages(ctx, corev1.ListProblemPackagesParams{ID: problemID, Page: corev1.NewOptInt32(page), PageSize: corev1.NewOptInt32(50)})
 		s.Require().NoError(err)
@@ -103,21 +104,19 @@ func (s *IntegrationTestSuite) TestListPaginationAndPackageHistory() {
 			s.Empty(result.Packages)
 		}
 		for _, pkg := range result.Packages {
-			versions = append(versions, pkg.Version.Value)
+			listed = append(listed, pkg.ID)
 		}
 	}
-	s.Require().Len(versions, 101)
-	for i, version := range versions {
-		s.EqualValues(101-i, version)
-	}
+	s.Equal(newestFirst, listed)
 	for _, size := range []int32{0, -1, 101} {
 		_, err := s.client.ListProblemPackages(ctx, corev1.ListProblemPackagesParams{ID: problemID, PageSize: corev1.NewOptInt32(size)})
 		s.Equal(http.StatusBadRequest, s.getStatusCode(err))
 	}
 	s.Run("empty history", func() {
-		_, err := s.dbPool.Exec(s.ctx, `DELETE FROM problem_packages WHERE problem_id=$1`, problemID)
+		emptyProblem := uuid.New()
+		err := dbfixtures.InsertProblem(s.ctx, s.dbPool, dbfixtures.ProblemSpec{ID: emptyProblem, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Empty", ShortName: "empty-history"})
 		s.Require().NoError(err)
-		result, err := s.client.ListProblemPackages(ctx, corev1.ListProblemPackagesParams{ID: problemID})
+		result, err := s.client.ListProblemPackages(ctx, corev1.ListProblemPackagesParams{ID: emptyProblem})
 		s.Require().NoError(err)
 		s.Equal(corev1.PaginationModel{Page: 1, PageSize: 50}, result.Pagination)
 		s.NotNil(result.Packages)

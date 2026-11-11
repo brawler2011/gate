@@ -748,7 +748,7 @@ func (q *Queries) ListContestMembers(ctx context.Context, arg ListContestMembers
 }
 
 const listContestProblems = `-- name: ListContestProblems :many
-SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, pp.title, pp.short_name, 'private'::text AS visibility, pp.time_limit_ms, pp.memory_limit_mb, pp.created_at AS problem_updated_at, pp.url as package_url
+SELECT cp.contest_id, cp.problem_id, cp.package_id, cp.ordinal, cp.created_at, pp.title, pp.short_name, 'private'::text AS visibility, pp.time_limit_ms, pp.memory_limit_mb, pp.created_at AS problem_updated_at
 FROM contest_problems cp
 JOIN problem_packages pp ON cp.package_id = pp.id
 WHERE cp.contest_id = $1
@@ -767,7 +767,6 @@ type ListContestProblemsRow struct {
 	TimeLimitMs      int32     `json:"time_limit_ms"`
 	MemoryLimitMb    int32     `json:"memory_limit_mb"`
 	ProblemUpdatedAt time.Time `json:"problem_updated_at"`
-	PackageUrl       *string   `json:"package_url"`
 }
 
 func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) ([]ListContestProblemsRow, error) {
@@ -791,7 +790,6 @@ func (q *Queries) ListContestProblems(ctx context.Context, contestID uuid.UUID) 
 			&i.TimeLimitMs,
 			&i.MemoryLimitMb,
 			&i.ProblemUpdatedAt,
-			&i.PackageUrl,
 		); err != nil {
 			return nil, err
 		}

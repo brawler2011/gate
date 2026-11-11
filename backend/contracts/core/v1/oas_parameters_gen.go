@@ -1630,6 +1630,136 @@ func decodeBlockSubmissionParams(args [3]string, argsEscaped bool, r *http.Reque
 	return params, nil
 }
 
+// BuildProblemPackageParams is parameters of BuildProblemPackage operation.
+type BuildProblemPackageParams struct {
+	// UUID of the problem.
+	ID uuid.UUID
+	// Stable identifier for retries of exactly this request.
+	IdempotencyKey string
+}
+
+func unpackBuildProblemPackageParams(packed middleware.Parameters) (params BuildProblemPackageParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		params.IdempotencyKey = packed[key].(string)
+	}
+	return params
+}
+
+func decodeBuildProblemPackageParams(args [1]string, argsEscaped bool, r *http.Request) (params BuildProblemPackageParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.IdempotencyKey = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     200,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.IdempotencyKey)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // CancelContestJoinRequestParams is parameters of CancelContestJoinRequest operation.
 type CancelContestJoinRequestParams struct {
 	// Organization login.
@@ -1936,34 +2066,44 @@ func decodeCancelOrganizationJoinRequestParams(args [1]string, argsEscaped bool,
 	return params, nil
 }
 
-// CompileProblemComponentParams is parameters of CompileProblemComponent operation.
-type CompileProblemComponentParams struct {
+// CancelProblemBuildParams is parameters of CancelProblemBuild operation.
+type CancelProblemBuildParams struct {
 	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Workshop component category.
-	ComponentType CompileProblemComponentComponentType
+	ID uuid.UUID
+	// Build identifier.
+	BuildId uuid.UUID
+	// Stable identifier for retries of exactly this request.
+	IdempotencyKey string
 }
 
-func unpackCompileProblemComponentParams(packed middleware.Parameters) (params CompileProblemComponentParams) {
+func unpackCancelProblemBuildParams(packed middleware.Parameters) (params CancelProblemBuildParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "problemId",
+			Name: "id",
 			In:   "path",
 		}
-		params.ProblemId = packed[key].(uuid.UUID)
+		params.ID = packed[key].(uuid.UUID)
 	}
 	{
 		key := middleware.ParameterKey{
-			Name: "componentType",
+			Name: "buildId",
 			In:   "path",
 		}
-		params.ComponentType = packed[key].(CompileProblemComponentComponentType)
+		params.BuildId = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		params.IdempotencyKey = packed[key].(string)
 	}
 	return params
 }
 
-func decodeCompileProblemComponentParams(args [2]string, argsEscaped bool, r *http.Request) (params CompileProblemComponentParams, _ error) {
-	// Decode path: problemId.
+func decodeCancelProblemBuildParams(args [2]string, argsEscaped bool, r *http.Request) (params CancelProblemBuildParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode path: id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -1975,7 +2115,7 @@ func decodeCompileProblemComponentParams(args [2]string, argsEscaped bool, r *ht
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
+				Param:   "id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -1992,7 +2132,7 @@ func decodeCompileProblemComponentParams(args [2]string, argsEscaped bool, r *ht
 					return err
 				}
 
-				params.ProblemId = c
+				params.ID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -2003,12 +2143,12 @@ func decodeCompileProblemComponentParams(args [2]string, argsEscaped bool, r *ht
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
+			Name: "id",
 			In:   "path",
 			Err:  err,
 		}
 	}
-	// Decode path: componentType.
+	// Decode path: buildId.
 	if err := func() error {
 		param := args[1]
 		if argsEscaped {
@@ -2020,7 +2160,7 @@ func decodeCompileProblemComponentParams(args [2]string, argsEscaped bool, r *ht
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "componentType",
+				Param:   "buildId",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -2032,20 +2172,12 @@ func decodeCompileProblemComponentParams(args [2]string, argsEscaped bool, r *ht
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.ComponentType = CompileProblemComponentComponentType(c)
-				return nil
-			}(); err != nil {
-				return err
-			}
-			if err := func() error {
-				if err := params.ComponentType.Validate(); err != nil {
-					return err
-				}
+				params.BuildId = c
 				return nil
 			}(); err != nil {
 				return err
@@ -2056,8 +2188,62 @@ func decodeCompileProblemComponentParams(args [2]string, argsEscaped bool, r *ht
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "componentType",
+			Name: "buildId",
 			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.IdempotencyKey = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     200,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.IdempotencyKey)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
 			Err:  err,
 		}
 	}
@@ -3577,6 +3763,8 @@ func decodeCreateOrganizationJoinRequestParams(args [1]string, argsEscaped bool,
 type CreateProblemParams struct {
 	// Title of the new problem.
 	Title string
+	// Stable identifier for retries of exactly this request.
+	IdempotencyKey string
 	// UUID of the organization.
 	OrganizationID OptUUID `json:",omitempty,omitzero"`
 	// Problem template identifier, including the builtin: prefix for built-in templates.
@@ -3590,6 +3778,13 @@ func unpackCreateProblemParams(packed middleware.Parameters) (params CreateProbl
 			In:   "query",
 		}
 		params.Title = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		params.IdempotencyKey = packed[key].(string)
 	}
 	{
 		key := middleware.ParameterKey{
@@ -3612,6 +3807,7 @@ func unpackCreateProblemParams(packed middleware.Parameters) (params CreateProbl
 
 func decodeCreateProblemParams(args [0]string, argsEscaped bool, r *http.Request) (params CreateProblemParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
+	h := uri.NewHeaderDecoder(r.Header)
 	// Decode query: title.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -3645,6 +3841,60 @@ func decodeCreateProblemParams(args [0]string, argsEscaped bool, r *http.Request
 		return params, &ogenerrors.DecodeParamError{
 			Name: "title",
 			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.IdempotencyKey = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     200,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.IdempotencyKey)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
 			Err:  err,
 		}
 	}
@@ -3721,566 +3971,6 @@ func decodeCreateProblemParams(args [0]string, argsEscaped bool, r *http.Request
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "template_id",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// CreateProblemCheckerParams is parameters of CreateProblemChecker operation.
-type CreateProblemCheckerParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackCreateProblemCheckerParams(packed middleware.Parameters) (params CreateProblemCheckerParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "query",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeCreateProblemCheckerParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateProblemCheckerParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode query: name.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// CreateProblemGeneratorParams is parameters of CreateProblemGenerator operation.
-type CreateProblemGeneratorParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackCreateProblemGeneratorParams(packed middleware.Parameters) (params CreateProblemGeneratorParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "query",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeCreateProblemGeneratorParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateProblemGeneratorParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode query: name.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// CreateProblemInteractorParams is parameters of CreateProblemInteractor operation.
-type CreateProblemInteractorParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackCreateProblemInteractorParams(packed middleware.Parameters) (params CreateProblemInteractorParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "query",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeCreateProblemInteractorParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateProblemInteractorParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode query: name.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// CreateProblemLibParams is parameters of CreateProblemLib operation.
-type CreateProblemLibParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackCreateProblemLibParams(packed middleware.Parameters) (params CreateProblemLibParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "query",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeCreateProblemLibParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateProblemLibParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode query: name.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// CreateProblemMediaFileParams is parameters of CreateProblemMediaFile operation.
-type CreateProblemMediaFileParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackCreateProblemMediaFileParams(packed middleware.Parameters) (params CreateProblemMediaFileParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "query",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeCreateProblemMediaFileParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateProblemMediaFileParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode query: name.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
 			In:   "query",
 			Err:  err,
 		}
@@ -4619,342 +4309,6 @@ func decodeCreateProblemTeamParams(args [1]string, argsEscaped bool, r *http.Req
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "permission",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// CreateProblemTestFileParams is parameters of CreateProblemTestFile operation.
-type CreateProblemTestFileParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackCreateProblemTestFileParams(packed middleware.Parameters) (params CreateProblemTestFileParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "query",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeCreateProblemTestFileParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateProblemTestFileParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode query: name.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// CreateProblemValidatorParams is parameters of CreateProblemValidator operation.
-type CreateProblemValidatorParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackCreateProblemValidatorParams(packed middleware.Parameters) (params CreateProblemValidatorParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "query",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeCreateProblemValidatorParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateProblemValidatorParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode query: name.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// CreateProblemWorkshopSubmissionParams is parameters of CreateProblemWorkshopSubmission operation.
-type CreateProblemWorkshopSubmissionParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackCreateProblemWorkshopSubmissionParams(packed middleware.Parameters) (params CreateProblemWorkshopSubmissionParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "query",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeCreateProblemWorkshopSubmissionParams(args [1]string, argsEscaped bool, r *http.Request) (params CreateProblemWorkshopSubmissionParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode query: name.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
 			In:   "query",
 			Err:  err,
 		}
@@ -6459,606 +5813,6 @@ func decodeDeleteProblemParams(args [1]string, argsEscaped bool, r *http.Request
 	return params, nil
 }
 
-// DeleteProblemCheckerParams is parameters of DeleteProblemChecker operation.
-type DeleteProblemCheckerParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackDeleteProblemCheckerParams(packed middleware.Parameters) (params DeleteProblemCheckerParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeDeleteProblemCheckerParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteProblemCheckerParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// DeleteProblemGeneratorParams is parameters of DeleteProblemGenerator operation.
-type DeleteProblemGeneratorParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackDeleteProblemGeneratorParams(packed middleware.Parameters) (params DeleteProblemGeneratorParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeDeleteProblemGeneratorParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteProblemGeneratorParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// DeleteProblemInteractorParams is parameters of DeleteProblemInteractor operation.
-type DeleteProblemInteractorParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackDeleteProblemInteractorParams(packed middleware.Parameters) (params DeleteProblemInteractorParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeDeleteProblemInteractorParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteProblemInteractorParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// DeleteProblemLibParams is parameters of DeleteProblemLib operation.
-type DeleteProblemLibParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackDeleteProblemLibParams(packed middleware.Parameters) (params DeleteProblemLibParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeDeleteProblemLibParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteProblemLibParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// DeleteProblemMediaFileParams is parameters of DeleteProblemMediaFile operation.
-type DeleteProblemMediaFileParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackDeleteProblemMediaFileParams(packed middleware.Parameters) (params DeleteProblemMediaFileParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeDeleteProblemMediaFileParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteProblemMediaFileParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
 // DeleteProblemMemberParams is parameters of DeleteProblemMember operation.
 type DeleteProblemMemberParams struct {
 	// UUID of the problem.
@@ -7277,366 +6031,6 @@ func decodeDeleteProblemTeamParams(args [1]string, argsEscaped bool, r *http.Req
 		return params, &ogenerrors.DecodeParamError{
 			Name: "team_id",
 			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// DeleteProblemTestFileParams is parameters of DeleteProblemTestFile operation.
-type DeleteProblemTestFileParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackDeleteProblemTestFileParams(packed middleware.Parameters) (params DeleteProblemTestFileParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeDeleteProblemTestFileParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteProblemTestFileParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// DeleteProblemValidatorParams is parameters of DeleteProblemValidator operation.
-type DeleteProblemValidatorParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackDeleteProblemValidatorParams(packed middleware.Parameters) (params DeleteProblemValidatorParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeDeleteProblemValidatorParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteProblemValidatorParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// DeleteProblemWorkshopSubmissionParams is parameters of DeleteProblemWorkshopSubmission operation.
-type DeleteProblemWorkshopSubmissionParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackDeleteProblemWorkshopSubmissionParams(packed middleware.Parameters) (params DeleteProblemWorkshopSubmissionParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeDeleteProblemWorkshopSubmissionParams(args [2]string, argsEscaped bool, r *http.Request) (params DeleteProblemWorkshopSubmissionParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
 			Err:  err,
 		}
 	}
@@ -7887,25 +6281,33 @@ func decodeDownloadContestStatementsPdfParams(args [2]string, argsEscaped bool, 
 	return params, nil
 }
 
-// GenerateTestsParams is parameters of GenerateTests operation.
-type GenerateTestsParams struct {
+// DownloadProblemPackageParams is parameters of DownloadProblemPackage operation.
+type DownloadProblemPackageParams struct {
 	// UUID of the problem.
-	ProblemId uuid.UUID
+	ID        uuid.UUID
+	PackageId uuid.UUID
 }
 
-func unpackGenerateTestsParams(packed middleware.Parameters) (params GenerateTestsParams) {
+func unpackDownloadProblemPackageParams(packed middleware.Parameters) (params DownloadProblemPackageParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "problemId",
+			Name: "id",
 			In:   "path",
 		}
-		params.ProblemId = packed[key].(uuid.UUID)
+		params.ID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "packageId",
+			In:   "path",
+		}
+		params.PackageId = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeGenerateTestsParams(args [1]string, argsEscaped bool, r *http.Request) (params GenerateTestsParams, _ error) {
-	// Decode path: problemId.
+func decodeDownloadProblemPackageParams(args [2]string, argsEscaped bool, r *http.Request) (params DownloadProblemPackageParams, _ error) {
+	// Decode path: id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -7917,7 +6319,7 @@ func decodeGenerateTestsParams(args [1]string, argsEscaped bool, r *http.Request
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
+				Param:   "id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -7934,7 +6336,7 @@ func decodeGenerateTestsParams(args [1]string, argsEscaped bool, r *http.Request
 					return err
 				}
 
-				params.ProblemId = c
+				params.ID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -7945,7 +6347,52 @@ func decodeGenerateTestsParams(args [1]string, argsEscaped bool, r *http.Request
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: packageId.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "packageId",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.PackageId = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "packageId",
 			In:   "path",
 			Err:  err,
 		}
@@ -9269,1160 +7716,15 @@ func decodeGetProblemBlockStatusForUserParams(args [4]string, argsEscaped bool, 
 	return params, nil
 }
 
-// GetProblemCheckerParams is parameters of GetProblemChecker operation.
-type GetProblemCheckerParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackGetProblemCheckerParams(packed middleware.Parameters) (params GetProblemCheckerParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeGetProblemCheckerParams(args [2]string, argsEscaped bool, r *http.Request) (params GetProblemCheckerParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// GetProblemGeneratorParams is parameters of GetProblemGenerator operation.
-type GetProblemGeneratorParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackGetProblemGeneratorParams(packed middleware.Parameters) (params GetProblemGeneratorParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeGetProblemGeneratorParams(args [2]string, argsEscaped bool, r *http.Request) (params GetProblemGeneratorParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// GetProblemInteractorParams is parameters of GetProblemInteractor operation.
-type GetProblemInteractorParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackGetProblemInteractorParams(packed middleware.Parameters) (params GetProblemInteractorParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeGetProblemInteractorParams(args [2]string, argsEscaped bool, r *http.Request) (params GetProblemInteractorParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// GetProblemLibParams is parameters of GetProblemLib operation.
-type GetProblemLibParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackGetProblemLibParams(packed middleware.Parameters) (params GetProblemLibParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeGetProblemLibParams(args [2]string, argsEscaped bool, r *http.Request) (params GetProblemLibParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// GetProblemLimitsParams is parameters of GetProblemLimits operation.
-type GetProblemLimitsParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-}
-
-func unpackGetProblemLimitsParams(packed middleware.Parameters) (params GetProblemLimitsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeGetProblemLimitsParams(args [1]string, argsEscaped bool, r *http.Request) (params GetProblemLimitsParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// GetProblemMediaFileParams is parameters of GetProblemMediaFile operation.
-type GetProblemMediaFileParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackGetProblemMediaFileParams(packed middleware.Parameters) (params GetProblemMediaFileParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeGetProblemMediaFileParams(args [2]string, argsEscaped bool, r *http.Request) (params GetProblemMediaFileParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// GetProblemStatementParams is parameters of GetProblemStatement operation.
-type GetProblemStatementParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Language code of the problem statement.
-	Lang OptString `json:",omitempty,omitzero"`
-}
-
-func unpackGetProblemStatementParams(packed middleware.Parameters) (params GetProblemStatementParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "lang",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Lang = v.(OptString)
-		}
-	}
-	return params
-}
-
-func decodeGetProblemStatementParams(args [1]string, argsEscaped bool, r *http.Request) (params GetProblemStatementParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode query: lang.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "lang",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotLangVal string
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotLangVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Lang.SetTo(paramsDotLangVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "lang",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// GetProblemTestFileParams is parameters of GetProblemTestFile operation.
-type GetProblemTestFileParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackGetProblemTestFileParams(packed middleware.Parameters) (params GetProblemTestFileParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeGetProblemTestFileParams(args [2]string, argsEscaped bool, r *http.Request) (params GetProblemTestFileParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// GetProblemValidatorParams is parameters of GetProblemValidator operation.
-type GetProblemValidatorParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackGetProblemValidatorParams(packed middleware.Parameters) (params GetProblemValidatorParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeGetProblemValidatorParams(args [2]string, argsEscaped bool, r *http.Request) (params GetProblemValidatorParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// GetProblemWorkshopSubmissionParams is parameters of GetProblemWorkshopSubmission operation.
-type GetProblemWorkshopSubmissionParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackGetProblemWorkshopSubmissionParams(packed middleware.Parameters) (params GetProblemWorkshopSubmissionParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeGetProblemWorkshopSubmissionParams(args [2]string, argsEscaped bool, r *http.Request) (params GetProblemWorkshopSubmissionParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// GetPublishedPackageParams is parameters of GetPublishedPackage operation.
-type GetPublishedPackageParams struct {
+// GetProblemBuildParams is parameters of GetProblemBuild operation.
+type GetProblemBuildParams struct {
 	// UUID of the problem.
 	ID uuid.UUID
-	// Problem package version.
-	Version string
+	// Build identifier.
+	BuildId uuid.UUID
 }
 
-func unpackGetPublishedPackageParams(packed middleware.Parameters) (params GetPublishedPackageParams) {
+func unpackGetProblemBuildParams(packed middleware.Parameters) (params GetProblemBuildParams) {
 	{
 		key := middleware.ParameterKey{
 			Name: "id",
@@ -10432,15 +7734,15 @@ func unpackGetPublishedPackageParams(packed middleware.Parameters) (params GetPu
 	}
 	{
 		key := middleware.ParameterKey{
-			Name: "version",
+			Name: "buildId",
 			In:   "path",
 		}
-		params.Version = packed[key].(string)
+		params.BuildId = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeGetPublishedPackageParams(args [2]string, argsEscaped bool, r *http.Request) (params GetPublishedPackageParams, _ error) {
+func decodeGetProblemBuildParams(args [2]string, argsEscaped bool, r *http.Request) (params GetProblemBuildParams, _ error) {
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -10486,7 +7788,7 @@ func decodeGetPublishedPackageParams(args [2]string, argsEscaped bool, r *http.R
 			Err:  err,
 		}
 	}
-	// Decode path: version.
+	// Decode path: buildId.
 	if err := func() error {
 		param := args[1]
 		if argsEscaped {
@@ -10498,7 +7800,7 @@ func decodeGetPublishedPackageParams(args [2]string, argsEscaped bool, r *http.R
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "version",
+				Param:   "buildId",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -10510,12 +7812,12 @@ func decodeGetPublishedPackageParams(args [2]string, argsEscaped bool, r *http.R
 					return err
 				}
 
-				c, err := conv.ToString(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}
 
-				params.Version = c
+				params.BuildId = c
 				return nil
 			}(); err != nil {
 				return err
@@ -10526,7 +7828,193 @@ func decodeGetPublishedPackageParams(args [2]string, argsEscaped bool, r *http.R
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "version",
+			Name: "buildId",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// GetProblemDraftParams is parameters of GetProblemDraft operation.
+type GetProblemDraftParams struct {
+	// UUID of the problem.
+	ID uuid.UUID
+}
+
+func unpackGetProblemDraftParams(packed middleware.Parameters) (params GetProblemDraftParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeGetProblemDraftParams(args [1]string, argsEscaped bool, r *http.Request) (params GetProblemDraftParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// GetProblemDraftObjectParams is parameters of GetProblemDraftObject operation.
+type GetProblemDraftObjectParams struct {
+	// UUID of the problem.
+	ID uuid.UUID
+	// Referenced stored object.
+	ObjectId uuid.UUID
+}
+
+func unpackGetProblemDraftObjectParams(packed middleware.Parameters) (params GetProblemDraftObjectParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "objectId",
+			In:   "path",
+		}
+		params.ObjectId = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeGetProblemDraftObjectParams(args [2]string, argsEscaped bool, r *http.Request) (params GetProblemDraftObjectParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: objectId.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "objectId",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ObjectId = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "objectId",
 			In:   "path",
 			Err:  err,
 		}
@@ -10853,6 +8341,10 @@ func decodeGetUserAvatarParams(args [1]string, argsEscaped bool, r *http.Request
 type ImportProblemParams struct {
 	// UUID of the problem.
 	ID uuid.UUID
+	// Revision last read by the author. A different current revision returns 409.
+	ExpectedRevision int64
+	// Stable identifier for retries of exactly this request.
+	IdempotencyKey string
 }
 
 func unpackImportProblemParams(packed middleware.Parameters) (params ImportProblemParams) {
@@ -10863,10 +8355,26 @@ func unpackImportProblemParams(packed middleware.Parameters) (params ImportProbl
 		}
 		params.ID = packed[key].(uuid.UUID)
 	}
+	{
+		key := middleware.ParameterKey{
+			Name: "expected_revision",
+			In:   "query",
+		}
+		params.ExpectedRevision = packed[key].(int64)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		params.IdempotencyKey = packed[key].(string)
+	}
 	return params
 }
 
 func decodeImportProblemParams(args [1]string, argsEscaped bool, r *http.Request) (params ImportProblemParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	h := uri.NewHeaderDecoder(r.Header)
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -10909,6 +8417,114 @@ func decodeImportProblemParams(args [1]string, argsEscaped bool, r *http.Request
 		return params, &ogenerrors.DecodeParamError{
 			Name: "id",
 			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode query: expected_revision.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "expected_revision",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt64(val)
+				if err != nil {
+					return err
+				}
+
+				params.ExpectedRevision = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           1,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(params.ExpectedRevision)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "expected_revision",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.IdempotencyKey = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     200,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.IdempotencyKey)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
 			Err:  err,
 		}
 	}
@@ -14808,25 +12424,25 @@ func decodeListPostsParams(args [0]string, argsEscaped bool, r *http.Request) (p
 	return params, nil
 }
 
-// ListProblemCheckersParams is parameters of ListProblemCheckers operation.
-type ListProblemCheckersParams struct {
+// ListProblemBuildsParams is parameters of ListProblemBuilds operation.
+type ListProblemBuildsParams struct {
 	// UUID of the problem.
-	ProblemId uuid.UUID
+	ID uuid.UUID
 }
 
-func unpackListProblemCheckersParams(packed middleware.Parameters) (params ListProblemCheckersParams) {
+func unpackListProblemBuildsParams(packed middleware.Parameters) (params ListProblemBuildsParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "problemId",
+			Name: "id",
 			In:   "path",
 		}
-		params.ProblemId = packed[key].(uuid.UUID)
+		params.ID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeListProblemCheckersParams(args [1]string, argsEscaped bool, r *http.Request) (params ListProblemCheckersParams, _ error) {
-	// Decode path: problemId.
+func decodeListProblemBuildsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListProblemBuildsParams, _ error) {
+	// Decode path: id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -14838,7 +12454,7 @@ func decodeListProblemCheckersParams(args [1]string, argsEscaped bool, r *http.R
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
+				Param:   "id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -14855,7 +12471,7 @@ func decodeListProblemCheckersParams(args [1]string, argsEscaped bool, r *http.R
 					return err
 				}
 
-				params.ProblemId = c
+				params.ID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -14866,271 +12482,7 @@ func decodeListProblemCheckersParams(args [1]string, argsEscaped bool, r *http.R
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// ListProblemGeneratorsParams is parameters of ListProblemGenerators operation.
-type ListProblemGeneratorsParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-}
-
-func unpackListProblemGeneratorsParams(packed middleware.Parameters) (params ListProblemGeneratorsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeListProblemGeneratorsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListProblemGeneratorsParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// ListProblemInteractorsParams is parameters of ListProblemInteractors operation.
-type ListProblemInteractorsParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-}
-
-func unpackListProblemInteractorsParams(packed middleware.Parameters) (params ListProblemInteractorsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeListProblemInteractorsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListProblemInteractorsParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// ListProblemLibsParams is parameters of ListProblemLibs operation.
-type ListProblemLibsParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-}
-
-func unpackListProblemLibsParams(packed middleware.Parameters) (params ListProblemLibsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeListProblemLibsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListProblemLibsParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// ListProblemMediaFilesParams is parameters of ListProblemMediaFiles operation.
-type ListProblemMediaFilesParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-}
-
-func unpackListProblemMediaFilesParams(packed middleware.Parameters) (params ListProblemMediaFilesParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeListProblemMediaFilesParams(args [1]string, argsEscaped bool, r *http.Request) (params ListProblemMediaFilesParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
+			Name: "id",
 			In:   "path",
 			Err:  err,
 		}
@@ -15725,204 +13077,6 @@ func decodeListProblemTemplatesParams(args [0]string, argsEscaped bool, r *http.
 		return params, &ogenerrors.DecodeParamError{
 			Name: "organization_id",
 			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// ListProblemTestsParams is parameters of ListProblemTests operation.
-type ListProblemTestsParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-}
-
-func unpackListProblemTestsParams(packed middleware.Parameters) (params ListProblemTestsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeListProblemTestsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListProblemTestsParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// ListProblemValidatorsParams is parameters of ListProblemValidators operation.
-type ListProblemValidatorsParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-}
-
-func unpackListProblemValidatorsParams(packed middleware.Parameters) (params ListProblemValidatorsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeListProblemValidatorsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListProblemValidatorsParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// ListProblemWorkshopSubmissionsParams is parameters of ListProblemWorkshopSubmissions operation.
-type ListProblemWorkshopSubmissionsParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-}
-
-func unpackListProblemWorkshopSubmissionsParams(packed middleware.Parameters) (params ListProblemWorkshopSubmissionsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeListProblemWorkshopSubmissionsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListProblemWorkshopSubmissionsParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
 			Err:  err,
 		}
 	}
@@ -19911,72 +17065,6 @@ func decodePatchPostByIdParams(args [1]string, argsEscaped bool, r *http.Request
 	return params, nil
 }
 
-// PublishProblemParams is parameters of PublishProblem operation.
-type PublishProblemParams struct {
-	// UUID of the problem.
-	ID uuid.UUID
-}
-
-func unpackPublishProblemParams(packed middleware.Parameters) (params PublishProblemParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "id",
-			In:   "path",
-		}
-		params.ID = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodePublishProblemParams(args [1]string, argsEscaped bool, r *http.Request) (params PublishProblemParams, _ error) {
-	// Decode path: id.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "id",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ID = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "id",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
 // RejectContestJoinRequestParams is parameters of RejectContestJoinRequest operation.
 type RejectContestJoinRequestParams struct {
 	// Organization login.
@@ -21083,25 +18171,45 @@ func decodeReorderContestProblemsParams(args [2]string, argsEscaped bool, r *htt
 	return params, nil
 }
 
-// TestSolutionParams is parameters of TestSolution operation.
-type TestSolutionParams struct {
+// SaveProblemDraftParams is parameters of SaveProblemDraft operation.
+type SaveProblemDraftParams struct {
 	// UUID of the problem.
-	ProblemId uuid.UUID
+	ID uuid.UUID
+	// Revision last read by the author. A different current revision returns 409.
+	ExpectedRevision int64
+	// Stable identifier for retries of exactly this request.
+	IdempotencyKey string
 }
 
-func unpackTestSolutionParams(packed middleware.Parameters) (params TestSolutionParams) {
+func unpackSaveProblemDraftParams(packed middleware.Parameters) (params SaveProblemDraftParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "problemId",
+			Name: "id",
 			In:   "path",
 		}
-		params.ProblemId = packed[key].(uuid.UUID)
+		params.ID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "expected_revision",
+			In:   "query",
+		}
+		params.ExpectedRevision = packed[key].(int64)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		params.IdempotencyKey = packed[key].(string)
 	}
 	return params
 }
 
-func decodeTestSolutionParams(args [1]string, argsEscaped bool, r *http.Request) (params TestSolutionParams, _ error) {
-	// Decode path: problemId.
+func decodeSaveProblemDraftParams(args [1]string, argsEscaped bool, r *http.Request) (params SaveProblemDraftParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode path: id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -21113,7 +18221,7 @@ func decodeTestSolutionParams(args [1]string, argsEscaped bool, r *http.Request)
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
+				Param:   "id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -21130,7 +18238,7 @@ func decodeTestSolutionParams(args [1]string, argsEscaped bool, r *http.Request)
 					return err
 				}
 
-				params.ProblemId = c
+				params.ID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -21141,8 +18249,116 @@ func decodeTestSolutionParams(args [1]string, argsEscaped bool, r *http.Request)
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
+			Name: "id",
 			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode query: expected_revision.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "expected_revision",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt64(val)
+				if err != nil {
+					return err
+				}
+
+				params.ExpectedRevision = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           1,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(params.ExpectedRevision)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "expected_revision",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.IdempotencyKey = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     200,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.IdempotencyKey)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
 			Err:  err,
 		}
 	}
@@ -22299,672 +19515,6 @@ func decodeUpdateProblemParams(args [1]string, argsEscaped bool, r *http.Request
 	return params, nil
 }
 
-// UpdateProblemCheckerParams is parameters of UpdateProblemChecker operation.
-type UpdateProblemCheckerParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackUpdateProblemCheckerParams(packed middleware.Parameters) (params UpdateProblemCheckerParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeUpdateProblemCheckerParams(args [2]string, argsEscaped bool, r *http.Request) (params UpdateProblemCheckerParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// UpdateProblemGeneratorParams is parameters of UpdateProblemGenerator operation.
-type UpdateProblemGeneratorParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackUpdateProblemGeneratorParams(packed middleware.Parameters) (params UpdateProblemGeneratorParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeUpdateProblemGeneratorParams(args [2]string, argsEscaped bool, r *http.Request) (params UpdateProblemGeneratorParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// UpdateProblemInteractorParams is parameters of UpdateProblemInteractor operation.
-type UpdateProblemInteractorParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackUpdateProblemInteractorParams(packed middleware.Parameters) (params UpdateProblemInteractorParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeUpdateProblemInteractorParams(args [2]string, argsEscaped bool, r *http.Request) (params UpdateProblemInteractorParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// UpdateProblemLibParams is parameters of UpdateProblemLib operation.
-type UpdateProblemLibParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackUpdateProblemLibParams(packed middleware.Parameters) (params UpdateProblemLibParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeUpdateProblemLibParams(args [2]string, argsEscaped bool, r *http.Request) (params UpdateProblemLibParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// UpdateProblemLimitsParams is parameters of UpdateProblemLimits operation.
-type UpdateProblemLimitsParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-}
-
-func unpackUpdateProblemLimitsParams(packed middleware.Parameters) (params UpdateProblemLimitsParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeUpdateProblemLimitsParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateProblemLimitsParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// UpdateProblemMediaFileParams is parameters of UpdateProblemMediaFile operation.
-type UpdateProblemMediaFileParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackUpdateProblemMediaFileParams(packed middleware.Parameters) (params UpdateProblemMediaFileParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeUpdateProblemMediaFileParams(args [2]string, argsEscaped bool, r *http.Request) (params UpdateProblemMediaFileParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
 // UpdateProblemMemberParams is parameters of UpdateProblemMember operation.
 type UpdateProblemMemberParams struct {
 	// UUID of the problem.
@@ -23130,125 +19680,6 @@ func decodeUpdateProblemMemberParams(args [1]string, argsEscaped bool, r *http.R
 	return params, nil
 }
 
-// UpdateProblemStatementParams is parameters of UpdateProblemStatement operation.
-type UpdateProblemStatementParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Language code of the problem statement.
-	Lang OptString `json:",omitempty,omitzero"`
-}
-
-func unpackUpdateProblemStatementParams(packed middleware.Parameters) (params UpdateProblemStatementParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "lang",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.Lang = v.(OptString)
-		}
-	}
-	return params
-}
-
-func decodeUpdateProblemStatementParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateProblemStatementParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode query: lang.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "lang",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotLangVal string
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToString(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotLangVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.Lang.SetTo(paramsDotLangVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "lang",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
 // UpdateProblemTeamParams is parameters of UpdateProblemTeam operation.
 type UpdateProblemTeamParams struct {
 	// UUID of the problem.
@@ -23400,432 +19831,6 @@ func decodeUpdateProblemTeamParams(args [1]string, argsEscaped bool, r *http.Req
 		return params, &ogenerrors.DecodeParamError{
 			Name: "permission",
 			In:   "query",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// UpdateProblemTestFileParams is parameters of UpdateProblemTestFile operation.
-type UpdateProblemTestFileParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackUpdateProblemTestFileParams(packed middleware.Parameters) (params UpdateProblemTestFileParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeUpdateProblemTestFileParams(args [2]string, argsEscaped bool, r *http.Request) (params UpdateProblemTestFileParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// UpdateProblemTestsConfigParams is parameters of UpdateProblemTestsConfig operation.
-type UpdateProblemTestsConfigParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-}
-
-func unpackUpdateProblemTestsConfigParams(packed middleware.Parameters) (params UpdateProblemTestsConfigParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	return params
-}
-
-func decodeUpdateProblemTestsConfigParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateProblemTestsConfigParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// UpdateProblemValidatorParams is parameters of UpdateProblemValidator operation.
-type UpdateProblemValidatorParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackUpdateProblemValidatorParams(packed middleware.Parameters) (params UpdateProblemValidatorParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeUpdateProblemValidatorParams(args [2]string, argsEscaped bool, r *http.Request) (params UpdateProblemValidatorParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// UpdateProblemWorkshopSubmissionParams is parameters of UpdateProblemWorkshopSubmission operation.
-type UpdateProblemWorkshopSubmissionParams struct {
-	// UUID of the problem.
-	ProblemId uuid.UUID
-	// Name of the workshop file.
-	Name string
-}
-
-func unpackUpdateProblemWorkshopSubmissionParams(packed middleware.Parameters) (params UpdateProblemWorkshopSubmissionParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "problemId",
-			In:   "path",
-		}
-		params.ProblemId = packed[key].(uuid.UUID)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "name",
-			In:   "path",
-		}
-		params.Name = packed[key].(string)
-	}
-	return params
-}
-
-func decodeUpdateProblemWorkshopSubmissionParams(args [2]string, argsEscaped bool, r *http.Request) (params UpdateProblemWorkshopSubmissionParams, _ error) {
-	// Decode path: problemId.
-	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToUUID(val)
-				if err != nil {
-					return err
-				}
-
-				params.ProblemId = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
-			In:   "path",
-			Err:  err,
-		}
-	}
-	// Decode path: name.
-	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
-		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
-
-			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.Name = c
-				return nil
-			}(); err != nil {
-				return err
-			}
-		} else {
-			return validate.ErrFieldRequired
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
-			In:   "path",
 			Err:  err,
 		}
 	}
@@ -24195,25 +20200,45 @@ func decodeUploadAvatarParams(args [1]string, argsEscaped bool, r *http.Request)
 	return params, nil
 }
 
-// ValidateAllTestsParams is parameters of ValidateAllTests operation.
-type ValidateAllTestsParams struct {
+// UploadProblemDraftParams is parameters of UploadProblemDraft operation.
+type UploadProblemDraftParams struct {
 	// UUID of the problem.
-	ProblemId uuid.UUID
+	ID uuid.UUID
+	// Revision last read by the author. A different current revision returns 409.
+	ExpectedRevision int64
+	// Stable identifier for retries of exactly this request.
+	IdempotencyKey string
 }
 
-func unpackValidateAllTestsParams(packed middleware.Parameters) (params ValidateAllTestsParams) {
+func unpackUploadProblemDraftParams(packed middleware.Parameters) (params UploadProblemDraftParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "problemId",
+			Name: "id",
 			In:   "path",
 		}
-		params.ProblemId = packed[key].(uuid.UUID)
+		params.ID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "expected_revision",
+			In:   "query",
+		}
+		params.ExpectedRevision = packed[key].(int64)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		params.IdempotencyKey = packed[key].(string)
 	}
 	return params
 }
 
-func decodeValidateAllTestsParams(args [1]string, argsEscaped bool, r *http.Request) (params ValidateAllTestsParams, _ error) {
-	// Decode path: problemId.
+func decodeUploadProblemDraftParams(args [1]string, argsEscaped bool, r *http.Request) (params UploadProblemDraftParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode path: id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -24225,7 +20250,7 @@ func decodeValidateAllTestsParams(args [1]string, argsEscaped bool, r *http.Requ
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "problemId",
+				Param:   "id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -24242,7 +20267,7 @@ func decodeValidateAllTestsParams(args [1]string, argsEscaped bool, r *http.Requ
 					return err
 				}
 
-				params.ProblemId = c
+				params.ID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -24253,8 +20278,116 @@ func decodeValidateAllTestsParams(args [1]string, argsEscaped bool, r *http.Requ
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "problemId",
+			Name: "id",
 			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode query: expected_revision.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "expected_revision",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt64(val)
+				if err != nil {
+					return err
+				}
+
+				params.ExpectedRevision = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           1,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(params.ExpectedRevision)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "expected_revision",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.IdempotencyKey = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     200,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.IdempotencyKey)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
 			Err:  err,
 		}
 	}

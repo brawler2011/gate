@@ -111,8 +111,8 @@ jobs:
       - name: Build and push Judge image
         uses: docker/build-push-action@v7
         with:
-          context: ./deploy/common/judge
-          file: ./deploy/common/judge/Dockerfile
+          context: ./judge
+          file: ./judge/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -129,18 +129,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-
-      - name: Copy common configuration to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          source: "deploy/common/**"
-          strip_components: 2
-          target: "~/gate/deploy/common"
-          overwrite: true
 
       - name: Copy environment configuration to VPS
         uses: appleboy/scp-action@v0.1.7
@@ -217,6 +205,8 @@ jobs:
             fi
             echo "$GITHUB_TOKEN" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
             docker compose pull --ignore-buildable
+            # The sandbox image identity is pinned into every problem build.
+            export GOJUDGE_TOOLCHAIN_DIGEST="$(docker image inspect ghcr.io/brawler2011/gate-go-judge:${IMAGE_TAG} --format '{{.Id}}')"
             docker compose up -d --remove-orphans
             docker image prune -f
             echo "Waiting for services to become healthy..."

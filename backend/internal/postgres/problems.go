@@ -7,7 +7,6 @@ import (
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
-	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -30,13 +29,11 @@ func (r *ProblemsRepo) CreateProblem(ctx context.Context, params *problemsmodel.
 		OrganizationID: params.OrganizationID,
 		OwnerID:        params.OwnerID,
 		Visibility:     params.Visibility,
-		Title:          params.Title,
-		ShortName:      params.ShortName,
 	})
 	if err != nil {
 		return HandlePgErr(err)
 	}
-	return nil
+	return HandlePgErr(r.queries.InsertProblemDraft(ctx, sqlc.InsertProblemDraftParams{ProblemID: params.ID, Title: params.Title, ShortName: params.ShortName}))
 }
 
 func (r *ProblemsRepo) GetProblemById(ctx context.Context, id uuid.UUID) (problemsmodel.Problem, error) {
@@ -75,7 +72,6 @@ func (r *ProblemsRepo) ListProblems(ctx context.Context, filter *problemsmodel.P
 func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error {
 	err := r.queries.UpdateProblem(ctx, sqlc.UpdateProblemParams{
 		ID:         id,
-		Title:      problem.Title,
 		Visibility: problem.Visibility,
 		OwnerID:    problem.OwnerID,
 		IsTemplate: problem.IsTemplate,
@@ -219,33 +215,6 @@ func mapGetProblemByIDRow(p sqlc.GetProblemByIDRow) problemsmodel.Problem {
 		CreatedAt:         p.CreatedAt,
 		UpdatedAt:         p.UpdatedAt,
 	}
-}
-
-func (r *ProblemsRepo) GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, error) {
-	hash, err := r.queries.GetWorkspaceHash(ctx, id)
-	if err != nil {
-		return "", HandlePgErr(err)
-	}
-	return hash, nil
-}
-
-func (r *ProblemsRepo) CommitWorkspace(ctx context.Context, id uuid.UUID, previousHash, hash string, metadata *problemsmodel.WorkspaceMetadata) error {
-	params := sqlc.CommitWorkspaceParams{ID: id, PreviousHash: previousHash, Hash: hash}
-	if metadata != nil {
-		params.Title = &metadata.Title
-		timeMs := safeInt32(metadata.TimeLimitMs)
-		params.TimeMs = &timeMs
-		memoryMb := safeInt32(metadata.MemoryLimitMb)
-		params.MemoryMb = &memoryMb
-	}
-	rows, err := r.queries.CommitWorkspace(ctx, params)
-	if err != nil {
-		return HandlePgErr(err)
-	}
-	if rows == 0 {
-		return pkg.Wrap(pkg.ErrConflict, nil, "workspace changed; reload before saving")
-	}
-	return nil
 }
 
 func mapProblemMember(pm sqlc.ProblemMember) problemsmodel.ProblemMember {

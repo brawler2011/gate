@@ -371,7 +371,7 @@ func SubmissionListItemDTO(s submissionsmodel.Submission) corev1.SubmissionsList
 		Username: s.Username,
 
 		State:      corev1.NewOptInt32(s.State),
-		Score:      corev1.NewOptInt32(s.Score),
+		Score:      corev1.NewOptFloat64(s.Score.Float64()),
 		Penalty:    corev1.NewOptInt32(s.Penalty),
 		TimeStat:   corev1.NewOptInt32(s.TimeStat),
 		MemoryStat: corev1.NewOptInt32(s.MemoryStat),
@@ -460,7 +460,7 @@ func SolutionDTO(s submissionsmodel.Submission) corev1.SubmissionModel {
 		Submission: corev1.NewOptString(s.Submission),
 
 		State:       corev1.NewOptInt32(s.State),
-		Score:       corev1.NewOptInt32(s.Score),
+		Score:       corev1.NewOptFloat64(s.Score.Float64()),
 		Penalty:     corev1.NewOptInt32(s.Penalty),
 		TimeStat:    corev1.NewOptInt32(s.TimeStat),
 		MemoryStat:  corev1.NewOptInt32(s.MemoryStat),

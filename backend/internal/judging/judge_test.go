@@ -76,7 +76,7 @@ func TestJudgeMissingProblemPersistsTerminalFailure(t *testing.T) {
 			job := judgingmodel.Job{ID: uuid.New(), SubmissionID: uuid.New(), Generation: 1}
 			jobs := &terminalJobs{job: job}
 			store := &terminalStore{current: current, submission: submissionsmodel.Submission{ID: job.SubmissionID, State: submissionsmodel.Saved, Revision: 1}}
-			judge := NewJudgeUseCase(jobs, store, store, nil, "", "", nil, terminalProgress{})
+			judge := NewJudgeUseCase(jobs, store, store, nil, nil, terminalProgress{})
 			require.NoError(t, judge.JudgeSubmission(context.Background(), job.Ref()))
 			require.True(t, jobs.released)
 			if !current {

@@ -6,9 +6,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -57,11 +58,9 @@ func newConcurrencyFixture(t *testing.T) *concurrencyFixture {
 	for _, user := range f.users[1:] {
 		require.NoError(t, repo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: f.contest, UserId: user, Role: contestsmodel.ContestRoleParticipant}))
 	}
-	_, err := f.pool.Exec(ctx, `INSERT INTO problems(id,organization_id,title,short_name) VALUES ($1,$2,'Problem','a')`, f.problem, org)
+	err := dbfixtures.InsertProblem(ctx, f.pool, dbfixtures.ProblemSpec{ID: f.problem, OrganizationID: org, Title: "Problem", ShortName: "a"})
 	require.NoError(t, err)
-	pack := uuid.New()
-	hash := strings.ReplaceAll(pack.String(), "-", "")
-	_, err = f.pool.Exec(ctx, `INSERT INTO problem_packages(id,problem_id,organization_id,package_hash,status,version) VALUES ($1,$2,$3,$4,'ready',1)`, pack, f.problem, org, hash+hash)
+	pack, err := dbfixtures.InsertPackage(ctx, f.pool, f.problem, org, time.Time{})
 	require.NoError(t, err)
 	require.NoError(t, repo.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{ContestId: f.contest, ProblemId: f.problem, PackageId: pack}))
 	f.permissions = access.NewPermissionsUseCase(repo, NewUsersRepo(f.pool), NewProblemsRepo(f.pool), NewTeamsRepo(f.pool), NewOrganizationsRepo(f.pool))

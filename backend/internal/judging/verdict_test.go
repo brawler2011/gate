@@ -6,6 +6,7 @@ import (
 
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -160,7 +161,7 @@ func TestVerdictCalculation(t *testing.T) {
 
 		verdict := calculator.Calculate(results)
 		assert.Equal(t, submissionsmodel.Accepted, verdict.State)
-		assert.Equal(t, int32(100), verdict.Score)
+		assert.Equal(t, 100*points.Unit, verdict.Score)
 		assert.Equal(t, int32(2), verdict.MaxTime) // 2ms
 	})
 
@@ -174,7 +175,7 @@ func TestVerdictCalculation(t *testing.T) {
 
 		verdict := calculator.Calculate(results)
 		assert.Equal(t, submissionsmodel.GotWA, verdict.State)
-		assert.Equal(t, int32(0), verdict.Score)
+		assert.Equal(t, points.Value(0), verdict.Score)
 		assert.NotNil(t, verdict.FailedTest)
 		assert.Equal(t, 2, *verdict.FailedTest)
 	})
@@ -199,26 +200,38 @@ func TestVerdictCalculation(t *testing.T) {
 
 		verdict := calculator.Calculate(results)
 		assert.Equal(t, submissionsmodel.GotIE, verdict.State)
-		assert.Equal(t, int32(0), verdict.Score)
+		assert.Equal(t, points.Value(0), verdict.Score)
 		assert.NotNil(t, verdict.FailedTest)
 		assert.Equal(t, 1, *verdict.FailedTest)
 	})
 
-	t.Run("ScoringVerdict_PartialScore", func(t *testing.T) {
-		prob := testProblemWithGroups()
-		calculator := NewVerdictCalculator("scoring", prob)
+	t.Run("ScoringVerdict_EachAndCompleteWithDependency", func(t *testing.T) {
+		calculator := NewVerdictCalculator("scoring", testProblemWithGroups())
+		verdict := calculator.Calculate([]TestResult{
+			{TestNumber: 1, Verdict: "OK"}, {TestNumber: 2, Verdict: "WA"},
+			{TestNumber: 3, Verdict: "OK"}, {TestNumber: 4, Verdict: "OK"},
+		})
+		// A partial solution reports the first failing test but keeps its points.
+		assert.Equal(t, submissionsmodel.GotWA, verdict.State)
+		require.NotNil(t, verdict.FailedTest)
+		assert.Equal(t, 2, *verdict.FailedTest)
+		// Only the passed test of "each" group1 counts; group2 is blocked by the
+		// failed dependency even though its own tests passed.
+		assert.Equal(t, points.Value(3333), verdict.Score)
 
-		score50 := 50.0
-		results := []TestResult{
-			{TestNumber: 1, Verdict: "OK", Score: &score50},
-			{TestNumber: 2, Verdict: "WA", Score: nil},
-			{TestNumber: 3, Verdict: "OK", Score: nil},
-			{TestNumber: 4, Verdict: "WA", Score: nil},
-		}
+		verdict = calculator.Calculate([]TestResult{
+			{TestNumber: 1, Verdict: "OK"}, {TestNumber: 2, Verdict: "OK"},
+			{TestNumber: 3, Verdict: "OK"}, {TestNumber: 4, Verdict: "WA"},
+		})
+		// "complete" group2 awards nothing when one test fails; weights are not rescaled.
+		assert.Equal(t, points.Value(6666), verdict.Score)
 
-		verdict := calculator.Calculate(results)
-		assert.Equal(t, submissionsmodel.Accepted, verdict.State) // Scoring always Accepted
-		assert.Equal(t, int32(12), verdict.Score)
+		verdict = calculator.Calculate([]TestResult{
+			{TestNumber: 1, Verdict: "OK"}, {TestNumber: 2, Verdict: "OK"},
+			{TestNumber: 3, Verdict: "OK"}, {TestNumber: 4, Verdict: "OK"},
+		})
+		assert.Equal(t, submissionsmodel.Accepted, verdict.State)
+		assert.Equal(t, points.Value(9666), verdict.Score)
 	})
 }
 
@@ -227,35 +240,35 @@ func testProblem() *gfmt.Problem {
 		Type: "pass-fail",
 		Subtasks: map[string]gfmt.Subtask{
 			"samples": {
-				Points: 100,
 				Policy: "complete",
 				Tests: []gfmt.Test{
-					{Manual: "01.in"},
-					{Manual: "02.in"},
+					{Ordinal: 1, Points: 40 * points.Unit, Manual: "01.in"},
+					{Ordinal: 2, Points: 60 * points.Unit, Manual: "02.in"},
 				},
 			},
 		},
 	}
 }
 
+// testProblemWithGroups: group1 awards each passed test; group2 awards its
+// weights only when complete and only if group1 is fully passed.
 func testProblemWithGroups() *gfmt.Problem {
 	return &gfmt.Problem{
 		Type: "scoring",
 		Subtasks: map[string]gfmt.Subtask{
 			"group1": {
-				Points: 50,
 				Policy: "each",
 				Tests: []gfmt.Test{
-					{Manual: "01.in"},
-					{Manual: "02.in"},
+					{Ordinal: 1, Points: 3333, Manual: "01.in"},
+					{Ordinal: 2, Points: 3333, Manual: "02.in"},
 				},
 			},
 			"group2": {
-				Points: 50,
-				Policy: "complete",
+				Policy:       "complete",
+				Dependencies: []string{"group1"},
 				Tests: []gfmt.Test{
-					{Manual: "03.in"},
-					{Manual: "04.in"},
+					{Ordinal: 3, Points: 1000, Manual: "03.in"},
+					{Ordinal: 4, Points: 2000, Manual: "04.in"},
 				},
 			},
 		},

@@ -1,6 +1,7 @@
 package submissionsmodel
 
 import (
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"time"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
@@ -72,7 +73,7 @@ type SubmissionTestDetails struct {
 
 type SubmissionUpdate struct {
 	State       State
-	Score       int32
+	Score       points.Value
 	TimeStat    int32
 	MemoryStat  int32
 	FailedTest  *int32
@@ -109,26 +110,26 @@ type RejudgeFilter struct {
 }
 
 type SubmissionListItem struct {
-	ID                uuid.UUID `json:"id"`
-	UserID            uuid.UUID `json:"user_id"`
-	Username          string    `json:"username"`
-	State             State     `json:"state"`
-	Score             int32     `json:"score"`
-	Penalty           int32     `json:"penalty"`
-	TimeStat          int32     `json:"time_stat"`
-	MemoryStat        int32     `json:"memory_stat"`
-	Language          int32     `json:"language"`
-	FailedTest        *int32    `json:"failed_test,omitempty"`
-	BanReason         *string   `json:"ban_reason,omitempty"`
-	ProblemID         uuid.UUID `json:"problem_id"`
-	ProblemTitle      string    `json:"problem_title"`
-	Position          int32     `json:"position"`
-	ContestID         uuid.UUID `json:"contest_id"`
-	ContestLogin      string    `json:"contest_login"`
-	ContestTitle      string    `json:"contest_title"`
-	OrganizationLogin string    `json:"organization_login"`
-	UpdatedAt         string    `json:"updated_at"`
-	CreatedAt         string    `json:"created_at"`
+	ID                uuid.UUID    `json:"id"`
+	UserID            uuid.UUID    `json:"user_id"`
+	Username          string       `json:"username"`
+	State             State        `json:"state"`
+	Score             points.Value `json:"score"`
+	Penalty           int32        `json:"penalty"`
+	TimeStat          int32        `json:"time_stat"`
+	MemoryStat        int32        `json:"memory_stat"`
+	Language          int32        `json:"language"`
+	FailedTest        *int32       `json:"failed_test,omitempty"`
+	BanReason         *string      `json:"ban_reason,omitempty"`
+	ProblemID         uuid.UUID    `json:"problem_id"`
+	ProblemTitle      string       `json:"problem_title"`
+	Position          int32        `json:"position"`
+	ContestID         uuid.UUID    `json:"contest_id"`
+	ContestLogin      string       `json:"contest_login"`
+	ContestTitle      string       `json:"contest_title"`
+	OrganizationLogin string       `json:"organization_login"`
+	UpdatedAt         string       `json:"updated_at"`
+	CreatedAt         string       `json:"created_at"`
 }
 
 type Submission struct {
@@ -141,7 +142,7 @@ type Submission struct {
 	Username          string                 `json:"username"`
 	Submission        string                 `json:"submission"`
 	State             State                  `json:"state"`
-	Score             int32                  `json:"score"`
+	Score             points.Value           `json:"score"`
 	Penalty           int32                  `json:"penalty"`
 	TimeStat          int32                  `json:"time_stat"`
 	MemoryStat        int32                  `json:"memory_stat"`
@@ -246,13 +247,13 @@ type SubmissionCompletedEvent struct {
 	PreviousState State `json:"previous_state"`
 	SubmissionEventMeta
 
-	Id         uuid.UUID `json:"id"`
-	State      State     `json:"state"`
-	Score      int32     `json:"score"`
-	Penalty    int32     `json:"penalty"`
-	TimeStat   int32     `json:"time_stat"`
-	MemoryStat int32     `json:"memory_stat"`
-	FailedTest *int32    `json:"failed_test,omitempty"`
+	Id         uuid.UUID    `json:"id"`
+	State      State        `json:"state"`
+	Score      points.Value `json:"score"`
+	Penalty    int32        `json:"penalty"`
+	TimeStat   int32        `json:"time_stat"`
+	MemoryStat int32        `json:"memory_stat"`
+	FailedTest *int32       `json:"failed_test,omitempty"`
 }
 
 func (s Submission) EventMeta() SubmissionEventMeta {

@@ -80,7 +80,7 @@ func (r *SubmissionsRepo) UpdateSubmission(ctx context.Context, id uuid.UUID, up
 
 	change, err := r.queries.UpdateSubmission(ctx, sqlc.UpdateSubmissionParams{
 		State:       update.State,
-		Score:       int32(update.Score),
+		Score:       update.Score,
 		TestDetails: detailsBytes,
 		ID:          id,
 	})

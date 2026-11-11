@@ -74,7 +74,7 @@ services:
         max-size: "10m"
         max-file: "3"
     build:
-      context: ../common/judge
+      context: ../../judge
       dockerfile: Dockerfile
     image: ghcr.io/brawler2011/gate-go-judge:latest
     container_name: gate-go-judge-local
@@ -83,8 +83,11 @@ services:
     command:
       - "-enable-grpc"
       - "-grpc-addr=0.0.0.0:5051"
+      - "-http-addr=0.0.0.0:5050"
+      - "-dir=/data"
     ports:
       - "5051:5051"
+      - "127.0.0.1:5050:5050"
     privileged: true
     volumes:
       - ./go-judge-data:/data
@@ -97,7 +100,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: chrislusf/seaweedfs:3.77_full
+    image: chrislusf/seaweedfs:4.53_full
     container_name: gate-seaweed-master-local
     volumes:
       - seaweedfs-master:/data
@@ -114,7 +117,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: chrislusf/seaweedfs:3.77_full
+    image: chrislusf/seaweedfs:4.53_full
     container_name: gate-seaweed-volume-local
     volumes:
       - seaweedfs-volume:/data
@@ -133,7 +136,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: chrislusf/seaweedfs:3.77_full
+    image: chrislusf/seaweedfs:4.53_full
     container_name: gate-seaweed-filer-local
     volumes:
       - seaweedfs-filer:/data
@@ -153,7 +156,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: chrislusf/seaweedfs:3.77_full
+    image: chrislusf/seaweedfs:4.53_full
     container_name: gate-s3-local
     hostname: s3
     networks:

@@ -2,6 +2,7 @@ package core
 
 import (
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/nats-io/nats.go/jetstream"
 )
 
@@ -18,6 +19,7 @@ type CoreServer struct {
 	natsJS        jetstream.JetStream
 	secureCookies bool
 	capabilities  CapabilityProjector
+	languages     map[string]sandbox.Language
 }
 
 func NewCoreServer(
@@ -47,4 +49,10 @@ func NewCoreServer(
 		server.capabilities = capabilities[0]
 	}
 	return server
+}
+
+// WithLanguages sets the languages reported by GetLanguages.
+func (h *CoreServer) WithLanguages(languages map[string]sandbox.Language) *CoreServer {
+	h.languages = languages
+	return h
 }

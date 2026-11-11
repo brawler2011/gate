@@ -32,13 +32,29 @@ const mockApi = (handler: (url: URL, init?: RequestInit) => Response | Promise<R
   return fetch;
 };
 
-const history = (page: number, pending = false) => ({
-  packages: Array.from({length: page < 3 ? 50 : 1}, (_, i) => ({
-    id: `package-${101 - (page - 1) * 50 - i}`, version: 101 - (page - 1) * 50 - i,
-    status: pending ? "pending" : "ready", created_at: "2026-01-01", package_hash: "hash",
-  })),
+const history = (page: number) => ({
+  packages: Array.from({length: page < 3 ? 50 : 1}, (_, i) => {
+    const revision = 101 - (page - 1) * 50 - i;
+    return {
+      id: `package-${revision}`, problem_id: "problem", build_id: `build-${revision}`, revision,
+      created_at: "2026-01-01T00:00:00Z", package_hash: `${String(revision).padStart(8, "0")}${"a".repeat(56)}`,
+    };
+  }),
   pagination: pagination(page),
 });
+
+// A draft with every component a build requires, so the build button is enabled.
+const buildableDraft = {
+  problem_id: "problem", revision: 7, title: "A", short_name: "a", type: "pass-fail", time_limit_ms: 1000,
+  memory_limit_mb: 256, max_score: null, checker_id: "checker", validator_id: null, interactor_id: null,
+  main_solution_id: null, files: {}, components: [], assets: [],
+  subtasks: [{id: "s", ordinal: 1, name: "All", points: 1, policy: "complete", depends_on: []}],
+  tests: [{
+    id: "t", ordinal: 1, subtask_id: "s", sample: false, points: 1,
+    input: {mode: "manual", object_id: "in", component_id: null, args: [], seed: null},
+    answer: {mode: "provided", object_id: "ans", component_id: null},
+  }],
+};
 
 describe("List pagination through production components", () => {
   it("shows three pages for 101 contest participants and requests the last page", async () => {
@@ -57,21 +73,34 @@ describe("List pagination through production components", () => {
     expect(view.queryByText("@user-1")).toBeNull();
   });
 
-  it("enumerates package history and returns to the newest page after publication", async () => {
-    const fetch = mockApi((url, init) => init?.method === "POST"
-      ? Response.json({version: 102})
-      : Response.json(history(Number(url.searchParams.get("page")))));
+  it("enumerates package history and builds from the draft revision the author last saw", async () => {
+    let built: {url: URL; init?: RequestInit} | undefined;
+    mockApi((url, init) => {
+      if (url.pathname.endsWith("/packages/build")) {
+        built = {url, init};
+        return Response.json({build_id: "build", revision: 7}, {status: 202});
+      }
+      if (url.pathname.endsWith("/draft")) {
+        return Response.json(buildableDraft);
+      }
+      if (url.pathname.endsWith("/builds")) {
+        return Response.json([]);
+      }
+      return Response.json(history(Number(url.searchParams.get("page"))));
+    });
     const view = renderWithProviders(<WorkshopPackagesTab problemId="problem" />);
-    await waitFor(() => expect(view.getByText("v101")).toBeTruthy());
+    await waitFor(() => expect(view.getByText("00000101")).toBeTruthy());
     fireEvent.click(view.getByRole("button", {name: "3"}));
-    await waitFor(() => expect(view.getByText("v1")).toBeTruthy());
-    expect(view.queryByText("v101")).toBeNull();
-    fireEvent.click(view.getByRole("button", {name: "Сбилдить пакет"}));
-    await waitFor(() => expect(view.getByText("v101")).toBeTruthy());
-    expect(fetch.mock.calls.some(([url, init]) => String(url).endsWith("/publish") && init?.method === "POST")).toBe(true);
+    await waitFor(() => expect(view.getByText("00000001")).toBeTruthy());
+    expect(view.queryByText("00000101")).toBeNull();
+    await waitFor(() => expect((view.getByRole("button", {name: "Собрать пакет"}) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(view.getByRole("button", {name: "Собрать пакет"}));
+    await waitFor(() => expect(built).toBeDefined());
+    expect(JSON.parse(String(built?.init?.body))).toEqual({expected_revision: 7});
+    expect(new Headers(built?.init?.headers).get("Idempotency-Key")).toBeTruthy();
   });
 
-  it("keeps an old version reachable across pages with no ready packages and retryable errors", async () => {
+  it("keeps an old package reachable across pages with retryable errors", async () => {
     let secondAttempts = 0;
     let submitted: string | null = null;
     mockApi((url, init) => {
@@ -80,7 +109,7 @@ describe("List pagination through production components", () => {
         if (page === 2 && secondAttempts++ === 0) {
           return Response.json({message: "Retry history"}, {status: 500});
         }
-        return Response.json(history(page, page < 3));
+        return Response.json(history(page));
       }
       if (init?.method === "POST") {
         submitted = url.searchParams.get("package_id");
@@ -99,7 +128,7 @@ describe("List pagination through production components", () => {
     fireEvent.click(view.getByRole("button", {name: "Ещё"}));
     const input = await view.findByRole("textbox", {name: "Выберите версию пакета"});
     fireEvent.click(input);
-    fireEvent.click(await view.findByRole("option", {name: /Версия v1 /}));
+    fireEvent.click(await view.findByRole("option", {name: /Ревизия 1 /}));
     fireEvent.click(view.getByRole("button", {name: "Обновить пакет на контесте"}));
     await waitFor(() => expect(submitted).toBe("package-1"));
   });

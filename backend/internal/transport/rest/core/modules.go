@@ -28,9 +28,7 @@ type ContestsModule interface {
 type ProblemsModule interface {
 	ProblemsUC
 	ProblemsReader
-	WorkshopUC
-	ImportUC
-	PublishUC
+	ProblemDraftUC
 	PackagesReader
 }
 

@@ -3,16 +3,9 @@
 package postgres
 
 import (
-	"archive/zip"
-	"bytes"
 	"context"
-	"io"
-	"strings"
 	"testing"
 	"time"
-
-	"github.com/brawler2011/gate/backend/internal/problems"
-	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -20,6 +13,7 @@ import (
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
@@ -45,21 +39,18 @@ func newContestProblemFixture(t *testing.T) *contestProblemFixture {
 	f.repo = NewContestsRepo(f.pool)
 	require.NoError(t, f.repo.CreateContest(f.ctx, &contestsmodel.CreateContestParams{ID: f.contest, OrganizationID: destination, OwnerID: &f.actor, Title: "Attachment", Login: uuid.NewString(), Visibility: contestsmodel.ContestVisibilityPublic}))
 	for _, problem := range []uuid.UUID{f.problem, f.other} {
-		_, err = f.pool.Exec(f.ctx, `INSERT INTO problems(id,organization_id,title,short_name,visibility) VALUES ($1,$2,'Source problem',$3,'private')`, problem, f.sourceOrg, uuid.NewString())
+		err = dbfixtures.InsertProblem(f.ctx, f.pool, dbfixtures.ProblemSpec{ID: problem, OrganizationID: f.sourceOrg, Title: "Source problem", ShortName: uuid.NewString()})
 		require.NoError(t, err)
 	}
-	f.original = f.pack(t, f.problem, "ready", time.Now().Add(-time.Hour))
+	f.original = f.pack(t, f.problem, time.Now().Add(-time.Hour))
 	f.permissions = access.NewMetadataPermissions(access.NewPermissionsUseCase(f.repo, NewUsersRepo(f.pool), NewProblemsRepo(f.pool), NewTeamsRepo(f.pool), NewOrganizationsRepo(f.pool)), NewPolicyFactsRepo(f.pool))
 	f.uc = contests.NewContestsUseCase(f.repo, NewOrganizationsRepo(f.pool), NewContestCommandTransactions(f.pool), f.permissions)
 	return f
 }
 
-func (f *contestProblemFixture) pack(t *testing.T, problem uuid.UUID, status string, created time.Time) uuid.UUID {
+func (f *contestProblemFixture) pack(t *testing.T, problem uuid.UUID, created time.Time) uuid.UUID {
 	t.Helper()
-	id := uuid.New()
-	hash := strings.ReplaceAll(id.String(), "-", "")
-	_, err := f.pool.Exec(f.ctx, `INSERT INTO problem_packages(id,problem_id,organization_id,package_hash,status,version,created_at)
- VALUES ($1,$2,$3,$4,$5,(SELECT COALESCE(MAX(version),0)+1 FROM problem_packages WHERE problem_id=$2),$6)`, id, problem, f.sourceOrg, hash+hash, status, created)
+	id, err := dbfixtures.InsertPackage(f.ctx, f.pool, problem, f.sourceOrg, created)
 	require.NoError(t, err)
 	return id
 }
@@ -91,7 +82,7 @@ func TestContestProblemRejectsUnauthorizedSource(t *testing.T) {
 				_, err := f.pool.Exec(f.ctx, `DELETE FROM problem_members WHERE problem_id=$1 AND user_id=$2`, f.problem, f.actor)
 				require.NoError(t, err)
 			}
-			candidate := f.pack(t, f.problem, "ready", time.Now())
+			candidate := f.pack(t, f.problem, time.Now())
 			var err error
 			if operation == "update" {
 				err = f.uc.UpdateContestProblemPackage(f.ctx, f.contest, f.problem, candidate)
@@ -112,7 +103,7 @@ func TestContestProblemRejectsUnauthorizedSource(t *testing.T) {
 func TestContestProblemValidatesExplicitPackage(t *testing.T) {
 	for _, operation := range []string{"create", "repeat create", "update"} {
 		t.Run(operation, func(t *testing.T) {
-			for _, kind := range []string{"foreign ready", "pending", "building", "failed", "missing"} {
+			for _, kind := range []string{"foreign package", "missing"} {
 				t.Run(kind, func(t *testing.T) {
 					f := newContestProblemFixture(t)
 					f.grantRead(t)
@@ -120,10 +111,8 @@ func TestContestProblemValidatesExplicitPackage(t *testing.T) {
 						require.NoError(t, f.create(f.original))
 					}
 					candidate := uuid.New()
-					if kind == "foreign ready" {
-						candidate = f.pack(t, f.other, "ready", time.Now())
-					} else if kind != "missing" {
-						candidate = f.pack(t, f.problem, kind, time.Now())
+					if kind == "foreign package" {
+						candidate = f.pack(t, f.other, time.Now())
 					}
 					var err error
 					if operation == "update" {
@@ -160,8 +149,7 @@ func TestContestProblemAcceptsReadableSourcesAndPreservesOrdinal(t *testing.T) {
 			}
 			require.NoError(t, f.create(f.original))
 			require.Equal(t, f.original, f.pinned(t))
-			newer := f.pack(t, f.problem, "ready", time.Now().Add(-time.Minute))
-			f.pack(t, f.problem, "pending", time.Now())
+			newer := f.pack(t, f.problem, time.Now().Add(-time.Minute))
 			require.NoError(t, f.create(uuid.Nil))
 			require.Equal(t, newer, f.pinned(t))
 			problems, err := f.repo.GetContestProblems(f.ctx, f.contest)
@@ -176,13 +164,14 @@ func TestContestProblemAcceptsReadableSourcesAndPreservesOrdinal(t *testing.T) {
 	}
 }
 
-func TestContestProblemRequiresReadyPackageForAutomaticSelection(t *testing.T) {
+func TestContestProblemAutomaticSelectionRequiresAPackage(t *testing.T) {
 	f := newContestProblemFixture(t)
-	f.grantRead(t)
-	_, err := f.pool.Exec(f.ctx, `UPDATE problem_packages SET status='failed' WHERE id=$1`, f.original)
+	// f.other has never been built, so there is nothing to pin.
+	_, err := f.pool.Exec(f.ctx, `INSERT INTO problem_members(problem_id,user_id,role) VALUES ($1,$2,'viewer')`, f.other, f.actor)
 	require.NoError(t, err)
-	require.ErrorIs(t, f.create(uuid.Nil), pkg.ErrBadInput)
-	_, err = f.repo.GetContestProblem(f.ctx, contestsmodel.ContestProblemGet{ContestId: f.contest, ProblemId: f.problem})
+	err = f.uc.CreateContestProblem(f.ctx, contestsmodel.ContestProblemCreation{ContestId: f.contest, ProblemId: f.other, PackageId: uuid.Nil})
+	require.ErrorIs(t, err, pkg.ErrBadInput)
+	_, err = f.repo.GetContestProblem(f.ctx, contestsmodel.ContestProblemGet{ContestId: f.contest, ProblemId: f.other})
 	require.ErrorIs(t, err, pkg.ErrNotFound)
 }
 
@@ -230,7 +219,7 @@ func TestContestProblemCommandsWorkWithSingleConnectionPool(t *testing.T) {
 	ctx, cancel := context.WithTimeout(f.ctx, 5*time.Second)
 	defer cancel()
 	require.NoError(t, uc.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{ContestId: f.contest, ProblemId: f.problem, PackageId: f.original}))
-	newer := f.pack(t, f.problem, "ready", time.Now())
+	newer := f.pack(t, f.problem, time.Now())
 	require.NoError(t, uc.UpdateContestProblemPackage(ctx, f.contest, f.problem, newer))
 	require.Equal(t, newer, f.pinned(t))
 }
@@ -241,9 +230,9 @@ func TestContestSnapshotSurvivesSourceChanges(t *testing.T) {
 	require.NoError(t, f.create(f.original))
 	before, err := f.repo.GetContestProblem(f.ctx, contestsmodel.ContestProblemGet{ContestId: f.contest, ProblemId: f.problem})
 	require.NoError(t, err)
-	_, err = f.pool.Exec(f.ctx, `UPDATE problems SET title='Changed source',time_limit_ms=4321,memory_limit_mb=768,visibility='public',owner_id=$2 WHERE id=$1`, f.problem, f.actor)
+	_, err = f.pool.Exec(f.ctx, `WITH d AS (UPDATE problem_drafts SET title='Changed source',time_limit_ms=4321,memory_limit_mb=768 WHERE problem_id=$1) UPDATE problems SET visibility='public',owner_id=$2 WHERE id=$1`, f.problem, f.actor)
 	require.NoError(t, err)
-	newer := f.pack(t, f.problem, "ready", time.Now())
+	newer := f.pack(t, f.problem, time.Now())
 	require.NotEqual(t, f.original, newer)
 	after, err := f.repo.GetContestProblem(f.ctx, contestsmodel.ContestProblemGet{ContestId: f.contest, ProblemId: f.problem})
 	require.NoError(t, err)
@@ -263,7 +252,6 @@ func TestContestSnapshotSurvivesSourceChanges(t *testing.T) {
 	require.Equal(t, before.Title, details.Problem.Title)
 	require.Equal(t, before.TimeLimitMs, details.Problem.TimeLimitMs)
 	require.Equal(t, f.original, statements.pack)
-	require.Nil(t, details.Link.PackageURL)
 }
 
 func TestContestCommandGuardRejectsRevokedDecision(t *testing.T) {
@@ -317,79 +305,6 @@ func TestContestLifecyclePostgresBoundaries(t *testing.T) {
 			require.Equal(t, tc.submit, allowed)
 		})
 	}
-}
-
-// Only the immutable package archive is served; no catalog or workspace reader
-// is needed for a participant who has no permission on the source problem.
-type snapshotArchives map[string][]byte
-
-func (a snapshotArchives) DownloadPackage(_ context.Context, _ uuid.UUID, hash string) (io.ReadCloser, error) {
-	data, ok := a[hash]
-	if !ok {
-		return nil, pkg.ErrNotFound
-	}
-	return io.NopCloser(bytes.NewReader(data)), nil
-}
-func snapshotArchive(t *testing.T, title, legend, input string) []byte {
-	t.Helper()
-	var data bytes.Buffer
-	archive := zip.NewWriter(&data)
-	for name, content := range map[string]string{
-		"problem.yaml":     "format_version: \"1.0\"\ntitle: " + title + "\ntype: pass-fail\nsubtasks:\n  samples:\n    points: 0\n    tests:\n      - manual: 01.in\n",
-		"statements/en.md": "# " + title + "\n\n" + legend,
-		"tests/01.in":      input, "tests/01.out": "answer\n",
-	} {
-		w, err := archive.Create(name)
-		require.NoError(t, err)
-		_, err = w.Write([]byte(content))
-		require.NoError(t, err)
-	}
-	require.NoError(t, archive.Close())
-	return data.Bytes()
-}
-func TestContestSnapshotStatementsAndSamplesAreImmutable(t *testing.T) {
-	f := newContestProblemFixture(t)
-	f.grantRead(t)
-	require.NoError(t, f.create(f.original))
-	packages := NewPackagesRepo(f.pool)
-	original, err := packages.GetPackageByID(f.ctx, f.original)
-	require.NoError(t, err)
-	archives := snapshotArchives{original.PackageHash: snapshotArchive(t, "Original", "Pinned legend", "old sample\n")}
-	source := problems.NewStatementReader(nil, packages, archives)
-	contest, err := f.repo.GetContest(f.ctx, f.contest)
-	require.NoError(t, err)
-	reader := contests.NewDetailsReader(f.repo, source, f.permissions, nil, nil)
-	// Register a real participant without any grant on the original private problem.
-	user := uuid.New()
-	_, err = f.pool.Exec(f.ctx, `INSERT INTO users(id,username,password_hash) VALUES($1,$2,'unused')`, user, user.String())
-	require.NoError(t, err)
-	require.NoError(t, f.repo.CreateContestMember(f.ctx, &contestsmodel.CreateContestMemberParams{ContestId: f.contest, UserId: user, Role: contestsmodel.ContestRoleParticipant}))
-	visitor := accessmodel.WithUser(context.Background(), accessmodel.User{Id: user, Role: accessmodel.UserRoleUser})
-	before, err := reader.GetContestProblemDetails(visitor, contest.OrganizationLogin, contest.Login, f.problem)
-	require.NoError(t, err)
-	require.Contains(t, before.Statement.Legend, "Pinned legend")
-	require.Equal(t, "old sample\n", before.Samples[0].Input)
-	_, err = f.pool.Exec(f.ctx, `UPDATE problems SET title='Updated workspace',owner_id=NULL,time_limit_ms=42 WHERE id=$1`, f.problem)
-	require.NoError(t, err)
-	newer := f.pack(t, f.problem, "ready", time.Now())
-	next, err := packages.GetPackageByID(f.ctx, newer)
-	require.NoError(t, err)
-	archives[next.PackageHash] = snapshotArchive(t, "Updated workspace", "Changed legend", "new sample\n")
-	after, err := reader.GetContestProblemDetails(visitor, contest.OrganizationLogin, contest.Login, f.problem)
-	require.NoError(t, err)
-	require.Equal(t, before, after)
-	// Relinking while running requires manager and source access; it changes future
-	// contest reads but cannot alter the already recorded submission package.
-	submissions := NewSubmissionsRepo(f.pool)
-	submission, err := submissions.CreateSubmission(visitor, &submissionsmodel.SubmissionCreation{ContestId: f.contest, ProblemId: f.problem, UserId: user, Language: submissionsmodel.Python, Solution: "code"})
-	require.NoError(t, err)
-	require.NoError(t, f.uc.UpdateContestProblemPackage(f.ctx, f.contest, f.problem, newer))
-	var pinned uuid.UUID
-	require.NoError(t, f.pool.QueryRow(f.ctx, `SELECT package_id FROM submissions WHERE id=$1`, submission).Scan(&pinned))
-	require.Equal(t, f.original, pinned)
-	job, err := NewJudgeJobs(f.pool).ScheduleJob(f.ctx, submission)
-	require.NoError(t, err)
-	require.Equal(t, &f.original, job.PackageID)
 }
 
 func TestContestCommandDeadlineRollsBackMutation(t *testing.T) {

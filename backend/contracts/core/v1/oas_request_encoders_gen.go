@@ -131,6 +131,20 @@ func encodeBlockSubmissionRequest(
 	return nil
 }
 
+func encodeBuildProblemPackageRequest(
+	req *BuildProblemPackageReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeChangePasswordRequest(
 	req *ChangePasswordRequestModel,
 	r *http.Request,
@@ -315,86 +329,6 @@ func encodeCreatePostRequest(
 	return nil
 }
 
-func encodeCreateProblemCheckerRequest(
-	req CreateProblemCheckerReq,
-	r *http.Request,
-) error {
-	const contentType = "text/plain"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeCreateProblemGeneratorRequest(
-	req CreateProblemGeneratorReq,
-	r *http.Request,
-) error {
-	const contentType = "text/plain"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeCreateProblemInteractorRequest(
-	req CreateProblemInteractorReq,
-	r *http.Request,
-) error {
-	const contentType = "text/plain"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeCreateProblemLibRequest(
-	req CreateProblemLibReq,
-	r *http.Request,
-) error {
-	const contentType = "text/plain"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeCreateProblemMediaFileRequest(
-	req CreateProblemMediaFileReq,
-	r *http.Request,
-) error {
-	const contentType = "application/octet-stream"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeCreateProblemTestFileRequest(
-	req CreateProblemTestFileReq,
-	r *http.Request,
-) error {
-	const contentType = "application/octet-stream"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeCreateProblemValidatorRequest(
-	req CreateProblemValidatorReq,
-	r *http.Request,
-) error {
-	const contentType = "text/plain"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeCreateProblemWorkshopSubmissionRequest(
-	req CreateProblemWorkshopSubmissionReq,
-	r *http.Request,
-) error {
-	const contentType = "text/plain"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
 func encodeCreateSubmissionRequest(
 	req *CreateSubmissionRequestModel,
 	r *http.Request,
@@ -425,20 +359,6 @@ func encodeCreateTeamRequest(
 
 func encodeForgotPasswordRequest(
 	req *ForgotPasswordRequestModel,
-	r *http.Request,
-) error {
-	const contentType = "application/json"
-	e := new(jx.Encoder)
-	{
-		req.Encode(e)
-	}
-	encoded := e.Bytes()
-	ht.SetBody(r, bytes.NewReader(encoded), contentType)
-	return nil
-}
-
-func encodeGenerateTestsRequest(
-	req *GenerateTestsReq,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -645,8 +565,8 @@ func encodeResetPasswordRequest(
 	return nil
 }
 
-func encodeTestSolutionRequest(
-	req *TestSolutionReq,
+func encodeSaveProblemDraftRequest(
+	req *ProblemDraft,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -701,128 +621,6 @@ func encodeUpdateProblemRequest(
 	return nil
 }
 
-func encodeUpdateProblemCheckerRequest(
-	req UpdateProblemCheckerReq,
-	r *http.Request,
-) error {
-	const contentType = "text/plain"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeUpdateProblemGeneratorRequest(
-	req UpdateProblemGeneratorReq,
-	r *http.Request,
-) error {
-	const contentType = "text/plain"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeUpdateProblemInteractorRequest(
-	req UpdateProblemInteractorReq,
-	r *http.Request,
-) error {
-	const contentType = "text/plain"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeUpdateProblemLibRequest(
-	req UpdateProblemLibReq,
-	r *http.Request,
-) error {
-	const contentType = "text/plain"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeUpdateProblemLimitsRequest(
-	req *UpdateProblemLimitsRequest,
-	r *http.Request,
-) error {
-	const contentType = "application/json"
-	e := new(jx.Encoder)
-	{
-		req.Encode(e)
-	}
-	encoded := e.Bytes()
-	ht.SetBody(r, bytes.NewReader(encoded), contentType)
-	return nil
-}
-
-func encodeUpdateProblemMediaFileRequest(
-	req UpdateProblemMediaFileReq,
-	r *http.Request,
-) error {
-	const contentType = "application/octet-stream"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeUpdateProblemStatementRequest(
-	req *UpdateProblemStatementRequest,
-	r *http.Request,
-) error {
-	const contentType = "application/json"
-	e := new(jx.Encoder)
-	{
-		req.Encode(e)
-	}
-	encoded := e.Bytes()
-	ht.SetBody(r, bytes.NewReader(encoded), contentType)
-	return nil
-}
-
-func encodeUpdateProblemTestFileRequest(
-	req UpdateProblemTestFileReq,
-	r *http.Request,
-) error {
-	const contentType = "application/octet-stream"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeUpdateProblemTestsConfigRequest(
-	req UpdateProblemTestsConfigRequest,
-	r *http.Request,
-) error {
-	const contentType = "application/json"
-	e := new(jx.Encoder)
-	{
-		req.Encode(e)
-	}
-	encoded := e.Bytes()
-	ht.SetBody(r, bytes.NewReader(encoded), contentType)
-	return nil
-}
-
-func encodeUpdateProblemValidatorRequest(
-	req UpdateProblemValidatorReq,
-	r *http.Request,
-) error {
-	const contentType = "text/plain"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
-func encodeUpdateProblemWorkshopSubmissionRequest(
-	req UpdateProblemWorkshopSubmissionReq,
-	r *http.Request,
-) error {
-	const contentType = "text/plain"
-	body := req
-	ht.SetBody(r, body, contentType)
-	return nil
-}
-
 func encodeUpdateTeamRequest(
 	req *UpdateTeamRequestModel,
 	r *http.Request,
@@ -862,6 +660,45 @@ func encodeUploadAvatarRequest(
 	body, boundary := ht.CreateMultipartBody(func(w *multipart.Writer) error {
 		if err := request.Avatar.WriteMultipart("avatar", w); err != nil {
 			return errors.Wrap(err, "write \"avatar\"")
+		}
+		if err := q.WriteMultipart(w); err != nil {
+			return errors.Wrap(err, "write multipart")
+		}
+		return nil
+	})
+	ht.SetCloserBody(r, body, mime.FormatMediaType(contentType, map[string]string{"boundary": boundary}))
+	return nil
+}
+
+func encodeUploadProblemDraftRequest(
+	req *UploadProblemDraftReq,
+	r *http.Request,
+) error {
+	const contentType = "multipart/form-data"
+	request := req
+
+	q := uri.NewFormEncoder(map[string]string{})
+	{
+		// Encode "metadata" form field.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "metadata",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(request.Metadata))
+		}); err != nil {
+			return errors.Wrap(err, "encode query")
+		}
+	}
+	body, boundary := ht.CreateMultipartBody(func(w *multipart.Writer) error {
+		if err := request.File.WriteMultipart("file", w); err != nil {
+			return errors.Wrap(err, "write \"file\"")
+		}
+		if val, ok := request.Answer.Get(); ok {
+			if err := val.WriteMultipart("answer", w); err != nil {
+				return errors.Wrap(err, "write \"answer\"")
+			}
 		}
 		if err := q.WriteMultipart(w); err != nil {
 			return errors.Wrap(err, "write multipart")

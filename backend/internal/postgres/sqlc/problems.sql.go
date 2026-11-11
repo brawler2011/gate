@@ -31,40 +31,6 @@ func (q *Queries) AddProblemMember(ctx context.Context, arg AddProblemMemberPara
 	return err
 }
 
-const commitWorkspace = `-- name: CommitWorkspace :execrows
-UPDATE problems
-SET workspace_hash = $1,
-    title = COALESCE($2::text, title),
-    time_limit_ms = COALESCE($3::integer, time_limit_ms),
-    memory_limit_mb = COALESCE($4::integer, memory_limit_mb),
-    updated_at = NOW()
-WHERE id = $5 AND workspace_hash = $6
-`
-
-type CommitWorkspaceParams struct {
-	Hash         string    `json:"hash"`
-	Title        *string   `json:"title"`
-	TimeMs       *int32    `json:"time_ms"`
-	MemoryMb     *int32    `json:"memory_mb"`
-	ID           uuid.UUID `json:"id"`
-	PreviousHash string    `json:"previous_hash"`
-}
-
-func (q *Queries) CommitWorkspace(ctx context.Context, arg CommitWorkspaceParams) (int64, error) {
-	result, err := q.db.Exec(ctx, commitWorkspace,
-		arg.Hash,
-		arg.Title,
-		arg.TimeMs,
-		arg.MemoryMb,
-		arg.ID,
-		arg.PreviousHash,
-	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
 const countProblemMembers = `-- name: CountProblemMembers :one
 SELECT COUNT(*)
 FROM problem_members pm
@@ -81,9 +47,9 @@ func (q *Queries) CountProblemMembers(ctx context.Context, problemID uuid.UUID) 
 
 const createProblem = `-- name: CreateProblem :one
 
-INSERT INTO problems (id, organization_id, owner_id, visibility, title, short_name)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, organization_id, owner_id, visibility, title, short_name, time_limit_ms, memory_limit_mb, created_at, updated_at, is_template, workspace_hash
+INSERT INTO problems (id, organization_id, owner_id, visibility)
+VALUES ($1, $2, $3, $4)
+RETURNING id, organization_id, owner_id, visibility, created_at, updated_at, is_template
 `
 
 type CreateProblemParams struct {
@@ -91,8 +57,6 @@ type CreateProblemParams struct {
 	OrganizationID uuid.UUID  `json:"organization_id"`
 	OwnerID        *uuid.UUID `json:"owner_id"`
 	Visibility     string     `json:"visibility"`
-	Title          string     `json:"title"`
-	ShortName      string     `json:"short_name"`
 }
 
 // Problems queries (new schema with Organizations)
@@ -102,8 +66,6 @@ func (q *Queries) CreateProblem(ctx context.Context, arg CreateProblemParams) (P
 		arg.OrganizationID,
 		arg.OwnerID,
 		arg.Visibility,
-		arg.Title,
-		arg.ShortName,
 	)
 	var i Problem
 	err := row.Scan(
@@ -111,14 +73,9 @@ func (q *Queries) CreateProblem(ctx context.Context, arg CreateProblemParams) (P
 		&i.OrganizationID,
 		&i.OwnerID,
 		&i.Visibility,
-		&i.Title,
-		&i.ShortName,
-		&i.TimeLimitMs,
-		&i.MemoryLimitMb,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IsTemplate,
-		&i.WorkspaceHash,
 	)
 	return i, err
 }
@@ -157,7 +114,7 @@ func (q *Queries) GetAuthorizationProblemMember(ctx context.Context, arg GetAuth
 
 const getProblemByID = `-- name: GetProblemByID :one
 SELECT p.id, p.organization_id, o.login as org_login, o.name as org_name, p.owner_id, p.visibility, p.title, p.short_name, p.created_at, p.updated_at, p.time_limit_ms, p.memory_limit_mb, p.is_template
-FROM problems p
+FROM problem_catalog p
 JOIN organizations o ON p.organization_id = o.id
 WHERE p.id = $1
 `
@@ -221,19 +178,6 @@ func (q *Queries) GetProblemMember(ctx context.Context, arg GetProblemMemberPara
 	return i, err
 }
 
-const getWorkspaceHash = `-- name: GetWorkspaceHash :one
-
-SELECT workspace_hash FROM problems WHERE id = $1
-`
-
-// Workshop integration queries
-func (q *Queries) GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, error) {
-	row := q.db.QueryRow(ctx, getWorkspaceHash, id)
-	var workspace_hash string
-	err := row.Scan(&workspace_hash)
-	return workspace_hash, err
-}
-
 const listDashboardProblems = `-- name: ListDashboardProblems :many
 WITH actor AS (
   SELECT u.id, u.role FROM users u
@@ -250,7 +194,7 @@ SELECT
     o.id as org_id,
     o.name as org_name,
     o.login as org_login
-FROM problems p
+FROM problem_catalog p
 JOIN organizations o ON p.organization_id = o.id
 WHERE ($1::uuid IS NULL OR $1::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR EXISTS (SELECT 1 FROM actor))
 AND NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = p.organization_id AND invalid.user_id = $1::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
@@ -383,16 +327,14 @@ func (q *Queries) RemoveProblemMember(ctx context.Context, arg RemoveProblemMemb
 
 const updateProblem = `-- name: UpdateProblem :exec
 UPDATE problems
-SET title = CASE WHEN workspace_hash = '' THEN COALESCE($2, title) ELSE title END,
-    visibility = COALESCE($3, visibility),
-    owner_id = COALESCE($4, owner_id),
-    is_template = COALESCE($5, is_template)
+SET visibility = COALESCE($2, visibility),
+    owner_id = COALESCE($3, owner_id),
+    is_template = COALESCE($4, is_template)
 WHERE id = $1
 `
 
 type UpdateProblemParams struct {
 	ID         uuid.UUID  `json:"id"`
-	Title      *string    `json:"title"`
 	Visibility *string    `json:"visibility"`
 	OwnerID    *uuid.UUID `json:"owner_id"`
 	IsTemplate *bool      `json:"is_template"`
@@ -401,7 +343,6 @@ type UpdateProblemParams struct {
 func (q *Queries) UpdateProblem(ctx context.Context, arg UpdateProblemParams) error {
 	_, err := q.db.Exec(ctx, updateProblem,
 		arg.ID,
-		arg.Title,
 		arg.Visibility,
 		arg.OwnerID,
 		arg.IsTemplate,

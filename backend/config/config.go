@@ -32,7 +32,13 @@ type Config struct {
 	NatsHost string `env:"NATS_HOST" env-default:"localhost"`
 	NatsPort string `env:"NATS_PORT" env-default:"4222"`
 	// Workshop configuration
-	GoJudgeGRPCAddr string `env:"GOJUDGE_GRPC_ADDR" env-default:"localhost:5051"`
+	GoJudgeGRPCAddr        string `env:"GOJUDGE_GRPC_ADDR" env-default:"localhost:5051"`
+	GoJudgeHTTPURL         string `env:"GOJUDGE_HTTP_URL" required:"true"`
+	GoJudgeToolchainDigest string `env:"GOJUDGE_TOOLCHAIN_DIGEST" required:"true"`
+	GoJudgeArchitecture    string `env:"GOJUDGE_ARCHITECTURE" required:"true"`
+	GoJudgeABI             string `env:"GOJUDGE_ABI" required:"true"`
+	ProblemPolicyPath      string `env:"PROBLEM_POLICY_PATH" required:"true"`
+	ProblemWorkDir         string `env:"PROBLEM_WORK_DIR" required:"true"`
 
 	// Storage configuration
 	StorageType      string `env:"STORAGE_TYPE" env-default:"local"`
@@ -47,10 +53,9 @@ type Config struct {
 	InboxRetentionDays int `env:"INBOX_RETENTION_DAYS" env-default:"7"`
 
 	// Judging configuration
-	JudgeWorkerCount int    `env:"JUDGE_WORKER_COUNT" env-default:"4"`
-	JudgeTempDir     string `env:"JUDGE_TEMP_DIR"`                     // defaults to os.TempDir()/judge at runtime
-	JudgeTimeout     int    `env:"JUDGE_TIMEOUT" env-default:"300000"` // milliseconds
-	JudgeMaxRetries  int    `env:"JUDGE_MAX_RETRIES" env-default:"3"`
+	JudgeWorkerCount int `env:"JUDGE_WORKER_COUNT" env-default:"4"`
+	JudgeTimeout     int `env:"JUDGE_TIMEOUT" env-default:"300000"` // milliseconds
+	JudgeMaxRetries  int `env:"JUDGE_MAX_RETRIES" env-default:"3"`
 
 	// Email configuration
 	ResendAPIKey string `env:"RESEND_API_KEY"`

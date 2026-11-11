@@ -100,6 +100,12 @@ type Invoker interface {
 	//
 	// POST /organizations/{org_login}/contests/{contest_login}/submissions/{submission_id}/block
 	BlockSubmission(ctx context.Context, request OptBlockSubmissionRequestModel, params BlockSubmissionParams) error
+	// BuildProblemPackage invokes BuildProblemPackage operation.
+	//
+	// Queue an immutable draft snapshot.
+	//
+	// POST /problems/{id}/packages/build
+	BuildProblemPackage(ctx context.Context, request *BuildProblemPackageReq, params BuildProblemPackageParams) (*ProblemBuildAccepted, error)
 	// CancelContestJoinRequest invokes CancelContestJoinRequest operation.
 	//
 	// Cancel my contest join request.
@@ -118,6 +124,12 @@ type Invoker interface {
 	//
 	// DELETE /organizations/{login}/requests/mine
 	CancelOrganizationJoinRequest(ctx context.Context, params CancelOrganizationJoinRequestParams) error
+	// CancelProblemBuild invokes CancelProblemBuild operation.
+	//
+	// Cancel a queued or running build.
+	//
+	// POST /problems/{id}/builds/{buildId}/cancel
+	CancelProblemBuild(ctx context.Context, params CancelProblemBuildParams) (*ProblemBuildCancelled, error)
 	// ChangePassword invokes ChangePassword operation.
 	//
 	// Change password for current user.
@@ -130,12 +142,6 @@ type Invoker interface {
 	//
 	// POST /users/claim-temporary
 	ClaimTemporaryUser(ctx context.Context, request *ClaimTemporaryUserRequestModel) (*ClaimTemporaryUserResponseModel, error)
-	// CompileProblemComponent invokes CompileProblemComponent operation.
-	//
-	// Compile checker/validator/generator/interactor.
-	//
-	// POST /problems/{problemId}/workshop/components/{componentType}/compile
-	CompileProblemComponent(ctx context.Context, params CompileProblemComponentParams) (*CompileResult, error)
 	// ConfirmEmailChange invokes ConfirmEmailChange operation.
 	//
 	// Confirm email change.
@@ -214,36 +220,6 @@ type Invoker interface {
 	//
 	// POST /problems
 	CreateProblem(ctx context.Context, params CreateProblemParams) (*CreationResponseModel, error)
-	// CreateProblemChecker invokes CreateProblemChecker operation.
-	//
-	// Create checker file.
-	//
-	// POST /problems/{problemId}/checkers
-	CreateProblemChecker(ctx context.Context, request CreateProblemCheckerReq, params CreateProblemCheckerParams) (*MessageResponse, error)
-	// CreateProblemGenerator invokes CreateProblemGenerator operation.
-	//
-	// Create generator file.
-	//
-	// POST /problems/{problemId}/generators
-	CreateProblemGenerator(ctx context.Context, request CreateProblemGeneratorReq, params CreateProblemGeneratorParams) (*MessageResponse, error)
-	// CreateProblemInteractor invokes CreateProblemInteractor operation.
-	//
-	// Create interactor file.
-	//
-	// POST /problems/{problemId}/interactors
-	CreateProblemInteractor(ctx context.Context, request CreateProblemInteractorReq, params CreateProblemInteractorParams) (*MessageResponse, error)
-	// CreateProblemLib invokes CreateProblemLib operation.
-	//
-	// Create library file.
-	//
-	// POST /problems/{problemId}/lib
-	CreateProblemLib(ctx context.Context, request CreateProblemLibReq, params CreateProblemLibParams) (*MessageResponse, error)
-	// CreateProblemMediaFile invokes CreateProblemMediaFile operation.
-	//
-	// Create media file.
-	//
-	// POST /problems/{problemId}/media
-	CreateProblemMediaFile(ctx context.Context, request CreateProblemMediaFileReq, params CreateProblemMediaFileParams) (*MessageResponse, error)
 	// CreateProblemMember invokes CreateProblemMember operation.
 	//
 	// Create problem member.
@@ -256,24 +232,6 @@ type Invoker interface {
 	//
 	// POST /problems/{id}/teams
 	CreateProblemTeam(ctx context.Context, params CreateProblemTeamParams) error
-	// CreateProblemTestFile invokes CreateProblemTestFile operation.
-	//
-	// Create test file.
-	//
-	// POST /problems/{problemId}/tests
-	CreateProblemTestFile(ctx context.Context, request CreateProblemTestFileReq, params CreateProblemTestFileParams) (*MessageResponse, error)
-	// CreateProblemValidator invokes CreateProblemValidator operation.
-	//
-	// Create validator file.
-	//
-	// POST /problems/{problemId}/validators
-	CreateProblemValidator(ctx context.Context, request CreateProblemValidatorReq, params CreateProblemValidatorParams) (*MessageResponse, error)
-	// CreateProblemWorkshopSubmission invokes CreateProblemWorkshopSubmission operation.
-	//
-	// Create author solution file.
-	//
-	// POST /problems/{problemId}/submissions
-	CreateProblemWorkshopSubmission(ctx context.Context, request CreateProblemWorkshopSubmissionReq, params CreateProblemWorkshopSubmissionParams) (*MessageResponse, error)
 	// CreateSubmission invokes CreateSubmission operation.
 	//
 	// Create submission.
@@ -352,36 +310,6 @@ type Invoker interface {
 	//
 	// DELETE /problems/{id}
 	DeleteProblem(ctx context.Context, params DeleteProblemParams) error
-	// DeleteProblemChecker invokes DeleteProblemChecker operation.
-	//
-	// Delete checker file.
-	//
-	// DELETE /problems/{problemId}/checkers/{name}
-	DeleteProblemChecker(ctx context.Context, params DeleteProblemCheckerParams) (*MessageResponse, error)
-	// DeleteProblemGenerator invokes DeleteProblemGenerator operation.
-	//
-	// Delete generator file.
-	//
-	// DELETE /problems/{problemId}/generators/{name}
-	DeleteProblemGenerator(ctx context.Context, params DeleteProblemGeneratorParams) (*MessageResponse, error)
-	// DeleteProblemInteractor invokes DeleteProblemInteractor operation.
-	//
-	// Delete interactor file.
-	//
-	// DELETE /problems/{problemId}/interactors/{name}
-	DeleteProblemInteractor(ctx context.Context, params DeleteProblemInteractorParams) (*MessageResponse, error)
-	// DeleteProblemLib invokes DeleteProblemLib operation.
-	//
-	// Delete library file.
-	//
-	// DELETE /problems/{problemId}/lib/{name}
-	DeleteProblemLib(ctx context.Context, params DeleteProblemLibParams) (*MessageResponse, error)
-	// DeleteProblemMediaFile invokes DeleteProblemMediaFile operation.
-	//
-	// Delete media file.
-	//
-	// DELETE /problems/{problemId}/media/{name}
-	DeleteProblemMediaFile(ctx context.Context, params DeleteProblemMediaFileParams) (*MessageResponse, error)
 	// DeleteProblemMember invokes DeleteProblemMember operation.
 	//
 	// Delete problem member.
@@ -394,24 +322,6 @@ type Invoker interface {
 	//
 	// DELETE /problems/{id}/teams
 	DeleteProblemTeam(ctx context.Context, params DeleteProblemTeamParams) error
-	// DeleteProblemTestFile invokes DeleteProblemTestFile operation.
-	//
-	// Delete test file.
-	//
-	// DELETE /problems/{problemId}/tests/{name}
-	DeleteProblemTestFile(ctx context.Context, params DeleteProblemTestFileParams) (*MessageResponse, error)
-	// DeleteProblemValidator invokes DeleteProblemValidator operation.
-	//
-	// Delete validator file.
-	//
-	// DELETE /problems/{problemId}/validators/{name}
-	DeleteProblemValidator(ctx context.Context, params DeleteProblemValidatorParams) (*MessageResponse, error)
-	// DeleteProblemWorkshopSubmission invokes DeleteProblemWorkshopSubmission operation.
-	//
-	// Delete author solution file.
-	//
-	// DELETE /problems/{problemId}/submissions/{name}
-	DeleteProblemWorkshopSubmission(ctx context.Context, params DeleteProblemWorkshopSubmissionParams) (*MessageResponse, error)
 	// DeleteTeam invokes DeleteTeam operation.
 	//
 	// Delete team.
@@ -424,18 +334,18 @@ type Invoker interface {
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/statements.pdf
 	DownloadContestStatementsPdf(ctx context.Context, params DownloadContestStatementsPdfParams) (DownloadContestStatementsPdfOK, error)
+	// DownloadProblemPackage invokes DownloadProblemPackage operation.
+	//
+	// Download a built problem package archive.
+	//
+	// GET /problems/{id}/packages/{packageId}/download
+	DownloadProblemPackage(ctx context.Context, params DownloadProblemPackageParams) (DownloadProblemPackageOK, error)
 	// ForgotPassword invokes ForgotPassword operation.
 	//
 	// Forgot password.
 	//
 	// POST /auth/forgot-password
 	ForgotPassword(ctx context.Context, request *ForgotPasswordRequestModel) error
-	// GenerateTests invokes GenerateTests operation.
-	//
-	// Generate tests using generator.
-	//
-	// POST /problems/{problemId}/workshop/tests/generate
-	GenerateTests(ctx context.Context, request *GenerateTestsReq, params GenerateTestsParams) (*GenerateTestsOK, error)
 	// GetContest invokes GetContest operation.
 	//
 	// Get contest.
@@ -526,72 +436,24 @@ type Invoker interface {
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/participants/{user_id}/problems/{problem_id}/block
 	GetProblemBlockStatusForUser(ctx context.Context, params GetProblemBlockStatusForUserParams) (*ProblemBlockStatusResponseModel, error)
-	// GetProblemChecker invokes GetProblemChecker operation.
+	// GetProblemBuild invokes GetProblemBuild operation.
 	//
-	// Get checker file content.
+	// Read build progress and diagnostics.
 	//
-	// GET /problems/{problemId}/checkers/{name}
-	GetProblemChecker(ctx context.Context, params GetProblemCheckerParams) (GetProblemCheckerOK, error)
-	// GetProblemGenerator invokes GetProblemGenerator operation.
+	// GET /problems/{id}/builds/{buildId}
+	GetProblemBuild(ctx context.Context, params GetProblemBuildParams) (*ProblemBuild, error)
+	// GetProblemDraft invokes GetProblemDraft operation.
 	//
-	// Get generator file content.
+	// Read the editable problem draft.
 	//
-	// GET /problems/{problemId}/generators/{name}
-	GetProblemGenerator(ctx context.Context, params GetProblemGeneratorParams) (GetProblemGeneratorOK, error)
-	// GetProblemInteractor invokes GetProblemInteractor operation.
+	// GET /problems/{id}/draft
+	GetProblemDraft(ctx context.Context, params GetProblemDraftParams) (*ProblemDraft, error)
+	// GetProblemDraftObject invokes GetProblemDraftObject operation.
 	//
-	// Get interactor file content.
+	// Download a binary referenced by this draft.
 	//
-	// GET /problems/{problemId}/interactors/{name}
-	GetProblemInteractor(ctx context.Context, params GetProblemInteractorParams) (GetProblemInteractorOK, error)
-	// GetProblemLib invokes GetProblemLib operation.
-	//
-	// Get library file content.
-	//
-	// GET /problems/{problemId}/lib/{name}
-	GetProblemLib(ctx context.Context, params GetProblemLibParams) (GetProblemLibOK, error)
-	// GetProblemLimits invokes GetProblemLimits operation.
-	//
-	// Get problem limits and type settings.
-	//
-	// GET /problems/{problemId}/limits
-	GetProblemLimits(ctx context.Context, params GetProblemLimitsParams) (*ProblemLimits, error)
-	// GetProblemMediaFile invokes GetProblemMediaFile operation.
-	//
-	// Get media file content.
-	//
-	// GET /problems/{problemId}/media/{name}
-	GetProblemMediaFile(ctx context.Context, params GetProblemMediaFileParams) (GetProblemMediaFileOK, error)
-	// GetProblemStatement invokes GetProblemStatement operation.
-	//
-	// Get problem statement.
-	//
-	// GET /problems/{problemId}/statement
-	GetProblemStatement(ctx context.Context, params GetProblemStatementParams) (*ProblemStatement, error)
-	// GetProblemTestFile invokes GetProblemTestFile operation.
-	//
-	// Get test file content.
-	//
-	// GET /problems/{problemId}/tests/{name}
-	GetProblemTestFile(ctx context.Context, params GetProblemTestFileParams) (GetProblemTestFileOK, error)
-	// GetProblemValidator invokes GetProblemValidator operation.
-	//
-	// Get validator file content.
-	//
-	// GET /problems/{problemId}/validators/{name}
-	GetProblemValidator(ctx context.Context, params GetProblemValidatorParams) (GetProblemValidatorOK, error)
-	// GetProblemWorkshopSubmission invokes GetProblemWorkshopSubmission operation.
-	//
-	// Get author solution file content.
-	//
-	// GET /problems/{problemId}/submissions/{name}
-	GetProblemWorkshopSubmission(ctx context.Context, params GetProblemWorkshopSubmissionParams) (GetProblemWorkshopSubmissionOK, error)
-	// GetPublishedPackage invokes GetPublishedPackage operation.
-	//
-	// Get redirect to published problem package.
-	//
-	// GET /problems/{id}/package/{version}
-	GetPublishedPackage(ctx context.Context, params GetPublishedPackageParams) (*GetPublishedPackageFound, error)
+	// GET /problems/{id}/draft/objects/{objectId}
+	GetProblemDraftObject(ctx context.Context, params GetProblemDraftObjectParams) (GetProblemDraftObjectOK, error)
 	// GetSubmission invokes GetSubmission operation.
 	//
 	// Get submission.
@@ -624,10 +486,10 @@ type Invoker interface {
 	GetUserAvatar(ctx context.Context, params GetUserAvatarParams) (GetUserAvatarRes, error)
 	// ImportProblem invokes ImportProblem operation.
 	//
-	// Import package into existing problem.
+	// Replace the draft with the contents of a problem archive.
 	//
 	// POST /problems/{id}/import
-	ImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (*ImportProblemOK, error)
+	ImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (*ProblemDraft, error)
 	// InviteOrganizationMember invokes InviteOrganizationMember operation.
 	//
 	// Invite user to organization.
@@ -730,36 +592,12 @@ type Invoker interface {
 	//
 	// GET /posts
 	ListPosts(ctx context.Context, params ListPostsParams) (*ListPostsResponseModel, error)
-	// ListProblemCheckers invokes ListProblemCheckers operation.
+	// ListProblemBuilds invokes ListProblemBuilds operation.
 	//
-	// List checker files.
+	// List the latest 100 builds.
 	//
-	// GET /problems/{problemId}/checkers
-	ListProblemCheckers(ctx context.Context, params ListProblemCheckersParams) (*WorkshopFileListResponse, error)
-	// ListProblemGenerators invokes ListProblemGenerators operation.
-	//
-	// List generator files.
-	//
-	// GET /problems/{problemId}/generators
-	ListProblemGenerators(ctx context.Context, params ListProblemGeneratorsParams) (*WorkshopFileListResponse, error)
-	// ListProblemInteractors invokes ListProblemInteractors operation.
-	//
-	// List interactor files.
-	//
-	// GET /problems/{problemId}/interactors
-	ListProblemInteractors(ctx context.Context, params ListProblemInteractorsParams) (*WorkshopFileListResponse, error)
-	// ListProblemLibs invokes ListProblemLibs operation.
-	//
-	// List library files.
-	//
-	// GET /problems/{problemId}/lib
-	ListProblemLibs(ctx context.Context, params ListProblemLibsParams) (*WorkshopFileListResponse, error)
-	// ListProblemMediaFiles invokes ListProblemMediaFiles operation.
-	//
-	// List media files.
-	//
-	// GET /problems/{problemId}/media
-	ListProblemMediaFiles(ctx context.Context, params ListProblemMediaFilesParams) (*WorkshopFileListResponse, error)
+	// GET /problems/{id}/builds
+	ListProblemBuilds(ctx context.Context, params ListProblemBuildsParams) ([]ProblemBuild, error)
 	// ListProblemMembers invokes ListProblemMembers operation.
 	//
 	// List problem members.
@@ -768,7 +606,7 @@ type Invoker interface {
 	ListProblemMembers(ctx context.Context, params ListProblemMembersParams) (*ListProblemMembersResponseModel, error)
 	// ListProblemPackages invokes ListProblemPackages operation.
 	//
-	// List a page of problem packages, newest version first.
+	// List a page of built problem packages, newest first.
 	//
 	// GET /problems/{id}/packages
 	ListProblemPackages(ctx context.Context, params ListProblemPackagesParams) (*ListProblemPackagesOK, error)
@@ -784,24 +622,6 @@ type Invoker interface {
 	//
 	// GET /problem-templates
 	ListProblemTemplates(ctx context.Context, params ListProblemTemplatesParams) ([]ProblemTemplateModel, error)
-	// ListProblemTests invokes ListProblemTests operation.
-	//
-	// List test files.
-	//
-	// GET /problems/{problemId}/tests
-	ListProblemTests(ctx context.Context, params ListProblemTestsParams) (*WorkshopFileListResponse, error)
-	// ListProblemValidators invokes ListProblemValidators operation.
-	//
-	// List validator files.
-	//
-	// GET /problems/{problemId}/validators
-	ListProblemValidators(ctx context.Context, params ListProblemValidatorsParams) (*WorkshopFileListResponse, error)
-	// ListProblemWorkshopSubmissions invokes ListProblemWorkshopSubmissions operation.
-	//
-	// List author solution files.
-	//
-	// GET /problems/{problemId}/submissions
-	ListProblemWorkshopSubmissions(ctx context.Context, params ListProblemWorkshopSubmissionsParams) (*WorkshopFileListResponse, error)
 	// ListProblems invokes ListProblems operation.
 	//
 	// List problems.
@@ -898,12 +718,6 @@ type Invoker interface {
 	//
 	// PATCH /posts/{id}
 	PatchPostById(ctx context.Context, request OptPatchPostByIdReq, params PatchPostByIdParams) (PatchPostByIdRes, error)
-	// PublishProblem invokes PublishProblem operation.
-	//
-	// Publish problem package.
-	//
-	// POST /problems/{id}/publish
-	PublishProblem(ctx context.Context, params PublishProblemParams) (*PublishProblemOK, error)
 	// Register invokes Register operation.
 	//
 	// Register.
@@ -976,12 +790,12 @@ type Invoker interface {
 	//
 	// POST /auth/reset-password
 	ResetPassword(ctx context.Context, request *ResetPasswordRequestModel) error
-	// TestSolution invokes TestSolution operation.
+	// SaveProblemDraft invokes SaveProblemDraft operation.
 	//
-	// Test solution against tests.
+	// Replace the draft in one revision change.
 	//
-	// POST /problems/{problemId}/workshop/solutions/test
-	TestSolution(ctx context.Context, request *TestSolutionReq, params TestSolutionParams) (*TestReport, error)
+	// PUT /problems/{id}/draft
+	SaveProblemDraft(ctx context.Context, request *ProblemDraft, params SaveProblemDraftParams) (*ProblemDraft, error)
 	// UnblockProblemForUser invokes UnblockProblemForUser operation.
 	//
 	// Unblock problem for user.
@@ -1024,84 +838,18 @@ type Invoker interface {
 	//
 	// PATCH /problems/{id}
 	UpdateProblem(ctx context.Context, request *UpdateProblemRequestModel, params UpdateProblemParams) error
-	// UpdateProblemChecker invokes UpdateProblemChecker operation.
-	//
-	// Update checker file.
-	//
-	// PUT /problems/{problemId}/checkers/{name}
-	UpdateProblemChecker(ctx context.Context, request UpdateProblemCheckerReq, params UpdateProblemCheckerParams) (*MessageResponse, error)
-	// UpdateProblemGenerator invokes UpdateProblemGenerator operation.
-	//
-	// Update generator file.
-	//
-	// PUT /problems/{problemId}/generators/{name}
-	UpdateProblemGenerator(ctx context.Context, request UpdateProblemGeneratorReq, params UpdateProblemGeneratorParams) (*MessageResponse, error)
-	// UpdateProblemInteractor invokes UpdateProblemInteractor operation.
-	//
-	// Update interactor file.
-	//
-	// PUT /problems/{problemId}/interactors/{name}
-	UpdateProblemInteractor(ctx context.Context, request UpdateProblemInteractorReq, params UpdateProblemInteractorParams) (*MessageResponse, error)
-	// UpdateProblemLib invokes UpdateProblemLib operation.
-	//
-	// Update library file.
-	//
-	// PUT /problems/{problemId}/lib/{name}
-	UpdateProblemLib(ctx context.Context, request UpdateProblemLibReq, params UpdateProblemLibParams) (*MessageResponse, error)
-	// UpdateProblemLimits invokes UpdateProblemLimits operation.
-	//
-	// Update problem limits and type settings.
-	//
-	// PATCH /problems/{problemId}/limits
-	UpdateProblemLimits(ctx context.Context, request *UpdateProblemLimitsRequest, params UpdateProblemLimitsParams) (*ProblemLimits, error)
-	// UpdateProblemMediaFile invokes UpdateProblemMediaFile operation.
-	//
-	// Update media file.
-	//
-	// PUT /problems/{problemId}/media/{name}
-	UpdateProblemMediaFile(ctx context.Context, request UpdateProblemMediaFileReq, params UpdateProblemMediaFileParams) (*MessageResponse, error)
 	// UpdateProblemMember invokes UpdateProblemMember operation.
 	//
 	// Update problem member.
 	//
 	// PATCH /problems/{id}/members
 	UpdateProblemMember(ctx context.Context, params UpdateProblemMemberParams) error
-	// UpdateProblemStatement invokes UpdateProblemStatement operation.
-	//
-	// Update problem statement.
-	//
-	// PATCH /problems/{problemId}/statement
-	UpdateProblemStatement(ctx context.Context, request *UpdateProblemStatementRequest, params UpdateProblemStatementParams) (*ProblemStatement, error)
 	// UpdateProblemTeam invokes UpdateProblemTeam operation.
 	//
 	// Update problem team.
 	//
 	// PATCH /problems/{id}/teams
 	UpdateProblemTeam(ctx context.Context, params UpdateProblemTeamParams) error
-	// UpdateProblemTestFile invokes UpdateProblemTestFile operation.
-	//
-	// Update test file.
-	//
-	// PUT /problems/{problemId}/tests/{name}
-	UpdateProblemTestFile(ctx context.Context, request UpdateProblemTestFileReq, params UpdateProblemTestFileParams) (*MessageResponse, error)
-	// UpdateProblemTestsConfig invokes UpdateProblemTestsConfig operation.
-	//
-	// Update tests.json configuration.
-	//
-	// PATCH /problems/{problemId}/tests/config
-	UpdateProblemTestsConfig(ctx context.Context, request UpdateProblemTestsConfigRequest, params UpdateProblemTestsConfigParams) (*MessageResponse, error)
-	// UpdateProblemValidator invokes UpdateProblemValidator operation.
-	//
-	// Update validator file.
-	//
-	// PUT /problems/{problemId}/validators/{name}
-	UpdateProblemValidator(ctx context.Context, request UpdateProblemValidatorReq, params UpdateProblemValidatorParams) (*MessageResponse, error)
-	// UpdateProblemWorkshopSubmission invokes UpdateProblemWorkshopSubmission operation.
-	//
-	// Update author solution file.
-	//
-	// PUT /problems/{problemId}/submissions/{name}
-	UpdateProblemWorkshopSubmission(ctx context.Context, request UpdateProblemWorkshopSubmissionReq, params UpdateProblemWorkshopSubmissionParams) (*MessageResponse, error)
 	// UpdateTeam invokes UpdateTeam operation.
 	//
 	// Update team.
@@ -1126,12 +874,12 @@ type Invoker interface {
 	//
 	// POST /users/{username}/avatar
 	UploadAvatar(ctx context.Context, request *UploadAvatarReq, params UploadAvatarParams) (*UploadAvatarOK, error)
-	// ValidateAllTests invokes ValidateAllTests operation.
+	// UploadProblemDraft invokes UploadProblemDraft operation.
 	//
-	// Validate all test inputs.
+	// Upload immutable test bodies or a resource.
 	//
-	// POST /problems/{problemId}/workshop/tests/validate
-	ValidateAllTests(ctx context.Context, params ValidateAllTestsParams) (*ValidationReport, error)
+	// POST /problems/{id}/draft/uploads
+	UploadProblemDraft(ctx context.Context, request *UploadProblemDraftReq, params UploadProblemDraftParams) (*ProblemDraft, error)
 	// VerifyEmail invokes VerifyEmail operation.
 	//
 	// Verify email.
@@ -2263,6 +2011,84 @@ func (c *Client) sendBlockSubmission(ctx context.Context, request OptBlockSubmis
 	return result, nil
 }
 
+// BuildProblemPackage invokes BuildProblemPackage operation.
+//
+// Queue an immutable draft snapshot.
+//
+// POST /problems/{id}/packages/build
+func (c *Client) BuildProblemPackage(ctx context.Context, request *BuildProblemPackageReq, params BuildProblemPackageParams) (*ProblemBuildAccepted, error) {
+	res, err := c.sendBuildProblemPackage(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendBuildProblemPackage(ctx context.Context, request *BuildProblemPackageReq, params BuildProblemPackageParams) (res *ProblemBuildAccepted, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/problems/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/packages/build"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeBuildProblemPackageRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.IdempotencyKey))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeBuildProblemPackageResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // CancelContestJoinRequest invokes CancelContestJoinRequest operation.
 //
 // Cancel my contest join request.
@@ -2486,6 +2312,100 @@ func (c *Client) sendCancelOrganizationJoinRequest(ctx context.Context, params C
 	return result, nil
 }
 
+// CancelProblemBuild invokes CancelProblemBuild operation.
+//
+// Cancel a queued or running build.
+//
+// POST /problems/{id}/builds/{buildId}/cancel
+func (c *Client) CancelProblemBuild(ctx context.Context, params CancelProblemBuildParams) (*ProblemBuildCancelled, error) {
+	res, err := c.sendCancelProblemBuild(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendCancelProblemBuild(ctx context.Context, params CancelProblemBuildParams) (res *ProblemBuildCancelled, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/problems/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/builds/"
+	{
+		// Encode "buildId" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "buildId",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.BuildId))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/cancel"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.IdempotencyKey))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeCancelProblemBuildResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ChangePassword invokes ChangePassword operation.
 //
 // Change password for current user.
@@ -2571,87 +2491,6 @@ func (c *Client) sendClaimTemporaryUser(ctx context.Context, request *ClaimTempo
 	}()
 
 	result, err := decodeClaimTemporaryUserResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// CompileProblemComponent invokes CompileProblemComponent operation.
-//
-// Compile checker/validator/generator/interactor.
-//
-// POST /problems/{problemId}/workshop/components/{componentType}/compile
-func (c *Client) CompileProblemComponent(ctx context.Context, params CompileProblemComponentParams) (*CompileResult, error) {
-	res, err := c.sendCompileProblemComponent(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendCompileProblemComponent(ctx context.Context, params CompileProblemComponentParams) (res *CompileResult, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [5]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/workshop/components/"
-	{
-		// Encode "componentType" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "componentType",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(string(params.ComponentType)))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	pathParts[4] = "/compile"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "POST", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeCompileProblemComponentResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -3773,6 +3612,19 @@ func (c *Client) sendCreateProblem(ctx context.Context, params CreateProblemPara
 		return res, errors.Wrap(err, "create request")
 	}
 
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.IdempotencyKey))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
 	resp, err := c.cfg.Client.Do(r)
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
@@ -3787,416 +3639,6 @@ func (c *Client) sendCreateProblem(ctx context.Context, params CreateProblemPara
 	}()
 
 	result, err := decodeCreateProblemResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// CreateProblemChecker invokes CreateProblemChecker operation.
-//
-// Create checker file.
-//
-// POST /problems/{problemId}/checkers
-func (c *Client) CreateProblemChecker(ctx context.Context, request CreateProblemCheckerReq, params CreateProblemCheckerParams) (*MessageResponse, error) {
-	res, err := c.sendCreateProblemChecker(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendCreateProblemChecker(ctx context.Context, request CreateProblemCheckerReq, params CreateProblemCheckerParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/checkers"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "name" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "POST", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeCreateProblemCheckerRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeCreateProblemCheckerResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// CreateProblemGenerator invokes CreateProblemGenerator operation.
-//
-// Create generator file.
-//
-// POST /problems/{problemId}/generators
-func (c *Client) CreateProblemGenerator(ctx context.Context, request CreateProblemGeneratorReq, params CreateProblemGeneratorParams) (*MessageResponse, error) {
-	res, err := c.sendCreateProblemGenerator(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendCreateProblemGenerator(ctx context.Context, request CreateProblemGeneratorReq, params CreateProblemGeneratorParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/generators"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "name" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "POST", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeCreateProblemGeneratorRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeCreateProblemGeneratorResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// CreateProblemInteractor invokes CreateProblemInteractor operation.
-//
-// Create interactor file.
-//
-// POST /problems/{problemId}/interactors
-func (c *Client) CreateProblemInteractor(ctx context.Context, request CreateProblemInteractorReq, params CreateProblemInteractorParams) (*MessageResponse, error) {
-	res, err := c.sendCreateProblemInteractor(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendCreateProblemInteractor(ctx context.Context, request CreateProblemInteractorReq, params CreateProblemInteractorParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/interactors"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "name" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "POST", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeCreateProblemInteractorRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeCreateProblemInteractorResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// CreateProblemLib invokes CreateProblemLib operation.
-//
-// Create library file.
-//
-// POST /problems/{problemId}/lib
-func (c *Client) CreateProblemLib(ctx context.Context, request CreateProblemLibReq, params CreateProblemLibParams) (*MessageResponse, error) {
-	res, err := c.sendCreateProblemLib(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendCreateProblemLib(ctx context.Context, request CreateProblemLibReq, params CreateProblemLibParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/lib"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "name" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "POST", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeCreateProblemLibRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeCreateProblemLibResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// CreateProblemMediaFile invokes CreateProblemMediaFile operation.
-//
-// Create media file.
-//
-// POST /problems/{problemId}/media
-func (c *Client) CreateProblemMediaFile(ctx context.Context, request CreateProblemMediaFileReq, params CreateProblemMediaFileParams) (*MessageResponse, error) {
-	res, err := c.sendCreateProblemMediaFile(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendCreateProblemMediaFile(ctx context.Context, request CreateProblemMediaFileReq, params CreateProblemMediaFileParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/media"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "name" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "POST", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeCreateProblemMediaFileRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeCreateProblemMediaFileResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -4389,252 +3831,6 @@ func (c *Client) sendCreateProblemTeam(ctx context.Context, params CreateProblem
 	}()
 
 	result, err := decodeCreateProblemTeamResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// CreateProblemTestFile invokes CreateProblemTestFile operation.
-//
-// Create test file.
-//
-// POST /problems/{problemId}/tests
-func (c *Client) CreateProblemTestFile(ctx context.Context, request CreateProblemTestFileReq, params CreateProblemTestFileParams) (*MessageResponse, error) {
-	res, err := c.sendCreateProblemTestFile(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendCreateProblemTestFile(ctx context.Context, request CreateProblemTestFileReq, params CreateProblemTestFileParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/tests"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "name" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "POST", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeCreateProblemTestFileRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeCreateProblemTestFileResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// CreateProblemValidator invokes CreateProblemValidator operation.
-//
-// Create validator file.
-//
-// POST /problems/{problemId}/validators
-func (c *Client) CreateProblemValidator(ctx context.Context, request CreateProblemValidatorReq, params CreateProblemValidatorParams) (*MessageResponse, error) {
-	res, err := c.sendCreateProblemValidator(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendCreateProblemValidator(ctx context.Context, request CreateProblemValidatorReq, params CreateProblemValidatorParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/validators"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "name" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "POST", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeCreateProblemValidatorRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeCreateProblemValidatorResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// CreateProblemWorkshopSubmission invokes CreateProblemWorkshopSubmission operation.
-//
-// Create author solution file.
-//
-// POST /problems/{problemId}/submissions
-func (c *Client) CreateProblemWorkshopSubmission(ctx context.Context, request CreateProblemWorkshopSubmissionReq, params CreateProblemWorkshopSubmissionParams) (*MessageResponse, error) {
-	res, err := c.sendCreateProblemWorkshopSubmission(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendCreateProblemWorkshopSubmission(ctx context.Context, request CreateProblemWorkshopSubmissionReq, params CreateProblemWorkshopSubmissionParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/submissions"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "name" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "name",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "POST", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeCreateProblemWorkshopSubmissionRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeCreateProblemWorkshopSubmissionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -5706,406 +4902,6 @@ func (c *Client) sendDeleteProblem(ctx context.Context, params DeleteProblemPara
 	return result, nil
 }
 
-// DeleteProblemChecker invokes DeleteProblemChecker operation.
-//
-// Delete checker file.
-//
-// DELETE /problems/{problemId}/checkers/{name}
-func (c *Client) DeleteProblemChecker(ctx context.Context, params DeleteProblemCheckerParams) (*MessageResponse, error) {
-	res, err := c.sendDeleteProblemChecker(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendDeleteProblemChecker(ctx context.Context, params DeleteProblemCheckerParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/checkers/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "DELETE", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeDeleteProblemCheckerResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// DeleteProblemGenerator invokes DeleteProblemGenerator operation.
-//
-// Delete generator file.
-//
-// DELETE /problems/{problemId}/generators/{name}
-func (c *Client) DeleteProblemGenerator(ctx context.Context, params DeleteProblemGeneratorParams) (*MessageResponse, error) {
-	res, err := c.sendDeleteProblemGenerator(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendDeleteProblemGenerator(ctx context.Context, params DeleteProblemGeneratorParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/generators/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "DELETE", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeDeleteProblemGeneratorResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// DeleteProblemInteractor invokes DeleteProblemInteractor operation.
-//
-// Delete interactor file.
-//
-// DELETE /problems/{problemId}/interactors/{name}
-func (c *Client) DeleteProblemInteractor(ctx context.Context, params DeleteProblemInteractorParams) (*MessageResponse, error) {
-	res, err := c.sendDeleteProblemInteractor(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendDeleteProblemInteractor(ctx context.Context, params DeleteProblemInteractorParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/interactors/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "DELETE", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeDeleteProblemInteractorResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// DeleteProblemLib invokes DeleteProblemLib operation.
-//
-// Delete library file.
-//
-// DELETE /problems/{problemId}/lib/{name}
-func (c *Client) DeleteProblemLib(ctx context.Context, params DeleteProblemLibParams) (*MessageResponse, error) {
-	res, err := c.sendDeleteProblemLib(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendDeleteProblemLib(ctx context.Context, params DeleteProblemLibParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/lib/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "DELETE", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeDeleteProblemLibResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// DeleteProblemMediaFile invokes DeleteProblemMediaFile operation.
-//
-// Delete media file.
-//
-// DELETE /problems/{problemId}/media/{name}
-func (c *Client) DeleteProblemMediaFile(ctx context.Context, params DeleteProblemMediaFileParams) (*MessageResponse, error) {
-	res, err := c.sendDeleteProblemMediaFile(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendDeleteProblemMediaFile(ctx context.Context, params DeleteProblemMediaFileParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/media/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "DELETE", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeDeleteProblemMediaFileResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
 // DeleteProblemMember invokes DeleteProblemMember operation.
 //
 // Delete problem member.
@@ -6257,246 +5053,6 @@ func (c *Client) sendDeleteProblemTeam(ctx context.Context, params DeleteProblem
 	}()
 
 	result, err := decodeDeleteProblemTeamResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// DeleteProblemTestFile invokes DeleteProblemTestFile operation.
-//
-// Delete test file.
-//
-// DELETE /problems/{problemId}/tests/{name}
-func (c *Client) DeleteProblemTestFile(ctx context.Context, params DeleteProblemTestFileParams) (*MessageResponse, error) {
-	res, err := c.sendDeleteProblemTestFile(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendDeleteProblemTestFile(ctx context.Context, params DeleteProblemTestFileParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/tests/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "DELETE", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeDeleteProblemTestFileResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// DeleteProblemValidator invokes DeleteProblemValidator operation.
-//
-// Delete validator file.
-//
-// DELETE /problems/{problemId}/validators/{name}
-func (c *Client) DeleteProblemValidator(ctx context.Context, params DeleteProblemValidatorParams) (*MessageResponse, error) {
-	res, err := c.sendDeleteProblemValidator(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendDeleteProblemValidator(ctx context.Context, params DeleteProblemValidatorParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/validators/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "DELETE", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeDeleteProblemValidatorResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// DeleteProblemWorkshopSubmission invokes DeleteProblemWorkshopSubmission operation.
-//
-// Delete author solution file.
-//
-// DELETE /problems/{problemId}/submissions/{name}
-func (c *Client) DeleteProblemWorkshopSubmission(ctx context.Context, params DeleteProblemWorkshopSubmissionParams) (*MessageResponse, error) {
-	res, err := c.sendDeleteProblemWorkshopSubmission(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendDeleteProblemWorkshopSubmission(ctx context.Context, params DeleteProblemWorkshopSubmissionParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/submissions/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "DELETE", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeDeleteProblemWorkshopSubmissionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -6666,6 +5222,87 @@ func (c *Client) sendDownloadContestStatementsPdf(ctx context.Context, params Do
 	return result, nil
 }
 
+// DownloadProblemPackage invokes DownloadProblemPackage operation.
+//
+// Download a built problem package archive.
+//
+// GET /problems/{id}/packages/{packageId}/download
+func (c *Client) DownloadProblemPackage(ctx context.Context, params DownloadProblemPackageParams) (DownloadProblemPackageOK, error) {
+	res, err := c.sendDownloadProblemPackage(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDownloadProblemPackage(ctx context.Context, params DownloadProblemPackageParams) (res DownloadProblemPackageOK, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/problems/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/packages/"
+	{
+		// Encode "packageId" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "packageId",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.PackageId))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/download"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeDownloadProblemPackageResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ForgotPassword invokes ForgotPassword operation.
 //
 // Forgot password.
@@ -6705,71 +5342,6 @@ func (c *Client) sendForgotPassword(ctx context.Context, request *ForgotPassword
 	}()
 
 	result, err := decodeForgotPasswordResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// GenerateTests invokes GenerateTests operation.
-//
-// Generate tests using generator.
-//
-// POST /problems/{problemId}/workshop/tests/generate
-func (c *Client) GenerateTests(ctx context.Context, request *GenerateTestsReq, params GenerateTestsParams) (*GenerateTestsOK, error) {
-	res, err := c.sendGenerateTests(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendGenerateTests(ctx context.Context, request *GenerateTestsReq, params GenerateTestsParams) (res *GenerateTestsOK, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/workshop/tests/generate"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "POST", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeGenerateTestsRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeGenerateTestsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -7833,801 +6405,17 @@ func (c *Client) sendGetProblemBlockStatusForUser(ctx context.Context, params Ge
 	return result, nil
 }
 
-// GetProblemChecker invokes GetProblemChecker operation.
+// GetProblemBuild invokes GetProblemBuild operation.
 //
-// Get checker file content.
+// Read build progress and diagnostics.
 //
-// GET /problems/{problemId}/checkers/{name}
-func (c *Client) GetProblemChecker(ctx context.Context, params GetProblemCheckerParams) (GetProblemCheckerOK, error) {
-	res, err := c.sendGetProblemChecker(ctx, params)
+// GET /problems/{id}/builds/{buildId}
+func (c *Client) GetProblemBuild(ctx context.Context, params GetProblemBuildParams) (*ProblemBuild, error) {
+	res, err := c.sendGetProblemBuild(ctx, params)
 	return res, err
 }
 
-func (c *Client) sendGetProblemChecker(ctx context.Context, params GetProblemCheckerParams) (res GetProblemCheckerOK, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/checkers/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeGetProblemCheckerResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// GetProblemGenerator invokes GetProblemGenerator operation.
-//
-// Get generator file content.
-//
-// GET /problems/{problemId}/generators/{name}
-func (c *Client) GetProblemGenerator(ctx context.Context, params GetProblemGeneratorParams) (GetProblemGeneratorOK, error) {
-	res, err := c.sendGetProblemGenerator(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendGetProblemGenerator(ctx context.Context, params GetProblemGeneratorParams) (res GetProblemGeneratorOK, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/generators/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeGetProblemGeneratorResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// GetProblemInteractor invokes GetProblemInteractor operation.
-//
-// Get interactor file content.
-//
-// GET /problems/{problemId}/interactors/{name}
-func (c *Client) GetProblemInteractor(ctx context.Context, params GetProblemInteractorParams) (GetProblemInteractorOK, error) {
-	res, err := c.sendGetProblemInteractor(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendGetProblemInteractor(ctx context.Context, params GetProblemInteractorParams) (res GetProblemInteractorOK, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/interactors/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeGetProblemInteractorResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// GetProblemLib invokes GetProblemLib operation.
-//
-// Get library file content.
-//
-// GET /problems/{problemId}/lib/{name}
-func (c *Client) GetProblemLib(ctx context.Context, params GetProblemLibParams) (GetProblemLibOK, error) {
-	res, err := c.sendGetProblemLib(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendGetProblemLib(ctx context.Context, params GetProblemLibParams) (res GetProblemLibOK, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/lib/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeGetProblemLibResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// GetProblemLimits invokes GetProblemLimits operation.
-//
-// Get problem limits and type settings.
-//
-// GET /problems/{problemId}/limits
-func (c *Client) GetProblemLimits(ctx context.Context, params GetProblemLimitsParams) (*ProblemLimits, error) {
-	res, err := c.sendGetProblemLimits(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendGetProblemLimits(ctx context.Context, params GetProblemLimitsParams) (res *ProblemLimits, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/limits"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeGetProblemLimitsResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// GetProblemMediaFile invokes GetProblemMediaFile operation.
-//
-// Get media file content.
-//
-// GET /problems/{problemId}/media/{name}
-func (c *Client) GetProblemMediaFile(ctx context.Context, params GetProblemMediaFileParams) (GetProblemMediaFileOK, error) {
-	res, err := c.sendGetProblemMediaFile(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendGetProblemMediaFile(ctx context.Context, params GetProblemMediaFileParams) (res GetProblemMediaFileOK, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/media/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeGetProblemMediaFileResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// GetProblemStatement invokes GetProblemStatement operation.
-//
-// Get problem statement.
-//
-// GET /problems/{problemId}/statement
-func (c *Client) GetProblemStatement(ctx context.Context, params GetProblemStatementParams) (*ProblemStatement, error) {
-	res, err := c.sendGetProblemStatement(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendGetProblemStatement(ctx context.Context, params GetProblemStatementParams) (res *ProblemStatement, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/statement"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "lang" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "lang",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.Lang.Get(); ok {
-				return e.EncodeValue(conv.StringToString(val))
-			}
-			return nil
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeGetProblemStatementResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// GetProblemTestFile invokes GetProblemTestFile operation.
-//
-// Get test file content.
-//
-// GET /problems/{problemId}/tests/{name}
-func (c *Client) GetProblemTestFile(ctx context.Context, params GetProblemTestFileParams) (GetProblemTestFileOK, error) {
-	res, err := c.sendGetProblemTestFile(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendGetProblemTestFile(ctx context.Context, params GetProblemTestFileParams) (res GetProblemTestFileOK, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/tests/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeGetProblemTestFileResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// GetProblemValidator invokes GetProblemValidator operation.
-//
-// Get validator file content.
-//
-// GET /problems/{problemId}/validators/{name}
-func (c *Client) GetProblemValidator(ctx context.Context, params GetProblemValidatorParams) (GetProblemValidatorOK, error) {
-	res, err := c.sendGetProblemValidator(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendGetProblemValidator(ctx context.Context, params GetProblemValidatorParams) (res GetProblemValidatorOK, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/validators/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeGetProblemValidatorResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// GetProblemWorkshopSubmission invokes GetProblemWorkshopSubmission operation.
-//
-// Get author solution file content.
-//
-// GET /problems/{problemId}/submissions/{name}
-func (c *Client) GetProblemWorkshopSubmission(ctx context.Context, params GetProblemWorkshopSubmissionParams) (GetProblemWorkshopSubmissionOK, error) {
-	res, err := c.sendGetProblemWorkshopSubmission(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendGetProblemWorkshopSubmission(ctx context.Context, params GetProblemWorkshopSubmissionParams) (res GetProblemWorkshopSubmissionOK, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/submissions/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeGetProblemWorkshopSubmissionResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// GetPublishedPackage invokes GetPublishedPackage operation.
-//
-// Get redirect to published problem package.
-//
-// GET /problems/{id}/package/{version}
-func (c *Client) GetPublishedPackage(ctx context.Context, params GetPublishedPackageParams) (*GetPublishedPackageFound, error) {
-	res, err := c.sendGetPublishedPackage(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendGetPublishedPackage(ctx context.Context, params GetPublishedPackageParams) (res *GetPublishedPackageFound, err error) {
+func (c *Client) sendGetProblemBuild(ctx context.Context, params GetProblemBuildParams) (res *ProblemBuild, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [4]string
@@ -8650,16 +6438,16 @@ func (c *Client) sendGetPublishedPackage(ctx context.Context, params GetPublishe
 		}
 		pathParts[1] = encoded
 	}
-	pathParts[2] = "/package/"
+	pathParts[2] = "/builds/"
 	{
-		// Encode "version" parameter.
+		// Encode "buildId" parameter.
 		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "version",
+			Param:   "buildId",
 			Style:   uri.PathStyleSimple,
 			Explode: false,
 		})
 		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Version))
+			return e.EncodeValue(conv.UUIDToString(params.BuildId))
 		}(); err != nil {
 			return res, errors.Wrap(err, "encode path")
 		}
@@ -8689,7 +6477,149 @@ func (c *Client) sendGetPublishedPackage(ctx context.Context, params GetPublishe
 		_ = body.Close()
 	}()
 
-	result, err := decodeGetPublishedPackageResponse(resp)
+	result, err := decodeGetProblemBuildResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetProblemDraft invokes GetProblemDraft operation.
+//
+// Read the editable problem draft.
+//
+// GET /problems/{id}/draft
+func (c *Client) GetProblemDraft(ctx context.Context, params GetProblemDraftParams) (*ProblemDraft, error) {
+	res, err := c.sendGetProblemDraft(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetProblemDraft(ctx context.Context, params GetProblemDraftParams) (res *ProblemDraft, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/problems/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/draft"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeGetProblemDraftResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetProblemDraftObject invokes GetProblemDraftObject operation.
+//
+// Download a binary referenced by this draft.
+//
+// GET /problems/{id}/draft/objects/{objectId}
+func (c *Client) GetProblemDraftObject(ctx context.Context, params GetProblemDraftObjectParams) (GetProblemDraftObjectOK, error) {
+	res, err := c.sendGetProblemDraftObject(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetProblemDraftObject(ctx context.Context, params GetProblemDraftObjectParams) (res GetProblemDraftObjectOK, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [4]string
+	pathParts[0] = "/problems/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/draft/objects/"
+	{
+		// Encode "objectId" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "objectId",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ObjectId))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeGetProblemDraftObjectResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -9003,15 +6933,15 @@ func (c *Client) sendGetUserAvatar(ctx context.Context, params GetUserAvatarPara
 
 // ImportProblem invokes ImportProblem operation.
 //
-// Import package into existing problem.
+// Replace the draft with the contents of a problem archive.
 //
 // POST /problems/{id}/import
-func (c *Client) ImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (*ImportProblemOK, error) {
+func (c *Client) ImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (*ProblemDraft, error) {
 	res, err := c.sendImportProblem(ctx, request, params)
 	return res, err
 }
 
-func (c *Client) sendImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (res *ImportProblemOK, err error) {
+func (c *Client) sendImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (res *ProblemDraft, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
@@ -9037,12 +6967,42 @@ func (c *Client) sendImportProblem(ctx context.Context, request *ImportProblemRe
 	pathParts[2] = "/import"
 	uri.AddPathParts(u, pathParts[:]...)
 
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "expected_revision" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "expected_revision",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.Int64ToString(params.ExpectedRevision))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
 	if err := encodeImportProblemRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
+	}
+
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.IdempotencyKey))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
 	}
 
 	resp, err := c.cfg.Client.Do(r)
@@ -10823,30 +8783,30 @@ func (c *Client) sendListPosts(ctx context.Context, params ListPostsParams) (res
 	return result, nil
 }
 
-// ListProblemCheckers invokes ListProblemCheckers operation.
+// ListProblemBuilds invokes ListProblemBuilds operation.
 //
-// List checker files.
+// List the latest 100 builds.
 //
-// GET /problems/{problemId}/checkers
-func (c *Client) ListProblemCheckers(ctx context.Context, params ListProblemCheckersParams) (*WorkshopFileListResponse, error) {
-	res, err := c.sendListProblemCheckers(ctx, params)
+// GET /problems/{id}/builds
+func (c *Client) ListProblemBuilds(ctx context.Context, params ListProblemBuildsParams) ([]ProblemBuild, error) {
+	res, err := c.sendListProblemBuilds(ctx, params)
 	return res, err
 }
 
-func (c *Client) sendListProblemCheckers(ctx context.Context, params ListProblemCheckersParams) (res *WorkshopFileListResponse, err error) {
+func (c *Client) sendListProblemBuilds(ctx context.Context, params ListProblemBuildsParams) (res []ProblemBuild, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
 	{
-		// Encode "problemId" parameter.
+		// Encode "id" parameter.
 		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
+			Param:   "id",
 			Style:   uri.PathStyleSimple,
 			Explode: false,
 		})
 		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
+			return e.EncodeValue(conv.UUIDToString(params.ID))
 		}(); err != nil {
 			return res, errors.Wrap(err, "encode path")
 		}
@@ -10856,7 +8816,7 @@ func (c *Client) sendListProblemCheckers(ctx context.Context, params ListProblem
 		}
 		pathParts[1] = encoded
 	}
-	pathParts[2] = "/checkers"
+	pathParts[2] = "/builds"
 	uri.AddPathParts(u, pathParts[:]...)
 
 	r, err := ht.NewRequest(ctx, "GET", u)
@@ -10877,255 +8837,7 @@ func (c *Client) sendListProblemCheckers(ctx context.Context, params ListProblem
 		_ = body.Close()
 	}()
 
-	result, err := decodeListProblemCheckersResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// ListProblemGenerators invokes ListProblemGenerators operation.
-//
-// List generator files.
-//
-// GET /problems/{problemId}/generators
-func (c *Client) ListProblemGenerators(ctx context.Context, params ListProblemGeneratorsParams) (*WorkshopFileListResponse, error) {
-	res, err := c.sendListProblemGenerators(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendListProblemGenerators(ctx context.Context, params ListProblemGeneratorsParams) (res *WorkshopFileListResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/generators"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeListProblemGeneratorsResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// ListProblemInteractors invokes ListProblemInteractors operation.
-//
-// List interactor files.
-//
-// GET /problems/{problemId}/interactors
-func (c *Client) ListProblemInteractors(ctx context.Context, params ListProblemInteractorsParams) (*WorkshopFileListResponse, error) {
-	res, err := c.sendListProblemInteractors(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendListProblemInteractors(ctx context.Context, params ListProblemInteractorsParams) (res *WorkshopFileListResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/interactors"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeListProblemInteractorsResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// ListProblemLibs invokes ListProblemLibs operation.
-//
-// List library files.
-//
-// GET /problems/{problemId}/lib
-func (c *Client) ListProblemLibs(ctx context.Context, params ListProblemLibsParams) (*WorkshopFileListResponse, error) {
-	res, err := c.sendListProblemLibs(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendListProblemLibs(ctx context.Context, params ListProblemLibsParams) (res *WorkshopFileListResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/lib"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeListProblemLibsResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// ListProblemMediaFiles invokes ListProblemMediaFiles operation.
-//
-// List media files.
-//
-// GET /problems/{problemId}/media
-func (c *Client) ListProblemMediaFiles(ctx context.Context, params ListProblemMediaFilesParams) (*WorkshopFileListResponse, error) {
-	res, err := c.sendListProblemMediaFiles(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendListProblemMediaFiles(ctx context.Context, params ListProblemMediaFilesParams) (res *WorkshopFileListResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/media"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeListProblemMediaFilesResponse(resp)
+	result, err := decodeListProblemBuildsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -11234,7 +8946,7 @@ func (c *Client) sendListProblemMembers(ctx context.Context, params ListProblemM
 
 // ListProblemPackages invokes ListProblemPackages operation.
 //
-// List a page of problem packages, newest version first.
+// List a page of built problem packages, newest first.
 //
 // GET /problems/{id}/packages
 func (c *Client) ListProblemPackages(ctx context.Context, params ListProblemPackagesParams) (*ListProblemPackagesOK, error) {
@@ -11449,192 +9161,6 @@ func (c *Client) sendListProblemTemplates(ctx context.Context, params ListProble
 	}()
 
 	result, err := decodeListProblemTemplatesResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// ListProblemTests invokes ListProblemTests operation.
-//
-// List test files.
-//
-// GET /problems/{problemId}/tests
-func (c *Client) ListProblemTests(ctx context.Context, params ListProblemTestsParams) (*WorkshopFileListResponse, error) {
-	res, err := c.sendListProblemTests(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendListProblemTests(ctx context.Context, params ListProblemTestsParams) (res *WorkshopFileListResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/tests"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeListProblemTestsResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// ListProblemValidators invokes ListProblemValidators operation.
-//
-// List validator files.
-//
-// GET /problems/{problemId}/validators
-func (c *Client) ListProblemValidators(ctx context.Context, params ListProblemValidatorsParams) (*WorkshopFileListResponse, error) {
-	res, err := c.sendListProblemValidators(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendListProblemValidators(ctx context.Context, params ListProblemValidatorsParams) (res *WorkshopFileListResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/validators"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeListProblemValidatorsResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// ListProblemWorkshopSubmissions invokes ListProblemWorkshopSubmissions operation.
-//
-// List author solution files.
-//
-// GET /problems/{problemId}/submissions
-func (c *Client) ListProblemWorkshopSubmissions(ctx context.Context, params ListProblemWorkshopSubmissionsParams) (*WorkshopFileListResponse, error) {
-	res, err := c.sendListProblemWorkshopSubmissions(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendListProblemWorkshopSubmissions(ctx context.Context, params ListProblemWorkshopSubmissionsParams) (res *WorkshopFileListResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/submissions"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "GET", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeListProblemWorkshopSubmissionsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -13401,68 +10927,6 @@ func (c *Client) sendPatchPostById(ctx context.Context, request OptPatchPostById
 	return result, nil
 }
 
-// PublishProblem invokes PublishProblem operation.
-//
-// Publish problem package.
-//
-// POST /problems/{id}/publish
-func (c *Client) PublishProblem(ctx context.Context, params PublishProblemParams) (*PublishProblemOK, error) {
-	res, err := c.sendPublishProblem(ctx, params)
-	return res, err
-}
-
-func (c *Client) sendPublishProblem(ctx context.Context, params PublishProblemParams) (res *PublishProblemOK, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "id" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "id",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ID))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/publish"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "POST", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodePublishProblemResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
 // Register invokes Register operation.
 //
 // Register.
@@ -14351,30 +11815,30 @@ func (c *Client) sendResetPassword(ctx context.Context, request *ResetPasswordRe
 	return result, nil
 }
 
-// TestSolution invokes TestSolution operation.
+// SaveProblemDraft invokes SaveProblemDraft operation.
 //
-// Test solution against tests.
+// Replace the draft in one revision change.
 //
-// POST /problems/{problemId}/workshop/solutions/test
-func (c *Client) TestSolution(ctx context.Context, request *TestSolutionReq, params TestSolutionParams) (*TestReport, error) {
-	res, err := c.sendTestSolution(ctx, request, params)
+// PUT /problems/{id}/draft
+func (c *Client) SaveProblemDraft(ctx context.Context, request *ProblemDraft, params SaveProblemDraftParams) (*ProblemDraft, error) {
+	res, err := c.sendSaveProblemDraft(ctx, request, params)
 	return res, err
 }
 
-func (c *Client) sendTestSolution(ctx context.Context, request *TestSolutionReq, params TestSolutionParams) (res *TestReport, err error) {
+func (c *Client) sendSaveProblemDraft(ctx context.Context, request *ProblemDraft, params SaveProblemDraftParams) (res *ProblemDraft, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
 	{
-		// Encode "problemId" parameter.
+		// Encode "id" parameter.
 		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
+			Param:   "id",
 			Style:   uri.PathStyleSimple,
 			Explode: false,
 		})
 		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
+			return e.EncodeValue(conv.UUIDToString(params.ID))
 		}(); err != nil {
 			return res, errors.Wrap(err, "encode path")
 		}
@@ -14384,15 +11848,45 @@ func (c *Client) sendTestSolution(ctx context.Context, request *TestSolutionReq,
 		}
 		pathParts[1] = encoded
 	}
-	pathParts[2] = "/workshop/solutions/test"
+	pathParts[2] = "/draft"
 	uri.AddPathParts(u, pathParts[:]...)
 
-	r, err := ht.NewRequest(ctx, "POST", u)
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "expected_revision" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "expected_revision",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.Int64ToString(params.ExpectedRevision))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	r, err := ht.NewRequest(ctx, "PUT", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
-	if err := encodeTestSolutionRequest(request, r); err != nil {
+	if err := encodeSaveProblemDraftRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
+	}
+
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.IdempotencyKey))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
 	}
 
 	resp, err := c.cfg.Client.Do(r)
@@ -14408,7 +11902,7 @@ func (c *Client) sendTestSolution(ctx context.Context, request *TestSolutionReq,
 		_ = body.Close()
 	}()
 
-	result, err := decodeTestSolutionResponse(resp)
+	result, err := decodeSaveProblemDraftResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -15090,486 +12584,6 @@ func (c *Client) sendUpdateProblem(ctx context.Context, request *UpdateProblemRe
 	return result, nil
 }
 
-// UpdateProblemChecker invokes UpdateProblemChecker operation.
-//
-// Update checker file.
-//
-// PUT /problems/{problemId}/checkers/{name}
-func (c *Client) UpdateProblemChecker(ctx context.Context, request UpdateProblemCheckerReq, params UpdateProblemCheckerParams) (*MessageResponse, error) {
-	res, err := c.sendUpdateProblemChecker(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendUpdateProblemChecker(ctx context.Context, request UpdateProblemCheckerReq, params UpdateProblemCheckerParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/checkers/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "PUT", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeUpdateProblemCheckerRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeUpdateProblemCheckerResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// UpdateProblemGenerator invokes UpdateProblemGenerator operation.
-//
-// Update generator file.
-//
-// PUT /problems/{problemId}/generators/{name}
-func (c *Client) UpdateProblemGenerator(ctx context.Context, request UpdateProblemGeneratorReq, params UpdateProblemGeneratorParams) (*MessageResponse, error) {
-	res, err := c.sendUpdateProblemGenerator(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendUpdateProblemGenerator(ctx context.Context, request UpdateProblemGeneratorReq, params UpdateProblemGeneratorParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/generators/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "PUT", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeUpdateProblemGeneratorRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeUpdateProblemGeneratorResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// UpdateProblemInteractor invokes UpdateProblemInteractor operation.
-//
-// Update interactor file.
-//
-// PUT /problems/{problemId}/interactors/{name}
-func (c *Client) UpdateProblemInteractor(ctx context.Context, request UpdateProblemInteractorReq, params UpdateProblemInteractorParams) (*MessageResponse, error) {
-	res, err := c.sendUpdateProblemInteractor(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendUpdateProblemInteractor(ctx context.Context, request UpdateProblemInteractorReq, params UpdateProblemInteractorParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/interactors/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "PUT", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeUpdateProblemInteractorRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeUpdateProblemInteractorResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// UpdateProblemLib invokes UpdateProblemLib operation.
-//
-// Update library file.
-//
-// PUT /problems/{problemId}/lib/{name}
-func (c *Client) UpdateProblemLib(ctx context.Context, request UpdateProblemLibReq, params UpdateProblemLibParams) (*MessageResponse, error) {
-	res, err := c.sendUpdateProblemLib(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendUpdateProblemLib(ctx context.Context, request UpdateProblemLibReq, params UpdateProblemLibParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/lib/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "PUT", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeUpdateProblemLibRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeUpdateProblemLibResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// UpdateProblemLimits invokes UpdateProblemLimits operation.
-//
-// Update problem limits and type settings.
-//
-// PATCH /problems/{problemId}/limits
-func (c *Client) UpdateProblemLimits(ctx context.Context, request *UpdateProblemLimitsRequest, params UpdateProblemLimitsParams) (*ProblemLimits, error) {
-	res, err := c.sendUpdateProblemLimits(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendUpdateProblemLimits(ctx context.Context, request *UpdateProblemLimitsRequest, params UpdateProblemLimitsParams) (res *ProblemLimits, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/limits"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "PATCH", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeUpdateProblemLimitsRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeUpdateProblemLimitsResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// UpdateProblemMediaFile invokes UpdateProblemMediaFile operation.
-//
-// Update media file.
-//
-// PUT /problems/{problemId}/media/{name}
-func (c *Client) UpdateProblemMediaFile(ctx context.Context, request UpdateProblemMediaFileReq, params UpdateProblemMediaFileParams) (*MessageResponse, error) {
-	res, err := c.sendUpdateProblemMediaFile(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendUpdateProblemMediaFile(ctx context.Context, request UpdateProblemMediaFileReq, params UpdateProblemMediaFileParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/media/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "PUT", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeUpdateProblemMediaFileRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeUpdateProblemMediaFileResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
 // UpdateProblemMember invokes UpdateProblemMember operation.
 //
 // Update problem member.
@@ -15663,91 +12677,6 @@ func (c *Client) sendUpdateProblemMember(ctx context.Context, params UpdateProbl
 	return result, nil
 }
 
-// UpdateProblemStatement invokes UpdateProblemStatement operation.
-//
-// Update problem statement.
-//
-// PATCH /problems/{problemId}/statement
-func (c *Client) UpdateProblemStatement(ctx context.Context, request *UpdateProblemStatementRequest, params UpdateProblemStatementParams) (*ProblemStatement, error) {
-	res, err := c.sendUpdateProblemStatement(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendUpdateProblemStatement(ctx context.Context, request *UpdateProblemStatementRequest, params UpdateProblemStatementParams) (res *ProblemStatement, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/statement"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
-	{
-		// Encode "lang" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "lang",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.Lang.Get(); ok {
-				return e.EncodeValue(conv.StringToString(val))
-			}
-			return nil
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	u.RawQuery = q.Values().Encode()
-
-	r, err := ht.NewRequest(ctx, "PATCH", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeUpdateProblemStatementRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeUpdateProblemStatementResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
 // UpdateProblemTeam invokes UpdateProblemTeam operation.
 //
 // Update problem team.
@@ -15834,320 +12763,6 @@ func (c *Client) sendUpdateProblemTeam(ctx context.Context, params UpdateProblem
 	}()
 
 	result, err := decodeUpdateProblemTeamResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// UpdateProblemTestFile invokes UpdateProblemTestFile operation.
-//
-// Update test file.
-//
-// PUT /problems/{problemId}/tests/{name}
-func (c *Client) UpdateProblemTestFile(ctx context.Context, request UpdateProblemTestFileReq, params UpdateProblemTestFileParams) (*MessageResponse, error) {
-	res, err := c.sendUpdateProblemTestFile(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendUpdateProblemTestFile(ctx context.Context, request UpdateProblemTestFileReq, params UpdateProblemTestFileParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/tests/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "PUT", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeUpdateProblemTestFileRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeUpdateProblemTestFileResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// UpdateProblemTestsConfig invokes UpdateProblemTestsConfig operation.
-//
-// Update tests.json configuration.
-//
-// PATCH /problems/{problemId}/tests/config
-func (c *Client) UpdateProblemTestsConfig(ctx context.Context, request UpdateProblemTestsConfigRequest, params UpdateProblemTestsConfigParams) (*MessageResponse, error) {
-	res, err := c.sendUpdateProblemTestsConfig(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendUpdateProblemTestsConfig(ctx context.Context, request UpdateProblemTestsConfigRequest, params UpdateProblemTestsConfigParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [3]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/tests/config"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "PATCH", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeUpdateProblemTestsConfigRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeUpdateProblemTestsConfigResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// UpdateProblemValidator invokes UpdateProblemValidator operation.
-//
-// Update validator file.
-//
-// PUT /problems/{problemId}/validators/{name}
-func (c *Client) UpdateProblemValidator(ctx context.Context, request UpdateProblemValidatorReq, params UpdateProblemValidatorParams) (*MessageResponse, error) {
-	res, err := c.sendUpdateProblemValidator(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendUpdateProblemValidator(ctx context.Context, request UpdateProblemValidatorReq, params UpdateProblemValidatorParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/validators/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "PUT", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeUpdateProblemValidatorRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeUpdateProblemValidatorResponse(resp)
-	if err != nil {
-		return res, errors.Wrap(err, "decode response")
-	}
-
-	return result, nil
-}
-
-// UpdateProblemWorkshopSubmission invokes UpdateProblemWorkshopSubmission operation.
-//
-// Update author solution file.
-//
-// PUT /problems/{problemId}/submissions/{name}
-func (c *Client) UpdateProblemWorkshopSubmission(ctx context.Context, request UpdateProblemWorkshopSubmissionReq, params UpdateProblemWorkshopSubmissionParams) (*MessageResponse, error) {
-	res, err := c.sendUpdateProblemWorkshopSubmission(ctx, request, params)
-	return res, err
-}
-
-func (c *Client) sendUpdateProblemWorkshopSubmission(ctx context.Context, request UpdateProblemWorkshopSubmissionReq, params UpdateProblemWorkshopSubmissionParams) (res *MessageResponse, err error) {
-
-	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [4]string
-	pathParts[0] = "/problems/"
-	{
-		// Encode "problemId" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[1] = encoded
-	}
-	pathParts[2] = "/submissions/"
-	{
-		// Encode "name" parameter.
-		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
-			Style:   uri.PathStyleSimple,
-			Explode: false,
-		})
-		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
-		}(); err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		encoded, err := e.Result()
-		if err != nil {
-			return res, errors.Wrap(err, "encode path")
-		}
-		pathParts[3] = encoded
-	}
-	uri.AddPathParts(u, pathParts[:]...)
-
-	r, err := ht.NewRequest(ctx, "PUT", u)
-	if err != nil {
-		return res, errors.Wrap(err, "create request")
-	}
-	if err := encodeUpdateProblemWorkshopSubmissionRequest(request, r); err != nil {
-		return res, errors.Wrap(err, "encode request")
-	}
-
-	resp, err := c.cfg.Client.Do(r)
-	if err != nil {
-		return res, errors.Wrap(err, "do request")
-	}
-	body := resp.Body
-	defer func() {
-		// Drain the body to EOF before closing, so the underlying
-		// connection can be reused by the Transport regardless of the
-		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
-		_, _ = io.Copy(io.Discard, body)
-		_ = body.Close()
-	}()
-
-	result, err := decodeUpdateProblemWorkshopSubmissionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -16441,30 +13056,30 @@ func (c *Client) sendUploadAvatar(ctx context.Context, request *UploadAvatarReq,
 	return result, nil
 }
 
-// ValidateAllTests invokes ValidateAllTests operation.
+// UploadProblemDraft invokes UploadProblemDraft operation.
 //
-// Validate all test inputs.
+// Upload immutable test bodies or a resource.
 //
-// POST /problems/{problemId}/workshop/tests/validate
-func (c *Client) ValidateAllTests(ctx context.Context, params ValidateAllTestsParams) (*ValidationReport, error) {
-	res, err := c.sendValidateAllTests(ctx, params)
+// POST /problems/{id}/draft/uploads
+func (c *Client) UploadProblemDraft(ctx context.Context, request *UploadProblemDraftReq, params UploadProblemDraftParams) (*ProblemDraft, error) {
+	res, err := c.sendUploadProblemDraft(ctx, request, params)
 	return res, err
 }
 
-func (c *Client) sendValidateAllTests(ctx context.Context, params ValidateAllTestsParams) (res *ValidationReport, err error) {
+func (c *Client) sendUploadProblemDraft(ctx context.Context, request *UploadProblemDraftReq, params UploadProblemDraftParams) (res *ProblemDraft, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string
 	pathParts[0] = "/problems/"
 	{
-		// Encode "problemId" parameter.
+		// Encode "id" parameter.
 		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "problemId",
+			Param:   "id",
 			Style:   uri.PathStyleSimple,
 			Explode: false,
 		})
 		if err := func() error {
-			return e.EncodeValue(conv.UUIDToString(params.ProblemId))
+			return e.EncodeValue(conv.UUIDToString(params.ID))
 		}(); err != nil {
 			return res, errors.Wrap(err, "encode path")
 		}
@@ -16474,12 +13089,45 @@ func (c *Client) sendValidateAllTests(ctx context.Context, params ValidateAllTes
 		}
 		pathParts[1] = encoded
 	}
-	pathParts[2] = "/workshop/tests/validate"
+	pathParts[2] = "/draft/uploads"
 	uri.AddPathParts(u, pathParts[:]...)
+
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "expected_revision" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "expected_revision",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.Int64ToString(params.ExpectedRevision))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
 
 	r, err := ht.NewRequest(ctx, "POST", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUploadProblemDraftRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.IdempotencyKey))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
 	}
 
 	resp, err := c.cfg.Client.Do(r)
@@ -16495,7 +13143,7 @@ func (c *Client) sendValidateAllTests(ctx context.Context, params ValidateAllTes
 		_ = body.Close()
 	}()
 
-	result, err := decodeValidateAllTestsResponse(resp)
+	result, err := decodeUploadProblemDraftResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

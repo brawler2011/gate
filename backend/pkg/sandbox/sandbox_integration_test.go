@@ -26,9 +26,9 @@ func TestIntegrationSandbox(t *testing.T) {
 	ctx := context.Background()
 
 	_, thisFile, _, ok := runtime.Caller(0)
-	judgeContext := "../../../deploy/common/judge"
+	judgeContext := "../../../judge"
 	if ok {
-		judgeContext = filepath.Join(filepath.Dir(thisFile), "../../../deploy/common/judge")
+		judgeContext = filepath.Join(filepath.Dir(thisFile), "../../../judge")
 	}
 
 	// Spin up go-judge container using testcontainers-go and the unified Dockerfile
@@ -83,7 +83,7 @@ func TestIntegrationSandbox(t *testing.T) {
 	defer client.Close()
 
 	// Load languages config
-	cfg, err := LoadConfig("../../../languages.yaml")
+	cfg, err := LoadConfig("../../../judge/langs.toml")
 	if err != nil {
 		t.Fatalf("Failed to load languages config: %v", err)
 	}

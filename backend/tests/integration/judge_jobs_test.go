@@ -5,7 +5,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"strings"
+	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"sync"
 	"time"
 
@@ -52,6 +52,9 @@ func (s *IntegrationTestSuite) newJobSubmission() (uuid.UUID, uuid.UUID, uuid.UU
 	problem, contest := uuid.New(), uuid.New()
 	s.Require().NoError(s.problemsRepo.CreateProblem(s.ctx, &problemsmodel.CreateProblemParams{ID: problem, OrganizationID: org.ID, Title: "Job", ShortName: "job", Visibility: problemsmodel.ProblemVisibilityPrivate, OwnerID: &user.Id}))
 	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{ID: contest, OrganizationID: org.ID, Title: "Jobs", Login: "jobs", Visibility: contestsmodel.ContestVisibilityPublic}))
+	pack, err := dbfixtures.InsertPackage(s.ctx, s.dbPool, problem, org.ID, time.Time{})
+	s.Require().NoError(err)
+	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{ContestId: contest, ProblemId: problem, PackageId: pack}))
 	s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: contest, UserId: user.Id, Role: contestsmodel.ContestRoleParticipant}))
 	submission, err := pgstore.NewSubmissionsRepo(s.dbPool).CreateSubmission(s.ctx, &submissionsmodel.SubmissionCreation{ContestId: contest, ProblemId: problem, UserId: user.Id, Language: submissionsmodel.Python, Solution: "print(1)"})
 	s.Require().NoError(err)
@@ -145,7 +148,7 @@ func (s *IntegrationTestSuite) TestJudgeTerminalResultOutboxAndStandingsAreAtomi
 	scheduled, err := jobs.ScheduleJob(s.ctx, sub)
 	s.Require().NoError(err)
 	s.Require().NoError(s.contestsRepo.UpsertContestProblemResult(s.ctx, &contestsmodel.UpsertContestProblemResultParams{ContestID: contest, UserID: user, ProblemID: problem, Solved: true}))
-	judge := judging.NewJudgeUseCase(jobs, pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), nil, "", "", nil, silentJudgeProgress{})
+	judge := judging.NewJudgeUseCase(jobs, pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), s.unreadablePackageLoader(), nil, silentJudgeProgress{})
 	_, err = s.dbPool.Exec(s.ctx, `CREATE FUNCTION reject_terminal_event() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event_type='submissions.completed' THEN RAISE EXCEPTION 'injected completion failure'; END IF; RETURN NEW; END $$;
  CREATE TRIGGER reject_terminal_event BEFORE INSERT ON outbox_events FOR EACH ROW EXECUTE FUNCTION reject_terminal_event()`)
 	s.Require().NoError(err)
@@ -206,26 +209,28 @@ func (s *IntegrationTestSuite) TestJudgePackageIsFixedForSubmission() {
 	original, err := s.problemsRepo.GetProblemById(s.ctx, problem)
 	s.Require().NoError(err)
 	packages := pgstore.NewPackagesRepo(s.dbPool)
-	first, err := packages.CreatePackage(s.ctx, &problemsmodel.CreatePackageParams{ID: uuid.New(), ProblemID: problem, OrganizationID: original.OrganizationID, PackageHash: strings.Repeat("a", 64), Status: "ready"})
+	first, err := dbfixtures.InsertPackage(s.ctx, s.dbPool, problem, original.OrganizationID, time.Time{})
 	s.Require().NoError(err)
-	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{ContestId: contest, ProblemId: problem, PackageId: first.ID}))
+	firstHash := s.packageHash(packages, first)
+	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{ContestId: contest, ProblemId: problem, PackageId: first}))
 	sub, err = pgstore.NewSubmissionsRepo(s.dbPool).CreateSubmission(s.ctx, &submissionsmodel.SubmissionCreation{ContestId: contest, ProblemId: problem, UserId: user, Language: submissionsmodel.Python, Solution: "print(1)"})
 	s.Require().NoError(err)
 	jobs := pgstore.NewJudgeJobs(s.dbPool)
 	initial, err := jobs.ScheduleJob(s.ctx, sub)
 	s.Require().NoError(err)
-	s.Equal(strings.Repeat("a", 64), initial.PackageHash)
-	second, err := packages.CreatePackage(s.ctx, &problemsmodel.CreatePackageParams{ID: uuid.New(), ProblemID: problem, OrganizationID: original.OrganizationID, PackageHash: strings.Repeat("b", 64), Status: "ready"})
+	s.Equal(firstHash, initial.PackageHash)
+	second, err := dbfixtures.InsertPackage(s.ctx, s.dbPool, problem, original.OrganizationID, time.Time{})
 	s.Require().NoError(err)
-	s.Require().NoError(s.contestsRepo.UpdateContestProblemPackage(s.ctx, contest, problem, second.ID))
+	s.NotEqual(firstHash, s.packageHash(packages, second))
+	s.Require().NoError(s.contestsRepo.UpdateContestProblemPackage(s.ctx, contest, problem, second))
 	claim, err := jobs.Claim(s.ctx, initial.Ref())
 	s.Require().NoError(err)
-	s.Equal(strings.Repeat("a", 64), claim.PackageHash)
+	s.Equal(firstHash, claim.PackageHash)
 	_, err = pgstore.NewSubmissionsRepo(s.dbPool).ResetSubmissionsState(s.ctx, submissionsmodel.RejudgeFilter{ContestID: contest, SubmissionID: &sub})
 	s.Require().NoError(err)
 	next, err := jobs.ScheduleJob(s.ctx, sub)
 	s.Require().NoError(err)
-	s.Equal(strings.Repeat("a", 64), next.PackageHash)
+	s.Equal(firstHash, next.PackageHash)
 	s.EqualValues(2, next.Generation)
 }
 
@@ -243,7 +248,7 @@ func (s *IntegrationTestSuite) TestDurableJudgeCompletionThroughJetStream() {
 		}
 		return tx.Record(s.ctx, eventdata.Event{AggregateID: sub, Type: eventdata.OutboxEventSubmissionCreated, Payload: submissionsmodel.SubmissionCreatedEvent{Id: sub, JobID: job.ID, Generation: job.Generation}})
 	}))
-	app := judging.NewJudgeUseCase(pgstore.NewJudgeJobs(s.dbPool), pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), nil, "", "", nil, judgeworker.NewEventPublisher(js))
+	app := judging.NewJudgeUseCase(pgstore.NewJudgeJobs(s.dbPool), pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), s.unreadablePackageLoader(), nil, judgeworker.NewEventPublisher(js))
 	worker, err := judgeworker.NewJudgeWorker(s.ctx, js, app, 1)
 	s.Require().NoError(err)
 	dispatcher := outbox.NewEventDispatcher()
@@ -272,26 +277,31 @@ func (s *IntegrationTestSuite) TestDurableJudgeCompletionThroughJetStream() {
 }
 
 func (s *IntegrationTestSuite) TestJudgeRecoversAfterRelatedEntityDeletion() {
-	for _, deleted := range []string{"problem", "contest", "both"} {
+	// A problem pinned by a contest, submission or job cannot be deleted at all (foreign keys);
+	// a deleted contest must not strand its in-flight jobs.
+	{
+		s.Run("pinned problem cannot be deleted", func() {
+			_, _, problem, _ := s.newJobSubmission()
+			_, err := s.dbPool.Exec(s.ctx, "DELETE FROM problems WHERE id=$1", problem)
+			s.Error(err)
+		})
+	}
+	for _, deleted := range []string{"contest"} {
 		s.Run(deleted, func() {
-			sub, contest, problem, _ := s.newJobSubmission()
+			sub, contest, _, _ := s.newJobSubmission()
 			jobs := pgstore.NewJudgeJobs(s.dbPool)
 			scheduled, err := jobs.ScheduleJob(s.ctx, sub)
 			s.Require().NoError(err)
 			abandoned, err := jobs.Claim(s.ctx, scheduled.Ref())
 			s.Require().NoError(err)
 			s.Require().NotEqual(uuid.Nil, abandoned.ID)
-			if deleted == "problem" || deleted == "both" {
-				_, err = s.dbPool.Exec(s.ctx, "DELETE FROM problems WHERE id=$1", problem)
-				s.Require().NoError(err)
-			}
-			if deleted == "contest" || deleted == "both" {
+			if deleted == "contest" {
 				_, err = s.dbPool.Exec(s.ctx, "DELETE FROM contests WHERE id=$1", contest)
 				s.Require().NoError(err)
 			}
 			_, err = s.dbPool.Exec(s.ctx, "UPDATE judge_jobs SET deadline_at=now()-interval '1 second' WHERE id=$1", abandoned.ID)
 			s.Require().NoError(err)
-			judge := judging.NewJudgeUseCase(jobs, pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), nil, "", "", nil, silentJudgeProgress{})
+			judge := judging.NewJudgeUseCase(jobs, pgstore.NewJudgeTransactions(s.dbPool), pgstore.NewSubmissionsRepo(s.dbPool), s.unreadablePackageLoader(), nil, silentJudgeProgress{})
 			s.Require().NoError(judge.JudgeSubmission(s.ctx, scheduled.Ref()))
 			saved, err := pgstore.NewSubmissionsRepo(s.dbPool).GetSubmission(s.ctx, sub)
 			s.Require().NoError(err)
@@ -462,4 +472,16 @@ func (s *IntegrationTestSuite) TestJudgeRecoveryForStalledJobs() {
 	saved3, err := repo.GetSubmission(s.ctx, sub3)
 	s.Require().NoError(err)
 	s.Equal(submissionsmodel.Saved, saved3.State, "rejudged submission must remain Saved for new generation")
+}
+
+func (s *IntegrationTestSuite) packageHash(packages *pgstore.PackagesRepo, id uuid.UUID) string {
+	pack, err := packages.GetPackageByID(s.ctx, id)
+	s.Require().NoError(err)
+	return pack.PackageHash
+}
+
+// unreadablePackageLoader loads packages from the real object store; the fixture packages
+// have no archive, so every judgement ends in an internal error without touching a sandbox.
+func (s *IntegrationTestSuite) unreadablePackageLoader() *judging.PackageLoader {
+	return &judging.PackageLoader{Store: s.objectStore, Bucket: objectsBucket, TempDir: diskTempDir(s.T()), Packages: s.problemDrafts, Limits: testBuildOptions(s.T()).Limits}
 }

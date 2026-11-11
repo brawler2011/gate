@@ -23,54 +23,12 @@ func (q *Queries) CountProblemPackages(ctx context.Context, problemID uuid.UUID)
 	return count, err
 }
 
-const createProblemPackage = `-- name: CreateProblemPackage :one
+const getProblemPackageByID = `-- name: GetProblemPackageByID :one
 
-INSERT INTO problem_packages (id, problem_id, organization_id, package_hash, status, version, compiled_at)
-VALUES ($1, $2, $3, $4, $5, (SELECT COALESCE(MAX(version), 0) + 1 FROM problem_packages WHERE problem_id = $2), CASE WHEN $5::package_status = 'ready'::package_status THEN NOW() ELSE NULL END)
-RETURNING id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at, title, short_name, time_limit_ms, memory_limit_mb
+SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, time_limit_ms, memory_limit_mb, build_id, object_id, revision FROM problem_packages WHERE id = $1
 `
-
-type CreateProblemPackageParams struct {
-	ID             uuid.UUID `json:"id"`
-	ProblemID      uuid.UUID `json:"problem_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	PackageHash    string    `json:"package_hash"`
-	Status         string    `json:"status"`
-}
 
 // Problem Packages queries
-func (q *Queries) CreateProblemPackage(ctx context.Context, arg CreateProblemPackageParams) (ProblemPackage, error) {
-	row := q.db.QueryRow(ctx, createProblemPackage,
-		arg.ID,
-		arg.ProblemID,
-		arg.OrganizationID,
-		arg.PackageHash,
-		arg.Status,
-	)
-	var i ProblemPackage
-	err := row.Scan(
-		&i.ID,
-		&i.ProblemID,
-		&i.OrganizationID,
-		&i.Version,
-		&i.PackageHash,
-		&i.Url,
-		&i.Status,
-		&i.BuildLog,
-		&i.CreatedAt,
-		&i.CompiledAt,
-		&i.Title,
-		&i.ShortName,
-		&i.TimeLimitMs,
-		&i.MemoryLimitMb,
-	)
-	return i, err
-}
-
-const getProblemPackageByID = `-- name: GetProblemPackageByID :one
-SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at, title, short_name, time_limit_ms, memory_limit_mb FROM problem_packages WHERE id = $1
-`
-
 func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (ProblemPackage, error) {
 	row := q.db.QueryRow(ctx, getProblemPackageByID, id)
 	var i ProblemPackage
@@ -78,56 +36,23 @@ func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (Prob
 		&i.ID,
 		&i.ProblemID,
 		&i.OrganizationID,
-		&i.Version,
 		&i.PackageHash,
-		&i.Url,
-		&i.Status,
-		&i.BuildLog,
 		&i.CreatedAt,
-		&i.CompiledAt,
 		&i.Title,
 		&i.ShortName,
 		&i.TimeLimitMs,
 		&i.MemoryLimitMb,
-	)
-	return i, err
-}
-
-const getProblemPackageByVersion = `-- name: GetProblemPackageByVersion :one
-SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at, title, short_name, time_limit_ms, memory_limit_mb FROM problem_packages WHERE problem_id = $1 AND version = $2
-`
-
-type GetProblemPackageByVersionParams struct {
-	ProblemID uuid.UUID `json:"problem_id"`
-	Version   int32     `json:"version"`
-}
-
-func (q *Queries) GetProblemPackageByVersion(ctx context.Context, arg GetProblemPackageByVersionParams) (ProblemPackage, error) {
-	row := q.db.QueryRow(ctx, getProblemPackageByVersion, arg.ProblemID, arg.Version)
-	var i ProblemPackage
-	err := row.Scan(
-		&i.ID,
-		&i.ProblemID,
-		&i.OrganizationID,
-		&i.Version,
-		&i.PackageHash,
-		&i.Url,
-		&i.Status,
-		&i.BuildLog,
-		&i.CreatedAt,
-		&i.CompiledAt,
-		&i.Title,
-		&i.ShortName,
-		&i.TimeLimitMs,
-		&i.MemoryLimitMb,
+		&i.BuildID,
+		&i.ObjectID,
+		&i.Revision,
 	)
 	return i, err
 }
 
 const getReadyPackage = `-- name: GetReadyPackage :one
-SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at, title, short_name, time_limit_ms, memory_limit_mb FROM problem_packages
-WHERE problem_id = $1 AND status = 'ready'
-ORDER BY created_at DESC
+SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, time_limit_ms, memory_limit_mb, build_id, object_id, revision FROM problem_packages
+WHERE problem_id = $1
+ORDER BY revision DESC,created_at DESC,id DESC
 LIMIT 1
 `
 
@@ -138,25 +63,23 @@ func (q *Queries) GetReadyPackage(ctx context.Context, problemID uuid.UUID) (Pro
 		&i.ID,
 		&i.ProblemID,
 		&i.OrganizationID,
-		&i.Version,
 		&i.PackageHash,
-		&i.Url,
-		&i.Status,
-		&i.BuildLog,
 		&i.CreatedAt,
-		&i.CompiledAt,
 		&i.Title,
 		&i.ShortName,
 		&i.TimeLimitMs,
 		&i.MemoryLimitMb,
+		&i.BuildID,
+		&i.ObjectID,
+		&i.Revision,
 	)
 	return i, err
 }
 
 const listProblemPackages = `-- name: ListProblemPackages :many
-SELECT id, problem_id, organization_id, version, package_hash, url, status, build_log, created_at, compiled_at, title, short_name, time_limit_ms, memory_limit_mb FROM problem_packages
+SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, time_limit_ms, memory_limit_mb, build_id, object_id, revision FROM problem_packages
 WHERE problem_id = $1
-ORDER BY version DESC
+ORDER BY revision DESC,created_at DESC,id DESC
 LIMIT $3::int OFFSET $2::bigint
 `
 
@@ -179,17 +102,15 @@ func (q *Queries) ListProblemPackages(ctx context.Context, arg ListProblemPackag
 			&i.ID,
 			&i.ProblemID,
 			&i.OrganizationID,
-			&i.Version,
 			&i.PackageHash,
-			&i.Url,
-			&i.Status,
-			&i.BuildLog,
 			&i.CreatedAt,
-			&i.CompiledAt,
 			&i.Title,
 			&i.ShortName,
 			&i.TimeLimitMs,
 			&i.MemoryLimitMb,
+			&i.BuildID,
+			&i.ObjectID,
+			&i.Revision,
 		); err != nil {
 			return nil, err
 		}

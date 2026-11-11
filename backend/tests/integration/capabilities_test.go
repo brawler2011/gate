@@ -16,7 +16,7 @@ func (s *IntegrationTestSuite) TestCapabilitiesRESTParity() {
 	owner := s.createUser("caps_owner", m.UserRoleUser)
 	org := s.createOrganization("caps-org", "Capabilities", owner.Id)
 	ctx := withTestUser(s.ctx, owner.Id)
-	problem, err := s.client.CreateProblem(ctx, corev1.CreateProblemParams{Title: "Capabilities", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
+	problem, err := s.client.CreateProblem(ctx, corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(), Title: "Capabilities", OrganizationID: corev1.NewOptUUID(org.ID), TemplateID: "builtin:a-plus-b"})
 	s.Require().NoError(err)
 	contest := uuid.New()
 	end := time.Now().Add(time.Hour)

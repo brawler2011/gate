@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"encoding/xml"
 	"fmt"
+	pointvalue "github.com/brawler2011/gate/backend/pkg/points"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
@@ -99,7 +101,7 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 	if hasGroups {
 		// Group tests by their group attribute
 		testsByGroup := make(map[string][]gfmt.Test)
-		pointsByGroup := make(map[string]float64)
+		pointsByGroup := make(map[string]pointvalue.Value)
 		numSamples := countSamples(packageDir)
 		var sampleTests []gfmt.Test
 
@@ -123,8 +125,13 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 				Manual: filename,
 			}
 
+			weight, err := pointvalue.Parse(strconv.FormatFloat(test.Points, 'f', -1, 64))
+			if err != nil {
+				return nil, err
+			}
+			t.Points = weight
+			pointsByGroup[gName] += weight
 			testsByGroup[gName] = append(testsByGroup[gName], t)
-			pointsByGroup[gName] += test.Points
 
 			if i < numSamples {
 				sampleTests = append(sampleTests, t)
@@ -133,7 +140,7 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 
 		for gName, tests := range testsByGroup {
 			subtasks[gName] = gfmt.Subtask{
-				Points: int(pointsByGroup[gName]),
+				Points: pointsByGroup[gName],
 				Policy: "complete",
 				Tests:  tests,
 			}
@@ -175,20 +182,20 @@ func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
 				Tests:  sampleTests,
 			}
 			subtasks["secret"] = gfmt.Subtask{
-				Points:       100,
+				Points:       pointvalue.Value(100) * pointvalue.Unit,
 				Policy:       "each",
 				Dependencies: []string{"samples"},
 				Tests:        secretTests,
 			}
 		case len(sampleTests) > 0:
 			subtasks["samples"] = gfmt.Subtask{
-				Points: 100,
+				Points: pointvalue.Value(100) * pointvalue.Unit,
 				Policy: "each",
 				Tests:  sampleTests,
 			}
 		case len(secretTests) > 0:
 			subtasks["secret"] = gfmt.Subtask{
-				Points: 100,
+				Points: pointvalue.Value(100) * pointvalue.Unit,
 				Policy: "each",
 				Tests:  secretTests,
 			}

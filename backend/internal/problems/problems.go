@@ -2,13 +2,11 @@ package problems
 
 import (
 	"context"
-	"errors"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
-	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 )
 
@@ -16,63 +14,27 @@ type ProblemsUseCase struct {
 	permissions  ProblemPermissions
 	repo         ProblemsRepo
 	orgsRepo     OrganizationsRepo
-	workspace    *WorkspaceStorage
 	transactions ProblemTransactions
-	templates    PackageTemplates
+	drafts       *DraftUseCase
+	packages     PackagesRepo
+	content      *PackageContent
 }
 
-func NewProblemsUseCase(repo ProblemsRepo, workspace *WorkspaceStorage, transactions ProblemTransactions, templates PackageTemplates, orgRepo OrganizationsRepo, permissions ProblemPermissions) *ProblemsUseCase {
-	return &ProblemsUseCase{
-		repo:         repo,
-		workspace:    workspace,
-		transactions: transactions,
-		permissions:  permissions,
-		templates:    templates,
-		orgsRepo:     orgRepo,
-	}
+func NewProblemsUseCase(repo ProblemsRepo, transactions ProblemTransactions, orgs OrganizationsRepo, permissions ProblemPermissions, drafts *DraftUseCase, packages PackagesRepo, content *PackageContent) *ProblemsUseCase {
+	return &ProblemsUseCase{repo: repo, transactions: transactions, orgsRepo: orgs, permissions: permissions, drafts: drafts, packages: packages, content: content}
 }
-
 func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error {
-	if err := authorizeProblem(ctx, uc.permissions, id, accessmodel.ActionEditProblem); err != nil {
-		return err
-	}
-	var previous string
-	var version *workspaceVersion
-	if problem.Title != nil {
-		var err error
-		previous, version, err = uc.workspace.prepareChange(ctx, id, func(ctx context.Context) error {
-			workshop := newWorkshop(uc.workspace)
-			config, err := workshop.readProblemConfig(ctx, id)
-			if errors.Is(err, storage.ErrNotFound) {
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-			config.Title = *problem.Title
-			return workshop.writeProblemConfig(ctx, id, config)
-		})
-		if err != nil {
-			return err
-		}
-	}
 	return withinProblem(ctx, uc.transactions, id, accessmodel.ActionEditProblem, func(tx ProblemTxStore) error {
 		if problem.IsTemplate != nil && *problem.IsTemplate {
 			if _, err := tx.GetReadyPackage(ctx, id); err != nil {
-				if errors.Is(err, pkg.ErrNotFound) {
-					return pkg.Wrap(pkg.ErrBadInput, err, "для перевода задачи в шаблон необходим хотя бы один успешно собранный пакет")
-				}
-				return err
-			}
-		}
-
-		if version != nil && version.hash != previous {
-			if err := tx.CommitWorkspace(ctx, id, previous, version.hash, version.metadata); err != nil {
-				return err
+				return pkg.Wrap(pkg.ErrBadInput, err, "template requires a successful package")
 			}
 		}
 		return tx.UpdateProblem(ctx, id, problem)
 	})
+}
+func (uc *ProblemsUseCase) CreateProblem(ctx context.Context, input *problemsmodel.CreateProblemInput) (uuid.UUID, error) {
+	return uc.drafts.CreateProblem(ctx, input)
 }
 
 func (uc *ProblemsUseCase) DeleteProblem(ctx context.Context, id uuid.UUID) error {

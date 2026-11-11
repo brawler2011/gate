@@ -24,7 +24,7 @@ type MessageSubmissionCompleted struct {
 	Frozen               *bool                  `json:"frozen,omitempty"`
 	Id                   uuid.UUID              `json:"id" binding:"required"`
 	State                *int32                 `json:"state,omitempty"`
-	Score                *int32                 `json:"score,omitempty"`
+	Score                *float64               `json:"score,omitempty"`
 	Penalty              *int32                 `json:"penalty,omitempty"`
 	TimeStat             *int32                 `json:"time_stat,omitempty"`
 	MemoryStat           *int32                 `json:"memory_stat,omitempty"`

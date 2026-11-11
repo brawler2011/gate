@@ -21,6 +21,7 @@ const go = new GoGenerator({
   presets: [{preset: GO_COMMON_PRESET, options: {addJsonTag: true}}],
   typeMapping: {
     Integer: args => scalar(args.constrainedModel.originalInput.format === 'int32' ? 'int32' : 'int64', args),
+    Float: args => scalar('float64', args),
     Boolean: args => scalar('bool', args),
     String: args => {
       switch (args.constrainedModel.originalInput.format) {

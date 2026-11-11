@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"testing"
@@ -16,7 +17,7 @@ import (
 )
 
 func TestS3ClientOperations(t *testing.T) {
-	ctx, s3Client := newSeaweedBackedS3Storage(t)
+	ctx, s3Client := context.Background(), newSeaweedBackedS3Storage(t)
 
 	bucket := "test-bucket-" + uuid.New().String()
 

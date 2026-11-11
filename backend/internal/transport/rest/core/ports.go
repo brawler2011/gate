@@ -8,7 +8,6 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/blogs"
 	"github.com/brawler2011/gate/backend/internal/identity"
-	problems "github.com/brawler2011/gate/backend/internal/problems"
 
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 
@@ -178,26 +177,6 @@ type UsersUC interface {
 	AdminResendVerification(ctx context.Context, username string) error
 }
 
-type WorkshopUC interface {
-	UpdateLimits(context.Context, uuid.UUID, problems.LimitsPatch) (*problemsmodel.ProblemManifest, error)
-	UpdateStatement(context.Context, uuid.UUID, string, problems.StatementPatch) (*problemsmodel.LocalizedStatement, error)
-	GetStatement(context.Context, uuid.UUID, string) (*problemsmodel.LocalizedStatement, error)
-	WithWorkspace(ctx context.Context, problemID uuid.UUID, fn func(context.Context) error) error
-	IsInitialized(ctx context.Context, problemID uuid.UUID) (bool, error)
-
-	UpdateProblemFile(ctx context.Context, req problemsmodel.UpdateFileRequest) error
-	DeleteProblemFile(ctx context.Context, problemID uuid.UUID, path string) error
-	ReadProblemFile(ctx context.Context, problemID uuid.UUID, path string) ([]byte, error)
-	ListProblemFiles(ctx context.Context, problemID uuid.UUID, dirPath string) ([]problemsmodel.FileEntry, error)
-	CompileProblemComponent(ctx context.Context, req problemsmodel.CompileComponentRequest) (*problemsmodel.CompileResult, error)
-	GenerateTests(ctx context.Context, req problemsmodel.GenerateTestsRequest) error
-	ValidateAllTests(ctx context.Context, problemID uuid.UUID) (*problemsmodel.ValidationReport, error)
-	TestSolution(ctx context.Context, req problemsmodel.TestSolutionRequest) (*problemsmodel.TestReport, error)
-	GetManifest(ctx context.Context, problemID uuid.UUID) (*problemsmodel.ProblemManifest, error)
-	UpdateTestsConfig(ctx context.Context, problemID uuid.UUID, testsMeta *problemsmodel.TestsMetadata) error
-	GetTestsConfig(ctx context.Context, problemID uuid.UUID) (*problemsmodel.TestsMetadata, error)
-}
-
 type ContestDetails interface {
 	GetContestDetails(context.Context, string, string) (*contests.ContestDetails, error)
 	GetContestProblemDetails(context.Context, string, string, uuid.UUID) (*contests.ContestProblemDetails, error)
@@ -215,15 +194,6 @@ type BlogsUC interface {
 	UpdatePost(ctx context.Context, id uuid.UUID, title, text, description *string, imageReader io.Reader, filename string) error
 	DeletePost(ctx context.Context, id uuid.UUID) error
 	GetPostImage(ctx context.Context, imageKey string, ifNoneMatch *string) (blogs.PostImage, error)
-}
-
-type ImportUC interface {
-	ImportProblemPackage(ctx context.Context, zipReader io.Reader, zipSize int64, problemID uuid.UUID) (*problemsmodel.ProblemManifest, error)
-}
-
-type PublishUC interface {
-	PublishProblem(ctx context.Context, problemID uuid.UUID) (*problems.PublishResult, error)
-	GetPublishedPackageURL(ctx context.Context, problemID uuid.UUID, version string) (string, error)
 }
 
 type AnnouncementsUC interface {

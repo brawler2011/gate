@@ -1,0 +1,35 @@
+# Languages available to submissions and problem packages.
+#
+# package  nixpkgs attribute installed into the judge image (see flake.nix)
+# The other keys tell the backend how to compile and run code in the sandbox,
+# where the runtime's binaries are available under /usr/bin.
+
+[cpp]
+package = "gcc15"
+type = "compiler"
+code_file = "foo.cc"
+compile = "/usr/bin/g++ -O2 -Wall -std=c++17 -o ${name} foo.cc"
+compile_file = "solution"
+execute = "${dir}/${name}"
+
+[python]
+package = "python314"
+type = "interpreter"
+code_file = "foo.py"
+execute = "/usr/bin/python3 ${dir}/foo.py"
+
+[go]
+package = "go_1_26"
+type = "compiler"
+code_file = "foo.go"
+compile = "/usr/bin/go build -o ${name} foo.go"
+compile_file = "solution"
+execute = "${dir}/${name}"
+
+[java]
+package = "jdk25_headless"
+type = "compiler"
+code_file = "Main.java"
+compile = "/usr/bin/javac Main.java"
+compile_file = "Main.class"
+execute = "/usr/bin/java -Xmx192m -Xms32m -XX:ActiveProcessorCount=1 -cp ${dir} Main"

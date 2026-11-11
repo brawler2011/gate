@@ -2,6 +2,7 @@ package problems
 
 import (
 	"context"
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
@@ -23,19 +24,12 @@ type OrganizationsRepo interface {
 type PackagesRepo interface {
 	GetReadyPackage(context.Context, uuid.UUID) (problemsmodel.ProblemPackage, error)
 	ListPackages(ctx context.Context, problemID uuid.UUID, request paging.Request) ([]problemsmodel.ProblemPackage, int32, error)
-	GetPackageByVersion(ctx context.Context, problemID uuid.UUID, version int32) (problemsmodel.ProblemPackage, error)
 }
 
 type ProblemsRepo interface {
-	GetProblemById(ctx context.Context, id uuid.UUID) (problemsmodel.Problem, error)
-
-	WorkspaceRepo
+	GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error)
 }
 
-// WorkspaceRepo stores only the location of the canonical GFMT package and its
-// searchable catalog fields. CommitWorkspace atomically checks the old hash,
-// switches the package reference and updates the catalog.
-type WorkspaceRepo interface {
-	GetWorkspaceHash(ctx context.Context, id uuid.UUID) (string, error)
-	CommitWorkspace(ctx context.Context, id uuid.UUID, previousHash, hash string, metadata *problemsmodel.WorkspaceMetadata) error
+type ProblemPermissions interface {
+	HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error)
 }

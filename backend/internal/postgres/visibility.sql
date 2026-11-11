@@ -8,7 +8,7 @@ WITH actor AS (
     AND u.role IN ('user', 'admin')
     AND (u.expires_at IS NULL OR u.expires_at > sqlc.arg('now')::timestamptz)
 ), visible AS (
-  SELECT p.*, o.login AS org_login, o.name AS org_name FROM problems p JOIN organizations o ON o.id = p.organization_id
+  SELECT p.*, o.login AS org_login, o.name AS org_name FROM problem_catalog p JOIN organizations o ON o.id = p.organization_id
   WHERE NOT EXISTS (SELECT 1 FROM organization_members invalid WHERE invalid.organization_id = p.organization_id AND invalid.user_id = sqlc.narg('viewer_id')::uuid AND invalid.role::text NOT IN ('member', 'admin', 'owner'))
     AND NOT EXISTS (SELECT 1 FROM problem_members invalid WHERE invalid.problem_id = p.id AND invalid.user_id = sqlc.narg('viewer_id')::uuid AND invalid.role::text NOT IN ('viewer', 'moderator', 'owner'))
     AND NOT EXISTS (SELECT 1 FROM problem_teams link JOIN team_members tm ON tm.team_id = link.team_id WHERE link.problem_id = p.id AND tm.user_id = sqlc.narg('viewer_id')::uuid AND (tm.role::text NOT IN ('member', 'maintainer') OR link.permission::text NOT IN ('read', 'write', 'admin')))

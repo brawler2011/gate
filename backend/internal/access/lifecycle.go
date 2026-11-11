@@ -110,7 +110,6 @@ func RequireAttachProblem(in m.PolicyInput, contest m.ContestContext, problem m.
 
 type PackageContext struct {
 	ID, ProblemID uuid.UUID
-	Status        string
 }
 
 // GetContestPermissions retains the legacy transport shape until the DTO PR.
@@ -188,7 +187,7 @@ func AuthorizeContestProblem(ctx context.Context, p RelationshipPermissions, con
 }
 
 func RequireReadyPackage(problem uuid.UUID, pack PackageContext) error {
-	if pack.ID == uuid.Nil || pack.ProblemID != problem || pack.Status != "ready" {
+	if pack.ID == uuid.Nil || pack.ProblemID != problem {
 		return pkg.ErrBadInput
 	}
 	return nil

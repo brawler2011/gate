@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"io"
 	"log"
 	"log/slog"
@@ -36,6 +37,7 @@ import (
 	handlers "github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/email"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/brawler2011/gate/backend/tests/mocks"
 	"github.com/google/uuid"
@@ -93,6 +95,8 @@ type IntegrationTestSuite struct {
 	teamsRepo         *pgstore.TeamsRepo
 	problemsRepo      *pgstore.ProblemsRepo
 	storage           storage.Storage
+	objectStore       *storage.S3Storage
+	problemDrafts     *pgstore.ProblemDraftsRepo
 	rateRedis         *miniredis.Miniredis
 	limiter           *ratelimit.Limiter
 }
@@ -191,7 +195,6 @@ func (s *IntegrationTestSuite) initApp() {
 	tempStoragePath := s.T().TempDir()
 	testStorage := storage.NewLocalStorage(tempStoragePath)
 	s.storage = testStorage
-	workspaceStorage := problems.NewWorkspaceStorage(testStorage, "integration-workshop", problems.NewWorkspaceCatalog(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool)))
 
 	authRepo := pgstore.NewAuthRepo(s.dbPool)
 	emailService := &email.LogEmailService{}
@@ -201,8 +204,15 @@ func (s *IntegrationTestSuite) initApp() {
 	authUC := identity.NewAuthUseCase(s.usersRepo, authRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService, s.limiter)
 	packagesRepo := pgstore.NewPackagesRepo(s.dbPool)
 	permissionsUC := access.NewMetadataPermissions(access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo), pgstore.NewPolicyFactsRepo(s.dbPool))
-	publishUC := problems.NewProblemPublishUseCase(s.problemsRepo, packagesRepo, workspaceStorage, testStorage, "packages", pgstore.NewProblemTransactions(s.dbPool), permissionsUC)
-	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(s.dbPool), publishUC, s.organizationsRepo, permissionsUC)
+	quotas := problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 100, Subtasks: 100}
+	problemDrafts := pgstore.NewProblemDraftsRepo(s.dbPool, quotas, time.Minute)
+	// Problem objects live in a real S3-compatible store, as in production.
+	objectStore := newSeaweedBackedS3Storage(s.T())
+	s.objectStore, s.problemDrafts = objectStore, problemDrafts
+	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: objectsBucket, TempDir: diskTempDir(s.T()), MaxArchiveBytes: 1 << 30, MaxEntries: 1000}
+	draftUC := &problems.DraftUseCase{DraftQuotas: quotas, Organizations: s.organizationsRepo, Templates: packagesRepo, PackageContent: packageContent, Repo: problemDrafts, Problems: s.problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: objectsBucket, TempDir: diskTempDir(s.T()), UploadTTL: time.Minute, ObjectBytes: 32 << 20, BuildOptions: testBuildOptions(s.T())}
+	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool), s.organizationsRepo, permissionsUC, draftUC, packagesRepo, packageContent)
+	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Permissions: permissionsUC}
 	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissionsUC)
 	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, s.contestsRepo, s.problemsRepo, pgstore.NewSubmissionTransactions(s.dbPool), permissionsUC)
 	notificationsRepo := pgstore.NewNotificationsRepo(s.dbPool)
@@ -212,11 +222,8 @@ func (s *IntegrationTestSuite) initApp() {
 	organizationsUC := organizations.NewOrganizationsUseCase(s.organizationsRepo, s.usersRepo, permissionsUC, pgstore.NewOrganizationTransactions(s.dbPool), notificationsUC)
 	teamsUC := organizations.NewTeamsUseCase(s.teamsRepo, permissionsUC, pgstore.NewTeamTransactions(s.dbPool), permissionsUC)
 	blogsUC := blogs.NewBlogsUseCase(pgstore.NewBlogTransactions(s.dbPool), nil, "")
-	workshopUC := problems.NewWorkshopUseCase(workspaceStorage, nil, permissionsUC)
 
 	avatarsUC := identity.NewAvatarsUseCase(s.usersRepo, pgstore.NewIdentityTransactions(s.dbPool), testStorage, "avatars")
-
-	importUC := problems.NewProblemImportUseCase(s.problemsRepo, workspaceStorage, pgstore.NewProblemTransactions(s.dbPool), permissionsUC)
 
 	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(s.dbPool), pgstore.NewDraftsRepo(s.dbPool), permissionsUC)
 
@@ -225,7 +232,7 @@ func (s *IntegrationTestSuite) initApp() {
 	clarificationsRepo := pgstore.NewClarificationsRepo(s.dbPool)
 	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(s.dbPool))
 	communicationReader := contests.NewCommunicationReader(announcementsRepo, clarificationsRepo, permissionsUC)
-	contestDetails := contests.NewDetailsReader(s.contestsRepo, problems.NewStatementReader(workspaceStorage, packagesRepo, publishUC), permissionsUC, nil, s.usersRepo)
+	contestDetails := contests.NewDetailsReader(s.contestsRepo, packageContent, permissionsUC, nil, s.usersRepo)
 
 	// Handler
 	coreServer := handlers.NewCoreServer(
@@ -253,11 +260,9 @@ func (s *IntegrationTestSuite) initApp() {
 		},
 		coremodules.Problems{
 			ProblemsUC:     problemsUC,
-			ProblemsReader: problems.NewReader(s.problemsRepo, permissionsUC, s.organizationsRepo, workshopUC),
-			WorkshopUC:     workshopUC,
-			ImportUC:       importUC,
-			PublishUC:      publishUC,
-			PackagesReader: publishUC,
+			ProblemsReader: problems.NewReader(s.problemsRepo, permissionsUC, s.organizationsRepo, problemDrafts),
+			ProblemDraftUC: draftUC,
+			PackagesReader: packagesUC,
 		},
 		coremodules.Submissions{SubmissionsUC: submissionsUC},
 		coremodules.Notifications{
@@ -272,6 +277,9 @@ func (s *IntegrationTestSuite) initApp() {
 		false,
 		access.NewCapabilities(pgstore.NewPolicyFactsRepo(s.dbPool)),
 	)
+	langs, err := sandbox.LoadConfig("../../../judge/langs.toml")
+	s.Require().NoError(err)
+	coreServer.WithLanguages(langs.Langs)
 
 	// Server setup
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))

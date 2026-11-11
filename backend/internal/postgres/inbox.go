@@ -47,4 +47,3 @@ func (i *Inbox) PruneReceipts(ctx context.Context, cutoff time.Time) (int64, err
 	}
 	return rows, nil
 }
-
