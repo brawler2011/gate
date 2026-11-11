@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package postgres
+package postgres_test
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
@@ -32,7 +33,7 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
@@ -53,11 +54,11 @@ func getSharedTestPool(t *testing.T) *pgxpool.Pool {
 		}
 
 		if dsn == "" {
-			container, err := postgres.Run(ctx,
+			container, err := tcpostgres.Run(ctx,
 				"postgres:18-alpine",
-				postgres.WithDatabase("gate_adapters_test"),
-				postgres.WithUsername("postgres"),
-				postgres.WithPassword("postgres"),
+				tcpostgres.WithDatabase("gate_adapters_test"),
+				tcpostgres.WithUsername("postgres"),
+				tcpostgres.WithPassword("postgres"),
 				testcontainers.WithWaitStrategy(
 					wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(15*time.Second),
 				),
@@ -75,7 +76,7 @@ func getSharedTestPool(t *testing.T) *pgxpool.Pool {
 
 		_, b, _, _ := runtime.Caller(0)
 		basepath := filepath.Dir(b)
-		migrationsPath := filepath.Join(basepath, "../../migrations")
+		migrationsPath := filepath.Join(basepath, "../../../migrations")
 
 		db, err := sql.Open("pgx", dsn)
 		if err != nil {
@@ -125,7 +126,7 @@ func helperCreatePackage(t *testing.T, ctx context.Context, pool *pgxpool.Pool, 
 
 func TestUsersRepo_Integration(t *testing.T) {
 	pool := getSharedTestPool(t)
-	repo := NewUsersRepo(pool)
+	repo := postgres.NewUsersRepo(pool)
 	ctx := context.Background()
 
 	suffix := strings.ReplaceAll(uuid.NewString()[:8], "-", "")
@@ -206,7 +207,7 @@ func TestUsersRepo_Integration(t *testing.T) {
 
 func TestProblemsRepo_Integration(t *testing.T) {
 	pool := getSharedTestPool(t)
-	repo := NewProblemsRepo(pool)
+	repo := postgres.NewProblemsRepo(pool)
 	ctx := context.Background()
 
 	suffix := strings.ReplaceAll(uuid.NewString()[:8], "-", "")
@@ -276,7 +277,7 @@ func TestProblemsRepo_Integration(t *testing.T) {
 
 func TestContestsRepo_Integration(t *testing.T) {
 	pool := getSharedTestPool(t)
-	repo := NewContestsRepo(pool)
+	repo := postgres.NewContestsRepo(pool)
 	ctx := context.Background()
 
 	suffix := strings.ReplaceAll(uuid.NewString()[:8], "-", "")
@@ -382,7 +383,7 @@ func TestContestsRepo_Integration(t *testing.T) {
 
 func TestSubmissionsRepo_Integration(t *testing.T) {
 	pool := getSharedTestPool(t)
-	repo := NewSubmissionsRepo(pool)
+	repo := postgres.NewSubmissionsRepo(pool)
 	ctx := context.Background()
 
 	suffix := strings.ReplaceAll(uuid.NewString()[:8], "-", "")
@@ -487,7 +488,7 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 
 func TestBlogsRepo_Integration(t *testing.T) {
 	pool := getSharedTestPool(t)
-	repo := NewBlogsRepo(pool)
+	repo := postgres.NewBlogsRepo(pool)
 	ctx := context.Background()
 
 	suffix := strings.ReplaceAll(uuid.NewString()[:8], "-", "")

@@ -1,6 +1,6 @@
 //go:build integration
 
-package postgres
+package postgres_test
 
 import (
 	"context"
@@ -18,7 +18,7 @@ func TestTeamOrganizationNameTrigramMigration(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, tx.Rollback(ctx)) }()
 
-	migration, err := os.ReadFile("../../migrations/20261107120000_team_organization_name_trgm.sql")
+	migration, err := os.ReadFile("../../../migrations/20261107120000_team_organization_name_trgm.sql")
 	require.NoError(t, err)
 	up, down, ok := strings.Cut(string(migration), "-- +goose Down")
 	require.True(t, ok)

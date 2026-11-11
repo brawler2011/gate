@@ -1,6 +1,6 @@
 //go:build integration
 
-package postgres
+package postgres_test
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
 	"github.com/brawler2011/gate/backend/internal/access"
@@ -18,7 +19,6 @@ import (
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	"github.com/brawler2011/gate/backend/internal/judging"
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
-	"github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	"github.com/brawler2011/gate/backend/internal/submissions"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -35,6 +35,7 @@ type concurrencyFixture struct {
 	users            [3]uuid.UUID
 	start            time.Time
 	permissions      *access.PermissionsUseCase
+	blockers         blockerPool
 }
 
 func newConcurrencyFixture(t *testing.T) *concurrencyFixture {
@@ -53,7 +54,7 @@ func newConcurrencyFixture(t *testing.T) *concurrencyFixture {
 		require.NoError(t, err)
 	}
 	end := f.start.Add(3 * time.Hour)
-	repo := NewContestsRepo(f.pool)
+	repo := postgres.NewContestsRepo(f.pool)
 	require.NoError(t, repo.CreateContest(ctx, &contestsmodel.CreateContestParams{ID: f.contest, OrganizationID: org, OwnerID: &f.users[0], Title: "Concurrent", Login: uuid.NewString(), Visibility: contestsmodel.ContestVisibilityPublic, StartTime: &f.start, EndTime: &end}))
 	for _, user := range f.users[1:] {
 		require.NoError(t, repo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: f.contest, UserId: user, Role: contestsmodel.ContestRoleParticipant}))
@@ -63,7 +64,8 @@ func newConcurrencyFixture(t *testing.T) *concurrencyFixture {
 	pack, err := dbfixtures.InsertPackage(ctx, f.pool, f.problem, org, time.Time{})
 	require.NoError(t, err)
 	require.NoError(t, repo.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{ContestId: f.contest, ProblemId: f.problem, PackageId: pack}))
-	f.permissions = access.NewPermissionsUseCase(repo, NewUsersRepo(f.pool), NewProblemsRepo(f.pool), NewTeamsRepo(f.pool), NewOrganizationsRepo(f.pool))
+	f.permissions = access.NewPermissionsUseCase(repo, postgres.NewUsersRepo(f.pool), postgres.NewProblemsRepo(f.pool), postgres.NewTeamsRepo(f.pool), postgres.NewOrganizationsRepo(f.pool))
+	f.blockers = newBlockerPool(t)
 	return f
 }
 
@@ -75,18 +77,18 @@ func (f *concurrencyFixture) userContext(i int) context.Context {
 	return accessmodel.WithUser(f.ctx, accessmodel.User{Id: f.users[i], Role: role})
 }
 func (f *concurrencyFixture) submissionUC(tx submissions.SubmissionTransactions) *submissions.SubmissionsUseCase {
-	return submissions.NewSubmissionsUseCase(NewSubmissionsRepo(f.pool), NewContestsRepo(f.pool), NewProblemsRepo(f.pool), tx, f.permissions)
+	return submissions.NewSubmissionsUseCase(postgres.NewSubmissionsRepo(f.pool), postgres.NewContestsRepo(f.pool), postgres.NewProblemsRepo(f.pool), tx, f.permissions)
 }
 func (f *concurrencyFixture) create(tx submissions.SubmissionTransactions, user int) (uuid.UUID, error) {
 	return f.submissionUC(tx).CreateSubmission(f.userContext(user), &submissionsmodel.SubmissionCreation{ContestId: f.contest, ProblemId: f.problem, UserId: f.users[user], Solution: "print(1)", Language: submissionsmodel.Python})
 }
 func (f *concurrencyFixture) job(t *testing.T, user, minute int) judgingmodel.Job {
 	t.Helper()
-	id, err := f.create(NewSubmissionTransactions(f.pool), user)
+	id, err := f.create(postgres.NewSubmissionTransactions(f.pool), user)
 	require.NoError(t, err)
 	_, err = f.pool.Exec(f.ctx, "UPDATE submissions SET created_at=$2 WHERE id=$1", id, f.start.Add(time.Duration(minute)*time.Minute))
 	require.NoError(t, err)
-	jobs := NewJudgeJobs(f.pool)
+	jobs := postgres.NewJudgeJobs(f.pool)
 	var job judgingmodel.Job
 	require.NoError(t, f.pool.QueryRow(f.ctx, "SELECT id,generation FROM judge_jobs WHERE submission_id=$1", id).Scan(&job.ID, &job.Generation))
 	job.SubmissionID = id
@@ -117,18 +119,41 @@ func applyConcurrentVerdict(ctx context.Context, tx judging.JudgeTxStore, job ju
 	return tx.Record(ctx, eventdata.Event{AggregateID: sub.ID, Type: eventdata.OutboxEventSubmissionCompleted, Payload: sub.CompletedEvent(change.PreviousState)})
 }
 func (f *concurrencyFixture) complete(job judgingmodel.Job, state submissionsmodel.State) error {
-	return NewJudgeTransactions(f.pool).Within(f.ctx, func(tx judging.JudgeTxStore) error { return applyConcurrentVerdict(f.ctx, tx, job, state) })
+	return postgres.NewJudgeTransactions(f.pool).Within(f.ctx, func(tx judging.JudgeTxStore) error { return applyConcurrentVerdict(f.ctx, tx, job, state) })
 }
 
-type fixedSubmissionTransaction struct{ submissions.SubmissionTxStore }
+// barrierSubmissionTransactions runs the production command transaction and
+// holds it open at barrier once the command's work is done.
+type barrierSubmissionTransactions struct {
+	submissions.SubmissionTransactions
+	barrier func() error
+}
 
-func (tx fixedSubmissionTransaction) Within(_ context.Context, fn func(submissions.SubmissionTxStore) error) error {
-	return fn(tx.SubmissionTxStore)
+func (tx barrierSubmissionTransactions) Within(ctx context.Context, fn func(submissions.SubmissionTxStore) error) error {
+	return tx.SubmissionTransactions.Within(ctx, func(store submissions.SubmissionTxStore) error {
+		if err := fn(store); err != nil {
+			return err
+		}
+		return tx.barrier()
+	})
+}
+
+// holdTuple keeps the scoring tuple of a user locked by an open transaction on blockers.
+func (f *concurrencyFixture) holdTuple(t *testing.T, blockers blockerPool, user int) (release func(commit bool) error) {
+	t.Helper()
+	return holdTransaction(t, func(barrier func() error) error {
+		return postgres.NewSubmissionTransactions(blockers.Pool).Within(f.ctx, func(tx submissions.SubmissionTxStore) error {
+			if err := tx.LockSubmissionTuple(f.ctx, f.contest, f.users[user], f.problem); err != nil {
+				return err
+			}
+			return barrier()
+		})
+	})
 }
 
 func beginConcurrencyTx(t *testing.T, f *concurrencyFixture) pgx.Tx {
 	t.Helper()
-	tx, err := f.pool.Begin(f.ctx)
+	tx, err := f.blockers.Begin(f.ctx)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
 	return tx
@@ -147,46 +172,39 @@ func asyncConcurrent(fn func() error) <-chan error {
 	go func() { result <- fn() }()
 	return result
 }
-func waitForTupleWaiters(t *testing.T, f *concurrencyFixture, count int) {
-	t.Helper()
-	waitForAdvisoryWaiters(t, f, submissionTupleKey(f.contest, f.users[1], f.problem), count)
-}
-
-func waitForAdvisoryWaiters(t *testing.T, f *concurrencyFixture, key int64, count int) {
-	t.Helper()
-	require.Eventually(t, func() bool {
-		var n int
-		err := f.pool.QueryRow(f.ctx, `SELECT count(*) FROM pg_locks WHERE locktype='advisory' AND NOT granted AND objid=$1::oid AND classid=$2::oid`, uint32(uint64(key)), uint32(uint64(key)>>32)).Scan(&n)
-		return err == nil && n >= count
-	}, 3*time.Second, 5*time.Millisecond)
-}
 
 func TestIndependentSubmissionTransactions(t *testing.T) {
 	for _, held := range []string{"creation", "completion", "administrative edit"} {
 		t.Run(held, func(t *testing.T) {
 			f := newConcurrencyFixture(t)
 			first, other := f.job(t, 1, 10), f.job(t, 2, 20)
-			tx := beginConcurrencyTx(t, f)
-			q := sqlc.New(tx)
 			switch held {
 			case "creation":
-				bound := NewSubmissionTransactions(f.pool).(guardedTransactions[submissions.SubmissionTxStore]).transactions.bind(q)
-				_, err := f.create(fixedSubmissionTransaction{bound}, 1)
-				require.NoError(t, err)
+				holdTransaction(t, func(barrier func() error) error {
+					_, err := f.create(barrierSubmissionTransactions{postgres.NewSubmissionTransactions(f.blockers.Pool), barrier}, 1)
+					return err
+				})
 			case "completion":
-				bound := NewJudgeTransactions(f.pool).(transactions[judging.JudgeTxStore]).bind(q)
-				require.NoError(t, applyConcurrentVerdict(f.ctx, bound, first, submissionsmodel.Accepted))
+				holdTransaction(t, func(barrier func() error) error {
+					return postgres.NewJudgeTransactions(f.blockers.Pool).Within(f.ctx, func(tx judging.JudgeTxStore) error {
+						if err := applyConcurrentVerdict(f.ctx, tx, first, submissionsmodel.Accepted); err != nil {
+							return err
+						}
+						return barrier()
+					})
+				})
 			default:
+				tx := beginConcurrencyTx(t, f)
 				_, err := tx.Exec(f.ctx, "SELECT id FROM contests WHERE id=$1 FOR NO KEY UPDATE", f.contest)
 				require.NoError(t, err)
 			}
-			awaitConcurrent(t, asyncConcurrent(func() error { _, err := f.create(NewSubmissionTransactions(f.pool), 2); return err }))
+			awaitConcurrent(t, asyncConcurrent(func() error { _, err := f.create(postgres.NewSubmissionTransactions(f.pool), 2); return err }))
 			awaitConcurrent(t, asyncConcurrent(func() error { return f.complete(other, submissionsmodel.Accepted) }))
-			sub, err := NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, other.SubmissionID)
+			sub, err := postgres.NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, other.SubmissionID)
 			require.NoError(t, err)
 			require.Equal(t, submissionsmodel.Accepted, sub.State)
 			require.EqualValues(t, 2, sub.Revision)
-			result, err := NewContestsRepo(f.pool).GetContestProblemResult(f.ctx, f.contest, f.users[2], f.problem)
+			result, err := postgres.NewContestsRepo(f.pool).GetContestProblemResult(f.ctx, f.contest, f.users[2], f.problem)
 			require.NoError(t, err)
 			require.True(t, result.Solved)
 			var events int
@@ -199,25 +217,24 @@ func TestIndependentSubmissionTransactions(t *testing.T) {
 func TestConcurrentTupleCompletions(t *testing.T) {
 	f := newConcurrencyFixture(t)
 	failed, early, late := f.job(t, 1, 5), f.job(t, 1, 10), f.job(t, 1, 20)
-	tx := beginConcurrencyTx(t, f)
-	require.NoError(t, (&ContestsRepo{queries: sqlc.New(tx)}).LockSubmissionTuple(f.ctx, f.contest, f.users[1], f.problem))
+	release := f.holdTuple(t, f.blockers, 1)
 	results := []<-chan error{
 		asyncConcurrent(func() error { return f.complete(late, submissionsmodel.Accepted) }),
 		asyncConcurrent(func() error { return f.complete(failed, submissionsmodel.GotWA) }),
 		asyncConcurrent(func() error { return f.complete(early, submissionsmodel.Accepted) }),
 	}
-	waitForTupleWaiters(t, f, 3)
-	require.NoError(t, tx.Commit(f.ctx))
+	f.blockers.waitBlocked(t, f.ctx, 3)
+	require.NoError(t, release(true))
 	for _, result := range results {
 		awaitConcurrent(t, result)
 	}
-	standing, err := NewContestsRepo(f.pool).GetContestProblemResult(f.ctx, f.contest, f.users[1], f.problem)
+	standing, err := postgres.NewContestsRepo(f.pool).GetContestProblemResult(f.ctx, f.contest, f.users[1], f.problem)
 	require.NoError(t, err)
 	require.True(t, standing.Solved)
 	require.EqualValues(t, 1, standing.FailedAttempts)
 	require.WithinDuration(t, f.start.Add(10*time.Minute), *standing.FirstACTime, time.Millisecond)
 	require.EqualValues(t, 10, *standing.TimeMinutes)
-	scoreboard, err := contests.NewContestsUseCase(NewContestsRepo(f.pool), nil, nil, nil).ProjectScoreboard(f.ctx, f.contest, true)
+	scoreboard, err := contests.NewContestsUseCase(postgres.NewContestsRepo(f.pool), nil, nil, nil).ProjectScoreboard(f.ctx, f.contest, true)
 	require.NoError(t, err)
 	require.EqualValues(t, 30, scoreboard.Items[0].TotalPenalty)
 	var events int
@@ -230,10 +247,9 @@ func TestCompletionRacesAdministrativeMutation(t *testing.T) {
 		t.Run(mutation, func(t *testing.T) {
 			f := newConcurrencyFixture(t)
 			job := f.job(t, 1, 10)
-			tx := beginConcurrencyTx(t, f)
-			require.NoError(t, (&ContestsRepo{queries: sqlc.New(tx)}).LockSubmissionTuple(f.ctx, f.contest, f.users[1], f.problem))
+			release := f.holdTuple(t, f.blockers, 1)
 			completion := asyncConcurrent(func() error { return f.complete(job, submissionsmodel.Accepted) })
-			uc := f.submissionUC(NewSubmissionTransactions(f.pool))
+			uc := f.submissionUC(postgres.NewSubmissionTransactions(f.pool))
 			update := asyncConcurrent(func() error {
 				switch mutation {
 				case "rejudge":
@@ -242,16 +258,16 @@ func TestCompletionRacesAdministrativeMutation(t *testing.T) {
 				case "block submission":
 					return uc.BlockSubmission(f.userContext(0), f.contest, job.SubmissionID, nil)
 				default:
-					return contests.NewContestsUseCase(NewContestsRepo(f.pool), nil, NewContestCommandTransactions(f.pool), f.permissions).BlockProblemForUser(f.userContext(0), f.contest, f.users[1], f.problem, nil)
+					return contests.NewContestsUseCase(postgres.NewContestsRepo(f.pool), nil, postgres.NewContestCommandTransactions(f.pool), f.permissions).BlockProblemForUser(f.userContext(0), f.contest, f.users[1], f.problem, nil)
 				}
 			})
-			waitForTupleWaiters(t, f, 2)
-			require.NoError(t, tx.Commit(f.ctx))
+			f.blockers.waitBlocked(t, f.ctx, 2)
+			require.NoError(t, release(true))
 			awaitConcurrent(t, completion)
 			awaitConcurrent(t, update)
 			// A late result from the old generation has no effect regardless of race order.
 			require.NoError(t, f.complete(job, submissionsmodel.Accepted))
-			sub, err := NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, job.SubmissionID)
+			sub, err := postgres.NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, job.SubmissionID)
 			require.NoError(t, err)
 			expected := submissionsmodel.Disqualified
 			if mutation == "rejudge" {
@@ -259,7 +275,7 @@ func TestCompletionRacesAdministrativeMutation(t *testing.T) {
 			}
 			require.Equal(t, expected, sub.State)
 			require.EqualValues(t, 2, sub.Generation)
-			standing, err := NewContestsRepo(f.pool).GetContestProblemResult(f.ctx, f.contest, f.users[1], f.problem)
+			standing, err := postgres.NewContestsRepo(f.pool).GetContestProblemResult(f.ctx, f.contest, f.users[1], f.problem)
 			require.NoError(t, err)
 			require.False(t, standing.Solved)
 		})
@@ -268,18 +284,21 @@ func TestCompletionRacesAdministrativeMutation(t *testing.T) {
 
 func TestCreationRacesProblemBlock(t *testing.T) {
 	f := newConcurrencyFixture(t)
-	tx := beginConcurrencyTx(t, f)
-	require.NoError(t, (&ContestsRepo{queries: sqlc.New(tx)}).LockSubmissionTuple(f.ctx, f.contest, f.users[1], f.problem))
+	release := f.holdTuple(t, f.blockers, 1)
 	var id uuid.UUID
-	create := asyncConcurrent(func() error { var err error; id, err = f.create(NewSubmissionTransactions(f.pool), 1); return err })
-	block := asyncConcurrent(func() error {
-		return contests.NewContestsUseCase(NewContestsRepo(f.pool), nil, NewContestCommandTransactions(f.pool), f.permissions).BlockProblemForUser(f.userContext(0), f.contest, f.users[1], f.problem, nil)
+	create := asyncConcurrent(func() error {
+		var err error
+		id, err = f.create(postgres.NewSubmissionTransactions(f.pool), 1)
+		return err
 	})
-	waitForTupleWaiters(t, f, 2)
-	require.NoError(t, tx.Commit(f.ctx))
+	block := asyncConcurrent(func() error {
+		return contests.NewContestsUseCase(postgres.NewContestsRepo(f.pool), nil, postgres.NewContestCommandTransactions(f.pool), f.permissions).BlockProblemForUser(f.userContext(0), f.contest, f.users[1], f.problem, nil)
+	})
+	f.blockers.waitBlocked(t, f.ctx, 2)
+	require.NoError(t, release(true))
 	awaitConcurrent(t, create)
 	awaitConcurrent(t, block)
-	sub, err := NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, id)
+	sub, err := postgres.NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, id)
 	require.NoError(t, err)
 	require.Equal(t, submissionsmodel.Disqualified, sub.State)
 }
@@ -287,14 +306,15 @@ func TestCreationRacesProblemBlock(t *testing.T) {
 func TestBulkRejudgeLockingAndRollback(t *testing.T) {
 	f := newConcurrencyFixture(t)
 	jobs := []judgingmodel.Job{f.job(t, 1, 10), f.job(t, 2, 20)}
-	blocker := beginConcurrencyTx(t, f)
-	key := submissionTupleKey(f.contest, f.users[1], f.problem)
-	otherKey := submissionTupleKey(f.contest, f.users[2], f.problem)
-	if otherKey < key {
-		key = otherKey
+	// Bulk commands lock all candidate tuples in key order. Hold both tuples and
+	// find the first one by which holder the commands wait for: while waiting
+	// there, they hold no tuple lock, so the other tuple can be released.
+	blockers := map[int]blockerPool{1: newBlockerPool(t), 2: newBlockerPool(t)}
+	releases := map[int]func(bool) error{}
+	for user, pool := range blockers {
+		releases[user] = f.holdTuple(t, pool, user)
 	}
-	require.NoError(t, sqlc.New(blocker).AdvisoryTransactionLock(f.ctx, key))
-	uc := f.submissionUC(NewSubmissionTransactions(f.pool))
+	uc := f.submissionUC(postgres.NewSubmissionTransactions(f.pool))
 	results := []<-chan error{}
 	for range 2 {
 		results = append(results, asyncConcurrent(func() error {
@@ -302,29 +322,36 @@ func TestBulkRejudgeLockingAndRollback(t *testing.T) {
 			return err
 		}))
 	}
-	waitForAdvisoryWaiters(t, f, key, 2)
+	first := 0
+	require.Eventually(t, func() bool {
+		for user, pool := range blockers {
+			if n, err := pool.blocked(f.ctx); err == nil && n >= 2 {
+				first = user
+				return true
+			}
+		}
+		return false
+	}, 3*time.Second, 5*time.Millisecond)
 	// Both commands have captured their candidates before waiting. A later insert
 	// into another tuple proceeds and must remain outside those bulk commands.
-	newUser := 2
-	if key == otherKey {
-		newUser = 1
-	}
+	newUser := 3 - first
+	require.NoError(t, releases[newUser](true))
 	var created uuid.UUID
 	awaitConcurrent(t, asyncConcurrent(func() error {
 		var err error
-		created, err = f.create(NewSubmissionTransactions(f.pool), newUser)
+		created, err = f.create(postgres.NewSubmissionTransactions(f.pool), newUser)
 		return err
 	}))
-	require.NoError(t, blocker.Commit(f.ctx))
+	require.NoError(t, releases[first](true))
 	for _, result := range results {
 		awaitConcurrent(t, result)
 	}
-	untouched, err := NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, created)
+	untouched, err := postgres.NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, created)
 	require.NoError(t, err)
 	require.EqualValues(t, 1, untouched.Generation)
 	require.EqualValues(t, 1, untouched.Revision)
 	sentinel := errors.New("rollback bulk rejudge")
-	err = NewSubmissionTransactions(f.pool).Within(f.ctx, func(tx submissions.SubmissionTxStore) error {
+	err = postgres.NewSubmissionTransactions(f.pool).Within(f.ctx, func(tx submissions.SubmissionTxStore) error {
 		changed, err := tx.ResetSubmissionsState(f.ctx, submissionsmodel.RejudgeFilter{ContestID: f.contest})
 		if err != nil {
 			return err
@@ -342,7 +369,7 @@ func TestBulkRejudgeLockingAndRollback(t *testing.T) {
 	})
 	require.ErrorIs(t, err, sentinel)
 	for _, job := range jobs {
-		sub, err := NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, job.SubmissionID)
+		sub, err := postgres.NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, job.SubmissionID)
 		require.NoError(t, err)
 		require.EqualValues(t, 3, sub.Generation)
 		require.EqualValues(t, 3, sub.Revision)
@@ -358,9 +385,15 @@ func TestConcurrentDraftLimit(t *testing.T) {
 	f := newConcurrencyFixture(t)
 	_, err := f.pool.Exec(f.ctx, `INSERT INTO contest_drafts(contest_id,user_id,code) SELECT $1,$2,'draft' FROM generate_series(1,49)`, f.contest, f.users[1])
 	require.NoError(t, err)
-	tx := beginConcurrencyTx(t, f)
-	require.NoError(t, (&DraftsRepo{queries: sqlc.New(tx)}).LockDraftOwner(f.ctx, f.contest, f.users[1]))
-	uc := contests.NewDraftsUseCase(NewDraftTransactions(f.pool), NewDraftsRepo(f.pool), f.permissions)
+	release := holdTransaction(t, func(barrier func() error) error {
+		return postgres.NewDraftTransactions(f.blockers.Pool).Within(f.ctx, func(tx contests.DraftTxStore) error {
+			if err := tx.LockDraftOwner(f.ctx, f.contest, f.users[1]); err != nil {
+				return err
+			}
+			return barrier()
+		})
+	})
+	uc := contests.NewDraftsUseCase(postgres.NewDraftTransactions(f.pool), postgres.NewDraftsRepo(f.pool), f.permissions)
 	create := func(user int) error {
 		_, err := uc.CreateDraft(f.userContext(user), &contestsmodel.ContestDraftCreation{ContestID: f.contest, UserID: f.users[user], Code: "print(1)"})
 		return err
@@ -370,7 +403,7 @@ func TestConcurrentDraftLimit(t *testing.T) {
 		results[i] = asyncConcurrent(func() error { return create(1) })
 	}
 	awaitConcurrent(t, asyncConcurrent(func() error { return create(2) }))
-	require.NoError(t, tx.Commit(f.ctx))
+	require.NoError(t, release(true))
 	success := 0
 	for _, result := range results {
 		select {
@@ -385,7 +418,7 @@ func TestConcurrentDraftLimit(t *testing.T) {
 		}
 	}
 	require.Equal(t, 1, success)
-	count, err := NewDraftsRepo(f.pool).GetDraftsCount(f.ctx, f.contest, f.users[1])
+	count, err := postgres.NewDraftsRepo(f.pool).GetDraftsCount(f.ctx, f.contest, f.users[1])
 	require.NoError(t, err)
 	require.EqualValues(t, 50, count)
 }
@@ -395,30 +428,25 @@ func TestCompletionChecksDeadlineAfterLockWait(t *testing.T) {
 	job := f.job(t, 1, 10)
 	_, err := f.pool.Exec(f.ctx, "UPDATE judge_jobs SET deadline_at=clock_timestamp()+interval '200 milliseconds' WHERE id=$1", job.ID)
 	require.NoError(t, err)
-	tx := beginConcurrencyTx(t, f)
-	require.NoError(t, (&ContestsRepo{queries: sqlc.New(tx)}).LockSubmissionTuple(f.ctx, f.contest, f.users[1], f.problem))
+	release := f.holdTuple(t, f.blockers, 1)
 	result := asyncConcurrent(func() error { return f.complete(job, submissionsmodel.Accepted) })
-	waitForTupleWaiters(t, f, 1)
+	f.blockers.waitBlocked(t, f.ctx, 1)
 	require.Eventually(t, func() bool {
 		var expired bool
 		err := f.pool.QueryRow(f.ctx, "SELECT deadline_at<clock_timestamp() FROM judge_jobs WHERE id=$1", job.ID).Scan(&expired)
 		return err == nil && expired
 	}, time.Second, 5*time.Millisecond)
-	require.NoError(t, tx.Commit(f.ctx))
+	require.NoError(t, release(true))
 	select {
 	case err := <-result:
 		require.ErrorIs(t, err, judging.ErrLeaseLost)
 	case <-time.After(5 * time.Second):
 		t.Fatal("operation blocked behind an independent transaction")
 	}
-	sub, err := NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, job.SubmissionID)
+	sub, err := postgres.NewSubmissionsRepo(f.pool).GetSubmission(f.ctx, job.SubmissionID)
 	require.NoError(t, err)
 	require.Equal(t, submissionsmodel.Saved, sub.State)
 	var events int
 	require.NoError(t, f.pool.QueryRow(f.ctx, "SELECT count(*) FROM outbox_events WHERE aggregate_id=$1 AND event_type='submissions.completed'", job.SubmissionID).Scan(&events))
 	require.Zero(t, events, fmt.Sprint(sub))
-}
-
-func (t fixedSubmissionTransaction) Prepare(ctx context.Context) (context.Context, error) {
-	return ctx, nil
 }
