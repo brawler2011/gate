@@ -130,11 +130,17 @@ jobs:
       - name: Check for an existing image
         id: existing
         if: env.PUSH_IMAGES == 'true'
+        # Only a single image manifest counts: tags pushed with attestations are
+        # indexes with another digest per build, so they are rebuilt and replaced.
         run: |
-          if docker buildx imagetools inspect "$IMAGE" > /dev/null 2>&1; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-            echo "$IMAGE already exists; skipping the build."
-          fi
+          media="$(docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' 2> /dev/null | jq -r .mediaType || true)"
+          case "$media" in
+            application/vnd.oci.image.manifest.v1+json|application/vnd.docker.distribution.manifest.v2+json)
+              echo "found=true" >> "$GITHUB_OUTPUT"
+              echo "$IMAGE already exists; skipping the build." ;;
+            "") echo "$IMAGE does not exist yet." ;;
+            *) echo "$IMAGE is a $media; rebuilding it as a single manifest." ;;
+          esac
         env:
           IMAGE: ${{ steps.tag.outputs.image }}
 
@@ -181,11 +187,17 @@ jobs:
       - name: Check for an existing image
         id: existing
         if: env.PUSH_IMAGES == 'true'
+        # Only a single image manifest counts: tags pushed with attestations are
+        # indexes with another digest per build, so they are rebuilt and replaced.
         run: |
-          if docker buildx imagetools inspect "$IMAGE" > /dev/null 2>&1; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-            echo "$IMAGE already exists; skipping the build."
-          fi
+          media="$(docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' 2> /dev/null | jq -r .mediaType || true)"
+          case "$media" in
+            application/vnd.oci.image.manifest.v1+json|application/vnd.docker.distribution.manifest.v2+json)
+              echo "found=true" >> "$GITHUB_OUTPUT"
+              echo "$IMAGE already exists; skipping the build." ;;
+            "") echo "$IMAGE does not exist yet." ;;
+            *) echo "$IMAGE is a $media; rebuilding it as a single manifest." ;;
+          esac
         env:
           IMAGE: ${{ steps.tag.outputs.image }}
 
