@@ -16,6 +16,6 @@
 
 {{/* Pod security shared by every pod; appArmorProfile is per environment. */}}
 {{- define "gate.podSecurity" -}}
-appArmorProfile: {type: {{ .Values.appArmorProfile }}}
+appArmorProfile: {{- toYaml .Values.appArmorProfile | nindent 2 }}
 seccompProfile: {type: RuntimeDefault}
 {{- end -}}

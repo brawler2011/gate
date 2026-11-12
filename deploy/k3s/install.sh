@@ -1,6 +1,6 @@
 #!/bin/sh
-# Prepares a server for Gate: swap, k3s with the API closed to the outside, and a
-# kubeconfig for the deploy user. Run as root; safe to run again. Docker and its
+# Prepares a server for Gate: swap, an AppArmor profile for pods, k3s with the API
+# closed to the outside, and a kubeconfig for the deploy user. Run as root; safe to run again. Docker and its
 # containers are left alone: k3s runs its own containerd.
 #
 #   sudo sh install.sh deployer
@@ -55,6 +55,54 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 systemctl enable --now gate-close-k3s-api.service
+
+# containerd's default AppArmor profile denies signals inside containers on kernels
+# that stack the host's label, which hangs PostgreSQL and gosu. Pods use this
+# profile instead (appArmorProfile in deploy/prod). The apparmor service loads it
+# again on boot.
+cat > /etc/apparmor.d/gate-default <<'EOF'
+#include <tunables/global>
+
+# Default profile for Gate's containers, after containerd's own. On kernels that
+# stack the host's label (Ubuntu 26.04), a container process is labelled
+# "gate-default//&unconfined", so peer rules name both forms; containerd's profile
+# names only the first and denies signals inside containers.
+profile gate-default flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  network,
+  capability,
+  file,
+  umount,
+
+  # The host and the runtime stop and signal containers.
+  signal (receive) peer=unconfined,
+  signal (receive) peer=runc,
+  signal (receive) peer=crun,
+  # Processes of a container signal and inspect each other.
+  signal (send,receive) peer=gate-default,
+  signal (send,receive) peer=gate-default//&unconfined,
+  ptrace (trace,read,tracedby,readby) peer=gate-default,
+  ptrace (trace,read,tracedby,readby) peer=gate-default//&unconfined,
+
+  deny @{PROC}/* w,
+  deny @{PROC}/{[^1-9],[^1-9][^0-9],[^1-9s][^0-9y][^0-9s],[^1-9][^0-9][^0-9][^0-9/]*}/** w,
+  deny @{PROC}/sys/[^k]** w,
+  deny @{PROC}/sys/kernel/{?,??,[^s][^h][^m]**} w,
+  deny @{PROC}/sysrq-trigger rwklx,
+  deny @{PROC}/kcore rwklx,
+  deny mount,
+  deny /sys/[^f]*/** wklx,
+  deny /sys/f[^s]*/** wklx,
+  deny /sys/fs/[^c]*/** wklx,
+  deny /sys/fs/c[^g]*/** wklx,
+  deny /sys/fs/cg[^r]*/** wklx,
+  deny /sys/firmware/** rwklx,
+  deny /sys/devices/virtual/powercap/** rwklx,
+  deny /sys/kernel/security/** rwklx,
+}
+EOF
+apparmor_parser -r -W /etc/apparmor.d/gate-default
 
 # Burstable pods may swap in proportion to their memory request. The kubelet has
 # no flag for this; k3s reads drop-in kubelet configs from this directory.
