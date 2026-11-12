@@ -156,6 +156,13 @@ jobs:
           --set imageTag=${{ needs.promote.outputs.tag }}
           --rollback-on-failure --timeout 10m
 
+      # The cluster checks readiness from inside; this catches routing, certificate
+      # and DNS problems that only show from outside.
+      - name: Check the public endpoint
+        run: |
+          host="$(helm --namespace "$NAMESPACE" get values gate -o json | jq -r .ingress.host)"
+          curl -fsS --retry 10 --retry-delay 6 --retry-all-errors "https://$host/health"
+
       - name: Show the release state
         if: always()
         run: |
