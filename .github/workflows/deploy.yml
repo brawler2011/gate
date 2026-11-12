@@ -107,7 +107,7 @@ jobs:
         uses: jdx/mise-action@v4
         with:
           version: "2026.10.25"
-          install_args: helm kubectl
+          install_args: helm kubectl jq
 
       # The API listens only on the server; an SSH tunnel reaches it without opening
       # a port. HostKeyAlias pins the server key whatever form SSH_HOST takes.
@@ -138,16 +138,11 @@ jobs:
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
         run: |
           set -euo pipefail
           kubectl apply -f deploy/k3s/
           kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-          deploy/secrets.sh kubectl -n "$NAMESPACE"
-          # The cluster pulls images long after this job ends, so it needs its own token.
-          kubectl -n "$NAMESPACE" create secret docker-registry ghcr --dry-run=client -o yaml \
-            --docker-server="$REGISTRY" --docker-username=${{ github.repository_owner }} \
-            --docker-password="$GHCR_PULL_TOKEN" | kubectl apply -f -
+          sh deploy/secrets.sh kubectl -n "$NAMESPACE"
 
       - name: Deploy data services
         run: >-

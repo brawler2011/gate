@@ -4,7 +4,7 @@
 # environment. Connection URLs are built here with escaped passwords, so passwords
 # may contain any character. The arguments are the kubectl command to use:
 #
-#   deploy/secrets.sh kubectl --context k3d-gate -n gate
+#   sh deploy/secrets.sh kubectl --context k3d-gate -n gate
 set -eu
 
 escape() { jq -rn --arg value "$1" '$value | @uri'; }

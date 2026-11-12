@@ -1,5 +1,7 @@
 # Production values of deploy/charts/gate-infra, sized for the current server:
-# 1 vCPU, 2 GB RAM plus 2 GB swap, shared with k3s and two small Docker services.
+# 1 vCPU, 2 GB RAM plus 2 GB swap (pods may swap: LimitedSwap), shared with k3s
+# and two small Docker services. Memory limits overcommit RAM on purpose; requests
+# are what must fit.
 # Requests leave room for a rolling update of the gate release.
 postgres:
   storage: 5Gi

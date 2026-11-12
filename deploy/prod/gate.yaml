@@ -1,8 +1,6 @@
 # Production values of deploy/charts/gate; the deploy workflow adds imageTag and
 # backend.config (deploy/prod/config.yaml). Sized for a 1 vCPU / 2 GB server; see
-# gate-infra.yaml.
-imagePullSecrets:
-  - name: ghcr
+# gate-infra.yaml. The images are public, so no pull secret is needed.
 backend:
   resources:
     requests: {cpu: 100m, memory: 128Mi}
