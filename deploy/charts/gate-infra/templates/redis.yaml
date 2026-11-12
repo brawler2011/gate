@@ -22,6 +22,14 @@ spec:
     spec:
       # Services are found by DNS; their env variables (e.g. S3_PORT) would clash with app settings.
       enableServiceLinks: false
+      # The image's own redis user: the server never runs as root, and the entrypoint
+      # needs no gosu to switch users.
+      securityContext:
+        {{- include "gate-infra.podSecurity" . | nindent 8 }}
+        runAsUser: 999
+        runAsGroup: 1000
+        fsGroup: 1000
+        runAsNonRoot: true
       containers:
         - name: redis
           image: {{ .Values.redis.image }}

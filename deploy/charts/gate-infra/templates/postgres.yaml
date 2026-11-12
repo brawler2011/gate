@@ -22,6 +22,14 @@ spec:
     spec:
       # Services are found by DNS; their env variables (e.g. S3_PORT) would clash with app settings.
       enableServiceLinks: false
+      # The image's own postgres user: the server never runs as root, and the entrypoint
+      # needs no gosu to switch users.
+      securityContext:
+        {{- include "gate-infra.podSecurity" . | nindent 8 }}
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+        runAsNonRoot: true
       terminationGracePeriodSeconds: 60
       containers:
         - name: postgres

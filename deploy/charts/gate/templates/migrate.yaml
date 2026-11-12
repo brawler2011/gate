@@ -16,6 +16,8 @@ spec:
     spec:
       # Services are found by DNS; their env variables (e.g. S3_PORT) would clash with app settings.
       enableServiceLinks: false
+      securityContext:
+        {{- include "gate.podSecurity" . | nindent 8 }}
       restartPolicy: Never
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets: {{- toYaml . | nindent 8 }}

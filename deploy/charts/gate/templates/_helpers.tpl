@@ -13,3 +13,9 @@
 - name: NATS_URL
   value: nats://nats:4222
 {{- end -}}
+
+{{/* Pod security shared by every pod; appArmorProfile is per environment. */}}
+{{- define "gate.podSecurity" -}}
+appArmorProfile: {type: {{ .Values.appArmorProfile }}}
+seccompProfile: {type: RuntimeDefault}
+{{- end -}}
