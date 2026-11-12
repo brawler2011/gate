@@ -7,7 +7,8 @@ vars:
     frontend/contracts
     backend/internal/postgres/sqlc
     backend/tests/mocks
-  DOCKER_COMPOSE: docker compose --env-file deploy/local/.env -f deploy/local/docker-compose.yml
+  # JUDGE_IMAGE names the go-judge image built from the current judge/ sources.
+  DOCKER_COMPOSE: JUDGE_IMAGE="$(go run ./tools/judgeimage)" docker compose --env-file deploy/local/.env -f deploy/local/docker-compose.yml
 
 tasks:
   default:
@@ -88,7 +89,17 @@ tasks:
     cmds:
       - |
         ref="$(go run ./tools/judgeimage)"
-        docker image inspect "$ref" > /dev/null 2>&1 || docker pull "$ref" || docker build -t "$ref" judge
+        docker image inspect "$ref" > /dev/null 2>&1 || docker pull "$ref" || task judge:build
+
+  judge:build:
+    desc: Build the go-judge image from judge/flake.nix into the local Docker daemon without a local Nix install
+    cmds:
+      # The volume keeps the Nix store between builds; it is named after the Nix image it was seeded from.
+      - >-
+        docker run --rm -v gate-judge-nix-2.35.6:/nix -v ./judge:/src:ro -w /src
+        -v /var/run/docker.sock:/var/run/docker.sock nixos/nix:2.35.6
+        nix --extra-experimental-features "nix-command flakes" run .#default.copyTo --
+        docker-daemon:"$(go run ./tools/judgeimage)"
 
   test:be:integration:
     desc: Run backend integration tests, which live in backend/tests/integration
@@ -188,7 +199,7 @@ tasks:
         fi
 
   update:judge:
-    desc: Update the judge runtime's nixpkgs pin (judge/flake.lock) without a local Nix install
+    desc: Update the judge flake inputs (judge/flake.lock) without a local Nix install
     cmds:
       - >-
         docker run --rm -v ./judge:/src -w /src nixos/nix:2.35.6
@@ -212,6 +223,7 @@ tasks:
 
   docker:up:
     desc: Start local Docker containers in background
+    deps: [judge:image]
     cmds:
       - "{{.DOCKER_COMPOSE}} up -d {{.CLI_ARGS}}"
 

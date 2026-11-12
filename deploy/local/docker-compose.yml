@@ -73,10 +73,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    build:
-      context: ../../judge
-      dockerfile: Dockerfile
-    image: gate-go-judge:local
+    image: ${JUDGE_IMAGE:?set by the Taskfile docker tasks}
     container_name: gate-go-judge-local
     hostname: go-judge
     restart: unless-stopped
