@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: s3
+spec:
+  selector: {app.kubernetes.io/name: seaweedfs}
+  ports:
+    - {name: s3, port: 8333}
+---
+# Master, volume, filer and S3 gateway in one process: one node needs no more.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: seaweedfs
+spec:
+  serviceName: s3
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: seaweedfs}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: seaweedfs}
+    spec:
+      # Services are found by DNS; their env variables (e.g. S3_PORT) would clash with app settings.
+      enableServiceLinks: false
+      containers:
+        - name: seaweedfs
+          image: {{ .Values.seaweedfs.image }}
+          env:
+            - name: S3_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: {{ .Values.secretName }}, key: S3_ACCESS_KEY}}
+            - name: S3_SECRET_KEY
+              valueFrom: {secretKeyRef: {name: {{ .Values.secretName }}, key: S3_SECRET_KEY}}
+          # The S3 identity comes from the shared secret, the same keys the backend uses.
+          command: [/bin/sh, -c]
+          args:
+            - |
+              cat > /tmp/s3.json <<EOF
+              {"identities": [{"name": "gate", "credentials": [{"accessKey": "$S3_ACCESS_KEY", "secretKey": "$S3_SECRET_KEY"}],
+                "actions": ["Admin", "Read", "List", "Tagging", "Write"]}]}
+              EOF
+              exec weed server -dir=/data -ip=127.0.0.1 -ip.bind=0.0.0.0 -volume.max=0 -s3 -s3.config=/tmp/s3.json
+          ports:
+            - {name: s3, containerPort: 8333}
+          readinessProbe:
+            tcpSocket: {port: s3}
+            periodSeconds: 5
+          resources: {{- toYaml .Values.seaweedfs.resources | nindent 12 }}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: {requests: {storage: {{ .Values.seaweedfs.storage }}}}

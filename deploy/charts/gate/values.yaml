@@ -1,0 +1,32 @@
+# Release tag of both images (release-<commit>, see .github/workflows/deploy.yml).
+imageTag: ""
+imagePullSecrets: []
+
+# Secret with POSTGRES_PASSWORD, REDIS_PASSWORD, S3_ACCESS_KEY, S3_SECRET_KEY and
+# RESEND_API_KEY; see deploy/README.md. Shared with gate-infra.
+secretName: gate-secrets
+postgresDatabase: gate
+
+backend:
+  image: ghcr.io/brawler2011/gate-backend
+  replicas: 1
+  resources:
+    requests: {cpu: 250m, memory: 256Mi}
+    limits: {memory: 2Gi}
+  # Contents of /etc/gate/config.yaml, the environment's deploy/<env>/config.yaml
+  # passed with --set-file. Connection strings and secrets come from env.
+  config: ""
+
+goJudge:
+  image: ghcr.io/brawler2011/gate-go-judge
+  resources:
+    requests: {cpu: 500m, memory: 512Mi}
+    limits: {memory: 4Gi}
+
+ingress:
+  # Set per environment.
+  host: ""
+  # Traefik entry point and ACME resolver (deploy/k3s/traefik-config.yaml). An empty
+  # resolver serves Traefik's default certificate.
+  entryPoint: websecure
+  certResolver: letsencrypt

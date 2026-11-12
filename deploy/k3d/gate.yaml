@@ -1,0 +1,6 @@
+# Overrides of deploy/charts/gate for the local k3d cluster (task k3d:deploy); the
+# task adds imageTag and backend.config (deploy/k3d/config.yaml).
+ingress:
+  host: gate.localhost
+  # No ACME locally: Traefik serves its default self-signed certificate.
+  certResolver: ""

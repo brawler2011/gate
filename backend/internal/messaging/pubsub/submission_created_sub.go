@@ -18,7 +18,7 @@ func NewSubmissionsSub(
 		js,
 		dispatcher,
 		"SUBMISSIONS",
-		"submissions_consumer",
+		"submissions",
 		"submissions.*",
 		"submission_created_subscriber",
 	)

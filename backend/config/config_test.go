@@ -23,7 +23,7 @@ func setSecrets(t *testing.T) {
 
 func TestEnvironmentConfigsLoad(t *testing.T) {
 	setSecrets(t)
-	for _, env := range []string{"local", "prod"} {
+	for _, env := range []string{"local", "prod", "k3d"} {
 		t.Run(env, func(t *testing.T) {
 			cfg, err := Load(filepath.Join("..", "..", "deploy", env, "config.yaml"))
 			require.NoError(t, err)

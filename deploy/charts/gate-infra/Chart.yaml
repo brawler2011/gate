@@ -1,0 +1,5 @@
+apiVersion: v2
+name: gate-infra
+description: Stateful services of Gate (PostgreSQL, Redis, NATS, SeaweedFS). Upgraded separately from the app, so an app rollback never touches data.
+type: application
+version: 0.1.0

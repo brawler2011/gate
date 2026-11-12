@@ -1,0 +1,27 @@
+# Runs before any app resource changes. A failed migration fails the release, and
+# with --rollback-on-failure nothing of the new release starts. Migrations must be
+# compatible with the previous release (docs/design/migrations.md): a rolled-back
+# release runs on the migrated schema.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  template:
+    spec:
+      # Services are found by DNS; their env variables (e.g. S3_PORT) would clash with app settings.
+      enableServiceLinks: false
+      restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrate
+          image: {{ .Values.backend.image }}:{{ include "gate.tag" . }}
+          args: [--migrate]
+          env: {{- include "gate.backendEnv" . | trim | nindent 12 }}
