@@ -1,0 +1,13 @@
+# Squawk lints migrations for changes the previous release cannot run on
+# (docs/design/migrations.md). `task lint:migrations` skips the baseline migration.
+# Style rules and per-migration timeouts are not about rollback safety.
+excluded_rules = [
+  "prefer-bigint-over-int",
+  "prefer-bigint-over-smallint",
+  "prefer-identity",
+  "prefer-text-field",
+  "prefer-robust-stmts",
+  "require-lock-timeout",
+  "require-statement-timeout",
+]
+pg_version = "18.0"

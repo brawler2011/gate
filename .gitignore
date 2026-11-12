@@ -1,5 +1,6 @@
 .*
 !.air.toml
+!.squawk.toml
 !*.env.example
 !.env.example
 !**/.env.example
