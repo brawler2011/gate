@@ -782,7 +782,7 @@ SELECT id FROM stored_objects WHERE state='deleting' OR
 ORDER BY id LIMIT 100
 `
 
-// Statements of the object, upload, build and idempotency protocols (RFC §3.3).
+// Statements of the object, upload, build and idempotency protocols.
 // Locks are taken by the caller in the documented order; lock-then-recheck
 // statements are deliberately separate queries so each sees a fresh snapshot.
 func (q *Queries) ListGCObjectIDs(ctx context.Context, retentionMs int64) ([]uuid.UUID, error) {

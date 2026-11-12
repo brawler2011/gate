@@ -123,7 +123,7 @@ type ProblemContext struct {
 	Visibility   Visibility
 }
 
-// ContestConditions supplies the lifecycle and audience gates from RFC §5.
+// ContestConditions supplies the contest lifecycle and audience gates.
 type ContestConditions struct {
 	ViewStatements        bool
 	ViewScoreboard        bool
