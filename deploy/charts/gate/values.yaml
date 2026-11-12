@@ -29,3 +29,6 @@ ingress:
   # resolver serves Traefik's default certificate.
   entryPoint: websecure
   certResolver: letsencrypt
+
+# AppArmor profile of every pod (go-judge is privileged and unconfined anyway).
+appArmorProfile: RuntimeDefault

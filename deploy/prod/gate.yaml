@@ -12,3 +12,7 @@ goJudge:
     limits: {memory: 1536Mi}
 ingress:
   host: steins.ru
+# containerd's default AppArmor profile denies signals inside containers on this
+# server (Ubuntu 26.04), which hangs PostgreSQL and gosu. Until #219 restores a
+# working profile, pods run unconfined; seccomp RuntimeDefault still applies.
+appArmorProfile: Unconfined

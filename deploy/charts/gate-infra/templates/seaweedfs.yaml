@@ -23,6 +23,8 @@ spec:
     spec:
       # Services are found by DNS; their env variables (e.g. S3_PORT) would clash with app settings.
       enableServiceLinks: false
+      securityContext:
+        {{- include "gate-infra.podSecurity" . | nindent 8 }}
       containers:
         - name: seaweedfs
           image: {{ .Values.seaweedfs.image }}
