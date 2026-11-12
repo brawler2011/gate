@@ -310,10 +310,7 @@ tasks:
       - "{{.K3D_KUBECTL}} create namespace gate --dry-run=client -o yaml | {{.K3D_KUBECTL}} apply -f -"
       - |
         set -a; . deploy/local/.env; set +a
-        {{.K3D_KUBECTL}} -n gate create secret generic gate-secrets --dry-run=client -o yaml \
-          --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" --from-literal=REDIS_PASSWORD="$REDIS_PASSWORD" \
-          --from-literal=S3_ACCESS_KEY="$S3_ACCESS_KEY" --from-literal=S3_SECRET_KEY="$S3_SECRET_KEY" \
-          --from-literal=RESEND_API_KEY="$RESEND_API_KEY" | {{.K3D_KUBECTL}} apply -f -
+        deploy/secrets.sh {{.K3D_KUBECTL}} -n gate
       - "{{.K3D_HELM}} upgrade --install gate-infra deploy/charts/gate-infra -n gate -f deploy/k3d/gate-infra.yaml --wait --timeout 5m"
       - "{{.K3D_HELM}} upgrade --install gate deploy/charts/gate -n gate -f deploy/k3d/gate.yaml --set-file backend.config=deploy/k3d/config.yaml --set imageTag={{.TAG}} --rollback-on-failure --timeout 5m {{.CLI_ARGS}}"
 

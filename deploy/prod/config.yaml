@@ -19,7 +19,8 @@ email:
 inbox:
   retention: 168h
 judge:
-  workers: 4
+  # One core: parallel judging would only share it and skew time limits.
+  workers: 1
 problems:
   # Pod scratch space on node disk (emptyDir); must not be tmpfs.
   work_dir: /problem-work
@@ -31,7 +32,7 @@ problems:
     components: 100
     subtasks: 100
   limits:
-    disk_bytes: 8GiB
+    disk_bytes: 2GiB
     file_count: 25000
     object_bytes: 512MiB
     test_output_bytes: 512MiB

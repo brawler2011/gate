@@ -1,6 +1,16 @@
 # Production values of deploy/charts/gate; the deploy workflow adds imageTag and
-# backend.config (deploy/prod/config.yaml).
+# backend.config (deploy/prod/config.yaml). Sized for a 1 vCPU / 2 GB server; see
+# gate-infra.yaml.
 imagePullSecrets:
   - name: ghcr
+backend:
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {memory: 512Mi}
+goJudge:
+  # Room for one compile (512 MiB) plus the sandbox itself.
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {memory: 1536Mi}
 ingress:
   host: steins.ru

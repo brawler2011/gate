@@ -1,2 +1,24 @@
-# Production values of deploy/charts/gate-infra; the chart defaults fit one node.
-{}
+# Production values of deploy/charts/gate-infra, sized for the current server:
+# 1 vCPU, 2 GB RAM plus 2 GB swap, shared with k3s and two small Docker services.
+# Requests leave room for a rolling update of the gate release.
+postgres:
+  storage: 5Gi
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {memory: 512Mi}
+redis:
+  storage: 1Gi
+  maxMemory: 128mb
+  resources:
+    requests: {cpu: 20m, memory: 32Mi}
+    limits: {memory: 192Mi}
+nats:
+  storage: 2Gi
+  resources:
+    requests: {cpu: 20m, memory: 32Mi}
+    limits: {memory: 256Mi}
+seaweedfs:
+  storage: 8Gi
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 512Mi}

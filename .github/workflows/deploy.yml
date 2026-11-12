@@ -109,11 +109,23 @@ jobs:
           version: "2026.10.25"
           install_args: helm kubectl
 
+      # The API listens only on the server; an SSH tunnel reaches it without opening
+      # a port. HostKeyAlias pins the server key whatever form SSH_HOST takes.
       - name: Connect to the cluster
         env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KNOWN_HOSTS: ${{ vars.SSH_KNOWN_HOSTS }}
           KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
         run: |
           umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o HostKeyAlias=gate-server -o StrictHostKeyChecking=yes \
+            -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 \
+            -fN -L 6443:127.0.0.1:6443 "$SSH_USER@$SSH_HOST"
           printf '%s' "$KUBECONFIG_CONTENT" > "$KUBECONFIG"
           kubectl version
 
@@ -131,10 +143,7 @@ jobs:
           set -euo pipefail
           kubectl apply -f deploy/k3s/
           kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-          kubectl -n "$NAMESPACE" create secret generic gate-secrets --dry-run=client -o yaml \
-            --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" --from-literal=REDIS_PASSWORD="$REDIS_PASSWORD" \
-            --from-literal=S3_ACCESS_KEY="$S3_ACCESS_KEY" --from-literal=S3_SECRET_KEY="$S3_SECRET_KEY" \
-            --from-literal=RESEND_API_KEY="$RESEND_API_KEY" | kubectl apply -f -
+          deploy/secrets.sh kubectl -n "$NAMESPACE"
           # The cluster pulls images long after this job ends, so it needs its own token.
           kubectl -n "$NAMESPACE" create secret docker-registry ghcr --dry-run=client -o yaml \
             --docker-server="$REGISTRY" --docker-username=${{ github.repository_owner }} \
@@ -148,13 +157,14 @@ jobs:
 
       # Migrations run first as a hook; if they or the new pods fail, Helm restores
       # the previous release and the job fails. The previous pods serve throughout.
+      # The timeout covers pulling the multi-GB judge image on a small server.
       - name: Deploy the release
         run: >-
           helm upgrade --install gate deploy/charts/gate
           --namespace "$NAMESPACE" -f deploy/${{ inputs.environment }}/gate.yaml
           --set-file backend.config=deploy/${{ inputs.environment }}/config.yaml
           --set imageTag=${{ needs.promote.outputs.tag }}
-          --rollback-on-failure --timeout 10m
+          --rollback-on-failure --timeout 20m
 
       # The cluster checks readiness from inside; this catches routing, certificate
       # and DNS problems that only show from outside.
