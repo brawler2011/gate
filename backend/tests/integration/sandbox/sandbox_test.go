@@ -26,7 +26,7 @@ func TestIntegrationSandbox(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Spin up go-judge container using testcontainers-go and the unified Dockerfile
+	// Spin up the go-judge image built from judge/flake.nix
 	t.Log("Starting go-judge container...")
 	image, err := judgeimage.Ref()
 	if err != nil {
