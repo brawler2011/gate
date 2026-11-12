@@ -1,42 +1,32 @@
-# Миграции базы данных
+# Migrations
 
-Деплой откатывается только образами (#26): после неудачного релиза предыдущая версия
-кода снова работает на **новой** схеме. Схему назад никто не возвращает. Поэтому каждая
-миграция обязана быть совместимой с кодом предыдущего релиза.
+A failed release is rolled back by image only: the previous code then runs on the
+**new** schema. Every migration must therefore work with the previous release's code.
 
-## Правила
+## Rules
 
-1. **Expand/contract.** Миграция только расширяет схему: новые таблицы, nullable-колонки,
-   колонки с константным default, новые индексы. Удаляющие и меняющие изменения
-   (`DROP`, `RENAME`, смена типа, `SET NOT NULL`) идут отдельным релизом, после того как
-   код предыдущего релиза перестал использовать объект.
-2. **Без Down.** Откат — это предыдущий образ на текущей схеме; секция `-- +goose Down`
-   запрещена. Ошибочную миграцию исправляет следующая миграция.
-3. **Слитые миграции неизменяемы.** Миграцию из `main` нельзя править, переименовывать
-   или удалять: её уже применили к базам. Версия новой миграции должна быть больше
-   последней в базовой ветке: goose не применяет миграцию старше уже применённых.
-4. **Базовая миграция** `20261112000000_init.sql` — начальная схема; правила 1–3
-   применяются к миграциям после неё.
+1. **Expand only.** Add tables, nullable columns, columns with a constant default,
+   indexes. `DROP`, `RENAME`, type changes and `SET NOT NULL` wait for a later release,
+   once the previous release no longer uses the object.
+2. **No Down section.** Fix a bad migration with a new one.
+3. **Merged migrations are immutable.** Never edit, rename or delete them; a new
+   migration's version must be newer than the latest on the base branch.
 
-## Как сделать удаляющее изменение
+Rules apply after the baseline `20261112000000_init.sql`.
 
-Пример: переименовать `users.email` в `users.mail`.
+## Removing or renaming a column
 
-1. Релиз N: добавить `mail` (nullable), код пишет в обе колонки и читает `mail`
-   с fallback на `email`; перенести данные `UPDATE`-ом.
-2. Релиз N+1: код использует только `mail`.
-3. Релиз N+2: удалить `email`. Этот шаг явно помечается для линтера:
+Release N adds the new column, writes both and backfills it; release N+1 uses only the new one;
+release N+2 drops the old one, marked for the linter:
 
-   ```sql
-   -- +goose Up
-   -- squawk-ignore ban-drop-column
-   ALTER TABLE users DROP COLUMN email;
-   ```
+```sql
+-- +goose Up
+-- squawk-ignore ban-drop-column
+ALTER TABLE users DROP COLUMN email;
+```
 
-Индексы на заполненных таблицах создаются `CONCURRENTLY`; такой запрос не работает
-внутри транзакции, поэтому файл помечается `-- +goose NO TRANSACTION`.
+Create indexes on populated tables `CONCURRENTLY`, in a file marked
+`-- +goose NO TRANSACTION`.
 
-## Проверки
-
-Правила проверяют `task lint:migrations` (Squawk и запрет Down) и CI-джоба
-Migration Rollback Test. Сценарий отката локально: `task test:migrations:rollback BASE=origin/main`.
+Checked by `task lint:migrations` and the Migration Rollback Test CI job; run the
+rollback scenario locally with `task test:migrations:rollback BASE=origin/main`.
