@@ -11,3 +11,5 @@ excluded_rules = [
   "require-statement-timeout",
 ]
 pg_version = "18.0"
+# goose runs each migration in a transaction unless it says `-- +goose NO TRANSACTION`.
+assume_in_transaction = true

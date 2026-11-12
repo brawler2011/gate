@@ -112,7 +112,10 @@ tasks:
     vars:
       BASE: '{{.BASE | default "origin/main"}}'
     cmds:
+      # Clears a worktree left by an interrupted run, even one deleted by hand.
       - git worktree remove --force .rollback-base 2> /dev/null || true
+      - git worktree prune
+      - rm -rf .rollback-base
       - git worktree add --detach .rollback-base "$(git merge-base '{{.BASE}}' HEAD)"
       - defer: git worktree remove --force .rollback-base
       - rm -rf .rollback-base/backend/migrations

@@ -284,6 +284,7 @@ jobs:
     permissions:
       contents: read
       packages: read
+      pull-requests: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -294,15 +295,34 @@ jobs:
       - name: Compare migrations with the base branch
         id: migrations
         env:
-          BASE: ${{ github.event.pull_request.base.sha || 'origin/main' }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          BRANCH: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          base="$(git merge-base "$BASE" HEAD)"
+          # A manual run compares with the base of the branch's open PR, so a stacked
+          # branch is not blamed for its parent's changes.
+          base_ref="$PR_BASE"
+          if [ -z "$base_ref" ]; then
+            pr_base="$(gh pr view "$BRANCH" --json baseRefName --jq .baseRefName 2> /dev/null || true)"
+            base_ref="origin/${pr_base:-main}"
+          fi
+          base="$(git merge-base "$base_ref" HEAD)"
           changed="$(git diff --name-status "$base" HEAD -- backend/migrations)"
           if [ -n "$changed" ] && grep -v '^A' <<< "$changed"; then
             echo "::error::Merged migrations are immutable; only new files may be added."
             exit 1
           fi
+          # goose refuses a migration older than one already applied to a database.
+          latest="$(git ls-tree --name-only "$base" backend/migrations/ | sed -n 's|.*/\([0-9]*\)_.*|\1|p' | sort -n | tail -n 1)"
+          while read -r _ path; do
+            [ -n "$path" ] || continue
+            version="$(basename "$path" | cut -d _ -f 1)"
+            if [ "$version" -le "${latest:-0}" ]; then
+              echo "::error::$path must have a version newer than $latest, the newest migration on the base branch."
+              exit 1
+            fi
+          done <<< "$changed"
           echo "base=$base" >> "$GITHUB_OUTPUT"
           echo "changed=$([ -n "$changed" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
