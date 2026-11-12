@@ -88,7 +88,7 @@ func (r *AuthRepo) CreateAuthToken(ctx context.Context, params identitymodel.Cre
 	err := r.queries.CreateAuthToken(ctx, sqlc.CreateAuthTokenParams{
 		ID:        params.ID,
 		UserID:    params.UserID,
-		TokenType: string(params.TokenType),
+		TokenType: sqlc.AuthTokenType(params.TokenType),
 		TokenHash: params.TokenHash,
 		Payload:   payload,
 		ExpiresAt: params.ExpiresAt,
@@ -102,7 +102,7 @@ func (r *AuthRepo) CreateAuthToken(ctx context.Context, params identitymodel.Cre
 func (r *AuthRepo) GetAuthTokenByHash(ctx context.Context, tokenHash string, tokenType identitymodel.AuthTokenType) (identitymodel.AuthToken, error) {
 	tok, err := r.queries.GetAuthTokenByHash(ctx, sqlc.GetAuthTokenByHashParams{
 		TokenHash: tokenHash,
-		TokenType: string(tokenType),
+		TokenType: sqlc.AuthTokenType(tokenType),
 	})
 	if err != nil {
 		return identitymodel.AuthToken{}, HandlePgErr(err)
@@ -130,7 +130,7 @@ func (r *AuthRepo) DeleteAuthToken(ctx context.Context, id uuid.UUID) error {
 func (r *AuthRepo) DeleteAuthTokensByUserIdAndType(ctx context.Context, userID uuid.UUID, tokenType identitymodel.AuthTokenType) error {
 	err := r.queries.DeleteAuthTokensByUserIdAndType(ctx, sqlc.DeleteAuthTokensByUserIdAndTypeParams{
 		UserID:    userID,
-		TokenType: string(tokenType),
+		TokenType: sqlc.AuthTokenType(tokenType),
 	})
 	if err != nil {
 		return HandlePgErr(err)

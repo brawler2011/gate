@@ -18,6 +18,49 @@ import (
 	"github.com/google/uuid"
 )
 
+type AuthTokenType string
+
+const (
+	AuthTokenTypeEmailVerification AuthTokenType = "email_verification"
+	AuthTokenTypePasswordReset     AuthTokenType = "password_reset"
+	AuthTokenTypeEmailChange       AuthTokenType = "email_change"
+)
+
+func (e *AuthTokenType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AuthTokenType(s)
+	case string:
+		*e = AuthTokenType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AuthTokenType: %T", src)
+	}
+	return nil
+}
+
+type NullAuthTokenType struct {
+	AuthTokenType AuthTokenType `json:"auth_token_type"`
+	Valid         bool          `json:"valid"` // Valid is true if AuthTokenType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAuthTokenType) Scan(value interface{}) error {
+	if value == nil {
+		ns.AuthTokenType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AuthTokenType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAuthTokenType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AuthTokenType), nil
+}
+
 type ContestRole string
 
 const (
@@ -454,13 +497,13 @@ type AccessRevision struct {
 }
 
 type AuthToken struct {
-	ID        uuid.UUID   `json:"id"`
-	UserID    uuid.UUID   `json:"user_id"`
-	TokenType interface{} `json:"token_type"`
-	TokenHash string      `json:"token_hash"`
-	Payload   []byte      `json:"payload"`
-	ExpiresAt time.Time   `json:"expires_at"`
-	CreatedAt time.Time   `json:"created_at"`
+	ID        uuid.UUID     `json:"id"`
+	UserID    uuid.UUID     `json:"user_id"`
+	TokenType AuthTokenType `json:"token_type"`
+	TokenHash string        `json:"token_hash"`
+	Payload   []byte        `json:"payload"`
+	ExpiresAt time.Time     `json:"expires_at"`
+	CreatedAt time.Time     `json:"created_at"`
 }
 
 type Contest struct {

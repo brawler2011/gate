@@ -20,7 +20,7 @@
 | `backend/internal/postgres/contests.sql` | Get/ListContestProblems соединяются с изменяемой таблицей problems, включая title/limits; для полной snapshot-изоляции этого недостаточно. |
 | `backend/internal/contests/model/contest.go`, scoreboard tests | Есть nullable start/end, freeze_duration_minutes, freeze_status, scopes, participation_mode, hide_statements, enable_upsolving. `IsFrozenAt` сам по себе не снимает freeze после конца. |
 | `backend/internal/transport/middleware/authz.go`, `backend/internal/transport/ws/observer/access.go` | Middleware содержит доменные правила. Observer уже проверяет сессии и permissions; целевые topics и маскирование должны сохранить существующие ограничения. |
-| `backend/migrations/20260822100000_drop_permission_masks_and_access_policy.sql` | Маски уже удалены из БД. Оставшиеся API/Go-поля — legacy-представление, восстанавливать колонки не нужно. |
+| `backend/migrations/` | Масок прав в схеме нет. Оставшиеся API/Go-поля — legacy-представление, восстанавливать колонки не нужно. |
 | `contracts/core/v1/openapi.yaml` | В исходном YAML ровно два `permissions_mask` и ни одного `permissionsMask`; точные владельцы полей перечислены в §7. |
 
 Это не утверждение, что связанные #143, #145, #146 ещё не исправлены: часть защит
