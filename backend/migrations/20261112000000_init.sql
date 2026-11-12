@@ -6,6 +6,7 @@
 -- ==========================================================================
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
 CREATE TYPE auth_token_type AS ENUM (
     'email_verification',
     'password_reset',
@@ -758,7 +759,7 @@ CREATE TABLE contests (
     owner_id uuid,
     visibility contest_visibility DEFAULT 'private'::contest_visibility NOT NULL,
     title text NOT NULL,
-    login varchar(64) CONSTRAINT contests_short_name_not_null NOT NULL,
+    login varchar(64) NOT NULL,
     description text DEFAULT ''::text NOT NULL,
     settings jsonb NOT NULL,
     start_time timestamptz,
