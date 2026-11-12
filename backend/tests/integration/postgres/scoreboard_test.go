@@ -23,7 +23,8 @@ import (
 )
 
 func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
-	pool := getSharedTestPool(t)
+	t.Parallel()
+	pool := getTestPool(t)
 	ctx := context.Background()
 	for _, size := range []int{1, 8} {
 		t.Run(fmt.Sprint(size), func(t *testing.T) {
@@ -136,6 +137,7 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 }
 
 func TestScoreboardFreezePreservesObservedVerdicts(t *testing.T) {
+	t.Parallel()
 	f := newContestProblemFixture(t)
 	f.grantRead(t)
 	require.NoError(t, f.create(f.original))

@@ -85,7 +85,8 @@ func scopeContests(ctx context.Context, q *sqlc.Queries, params sqlc.ScopeContes
 // facts. Explicit expectations below also prevent matching bugs in both policies
 // and SQL from making this parity test vacuous.
 func TestMetadataPolicySQLParity(t *testing.T) {
-	pool := getSharedTestPool(t)
+	t.Parallel()
+	pool := getTestPool(t)
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	ctx := m.WithReadTime(context.Background(), now)
 	exec := func(query string, args ...any) {

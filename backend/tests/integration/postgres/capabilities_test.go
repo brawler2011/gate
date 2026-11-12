@@ -13,6 +13,7 @@ import (
 )
 
 func TestCapabilityFactsRemainBatchedAndNonlocking(t *testing.T) {
+	t.Parallel()
 	f := newContestProblemFixture(t)
 	f.grantRead(t)
 	pool, recorder := newRecordingPool(t)

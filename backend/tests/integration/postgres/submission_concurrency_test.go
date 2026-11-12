@@ -42,7 +42,7 @@ func newConcurrencyFixture(t *testing.T) *concurrencyFixture {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	t.Cleanup(cancel)
-	f := &concurrencyFixture{pool: getSharedTestPool(t), ctx: ctx, contest: uuid.New(), problem: uuid.New(), start: time.Now().Add(-time.Hour).Truncate(time.Second)}
+	f := &concurrencyFixture{pool: getTestPool(t), ctx: ctx, contest: uuid.New(), problem: uuid.New(), start: time.Now().Add(-time.Hour).Truncate(time.Second)}
 	org := helperCreateOrg(t, ctx, f.pool, uuid.NewString(), "Concurrency")
 	for i := range f.users {
 		f.users[i] = uuid.New()
@@ -174,6 +174,7 @@ func asyncConcurrent(fn func() error) <-chan error {
 }
 
 func TestIndependentSubmissionTransactions(t *testing.T) {
+	t.Parallel()
 	for _, held := range []string{"creation", "completion", "administrative edit"} {
 		t.Run(held, func(t *testing.T) {
 			f := newConcurrencyFixture(t)
@@ -215,6 +216,7 @@ func TestIndependentSubmissionTransactions(t *testing.T) {
 }
 
 func TestConcurrentTupleCompletions(t *testing.T) {
+	t.Parallel()
 	f := newConcurrencyFixture(t)
 	failed, early, late := f.job(t, 1, 5), f.job(t, 1, 10), f.job(t, 1, 20)
 	release := f.holdTuple(t, f.blockers, 1)
@@ -243,6 +245,7 @@ func TestConcurrentTupleCompletions(t *testing.T) {
 }
 
 func TestCompletionRacesAdministrativeMutation(t *testing.T) {
+	t.Parallel()
 	for _, mutation := range []string{"rejudge", "block submission", "block problem"} {
 		t.Run(mutation, func(t *testing.T) {
 			f := newConcurrencyFixture(t)
@@ -283,6 +286,7 @@ func TestCompletionRacesAdministrativeMutation(t *testing.T) {
 }
 
 func TestCreationRacesProblemBlock(t *testing.T) {
+	t.Parallel()
 	f := newConcurrencyFixture(t)
 	release := f.holdTuple(t, f.blockers, 1)
 	var id uuid.UUID
@@ -304,6 +308,7 @@ func TestCreationRacesProblemBlock(t *testing.T) {
 }
 
 func TestBulkRejudgeLockingAndRollback(t *testing.T) {
+	t.Parallel()
 	f := newConcurrencyFixture(t)
 	jobs := []judgingmodel.Job{f.job(t, 1, 10), f.job(t, 2, 20)}
 	// Bulk commands lock all candidate tuples in key order. Hold both tuples and
@@ -382,6 +387,7 @@ func TestBulkRejudgeLockingAndRollback(t *testing.T) {
 }
 
 func TestConcurrentDraftLimit(t *testing.T) {
+	t.Parallel()
 	f := newConcurrencyFixture(t)
 	_, err := f.pool.Exec(f.ctx, `INSERT INTO contest_drafts(contest_id,user_id,code) SELECT $1,$2,'draft' FROM generate_series(1,49)`, f.contest, f.users[1])
 	require.NoError(t, err)
@@ -424,6 +430,7 @@ func TestConcurrentDraftLimit(t *testing.T) {
 }
 
 func TestCompletionChecksDeadlineAfterLockWait(t *testing.T) {
+	t.Parallel()
 	f := newConcurrencyFixture(t)
 	job := f.job(t, 1, 10)
 	_, err := f.pool.Exec(f.ctx, "UPDATE judge_jobs SET deadline_at=clock_timestamp()+interval '200 milliseconds' WHERE id=$1", job.ID)

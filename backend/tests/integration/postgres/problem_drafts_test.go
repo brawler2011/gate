@@ -27,7 +27,7 @@ import (
 func draftFixture(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.ProblemDraftsRepo, uuid.UUID, model.Draft) {
 	t.Helper()
 	ctx := context.Background()
-	pool := getSharedTestPool(t)
+	pool := getTestPool(t)
 	org := helperCreateOrg(t, ctx, pool, "draft-"+uuid.NewString(), "Drafts")
 	id := uuid.New()
 	require.NoError(t, dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: id, OrganizationID: org, Title: "Initial", ShortName: "draft"}))
@@ -62,6 +62,7 @@ func insertAvailableObject(t *testing.T, ctx context.Context, pool *pgxpool.Pool
 	return id
 }
 func TestProblemDraftConcurrentEditsAndReplay(t *testing.T) {
+	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
 	d.Files = map[string]string{"statements/en.md": "Original"}
 	var wg sync.WaitGroup
@@ -112,6 +113,7 @@ func TestProblemDraftConcurrentEditsAndReplay(t *testing.T) {
 	require.ErrorIs(t, err, pkg.ErrConflict)
 }
 func TestProblemBuildSnapshotAndRecovery(t *testing.T) {
+	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
 	oid := insertAvailableObject(t, ctx, pool, org)
 	d = makeBuildableDraft(d, oid)

@@ -31,7 +31,7 @@ type contestProblemFixture struct {
 
 func newContestProblemFixture(t *testing.T) *contestProblemFixture {
 	t.Helper()
-	f := &contestProblemFixture{pool: getSharedTestPool(t), actor: uuid.New(), problem: uuid.New(), other: uuid.New(), contest: uuid.New()}
+	f := &contestProblemFixture{pool: getTestPool(t), actor: uuid.New(), problem: uuid.New(), other: uuid.New(), contest: uuid.New()}
 	f.ctx = accessmodel.WithUser(context.Background(), accessmodel.User{Id: f.actor, Role: accessmodel.UserRoleUser})
 	_, err := f.pool.Exec(f.ctx, `INSERT INTO users(id, username, password_hash) VALUES ($1,$2,'unused')`, f.actor, uuid.NewString())
 	require.NoError(t, err)
@@ -74,6 +74,7 @@ func (f *contestProblemFixture) pinned(t *testing.T) uuid.UUID {
 }
 
 func TestContestProblemRejectsUnauthorizedSource(t *testing.T) {
+	t.Parallel()
 	for _, operation := range []string{"create", "repeat create", "update"} {
 		t.Run(operation, func(t *testing.T) {
 			f := newContestProblemFixture(t)
@@ -102,6 +103,7 @@ func TestContestProblemRejectsUnauthorizedSource(t *testing.T) {
 }
 
 func TestContestProblemValidatesExplicitPackage(t *testing.T) {
+	t.Parallel()
 	for _, operation := range []string{"create", "repeat create", "update"} {
 		t.Run(operation, func(t *testing.T) {
 			for _, kind := range []string{"foreign package", "missing"} {
@@ -135,6 +137,7 @@ func TestContestProblemValidatesExplicitPackage(t *testing.T) {
 }
 
 func TestContestProblemAcceptsReadableSourcesAndPreservesOrdinal(t *testing.T) {
+	t.Parallel()
 	for _, public := range []bool{false, true} {
 		name := "private read grant"
 		if public {
@@ -166,6 +169,7 @@ func TestContestProblemAcceptsReadableSourcesAndPreservesOrdinal(t *testing.T) {
 }
 
 func TestContestProblemAutomaticSelectionRequiresAPackage(t *testing.T) {
+	t.Parallel()
 	f := newContestProblemFixture(t)
 	// f.other has never been built, so there is nothing to pin.
 	_, err := f.pool.Exec(f.ctx, `INSERT INTO problem_members(problem_id,user_id,role) VALUES ($1,$2,'viewer')`, f.other, f.actor)
@@ -184,6 +188,7 @@ func (s *pinnedContestStatement) ReadStatement(_ context.Context, problem, pack 
 }
 
 func TestContestProblemReadUsesContestAccessAndPinnedPackage(t *testing.T) {
+	t.Parallel()
 	f := newContestProblemFixture(t)
 	f.grantRead(t)
 	require.NoError(t, f.create(f.original))
@@ -206,6 +211,7 @@ func TestContestProblemReadUsesContestAccessAndPinnedPackage(t *testing.T) {
 }
 
 func TestContestProblemCommandsWorkWithSingleConnectionPool(t *testing.T) {
+	t.Parallel()
 	f := newContestProblemFixture(t)
 	f.grantRead(t)
 	config := f.pool.Config()
@@ -226,6 +232,7 @@ func TestContestProblemCommandsWorkWithSingleConnectionPool(t *testing.T) {
 }
 
 func TestContestSnapshotSurvivesSourceChanges(t *testing.T) {
+	t.Parallel()
 	f := newContestProblemFixture(t)
 	f.grantRead(t)
 	require.NoError(t, f.create(f.original))
@@ -256,6 +263,7 @@ func TestContestSnapshotSurvivesSourceChanges(t *testing.T) {
 }
 
 func TestContestCommandGuardRejectsRevokedDecision(t *testing.T) {
+	t.Parallel()
 	f := newContestProblemFixture(t)
 	f.grantRead(t)
 	transactions := postgres.NewContestCommandTransactions(f.pool)
@@ -274,6 +282,7 @@ func TestContestCommandGuardRejectsRevokedDecision(t *testing.T) {
 }
 
 func TestContestLifecyclePostgresBoundaries(t *testing.T) {
+	t.Parallel()
 	f := newContestProblemFixture(t)
 	start := time.Now().UTC().Truncate(time.Microsecond).Add(-time.Hour)
 	end := start.Add(2 * time.Hour)
@@ -309,6 +318,7 @@ func TestContestLifecyclePostgresBoundaries(t *testing.T) {
 }
 
 func TestContestCommandDeadlineRollsBackMutation(t *testing.T) {
+	t.Parallel()
 	f := newContestProblemFixture(t)
 	f.grantRead(t)
 	txs := postgres.NewContestCommandTransactions(f.pool)
