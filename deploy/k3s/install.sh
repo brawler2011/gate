@@ -76,5 +76,7 @@ group="$(id -gn "$DEPLOY_USER")"
 install -d -m 700 -o "$DEPLOY_USER" -g "$group" "$home/.kube"
 install -m 600 -o "$DEPLOY_USER" -g "$group" /etc/rancher/k3s/k3s.yaml "$home/.kube/config"
 
+# The node registers shortly after k3s starts; wait for it before waiting for Ready.
+timeout 180 sh -c 'until k3s kubectl get nodes -o name 2> /dev/null | grep -q .; do sleep 2; done'
 k3s kubectl wait --for=condition=Ready node --all --timeout=180s
 echo "k3s $K3S_VERSION is ready; kubeconfig for $DEPLOY_USER is in $home/.kube/config"

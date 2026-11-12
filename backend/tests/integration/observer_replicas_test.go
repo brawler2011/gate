@@ -31,7 +31,9 @@ func TestObserverEventsReachEveryReplica(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: testcontainers.ContainerRequest{
-		Image: "nats:2.10-alpine", ExposedPorts: []string{"4222/tcp"}, Cmd: []string{"-js"}, WaitingFor: wait.ForListeningPort("4222/tcp"),
+		Image: "nats:2.10-alpine", ExposedPorts: []string{"4222/tcp"}, Cmd: []string{"-js"},
+		// The mapped port can accept before the server does; its log says when it is ready.
+		WaitingFor: wait.ForAll(wait.ForLog("Server is ready"), wait.ForListeningPort("4222/tcp")),
 	}, Started: true})
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, terminate(container)) })
