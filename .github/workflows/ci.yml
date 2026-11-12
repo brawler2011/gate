@@ -57,7 +57,7 @@ jobs:
         uses: jdx/mise-action@v4
         with:
           version: "2026.10.25"
-          install_args: go task golangci-lint
+          install_args: go task golangci-lint github:sbdchd/squawk
 
       - name: Cache Go modules and build artifacts
         uses: actions/cache@v4
@@ -278,6 +278,86 @@ jobs:
       - name: Run integration tests
         run: task test:be:integration
 
+  migration-rollback:
+    name: Migration Rollback Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      pull-requests: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # See docs/design/migrations.md. Runs the tests only when migrations change.
+      - name: Compare migrations with the base branch
+        id: migrations
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          BRANCH: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # A manual run compares with the base of the branch's open PR, so a stacked
+          # branch is not blamed for its parent's changes.
+          base_ref="$PR_BASE"
+          if [ -z "$base_ref" ]; then
+            pr_base="$(gh pr view "$BRANCH" --json baseRefName --jq .baseRefName 2> /dev/null || true)"
+            base_ref="origin/${pr_base:-main}"
+          fi
+          base="$(git merge-base "$base_ref" HEAD)"
+          changed="$(git diff --name-status "$base" HEAD -- backend/migrations)"
+          if [ -n "$changed" ] && grep -v '^A' <<< "$changed"; then
+            echo "::error::Merged migrations are immutable; only new files may be added."
+            exit 1
+          fi
+          # goose refuses a migration older than one already applied to a database.
+          latest="$(git ls-tree --name-only "$base" backend/migrations/ | sed -n 's|.*/\([0-9]*\)_.*|\1|p' | sort -n | tail -n 1)"
+          while read -r _ path; do
+            [ -n "$path" ] || continue
+            version="$(basename "$path" | cut -d _ -f 1)"
+            if [ "$version" -le "${latest:-0}" ]; then
+              echo "::error::$path must have a version newer than $latest, the newest migration on the base branch."
+              exit 1
+            fi
+          done <<< "$changed"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "changed=$([ -n "$changed" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up project tools
+        if: steps.migrations.outputs.changed == 'true'
+        uses: jdx/mise-action@v4
+        with:
+          version: "2026.10.25"
+          install_args: go task
+
+      - name: Cache Go modules and build artifacts
+        if: steps.migrations.outputs.changed == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-integration-${{ hashFiles('mise.toml', '**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-integration-
+            ${{ runner.os }}-go-
+
+      - name: Log in to GitHub Container Registry
+        if: steps.migrations.outputs.changed == 'true' && env.PUSH_IMAGES == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The base branch's code and judge image, with this branch's migrations.
+      - name: Run base integration tests on these migrations
+        if: steps.migrations.outputs.changed == 'true'
+        run: task test:migrations:rollback BASE=${{ steps.migrations.outputs.base }}
+
   frontend-checks:
     name: Frontend Typecheck & Lint
     runs-on: ubuntu-latest
@@ -318,6 +398,7 @@ jobs:
       - backend-lint
       - backend-unit-tests
       - backend-integration-tests
+      - migration-rollback
       - frontend-checks
       - judge-image
       - backend-image
@@ -330,6 +411,7 @@ jobs:
           echo "Backend Lint: ${{ needs.backend-lint.result }}"
           echo "Backend Unit Tests: ${{ needs.backend-unit-tests.result }}"
           echo "Backend Integration Tests: ${{ needs.backend-integration-tests.result }}"
+          echo "Migration Rollback Test: ${{ needs.migration-rollback.result }}"
           echo "Frontend Checks: ${{ needs.frontend-checks.result }}"
           echo "Judge Image: ${{ needs.judge-image.result }}"
           echo "Backend Image: ${{ needs.backend-image.result }}"
@@ -338,6 +420,7 @@ jobs:
                 "${{ needs.backend-lint.result }}" != "success" || \
                 "${{ needs.backend-unit-tests.result }}" != "success" || \
                 "${{ needs.backend-integration-tests.result }}" != "success" || \
+                "${{ needs.migration-rollback.result }}" != "success" || \
                 "${{ needs.frontend-checks.result }}" != "success" || \
                 "${{ needs.judge-image.result }}" != "success" || \
                 "${{ needs.backend-image.result }}" != "success" ]]; then
