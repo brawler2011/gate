@@ -6,6 +6,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -24,20 +25,61 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// Every leaf owns its schema, including migration history. Never use application data.
+// One PostgreSQL 18 container serves the package run; it keeps default durability
+// settings because the benchmarks measure writes.
+var (
+	benchOnce      sync.Once
+	benchContainer *tcpostgres.PostgresContainer
+	benchDSN       string
+	benchErr       error
+)
+
+func TestMain(m *testing.M) {
+	code := m.Run()
+	if benchContainer != nil {
+		if err := benchContainer.Terminate(context.Background(), testcontainers.StopTimeout(0)); err != nil {
+			log.Printf("terminate postgres container: %v", err)
+		}
+	}
+	os.Exit(code)
+}
+
+func startBenchmarkDatabase(ctx context.Context) (string, error) {
+	container, err := tcpostgres.Run(ctx,
+		"postgres:18-alpine",
+		tcpostgres.WithDatabase("gate_benchmarks"),
+		tcpostgres.WithUsername("postgres"),
+		tcpostgres.WithPassword("postgres"),
+		// The module defaults to fsync=off; restore PostgreSQL's own defaults.
+		testcontainers.WithCmd("postgres"),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(60*time.Second),
+		),
+	)
+	if container != nil {
+		benchContainer = container
+	}
+	if err != nil {
+		return "", fmt.Errorf("start postgres container: %w", err)
+	}
+	return container.ConnectionString(ctx, "sslmode=disable")
+}
+
+// Every leaf owns its schema, including migration history.
 func benchmarkPool(b *testing.B) *pgxpool.Pool {
 	b.Helper()
 	ctx := context.Background()
-	dsn := os.Getenv("BENCHMARK_DATABASE_URL")
-	require.NotEmpty(b, dsn, "configure BENCHMARK_DATABASE_URL for a dedicated PostgreSQL 18 test database")
+	benchOnce.Do(func() { benchDSN, benchErr = startBenchmarkDatabase(ctx) })
+	require.NoError(b, benchErr)
+	dsn := benchDSN
 	admin, err := pgx.Connect(ctx, dsn)
 	require.NoError(b, err)
 	b.Cleanup(func() { require.NoError(b, admin.Close(ctx)) })
-	var version int
-	require.NoError(b, admin.QueryRow(ctx, "SELECT current_setting('server_version_num')::int").Scan(&version))
-	require.Equal(b, 18, version/10000, "benchmarks require PostgreSQL 18")
 	_, err = admin.Exec(ctx, "CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public")
 	require.NoError(b, err)
 	schema := "bench_" + strings.ReplaceAll(uuid.NewString(), "-", "")
