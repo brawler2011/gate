@@ -49,7 +49,7 @@ func TestInvalidConfigNamesField(t *testing.T) {
 		name, from, to, field string
 	}{
 		{"missing address", "address: :8080", "address: ''", "http.address"},
-		{"relative go-judge url", "http_url: http://go-judge:5050", "http_url: go-judge:5050", "go_judge.http_url"},
+		{"relative go-judge url", "http_url: http://127.0.0.1:5050", "http_url: 127.0.0.1:5050", "go_judge.http_url"},
 		{"unknown email provider", "provider: resend", "provider: smtp", "email.provider"},
 		{"no judge workers", "workers: 4", "workers: 0", "judge.workers"},
 		{"lease too short", "lease: 30s", "lease: 1s", "problems.lease"},

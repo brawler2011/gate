@@ -17,6 +17,7 @@ backend:
   # passed with --set-file. Connection strings and secrets come from env.
   config: ""
 
+# Sidecar of every backend pod (templates/backend.yaml).
 goJudge:
   image: ghcr.io/brawler2011/gate-go-judge
   resources:

@@ -1,5 +1,5 @@
 apiVersion: v2
 name: gate
-description: Gate backend and go-judge. Installed after gate-infra; upgrades run migrations first and roll back as a whole.
+description: Gate backend with its go-judge sidecar. Installed after gate-infra; upgrades run migrations first and roll back as a whole.
 type: application
 version: 0.1.0

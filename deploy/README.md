@@ -5,7 +5,7 @@ Gate runs on k3s and is deployed with Helm as two releases in the `gate` namespa
 | Release | Chart | Contents | Upgrades |
 |---|---|---|---|
 | `gate-infra` | `charts/gate-infra` | PostgreSQL, Redis, NATS, SeaweedFS (StatefulSets on node disk) | rarely; never rolled back with the app |
-| `gate` | `charts/gate` | backend, go-judge, migration Job, Traefik routes | every release |
+| `gate` | `charts/gate` | backend with a go-judge sidecar, migration Job, Traefik routes | every release |
 
 `.github/workflows/deploy.yml` tags the images that CI tested as `release-<commit>`.
 It then runs `helm upgrade --install gate --rollback-on-failure` with that tag:

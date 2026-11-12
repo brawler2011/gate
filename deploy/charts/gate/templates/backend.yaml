@@ -40,6 +40,21 @@ spec:
       imagePullSecrets: {{- toYaml . | nindent 8 }}
       {{- end }}
       terminationGracePeriodSeconds: 40
+      # go-judge runs next to the backend, which uploads files to it over HTTP and
+      # runs them over gRPC; both must reach the same sandbox. As a native sidecar it
+      # starts before the backend and stops after it, so running judgements finish.
+      initContainers:
+        - name: go-judge
+          image: {{ .Values.goJudge.image }}:{{ include "gate.tag" . }}
+          restartPolicy: Always
+          # Loopback only: nothing outside the pod may run code in the sandbox.
+          args: [-enable-grpc, -grpc-addr=127.0.0.1:5051, -http-addr=127.0.0.1:5050, -dir=/data]
+          # The sandbox creates namespaces and cgroups for every run.
+          securityContext: {privileged: true}
+          resources: {{- toYaml .Values.goJudge.resources | nindent 12 }}
+          volumeMounts:
+            # File store on disk: large inputs and answers are not kept in sandbox memory.
+            - {name: judge-data, mountPath: /data}
       containers:
         - name: backend
           image: {{ .Values.backend.image }}:{{ include "gate.tag" . }}
@@ -66,4 +81,6 @@ spec:
         - name: config
           configMap: {name: backend-config}
         - name: problem-work
+          emptyDir: {}
+        - name: judge-data
           emptyDir: {}
