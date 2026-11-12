@@ -43,12 +43,12 @@ INSERT INTO auth_tokens (
 `
 
 type CreateAuthTokenParams struct {
-	ID        uuid.UUID   `json:"id"`
-	UserID    uuid.UUID   `json:"user_id"`
-	TokenType interface{} `json:"token_type"`
-	TokenHash string      `json:"token_hash"`
-	Payload   []byte      `json:"payload"`
-	ExpiresAt time.Time   `json:"expires_at"`
+	ID        uuid.UUID     `json:"id"`
+	UserID    uuid.UUID     `json:"user_id"`
+	TokenType AuthTokenType `json:"token_type"`
+	TokenHash string        `json:"token_hash"`
+	Payload   []byte        `json:"payload"`
+	ExpiresAt time.Time     `json:"expires_at"`
 }
 
 func (q *Queries) CreateAuthToken(ctx context.Context, arg CreateAuthTokenParams) error {
@@ -80,8 +80,8 @@ WHERE user_id = $1::uuid
 `
 
 type DeleteAuthTokensByUserIdAndTypeParams struct {
-	UserID    uuid.UUID   `json:"user_id"`
-	TokenType interface{} `json:"token_type"`
+	UserID    uuid.UUID     `json:"user_id"`
+	TokenType AuthTokenType `json:"token_type"`
 }
 
 func (q *Queries) DeleteAuthTokensByUserIdAndType(ctx context.Context, arg DeleteAuthTokensByUserIdAndTypeParams) error {
@@ -99,8 +99,8 @@ FOR UPDATE
 `
 
 type GetAuthTokenByHashParams struct {
-	TokenHash string      `json:"token_hash"`
-	TokenType interface{} `json:"token_type"`
+	TokenHash string        `json:"token_hash"`
+	TokenType AuthTokenType `json:"token_type"`
 }
 
 func (q *Queries) GetAuthTokenByHash(ctx context.Context, arg GetAuthTokenByHashParams) (AuthToken, error) {
