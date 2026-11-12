@@ -23,7 +23,5 @@ jobs:
     uses: ./.github/workflows/deploy.yml
     with:
       environment: prod
-      domain_name: steins.ru
-      deploy_dir: ~/gate/deploy/prod
       release: ${{ inputs.release || github.sha }}
     secrets: inherit

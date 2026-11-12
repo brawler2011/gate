@@ -1,0 +1,6 @@
+# Production values of deploy/charts/gate; the deploy workflow adds imageTag and
+# backend.config (deploy/prod/config.yaml).
+imagePullSecrets:
+  - name: ghcr
+ingress:
+  host: steins.ru

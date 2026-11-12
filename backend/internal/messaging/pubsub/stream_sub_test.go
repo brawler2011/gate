@@ -87,3 +87,38 @@ func TestStreamConsumerAcknowledgesOnlySuccessfulHandlers(t *testing.T) {
 		})
 	}
 }
+
+type infoConsumer struct {
+	jetstream.Consumer
+	err error
+}
+
+func (c infoConsumer) Info(context.Context) (*jetstream.ConsumerInfo, error) {
+	return &jetstream.ConsumerInfo{}, c.err
+}
+
+type stopRecorder struct {
+	jetstream.ConsumeContext
+	stopped bool
+}
+
+func (c *stopRecorder) Stop() { c.stopped = true }
+
+func TestStreamConsumerStopsOnlyWhenConsumerIsGone(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		infoErr error
+		stopped bool
+	}{
+		{name: "consumer deleted", infoErr: jetstream.ErrConsumerNotFound, stopped: true},
+		{name: "consumer exists"},
+		{name: "server unreachable", infoErr: nats.ErrConnectionClosed},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			subscriber := &StreamSubscriber{consumer: infoConsumer{err: tc.infoErr}, logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+			consumeCtx := &stopRecorder{}
+			subscriber.handleConsumeError(consumeCtx, nats.ErrNoResponders)
+			require.Equal(t, tc.stopped, consumeCtx.stopped)
+		})
+	}
+}

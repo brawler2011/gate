@@ -18,7 +18,7 @@ func NewContestsSub(
 		js,
 		dispatcher,
 		"CONTESTS",
-		"contest_events_consumer",
+		"contest_events",
 		"contest.*",
 		"contest_events_subscriber",
 	)

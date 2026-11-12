@@ -1,13 +1,15 @@
-# Backend configuration for production; mounted into the backend container.
-# Secrets and connection strings come from the environment; see deploy/local/.env.example.
+# Backend configuration for production, mounted by the gate chart (deploy/README.md).
+# Secrets and connection strings come from the environment (the gate-secrets secret).
 http:
   address: :8080
-  # Only this Docker DNS peer may supply forwarded client IPs.
-  trusted_proxy: traefik-global
+  # Headless service of the Traefik pods (deploy/k3s/traefik-pods.yaml): only they
+  # may supply forwarded client IPs.
+  trusted_proxy: traefik-pods.kube-system.svc.cluster.local
   secure_cookies: true
 go_judge:
-  grpc_addr: go-judge:5051
-  http_url: http://go-judge:5050
+  # The go-judge sidecar in the backend pod.
+  grpc_addr: 127.0.0.1:5051
+  http_url: http://127.0.0.1:5050
 storage:
   s3_endpoint: http://s3:8333
 email:
@@ -19,7 +21,7 @@ inbox:
 judge:
   workers: 4
 problems:
-  # Disk-backed scratch space for builds and judging; must not be tmpfs.
+  # Pod scratch space on node disk (emptyDir); must not be tmpfs.
   work_dir: /problem-work
   draft:
     file_bytes: 1MiB

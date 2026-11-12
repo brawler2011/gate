@@ -1,0 +1,28 @@
+# Configures the Traefik that k3s bundles (chart 41.x). k3s applies HelmChartConfig
+# objects from its manifests directory or from kubectl apply.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    ports:
+      web:
+        http:
+          redirections:
+            entryPoint: {to: websecure, scheme: https, permanent: true}
+    service:
+      spec:
+        # Keeps client source IPs: the backend rate-limits by them.
+        externalTrafficPolicy: Local
+    # ACME account and certificates survive Traefik restarts.
+    persistence:
+      enabled: true
+    certificatesResolvers:
+      letsencrypt:
+        acme:
+          email: slavabirin1@yandex.ru
+          storage: /data/acme.json
+          httpChallenge:
+            entryPoint: web

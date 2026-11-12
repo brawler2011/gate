@@ -38,7 +38,3 @@ Thumbs.db
 postgres-data/
 redis-data/
 nats-data/
-
-# Traefik ACME state
-acme.json
-

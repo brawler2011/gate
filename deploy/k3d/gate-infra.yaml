@@ -1,0 +1,7 @@
+# Overrides of deploy/charts/gate-infra for the local k3d cluster (task k3d:deploy).
+postgres:
+  storage: 1Gi
+nats:
+  storage: 1Gi
+seaweedfs:
+  storage: 5Gi
