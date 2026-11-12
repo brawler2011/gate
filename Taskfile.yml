@@ -111,21 +111,6 @@ tasks:
     cmds:
       - go test -v -timeout 15m -tags=integration {{.CLI_ARGS | default "./backend/tests/integration/..."}}
 
-  test:migrations:rollback:
-    desc: Run the base branch's integration tests on this branch's migrations, as after an image rollback
-    vars:
-      BASE: '{{.BASE | default "origin/main"}}'
-    cmds:
-      # Clears a worktree left by an interrupted run, even one deleted by hand.
-      - git worktree remove --force .rollback-base 2> /dev/null || true
-      - git worktree prune
-      - rm -rf .rollback-base
-      - git worktree add --detach .rollback-base "$(git merge-base '{{.BASE}}' HEAD)"
-      - defer: git worktree remove --force .rollback-base
-      - rm -rf .rollback-base/backend/migrations
-      - cp -r backend/migrations .rollback-base/backend/migrations
-      - cd .rollback-base && task test:be:integration -- {{.CLI_ARGS}}
-
   bench:be:
     desc: Run PostgreSQL and scoreboard performance benchmarks
     cmds:
@@ -136,27 +121,11 @@ tasks:
     cmds:
       - golangci-lint run ./backend/...
       - task: lint:sql
-      - task: lint:migrations
 
   lint:sql:
     desc: Check for unused sqlc queries in production code
     cmds:
       - go run ./tools/unusedsqlc
-
-  lint:migrations:
-    desc: Check migrations against the rollback-safety rules in backend/migrations/README.md
-    vars:
-      # The initial schema; rules apply to the migrations after it.
-      BASELINE: backend/migrations/20261112000000_init.sql
-    cmds:
-      - |
-        if grep -l -e '+goose Down' backend/migrations/*.sql; then
-          echo "ERROR: migrations must not have a Down section (backend/migrations/README.md)."
-          exit 1
-        fi
-      - |
-        set -- $(ls backend/migrations/*.sql | grep -v -x -F '{{.BASELINE}}')
-        if [ "$#" -gt 0 ]; then squawk "$@"; fi
 
   lint:deploy:
     desc: Lint the Helm charts with the values of every environment
@@ -259,9 +228,9 @@ tasks:
       - rm -rf frontend/contracts/core/v1 frontend/contracts/observer/v1
 
   migrate:be:
-    desc: Apply database migrations
+    desc: Apply the schema, resetting all local data if it changed
     cmds:
-      - go run ./backend -env=deploy/local/.env -migrate
+      - go run ./backend -config=deploy/local/config.yaml -env=deploy/local/.env -migrate
 
   docker:up:
     desc: Start local Docker containers in background

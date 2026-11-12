@@ -16,7 +16,7 @@ func main() {
 
 	flag.StringVar(&configFile, "config", "", "path to the YAML config file")
 	flag.StringVar(&envFile, "env", "", "path to an environment file with secrets for local runs")
-	flag.BoolVar(&migrate, "migrate", false, "run database migrations and exit")
+	flag.BoolVar(&migrate, "migrate", false, "apply the schema, resetting all data if it changed, and exit")
 	flag.Parse()
 
 	if flag.NArg() != 0 {
@@ -27,12 +27,12 @@ func main() {
 
 	var err error
 	switch {
-	case migrate:
-		err = runMigrations(envFile)
 	case configFile == "":
 		slog.Error("missing -config")
 		flag.Usage()
 		os.Exit(2)
+	case migrate:
+		err = runMigrations(configFile, envFile)
 	default:
 		err = runApp(configFile, envFile)
 	}

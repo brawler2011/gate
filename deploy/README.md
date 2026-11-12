@@ -10,14 +10,15 @@ Gate runs on k3s and is deployed with Helm as two releases in the `gate` namespa
 `.github/workflows/deploy.yml` tags the images that CI tested as `release-<commit>`.
 It then runs `helm upgrade --install gate --rollback-on-failure` with that tag:
 
-1. A `pre-upgrade` Job runs `backend --migrate`. If it fails, nothing of the new release starts.
+1. A `pre-upgrade` Job runs `backend --migrate`: when the schema changed, it wipes all data and applies the new schema (`backend/migrations/README.md`). If it fails, nothing of the new release starts.
 2. Backend pods roll one at a time (`maxUnavailable: 0`). A new pod must pass `/health` before an old one stops.
-3. If the migration or the rollout fails within the timeout, Helm restores the previous release and the workflow fails. The previous pods serve throughout.
+3. If the migration or the rollout fails within the timeout, Helm restores the previous release and the workflow fails. The previous pods serve throughout, unless the schema was reset under them.
 4. The workflow then checks `https://<host>/health` from outside. A failure there (route, certificate, DNS) fails the workflow but does not roll back.
 
-A rolled-back release runs on the migrated schema, so migrations must follow
-`backend/migrations/README.md`. To roll back by hand, run Deploy Production with the
-commit of an earlier release, or run `helm -n gate rollback gate`.
+A rollback restores images, not data: after a schema reset, an earlier release
+resets the data again on its next deploy. To roll back by hand, run Deploy Production
+with the commit of an earlier release, or run `helm -n gate rollback gate`; the latter
+skips the migrate Job, so it does not fit a release with a different schema.
 
 ## Layout
 

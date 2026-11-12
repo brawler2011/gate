@@ -138,6 +138,11 @@ linters:
           - forbidigo
         path: (_test\.go$|^backend/tests/)
         text: Do not execute raw SQL
+      # Schema management runs DDL that sqlc cannot express, like goose does.
+      - linters:
+          - forbidigo
+        path: ^backend/internal/datareset/
+        text: Do not execute raw SQL
       - linters:
           - gosec
         text: "G124|G122|G703|G304|G301"
