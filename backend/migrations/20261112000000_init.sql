@@ -1,4 +1,4 @@
--- Initial schema. Schema changes are new migrations; this file is not edited.
+-- The schema. Edit it in place; a change resets all data on the next deploy (README.md).
 -- +goose Up
 
 -- ==========================================================================
