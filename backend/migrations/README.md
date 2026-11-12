@@ -1,32 +1,16 @@
-# Migrations
+# Schema
 
-A failed release is rolled back by image only: the previous code then runs on the
-**new** schema. Every migration must therefore work with the previous release's code.
+Gate has no users yet, so data is disposable. The schema is one editable file,
+`20261112000000_init.sql`: change it in place, and do not add migrations.
 
-## Rules
+`backend --migrate` (the Helm migrate Job before every deploy, `task migrate:be`
+locally) hashes this directory and compares the hash with the one stored in the
+database:
 
-1. **Expand only.** Add tables, nullable columns, columns with a constant default,
-   indexes. `DROP`, `RENAME`, type changes and `SET NOT NULL` wait for a later release,
-   once the previous release no longer uses the object.
-2. **No Down section.** Fix a bad migration with a new one.
-3. **Merged migrations are immutable.** Never edit, rename or delete them; a new
-   migration's version must be newer than the latest on the base branch.
+- same hash: nothing happens, data is kept;
+- different or no hash: every S3 bucket is emptied, the Redis database flushed, the
+  JetStream streams deleted, and the `public` schema dropped and created from scratch.
+  The backend recreates streams and buckets on startup.
 
-Rules apply after the baseline `20261112000000_init.sql`.
-
-## Removing or renaming a column
-
-Release N adds the new column, writes both and backfills it; release N+1 uses only the new one;
-release N+2 drops the old one, marked for the linter:
-
-```sql
--- +goose Up
--- squawk-ignore ban-drop-column
-ALTER TABLE users DROP COLUMN email;
-```
-
-Create indexes on populated tables `CONCURRENTLY`, in a file marked
-`-- +goose NO TRANSACTION`.
-
-Checked by `task lint:migrations` and the Migration Rollback Test CI job; run the
-rollback scenario locally with `task test:migrations:rollback BASE=origin/main`.
+When Gate gets real users, freeze this file as the baseline and go back to
+rollback-safe migrations (expand/contract, see #212).

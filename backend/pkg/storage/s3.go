@@ -186,6 +186,36 @@ func (s *S3Storage) ListFiles(ctx context.Context, bucket, prefix string) ([]str
 	return keys, nil
 }
 
+// ListBuckets returns the names of all buckets.
+func (s *S3Storage) ListBuckets(ctx context.Context) ([]string, error) {
+	paginator := s3.NewListBucketsPaginator(s.client, &s3.ListBucketsInput{})
+	var names []string
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list S3 buckets: %w", err)
+		}
+		for _, bucket := range page.Buckets {
+			names = append(names, aws.ToString(bucket.Name))
+		}
+	}
+	return names, nil
+}
+
+// EmptyBucket deletes every object in the bucket and keeps the bucket.
+func (s *S3Storage) EmptyBucket(ctx context.Context, bucket string) error {
+	keys, err := s.ListFiles(ctx, bucket, "")
+	if err != nil {
+		return err
+	}
+	for _, key := range keys {
+		if err := s.DeleteFile(ctx, bucket, key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // BucketExists checks if an S3 bucket exists
 func (s *S3Storage) BucketExists(ctx context.Context, bucket string) (bool, error) {
 	_, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{

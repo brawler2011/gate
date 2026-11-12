@@ -1,7 +1,21 @@
-# Runs before any app resource changes. A failed migration fails the release, and
-# with --rollback-on-failure nothing of the new release starts. Migrations must be
-# compatible with the previous release (backend/migrations/README.md): a rolled-back
-# release runs on the migrated schema.
+# Runs before any app resource changes. It applies the schema and, when the schema
+# changed, resets all data (backend/migrations/README.md). A failed run fails the
+# release, and with --rollback-on-failure nothing of the new release starts.
+#
+# The Job reads the backend config (the S3 endpoint). Hooks run before the release's
+# own resources exist, so the config comes from a hook ConfigMap of its own.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migrate-config
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-1"
+    helm.sh/hook-delete-policy: before-hook-creation
+data:
+  config.yaml: |
+    {{- .Values.backend.config | nindent 4 }}
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -25,5 +39,10 @@ spec:
       containers:
         - name: migrate
           image: {{ .Values.backend.image }}:{{ include "gate.tag" . }}
-          args: [--migrate]
+          args: [--migrate, -config=/etc/gate/config.yaml]
           env: {{- include "gate.backendEnv" . | trim | nindent 12 }}
+          volumeMounts:
+            - {name: config, mountPath: /etc/gate, readOnly: true}
+      volumes:
+        - name: config
+          configMap: {name: migrate-config}
