@@ -26,6 +26,7 @@ import (
 const natsPort = "4222/tcp"
 
 func TestJudgeProgressPublishing(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	js, natsConn := newNATSJetStream(t)
 	defer natsConn.Close()

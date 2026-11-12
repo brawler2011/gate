@@ -19,13 +19,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (s *IntegrationTestSuite) resetDeliveryTables() {
-	_, err := s.dbPool.Exec(s.ctx, "TRUNCATE outbox_events,event_aggregates,inbox_receipts")
-	s.Require().NoError(err)
-}
-
 func (s *IntegrationTestSuite) TestOutboxFencesLeasesAndOrdersAggregate() {
-	s.resetDeliveryTables()
 	repo := pgstore.NewOutboxRepo(s.dbPool)
 	aggregate := uuid.New()
 	for range 2 {
@@ -70,7 +64,6 @@ func (s *IntegrationTestSuite) TestOutboxFencesLeasesAndOrdersAggregate() {
 }
 
 func (s *IntegrationTestSuite) TestInboxCommitsEffectsOnceAndRollsBackFailures() {
-	s.resetDeliveryTables()
 	inbox := pgstore.NewInbox(s.dbPool)
 	input := uuid.New()
 	output := eventdata.Event{AggregateID: uuid.New(), Type: eventdata.OutboxEventSubmissionCreated, Payload: map[string]string{"effect": "once"}}
@@ -103,7 +96,6 @@ func (s *IntegrationTestSuite) TestInboxCommitsEffectsOnceAndRollsBackFailures()
 }
 
 func (s *IntegrationTestSuite) TestOutboxRetriesSameMessageAfterPubAckCrash() {
-	s.resetDeliveryTables()
 	js, _ := newNATSJetStream(s.T())
 	s.Require().NoError(pkg.EnsureSubmissionsStream(s.ctx, js))
 	repo := pgstore.NewOutboxRepo(s.dbPool)
@@ -133,7 +125,6 @@ func (s *IntegrationTestSuite) TestOutboxRetriesSameMessageAfterPubAckCrash() {
 }
 
 func (s *IntegrationTestSuite) TestOutboxBoundsRetryAndRetainsPermanentFailures() {
-	s.resetDeliveryTables()
 	repo := pgstore.NewOutboxRepo(s.dbPool)
 	aggregate := uuid.New()
 	s.Require().NoError(repo.Record(s.ctx, eventdata.Event{AggregateID: aggregate, Type: "test.retry", Payload: struct{}{}}))
@@ -165,7 +156,6 @@ func (s *IntegrationTestSuite) TestOutboxBoundsRetryAndRetainsPermanentFailures(
 }
 
 func (s *IntegrationTestSuite) TestInboxConcurrentRedeliveriesApplyOncePerConsumer() {
-	s.resetDeliveryTables()
 	inbox := pgstore.NewInbox(s.dbPool)
 	eventID := uuid.New()
 	var calls atomic.Int32
@@ -200,7 +190,6 @@ func (s *IntegrationTestSuite) TestInboxConcurrentRedeliveriesApplyOncePerConsum
 }
 
 func (s *IntegrationTestSuite) TestInboxRetentionPrunesExpiredReceiptsAndPreservesRecent() {
-	s.resetDeliveryTables()
 	inboxRepo := pgstore.NewInbox(s.dbPool)
 
 	expiredID1 := uuid.New()
@@ -264,7 +253,6 @@ func (s *IntegrationTestSuite) TestInboxRetentionPrunesExpiredReceiptsAndPreserv
 }
 
 func (s *IntegrationTestSuite) TestOutboxDispatchTimeoutDoesNotCauseDuplicateStorm() {
-	s.resetDeliveryTables()
 	repo := pgstore.NewOutboxRepo(s.dbPool)
 	aggregate := uuid.New()
 	s.Require().NoError(repo.Record(s.ctx, eventdata.Event{
@@ -301,7 +289,6 @@ func (s *IntegrationTestSuite) TestOutboxDispatchTimeoutDoesNotCauseDuplicateSto
 }
 
 func (s *IntegrationTestSuite) TestOutboxWorkerHeartbeatRenewsLongDispatch() {
-	s.resetDeliveryTables()
 	repo := pgstore.NewOutboxRepo(s.dbPool)
 	aggregate := uuid.New()
 	s.Require().NoError(repo.Record(s.ctx, eventdata.Event{

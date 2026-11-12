@@ -16,6 +16,7 @@ import (
 )
 
 func TestS3ClientOperations(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	s3Client, bucket := newSeaweedBackedS3Storage(t)
 
