@@ -11,7 +11,7 @@
 - Run commands from the repository root using `task` and `bun`. Find development, build, check, and generation commands in `Taskfile.yml` and frontend scripts in `package.json`.
 - Install dependencies with `bun install --frozen-lockfile`.
 - Use `slog` for backend logging.
-- Database migrations must stay compatible with the previous release: expand/contract, no Down sections, never edit merged migrations. See `docs/design/migrations.md`.
+- Database migrations must stay compatible with the previous release: expand/contract, no Down sections, never edit merged migrations. See `backend/migrations/README.md`.
 - Use React Router for routing, TanStack Query for query state, and Mantine for UI.
 - Use `api` and, when needed, `unwrap` from `@/lib/api`. Browser requests use same-origin `/api` and `/ws`.
 - Do not override environment variables or add fallback values in code. Local settings belong in `deploy/local/.env`; variables are listed in `.env.example` alongside it.

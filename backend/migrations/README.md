@@ -38,10 +38,5 @@
 
 ## Проверки
 
-- `task lint:migrations` (входит в `lint:be`, `precommit`, хук и CI) запускает
-  [Squawk](https://squawkhq.com) с `.squawk.toml` и запрещает секцию Down.
-- CI-джоба **Migration Rollback Test**: если PR меняет `backend/migrations`, она
-  проверяет, что миграции базовой ветки не изменены, а новые идут после них, и запускает
-  интеграционные тесты
-  базовой ветки на миграциях PR — ровно сценарий отката. Локально:
-  `task test:migrations:rollback BASE=origin/main`.
+Правила проверяют `task lint:migrations` (Squawk и запрет Down) и CI-джоба
+Migration Rollback Test. Сценарий отката локально: `task test:migrations:rollback BASE=origin/main`.

@@ -16,7 +16,7 @@ It then runs `helm upgrade --install gate --rollback-on-failure` with that tag:
 4. The workflow then checks `https://<host>/health` from outside. A failure there (route, certificate, DNS) fails the workflow but does not roll back.
 
 A rolled-back release runs on the migrated schema, so migrations must follow
-`docs/design/migrations.md`. To roll back by hand, run Deploy Production with the
+`backend/migrations/README.md`. To roll back by hand, run Deploy Production with the
 commit of an earlier release, or run `helm -n gate rollback gate`.
 
 ## Layout
