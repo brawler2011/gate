@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -47,7 +48,7 @@ func BenchmarkScoreboardProjection(b *testing.B) {
 					start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 					end := start.Add(2 * time.Hour)
 					r := &benchmarkScoreboardRepo{scoreboardRepo: &scoreboardRepo{
-						contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, EndTime: &end, Settings: map[string]interface{}{"freeze_status": contestsmodel.FreezeStatusFrozen, "freeze_duration_minutes": 60}},
+						contest: contestsmodel.Contest{ID: uuid.New(), StartTime: &start, EndTime: &end, Settings: map[string]interface{}{"freeze_status": contestsmodel.FreezeStatusAuto, "freeze_duration_minutes": 60}},
 						users:   map[uuid.UUID]string{},
 					}}
 					for p := 0; p < 10; p++ {
@@ -67,8 +68,10 @@ func BenchmarkScoreboardProjection(b *testing.B) {
 						}
 					}
 					uc := contests.NewContestsUseCase(r, nil, nil, nil)
+					// Read inside the freeze window; the fixed contest dates are in the past.
+					ctx := accessmodel.WithReadTime(context.Background(), start.Add(90*time.Minute))
 					operation := func() {
-						result, err := uc.ProjectScoreboard(context.Background(), r.contest.ID, unfrozen)
+						result, err := uc.ProjectScoreboard(ctx, r.contest.ID, unfrozen)
 						if err != nil {
 							b.Fatal(err)
 						}
