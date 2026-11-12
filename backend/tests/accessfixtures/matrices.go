@@ -1,4 +1,4 @@
-// Package accessfixtures contains the RFC §3 action expectations shared by
+// Package accessfixtures contains the access-policy action expectations shared by
 // in-memory policies and future SQL visibility parity tests. A 1 permits access;
 // a 0 denies it. D rows test only the gate; concrete changes have separate tests.
 package accessfixtures

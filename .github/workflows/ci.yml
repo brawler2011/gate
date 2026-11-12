@@ -291,7 +291,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # See docs/design/migrations.md. Runs the tests only when migrations change.
+      # See backend/migrations/README.md. Runs the tests only when migrations change.
       - name: Compare migrations with the base branch
         id: migrations
         env:
@@ -308,7 +308,7 @@ jobs:
             base_ref="origin/${pr_base:-main}"
           fi
           base="$(git merge-base "$base_ref" HEAD)"
-          changed="$(git diff --name-status "$base" HEAD -- backend/migrations)"
+          changed="$(git diff --name-status "$base" HEAD -- 'backend/migrations/*.sql')"
           if [ -n "$changed" ] && grep -v '^A' <<< "$changed"; then
             echo "::error::Merged migrations are immutable; only new files may be added."
             exit 1

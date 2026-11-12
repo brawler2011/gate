@@ -144,14 +144,14 @@ tasks:
       - go run ./tools/unusedsqlc
 
   lint:migrations:
-    desc: Check migrations against the rollback-safety rules in docs/design/migrations.md
+    desc: Check migrations against the rollback-safety rules in backend/migrations/README.md
     vars:
       # The initial schema; rules apply to the migrations after it.
       BASELINE: backend/migrations/20261112000000_init.sql
     cmds:
       - |
         if grep -l -e '+goose Down' backend/migrations/*.sql; then
-          echo "ERROR: migrations must not have a Down section (docs/design/migrations.md)."
+          echo "ERROR: migrations must not have a Down section (backend/migrations/README.md)."
           exit 1
         fi
       - |

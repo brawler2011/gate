@@ -1,6 +1,6 @@
 # Runs before any app resource changes. A failed migration fails the release, and
 # with --rollback-on-failure nothing of the new release starts. Migrations must be
-# compatible with the previous release (docs/design/migrations.md): a rolled-back
+# compatible with the previous release (backend/migrations/README.md): a rolled-back
 # release runs on the migrated schema.
 apiVersion: batch/v1
 kind: Job
