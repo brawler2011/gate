@@ -13,6 +13,8 @@ goJudge:
 ingress:
   host: steins.ru
 # containerd's default AppArmor profile denies signals inside containers on this
-# server (Ubuntu 26.04), which hangs PostgreSQL and gosu. Until #219 restores a
-# working profile, pods run unconfined; seccomp RuntimeDefault still applies.
-appArmorProfile: Unconfined
+# server (Ubuntu 26.04), which hangs PostgreSQL and gosu. deploy/k3s/install.sh
+# installs gate-default, which allows them.
+appArmorProfile:
+  type: Localhost
+  localhostProfile: gate-default

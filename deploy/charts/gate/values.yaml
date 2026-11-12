@@ -30,5 +30,7 @@ ingress:
   entryPoint: websecure
   certResolver: letsencrypt
 
-# AppArmor profile of every pod (go-judge is privileged and unconfined anyway).
-appArmorProfile: RuntimeDefault
+# AppArmor profile of every pod, as in a pod securityContext (go-judge is
+# privileged and unconfined anyway).
+appArmorProfile:
+  type: RuntimeDefault
