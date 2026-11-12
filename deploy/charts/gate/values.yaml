@@ -30,7 +30,7 @@ ingress:
   entryPoint: websecure
   certResolver: letsencrypt
 
-# AppArmor profile of every pod, as in a pod securityContext (go-judge is
-# privileged and unconfined anyway).
+# AppArmor profile of every pod, as in a pod securityContext. The go-judge
+# sidecar always runs unconfined (templates/backend.yaml in the gate chart).
 appArmorProfile:
   type: RuntimeDefault

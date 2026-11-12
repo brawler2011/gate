@@ -52,8 +52,10 @@ spec:
           # Loopback only: nothing outside the pod may run code in the sandbox.
           args: [-enable-grpc, -grpc-addr=127.0.0.1:5051, -http-addr=127.0.0.1:5050, -dir=/data]
           # The sandbox creates namespaces and cgroups for every run.
-          # Privileged: no seccomp filter, the sandbox applies its own per run.
-          securityContext: {privileged: true, seccompProfile: {type: Unconfined}}
+          # Privileged and unconfined: the sandbox mounts filesystems and filters each run
+          # itself. The pod's AppArmor profile would otherwise apply here too, and a
+          # Localhost profile denies the mounts.
+          securityContext: {privileged: true, seccompProfile: {type: Unconfined}, appArmorProfile: {type: Unconfined}}
           resources: {{- toYaml .Values.goJudge.resources | nindent 12 }}
           volumeMounts:
             # File store on disk: large inputs and answers are not kept in sandbox memory.
