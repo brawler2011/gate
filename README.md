@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/brawler2011/gate/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/brawler2011/gate/actions/workflows/ci.yml)
 [![Deploy Production](https://github.com/brawler2011/gate/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/brawler2011/gate/actions/workflows/deploy-prod.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
 ## Dependencies
 

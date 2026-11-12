@@ -1,6 +1,7 @@
 {
   "name": "gate",
   "private": true,
+  "license": "AGPL-3.0-only",
   "scripts": {
     "commit:validate": "commitlint --strict",
     "dev": "vite",
