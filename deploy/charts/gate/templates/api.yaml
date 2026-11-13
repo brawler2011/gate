@@ -9,20 +9,22 @@ data:
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend
+  name: api
 spec:
-  selector: {app.kubernetes.io/name: backend}
+  selector: {app.kubernetes.io/name: api}
   ports:
     - {name: http, port: 8080}
 ---
+# Serves HTTP and WebSocket and publishes submissions and builds; worker pods
+# (templates/worker.yaml) run them. No sandbox: these pods cannot run user code.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend
+  name: api
 spec:
-  replicas: {{ .Values.backend.replicas }}
+  replicas: {{ .Values.api.replicas }}
   selector:
-    matchLabels: {app.kubernetes.io/name: backend}
+    matchLabels: {app.kubernetes.io/name: api}
   # A new pod must be ready before an old one stops, so a release that never
   # becomes ready leaves the previous pods serving until Helm rolls it back.
   strategy:
@@ -30,7 +32,7 @@ spec:
     rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
   template:
     metadata:
-      labels: {app.kubernetes.io/name: backend}
+      labels: {app.kubernetes.io/name: api}
       annotations:
         checksum/config: {{ .Values.backend.config | sha256sum }}
     spec:
@@ -42,50 +44,37 @@ spec:
       imagePullSecrets: {{- toYaml . | nindent 8 }}
       {{- end }}
       terminationGracePeriodSeconds: 40
-      # go-judge runs next to the backend, which uploads files to it over HTTP and
-      # runs them over gRPC; both must reach the same sandbox. As a native sidecar it
-      # starts before the backend and stops after it, so running judgements finish.
       initContainers:
-        - name: go-judge
+        # The API offers the languages of the judge image that the workers of this
+        # release run, so it copies that image's manifest (judge.manifest_dir in the
+        # config). The image is already on the node for the workers.
+        - name: judge-manifest
           image: {{ .Values.goJudge.image }}:{{ include "gate.tag" . }}
-          restartPolicy: Always
-          # Loopback only: nothing outside the pod may run code in the sandbox.
-          args: [-enable-grpc, -grpc-addr=127.0.0.1:5051, -http-addr=127.0.0.1:5050, -dir=/data]
-          # The sandbox creates namespaces and cgroups for every run.
-          # Privileged and unconfined: the sandbox mounts filesystems and filters each run
-          # itself. The pod's AppArmor profile would otherwise apply here too, and a
-          # Localhost profile denies the mounts.
-          securityContext: {privileged: true, seccompProfile: {type: Unconfined}, appArmorProfile: {type: Unconfined}}
-          resources: {{- toYaml .Values.goJudge.resources | nindent 12 }}
+          command: [/opt/runtime/bin/cp, -RL, /opt/manifest/., /etc/judge/]
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true}
+          resources: {requests: {cpu: 10m, memory: 16Mi}, limits: {memory: 64Mi}}
           volumeMounts:
-            # File store on disk: large inputs and answers are not kept in sandbox memory.
-            - {name: judge-data, mountPath: /data}
+            - {name: judge-manifest, mountPath: /etc/judge}
       containers:
         - name: backend
           image: {{ .Values.backend.image }}:{{ include "gate.tag" . }}
-          args: [-config=/etc/gate/config.yaml]
+          args: [-mode=api, -config=/etc/gate/config.yaml]
           env: {{- include "gate.backendEnv" . | trim | nindent 12 }}
           ports:
             - {name: http, containerPort: 8080}
-          readinessProbe:
-            httpGet: {path: /health, port: http}
-            periodSeconds: 5
-            failureThreshold: 2
-          livenessProbe:
-            httpGet: {path: /health, port: http}
-            periodSeconds: 10
-            failureThreshold: 6
+          {{- include "gate.backendProbes" . | nindent 10 }}
           lifecycle:
             # Let Traefik drop the pod from its endpoints before the server shuts down.
             preStop: {sleep: {seconds: 5}}
-          resources: {{- toYaml .Values.backend.resources | nindent 12 }}
+          resources: {{- toYaml .Values.api.resources | nindent 12 }}
           volumeMounts:
             - {name: config, mountPath: /etc/gate, readOnly: true}
+            - {name: judge-manifest, mountPath: /etc/judge, readOnly: true}
             - {name: problem-work, mountPath: /problem-work}
       volumes:
         - name: config
           configMap: {name: backend-config}
-        - name: problem-work
+        - name: judge-manifest
           emptyDir: {}
-        - name: judge-data
+        - name: problem-work
           emptyDir: {}

@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -29,4 +32,23 @@ func TestReadImageWaitsForUnreachableJudge(t *testing.T) {
 	_, err = ReadImage(ctx, client)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "go-judge unreachable")
+}
+
+// An API instance reads the manifest that the judge image ships, copied to a directory.
+func TestReadImageDir(t *testing.T) {
+	dir := t.TempDir()
+	langs, err := os.ReadFile(filepath.Join("..", "..", "..", "judge", "langs.toml"))
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "langs.toml"), langs, 0o600))
+	digest := "sha256:" + strings.Repeat("ab", 32)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "identity.json"), []byte(`{"digest":"`+digest+`","architecture":"x86_64","abi":"linux-gnu"}`), 0o600))
+
+	image, err := ReadImageDir(dir)
+	require.NoError(t, err)
+	assert.Equal(t, Identity{Digest: digest, Architecture: "x86_64", ABI: "linux-gnu"}, image.Identity)
+	assert.Contains(t, image.Config.Langs, "cpp")
+
+	_, err = ReadImageDir(t.TempDir())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "identity.json")
 }

@@ -6,16 +6,18 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/brawler2011/gate/backend/config"
 	"github.com/brawler2011/gate/backend/pkg/logging"
 )
 
 func main() {
 	slog.SetDefault(logging.New(os.Stdout))
-	var configFile, envFile string
+	var configFile, envFile, modeName string
 	var migrate bool
 
 	flag.StringVar(&configFile, "config", "", "path to the YAML config file")
 	flag.StringVar(&envFile, "env", "", "path to an environment file with secrets for local runs")
+	flag.StringVar(&modeName, "mode", string(config.ModeAll), "what to run: all, api (HTTP and WebSocket) or worker (judging, problem builds, booklets)")
 	flag.BoolVar(&migrate, "migrate", false, "apply the schema, resetting all data if it changed, and exit")
 	flag.Parse()
 
@@ -25,7 +27,13 @@ func main() {
 		os.Exit(2)
 	}
 
-	var err error
+	mode, err := config.ParseMode(modeName)
+	if err != nil {
+		slog.Error("invalid -mode", "error", err)
+		flag.Usage()
+		os.Exit(2)
+	}
+
 	switch {
 	case configFile == "":
 		slog.Error("missing -config")
@@ -34,7 +42,7 @@ func main() {
 	case migrate:
 		err = runMigrations(configFile, envFile)
 	default:
-		err = runApp(configFile, envFile)
+		err = runApp(configFile, envFile, mode)
 	}
 
 	if err == nil || errors.Is(err, os.ErrClosed) {

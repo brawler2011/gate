@@ -19,3 +19,15 @@
 appArmorProfile: {{- toYaml .Values.appArmorProfile | nindent 2 }}
 seccompProfile: {type: RuntimeDefault}
 {{- end -}}
+
+{{/* Probes of the backend container in API and worker pods; both serve /health. */}}
+{{- define "gate.backendProbes" -}}
+readinessProbe:
+  httpGet: {path: /health, port: http}
+  periodSeconds: 5
+  failureThreshold: 2
+livenessProbe:
+  httpGet: {path: /health, port: http}
+  periodSeconds: 10
+  failureThreshold: 6
+{{- end -}}

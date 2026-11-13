@@ -38,16 +38,16 @@ spec:
     - match: Host(`{{ $host }}`) && PathPrefix(`/api`)
       kind: Rule
       middlewares: [{name: security-headers}, {name: api-ratelimit}]
-      services: [{name: backend, port: 8080}]
+      services: [{name: api, port: 8080}]
     - match: Host(`{{ $host }}`) && (PathRegexp(`^/(wp-admin|wp-content|phpmyadmin|webpack-dev|\.env|\.git)`) || PathRegexp(`.*\.php$`))
       kind: Rule
       middlewares: [{name: security-headers}, {name: deny-all}]
-      services: [{name: backend, port: 8080}]
+      services: [{name: api, port: 8080}]
     # The SPA, /ws and /health.
     - match: Host(`{{ $host }}`)
       kind: Rule
       middlewares: [{name: security-headers}]
-      services: [{name: backend, port: 8080}]
+      services: [{name: api, port: 8080}]
   tls:
     {{- with .Values.ingress.certResolver }}
     certResolver: {{ . }}

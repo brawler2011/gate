@@ -7,7 +7,7 @@ http:
   trusted_proxy: traefik-pods.kube-system.svc.cluster.local
   secure_cookies: true
 go_judge:
-  # The go-judge sidecar in the backend pod.
+  # The go-judge sidecar in the worker pod.
   grpc_addr: 127.0.0.1:5051
   http_url: http://127.0.0.1:5050
 storage:
@@ -19,6 +19,8 @@ email:
 inbox:
   retention: 168h
 judge:
+  # Judge image manifest that an init container copies into API pods.
+  manifest_dir: /etc/judge
   # One core: parallel judging would only share it and skew time limits.
   workers: 1
 problems:

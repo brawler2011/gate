@@ -5,13 +5,22 @@ Gate runs on k3s and is deployed with Helm as two releases in the `gate` namespa
 | Release | Chart | Contents | Upgrades |
 |---|---|---|---|
 | `gate-infra` | `charts/gate-infra` | PostgreSQL, Redis, NATS, SeaweedFS (StatefulSets on node disk) | rarely; never rolled back with the app |
-| `gate` | `charts/gate` | backend with a go-judge sidecar, migration Job, Traefik routes | every release |
+| `gate` | `charts/gate` | API and worker Deployments, migration Job, Traefik routes | every release |
+
+The backend binary runs in one of two modes, and the chart deploys each as its own
+Deployment, scaled by `api.replicas` and `worker.replicas`:
+
+- **API** (`-mode=api`): HTTP and WebSocket. It publishes submissions and problem builds and runs no sandbox. An init container copies the judge image's manifest (languages, toolchain identity) into the pod.
+- **Worker** (`-mode=worker`): judges submissions, builds problem packages and compiles contest booklets for the API (NATS request-reply), in a privileged go-judge sidecar. It serves only `/health`.
+
+Both belong to one release and roll back together. Locally, `task dev` runs both in
+one process (`-mode=all`, the default).
 
 `.github/workflows/deploy.yml` tags the images that CI tested as `release-<commit>`.
 It then runs `helm upgrade --install gate --rollback-on-failure` with that tag:
 
 1. A `pre-upgrade` Job runs `backend --migrate`: when the schema changed, it wipes all data and applies the new schema (`backend/migrations/README.md`). If it fails, nothing of the new release starts.
-2. Backend pods roll one at a time (`maxUnavailable: 0`). A new pod must pass `/health` before an old one stops.
+2. API and worker pods roll one at a time (`maxUnavailable: 0`). A new pod must pass `/health` before an old one stops. A stopping worker returns its running judgements to the queue, and a running worker judges them again.
 3. If the migration or the rollout fails within the timeout, Helm restores the previous release and the workflow fails. The previous pods serve throughout, unless the schema was reset under them.
 4. The workflow then checks `https://<host>/health` from outside. A failure there (route, certificate, DNS) fails the workflow but does not roll back.
 
