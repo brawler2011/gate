@@ -1,0 +1,114 @@
+{
+  "Outbox/large/MarkAsCompleted": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 21,
+    "sorts": 0,
+    "seq_scans": 0
+  },
+  "Outbox/large/PickEvents": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 293,
+    "sorts": 1,
+    "seq_scans": 0
+  },
+  "Outbox/small/MarkAsCompleted": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 16,
+    "sorts": 0,
+    "seq_scans": 0
+  },
+  "Outbox/small/PickEvents": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 223,
+    "sorts": 1,
+    "seq_scans": 0
+  },
+  "ScoreboardQueries/large/Standings": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 143,
+    "sorts": 0,
+    "seq_scans": 3
+  },
+  "ScoreboardQueries/large/SubmissionHistory": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 13,
+    "sorts": 0,
+    "seq_scans": 0
+  },
+  "ScoreboardQueries/small/Standings": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 16,
+    "sorts": 0,
+    "seq_scans": 3
+  },
+  "ScoreboardQueries/small/SubmissionHistory": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 3,
+    "sorts": 0,
+    "seq_scans": 0
+  },
+  "Submissions/large/Create": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 57,
+    "sorts": 0,
+    "seq_scans": 0
+  },
+  "Submissions/large/Get": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 14,
+    "sorts": 0,
+    "seq_scans": 0
+  },
+  "Submissions/large/Latest": {
+    "statements": 2,
+    "transactions": 1,
+    "pages": 283,
+    "sorts": 0,
+    "seq_scans": 0
+  },
+  "Submissions/large/UpdateRevision": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 58,
+    "sorts": 0,
+    "seq_scans": 0
+  },
+  "Submissions/small/Create": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 46,
+    "sorts": 0,
+    "seq_scans": 0
+  },
+  "Submissions/small/Get": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 12,
+    "sorts": 0,
+    "seq_scans": 1
+  },
+  "Submissions/small/Latest": {
+    "statements": 2,
+    "transactions": 1,
+    "pages": 138,
+    "sorts": 0,
+    "seq_scans": 0
+  },
+  "Submissions/small/UpdateRevision": {
+    "statements": 1,
+    "transactions": 0,
+    "pages": 44,
+    "sorts": 0,
+    "seq_scans": 0
+  }
+}

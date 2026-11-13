@@ -87,6 +87,7 @@ tasks:
     cmds:
       - task: test:be
       - task: test:be:integration
+      - task: test:be:work
 
   judge:image:
     desc: Make the go-judge image for the current judge/ sources available locally (pull, else build)
@@ -110,6 +111,16 @@ tasks:
     deps: [judge:image]
     cmds:
       - go test -v -timeout 15m -tags=integration {{.CLI_ARGS | default "./backend/tests/integration/..."}}
+
+  test:be:work:
+    desc: Check the database work of PostgreSQL scenarios against backend/internal/postgres/testdata/query_work.json
+    cmds:
+      - go test -v -count=1 -tags=integration -run='^TestQueryWork$' ./backend/internal/postgres
+
+  golden:update:
+    desc: Rewrite backend/internal/postgres/testdata/query_work.json with the measured database work
+    cmds:
+      - go test -count=1 -tags=integration -run='^TestQueryWork$' ./backend/internal/postgres -update
 
   bench:be:
     desc: Run PostgreSQL and scoreboard performance benchmarks
