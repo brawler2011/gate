@@ -20,7 +20,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
@@ -125,14 +124,7 @@ func newResetStores(t *testing.T, ctx context.Context) datareset.Stores {
 	redisClient := redis.NewClient(&redis.Options{Addr: redisAddr})
 	t.Cleanup(func() { _ = redisClient.Close() })
 
-	natsAddr := startResetContainer(t, ctx, testcontainers.ContainerRequest{
-		Image: "nats:2.10-alpine", ExposedPorts: []string{"4222/tcp"}, Cmd: []string{"-js"}, WaitingFor: wait.ForListeningPort("4222/tcp"),
-	}, "4222/tcp")
-	natsConn, err := nats.Connect("nats://" + natsAddr)
-	require.NoError(t, err)
-	t.Cleanup(natsConn.Close)
-	js, err := jetstream.New(natsConn)
-	require.NoError(t, err)
+	js, _ := newNATSJetStream(t)
 
 	s3Addr := startResetContainer(t, ctx, testcontainers.ContainerRequest{
 		Image:        "chrislusf/seaweedfs:4.53_full",

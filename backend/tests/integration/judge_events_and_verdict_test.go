@@ -5,7 +5,6 @@ package integration
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -15,21 +14,14 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/queuecontext"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/google/uuid"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
-
-const natsPort = "4222/tcp"
 
 func TestJudgeProgressPublishing(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	js, natsConn := newNATSJetStream(t)
-	defer natsConn.Close()
 
 	err := pkg.EnsureSubmissionsStream(ctx, js)
 	require.NoError(t, err)
@@ -82,40 +74,4 @@ func TestJudgeProgressPublishing(t *testing.T) {
 		ids[id] = true
 		require.Equal(t, "progress-123", msg.Header.Get(requestid.Header))
 	}
-}
-
-func newNATSJetStream(t *testing.T) (jetstream.JetStream, *nats.Conn) {
-	t.Helper()
-
-	ctx := context.Background()
-	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "nats:2.10-alpine",
-			ExposedPorts: []string{natsPort},
-			Cmd:          []string{"-js"},
-			WaitingFor: wait.ForLog("Server is ready").
-				WithStartupTimeout(30 * time.Second),
-		},
-		Started: true,
-	})
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		_ = terminate(container)
-	})
-
-	host, err := container.Host(ctx)
-	require.NoError(t, err)
-
-	port, err := container.MappedPort(ctx, natsPort)
-	require.NoError(t, err)
-
-	natsURL := fmt.Sprintf("nats://%s:%s", host, port.Port())
-	natsConn, err := pkg.NewNatsConn(natsURL)
-	require.NoError(t, err)
-
-	js, err := jetstream.New(natsConn)
-	require.NoError(t, err)
-
-	return js, natsConn
 }
