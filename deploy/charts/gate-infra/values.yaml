@@ -28,6 +28,9 @@ nats:
 seaweedfs:
   image: chrislusf/seaweedfs:4.53_full
   storage: 50Gi
+  # Each bucket takes about 7 volumes on its first write (templates/seaweedfs.yaml).
+  volumeSizeLimitMB: 1024
+  maxVolumes: 100
   resources:
     requests: {cpu: 100m, memory: 256Mi}
     limits: {memory: 2Gi}
