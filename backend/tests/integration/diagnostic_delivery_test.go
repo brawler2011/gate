@@ -5,7 +5,6 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
@@ -21,10 +20,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/queuecontext"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/google/uuid"
-	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 type diagnosticJudgingCall struct {
@@ -55,20 +51,7 @@ func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uui
 	s.Require().NoError(json.Unmarshal(headersJSON, &headers))
 	s.Equal(requestID, headers[requestid.Header])
 
-	container, err := testcontainers.GenericContainer(s.ctx, testcontainers.GenericContainerRequest{ContainerRequest: testcontainers.ContainerRequest{
-		Image: "nats:2.10-alpine", ExposedPorts: []string{"4222/tcp"}, Cmd: []string{"-js"}, WaitingFor: wait.ForListeningPort("4222/tcp"),
-	}, Started: true})
-	s.Require().NoError(err)
-	defer func() { s.NoError(terminate(container)) }()
-	host, err := container.Host(s.ctx)
-	s.Require().NoError(err)
-	port, err := container.MappedPort(s.ctx, "4222/tcp")
-	s.Require().NoError(err)
-	conn, err := nats.Connect(fmt.Sprintf("nats://%s:%s", host, port.Port()))
-	s.Require().NoError(err)
-	defer conn.Close()
-	js, err := jetstream.New(conn)
-	s.Require().NoError(err)
+	js, _ := newNATSJetStream(s.T())
 	s.Require().NoError(pkg.EnsureSubmissionsStream(s.ctx, js))
 	s.Require().NoError(pkg.EnsureContestsStream(s.ctx, js))
 	tap, err := js.CreateOrUpdateConsumer(s.ctx, pkg.SubmissionsStreamName, jetstream.ConsumerConfig{Durable: "diagnostic_tap", FilterSubject: "submissions.created", AckPolicy: jetstream.AckExplicitPolicy})

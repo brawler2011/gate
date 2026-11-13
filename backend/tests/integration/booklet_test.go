@@ -5,7 +5,6 @@ package integration
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -13,8 +12,6 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 type fakeCompiler struct{}
@@ -31,22 +28,10 @@ func (fakeCompiler) CompilePDF(_ context.Context, tex string) ([]byte, error) {
 func TestBookletCompiledOnWorker(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: testcontainers.ContainerRequest{
-		Image: "nats:2.10-alpine", ExposedPorts: []string{"4222/tcp"},
-		WaitingFor: wait.ForAll(wait.ForLog("Server is ready"), wait.ForListeningPort("4222/tcp")),
-	}, Started: true})
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, terminate(container)) })
-	host, err := container.Host(ctx)
-	require.NoError(t, err)
-	port, err := container.MappedPort(ctx, "4222/tcp")
-	require.NoError(t, err)
-	conn, err := nats.Connect(fmt.Sprintf("nats://%s:%s", host, port.Port()))
-	require.NoError(t, err)
-	t.Cleanup(conn.Close)
+	conn := newNATSConn(t, false)
 	client := booklet.NewClient(conn)
 
-	_, err = client.CompilePDF(ctx, "no worker yet")
+	_, err := client.CompilePDF(ctx, "no worker yet")
 	require.ErrorIs(t, err, nats.ErrNoResponders)
 
 	runCtx, stop := context.WithCancel(ctx)
