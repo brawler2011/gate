@@ -123,14 +123,16 @@ func TestQueryWork(t *testing.T) {
 		return
 	}
 
+	data, err := json.MarshalIndent(actual, "", "  ")
+	require.NoError(t, err)
+	// The full measurement, so runs (also in CI) can be compared exactly.
+	t.Logf("measured query work:\n%s", data)
 	if *updateQueryWork {
-		data, err := json.MarshalIndent(actual, "", "  ")
-		require.NoError(t, err)
 		require.NoError(t, os.WriteFile(queryWorkGolden, append(data, '\n'), 0o644))
 		t.Logf("wrote %s", queryWorkGolden)
 		return
 	}
-	data, err := os.ReadFile(queryWorkGolden)
+	data, err = os.ReadFile(queryWorkGolden)
 	require.NoError(t, err, "record the golden file with `%s`", queryWorkUpdate)
 	var golden map[string]queryWork
 	require.NoError(t, json.Unmarshal(data, &golden))
@@ -139,6 +141,9 @@ func TestQueryWork(t *testing.T) {
 	}
 }
 
+// workScenarios runs in this order: a write's measured pass sees its own rolled-back
+// warm-up, and later scenarios run after the VACUUM that follows it, so page counts
+// may change when the order does.
 func workScenarios(pool *pgxpool.Pool, f submissionBenchFixture) []workScenario {
 	outbox := NewOutboxRepo(pool)
 	submissions := NewSubmissionsRepo(pool)

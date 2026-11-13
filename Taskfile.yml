@@ -115,7 +115,7 @@ tasks:
   test:be:work:
     desc: Check the database work of PostgreSQL scenarios against backend/internal/postgres/testdata/query_work.json
     cmds:
-      - go test -count=1 -tags=integration -run='^TestQueryWork$' ./backend/internal/postgres
+      - go test -v -count=1 -tags=integration -run='^TestQueryWork$' ./backend/internal/postgres
 
   golden:update:
     desc: Rewrite backend/internal/postgres/testdata/query_work.json with the measured database work
