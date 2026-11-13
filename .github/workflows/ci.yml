@@ -259,7 +259,7 @@ jobs:
 
       # A separate step, so compile time shows apart from test time.
       - name: Build integration tests
-        run: go test -tags=integration -run '^$' ./backend/tests/integration/...
+        run: go test -tags=integration -run '^$' ./backend/tests/integration/... ./backend/internal/postgres
 
       - name: Log in to GitHub Container Registry
         if: env.PUSH_IMAGES == 'true'
@@ -277,6 +277,11 @@ jobs:
 
       - name: Run integration tests
         run: task test:be:integration
+
+      # Gates PRs on the database work per operation (statements, pages, plan
+      # shape) recorded in backend/internal/postgres/testdata/query_work.json.
+      - name: Check query work
+        run: task test:be:work
 
   deploy-lint:
     name: Deploy Lint

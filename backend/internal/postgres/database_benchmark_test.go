@@ -6,102 +6,30 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
-	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
-
-	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/jackc/pgx/v5/stdlib"
-	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// One PostgreSQL 18 container serves the package run; it keeps default durability
-// settings because the benchmarks measure writes.
-var (
-	benchOnce      sync.Once
-	benchContainer *tcpostgres.PostgresContainer
-	benchDSN       string
-	benchErr       error
-)
-
-func TestMain(m *testing.M) {
-	code := m.Run()
-	if benchContainer != nil {
-		if err := benchContainer.Terminate(context.Background(), testcontainers.StopTimeout(0)); err != nil {
-			log.Printf("terminate postgres container: %v", err)
-		}
-	}
-	os.Exit(code)
-}
-
-func startBenchmarkDatabase(ctx context.Context) (string, error) {
-	container, err := tcpostgres.Run(ctx,
-		"postgres:18-alpine",
-		tcpostgres.WithDatabase("gate_benchmarks"),
-		tcpostgres.WithUsername("postgres"),
-		tcpostgres.WithPassword("postgres"),
-		// The module defaults to fsync=off; restore PostgreSQL's own defaults.
-		testcontainers.WithCmd("postgres"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(60*time.Second),
-		),
-	)
-	if container != nil {
-		benchContainer = container
-	}
-	if err != nil {
-		return "", fmt.Errorf("start postgres container: %w", err)
-	}
-	return container.ConnectionString(ctx, "sslmode=disable")
-}
+// The benchmarks keep fsync on because they measure writes. Commits do not wait
+// for the WAL flush: fsync latency on a laptop is bimodal (~1 or ~10 ms) and
+// says nothing about the code under test.
+var databaseCommand = []string{"postgres", "-c", "synchronous_commit=off"}
 
 // Every leaf owns its schema, including migration history.
 func benchmarkPool(b *testing.B) *pgxpool.Pool {
 	b.Helper()
 	ctx := context.Background()
-	benchOnce.Do(func() { benchDSN, benchErr = startBenchmarkDatabase(ctx) })
-	require.NoError(b, benchErr)
-	dsn := benchDSN
-	admin, err := pgx.Connect(ctx, dsn)
-	require.NoError(b, err)
-	b.Cleanup(func() { require.NoError(b, admin.Close(ctx)) })
-	_, err = admin.Exec(ctx, "CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public")
-	require.NoError(b, err)
-	schema := "bench_" + strings.ReplaceAll(uuid.NewString(), "-", "")
-	_, err = admin.Exec(ctx, "CREATE SCHEMA "+pgx.Identifier{schema}.Sanitize())
-	require.NoError(b, err)
-	b.Cleanup(func() {
-		_, err := admin.Exec(ctx, "DROP SCHEMA "+pgx.Identifier{schema}.Sanitize()+" CASCADE")
-		require.NoError(b, err)
-	})
-	config, err := pgxpool.ParseConfig(dsn)
-	require.NoError(b, err)
-	config.ConnConfig.RuntimeParams["search_path"] = schema + ",public"
+	config := migratedSchema(b)
 	config.MaxConns, config.MinConns = 8, 8
-	db := stdlib.OpenDB(*config.ConnConfig)
-	b.Cleanup(func() { require.NoError(b, db.Close()) })
-	_, file, _, ok := runtime.Caller(0)
-	require.True(b, ok)
-	provider, err := goose.NewProvider(goose.DialectPostgres, db, os.DirFS(filepath.Join(filepath.Dir(file), "../../migrations")))
-	require.NoError(b, err)
-	_, err = provider.Up(ctx)
-	require.NoError(b, err)
-	require.NoError(b, db.Close())
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	require.NoError(b, err)
 	b.Cleanup(pool.Close)
@@ -123,12 +51,6 @@ func benchmarkPool(b *testing.B) *pgxpool.Pool {
 	require.NoError(b, pool.QueryRow(ctx, `SELECT json_build_object('version',version(),'shared_buffers',current_setting('shared_buffers'),'fsync',current_setting('fsync'),'synchronous_commit',current_setting('synchronous_commit'),'max_connections',current_setting('max_connections'))::text`).Scan(&settings))
 	b.Logf("PostgreSQL: %s; pool=8; GOMAXPROCS=%d", settings, runtime.GOMAXPROCS(0))
 	return pool
-}
-
-func benchExec(b *testing.B, pool *pgxpool.Pool, query string, args ...any) {
-	b.Helper()
-	_, err := pool.Exec(context.Background(), query, args...)
-	require.NoError(b, err)
 }
 
 // Fixed work avoids Go's duration calibration growing write datasets unpredictably.
@@ -174,17 +96,6 @@ func benchmarkWork(b *testing.B, workers int, operation func(int) error) {
 	checkDatabaseBenchmarkBudget(b, memory)
 }
 
-func seedOutbox(b *testing.B, pool *pgxpool.Pool, size int) {
-	b.Helper()
-	benchExec(b, pool, `INSERT INTO outbox_events(id,aggregate_id,aggregate_version,event_type,payload,headers,status,created_at)
- SELECT md5('event'||i)::uuid, md5('aggregate'||((i-1)/3))::uuid, (i-1)%3+1,
- 'submission.updated', '{"submission_id":"00000000-0000-0000-0000-000000000001","revision":1}', '{}',
- CASE WHEN (i-1)%3=0 THEN 'completed'::outbox_event_status ELSE 'pending'::outbox_event_status END,
- '2026-01-01'::timestamptz + i*interval '1 millisecond' FROM generate_series(1,$1::int) i`, size)
-	benchExec(b, pool, `INSERT INTO event_aggregates(aggregate_id,version) SELECT aggregate_id,max(aggregate_version) FROM outbox_events GROUP BY aggregate_id`)
-	benchExec(b, pool, "VACUUM ANALYZE outbox_events")
-}
-
 func BenchmarkOutbox(b *testing.B) {
 	for _, size := range []struct {
 		name string
@@ -202,11 +113,11 @@ func BenchmarkOutbox(b *testing.B) {
 					require.NoError(b, err)
 					require.Len(b, warm, 1)
 					require.NoError(b, repo.MarkAsCompleted(ctx, warm[0].Id, warm[0].LeaseToken))
-					benchExec(b, pool, `UPDATE outbox_events SET status='pending',lease_token=NULL,deadline_at=NULL,locked_at=NULL,processed_at=NULL WHERE id=$1`, warm[0].Id)
+					fixtureExec(b, pool, `UPDATE outbox_events SET status='pending',lease_token=NULL,deadline_at=NULL,locked_at=NULL,processed_at=NULL WHERE id=$1`, warm[0].Id)
 					token := uuid.New()
 					var ids []uuid.UUID
 					if scenario == "MarkAsCompleted" {
-						benchExec(b, pool, `UPDATE outbox_events SET status='processing',lease_token=$1,deadline_at=now()+interval '1 hour' WHERE aggregate_version=2`, token)
+						fixtureExec(b, pool, `UPDATE outbox_events SET status='processing',lease_token=$1,deadline_at=now()+interval '1 hour' WHERE aggregate_version=2`, token)
 						rows, err := pool.Query(ctx, "SELECT id FROM outbox_events WHERE aggregate_version=2 ORDER BY created_at LIMIT 100")
 						require.NoError(b, err)
 						ids, err = pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
@@ -250,53 +161,6 @@ func BenchmarkOutbox(b *testing.B) {
 			}
 		})
 	}
-}
-
-type submissionBenchFixture struct {
-	contest, user, problem, submission uuid.UUID
-	participants, rows                 int
-}
-
-func seedSubmissions(b *testing.B, pool *pgxpool.Pool, size int) submissionBenchFixture {
-	b.Helper()
-	participants := 100
-	if size == 100000 {
-		participants = 1000
-	}
-	f := submissionBenchFixture{contest: uuid.New(), participants: participants, rows: size}
-	org := uuid.New()
-	benchExec(b, pool, `INSERT INTO organizations(id,login,name) VALUES ($1,'benchmark','Benchmark')`, org)
-	benchExec(b, pool, `INSERT INTO users(id,username,password_hash) SELECT md5('user'||i)::uuid,'bench'||i,'unused' FROM generate_series(1,$1::int) i`, participants)
-	benchExec(b, pool, `INSERT INTO contests(id,organization_id,title,login,settings,start_time,end_time)
- VALUES ($1,$2,'Benchmark','benchmark','{"freeze_status":"frozen","freeze_duration_minutes":60}', '2026-01-01 00:00Z','2026-01-01 02:00Z')`, f.contest, org)
-	benchExec(b, pool, `INSERT INTO problems(id,organization_id) SELECT md5('problem'||i)::uuid,$1 FROM generate_series(1,10) i`, org)
-	benchExec(b, pool, `INSERT INTO problem_drafts(problem_id,organization_id,title,short_name,type,time_limit_ms,memory_limit_mb)
- SELECT md5('problem'||i)::uuid,$1,'Problem '||i,'p'||i,'pass-fail',1000,256 FROM generate_series(1,10) i`, org)
-	for i := 1; i <= 10; i++ {
-		var problem uuid.UUID
-		if err := pool.QueryRow(context.Background(), `SELECT md5('problem'||$1::int)::uuid`, i).Scan(&problem); err != nil {
-			b.Fatal(err)
-		}
-		pack, err := dbfixtures.InsertPackage(context.Background(), pool, problem, org, time.Time{})
-		if err != nil {
-			b.Fatal(err)
-		}
-		benchExec(b, pool, `INSERT INTO contest_problems(contest_id,problem_id,package_id,ordinal) VALUES ($1,$2,$3,$4)`, f.contest, problem, pack, i)
-	}
-	benchExec(b, pool, `INSERT INTO contest_members(contest_id,user_id) SELECT $1,md5('user'||i)::uuid FROM generate_series(1,$2::int) i`, f.contest, participants)
-	benchExec(b, pool, `INSERT INTO submissions(id,contest_id,owner_id,problem_id,source,language,state,revision,created_at)
- SELECT md5('submission'||i)::uuid,$1,md5('user'||(((i-1)/10)%$3::int+1))::uuid,md5('problem'||((i-1)%10+1))::uuid,
- repeat('print(1)\n',32),30,CASE WHEN i%3=0 THEN 200 ELSE 106 END,1,
- '2026-01-01'::timestamptz + ((i-1)/($3::int*10))*interval '10 minutes'
- FROM generate_series(1,$2::int) i`, f.contest, size, participants)
-	benchExec(b, pool, `INSERT INTO contest_problem_results(contest_id,user_id,problem_id,solved,failed_attempts,first_ac_time,time_minutes)
- SELECT $1,md5('user'||u)::uuid,md5('problem'||p)::uuid,(u+p)%3=0,(u+p)%4,CASE WHEN (u+p)%3=0 THEN '2026-01-01 00:30Z'::timestamptz END,CASE WHEN (u+p)%3=0 THEN 30 END
- FROM generate_series(1,$2::int) u CROSS JOIN generate_series(1,10) p`, f.contest, participants)
-	require.NoError(b, pool.QueryRow(context.Background(), `SELECT md5('user1')::uuid,md5('problem1')::uuid,md5('submission1')::uuid`).Scan(&f.user, &f.problem, &f.submission))
-	for _, table := range []string{"submissions", "contests", "users", "problems", "contest_problems", "contest_members", "contest_problem_results"} {
-		benchExec(b, pool, "VACUUM ANALYZE "+table)
-	}
-	return f
 }
 
 func BenchmarkSubmissions(b *testing.B) {
@@ -444,34 +308,35 @@ func BenchmarkScoreboardQueries(b *testing.B) {
 	}
 }
 
-// Initial fixed budgets come from five local PostgreSQL 18.3 measurements with
-// headroom: 2x maximum time, half minimum throughput, 25% above Go allocations.
+// Budgets come from five local PostgreSQL 18.3 measurements with headroom: 2x
+// maximum time, half minimum throughput, 25% above Go allocations. The time and
+// throughput budgets of writes were re-measured with synchronous_commit=off.
 // Columns: maximum ns/op, minimum ops/s, maximum B/op, maximum allocs/op.
 var databaseBenchmarkBudgets = map[string]struct{ nanos, ops, bytes, allocs float64 }{
-	"BenchmarkOutbox/large/MarkAsCompleted":              {38657000, 25.87, 1664, 54},
-	"BenchmarkOutbox/large/PickEvents":                   {20507000, 48.76, 4160, 87},
-	"BenchmarkOutbox/large/Process/workers16":            {1431000, 699.5, 6976, 153},
-	"BenchmarkOutbox/large/Process/workers4":             {2048000, 488.35, 6016, 142},
-	"BenchmarkOutbox/small/MarkAsCompleted":              {1844000, 542.5, 1664, 54},
-	"BenchmarkOutbox/small/PickEvents":                   {3064000, 326.39, 4160, 87},
-	"BenchmarkOutbox/small/Process/workers16":            {1310000, 763.5, 6976, 153},
-	"BenchmarkOutbox/small/Process/workers4":             {2247000, 445.05, 6080, 142},
+	"BenchmarkOutbox/large/MarkAsCompleted":              {11719176, 85.35, 1664, 54},
+	"BenchmarkOutbox/large/PickEvents":                   {1927474, 519.00, 4160, 87},
+	"BenchmarkOutbox/large/Process/workers16":            {525668, 1902.50, 6976, 153},
+	"BenchmarkOutbox/large/Process/workers4":             {753032, 1328.00, 6016, 142},
+	"BenchmarkOutbox/small/MarkAsCompleted":              {552146, 1811.00, 1664, 54},
+	"BenchmarkOutbox/small/PickEvents":                   {2094484, 477.45, 4160, 87},
+	"BenchmarkOutbox/small/Process/workers16":            {831882, 1202.00, 6976, 153},
+	"BenchmarkOutbox/small/Process/workers4":             {726704, 1376.00, 6080, 142},
 	"BenchmarkScoreboardQueries/large/Standings":         {25889000, 38.62, 10681088, 158437},
 	"BenchmarkScoreboardQueries/large/SubmissionHistory": {285000, 3509.5, 5248, 115},
 	"BenchmarkScoreboardQueries/small/Standings":         {2575000, 388.45, 854144, 15905},
 	"BenchmarkScoreboardQueries/small/SubmissionHistory": {232000, 4312.5, 3008, 89},
-	"BenchmarkSubmissions/large/Create":                  {1853000, 539.5, 4032, 93},
+	"BenchmarkSubmissions/large/Create":                  {681892, 1466.50, 4032, 93},
 	"BenchmarkSubmissions/large/Get":                     {667000, 1501.5, 6336, 97},
 	"BenchmarkSubmissions/large/Latest":                  {15112000, 66.15, 128640, 1952},
-	"BenchmarkSubmissions/large/UpdateRevision":          {17129000, 58.4, 1856, 44},
-	"BenchmarkSubmissions/large/WriteRead/workers16":     {2695000, 371.1, 11776, 203},
-	"BenchmarkSubmissions/large/WriteRead/workers4":      {19958000, 50.1, 10688, 192},
-	"BenchmarkSubmissions/small/Create":                  {22326000, 44.79, 4032, 93},
+	"BenchmarkSubmissions/large/UpdateRevision":          {564854, 1770.50, 1856, 44},
+	"BenchmarkSubmissions/large/WriteRead/workers16":     {814294, 1228.00, 11776, 203},
+	"BenchmarkSubmissions/large/WriteRead/workers4":      {833538, 1199.50, 10688, 192},
+	"BenchmarkSubmissions/small/Create":                  {560530, 1784.00, 4032, 93},
 	"BenchmarkSubmissions/small/Get":                     {846000, 1182.5, 6336, 97},
 	"BenchmarkSubmissions/small/Latest":                  {6031000, 165.85, 128640, 1952},
-	"BenchmarkSubmissions/small/UpdateRevision":          {21702000, 46.08, 1856, 44},
-	"BenchmarkSubmissions/small/WriteRead/workers16":     {2922000, 342.35, 11776, 203},
-	"BenchmarkSubmissions/small/WriteRead/workers4":      {2225000, 449.55, 10688, 192},
+	"BenchmarkSubmissions/small/UpdateRevision":          {540754, 1849.50, 1856, 44},
+	"BenchmarkSubmissions/small/WriteRead/workers16":     {808556, 1237.00, 11776, 203},
+	"BenchmarkSubmissions/small/WriteRead/workers4":      {844640, 1184.00, 10688, 192},
 }
 
 func checkDatabaseBenchmarkBudget(b *testing.B, before runtime.MemStats) {
