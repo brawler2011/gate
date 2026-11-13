@@ -21,6 +21,7 @@ nats:
     limits: {memory: 256Mi}
 seaweedfs:
   storage: 8Gi
+  minFreeSpace: "5GiB"
   resources:
     requests: {cpu: 50m, memory: 128Mi}
     limits: {memory: 512Mi}

@@ -27,7 +27,10 @@ nats:
 
 seaweedfs:
   image: chrislusf/seaweedfs:4.53_full
+  # PVC request only; local-path does not enforce a disk quota.
   storage: 50Gi
+  # Stop volume writes below this filesystem free space; leave room for other services.
+  minFreeSpace: "5GiB"
   # Each bucket takes about 7 volumes on its first write (templates/seaweedfs.yaml).
   volumeSizeLimitMB: 1024
   maxVolumes: 100

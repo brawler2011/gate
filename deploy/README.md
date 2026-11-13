@@ -68,6 +68,34 @@ go-judge image is about 5 GB unpacked, and a release that changes the toolchain 
 two versions until the kubelet's image garbage collection removes the old one (at 85%
 disk use).
 
+## Disk space
+
+The k3s `local-path` provisioner stores PVC data in directories on the node's
+filesystem; it does not enforce the requested capacity. In particular,
+`seaweedfs.storage: 8Gi` in prod is a PVC request, not an 8 GiB quota. SeaweedFS
+shares the root disk with PostgreSQL, NATS, container images and other services.
+
+The gate-infra chart passes `seaweedfs.minFreeSpace` to `weed server` as
+`-volume.minFreeSpace`. Both the chart default and prod set `"5GiB"`, leaving room
+for the other services by stopping volume writes when filesystem free space falls
+below that threshold. Existing objects remain readable. The value uses SeaweedFS
+syntax: `5GiB` is an absolute amount; `10` means 10 percent of the filesystem.
+
+SeaweedFS 4.53 checks disk space once per minute, so writes can consume part of the
+reserve before the next check. This is not a hard quota or a guaranteed reserve:
+other processes can still fill the filesystem. Monitor node free space and leave
+additional headroom for large uploads and image pulls. An infra chart upgrade
+applies a changed threshold; the normal app-only release does not update it.
+
+When the threshold is reached, uploads fail through the existing API error path.
+An avatar upload (`POST /api/users/{username}/avatar`) returns HTTP 500 with
+`{"error":"Internal Server Error","message":"failed to upload avatar"}` (and a
+`request_id` when request logging middleware is active). It does not expose a
+specific disk-full message; other upload endpoints may return different generic
+messages. Free space on the backing filesystem, then allow the next disk check
+to restore writes. Deleting objects alone may not immediately reclaim volume
+file space.
+
 ## GitHub secrets and variables
 
 | Name | Kind | Value |
