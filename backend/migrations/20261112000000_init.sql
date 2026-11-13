@@ -991,7 +991,7 @@ CREATE TABLE submissions (
 );
 CREATE INDEX submissions_contest_id_idx ON submissions USING btree (contest_id);
 CREATE INDEX submissions_contest_problem_idx ON submissions USING btree (contest_id, problem_id);
-CREATE INDEX submissions_created_at_idx ON submissions USING btree (created_at DESC);
+CREATE INDEX submissions_created_at_idx ON submissions USING btree (created_at DESC, id DESC);
 CREATE INDEX submissions_owner_id_idx ON submissions USING btree (owner_id);
 CREATE INDEX submissions_problem_id_idx ON submissions USING btree (problem_id);
 CREATE INDEX submissions_scoreboard_idx ON submissions USING btree (contest_id, owner_id, problem_id, created_at) WHERE ((contest_id IS NOT NULL) AND (owner_id IS NOT NULL));
