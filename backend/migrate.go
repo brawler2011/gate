@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"log/slog"
 
+	"github.com/brawler2011/gate/backend/config"
 	"github.com/brawler2011/gate/backend/internal/datareset"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
@@ -18,7 +19,7 @@ var embedMigrations embed.FS
 
 // runMigrations applies the schema, resetting all data if the schema changed.
 func runMigrations(configFile, envFile string) error {
-	cfg, err := loadConfig(configFile, envFile)
+	cfg, err := loadConfig(configFile, envFile, config.ModeAll)
 	if err != nil {
 		return err
 	}

@@ -22,6 +22,7 @@ import (
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
 	judging "github.com/brawler2011/gate/backend/internal/judging"
+	"github.com/brawler2011/gate/backend/internal/messaging/booklet"
 	inbox "github.com/brawler2011/gate/backend/internal/messaging/inbox"
 	judgeworker "github.com/brawler2011/gate/backend/internal/messaging/judge"
 	outbox "github.com/brawler2011/gate/backend/internal/messaging/outbox"
@@ -43,7 +44,9 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/nats-io/nats.go/jetstream"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -114,13 +117,14 @@ func newHTTPService(name string, server *http.Server) appService {
 	)
 }
 
-func runApp(configFile, envFile string) error {
-	cfg, err := loadConfig(configFile, envFile)
+func runApp(configFile, envFile string, mode config.Mode) error {
+	cfg, err := loadConfig(configFile, envFile, mode)
 	if err != nil {
 		return err
 	}
 
-	logger := slog.Default()
+	logger := slog.Default().With(slog.String("mode", string(mode)))
+	slog.SetDefault(logger)
 
 	logger.Info("connecting to postgres")
 	pool, err := pkg.NewPostgresDB(cfg.Secrets.PostgresDSN)
@@ -129,6 +133,179 @@ func runApp(configFile, envFile string) error {
 	}
 	defer pool.Close()
 	logger.Info("successfully connected to postgres")
+
+	store := storage.NewS3Storage(storage.S3Config{
+		Endpoint:  cfg.Storage.S3Endpoint,
+		AccessKey: cfg.Secrets.S3AccessKey,
+		SecretKey: cfg.Secrets.S3SecretKey,
+		Region:    defaultS3Region,
+	})
+	if err := store.EnsureBucket(context.Background(), defaultS3ObjectBucket); err != nil {
+		return err
+	}
+	logger.Info("successfully initialized S3 storage client")
+
+	if err := os.MkdirAll(cfg.Problems.WorkDir, 0700); err != nil {
+		return fmt.Errorf("create problem work directory: %w", err)
+	}
+
+	natsJS, err := pkg.NewNatsJetStream(cfg.Secrets.NatsURL)
+	if err != nil {
+		return fmt.Errorf("create nats jetstream connection: %w", err)
+	}
+	defer natsJS.Conn().Close()
+	if err := pkg.EnsureSubmissionsStream(context.Background(), natsJS); err != nil {
+		return fmt.Errorf("ensure submissions stream: %w", err)
+	}
+	if err := pkg.EnsureContestsStream(context.Background(), natsJS); err != nil {
+		return fmt.Errorf("ensure contests stream: %w", err)
+	}
+	logger.Info("SUBMISSIONS and CONTESTS streams ready")
+
+	shared := sharedDeps{cfg: cfg, logger: logger, pool: pool, store: store, natsJS: natsJS, problemDrafts: pgstore.NewProblemDraftsRepo(pool, cfg.Problems.Draft, cfg.Problems.OperationLease)}
+
+	var services []appService
+	var judgeImage sandbox.Image
+	if mode.Worker() {
+		sandboxClient, err := sandbox.NewClient(cfg.GoJudge.GRPCAddr)
+		if err != nil {
+			return fmt.Errorf("initialize sandbox client: %w", err)
+		}
+		defer sandboxClient.Close()
+		logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudge.GRPCAddr))
+
+		// The toolchain identity and languages come from the running judge image itself.
+		imageCtx, cancelImage := context.WithTimeout(context.Background(), time.Minute)
+		judgeImage, err = sandbox.ReadImage(imageCtx, sandboxClient)
+		cancelImage()
+		if err != nil {
+			return err
+		}
+		workers, err := workerServices(shared, sandboxClient, judgeImage)
+		if err != nil {
+			return err
+		}
+		services = append(services, workers...)
+		if !mode.API() {
+			services = append(services, newHTTPService("health server", &http.Server{Addr: cfg.HTTP.Address, Handler: workerHealthHandler(), ReadHeaderTimeout: 10 * time.Second}))
+		}
+	}
+	if mode.API() {
+		if !mode.Worker() {
+			// Copied from the judge image of the same release (deploy/charts/gate).
+			judgeImage, err = sandbox.ReadImageDir(cfg.Judge.ManifestDir)
+			if err != nil {
+				return err
+			}
+		}
+		api, closeAPI, err := apiServices(shared, judgeImage)
+		if err != nil {
+			return err
+		}
+		defer closeAPI()
+		services = append(services, api...)
+	}
+	logger.Info("read judge image manifest", slog.String("toolchain_digest", judgeImage.Identity.Digest))
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	return runServices(ctx, logger, services)
+}
+
+// sharedDeps are the connections and stores that API and worker instances both use.
+type sharedDeps struct {
+	cfg           config.Config
+	logger        *slog.Logger
+	pool          *pgxpool.Pool
+	store         *storage.S3Storage
+	natsJS        jetstream.JetStream
+	problemDrafts *pgstore.ProblemDraftsRepo
+}
+
+func toolchainOf(image sandbox.Image) problemsmodel.Toolchain {
+	return problemsmodel.Toolchain{Digest: image.Identity.Digest, Architecture: image.Identity.Architecture, ABI: image.Identity.ABI, Languages: image.Config.Langs}
+}
+
+// workerServices judge submissions, build problem packages and compile booklets
+// in the sandbox.
+func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sandbox.Image) ([]appService, error) {
+	problemPolicy := d.cfg.Problems
+	toolchain := toolchainOf(judgeImage)
+	fileTransport, err := sandbox.NewFileTransport(d.cfg.GoJudge.HTTPURL, &http.Client{Timeout: problemPolicy.UploadTTL})
+	if err != nil {
+		return nil, err
+	}
+
+	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Environment: toolchain, UploadTTL: problemPolicy.UploadTTL, Logger: d.logger}
+	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll}
+	problemGC := &builder.GC{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: d.logger}
+
+	judgeJobs := pgstore.NewJudgeJobs(d.pool)
+	judgeTransactions := pgstore.NewJudgeTransactions(d.pool)
+	judgeUC := judging.NewJudgeUseCase(judgeJobs, judgeTransactions, pgstore.NewSubmissionsRepo(d.pool),
+		&judging.PackageLoader{Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Packages: d.problemDrafts, Limits: problemPolicy.Limits},
+		&judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Environment: toolchain, Logger: d.logger}, judgeworker.NewEventPublisher(d.natsJS))
+	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), d.natsJS, judgeUC, d.cfg.Judge.Workers)
+	if err != nil {
+		return nil, fmt.Errorf("create judge worker: %w", err)
+	}
+	judgeRecovery := judging.NewJudgeRecovery(
+		judgeJobs,
+		judgeTransactions,
+		judging.DefaultMaxJobAttempts,
+		judging.DefaultRecoveryBatchSize,
+		judging.DefaultRecoveryInterval,
+	)
+	inboxPruner := inbox.NewPruner(pgstore.NewInbox(d.pool), d.cfg.Inbox.Retention, inbox.DefaultPruneInterval)
+	bookletResponder := booklet.NewResponder(d.natsJS.Conn(), sandbox.NewSandbox(sandboxClient, judgeImage.Config))
+
+	noStop := func(context.Context) error { return nil }
+	return []appService{
+		newService("problem build worker", buildWorker.Run, noStop),
+		newService("problem object GC", problemGC.Run, noStop),
+		newService(
+			"judge worker",
+			judgeWorker.Start,
+			func(context.Context) error {
+				judgeWorker.Stop()
+				return nil
+			},
+		),
+		newService(
+			"judge recovery worker",
+			func(ctx context.Context) error {
+				judgeRecovery.Start(ctx)
+				return nil
+			},
+			noStop,
+		),
+		newService(
+			"inbox receipts pruner",
+			func(ctx context.Context) error {
+				inboxPruner.Start(ctx)
+				return nil
+			},
+			noStop,
+		),
+		newService("booklet responder", bookletResponder.Run, noStop),
+	}, nil
+}
+
+// workerHealthHandler answers the probes of a worker-only instance, which serves
+// no API. It is ready once its workers have started.
+func workerHealthHandler() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok","message":"Worker is running"}`))
+	})
+	return mux
+}
+
+// apiServices serve HTTP and WebSocket and publish work to the workers. The
+// returned function closes what they opened.
+func apiServices(d sharedDeps, judgeImage sandbox.Image) (services []appService, closeAPI func(), err error) {
+	cfg, logger, pool, store, natsJS := d.cfg, d.logger, d.pool, d.store, d.natsJS
 
 	usersRepo := pgstore.NewUsersRepo(pool)
 	outboxRepo := pgstore.NewOutboxRepo(pool)
@@ -144,28 +321,25 @@ func runApp(configFile, envFile string) error {
 	clarificationsRepo := pgstore.NewClarificationsRepo(pool)
 	logger.Info("successfully initialized repositories")
 
-	store := storage.NewS3Storage(storage.S3Config{
-		Endpoint:  cfg.Storage.S3Endpoint,
-		AccessKey: cfg.Secrets.S3AccessKey,
-		SecretKey: cfg.Secrets.S3SecretKey,
-		Region:    defaultS3Region,
-	})
-	logger.Info("successfully initialized S3 storage client")
-
 	for bucket, name := range map[string]string{
 		defaultS3AvatarBucket: "avatar",
 		defaultS3BlogBucket:   "blog",
 	} {
 		if err := store.EnsureBucket(context.Background(), bucket); err != nil {
-			return fmt.Errorf("ensure %s bucket %q: %w", name, bucket, err)
+			return nil, nil, fmt.Errorf("ensure %s bucket %q: %w", name, bucket, err)
 		}
 	}
 
 	redisClient, err := pkg.NewRedisClient(cfg.Secrets.RedisURL)
 	if err != nil {
-		return fmt.Errorf("create rate limiter redis client: %w", err)
+		return nil, nil, fmt.Errorf("create rate limiter redis client: %w", err)
 	}
-	defer func() { _ = redisClient.Close() }()
+	closeAPI = func() { _ = redisClient.Close() }
+	defer func() {
+		if err != nil {
+			closeAPI()
+		}
+	}()
 	limiter := ratelimit.New(redisClient)
 	authRepo := pgstore.NewAuthRepo(pool)
 	emailService := email.NewEmailService(cfg.Email.Provider == config.EmailProviderResend, cfg.Secrets.ResendAPIKey, cfg.Email.From, cfg.Email.AppBaseURL)
@@ -189,63 +363,18 @@ func runApp(configFile, envFile string) error {
 	communicationReader := contests.NewCommunicationReader(announcementsRepo, clarificationsRepo, permissionsUC)
 	logger.Info("successfully initialized use cases")
 
-	sandboxClient, err := sandbox.NewClient(cfg.GoJudge.GRPCAddr)
-	if err != nil {
-		return fmt.Errorf("initialize sandbox client: %w", err)
-	}
-	defer sandboxClient.Close()
-	logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudge.GRPCAddr))
-
-	// The toolchain identity and languages come from the running judge image itself.
-	imageCtx, cancelImage := context.WithTimeout(context.Background(), time.Minute)
-	judgeImage, err := sandbox.ReadImage(imageCtx, sandboxClient)
-	cancelImage()
-	if err != nil {
-		return err
-	}
-	sandboxCfg := judgeImage.Config
-	logger.Info("read judge image manifest", slog.String("toolchain_digest", judgeImage.Identity.Digest))
-
-	sandboxInstance := sandbox.NewSandbox(sandboxClient, sandboxCfg)
 	problemPolicy := cfg.Problems
-	if err := os.MkdirAll(problemPolicy.WorkDir, 0700); err != nil {
-		return fmt.Errorf("create problem work directory: %w", err)
-	}
-	fileTransport, err := sandbox.NewFileTransport(cfg.GoJudge.HTTPURL, &http.Client{Timeout: problemPolicy.UploadTTL})
-	if err != nil {
-		return err
-	}
+	toolchain := toolchainOf(judgeImage)
+	sandboxCfg := judgeImage.Config
+	problemDrafts := d.problemDrafts
 	objectStore := store
-	if err := objectStore.EnsureBucket(context.Background(), defaultS3ObjectBucket); err != nil {
-		return err
-	}
-	problemDrafts := pgstore.NewProblemDraftsRepo(pool, problemPolicy.Draft, problemPolicy.OperationLease)
-	toolchain := problemsmodel.Toolchain{Digest: judgeImage.Identity.Digest, Architecture: judgeImage.Identity.Architecture, ABI: judgeImage.Identity.ABI, Languages: sandboxCfg.Langs}
 	buildOptions := problemsmodel.BuildOptions{Toolchain: toolchain, Limits: problemPolicy.Limits, MaxAttempts: problemPolicy.Attempts, Duration: problemPolicy.Duration, Lease: problemPolicy.Lease}
 	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, UploadTTL: problemPolicy.UploadTTL, ObjectBytes: int64(problemPolicy.Limits.ObjectBytes), BuildOptions: buildOptions}
-	pipeline := &builder.Pipeline{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Environment: toolchain, UploadTTL: problemPolicy.UploadTTL, Logger: logger}
-	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll}
-	problemGC := &builder.GC{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: logger}
-
 	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, MaxArchiveBytes: int64(problemPolicy.Limits.ObjectBytes), MaxEntries: problemPolicy.Limits.FileCount}
 	draftUC.PackageContent = packageContent
 	problemsUC := problems.NewProblemsUseCase(problemsRepo, pgstore.NewProblemTransactions(pool), orgsRepo, permissionsUC, draftUC, packagesRepo, packageContent)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Permissions: permissionsUC}
-	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, permissionsUC, sandboxInstance, usersRepo)
-
-	natsJS, err := pkg.NewNatsJetStream(cfg.Secrets.NatsURL)
-	if err != nil {
-		return fmt.Errorf("create nats jetstream connection: %w", err)
-	}
-	logger.Info("successfully initialized nats jetstream")
-
-	if err := pkg.EnsureSubmissionsStream(context.Background(), natsJS); err != nil {
-		return fmt.Errorf("ensure submissions stream: %w", err)
-	}
-	if err := pkg.EnsureContestsStream(context.Background(), natsJS); err != nil {
-		return fmt.Errorf("ensure contests stream: %w", err)
-	}
-	logger.Info("SUBMISSIONS and CONTESTS streams ready")
+	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, permissionsUC, booklet.NewClient(natsJS.Conn()), usersRepo)
 
 	outboxDispatcher := outbox.NewEventDispatcher()
 	outboxDispatcher.Register(eventdata.OutboxEventSubmissionCreated, pubsub.NewSubmissionCreatedPublisher(natsJS))
@@ -256,28 +385,6 @@ func runApp(configFile, envFile string) error {
 	outboxDispatcher.Register(eventdata.OutboxEventContestClarificationCreated, contestEventsPublisher)
 	outboxDispatcher.Register(eventdata.OutboxEventContestClarificationAnswered, contestEventsPublisher)
 	outboxWorker := outbox.NewOutboxWorker(outboxDispatcher, outboxRepo)
-	inboxRepo := pgstore.NewInbox(pool)
-	inboxPruner := inbox.NewPruner(inboxRepo, cfg.Inbox.Retention, inbox.DefaultPruneInterval)
-
-	judgeJobs := pgstore.NewJudgeJobs(pool)
-	judgeTransactions := pgstore.NewJudgeTransactions(pool)
-	judgeUC := judging.NewJudgeUseCase(judgeJobs, judgeTransactions, submissionsRepo,
-		&judging.PackageLoader{Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Packages: problemDrafts, Limits: problemPolicy.Limits},
-		&judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Environment: toolchain, Logger: logger}, judgeworker.NewEventPublisher(natsJS))
-
-	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), natsJS, judgeUC, cfg.Judge.Workers)
-	if err != nil {
-		return fmt.Errorf("create judge worker: %w", err)
-	}
-
-	judgeRecovery := judging.NewJudgeRecovery(
-		judgeJobs,
-		judgeTransactions,
-		judging.DefaultMaxJobAttempts,
-		judging.DefaultRecoveryBatchSize,
-		judging.DefaultRecoveryInterval,
-	)
-
 	submissionDispatcher := outbox.NewEventDispatcher()
 	observerHub := wsobserver.NewHub(submissionsRingBufferSize, contestsRepo, contestsUC, pgstore.NewPolicyFactsRepo(pool))
 
@@ -294,7 +401,7 @@ func runApp(configFile, envFile string) error {
 
 	submissionsSub, err := pubsub.NewSubmissionsSub(context.Background(), natsJS, submissionDispatcher)
 	if err != nil {
-		return fmt.Errorf("create submissions subscriber: %w", err)
+		return nil, nil, fmt.Errorf("create submissions subscriber: %w", err)
 	}
 
 	contestsDispatcher := outbox.NewEventDispatcher()
@@ -311,7 +418,7 @@ func runApp(configFile, envFile string) error {
 
 	contestsSub, err := pubsub.NewContestsSub(context.Background(), natsJS, contestsDispatcher)
 	if err != nil {
-		return fmt.Errorf("create contests subscriber: %w", err)
+		return nil, nil, fmt.Errorf("create contests subscriber: %w", err)
 	}
 
 	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersRepo, authUC), authUC, permissionsUC, contestsRepo, pgstore.NewPolicyFactsRepo(pool))
@@ -372,7 +479,7 @@ func runApp(configFile, envFile string) error {
 		corev1.WithErrorHandler(middleware.ResponseErrorHandler(logger)),
 	)
 	if err != nil {
-		return fmt.Errorf("create core api server: %w", err)
+		return nil, nil, fmt.Errorf("create core api server: %w", err)
 	}
 
 	apiHandler := middleware.AuthMiddleware(authUC)(
@@ -411,34 +518,11 @@ func runApp(configFile, envFile string) error {
 		ReadTimeout:       problemPolicy.UploadTTL,
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
-	services := []appService{
-		newService("problem build worker", buildWorker.Run, func(context.Context) error { return nil }),
-		newService("problem object GC", problemGC.Run, func(context.Context) error { return nil }),
+	services = []appService{
 		newService(
 			"outbox worker",
 			func(ctx context.Context) error {
 				outboxWorker.Start(ctx)
-				return nil
-			},
-			func(context.Context) error {
-				return nil
-			},
-		),
-		newService(
-			"judge worker",
-			judgeWorker.Start,
-			func(context.Context) error {
-				judgeWorker.Stop()
-				return nil
-			},
-		),
-		newService(
-			"judge recovery worker",
-			func(ctx context.Context) error {
-				judgeRecovery.Start(ctx)
 				return nil
 			},
 			func(context.Context) error {
@@ -487,30 +571,19 @@ func runApp(configFile, envFile string) error {
 				return nil
 			},
 		),
-		newService(
-			"inbox receipts pruner",
-			func(ctx context.Context) error {
-				inboxPruner.Start(ctx)
-				return nil
-			},
-			func(context.Context) error {
-				return nil
-			},
-		),
 		newHTTPService("public server", publicServer),
 	}
-
-	return runServices(ctx, logger, services)
+	return services, closeAPI, nil
 }
 
-// loadConfig reads the YAML config; envFile, when set, supplies secrets for local runs.
-func loadConfig(configFile, envFile string) (config.Config, error) {
+// loadConfig reads the YAML config for mode; envFile, when set, supplies secrets for local runs.
+func loadConfig(configFile, envFile string, mode config.Mode) (config.Config, error) {
 	if envFile != "" {
 		if err := godotenv.Load(envFile); err != nil {
 			return config.Config{}, fmt.Errorf("load env file %s: %w", envFile, err)
 		}
 	}
-	return config.Load(configFile)
+	return config.Load(configFile, mode)
 }
 
 func newObserverMiddleware(users middleware.UsersUC, authUC middleware.AuthUC) func(http.Handler) http.Handler {

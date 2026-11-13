@@ -23,24 +23,34 @@ func setSecrets(t *testing.T) {
 
 func TestEnvironmentConfigsLoad(t *testing.T) {
 	setSecrets(t)
-	for _, env := range []string{"local", "prod", "k3d"} {
-		t.Run(env, func(t *testing.T) {
-			cfg, err := Load(filepath.Join("..", "..", "deploy", env, "config.yaml"))
-			require.NoError(t, err)
-			assert.Equal(t, "postgres://db:5432/app", cfg.Secrets.PostgresDSN)
-			assert.Equal(t, 7*24*time.Hour, cfg.Inbox.Retention)
-			assert.Equal(t, 30*time.Second, cfg.Problems.Lease)
-		})
+	// Local runs everything in one process; the clusters run API and worker pods
+	// from the same config.
+	envModes := map[string][]Mode{"local": {ModeAll}, "prod": {ModeAPI, ModeWorker}, "k3d": {ModeAPI, ModeWorker}}
+	for env, modes := range envModes {
+		for _, mode := range modes {
+			t.Run(env+"/"+string(mode), func(t *testing.T) {
+				cfg, err := Load(filepath.Join("..", "..", "deploy", env, "config.yaml"), mode)
+				require.NoError(t, err)
+				assert.Equal(t, "postgres://db:5432/app", cfg.Secrets.PostgresDSN)
+				assert.Equal(t, 7*24*time.Hour, cfg.Inbox.Retention)
+				assert.Equal(t, 30*time.Second, cfg.Problems.Lease)
+			})
+		}
 	}
 }
 
 func loadModified(t *testing.T, edit func(string) string) error {
 	t.Helper()
+	return loadModifiedAs(t, ModeAll, edit)
+}
+
+func loadModifiedAs(t *testing.T, mode Mode, edit func(string) string) error {
+	t.Helper()
 	data, err := os.ReadFile(filepath.Join("..", "..", "deploy", "prod", "config.yaml"))
 	require.NoError(t, err)
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	require.NoError(t, os.WriteFile(path, []byte(edit(string(data))), 0o600))
-	_, err = Load(path)
+	_, err = Load(path, mode)
 	return err
 }
 
@@ -80,4 +90,29 @@ func TestUnknownFieldIsRejected(t *testing.T) {
 	err := loadModified(t, func(s string) string { return s + "unexpected: true\n" })
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unexpected")
+}
+
+func TestModeChecksOnlyItsSettings(t *testing.T) {
+	setSecrets(t)
+	noSandbox := func(s string) string { return strings.Replace(s, "grpc_addr: 127.0.0.1:5051", "grpc_addr: ''", 1) }
+	require.NoError(t, loadModifiedAs(t, ModeAPI, noSandbox))
+	err := loadModifiedAs(t, ModeWorker, noSandbox)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "go_judge.grpc_addr:")
+
+	noManifest := func(s string) string { return strings.Replace(s, "manifest_dir: /etc/judge", "manifest_dir: ''", 1) }
+	require.NoError(t, loadModifiedAs(t, ModeWorker, noManifest))
+	err = loadModifiedAs(t, ModeAPI, noManifest)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "judge.manifest_dir:")
+}
+
+func TestParseMode(t *testing.T) {
+	for _, m := range []Mode{ModeAll, ModeAPI, ModeWorker} {
+		got, err := ParseMode(string(m))
+		require.NoError(t, err)
+		assert.Equal(t, m, got)
+	}
+	_, err := ParseMode("judge")
+	require.Error(t, err)
 }

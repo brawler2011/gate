@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"regexp"
 	"time"
 
@@ -61,8 +63,22 @@ func unavailable(err error) bool {
 	return errors.As(err, &s) && s.GRPCStatus().Code() == codes.Unavailable
 }
 
+// ReadImageDir reads the judge image manifest from a copy of its manifest
+// directory, for an instance without a sandbox.
+func ReadImageDir(dir string) (Image, error) {
+	image, err := parseImage(func(name string) ([]byte, error) { return os.ReadFile(filepath.Join(dir, name)) })
+	if err != nil {
+		return Image{}, fmt.Errorf("read judge image manifest from %s: %w", dir, err)
+	}
+	return image, nil
+}
+
 func readImage(ctx context.Context, client *Client) (Image, error) {
-	data, err := client.readFile(ctx, manifestDir+"/identity.json")
+	return parseImage(func(name string) ([]byte, error) { return client.readFile(ctx, manifestDir+"/"+name) })
+}
+
+func parseImage(read func(name string) ([]byte, error)) (Image, error) {
+	data, err := read("identity.json")
 	if err != nil {
 		return Image{}, err
 	}
@@ -73,7 +89,7 @@ func readImage(ctx context.Context, client *Client) (Image, error) {
 	if !digestPattern.MatchString(identity.Digest) || identity.Architecture == "" || identity.ABI == "" {
 		return Image{}, fmt.Errorf("invalid identity.json: %s", data)
 	}
-	data, err = client.readFile(ctx, manifestDir+"/langs.toml")
+	data, err = read("langs.toml")
 	if err != nil {
 		return Image{}, err
 	}
