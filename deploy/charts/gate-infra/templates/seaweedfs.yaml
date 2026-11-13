@@ -34,6 +34,11 @@ spec:
             - name: S3_SECRET_KEY
               valueFrom: {secretKeyRef: {name: {{ .Values.secretName }}, key: S3_SECRET_KEY}}
           # The S3 identity comes from the shared secret, the same keys the backend uses.
+          # Every bucket is a collection with volumes of its own. Volumes are not
+          # preallocated, so many small ones only cost slots; disk use is bounded by
+          # free space (-volume.minFreeSpace). With -volume.max=0 SeaweedFS instead
+          # derives the count from free space and 30 GB volumes, which on a small
+          # disk leaves a single volume for every bucket.
           command: [/bin/sh, -c]
           args:
             - |
@@ -41,7 +46,7 @@ spec:
               {"identities": [{"name": "gate", "credentials": [{"accessKey": "$S3_ACCESS_KEY", "secretKey": "$S3_SECRET_KEY"}],
                 "actions": ["Admin", "Read", "List", "Tagging", "Write"]}]}
               EOF
-              exec weed server -dir=/data -ip=127.0.0.1 -ip.bind=0.0.0.0 -volume.max=0 -s3 -s3.config=/tmp/s3.json
+              exec weed server -dir=/data -ip=127.0.0.1 -ip.bind=0.0.0.0 -master.volumeSizeLimitMB={{ .Values.seaweedfs.volumeSizeLimitMB }} -volume.max={{ .Values.seaweedfs.maxVolumes }} -s3 -s3.config=/tmp/s3.json
           ports:
             - {name: s3, containerPort: 8333}
           readinessProbe:
