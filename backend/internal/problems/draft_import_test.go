@@ -51,16 +51,34 @@ func TestBuiltinTemplatesImportIntoValidDrafts(t *testing.T) {
 	}
 }
 
-// Tests name generators by file stem, so echo.cpp and echo.py together are ambiguous.
-func TestImportRejectsGeneratorsWithOneStem(t *testing.T) {
+// importAPlusB imports the gfmt a-plus-b package with extra files added.
+func importAPlusB(t *testing.T, extra map[string]string) (*draftImport, error) {
 	dir := t.TempDir()
 	require.NoError(t, os.CopyFS(dir, os.DirFS("../../pkg/testdata/gfmt/a-plus-b")))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "generators/echo.py"), []byte("print(0, 0)\n"), 0o600))
+	for path, text := range extra {
+		require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(dir, path)), 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, path), []byte(text), 0o600))
+	}
 	var archive bytes.Buffer
 	w := zip.NewWriter(&archive)
 	require.NoError(t, w.AddFS(os.DirFS(dir)))
 	require.NoError(t, w.Close())
+	return newImportUseCase(t).parseImport(context.Background(), &archive, uuid.New(), 1)
+}
 
-	_, err := newImportUseCase(t).parseImport(context.Background(), &archive, uuid.New(), 1)
+// Tests name generators by file stem, so echo.cpp and echo.py together are ambiguous.
+func TestImportRejectsGeneratorsWithOneStem(t *testing.T) {
+	_, err := importAPlusB(t, map[string]string{"generators/echo.py": "print(0, 0)\n"})
 	require.ErrorContains(t, err, "several generators named echo")
+}
+
+func TestImportKeepsDraftLayout(t *testing.T) {
+	plan, err := importAPlusB(t, map[string]string{"assets/pic.png": "png"})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Len(t, plan.draft.Assets, 1)
+	require.Equal(t, "assets/pic.png", plan.draft.Assets[0].Path)
+
+	_, err = importAPlusB(t, map[string]string{"pic.png": "png"})
+	require.ErrorContains(t, err, "unexpected file pic.png")
 }

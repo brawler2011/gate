@@ -222,7 +222,7 @@ func TestObjectDeletionSeesReferenceCommittedWhileWaitingForLock(t *testing.T) {
 	case <-time.After(300 * time.Millisecond):
 	}
 	// The lock holder links the object into the draft, then commits.
-	_, err = tx.Exec(ctx, `INSERT INTO problem_draft_assets(problem_id,path,object_id) VALUES($1,'images/a.png',$2)`, d.ProblemID, object)
+	_, err = tx.Exec(ctx, `INSERT INTO problem_draft_assets(problem_id,path,object_id) VALUES($1,'assets/a.png',$2)`, d.ProblemID, object)
 	require.NoError(t, err)
 	require.NoError(t, tx.Commit(ctx))
 
@@ -266,7 +266,7 @@ func TestObjectDeletionProtocolIsOneWay(t *testing.T) {
 func TestExpiredUploadIsNeverPublishedAndBecomesCollectable(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
-	change := model.UploadChange{Part: "asset", AssetPath: "images/late.png"}
+	change := model.UploadChange{Part: "asset", AssetPath: "assets/late.png"}
 	key := mutationKey(org, "upload", struct {
 		Revision int64
 		Change   model.UploadChange
@@ -307,7 +307,7 @@ func TestObjectDeletionRacingWithNewReference(t *testing.T) {
 		current, err := repo.GetDraft(ctx, d.ProblemID)
 		require.NoError(t, err)
 		candidate := current
-		candidate.Assets = []model.DraftAsset{{Path: "images/a.png", ObjectID: object}}
+		candidate.Assets = []model.DraftAsset{{Path: "assets/a.png", ObjectID: object}}
 
 		var deleting bool
 		var deleteErr, linkErr error

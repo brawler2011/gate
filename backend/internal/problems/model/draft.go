@@ -117,6 +117,37 @@ type DraftQuotas struct {
 	Subtasks   int           `yaml:"subtasks"`
 }
 
+// Draft layout: component sources live in their role folder, shared source
+// files in lib/, statements in statements/, statement resources in assets/.
+const (
+	LibraryFolder   = "lib"
+	StatementFolder = "statements"
+	AssetFolder     = "assets"
+)
+
+var componentFolders = map[string]string{
+	"checker": "checkers", "validator": "validators", "interactor": "interactors", "generator": "generators", "solution": "solutions",
+}
+
+// topFolder returns the first path element, or "" for a file in the root.
+func topFolder(path string) string {
+	folder, _, found := strings.Cut(path, "/")
+	if !found {
+		return ""
+	}
+	return folder
+}
+
+// ComponentRole returns the role whose folder holds path, or "".
+func ComponentRole(path string) string {
+	for role, folder := range componentFolders {
+		if topFolder(path) == folder {
+			return role
+		}
+	}
+	return ""
+}
+
 func ValidDraftPath(path string) bool {
 	return fs.ValidPath(path) && path != "." && path != "problem.yaml" && path != ".gate" && !strings.HasPrefix(path, ".gate/") && !strings.ContainsAny(path, "\\\x00") && len(path) <= 512
 }
@@ -163,6 +194,9 @@ func (d *Draft) Validate(q DraftQuotas, build bool) error {
 		if !ValidDraftPath(path) || !utf8.ValidString(text) || int64(len(text)) > int64(q.FileBytes) {
 			return fmt.Errorf("invalid text file %q or size exceeded", path)
 		}
+		if folder := topFolder(path); folder != LibraryFolder && folder != StatementFolder && ComponentRole(path) == "" {
+			return fmt.Errorf("text file %q is outside lib/, statements/ and component folders", path)
+		}
 		total += int64(len(text))
 		paths[path] = true
 	}
@@ -173,15 +207,22 @@ func (d *Draft) Validate(q DraftQuotas, build bool) error {
 		if !ValidDraftPath(asset.Path) || paths[asset.Path] || asset.ObjectID == uuid.Nil {
 			return fmt.Errorf("invalid or duplicate asset %q", asset.Path)
 		}
+		if topFolder(asset.Path) != AssetFolder {
+			return fmt.Errorf("asset %q is outside %s/", asset.Path, AssetFolder)
+		}
 		paths[asset.Path] = true
 	}
 	components := make(map[uuid.UUID]DraftComponent)
+	sources := make(map[string]bool)
 	for _, c := range d.Components {
-		if c.ID == uuid.Nil || components[c.ID].ID != uuid.Nil || !ValidDraftPath(c.Path) || c.Language == "" {
+		if c.ID == uuid.Nil || components[c.ID].ID != uuid.Nil || sources[c.Path] || !ValidDraftPath(c.Path) || c.Language == "" {
 			return fmt.Errorf("invalid or duplicate component")
 		}
-		if !slices.Contains([]string{"checker", "validator", "interactor", "solution", "generator"}, c.Role) {
+		if _, ok := componentFolders[c.Role]; !ok {
 			return fmt.Errorf("invalid component role")
+		}
+		if ComponentRole(c.Path) != c.Role {
+			return fmt.Errorf("component %q is outside %s/", c.Path, componentFolders[c.Role])
 		}
 		if _, ok := d.Files[c.Path]; !ok {
 			return fmt.Errorf("missing component source %q", c.Path)
@@ -194,9 +235,18 @@ func (d *Draft) Validate(q DraftQuotas, build bool) error {
 			if _, ok := d.Files[dep]; !ok || seen[dep] {
 				return fmt.Errorf("missing or duplicate dependency %q", dep)
 			}
+			if topFolder(dep) != LibraryFolder {
+				return fmt.Errorf("dependency %q is outside %s/", dep, LibraryFolder)
+			}
 			seen[dep] = true
 		}
 		components[c.ID] = c
+		sources[c.Path] = true
+	}
+	for path := range d.Files {
+		if ComponentRole(path) != "" && !sources[path] {
+			return fmt.Errorf("file %q is not a component source", path)
+		}
 	}
 	checkComponent := func(id *uuid.UUID, role string, required bool) error {
 		if id == nil {

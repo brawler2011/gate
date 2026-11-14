@@ -25,6 +25,7 @@ export const ROLE_LABELS: Record<ComponentRole, string> = {
 
 export const LIBRARY_FOLDER = "lib";
 export const STATEMENT_FOLDER = "statements";
+export const ASSET_FOLDER = "assets";
 
 export type OpResult = {draft: ProblemDraft} | {error: string};
 

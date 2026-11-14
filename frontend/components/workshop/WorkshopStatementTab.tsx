@@ -15,7 +15,7 @@ import "katex/dist/katex.min.css";
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 
 import {DraftGate} from "./draft/DraftGate";
-import {isValidPath, setFile, statementLanguages, STATEMENT_FOLDER} from "./draft/draftOps";
+import {ASSET_FOLDER, isValidPath, setFile, statementLanguages, STATEMENT_FOLDER} from "./draft/draftOps";
 import {objectUrl, useSaveDraft, useUploadToDraft} from "./draft/useDraft";
 
 import "../problems/Problem.css";
@@ -161,9 +161,9 @@ const AssetsSection = ({draft, problemId}: {draft: ProblemDraft; problemId: stri
   const [assetPath, setAssetPath] = useState("");
 
   const handleUpload = async () => {
-    const target = assetPath.trim() || file?.name || "";
-    if (!file || !isValidPath(target) || target.startsWith(`${STATEMENT_FOLDER}/`)) {
-      notifications.show({title: "Недопустимый путь ресурса", message: "Укажите относительный путь, например images/pic.png", color: "red"});
+    const target = `${ASSET_FOLDER}/${assetPath.trim() || file?.name || ""}`;
+    if (!file || !isValidPath(target)) {
+      notifications.show({title: "Недопустимый путь ресурса", message: "Укажите относительный путь, например pic.png", color: "red"});
       return;
     }
     try {
@@ -181,8 +181,8 @@ const AssetsSection = ({draft, problemId}: {draft: ProblemDraft; problemId: stri
         <Group align="flex-end" wrap="wrap">
           <FileInput label="Файл" value={file} onChange={setFile} placeholder="Изображение, PDF…" style={{minWidth: 240}} />
           <TextInput
-            label="Путь в условии"
-            placeholder={file?.name ?? "images/pic.png"}
+            label={`Путь в ${ASSET_FOLDER}/`}
+            placeholder={file?.name ?? "pic.png"}
             value={assetPath}
             onChange={(e) => setAssetPath(e.currentTarget.value)}
             style={{minWidth: 240}}
