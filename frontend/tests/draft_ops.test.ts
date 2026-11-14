@@ -11,6 +11,7 @@ import {
   moveTest,
   newManualTest,
   removeComponent,
+  setComponentLanguage,
   removeSubtask,
   removeTest,
   setSubtaskDependencies,
@@ -29,9 +30,6 @@ const emptyDraft = (): ProblemDraft => ({
   time_limit_ms: 1000,
   memory_limit_mb: 256,
   max_score: null,
-  checker_id: null,
-  validator_id: null,
-  interactor_id: null,
   main_solution_id: null,
   files: {},
   components: [],
@@ -48,24 +46,57 @@ const must = (result: ReturnType<typeof addComponent>): ProblemDraft => {
 };
 
 describe("components", () => {
-  test("the first component of a singleton role is selected, later ones are not", () => {
-    let draft = must(addComponent(emptyDraft(), "checker", "check.cpp", "cpp", "int main(){}"));
-    expect(draft.checker_id).toBe(draft.components[0].id);
+  test("checker, validator and interactor are singletons; generators and solutions are not", () => {
+    for (const role of ["checker", "validator", "interactor"] as const) {
+      const draft = must(addComponent(emptyDraft(), role, "main", "cpp", "int main(){}"));
+      expect(draft.components).toHaveLength(1);
+      expect("error" in addComponent(draft, role, "other", "python", "")).toBe(true);
+    }
+    const draft = must(addComponent(emptyDraft(), "checker", "check", "cpp", "int main(){}"));
     expect(draft.files["checkers/check.cpp"]).toBe("int main(){}");
-    draft = must(addComponent(draft, "checker", "other.cpp", "cpp", ""));
-    expect(draft.checker_id).toBe(draft.components[0].id);
-    expect(draft.components).toHaveLength(2);
+    const generators = must(addComponent(must(addComponent(emptyDraft(), "generator", "a", "cpp", "")), "generator", "b", "python", ""));
+    expect(generators.components.map((c) => c.path)).toEqual(["generators/a.cpp", "generators/b.py"]);
   });
 
-  test("rejects duplicate paths and path traversal", () => {
-    const draft = must(addComponent(emptyDraft(), "generator", "gen.py", "python", ""));
-    expect("error" in addComponent(draft, "generator", "gen.py", "python", "")).toBe(true);
-    expect("error" in addComponent(draft, "generator", "../evil.py", "python", "")).toBe(true);
-    expect("error" in addComponent(draft, "generator", "a/b.py", "python", "")).toBe(true);
+  test("rejects duplicate paths, path traversal and unknown languages", () => {
+    const draft = must(addComponent(emptyDraft(), "generator", "gen", "python", ""));
+    expect("error" in addComponent(draft, "generator", "gen", "python", "")).toBe(true);
+    expect("error" in addComponent(draft, "generator", "../evil", "python", "")).toBe(true);
+    expect("error" in addComponent(draft, "generator", "a/b", "python", "")).toBe(true);
+    expect("error" in addComponent(draft, "generator", "gen", "rust", "")).toBe(true);
   });
 
-  test("removal clears selections and the source, but is refused while tests use it", () => {
-    let draft = must(addComponent(emptyDraft(), "solution", "main.cpp", "cpp", ""));
+  test("changing the language renames the source and keeps the component", () => {
+    let draft = must(addComponent(emptyDraft(), "checker", "checker", "cpp", "src"));
+    const checker = draft.components[0];
+    draft = must(addComponent(draft, "generator", "gen", "cpp", ""));
+    draft = {...draft, files: {...draft.files, "lib/testlib.h": ""}};
+    draft.components[0] = {...checker, dependencies: {"testlib.h": "lib/testlib.h"}};
+    draft = addSubtask(draft, "All");
+    draft = upsertTest(draft, newGeneratedTest(draft, draft.subtasks[0].id));
+
+    const renamed = must(setComponentLanguage(draft, checker.id, "python"));
+    expect(renamed.components[0]).toEqual({...checker, path: "checkers/checker.py", dependencies: {"testlib.h": "lib/testlib.h"}});
+    expect(renamed.files["checkers/checker.py"]).toBe("src");
+    expect("checkers/checker.cpp" in renamed.files).toBe(false);
+    expect(renamed.tests).toEqual(draft.tests);
+
+    // A file named only by its extension is a Python source on the server too.
+    const dotfile: ProblemDraft = {
+      ...emptyDraft(),
+      files: {"validators/.py": ""},
+      components: [{id: "v", role: "validator", path: "validators/.py", dependencies: {}}],
+    };
+    expect(must(setComponentLanguage(dotfile, dotfile.components[0].id, "cpp")).components[0].path).toBe("validators/.cpp");
+
+    const generator = draft.components[1].id;
+    const python = must(setComponentLanguage(draft, generator, "python"));
+    expect(python.components[1].path).toBe("generators/gen.py");
+    expect(python.tests[0].input.component_id).toBe(generator);
+  });
+
+  test("removal clears the main solution and the source, but is refused while tests use it", () => {
+    let draft = must(addComponent(emptyDraft(), "solution", "main", "cpp", ""));
     const solution = draft.components[0].id;
     expect(draft.main_solution_id).toBe(solution);
     draft = addSubtask(draft, "All");
@@ -156,12 +187,13 @@ describe("points", () => {
 describe("build readiness", () => {
   test("reports everything missing before a build is requested", () => {
     const draft = emptyDraft();
-    expect(buildProblems(draft)).toEqual(["Не выбран чекер", "Нет ни одного теста", "Нет ни одной подзадачи"]);
+    expect(buildProblems(draft)).toEqual(["Нет чекера", "Нет ни одного теста", "Нет ни одной подзадачи"]);
     expect(buildProblems({...draft, type: "interactive"})).toContain("Для интерактивной задачи нужен интерактор");
+    expect(buildProblems({...draft, type: "interactive"})).toContain("Для интерактивной задачи нужно главное решение");
   });
 
   test("manual tests need uploaded objects", () => {
-    let draft = must(addComponent(emptyDraft(), "checker", "check.cpp", "cpp", ""));
+    let draft = must(addComponent(emptyDraft(), "checker", "check", "cpp", ""));
     draft = addSubtask(draft, "All");
     draft = upsertTest(draft, newManualTest(draft, draft.subtasks[0].id));
     expect(buildProblems(draft)).toEqual(["У некоторых ручных тестов не загружен вход", "У некоторых тестов не загружен ответ"]);

@@ -52,37 +52,97 @@ export const formatPoints = (points: number): string => points.toFixed(2).replac
 export const sumPoints = (tests: ProblemDraftTest[]): number =>
   fromHundredths(tests.reduce((total, test) => total + toHundredths(test.points), 0));
 
+/** Roles a draft holds at most one component of; the role folder identifies it. */
+export const SINGLETON_ROLES: ReadonlySet<ComponentRole> = new Set(["checker", "validator", "interactor"]);
+
+/** Canonical source extension of each language; the server derives the language from it. */
+export const LANGUAGE_EXTENSIONS: Record<string, string> = {
+  cpp: ".cpp",
+  python: ".py",
+  go: ".go",
+  java: ".java",
+};
+
+const EXTENSION_LANGUAGES: Record<string, string> = {
+  ".cpp": "cpp",
+  ".cc": "cpp",
+  ".cxx": "cpp",
+  ".py": "python",
+  ".go": "go",
+  ".java": "java",
+};
+
+/** Mirrors Go's filepath.Ext: the suffix from the last dot of the file name. */
+const extensionOf = (path: string): string => {
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  const dot = name.lastIndexOf(".");
+  return dot < 0 ? "" : name.slice(dot).toLowerCase();
+};
+
+/** Returns the language of a source file from its extension, or "" when unknown. */
+export const languageForPath = (path: string): string => EXTENSION_LANGUAGES[extensionOf(path)] ?? "";
+
+const roleComponent = (draft: ProblemDraft, role: ComponentRole): ProblemDraftComponent | undefined =>
+  draft.components.find((c) => c.role === role);
+
+/** Adds a component named `stem` plus the extension of `language`. */
 export const addComponent = (
   draft: ProblemDraft,
   role: ComponentRole,
-  fileName: string,
+  stem: string,
   language: string,
   source: string,
 ): OpResult => {
-  const path = `${ROLE_FOLDERS[role]}/${fileName}`;
-  if (!isValidPath(path) || fileName.includes("/")) {
+  const extension = LANGUAGE_EXTENSIONS[language];
+  if (!extension) {
+    return {error: "Неизвестный язык"};
+  }
+  const path = `${ROLE_FOLDERS[role]}/${stem}${extension}`;
+  if (!isValidPath(path) || stem === "" || stem.includes("/")) {
     return {error: "Недопустимое имя файла"};
+  }
+  if (SINGLETON_ROLES.has(role) && roleComponent(draft, role)) {
+    return {error: `${ROLE_LABELS[role]} у задачи может быть только один`};
   }
   if (path in draft.files || draft.assets.some((asset) => asset.path === path)) {
     return {error: "Файл с таким именем уже существует"};
   }
-  const component: ProblemDraftComponent = {id: newId(), role, path, language, dependencies: {}};
-  const next: ProblemDraft = {
-    ...draft,
-    files: {...draft.files, [path]: source},
-    components: [...draft.components, component],
+  const component: ProblemDraftComponent = {id: newId(), role, path, dependencies: {}};
+  return {
+    draft: {
+      ...draft,
+      files: {...draft.files, [path]: source},
+      components: [...draft.components, component],
+      // The first solution becomes the main one.
+      main_solution_id: role === "solution" && !draft.main_solution_id ? component.id : draft.main_solution_id,
+    },
   };
-  // The first component of a singleton role becomes the selected one.
-  if (role === "checker" && !next.checker_id) {
-    next.checker_id = component.id;
-  } else if (role === "validator" && !next.validator_id) {
-    next.validator_id = component.id;
-  } else if (role === "interactor" && !next.interactor_id) {
-    next.interactor_id = component.id;
-  } else if (role === "solution" && !next.main_solution_id) {
-    next.main_solution_id = component.id;
+};
+
+/** Changes a component's language by renaming its source; ID, dependencies and tests are kept. */
+export const setComponentLanguage = (draft: ProblemDraft, id: string, language: string): OpResult => {
+  const component = draft.components.find((c) => c.id === id);
+  const extension = LANGUAGE_EXTENSIONS[language];
+  if (!component || !extension) {
+    return {error: "Компонент не найден"};
   }
-  return {draft: next};
+  const current = extensionOf(component.path);
+  const path = component.path.slice(0, component.path.length - current.length) + extension;
+  if (path === component.path) {
+    return {draft};
+  }
+  if (path in draft.files || draft.assets.some((asset) => asset.path === path)) {
+    return {error: "Файл с таким именем уже существует"};
+  }
+  const files = {...draft.files, [path]: draft.files[component.path] ?? ""};
+  delete files[component.path];
+  return {
+    draft: {
+      ...draft,
+      files,
+      components: draft.components.map((c) => (c.id === id ? {...c, path} : c)),
+    },
+  };
 };
 
 export const removeComponent = (draft: ProblemDraft, id: string): OpResult => {
@@ -103,9 +163,6 @@ export const removeComponent = (draft: ProblemDraft, id: string): OpResult => {
       ...draft,
       files,
       components: draft.components.filter((c) => c.id !== id),
-      checker_id: draft.checker_id === id ? null : draft.checker_id,
-      validator_id: draft.validator_id === id ? null : draft.validator_id,
-      interactor_id: draft.interactor_id === id ? null : draft.interactor_id,
       main_solution_id: draft.main_solution_id === id ? null : draft.main_solution_id,
     },
   };
@@ -275,14 +332,17 @@ export const newManualTest = (draft: ProblemDraft, subtaskId: string): ProblemDr
     : {mode: "provided", object_id: null, component_id: null},
 });
 
-/** Problems with every selected component the build requires, as reported to the author before building. */
+/** Problems with every component the build requires, as reported to the author before building. */
 export const buildProblems = (draft: ProblemDraft): string[] => {
   const problems: string[] = [];
-  if (!draft.checker_id) {
-    problems.push("Не выбран чекер");
+  if (draft.type !== "interactive" && !roleComponent(draft, "checker")) {
+    problems.push("Нет чекера");
   }
-  if (draft.type === "interactive" && !draft.interactor_id) {
+  if (draft.type === "interactive" && !roleComponent(draft, "interactor")) {
     problems.push("Для интерактивной задачи нужен интерактор");
+  }
+  if (draft.type === "interactive" && !draft.main_solution_id) {
+    problems.push("Для интерактивной задачи нужно главное решение");
   }
   if (draft.tests.length === 0) {
     problems.push("Нет ни одного теста");

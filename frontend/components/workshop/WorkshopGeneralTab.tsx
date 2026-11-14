@@ -29,15 +29,14 @@ type ComponentSelectProps = {
   draft: ProblemDraft;
   role: ComponentRole;
   value: string | null;
-  required?: boolean;
   onChange: (value: string | null) => void;
 };
 
-const ComponentSelect = ({draft, role, value, required, onChange}: ComponentSelectProps): ReactNode => (
+const ComponentSelect = ({draft, role, value, onChange}: ComponentSelectProps): ReactNode => (
   <Select
     label={ROLE_LABELS[role]}
-    placeholder={required ? "Не выбран" : "Не используется"}
-    clearable={!required}
+    placeholder="Не используется"
+    clearable
     data={draft.components.filter((c) => c.role === role).map((c) => ({value: c.id, label: c.path}))}
     value={value}
     onChange={onChange}
@@ -51,9 +50,6 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
   const [type, setType] = useState<ProblemDraft["type"]>(draft.type);
   const [timeLimit, setTimeLimit] = useState<number>(draft.time_limit_ms);
   const [memoryLimit, setMemoryLimit] = useState<number>(draft.memory_limit_mb);
-  const [checker, setChecker] = useState(draft.checker_id);
-  const [validator, setValidator] = useState(draft.validator_id);
-  const [interactor, setInteractor] = useState(draft.interactor_id);
   const [mainSolution, setMainSolution] = useState(draft.main_solution_id);
 
   const changed =
@@ -62,9 +58,6 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
     type !== draft.type ||
     timeLimit !== draft.time_limit_ms ||
     memoryLimit !== draft.memory_limit_mb ||
-    checker !== draft.checker_id ||
-    validator !== draft.validator_id ||
-    interactor !== draft.interactor_id ||
     mainSolution !== draft.main_solution_id;
 
   const handleSave = async () => {
@@ -75,9 +68,6 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
       type,
       time_limit_ms: timeLimit,
       memory_limit_mb: memoryLimit,
-      checker_id: checker,
-      validator_id: validator,
-      interactor_id: type === "interactive" ? interactor : null,
       main_solution_id: mainSolution,
     }));
     if (ok) {
@@ -139,23 +129,12 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
         <Divider label="Компоненты сборки" labelPosition="left" />
         <Grid gutter="md">
           <Grid.Col span={{base: 12, sm: 6}}>
-            <ComponentSelect draft={draft} role="checker" value={checker} required onChange={setChecker} />
-          </Grid.Col>
-          <Grid.Col span={{base: 12, sm: 6}}>
-            <ComponentSelect draft={draft} role="validator" value={validator} onChange={setValidator} />
-          </Grid.Col>
-          <Grid.Col span={{base: 12, sm: 6}}>
             <ComponentSelect draft={draft} role="solution" value={mainSolution} onChange={setMainSolution} />
           </Grid.Col>
-          {type === "interactive" && (
-            <Grid.Col span={{base: 12, sm: 6}}>
-              <ComponentSelect draft={draft} role="interactor" value={interactor} required onChange={setInteractor} />
-            </Grid.Col>
-          )}
         </Grid>
         <Text size="xs" c="dimmed">
-          Главное решение формирует ответы для тестов в режиме «генерируется». Файлы компонентов
-          редактируются на вкладках чекера, валидатора, генератора, интерактора и решений.
+          Главное решение формирует ответы для тестов в режиме «генерируется». Чекер, валидатор и
+          интерактор у задачи единственные и задаются файлом на своей вкладке.
         </Text>
 
         <Group justify="flex-end">

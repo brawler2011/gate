@@ -97,11 +97,11 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		"statements/en.md":   "Print a+b.",
 	}
 	d.Components = []problemsmodel.DraftComponent{
-		{ID: checker, Role: "checker", Path: "checkers/check.cpp", Language: "cpp"},
-		{ID: generator, Role: "generator", Path: "generators/gen.py", Language: "python"},
-		{ID: solution, Role: "solution", Path: "solutions/main.cpp", Language: "cpp"},
+		{ID: checker, Role: "checker", Path: "checkers/check.cpp"},
+		{ID: generator, Role: "generator", Path: "generators/gen.py"},
+		{ID: solution, Role: "solution", Path: "solutions/main.cpp"},
 	}
-	d.CheckerID, d.MainSolutionID = &checker, &solution
+	d.MainSolutionID = &solution
 	d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
 	seed := int64(1)
 	test := func(ordinal int, weight points.Value, a, b string) problemsmodel.DraftTest {

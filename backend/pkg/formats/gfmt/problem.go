@@ -22,9 +22,17 @@ type Problem struct {
 	Limits          Limits                       `yaml:"limits" json:"limits"`
 	Subtasks        map[string]Subtask           `yaml:"subtasks" json:"subtasks"`
 	Solutions       map[string]string            `yaml:"solutions" json:"solutions"`
-	Checker         string                       `yaml:"checker,omitempty" json:"checker,omitempty"`
-	Interactor      string                       `yaml:"interactor,omitempty" json:"interactor,omitempty"`
-	Validator       string                       `yaml:"validator,omitempty" json:"validator,omitempty"`
+}
+
+// CompiledRole returns the compiled component of a singleton role (checker,
+// validator, interactor); a built package holds at most one of each.
+func (p *Problem) CompiledRole(role string) (CompiledComponent, bool) {
+	for _, c := range p.Compiled {
+		if c.Role == role {
+			return c, true
+		}
+	}
+	return CompiledComponent{}, false
 }
 
 // Limits defines the resource limits for a problem.
@@ -96,10 +104,9 @@ func (p *Problem) OrderedSubtaskNames() []string {
 	return names
 }
 
-// Source holds explicit build settings; files and component kinds come from
-// the package layout, and component selections remain in checker/validator/interactor.
+// Source holds explicit build settings; files, component kinds and languages
+// come from the package layout and file extensions.
 type Source struct {
 	DependencyMap map[string]string `yaml:"dependency_map,omitempty" json:"dependency_map,omitempty"`
-	Compiler      string            `yaml:"compiler,omitempty" json:"compiler,omitempty"`
 	Dependencies  []string          `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
 }

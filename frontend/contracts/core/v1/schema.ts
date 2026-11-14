@@ -1733,7 +1733,6 @@ export interface components {
             /** @enum {string} */
             role: "checker" | "validator" | "interactor" | "generator" | "solution";
             path: string;
-            language: string;
             dependencies: {
                 [key: string]: string;
             };
@@ -1783,12 +1782,6 @@ export interface components {
             memory_limit_mb: number;
             /** Format: double */
             max_score: number | null;
-            /** Format: uuid */
-            checker_id: string | null;
-            /** Format: uuid */
-            validator_id: string | null;
-            /** Format: uuid */
-            interactor_id: string | null;
             /** Format: uuid */
             main_solution_id: string | null;
             files: {

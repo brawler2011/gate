@@ -1,8 +1,6 @@
 format_version: "1.0"
 title: "A+B"
 type: "pass-fail"
-checker: checkers/checker.cpp
-validator: validators/validator.cpp
 
 limits:
   time_ms: 1000

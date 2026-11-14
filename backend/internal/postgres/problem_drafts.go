@@ -239,7 +239,7 @@ func writeDraft(ctx context.Context, tx pgx.Tx, d model.Draft) error {
 	if err := q.UpdateProblemDraftRow(ctx, sqlc.UpdateProblemDraftRowParams{
 		ProblemID: d.ProblemID, Revision: d.Revision, Title: d.Title, ShortName: d.ShortName, Type: d.Type,
 		TimeLimitMs: int32(d.TimeLimitMs), MemoryLimitMb: int32(d.MemoryLimitMb), MaxScore: d.MaxScore, //nolint:gosec // validated against quotas
-		CheckerID: d.CheckerID, ValidatorID: d.ValidatorID, InteractorID: d.InteractorID, MainSolutionID: d.MainSolutionID,
+		MainSolutionID: d.MainSolutionID,
 	}); err != nil {
 		return fmt.Errorf("update draft: %w", err)
 	}
@@ -267,7 +267,7 @@ func writeDraft(ctx context.Context, tx pgx.Tx, d model.Draft) error {
 			return fmt.Errorf("encode component dependencies: %w", err)
 		}
 		if err := q.InsertDraftComponent(ctx, sqlc.InsertDraftComponentParams{
-			ProblemID: d.ProblemID, ID: c.ID, Role: c.Role, Path: c.Path, Language: c.Language, Dependencies: encoded,
+			ProblemID: d.ProblemID, ID: c.ID, Role: c.Role, Path: c.Path, Dependencies: encoded,
 		}); err != nil {
 			return fmt.Errorf("insert draft component: %w", err)
 		}

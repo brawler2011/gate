@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -75,8 +76,7 @@ func publicationHarness(t *testing.T) *pipelineHarness {
 	checker, group := uuid.New(), uuid.New()
 	h.save(t, func(d *model.Draft) {
 		d.Files = map[string]string{"checkers/check.py": "import sys\nassert open(sys.argv[2]).read() == open(sys.argv[3]).read()\n", "statements/en.md": "Original statement"}
-		d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.py", Language: "python"}}
-		d.CheckerID = &checker
+		d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.py"}}
 		d.Subtasks = []model.DraftSubtask{{ID: group, Ordinal: 1, Policy: "each"}}
 	})
 	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
@@ -392,8 +392,8 @@ func TestPublicationSupportedTypes(t *testing.T) {
 					interactor, solution := uuid.New(), uuid.New()
 					d.Files["interactors/main.py"] = "print('hello', flush=True)\n"
 					d.Files["solutions/main.py"] = "input()\n"
-					d.Components = append(d.Components, model.DraftComponent{ID: interactor, Role: "interactor", Path: "interactors/main.py", Language: "python"}, model.DraftComponent{ID: solution, Role: "solution", Path: "solutions/main.py", Language: "python"})
-					d.InteractorID, d.MainSolutionID = &interactor, &solution
+					d.Components = append(d.Components, model.DraftComponent{ID: interactor, Role: "interactor", Path: "interactors/main.py"}, model.DraftComponent{ID: solution, Role: "solution", Path: "solutions/main.py"})
+					d.MainSolutionID = &solution
 					for i := range d.Tests {
 						d.Tests[i].Answer = model.DraftAnswer{Mode: "interactive"}
 					}
@@ -462,7 +462,10 @@ func TestPublicationRejectsIncompleteDrafts(t *testing.T) {
 		name, message string
 		change        func(*model.Draft)
 	}{
-		{"no checker", "checker is required", func(d *model.Draft) { d.CheckerID = nil }},
+		{"no checker", "checker is required", func(d *model.Draft) {
+			delete(d.Files, d.Component("checker").Path)
+			d.Components = slices.DeleteFunc(d.Components, func(c model.DraftComponent) bool { return c.Role == "checker" })
+		}},
 		{"no tests", "build requires title and tests", func(d *model.Draft) { d.Tests = nil }},
 		{"interactive without interactor", "interactor is required", func(d *model.Draft) {
 			d.Type = "interactive"

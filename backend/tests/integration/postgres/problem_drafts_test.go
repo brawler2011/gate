@@ -45,8 +45,7 @@ func makeBuildableDraft(d model.Draft, oid uuid.UUID) model.Draft {
 	c := uuid.New()
 	g := uuid.New()
 	d.Files = map[string]string{"checkers/check.cpp": "int main(){return 0;}"}
-	d.Components = []model.DraftComponent{{ID: c, Role: "checker", Path: "checkers/check.cpp", Language: "cpp"}}
-	d.CheckerID = &c
+	d.Components = []model.DraftComponent{{ID: c, Role: "checker", Path: "checkers/check.cpp"}}
 	d.Subtasks = []model.DraftSubtask{{ID: g, Ordinal: 1, Name: "All", Policy: "complete"}}
 	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: g, Input: model.DraftInput{Mode: "manual", ObjectID: &oid}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &oid}}}
 	return d

@@ -44,7 +44,7 @@ func TestBuiltinTemplatesImportIntoValidDrafts(t *testing.T) {
 			require.NoError(t, err)
 			defer plan.Close()
 			plan.draft.ProblemID, plan.draft.Revision = problem, 1
-			require.NoError(t, plan.draft.Validate(importQuotas, false))
+			require.NoError(t, plan.draft.Validate(importQuotas, true))
 			require.NotEmpty(t, plan.draft.Tests)
 			require.NotEmpty(t, plan.draft.Components)
 		})
@@ -81,4 +81,16 @@ func TestImportKeepsDraftLayout(t *testing.T) {
 
 	_, err = importAPlusB(t, map[string]string{"pic.png": "png"})
 	require.ErrorContains(t, err, "unexpected file pic.png")
+}
+
+func TestImportRejectsSecondSingletonComponent(t *testing.T) {
+	_, err := importAPlusB(t, map[string]string{"checkers/other.cpp": "int main() {}\n"})
+	require.ErrorContains(t, err, "more than one checker in checkers/")
+	_, err = importAPlusB(t, map[string]string{"validators/other.py": "\n"})
+	require.ErrorContains(t, err, "more than one validator in validators/")
+}
+
+func TestImportRejectsUnknownSourceExtension(t *testing.T) {
+	_, err := importAPlusB(t, map[string]string{"solutions/main.rs": "fn main() {}\n"})
+	require.ErrorContains(t, err, "unsupported source language: solutions/main.rs")
 }

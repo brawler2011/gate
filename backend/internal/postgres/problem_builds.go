@@ -55,7 +55,7 @@ func (r *ProblemDraftsRepo) EnqueueBuild(ctx context.Context, k model.MutationKe
 		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "draft cannot be built")
 	}
 	for _, c := range draft.Components {
-		if _, ok := options.Toolchain.Languages[c.Language]; !ok {
+		if _, ok := options.Toolchain.Languages[c.Language()]; !ok {
 			return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, nil, "component language is unavailable in pinned toolchain")
 		}
 	}

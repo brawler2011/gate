@@ -74,22 +74,16 @@ func OpenBuiltPackage(dir string) (*GateFormat, error) {
 			}
 		}
 	}
-	selected := func(id, role string, required bool) error {
-		if id == "" && !required {
-			return nil
-		}
-		c, ok := p.Compiled[id]
-		if !ok || c.Role != role {
-			return fmt.Errorf("invalid compiled %s selection", role)
-		}
-		return nil
+	roles := map[string]int{}
+	for _, c := range p.Compiled {
+		roles[c.Role]++
 	}
 	for _, s := range []struct {
-		id, role string
+		role     string
 		required bool
-	}{{p.Checker, "checker", p.Type != "interactive"}, {p.Interactor, "interactor", p.Type == "interactive"}, {p.Validator, "validator", false}} {
-		if err := selected(s.id, s.role, s.required); err != nil {
-			return nil, err
+	}{{"checker", p.Type != "interactive"}, {"interactor", p.Type == "interactive"}, {"validator", false}} {
+		if roles[s.role] > 1 || (s.required && roles[s.role] == 0) {
+			return nil, fmt.Errorf("built package needs exactly one %s", s.role)
 		}
 	}
 	ordinals := map[int]bool{}

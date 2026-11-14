@@ -3112,7 +3112,6 @@ components:
       - id
       - role
       - path
-      - language
       - dependencies
       properties:
         id:
@@ -3127,8 +3126,6 @@ components:
           - generator
           - solution
         path:
-          type: string
-        language:
           type: string
         dependencies:
           type: object
@@ -3219,9 +3216,6 @@ components:
       - time_limit_ms
       - memory_limit_mb
       - max_score
-      - checker_id
-      - validator_id
-      - interactor_id
       - main_solution_id
       - files
       - components
@@ -3254,18 +3248,6 @@ components:
         max_score:
           type: number
           format: double
-          nullable: true
-        checker_id:
-          type: string
-          format: uuid
-          nullable: true
-        validator_id:
-          type: string
-          format: uuid
-          nullable: true
-        interactor_id:
-          type: string
-          format: uuid
           nullable: true
         main_solution_id:
           type: string

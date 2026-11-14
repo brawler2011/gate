@@ -93,13 +93,11 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 		}
 	}()
 	role := "checker"
-	componentID := pkg.Format.Problem.Checker
 	if s.Draft.Type == "interactive" {
 		role = "interactor"
-		componentID = pkg.Format.Problem.Interactor
 	}
-	component, ok := pkg.Format.Problem.Compiled[componentID]
-	if !ok || component.Role != role {
+	component, ok := pkg.Format.Problem.CompiledRole(role)
+	if !ok {
 		return nil, fmt.Errorf("missing published %s", role)
 	}
 	executable, err := j.restore(ctx, pkg, component)

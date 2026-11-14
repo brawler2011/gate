@@ -140,8 +140,7 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 	checker, subtask := uuid.New(), uuid.New()
 	h.save(t, func(d *model.Draft) {
 		d.Files = map[string]string{"checkers/check.cpp": acceptEverythingChecker}
-		d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.cpp", Language: "cpp"}}
-		d.CheckerID = &checker
+		d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.cpp"}}
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 	})
 	for i := 1; i <= tests; i++ {
@@ -204,11 +203,11 @@ func (h *pipelineHarness) generatorBuild(t *testing.T, script string) {
 	h.save(t, func(d *model.Draft) {
 		d.Files = map[string]string{"checkers/check.cpp": acceptEverythingChecker, "generators/gen.py": script, "solutions/main.py": "print(1)\n"}
 		d.Components = []model.DraftComponent{
-			{ID: checker, Role: "checker", Path: "checkers/check.cpp", Language: "cpp"},
-			{ID: generator, Role: "generator", Path: "generators/gen.py", Language: "python"},
-			{ID: solution, Role: "solution", Path: "solutions/main.py", Language: "python"},
+			{ID: checker, Role: "checker", Path: "checkers/check.cpp"},
+			{ID: generator, Role: "generator", Path: "generators/gen.py"},
+			{ID: solution, Role: "solution", Path: "solutions/main.py"},
 		}
-		d.CheckerID, d.MainSolutionID = &checker, &solution
+		d.MainSolutionID = &solution
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 		seed := int64(1)
 		d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1,
@@ -349,8 +348,7 @@ func TestPipelineDiskQuotaRejectsOversizedSnapshot(t *testing.T) {
 	checker, subtask := uuid.New(), uuid.New()
 	h.save(t, func(d *model.Draft) {
 		d.Files = map[string]string{"checkers/check.cpp": acceptEverythingChecker}
-		d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.cpp", Language: "cpp"}}
-		d.CheckerID = &checker
+		d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.cpp"}}
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 	})
 	h.uploadPair(t, model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}, 3<<20)

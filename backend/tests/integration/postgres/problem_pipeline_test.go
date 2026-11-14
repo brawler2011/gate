@@ -90,9 +90,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 		"validators/validate.py": "import sys\na,b=map(int,sys.stdin.read().split())\nassert a>=0 and b>=0\n",
 		"statements/en.md":       "A snapshot statement.",
 	}
-	d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.cpp", Language: "cpp"}, {ID: generator, Role: "generator", Path: "generators/gen.py", Language: "python"}, {ID: solution, Role: "solution", Path: "solutions/main.cpp", Language: "cpp"}, {ID: validator, Role: "validator", Path: "validators/validate.py", Language: "python"}}
-	d.CheckerID = &checker
-	d.ValidatorID = &validator
+	d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.cpp"}, {ID: generator, Role: "generator", Path: "generators/gen.py"}, {ID: solution, Role: "solution", Path: "solutions/main.cpp"}, {ID: validator, Role: "validator", Path: "validators/validate.py"}}
 	d.MainSolutionID = &solution
 	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete"}}
 	seed := int64(7)

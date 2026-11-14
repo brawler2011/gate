@@ -260,7 +260,7 @@ WHERE organization_id=$1 AND operation=$2 AND key=$3 AND fingerprint=$4;
 
 -- name: UpdateProblemDraftRow :exec
 UPDATE problem_drafts SET updated_at=clock_timestamp(),revision=$2,title=$3,short_name=$4,type=$5,time_limit_ms=$6,memory_limit_mb=$7,max_score=$8,
- checker_id=$9,validator_id=$10,interactor_id=$11,main_solution_id=$12 WHERE problem_id=$1;
+ main_solution_id=$9 WHERE problem_id=$1;
 
 -- name: DeleteDraftTests :exec
 DELETE FROM problem_draft_tests WHERE problem_id=$1;
@@ -279,8 +279,8 @@ DELETE FROM problem_draft_files WHERE problem_id=$1;
 INSERT INTO problem_draft_files(problem_id,path,content)VALUES($1,$2,$3);
 
 -- name: InsertDraftComponent :exec
-INSERT INTO problem_draft_components(problem_id,id,role,path,language,dependencies)
-VALUES(sqlc.arg(problem_id),sqlc.arg(id),sqlc.arg(role),sqlc.arg(path),sqlc.arg(language),sqlc.arg(dependencies)::jsonb);
+INSERT INTO problem_draft_components(problem_id,id,role,path,dependencies)
+VALUES(sqlc.arg(problem_id),sqlc.arg(id),sqlc.arg(role),sqlc.arg(path),sqlc.arg(dependencies)::jsonb);
 
 -- name: InsertDraftSubtask :exec
 INSERT INTO problem_draft_subtasks(problem_id,id,ordinal,name,points,policy)VALUES($1,$2,$3,$4,$5,$6);

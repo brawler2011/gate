@@ -257,15 +257,6 @@ func (e *execution) makeManifest() {
 		}
 		m.Subtasks[g.ID.String()] = gfmt.Subtask{Ordinal: g.Ordinal, Points: g.Points, Policy: g.Policy, Dependencies: deps, Tests: []gfmt.Test{}}
 	}
-	if d.CheckerID != nil {
-		m.Checker = d.CheckerID.String()
-	}
-	if d.ValidatorID != nil {
-		m.Validator = d.ValidatorID.String()
-	}
-	if d.InteractorID != nil {
-		m.Interactor = d.InteractorID.String()
-	}
 	if d.MainSolutionID != nil {
 		m.Solutions["main"] = d.MainSolutionID.String()
 	}
@@ -308,10 +299,13 @@ func (e *execution) upload(ctx context.Context, path string) (string, error) {
 func (e *execution) compile(ctx context.Context) error {
 	s := e.build.Snapshot
 	required := map[uuid.UUID]bool{}
-	for _, id := range []*uuid.UUID{s.Draft.CheckerID, s.Draft.ValidatorID, s.Draft.InteractorID, s.Draft.MainSolutionID} {
-		if id != nil {
-			required[*id] = true
+	for _, role := range []string{"checker", "validator", "interactor"} {
+		if c := s.Draft.Component(role); c != nil {
+			required[c.ID] = true
 		}
+	}
+	if s.Draft.MainSolutionID != nil {
+		required[*s.Draft.MainSolutionID] = true
 	}
 	for _, test := range s.Draft.Tests {
 		if test.Input.ComponentID != nil {
@@ -329,7 +323,7 @@ func (e *execution) compile(ctx context.Context) error {
 		for destination, path := range c.Dependencies {
 			deps[destination] = []byte(s.Draft.Files[path])
 		}
-		executable, err := e.sandbox.CompileWithLimits(ctx, []byte(s.Draft.Files[c.Path]), c.Language, deps, s.Limits.Compile)
+		executable, err := e.sandbox.CompileWithLimits(ctx, []byte(s.Draft.Files[c.Path]), c.Language(), deps, s.Limits.Compile)
 		if err != nil {
 			return fail("compile", 0, processKind(err), fmt.Errorf("%s: %w", c.Path, err))
 		}
@@ -338,7 +332,7 @@ func (e *execution) compile(ctx context.Context) error {
 		if err := e.download(ctx, entry, executable.PrimaryFileID, int64(s.Limits.Compile.Output)); err != nil {
 			return fail("export", 0, "infrastructure", err)
 		}
-		artifact := gfmt.CompiledComponent{Role: c.Role, Language: c.Language, Entry: entry, Dependencies: map[string]string{}}
+		artifact := gfmt.CompiledComponent{Role: c.Role, Language: c.Language(), Entry: entry, Dependencies: map[string]string{}}
 		for path, id := range executable.Dependencies {
 			dest := ".gate/bin/" + c.ID.String() + "/dependencies/" + path
 			if err := e.download(ctx, dest, id, int64(s.Limits.Compile.Output)); err != nil {
@@ -347,7 +341,7 @@ func (e *execution) compile(ctx context.Context) error {
 			artifact.Dependencies[path] = dest
 		}
 		e.manifest.Compiled[c.ID.String()] = artifact
-		e.manifest.Sources[c.Path] = gfmt.Source{Compiler: c.Language, DependencyMap: c.Dependencies}
+		e.manifest.Sources[c.Path] = gfmt.Source{DependencyMap: c.Dependencies}
 	}
 	return nil
 }
@@ -382,7 +376,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 	} else {
 		gen := e.compiled[*test.Input.ComponentID]
 		args := append(append([]string{}, test.Input.Args...), strconv.FormatInt(*test.Input.Seed, 10))
-		result, err := e.sandbox.RunFiles(ctx, gen.executable, gen.source.Language, "", args, nil, aux)
+		result, err := e.sandbox.RunFiles(ctx, gen.executable, gen.source.Language(), "", args, nil, aux)
 		if err != nil {
 			return fail("generate", test.Ordinal, "infrastructure", err)
 		}
@@ -396,9 +390,9 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			return fail("generate", test.Ordinal, "infrastructure", err)
 		}
 	}
-	if s.Draft.ValidatorID != nil {
-		v := e.compiled[*s.Draft.ValidatorID]
-		result, err := e.sandbox.RunFiles(ctx, v.executable, v.source.Language, inputID, nil, nil, aux)
+	if validator := s.Draft.Component("validator"); validator != nil {
+		v := e.compiled[validator.ID]
+		result, err := e.sandbox.RunFiles(ctx, v.executable, v.source.Language(), inputID, nil, nil, aux)
 		if err != nil {
 			return fail("validate", test.Ordinal, "infrastructure", err)
 		}
@@ -410,8 +404,8 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 	answerPath := ""
 	if s.Draft.Type == "interactive" {
 		sol := e.compiled[*s.Draft.MainSolutionID]
-		intr := e.compiled[*s.Draft.InteractorID]
-		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.source.Language, intr.executable, intr.source.Language, inputID, e.solutionLimits(), aux)
+		intr := e.compiled[s.Draft.Component("interactor").ID]
+		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.source.Language(), intr.executable, intr.source.Language(), inputID, e.solutionLimits(), aux)
 		if err != nil {
 			return fail("interact", test.Ordinal, "infrastructure", err)
 		}
@@ -436,7 +430,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		outputID := answerID
 		if solID != nil {
 			sol := e.compiled[*solID]
-			result, err := e.sandbox.RunFiles(ctx, sol.executable, sol.source.Language, inputID, nil, nil, e.solutionLimits())
+			result, err := e.sandbox.RunFiles(ctx, sol.executable, sol.source.Language(), inputID, nil, nil, e.solutionLimits())
 			if err != nil {
 				return fail("answer", test.Ordinal, "infrastructure", err)
 			}
@@ -453,8 +447,8 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 				}
 			}
 		}
-		checker := e.compiled[*s.Draft.CheckerID]
-		result, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.source.Language, inputID, outputID, answerID, aux)
+		checker := e.compiled[s.Draft.Component("checker").ID]
+		result, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.source.Language(), inputID, outputID, answerID, aux)
 		if err != nil {
 			return fail("check", test.Ordinal, "infrastructure", err)
 		}
