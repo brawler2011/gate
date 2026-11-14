@@ -157,6 +157,17 @@ func withDatabase(t *testing.T, connString, database string) string {
 func newSeaweedBackedS3Storage(t *testing.T) (*storage.S3Storage, string) {
 	t.Helper()
 	ctx := context.Background()
+	endpoint := sharedSeaweedEndpoint(t)
+	store := storage.NewS3Storage(storage.S3Config{Endpoint: endpoint, AccessKey: "any", SecretKey: "any", Region: "us-east-1"})
+	bucket := "t-" + uuid.NewString()
+	require.NoError(t, store.EnsureBucket(ctx, bucket))
+	return store, bucket
+}
+
+// sharedSeaweedEndpoint holds the lock only for shared container initialization.
+func sharedSeaweedEndpoint(t *testing.T) string {
+	t.Helper()
+	ctx := context.Background()
 	sharedMu.Lock()
 	defer sharedMu.Unlock()
 	if shared.s3Endpoint == "" {
@@ -173,10 +184,7 @@ func newSeaweedBackedS3Storage(t *testing.T) (*storage.S3Storage, string) {
 		require.NoError(t, err)
 		shared.s3Endpoint = fmt.Sprintf("http://%s:%s", host, port.Port())
 	}
-	store := storage.NewS3Storage(storage.S3Config{Endpoint: shared.s3Endpoint, AccessKey: "any", SecretKey: "any", Region: "us-east-1"})
-	bucket := "t-" + uuid.NewString()
-	require.NoError(t, store.EnsureBucket(ctx, bucket))
-	return store, bucket
+	return shared.s3Endpoint
 }
 
 // newGoJudge returns the package's real sandbox started from the project's image.

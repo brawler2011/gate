@@ -2506,11 +2506,10 @@ export interface components {
              */
             freeze_duration_minutes?: number | null;
             /**
-             * @description Freeze mode status
-             * @default auto
+             * @description Freeze mode status; omitted preserves the current mode
              * @enum {string}
              */
-            freeze_status: "auto" | "frozen" | "unfrozen";
+            freeze_status?: "auto" | "frozen" | "unfrozen";
             /** Format: date-time */
             start_time?: string | null;
             /** Format: date-time */
