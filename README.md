@@ -11,7 +11,7 @@ Install [mise](https://mise.jdx.dev) and [Docker](https://docs.docker.com/get-do
 ```sh
 mise install                    # Go, Bun, Task and the other tools pinned in mise.toml
 bun install --frozen-lockfile
-task install:hooks
+task hooks:install
 ```
 
 ## Running locally
@@ -19,6 +19,12 @@ task install:hooks
 ```sh
 cp deploy/local/.env.example deploy/local/.env
 task docker:up                  # PostgreSQL, Redis, NATS, SeaweedFS, go-judge
-task migrate:be
+task be:migrate
 task dev                        # backend on :8080, frontend on http://localhost:3000
 ```
+
+Tooling tasks use `<area>:<action>[:<qualifier>]` (for example, `be:test` and
+`contracts:gen`). Bare names `dev`, `test`, `gen`, `check`, and `clean` cover all
+areas. Run `task --list` for commands; `task check` runs the required CI checks
+except integration tests and image builds. The Vite scripts in `package.json`
+keep their standard names (`dev`, `build`, `typecheck`, `test`, `lint`, `knip`).

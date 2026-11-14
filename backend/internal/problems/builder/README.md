@@ -82,6 +82,6 @@ and go-judge. `TestProblemPipelineRealServices` additionally covers generated in
 and answers with a validator. Run them from the repository root:
 
 ```sh
-mise exec -- task test:be:integration -- ./backend/tests/integration -run TestSeaweedUploadChecksumEnforcement -count=1
-mise exec -- task test:be:integration -- ./backend/tests/integration/postgres -run 'TestPublication|TestProblemPipelineRealServices' -count=1
+mise exec -- task be:test:integration -- ./backend/tests/integration -run TestSeaweedUploadChecksumEnforcement -count=1
+mise exec -- task be:test:integration -- ./backend/tests/integration/postgres -run 'TestPublication|TestProblemPipelineRealServices' -count=1
 ```
