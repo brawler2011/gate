@@ -132,6 +132,11 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token, oid uui
 	for _, a := range snapshot.Draft.Assets {
 		ids = append(ids, a.ObjectID)
 	}
+	// Inserting the Package bumps the access revision; take it before the
+	// asset objects, which a template clone may lock after it.
+	if err := q.LockAccessRevision(ctx); err != nil {
+		return uuid.Nil, fmt.Errorf("lock access revision: %w", err)
+	}
 	objects, err := lockObjects(ctx, tx, ids)
 	if err != nil {
 		return uuid.Nil, err

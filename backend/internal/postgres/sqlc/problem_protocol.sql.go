@@ -988,6 +988,17 @@ func (q *Queries) ListRecoverableBuildIDs(ctx context.Context) ([]uuid.UUID, err
 	return items, nil
 }
 
+const lockAccessRevision = `-- name: LockAccessRevision :exec
+SELECT 1 FROM access_revision FOR UPDATE
+`
+
+// Writers of access-relevant rows take this lock before stored objects, as
+// problem creation does, so their object locks cannot form a cycle.
+func (q *Queries) LockAccessRevision(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, lockAccessRevision)
+	return err
+}
+
 const lockOperation = `-- name: LockOperation :one
 SELECT 1::int AS locked FROM request_idempotency WHERE organization_id=$1 AND operation=$2 AND key=$3 FOR UPDATE
 `

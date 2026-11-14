@@ -297,3 +297,8 @@ INSERT INTO problem_draft_assets(problem_id,path,object_id)VALUES($1,$2,$3);
 
 -- name: RefreshObjectReferences :exec
 UPDATE stored_objects SET unreferenced_at=CASE WHEN stored_object_has_references(id) THEN NULL ELSE COALESCE(unreferenced_at,clock_timestamp()) END WHERE id=$1;
+
+-- name: LockAccessRevision :exec
+-- Writers of access-relevant rows take this lock before stored objects, as
+-- problem creation does, so their object locks cannot form a cycle.
+SELECT 1 FROM access_revision FOR UPDATE;

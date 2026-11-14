@@ -100,6 +100,11 @@ func (r *ProblemDraftsRepo) prunePackage(ctx context.Context, id uuid.UUID, rete
 		return fmt.Errorf("list package assets: %w", err)
 	}
 	objectIDs := append([]uuid.UUID{objectID}, assetIDs...)
+	// Deleting the Package bumps the access revision; take it before the
+	// asset objects, which a template clone may lock after it.
+	if err := q.LockAccessRevision(ctx); err != nil {
+		return fmt.Errorf("lock access revision: %w", err)
+	}
 	if _, err := lockObjects(ctx, tx, objectIDs); err != nil {
 		return err
 	}
