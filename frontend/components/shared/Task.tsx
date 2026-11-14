@@ -151,7 +151,10 @@ const Task = ({
                 isManager={isManager}
                 orgLogin={contest.organization_login}
                 hideStatements={contest.hide_statements}
-                assetsUrl={`/api/organizations/${encodeURIComponent(contest.organization_login)}/contests/${encodeURIComponent(contest.login)}/problems/${task.problem_id}/assets`}
+                assetUrl={(path) => {
+                  const hash = task.assets[path];
+                  return hash && `/api/organizations/${encodeURIComponent(contest.organization_login)}/contests/${encodeURIComponent(contest.login)}/problems/${task.problem_id}/assets/${hash}`;
+                }}
               />
             </Box>
           </Container>

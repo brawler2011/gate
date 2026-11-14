@@ -463,7 +463,9 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, params corev1.GetCon
 	if err != nil {
 		return nil, err
 	}
-	return projectResponse(h, ctx, GetContestProblemResponseDTO(details.Link, details.Problem, details.Statement, SamplesDTO(details.Samples)), details.Link.ContestID)
+	response := GetContestProblemResponseDTO(details.Link, details.Problem, details.Statement, SamplesDTO(details.Samples))
+	response.Problem.Assets = details.Assets
+	return projectResponse(h, ctx, response, details.Link.ContestID)
 }
 
 // statementAssetPolicy keeps an image opened directly by URL, notably SVG,
@@ -471,14 +473,14 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, params corev1.GetCon
 const statementAssetPolicy = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
 
 func (h *CoreServer) GetContestProblemAsset(ctx context.Context, params corev1.GetContestProblemAssetParams) (*corev1.GetContestProblemAssetOKHeaders, error) {
-	file, contentType, err := h.ContestDetails.OpenProblemAsset(ctx, params.OrgLogin, params.ContestLogin, params.ProblemID, params.Path)
+	file, contentType, err := h.ContestDetails.OpenProblemAsset(ctx, params.OrgLogin, params.ContestLogin, params.ProblemID, params.SHA256)
 	if err != nil {
 		return nil, err
 	}
 	return &corev1.GetContestProblemAssetOKHeaders{
-		// Every request downloads the whole package archive, so let the
-		// browser reuse an image briefly; it may lag a package change.
-		CacheControl:          corev1.NewOptString("private, max-age=300"),
+		// The URL names the content, so the response never changes.
+		CacheControl:          corev1.NewOptString("public, max-age=31536000, immutable"),
+		ETag:                  corev1.NewOptString(`"` + params.SHA256 + `"`),
 		ContentSecurityPolicy: corev1.NewOptString(statementAssetPolicy),
 		ContentType:           contentType,
 		Response:              corev1.GetContestProblemAssetOK{Data: file},

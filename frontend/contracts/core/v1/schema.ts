@@ -437,14 +437,17 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets": {
+    "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets/{sha256}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get a contest problem statement image */
+        /**
+         * Get a contest problem statement image
+         * @description Serves a statement image of the problem package the contest currently uses, addressed by content hash, so the response never changes.
+         */
         get: operations["GetContestProblemAsset"];
         put?: never;
         post?: never;
@@ -1978,7 +1981,10 @@ export interface components {
          *           "input": "1 2",
          *           "output": "3"
          *         }
-         *       ]
+         *       ],
+         *       "assets": {
+         *         "assets/pic.png": "0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f"
+         *       }
          *     }
          */
         ProblemModel: {
@@ -2113,7 +2119,10 @@ export interface components {
          *             "input": "1 2",
          *             "output": "3"
          *           }
-         *         ]
+         *         ],
+         *         "assets": {
+         *           "assets/pic.png": "0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f"
+         *         }
          *       }
          *     }
          */
@@ -2174,6 +2183,10 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
             samples: components["schemas"]["ProblemSampleModel"][];
+            /** @description SHA-256 of each statement asset by package path, e.g. `assets/pic.png`; images are served by hash from the problem's assets endpoint. */
+            assets: {
+                [key: string]: string;
+            };
         };
         /**
          * @description Result of get contest problem.
@@ -6170,10 +6183,7 @@ export interface operations {
     };
     GetContestProblemAsset: {
         parameters: {
-            query: {
-                /** @description Path of the statement resource in the problem package, e.g. `assets/pic.png`. */
-                path: string;
-            };
+            query?: never;
             header?: never;
             path: {
                 /** @description Organization login. */
@@ -6182,6 +6192,8 @@ export interface operations {
                 contest_login: components["parameters"]["ContestLoginPath"];
                 /** @description UUID of the problem. */
                 problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
+                /** @description SHA-256 of the image, as listed in the problem's `assets`. */
+                sha256: string;
             };
             cookie?: never;
         };
@@ -6191,6 +6203,7 @@ export interface operations {
             200: {
                 headers: {
                     "Cache-Control"?: string;
+                    ETag?: string;
                     "Content-Security-Policy"?: string;
                     [name: string]: unknown;
                 };

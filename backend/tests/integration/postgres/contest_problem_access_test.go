@@ -183,9 +183,9 @@ func TestContestProblemAutomaticSelectionRequiresAPackage(t *testing.T) {
 
 type pinnedContestStatement struct{ problem, pack uuid.UUID }
 
-func (s *pinnedContestStatement) ReadStatement(_ context.Context, problem, pack uuid.UUID, _ string) (*problemsmodel.Statement, []problemsmodel.Sample) {
+func (s *pinnedContestStatement) ReadStatement(_ context.Context, problem, pack uuid.UUID, _ string) problemsmodel.StatementContent {
 	s.problem, s.pack = problem, pack
-	return &problemsmodel.Statement{Legend: "Pinned statement"}, nil
+	return problemsmodel.StatementContent{Statement: &problemsmodel.Statement{Legend: "Pinned statement"}}
 }
 
 func TestContestProblemReadUsesContestAccessAndPinnedPackage(t *testing.T) {
@@ -335,6 +335,6 @@ func TestContestCommandDeadlineRollsBackMutation(t *testing.T) {
 	require.ErrorIs(t, err, pkg.ErrNotFound)
 }
 
-func (*pinnedContestStatement) OpenFile(context.Context, uuid.UUID, string) (io.ReadCloser, error) {
-	return nil, pkg.ErrNotFound
+func (*pinnedContestStatement) OpenImage(context.Context, uuid.UUID, string) (io.ReadCloser, string, error) {
+	return nil, "", pkg.ErrNotFound
 }

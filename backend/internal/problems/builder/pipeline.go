@@ -34,7 +34,7 @@ type BuildRepository interface {
 	RecoverBuilds(context.Context) error
 	BuildInputObjects(context.Context, uuid.UUID) ([]model.StoredObject, error)
 	RegisterBuildOutput(context.Context, uuid.UUID, uuid.UUID, string, int64, time.Duration) (model.StoredObject, error)
-	PublishBuild(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (uuid.UUID, error)
+	PublishBuild(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, []model.Sample) (uuid.UUID, error)
 	FinishBuildAttempt(context.Context, uuid.UUID, uuid.UUID, json.RawMessage, bool) error
 }
 type Pipeline struct {
@@ -89,6 +89,7 @@ type execution struct {
 	sandbox  *sandbox.Sandbox
 	compiled map[uuid.UUID]compilation
 	manifest *gfmt.Problem
+	samples  []model.Sample
 }
 
 func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID, error) {
@@ -124,7 +125,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := os.Mkdir(tree, 0700); err != nil {
 		return uuid.Nil, fmt.Errorf("mkdir: %w", err)
 	}
-	e := &execution{pipeline: p, build: b, dir: &directory{root: tree, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, &sandbox.Config{Langs: s.Toolchain.Languages}), compiled: make(map[uuid.UUID]compilation)}
+	e := &execution{pipeline: p, build: b, dir: &directory{root: tree, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, &sandbox.Config{Langs: s.Toolchain.Languages}), compiled: make(map[uuid.UUID]compilation), samples: []model.Sample{}}
 	defer e.releaseComponents()
 	if err := e.materialize(ctx); err != nil {
 		return uuid.Nil, fail("materialize", 0, "infrastructure", err)
@@ -165,7 +166,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := p.Store.UploadFileWithSHA256(ctx, p.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/octet-stream", digest); err != nil {
 		return uuid.Nil, fail("upload", 0, "infrastructure", err)
 	}
-	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object.ID)
+	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object.ID, e.samples)
 	if err != nil {
 		return uuid.Nil, fail("publish", 0, "infrastructure", err)
 	}
@@ -461,10 +462,52 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			return fail("check", test.Ordinal, string(result.Status), errors.New(result.Message))
 		}
 	}
+	if test.Sample {
+		if err := e.addSample(inputPath, answerPath); err != nil {
+			return fail("sample", test.Ordinal, "infrastructure", err)
+		}
+	}
 	group := e.manifest.Subtasks[test.SubtaskID.String()]
 	group.Tests = append(group.Tests, gfmt.Test{Ordinal: test.Ordinal, Points: test.Points, Manual: inputPath, Answer: answerPath, AnswerMode: test.Answer.Mode, Sample: test.Sample})
 	e.manifest.Subtasks[test.SubtaskID.String()] = group
 	return nil
+}
+
+// maxSampleBytes bounds each sample file shown in a statement.
+const maxSampleBytes = 128 * 1024
+
+// addSample records a sample test for the statement, which is stored with the
+// Package because generated inputs exist only after the build.
+func (e *execution) addSample(inputPath, answerPath string) error {
+	input, err := e.readSample(inputPath)
+	if err != nil {
+		return err
+	}
+	answer, err := e.readSample(answerPath)
+	if err != nil {
+		return err
+	}
+	e.samples = append(e.samples, model.Sample{Input: input, Output: answer})
+	return nil
+}
+func (e *execution) readSample(path string) (string, error) {
+	if path == "" {
+		return "", nil
+	}
+	f, err := os.Open(filepath.Join(e.dir.root, path))
+	if err != nil {
+		return "", fmt.Errorf("open: %w", err)
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, maxSampleBytes+1))
+	if err != nil {
+		return "", fmt.Errorf("read: %w", err)
+	}
+	if len(data) > maxSampleBytes {
+		data = append(data[:maxSampleBytes], []byte("\n…")...)
+	}
+	// PostgreSQL JSON text holds neither NUL nor invalid UTF-8.
+	return strings.ReplaceAll(strings.ToValidUTF8(string(data), "�"), "\x00", "�"), nil
 }
 
 func diagnostic(err error) json.RawMessage {

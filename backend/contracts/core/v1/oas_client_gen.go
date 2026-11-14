@@ -360,9 +360,10 @@ type Invoker interface {
 	GetContestProblem(ctx context.Context, params GetContestProblemParams) (*GetContestProblemResponseModel, error)
 	// GetContestProblemAsset invokes GetContestProblemAsset operation.
 	//
-	// Get a contest problem statement image.
+	// Serves a statement image of the problem package the contest currently uses, addressed by content
+	// hash, so the response never changes.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets
+	// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets/{sha256}
 	GetContestProblemAsset(ctx context.Context, params GetContestProblemAssetParams) (*GetContestProblemAssetOKHeaders, error)
 	// GetContestScoreboard invokes GetContestScoreboard operation.
 	//
@@ -5536,9 +5537,10 @@ func (c *Client) sendGetContestProblem(ctx context.Context, params GetContestPro
 
 // GetContestProblemAsset invokes GetContestProblemAsset operation.
 //
-// Get a contest problem statement image.
+// Serves a statement image of the problem package the contest currently uses, addressed by content
+// hash, so the response never changes.
 //
-// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets
+// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets/{sha256}
 func (c *Client) GetContestProblemAsset(ctx context.Context, params GetContestProblemAssetParams) (*GetContestProblemAssetOKHeaders, error) {
 	res, err := c.sendGetContestProblemAsset(ctx, params)
 	return res, err
@@ -5547,7 +5549,7 @@ func (c *Client) GetContestProblemAsset(ctx context.Context, params GetContestPr
 func (c *Client) sendGetContestProblemAsset(ctx context.Context, params GetContestProblemAssetParams) (res *GetContestProblemAssetOKHeaders, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
-	var pathParts [7]string
+	var pathParts [8]string
 	pathParts[0] = "/organizations/"
 	{
 		// Encode "org_login" parameter.
@@ -5605,25 +5607,26 @@ func (c *Client) sendGetContestProblemAsset(ctx context.Context, params GetConte
 		}
 		pathParts[5] = encoded
 	}
-	pathParts[6] = "/assets"
-	uri.AddPathParts(u, pathParts[:]...)
-
-	q := uri.NewQueryEncoder()
+	pathParts[6] = "/assets/"
 	{
-		// Encode "path" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "path",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
+		// Encode "sha256" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "sha256",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.SHA256))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
 		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.Path))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
 		}
+		pathParts[7] = encoded
 	}
-	u.RawQuery = q.Values().Encode()
+	uri.AddPathParts(u, pathParts[:]...)
 
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {

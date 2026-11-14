@@ -346,9 +346,10 @@ type Handler interface {
 	GetContestProblem(ctx context.Context, params GetContestProblemParams) (*GetContestProblemResponseModel, error)
 	// GetContestProblemAsset implements GetContestProblemAsset operation.
 	//
-	// Get a contest problem statement image.
+	// Serves a statement image of the problem package the contest currently uses, addressed by content
+	// hash, so the response never changes.
 	//
-	// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets
+	// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets/{sha256}
 	GetContestProblemAsset(ctx context.Context, params GetContestProblemAssetParams) (*GetContestProblemAssetOKHeaders, error)
 	// GetContestScoreboard implements GetContestScoreboard operation.
 	//

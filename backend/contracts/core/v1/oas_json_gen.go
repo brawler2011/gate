@@ -4289,9 +4289,13 @@ func (s *ContestProblemModel) encodeFields(e *jx.Encoder) {
 		}
 		e.ArrEnd()
 	}
+	{
+		e.FieldStart("assets")
+		s.Assets.Encode(e)
+	}
 }
 
-var jsonFieldsNameOfContestProblemModel = [14]string{
+var jsonFieldsNameOfContestProblemModel = [15]string{
 	0:  "capabilities",
 	1:  "problem_id",
 	2:  "title",
@@ -4306,6 +4310,7 @@ var jsonFieldsNameOfContestProblemModel = [14]string{
 	11: "created_at",
 	12: "updated_at",
 	13: "samples",
+	14: "assets",
 }
 
 // Decode decodes ContestProblemModel from json.
@@ -4499,6 +4504,16 @@ func (s *ContestProblemModel) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"samples\"")
 			}
+		case "assets":
+			requiredBitSet[1] |= 1 << 6
+			if err := func() error {
+				if err := s.Assets.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"assets\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -4510,7 +4525,7 @@ func (s *ContestProblemModel) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
 		0b11111111,
-		0b00111111,
+		0b01111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -4552,6 +4567,62 @@ func (s *ContestProblemModel) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ContestProblemModel) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s ContestProblemModelAssets) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s ContestProblemModelAssets) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		e.Str(elem)
+	}
+}
+
+// Decode decodes ContestProblemModelAssets from json.
+func (s *ContestProblemModelAssets) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ContestProblemModelAssets to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem string
+		if err := func() error {
+			v, err := d.Str()
+			elem = string(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ContestProblemModelAssets")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ContestProblemModelAssets) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ContestProblemModelAssets) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

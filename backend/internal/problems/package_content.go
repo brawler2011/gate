@@ -1,14 +1,11 @@
 package problems
 
 import (
-	"archive/zip"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
+	"errors"
 	"io"
 	"log/slog"
-	"os"
+	"mime"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -18,136 +15,38 @@ import (
 	"github.com/google/uuid"
 )
 
+// PackageContent reads the statement-facing content of built packages. It is
+// stored at publication, so no read here opens a package archive.
 type PackageContent struct {
 	Repo interface {
 		GetPackageDescriptor(context.Context, uuid.UUID) (model.PackageDescriptor, error)
+		GetPackageStatement(context.Context, uuid.UUID) (model.PackageStatement, error)
+		FindPackageAssets(context.Context, uuid.UUID, string) ([]model.PackageAsset, error)
 	}
-	Store           DraftObjectStore
-	Bucket          string
-	TempDir         string
-	MaxArchiveBytes int64
-	MaxEntries      int
-}
-type contentArchive struct {
-	zip  *zip.ReadCloser
-	root string
+	Store  DraftObjectStore
+	Bucket string
 }
 
-func (a *contentArchive) Close() error {
-	err := a.zip.Close()
-	removeErr := os.RemoveAll(a.root)
+// OpenImage opens a statement image of the package by its content hash and
+// returns it with its content type. Only statement assets are reachable, never
+// tests or executables.
+func (c *PackageContent) OpenImage(ctx context.Context, id uuid.UUID, sha256 string) (io.ReadCloser, string, error) {
+	assets, err := c.Repo.FindPackageAssets(ctx, id, sha256)
 	if err != nil {
-		return fmt.Errorf("close: %w", err)
+		return nil, "", err
 	}
-	if removeErr != nil {
-		return fmt.Errorf("remove archive directory: %w", removeErr)
-	}
-	return nil
-}
-func (c *PackageContent) openArchive(ctx context.Context, id uuid.UUID) (*contentArchive, error) {
-	p, err := c.Repo.GetPackageDescriptor(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	o := p.Object
-	if o.State != "available" || o.Size > c.MaxArchiveBytes {
-		return nil, pkg.ErrConflict
-	}
-	root, err := os.MkdirTemp(c.TempDir, "content-")
-	if err != nil {
-		return nil, fmt.Errorf("mkdirtemp: %w", err)
-	}
-	ok := false
-	defer func() {
-		if !ok {
-			_ = os.RemoveAll(root)
+	for _, a := range assets {
+		contentType := mime.TypeByExtension(strings.ToLower(filepath.Ext(a.Path)))
+		if !strings.HasPrefix(contentType, "image/") {
+			continue
 		}
-	}()
-	path := filepath.Join(root, "package.zip")
-	f, err := os.Create(path)
-	if err != nil {
-		return nil, fmt.Errorf("create: %w", err)
-	}
-	r, _, err := c.Store.DownloadFile(ctx, c.Bucket, o.Key, nil)
-	if err != nil {
-		_ = f.Close()
-		return nil, err
-	}
-	hash := sha256.New()
-	n, copyErr := io.Copy(io.MultiWriter(f, hash), io.LimitReader(r, o.Size+1))
-	fileErr, readErr := f.Close(), r.Close()
-	if copyErr != nil {
-		return nil, fmt.Errorf("copy: %w", copyErr)
-	}
-	if fileErr != nil {
-		return nil, fmt.Errorf("close: %w", fileErr)
-	}
-	if readErr != nil {
-		return nil, fmt.Errorf("close: %w", readErr)
-	}
-	if n != o.Size || hex.EncodeToString(hash.Sum(nil)) != o.SHA256 {
-		return nil, fmt.Errorf("package content checksum mismatch")
-	}
-	z, err := zip.OpenReader(path)
-	if err != nil {
-		return nil, fmt.Errorf("openreader: %w", err)
-	}
-	if len(z.File) > c.MaxEntries {
-		_ = z.Close()
-		return nil, fmt.Errorf("package entry quota exceeded")
-	}
-	ok = true
-	return &contentArchive{zip: z, root: root}, nil
-}
-
-type packageFile struct {
-	io.ReadCloser
-	archive *contentArchive
-}
-
-func (f *packageFile) Close() error {
-	err := f.ReadCloser.Close()
-	archiveErr := f.archive.Close()
-	if err != nil {
-		return fmt.Errorf("close: %w", err)
-	}
-	return archiveErr
-}
-func (c *PackageContent) OpenFile(ctx context.Context, id uuid.UUID, path string) (io.ReadCloser, error) {
-	if !model.ValidDraftPath(path) {
-		return nil, pkg.ErrBadInput
-	}
-	p, err := c.Repo.GetPackageDescriptor(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	allowed := false
-	for _, a := range p.Snapshot.Draft.Assets {
-		if a.Path == path {
-			allowed = true
-			break
+		r, _, err := c.Store.DownloadFile(ctx, c.Bucket, a.Key, nil)
+		if err != nil {
+			return nil, "", err
 		}
+		return r, contentType, nil
 	}
-	// This endpoint exposes only statement resources, never tests or executables.
-	if !allowed {
-		return nil, pkg.ErrNotFound
-	}
-	a, err := c.openArchive(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	for _, entry := range a.zip.File {
-		if entry.Name == path {
-			reader, err := entry.Open()
-			if err != nil {
-				_ = a.Close()
-				return nil, fmt.Errorf("open: %w", err)
-			}
-			return &packageFile{ReadCloser: reader, archive: a}, nil
-		}
-	}
-	_ = a.Close()
-	return nil, pkg.ErrNotFound
+	return nil, "", pkg.ErrNotFound
 }
 func statementFromDraft(d model.Draft, language string) *model.Statement {
 	languages := []string{}
@@ -167,71 +66,16 @@ func statementFromDraft(d model.Draft, language string) *model.Statement {
 	statement.Title = d.Title
 	return &statement
 }
-func (c *PackageContent) ReadStatement(ctx context.Context, problemID, packageID uuid.UUID, language string) (*model.Statement, []model.Sample) {
-	p, err := c.Repo.GetPackageDescriptor(ctx, packageID)
+// ReadStatement returns the package statement in the requested language with
+// the samples and statement asset hashes, or a nil statement when the package
+// is unavailable.
+func (c *PackageContent) ReadStatement(ctx context.Context, problemID, packageID uuid.UUID, language string) model.StatementContent {
+	p, err := c.Repo.GetPackageStatement(ctx, packageID)
 	if err != nil || p.ProblemID != problemID {
-		return nil, nil
+		if err != nil && !errors.Is(err, pkg.ErrNotFound) {
+			slog.ErrorContext(ctx, "read package statement", "error", err, "package_id", packageID)
+		}
+		return model.StatementContent{Samples: []model.Sample{}, Assets: map[string]string{}}
 	}
-	statement := statementFromDraft(p.Snapshot.Draft, language)
-	samples := []model.Sample{}
-	needSamples := false
-	for _, t := range p.Snapshot.Draft.Tests {
-		needSamples = needSamples || t.Sample
-	}
-	if !needSamples {
-		return statement, samples
-	}
-	a, err := c.openArchive(ctx, packageID)
-	if err != nil {
-		slog.ErrorContext(ctx, "open package samples", "error", err, "package_id", packageID)
-		return statement, samples
-	}
-	defer a.Close()
-	byPath := make(map[string]*zip.File, len(a.zip.File))
-	for _, entry := range a.zip.File {
-		byPath[entry.Name] = entry
-	}
-	read := func(path string) (string, error) {
-		if path == "" {
-			return "", nil
-		}
-		entry, ok := byPath[path]
-		if !ok {
-			return "", pkg.ErrNotFound
-		}
-		f, err := entry.Open()
-		if err != nil {
-			return "", fmt.Errorf("open: %w", err)
-		}
-		defer f.Close()
-		data, err := io.ReadAll(io.LimitReader(f, 128*1024+1))
-		if len(data) > 128*1024 {
-			data = append(data[:128*1024], []byte("\n…")...)
-		}
-		return string(data), err
-	}
-	for _, t := range p.Snapshot.Draft.Tests {
-		if !t.Sample {
-			continue
-		}
-		inputPath := ".gate/tests/" + t.ID.String() + ".in"
-		if t.Input.Mode == "manual" {
-			inputPath = ".gate/objects/" + t.Input.ObjectID.String()
-		}
-		answerPath := ""
-		if t.Answer.Mode == "generated" {
-			answerPath = ".gate/tests/" + t.ID.String() + ".ans"
-		}
-		if t.Answer.Mode == "provided" {
-			answerPath = ".gate/objects/" + t.Answer.ObjectID.String()
-		}
-		input, inErr := read(inputPath)
-		answer, ansErr := read(answerPath)
-		if inErr != nil || ansErr != nil {
-			slog.ErrorContext(ctx, "read package sample", "input_error", inErr, "answer_error", ansErr)
-			continue
-		}
-		samples = append(samples, model.Sample{Input: input, Output: answer})
-	}
-	return statement, samples
+	return model.StatementContent{Statement: statementFromDraft(p.Draft, language), Samples: p.Samples, Assets: p.Assets}
 }

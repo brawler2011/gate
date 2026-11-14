@@ -188,8 +188,32 @@ type DashboardProblem struct {
 }
 
 type Sample struct {
-	Input  string
-	Output string
+	Input  string `json:"input"`
+	Output string `json:"output"`
+}
+
+// PackageStatement is the statement-facing content of a built package. It is
+// stored at publication, so reading it never opens the package archive.
+type PackageStatement struct {
+	ProblemID uuid.UUID
+	Draft     Draft
+	Samples   []Sample
+	// Assets maps each statement asset path to its content SHA-256.
+	Assets map[string]string
+}
+
+// StatementContent is a package statement in one language with its samples
+// and statement asset hashes by path.
+type StatementContent struct {
+	Statement *Statement
+	Samples   []Sample
+	Assets    map[string]string
+}
+
+// PackageAsset is a statement asset stored as its own object.
+type PackageAsset struct {
+	Path string
+	Key  string
 }
 type ProblemDetails struct {
 	Problem   Problem

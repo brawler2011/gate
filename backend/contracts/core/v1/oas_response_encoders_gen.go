@@ -613,7 +613,7 @@ func encodeGetContestProblemResponse(response *GetContestProblemResponseModel, w
 }
 
 func encodeGetContestProblemAssetResponse(response *GetContestProblemAssetOKHeaders, w http.ResponseWriter) error {
-	w.Header().Set("Access-Control-Expose-Headers", "Content-Security-Policy")
+	w.Header().Set("Access-Control-Expose-Headers", "Content-Security-Policy,Etag")
 	// Encoding response headers.
 	{
 		h := uri.NewHeaderEncoder(w.Header())
@@ -657,6 +657,21 @@ func encodeGetContestProblemAssetResponse(response *GetContestProblemAssetOKHead
 				return e.EncodeValue(conv.StringToString(response.ContentType))
 			}); err != nil {
 				return errors.Wrap(err, "encode Content-Type header")
+			}
+		}
+		// Encode "ETag" header.
+		{
+			cfg := uri.HeaderParameterEncodingConfig{
+				Name:    "ETag",
+				Explode: false,
+			}
+			if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+				if val, ok := response.ETag.Get(); ok {
+					return e.EncodeValue(conv.StringToString(val))
+				}
+				return nil
+			}); err != nil {
+				return errors.Wrap(err, "encode ETag header")
 			}
 		}
 	}

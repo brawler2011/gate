@@ -146,7 +146,7 @@ func TestStaleAttemptCannotTouchNewerAttempt(t *testing.T) {
 
 	// The stale worker's late calls are all rejected and leave the new attempt untouched.
 	require.ErrorIs(t, repo.FinishBuildAttempt(ctx, first.ID, *first.LeaseToken, []byte(`{"message":"late"}`), false), pkg.ErrConflict)
-	_, err = repo.PublishBuild(ctx, first.ID, *first.LeaseToken, firstOutput.ID)
+	_, err = repo.PublishBuild(ctx, first.ID, *first.LeaseToken, firstOutput.ID, nil)
 	require.ErrorIs(t, err, pkg.ErrConflict)
 	_, err = repo.RegisterBuildOutput(ctx, first.ID, *first.LeaseToken, strings.Repeat("3", 64), 10, time.Minute)
 	require.ErrorIs(t, err, pkg.ErrConflict)
@@ -167,7 +167,7 @@ func TestPublishBuildHandsOwnershipToPackageAtomically(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "uploading", output.State)
 
-	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output.ID)
+	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output.ID, nil)
 	require.NoError(t, err)
 	var state string
 	var unreferenced *time.Time
@@ -181,7 +181,7 @@ func TestPublishBuildHandsOwnershipToPackageAtomically(t *testing.T) {
 	require.Equal(t, "succeeded", got.State)
 
 	// A retry after a lost commit response resolves to the same Package.
-	again, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output.ID)
+	again, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output.ID, nil)
 	require.NoError(t, err)
 	require.Equal(t, packageID, again)
 	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, build.ID))
@@ -371,4 +371,54 @@ func TestPackageRetentionKeepsPinnedPackages(t *testing.T) {
 		_, err := f.pool.Exec(f.ctx, `DELETE FROM problem_packages WHERE id=$1`, f.original)
 		return err
 	}(), "foreign keys forbid deleting a pinned package")
+}
+
+// A Package stores its statement samples and references its statement assets at
+// publication; the assets stay alive with the Package and are released when it is pruned.
+func TestPackageStatementContentLivesWithPackage(t *testing.T) {
+	t.Parallel()
+	ctx, pool, repo, org, d, _ := buildableFixture(t)
+	asset := insertAvailableObject(t, ctx, pool, org)
+	d.Assets = []model.DraftAsset{{Path: "assets/pic.png", ObjectID: asset}}
+	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	require.NoError(t, err)
+	d, err = repo.GetDraft(ctx, d.ProblemID)
+	require.NoError(t, err)
+	enqueue(t, ctx, repo, org, d)
+	build, err := repo.ClaimBuild(ctx, time.Minute)
+	require.NoError(t, err)
+	output, err := repo.RegisterBuildOutput(ctx, build.ID, *build.LeaseToken, strings.Repeat("a", 64), 10, time.Minute)
+	require.NoError(t, err)
+	samples := []model.Sample{{Input: "1 2\n", Output: "3\n"}}
+	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output.ID, samples)
+	require.NoError(t, err)
+
+	statement, err := repo.GetPackageStatement(ctx, packageID)
+	require.NoError(t, err)
+	require.Equal(t, samples, statement.Samples)
+	require.Equal(t, map[string]string{"assets/pic.png": strings.Repeat("0", 64)}, statement.Assets)
+	found, err := repo.FindPackageAssets(ctx, packageID, strings.Repeat("0", 64))
+	require.NoError(t, err)
+	require.Equal(t, []model.PackageAsset{{Path: "assets/pic.png", Key: "objects/" + org.String() + "/" + asset.String()}}, found)
+
+	// The draft drops the asset; the Package keeps it.
+	d.Assets = nil
+	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	require.NoError(t, err)
+	time.Sleep(5 * time.Millisecond)
+	require.NoError(t, repo.PruneBuilds(ctx, time.Millisecond))
+	var unreferenced *time.Time
+	require.NoError(t, pool.QueryRow(ctx, `SELECT unreferenced_at FROM stored_objects WHERE id=$1`, asset).Scan(&unreferenced))
+	require.Nil(t, unreferenced, "the Package references its asset")
+	deleting, err := repo.BeginObjectDeletion(ctx, asset, time.Millisecond)
+	require.NoError(t, err)
+	require.False(t, deleting, "an asset of a live Package is not collected")
+	_, err = pool.Exec(ctx, `UPDATE problem_package_assets SET path='assets/other.png' WHERE package_id=$1`, packageID)
+	require.ErrorContains(t, err, "package is immutable")
+
+	require.NoError(t, repo.PrunePackages(ctx, time.Millisecond))
+	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM problem_package_assets WHERE package_id=$1`, packageID))
+	require.NoError(t, repo.PruneBuilds(ctx, time.Millisecond))
+	require.NoError(t, pool.QueryRow(ctx, `SELECT unreferenced_at FROM stored_objects WHERE id=$1`, asset).Scan(&unreferenced))
+	require.NotNil(t, unreferenced, "the asset of a pruned Package becomes collectable")
 }

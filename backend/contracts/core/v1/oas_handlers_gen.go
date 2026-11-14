@@ -5288,10 +5288,11 @@ func (s *Server) handleGetContestProblemRequest(args [3]string, argsEscaped bool
 
 // handleGetContestProblemAssetRequest handles GetContestProblemAsset operation.
 //
-// Get a contest problem statement image.
+// Serves a statement image of the problem package the contest currently uses, addressed by content
+// hash, so the response never changes.
 //
-// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets
-func (s *Server) handleGetContestProblemAssetRequest(args [3]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets/{sha256}
+func (s *Server) handleGetContestProblemAssetRequest(args [4]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	ctx := r.Context()
@@ -5339,9 +5340,9 @@ func (s *Server) handleGetContestProblemAssetRequest(args [3]string, argsEscaped
 					In:   "path",
 				}: params.ProblemID,
 				{
-					Name: "path",
-					In:   "query",
-				}: params.Path,
+					Name: "sha256",
+					In:   "path",
+				}: params.SHA256,
 			},
 			Raw: r,
 		}

@@ -54,7 +54,7 @@ VALUES($1,$2,$3,$4,$5::jsonb,1,$6,'running',$7,clock_timestamp()+interval '1 hou
 	if created.IsZero() {
 		created = time.Now()
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,created_at) VALUES($1,$2,$3,$4,$5,$6,$7)`,
+	if _, err := tx.Exec(ctx, `INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,created_at,samples) VALUES($1,$2,$3,$4,$5,$6,$7,'[]')`,
 		packageID, problemID, organizationID, buildID, objectID, hash, created); err != nil {
 		return uuid.Nil, fmt.Errorf("package: %w", err)
 	}
