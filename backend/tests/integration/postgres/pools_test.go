@@ -68,7 +68,7 @@ func newTestPool(t *testing.T, configure func(*pgxpool.Config)) *pgxpool.Pool {
 	return pool
 }
 
-// newRecordingPool returns a pool on the shared database that records its statements.
+// newRecordingPool returns a pool on the top-level test's database that records its statements.
 func newRecordingPool(t *testing.T) (*pgxpool.Pool, *queryRecorder) {
 	t.Helper()
 	recorder := &queryRecorder{}

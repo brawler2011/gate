@@ -98,9 +98,13 @@
       '';
 
       # One layer for the shared base, one per language, then TeX, the Go cache
-      # and go-judge. Each layer skips the store paths of the layers before it, so
-      # changing a language rebuilds and pushes only its own layer and the small
-      # last one (runtime env, manifest, /opt).
+      # and go-judge. Each layer skips the store paths of the layers before it.
+      # Shared paths belong to the first layer that needs them, in language-name
+      # order (cpp, go, java, python). Updating an early language can move shared
+      # paths into or out of later language, TeX, Go cache and go-judge layers,
+      # changing those layers too. Updating Go also rebuilds its standard-library
+      # cache. The last layer (runtime env, manifest, /opt) changes with any language.
+      # This layout reduces transfers but does not guarantee language isolation.
       layers = builtins.foldl' (built: deps: built ++ [ (n2c.buildLayer { inherit deps; layers = built; }) ]) [ ] (
         [
           [

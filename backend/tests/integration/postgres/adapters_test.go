@@ -52,7 +52,8 @@ var (
 const templateDatabase = "gate_template"
 
 // testDSN returns the DSN of the database owned by t's top-level test; its subtests
-// share it.
+// share it. Databases are keyed by test name, so with -count>1 later runs reuse
+// the database created by the first run.
 func testDSN(t *testing.T) string {
 	t.Helper()
 	ctx := context.Background()
