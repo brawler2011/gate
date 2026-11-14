@@ -62,6 +62,7 @@ const (
 	ForgotPasswordOperation                 OperationName = "ForgotPassword"
 	GetContestOperation                     OperationName = "GetContest"
 	GetContestProblemOperation              OperationName = "GetContestProblem"
+	GetContestProblemAssetOperation         OperationName = "GetContestProblemAsset"
 	GetContestScoreboardOperation           OperationName = "GetContestScoreboard"
 	GetHealthOperation                      OperationName = "GetHealth"
 	GetLanguagesOperation                   OperationName = "GetLanguages"

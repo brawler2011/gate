@@ -3157,6 +3157,68 @@ func (s *ForgotPasswordRequestModel) SetIdentifier(val string) {
 	s.Identifier = val
 }
 
+type GetContestProblemAssetOK struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetContestProblemAssetOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+// GetContestProblemAssetOKHeaders wraps GetContestProblemAssetOK with response headers.
+type GetContestProblemAssetOKHeaders struct {
+	CacheControl          OptString
+	ContentSecurityPolicy OptString
+	ContentType           string
+	Response              GetContestProblemAssetOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *GetContestProblemAssetOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetContentSecurityPolicy returns the value of ContentSecurityPolicy.
+func (s *GetContestProblemAssetOKHeaders) GetContentSecurityPolicy() OptString {
+	return s.ContentSecurityPolicy
+}
+
+// GetContentType returns the value of ContentType.
+func (s *GetContestProblemAssetOKHeaders) GetContentType() string {
+	return s.ContentType
+}
+
+// GetResponse returns the value of Response.
+func (s *GetContestProblemAssetOKHeaders) GetResponse() GetContestProblemAssetOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *GetContestProblemAssetOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetContentSecurityPolicy sets the value of ContentSecurityPolicy.
+func (s *GetContestProblemAssetOKHeaders) SetContentSecurityPolicy(val OptString) {
+	s.ContentSecurityPolicy = val
+}
+
+// SetContentType sets the value of ContentType.
+func (s *GetContestProblemAssetOKHeaders) SetContentType(val string) {
+	s.ContentType = val
+}
+
+// SetResponse sets the value of Response.
+func (s *GetContestProblemAssetOKHeaders) SetResponse(val GetContestProblemAssetOK) {
+	s.Response = val
+}
+
 // Result of get contest problem.
 // Ref: #/components/schemas/GetContestProblemResponseModel
 type GetContestProblemResponseModel struct {

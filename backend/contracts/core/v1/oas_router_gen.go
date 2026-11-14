@@ -23,19 +23,19 @@ var (
 	rn93AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn130AllowedHeaders = map[string]string{
+	rn131AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn137AllowedHeaders = map[string]string{
-		"POST": "Content-Type",
-	}
-	rn150AllowedHeaders = map[string]string{
+	rn138AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn152AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn156AllowedHeaders = map[string]string{
+	rn154AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn158AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn6AllowedHeaders = map[string]string{
@@ -59,7 +59,7 @@ var (
 	rn37AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn147AllowedHeaders = map[string]string{
+	rn149AllowedHeaders = map[string]string{
 		"PUT": "Content-Type",
 	}
 	rn61AllowedHeaders = map[string]string{
@@ -68,7 +68,7 @@ var (
 	rn40AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn110AllowedHeaders = map[string]string{
+	rn111AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn32AllowedHeaders = map[string]string{
@@ -86,7 +86,7 @@ var (
 	rn86AllowedHeaders = map[string]string{
 		"PATCH": "Content-Type",
 	}
-	rn102AllowedHeaders = map[string]string{
+	rn103AllowedHeaders = map[string]string{
 		"GET": "If-None-Match",
 	}
 	rn70AllowedHeaders = map[string]string{
@@ -98,13 +98,13 @@ var (
 	rn51AllowedHeaders = map[string]string{
 		"POST": "Idempotency-Key",
 	}
-	rn103AllowedHeaders = map[string]string{
+	rn104AllowedHeaders = map[string]string{
 		"PUT": "Content-Type,Idempotency-Key",
 	}
-	rn155AllowedHeaders = map[string]string{
+	rn157AllowedHeaders = map[string]string{
 		"POST": "Content-Type,Idempotency-Key",
 	}
-	rn109AllowedHeaders = map[string]string{
+	rn110AllowedHeaders = map[string]string{
 		"POST": "Content-Type,Idempotency-Key",
 	}
 	rn43AllowedHeaders = map[string]string{
@@ -125,7 +125,7 @@ var (
 	rn52AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn148AllowedHeaders = map[string]string{
+	rn150AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn77AllowedHeaders = map[string]string{
@@ -488,7 +488,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn130AllowedHeaders,
+										allowedHeaders: rn131AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -552,7 +552,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn137AllowedHeaders,
+										allowedHeaders: rn138AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -589,7 +589,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "POST",
-											allowedHeaders: rn150AllowedHeaders,
+											allowedHeaders: rn152AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -614,7 +614,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "POST",
-											allowedHeaders: rn152AllowedHeaders,
+											allowedHeaders: rn154AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -643,7 +643,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn156AllowedHeaders,
+									allowedHeaders: rn158AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -1574,7 +1574,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 														default:
 															s.notAllowed(w, r, notAllowedParams{
 																allowedMethods: "PUT",
-																allowedHeaders: rn147AllowedHeaders,
+																allowedHeaders: rn149AllowedHeaders,
 																acceptPost:     "",
 																acceptPatch:    "",
 															})
@@ -1620,33 +1620,76 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 													return
 												}
 												switch elem[0] {
-												case '/': // Prefix: "/rejudge"
+												case '/': // Prefix: "/"
 
-													if l := len("/rejudge"); len(elem) >= l && elem[0:l] == "/rejudge" {
+													if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 														elem = elem[l:]
 													} else {
 														break
 													}
 
 													if len(elem) == 0 {
-														// Leaf node.
-														switch r.Method {
-														case "POST":
-															s.handleRejudgeContestProblemRequest([3]string{
-																args[0],
-																args[1],
-																args[2],
-															}, elemIsEscaped, w, r)
-														default:
-															s.notAllowed(w, r, notAllowedParams{
-																allowedMethods: "POST",
-																allowedHeaders: nil,
-																acceptPost:     "",
-																acceptPatch:    "",
-															})
+														break
+													}
+													switch elem[0] {
+													case 'a': // Prefix: "assets"
+
+														if l := len("assets"); len(elem) >= l && elem[0:l] == "assets" {
+															elem = elem[l:]
+														} else {
+															break
 														}
 
-														return
+														if len(elem) == 0 {
+															// Leaf node.
+															switch r.Method {
+															case "GET":
+																s.handleGetContestProblemAssetRequest([3]string{
+																	args[0],
+																	args[1],
+																	args[2],
+																}, elemIsEscaped, w, r)
+															default:
+																s.notAllowed(w, r, notAllowedParams{
+																	allowedMethods: "GET",
+																	allowedHeaders: nil,
+																	acceptPost:     "",
+																	acceptPatch:    "",
+																})
+															}
+
+															return
+														}
+
+													case 'r': // Prefix: "rejudge"
+
+														if l := len("rejudge"); len(elem) >= l && elem[0:l] == "rejudge" {
+															elem = elem[l:]
+														} else {
+															break
+														}
+
+														if len(elem) == 0 {
+															// Leaf node.
+															switch r.Method {
+															case "POST":
+																s.handleRejudgeContestProblemRequest([3]string{
+																	args[0],
+																	args[1],
+																	args[2],
+																}, elemIsEscaped, w, r)
+															default:
+																s.notAllowed(w, r, notAllowedParams{
+																	allowedMethods: "POST",
+																	allowedHeaders: nil,
+																	acceptPost:     "",
+																	acceptPatch:    "",
+																})
+															}
+
+															return
+														}
+
 													}
 
 												}
@@ -2158,7 +2201,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "GET,POST",
-										allowedHeaders: rn110AllowedHeaders,
+										allowedHeaders: rn111AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -2536,7 +2579,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "GET",
-										allowedHeaders: rn102AllowedHeaders,
+										allowedHeaders: rn103AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -2782,7 +2825,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										default:
 											s.notAllowed(w, r, notAllowedParams{
 												allowedMethods: "GET,PUT",
-												allowedHeaders: rn103AllowedHeaders,
+												allowedHeaders: rn104AllowedHeaders,
 												acceptPost:     "",
 												acceptPatch:    "",
 											})
@@ -2858,7 +2901,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 												default:
 													s.notAllowed(w, r, notAllowedParams{
 														allowedMethods: "POST",
-														allowedHeaders: rn155AllowedHeaders,
+														allowedHeaders: rn157AllowedHeaders,
 														acceptPost:     "multipart/form-data",
 														acceptPatch:    "",
 													})
@@ -2889,7 +2932,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										default:
 											s.notAllowed(w, r, notAllowedParams{
 												allowedMethods: "POST",
-												allowedHeaders: rn109AllowedHeaders,
+												allowedHeaders: rn110AllowedHeaders,
 												acceptPost:     "multipart/form-data",
 												acceptPatch:    "",
 											})
@@ -3570,7 +3613,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "POST",
-											allowedHeaders: rn148AllowedHeaders,
+											allowedHeaders: rn150AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -5278,29 +5321,68 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 													}
 												}
 												switch elem[0] {
-												case '/': // Prefix: "/rejudge"
+												case '/': // Prefix: "/"
 
-													if l := len("/rejudge"); len(elem) >= l && elem[0:l] == "/rejudge" {
+													if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 														elem = elem[l:]
 													} else {
 														break
 													}
 
 													if len(elem) == 0 {
-														// Leaf node.
-														switch method {
-														case "POST":
-															r.name = RejudgeContestProblemOperation
-															r.summary = "Rejudge contest problem"
-															r.operationID = "RejudgeContestProblem"
-															r.operationGroup = ""
-															r.pathPattern = "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge"
-															r.args = args
-															r.count = 3
-															return r, true
-														default:
-															return
+														break
+													}
+													switch elem[0] {
+													case 'a': // Prefix: "assets"
+
+														if l := len("assets"); len(elem) >= l && elem[0:l] == "assets" {
+															elem = elem[l:]
+														} else {
+															break
 														}
+
+														if len(elem) == 0 {
+															// Leaf node.
+															switch method {
+															case "GET":
+																r.name = GetContestProblemAssetOperation
+																r.summary = "Get a contest problem statement image"
+																r.operationID = "GetContestProblemAsset"
+																r.operationGroup = ""
+																r.pathPattern = "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets"
+																r.args = args
+																r.count = 3
+																return r, true
+															default:
+																return
+															}
+														}
+
+													case 'r': // Prefix: "rejudge"
+
+														if l := len("rejudge"); len(elem) >= l && elem[0:l] == "rejudge" {
+															elem = elem[l:]
+														} else {
+															break
+														}
+
+														if len(elem) == 0 {
+															// Leaf node.
+															switch method {
+															case "POST":
+																r.name = RejudgeContestProblemOperation
+																r.summary = "Rejudge contest problem"
+																r.operationID = "RejudgeContestProblem"
+																r.operationGroup = ""
+																r.pathPattern = "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/rejudge"
+																r.args = args
+																r.count = 3
+																return r, true
+															default:
+																return
+															}
+														}
+
 													}
 
 												}

@@ -5286,6 +5286,102 @@ func (s *Server) handleGetContestProblemRequest(args [3]string, argsEscaped bool
 	}
 }
 
+// handleGetContestProblemAssetRequest handles GetContestProblemAsset operation.
+//
+// Get a contest problem statement image.
+//
+// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets
+func (s *Server) handleGetContestProblemAssetRequest(args [3]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetContestProblemAssetOperation,
+			ID:   "GetContestProblemAsset",
+		}
+	)
+	params, err := decodeGetContestProblemAssetParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *GetContestProblemAssetOKHeaders
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetContestProblemAssetOperation,
+			OperationSummary: "Get a contest problem statement image",
+			OperationID:      "GetContestProblemAsset",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "org_login",
+					In:   "path",
+				}: params.OrgLogin,
+				{
+					Name: "contest_login",
+					In:   "path",
+				}: params.ContestLogin,
+				{
+					Name: "problem_id",
+					In:   "path",
+				}: params.ProblemID,
+				{
+					Name: "path",
+					In:   "query",
+				}: params.Path,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = GetContestProblemAssetParams
+			Response = *GetContestProblemAssetOKHeaders
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackGetContestProblemAssetParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetContestProblemAsset(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetContestProblemAsset(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeGetContestProblemAssetResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleGetContestScoreboardRequest handles GetContestScoreboard operation.
 //
 // Get contest scoreboard.

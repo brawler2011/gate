@@ -188,6 +188,7 @@ type ContestDetails interface {
 	GetContestDetails(context.Context, string, string) (*contests.ContestDetails, error)
 	GetContestProblemDetails(context.Context, string, string, uuid.UUID) (*contests.ContestProblemDetails, error)
 	ReadBooklet(context.Context, string, string, string) ([]byte, error)
+	OpenProblemAsset(context.Context, string, string, uuid.UUID, string) (io.ReadCloser, string, error)
 }
 
 type AvatarsUC interface {

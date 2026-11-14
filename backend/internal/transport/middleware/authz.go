@@ -183,6 +183,7 @@ func buildEndpointPolicies() map[string]endpointPolicy {
 		"DeleteContest":                authenticatedPolicy(),
 		"CreateContestProblem":         authenticatedPolicy(),
 		"GetContestProblem":            policy(Public),
+		"GetContestProblemAsset":       policy(Public),
 		"DeleteContestProblem":         authenticatedPolicy(),
 		"ReorderContestProblems":       authenticatedPolicy(),
 		"CreateContestMember":          authenticatedPolicy(),
