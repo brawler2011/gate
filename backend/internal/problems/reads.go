@@ -5,7 +5,6 @@ import (
 
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
-	organizationsmodel "github.com/brawler2011/gate/backend/internal/organizations/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
@@ -13,38 +12,12 @@ import (
 	"github.com/google/uuid"
 )
 
-type Reads interface {
-	ListProblemMembers(context.Context, uuid.UUID, paging.Request) ([]problemsmodel.ProblemMember, int32, error)
-	GetProblemTeams(context.Context, uuid.UUID) ([]problemsmodel.ProblemTeam, error)
-	ListProblems(context.Context, *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error)
-	ListDashboardProblems(context.Context, uuid.UUID, int32) ([]problemsmodel.DashboardProblem, error)
-}
-
-type TemplateOrganizations interface {
-	GetUserOrganizations(context.Context, uuid.UUID) ([]organizationsmodel.Organization, error)
-}
-
-type TemplateManifests interface {
-	GetDraft(context.Context, uuid.UUID) (problemsmodel.Draft, error)
-}
-
 type Template struct {
 	ID, Title, Description, ProblemType string
 	IsBuiltin                           bool
 }
 
-type Reader struct {
-	reads         Reads
-	permissions   ProblemPermissions
-	organizations TemplateOrganizations
-	manifests     TemplateManifests
-}
-
-func NewReader(reads Reads, permissions ProblemPermissions, organizations TemplateOrganizations, manifests TemplateManifests) *Reader {
-	return &Reader{reads: reads, permissions: permissions, organizations: organizations, manifests: manifests}
-}
-
-func (r *Reader) ListProblems(ctx context.Context, filter *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error) {
+func (uc *ProblemsUseCase) ListProblems(ctx context.Context, filter *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error) {
 	if filter == nil {
 		return nil, pkg.ErrBadInput
 	}
@@ -59,15 +32,15 @@ func (r *Reader) ListProblems(ctx context.Context, filter *problemsmodel.Problem
 	}
 	user := accessmodel.UserFromContext(ctx)
 	copy.ViewerID = &user.Id
-	return r.reads.ListProblems(ctx, &copy)
+	return uc.repo.ListProblems(ctx, &copy)
 }
 
-func (r *Reader) authorize(ctx context.Context, id uuid.UUID) error {
+func (uc *ProblemsUseCase) authorizeView(ctx context.Context, id uuid.UUID) error {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.ErrUnauthenticated
 	}
-	allowed, err := r.permissions.HasProblemPermission(ctx, id, user.Id, accessmodel.ActionViewProblem)
+	allowed, err := uc.permissions.HasProblemPermission(ctx, id, user.Id, accessmodel.ActionViewProblem)
 	if err != nil {
 		return err
 	}
@@ -77,45 +50,45 @@ func (r *Reader) authorize(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *Reader) ListProblemMembers(ctx context.Context, id uuid.UUID, request paging.Request) (*paging.List[problemsmodel.ProblemMember], error) {
-	if err := r.authorize(ctx, id); err != nil {
+func (uc *ProblemsUseCase) ListProblemMembers(ctx context.Context, id uuid.UUID, request paging.Request) (*paging.List[problemsmodel.ProblemMember], error) {
+	if err := uc.authorizeView(ctx, id); err != nil {
 		return nil, err
 	}
 	request, err := request.Normalize()
 	if err != nil {
 		return nil, err
 	}
-	items, total, err := r.reads.ListProblemMembers(ctx, id, request)
+	items, total, err := uc.repo.ListProblemMembers(ctx, id, request)
 	if err != nil {
 		return nil, err
 	}
 	return &paging.List[problemsmodel.ProblemMember]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, total)}, nil
 }
 
-func (r *Reader) GetProblemTeams(ctx context.Context, id uuid.UUID) ([]problemsmodel.ProblemTeam, error) {
-	if err := r.authorize(ctx, id); err != nil {
+func (uc *ProblemsUseCase) GetProblemTeams(ctx context.Context, id uuid.UUID) ([]problemsmodel.ProblemTeam, error) {
+	if err := uc.authorizeView(ctx, id); err != nil {
 		return nil, err
 	}
-	return r.reads.GetProblemTeams(ctx, id)
+	return uc.repo.GetProblemTeams(ctx, id)
 }
 
-func (r *Reader) ListDashboardProblems(ctx context.Context, user uuid.UUID, limit int32) ([]problemsmodel.DashboardProblem, error) {
+func (uc *ProblemsUseCase) ListDashboardProblems(ctx context.Context, user uuid.UUID, limit int32) ([]problemsmodel.DashboardProblem, error) {
 	if err := accessmodel.RequireSelfOrAdmin(ctx, user); err != nil {
 		return nil, err
 	}
 	if limit < 1 || limit > 100 {
 		return nil, pkg.ErrBadInput
 	}
-	return r.reads.ListDashboardProblems(ctx, user, limit)
+	return uc.repo.ListDashboardProblems(ctx, user, limit)
 }
 
-func (r *Reader) ListTemplates(ctx context.Context, orgID uuid.UUID) ([]Template, error) {
+func (uc *ProblemsUseCase) ListTemplates(ctx context.Context, orgID uuid.UUID) ([]Template, error) {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.ErrUnauthenticated
 	}
 	if orgID == uuid.Nil {
-		organizations, err := r.organizations.GetUserOrganizations(ctx, user.Id)
+		organizations, err := uc.organizations.GetUserOrganizations(ctx, user.Id)
 		if err != nil {
 			return nil, err
 		}
@@ -131,13 +104,13 @@ func (r *Reader) ListTemplates(ctx context.Context, orgID uuid.UUID) ([]Template
 		return result, nil
 	}
 	isTemplate := true
-	list, err := r.ListProblems(ctx, &problemsmodel.ProblemsFilter{Page: 1, PageSize: 100, OrganizationID: &orgID, IsTemplate: &isTemplate})
+	list, err := uc.ListProblems(ctx, &problemsmodel.ProblemsFilter{Page: 1, PageSize: 100, OrganizationID: &orgID, IsTemplate: &isTemplate})
 	if err != nil {
 		return nil, err
 	}
 	for _, p := range list.Problems {
 		template := Template{ID: p.ID.String(), Title: p.Title, Description: "Пользовательский шаблон организации", ProblemType: "pass-fail"}
-		manifest, err := r.manifests.GetDraft(ctx, p.ID)
+		manifest, err := uc.drafts.GetDraft(ctx, p.ID)
 		if err != nil {
 			return nil, err
 		}

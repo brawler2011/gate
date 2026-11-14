@@ -14,6 +14,7 @@ import (
 )
 
 type ProblemDraftUC interface {
+	CreateProblem(context.Context, *model.CreateProblemInput) (uuid.UUID, error)
 	GetDraft(context.Context, uuid.UUID) (model.Draft, error)
 	SaveDraft(context.Context, uuid.UUID, int64, string, model.Draft) (model.MutationResult, error)
 	RequestBuild(context.Context, uuid.UUID, int64, string) (model.MutationResult, error)
@@ -47,7 +48,7 @@ func draftResult[T any](result model.MutationResult, err error) (*T, error) {
 	return &value, nil
 }
 func (h *CoreServer) GetProblemDraft(ctx context.Context, p corev1.GetProblemDraftParams) (*corev1.ProblemDraft, error) {
-	d, err := h.problems.GetDraft(ctx, p.ID)
+	d, err := h.ProblemDrafts.GetDraft(ctx, p.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -61,23 +62,23 @@ func (h *CoreServer) SaveProblemDraft(ctx context.Context, req *corev1.ProblemDr
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid draft")
 	}
-	return draftResult[corev1.ProblemDraft](h.problems.SaveDraft(ctx, p.ID, p.ExpectedRevision, p.IdempotencyKey, *d))
+	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.SaveDraft(ctx, p.ID, p.ExpectedRevision, p.IdempotencyKey, *d))
 }
 func (h *CoreServer) BuildProblemPackage(ctx context.Context, req *corev1.BuildProblemPackageReq, p corev1.BuildProblemPackageParams) (*corev1.ProblemBuildAccepted, error) {
 	if req == nil {
 		return nil, pkg.ErrBadInput
 	}
-	return draftResult[corev1.ProblemBuildAccepted](h.problems.RequestBuild(ctx, p.ID, req.ExpectedRevision, p.IdempotencyKey))
+	return draftResult[corev1.ProblemBuildAccepted](h.ProblemDrafts.RequestBuild(ctx, p.ID, req.ExpectedRevision, p.IdempotencyKey))
 }
 func (h *CoreServer) GetProblemBuild(ctx context.Context, p corev1.GetProblemBuildParams) (*corev1.ProblemBuild, error) {
-	b, err := h.problems.GetBuild(ctx, p.ID, p.BuildId)
+	b, err := h.ProblemDrafts.GetBuild(ctx, p.ID, p.BuildId)
 	if err != nil {
 		return nil, err
 	}
 	return draftContract[corev1.ProblemBuild](b)
 }
 func (h *CoreServer) ListProblemBuilds(ctx context.Context, p corev1.ListProblemBuildsParams) ([]corev1.ProblemBuild, error) {
-	builds, err := h.problems.ListBuilds(ctx, p.ID)
+	builds, err := h.ProblemDrafts.ListBuilds(ctx, p.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +89,7 @@ func (h *CoreServer) ListProblemBuilds(ctx context.Context, p corev1.ListProblem
 	return *result, nil
 }
 func (h *CoreServer) CancelProblemBuild(ctx context.Context, p corev1.CancelProblemBuildParams) (*corev1.ProblemBuildCancelled, error) {
-	return draftResult[corev1.ProblemBuildCancelled](h.problems.CancelBuild(ctx, p.ID, p.BuildId, p.IdempotencyKey))
+	return draftResult[corev1.ProblemBuildCancelled](h.ProblemDrafts.CancelBuild(ctx, p.ID, p.BuildId, p.IdempotencyKey))
 }
 func (h *CoreServer) UploadProblemDraft(ctx context.Context, req *corev1.UploadProblemDraftReq, p corev1.UploadProblemDraftParams) (*corev1.ProblemDraft, error) {
 	if req == nil || req.File.File == nil {
@@ -104,10 +105,10 @@ func (h *CoreServer) UploadProblemDraft(ctx context.Context, req *corev1.UploadP
 	if req.Answer.IsSet() {
 		answer = req.Answer.Value.File
 	}
-	return draftResult[corev1.ProblemDraft](h.problems.Upload(ctx, p.ID, p.ExpectedRevision, p.IdempotencyKey, change, req.File.File, answer))
+	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.Upload(ctx, p.ID, p.ExpectedRevision, p.IdempotencyKey, change, req.File.File, answer))
 }
 func (h *CoreServer) GetProblemDraftObject(ctx context.Context, p corev1.GetProblemDraftObjectParams) (corev1.GetProblemDraftObjectOK, error) {
-	reader, _, err := h.problems.DownloadObject(ctx, p.ID, p.ObjectId)
+	reader, _, err := h.ProblemDrafts.DownloadObject(ctx, p.ID, p.ObjectId)
 	if err != nil {
 		return corev1.GetProblemDraftObjectOK{}, err
 	}

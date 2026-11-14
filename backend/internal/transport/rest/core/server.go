@@ -8,47 +8,49 @@ import (
 
 var _ corev1.Handler = (*CoreServer)(nil)
 
+// Services lists the application services the REST handlers call. Each field
+// is the use case or read store that owns the operation; there is no facade in
+// between.
+type Services struct {
+	Auth      AuthUC
+	Users     UsersUC
+	UserReads UsersReader
+	Avatars   AvatarsUC
+
+	Organizations OrganizationsUC
+	Teams         TeamsUC
+
+	Contests           ContestsUC
+	ContestPermissions PermissionsUC
+	ContestDetails     ContestDetails
+	Drafts             DraftsUC
+	Announcements      AnnouncementsUC
+	Clarifications     ClarificationsUC
+
+	Problems      ProblemsUC
+	ProblemDrafts ProblemDraftUC
+	Packages      PackagesReader
+
+	Submissions SubmissionsUC
+
+	Notifications     NotificationsUC
+	NotificationReads NotificationsReader
+
+	Blogs     BlogsUC
+	BlogReads BlogsReader
+
+	NATS         jetstream.JetStream
+	Capabilities CapabilityProjector
+}
+
 type CoreServer struct {
-	identity      IdentityModule
-	organizations OrganizationsModule
-	contests      ContestsModule
-	problems      ProblemsModule
-	submissions   SubmissionsModule
-	notifications NotificationsModule
-	blogs         BlogsModule
-	natsJS        jetstream.JetStream
+	Services
 	secureCookies bool
-	capabilities  CapabilityProjector
 	languages     map[string]sandbox.Language
 }
 
-func NewCoreServer(
-	identity IdentityModule,
-	organizations OrganizationsModule,
-	contests ContestsModule,
-	problems ProblemsModule,
-	submissions SubmissionsModule,
-	notifications NotificationsModule,
-	blogs BlogsModule,
-	natsJS jetstream.JetStream,
-	secureCookies bool,
-	capabilities ...CapabilityProjector,
-) *CoreServer {
-	server := &CoreServer{
-		identity:      identity,
-		organizations: organizations,
-		contests:      contests,
-		problems:      problems,
-		submissions:   submissions,
-		notifications: notifications,
-		blogs:         blogs,
-		natsJS:        natsJS,
-		secureCookies: secureCookies,
-	}
-	if len(capabilities) > 0 {
-		server.capabilities = capabilities[0]
-	}
-	return server
+func NewCoreServer(services Services, secureCookies bool) *CoreServer {
+	return &CoreServer{Services: services, secureCookies: secureCookies}
 }
 
 // WithLanguages sets the languages reported by GetLanguages.

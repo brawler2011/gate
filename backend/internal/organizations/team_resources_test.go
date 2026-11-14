@@ -47,18 +47,16 @@ func TestTeamResourcesAuthorization(t *testing.T) {
 		for _, tc := range []struct {
 			name                            string
 			user                            accessmodel.User
-			actor                           uuid.UUID
 			view                            bool
 			repoErr, permissionErr, wantErr error
 			wantCalls                       int
 		}{
-			{name: "allowed", user: caller, actor: caller.Id, view: true, wantCalls: 1},
-			{name: "storage failure", user: caller, actor: caller.Id, view: true, repoErr: context.Canceled, wantErr: context.Canceled, wantCalls: 1},
-			{name: "team denied", user: caller, actor: caller.Id, wantErr: pkg.NoPermission},
-			{name: "permission failure", user: caller, actor: caller.Id, permissionErr: context.Canceled, wantErr: context.Canceled},
-			{name: "spoofed caller", user: caller, actor: uuid.New(), view: true, wantErr: pkg.NoPermission},
+			{name: "allowed", user: caller, view: true, wantCalls: 1},
+			{name: "storage failure", user: caller, view: true, repoErr: context.Canceled, wantErr: context.Canceled, wantCalls: 1},
+			{name: "team denied", user: caller, wantErr: pkg.NoPermission},
+			{name: "permission failure", user: caller, permissionErr: context.Canceled, wantErr: context.Canceled},
 			{name: "guest", user: accessmodel.Guest, wantErr: pkg.ErrUnauthenticated},
-			{name: "expired", user: expired, actor: caller.Id, view: true, wantErr: pkg.ErrUnauthenticated},
+			{name: "expired", user: expired, view: true, wantErr: pkg.ErrUnauthenticated},
 		} {
 			t.Run(resource+"/"+tc.name, func(t *testing.T) {
 				teamID := uuid.New()
@@ -72,13 +70,13 @@ func TestTeamResourcesAuthorization(t *testing.T) {
 				var err error
 				if resource == "contests" {
 					var result *paging.List[contestsmodel.Contest]
-					result, err = uc.GetTeamContests(ctx, teamID, tc.actor, paging.Request{})
+					result, err = uc.GetTeamContests(ctx, teamID, paging.Request{})
 					if tc.wantErr == nil {
 						require.Equal(t, []contestsmodel.Contest{{ID: teamID}}, result.Items)
 					}
 				} else {
 					var result *paging.List[problemsmodel.Problem]
-					result, err = uc.GetTeamProblems(ctx, teamID, tc.actor, paging.Request{})
+					result, err = uc.GetTeamProblems(ctx, teamID, paging.Request{})
 					if tc.wantErr == nil {
 						require.Equal(t, []problemsmodel.Problem{{ID: teamID}}, result.Items)
 					}

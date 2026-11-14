@@ -11,15 +11,13 @@ import (
 )
 
 type ClarificationsUseCase struct {
-	transactor ContestEventsTransactions
+	transactor  ContestEventsTransactions
+	reads       ClarificationReads
+	permissions Permissions
 }
 
-func NewClarificationsUseCase(
-	transactor ContestEventsTransactions,
-) *ClarificationsUseCase {
-	return &ClarificationsUseCase{
-		transactor: transactor,
-	}
+func NewClarificationsUseCase(transactor ContestEventsTransactions, reads ClarificationReads, permissions Permissions) *ClarificationsUseCase {
+	return &ClarificationsUseCase{transactor: transactor, reads: reads, permissions: permissions}
 }
 
 func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error) {

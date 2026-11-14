@@ -172,7 +172,7 @@ func TestScoreboardFreezePreservesObservedVerdicts(t *testing.T) {
 	}
 	read := func(actor accessmodel.User, at time.Time, live bool) *contestsmodel.ScoreboardResponse {
 		t.Helper()
-		board, err := f.uc.GetContestScoreboard(accessmodel.WithReadTime(accessmodel.WithUser(f.ctx, actor), at), f.contest, actor.Id, live)
+		board, err := f.uc.GetContestScoreboard(accessmodel.WithReadTime(accessmodel.WithUser(f.ctx, actor), at), f.contest, live)
 		require.NoError(t, err)
 		return board
 	}
@@ -188,7 +188,7 @@ func TestScoreboardFreezePreservesObservedVerdicts(t *testing.T) {
 	require.Zero(t, results[users[0]].ProblemsSolved)
 	require.EqualValues(t, 2, results[users[0]].ProblemResults[0].PendingAttempts)
 	require.EqualValues(t, 1, results[users[1]].ProblemsSolved)
-	_, err = f.uc.GetContestScoreboard(accessmodel.WithReadTime(accessmodel.WithUser(f.ctx, participant), now), f.contest, participant.Id, true)
+	_, err = f.uc.GetContestScoreboard(accessmodel.WithReadTime(accessmodel.WithUser(f.ctx, participant), now), f.contest, true)
 	require.ErrorIs(t, err, pkg.NoPermission)
 	live := read(accessmodel.UserFromContext(f.ctx), now, true)
 	require.NotEqual(t, masked.Items, live.Items)

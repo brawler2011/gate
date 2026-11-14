@@ -10,6 +10,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/identity"
 
 	contests "github.com/brawler2011/gate/backend/internal/contests"
+	"github.com/brawler2011/gate/backend/internal/problems"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -45,16 +46,16 @@ type ContestsUC interface {
 	UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role string) error
 	DeleteParticipant(ctx context.Context, c contestsmodel.ParticipantDeletion) error
 
-	CreateContestTeam(ctx context.Context, contestID, teamID, requestUserID uuid.UUID, role contestsmodel.ContestRole) error
-	UpdateContestTeamRole(ctx context.Context, contestID, teamID, requestUserID uuid.UUID, role contestsmodel.ContestRole) error
-	DeleteContestTeam(ctx context.Context, contestID, teamID, requestUserID uuid.UUID) error
+	CreateContestTeam(ctx context.Context, contestID, teamID uuid.UUID, role contestsmodel.ContestRole) error
+	UpdateContestTeamRole(ctx context.Context, contestID, teamID uuid.UUID, role contestsmodel.ContestRole) error
+	DeleteContestTeam(ctx context.Context, contestID, teamID uuid.UUID) error
 
 	CreateContestProblem(ctx context.Context, c contestsmodel.ContestProblemCreation) error
 
 	DeleteContestProblem(ctx context.Context, c contestsmodel.ContestProblemDeletion) error
 	ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []contestsmodel.ContestProblemReorderItem) error
 
-	GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error)
+	GetContestScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error)
 
 	BlockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, reason *string) error
 	UnblockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, rejudgeSubmissions bool) error
@@ -62,16 +63,26 @@ type ContestsUC interface {
 
 	// Contest Join Requests
 	CreateJoinRequest(ctx context.Context, orgLogin, contestLogin string, message *string) (*contestsmodel.ContestJoinRequest, bool, error)
-	ListJoinRequests(ctx context.Context, orgLogin, contestLogin string, requestUserID uuid.UUID) ([]contestsmodel.ContestJoinRequest, error)
+	ListJoinRequests(ctx context.Context, orgLogin, contestLogin string) ([]contestsmodel.ContestJoinRequest, error)
 	CancelJoinRequest(ctx context.Context, orgLogin, contestLogin string) error
-	ApproveJoinRequest(ctx context.Context, orgLogin, contestLogin string, requestID, reviewerID uuid.UUID) error
-	RejectJoinRequest(ctx context.Context, orgLogin, contestLogin string, requestID, reviewerID uuid.UUID) error
-	GetMyPendingJoinRequest(ctx context.Context, orgLogin, contestLogin string, userID uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
+	ApproveJoinRequest(ctx context.Context, orgLogin, contestLogin string, requestID uuid.UUID) error
+	RejectJoinRequest(ctx context.Context, orgLogin, contestLogin string, requestID uuid.UUID) error
+	GetMyPendingJoinRequest(ctx context.Context, orgLogin, contestLogin string) (*contestsmodel.ContestJoinRequest, error)
+
+	GetContestTeams(context.Context, uuid.UUID) ([]contestsmodel.ContestTeam, error)
+	ListPublicContests(context.Context, contestsmodel.PublicContestsFilter) (*contestsmodel.ContestsList, error)
+	ListWorkshopContests(context.Context, contestsmodel.WorkshopContestsFilter) (*contestsmodel.ContestsList, error)
+	ListUserContests(context.Context, contestsmodel.UserContestsFilter) (*contestsmodel.ContestsList, error)
+	ListAdminContests(context.Context, contestsmodel.AdminContestsFilter) (*contestsmodel.ContestsList, error)
+	ListOrganizationContests(context.Context, string, string, int32, int32) (*contestsmodel.ContestsList, error)
+	ListContestMembers(context.Context, contestsmodel.ParticipantsFilter) (*contestsmodel.ContestMembersList, error)
+	ListDashboardContests(context.Context, uuid.UUID, int32) ([]contestsmodel.DashboardContest, error)
 }
 
 type DraftsUC interface {
 	CreateDraft(ctx context.Context, creation *contestsmodel.ContestDraftCreation) (uuid.UUID, error)
 	DeleteDraft(ctx context.Context, contestID, draftID uuid.UUID) error
+	ListDrafts(ctx context.Context, filter contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error)
 }
 
 type NotificationsUC interface {
@@ -81,38 +92,31 @@ type NotificationsUC interface {
 
 type OrganizationsUC interface {
 	CreateOrganization(ctx context.Context, input *organizationsmodel.CreateOrganizationInput) (*organizationsmodel.Organization, error)
-
-	GetOrganizationByLogin(ctx context.Context, login string, userID uuid.UUID) (*organizationsmodel.Organization, error)
-	ListOrganizations(ctx context.Context, filter *organizationsmodel.OrganizationFilter, userID uuid.UUID) (*organizationsmodel.OrganizationList, error)
-
-	UpdateOrganizationByLogin(ctx context.Context, login string, userID uuid.UUID, input *organizationsmodel.UpdateOrganizationInput) error
-
-	DeleteOrganizationByLogin(ctx context.Context, login string, userID uuid.UUID) error
+	GetOrganizationByLogin(ctx context.Context, login string) (*organizationsmodel.Organization, error)
+	ListOrganizations(ctx context.Context, filter *organizationsmodel.OrganizationFilter) (*organizationsmodel.OrganizationList, error)
+	UpdateOrganizationByLogin(ctx context.Context, login string, input *organizationsmodel.UpdateOrganizationInput) error
+	DeleteOrganizationByLogin(ctx context.Context, login string) error
 
 	// Member management
-
-	AddMemberByLogin(ctx context.Context, login string, input *organizationsmodel.AddOrganizationMemberInput, requestUserID uuid.UUID) error
-	ListMembers(ctx context.Context, orgID, requestUserID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.OrganizationMember], error)
-	ListMembersByLogin(ctx context.Context, login string, requestUserID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.OrganizationMember], error)
-
-	RemoveMemberByLogin(ctx context.Context, login string, userID, requestUserID uuid.UUID) error
-
-	BatchCreateUsers(ctx context.Context, input organizationsmodel.BatchCreateOrganizationUsersInput, requestUserID uuid.UUID) (*organizationsmodel.BatchCreateOrganizationUsersResult, error)
+	AddMemberByLogin(ctx context.Context, login string, input *organizationsmodel.AddOrganizationMemberInput) error
+	ListMembersByLogin(ctx context.Context, login string, request paging.Request) (*paging.List[organizationsmodel.OrganizationMember], error)
+	RemoveMemberByLogin(ctx context.Context, login string, userID uuid.UUID) error
+	BatchCreateUsers(ctx context.Context, input organizationsmodel.BatchCreateOrganizationUsersInput) (*organizationsmodel.BatchCreateOrganizationUsersResult, error)
 
 	// Invitations
-	InviteMember(ctx context.Context, orgLogin string, targetUserID uuid.UUID, role organizationsmodel.OrganizationRole, inviterID uuid.UUID) (*organizationsmodel.OrganizationInvitation, error)
-	ListInvitations(ctx context.Context, orgLogin string, requestUserID uuid.UUID) ([]organizationsmodel.OrganizationInvitation, error)
-	CancelInvitation(ctx context.Context, orgLogin string, invitationID, requestUserID uuid.UUID) error
+	InviteMember(ctx context.Context, orgLogin string, targetUserID uuid.UUID, role organizationsmodel.OrganizationRole) (*organizationsmodel.OrganizationInvitation, error)
+	ListInvitations(ctx context.Context, orgLogin string) ([]organizationsmodel.OrganizationInvitation, error)
+	CancelInvitation(ctx context.Context, orgLogin string, invitationID uuid.UUID) error
 	AcceptInvitation(ctx context.Context, invitationID uuid.UUID) error
 	DeclineInvitation(ctx context.Context, invitationID uuid.UUID) error
 
 	// Join Requests
 	CreateJoinRequest(ctx context.Context, orgLogin string, message *string) (*organizationsmodel.OrganizationJoinRequest, bool, error)
-	ListJoinRequests(ctx context.Context, orgLogin string, requestUserID uuid.UUID) ([]organizationsmodel.OrganizationJoinRequest, error)
+	ListJoinRequests(ctx context.Context, orgLogin string) ([]organizationsmodel.OrganizationJoinRequest, error)
 	CancelJoinRequest(ctx context.Context, orgLogin string) error
-	ApproveJoinRequest(ctx context.Context, orgLogin string, requestID, reviewerID uuid.UUID, role organizationsmodel.OrganizationRole) error
-	RejectJoinRequest(ctx context.Context, orgLogin string, requestID, reviewerID uuid.UUID) error
-	GetMyPendingJoinRequest(ctx context.Context, orgLogin string, userID uuid.UUID) (*organizationsmodel.OrganizationJoinRequest, error)
+	ApproveJoinRequest(ctx context.Context, orgLogin string, requestID uuid.UUID, role organizationsmodel.OrganizationRole) error
+	RejectJoinRequest(ctx context.Context, orgLogin string, requestID uuid.UUID) error
+	GetMyPendingJoinRequest(ctx context.Context, orgLogin string) (*organizationsmodel.OrganizationJoinRequest, error)
 }
 
 type PermissionsUC interface {
@@ -125,19 +129,22 @@ type PermissionsUC interface {
 
 type ProblemsUC interface {
 	GetProblemDetails(context.Context, uuid.UUID) (*problemsmodel.ProblemDetails, error)
-	CreateProblem(ctx context.Context, input *problemsmodel.CreateProblemInput) (uuid.UUID, error)
-
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
-
 	UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error
 
-	AddProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission problemsmodel.ProblemPermission) error
-	UpdateProblemTeamPermission(ctx context.Context, problemID, teamID, requestUserID uuid.UUID, permission problemsmodel.ProblemPermission) error
-	RemoveProblemTeam(ctx context.Context, problemID, teamID, requestUserID uuid.UUID) error
+	AddProblemTeam(ctx context.Context, problemID, teamID uuid.UUID, permission problemsmodel.ProblemPermission) error
+	UpdateProblemTeamPermission(ctx context.Context, problemID, teamID uuid.UUID, permission problemsmodel.ProblemPermission) error
+	RemoveProblemTeam(ctx context.Context, problemID, teamID uuid.UUID) error
 
-	CreateProblemMember(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role problemsmodel.ProblemRole) error
-	UpdateProblemMemberRole(ctx context.Context, problemID, userID, requestUserID uuid.UUID, role problemsmodel.ProblemRole) error
-	RemoveProblemMember(ctx context.Context, problemID, userID, requestUserID uuid.UUID) error
+	CreateProblemMember(ctx context.Context, problemID, userID uuid.UUID, role problemsmodel.ProblemRole) error
+	UpdateProblemMemberRole(ctx context.Context, problemID, userID uuid.UUID, role problemsmodel.ProblemRole) error
+	RemoveProblemMember(ctx context.Context, problemID, userID uuid.UUID) error
+
+	ListProblemMembers(context.Context, uuid.UUID, paging.Request) (*paging.List[problemsmodel.ProblemMember], error)
+	GetProblemTeams(context.Context, uuid.UUID) ([]problemsmodel.ProblemTeam, error)
+	ListProblems(context.Context, *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error)
+	ListDashboardProblems(context.Context, uuid.UUID, int32) ([]problemsmodel.DashboardProblem, error)
+	ListTemplates(context.Context, uuid.UUID) ([]problems.Template, error)
 }
 
 type SubmissionsUC interface {
@@ -151,21 +158,21 @@ type SubmissionsUC interface {
 }
 
 type TeamsUC interface {
-	CreateTeam(ctx context.Context, input *organizationsmodel.CreateTeamInput, creatorID uuid.UUID) (*organizationsmodel.Team, error)
-	GetTeam(ctx context.Context, teamID, userID uuid.UUID) (*organizationsmodel.Team, error)
+	CreateTeam(ctx context.Context, input *organizationsmodel.CreateTeamInput) (*organizationsmodel.Team, error)
+	GetTeam(ctx context.Context, teamID uuid.UUID) (*organizationsmodel.Team, error)
 	ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter) (*organizationsmodel.TeamsList, error)
-	UpdateTeam(ctx context.Context, teamID, userID uuid.UUID, input *organizationsmodel.UpdateTeamInput) error
-	DeleteTeam(ctx context.Context, teamID, userID uuid.UUID) error
+	UpdateTeam(ctx context.Context, teamID uuid.UUID, input *organizationsmodel.UpdateTeamInput) error
+	DeleteTeam(ctx context.Context, teamID uuid.UUID) error
 
 	// Member management
-	AddTeamMember(ctx context.Context, input *organizationsmodel.AddTeamMemberInput, requestUserID uuid.UUID) error
-	ListTeamMembers(ctx context.Context, teamID, requestUserID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.TeamMember], error)
-	UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole, requestUserID uuid.UUID) error
-	RemoveTeamMember(ctx context.Context, teamID, userID, requestUserID uuid.UUID) error
+	AddTeamMember(ctx context.Context, input *organizationsmodel.AddTeamMemberInput) error
+	ListTeamMembers(ctx context.Context, teamID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.TeamMember], error)
+	UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole) error
+	RemoveTeamMember(ctx context.Context, teamID, userID uuid.UUID) error
 
 	// Resource associations
-	GetTeamContests(ctx context.Context, teamID, requestUserID uuid.UUID, request paging.Request) (*paging.List[contestsmodel.Contest], error)
-	GetTeamProblems(ctx context.Context, teamID, requestUserID uuid.UUID, request paging.Request) (*paging.List[problemsmodel.Problem], error)
+	GetTeamContests(ctx context.Context, teamID uuid.UUID, request paging.Request) (*paging.List[contestsmodel.Contest], error)
+	GetTeamProblems(ctx context.Context, teamID uuid.UUID, request paging.Request) (*paging.List[problemsmodel.Problem], error)
 }
 
 type UsersUC interface {
@@ -199,9 +206,11 @@ type BlogsUC interface {
 type AnnouncementsUC interface {
 	CreateAnnouncement(ctx context.Context, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error)
 	DeleteAnnouncement(ctx context.Context, announcementID, contestID uuid.UUID) error
+	ListAnnouncements(ctx context.Context, contestID uuid.UUID, page, pageSize int32) (*contestsmodel.ContestAnnouncementsList, error)
 }
 
 type ClarificationsUC interface {
 	CreateClarification(ctx context.Context, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error)
 	AnswerClarification(ctx context.Context, input *contestsmodel.AnswerContestClarificationInput) (*contestsmodel.ContestClarification, error)
+	ListClarifications(context.Context, uuid.UUID, *contestsmodel.ContestClarificationsFilter) (*contestsmodel.ContestClarificationsList, error)
 }

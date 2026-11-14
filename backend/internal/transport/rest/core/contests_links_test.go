@@ -8,7 +8,6 @@ import (
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	"github.com/brawler2011/gate/backend/internal/coremodules"
 	"github.com/brawler2011/gate/backend/internal/transport/rest/core"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
@@ -77,7 +76,7 @@ func TestCreateContestLinksHTTP(t *testing.T) {
 				if result.lookupErr == nil {
 					uc.On(operation.method, mock.Anything, operation.input).Return(result.createErr).Once()
 				}
-				handler := core.NewCoreServer(nil, nil, coremodules.Contests{ContestsUC: uc, ContestsReader: uc}, nil, nil, nil, nil, nil, false)
+				handler := core.NewCoreServer(core.Services{Contests: uc}, false)
 				server, err := corev1.NewServer(handler, contestLinksSecurity{}, corev1.WithErrorHandler(func(_ context.Context, w http.ResponseWriter, _ *http.Request, err error) {
 					w.WriteHeader(pkg.ToREST(err))
 				}))

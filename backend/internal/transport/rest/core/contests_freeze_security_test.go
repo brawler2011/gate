@@ -12,7 +12,6 @@ import (
 type MockContestsUC struct {
 	mock.Mock
 	ContestsUC
-	ContestsReader
 }
 
 func (m *MockContestsUC) GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error) {
@@ -25,8 +24,8 @@ func (m *MockContestsUC) GetContestByOrgLoginAndContestLogin(ctx context.Context
 	return args.Get(0).(contestsmodel.Contest), args.Error(1) //nolint:wrapcheck
 }
 
-func (m *MockContestsUC) GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error) {
-	args := m.Called(ctx, contestID, userID, unfrozen)
+func (m *MockContestsUC) GetContestScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error) {
+	args := m.Called(ctx, contestID, unfrozen)
 	if res := args.Get(0); res != nil {
 		return res.(*contestsmodel.ScoreboardResponse), args.Error(1) //nolint:wrapcheck
 	}

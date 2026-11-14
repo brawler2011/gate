@@ -14,7 +14,7 @@ import (
 )
 
 type packageHistoryErrorStub struct {
-	ProblemsModule
+	PackagesReader
 	err error
 }
 
@@ -34,7 +34,7 @@ func TestListProblemPackagesPreservesReadErrors(t *testing.T) {
 		{pkg.ErrInternal, http.StatusInternalServerError},
 	} {
 		t.Run(tc.err.Error(), func(t *testing.T) {
-			server := &CoreServer{problems: packageHistoryErrorStub{err: tc.err}}
+			server := &CoreServer{Services: Services{Packages: packageHistoryErrorStub{err: tc.err}}}
 			_, err := server.ListProblemPackages(context.Background(), corev1.ListProblemPackagesParams{ID: uuid.New()})
 			require.ErrorIs(t, err, tc.err)
 			require.Equal(t, tc.status, pkg.ToREST(err))

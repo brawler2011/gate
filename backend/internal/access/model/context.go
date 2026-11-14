@@ -43,15 +43,13 @@ func RequireSelfOrAdmin(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func RequireCaller(ctx context.Context, id uuid.UUID) error {
+// RequireUser returns the authenticated caller, rejecting guests and expired users.
+func RequireUser(ctx context.Context) (User, error) {
 	user := UserFromContext(ctx)
 	if user.IsGuest() || user.IsExpired() {
-		return pkg.ErrUnauthenticated
+		return User{}, pkg.ErrUnauthenticated
 	}
-	if user.Id != id {
-		return pkg.NoPermission
-	}
-	return nil
+	return user, nil
 }
 
 type readTimeKey struct{}

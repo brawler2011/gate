@@ -19,31 +19,21 @@ type ClarificationReads interface {
 	ListClarificationsForModerator(context.Context, uuid.UUID, *contestsmodel.ContestClarificationsFilter) (*contestsmodel.ContestClarificationsList, error)
 }
 
-type CommunicationReader struct {
-	announcements  AnnouncementReads
-	clarifications ClarificationReads
-	permissions    Permissions
-}
-
-func NewCommunicationReader(announcements AnnouncementReads, clarifications ClarificationReads, permissions Permissions) *CommunicationReader {
-	return &CommunicationReader{announcements: announcements, clarifications: clarifications, permissions: permissions}
-}
-
-func (r *CommunicationReader) ListAnnouncements(ctx context.Context, contest uuid.UUID, page, size int32) (*contestsmodel.ContestAnnouncementsList, error) {
+func (uc *AnnouncementsUseCase) ListAnnouncements(ctx context.Context, contest uuid.UUID, page, size int32) (*contestsmodel.ContestAnnouncementsList, error) {
 	if err := paging.Validate(page, size); err != nil {
 		return nil, err
 	}
-	allowed, err := r.permissions.HasContestPermission(ctx, contest, accessmodel.UserFromContext(ctx).Id, accessmodel.ActionGetContest)
+	allowed, err := uc.permissions.HasContestPermission(ctx, contest, accessmodel.UserFromContext(ctx).Id, accessmodel.ActionGetContest)
 	if err != nil {
 		return nil, err
 	}
 	if !allowed {
 		return nil, pkg.NoPermission
 	}
-	return r.announcements.ListAnnouncements(ctx, contest, page, size)
+	return uc.reads.ListAnnouncements(ctx, contest, page, size)
 }
 
-func (r *CommunicationReader) ListClarifications(ctx context.Context, contest uuid.UUID, filter *contestsmodel.ContestClarificationsFilter) (*contestsmodel.ContestClarificationsList, error) {
+func (uc *ClarificationsUseCase) ListClarifications(ctx context.Context, contest uuid.UUID, filter *contestsmodel.ContestClarificationsFilter) (*contestsmodel.ContestClarificationsList, error) {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.ErrUnauthenticated
@@ -51,19 +41,19 @@ func (r *CommunicationReader) ListClarifications(ctx context.Context, contest uu
 	if err := paging.Validate(filter.Page, filter.PageSize); err != nil {
 		return nil, err
 	}
-	allowed, err := r.permissions.HasContestPermission(ctx, contest, user.Id, accessmodel.ActionGetContest)
+	allowed, err := uc.permissions.HasContestPermission(ctx, contest, user.Id, accessmodel.ActionGetContest)
 	if err != nil {
 		return nil, err
 	}
 	if !allowed {
 		return nil, pkg.NoPermission
 	}
-	moderator, err := r.permissions.HasContestPermission(ctx, contest, user.Id, accessmodel.ActionManageContest)
+	moderator, err := uc.permissions.HasContestPermission(ctx, contest, user.Id, accessmodel.ActionManageContest)
 	if err != nil {
 		return nil, err
 	}
 	if moderator {
-		return r.clarifications.ListClarificationsForModerator(ctx, contest, filter)
+		return uc.reads.ListClarificationsForModerator(ctx, contest, filter)
 	}
-	return r.clarifications.ListClarificationsForUser(ctx, contest, user.Id, filter.Page, filter.PageSize)
+	return uc.reads.ListClarificationsForUser(ctx, contest, user.Id, filter.Page, filter.PageSize)
 }

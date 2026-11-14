@@ -13,12 +13,6 @@ import (
 
 type OrganizationsRepo interface {
 	GetUserOrganizations(context.Context, uuid.UUID) ([]organizationsmodel.Organization, error)
-
-	// Member management
-
-	GetMember(ctx context.Context, orgID, userID uuid.UUID) (*organizationsmodel.OrganizationMember, error)
-
-	// Invitations
 }
 
 type PackagesRepo interface {
@@ -28,6 +22,14 @@ type PackagesRepo interface {
 
 type ProblemsRepo interface {
 	GetProblemById(context.Context, uuid.UUID) (problemsmodel.Problem, error)
+	ListProblemMembers(context.Context, uuid.UUID, paging.Request) ([]problemsmodel.ProblemMember, int32, error)
+	GetProblemTeams(context.Context, uuid.UUID) ([]problemsmodel.ProblemTeam, error)
+	ListProblems(context.Context, *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error)
+	ListDashboardProblems(context.Context, uuid.UUID, int32) ([]problemsmodel.DashboardProblem, error)
+}
+
+type DraftsRepo interface {
+	GetDraft(context.Context, uuid.UUID) (problemsmodel.Draft, error)
 }
 
 type ProblemPermissions interface {

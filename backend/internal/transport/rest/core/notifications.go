@@ -26,7 +26,7 @@ func (h *CoreServer) ListNotifications(ctx context.Context, params corev1.ListNo
 	pageSize := params.PageSize.Or(20)
 	unreadOnly := params.UnreadOnly.Or(false)
 
-	list, err := h.notifications.ListNotifications(ctx, user.Id, &notificationsmodel.NotificationFilter{
+	list, err := h.NotificationReads.ListNotifications(ctx, user.Id, &notificationsmodel.NotificationFilter{
 		Page:       page,
 		PageSize:   pageSize,
 		UnreadOnly: unreadOnly,
@@ -44,7 +44,7 @@ func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context) (*corev1.U
 		return &corev1.UnreadNotificationsCountResponseModel{Count: 0}, nil
 	}
 
-	count, err := h.notifications.GetUnreadCount(ctx, user.Id)
+	count, err := h.NotificationReads.GetUnreadCount(ctx, user.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (h *CoreServer) GetUnreadNotificationsCount(ctx context.Context) (*corev1.U
 
 func (h *CoreServer) MarkNotificationAsRead(ctx context.Context, params corev1.MarkNotificationAsReadParams) error {
 
-	err := h.notifications.MarkAsRead(ctx, params.ID)
+	err := h.Notifications.MarkAsRead(ctx, params.ID)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func (h *CoreServer) MarkNotificationAsRead(ctx context.Context, params corev1.M
 
 func (h *CoreServer) MarkAllNotificationsAsRead(ctx context.Context) error {
 
-	err := h.notifications.MarkAllAsRead(ctx)
+	err := h.Notifications.MarkAllAsRead(ctx)
 	if err != nil {
 		return err
 	}

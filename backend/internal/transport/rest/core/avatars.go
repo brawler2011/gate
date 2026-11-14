@@ -36,7 +36,7 @@ func (h *CoreServer) UploadAvatar(ctx context.Context, req *corev1.UploadAvatarR
 		contentType = "application/octet-stream"
 	}
 
-	imgID, err := h.identity.UploadAvatar(ctx, params.Username, file.File, filename, contentType)
+	imgID, err := h.Avatars.UploadAvatar(ctx, params.Username, file.File, filename, contentType)
 	if err != nil {
 		return nil, wrapAvatarError(err, "failed to upload avatar")
 	}
@@ -47,7 +47,7 @@ func (h *CoreServer) UploadAvatar(ctx context.Context, req *corev1.UploadAvatarR
 }
 
 func (h *CoreServer) DeleteAvatar(ctx context.Context, params corev1.DeleteAvatarParams) error {
-	err := h.identity.DeleteAvatar(ctx, params.Username)
+	err := h.Avatars.DeleteAvatar(ctx, params.Username)
 	if err != nil {
 		return wrapAvatarError(err, "failed to delete avatar")
 	}
@@ -62,7 +62,7 @@ func (h *CoreServer) GetUserAvatar(ctx context.Context, params corev1.GetUserAva
 		ifNoneMatch = &params.IfNoneMatch.Value
 	}
 
-	avatarImg, err := h.identity.GetAvatar(ctx, params.Username, ifNoneMatch)
+	avatarImg, err := h.Avatars.GetAvatar(ctx, params.Username, ifNoneMatch)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotModified) {
 			var etag corev1.OptString

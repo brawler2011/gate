@@ -21,12 +21,12 @@ func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProble
 	if req == nil || req.Package.File == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "expected 'package' field")
 	}
-	return draftResult[corev1.ProblemDraft](h.problems.Import(ctx, params.ID, params.ExpectedRevision, params.IdempotencyKey, req.Package.File))
+	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.Import(ctx, params.ID, params.ExpectedRevision, params.IdempotencyKey, req.Package.File))
 }
 
 // ListProblemPackages handles GET /problems/{id}/packages.
 func (h *CoreServer) ListProblemPackages(ctx context.Context, params corev1.ListProblemPackagesParams) (*corev1.ListProblemPackagesOK, error) {
-	packages, err := h.problems.ListPackages(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
+	packages, err := h.Packages.ListPackages(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func (h *CoreServer) ListProblemPackages(ctx context.Context, params corev1.List
 
 // DownloadProblemPackage handles GET /problems/{id}/packages/{packageId}/download.
 func (h *CoreServer) DownloadProblemPackage(ctx context.Context, params corev1.DownloadProblemPackageParams) (corev1.DownloadProblemPackageOK, error) {
-	reader, err := h.problems.DownloadPackage(ctx, params.ID, params.PackageId)
+	reader, err := h.Packages.DownloadPackage(ctx, params.ID, params.PackageId)
 	if err != nil {
 		return corev1.DownloadProblemPackageOK{}, err
 	}

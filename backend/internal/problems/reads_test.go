@@ -16,7 +16,7 @@ import (
 )
 
 type problemReads struct {
-	Reads
+	ProblemsRepo
 	filter *problemsmodel.ProblemsFilter
 	list   *problemsmodel.ProblemsList
 }
@@ -52,7 +52,7 @@ func TestProblemReadsBindViewerAndPagination(t *testing.T) {
 	actor := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 	ctx := accessmodel.WithUser(context.Background(), actor)
 	reads := &problemReads{}
-	reader := NewReader(reads, nil, nil, nil)
+	reader := NewProblemsUseCase(reads, nil, nil, nil, nil)
 	other := uuid.New()
 	filter := &problemsmodel.ProblemsFilter{ViewerID: &other}
 	original := *filter
@@ -95,7 +95,7 @@ func TestProblemReadsBindViewerAndPagination(t *testing.T) {
 }
 
 func TestProblemPrivateReadsRejectBeforeStorage(t *testing.T) {
-	reader := NewReader(nil, denyProblemPermissions{}, nil, nil)
+	reader := NewProblemsUseCase(nil, nil, nil, denyProblemPermissions{}, nil)
 	user := uuid.New()
 	for _, ctx := range []context.Context{context.Background(), problemActorContext()} {
 		expected := pkg.NoPermission
@@ -115,7 +115,7 @@ func TestTemplateCatalogUsesVisibleProblemsAndApplicationMapping(t *testing.T) {
 	id, org := uuid.New(), uuid.New()
 	reads := &problemReads{list: &problemsmodel.ProblemsList{Problems: []problemsmodel.Problem{{ID: id, Title: "Organization template"}}}}
 	manifests := &templateManifests{}
-	reader := NewReader(reads, nil, templateOrganizations{id: org}, manifests)
+	reader := NewProblemsUseCase(reads, nil, templateOrganizations{id: org}, nil, manifests)
 	ctx := problemActorContext()
 	templates, err := reader.ListTemplates(ctx, uuid.Nil)
 	require.NoError(t, err)
@@ -129,7 +129,7 @@ func TestTemplateCatalogUsesVisibleProblemsAndApplicationMapping(t *testing.T) {
 	_, err = reader.ListTemplates(context.Background(), org)
 	require.ErrorIs(t, err, pkg.ErrUnauthenticated)
 	expected := errors.New("organizations unavailable")
-	_, err = NewReader(nil, nil, templateOrganizations{err: expected}, nil).ListTemplates(ctx, uuid.Nil)
+	_, err = NewProblemsUseCase(nil, nil, templateOrganizations{err: expected}, nil, nil).ListTemplates(ctx, uuid.Nil)
 	require.ErrorIs(t, err, expected)
 }
 

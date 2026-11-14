@@ -38,7 +38,7 @@ func TestInvitationRejectsDuplicates(t *testing.T) {
 			} else {
 				uc.transactor = invitationTransactions{store: &pendingInvitationStore{store}}
 			}
-			invitation, err := uc.InviteMember(accessmodel.WithUser(context.Background(), owner), store.org.Login, target.Id, organizationsmodel.OrgRoleMember, owner.Id)
+			invitation, err := uc.InviteMember(accessmodel.WithUser(context.Background(), owner), store.org.Login, target.Id, organizationsmodel.OrgRoleMember)
 			require.ErrorIs(t, err, pkg.ErrConflict)
 			require.Equal(t, http.StatusConflict, pkg.ToREST(err))
 			require.Nil(t, invitation)
