@@ -152,25 +152,29 @@ jobs:
         if: env.PUSH_IMAGES == 'true' && (steps.existing.outputs.found != 'true' || github.ref == 'refs/heads/main')
         uses: cachix/install-nix-action@v31
 
-      # Keeps the store between runs, so only derivations whose inputs changed are
-      # rebuilt or substituted again. main warms the default-branch cache even when
-      # the image already exists; new PR refs can restore it. Older caches are purged.
+      # Nix store cache for judge image builds. Runs that build the image
+      # use it to rebuild only what changed in judge/.
+      # - Key: judge-nix-store-<hash of judge/>. On a miss, the newest cache with
+      #   that prefix is restored (a PR sees its own caches and main's).
+      # - main keeps a cache for the current judge/, so new PRs start warm. It
+      #   builds but never re-pushes an existing image (see "Warm main Nix cache").
+      # - After successful runs, older caches with this prefix on the same ref are
+      #   deleted; that needs actions: write on this job.
       - name: Cache Nix store
         id: nix-cache
         if: env.PUSH_IMAGES == 'true' && (steps.existing.outputs.found != 'true' || github.ref == 'refs/heads/main')
         uses: nix-community/cache-nix-action@v7
         with:
-          # New key so image-only caches are replaced with the copyTo closure too.
-          primary-key: nix-judge-v2-${{ hashFiles('judge/**') }}
-          restore-prefixes-first-match: nix-judge-
+          primary-key: judge-nix-store-${{ hashFiles('judge/**') }}
+          restore-prefixes-first-match: judge-nix-store-
           gc-max-store-size-linux: 8G
           purge: true
-          purge-prefixes: nix-judge-
+          purge-prefixes: judge-nix-store-
           purge-created: 0
           purge-primary-key: never
 
       # Realise the image and push tool for main's cache without replacing the
-      # tested tag deploy may be promoting concurrently. An exact hit needs no build.
+      # tested tag deploy may be promoting concurrently.
       - name: Warm main Nix cache
         if: env.PUSH_IMAGES == 'true' && github.ref == 'refs/heads/main' && steps.existing.outputs.found == 'true' && steps.nix-cache.outputs.hit-primary-key != 'true'
         run: |
