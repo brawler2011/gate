@@ -23,7 +23,7 @@ export const ROLE_LABELS: Record<ComponentRole, string> = {
   solution: "Решение",
 };
 
-export const LIBRARY_FOLDER = "libs";
+export const LIBRARY_FOLDER = "lib";
 export const STATEMENT_FOLDER = "statements";
 
 export type OpResult = {draft: ProblemDraft} | {error: string};

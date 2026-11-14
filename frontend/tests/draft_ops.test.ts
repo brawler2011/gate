@@ -2,9 +2,11 @@ import {describe, expect, test} from "bun:test";
 
 import {
   addComponent,
+  addLibraryFile,
   addSubtask,
   buildProblems,
   formatPoints,
+  libraryFiles,
   newGeneratedTest,
   moveTest,
   newManualTest,
@@ -77,6 +79,15 @@ describe("components", () => {
     const removed = must(removeComponent(draft, solution));
     expect(removed.main_solution_id).toBeNull();
     expect(removed.files["solutions/main.cpp"]).toBeUndefined();
+  });
+});
+
+describe("library", () => {
+  test("uses lib/, where templates and imports put shared files", () => {
+    const draft = {...emptyDraft(), files: {"lib/testlib.h": "", "checkers/checker.cpp": ""}};
+    expect(libraryFiles(draft)).toEqual(["lib/testlib.h"]);
+    const result = addLibraryFile(draft, "olymp.sty", "");
+    expect("draft" in result && libraryFiles(result.draft)).toEqual(["lib/olymp.sty", "lib/testlib.h"]);
   });
 });
 

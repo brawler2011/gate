@@ -261,7 +261,12 @@ func (uc *DraftUseCase) convertImport(result *draftImport, root string, plan *gf
 				}
 				d.Components = append(d.Components, model.DraftComponent{ID: cid, Role: role, Path: path, Language: language, Dependencies: deps})
 				if role == "generator" {
-					generatorIDs[strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))] = cid
+					// Tests name generators by stem, so the stem must identify one file.
+					name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+					if _, ok := generatorIDs[name]; ok {
+						return pkg.Wrap(pkg.ErrBadInput, nil, "several generators named "+name)
+					}
+					generatorIDs[name] = cid
 				}
 			}
 		}
