@@ -26,7 +26,7 @@ import (
 
 type ObjectStore interface {
 	DownloadFile(context.Context, string, string, *string) (io.ReadCloser, string, error)
-	UploadFile(context.Context, string, string, io.Reader, string) error
+	UploadFileWithSHA256(context.Context, string, string, io.Reader, string, string) error
 }
 type BuildRepository interface {
 	ClaimBuild(context.Context, time.Duration) (model.ProblemBuild, error)
@@ -162,7 +162,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 		return uuid.Nil, fmt.Errorf("open: %w", err)
 	}
 	defer f.Close()
-	if err := p.Store.UploadFile(ctx, p.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/octet-stream"); err != nil {
+	if err := p.Store.UploadFileWithSHA256(ctx, p.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/octet-stream", digest); err != nil {
 		return uuid.Nil, fail("upload", 0, "infrastructure", err)
 	}
 	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object.ID)
@@ -171,6 +171,25 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	}
 	return pid, nil
 }
+
+func objectReferences(d model.Draft, id uuid.UUID) string {
+	refs := []string{}
+	for _, test := range d.Tests {
+		if test.Input.ObjectID != nil && *test.Input.ObjectID == id {
+			refs = append(refs, fmt.Sprintf("test %d input", test.Ordinal))
+		}
+		if test.Answer.ObjectID != nil && *test.Answer.ObjectID == id {
+			refs = append(refs, fmt.Sprintf("test %d answer", test.Ordinal))
+		}
+	}
+	for _, asset := range d.Assets {
+		if asset.ObjectID == id {
+			refs = append(refs, fmt.Sprintf("asset %q", asset.Path))
+		}
+	}
+	return fmt.Sprintf("object %s (%s)", id, strings.Join(refs, ", "))
+}
+
 func (e *execution) materialize(ctx context.Context) error {
 	s := e.build.Snapshot
 	for path, text := range s.Draft.Files {
@@ -195,15 +214,15 @@ func (e *execution) materialize(ctx context.Context) error {
 		}
 		r, _, err := e.pipeline.Store.DownloadFile(ctx, e.pipeline.Bucket, o.Key, nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", objectReferences(s.Draft, o.ID), err)
 		}
 		digest, n, copyErr := e.dir.copy(".gate/objects/"+o.ID.String(), r, o.Size)
 		closeErr := r.Close()
 		if err := errors.Join(copyErr, closeErr); err != nil {
-			return err
+			return fmt.Errorf("%s: %w", objectReferences(s.Draft, o.ID), err)
 		}
 		if n != o.Size || digest != o.SHA256 {
-			return fmt.Errorf("snapshot object bytes differ from registry")
+			return fmt.Errorf("%s: snapshot object bytes differ from registry", objectReferences(s.Draft, o.ID))
 		}
 	}
 	for _, a := range s.Draft.Assets {
