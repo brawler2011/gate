@@ -7826,9 +7826,6 @@ type ProblemDraft struct {
 	TimeLimitMs    int64                   `json:"time_limit_ms"`
 	MemoryLimitMB  int64                   `json:"memory_limit_mb"`
 	MaxScore       NilFloat64              `json:"max_score"`
-	CheckerID      NilUUID                 `json:"checker_id"`
-	ValidatorID    NilUUID                 `json:"validator_id"`
-	InteractorID   NilUUID                 `json:"interactor_id"`
 	MainSolutionID NilUUID                 `json:"main_solution_id"`
 	Files          ProblemDraftFiles       `json:"files"`
 	Components     []ProblemDraftComponent `json:"components"`
@@ -7875,21 +7872,6 @@ func (s *ProblemDraft) GetMemoryLimitMB() int64 {
 // GetMaxScore returns the value of MaxScore.
 func (s *ProblemDraft) GetMaxScore() NilFloat64 {
 	return s.MaxScore
-}
-
-// GetCheckerID returns the value of CheckerID.
-func (s *ProblemDraft) GetCheckerID() NilUUID {
-	return s.CheckerID
-}
-
-// GetValidatorID returns the value of ValidatorID.
-func (s *ProblemDraft) GetValidatorID() NilUUID {
-	return s.ValidatorID
-}
-
-// GetInteractorID returns the value of InteractorID.
-func (s *ProblemDraft) GetInteractorID() NilUUID {
-	return s.InteractorID
 }
 
 // GetMainSolutionID returns the value of MainSolutionID.
@@ -7960,21 +7942,6 @@ func (s *ProblemDraft) SetMemoryLimitMB(val int64) {
 // SetMaxScore sets the value of MaxScore.
 func (s *ProblemDraft) SetMaxScore(val NilFloat64) {
 	s.MaxScore = val
-}
-
-// SetCheckerID sets the value of CheckerID.
-func (s *ProblemDraft) SetCheckerID(val NilUUID) {
-	s.CheckerID = val
-}
-
-// SetValidatorID sets the value of ValidatorID.
-func (s *ProblemDraft) SetValidatorID(val NilUUID) {
-	s.ValidatorID = val
-}
-
-// SetInteractorID sets the value of InteractorID.
-func (s *ProblemDraft) SetInteractorID(val NilUUID) {
-	s.InteractorID = val
 }
 
 // SetMainSolutionID sets the value of MainSolutionID.
@@ -8123,7 +8090,6 @@ type ProblemDraftComponent struct {
 	ID           uuid.UUID                         `json:"id"`
 	Role         ProblemDraftComponentRole         `json:"role"`
 	Path         string                            `json:"path"`
-	Language     string                            `json:"language"`
 	Dependencies ProblemDraftComponentDependencies `json:"dependencies"`
 }
 
@@ -8140,11 +8106,6 @@ func (s *ProblemDraftComponent) GetRole() ProblemDraftComponentRole {
 // GetPath returns the value of Path.
 func (s *ProblemDraftComponent) GetPath() string {
 	return s.Path
-}
-
-// GetLanguage returns the value of Language.
-func (s *ProblemDraftComponent) GetLanguage() string {
-	return s.Language
 }
 
 // GetDependencies returns the value of Dependencies.
@@ -8165,11 +8126,6 @@ func (s *ProblemDraftComponent) SetRole(val ProblemDraftComponentRole) {
 // SetPath sets the value of Path.
 func (s *ProblemDraftComponent) SetPath(val string) {
 	s.Path = val
-}
-
-// SetLanguage sets the value of Language.
-func (s *ProblemDraftComponent) SetLanguage(val string) {
-	s.Language = val
 }
 
 // SetDependencies sets the value of Dependencies.

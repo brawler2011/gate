@@ -1,8 +1,6 @@
 format_version: "1.0"
 title: "Interactive Guessing"
 type: "interactive"
-interactor: interactors/interactor.cpp
-checker: checkers/checker.cpp
 
 limits:
   time_ms: 2000

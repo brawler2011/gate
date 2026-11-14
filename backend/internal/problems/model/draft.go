@@ -3,6 +3,7 @@ package problemsmodel
 import (
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -24,9 +25,6 @@ type Draft struct {
 	TimeLimitMs    int               `json:"time_limit_ms"`
 	MemoryLimitMb  int               `json:"memory_limit_mb"`
 	MaxScore       *points.Value     `json:"max_score"`
-	CheckerID      *uuid.UUID        `json:"checker_id"`
-	ValidatorID    *uuid.UUID        `json:"validator_id"`
-	InteractorID   *uuid.UUID        `json:"interactor_id"`
 	MainSolutionID *uuid.UUID        `json:"main_solution_id"`
 	Files          map[string]string `json:"files"`
 	Components     []DraftComponent  `json:"components"`
@@ -39,7 +37,6 @@ type DraftComponent struct {
 	ID           uuid.UUID         `json:"id"`
 	Role         string            `json:"role"`
 	Path         string            `json:"path"`
-	Language     string            `json:"language"`
 	Dependencies map[string]string `json:"dependencies"`
 }
 
@@ -129,6 +126,41 @@ var componentFolders = map[string]string{
 	"checker": "checkers", "validator": "validators", "interactor": "interactors", "generator": "generators", "solution": "solutions",
 }
 
+// singletonRoles hold at most one component each; the role folder identifies it.
+var singletonRoles = map[string]bool{"checker": true, "validator": true, "interactor": true}
+
+// SingletonRole reports whether a draft holds at most one component of role.
+func SingletonRole(role string) bool { return singletonRoles[role] }
+
+// LanguageForPath returns the toolchain language of a source file, derived from
+// its extension, or "" for an unknown extension.
+func LanguageForPath(path string) string {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".cpp", ".cc", ".cxx":
+		return "cpp"
+	case ".py":
+		return "python"
+	case ".go":
+		return "go"
+	case ".java":
+		return "java"
+	}
+	return ""
+}
+
+// Language returns the language derived from the component source extension.
+func (c DraftComponent) Language() string { return LanguageForPath(c.Path) }
+
+// Component returns the only component of a singleton role, or nil.
+func (d *Draft) Component(role string) *DraftComponent {
+	for i := range d.Components {
+		if d.Components[i].Role == role {
+			return &d.Components[i]
+		}
+	}
+	return nil
+}
+
 // topFolder returns the first path element, or "" for a file in the root.
 func topFolder(path string) string {
 	folder, _, found := strings.Cut(path, "/")
@@ -214,8 +246,9 @@ func (d *Draft) Validate(q DraftQuotas, build bool) error {
 	}
 	components := make(map[uuid.UUID]DraftComponent)
 	sources := make(map[string]bool)
+	singletons := make(map[string]bool)
 	for _, c := range d.Components {
-		if c.ID == uuid.Nil || components[c.ID].ID != uuid.Nil || sources[c.Path] || !ValidDraftPath(c.Path) || c.Language == "" {
+		if c.ID == uuid.Nil || components[c.ID].ID != uuid.Nil || sources[c.Path] || !ValidDraftPath(c.Path) {
 			return fmt.Errorf("invalid or duplicate component")
 		}
 		if _, ok := componentFolders[c.Role]; !ok {
@@ -223,6 +256,15 @@ func (d *Draft) Validate(q DraftQuotas, build bool) error {
 		}
 		if ComponentRole(c.Path) != c.Role {
 			return fmt.Errorf("component %q is outside %s/", c.Path, componentFolders[c.Role])
+		}
+		if singletonRoles[c.Role] {
+			if singletons[c.Role] {
+				return fmt.Errorf("%s/ holds more than one %s", componentFolders[c.Role], c.Role)
+			}
+			singletons[c.Role] = true
+		}
+		if c.Language() == "" {
+			return fmt.Errorf("component %q has an unknown source extension", c.Path)
 		}
 		if _, ok := d.Files[c.Path]; !ok {
 			return fmt.Errorf("missing component source %q", c.Path)
@@ -260,17 +302,14 @@ func (d *Draft) Validate(q DraftQuotas, build bool) error {
 		}
 		return nil
 	}
-	for _, selection := range []struct {
-		id       *uuid.UUID
-		role     string
-		required bool
-	}{
-		{d.CheckerID, "checker", build && d.Type != "interactive"}, {d.ValidatorID, "validator", false},
-		{d.InteractorID, "interactor", build && d.Type == "interactive"}, {d.MainSolutionID, "solution", build && d.Type == "interactive"},
-	} {
-		if err := checkComponent(selection.id, selection.role, selection.required); err != nil {
-			return err
-		}
+	if build && d.Type != "interactive" && !singletons["checker"] {
+		return fmt.Errorf("checker is required")
+	}
+	if build && d.Type == "interactive" && !singletons["interactor"] {
+		return fmt.Errorf("interactor is required")
+	}
+	if err := checkComponent(d.MainSolutionID, "solution", build && d.Type == "interactive"); err != nil {
+		return err
 	}
 	groups := make(map[uuid.UUID]DraftSubtask)
 	orders := make(map[int]bool)

@@ -35,19 +35,6 @@ type draftImport struct {
 }
 
 func (i *draftImport) Close() { _ = os.RemoveAll(i.root) }
-func languageForPath(path string) string {
-	switch strings.ToLower(filepath.Ext(path)) {
-	case ".cpp", ".cc", ".cxx":
-		return "cpp"
-	case ".py":
-		return "python"
-	case ".go":
-		return "go"
-	case ".java":
-		return "java"
-	}
-	return ""
-}
 func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uuid.UUID, revision int64) (*draftImport, error) {
 	root, err := os.MkdirTemp(uc.TempDir, "import-")
 	if err != nil {
@@ -198,6 +185,7 @@ func (uc *DraftUseCase) convertImport(result *draftImport, root string, plan *gf
 	}
 	sort.Strings(names)
 	componentIDs := map[string]uuid.UUID{}
+	singletons := map[string]bool{}
 	generatorIDs := map[string]uuid.UUID{}
 	for _, path := range names {
 		role := model.ComponentRole(path)
@@ -220,12 +208,15 @@ func (uc *DraftUseCase) convertImport(result *draftImport, root string, plan *gf
 			if role != "" {
 				cid := uuid.New()
 				componentIDs[path] = cid
-				language := p.Sources[path].Compiler
-				if language == "" {
-					language = languageForPath(path)
+				if _, ok := uc.BuildOptions.Toolchain.Languages[model.LanguageForPath(path)]; !ok {
+					return pkg.Wrap(pkg.ErrBadInput, nil, "unsupported source language: "+path)
 				}
-				if _, ok := uc.BuildOptions.Toolchain.Languages[language]; !ok {
-					return pkg.Wrap(pkg.ErrBadInput, nil, "unsupported imported source language")
+				if model.SingletonRole(role) {
+					if singletons[role] {
+						folder, _, _ := strings.Cut(path, "/")
+						return pkg.Wrap(pkg.ErrBadInput, nil, "more than one "+role+" in "+folder+"/")
+					}
+					singletons[role] = true
 				}
 				deps := map[string]string{}
 				for destination, source := range p.Sources[path].DependencyMap {
@@ -244,7 +235,7 @@ func (uc *DraftUseCase) convertImport(result *draftImport, root string, plan *gf
 						}
 					}
 				}
-				d.Components = append(d.Components, model.DraftComponent{ID: cid, Role: role, Path: path, Language: language, Dependencies: deps})
+				d.Components = append(d.Components, model.DraftComponent{ID: cid, Role: role, Path: path, Dependencies: deps})
 				if role == "generator" {
 					// Tests name generators by stem, so the stem must identify one file.
 					name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
@@ -269,9 +260,6 @@ func (uc *DraftUseCase) convertImport(result *draftImport, root string, plan *gf
 		}
 		return &id
 	}
-	d.CheckerID = selection(p.Checker, "checkers")
-	d.ValidatorID = selection(p.Validator, "validators")
-	d.InteractorID = selection(p.Interactor, "interactors")
 	d.MainSolutionID = selection(p.Solutions["main"], "solutions")
 	if d.MainSolutionID == nil {
 		for _, path := range names {

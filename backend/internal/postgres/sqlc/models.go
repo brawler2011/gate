@@ -776,9 +776,6 @@ type ProblemDraft struct {
 	TimeLimitMs    int32         `json:"time_limit_ms"`
 	MemoryLimitMb  int32         `json:"memory_limit_mb"`
 	MaxScore       *points.Value `json:"max_score"`
-	CheckerID      *uuid.UUID    `json:"checker_id"`
-	ValidatorID    *uuid.UUID    `json:"validator_id"`
-	InteractorID   *uuid.UUID    `json:"interactor_id"`
 	MainSolutionID *uuid.UUID    `json:"main_solution_id"`
 }
 
@@ -793,7 +790,6 @@ type ProblemDraftComponent struct {
 	ID           uuid.UUID `json:"id"`
 	Role         string    `json:"role"`
 	Path         string    `json:"path"`
-	Language     string    `json:"language"`
 	Dependencies []byte    `json:"dependencies"`
 }
 

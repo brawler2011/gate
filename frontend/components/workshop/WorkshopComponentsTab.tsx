@@ -1,15 +1,25 @@
 "use client";
 
 import {Badge, Box, Button, Grid, Group, MultiSelect, NavLink, Select, Stack, Text, TextInput} from "@mantine/core";
-import {useQuery} from "@tanstack/react-query";
 import {useState} from "react";
 import {useSearchParams} from "react-router-dom";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
-import {api, unwrap} from "@/lib/api";
 
 import {DraftGate} from "./draft/DraftGate";
-import {addComponent, LIBRARY_FOLDER, libraryFiles, removeComponent, ROLE_LABELS, setFile, type ComponentRole} from "./draft/draftOps";
+import {
+  addComponent,
+  LANGUAGE_EXTENSIONS,
+  languageForPath,
+  LIBRARY_FOLDER,
+  libraryFiles,
+  removeComponent,
+  ROLE_LABELS,
+  setComponentLanguage,
+  setFile,
+  SINGLETON_ROLES,
+  type ComponentRole,
+} from "./draft/draftOps";
 import {SourceEditor} from "./draft/SourceEditor";
 import {componentTemplate} from "./draft/templates";
 import {useSaveDraft} from "./draft/useDraft";
@@ -17,31 +27,12 @@ import {useSaveDraft} from "./draft/useDraft";
 import type {ProblemDraft, ProblemDraftComponent} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
-type SelectedKey = "checker_id" | "validator_id" | "interactor_id" | "main_solution_id";
-
-const SELECTED_KEYS: Partial<Record<ComponentRole, SelectedKey>> = {
-  checker: "checker_id",
-  validator: "validator_id",
-  interactor: "interactor_id",
-  solution: "main_solution_id",
-};
-
-const SELECTED_LABELS: Partial<Record<ComponentRole, string>> = {
-  checker: "Используется",
-  validator: "Используется",
-  interactor: "Используется",
-  solution: "Главное",
-};
-
 const libraryName = (path: string): string => path.slice(LIBRARY_FOLDER.length + 1);
 
-const useLanguageOptions = () =>
-  useQuery({
-    queryKey: ["supported-languages"],
-    queryFn: () => unwrap(api.GET("/languages")),
-    staleTime: Infinity,
-    select: (data) => data.languages.map((language) => ({value: language.name, label: language.name})),
-  });
+const LANGUAGE_OPTIONS = Object.entries(LANGUAGE_EXTENSIONS).map(([language, extension]) => ({
+  value: language,
+  label: `${language} (${extension})`,
+}));
 
 type PanelProps = {
   draft: ProblemDraft;
@@ -51,14 +42,13 @@ type PanelProps = {
 
 const ComponentsPanel = ({draft, problemId, role}: PanelProps): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
-  const {data: languages = []} = useLanguageOptions();
   const [params, setParams] = useSearchParams();
   const [newName, setNewName] = useState("");
   const [newLanguage, setNewLanguage] = useState<string>("cpp");
 
   const components = draft.components.filter((c) => c.role === role);
   const selected = components.find((c) => c.id === params.get("component")) ?? components[0];
-  const selectedKey = SELECTED_KEYS[role];
+  const canCreate = !SINGLETON_ROLES.has(role) || components.length === 0;
   const libs = libraryFiles(draft);
 
   const open = (component: ProblemDraftComponent) => {
@@ -103,28 +93,42 @@ const ComponentsPanel = ({draft, problemId, role}: PanelProps): ReactNode => {
                 key={component.id}
                 active={component.id === selected?.id}
                 label={component.path.split("/").pop()}
-                description={component.language}
+                description={languageForPath(component.path)}
                 rightSection={
-                  selectedKey && draft[selectedKey] === component.id ? (
+                  role === "solution" && draft.main_solution_id === component.id ? (
                     <Badge size="xs" variant="light">
-                      {SELECTED_LABELS[role]}
+                      Главное
                     </Badge>
                   ) : undefined
                 }
                 onClick={() => open(component)}
               />
             ))}
-            <TextInput label="Новый файл" placeholder="main.cpp" value={newName} onChange={(e) => setNewName(e.currentTarget.value)} />
-            <Select
-              label="Язык"
-              data={languages.length > 0 ? languages : [{value: "cpp", label: "cpp"}]}
-              value={newLanguage}
-              allowDeselect={false}
-              onChange={(value) => setNewLanguage(value ?? "cpp")}
-            />
-            <Button variant="light" disabled={newName.trim() === ""} loading={isSaving} onClick={() => void handleCreate()}>
-              Создать
-            </Button>
+            {canCreate ? (
+              <>
+                <TextInput
+                  label="Новый файл"
+                  description="Имя без расширения; расширение задаёт язык"
+                  placeholder="main"
+                  value={newName}
+                  onChange={(e) => setNewName(e.currentTarget.value)}
+                />
+                <Select
+                  label="Язык"
+                  data={LANGUAGE_OPTIONS}
+                  value={newLanguage}
+                  allowDeselect={false}
+                  onChange={(value) => setNewLanguage(value ?? "cpp")}
+                />
+                <Button variant="light" disabled={newName.trim() === ""} loading={isSaving} onClick={() => void handleCreate()}>
+                  Создать
+                </Button>
+              </>
+            ) : (
+              <Text size="xs" c="dimmed">
+                У задачи может быть только один файл этой роли.
+              </Text>
+            )}
           </Stack>
         </SectionPaper>
       </Grid.Col>
@@ -135,19 +139,22 @@ const ComponentsPanel = ({draft, problemId, role}: PanelProps): ReactNode => {
               <Group align="flex-end" wrap="wrap">
                 <Select
                   label="Язык"
-                  data={languages.length > 0 ? languages : [{value: selected.language, label: selected.language}]}
-                  value={selected.language}
+                  description="Меняет расширение файла"
+                  data={LANGUAGE_OPTIONS}
+                  value={languageForPath(selected.path) || null}
                   allowDeselect={false}
-                  onChange={(value) => value && void updateComponent(selected.id, {language: value})}
-                  w={160}
+                  onChange={(value) =>
+                    value && void save((current) => setComponentLanguage(current, selected.id, value))
+                  }
+                  w={200}
                 />
-                {selectedKey && draft[selectedKey] !== selected.id && (
+                {role === "solution" && draft.main_solution_id !== selected.id && (
                   <Button
                     variant="light"
                     loading={isSaving}
-                    onClick={() => void save((current) => ({...current, [selectedKey]: selected.id}))}
+                    onClick={() => void save((current) => ({...current, main_solution_id: selected.id}))}
                   >
-                    {role === "solution" ? "Сделать главным" : "Использовать"}
+                    Сделать главным
                   </Button>
                 )}
               </Group>

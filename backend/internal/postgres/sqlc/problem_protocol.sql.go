@@ -364,8 +364,8 @@ func (q *Queries) InsertDraftAsset(ctx context.Context, arg InsertDraftAssetPara
 }
 
 const insertDraftComponent = `-- name: InsertDraftComponent :exec
-INSERT INTO problem_draft_components(problem_id,id,role,path,language,dependencies)
-VALUES($1,$2,$3,$4,$5,$6::jsonb)
+INSERT INTO problem_draft_components(problem_id,id,role,path,dependencies)
+VALUES($1,$2,$3,$4,$5::jsonb)
 `
 
 type InsertDraftComponentParams struct {
@@ -373,7 +373,6 @@ type InsertDraftComponentParams struct {
 	ID           uuid.UUID `json:"id"`
 	Role         string    `json:"role"`
 	Path         string    `json:"path"`
-	Language     string    `json:"language"`
 	Dependencies []byte    `json:"dependencies"`
 }
 
@@ -383,7 +382,6 @@ func (q *Queries) InsertDraftComponent(ctx context.Context, arg InsertDraftCompo
 		arg.ID,
 		arg.Role,
 		arg.Path,
-		arg.Language,
 		arg.Dependencies,
 	)
 	return err
@@ -1511,7 +1509,7 @@ func (q *Queries) TakeOverOperation(ctx context.Context, arg TakeOverOperationPa
 
 const updateProblemDraftRow = `-- name: UpdateProblemDraftRow :exec
 UPDATE problem_drafts SET updated_at=clock_timestamp(),revision=$2,title=$3,short_name=$4,type=$5,time_limit_ms=$6,memory_limit_mb=$7,max_score=$8,
- checker_id=$9,validator_id=$10,interactor_id=$11,main_solution_id=$12 WHERE problem_id=$1
+ main_solution_id=$9 WHERE problem_id=$1
 `
 
 type UpdateProblemDraftRowParams struct {
@@ -1523,9 +1521,6 @@ type UpdateProblemDraftRowParams struct {
 	TimeLimitMs    int32         `json:"time_limit_ms"`
 	MemoryLimitMb  int32         `json:"memory_limit_mb"`
 	MaxScore       *points.Value `json:"max_score"`
-	CheckerID      *uuid.UUID    `json:"checker_id"`
-	ValidatorID    *uuid.UUID    `json:"validator_id"`
-	InteractorID   *uuid.UUID    `json:"interactor_id"`
 	MainSolutionID *uuid.UUID    `json:"main_solution_id"`
 }
 
@@ -1539,9 +1534,6 @@ func (q *Queries) UpdateProblemDraftRow(ctx context.Context, arg UpdateProblemDr
 		arg.TimeLimitMs,
 		arg.MemoryLimitMb,
 		arg.MaxScore,
-		arg.CheckerID,
-		arg.ValidatorID,
-		arg.InteractorID,
 		arg.MainSolutionID,
 	)
 	return err

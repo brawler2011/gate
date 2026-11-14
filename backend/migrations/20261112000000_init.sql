@@ -414,9 +414,6 @@ CREATE TABLE problem_drafts (
     time_limit_ms integer NOT NULL,
     memory_limit_mb integer NOT NULL,
     max_score numeric(12,2),
-    checker_id uuid,
-    validator_id uuid,
-    interactor_id uuid,
     main_solution_id uuid,
     CONSTRAINT problem_drafts_check CHECK (((type = 'scoring'::text) = (max_score IS NOT NULL))),
     CONSTRAINT problem_drafts_max_score_check CHECK ((max_score >= (0)::numeric)),
@@ -446,16 +443,16 @@ CREATE TABLE problem_draft_components (
     id uuid NOT NULL,
     role text NOT NULL,
     path text NOT NULL,
-    language text NOT NULL,
     dependencies jsonb NOT NULL,
     CONSTRAINT problem_draft_components_dependencies_check CHECK ((jsonb_typeof(dependencies) = 'object'::text)),
-    CONSTRAINT problem_draft_components_language_check CHECK ((language <> ''::text)),
     CONSTRAINT problem_draft_components_role_check CHECK ((role = ANY (ARRAY['checker'::text, 'validator'::text, 'interactor'::text, 'generator'::text, 'solution'::text]))),
     CONSTRAINT problem_draft_components_pkey PRIMARY KEY (problem_id, id),
     CONSTRAINT problem_draft_components_problem_id_id_role_key UNIQUE (problem_id, id, role),
     CONSTRAINT problem_draft_components_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problem_drafts(problem_id) ON DELETE CASCADE,
     CONSTRAINT problem_draft_components_problem_id_path_fkey FOREIGN KEY (problem_id, path) REFERENCES problem_draft_files(problem_id, path) DEFERRABLE INITIALLY DEFERRED
 );
+-- A draft holds at most one checker, validator and interactor.
+CREATE UNIQUE INDEX problem_draft_components_singleton_role ON problem_draft_components (problem_id, role) WHERE role = ANY (ARRAY['checker'::text, 'validator'::text, 'interactor'::text]);
 
 CREATE TABLE problem_draft_assets (
     problem_id uuid NOT NULL,
@@ -527,10 +524,7 @@ CREATE INDEX problem_draft_tests_answer ON problem_draft_tests USING btree (answ
 CREATE INDEX problem_draft_tests_input ON problem_draft_tests USING btree (input_object_id);
 
 -- Cyclic references, added once both tables exist.
-ALTER TABLE problem_drafts ADD CONSTRAINT problem_drafts_problem_id_checker_id_fkey FOREIGN KEY (problem_id, checker_id) REFERENCES problem_draft_components(problem_id, id) DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE problem_drafts ADD CONSTRAINT problem_drafts_problem_id_interactor_id_fkey FOREIGN KEY (problem_id, interactor_id) REFERENCES problem_draft_components(problem_id, id) DEFERRABLE INITIALLY DEFERRED;
 ALTER TABLE problem_drafts ADD CONSTRAINT problem_drafts_problem_id_main_solution_id_fkey FOREIGN KEY (problem_id, main_solution_id) REFERENCES problem_draft_components(problem_id, id) DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE problem_drafts ADD CONSTRAINT problem_drafts_problem_id_validator_id_fkey FOREIGN KEY (problem_id, validator_id) REFERENCES problem_draft_components(problem_id, id) DEFERRABLE INITIALLY DEFERRED;
 
 CREATE VIEW problem_catalog AS
  SELECT p.id,

@@ -15517,18 +15517,6 @@ func (s *ProblemDraft) encodeFields(e *jx.Encoder) {
 		s.MaxScore.Encode(e)
 	}
 	{
-		e.FieldStart("checker_id")
-		s.CheckerID.Encode(e)
-	}
-	{
-		e.FieldStart("validator_id")
-		s.ValidatorID.Encode(e)
-	}
-	{
-		e.FieldStart("interactor_id")
-		s.InteractorID.Encode(e)
-	}
-	{
 		e.FieldStart("main_solution_id")
 		s.MainSolutionID.Encode(e)
 	}
@@ -15570,7 +15558,7 @@ func (s *ProblemDraft) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfProblemDraft = [17]string{
+var jsonFieldsNameOfProblemDraft = [14]string{
 	0:  "problem_id",
 	1:  "revision",
 	2:  "title",
@@ -15579,15 +15567,12 @@ var jsonFieldsNameOfProblemDraft = [17]string{
 	5:  "time_limit_ms",
 	6:  "memory_limit_mb",
 	7:  "max_score",
-	8:  "checker_id",
-	9:  "validator_id",
-	10: "interactor_id",
-	11: "main_solution_id",
-	12: "files",
-	13: "components",
-	14: "subtasks",
-	15: "tests",
-	16: "assets",
+	8:  "main_solution_id",
+	9:  "files",
+	10: "components",
+	11: "subtasks",
+	12: "tests",
+	13: "assets",
 }
 
 // Decode decodes ProblemDraft from json.
@@ -15595,7 +15580,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode ProblemDraft to nil")
 	}
-	var requiredBitSet [3]uint8
+	var requiredBitSet [2]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -15691,38 +15676,8 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"max_score\"")
 			}
-		case "checker_id":
-			requiredBitSet[1] |= 1 << 0
-			if err := func() error {
-				if err := s.CheckerID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"checker_id\"")
-			}
-		case "validator_id":
-			requiredBitSet[1] |= 1 << 1
-			if err := func() error {
-				if err := s.ValidatorID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"validator_id\"")
-			}
-		case "interactor_id":
-			requiredBitSet[1] |= 1 << 2
-			if err := func() error {
-				if err := s.InteractorID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"interactor_id\"")
-			}
 		case "main_solution_id":
-			requiredBitSet[1] |= 1 << 3
+			requiredBitSet[1] |= 1 << 0
 			if err := func() error {
 				if err := s.MainSolutionID.Decode(d); err != nil {
 					return err
@@ -15732,7 +15687,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"main_solution_id\"")
 			}
 		case "files":
-			requiredBitSet[1] |= 1 << 4
+			requiredBitSet[1] |= 1 << 1
 			if err := func() error {
 				if err := s.Files.Decode(d); err != nil {
 					return err
@@ -15742,7 +15697,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"files\"")
 			}
 		case "components":
-			requiredBitSet[1] |= 1 << 5
+			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
 				s.Components = make([]ProblemDraftComponent, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -15760,7 +15715,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"components\"")
 			}
 		case "subtasks":
-			requiredBitSet[1] |= 1 << 6
+			requiredBitSet[1] |= 1 << 3
 			if err := func() error {
 				s.Subtasks = make([]ProblemDraftSubtask, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -15778,7 +15733,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"subtasks\"")
 			}
 		case "tests":
-			requiredBitSet[1] |= 1 << 7
+			requiredBitSet[1] |= 1 << 4
 			if err := func() error {
 				s.Tests = make([]ProblemDraftTest, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -15796,7 +15751,7 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"tests\"")
 			}
 		case "assets":
-			requiredBitSet[2] |= 1 << 0
+			requiredBitSet[1] |= 1 << 5
 			if err := func() error {
 				s.Assets = make([]ProblemDraftAsset, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -15822,10 +15777,9 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [3]uint8{
+	for i, mask := range [2]uint8{
 		0b11111111,
-		0b11111111,
-		0b00000001,
+		0b00111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -16172,21 +16126,16 @@ func (s *ProblemDraftComponent) encodeFields(e *jx.Encoder) {
 		e.Str(s.Path)
 	}
 	{
-		e.FieldStart("language")
-		e.Str(s.Language)
-	}
-	{
 		e.FieldStart("dependencies")
 		s.Dependencies.Encode(e)
 	}
 }
 
-var jsonFieldsNameOfProblemDraftComponent = [5]string{
+var jsonFieldsNameOfProblemDraftComponent = [4]string{
 	0: "id",
 	1: "role",
 	2: "path",
-	3: "language",
-	4: "dependencies",
+	3: "dependencies",
 }
 
 // Decode decodes ProblemDraftComponent from json.
@@ -16232,20 +16181,8 @@ func (s *ProblemDraftComponent) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"path\"")
 			}
-		case "language":
-			requiredBitSet[0] |= 1 << 3
-			if err := func() error {
-				v, err := d.Str()
-				s.Language = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"language\"")
-			}
 		case "dependencies":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				if err := s.Dependencies.Decode(d); err != nil {
 					return err
@@ -16264,7 +16201,7 @@ func (s *ProblemDraftComponent) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00011111,
+		0b00001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
