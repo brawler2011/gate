@@ -611,8 +611,10 @@ CREATE TABLE problem_packages (
     build_id uuid NOT NULL,
     object_id uuid NOT NULL,
     revision bigint NOT NULL,
+    samples jsonb NOT NULL,
     CONSTRAINT problem_packages_package_hash_check CHECK ((length((package_hash)::text) = 64)),
     CONSTRAINT problem_packages_revision_check CHECK ((revision > 0)),
+    CONSTRAINT problem_packages_samples_check CHECK ((jsonb_typeof(samples) = 'array'::text)),
     CONSTRAINT problem_packages_build_id_key UNIQUE (build_id),
     CONSTRAINT problem_packages_pkey PRIMARY KEY (id),
     CONSTRAINT problem_packages_build_id_fkey FOREIGN KEY (build_id) REFERENCES problem_builds(id) ON DELETE RESTRICT,
@@ -625,6 +627,19 @@ CREATE INDEX problem_packages_object ON problem_packages USING btree (object_id)
 CREATE INDEX problem_packages_organization_id_idx ON problem_packages USING btree (organization_id);
 CREATE INDEX problem_packages_package_hash_idx ON problem_packages USING btree (package_hash);
 CREATE INDEX problem_packages_problem_id_idx ON problem_packages USING btree (problem_id);
+
+-- Statement assets of a package reference the draft's stored objects, so
+-- serving an image never opens the package archive.
+CREATE TABLE problem_package_assets (
+    package_id uuid NOT NULL,
+    path text NOT NULL,
+    object_id uuid NOT NULL,
+    CONSTRAINT problem_package_assets_path_check CHECK (valid_draft_path(path)),
+    CONSTRAINT problem_package_assets_pkey PRIMARY KEY (package_id, path),
+    CONSTRAINT problem_package_assets_object_id_fkey FOREIGN KEY (object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
+    CONSTRAINT problem_package_assets_package_id_fkey FOREIGN KEY (package_id) REFERENCES problem_packages(id) ON DELETE CASCADE
+);
+CREATE INDEX problem_package_assets_object ON problem_package_assets USING btree (object_id);
 
 -- +goose StatementBegin
 CREATE FUNCTION check_build_publication() RETURNS trigger
@@ -746,6 +761,7 @@ CREATE CONSTRAINT TRIGGER problem_build_inputs_snapshot AFTER INSERT OR UPDATE O
 CREATE TRIGGER problem_build_input_guard BEFORE DELETE OR UPDATE ON problem_build_objects FOR EACH ROW EXECUTE FUNCTION guard_build_input();
 CREATE CONSTRAINT TRIGGER problem_build_inputs_refs AFTER INSERT OR DELETE OR UPDATE ON problem_build_objects DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_build_inputs();
 CREATE TRIGGER package_immutable BEFORE UPDATE ON problem_packages FOR EACH ROW EXECUTE FUNCTION guard_package_immutable();
+CREATE TRIGGER package_asset_immutable BEFORE UPDATE ON problem_package_assets FOR EACH ROW EXECUTE FUNCTION guard_package_immutable();
 CREATE TRIGGER package_metadata BEFORE INSERT ON problem_packages FOR EACH ROW EXECUTE FUNCTION capture_package_metadata();
 CREATE CONSTRAINT TRIGGER package_publication AFTER INSERT ON problem_packages DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_build_publication();
 
@@ -1309,6 +1325,7 @@ CREATE FUNCTION stored_object_has_references(oid uuid) RETURNS boolean
  OR EXISTS(SELECT 1 FROM problem_draft_assets WHERE object_id=oid)
  OR EXISTS(SELECT 1 FROM problem_build_objects WHERE object_id=oid)
  OR EXISTS(SELECT 1 FROM problem_packages WHERE object_id=oid)
+ OR EXISTS(SELECT 1 FROM problem_package_assets WHERE object_id=oid)
  OR EXISTS(SELECT 1 FROM request_idempotency WHERE upload_id=oid)
  OR EXISTS(SELECT 1 FROM request_upload_objects WHERE object_id=oid);
 $$;
@@ -1340,6 +1357,11 @@ BEGIN
  ELSIF TG_TABLE_NAME='problem_packages' THEN
   IF TG_OP<>'INSERT' THEN old_ids=ARRAY[OLD.object_id]; END IF;
   IF TG_OP<>'DELETE' THEN new_ids=ARRAY[NEW.object_id];owner_org=NEW.organization_id; END IF;
+ ELSIF TG_TABLE_NAME='problem_package_assets' THEN
+  IF TG_OP<>'INSERT' THEN old_ids=ARRAY[OLD.object_id]; END IF;
+  IF TG_OP<>'DELETE' THEN
+   new_ids=ARRAY[NEW.object_id]; SELECT organization_id INTO owner_org FROM problem_packages WHERE id=NEW.package_id;
+  END IF;
  ELSIF TG_TABLE_NAME='request_upload_objects' THEN
   IF TG_OP<>'INSERT' THEN old_ids=ARRAY[OLD.object_id]; END IF;
   IF TG_OP<>'DELETE' THEN new_ids=ARRAY[NEW.object_id];owner_org=NEW.organization_id;is_output=true; END IF;
@@ -1372,3 +1394,4 @@ CREATE TRIGGER draft_asset_object_refs AFTER INSERT OR DELETE OR UPDATE ON probl
 CREATE TRIGGER draft_test_object_refs AFTER INSERT OR DELETE OR UPDATE ON problem_draft_tests FOR EACH ROW EXECUTE FUNCTION maintain_stored_object_references();
 CREATE TRIGGER build_object_refs AFTER INSERT OR DELETE OR UPDATE ON problem_build_objects FOR EACH ROW EXECUTE FUNCTION maintain_stored_object_references();
 CREATE TRIGGER package_object_refs AFTER INSERT OR DELETE OR UPDATE ON problem_packages FOR EACH ROW EXECUTE FUNCTION maintain_stored_object_references();
+CREATE TRIGGER package_asset_object_refs AFTER INSERT OR DELETE OR UPDATE ON problem_package_assets FOR EACH ROW EXECUTE FUNCTION maintain_stored_object_references();

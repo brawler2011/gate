@@ -6702,8 +6702,8 @@ type GetContestProblemAssetParams struct {
 	ContestLogin string
 	// UUID of the problem.
 	ProblemID uuid.UUID
-	// Path of the statement resource in the problem package, e.g. `assets/pic.png`.
-	Path string
+	// SHA-256 of the image, as listed in the problem's `assets`.
+	SHA256 string
 }
 
 func unpackGetContestProblemAssetParams(packed middleware.Parameters) (params GetContestProblemAssetParams) {
@@ -6730,16 +6730,15 @@ func unpackGetContestProblemAssetParams(packed middleware.Parameters) (params Ge
 	}
 	{
 		key := middleware.ParameterKey{
-			Name: "path",
-			In:   "query",
+			Name: "sha256",
+			In:   "path",
 		}
-		params.Path = packed[key].(string)
+		params.SHA256 = packed[key].(string)
 	}
 	return params
 }
 
-func decodeGetContestProblemAssetParams(args [3]string, argsEscaped bool, r *http.Request) (params GetContestProblemAssetParams, _ error) {
-	q := uri.NewQueryDecoder(r.URL.Query())
+func decodeGetContestProblemAssetParams(args [4]string, argsEscaped bool, r *http.Request) (params GetContestProblemAssetParams, _ error) {
 	// Decode path: org_login.
 	if err := func() error {
 		param := args[0]
@@ -6875,16 +6874,25 @@ func decodeGetContestProblemAssetParams(args [3]string, argsEscaped bool, r *htt
 			Err:  err,
 		}
 	}
-	// Decode query: path.
+	// Decode path: sha256.
 	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "path",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
+		param := args[3]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[3])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
 		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "sha256",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
 
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+			if err := func() error {
 				val, err := d.DecodeValue()
 				if err != nil {
 					return err
@@ -6895,19 +6903,39 @@ func decodeGetContestProblemAssetParams(args [3]string, argsEscaped bool, r *htt
 					return err
 				}
 
-				params.Path = c
+				params.SHA256 = c
 				return nil
-			}); err != nil {
+			}(); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     0,
+					MinLengthSet:  false,
+					MaxLength:     0,
+					MaxLengthSet:  false,
+					Email:         false,
+					Hostname:      false,
+					Regex:         regexMap["^[0-9a-f]{64}$"],
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.SHA256)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		} else {
-			return err
+			return validate.ErrFieldRequired
 		}
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "path",
-			In:   "query",
+			Name: "sha256",
+			In:   "path",
 			Err:  err,
 		}
 	}

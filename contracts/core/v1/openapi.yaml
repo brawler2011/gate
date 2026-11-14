@@ -667,26 +667,31 @@ paths:
       responses:
         "200":
           description: OK
-  /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets:
+  /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets/{sha256}:
     get:
       summary: "Get a contest problem statement image"
+      description: "Serves a statement image of the problem package the contest currently uses, addressed by content hash, so the response never changes."
       tags: [contests]
       operationId: GetContestProblemAsset
       parameters:
         - $ref: "#/components/parameters/OrgLoginPath"
         - $ref: "#/components/parameters/ContestLoginPath"
         - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
-        - name: path
-          description: "Path of the statement resource in the problem package, e.g. `assets/pic.png`."
-          in: query
+        - name: sha256
+          description: "SHA-256 of the image, as listed in the problem's `assets`."
+          in: path
           required: true
           schema:
             type: string
+            pattern: "^[0-9a-f]{64}$"
       responses:
         "200":
           description: Statement image from the problem package used by the contest
           headers:
             Cache-Control:
+              schema:
+                type: string
+            ETag:
               schema:
                 type: string
             Content-Security-Policy:
@@ -3533,6 +3538,8 @@ components:
         samples:
         - input: 1 2
           output: '3'
+        assets:
+          assets/pic.png: 0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f
       type: object
       required:
         - capabilities
@@ -3722,6 +3729,8 @@ components:
           samples:
           - input: 1 2
             output: '3'
+          assets:
+            assets/pic.png: 0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f
       type: object
       required:
         - problem
@@ -3763,6 +3772,7 @@ components:
         - created_at
         - updated_at
         - samples
+        - assets
       properties:
         capabilities:
           type: array
@@ -3807,6 +3817,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ProblemSampleModel"
+        assets:
+          description: "SHA-256 of each statement asset by package path, e.g. `assets/pic.png`; images are served by hash from the problem's assets endpoint."
+          type: object
+          additionalProperties:
+            type: string
     GetContestProblemResponseModel:
       description: "Result of get contest problem."
       example:

@@ -25,7 +25,7 @@ func (q *Queries) CountProblemPackages(ctx context.Context, problemID uuid.UUID)
 
 const getProblemPackageByID = `-- name: GetProblemPackageByID :one
 
-SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, time_limit_ms, memory_limit_mb, build_id, object_id, revision FROM problem_packages WHERE id = $1
+SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, time_limit_ms, memory_limit_mb, build_id, object_id, revision, samples FROM problem_packages WHERE id = $1
 `
 
 // Problem Packages queries
@@ -45,12 +45,13 @@ func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (Prob
 		&i.BuildID,
 		&i.ObjectID,
 		&i.Revision,
+		&i.Samples,
 	)
 	return i, err
 }
 
 const getReadyPackage = `-- name: GetReadyPackage :one
-SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, time_limit_ms, memory_limit_mb, build_id, object_id, revision FROM problem_packages
+SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, time_limit_ms, memory_limit_mb, build_id, object_id, revision, samples FROM problem_packages
 WHERE problem_id = $1
 ORDER BY revision DESC,created_at DESC,id DESC
 LIMIT 1
@@ -72,12 +73,13 @@ func (q *Queries) GetReadyPackage(ctx context.Context, problemID uuid.UUID) (Pro
 		&i.BuildID,
 		&i.ObjectID,
 		&i.Revision,
+		&i.Samples,
 	)
 	return i, err
 }
 
 const listProblemPackages = `-- name: ListProblemPackages :many
-SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, time_limit_ms, memory_limit_mb, build_id, object_id, revision FROM problem_packages
+SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, time_limit_ms, memory_limit_mb, build_id, object_id, revision, samples FROM problem_packages
 WHERE problem_id = $1
 ORDER BY revision DESC,created_at DESC,id DESC
 LIMIT $3::int OFFSET $2::bigint
@@ -111,6 +113,7 @@ func (q *Queries) ListProblemPackages(ctx context.Context, arg ListProblemPackag
 			&i.BuildID,
 			&i.ObjectID,
 			&i.Revision,
+			&i.Samples,
 		); err != nil {
 			return nil, err
 		}

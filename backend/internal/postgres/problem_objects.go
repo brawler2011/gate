@@ -90,7 +90,16 @@ func (r *ProblemDraftsRepo) RegisterBuildOutput(ctx context.Context, id, token u
 
 // PublishBuild is called only after the trusted worker confirmed upload bytes.
 // The single transaction hands ownership from the attempt to Package.
-func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token, oid uuid.UUID) (uuid.UUID, error) {
+// Statement samples and asset references are stored with the Package so that
+// statement reads never open its archive.
+func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token, oid uuid.UUID, samples []model.Sample) (uuid.UUID, error) {
+	if samples == nil {
+		samples = []model.Sample{}
+	}
+	samplesJSON, err := json.Marshal(samples)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("marshal samples: %w", err)
+	}
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
 		return uuid.Nil, err
@@ -115,7 +124,20 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token, oid uui
 	if !active {
 		return uuid.Nil, pkg.ErrConflict
 	}
-	objects, err := lockObjects(ctx, tx, []uuid.UUID{oid})
+	var snapshot model.BuildSnapshot
+	if err := json.Unmarshal(b.Snapshot, &snapshot); err != nil {
+		return uuid.Nil, fmt.Errorf("decode build snapshot: %w", err)
+	}
+	ids := []uuid.UUID{oid}
+	for _, a := range snapshot.Draft.Assets {
+		ids = append(ids, a.ObjectID)
+	}
+	// Inserting the Package bumps the access revision; take it before the
+	// asset objects, which a template clone may lock after it.
+	if err := q.LockAccessRevision(ctx); err != nil {
+		return uuid.Nil, fmt.Errorf("lock access revision: %w", err)
+	}
+	objects, err := lockObjects(ctx, tx, ids)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -135,9 +157,12 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token, oid uui
 	}
 	pid := uuid.New()
 	if err := q.InsertProblemPackage(ctx, sqlc.InsertProblemPackageParams{
-		ID: pid, ProblemID: b.ProblemID, OrganizationID: b.OrganizationID, BuildID: id, ObjectID: oid, PackageHash: o.Sha256, Revision: b.Revision,
+		ID: pid, ProblemID: b.ProblemID, OrganizationID: b.OrganizationID, BuildID: id, ObjectID: oid, PackageHash: o.Sha256, Revision: b.Revision, Samples: samplesJSON,
 	}); err != nil {
 		return uuid.Nil, fmt.Errorf("insert package: %w", err)
+	}
+	if err := q.InsertPackageAssets(ctx, sqlc.InsertPackageAssetsParams{PackageID: pid, BuildID: id}); err != nil {
+		return uuid.Nil, fmt.Errorf("insert package assets: %w", err)
 	}
 	if err := q.DeleteBuildOutput(ctx, sqlc.DeleteBuildOutputParams{BuildID: id, ObjectID: oid, AttemptToken: &token}); err != nil {
 		return uuid.Nil, fmt.Errorf("release output hold: %w", err)
@@ -231,4 +256,38 @@ func (r *ProblemDraftsRepo) GetPackageDescriptor(ctx context.Context, id uuid.UU
 	}
 	p.Object, err = r.GetObject(ctx, row.ObjectID)
 	return p, err
+}
+
+func (r *ProblemDraftsRepo) GetPackageStatement(ctx context.Context, id uuid.UUID) (model.PackageStatement, error) {
+	row, err := sqlc.New(r.pool).ReadPackageStatement(ctx, id)
+	if err != nil {
+		return model.PackageStatement{}, HandlePgErr(err)
+	}
+	p := model.PackageStatement{ProblemID: row.ProblemID}
+	var snapshot model.BuildSnapshot
+	if err := json.Unmarshal(row.Snapshot, &snapshot); err != nil {
+		return p, fmt.Errorf("decode package snapshot: %w", err)
+	}
+	p.Draft = snapshot.Draft
+	if err := json.Unmarshal(row.Samples, &p.Samples); err != nil {
+		return p, fmt.Errorf("decode package samples: %w", err)
+	}
+	if err := json.Unmarshal(row.Assets, &p.Assets); err != nil {
+		return p, fmt.Errorf("decode package assets: %w", err)
+	}
+	return p, nil
+}
+
+// FindPackageAssets lists the statement assets of a Package with the given
+// content hash.
+func (r *ProblemDraftsRepo) FindPackageAssets(ctx context.Context, id uuid.UUID, sha256 string) ([]model.PackageAsset, error) {
+	rows, err := sqlc.New(r.pool).ListPackageAssetsBySHA256(ctx, sqlc.ListPackageAssetsBySHA256Params{PackageID: id, Sha256: sha256})
+	if err != nil {
+		return nil, fmt.Errorf("list package assets: %w", err)
+	}
+	assets := make([]model.PackageAsset, 0, len(rows))
+	for _, row := range rows {
+		assets = append(assets, model.PackageAsset{Path: row.Path, Key: row.Key})
+	}
+	return assets, nil
 }

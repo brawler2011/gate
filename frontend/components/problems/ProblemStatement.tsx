@@ -19,7 +19,7 @@ const packagePath = (src: string): string => {
 };
 
 const renderSafeImage = (
-  assetsUrl?: string
+  assetUrl?: AssetUrl
 ): ((props: React.ImgHTMLAttributes<HTMLImageElement> & { node?: unknown }) => ReactNode) => {
   const SafeImage = ({
     node: _node,
@@ -34,7 +34,7 @@ const renderSafeImage = (
     let width: string | undefined;
     let height: string | undefined;
     let isCentered = false;
-    let cleanSrc = src;
+    let cleanSrc: string | undefined = src;
 
     const hashIndex = src.indexOf("#");
     if (hashIndex !== -1) {
@@ -75,13 +75,14 @@ const renderSafeImage = (
     }
 
     if (
-      assetsUrl &&
+      assetUrl &&
       !cleanSrc.startsWith("http://") &&
       !cleanSrc.startsWith("https://") &&
       !cleanSrc.startsWith("data:") &&
       !cleanSrc.startsWith("/")
     ) {
-      cleanSrc = `${assetsUrl}?path=${encodeURIComponent(packagePath(cleanSrc))}`;
+      // An image missing from the package shows its alt text.
+      cleanSrc = assetUrl(packagePath(cleanSrc));
     }
 
     return (
@@ -102,16 +103,18 @@ const renderSafeImage = (
   return SafeImage;
 };
 
+/** Resolves a statement asset path in the package to its URL. */
+export type AssetUrl = (path: string) => string | undefined;
+
 export interface ProblemStatementProps {
   value: string;
-  /** Endpoint serving the problem's statement images by package path. */
-  assetsUrl?: string;
+  assetUrl?: AssetUrl;
   className?: string;
 }
 
 export const ProblemStatement = ({
   value,
-  assetsUrl,
+  assetUrl,
   className = "content",
 }: ProblemStatementProps): ReactNode => {
   return (
@@ -120,7 +123,7 @@ export const ProblemStatement = ({
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
         components={{
-          img: renderSafeImage(assetsUrl),
+          img: renderSafeImage(assetUrl),
         }}
       >
         {value}

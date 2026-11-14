@@ -82,8 +82,25 @@ SELECT (EXISTS(SELECT 1 FROM problem_build_objects WHERE build_id=sqlc.arg(build
 UPDATE stored_objects SET state='available',unreferenced_at=NULL WHERE id=$1;
 
 -- name: InsertProblemPackage :exec
-INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision)
-VALUES($1,$2,$3,$4,$5,$6,$7);
+INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision,samples)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8);
+
+-- name: InsertPackageAssets :exec
+INSERT INTO problem_package_assets(package_id,path,object_id)
+SELECT sqlc.arg(package_id)::uuid,a->>'path',(a->>'object_id')::uuid
+FROM problem_builds b,jsonb_array_elements(b.snapshot->'draft'->'assets') a WHERE b.id=sqlc.arg(build_id);
+
+-- name: ListPackageAssetObjectIDs :many
+SELECT object_id FROM problem_package_assets WHERE package_id=$1;
+
+-- name: ReadPackageStatement :one
+SELECT p.problem_id,p.samples,b.snapshot,
+ COALESCE((SELECT jsonb_object_agg(a.path,o.sha256) FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id WHERE a.package_id=p.id),'{}')::jsonb AS assets
+FROM problem_packages p JOIN problem_builds b ON b.id=p.build_id WHERE p.id=$1;
+
+-- name: ListPackageAssetsBySHA256 :many
+SELECT a.path,o.key FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id
+WHERE a.package_id=$1 AND o.sha256=$2 AND o.state='available' ORDER BY a.path;
 
 -- name: DeleteBuildOutput :exec
 DELETE FROM problem_build_objects WHERE build_id=$1 AND object_id=$2 AND role='output' AND attempt_token=$3;
@@ -280,3 +297,8 @@ INSERT INTO problem_draft_assets(problem_id,path,object_id)VALUES($1,$2,$3);
 
 -- name: RefreshObjectReferences :exec
 UPDATE stored_objects SET unreferenced_at=CASE WHEN stored_object_has_references(id) THEN NULL ELSE COALESCE(unreferenced_at,clock_timestamp()) END WHERE id=$1;
+
+-- name: LockAccessRevision :exec
+-- Writers of access-relevant rows take this lock before stored objects, as
+-- problem creation does, so their object locks cannot form a cycle.
+SELECT 1 FROM access_revision FOR UPDATE;

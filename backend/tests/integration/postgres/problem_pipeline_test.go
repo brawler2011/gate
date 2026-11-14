@@ -131,7 +131,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	require.Equal(t, "Initial", title)
 	requireStoredObject(t, ctx, store, "objects", key, size, digest)
 	// The second finalization resolves the original success, never a second Package.
-	again, err := repo.PublishBuild(ctx, b.ID, *b.LeaseToken, uuid.New())
+	again, err := repo.PublishBuild(ctx, b.ID, *b.LeaseToken, uuid.New(), nil)
 	require.NoError(t, err)
 	require.Equal(t, pid, again)
 	var outputs int

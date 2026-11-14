@@ -11,8 +11,12 @@ import (
 	ht "github.com/ogen-go/ogen/http"
 	"github.com/ogen-go/ogen/middleware"
 	"github.com/ogen-go/ogen/ogenerrors"
+	"github.com/ogen-go/ogen/ogenregex"
 )
 
+var regexMap = map[string]ogenregex.Regexp{
+	"^[0-9a-f]{64}$": ogenregex.MustCompile("^[0-9a-f]{64}$"),
+}
 var ratMap = map[string]*big.Rat{
 	"1/100": func() *big.Rat {
 		r, ok := new(big.Rat).SetString("1/100")

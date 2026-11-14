@@ -160,6 +160,7 @@ func GetContestProblemResponseDTO(contestProblem contestsmodel.ContestProblem, p
 			CreatedAt:    problem.CreatedAt,
 			UpdatedAt:    problem.UpdatedAt,
 			Samples:      samples,
+			Assets:       map[string]string{},
 		},
 	}
 }

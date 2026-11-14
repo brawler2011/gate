@@ -9,7 +9,7 @@ import {ProblemCopyableBlock} from "./ProblemCopyableBlock";
 import {ProblemHeader} from "./ProblemHeader";
 import {ProblemLimits} from "./ProblemLimits";
 import {ProblemSamples} from "./ProblemSamples";
-import {ProblemStatement} from "./ProblemStatement";
+import {type AssetUrl, ProblemStatement} from "./ProblemStatement";
 
 import "./Problem.css";
 
@@ -41,8 +41,8 @@ export type ProblemProps = {
   letter?: string;
   isManager?: boolean;
   hideStatements?: boolean;
-  /** Endpoint serving the problem's statement images by package path. */
-  assetsUrl?: string;
+  /** Resolves statement image paths to URLs. */
+  assetUrl?: AssetUrl;
 };
 
 const ProblemComponent = ({
@@ -52,7 +52,7 @@ const ProblemComponent = ({
   isManager,
   orgLogin,
   hideStatements,
-  assetsUrl,
+  assetUrl,
 }: ProblemProps): ReactNode => {
   const activeProblemId = problemId || problem.id || problem.problem_id;
   const org = orgLogin || problem.organization_login;
@@ -113,20 +113,20 @@ const ProblemComponent = ({
       ) : (
         <>
           {problem.legend && (
-            <ProblemStatement value={problem.legend} assetsUrl={assetsUrl} />
+            <ProblemStatement value={problem.legend} assetUrl={assetUrl} />
           )}
 
           {problem.input_format && (
             <Stack gap="xs">
               <Title order={3}>Входные данные</Title>
-              <ProblemStatement value={problem.input_format} assetsUrl={assetsUrl} />
+              <ProblemStatement value={problem.input_format} assetUrl={assetUrl} />
             </Stack>
           )}
 
           {problem.output_format && (
             <Stack gap="xs">
               <Title order={3}>Выходные данные</Title>
-              <ProblemStatement value={problem.output_format} assetsUrl={assetsUrl} />
+              <ProblemStatement value={problem.output_format} assetUrl={assetUrl} />
             </Stack>
           )}
 
@@ -137,7 +137,7 @@ const ProblemComponent = ({
           {problem.notes && (
             <Stack gap="xs">
               <Title order={3}>Примечание</Title>
-              <ProblemStatement value={problem.notes} assetsUrl={assetsUrl} />
+              <ProblemStatement value={problem.notes} assetUrl={assetUrl} />
             </Stack>
           )}
         </>

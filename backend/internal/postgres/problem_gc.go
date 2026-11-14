@@ -95,13 +95,23 @@ func (r *ProblemDraftsRepo) prunePackage(ctx context.Context, id uuid.UUID, rete
 	if !eligible {
 		return nil
 	}
-	if _, err := lockObjects(ctx, tx, []uuid.UUID{objectID}); err != nil {
+	assetIDs, err := q.ListPackageAssetObjectIDs(ctx, id)
+	if err != nil {
+		return fmt.Errorf("list package assets: %w", err)
+	}
+	objectIDs := append([]uuid.UUID{objectID}, assetIDs...)
+	// Deleting the Package bumps the access revision; take it before the
+	// asset objects, which a template clone may lock after it.
+	if err := q.LockAccessRevision(ctx); err != nil {
+		return fmt.Errorf("lock access revision: %w", err)
+	}
+	if _, err := lockObjects(ctx, tx, objectIDs); err != nil {
 		return err
 	}
 	if err := q.DeleteProblemPackage(ctx, id); err != nil {
 		return fmt.Errorf("delete package: %w", err)
 	}
-	if err := refreshObjectReferences(ctx, tx, []uuid.UUID{objectID}); err != nil {
+	if err := refreshObjectReferences(ctx, tx, objectIDs); err != nil {
 		return err
 	}
 	return commitTx(ctx, tx)

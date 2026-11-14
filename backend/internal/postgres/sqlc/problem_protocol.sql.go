@@ -509,6 +509,22 @@ func (q *Queries) InsertOperationUpload(ctx context.Context, arg InsertOperation
 	return err
 }
 
+const insertPackageAssets = `-- name: InsertPackageAssets :exec
+INSERT INTO problem_package_assets(package_id,path,object_id)
+SELECT $1::uuid,a->>'path',(a->>'object_id')::uuid
+FROM problem_builds b,jsonb_array_elements(b.snapshot->'draft'->'assets') a WHERE b.id=$2
+`
+
+type InsertPackageAssetsParams struct {
+	PackageID uuid.UUID `json:"package_id"`
+	BuildID   uuid.UUID `json:"build_id"`
+}
+
+func (q *Queries) InsertPackageAssets(ctx context.Context, arg InsertPackageAssetsParams) error {
+	_, err := q.db.Exec(ctx, insertPackageAssets, arg.PackageID, arg.BuildID)
+	return err
+}
+
 const insertPackageObject = `-- name: InsertPackageObject :exec
 INSERT INTO stored_objects(id,organization_id,purpose,key,sha256,size,state,upload_deadline,unreferenced_at)
 VALUES($1,$2,'package',$3,$4,$5,'uploading',
@@ -572,8 +588,8 @@ func (q *Queries) InsertProblemBuild(ctx context.Context, arg InsertProblemBuild
 }
 
 const insertProblemPackage = `-- name: InsertProblemPackage :exec
-INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision)
-VALUES($1,$2,$3,$4,$5,$6,$7)
+INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision,samples)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8)
 `
 
 type InsertProblemPackageParams struct {
@@ -584,6 +600,7 @@ type InsertProblemPackageParams struct {
 	ObjectID       uuid.UUID `json:"object_id"`
 	PackageHash    string    `json:"package_hash"`
 	Revision       int64     `json:"revision"`
+	Samples        []byte    `json:"samples"`
 }
 
 func (q *Queries) InsertProblemPackage(ctx context.Context, arg InsertProblemPackageParams) error {
@@ -595,6 +612,7 @@ func (q *Queries) InsertProblemPackage(ctx context.Context, arg InsertProblemPac
 		arg.ObjectID,
 		arg.PackageHash,
 		arg.Revision,
+		arg.Samples,
 	)
 	return err
 }
@@ -835,6 +853,65 @@ func (q *Queries) ListOperationUploads(ctx context.Context, arg ListOperationUpl
 	return items, nil
 }
 
+const listPackageAssetObjectIDs = `-- name: ListPackageAssetObjectIDs :many
+SELECT object_id FROM problem_package_assets WHERE package_id=$1
+`
+
+func (q *Queries) ListPackageAssetObjectIDs(ctx context.Context, packageID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listPackageAssetObjectIDs, packageID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var object_id uuid.UUID
+		if err := rows.Scan(&object_id); err != nil {
+			return nil, err
+		}
+		items = append(items, object_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPackageAssetsBySHA256 = `-- name: ListPackageAssetsBySHA256 :many
+SELECT a.path,o.key FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id
+WHERE a.package_id=$1 AND o.sha256=$2 AND o.state='available' ORDER BY a.path
+`
+
+type ListPackageAssetsBySHA256Params struct {
+	PackageID uuid.UUID `json:"package_id"`
+	Sha256    string    `json:"sha256"`
+}
+
+type ListPackageAssetsBySHA256Row struct {
+	Path string `json:"path"`
+	Key  string `json:"key"`
+}
+
+func (q *Queries) ListPackageAssetsBySHA256(ctx context.Context, arg ListPackageAssetsBySHA256Params) ([]ListPackageAssetsBySHA256Row, error) {
+	rows, err := q.db.Query(ctx, listPackageAssetsBySHA256, arg.PackageID, arg.Sha256)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPackageAssetsBySHA256Row{}
+	for rows.Next() {
+		var i ListPackageAssetsBySHA256Row
+		if err := rows.Scan(&i.Path, &i.Key); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPackageIDsPastRetention = `-- name: ListPackageIDsPastRetention :many
 SELECT id FROM problem_packages
 WHERE created_at<=clock_timestamp()-$1::bigint*interval '1 millisecond' ORDER BY id LIMIT 100
@@ -909,6 +986,17 @@ func (q *Queries) ListRecoverableBuildIDs(ctx context.Context) ([]uuid.UUID, err
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockAccessRevision = `-- name: LockAccessRevision :exec
+SELECT 1 FROM access_revision FOR UPDATE
+`
+
+// Writers of access-relevant rows take this lock before stored objects, as
+// problem creation does, so their object locks cannot form a cycle.
+func (q *Queries) LockAccessRevision(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, lockAccessRevision)
+	return err
 }
 
 const lockOperation = `-- name: LockOperation :one
@@ -1244,6 +1332,31 @@ func (q *Queries) ReadPackageDescriptor(ctx context.Context, id uuid.UUID) (Read
 		&i.ProblemID,
 		&i.ObjectID,
 		&i.Snapshot,
+	)
+	return i, err
+}
+
+const readPackageStatement = `-- name: ReadPackageStatement :one
+SELECT p.problem_id,p.samples,b.snapshot,
+ COALESCE((SELECT jsonb_object_agg(a.path,o.sha256) FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id WHERE a.package_id=p.id),'{}')::jsonb AS assets
+FROM problem_packages p JOIN problem_builds b ON b.id=p.build_id WHERE p.id=$1
+`
+
+type ReadPackageStatementRow struct {
+	ProblemID uuid.UUID `json:"problem_id"`
+	Samples   []byte    `json:"samples"`
+	Snapshot  []byte    `json:"snapshot"`
+	Assets    []byte    `json:"assets"`
+}
+
+func (q *Queries) ReadPackageStatement(ctx context.Context, id uuid.UUID) (ReadPackageStatementRow, error) {
+	row := q.db.QueryRow(ctx, readPackageStatement, id)
+	var i ReadPackageStatementRow
+	err := row.Scan(
+		&i.ProblemID,
+		&i.Samples,
+		&i.Snapshot,
+		&i.Assets,
 	)
 	return i, err
 }

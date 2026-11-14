@@ -176,10 +176,10 @@ func TestHideStatementsAndPDFBooklet(t *testing.T) {
 
 type hiddenStatementSource struct{}
 
-func (hiddenStatementSource) ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) (*problemsmodel.Statement, []problemsmodel.Sample) {
-	return nil, nil
+func (hiddenStatementSource) ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) problemsmodel.StatementContent {
+	return problemsmodel.StatementContent{}
 }
 
-func (hiddenStatementSource) OpenFile(context.Context, uuid.UUID, string) (io.ReadCloser, error) {
-	return nil, pkg.ErrNotFound
+func (hiddenStatementSource) OpenImage(context.Context, uuid.UUID, string) (io.ReadCloser, string, error) {
+	return nil, "", pkg.ErrNotFound
 }

@@ -4,8 +4,6 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"mime"
-	"path/filepath"
 	"strings"
 
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
@@ -26,6 +24,8 @@ type ContestDetails struct {
 type ContestProblemDetails struct {
 	Link contestsmodel.ContestProblem
 	problemsmodel.ProblemDetails
+	// Assets maps statement asset paths to the content hashes that address them.
+	Assets map[string]string
 }
 type ContestDetailsStore interface {
 	GetContestByOrgLoginAndContestLogin(context.Context, string, string) (contestsmodel.Contest, error)
@@ -33,8 +33,8 @@ type ContestDetailsStore interface {
 	GetContestProblems(context.Context, uuid.UUID) ([]contestsmodel.ContestProblem, error)
 }
 type StatementSource interface {
-	ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) (*problemsmodel.Statement, []problemsmodel.Sample)
-	OpenFile(context.Context, uuid.UUID, string) (io.ReadCloser, error)
+	ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) problemsmodel.StatementContent
+	OpenImage(context.Context, uuid.UUID, string) (io.ReadCloser, string, error)
 }
 type BookletCompiler interface {
 	CompilePDF(context.Context, string) ([]byte, error)
@@ -116,21 +116,18 @@ func (r *DetailsReader) GetContestProblemDetails(ctx context.Context, org, login
 		return nil, err
 	}
 	problem := problemsmodel.Problem{ID: link.ProblemID, Title: link.Title, ShortName: link.ShortName, TimeLimitMs: link.TimeLimitMs, MemoryLimitMb: link.MemoryLimitMb, CreatedAt: link.CreatedAt, UpdatedAt: link.UpdatedAt}
-	result := &ContestProblemDetails{Link: link, ProblemDetails: problemsmodel.ProblemDetails{Problem: problem}}
+	result := &ContestProblemDetails{Link: link, ProblemDetails: problemsmodel.ProblemDetails{Problem: problem}, Assets: map[string]string{}}
 	if statementVisible {
-		result.Statement, result.Samples = r.statements.ReadStatement(ctx, id, link.PackageID, "")
+		content := r.statements.ReadStatement(ctx, id, link.PackageID, "")
+		result.Statement, result.Samples, result.Assets = content.Statement, content.Samples, content.Assets
 	}
 	return result, nil
 }
 
-// OpenProblemAsset opens a statement image from the package the contest uses
-// for the problem and returns it with its content type. It is readable exactly
-// when the statement is.
-func (r *DetailsReader) OpenProblemAsset(ctx context.Context, org, login string, id uuid.UUID, path string) (io.ReadCloser, string, error) {
-	contentType := mime.TypeByExtension(strings.ToLower(filepath.Ext(path)))
-	if !strings.HasPrefix(contentType, "image/") {
-		return nil, "", pkg.ErrNotFound
-	}
+// OpenProblemAsset opens a statement image by content hash from the package
+// the contest currently uses for the problem and returns it with its content
+// type. It is readable exactly when the statement is.
+func (r *DetailsReader) OpenProblemAsset(ctx context.Context, org, login string, id uuid.UUID, sha256 string) (io.ReadCloser, string, error) {
 	link, statementVisible, err := r.contestProblem(ctx, org, login, id)
 	if err != nil {
 		return nil, "", err
@@ -138,11 +135,7 @@ func (r *DetailsReader) OpenProblemAsset(ctx context.Context, org, login string,
 	if !statementVisible {
 		return nil, "", pkg.Wrap(pkg.NoPermission, nil, "statements are hidden for this contest")
 	}
-	file, err := r.statements.OpenFile(ctx, link.PackageID, path)
-	if err != nil {
-		return nil, "", err
-	}
-	return file, contentType, nil
+	return r.statements.OpenImage(ctx, link.PackageID, sha256)
 }
 func (r *DetailsReader) ReadBooklet(ctx context.Context, orgLogin, contestLogin, language string) ([]byte, error) {
 
@@ -178,7 +171,8 @@ func (r *DetailsReader) ReadBooklet(ctx context.Context, orgLogin, contestLogin,
 
 	var problemDatas []booklet.ProblemData
 	for _, cp := range problems {
-		statement, samples := r.statements.ReadStatement(ctx, cp.ProblemID, cp.PackageID, lang)
+		content := r.statements.ReadStatement(ctx, cp.ProblemID, cp.PackageID, lang)
+		statement, samples := content.Statement, content.Samples
 
 		title := strings.TrimSpace(cp.Title)
 		if statement != nil && strings.TrimSpace(statement.Title) != "" {

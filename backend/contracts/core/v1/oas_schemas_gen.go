@@ -1853,6 +1853,9 @@ type ContestProblemModel struct {
 	CreatedAt    time.Time            `json:"created_at"`
 	UpdatedAt    time.Time            `json:"updated_at"`
 	Samples      []ProblemSampleModel `json:"samples"`
+	// SHA-256 of each statement asset by package path, e.g. `assets/pic.png`; images are served by hash
+	// from the problem's assets endpoint.
+	Assets ContestProblemModelAssets `json:"assets"`
 }
 
 // GetCapabilities returns the value of Capabilities.
@@ -1925,6 +1928,11 @@ func (s *ContestProblemModel) GetSamples() []ProblemSampleModel {
 	return s.Samples
 }
 
+// GetAssets returns the value of Assets.
+func (s *ContestProblemModel) GetAssets() ContestProblemModelAssets {
+	return s.Assets
+}
+
 // SetCapabilities sets the value of Capabilities.
 func (s *ContestProblemModel) SetCapabilities(val []string) {
 	s.Capabilities = val
@@ -1993,6 +2001,24 @@ func (s *ContestProblemModel) SetUpdatedAt(val time.Time) {
 // SetSamples sets the value of Samples.
 func (s *ContestProblemModel) SetSamples(val []ProblemSampleModel) {
 	s.Samples = val
+}
+
+// SetAssets sets the value of Assets.
+func (s *ContestProblemModel) SetAssets(val ContestProblemModelAssets) {
+	s.Assets = val
+}
+
+// SHA-256 of each statement asset by package path, e.g. `assets/pic.png`; images are served by hash
+// from the problem's assets endpoint.
+type ContestProblemModelAssets map[string]string
+
+func (s *ContestProblemModelAssets) init() ContestProblemModelAssets {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
 }
 
 // Contest problem reorder item data.
@@ -3176,6 +3202,7 @@ type GetContestProblemAssetOKHeaders struct {
 	CacheControl          OptString
 	ContentSecurityPolicy OptString
 	ContentType           string
+	ETag                  OptString
 	Response              GetContestProblemAssetOK
 }
 
@@ -3192,6 +3219,11 @@ func (s *GetContestProblemAssetOKHeaders) GetContentSecurityPolicy() OptString {
 // GetContentType returns the value of ContentType.
 func (s *GetContestProblemAssetOKHeaders) GetContentType() string {
 	return s.ContentType
+}
+
+// GetETag returns the value of ETag.
+func (s *GetContestProblemAssetOKHeaders) GetETag() OptString {
+	return s.ETag
 }
 
 // GetResponse returns the value of Response.
@@ -3212,6 +3244,11 @@ func (s *GetContestProblemAssetOKHeaders) SetContentSecurityPolicy(val OptString
 // SetContentType sets the value of ContentType.
 func (s *GetContestProblemAssetOKHeaders) SetContentType(val string) {
 	s.ContentType = val
+}
+
+// SetETag sets the value of ETag.
+func (s *GetContestProblemAssetOKHeaders) SetETag(val OptString) {
+	s.ETag = val
 }
 
 // SetResponse sets the value of Response.

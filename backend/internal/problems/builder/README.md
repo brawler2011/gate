@@ -74,7 +74,12 @@ require `BadDigest`, and forbid archive downloads during successful retries.
 
 `PublishBuild` checks attempt ownership and lease, then atomically changes the
 output object to available, inserts the package with the build's revision and
-metadata, releases the output hold, and marks the build successful. Commit failure
+metadata, releases the output hold, and marks the build successful. The same
+transaction stores the statement-facing content outside the archive: sample
+inputs and answers, taken from the materialized tests, as `problem_packages.samples`,
+and one `problem_package_assets` row per statement asset that references the
+draft's stored object. Statement reads and image requests never open the archive,
+and asset objects stay referenced until the package is pruned. Commit failure
 rolls these changes back; an ambiguous commit is resolved by looking up the durable
 package. Retries and late workers cannot splice in a newer draft or publish an
 unowned output. Failed uploads remain under the existing retention/GC protocol.

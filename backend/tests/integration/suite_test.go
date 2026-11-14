@@ -169,7 +169,7 @@ func (s *IntegrationTestSuite) initApp() {
 	// Problem objects live in a real S3-compatible store, as in production.
 	objectStore, bucket := newSeaweedBackedS3Storage(s.T())
 	s.objectStore, s.bucket, s.problemDrafts = objectStore, bucket, problemDrafts
-	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: bucket, TempDir: diskTempDir(s.T()), MaxArchiveBytes: 1 << 30, MaxEntries: 1000}
+	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: bucket}
 	draftUC := &problems.DraftUseCase{DraftQuotas: quotas, Organizations: s.organizationsRepo, Templates: packagesRepo, PackageContent: packageContent, Repo: problemDrafts, Problems: s.problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: bucket, TempDir: diskTempDir(s.T()), UploadTTL: time.Minute, ObjectBytes: 32 << 20, BuildOptions: testBuildOptions(s.T())}
 	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool), s.organizationsRepo, permissionsUC, problemDrafts)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Permissions: permissionsUC}

@@ -855,6 +855,13 @@ type ProblemPackage struct {
 	BuildID        uuid.UUID `json:"build_id"`
 	ObjectID       uuid.UUID `json:"object_id"`
 	Revision       int64     `json:"revision"`
+	Samples        []byte    `json:"samples"`
+}
+
+type ProblemPackageAsset struct {
+	PackageID uuid.UUID `json:"package_id"`
+	Path      string    `json:"path"`
+	ObjectID  uuid.UUID `json:"object_id"`
 }
 
 type ProblemTeam struct {
