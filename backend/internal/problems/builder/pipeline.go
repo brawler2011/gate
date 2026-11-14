@@ -94,7 +94,7 @@ type execution struct {
 
 func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID, error) {
 	s := b.Snapshot
-	if s.SchemaVersion != model.DraftSnapshotVersion || s.Toolchain.Digest != p.Environment.Digest || s.Toolchain.Architecture != p.Environment.Architecture || s.Toolchain.ABI != p.Environment.ABI {
+	if s.Toolchain.Digest != p.Environment.Digest || s.Toolchain.Architecture != p.Environment.Architecture || s.Toolchain.ABI != p.Environment.ABI {
 		return uuid.Nil, fail("environment", 0, "infrastructure", fmt.Errorf("pinned toolchain is unavailable"))
 	}
 	if s.Limits.DiskBytes <= 0 || s.Limits.FileCount <= 0 || s.Limits.ObjectBytes <= 0 || s.Limits.TestOutputBytes <= 0 {

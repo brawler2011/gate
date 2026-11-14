@@ -553,9 +553,9 @@ func (q *Queries) InsertPackageObject(ctx context.Context, arg InsertPackageObje
 }
 
 const insertProblemBuild = `-- name: InsertProblemBuild :exec
-INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,schema_version,toolchain_digest,state,max_attempts,deadline)
-VALUES($1,$2,$3,$4,$5::jsonb,$6,
- $7,'queued',$8,clock_timestamp()+$9::bigint*interval '1 millisecond')
+INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,toolchain_digest,state,max_attempts,deadline)
+VALUES($1,$2,$3,$4,$5::jsonb,
+ $6,'queued',$7,clock_timestamp()+$8::bigint*interval '1 millisecond')
 `
 
 type InsertProblemBuildParams struct {
@@ -564,7 +564,6 @@ type InsertProblemBuildParams struct {
 	OrganizationID  uuid.UUID `json:"organization_id"`
 	Revision        int64     `json:"revision"`
 	Snapshot        []byte    `json:"snapshot"`
-	SchemaVersion   int32     `json:"schema_version"`
 	ToolchainDigest string    `json:"toolchain_digest"`
 	MaxAttempts     int32     `json:"max_attempts"`
 	DurationMs      int64     `json:"duration_ms"`
@@ -577,7 +576,6 @@ func (q *Queries) InsertProblemBuild(ctx context.Context, arg InsertProblemBuild
 		arg.OrganizationID,
 		arg.Revision,
 		arg.Snapshot,
-		arg.SchemaVersion,
 		arg.ToolchainDigest,
 		arg.MaxAttempts,
 		arg.DurationMs,

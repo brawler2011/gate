@@ -731,7 +731,6 @@ type ProblemBuild struct {
 	OrganizationID  uuid.UUID  `json:"organization_id"`
 	Revision        int64      `json:"revision"`
 	Snapshot        []byte     `json:"snapshot"`
-	SchemaVersion   int32      `json:"schema_version"`
 	ToolchainDigest string     `json:"toolchain_digest"`
 	State           string     `json:"state"`
 	LeaseToken      *uuid.UUID `json:"lease_token"`

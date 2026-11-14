@@ -77,9 +77,6 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 		if err := json.Unmarshal(data, &snapshot); err != nil {
 			return nil, fmt.Errorf("unmarshal: %w", err)
 		}
-		if snapshot.SchemaVersion != model.DraftSnapshotVersion {
-			return nil, pkg.ErrBadInput
-		}
 		result.draft = snapshot.Draft
 		result.draft.ProblemID = id
 		result.draft.Revision = revision

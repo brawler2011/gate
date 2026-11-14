@@ -28,7 +28,7 @@ func (q *Queries) InsertProblemDraft(ctx context.Context, arg InsertProblemDraft
 }
 
 const lockProblemBuild = `-- name: LockProblemBuild :one
-SELECT id, problem_id, organization_id, revision, snapshot, schema_version, toolchain_digest, state, lease_token, lease_deadline, attempt, max_attempts, deadline, diagnostic, created_at, finished_at FROM problem_builds WHERE id=$1 FOR UPDATE
+SELECT id, problem_id, organization_id, revision, snapshot, toolchain_digest, state, lease_token, lease_deadline, attempt, max_attempts, deadline, diagnostic, created_at, finished_at FROM problem_builds WHERE id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockProblemBuild(ctx context.Context, id uuid.UUID) (ProblemBuild, error) {
@@ -40,7 +40,6 @@ func (q *Queries) LockProblemBuild(ctx context.Context, id uuid.UUID) (ProblemBu
 		&i.OrganizationID,
 		&i.Revision,
 		&i.Snapshot,
-		&i.SchemaVersion,
 		&i.ToolchainDigest,
 		&i.State,
 		&i.LeaseToken,
@@ -101,7 +100,7 @@ func (q *Queries) NextProblemBuild(ctx context.Context) (uuid.UUID, error) {
 }
 
 const readProblemBuild = `-- name: ReadProblemBuild :one
-SELECT id, problem_id, organization_id, revision, snapshot, schema_version, toolchain_digest, state, lease_token, lease_deadline, attempt, max_attempts, deadline, diagnostic, created_at, finished_at FROM problem_builds WHERE id=$1
+SELECT id, problem_id, organization_id, revision, snapshot, toolchain_digest, state, lease_token, lease_deadline, attempt, max_attempts, deadline, diagnostic, created_at, finished_at FROM problem_builds WHERE id=$1
 `
 
 func (q *Queries) ReadProblemBuild(ctx context.Context, id uuid.UUID) (ProblemBuild, error) {
@@ -113,7 +112,6 @@ func (q *Queries) ReadProblemBuild(ctx context.Context, id uuid.UUID) (ProblemBu
 		&i.OrganizationID,
 		&i.Revision,
 		&i.Snapshot,
-		&i.SchemaVersion,
 		&i.ToolchainDigest,
 		&i.State,
 		&i.LeaseToken,
