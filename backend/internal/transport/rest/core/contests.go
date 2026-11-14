@@ -478,8 +478,10 @@ func (h *CoreServer) GetContestProblemAsset(ctx context.Context, params corev1.G
 		return nil, err
 	}
 	return &corev1.GetContestProblemAssetOKHeaders{
-		// The URL names the content, so the response never changes.
-		CacheControl:          corev1.NewOptString("public, max-age=31536000, immutable"),
+		// The URL names the content, so the response never changes. Only the
+		// viewer may cache it: a shared cache would keep serving it after the
+		// statement stops being visible.
+		CacheControl:          corev1.NewOptString("private, max-age=31536000, immutable"),
 		ETag:                  corev1.NewOptString(`"` + params.SHA256 + `"`),
 		ContentSecurityPolicy: corev1.NewOptString(statementAssetPolicy),
 		ContentType:           contentType,
