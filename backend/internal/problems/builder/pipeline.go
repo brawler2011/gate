@@ -2,6 +2,8 @@ package builder
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -165,12 +167,52 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := p.Store.UploadFile(ctx, p.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/octet-stream"); err != nil {
 		return uuid.Nil, fail("upload", 0, "infrastructure", err)
 	}
+	// A successful PUT alone does not prove that the stored archive matches the
+	// validated tree. Verify the bytes before the database makes it ready.
+	if err := p.verifyOutput(ctx, object); err != nil {
+		return uuid.Nil, fail("verify-upload", 0, "infrastructure", err)
+	}
 	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object.ID)
 	if err != nil {
 		return uuid.Nil, fail("publish", 0, "infrastructure", err)
 	}
 	return pid, nil
 }
+
+func (p *Pipeline) verifyOutput(ctx context.Context, object model.StoredObject) error {
+	r, _, err := p.Store.DownloadFile(ctx, p.Bucket, object.Key, nil)
+	if err != nil {
+		return fmt.Errorf("read package object %s: %w", object.ID, err)
+	}
+	h := sha256.New()
+	n, copyErr := io.Copy(h, io.LimitReader(r, object.Size+1))
+	if err := errors.Join(copyErr, r.Close()); err != nil {
+		return fmt.Errorf("verify package object %s: %w", object.ID, err)
+	}
+	if n != object.Size || hex.EncodeToString(h.Sum(nil)) != object.SHA256 {
+		return fmt.Errorf("package object %s: uploaded bytes differ from validated archive", object.ID)
+	}
+	return nil
+}
+
+func objectReferences(d model.Draft, id uuid.UUID) string {
+	refs := []string{}
+	for _, test := range d.Tests {
+		if test.Input.ObjectID != nil && *test.Input.ObjectID == id {
+			refs = append(refs, fmt.Sprintf("test %d input", test.Ordinal))
+		}
+		if test.Answer.ObjectID != nil && *test.Answer.ObjectID == id {
+			refs = append(refs, fmt.Sprintf("test %d answer", test.Ordinal))
+		}
+	}
+	for _, asset := range d.Assets {
+		if asset.ObjectID == id {
+			refs = append(refs, fmt.Sprintf("asset %q", asset.Path))
+		}
+	}
+	return fmt.Sprintf("object %s (%s)", id, strings.Join(refs, ", "))
+}
+
 func (e *execution) materialize(ctx context.Context) error {
 	s := e.build.Snapshot
 	for path, text := range s.Draft.Files {
@@ -195,15 +237,15 @@ func (e *execution) materialize(ctx context.Context) error {
 		}
 		r, _, err := e.pipeline.Store.DownloadFile(ctx, e.pipeline.Bucket, o.Key, nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", objectReferences(s.Draft, o.ID), err)
 		}
 		digest, n, copyErr := e.dir.copy(".gate/objects/"+o.ID.String(), r, o.Size)
 		closeErr := r.Close()
 		if err := errors.Join(copyErr, closeErr); err != nil {
-			return err
+			return fmt.Errorf("%s: %w", objectReferences(s.Draft, o.ID), err)
 		}
 		if n != o.Size || digest != o.SHA256 {
-			return fmt.Errorf("snapshot object bytes differ from registry")
+			return fmt.Errorf("%s: snapshot object bytes differ from registry", objectReferences(s.Draft, o.ID))
 		}
 	}
 	for _, a := range s.Draft.Assets {
