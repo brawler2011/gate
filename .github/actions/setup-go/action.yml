@@ -16,6 +16,6 @@ runs:
         path: |
           ~/go/pkg/mod
           ~/.cache/go-build
-        key: ${{ runner.os }}-go-${{ github.job }}-${{ hashFiles('mise.toml', '**/go.sum', '**/*.go', '**/*.sql', 'contracts/**', 'ogen.yaml', 'sqlc.yaml', '.golangci.yml') }}
+        key: ${{ runner.os }}-go-${{ github.job }}-${{ hashFiles('mise.toml', '**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-${{ github.job }}-

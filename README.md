@@ -26,5 +26,5 @@ task dev                        # backend on :8080, frontend on http://localhost
 Tooling tasks use `<area>:<action>[:<qualifier>]` (for example, `be:test` and
 `contracts:gen`). Bare names `dev`, `test`, `gen`, `check`, and `clean` cover all
 areas. Run `task --list` for commands; `task check` runs the required CI checks
-except integration tests and image builds. The Vite scripts in `package.json`
-keep their standard names (`dev`, `build`, `typecheck`, `test`, `lint`, `knip`).
+except integration tests and image builds. The development and check scripts in
+`package.json` keep their standard names (`dev`, `build`, `typecheck`, `test`, `lint`, `knip`).

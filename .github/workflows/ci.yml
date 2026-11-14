@@ -245,10 +245,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Reuse the image published by Judge Image, or build it for fork PRs.
-      - name: Prepare go-judge image
-        run: task judge:image
-
       - name: Run integration tests
         run: task be:test:integration
 
