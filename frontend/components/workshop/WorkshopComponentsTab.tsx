@@ -9,7 +9,7 @@ import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {api, unwrap} from "@/lib/api";
 
 import {DraftGate} from "./draft/DraftGate";
-import {addComponent, libraryFiles, removeComponent, ROLE_LABELS, setFile, type ComponentRole} from "./draft/draftOps";
+import {addComponent, LIBRARY_FOLDER, libraryFiles, removeComponent, ROLE_LABELS, setFile, type ComponentRole} from "./draft/draftOps";
 import {SourceEditor} from "./draft/SourceEditor";
 import {componentTemplate} from "./draft/templates";
 import {useSaveDraft} from "./draft/useDraft";
@@ -32,6 +32,8 @@ const SELECTED_LABELS: Partial<Record<ComponentRole, string>> = {
   interactor: "Используется",
   solution: "Главное",
 };
+
+const libraryName = (path: string): string => path.slice(LIBRARY_FOLDER.length + 1);
 
 const useLanguageOptions = () =>
   useQuery({
@@ -152,11 +154,11 @@ const ComponentsPanel = ({draft, problemId, role}: PanelProps): ReactNode => {
               <MultiSelect
                 label="Подключаемые файлы"
                 description="Файлы из библиотеки, доступные компоненту при сборке под своим именем"
-                data={libs.map((path) => ({value: path, label: path.slice("libs/".length)}))}
+                data={libs.map((path) => ({value: path, label: libraryName(path)}))}
                 value={Object.values(selected.dependencies ?? {})}
                 onChange={(paths) =>
                   void updateComponent(selected.id, {
-                    dependencies: Object.fromEntries(paths.map((path) => [path.slice("libs/".length), path])),
+                    dependencies: Object.fromEntries(paths.map((path) => [libraryName(path), path])),
                   })
                 }
                 searchable

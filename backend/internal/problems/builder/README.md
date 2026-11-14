@@ -13,6 +13,10 @@ another package; editing a problem does not change an existing package.
 enqueueing a build. All supported types require a nonblank title, positive time
 and memory limits, at least one test, and valid component source files and declared
 source dependencies. Paths must be safe and assets must not duplicate text paths.
+Every path belongs to the draft layout: component sources in their role folder
+(`checkers/`, `validators/`, `interactors/`, `generators/`, `solutions/`), shared
+files and all source dependencies in `lib/`, statements in `statements/`, statement
+resources in `assets/`.
 Component selections must reference components of the appropriate role, using a
 language available in the pinned toolchain.
 

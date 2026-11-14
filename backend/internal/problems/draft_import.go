@@ -48,21 +48,6 @@ func languageForPath(path string) string {
 	}
 	return ""
 }
-func sourceRole(path string) string {
-	switch strings.Split(path, "/")[0] {
-	case "checkers":
-		return "checker"
-	case "validators":
-		return "validator"
-	case "interactors":
-		return "interactor"
-	case "generators":
-		return "generator"
-	case "solutions":
-		return "solution"
-	}
-	return ""
-}
 func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uuid.UUID, revision int64) (*draftImport, error) {
 	root, err := os.MkdirTemp(uc.TempDir, "import-")
 	if err != nil {
@@ -215,8 +200,8 @@ func (uc *DraftUseCase) convertImport(result *draftImport, root string, plan *gf
 	componentIDs := map[string]uuid.UUID{}
 	generatorIDs := map[string]uuid.UUID{}
 	for _, path := range names {
-		role := sourceRole(path)
-		if role != "" || strings.HasPrefix(path, "lib/") || strings.HasPrefix(path, "statements/") {
+		role := model.ComponentRole(path)
+		if role != "" || strings.HasPrefix(path, model.LibraryFolder+"/") || strings.HasPrefix(path, model.StatementFolder+"/") {
 			info, err := os.Stat(paths[path])
 			if err != nil {
 				return fmt.Errorf("stat: %w", err)
@@ -261,7 +246,12 @@ func (uc *DraftUseCase) convertImport(result *draftImport, root string, plan *gf
 				}
 				d.Components = append(d.Components, model.DraftComponent{ID: cid, Role: role, Path: path, Language: language, Dependencies: deps})
 				if role == "generator" {
-					generatorIDs[strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))] = cid
+					// Tests name generators by stem, so the stem must identify one file.
+					name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+					if _, ok := generatorIDs[name]; ok {
+						return pkg.Wrap(pkg.ErrBadInput, nil, "several generators named "+name)
+					}
+					generatorIDs[name] = cid
 				}
 			}
 		}
@@ -405,6 +395,9 @@ func (uc *DraftUseCase) convertImport(result *draftImport, root string, plan *gf
 	for _, path := range names {
 		if _, ok := d.Files[path]; ok || strings.HasPrefix(path, "tests/") {
 			continue
+		}
+		if !strings.HasPrefix(path, model.AssetFolder+"/") {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "unexpected file "+path)
 		}
 		oid, err := addObject(path, "asset")
 		if err != nil {
