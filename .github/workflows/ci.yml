@@ -105,6 +105,7 @@ jobs:
     name: Judge Image
     runs-on: ubuntu-latest
     permissions:
+      actions: write
       contents: read
       packages: write
     steps:
