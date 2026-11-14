@@ -117,16 +117,18 @@ func (s *IntegrationTestSuite) TestContestPatchSettingsPresence() {
 	owner := s.createUser("settings_owner_"+uuid.NewString()[:8], accessmodel.UserRoleUser)
 	org := s.createOrganization("settings-"+uuid.NewString()[:8], "Settings", owner.Id)
 	for _, tc := range []struct {
-		name, body  string
-		freeze      any
-		drafts      bool
-		description string
+		name, body   string
+		freeze       any
+		drafts       bool
+		description  string
+		freezeStatus string
 	}{
-		{"omitted", `{}`, float64(30), true, "Original"},
-		{"null", `{"freeze_duration_minutes":null}`, nil, true, "Original"},
-		{"zero", `{"freeze_duration_minutes":0}`, float64(0), true, "Original"},
-		{"false", `{"enable_drafts":false}`, float64(30), false, "Original"},
-		{"empty", `{"description":""}`, float64(30), true, ""},
+		{"omitted", `{}`, float64(30), true, "Original", "frozen"},
+		{"null", `{"freeze_duration_minutes":null}`, nil, true, "Original", "frozen"},
+		{"zero", `{"freeze_duration_minutes":0}`, float64(0), true, "Original", "frozen"},
+		{"false", `{"enable_drafts":false}`, float64(30), false, "Original", "frozen"},
+		{"empty", `{"description":""}`, float64(30), true, "", "frozen"},
+		{"explicit_auto", `{"freeze_status":"auto"}`, float64(30), true, "Original", "auto"},
 	} {
 		s.Run(tc.name, func() {
 			id := uuid.New()
@@ -134,7 +136,7 @@ func (s *IntegrationTestSuite) TestContestPatchSettingsPresence() {
 			s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 				ID: id, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Settings", Login: login,
 				Description: "Original", Visibility: contestsmodel.ContestVisibilityPublic,
-				Settings: map[string]interface{}{"freeze_duration_minutes": 30, "enable_drafts": true, "enable_upsolving": true},
+				Settings: map[string]interface{}{"freeze_duration_minutes": 30, "enable_drafts": true, "enable_upsolving": true, "freeze_status": "frozen"},
 			}))
 			req := httptest.NewRequest(http.MethodPatch, "/organizations/"+org.Login+"/contests/"+login, strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
@@ -152,6 +154,30 @@ func (s *IntegrationTestSuite) TestContestPatchSettingsPresence() {
 			s.Equal(tc.drafts, got.Settings["enable_drafts"])
 			s.Equal(true, got.Settings["enable_upsolving"])
 			s.Equal(tc.description, got.Description)
+			s.Equal(tc.freezeStatus, got.Settings["freeze_status"])
 		})
 	}
+}
+
+func (s *IntegrationTestSuite) TestContestPatchRejectsNullFreezeStatus() {
+	owner := s.createUser("freeze_owner_"+uuid.NewString()[:8], accessmodel.UserRoleUser)
+	org := s.createOrganization("freeze-"+uuid.NewString()[:8], "Freeze status", owner.Id)
+	id := uuid.New()
+	login := "null-freeze-status"
+	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
+		ID: id, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Freeze status", Login: login,
+		Visibility: contestsmodel.ContestVisibilityPublic,
+		Settings:   map[string]interface{}{"freeze_status": "frozen"},
+	}))
+
+	req := httptest.NewRequest(http.MethodPatch, "/organizations/"+org.Login+"/contests/"+login, strings.NewReader(`{"freeze_status":null}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Test-User-ID", owner.Id.String())
+	recorder := httptest.NewRecorder()
+	s.handler.ServeHTTP(recorder, req)
+	s.Require().Equal(http.StatusBadRequest, recorder.Code, recorder.Body.String())
+
+	got, err := s.contestsRepo.GetContest(s.ctx, id)
+	s.Require().NoError(err)
+	s.Equal("frozen", got.Settings["freeze_status"])
 }
