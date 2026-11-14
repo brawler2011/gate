@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -113,11 +114,20 @@ func TestIntegrationSuite(t *testing.T) {
 	typ := reflect.TypeOf(&IntegrationTestSuite{})
 	for i := range typ.NumMethod() {
 		method := typ.Method(i)
-		if !strings.HasPrefix(method.Name, "Test") || method.Type.NumIn() != 1 || method.Type.NumOut() != 0 {
+		if !strings.HasPrefix(method.Name, "Test") {
+			continue
+		}
+		if method.Type.NumIn() != 1 || method.Type.NumOut() != 0 {
+			t.Errorf("%s has unsupported signature %s; expected func(*IntegrationTestSuite)", method.Name, method.Type)
 			continue
 		}
 		t.Run(method.Name, func(t *testing.T) {
 			t.Parallel()
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					t.Errorf("%s panicked: %v\n%s", method.Name, recovered, debug.Stack())
+				}
+			}()
 			s := new(IntegrationTestSuite)
 			s.SetT(t)
 			s.ctx = context.Background()
