@@ -2,7 +2,10 @@ package contests
 
 import (
 	"context"
+	"io"
 	"log/slog"
+	"mime"
+	"path/filepath"
 	"strings"
 
 	identitymodel "github.com/brawler2011/gate/backend/internal/identity/model"
@@ -31,6 +34,7 @@ type ContestDetailsStore interface {
 }
 type StatementSource interface {
 	ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) (*problemsmodel.Statement, []problemsmodel.Sample)
+	OpenFile(context.Context, uuid.UUID, string) (io.ReadCloser, error)
 }
 type BookletCompiler interface {
 	CompilePDF(context.Context, string) ([]byte, error)
@@ -85,29 +89,60 @@ func (r *DetailsReader) GetContestDetails(ctx context.Context, org, login string
 	}
 	return result, err
 }
-func (r *DetailsReader) GetContestProblemDetails(ctx context.Context, org, login string, id uuid.UUID) (*ContestProblemDetails, error) {
+// contestProblem returns the contest problem link and whether the caller may
+// read its statement.
+func (r *DetailsReader) contestProblem(ctx context.Context, org, login string, id uuid.UUID) (contestsmodel.ContestProblem, bool, error) {
 	contest, err := r.authorizedContest(ctx, org, login, accessmodel.ActionGetContestProblem)
 	if err != nil {
-		return nil, err
+		return contestsmodel.ContestProblem{}, false, err
 	}
 	link, err := r.contests.GetContestProblem(ctx, contestsmodel.ContestProblemGet{ContestId: contest.ID, ProblemId: id})
+	if err != nil {
+		return contestsmodel.ContestProblem{}, false, err
+	}
+	if !contest.GetHideStatements() {
+		return link, true, nil
+	}
+	user := accessmodel.UserFromContext(ctx)
+	if user.IsGuest() {
+		return link, false, nil
+	}
+	manager, err := r.permissions.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
+	return link, manager, err
+}
+func (r *DetailsReader) GetContestProblemDetails(ctx context.Context, org, login string, id uuid.UUID) (*ContestProblemDetails, error) {
+	link, statementVisible, err := r.contestProblem(ctx, org, login, id)
 	if err != nil {
 		return nil, err
 	}
 	problem := problemsmodel.Problem{ID: link.ProblemID, Title: link.Title, ShortName: link.ShortName, TimeLimitMs: link.TimeLimitMs, MemoryLimitMb: link.MemoryLimitMb, CreatedAt: link.CreatedAt, UpdatedAt: link.UpdatedAt}
-	user := accessmodel.UserFromContext(ctx)
-	manager := false
-	if !user.IsGuest() {
-		manager, err = r.permissions.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
-		if err != nil {
-			return nil, err
-		}
-	}
 	result := &ContestProblemDetails{Link: link, ProblemDetails: problemsmodel.ProblemDetails{Problem: problem}}
-	if !contest.GetHideStatements() || manager {
+	if statementVisible {
 		result.Statement, result.Samples = r.statements.ReadStatement(ctx, id, link.PackageID, "")
 	}
 	return result, nil
+}
+
+// OpenProblemAsset opens a statement image from the package the contest uses
+// for the problem and returns it with its content type. It is readable exactly
+// when the statement is.
+func (r *DetailsReader) OpenProblemAsset(ctx context.Context, org, login string, id uuid.UUID, path string) (io.ReadCloser, string, error) {
+	contentType := mime.TypeByExtension(strings.ToLower(filepath.Ext(path)))
+	if !strings.HasPrefix(contentType, "image/") {
+		return nil, "", pkg.ErrNotFound
+	}
+	link, statementVisible, err := r.contestProblem(ctx, org, login, id)
+	if err != nil {
+		return nil, "", err
+	}
+	if !statementVisible {
+		return nil, "", pkg.Wrap(pkg.NoPermission, nil, "statements are hidden for this contest")
+	}
+	file, err := r.statements.OpenFile(ctx, link.PackageID, path)
+	if err != nil {
+		return nil, "", err
+	}
+	return file, contentType, nil
 }
 func (r *DetailsReader) ReadBooklet(ctx context.Context, orgLogin, contestLogin, language string) ([]byte, error) {
 

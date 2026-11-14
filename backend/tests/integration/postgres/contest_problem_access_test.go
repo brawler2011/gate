@@ -4,6 +4,7 @@ package postgres_test
 
 import (
 	"context"
+	"io"
 	"testing"
 	"time"
 
@@ -332,4 +333,8 @@ func TestContestCommandDeadlineRollsBackMutation(t *testing.T) {
 	require.ErrorIs(t, err, pkg.NoPermission)
 	_, err = f.repo.GetContestProblem(f.ctx, contestsmodel.ContestProblemGet{ContestId: f.contest, ProblemId: f.problem})
 	require.ErrorIs(t, err, pkg.ErrNotFound)
+}
+
+func (*pinnedContestStatement) OpenFile(context.Context, uuid.UUID, string) (io.ReadCloser, error) {
+	return nil, pkg.ErrNotFound
 }

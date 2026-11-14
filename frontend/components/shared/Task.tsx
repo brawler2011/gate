@@ -151,6 +151,7 @@ const Task = ({
                 isManager={isManager}
                 orgLogin={contest.organization_login}
                 hideStatements={contest.hide_statements}
+                assetsUrl={`/api/organizations/${encodeURIComponent(contest.organization_login)}/contests/${encodeURIComponent(contest.login)}/problems/${task.problem_id}/assets`}
               />
             </Box>
           </Container>

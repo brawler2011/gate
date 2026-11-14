@@ -12,6 +12,7 @@ import (
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
 	"github.com/ogen-go/ogen/conv"
+	ht "github.com/ogen-go/ogen/http"
 	"github.com/ogen-go/ogen/ogenerrors"
 	"github.com/ogen-go/ogen/uri"
 	"github.com/ogen-go/ogen/validate"
@@ -1470,6 +1471,140 @@ func decodeGetContestProblemResponse(resp *http.Response) (res *GetContestProble
 				return res, errors.Wrap(err, "validate")
 			}
 			return &response, nil
+		default:
+			return res, validate.InvalidContentType(ct)
+		}
+	}
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
+}
+
+func decodeGetContestProblemAssetResponse(resp *http.Response) (res *GetContestProblemAssetOKHeaders, _ error) {
+	switch resp.StatusCode {
+	case 200:
+		// Code 200.
+		ct, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+		if err != nil {
+			return res, errors.Wrap(err, "parse media type")
+		}
+		switch {
+		case ht.MatchContentType("image/*", ct):
+			reader := resp.Body
+			b, err := io.ReadAll(reader)
+			if err != nil {
+				return res, err
+			}
+
+			response := GetContestProblemAssetOK{Data: bytes.NewReader(b)}
+			var wrapper GetContestProblemAssetOKHeaders
+			wrapper.Response = response
+			h := uri.NewHeaderDecoder(resp.Header)
+			// Parse "Cache-Control" header.
+			{
+				cfg := uri.HeaderParameterDecodingConfig{
+					Name:    "Cache-Control",
+					Explode: false,
+				}
+				if err := func() error {
+					if err := h.HasParam(cfg); err == nil {
+						if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+							var wrapperDotCacheControlVal string
+							if err := func() error {
+								val, err := d.DecodeValue()
+								if err != nil {
+									return err
+								}
+
+								c, err := conv.ToString(val)
+								if err != nil {
+									return err
+								}
+
+								wrapperDotCacheControlVal = c
+								return nil
+							}(); err != nil {
+								return err
+							}
+							wrapper.CacheControl.SetTo(wrapperDotCacheControlVal)
+							return nil
+						}); err != nil {
+							return err
+						}
+					}
+					return nil
+				}(); err != nil {
+					return res, errors.Wrap(err, "parse Cache-Control header")
+				}
+			}
+			// Parse "Content-Security-Policy" header.
+			{
+				cfg := uri.HeaderParameterDecodingConfig{
+					Name:    "Content-Security-Policy",
+					Explode: false,
+				}
+				if err := func() error {
+					if err := h.HasParam(cfg); err == nil {
+						if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+							var wrapperDotContentSecurityPolicyVal string
+							if err := func() error {
+								val, err := d.DecodeValue()
+								if err != nil {
+									return err
+								}
+
+								c, err := conv.ToString(val)
+								if err != nil {
+									return err
+								}
+
+								wrapperDotContentSecurityPolicyVal = c
+								return nil
+							}(); err != nil {
+								return err
+							}
+							wrapper.ContentSecurityPolicy.SetTo(wrapperDotContentSecurityPolicyVal)
+							return nil
+						}); err != nil {
+							return err
+						}
+					}
+					return nil
+				}(); err != nil {
+					return res, errors.Wrap(err, "parse Content-Security-Policy header")
+				}
+			}
+			// Parse "Content-Type" header.
+			{
+				cfg := uri.HeaderParameterDecodingConfig{
+					Name:    "Content-Type",
+					Explode: false,
+				}
+				if err := func() error {
+					if err := h.HasParam(cfg); err == nil {
+						if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+							val, err := d.DecodeValue()
+							if err != nil {
+								return err
+							}
+
+							c, err := conv.ToString(val)
+							if err != nil {
+								return err
+							}
+
+							wrapper.ContentType = c
+							return nil
+						}); err != nil {
+							return err
+						}
+					} else {
+						return err
+					}
+					return nil
+				}(); err != nil {
+					return res, errors.Wrap(err, "parse Content-Type header")
+				}
+			}
+			return &wrapper, nil
 		default:
 			return res, validate.InvalidContentType(ct)
 		}

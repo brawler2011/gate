@@ -437,6 +437,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a contest problem statement image */
+        get: operations["GetContestProblemAsset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{org_login}/contests/{contest_login}/members": {
         parameters: {
             query?: never;
@@ -6148,6 +6165,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    GetContestProblemAsset: {
+        parameters: {
+            query: {
+                /** @description Path of the statement resource in the problem package, e.g. `assets/pic.png`. */
+                path: string;
+            };
+            header?: never;
+            path: {
+                /** @description Organization login. */
+                org_login: components["parameters"]["OrgLoginPath"];
+                /** @description Contest login within the organization. */
+                contest_login: components["parameters"]["ContestLoginPath"];
+                /** @description UUID of the problem. */
+                problem_id: components["parameters"]["ProblemIDPathBySnakeName"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Statement image from the problem package used by the contest */
+            200: {
+                headers: {
+                    "Cache-Control"?: string;
+                    "Content-Security-Policy"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/*": string;
+                };
             };
         };
     };

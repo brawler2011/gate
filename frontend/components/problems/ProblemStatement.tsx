@@ -8,8 +8,18 @@ import remarkMath from "remark-math";
 
 import "katex/dist/katex.min.css";
 
+// Markdown has already percent-encoded the image URL; recover the package path.
+const packagePath = (src: string): string => {
+  const path = src.replace(/^\.\//, "");
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+};
+
 const renderSafeImage = (
-  problemId?: string
+  assetsUrl?: string
 ): ((props: React.ImgHTMLAttributes<HTMLImageElement> & { node?: unknown }) => ReactNode) => {
   const SafeImage = ({
     node: _node,
@@ -65,14 +75,13 @@ const renderSafeImage = (
     }
 
     if (
-      problemId &&
+      assetsUrl &&
       !cleanSrc.startsWith("http://") &&
       !cleanSrc.startsWith("https://") &&
       !cleanSrc.startsWith("data:") &&
-      !cleanSrc.startsWith("/api/")
+      !cleanSrc.startsWith("/")
     ) {
-      const filename = cleanSrc.replace(/^\.\//, "").replace(/^media\//, "");
-      cleanSrc = `/api/problems/${problemId}/media/${filename}`;
+      cleanSrc = `${assetsUrl}?path=${encodeURIComponent(packagePath(cleanSrc))}`;
     }
 
     return (
@@ -95,13 +104,14 @@ const renderSafeImage = (
 
 export interface ProblemStatementProps {
   value: string;
-  problemId?: string;
+  /** Endpoint serving the problem's statement images by package path. */
+  assetsUrl?: string;
   className?: string;
 }
 
 export const ProblemStatement = ({
   value,
-  problemId,
+  assetsUrl,
   className = "content",
 }: ProblemStatementProps): ReactNode => {
   return (
@@ -110,7 +120,7 @@ export const ProblemStatement = ({
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
         components={{
-          img: renderSafeImage(problemId),
+          img: renderSafeImage(assetsUrl),
         }}
       >
         {value}

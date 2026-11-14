@@ -2,6 +2,8 @@ package contests
 
 import (
 	"context"
+	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -46,11 +48,21 @@ func (p detailPermissions) HasContestPermission(_ context.Context, _, _ uuid.UUI
 	}
 }
 
-type detailStatements struct{ calls int }
+type detailStatements struct {
+	calls     int
+	fileCalls int
+	filePath  string
+}
 
 func (s *detailStatements) ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) (*problemsmodel.Statement, []problemsmodel.Sample) {
 	s.calls++
 	return &problemsmodel.Statement{Legend: "Visible statement"}, []problemsmodel.Sample{{Input: "1", Output: "2"}}
+}
+
+func (s *detailStatements) OpenFile(_ context.Context, _ uuid.UUID, path string) (io.ReadCloser, error) {
+	s.fileCalls++
+	s.filePath = path
+	return io.NopCloser(strings.NewReader("png")), nil
 }
 
 type detailCompiler struct{ calls int }
@@ -93,6 +105,17 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 			} else {
 				require.Zero(t, statements.calls)
 			}
+			file, contentType, err := reader.OpenProblemAsset(ctx, "org", "contest", store.link.ProblemID, "assets/pic.png")
+			if tc.statement {
+				require.NoError(t, err)
+				require.NoError(t, file.Close())
+				require.Equal(t, "image/png", contentType)
+				require.Equal(t, 1, statements.fileCalls)
+				require.Equal(t, "assets/pic.png", statements.filePath)
+			} else {
+				require.ErrorIs(t, err, pkg.NoPermission)
+				require.Zero(t, statements.fileCalls)
+			}
 			_, err = reader.ReadBooklet(ctx, "org", "contest", "ru")
 			if tc.pdf {
 				require.NoError(t, err)
@@ -103,6 +126,22 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestContestProblemAssetServesOnlyImages(t *testing.T) {
+	store := &detailStore{contest: contestsmodel.Contest{ID: uuid.New()}, link: contestsmodel.ContestProblem{ProblemID: uuid.New()}}
+	statements := &detailStatements{}
+	reader := NewDetailsReader(store, statements, detailPermissions{view: true, problems: true}, nil, nil)
+	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
+	for _, path := range []string{"assets/notes.txt", "assets/page.html", "assets/noext"} {
+		_, _, err := reader.OpenProblemAsset(ctx, "org", "contest", store.link.ProblemID, path)
+		require.ErrorIs(t, err, pkg.ErrNotFound, path)
+	}
+	require.Zero(t, statements.fileCalls)
+	file, contentType, err := reader.OpenProblemAsset(ctx, "org", "contest", store.link.ProblemID, "assets/Diagram.SVG")
+	require.NoError(t, err)
+	require.NoError(t, file.Close())
+	require.Equal(t, "image/svg+xml", contentType)
 }
 
 func TestContestListUsesFlatProjection(t *testing.T) {

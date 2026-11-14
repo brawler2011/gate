@@ -344,6 +344,12 @@ type Handler interface {
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
 	GetContestProblem(ctx context.Context, params GetContestProblemParams) (*GetContestProblemResponseModel, error)
+	// GetContestProblemAsset implements GetContestProblemAsset operation.
+	//
+	// Get a contest problem statement image.
+	//
+	// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets
+	GetContestProblemAsset(ctx context.Context, params GetContestProblemAssetParams) (*GetContestProblemAssetOKHeaders, error)
 	// GetContestScoreboard implements GetContestScoreboard operation.
 	//
 	// Get contest scoreboard.

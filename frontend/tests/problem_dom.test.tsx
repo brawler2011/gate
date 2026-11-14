@@ -98,4 +98,28 @@ describe("Problem Component DOM baseline test", () => {
     expect(view.container.querySelector(".katex")?.textContent).toContain("y");
   });
 
+  it("loads relative statement images from the assets endpoint", () => {
+    const assetsUrl = "/api/organizations/school/contests/final/problems/prob-1/assets";
+    const view = renderWithProviders(<Problem
+      problem={{...sampleProblem, legend: "![a](assets/pic.png) ![b](./assets/b.svg#center) ![c](https://example.com/c.png)"}}
+      assetsUrl={assetsUrl}
+    />);
+    const sources = Array.from(view.container.querySelectorAll("img")).map((img) => img.getAttribute("src"));
+    expect(sources).toEqual([
+      `${assetsUrl}?path=assets%2Fpic.png`,
+      `${assetsUrl}?path=assets%2Fb.svg`,
+      "https://example.com/c.png",
+    ]);
+  });
+
+  it("passes non-ASCII and spaced image names to the assets endpoint once encoded", () => {
+    const view = renderWithProviders(<Problem
+      problem={{...sampleProblem, legend: "![a](assets/рисунок.png) ![b](<assets/my pic.png>) ![c](assets/100%.png)"}}
+      assetsUrl="/assets"
+    />);
+    const paths = Array.from(view.container.querySelectorAll("img"))
+      .map((img) => new URL(img.getAttribute("src") ?? "", "http://host").searchParams.get("path"));
+    expect(paths).toEqual(["assets/рисунок.png", "assets/my pic.png", "assets/100%.png"]);
+  });
+
 });

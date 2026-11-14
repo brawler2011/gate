@@ -41,6 +41,8 @@ export type ProblemProps = {
   letter?: string;
   isManager?: boolean;
   hideStatements?: boolean;
+  /** Endpoint serving the problem's statement images by package path. */
+  assetsUrl?: string;
 };
 
 const ProblemComponent = ({
@@ -50,6 +52,7 @@ const ProblemComponent = ({
   isManager,
   orgLogin,
   hideStatements,
+  assetsUrl,
 }: ProblemProps): ReactNode => {
   const activeProblemId = problemId || problem.id || problem.problem_id;
   const org = orgLogin || problem.organization_login;
@@ -110,20 +113,20 @@ const ProblemComponent = ({
       ) : (
         <>
           {problem.legend && (
-            <ProblemStatement value={problem.legend} problemId={activeProblemId} />
+            <ProblemStatement value={problem.legend} assetsUrl={assetsUrl} />
           )}
 
           {problem.input_format && (
             <Stack gap="xs">
               <Title order={3}>Входные данные</Title>
-              <ProblemStatement value={problem.input_format} problemId={activeProblemId} />
+              <ProblemStatement value={problem.input_format} assetsUrl={assetsUrl} />
             </Stack>
           )}
 
           {problem.output_format && (
             <Stack gap="xs">
               <Title order={3}>Выходные данные</Title>
-              <ProblemStatement value={problem.output_format} problemId={activeProblemId} />
+              <ProblemStatement value={problem.output_format} assetsUrl={assetsUrl} />
             </Stack>
           )}
 
@@ -134,7 +137,7 @@ const ProblemComponent = ({
           {problem.notes && (
             <Stack gap="xs">
               <Title order={3}>Примечание</Title>
-              <ProblemStatement value={problem.notes} problemId={activeProblemId} />
+              <ProblemStatement value={problem.notes} assetsUrl={assetsUrl} />
             </Stack>
           )}
         </>

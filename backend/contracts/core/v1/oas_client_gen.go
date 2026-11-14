@@ -358,6 +358,12 @@ type Invoker interface {
 	//
 	// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}
 	GetContestProblem(ctx context.Context, params GetContestProblemParams) (*GetContestProblemResponseModel, error)
+	// GetContestProblemAsset invokes GetContestProblemAsset operation.
+	//
+	// Get a contest problem statement image.
+	//
+	// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets
+	GetContestProblemAsset(ctx context.Context, params GetContestProblemAssetParams) (*GetContestProblemAssetOKHeaders, error)
 	// GetContestScoreboard invokes GetContestScoreboard operation.
 	//
 	// Get contest scoreboard.
@@ -5521,6 +5527,123 @@ func (c *Client) sendGetContestProblem(ctx context.Context, params GetContestPro
 	}()
 
 	result, err := decodeGetContestProblemResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetContestProblemAsset invokes GetContestProblemAsset operation.
+//
+// Get a contest problem statement image.
+//
+// GET /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets
+func (c *Client) GetContestProblemAsset(ctx context.Context, params GetContestProblemAssetParams) (*GetContestProblemAssetOKHeaders, error) {
+	res, err := c.sendGetContestProblemAsset(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetContestProblemAsset(ctx context.Context, params GetContestProblemAssetParams) (res *GetContestProblemAssetOKHeaders, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [7]string
+	pathParts[0] = "/organizations/"
+	{
+		// Encode "org_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "org_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.OrgLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/contests/"
+	{
+		// Encode "contest_login" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contest_login",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ContestLogin))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/problems/"
+	{
+		// Encode "problem_id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "problem_id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ProblemID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[5] = encoded
+	}
+	pathParts[6] = "/assets"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "path" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "path",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.Path))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeGetContestProblemAssetResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

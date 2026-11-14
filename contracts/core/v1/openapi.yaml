@@ -667,6 +667,36 @@ paths:
       responses:
         "200":
           description: OK
+  /organizations/{org_login}/contests/{contest_login}/problems/{problem_id}/assets:
+    get:
+      summary: "Get a contest problem statement image"
+      tags: [contests]
+      operationId: GetContestProblemAsset
+      parameters:
+        - $ref: "#/components/parameters/OrgLoginPath"
+        - $ref: "#/components/parameters/ContestLoginPath"
+        - $ref: "#/components/parameters/ProblemIDPathBySnakeName"
+        - name: path
+          description: "Path of the statement resource in the problem package, e.g. `assets/pic.png`."
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Statement image from the problem package used by the contest
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+            Content-Security-Policy:
+              schema:
+                type: string
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
   /organizations/{org_login}/contests/{contest_login}/members:
     get:
       summary: "List contest members"

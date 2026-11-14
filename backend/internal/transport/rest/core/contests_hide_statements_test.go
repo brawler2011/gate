@@ -2,10 +2,12 @@ package core_test
 
 import (
 	"context"
+	"io"
 	"testing"
 	"time"
 
 	"github.com/brawler2011/gate/backend/internal/contests"
+	"github.com/brawler2011/gate/backend/pkg"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -176,4 +178,8 @@ type hiddenStatementSource struct{}
 
 func (hiddenStatementSource) ReadStatement(context.Context, uuid.UUID, uuid.UUID, string) (*problemsmodel.Statement, []problemsmodel.Sample) {
 	return nil, nil
+}
+
+func (hiddenStatementSource) OpenFile(context.Context, uuid.UUID, string) (io.ReadCloser, error) {
+	return nil, pkg.ErrNotFound
 }

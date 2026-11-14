@@ -466,6 +466,25 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, params corev1.GetCon
 	return projectResponse(h, ctx, GetContestProblemResponseDTO(details.Link, details.Problem, details.Statement, SamplesDTO(details.Samples)), details.Link.ContestID)
 }
 
+// statementAssetPolicy keeps an image opened directly by URL, notably SVG,
+// from running scripts or loading anything in the site's origin.
+const statementAssetPolicy = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+
+func (h *CoreServer) GetContestProblemAsset(ctx context.Context, params corev1.GetContestProblemAssetParams) (*corev1.GetContestProblemAssetOKHeaders, error) {
+	file, contentType, err := h.ContestDetails.OpenProblemAsset(ctx, params.OrgLogin, params.ContestLogin, params.ProblemID, params.Path)
+	if err != nil {
+		return nil, err
+	}
+	return &corev1.GetContestProblemAssetOKHeaders{
+		// Every request downloads the whole package archive, so let the
+		// browser reuse an image briefly; it may lag a package change.
+		CacheControl:          corev1.NewOptString("private, max-age=300"),
+		ContentSecurityPolicy: corev1.NewOptString(statementAssetPolicy),
+		ContentType:           contentType,
+		Response:              corev1.GetContestProblemAssetOK{Data: file},
+	}, nil
+}
+
 func (h *CoreServer) DownloadContestStatementsPdf(ctx context.Context, params corev1.DownloadContestStatementsPdfParams) (corev1.DownloadContestStatementsPdfOK, error) {
 	data, err := h.ContestDetails.ReadBooklet(ctx, params.OrgLogin, params.ContestLogin, params.Lang.Or("ru"))
 	if err != nil {

@@ -612,6 +612,67 @@ func encodeGetContestProblemResponse(response *GetContestProblemResponseModel, w
 	return nil
 }
 
+func encodeGetContestProblemAssetResponse(response *GetContestProblemAssetOKHeaders, w http.ResponseWriter) error {
+	w.Header().Set("Access-Control-Expose-Headers", "Content-Security-Policy")
+	// Encoding response headers.
+	{
+		h := uri.NewHeaderEncoder(w.Header())
+		// Encode "Cache-Control" header.
+		{
+			cfg := uri.HeaderParameterEncodingConfig{
+				Name:    "Cache-Control",
+				Explode: false,
+			}
+			if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+				if val, ok := response.CacheControl.Get(); ok {
+					return e.EncodeValue(conv.StringToString(val))
+				}
+				return nil
+			}); err != nil {
+				return errors.Wrap(err, "encode Cache-Control header")
+			}
+		}
+		// Encode "Content-Security-Policy" header.
+		{
+			cfg := uri.HeaderParameterEncodingConfig{
+				Name:    "Content-Security-Policy",
+				Explode: false,
+			}
+			if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+				if val, ok := response.ContentSecurityPolicy.Get(); ok {
+					return e.EncodeValue(conv.StringToString(val))
+				}
+				return nil
+			}); err != nil {
+				return errors.Wrap(err, "encode Content-Security-Policy header")
+			}
+		}
+		// Encode "Content-Type" header.
+		{
+			cfg := uri.HeaderParameterEncodingConfig{
+				Name:    "Content-Type",
+				Explode: false,
+			}
+			if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+				return e.EncodeValue(conv.StringToString(response.ContentType))
+			}); err != nil {
+				return errors.Wrap(err, "encode Content-Type header")
+			}
+		}
+	}
+	w.WriteHeader(200)
+
+	writer := w
+	if closer, ok := response.Response.Data.(io.Closer); ok {
+		defer closer.Close()
+	}
+	if _, err := io.Copy(writer, response.Response); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
 func encodeGetContestScoreboardResponse(response *ScoreboardResponseModel, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
