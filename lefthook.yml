@@ -1,14 +1,26 @@
+# Lefthook 1.13.6 globs: * also matches across directories.
 pre-commit:
   parallel: true
   commands:
     backend-lint:
-      glob: "backend/**/*.{go,sql}"
-      run: mise exec -- task lint:be
+      glob:
+        - "backend/*.{go,sql}"
+        - "tools/*.go"
+        - "go.mod"
+        - "go.sum"
+        - ".golangci.yml"
+      run: mise exec -- task be:lint
     frontend-lint:
-      glob: "frontend/**/*.{ts,tsx,js,jsx}"
-      run: mise exec -- task lint:fe
+      glob:
+        - "frontend/*.{ts,tsx,js,jsx,css,mjs}"
+        - "*.mjs"
+        - "vite.config.ts"
+        - "package.json"
+        - "bun.lock"
+        - "tsconfig*.json"
+      run: mise exec -- task fe:lint
 
 commit-msg:
   commands:
     validate-commit-msg:
-      run: mise exec -- task validate:commit -- --edit "{1}"
+      run: mise exec -- task commit:validate -- --edit "{1}"

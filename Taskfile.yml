@@ -18,76 +18,56 @@ tasks:
     cmds:
       - task -a
 
-  precommit:
-    desc: Run pre-commit checks across all components
+  check:
+    desc: Run required CI checks except integration tests (be:test:integration, be:querywork) and image builds (judge, backend)
     cmds:
-      - task: lint:contracts
-      - task: lint:deploy
-      - task: diff:codegen
-      - task: precommit:be
-      - task: precommit:fe
-
-  precommit:be:
-    desc: Run backend pre-commit verification (lint + tests)
-    cmds:
-      - task: lint:be
-      - task: test:be
-
-  precommit:fe:
-    desc: Run frontend pre-commit verification (typecheck + lint)
-    cmds:
-      - task: typecheck:fe
-      - task: lint:fe
+      - task: contracts:lint
+      - task: gen:check
+      - task: be:lint
+      - task: be:test
+      - task: deploy:lint
+      - task: fe:typecheck
+      - task: fe:lint
+      - task: fe:knip
+      - task: fe:test
+      - task: fe:build
 
   dev:
     desc: Run backend and frontend
     deps:
-      - dev:be
-      - dev:fe
+      - be:dev
+      - fe:dev
 
-  dev:be:
+  be:dev:
     desc: Run Go backend server with live reload
     cmds:
       - air -c .air.toml
 
-  dev:fe:
+  fe:dev:
     desc: Run Vite dev server
     cmds:
       - bun dev
 
-  build:
-    desc: Build backend and static SPA
-    cmds:
-      - task: build:be
-      - task: build:fe
-
-  build:be:
-    desc: Build Go packages
-    cmds:
-      - go build ./...
-
-  build:fe:
+  fe:build:
     desc: Build production bundle
     cmds:
       - bun run build
 
   test:
-    desc: Run backend unit, repository, and frontend tests
+    desc: Run backend and frontend tests
     cmds:
-      - task: test:be
-      - bun test
+      - task: be:test
+      - task: fe:test
 
-  test:be:
+  be:test:
     desc: Run backend unit tests
     cmds:
-      - go test -v ./...
+      - go test ./backend/...
 
-  test:be:all:
-    desc: Run backend unit and integration tests
+  fe:test:
+    desc: Run frontend tests
     cmds:
-      - task: test:be
-      - task: test:be:integration
-      - task: test:be:work
+      - bun run test
 
   judge:image:
     desc: Make the go-judge image for the current judge/ sources available locally (pull, else build)
@@ -106,39 +86,34 @@ tasks:
         nix --extra-experimental-features "nix-command flakes" run .#default.copyTo --
         docker-daemon:"$(go run ./tools/judgeimage)"
 
-  test:be:integration:
+  be:test:integration:
     desc: Run backend integration tests, which live in backend/tests/integration
     deps: [judge:image]
     cmds:
       - go test -v -timeout 15m -tags=integration {{.CLI_ARGS | default "./backend/tests/integration/..."}}
 
-  test:be:work:
+  be:querywork:
     desc: Check the database work of PostgreSQL scenarios against backend/internal/postgres/testdata/query_work.json
     cmds:
       - go test -v -count=1 -tags=integration -run='^TestQueryWork$' ./backend/internal/postgres
 
-  golden:update:
+  be:querywork:update:
     desc: Rewrite backend/internal/postgres/testdata/query_work.json with the measured database work
     cmds:
       - go test -count=1 -tags=integration -run='^TestQueryWork$' ./backend/internal/postgres -update
 
-  bench:be:
+  be:bench:
     desc: Run PostgreSQL and scoreboard performance benchmarks
     cmds:
       - go test -p 1 -tags=benchmark -run='^$' -bench=Benchmark -benchmem -benchtime=100x -cpu=2 ./backend/internal/postgres ./backend/internal/contests {{.CLI_ARGS}}
 
-  lint:be:
-    desc: Run golangci-lint
+  be:lint:
+    desc: Run golangci-lint and check for unused sqlc queries
     cmds:
       - golangci-lint run ./backend/...
-      - task: lint:sql
-
-  lint:sql:
-    desc: Check for unused sqlc queries in production code
-    cmds:
       - go run ./tools/unusedsqlc
 
-  lint:deploy:
+  deploy:lint:
     desc: Lint the Helm charts with the values of every environment
     cmds:
       - for: [prod, k3d]
@@ -146,12 +121,12 @@ tasks:
           helm lint --strict deploy/charts/gate-infra -f deploy/{{.ITEM}}/gate-infra.yaml &&
           helm lint --strict deploy/charts/gate -f deploy/{{.ITEM}}/gate.yaml --set-file backend.config=deploy/{{.ITEM}}/config.yaml --set imageTag=lint
 
-  lint:fe:
+  fe:lint:
     desc: Run ESLint and Stylelint
     cmds:
       - bun run lint
 
-  lint:contracts:
+  contracts:lint:
     desc: Validate OpenAPI and AsyncAPI contracts
     cmds:
       - >-
@@ -162,12 +137,12 @@ tasks:
         --details --errors --all-results --fail-severity error
       - bun run tools/generate-observer.ts --validate
 
-  typecheck:fe:
+  fe:typecheck:
     desc: Run TypeScript type check
     cmds:
       - bun run typecheck
 
-  knip:fe:
+  fe:knip:
     desc: Run Knip unused code check
     cmds:
       - bun run knip
@@ -175,11 +150,11 @@ tasks:
   gen:
     desc: Generate all code (contracts, SQLC, Mocks)
     cmds:
-      - task: gen:contracts
-      - task: gen:sqlc
-      - task: gen:mocks
+      - task: contracts:gen
+      - task: sqlc:gen
+      - task: mocks:gen
 
-  gen:contracts:
+  contracts:gen:
     desc: Generate OpenAPI and AsyncAPI Go and TS contracts
     cmds:
       - mkdir -p backend/contracts/core/v1 backend/contracts/observer/v1
@@ -192,7 +167,7 @@ tasks:
       - bun run contracts:gen
       - goimports -w backend/contracts/observer/v1
 
-  gen:sqlc:
+  sqlc:gen:
     desc: Generate SQLC queries
     sources:
       - sqlc.yaml
@@ -205,13 +180,13 @@ tasks:
         sqlc
         generate -f sqlc.yaml
 
-  gen:mocks:
+  mocks:gen:
     desc: Generate Go mocks
     cmds:
       - go generate ./...
 
-  diff:codegen:
-    desc: Verify codegen freshness for CI
+  gen:check:
+    desc: Regenerate files and fail if generated files changed
     cmds:
       - task: gen
       - |
@@ -220,8 +195,8 @@ tasks:
           exit 1
         fi
 
-  update:judge:
-    desc: Update the judge flake inputs (judge/flake.lock) without a local Nix install
+  judge:update:
+    desc: Update all judge flake inputs (judge/flake.lock) without a local Nix install
     cmds:
       - >-
         docker run --rm -v ./judge:/src -w /src nixos/nix:2.35.6
@@ -233,12 +208,11 @@ tasks:
         sh: id -g
 
   clean:
-    desc: Remove generated contract files
+    desc: Remove all generated files
     cmds:
-      - rm -rf backend/contracts/core/v1 backend/contracts/observer/v1
-      - rm -rf frontend/contracts/core/v1 frontend/contracts/observer/v1
+      - rm -rf {{.GENERATED_PATHS}}
 
-  migrate:be:
+  be:migrate:
     desc: Apply the schema, resetting all local data if it changed
     cmds:
       - go run ./backend -config=deploy/local/config.yaml -env=deploy/local/.env -migrate
@@ -253,21 +227,6 @@ tasks:
     desc: Stop local Docker containers
     cmds:
       - "{{.DOCKER_COMPOSE}} down {{.CLI_ARGS}}"
-
-  docker:restart:
-    desc: Restart local Docker containers
-    cmds:
-      - "{{.DOCKER_COMPOSE}} restart {{.CLI_ARGS}}"
-
-  docker:status:
-    desc: Show status of local Docker containers
-    cmds:
-      - "{{.DOCKER_COMPOSE}} ps {{.CLI_ARGS}}"
-
-  docker:logs:
-    desc: View logs from local Docker containers
-    cmds:
-      - "{{.DOCKER_COMPOSE}} logs {{.CLI_ARGS}}"
 
   k3d:up:
     desc: Create the local k3s cluster (k3d) with the deploy/k3s bootstrap
@@ -299,18 +258,18 @@ tasks:
     cmds:
       - k3d cluster delete gate
 
-  install:hooks:
-    desc: Install Lefthook and setup git pre-commit hooks
+  hooks:install:
+    desc: Install Git hooks using Lefthook
     cmds:
       - lefthook install
 
-  validate:commit:
+  commit:validate:
     desc: Validate commit message or PR title format and length
     cmds:
-      - bun run commit:validate {{.CLI_ARGS}}
-
-  status:pr:
-    desc: Show GitHub PR status and CI checks for current branch
-    cmds:
-      - gh pr status
-      - gh pr checks || true
+      - |
+        set -- {{.CLI_ARGS}}
+        if [ "$1" = "--edit" ]; then
+          bun run commit:validate "$@"
+        else
+          printf '%s\n' "$*" | bun run commit:validate
+        fi

@@ -1,0 +1,14 @@
+name: Set up project tools
+description: Install the pinned mise tools needed by a job
+inputs:
+  tools:
+    description: Space-separated mise tools (empty installs all)
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@v4
+      with:
+        version: "2026.10.25"
+        install_args: ${{ inputs.tools }}

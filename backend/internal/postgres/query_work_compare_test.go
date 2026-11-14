@@ -44,7 +44,7 @@ func (w queryWork) metrics() []struct {
 // fail too, so the golden file never keeps slack that hides a later regression.
 const queryWorkTolerance = 0.03
 
-const queryWorkUpdate = "task golden:update"
+const queryWorkUpdate = "task be:querywork:update"
 
 // compareQueryWork returns one message per metric outside the tolerance and per
 // scenario present on one side only.
@@ -110,9 +110,9 @@ func TestCompareQueryWork(t *testing.T) {
 		{"within tolerance above", with(func(w *queryWork) { w.Pages = 1030 }), nil},
 		{"within tolerance below", with(func(w *queryWork) { w.Pages = 970 }), nil},
 		{"regression by 30%", with(func(w *queryWork) { w.Pages = 1300 }),
-			[]string{"Submissions/large/Latest: pages regressed: golden 1000, actual 1300 (+30.0%", "task golden:update"}},
+			[]string{"Submissions/large/Latest: pages regressed: golden 1000, actual 1300 (+30.0%", "task be:querywork:update"}},
 		{"improvement beyond tolerance", with(func(w *queryWork) { w.Pages = 700 }),
-			[]string{"Submissions/large/Latest: pages improved: golden 1000, actual 700 (-30.0%", "stale", "task golden:update"}},
+			[]string{"Submissions/large/Latest: pages improved: golden 1000, actual 700 (-30.0%", "stale", "task be:querywork:update"}},
 		{"new sort node", with(func(w *queryWork) { w.Sorts = 1 }),
 			[]string{"sorts regressed: golden 0, actual 1 (+Inf%"}},
 		{"extra statement", with(func(w *queryWork) { w.Statements = 3 }),

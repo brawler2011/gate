@@ -5,6 +5,8 @@
 !**/.env.example
 !.github/
 .github/*
+!.github/actions/
+!.github/actions/**
 !.github/workflows/
 !.github/workflows/**
 !.github/*.md
