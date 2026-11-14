@@ -52,11 +52,21 @@ Later saves can proceed while the worker builds exclusively from that snapshot.
 The worker verifies each input object's size and SHA-256 against its registry row.
 
 The archive includes the snapshot, materialized tests and manifest from the same
-execution. After registering and uploading it, the worker streams the stored
-archive back and checks its size and SHA-256 before calling `PublishBuild`. This
-adds one archive read per successful attempt, with bounded memory. A missing,
-truncated or changed upload is an infrastructure failure eligible for retry from
-the original snapshot; it never produces a ready package.
+execution. After registering it, the worker sends the archive's expected SHA-256
+with S3 `PutObject` as a base64 `ChecksumSHA256`. The pinned aws-sdk-go-v2 S3
+v1.68.0 does not send this checksum by default, so `UploadFileWithSHA256` sets it
+explicitly from the digest already computed during archiving. Other upload
+callers keep their existing API.
+
+`TestSeaweedUploadChecksumEnforcement` proves that the real integration server,
+`chrislusf/seaweedfs:4.53_full`, accepts matching SHA-256 and rejects mismatched
+body/checksum pairs with the server's `BadDigest` error. Merely accepting a checksum
+header would not satisfy this contract. The server validates the write, so a
+successful publication requires no archive read-back. Truncated, empty or changed
+upload bytes and failed upload acknowledgements are infrastructure failures
+eligible for retry from the original snapshot; they never produce a ready package.
+The publication regressions alter the body while preserving the expected digest,
+require `BadDigest`, and forbid archive downloads during successful retries.
 
 `PublishBuild` checks attempt ownership and lease, then atomically changes the
 output object to available, inserts the package with the build's revision and
@@ -65,12 +75,13 @@ rolls these changes back; an ambiguous commit is resolved by looking up the dura
 package. Retries and late workers cannot splice in a newer draft or publish an
 unowned output. Failed uploads remain under the existing retention/GC protocol.
 As with the existing immutable object model, storage must preserve objects after
-verification; this protocol does not provide recovery from subsequent data loss.
+the acknowledged write; this protocol does not provide recovery from subsequent data loss.
 
 The `TestPublication*` integration regressions use real PostgreSQL, SeaweedFS S3
 and go-judge. `TestProblemPipelineRealServices` additionally covers generated inputs
 and answers with a validator. Run them from the repository root:
 
 ```sh
+mise exec -- task test:be:integration -- ./backend/tests/integration -run TestSeaweedUploadChecksumEnforcement -count=1
 mise exec -- task test:be:integration -- ./backend/tests/integration/postgres -run 'TestPublication|TestProblemPipelineRealServices' -count=1
 ```

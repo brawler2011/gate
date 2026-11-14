@@ -2,6 +2,9 @@ package storage
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -53,6 +56,20 @@ func NewS3Storage(cfg S3Config) *S3Storage {
 
 // UploadFile uploads a file to S3
 func (s *S3Storage) UploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string) error {
+	return s.uploadFile(ctx, bucket, key, reader, contentType, nil)
+}
+
+// UploadFileWithSHA256 requires S3 to validate the body against the expected
+// hexadecimal SHA-256 before acknowledging the write.
+func (s *S3Storage) UploadFileWithSHA256(ctx context.Context, bucket, key string, reader io.Reader, contentType, digest string) error {
+	checksum, err := hex.DecodeString(digest)
+	if err != nil || len(checksum) != sha256.Size {
+		return fmt.Errorf("invalid upload SHA-256 %q", digest)
+	}
+	return s.uploadFile(ctx, bucket, key, reader, contentType, aws.String(base64.StdEncoding.EncodeToString(checksum)))
+}
+
+func (s *S3Storage) uploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string, checksum *string) error {
 	// The SDK needs a seekable body for signing and retries. Callers already
 	// holding a file avoid a copy; streams are spooled to disk, never the heap.
 	body, ok := reader.(io.ReadSeeker)
@@ -72,10 +89,11 @@ func (s *S3Storage) UploadFile(ctx context.Context, bucket, key string, reader i
 		body = file
 	}
 	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket:      aws.String(bucket),
-		Key:         aws.String(key),
-		Body:        body,
-		ContentType: aws.String(contentType),
+		Bucket:         aws.String(bucket),
+		Key:            aws.String(key),
+		Body:           body,
+		ContentType:    aws.String(contentType),
+		ChecksumSHA256: checksum,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to upload file to S3: %w", err)

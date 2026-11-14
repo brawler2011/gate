@@ -2,8 +2,6 @@ package builder
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,7 +26,7 @@ import (
 
 type ObjectStore interface {
 	DownloadFile(context.Context, string, string, *string) (io.ReadCloser, string, error)
-	UploadFile(context.Context, string, string, io.Reader, string) error
+	UploadFileWithSHA256(context.Context, string, string, io.Reader, string, string) error
 }
 type BuildRepository interface {
 	ClaimBuild(context.Context, time.Duration) (model.ProblemBuild, error)
@@ -164,35 +162,14 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 		return uuid.Nil, fmt.Errorf("open: %w", err)
 	}
 	defer f.Close()
-	if err := p.Store.UploadFile(ctx, p.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/octet-stream"); err != nil {
+	if err := p.Store.UploadFileWithSHA256(ctx, p.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/octet-stream", digest); err != nil {
 		return uuid.Nil, fail("upload", 0, "infrastructure", err)
-	}
-	// A successful PUT alone does not prove that the stored archive matches the
-	// validated tree. Verify the bytes before the database makes it ready.
-	if err := p.verifyOutput(ctx, object); err != nil {
-		return uuid.Nil, fail("verify-upload", 0, "infrastructure", err)
 	}
 	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object.ID)
 	if err != nil {
 		return uuid.Nil, fail("publish", 0, "infrastructure", err)
 	}
 	return pid, nil
-}
-
-func (p *Pipeline) verifyOutput(ctx context.Context, object model.StoredObject) error {
-	r, _, err := p.Store.DownloadFile(ctx, p.Bucket, object.Key, nil)
-	if err != nil {
-		return fmt.Errorf("read package object %s: %w", object.ID, err)
-	}
-	h := sha256.New()
-	n, copyErr := io.Copy(h, io.LimitReader(r, object.Size+1))
-	if err := errors.Join(copyErr, r.Close()); err != nil {
-		return fmt.Errorf("verify package object %s: %w", object.ID, err)
-	}
-	if n != object.Size || hex.EncodeToString(h.Sum(nil)) != object.SHA256 {
-		return fmt.Errorf("package object %s: uploaded bytes differ from validated archive", object.ID)
-	}
-	return nil
 }
 
 func objectReferences(d model.Draft, id uuid.UUID) string {

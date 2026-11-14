@@ -13,9 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/smithy-go"
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -24,15 +26,46 @@ import (
 // These fault hooks still transfer bytes through real S3. Repository and sandbox
 // calls always use the real services, including publication transactions.
 type publicationStore struct {
-	builder.ObjectStore
-	afterUpload func(context.Context, string, string) error
+	*storage.S3Storage
+	beforeUpload   func(io.Reader) (io.Reader, error)
+	afterUpload    func(context.Context, string, string) error
+	beforeDownload func(string) error
 }
 
 func (s publicationStore) UploadFile(ctx context.Context, bucket, key string, r io.Reader, contentType string) error {
-	if err := s.ObjectStore.UploadFile(ctx, bucket, key, r, contentType); err != nil {
+	if err := s.S3Storage.UploadFile(ctx, bucket, key, r, contentType); err != nil {
 		return err
 	}
-	return s.afterUpload(ctx, bucket, key)
+	if s.afterUpload != nil {
+		return s.afterUpload(ctx, bucket, key)
+	}
+	return nil
+}
+
+func (s publicationStore) UploadFileWithSHA256(ctx context.Context, bucket, key string, r io.Reader, contentType, digest string) error {
+	if s.beforeUpload != nil {
+		var err error
+		r, err = s.beforeUpload(r)
+		if err != nil {
+			return err
+		}
+	}
+	if err := s.S3Storage.UploadFileWithSHA256(ctx, bucket, key, r, contentType, digest); err != nil {
+		return err
+	}
+	if s.afterUpload != nil {
+		return s.afterUpload(ctx, bucket, key)
+	}
+	return nil
+}
+
+func (s publicationStore) DownloadFile(ctx context.Context, bucket, key string, ifNoneMatch *string) (io.ReadCloser, string, error) {
+	if s.beforeDownload != nil {
+		if err := s.beforeDownload(key); err != nil {
+			return nil, "", err
+		}
+	}
+	return s.S3Storage.DownloadFile(ctx, bucket, key, ifNoneMatch)
 }
 
 func publicationHarness(t *testing.T) *pipelineHarness {
@@ -145,6 +178,13 @@ func TestPublicationMissingAndCorruptedObjects(t *testing.T) {
 			}
 			o, err := h.repo.GetObject(h.ctx, *id)
 			require.NoError(t, err)
+			t.Cleanup(func() {
+				original := "original input\n"
+				if tc.part == "answer" {
+					original = "original answer\n"
+				}
+				require.NoError(t, h.services.store.UploadFile(h.ctx, "objects", o.Key, strings.NewReader(original), "application/octet-stream"))
+			})
 			if tc.body == "" {
 				require.NoError(t, h.services.store.DeleteFile(h.ctx, "objects", o.Key))
 			} else {
@@ -158,11 +198,6 @@ func TestPublicationMissingAndCorruptedObjects(t *testing.T) {
 			require.Contains(t, failure.Message, id.String())
 			require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, b.ID))
 			require.NoError(t, h.repo.FinishBuildAttempt(h.ctx, b.ID, *b.LeaseToken, json.RawMessage(`{"message":"expected storage fault"}`), false))
-			original := "original input\n"
-			if tc.part == "answer" {
-				original = "original answer\n"
-			}
-			require.NoError(t, h.services.store.UploadFile(h.ctx, "objects", o.Key, strings.NewReader(original), "application/octet-stream"))
 		})
 	}
 }
@@ -170,43 +205,44 @@ func TestPublicationMissingAndCorruptedObjects(t *testing.T) {
 func TestPublicationUploadVerificationAndRetry(t *testing.T) {
 	h := publicationHarness(t)
 	h.options.MaxAttempts = 3
-	for _, fault := range []string{"truncated", "same size corruption", "lost upload response", "missing after upload"} {
+	for _, fault := range []string{"truncated", "same size corruption", "empty upload", "lost upload response"} {
 		t.Run(fault, func(t *testing.T) {
 			b := h.enqueueAndClaim(t)
 			pipeline := h.pipeline()
-			pipeline.Store = publicationStore{ObjectStore: h.services.store, afterUpload: func(ctx context.Context, bucket, key string) error {
-				if fault == "lost upload response" {
-					return errors.New("injected lost upload response")
-				}
-				if fault == "missing after upload" {
-					return h.services.store.DeleteFile(ctx, bucket, key)
-				}
-				body := []byte("partial zip")
-				if fault == "same size corruption" {
-					r, _, err := h.services.store.DownloadFile(ctx, bucket, key, nil)
-					if err != nil {
-						return err
+			pipeline.Store = publicationStore{S3Storage: h.services.store,
+				beforeUpload: func(r io.Reader) (io.Reader, error) {
+					switch fault {
+					case "truncated":
+						return io.LimitReader(r, 11), nil
+					case "empty upload":
+						return strings.NewReader(""), nil
+					case "same size corruption":
+						body, err := io.ReadAll(r)
+						if err != nil {
+							return nil, err
+						}
+						body[0] ^= 0xff
+						return bytes.NewReader(body), nil
+					default:
+						return r, nil
 					}
-					body, err = io.ReadAll(r)
-					closeErr := r.Close()
-					if err != nil {
-						return err
+				},
+				afterUpload: func(context.Context, string, string) error {
+					if fault == "lost upload response" {
+						return errors.New("injected lost upload response")
 					}
-					if closeErr != nil {
-						return closeErr
-					}
-					body[0] ^= 0xff
-				}
-				return h.services.store.UploadFile(ctx, bucket, key, bytes.NewReader(body), "application/octet-stream")
-			}}
+					return nil
+				},
+			}
 			_, err := pipeline.Execute(h.ctx, b)
 			var failure *builder.Failure
 			require.ErrorAs(t, err, &failure)
-			stage := "verify-upload"
-			if fault == "lost upload response" {
-				stage = "upload"
+			require.Equal(t, "upload", failure.Stage)
+			if fault != "lost upload response" {
+				var apiErr smithy.APIError
+				require.ErrorAs(t, err, &apiErr)
+				require.Equal(t, "BadDigest", apiErr.ErrorCode(), "the S3 server must reject altered archive bytes")
 			}
-			require.Equal(t, stage, failure.Stage)
 			require.Equal(t, "infrastructure", failure.Kind)
 			require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, b.ID))
 			require.Equal(t, 1, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_build_objects b JOIN stored_objects o ON o.id=b.object_id WHERE b.build_id=$1 AND b.role='output' AND o.state='uploading'`, b.ID))
@@ -219,7 +255,19 @@ func TestPublicationUploadVerificationAndRetry(t *testing.T) {
 			next, err := h.repo.ClaimBuild(h.ctx, time.Minute)
 			require.NoError(t, err)
 			require.Equal(t, b.ID, next.ID)
-			pid, err := h.pipeline().Execute(h.ctx, next)
+			// Successful publication must not download the archive it just wrote.
+			var outputKey string
+			retryPipeline := h.pipeline()
+			retryPipeline.Store = publicationStore{S3Storage: h.services.store,
+				afterUpload: func(_ context.Context, _, key string) error { outputKey = key; return nil },
+				beforeDownload: func(key string) error {
+					if key == outputKey {
+						return errors.New("unexpected archive read-back")
+					}
+					return nil
+				},
+			}
+			pid, err := retryPipeline.Execute(h.ctx, next)
 			require.NoError(t, err)
 			files, manifest, snapshot := publishedFiles(t, h, pid)
 			require.Equal(t, b.Snapshot, snapshot)
@@ -234,7 +282,7 @@ func TestPublicationConcurrentEdits(t *testing.T) {
 	b := h.enqueueAndClaim(t)
 	uploading, release := make(chan struct{}), make(chan struct{})
 	pipeline := h.pipeline()
-	pipeline.Store = publicationStore{ObjectStore: h.services.store, afterUpload: func(ctx context.Context, _, _ string) error {
+	pipeline.Store = publicationStore{S3Storage: h.services.store, afterUpload: func(ctx context.Context, _, _ string) error {
 		close(uploading)
 		select {
 		case <-release:
@@ -296,22 +344,26 @@ func TestPublicationConcurrentEdits(t *testing.T) {
 func TestPublicationCommitFailure(t *testing.T) {
 	h := publicationHarness(t)
 	b := h.enqueueAndClaim(t)
-	// The database is private to this top-level test. Fail at COMMIT, after the
-	// object state, package row, output hold and build state have all been changed.
-	_, err := h.pool.Exec(h.ctx, `CREATE FUNCTION reject_publication() RETURNS trigger LANGUAGE plpgsql AS $$
+	t.Run("rollback at commit", func(t *testing.T) {
+		// The database is private to this top-level test. Fail at COMMIT, after the
+		// object state, package row, output hold and build state have all been changed.
+		_, err := h.pool.Exec(h.ctx, `CREATE FUNCTION reject_publication() RETURNS trigger LANGUAGE plpgsql AS $$
  BEGIN RAISE EXCEPTION 'injected publication commit failure'; END $$;
  CREATE CONSTRAINT TRIGGER reject_publication AFTER UPDATE ON problem_builds
  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN (NEW.state='succeeded') EXECUTE FUNCTION reject_publication();`)
-	require.NoError(t, err)
-	_, err = h.pipeline().Execute(h.ctx, b)
-	require.ErrorContains(t, err, "injected publication commit failure")
-	require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, b.ID))
-	require.Equal(t, 1, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_build_objects b JOIN stored_objects o ON o.id=b.object_id WHERE b.build_id=$1 AND b.role='output' AND o.state='uploading'`, b.ID))
-	current, err := h.repo.GetBuild(h.ctx, b.ID)
-	require.NoError(t, err)
-	require.Equal(t, "running", current.State)
-	_, err = h.pool.Exec(h.ctx, `DROP TRIGGER reject_publication ON problem_builds; DROP FUNCTION reject_publication();`)
-	require.NoError(t, err)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_, err := h.pool.Exec(h.ctx, `DROP TRIGGER reject_publication ON problem_builds; DROP FUNCTION reject_publication();`)
+			require.NoError(t, err)
+		})
+		_, err = h.pipeline().Execute(h.ctx, b)
+		require.ErrorContains(t, err, "injected publication commit failure")
+		require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, b.ID))
+		require.Equal(t, 1, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_build_objects b JOIN stored_objects o ON o.id=b.object_id WHERE b.build_id=$1 AND b.role='output' AND o.state='uploading'`, b.ID))
+		current, err := h.repo.GetBuild(h.ctx, b.ID)
+		require.NoError(t, err)
+		require.Equal(t, "running", current.State)
+	})
 	pid, err := h.pipeline().Execute(h.ctx, b)
 	require.NoError(t, err)
 	_, _, snapshot := publishedFiles(t, h, pid)
@@ -380,7 +432,7 @@ func TestPublicationPartialPairUpload(t *testing.T) {
 	require.NoError(t, err)
 	uploads := *h.uploads
 	calls := 0
-	uploads.Store = publicationStore{ObjectStore: h.services.store, afterUpload: func(context.Context, string, string) error {
+	uploads.Store = publicationStore{S3Storage: h.services.store, afterUpload: func(context.Context, string, string) error {
 		calls++
 		if calls == 2 {
 			return errors.New("injected answer upload failure")
