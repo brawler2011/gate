@@ -81,6 +81,14 @@ describe("components", () => {
     expect("checkers/checker.cpp" in renamed.files).toBe(false);
     expect(renamed.tests).toEqual(draft.tests);
 
+    // A file named only by its extension is a Python source on the server too.
+    const dotfile: ProblemDraft = {
+      ...emptyDraft(),
+      files: {"validators/.py": ""},
+      components: [{id: "v", role: "validator", path: "validators/.py", dependencies: {}}],
+    };
+    expect(must(setComponentLanguage(dotfile, dotfile.components[0].id, "cpp")).components[0].path).toBe("validators/.cpp");
+
     const generator = draft.components[1].id;
     const python = must(setComponentLanguage(draft, generator, "python"));
     expect(python.components[1].path).toBe("generators/gen.py");
@@ -181,6 +189,7 @@ describe("build readiness", () => {
     const draft = emptyDraft();
     expect(buildProblems(draft)).toEqual(["Нет чекера", "Нет ни одного теста", "Нет ни одной подзадачи"]);
     expect(buildProblems({...draft, type: "interactive"})).toContain("Для интерактивной задачи нужен интерактор");
+    expect(buildProblems({...draft, type: "interactive"})).toContain("Для интерактивной задачи нужно главное решение");
   });
 
   test("manual tests need uploaded objects", () => {

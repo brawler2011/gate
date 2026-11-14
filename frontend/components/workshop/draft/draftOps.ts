@@ -72,10 +72,11 @@ const EXTENSION_LANGUAGES: Record<string, string> = {
   ".java": "java",
 };
 
+/** Mirrors Go's filepath.Ext: the suffix from the last dot of the file name. */
 const extensionOf = (path: string): string => {
   const name = path.slice(path.lastIndexOf("/") + 1);
   const dot = name.lastIndexOf(".");
-  return dot <= 0 ? "" : name.slice(dot).toLowerCase();
+  return dot < 0 ? "" : name.slice(dot).toLowerCase();
 };
 
 /** Returns the language of a source file from its extension, or "" when unknown. */
@@ -339,6 +340,9 @@ export const buildProblems = (draft: ProblemDraft): string[] => {
   }
   if (draft.type === "interactive" && !roleComponent(draft, "interactor")) {
     problems.push("Для интерактивной задачи нужен интерактор");
+  }
+  if (draft.type === "interactive" && !draft.main_solution_id) {
+    problems.push("Для интерактивной задачи нужно главное решение");
   }
   if (draft.tests.length === 0) {
     problems.push("Нет ни одного теста");

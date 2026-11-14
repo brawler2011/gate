@@ -9,7 +9,7 @@ another package; editing a problem does not change an existing package.
 
 ## Required files and metadata
 
-`Draft.Validate` runs both on saves and, with complete selections required, when
+`Draft.Validate` runs both on saves and, with required components enforced, when
 enqueueing a build. All supported types require a nonblank title, positive time
 and memory limits, at least one test, and valid component source files and declared
 source dependencies. Paths must be safe and assets must not duplicate text paths.
@@ -17,8 +17,10 @@ Every path belongs to the draft layout: component sources in their role folder
 (`checkers/`, `validators/`, `interactors/`, `generators/`, `solutions/`), shared
 files and all source dependencies in `lib/`, statements in `statements/`, statement
 resources in `assets/`.
-Component selections must reference components of the appropriate role, using a
-language available in the pinned toolchain.
+A draft holds at most one checker, validator and interactor; the role folder
+identifies each, so there is no selection. A component's language comes from its
+file extension (`.cpp`, `.cc`, `.cxx`, `.py`, `.go`, `.java`) and must be available
+in the pinned toolchain. The main solution is the only selected component.
 
 - `pass-fail` and `scoring` require a checker. Each test requires either a provided
   answer object or a solution component that generates the answer. An optional
@@ -34,7 +36,7 @@ language available in the pinned toolchain.
   `each`, and dependencies reference existing groups without duplicates or cycles.
   Empty groups are allowed. Scores are derived from authored test weights;
   scoring max score equals the group total. Other types have no max score.
-- A validator is optional. When selected, it runs on every materialized input.
+- A validator is optional. When present, it runs on every materialized input.
   Required components must compile, generated files must be produced, and checker
   or interactor execution must succeed before the archive can be published.
 
@@ -42,7 +44,8 @@ The ready GFMT v2 archive contains `problem.yaml`, the author snapshot at
 `.gate/snapshot.json`, source files/assets, compiled components and dependencies,
 and every declared test input and noninteractive answer. Generated tests have no
 remaining execution recipe in the ready manifest. `gfmt.OpenBuiltPackage` checks
-the final tree, including regular files, selections, test modes and group graph,
+the final tree, including regular files, one compiled component per singleton role
+(a checker, or an interactor for interactive problems), test modes and group graph,
 before archiving. Missing or changed input objects fail materialization with the
 object UUID and affected test input/answer or asset path.
 
