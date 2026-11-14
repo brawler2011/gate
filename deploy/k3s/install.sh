@@ -57,9 +57,9 @@ systemctl daemon-reload
 systemctl enable --now gate-close-k3s-api.service
 
 # containerd's default AppArmor profile denies signals inside containers on kernels
-# that stack the host's label, which hangs PostgreSQL and gosu. Pods use this
-# profile instead (appArmorProfile in deploy/prod). The apparmor service loads it
-# again on boot.
+# that stack the host's label, which hangs PostgreSQL and gosu. Production pods use
+# this profile instead (appArmorProfile in deploy/prod). The apparmor service loads
+# it again on boot.
 cat > /etc/apparmor.d/gate-default <<'EOF'
 #include <tunables/global>
 
