@@ -117,7 +117,7 @@ func (s *IntegrationTestSuite) TestContestProblemAssetServesPackageImage() {
 	resp, err := s.client.GetContestProblemAsset(ctx, params(sha256Hex(image)))
 	s.Require().NoError(err)
 	s.Equal("image/png", resp.ContentType)
-	s.Equal("public, max-age=31536000, immutable", resp.CacheControl.Or(""))
+	s.Equal("private, max-age=31536000, immutable", resp.CacheControl.Or(""))
 	s.Equal(`"`+sha256Hex(image)+`"`, resp.ETag.Or(""))
 	s.Contains(resp.ContentSecurityPolicy.Or(""), "sandbox")
 	body, err := io.ReadAll(resp.Response.Data)
