@@ -159,7 +159,8 @@ jobs:
         if: env.PUSH_IMAGES == 'true' && (steps.existing.outputs.found != 'true' || github.ref == 'refs/heads/main')
         uses: nix-community/cache-nix-action@v7
         with:
-          primary-key: nix-judge-${{ hashFiles('judge/**') }}
+          # New key so image-only caches are replaced with the copyTo closure too.
+          primary-key: nix-judge-v2-${{ hashFiles('judge/**') }}
           restore-prefixes-first-match: nix-judge-
           gc-max-store-size-linux: 8G
           purge: true
@@ -167,13 +168,13 @@ jobs:
           purge-created: 0
           purge-primary-key: never
 
-      # Realise the image for main's cache without replacing the tested tag that
-      # deploy may be promoting concurrently. An exact cache hit needs no build.
+      # Realise the image and push tool for main's cache without replacing the
+      # tested tag deploy may be promoting concurrently. An exact hit needs no build.
       - name: Warm main Nix cache
         if: env.PUSH_IMAGES == 'true' && github.ref == 'refs/heads/main' && steps.existing.outputs.found == 'true' && steps.nix-cache.outputs.hit-primary-key != 'true'
         run: |
           started=$SECONDS
-          nix build --no-link ./judge#default
+          nix build --no-link ./judge#default ./judge#default.copyTo
           echo "Judge cache warm-up: $((SECONDS - started)) seconds (ref: $GITHUB_REF)." >> "$GITHUB_STEP_SUMMARY"
 
       # Pushes the layers as Nix built them (uncompressed, digests known before the
