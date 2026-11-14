@@ -44,10 +44,10 @@ VALUES($1::uuid,$2::uuid,'package','objects/'||$2::text||'/'||$1::text,$3,1,'upl
 	if _, err := tx.Exec(ctx, `UPDATE stored_objects SET state='available' WHERE id=$1`, objectID); err != nil {
 		return uuid.Nil, fmt.Errorf("publish object: %w", err)
 	}
-	snapshot := fmt.Sprintf(`{"schema_version":1,"organization_id":%q,"toolchain":{"digest":%q},"input_objects":[],"draft":{"problem_id":%q,"revision":%d,"title":%q,"short_name":%q,"time_limit_ms":%d,"memory_limit_mb":%d,"tests":[],"assets":[]}}`,
+	snapshot := fmt.Sprintf(`{"organization_id":%q,"toolchain":{"digest":%q},"input_objects":[],"draft":{"problem_id":%q,"revision":%d,"title":%q,"short_name":%q,"time_limit_ms":%d,"memory_limit_mb":%d,"tests":[],"assets":[]}}`,
 		organizationID, toolchain, problemID, revision, title, shortName, timeMs, memoryMb)
-	if _, err := tx.Exec(ctx, `INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,schema_version,toolchain_digest,state,lease_token,lease_deadline,attempt,max_attempts,deadline)
-VALUES($1,$2,$3,$4,$5::jsonb,1,$6,'running',$7,clock_timestamp()+interval '1 hour',1,1,clock_timestamp()+interval '1 hour')`,
+	if _, err := tx.Exec(ctx, `INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,toolchain_digest,state,lease_token,lease_deadline,attempt,max_attempts,deadline)
+VALUES($1,$2,$3,$4,$5::jsonb,$6,'running',$7,clock_timestamp()+interval '1 hour',1,1,clock_timestamp()+interval '1 hour')`,
 		buildID, problemID, organizationID, revision, snapshot, toolchain, uuid.New()); err != nil {
 		return uuid.Nil, fmt.Errorf("build: %w", err)
 	}

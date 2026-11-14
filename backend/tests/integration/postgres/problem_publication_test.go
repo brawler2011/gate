@@ -485,3 +485,52 @@ func TestPublicationRejectsIncompleteDrafts(t *testing.T) {
 		})
 	}
 }
+
+// A published package re-imports from its .gate/snapshot.json into a draft that builds
+// into a package with the same content.
+func TestPublicationReimportsSnapshot(t *testing.T) {
+	h := publicationHarness(t)
+	b := h.enqueueAndClaim(t)
+	pid, err := h.pipeline().Execute(h.ctx, b)
+	require.NoError(t, err)
+	files, _, published := publishedFiles(t, h, pid)
+	var archive bytes.Buffer
+	w := zip.NewWriter(&archive)
+	for name, data := range files {
+		f, err := w.Create(name)
+		require.NoError(t, err)
+		_, err = f.Write(data)
+		require.NoError(t, err)
+	}
+	require.NoError(t, w.Close())
+
+	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
+	require.NoError(t, err)
+	_, err = h.uploads.Import(h.ctx, current.ProblemID, current.Revision, uuid.NewString(), &archive)
+	require.NoError(t, err)
+	imported, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
+	require.NoError(t, err)
+	require.Greater(t, imported.Revision, current.Revision)
+	require.NoError(t, imported.Validate(h.uploads.DraftQuotas, true))
+	// Import normalizes statement markdown; every other file is preserved byte for byte.
+	require.Len(t, imported.Files, len(published.Draft.Files))
+	for path, text := range published.Draft.Files {
+		if strings.HasPrefix(path, "statements/") {
+			require.Contains(t, imported.Files[path], text)
+		} else {
+			require.Equal(t, text, imported.Files[path])
+		}
+	}
+	require.Equal(t, published.Draft.Components, imported.Components)
+	require.Equal(t, published.Draft.Subtasks, imported.Subtasks)
+	require.Len(t, imported.Tests, 1)
+
+	rebuilt := h.enqueueAndClaim(t)
+	require.Equal(t, imported.Revision, rebuilt.Revision)
+	pid, err = h.pipeline().Execute(h.ctx, rebuilt)
+	require.NoError(t, err)
+	files, manifest, snapshot := publishedFiles(t, h, pid)
+	test := manifest.Subtasks[snapshot.Draft.Subtasks[0].ID.String()].Tests[0]
+	require.Equal(t, "original input\n", string(files[test.Manual]))
+	require.Equal(t, "original answer\n", string(files[test.Answer]))
+}

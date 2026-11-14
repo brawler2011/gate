@@ -551,7 +551,6 @@ CREATE TABLE problem_builds (
     organization_id uuid NOT NULL,
     revision bigint NOT NULL,
     snapshot jsonb NOT NULL,
-    schema_version integer NOT NULL,
     toolchain_digest text NOT NULL,
     state text NOT NULL,
     lease_token uuid,
@@ -568,7 +567,6 @@ CREATE TABLE problem_builds (
     CONSTRAINT problem_builds_diagnostic_check CHECK ((octet_length((diagnostic)::text) <= 131072)),
     CONSTRAINT problem_builds_max_attempts_check CHECK ((max_attempts > 0)),
     CONSTRAINT problem_builds_revision_check CHECK ((revision > 0)),
-    CONSTRAINT problem_builds_schema_version_check CHECK ((schema_version = 1)),
     CONSTRAINT problem_builds_snapshot_check CHECK ((jsonb_typeof(snapshot) = 'object'::text)),
     CONSTRAINT problem_builds_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'running'::text, 'succeeded'::text, 'failed'::text, 'cancelled'::text]))),
     CONSTRAINT problem_builds_toolchain_digest_check CHECK ((toolchain_digest ~ '^sha256:[0-9a-f]{64}$'::text)),
@@ -656,8 +654,8 @@ CREATE FUNCTION guard_problem_build() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    IF (NEW.id,NEW.problem_id,NEW.organization_id,NEW.revision,NEW.snapshot,NEW.schema_version,NEW.toolchain_digest,NEW.created_at,NEW.max_attempts,NEW.deadline)
-      IS DISTINCT FROM (OLD.id,OLD.problem_id,OLD.organization_id,OLD.revision,OLD.snapshot,OLD.schema_version,OLD.toolchain_digest,OLD.created_at,OLD.max_attempts,OLD.deadline) THEN
+    IF (NEW.id,NEW.problem_id,NEW.organization_id,NEW.revision,NEW.snapshot,NEW.toolchain_digest,NEW.created_at,NEW.max_attempts,NEW.deadline)
+      IS DISTINCT FROM (OLD.id,OLD.problem_id,OLD.organization_id,OLD.revision,OLD.snapshot,OLD.toolchain_digest,OLD.created_at,OLD.max_attempts,OLD.deadline) THEN
         RAISE EXCEPTION 'immutable build snapshot and settings';
     END IF;
     IF OLD.state IN ('succeeded','failed','cancelled') THEN RAISE EXCEPTION 'terminal build is immutable'; END IF;
@@ -694,7 +692,7 @@ BEGIN
       UNION ALL SELECT v FROM jsonb_path_query(snap,'$.draft.assets[*].object_id') e(v)
     ) refs WHERE v<>'null'::jsonb;
     IF actual<>declared OR actual<>embedded THEN RAISE EXCEPTION 'snapshot input object set mismatch'; END IF;
-    IF (snap->>'schema_version')::integer<>1 OR (snap->'draft'->>'revision')::bigint<>(SELECT revision FROM problem_builds WHERE id=bid)
+    IF (snap->'draft'->>'revision')::bigint<>(SELECT revision FROM problem_builds WHERE id=bid)
       OR (snap->'draft'->>'problem_id')::uuid<>(SELECT problem_id FROM problem_builds WHERE id=bid)
       OR (snap->>'organization_id')::uuid<>(SELECT organization_id FROM problem_builds WHERE id=bid)
       OR snap->'toolchain'->>'digest'<>(SELECT toolchain_digest FROM problem_builds WHERE id=bid) THEN

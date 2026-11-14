@@ -14,8 +14,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const DraftSnapshotVersion = 1
-
 type Draft struct {
 	ProblemID      uuid.UUID         `json:"problem_id"`
 	Revision       int64             `json:"revision"`
@@ -80,7 +78,6 @@ type DraftAsset struct {
 }
 
 type BuildSnapshot struct {
-	SchemaVersion  int         `json:"schema_version"`
 	OrganizationID uuid.UUID   `json:"organization_id"`
 	Draft          Draft       `json:"draft"`
 	Toolchain      Toolchain   `json:"toolchain"`

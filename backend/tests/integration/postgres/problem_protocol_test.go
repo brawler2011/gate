@@ -112,11 +112,11 @@ func TestBuildRequestSnapshotsOneRevisionWhileEditing(t *testing.T) {
 func TestBuildSnapshotInputSetMustMatchReferences(t *testing.T) {
 	t.Parallel()
 	ctx, pool, _, org, d, oid := buildableFixture(t)
-	snapshot := `{"schema_version":1,"organization_id":"` + org.String() + `","toolchain":{"digest":"sha256:` + strings.Repeat("a", 64) + `"},` +
+	snapshot := `{"organization_id":"` + org.String() + `","toolchain":{"digest":"sha256:` + strings.Repeat("a", 64) + `"},` +
 		`"input_objects":["` + oid.String() + `"],"draft":{"problem_id":"` + d.ProblemID.String() + `","revision":` + "2" + `,` +
 		`"tests":[{"input":{"object_id":"` + oid.String() + `"},"answer":{"object_id":null}}],"assets":[]}}`
-	_, err := pool.Exec(ctx, `INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,schema_version,toolchain_digest,state,max_attempts,deadline)
- VALUES($1,$2,$3,2,$4::jsonb,1,$5,'queued',1,clock_timestamp()+interval '1 minute')`,
+	_, err := pool.Exec(ctx, `INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,toolchain_digest,state,max_attempts,deadline)
+ VALUES($1,$2,$3,2,$4::jsonb,$5,'queued',1,clock_timestamp()+interval '1 minute')`,
 		uuid.New(), d.ProblemID, org, snapshot, "sha256:"+strings.Repeat("a", 64))
 	require.ErrorContains(t, err, "snapshot input object set mismatch")
 }
