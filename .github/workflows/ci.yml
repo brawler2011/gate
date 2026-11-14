@@ -152,17 +152,14 @@ jobs:
         if: env.PUSH_IMAGES == 'true' && (steps.existing.outputs.found != 'true' || github.ref == 'refs/heads/main')
         uses: cachix/install-nix-action@v31
 
-      # Caches /nix, including the judge image and its copyTo push tool, between runs.
-      # The key is judge-nix-store- plus the hash of judge/**.
-      # Restore the exact key first; on a miss, restore the newest cache with that
-      # prefix visible to this ref. PRs can read their own caches and main's;
-      # main can read its own caches, but cannot read PR caches.
-      # main warms the store even when the image exists so new PRs can reuse it.
-      # Without an exact hit, warm-up builds the image and push tool without pushing.
-      # After a successful job, the action saves the store if the key is missing.
-      # Its post step also purges older caches with this prefix on the current ref,
-      # even when nothing is saved, keeping the primary key. Other refs are untouched.
-      # Purging requires this job's actions: write permission.
+      # Nix store cache for judge image builds. Runs that build the image
+      # use it to rebuild only what changed in judge/.
+      # - Key: judge-nix-store-<hash of judge/>. On a miss, the newest cache with
+      #   that prefix is restored (a PR sees its own caches and main's).
+      # - main keeps a cache for the current judge/, so new PRs start warm. It
+      #   builds but never re-pushes an existing image (see "Warm main Nix cache").
+      # - After successful runs, older caches with this prefix on the same ref are
+      #   deleted; that needs actions: write on this job.
       - name: Cache Nix store
         id: nix-cache
         if: env.PUSH_IMAGES == 'true' && (steps.existing.outputs.found != 'true' || github.ref == 'refs/heads/main')
