@@ -57,7 +57,7 @@ func TestPatchContestAllowClarifications(t *testing.T) {
 			t.Run(fmt.Sprintf("initial=%t/%s", initial, tc.name), func(t *testing.T) {
 				store := &patchContestsModule{contest: contestsmodel.Contest{
 					ID: uuid.New(), Login: "round", OrganizationLogin: "org", Visibility: contestsmodel.ContestVisibilityPublic,
-					Settings: map[string]interface{}{"allow_clarifications": initial, "hide_statements": true},
+					Settings: map[string]interface{}{"allow_clarifications": initial, "hide_statements": true, "freeze_status": "frozen"},
 				}}
 				server := NewCoreServer(nil, nil, store, nil, nil, nil, nil, nil, false)
 				handler, err := corev1.NewServer(server, middleware.NewSecurityHandler())
@@ -75,6 +75,7 @@ func TestPatchContestAllowClarifications(t *testing.T) {
 				require.Equal(t, tc.settingsUpdate, flagSet)
 				require.Equal(t, tc.want, store.contest.Settings["allow_clarifications"])
 				require.Equal(t, true, store.contest.Settings["hide_statements"])
+				require.Equal(t, "frozen", store.contest.Settings["freeze_status"], "omitted freeze_status must preserve the stored mode")
 
 				rec = httptest.NewRecorder()
 				handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))

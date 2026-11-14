@@ -65,11 +65,3 @@ func (s *OrganizationModel) setDefaults() {
 		s.JoinPolicy = val
 	}
 }
-
-// setDefaults set default value of fields.
-func (s *UpdateContestRequestModel) setDefaults() {
-	{
-		val := UpdateContestRequestModelFreezeStatus("auto")
-		s.FreezeStatus.SetTo(val)
-	}
-}
