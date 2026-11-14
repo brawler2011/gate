@@ -96,11 +96,6 @@ export const removeComponent = (draft: ProblemDraft, id: string): OpResult => {
   if (usedByTests) {
     return {error: "Компонент используется в тестах. Сначала измените эти тесты."};
   }
-  const isDependency = (c: ProblemDraftComponent): boolean =>
-    c.id !== id && Object.values(c.dependencies ?? {}).includes(component.path);
-  if (draft.components.some(isDependency)) {
-    return {error: "Файл используется как зависимость другого компонента"};
-  }
   const files = {...draft.files};
   delete files[component.path];
   return {
