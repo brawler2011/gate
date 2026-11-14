@@ -15,7 +15,6 @@ import (
 
 type announcementsContestStub struct {
 	ContestsUC
-	ContestsReader
 	resolve func(context.Context, string, string) (contestsmodel.Contest, error)
 }
 
@@ -24,6 +23,7 @@ func (s announcementsContestStub) GetContestByOrgLoginAndContestLogin(ctx contex
 }
 
 type announcementsReaderStub struct {
+	AnnouncementsUC
 	read func(context.Context, uuid.UUID, int32, int32) (*contestsmodel.ContestAnnouncementsList, error)
 }
 
@@ -70,17 +70,7 @@ func TestListContestAnnouncementsReader(t *testing.T) {
 				}
 				return response, nil
 			}}
-			h := NewCoreServer(
-				nil,
-				nil,
-				testContestsModule{ContestsUC: contests, ContestsReader: contests, AnnouncementsReader: reader},
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				false,
-			)
+			h := NewCoreServer(Services{Contests: contests, Announcements: reader}, false)
 			got, err := h.ListContestAnnouncements(ctx, params)
 			switch {
 			case tc.resolveErr != nil:

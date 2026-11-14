@@ -128,7 +128,7 @@ func TestBatchCreateOrganizationUsers_Success(t *testing.T) {
 		TTLDays:  &ttl,
 	}
 
-	res, err := orgsUC.BatchCreateUsers(accessmodel.WithUser(ctx, adminUser), input, adminUser.Id)
+	res, err := orgsUC.BatchCreateUsers(accessmodel.WithUser(ctx, adminUser), input)
 	require.NoError(t, err)
 	require.Len(t, res.Users, 10)
 
@@ -182,7 +182,7 @@ func TestBatchCreateOrganizationUsers_CollisionHandling(t *testing.T) {
 		Count:    2,
 	}
 
-	res, err := orgsUC.BatchCreateUsers(accessmodel.WithUser(ctx, adminUser), input, adminUser.Id)
+	res, err := orgsUC.BatchCreateUsers(accessmodel.WithUser(ctx, adminUser), input)
 	require.NoError(t, err)
 	require.Len(t, res.Users, 2)
 

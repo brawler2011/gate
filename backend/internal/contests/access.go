@@ -27,11 +27,9 @@ func (uc *ContestsUseCase) authorizeContestProblem(ctx context.Context, contestI
 	})
 }
 
-func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID, userID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error) {
+func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID uuid.UUID, unfrozen bool) (*contestsmodel.ScoreboardResponse, error) {
 	user := accessmodel.UserFromContext(ctx)
-	if user.Id != userID {
-		return nil, pkg.NoPermission
-	}
+	userID := user.Id
 	contest, err := uc.contestRepo.GetContest(ctx, contestID)
 	if err != nil {
 		return nil, err

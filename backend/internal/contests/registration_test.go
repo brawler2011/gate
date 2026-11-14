@@ -141,7 +141,7 @@ func TestListJoinRequestsUsesDomainPermission(t *testing.T) {
 			permissions := &rosterPermissions{allow: tc.allow, err: tc.permissionErr}
 			uc := NewContestsUseCase(lookup, nil, nil, joinRequestsPermissions{permissions})
 			actor := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
-			_, err := uc.ListJoinRequests(accessmodel.WithUser(context.Background(), actor), "org", "contest", actor.Id)
+			_, err := uc.ListJoinRequests(accessmodel.WithUser(context.Background(), actor), "org", "contest")
 			require.ErrorIs(t, err, tc.want)
 			require.Equal(t, tc.want == nil, lookup.listed)
 			require.Equal(t, []accessmodel.ContestAction{accessmodel.ActionManageContest}, permissions.actions)
@@ -167,8 +167,8 @@ func TestContestRosterMutationsAuthorizeWithoutHTTP(t *testing.T) {
 		require.ErrorIs(t, uc.CreateParticipant(ctx, contestsmodel.ParticipantCreation{ContestId: contest, UserId: target}), want)
 		require.ErrorIs(t, uc.UpdateContestMember(ctx, contest, target, "participant"), want)
 		require.ErrorIs(t, uc.DeleteParticipant(ctx, contestsmodel.ParticipantDeletion{ContestId: contest, UserId: target}), want)
-		require.ErrorIs(t, uc.CreateContestTeam(ctx, contest, target, caller.Id, contestsmodel.ContestRoleParticipant), want)
-		require.ErrorIs(t, uc.UpdateContestTeamRole(ctx, contest, target, caller.Id, contestsmodel.ContestRoleParticipant), want)
-		require.ErrorIs(t, uc.DeleteContestTeam(ctx, contest, target, caller.Id), want)
+		require.ErrorIs(t, uc.CreateContestTeam(ctx, contest, target, contestsmodel.ContestRoleParticipant), want)
+		require.ErrorIs(t, uc.UpdateContestTeamRole(ctx, contest, target, contestsmodel.ContestRoleParticipant), want)
+		require.ErrorIs(t, uc.DeleteContestTeam(ctx, contest, target), want)
 	}
 }

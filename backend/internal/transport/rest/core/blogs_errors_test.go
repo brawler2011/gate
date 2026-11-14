@@ -18,7 +18,8 @@ import (
 )
 
 type failingBlogs struct {
-	BlogsModule
+	BlogsUC
+	BlogsReader
 	err error
 }
 
@@ -40,7 +41,8 @@ func TestBlogHandlersPreserveErrors(t *testing.T) {
 		{"internal", errors.New("storage failed"), http.StatusInternalServerError},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			server := &CoreServer{blogs: failingBlogs{err: tc.err}}
+			blogs := failingBlogs{err: tc.err}
+			server := &CoreServer{Services: Services{Blogs: blogs, BlogReads: blogs}}
 			ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 			t.Run("create", func(t *testing.T) {
 				response, err := server.CreatePost(ctx, &corev1.CreatePostReq{

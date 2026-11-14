@@ -75,7 +75,7 @@ func (s *IntegrationTestSuite) TestContestReadFiltersOrderingAndRosterPages() {
 		s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{ID: ids[i], OrganizationID: org.ID, OwnerID: &owner.Id, Title: title, Login: ids[i].String(), Visibility: contestsmodel.ContestVisibilityPublic}))
 	}
 	permissions := access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo)
-	reader := contests.NewReader(s.contestsRepo, permissions)
+	reader := contests.NewContestsUseCase(s.contestsRepo, nil, nil, permissions)
 	ctx := accessmodel.WithUser(s.ctx, owner)
 	for _, orgID := range []*uuid.UUID{nil, &org.ID} {
 		list, err := reader.ListWorkshopContests(ctx, contestsmodel.WorkshopContestsFilter{UserId: owner.Id, Search: "Needle", SortBy: "title", SortOrder: "asc", Page: 2, PageSize: 1, OrganizationID: orgID})

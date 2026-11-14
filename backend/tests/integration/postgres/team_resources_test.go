@@ -91,10 +91,10 @@ func TestTeamResourcesViewerAccess(t *testing.T) {
 			viewer, err := postgres.NewUsersRepo(pool).GetUserById(ctx, viewerID)
 			require.NoError(t, err)
 			actorCtx := accessmodel.WithUser(ctx, viewer)
-			visibleContests, err := uc.GetTeamContests(actorCtx, teamID, viewerID, paging.Request{})
+			visibleContests, err := uc.GetTeamContests(actorCtx, teamID, paging.Request{})
 			require.NoError(t, err)
 			require.Equal(t, contests, visibleContests.Items)
-			visibleProblems, err := uc.GetTeamProblems(actorCtx, teamID, viewerID, paging.Request{})
+			visibleProblems, err := uc.GetTeamProblems(actorCtx, teamID, paging.Request{})
 			require.NoError(t, err)
 			require.Equal(t, problems, visibleProblems.Items)
 			gotContests, gotProblems := []uuid.UUID{}, []uuid.UUID{}

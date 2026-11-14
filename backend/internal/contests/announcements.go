@@ -12,15 +12,13 @@ import (
 )
 
 type AnnouncementsUseCase struct {
-	transactor ContestEventsTransactions
+	transactor  ContestEventsTransactions
+	reads       AnnouncementReads
+	permissions Permissions
 }
 
-func NewAnnouncementsUseCase(
-	transactor ContestEventsTransactions,
-) *AnnouncementsUseCase {
-	return &AnnouncementsUseCase{
-		transactor: transactor,
-	}
+func NewAnnouncementsUseCase(transactor ContestEventsTransactions, reads AnnouncementReads, permissions Permissions) *AnnouncementsUseCase {
+	return &AnnouncementsUseCase{transactor: transactor, reads: reads, permissions: permissions}
 }
 
 func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error) {

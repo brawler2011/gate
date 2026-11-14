@@ -174,7 +174,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 	s.Equal(corev1.PaginationModel{Page: 1, PageSize: 50, TotalItems: 51, TotalPages: 2}, pagination)
 
 	reader := pgstore.NewAnnouncementsRepo(s.dbPool)
-	protected := contests.NewCommunicationReader(reader, nil, nil)
+	protected := contests.NewAnnouncementsUseCase(nil, reader, nil)
 	for _, params := range [][2]int32{{0, 1}, {-3, 2}, {1, 0}, {1, -1}, {1, 101}, {2, 0}} {
 		_, err := protected.ListAnnouncements(s.ctx, contestID, params[0], params[1])
 		s.Require().ErrorIs(err, pkg.ErrBadInput)

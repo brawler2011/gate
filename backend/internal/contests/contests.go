@@ -412,7 +412,7 @@ func sortScoreboardItems(items []contestsmodel.ScoreboardItem) {
 
 func (uc *ContestsUseCase) CreateContestTeam(
 	ctx context.Context,
-	contestID, teamID, requestUserID uuid.UUID,
+	contestID, teamID uuid.UUID,
 	role contestsmodel.ContestRole,
 ) error {
 	return uc.withinContest(ctx, contestID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
@@ -422,7 +422,7 @@ func (uc *ContestsUseCase) CreateContestTeam(
 
 func (uc *ContestsUseCase) UpdateContestTeamRole(
 	ctx context.Context,
-	contestID, teamID, requestUserID uuid.UUID,
+	contestID, teamID uuid.UUID,
 	role contestsmodel.ContestRole,
 ) error {
 	return uc.withinContest(ctx, contestID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
@@ -432,7 +432,7 @@ func (uc *ContestsUseCase) UpdateContestTeamRole(
 
 func (uc *ContestsUseCase) DeleteContestTeam(
 	ctx context.Context,
-	contestID, teamID, requestUserID uuid.UUID,
+	contestID, teamID uuid.UUID,
 ) error {
 	return uc.withinContest(ctx, contestID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
 		return tx.DeleteContestTeam(ctx, contestID, teamID)
@@ -626,9 +626,9 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 func (uc *ContestsUseCase) ListJoinRequests(
 	ctx context.Context,
 	orgLogin, contestLogin string,
-	requestUserID uuid.UUID,
 ) ([]contestsmodel.ContestJoinRequest, error) {
-	if err := accessmodel.RequireCaller(ctx, requestUserID); err != nil {
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
 		return nil, err
 	}
 	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
@@ -636,7 +636,7 @@ func (uc *ContestsUseCase) ListJoinRequests(
 		return nil, err
 	}
 
-	allowed, err := uc.permissions.HasContestPermission(ctx, contest.ID, requestUserID, accessmodel.ActionManageContest)
+	allowed, err := uc.permissions.HasContestPermission(ctx, contest.ID, user.Id, accessmodel.ActionManageContest)
 	if err != nil {
 		return nil, err
 	}
@@ -677,16 +677,14 @@ func (uc *ContestsUseCase) CancelJoinRequest(
 func (uc *ContestsUseCase) ApproveJoinRequest(
 	ctx context.Context,
 	orgLogin, contestLogin string,
-	requestID, reviewerID uuid.UUID,
+	requestID uuid.UUID,
 ) error {
 	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 	if err != nil {
 		return err
 	}
 
-	if accessmodel.UserFromContext(ctx).Id != reviewerID {
-		return pkg.NoPermission
-	}
+	reviewerID := accessmodel.UserFromContext(ctx).Id
 
 	var pendingNotifications []notificationsmodel.Notification
 	err = uc.withinContest(ctx, contest.ID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
@@ -753,16 +751,14 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 func (uc *ContestsUseCase) RejectJoinRequest(
 	ctx context.Context,
 	orgLogin, contestLogin string,
-	requestID, reviewerID uuid.UUID,
+	requestID uuid.UUID,
 ) error {
 	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 	if err != nil {
 		return err
 	}
 
-	if accessmodel.UserFromContext(ctx).Id != reviewerID {
-		return pkg.NoPermission
-	}
+	reviewerID := accessmodel.UserFromContext(ctx).Id
 
 	var pendingNotifications []notificationsmodel.Notification
 	if err := uc.withinContest(ctx, contest.ID, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
@@ -818,16 +814,16 @@ func (uc *ContestsUseCase) RejectJoinRequest(
 func (uc *ContestsUseCase) GetMyPendingJoinRequest(
 	ctx context.Context,
 	orgLogin, contestLogin string,
-	userID uuid.UUID,
 ) (*contestsmodel.ContestJoinRequest, error) {
-	if err := accessmodel.RequireCaller(ctx, userID); err != nil {
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
 		return nil, err
 	}
 	contest, err := uc.GetContestByOrgLoginAndContestLogin(ctx, orgLogin, contestLogin)
 	if err != nil {
 		return nil, err
 	}
-	return uc.contestRepo.GetPendingContestJoinRequest(ctx, contest.ID, userID)
+	return uc.contestRepo.GetPendingContestJoinRequest(ctx, contest.ID, user.Id)
 }
 
 func scoreboardItem(userID uuid.UUID, username string, pResults []contestsmodel.ContestProblemResult) contestsmodel.ScoreboardItem {

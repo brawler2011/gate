@@ -20,7 +20,6 @@ import (
 
 type visibilityStub struct {
 	ContestsUC
-	ContestsReader
 	PermissionsUC
 	SubmissionsUC
 	contest       contestsmodel.Contest
@@ -55,17 +54,7 @@ func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 	viewer, author, contestID := uuid.New(), uuid.New(), uuid.New()
 	stub := &visibilityStub{contest: contestsmodel.Contest{ID: contestID, Settings: map[string]any{"freeze_status": contestsmodel.FreezeStatusFrozen}}, permissions: accessmodel.ContestPermissions{ListUsersSubmissions: true, ListOwnSubmissions: true, GetOwnSubmission: true, GetOtherUserSubmission: true, GetSubmissionDetails: true}, submission: submissionsmodel.Submission{ID: uuid.New(), ContestID: &contestID, CreatedBy: &author, CreatedAt: time.Now(), State: 200, Score: 100, TimeStat: 5, Submission: "secret", TestDetails: &submissionsmodel.SubmissionTestDetails{}, FailedTest: new(int32), BanReason: new(string)}}
 	application := submissions.NewSubmissionsUseCase(&visibilityRepo{stub: stub}, stub, nil, nil, stub)
-	h := NewCoreServer(
-		nil,
-		nil,
-		testContestsModule{ContestsUC: stub, PermissionsUC: stub, ContestsReader: stub},
-		nil,
-		application,
-		nil,
-		nil,
-		nil,
-		false,
-	)
+	h := NewCoreServer(Services{Contests: stub, ContestPermissions: stub, Submissions: application}, false)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: viewer, Role: accessmodel.UserRoleUser})
 	for _, own := range []bool{false, true} {
 		t.Run(map[bool]string{true: "own", false: "other"}[own], func(t *testing.T) {

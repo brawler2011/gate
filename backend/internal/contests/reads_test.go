@@ -13,7 +13,7 @@ import (
 )
 
 type contestReads struct {
-	Reads
+	ContestsRepo
 	page, size    int32
 	user          uuid.UUID
 	login, search string
@@ -48,11 +48,23 @@ func (p *rosterPermissions) HasContestPermission(_ context.Context, _, _ uuid.UU
 	return action == p.allow, p.err
 }
 
+func (p *rosterPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
+	return false, nil
+}
+
+func newContestReader(reads ContestsRepo, permissions *rosterPermissions) *ContestsUseCase {
+	uc := &ContestsUseCase{contestRepo: reads}
+	if permissions != nil {
+		uc.permissions = permissions
+	}
+	return uc
+}
+
 func TestProtectedContestReadsRejectBeforeStorage(t *testing.T) {
 	actor := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 	user := uuid.New()
 	for _, ctx := range []context.Context{context.Background(), accessmodel.WithUser(context.Background(), actor)} {
-		reader := NewReader(nil, &rosterPermissions{})
+		reader := newContestReader(nil, &rosterPermissions{})
 		expected := pkg.NoPermission
 		if accessmodel.UserFromContext(ctx).IsGuest() {
 			expected = pkg.ErrUnauthenticated
@@ -100,7 +112,7 @@ func TestContestReadsNormalizePaginationAndValidateBeforeStorage(t *testing.T) {
 				t.Run(tc.name, func(t *testing.T) {
 					reads := &contestReads{}
 					permissions := &rosterPermissions{allow: accessmodel.ActionGetMonitor}
-					reader := NewReader(reads, permissions)
+					reader := newContestReader(reads, permissions)
 					var err error
 					switch method {
 					case "organization":
@@ -140,7 +152,7 @@ func TestContestRosterPreservesMonitorOrParticipantPermission(t *testing.T) {
 	for _, action := range []accessmodel.ContestAction{accessmodel.ActionGetMonitor, accessmodel.ActionListOwnSubmissions} {
 		reads := &contestReads{}
 		permissions := &rosterPermissions{allow: action}
-		reader := NewReader(reads, permissions)
+		reader := newContestReader(reads, permissions)
 		_, err := reader.ListContestMembers(ctx, contestsmodel.ParticipantsFilter{})
 		require.NoError(t, err)
 		require.True(t, reads.called)
@@ -149,14 +161,14 @@ func TestContestRosterPreservesMonitorOrParticipantPermission(t *testing.T) {
 		require.Contains(t, permissions.actions, action)
 	}
 	expected := errors.New("authorization unavailable")
-	_, err := NewReader(nil, &rosterPermissions{err: expected}).ListContestMembers(ctx, contestsmodel.ParticipantsFilter{})
+	_, err := newContestReader(nil, &rosterPermissions{err: expected}).ListContestMembers(ctx, contestsmodel.ParticipantsFilter{})
 	require.ErrorIs(t, err, expected)
 }
 
 func TestContestReadsPreserveValidationOrder(t *testing.T) {
 	other := uuid.New()
 	for _, ctx := range []context.Context{context.Background(), accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})} {
-		reader := NewReader(nil, nil)
+		reader := newContestReader(nil, nil)
 		want := pkg.NoPermission
 		if accessmodel.UserFromContext(ctx).IsGuest() {
 			want = pkg.ErrUnauthenticated
@@ -171,6 +183,6 @@ func TestContestReadsPreserveValidationOrder(t *testing.T) {
 		_, err = reader.ListContestMembers(ctx, contestsmodel.ParticipantsFilter{Page: -1})
 		require.ErrorIs(t, err, pkg.ErrBadInput)
 	}
-	_, err := NewReader(nil, nil).ListOrganizationContests(context.Background(), "organization", "", -1, 50)
+	_, err := newContestReader(nil, nil).ListOrganizationContests(context.Background(), "organization", "", -1, 50)
 	require.ErrorIs(t, err, pkg.ErrBadInput)
 }

@@ -20,7 +20,7 @@ import (
 )
 
 type cookieIdentityStub struct {
-	IdentityModule
+	AuthUC
 	user      accessmodel.User
 	sessionID uuid.UUID
 	err       error
@@ -87,7 +87,7 @@ func TestAuthHandlerCookies(t *testing.T) {
 		t.Run(map[bool]string{false: "local", true: "secure"}[secure], func(t *testing.T) {
 			user := accessmodel.User{Id: uuid.New(), Username: "cookieuser", Role: accessmodel.UserRoleUser}
 			identity := &cookieIdentityStub{user: user, sessionID: uuid.New()}
-			h := NewCoreServer(identity, nil, nil, nil, nil, nil, nil, nil, secure)
+			h := NewCoreServer(Services{Auth: identity}, secure)
 			ctx := context.Background()
 			oldSessionID := uuid.New()
 			authCtx := authenticatedCookieContext(identity, oldSessionID)
@@ -141,7 +141,7 @@ func TestAuthHandlerCookies(t *testing.T) {
 
 func TestAuthHandlerCookieErrors(t *testing.T) {
 	identity := &cookieIdentityStub{err: pkg.ErrBadInput}
-	h := NewCoreServer(identity, nil, nil, nil, nil, nil, nil, nil, true)
+	h := NewCoreServer(Services{Auth: identity}, true)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 
 	login, err := h.Login(ctx, &corev1.LoginRequestModel{})
@@ -199,7 +199,7 @@ func TestAuthHTTPCookies(t *testing.T) {
 					if operation.failure {
 						identity.err = pkg.ErrBadInput
 					}
-					h := NewCoreServer(identity, nil, nil, nil, nil, nil, nil, nil, secure)
+					h := NewCoreServer(Services{Auth: identity}, secure)
 					server, err := corev1.NewServer(h, middleware.NewSecurityHandler(), corev1.WithErrorHandler(middleware.ResponseErrorHandler(slog.New(slog.NewTextHandler(io.Discard, nil)))))
 					require.NoError(t, err)
 					req := httptest.NewRequest(http.MethodPost, transport.scheme+"://example.com"+operation.path, strings.NewReader(operation.body))

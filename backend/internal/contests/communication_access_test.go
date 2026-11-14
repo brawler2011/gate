@@ -58,7 +58,7 @@ func TestCommunicationReadsEnforceVisibility(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			reads := &communicationReads{}
-			reader := NewCommunicationReader(reads, reads, communicationPermissions{tc.view, tc.manage})
+			reader := newCommunicationReader(reads, communicationPermissions{tc.view, tc.manage})
 			user := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 			ctx := context.Background()
 			if !tc.guest {
@@ -86,6 +86,16 @@ func TestCommunicationReadsEnforceVisibility(t *testing.T) {
 	}
 }
 
+// communicationReader exposes the announcement and clarification reads together.
+type communicationReader struct {
+	*AnnouncementsUseCase
+	*ClarificationsUseCase
+}
+
+func newCommunicationReader(reads *communicationReads, permissions Permissions) communicationReader {
+	return communicationReader{NewAnnouncementsUseCase(nil, reads, permissions), NewClarificationsUseCase(nil, reads, permissions)}
+}
+
 type deniedCommunicationStore struct {
 	contestEventsTestStore
 }
@@ -99,11 +109,11 @@ func TestCommunicationCommandsRequireTransactionBoundPermission(t *testing.T) {
 	transactions := testTransactions[ContestEventsTxStore]{store}
 	actor := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 	ctx := accessmodel.WithUser(context.Background(), actor)
-	announcements := NewAnnouncementsUseCase(transactions)
+	announcements := NewAnnouncementsUseCase(transactions, nil, nil)
 	_, err := announcements.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{ContestID: uuid.New(), AuthorID: actor.Id, Title: "Title", Body: "Body"})
 	require.ErrorIs(t, err, pkg.NoPermission)
 	require.ErrorIs(t, announcements.DeleteAnnouncement(ctx, uuid.New(), uuid.New()), pkg.NoPermission)
-	clarifications := NewClarificationsUseCase(transactions)
+	clarifications := NewClarificationsUseCase(transactions, nil, nil)
 	_, err = clarifications.CreateClarification(ctx, &contestsmodel.CreateContestClarificationInput{ContestID: uuid.New(), UserID: actor.Id, Question: "Question"})
 	require.ErrorIs(t, err, pkg.NoPermission)
 	_, err = clarifications.AnswerClarification(ctx, &contestsmodel.AnswerContestClarificationInput{ContestID: uuid.New(), AnsweredBy: actor.Id, Answer: "Answer"})
@@ -113,7 +123,7 @@ func TestCommunicationCommandsRequireTransactionBoundPermission(t *testing.T) {
 func TestClarificationsSettingCheckedInsideTransaction(t *testing.T) {
 	store := contestEventsTestStore{Contest: contestsmodel.Contest{Settings: map[string]interface{}{"allow_clarifications": false}}}
 	user := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
-	uc := NewClarificationsUseCase(testTransactions[ContestEventsTxStore]{store})
+	uc := NewClarificationsUseCase(testTransactions[ContestEventsTxStore]{store}, nil, nil)
 	_, err := uc.CreateClarification(accessmodel.WithUser(context.Background(), user), &contestsmodel.CreateContestClarificationInput{ContestID: uuid.New(), UserID: user.Id, Question: "Question"})
 	require.ErrorIs(t, err, pkg.NoPermission)
 }
@@ -139,10 +149,10 @@ func TestCommunicationPagination(t *testing.T) {
 			} {
 				t.Run(tc.name, func(t *testing.T) {
 					reads := &communicationReads{}
-					reader := NewCommunicationReader(reads, reads, communicationPermissions{view: true, manage: method == "moderator clarifications"})
+					reader := newCommunicationReader(reads, communicationPermissions{view: true, manage: method == "moderator clarifications"})
 					if tc.err != nil {
 						// Invalid pagination must fail before permission or storage access.
-						reader = NewCommunicationReader(nil, nil, nil)
+						reader = newCommunicationReader(nil, nil)
 					}
 					var err error
 					if method == "announcements" {
@@ -160,6 +170,6 @@ func TestCommunicationPagination(t *testing.T) {
 			}
 		})
 	}
-	_, err := NewCommunicationReader(nil, nil, nil).ListClarifications(context.Background(), uuid.New(), &contestsmodel.ContestClarificationsFilter{})
+	_, err := newCommunicationReader(nil, nil).ListClarifications(context.Background(), uuid.New(), &contestsmodel.ContestClarificationsFilter{})
 	require.ErrorIs(t, err, pkg.ErrUnauthenticated)
 }

@@ -8,19 +8,10 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
-	"github.com/brawler2011/gate/backend/internal/problems"
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
-
-type ProblemsReader interface {
-	ListProblemMembers(context.Context, uuid.UUID, paging.Request) (*paging.List[problemsmodel.ProblemMember], error)
-	GetProblemTeams(context.Context, uuid.UUID) ([]problemsmodel.ProblemTeam, error)
-	ListProblems(context.Context, *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error)
-	ListDashboardProblems(context.Context, uuid.UUID, int32) ([]problemsmodel.DashboardProblem, error)
-	ListTemplates(context.Context, uuid.UUID) ([]problems.Template, error)
-}
 
 func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblemsParams) (*corev1.ListProblemsResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
@@ -49,7 +40,7 @@ func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblem
 		filter.IsTemplate = &isTmpl
 	}
 
-	problemsList, err := h.problems.ListProblems(ctx, filter)
+	problemsList, err := h.Problems.ListProblems(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +57,7 @@ func (h *CoreServer) ListProblems(ctx context.Context, params corev1.ListProblem
 }
 
 func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.ListProblemTemplatesParams) ([]corev1.ProblemTemplateModel, error) {
-	templates, err := h.problems.ListTemplates(ctx, params.OrganizationID.Or(uuid.Nil))
+	templates, err := h.Problems.ListTemplates(ctx, params.OrganizationID.Or(uuid.Nil))
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +69,7 @@ func (h *CoreServer) ListProblemTemplates(ctx context.Context, params corev1.Lis
 }
 
 func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProblemParams) (*corev1.CreationResponseModel, error) {
-	id, err := h.problems.CreateProblem(ctx, &problemsmodel.CreateProblemInput{OrganizationID: params.OrganizationID.Or(uuid.Nil), Title: params.Title, TemplateID: params.TemplateID, IdempotencyKey: params.IdempotencyKey})
+	id, err := h.ProblemDrafts.CreateProblem(ctx, &problemsmodel.CreateProblemInput{OrganizationID: params.OrganizationID.Or(uuid.Nil), Title: params.Title, TemplateID: params.TemplateID, IdempotencyKey: params.IdempotencyKey})
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +77,7 @@ func (h *CoreServer) CreateProblem(ctx context.Context, params corev1.CreateProb
 }
 
 func (h *CoreServer) DeleteProblem(ctx context.Context, params corev1.DeleteProblemParams) error {
-	err := h.problems.DeleteProblem(ctx, params.ID)
+	err := h.Problems.DeleteProblem(ctx, params.ID)
 	if err != nil {
 		return err
 	}
@@ -95,7 +86,7 @@ func (h *CoreServer) DeleteProblem(ctx context.Context, params corev1.DeleteProb
 }
 
 func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemParams) (*corev1.GetProblemResponseModel, error) {
-	details, err := h.problems.GetProblemDetails(ctx, params.ID)
+	details, err := h.Problems.GetProblemDetails(ctx, params.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +109,7 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 		update.IsTemplate = &req.IsTemplate.Value
 	}
 
-	err := h.problems.UpdateProblem(ctx, params.ID, update)
+	err := h.Problems.UpdateProblem(ctx, params.ID, update)
 	if err != nil {
 		return err
 	}
@@ -127,7 +118,7 @@ func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProble
 }
 
 func (h *CoreServer) ListProblemTeams(ctx context.Context, params corev1.ListProblemTeamsParams) (*corev1.ListProblemTeamsResponseModel, error) {
-	teams, err := h.problems.GetProblemTeams(ctx, params.ID)
+	teams, err := h.Problems.GetProblemTeams(ctx, params.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -136,14 +127,12 @@ func (h *CoreServer) ListProblemTeams(ctx context.Context, params corev1.ListPro
 }
 
 func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.CreateProblemTeamParams) error {
-	user := accessmodel.UserFromContext(ctx)
-
 	permission := problemsmodel.ProblemPermissionRead
 	if params.Permission.IsSet() && params.Permission.Value != "" {
 		permission = problemsmodel.ProblemPermission(params.Permission.Value)
 	}
 
-	err := h.problems.AddProblemTeam(ctx, params.ID, params.TeamID, user.Id, permission)
+	err := h.Problems.AddProblemTeam(ctx, params.ID, params.TeamID, permission)
 	if err != nil {
 		return err
 	}
@@ -152,9 +141,7 @@ func (h *CoreServer) CreateProblemTeam(ctx context.Context, params corev1.Create
 }
 
 func (h *CoreServer) UpdateProblemTeam(ctx context.Context, params corev1.UpdateProblemTeamParams) error {
-	user := accessmodel.UserFromContext(ctx)
-
-	err := h.problems.UpdateProblemTeamPermission(ctx, params.ID, params.TeamID, user.Id, problemsmodel.ProblemPermission(params.Permission))
+	err := h.Problems.UpdateProblemTeamPermission(ctx, params.ID, params.TeamID, problemsmodel.ProblemPermission(params.Permission))
 	if err != nil {
 		return err
 	}
@@ -163,9 +150,7 @@ func (h *CoreServer) UpdateProblemTeam(ctx context.Context, params corev1.Update
 }
 
 func (h *CoreServer) DeleteProblemTeam(ctx context.Context, params corev1.DeleteProblemTeamParams) error {
-	user := accessmodel.UserFromContext(ctx)
-
-	err := h.problems.RemoveProblemTeam(ctx, params.ID, params.TeamID, user.Id)
+	err := h.Problems.RemoveProblemTeam(ctx, params.ID, params.TeamID)
 	if err != nil {
 		return err
 	}
@@ -174,7 +159,7 @@ func (h *CoreServer) DeleteProblemTeam(ctx context.Context, params corev1.Delete
 }
 
 func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListProblemMembersParams) (*corev1.ListProblemMembersResponseModel, error) {
-	members, err := h.problems.ListProblemMembers(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
+	members, err := h.Problems.ListProblemMembers(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
 		return nil, err
 	}
@@ -183,14 +168,12 @@ func (h *CoreServer) ListProblemMembers(ctx context.Context, params corev1.ListP
 }
 
 func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.CreateProblemMemberParams) error {
-	user := accessmodel.UserFromContext(ctx)
-
 	role := problemsmodel.ProblemRoleViewer
 	if params.Role.IsSet() && params.Role.Value != "" {
 		role = problemsmodel.ProblemRole(params.Role.Value)
 	}
 
-	err := h.problems.CreateProblemMember(ctx, params.ID, params.UserID, user.Id, role)
+	err := h.Problems.CreateProblemMember(ctx, params.ID, params.UserID, role)
 	if err != nil {
 		return err
 	}
@@ -199,9 +182,7 @@ func (h *CoreServer) CreateProblemMember(ctx context.Context, params corev1.Crea
 }
 
 func (h *CoreServer) UpdateProblemMember(ctx context.Context, params corev1.UpdateProblemMemberParams) error {
-	user := accessmodel.UserFromContext(ctx)
-
-	err := h.problems.UpdateProblemMemberRole(ctx, params.ID, params.UserID, user.Id, problemsmodel.ProblemRole(params.Role))
+	err := h.Problems.UpdateProblemMemberRole(ctx, params.ID, params.UserID, problemsmodel.ProblemRole(params.Role))
 	if err != nil {
 		return err
 	}
@@ -210,9 +191,7 @@ func (h *CoreServer) UpdateProblemMember(ctx context.Context, params corev1.Upda
 }
 
 func (h *CoreServer) DeleteProblemMember(ctx context.Context, params corev1.DeleteProblemMemberParams) error {
-	user := accessmodel.UserFromContext(ctx)
-
-	err := h.problems.RemoveProblemMember(ctx, params.ID, params.UserID, user.Id)
+	err := h.Problems.RemoveProblemMember(ctx, params.ID, params.UserID)
 	if err != nil {
 		return err
 	}

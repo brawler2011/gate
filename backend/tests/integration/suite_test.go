@@ -25,7 +25,6 @@ import (
 	access "github.com/brawler2011/gate/backend/internal/access"
 	blogs "github.com/brawler2011/gate/backend/internal/blogs"
 	contests "github.com/brawler2011/gate/backend/internal/contests"
-	"github.com/brawler2011/gate/backend/internal/coremodules"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
 	notifications "github.com/brawler2011/gate/backend/internal/notifications"
 	organizations "github.com/brawler2011/gate/backend/internal/organizations"
@@ -172,7 +171,7 @@ func (s *IntegrationTestSuite) initApp() {
 	s.objectStore, s.bucket, s.problemDrafts = objectStore, bucket, problemDrafts
 	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: bucket, TempDir: diskTempDir(s.T()), MaxArchiveBytes: 1 << 30, MaxEntries: 1000}
 	draftUC := &problems.DraftUseCase{DraftQuotas: quotas, Organizations: s.organizationsRepo, Templates: packagesRepo, PackageContent: packageContent, Repo: problemDrafts, Problems: s.problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: bucket, TempDir: diskTempDir(s.T()), UploadTTL: time.Minute, ObjectBytes: 32 << 20, BuildOptions: testBuildOptions(s.T())}
-	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool), s.organizationsRepo, permissionsUC, draftUC, packagesRepo, packageContent)
+	problemsUC := problems.NewProblemsUseCase(s.problemsRepo, pgstore.NewProblemTransactions(s.dbPool), s.organizationsRepo, permissionsUC, problemDrafts)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Permissions: permissionsUC}
 	contestsUC := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissionsUC)
 	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, s.contestsRepo, s.problemsRepo, pgstore.NewSubmissionTransactions(s.dbPool), permissionsUC)
@@ -189,55 +188,35 @@ func (s *IntegrationTestSuite) initApp() {
 	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(s.dbPool), pgstore.NewDraftsRepo(s.dbPool), permissionsUC)
 
 	announcementsRepo := pgstore.NewAnnouncementsRepo(s.dbPool)
-	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(s.dbPool))
+	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(s.dbPool), announcementsRepo, permissionsUC)
 	clarificationsRepo := pgstore.NewClarificationsRepo(s.dbPool)
-	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(s.dbPool))
-	communicationReader := contests.NewCommunicationReader(announcementsRepo, clarificationsRepo, permissionsUC)
+	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(s.dbPool), clarificationsRepo, permissionsUC)
 	contestDetails := contests.NewDetailsReader(s.contestsRepo, packageContent, permissionsUC, nil, s.usersRepo)
 
 	// Handler
-	coreServer := handlers.NewCoreServer(
-		coremodules.Identity{
-			AuthUC:      authUC,
-			UsersUC:     usersUC,
-			UsersReader: s.usersRepo,
-			AvatarsUC:   avatarsUC,
-		},
-		coremodules.Organizations{
-			OrganizationsUC: organizationsUC,
-			TeamsUC:         teamsUC,
-		},
-		coremodules.Contests{
-			ContestsUC:           contestsUC,
-			PermissionsUC:        permissionsUC,
-			ContestsReader:       contests.NewReader(s.contestsRepo, permissionsUC),
-			ContestDetails:       contestDetails,
-			DraftsUC:             draftsUC,
-			DraftsReader:         draftsUC,
-			AnnouncementsUC:      announcementsUC,
-			AnnouncementsReader:  communicationReader,
-			ClarificationsUC:     clarificationsUC,
-			ClarificationsReader: communicationReader,
-		},
-		coremodules.Problems{
-			ProblemsUC:     problemsUC,
-			ProblemsReader: problems.NewReader(s.problemsRepo, permissionsUC, s.organizationsRepo, problemDrafts),
-			ProblemDraftUC: draftUC,
-			PackagesReader: packagesUC,
-		},
-		coremodules.Submissions{SubmissionsUC: submissionsUC},
-		coremodules.Notifications{
-			NotificationsUC:     notificationsUC,
-			NotificationsReader: notificationsRepo,
-		},
-		coremodules.Blogs{
-			BlogsUC:     blogsUC,
-			BlogsReader: blogsRepo,
-		},
-		nil,
-		false,
-		access.NewCapabilities(pgstore.NewPolicyFactsRepo(s.dbPool)),
-	)
+	coreServer := handlers.NewCoreServer(handlers.Services{
+		Auth:               authUC,
+		Users:              usersUC,
+		UserReads:          s.usersRepo,
+		Avatars:            avatarsUC,
+		Organizations:      organizationsUC,
+		Teams:              teamsUC,
+		Contests:           contestsUC,
+		ContestPermissions: permissionsUC,
+		ContestDetails:     contestDetails,
+		Drafts:             draftsUC,
+		Announcements:      announcementsUC,
+		Clarifications:     clarificationsUC,
+		Problems:           problemsUC,
+		ProblemDrafts:      draftUC,
+		Packages:           packagesUC,
+		Submissions:        submissionsUC,
+		Notifications:      notificationsUC,
+		NotificationReads:  notificationsRepo,
+		Blogs:              blogsUC,
+		BlogReads:          blogsRepo,
+		Capabilities:       access.NewCapabilities(pgstore.NewPolicyFactsRepo(s.dbPool)),
+	}, false)
 	langs, err := sandbox.LoadConfig("../../../judge/langs.toml")
 	s.Require().NoError(err)
 	coreServer.WithLanguages(langs.Langs)

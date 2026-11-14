@@ -60,6 +60,14 @@ type ContestsRepo interface {
 	ListContestJoinRequests(ctx context.Context, contestID uuid.UUID, status *string) ([]contestsmodel.ContestJoinRequest, error)
 	ListUserContestJoinRequests(ctx context.Context, userID uuid.UUID) ([]contestsmodel.ContestJoinRequest, error)
 	UpdateContestJoinRequestStatus(ctx context.Context, id uuid.UUID, status organizationsmodel.RequestStatus, reviewedBy *uuid.UUID) error
+
+	ListPublicContests(context.Context, contestsmodel.PublicContestsFilter) (*contestsmodel.ContestsList, error)
+	ListWorkshopContests(context.Context, contestsmodel.WorkshopContestsFilter) (*contestsmodel.ContestsList, error)
+	ListUserContests(context.Context, contestsmodel.UserContestsFilter) (*contestsmodel.ContestsList, error)
+	ListAdminContests(context.Context, contestsmodel.AdminContestsFilter) (*contestsmodel.ContestsList, error)
+	ListOrganizationContests(context.Context, string, string, int32, int32) (*contestsmodel.ContestsList, error)
+	ListContestMembers(context.Context, contestsmodel.ParticipantsFilter) (*contestsmodel.ContestMembersList, error)
+	ListDashboardContests(context.Context, uuid.UUID, int32) ([]contestsmodel.DashboardContest, error)
 }
 
 type OutboxRepo interface {

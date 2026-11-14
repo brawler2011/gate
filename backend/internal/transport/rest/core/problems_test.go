@@ -16,7 +16,7 @@ import (
 )
 
 type mockProblemsModule struct {
-	ProblemsModule
+	ProblemsUC
 	lastFilter *problemsmodel.ProblemsFilter
 }
 
@@ -60,7 +60,7 @@ func TestListProblems_DescendingFilterHonored(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			stub := &mockProblemsModule{}
-			server := NewCoreServer(nil, nil, nil, stub, nil, nil, nil, nil, false)
+			server := NewCoreServer(Services{Problems: stub}, false)
 
 			resp, err := server.ListProblems(ctx, tt.params)
 			require.NoError(t, err)
@@ -74,7 +74,7 @@ func TestListProblems_DescendingFilterHonored(t *testing.T) {
 
 func TestListProblems_HTTPProbeDescending(t *testing.T) {
 	stub := &mockProblemsModule{}
-	server := NewCoreServer(nil, nil, nil, stub, nil, nil, nil, nil, false)
+	server := NewCoreServer(Services{Problems: stub}, false)
 	handler, err := corev1.NewServer(server, middleware.NewSecurityHandler())
 	require.NoError(t, err)
 

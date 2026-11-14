@@ -79,7 +79,7 @@ func TestScoreboardAccessAndFreezeWithoutHTTP(t *testing.T) {
 				repo.contest.OwnerID = &user.Id
 			}
 			uc := NewContestsUseCase(repo, nil, nil, scoreboardAccessPermissions{tc.monitor, tc.manage})
-			response, err := uc.GetContestScoreboard(accessmodel.WithUser(context.Background(), user), repo.contest.ID, user.Id, tc.unfrozen)
+			response, err := uc.GetContestScoreboard(accessmodel.WithUser(context.Background(), user), repo.contest.ID, tc.unfrozen)
 			if tc.want != nil {
 				require.ErrorIs(t, err, tc.want)
 				require.Nil(t, response)

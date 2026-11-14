@@ -25,10 +25,10 @@ func projectResponse[T any](h *CoreServer, ctx context.Context, response *T, par
 		requests[i] = s.request
 		*s.value = []string{}
 	}
-	if h.capabilities == nil {
+	if h.Capabilities == nil {
 		return response, nil
 	} // Standalone transport fixtures.
-	values, err := h.capabilities.Project(ctx, requests)
+	values, err := h.Capabilities.Project(ctx, requests)
 	if err != nil {
 		return nil, err
 	}

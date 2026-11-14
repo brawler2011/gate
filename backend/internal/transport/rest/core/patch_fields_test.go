@@ -19,7 +19,8 @@ import (
 
 // These stores keep updates so HTTP reads exercise the response mapping too.
 type patchContestsModule struct {
-	ContestsModule
+	ContestsUC
+	ContestDetails
 	contest    contestsmodel.Contest
 	lastUpdate contestsmodel.ContestUpdateInput
 }
@@ -59,7 +60,7 @@ func TestPatchContestAllowClarifications(t *testing.T) {
 					ID: uuid.New(), Login: "round", OrganizationLogin: "org", Visibility: contestsmodel.ContestVisibilityPublic,
 					Settings: map[string]interface{}{"allow_clarifications": initial, "hide_statements": true, "freeze_status": "frozen"},
 				}}
-				server := NewCoreServer(nil, nil, store, nil, nil, nil, nil, nil, false)
+				server := NewCoreServer(Services{Contests: store, ContestDetails: store}, false)
 				handler, err := corev1.NewServer(server, middleware.NewSecurityHandler())
 				require.NoError(t, err)
 				path := "/organizations/org/contests/round"
@@ -87,7 +88,7 @@ func TestPatchContestAllowClarifications(t *testing.T) {
 }
 
 type patchProblemsModule struct {
-	ProblemsModule
+	ProblemsUC
 	problem problemsmodel.Problem
 	updates int
 }
@@ -122,7 +123,7 @@ func TestPatchProblemMetadata(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			store := &patchProblemsModule{problem: problemsmodel.Problem{ID: uuid.New(), Title: "Original", Visibility: "private", IsTemplate: true}}
-			server := NewCoreServer(nil, nil, nil, store, nil, nil, nil, nil, false)
+			server := NewCoreServer(Services{Problems: store}, false)
 			handler, err := corev1.NewServer(server, middleware.NewSecurityHandler())
 			require.NoError(t, err)
 			path := "/problems/" + store.problem.ID.String()
@@ -156,7 +157,7 @@ func TestPatchProblemRejectsObsoleteFields(t *testing.T) {
 				}
 				body += "}"
 				store := &patchProblemsModule{problem: problemsmodel.Problem{ID: uuid.New(), Title: "Original"}}
-				server := NewCoreServer(nil, nil, nil, store, nil, nil, nil, nil, false)
+				server := NewCoreServer(Services{Problems: store}, false)
 				handler, err := corev1.NewServer(server, middleware.NewSecurityHandler())
 				require.NoError(t, err)
 				req := httptest.NewRequest(http.MethodPatch, "/problems/"+store.problem.ID.String(), strings.NewReader(body))

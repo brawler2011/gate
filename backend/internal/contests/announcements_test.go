@@ -89,7 +89,7 @@ func TestAnnouncementsUseCase_CreateAndDelete(t *testing.T) {
 	repo := newMockAnnouncementsRepo()
 	outboxRepo := &mockOutboxRepo{}
 
-	uc := NewAnnouncementsUseCase(testTransactions[ContestEventsTxStore]{contestEventsTestStore{AnnouncementsRepo: repo, OutboxRepo: outboxRepo}})
+	uc := NewAnnouncementsUseCase(testTransactions[ContestEventsTxStore]{contestEventsTestStore{AnnouncementsRepo: repo, OutboxRepo: outboxRepo}}, nil, nil)
 
 	contestID := uuid.New()
 	authorID := uuid.New()

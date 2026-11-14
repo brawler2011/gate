@@ -397,7 +397,7 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, allowed)
 		teamUC := organizations.NewTeamsUseCase(postgres.NewTeamsRepo(pool), permissions, nil, permissions)
-		_, err = teamUC.GetTeam(readCtx, secret, actor.Id)
+		_, err = teamUC.GetTeam(readCtx, secret)
 		require.NoError(t, err)
 		_, err = postgres.NewProblemsRepo(pool).ListProblems(readCtx, &problemsmodel.ProblemsFilter{OrganizationID: &org, ViewerID: &actor.Id, Page: 1, PageSize: 100})
 		require.NoError(t, err)

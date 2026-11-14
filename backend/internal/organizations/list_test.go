@@ -28,12 +28,12 @@ func TestOrganizationListPaginationDefaults(t *testing.T) {
 	repo := &organizationListRepo{}
 	uc := &OrganizationsUseCase{repo: repo}
 	filter := &organizationsmodel.OrganizationFilter{}
-	result, err := uc.ListOrganizations(ctx, filter, caller.Id)
+	result, err := uc.ListOrganizations(ctx, filter)
 	require.NoError(t, err)
 	require.Equal(t, paging.Pagination{Page: 1, PageSize: 50, TotalItems: 101, TotalPages: 3}, result.Pagination)
 	require.Zero(t, filter.PageSize, "normalizing must not mutate the caller's filter")
 	for _, invalid := range []*organizationsmodel.OrganizationFilter{nil, {PageSize: 101}, {Page: -1}} {
-		_, err := uc.ListOrganizations(ctx, invalid, caller.Id)
+		_, err := uc.ListOrganizations(ctx, invalid)
 		require.ErrorIs(t, err, pkg.ErrBadInput)
 	}
 	require.Equal(t, 1, repo.calls)

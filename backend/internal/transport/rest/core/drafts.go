@@ -10,10 +10,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 )
 
-type DraftsReader interface {
-	ListDrafts(ctx context.Context, filter contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error)
-}
-
 func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateContestDraftRequestModel, params corev1.CreateContestDraftParams) (*corev1.CreationResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 
@@ -21,7 +17,7 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +28,7 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 		Code:      req.Code,
 	}
 
-	draftID, err := h.contests.CreateDraft(ctx, draftCreation)
+	draftID, err := h.Drafts.CreateDraft(ctx, draftCreation)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +41,7 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 func (h *CoreServer) ListContestDrafts(ctx context.Context, params corev1.ListContestDraftsParams) (*corev1.ListContestDraftsResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 
-	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +49,7 @@ func (h *CoreServer) ListContestDrafts(ctx context.Context, params corev1.ListCo
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(20)
 
-	draftsList, err := h.contests.ListDrafts(ctx, contestsmodel.ContestDraftsFilter{
+	draftsList, err := h.Drafts.ListDrafts(ctx, contestsmodel.ContestDraftsFilter{
 		ContestID: contest.ID,
 		UserID:    user.Id,
 		Page:      page,
@@ -69,12 +65,12 @@ func (h *CoreServer) ListContestDrafts(ctx context.Context, params corev1.ListCo
 func (h *CoreServer) DeleteContestDraft(ctx context.Context, params corev1.DeleteContestDraftParams) error {
 	user := accessmodel.UserFromContext(ctx)
 
-	contest, err := h.contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
+	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return err
 	}
 
-	if err := h.contests.DeleteDraft(ctx, contest.ID, params.DraftID); err != nil {
+	if err := h.Drafts.DeleteDraft(ctx, contest.ID, params.DraftID); err != nil {
 		return err
 	}
 

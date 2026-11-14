@@ -18,7 +18,6 @@ import (
 	blogs "github.com/brawler2011/gate/backend/internal/blogs"
 	contests "github.com/brawler2011/gate/backend/internal/contests"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
-	"github.com/brawler2011/gate/backend/internal/coremodules"
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	identity "github.com/brawler2011/gate/backend/internal/identity"
 	judging "github.com/brawler2011/gate/backend/internal/judging"
@@ -358,9 +357,8 @@ func apiServices(d sharedDeps, judgeImage sandbox.Image) (services []appService,
 	teamsUC := organizations.NewTeamsUseCase(teamsRepo, permissionsUC, pgstore.NewTeamTransactions(pool), permissionsUC)
 	submissionsUC := submissions.NewSubmissionsUseCase(submissionsRepo, contestsRepo, problemsRepo, pgstore.NewSubmissionTransactions(pool), permissionsUC)
 	draftsUC := contests.NewDraftsUseCase(pgstore.NewDraftTransactions(pool), pgstore.NewDraftsRepo(pool), permissionsUC)
-	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(pool))
-	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(pool))
-	communicationReader := contests.NewCommunicationReader(announcementsRepo, clarificationsRepo, permissionsUC)
+	announcementsUC := contests.NewAnnouncementsUseCase(pgstore.NewContestEventsTransactions(pool), announcementsRepo, permissionsUC)
+	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(pool), clarificationsRepo, permissionsUC)
 	logger.Info("successfully initialized use cases")
 
 	problemPolicy := cfg.Problems
@@ -372,7 +370,7 @@ func apiServices(d sharedDeps, judgeImage sandbox.Image) (services []appService,
 	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, UploadTTL: problemPolicy.UploadTTL, ObjectBytes: int64(problemPolicy.Limits.ObjectBytes), BuildOptions: buildOptions}
 	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, MaxArchiveBytes: int64(problemPolicy.Limits.ObjectBytes), MaxEntries: problemPolicy.Limits.FileCount}
 	draftUC.PackageContent = packageContent
-	problemsUC := problems.NewProblemsUseCase(problemsRepo, pgstore.NewProblemTransactions(pool), orgsRepo, permissionsUC, draftUC, packagesRepo, packageContent)
+	problemsUC := problems.NewProblemsUseCase(problemsRepo, pgstore.NewProblemTransactions(pool), orgsRepo, permissionsUC, problemDrafts)
 	packagesUC := &problems.PackageUseCase{Repo: packagesRepo, Content: packageContent, Permissions: permissionsUC}
 	contestDetails := contests.NewDetailsReader(contestsRepo, packageContent, permissionsUC, booklet.NewClient(natsJS.Conn()), usersRepo)
 
@@ -426,48 +424,30 @@ func apiServices(d sharedDeps, judgeImage sandbox.Image) (services []appService,
 	publicMux := http.NewServeMux()
 	publicMux.Handle("/ws/", observer.Handler())
 
-	coreServer := handlers.NewCoreServer(
-		coremodules.Identity{
-			AuthUC:      authUC,
-			UsersUC:     usersUC,
-			UsersReader: usersRepo,
-			AvatarsUC:   avatarsUC,
-		},
-		coremodules.Organizations{
-			OrganizationsUC: orgsUC,
-			TeamsUC:         teamsUC,
-		},
-		coremodules.Contests{
-			ContestsUC:           contestsUC,
-			PermissionsUC:        permissionsUC,
-			ContestsReader:       contests.NewReader(contestsRepo, permissionsUC),
-			ContestDetails:       contestDetails,
-			DraftsUC:             draftsUC,
-			DraftsReader:         draftsUC,
-			AnnouncementsUC:      announcementsUC,
-			AnnouncementsReader:  communicationReader,
-			ClarificationsUC:     clarificationsUC,
-			ClarificationsReader: communicationReader,
-		},
-		coremodules.Problems{
-			ProblemsUC:     problemsUC,
-			ProblemsReader: problems.NewReader(problemsRepo, permissionsUC, orgsRepo, problemDrafts),
-			ProblemDraftUC: draftUC,
-			PackagesReader: packagesUC,
-		},
-		coremodules.Submissions{SubmissionsUC: submissionsUC},
-		coremodules.Notifications{
-			NotificationsUC:     notificationsUC,
-			NotificationsReader: notificationsRepo,
-		},
-		coremodules.Blogs{
-			BlogsUC:     blogsUC,
-			BlogsReader: blogsRepo,
-		},
-		natsJS,
-		cfg.HTTP.SecureCookies,
-		access.NewCapabilities(pgstore.NewPolicyFactsRepo(pool)),
-	).WithLanguages(sandboxCfg.Langs)
+	coreServer := handlers.NewCoreServer(handlers.Services{
+		Auth:               authUC,
+		Users:              usersUC,
+		UserReads:          usersRepo,
+		Avatars:            avatarsUC,
+		Organizations:      orgsUC,
+		Teams:              teamsUC,
+		Contests:           contestsUC,
+		ContestPermissions: permissionsUC,
+		ContestDetails:     contestDetails,
+		Drafts:             draftsUC,
+		Announcements:      announcementsUC,
+		Clarifications:     clarificationsUC,
+		Problems:           problemsUC,
+		ProblemDrafts:      draftUC,
+		Packages:           packagesUC,
+		Submissions:        submissionsUC,
+		Notifications:      notificationsUC,
+		NotificationReads:  notificationsRepo,
+		Blogs:              blogsUC,
+		BlogReads:          blogsRepo,
+		NATS:               natsJS,
+		Capabilities:       access.NewCapabilities(pgstore.NewPolicyFactsRepo(pool)),
+	}, cfg.HTTP.SecureCookies).WithLanguages(sandboxCfg.Langs)
 
 	secHandler := middleware.NewSecurityHandler()
 	authzMw := middleware.AuthzMiddleware()

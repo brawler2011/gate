@@ -26,8 +26,6 @@ func generateLogin(name string) string {
 
 // ListOrganizations handles GET /organizations
 func (h *CoreServer) ListOrganizations(ctx context.Context, params corev1.ListOrganizationsParams) (*corev1.ListOrganizationsResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(50)
 	search := params.Search.Or("")
@@ -38,7 +36,7 @@ func (h *CoreServer) ListOrganizations(ctx context.Context, params corev1.ListOr
 		PageSize: pageSize,
 	}
 
-	organizationsList, err := h.organizations.ListOrganizations(ctx, filter, user.Id)
+	organizationsList, err := h.Organizations.ListOrganizations(ctx, filter)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to list organizations")
 	}
@@ -84,7 +82,7 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.Creat
 		CreatorID:   user.Id,
 	}
 
-	org, err := h.organizations.CreateOrganization(ctx, input)
+	org, err := h.Organizations.CreateOrganization(ctx, input)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to create organization")
 	}
@@ -97,9 +95,7 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.Creat
 
 // GetOrganization handles GET /organizations/{login}
 func (h *CoreServer) GetOrganization(ctx context.Context, params corev1.GetOrganizationParams) (*corev1.GetOrganizationResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-
-	org, err := h.organizations.GetOrganizationByLogin(ctx, params.Login, user.Id)
+	org, err := h.Organizations.GetOrganizationByLogin(ctx, params.Login)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to get organization")
 	}
@@ -111,8 +107,6 @@ func (h *CoreServer) GetOrganization(ctx context.Context, params corev1.GetOrgan
 
 // UpdateOrganization handles PATCH /organizations/{login}
 func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateOrganizationRequestModel, params corev1.UpdateOrganizationParams) error {
-	user := accessmodel.UserFromContext(ctx)
-
 	if err := validateUpdateOrganizationRequest(req); err != nil {
 		return err
 	}
@@ -142,7 +136,7 @@ func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateO
 		JoinPolicy:  joinPolicy,
 	}
 
-	err := h.organizations.UpdateOrganizationByLogin(ctx, params.Login, user.Id, input)
+	err := h.Organizations.UpdateOrganizationByLogin(ctx, params.Login, input)
 	if err != nil {
 		return wrapOrgUCError(err, "failed to update organization")
 	}
@@ -152,9 +146,7 @@ func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateO
 
 // DeleteOrganization handles DELETE /organizations/{login}
 func (h *CoreServer) DeleteOrganization(ctx context.Context, params corev1.DeleteOrganizationParams) error {
-	user := accessmodel.UserFromContext(ctx)
-
-	err := h.organizations.DeleteOrganizationByLogin(ctx, params.Login, user.Id)
+	err := h.Organizations.DeleteOrganizationByLogin(ctx, params.Login)
 	if err != nil {
 		return wrapOrgUCError(err, "failed to delete organization")
 	}
@@ -164,9 +156,7 @@ func (h *CoreServer) DeleteOrganization(ctx context.Context, params corev1.Delet
 
 // ListOrganizationMembers handles GET /organizations/{login}/members
 func (h *CoreServer) ListOrganizationMembers(ctx context.Context, params corev1.ListOrganizationMembersParams) (*corev1.ListOrganizationMembersResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-
-	members, err := h.organizations.ListMembersByLogin(ctx, params.Login, user.Id, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
+	members, err := h.Organizations.ListMembersByLogin(ctx, params.Login, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to list organization members")
 	}
@@ -176,8 +166,6 @@ func (h *CoreServer) ListOrganizationMembers(ctx context.Context, params corev1.
 
 // AddOrganizationMember handles POST /organizations/{login}/members
 func (h *CoreServer) AddOrganizationMember(ctx context.Context, params corev1.AddOrganizationMemberParams) error {
-	user := accessmodel.UserFromContext(ctx)
-
 	if !validateOrganizationRole(string(params.Role)) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role, must be 'owner', 'admin', or 'member'")
 	}
@@ -187,7 +175,7 @@ func (h *CoreServer) AddOrganizationMember(ctx context.Context, params corev1.Ad
 		Role:   organizationsmodel.OrganizationRole(params.Role),
 	}
 
-	err := h.organizations.AddMemberByLogin(ctx, params.Login, input, user.Id)
+	err := h.Organizations.AddMemberByLogin(ctx, params.Login, input)
 	if err != nil {
 		return wrapOrgUCError(err, "failed to add organization member")
 	}
@@ -197,9 +185,7 @@ func (h *CoreServer) AddOrganizationMember(ctx context.Context, params corev1.Ad
 
 // RemoveOrganizationMember handles DELETE /organizations/{login}/members
 func (h *CoreServer) RemoveOrganizationMember(ctx context.Context, params corev1.RemoveOrganizationMemberParams) error {
-	user := accessmodel.UserFromContext(ctx)
-
-	err := h.organizations.RemoveMemberByLogin(ctx, params.Login, params.UserID, user.Id)
+	err := h.Organizations.RemoveMemberByLogin(ctx, params.Login, params.UserID)
 	if err != nil {
 		return wrapOrgUCError(err, "failed to remove organization member")
 	}
@@ -223,12 +209,12 @@ func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, req *core
 		ttlDays = &req.TTLDays.Value
 	}
 
-	result, err := h.organizations.BatchCreateUsers(ctx, organizationsmodel.BatchCreateOrganizationUsersInput{
+	result, err := h.Organizations.BatchCreateUsers(ctx, organizationsmodel.BatchCreateOrganizationUsersInput{
 		OrgLogin: params.Login,
 		Prefix:   req.Prefix,
 		Count:    req.Count,
 		TTLDays:  ttlDays,
-	}, user.Id)
+	})
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to batch create users")
 	}
@@ -255,7 +241,7 @@ func (h *CoreServer) ListOrganizationInvitations(ctx context.Context, params cor
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	invs, err := h.organizations.ListInvitations(ctx, params.Login, user.Id)
+	invs, err := h.Organizations.ListInvitations(ctx, params.Login)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to list invitations")
 	}
@@ -279,7 +265,7 @@ func (h *CoreServer) InviteOrganizationMember(ctx context.Context, req *corev1.I
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid role")
 	}
 
-	inv, err := h.organizations.InviteMember(ctx, params.Login, req.UserID, role, user.Id)
+	inv, err := h.Organizations.InviteMember(ctx, params.Login, req.UserID, role)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to invite member")
 	}
@@ -295,7 +281,7 @@ func (h *CoreServer) CancelOrganizationInvitation(ctx context.Context, params co
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	err := h.organizations.CancelInvitation(ctx, params.Login, params.ID, user.Id)
+	err := h.Organizations.CancelInvitation(ctx, params.Login, params.ID)
 	if err != nil {
 		return wrapOrgUCError(err, "failed to cancel invitation")
 	}
@@ -306,7 +292,7 @@ func (h *CoreServer) CancelOrganizationInvitation(ctx context.Context, params co
 // AcceptOrganizationInvitation handles POST /invitations/{id}/accept
 func (h *CoreServer) AcceptOrganizationInvitation(ctx context.Context, params corev1.AcceptOrganizationInvitationParams) error {
 
-	err := h.organizations.AcceptInvitation(ctx, params.ID)
+	err := h.Organizations.AcceptInvitation(ctx, params.ID)
 	if err != nil {
 		return wrapOrgUCError(err, "failed to accept invitation")
 	}
@@ -317,7 +303,7 @@ func (h *CoreServer) AcceptOrganizationInvitation(ctx context.Context, params co
 // DeclineOrganizationInvitation handles POST /invitations/{id}/decline
 func (h *CoreServer) DeclineOrganizationInvitation(ctx context.Context, params corev1.DeclineOrganizationInvitationParams) error {
 
-	err := h.organizations.DeclineInvitation(ctx, params.ID)
+	err := h.Organizations.DeclineInvitation(ctx, params.ID)
 	if err != nil {
 		return wrapOrgUCError(err, "failed to decline invitation")
 	}
@@ -332,7 +318,7 @@ func (h *CoreServer) ListOrganizationJoinRequests(ctx context.Context, params co
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	reqs, err := h.organizations.ListJoinRequests(ctx, params.Login, user.Id)
+	reqs, err := h.Organizations.ListJoinRequests(ctx, params.Login)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to list join requests")
 	}
@@ -348,7 +334,7 @@ func (h *CoreServer) CreateOrganizationJoinRequest(ctx context.Context, req core
 		message = &req.Value.Message.Value
 	}
 
-	joinReq, joined, err := h.organizations.CreateJoinRequest(ctx, params.Login, message)
+	joinReq, joined, err := h.Organizations.CreateJoinRequest(ctx, params.Login, message)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to create join request")
 	}
@@ -372,7 +358,7 @@ func (h *CoreServer) GetMyOrganizationJoinRequest(ctx context.Context, params co
 		return &corev1.OrganizationJoinRequestNullableResponseModel{}, nil
 	}
 
-	joinReq, err := h.organizations.GetMyPendingJoinRequest(ctx, params.Login, user.Id)
+	joinReq, err := h.Organizations.GetMyPendingJoinRequest(ctx, params.Login)
 	if err != nil {
 		return nil, wrapOrgUCError(err, "failed to get join request")
 	}
@@ -391,7 +377,7 @@ func (h *CoreServer) GetMyOrganizationJoinRequest(ctx context.Context, params co
 // CancelOrganizationJoinRequest handles DELETE /organizations/{login}/requests/mine
 func (h *CoreServer) CancelOrganizationJoinRequest(ctx context.Context, params corev1.CancelOrganizationJoinRequestParams) error {
 
-	err := h.organizations.CancelJoinRequest(ctx, params.Login)
+	err := h.Organizations.CancelJoinRequest(ctx, params.Login)
 	if err != nil {
 		return wrapOrgUCError(err, "failed to cancel join request")
 	}
@@ -414,7 +400,7 @@ func (h *CoreServer) ApproveOrganizationJoinRequest(ctx context.Context, req cor
 		}
 	}
 
-	err := h.organizations.ApproveJoinRequest(ctx, params.Login, params.ID, user.Id, role)
+	err := h.Organizations.ApproveJoinRequest(ctx, params.Login, params.ID, role)
 	if err != nil {
 		return wrapOrgUCError(err, "failed to approve join request")
 	}
@@ -429,7 +415,7 @@ func (h *CoreServer) RejectOrganizationJoinRequest(ctx context.Context, params c
 		return pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 
-	err := h.organizations.RejectJoinRequest(ctx, params.Login, params.ID, user.Id)
+	err := h.Organizations.RejectJoinRequest(ctx, params.Login, params.ID)
 	if err != nil {
 		return wrapOrgUCError(err, "failed to reject join request")
 	}

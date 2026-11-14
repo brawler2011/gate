@@ -83,24 +83,9 @@ func (uc *OrganizationsUseCase) CreateOrganization(ctx context.Context, input *o
 	return org, nil
 }
 
-func (uc *OrganizationsUseCase) GetOrganization(ctx context.Context, orgID, userID uuid.UUID) (*organizationsmodel.Organization, error) {
-	if err := accessmodel.RequireCaller(ctx, userID); err != nil {
-		return nil, err
-	}
-	// Check permissions
-	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, orgID, userID, accessmodel.ActionViewOrganization)
+func (uc *OrganizationsUseCase) GetOrganizationByLogin(ctx context.Context, login string) (*organizationsmodel.Organization, error) {
+	user, err := accessmodel.RequireUser(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("check permissions: %w", err)
-	}
-	if !hasAccess {
-		return nil, pkg.NoPermission
-	}
-
-	return uc.repo.GetOrganizationByID(ctx, orgID)
-}
-
-func (uc *OrganizationsUseCase) GetOrganizationByLogin(ctx context.Context, login string, userID uuid.UUID) (*organizationsmodel.Organization, error) {
-	if err := accessmodel.RequireCaller(ctx, userID); err != nil {
 		return nil, err
 	}
 	org, err := uc.repo.GetOrganizationByLogin(ctx, login)
@@ -109,7 +94,7 @@ func (uc *OrganizationsUseCase) GetOrganizationByLogin(ctx context.Context, logi
 	}
 
 	// Check permissions
-	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, userID, accessmodel.ActionViewOrganization)
+	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, user.Id, accessmodel.ActionViewOrganization)
 	if err != nil {
 		return nil, fmt.Errorf("check permissions: %w", err)
 	}
@@ -120,15 +105,15 @@ func (uc *OrganizationsUseCase) GetOrganizationByLogin(ctx context.Context, logi
 	return org, nil
 }
 
-func (uc *OrganizationsUseCase) ListOrganizations(ctx context.Context, filter *organizationsmodel.OrganizationFilter, userID uuid.UUID) (*organizationsmodel.OrganizationList, error) {
-	if err := accessmodel.RequireCaller(ctx, userID); err != nil {
+func (uc *OrganizationsUseCase) ListOrganizations(ctx context.Context, filter *organizationsmodel.OrganizationFilter) (*organizationsmodel.OrganizationList, error) {
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
 		return nil, err
 	}
 	if filter == nil {
 		return nil, pkg.ErrBadInput
 	}
 	normalized := *filter
-	var err error
 	normalized.Page, normalized.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 50)
 	if err != nil {
 		return nil, err
@@ -143,7 +128,7 @@ func (uc *OrganizationsUseCase) ListOrganizations(ctx context.Context, filter *o
 	// Filter based on user access
 	accessibleOrgs := make([]organizationsmodel.Organization, 0, len(orgs))
 	for _, org := range orgs {
-		hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, userID, accessmodel.ActionViewOrganization)
+		hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, user.Id, accessmodel.ActionViewOrganization)
 		if err != nil {
 			return nil, err
 		}
@@ -158,28 +143,20 @@ func (uc *OrganizationsUseCase) ListOrganizations(ctx context.Context, filter *o
 	}, nil
 }
 
-func (uc *OrganizationsUseCase) UpdateOrganization(ctx context.Context, orgID, userID uuid.UUID, input *organizationsmodel.UpdateOrganizationInput) error {
-	return uc.withinOrganization(ctx, orgID, userID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error { return tx.UpdateOrganization(ctx, orgID, input) })
-}
-
-func (uc *OrganizationsUseCase) UpdateOrganizationByLogin(ctx context.Context, login string, userID uuid.UUID, input *organizationsmodel.UpdateOrganizationInput) error {
+func (uc *OrganizationsUseCase) UpdateOrganizationByLogin(ctx context.Context, login string, input *organizationsmodel.UpdateOrganizationInput) error {
 	org, err := uc.repo.GetOrganizationByLogin(ctx, login)
 	if err != nil {
 		return err
 	}
-	return uc.UpdateOrganization(ctx, org.ID, userID, input)
+	return uc.withinOrganization(ctx, org.ID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error { return tx.UpdateOrganization(ctx, org.ID, input) })
 }
 
-func (uc *OrganizationsUseCase) DeleteOrganization(ctx context.Context, orgID, userID uuid.UUID) error {
-	return uc.withinOrganization(ctx, orgID, userID, accessmodel.ActionDeleteOrganization, func(tx OrganizationTxStore) error { return tx.DeleteOrganization(ctx, orgID) })
-}
-
-func (uc *OrganizationsUseCase) DeleteOrganizationByLogin(ctx context.Context, login string, userID uuid.UUID) error {
+func (uc *OrganizationsUseCase) DeleteOrganizationByLogin(ctx context.Context, login string) error {
 	org, err := uc.repo.GetOrganizationByLogin(ctx, login)
 	if err != nil {
 		return err
 	}
-	return uc.DeleteOrganization(ctx, org.ID, userID)
+	return uc.withinOrganization(ctx, org.ID, accessmodel.ActionDeleteOrganization, func(tx OrganizationTxStore) error { return tx.DeleteOrganization(ctx, org.ID) })
 }
 
 func requiredOrgMemberAction(role organizationsmodel.OrganizationRole) accessmodel.OrgAction {
@@ -189,8 +166,8 @@ func requiredOrgMemberAction(role organizationsmodel.OrganizationRole) accessmod
 	return accessmodel.ActionManageOrganization
 }
 
-func (uc *OrganizationsUseCase) AddMember(ctx context.Context, input *organizationsmodel.AddOrganizationMemberInput, requestUserID uuid.UUID) error {
-	return uc.withinOrganization(ctx, input.OrganizationID, requestUserID, requiredOrgMemberAction(input.Role), func(tx OrganizationTxStore) error {
+func (uc *OrganizationsUseCase) AddMember(ctx context.Context, input *organizationsmodel.AddOrganizationMemberInput) error {
+	return uc.withinOrganization(ctx, input.OrganizationID, requiredOrgMemberAction(input.Role), func(tx OrganizationTxStore) error {
 		if _, err := tx.GetUserById(ctx, input.UserID); err != nil {
 			return err
 		}
@@ -198,26 +175,32 @@ func (uc *OrganizationsUseCase) AddMember(ctx context.Context, input *organizati
 	})
 }
 
-func (uc *OrganizationsUseCase) AddMemberByLogin(ctx context.Context, login string, input *organizationsmodel.AddOrganizationMemberInput, requestUserID uuid.UUID) error {
+func (uc *OrganizationsUseCase) AddMemberByLogin(ctx context.Context, login string, input *organizationsmodel.AddOrganizationMemberInput) error {
 	org, err := uc.repo.GetOrganizationByLogin(ctx, login)
 	if err != nil {
 		return err
 	}
 	input.OrganizationID = org.ID
-	return uc.AddMember(ctx, input, requestUserID)
+	return uc.AddMember(ctx, input)
 }
 
-func (uc *OrganizationsUseCase) ListMembers(ctx context.Context, orgID, requestUserID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.OrganizationMember], error) {
-	if err := accessmodel.RequireCaller(ctx, requestUserID); err != nil {
+func (uc *OrganizationsUseCase) ListMembersByLogin(ctx context.Context, login string, request paging.Request) (*paging.List[organizationsmodel.OrganizationMember], error) {
+	caller, err := accessmodel.RequireUser(ctx)
+	if err != nil {
 		return nil, err
 	}
-	user, err := uc.usersRepo.GetUserById(ctx, requestUserID)
+	org, err := uc.repo.GetOrganizationByLogin(ctx, login)
+	if err != nil {
+		return nil, err
+	}
+	orgID := org.ID
+	user, err := uc.usersRepo.GetUserById(ctx, caller.Id)
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 	}
 
 	if user.Role != accessmodel.UserRoleAdmin {
-		_, err := uc.repo.GetMember(ctx, orgID, requestUserID)
+		_, err := uc.repo.GetMember(ctx, orgID, caller.Id)
 		if err != nil {
 			if errors.Is(err, pkg.ErrNotFound) {
 				return nil, pkg.Wrap(pkg.NoPermission, nil, "must be a member of organization")
@@ -237,55 +220,23 @@ func (uc *OrganizationsUseCase) ListMembers(ctx context.Context, orgID, requestU
 	return &paging.List[organizationsmodel.OrganizationMember]{Items: items, Pagination: paging.NewPagination(request.Page, request.PageSize, total)}, nil
 }
 
-func (uc *OrganizationsUseCase) ListMembersByLogin(ctx context.Context, login string, requestUserID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.OrganizationMember], error) {
-	org, err := uc.repo.GetOrganizationByLogin(ctx, login)
-	if err != nil {
-		return nil, err
-	}
-	return uc.ListMembers(ctx, org.ID, requestUserID, request)
+func (uc *OrganizationsUseCase) UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role organizationsmodel.OrganizationRole) error {
+	return uc.withinOrganization(ctx, orgID, requiredOrgMemberAction(role), func(tx OrganizationTxStore) error { return tx.UpdateMemberRole(ctx, orgID, userID, role) })
 }
 
-func (uc *OrganizationsUseCase) UpdateMemberRole(ctx context.Context, orgID, userID uuid.UUID, role organizationsmodel.OrganizationRole, requestUserID uuid.UUID) error {
-	return uc.withinOrganization(ctx, orgID, requestUserID, requiredOrgMemberAction(role), func(tx OrganizationTxStore) error { return tx.UpdateMemberRole(ctx, orgID, userID, role) })
-}
-
-func (uc *OrganizationsUseCase) RemoveMember(ctx context.Context, orgID, userID, requestUserID uuid.UUID) error {
-	return uc.withinOrganization(ctx, orgID, requestUserID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error { return tx.RemoveMember(ctx, orgID, userID) })
-}
-
-func (uc *OrganizationsUseCase) RemoveMemberByLogin(ctx context.Context, login string, userID, requestUserID uuid.UUID) error {
+func (uc *OrganizationsUseCase) RemoveMemberByLogin(ctx context.Context, login string, userID uuid.UUID) error {
 	org, err := uc.repo.GetOrganizationByLogin(ctx, login)
 	if err != nil {
 		return err
 	}
-	return uc.RemoveMember(ctx, org.ID, userID, requestUserID)
-}
-
-func (uc *OrganizationsUseCase) ResolveUserOrganizationID(ctx context.Context, userID uuid.UUID, requestedOrgID *uuid.UUID) (uuid.UUID, error) {
-	if err := accessmodel.RequireCaller(ctx, userID); err != nil {
-		return uuid.Nil, err
-	}
-	orgID, found, err := uc.repo.ResolveUserOrganizationID(ctx, userID, requestedOrgID)
-	if err != nil {
-		return uuid.Nil, err
-	}
-
-	if !found {
-		if requestedOrgID != nil {
-			return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "organization not found or user is not a member")
-		}
-
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "user has no organizations")
-	}
-
-	return orgID, nil
+	return uc.withinOrganization(ctx, org.ID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error { return tx.RemoveMember(ctx, org.ID, userID) })
 }
 
 func (uc *OrganizationsUseCase) BatchCreateUsers(
 	ctx context.Context,
 	input organizationsmodel.BatchCreateOrganizationUsersInput,
-	requestUserID uuid.UUID,
 ) (*organizationsmodel.BatchCreateOrganizationUsersResult, error) {
+	requestUserID := accessmodel.UserFromContext(ctx).Id
 	if input.Count < 1 || input.Count > 500 {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "count must be between 1 and 500")
 	}
@@ -375,7 +326,7 @@ func (uc *OrganizationsUseCase) BatchCreateUsers(
 	}
 
 	// Save all users and org members in a transaction
-	err = uc.withinOrganization(ctx, org.ID, requestUserID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error {
+	err = uc.withinOrganization(ctx, org.ID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error {
 
 		for _, pu := range pendingUsers {
 			err := tx.CreateUser(ctx, identitymodel.CreateUserParams{
@@ -424,8 +375,8 @@ func (uc *OrganizationsUseCase) InviteMember(
 	orgLogin string,
 	targetUserID uuid.UUID,
 	role organizationsmodel.OrganizationRole,
-	inviterID uuid.UUID,
 ) (*organizationsmodel.OrganizationInvitation, error) {
+	inviterID := accessmodel.UserFromContext(ctx).Id
 	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
 	if err != nil {
 		return nil, err
@@ -433,7 +384,7 @@ func (uc *OrganizationsUseCase) InviteMember(
 
 	var invitation *organizationsmodel.OrganizationInvitation
 	var pendingNotifications []notificationsmodel.Notification
-	err = uc.withinOrganization(ctx, org.ID, inviterID, requiredOrgMemberAction(role), func(tx OrganizationTxStore) error {
+	err = uc.withinOrganization(ctx, org.ID, requiredOrgMemberAction(role), func(tx OrganizationTxStore) error {
 		// Verify target user exists
 		_, err := tx.GetUserById(ctx, targetUserID)
 		if err != nil {
@@ -511,8 +462,9 @@ func (uc *OrganizationsUseCase) InviteMember(
 	return invitation, nil
 }
 
-func (uc *OrganizationsUseCase) ListInvitations(ctx context.Context, orgLogin string, requestUserID uuid.UUID) ([]organizationsmodel.OrganizationInvitation, error) {
-	if err := accessmodel.RequireCaller(ctx, requestUserID); err != nil {
+func (uc *OrganizationsUseCase) ListInvitations(ctx context.Context, orgLogin string) ([]organizationsmodel.OrganizationInvitation, error) {
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
 		return nil, err
 	}
 	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
@@ -520,7 +472,7 @@ func (uc *OrganizationsUseCase) ListInvitations(ctx context.Context, orgLogin st
 		return nil, err
 	}
 
-	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, requestUserID, accessmodel.ActionManageOrganization)
+	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, user.Id, accessmodel.ActionManageOrganization)
 	if err != nil {
 		return nil, fmt.Errorf("check permissions: %w", err)
 	}
@@ -532,13 +484,13 @@ func (uc *OrganizationsUseCase) ListInvitations(ctx context.Context, orgLogin st
 	return uc.repo.ListInvitations(ctx, org.ID, &status)
 }
 
-func (uc *OrganizationsUseCase) CancelInvitation(ctx context.Context, orgLogin string, invitationID, requestUserID uuid.UUID) error {
+func (uc *OrganizationsUseCase) CancelInvitation(ctx context.Context, orgLogin string, invitationID uuid.UUID) error {
 	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
 	if err != nil {
 		return err
 	}
 
-	return uc.withinOrganization(ctx, org.ID, requestUserID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error {
+	return uc.withinOrganization(ctx, org.ID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error {
 		inv, err := tx.GetInvitationByID(ctx, invitationID)
 		if err != nil {
 			return err
@@ -704,8 +656,9 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 	return req, joined, nil
 }
 
-func (uc *OrganizationsUseCase) ListJoinRequests(ctx context.Context, orgLogin string, requestUserID uuid.UUID) ([]organizationsmodel.OrganizationJoinRequest, error) {
-	if err := accessmodel.RequireCaller(ctx, requestUserID); err != nil {
+func (uc *OrganizationsUseCase) ListJoinRequests(ctx context.Context, orgLogin string) ([]organizationsmodel.OrganizationJoinRequest, error) {
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
 		return nil, err
 	}
 	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
@@ -713,7 +666,7 @@ func (uc *OrganizationsUseCase) ListJoinRequests(ctx context.Context, orgLogin s
 		return nil, err
 	}
 
-	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, requestUserID, accessmodel.ActionManageOrganization)
+	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, user.Id, accessmodel.ActionManageOrganization)
 	if err != nil {
 		return nil, fmt.Errorf("check permissions: %w", err)
 	}
@@ -750,16 +703,17 @@ func (uc *OrganizationsUseCase) CancelJoinRequest(ctx context.Context, orgLogin 
 func (uc *OrganizationsUseCase) ApproveJoinRequest(
 	ctx context.Context,
 	orgLogin string,
-	requestID, reviewerID uuid.UUID,
+	requestID uuid.UUID,
 	role organizationsmodel.OrganizationRole,
 ) error {
+	reviewerID := accessmodel.UserFromContext(ctx).Id
 	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
 	if err != nil {
 		return err
 	}
 
 	var pendingNotifications []notificationsmodel.Notification
-	err = uc.withinOrganization(ctx, org.ID, reviewerID, requiredOrgMemberAction(role), func(tx OrganizationTxStore) error {
+	err = uc.withinOrganization(ctx, org.ID, requiredOrgMemberAction(role), func(tx OrganizationTxStore) error {
 		req, err := tx.GetJoinRequestByID(ctx, requestID)
 		if err != nil {
 			return err
@@ -813,14 +767,15 @@ func (uc *OrganizationsUseCase) ApproveJoinRequest(
 	return nil
 }
 
-func (uc *OrganizationsUseCase) RejectJoinRequest(ctx context.Context, orgLogin string, requestID, reviewerID uuid.UUID) error {
+func (uc *OrganizationsUseCase) RejectJoinRequest(ctx context.Context, orgLogin string, requestID uuid.UUID) error {
+	reviewerID := accessmodel.UserFromContext(ctx).Id
 	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
 	if err != nil {
 		return err
 	}
 
 	var pendingNotifications []notificationsmodel.Notification
-	err = uc.withinOrganization(ctx, org.ID, reviewerID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error {
+	err = uc.withinOrganization(ctx, org.ID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error {
 		req, err := tx.GetJoinRequestByID(ctx, requestID)
 		if err != nil {
 			return err
@@ -870,25 +825,24 @@ func (uc *OrganizationsUseCase) RejectJoinRequest(ctx context.Context, orgLogin 
 	return nil
 }
 
-func (uc *OrganizationsUseCase) GetMyPendingJoinRequest(ctx context.Context, orgLogin string, userID uuid.UUID) (*organizationsmodel.OrganizationJoinRequest, error) {
-	if err := accessmodel.RequireCaller(ctx, userID); err != nil {
+func (uc *OrganizationsUseCase) GetMyPendingJoinRequest(ctx context.Context, orgLogin string) (*organizationsmodel.OrganizationJoinRequest, error) {
+	user, err := accessmodel.RequireUser(ctx)
+	if err != nil {
 		return nil, err
 	}
 	org, err := uc.repo.GetOrganizationByLogin(ctx, orgLogin)
 	if err != nil {
 		return nil, err
 	}
-	return uc.repo.GetPendingJoinRequest(ctx, org.ID, userID)
+	return uc.repo.GetPendingJoinRequest(ctx, org.ID, user.Id)
 }
 
-func (uc *OrganizationsUseCase) withinOrganization(ctx context.Context, id, actor uuid.UUID, action accessmodel.OrgAction, fn func(OrganizationTxStore) error) error {
+func (uc *OrganizationsUseCase) withinOrganization(ctx context.Context, id uuid.UUID, action accessmodel.OrgAction, fn func(OrganizationTxStore) error) error {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return pkg.ErrUnauthenticated
 	}
-	if user.Id != actor {
-		return pkg.NoPermission
-	}
+	actor := user.Id
 	return uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
 		if _, err := tx.GetOrganizationByID(ctx, id); err != nil {
 			return err

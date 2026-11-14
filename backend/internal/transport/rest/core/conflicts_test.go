@@ -14,20 +14,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type conflictOrganizations struct{ OrganizationsModule }
+type conflictOrganizations struct{ OrganizationsUC }
 
-func (conflictOrganizations) GetOrganizationByLogin(context.Context, string, uuid.UUID) (*organizationsmodel.Organization, error) {
+func (conflictOrganizations) GetOrganizationByLogin(context.Context, string) (*organizationsmodel.Organization, error) {
 	return &organizationsmodel.Organization{ID: uuid.New()}, nil
 }
 
-type conflictContests struct{ ContestsModule }
+type conflictContests struct{ ContestsUC }
 
 func (conflictContests) GetContestByOrgLoginAndContestLogin(_ context.Context, _, login string) (contestsmodel.Contest, error) {
 	return contestsmodel.Contest{ID: uuid.New(), Login: login}, nil
 }
 
 func TestDuplicateContestLogin(t *testing.T) {
-	server := &CoreServer{organizations: conflictOrganizations{}, contests: conflictContests{}}
+	server := &CoreServer{Services: Services{Organizations: conflictOrganizations{}, Contests: conflictContests{}}}
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 	t.Run("create", func(t *testing.T) {
 		response, err := server.CreateContest(ctx, corev1.CreateContestParams{OrgLogin: "org", Title: "Contest", Login: corev1.NewOptString("taken")})
