@@ -112,4 +112,14 @@ describe("Problem Component DOM baseline test", () => {
     ]);
   });
 
+  it("passes non-ASCII and spaced image names to the assets endpoint once encoded", () => {
+    const view = renderWithProviders(<Problem
+      problem={{...sampleProblem, legend: "![a](assets/рисунок.png) ![b](<assets/my pic.png>) ![c](assets/100%.png)"}}
+      assetsUrl="/assets"
+    />);
+    const paths = Array.from(view.container.querySelectorAll("img"))
+      .map((img) => new URL(img.getAttribute("src") ?? "", "http://host").searchParams.get("path"));
+    expect(paths).toEqual(["assets/рисунок.png", "assets/my pic.png", "assets/100%.png"]);
+  });
+
 });

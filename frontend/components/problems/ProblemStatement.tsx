@@ -8,6 +8,16 @@ import remarkMath from "remark-math";
 
 import "katex/dist/katex.min.css";
 
+// Markdown has already percent-encoded the image URL; recover the package path.
+const packagePath = (src: string): string => {
+  const path = src.replace(/^\.\//, "");
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+};
+
 const renderSafeImage = (
   assetsUrl?: string
 ): ((props: React.ImgHTMLAttributes<HTMLImageElement> & { node?: unknown }) => ReactNode) => {
@@ -71,8 +81,7 @@ const renderSafeImage = (
       !cleanSrc.startsWith("data:") &&
       !cleanSrc.startsWith("/")
     ) {
-      const path = cleanSrc.replace(/^\.\//, "");
-      cleanSrc = `${assetsUrl}?path=${encodeURIComponent(path)}`;
+      cleanSrc = `${assetsUrl}?path=${encodeURIComponent(packagePath(cleanSrc))}`;
     }
 
     return (
