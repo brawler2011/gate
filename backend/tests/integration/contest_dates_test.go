@@ -158,3 +158,26 @@ func (s *IntegrationTestSuite) TestContestPatchSettingsPresence() {
 		})
 	}
 }
+
+func (s *IntegrationTestSuite) TestContestPatchRejectsNullFreezeStatus() {
+	owner := s.createUser("freeze_owner_"+uuid.NewString()[:8], accessmodel.UserRoleUser)
+	org := s.createOrganization("freeze-"+uuid.NewString()[:8], "Freeze status", owner.Id)
+	id := uuid.New()
+	login := "null-freeze-status"
+	s.Require().NoError(s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
+		ID: id, OrganizationID: org.ID, OwnerID: &owner.Id, Title: "Freeze status", Login: login,
+		Visibility: contestsmodel.ContestVisibilityPublic,
+		Settings:   map[string]interface{}{"freeze_status": "frozen"},
+	}))
+
+	req := httptest.NewRequest(http.MethodPatch, "/organizations/"+org.Login+"/contests/"+login, strings.NewReader(`{"freeze_status":null}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Test-User-ID", owner.Id.String())
+	recorder := httptest.NewRecorder()
+	s.handler.ServeHTTP(recorder, req)
+	s.Require().Equal(http.StatusBadRequest, recorder.Code, recorder.Body.String())
+
+	got, err := s.contestsRepo.GetContest(s.ctx, id)
+	s.Require().NoError(err)
+	s.Equal("frozen", got.Settings["freeze_status"])
+}
