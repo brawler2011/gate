@@ -10786,7 +10786,7 @@ type UpdateContestRequestModel struct {
 	SubmissionDetailsScope OptString `json:"submission_details_scope"`
 	// Freeze duration in minutes before contest end.
 	FreezeDurationMinutes OptNilInt32 `json:"freeze_duration_minutes"`
-	// Freeze mode status.
+	// Freeze mode status; omitted preserves the current mode.
 	FreezeStatus          OptUpdateContestRequestModelFreezeStatus      `json:"freeze_status"`
 	StartTime             OptNilDateTime                                `json:"start_time"`
 	EndTime               OptNilDateTime                                `json:"end_time"`
@@ -10978,7 +10978,7 @@ func (s *UpdateContestRequestModel) SetHideStatements(val OptBool) {
 	s.HideStatements = val
 }
 
-// Freeze mode status.
+// Freeze mode status; omitted preserves the current mode.
 type UpdateContestRequestModelFreezeStatus string
 
 const (
