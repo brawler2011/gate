@@ -2,7 +2,7 @@
 # its bin/ is exposed as /usr/bin and /bin, and the binaries resolve their
 # libraries and data through /nix/store.
 # This file lives in the image root layer (flake.nix root), so editing it changes
-# only the last image layer and not the toolchain identity.
+# only the last image layer and not the toolchain identity. (verification of #246)
 mount:
   - type: bind
     source: /nix/store
