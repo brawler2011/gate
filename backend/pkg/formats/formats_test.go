@@ -62,15 +62,16 @@ func TestReadTestdataPackages(t *testing.T) {
 		"polygon/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validator: "v.cpp", Main: "solutions/solution_mm.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"tests/each/12.00/3.00/0.00"}},
 		"polygon/interactive-guess": {Type: "interactive", Checker: "check.cpp", Validator: "validator.cpp", Interactor: "interactor.cpp", Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
-			Groups: []string{"tests/each/2.00/1.00/0.00"}},
+			Groups: []string{"tests/each/2.00/0.00/0.00"}},
 		"polygon/max-subarray": {Type: "pass-fail", Checker: "check.cpp", Validator: "validator.cpp", Main: "solutions/accepted.cpp", Generators: []string{"generator.cpp"}, Library: testlib, Statements: []string{"en"},
 			Groups: []string{"tests/each/4.00/2.00/0.00"}},
 		"polygon/subtasks-groups": {Type: "scoring", Checker: "check.cpp", Validator: "validator.cpp", Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"1/complete/1.00/1.00/40.00", "2/complete/1.00/0.00/60.00"}},
 		"icpc/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validator: "v.cpp", Main: "submissions/accepted/accepted.cpp", Generators: []string{"echo.cpp"}, Library: icpcLib, Statements: []string{"en", "ru"},
 			Groups: []string{"sample/each/3.00/3.00/0.00", "secret/each/9.00/0.00/0.00"}},
+		// An interactive input is what the interactor reads, so none is published.
 		"icpc/interactive-guess": {Type: "interactive", Validator: "validator.cpp", Interactor: "interactor.cpp", Main: "submissions/accepted/accepted.cpp", Library: []string{"testlib.h", "testlib.h"}, Statements: []string{"en"},
-			Groups: []string{"sample/each/1.00/1.00/0.00", "secret/each/1.00/0.00/0.00"}},
+			Groups: []string{"sample/each/1.00/0.00/0.00", "secret/each/1.00/0.00/0.00"}},
 		"pcms2/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"tests/each/12.00/3.00/0.00"}},
 		"pcms2/interactive-guess": {Type: "interactive", Checker: "check.cpp", Interactor: "interactor.cpp", Library: testlib, Statements: []string{"en"},
@@ -123,8 +124,9 @@ func TestPolygonGroups(t *testing.T) {
 	}}, p.Groups[1])
 }
 
-// A test is worth the accept_score of the nearest testdata.yaml above it, and
-// an explicit zero is kept.
+// Every directory of tests is a group, at any depth. A test is worth the
+// accept_score of the nearest testdata.yaml above it, and an explicit zero is
+// kept.
 func TestICPCScoringGroups(t *testing.T) {
 	dir := t.TempDir()
 	write(t, dir, "problem.yaml", "name: Groups\ntype: scoring\n")
@@ -135,17 +137,33 @@ func TestICPCScoringGroups(t *testing.T) {
 	write(t, dir, "data/secret/group1/a.ans", "2\n")
 	write(t, dir, "data/secret/group1/testdata.yaml", "accept_score: 0\n")
 	write(t, dir, "data/secret/group2/b.in", "3\n")
+	write(t, dir, "data/secret/group2/nested/c.in", "4\n")
 	write(t, dir, "output_validators/checker/checker.cpp", "int main() {}\n")
 	write(t, dir, "output_validators/checker/testlib.h", "\n")
 	p, err := Read(dir)
 	require.NoError(t, err)
 	require.Equal(t, summary{Type: "scoring", Checker: "checker.cpp", Library: []string{"testlib.h"},
-		Groups: []string{"sample/each/1.00/1.00/1.00", "group1/each/1.00/0.00/0.00", "group2/each/1.00/0.00/5.00"}}, summarize(p))
+		Groups: []string{"sample/each/1.00/1.00/1.00", "secret/group1/each/1.00/0.00/0.00", "secret/group2/each/1.00/0.00/5.00", "secret/group2/nested/each/1.00/0.00/5.00"}}, summarize(p))
 	require.Equal(t, "output_validators/checker/checker.cpp", p.Checker.Path)
 	require.Empty(t, p.Groups[2].Tests[0].Answer)
 }
 
 // Each ICPC program includes the headers of its own directory.
+// Polygon resources are library files, except the statement templates.
+func TestPolygonResources(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, "problem.xml", `<problem short-name="resources">
+  <judging><testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit></testset></judging>
+  <files><resources>
+    <file path="files/olymp.sty"/><file path="files/problem.tex"/><file path="files/statements.ftl"/>
+    <file path="files/testlib.h" type="h.g++"/><file path="files/helper.inc"/>
+  </resources></files>
+</problem>`)
+	p, err := Read(dir)
+	require.NoError(t, err)
+	require.Equal(t, []spec.File{{Name: "testlib.h", Path: "files/testlib.h"}, {Name: "helper.inc", Path: "files/helper.inc"}}, p.Library)
+}
+
 func TestICPCProgramHeaders(t *testing.T) {
 	dir := t.TempDir()
 	write(t, dir, "problem.yaml", "name: Headers\nvalidation: custom\n")

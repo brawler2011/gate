@@ -56,6 +56,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		return nil, err
 	}
 	p.Type = problemType(run, p.Groups)
+	p.KeepInteractiveInputsPrivate()
 	if p.Statements, err = statements(fsys, prob.Statements); err != nil {
 		return nil, err
 	}

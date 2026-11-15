@@ -89,6 +89,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if p.Groups, err = groups(fsys, p.Type == "scoring"); err != nil {
 		return nil, err
 	}
+	p.KeepInteractiveInputsPrivate()
 	if p.Statements, err = statements(fsys); err != nil {
 		return nil, err
 	}
@@ -183,39 +184,35 @@ func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error)) ([]sp
 	return result, main, nil
 }
 
-// groups reads data/sample, data/secret and its subdirectories. In a scoring
-// problem every test is worth the accept_score of the nearest testdata.yaml
-// above it, 1 by default.
+// groups reads data/sample and data/secret. Every directory holding tests,
+// at any depth, is a group named by its path under data/. In a scoring problem
+// every test is worth the accept_score of the nearest testdata.yaml above it,
+// 1 by default.
 func groups(fsys fs.FS, scoring bool) ([]spec.Group, error) {
 	var result []spec.Group
-	add := func(dir, name string, sample bool) error {
-		weight := points.Value(0)
-		if scoring {
-			score, err := acceptScore(fsys, dir)
-			if err != nil {
+	for _, top := range []string{"sample", "secret"} {
+		err := fs.WalkDir(fsys, path.Join("data", top), func(dir string, d fs.DirEntry, err error) error {
+			if errors.Is(err, fs.ErrNotExist) && dir == path.Join("data", top) {
+				return fs.SkipDir
+			}
+			if err != nil || !d.IsDir() {
 				return err
 			}
-			weight = score
-		}
-		tests, err := testFiles(fsys, dir, weight, sample)
-		if err != nil || len(tests) == 0 {
-			return err
-		}
-		result = append(result, spec.Group{Name: name, Policy: "each", Tests: tests})
-		return nil
-	}
-	if err := add("data/sample", "sample", true); err != nil {
-		return nil, err
-	}
-	if err := add("data/secret", "secret", false); err != nil {
-		return nil, err
-	}
-	entries, _ := fs.ReadDir(fsys, "data/secret")
-	for _, e := range entries {
-		if e.IsDir() {
-			if err := add(path.Join("data/secret", e.Name()), e.Name(), false); err != nil {
-				return nil, err
+			weight := points.Value(0)
+			if scoring {
+				if weight, err = acceptScore(fsys, dir); err != nil {
+					return err
+				}
 			}
+			tests, err := testFiles(fsys, dir, weight, top == "sample")
+			if err != nil || len(tests) == 0 {
+				return err
+			}
+			result = append(result, spec.Group{Name: strings.TrimPrefix(dir, "data/"), Policy: "each", Tests: tests})
+			return nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("read tests: %w", err)
 		}
 	}
 	return result, nil

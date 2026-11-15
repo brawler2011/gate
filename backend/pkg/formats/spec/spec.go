@@ -79,6 +79,20 @@ type Test struct {
 	Sample    bool
 }
 
+// KeepInteractiveInputsPrivate unmarks the samples of an interactive problem.
+// Gate publishes sample inputs, but in Polygon, PCMS2 and ICPC the input of an
+// interactive test is what the interactor reads, such as the hidden answer.
+func (p *Problem) KeepInteractiveInputsPrivate() {
+	if p.Type != "interactive" {
+		return
+	}
+	for i := range p.Groups {
+		for j := range p.Groups[i].Tests {
+			p.Groups[i].Tests[j].Sample = false
+		}
+	}
+}
+
 // ParseCommand splits a generator command line into argv. Only quoting and
 // escaping are understood; a trailing "> $" (output redirection in Polygon and
 // gfmt recipes) is dropped, and any other shell syntax is rejected because

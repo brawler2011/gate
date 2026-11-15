@@ -69,8 +69,11 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			p.Generators = append(p.Generators, *program(source))
 			generators[spec.Stem(source)] = source
 		}
+		// Resources are files programs include, except the statement templates.
 		for _, r := range prob.Files.Resources {
-			if spec.IsHeaderFile(r.Path) {
+			switch path.Ext(r.Path) {
+			case ".sty", ".tex", ".ftl":
+			default:
 				p.Library = append(p.Library, spec.File{Name: path.Base(r.Path), Path: r.Path})
 			}
 		}
@@ -79,6 +82,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		return nil, err
 	}
 	p.Type = problemType(prob, p.Groups)
+	p.KeepInteractiveInputsPrivate()
 	// Polygon checks that well-formed tests are text, and its Windows
 	// packages store them with CRLF line endings.
 	for _, property := range prob.Properties {
