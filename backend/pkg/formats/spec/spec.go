@@ -7,6 +7,8 @@ package spec
 
 import (
 	"fmt"
+	"io"
+	"io/fs"
 	"strings"
 
 	"github.com/brawler2011/gate/backend/pkg/points"
@@ -79,6 +81,28 @@ type Test struct {
 	Answer    string
 	Points    points.Value
 	Sample    bool
+}
+
+// MaxMetadataBytes bounds the files readers parse themselves: manifests and
+// statements they inspect. Package contents are read by the importer within
+// the draft quotas.
+const MaxMetadataBytes = 4 << 20
+
+// ReadFile reads a metadata file of at most MaxMetadataBytes.
+func ReadFile(fsys fs.FS, name string) ([]byte, error) {
+	f, err := fsys.Open(name)
+	if err != nil {
+		return nil, fmt.Errorf("open %s: %w", name, err)
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, MaxMetadataBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", name, err)
+	}
+	if len(data) > MaxMetadataBytes {
+		return nil, fmt.Errorf("%s is larger than %d bytes", name, MaxMetadataBytes)
+	}
+	return data, nil
 }
 
 // KeepInteractiveInputsPrivate unmarks the samples of an interactive problem.

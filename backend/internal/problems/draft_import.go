@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -493,31 +494,74 @@ func (c *importConverter) object(path, purpose string) (uuid.UUID, error) {
 }
 
 // toLF returns a copy of the text file at full with LF line endings, or full
-// itself when it has no CRLF.
+// itself when it has no CRLF. It streams, so test size does not bound memory.
 func (c *importConverter) toLF(full string) (string, error) {
-	info, err := os.Stat(full)
+	src, err := os.Open(full)
 	if err != nil {
-		return "", fmt.Errorf("stat: %w", err)
+		return "", fmt.Errorf("open: %w", err)
 	}
-	if info.Size() > c.uc.ObjectBytes {
-		return "", pkg.ErrPayloadTooLarge
-	}
-	data, err := os.ReadFile(full)
-	if err != nil {
-		return "", fmt.Errorf("readfile: %w", err)
-	}
-	if !bytes.Contains(data, []byte("\r\n")) {
-		return full, nil
-	}
+	defer src.Close()
 	dir := filepath.Join(c.result.root, "lf")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", fmt.Errorf("mkdirall: %w", err)
 	}
-	converted := filepath.Join(dir, uuid.NewString())
-	if err := os.WriteFile(converted, bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n")), 0o600); err != nil {
-		return "", fmt.Errorf("writefile: %w", err)
+	dst, err := os.CreateTemp(dir, "test-")
+	if err != nil {
+		return "", fmt.Errorf("createtemp: %w", err)
 	}
-	return converted, nil
+	converted, err := copyLF(dst, src)
+	if closeErr := dst.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil || !converted {
+		_ = os.Remove(dst.Name())
+		if err != nil {
+			return "", fmt.Errorf("convert line endings: %w", err)
+		}
+		return full, nil
+	}
+	return dst.Name(), nil
+}
+
+// copyLF copies src to dst with each CRLF replaced by LF and reports whether
+// it replaced any.
+func copyLF(dst io.Writer, src io.Reader) (bool, error) {
+	crlf, lf := []byte("\r\n"), []byte("\n")
+	buf := make([]byte, 64<<10)
+	converted, heldCR := false, false
+	for {
+		n, readErr := src.Read(buf)
+		chunk := buf[:n]
+		if heldCR && n > 0 {
+			// A CR that ended the previous chunk ends a line only before LF.
+			if chunk[0] == '\n' {
+				converted = true
+			} else if _, err := dst.Write([]byte{'\r'}); err != nil {
+				return false, fmt.Errorf("write: %w", err)
+			}
+			heldCR = false
+		}
+		if len(chunk) > 0 && chunk[len(chunk)-1] == '\r' {
+			heldCR, chunk = true, chunk[:len(chunk)-1]
+		}
+		if bytes.Contains(chunk, crlf) {
+			converted, chunk = true, bytes.ReplaceAll(chunk, crlf, lf)
+		}
+		if _, err := dst.Write(chunk); err != nil {
+			return false, fmt.Errorf("write: %w", err)
+		}
+		if errors.Is(readErr, io.EOF) {
+			if heldCR {
+				if _, err := dst.Write([]byte{'\r'}); err != nil {
+					return false, fmt.Errorf("write: %w", err)
+				}
+			}
+			return converted, nil
+		}
+		if readErr != nil {
+			return false, fmt.Errorf("read: %w", readErr)
+		}
+	}
 }
 
 // file resolves a package path to a regular file inside the package.

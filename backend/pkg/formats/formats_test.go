@@ -3,6 +3,7 @@ package formats
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
@@ -211,6 +212,22 @@ func TestReadersStayInsidePackage(t *testing.T) {
 		require.NoError(t, err)
 		require.Empty(t, p.Groups[0].Tests[0].Answer, pattern)
 	}
+}
+
+// Readers parse metadata of bounded size only.
+func TestReadersBoundMetadata(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, "problem.xml", `<!DOCTYPE problem PUBLIC "-//PCMS2//DTD Problem Description 1.0//EN" "http://pcms2.ru/dtd/problem-0.2.dtd">
+<problem id="big"><judging><testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
+  <input-path-pattern>tests/%02d</input-path-pattern><tests><test/></tests></testset></judging></problem>`)
+	write(t, dir, "tests/01", "1\n")
+	write(t, dir, "statements/english/problem.tex", "\\exmp{1}{1}"+strings.Repeat(" ", spec.MaxMetadataBytes))
+	p, err := Read(dir)
+	require.NoError(t, err)
+	require.False(t, p.Groups[0].Tests[0].Sample, "an oversized statement is not inspected")
+	write(t, dir, "problem.xml", "<problem>"+strings.Repeat(" ", spec.MaxMetadataBytes)+"</problem>")
+	_, err = Read(dir)
+	require.ErrorContains(t, err, "larger than")
 }
 
 // Gate runs one program per role; a package with more is rejected rather

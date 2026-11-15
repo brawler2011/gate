@@ -27,16 +27,23 @@ func DetectFormat(dir string) (string, error) {
 }
 
 func detect(fsys fs.FS) (string, error) {
-	if data, err := fs.ReadFile(fsys, "problem.xml"); err == nil {
+	if _, err := fs.Stat(fsys, "problem.xml"); err == nil {
+		data, err := spec.ReadFile(fsys, "problem.xml")
+		if err != nil {
+			return "", err
+		}
 		content := string(data)
 		if strings.Contains(content, "pcms2.ru") || strings.Contains(content, "-//PCMS2//") || strings.Contains(content, "<problem id=") {
 			return "pcms2", nil
 		}
 		return "polygon", nil
 	}
-	data, err := fs.ReadFile(fsys, "problem.yaml")
-	if err != nil {
+	if _, err := fs.Stat(fsys, "problem.yaml"); err != nil {
 		return "", fmt.Errorf("unknown problem format: no problem.xml or problem.yaml found")
+	}
+	data, err := spec.ReadFile(fsys, "problem.yaml")
+	if err != nil {
+		return "", err
 	}
 	var config map[string]any
 	if err := yaml.Unmarshal(data, &config); err != nil {

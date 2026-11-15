@@ -16,7 +16,7 @@ import (
 
 // Read reads the Polygon package in fsys as described by its problem.xml.
 func Read(fsys fs.FS) (*spec.Problem, error) {
-	data, err := fs.ReadFile(fsys, "problem.xml")
+	data, err := spec.ReadFile(fsys, "problem.xml")
 	if err != nil {
 		return nil, fmt.Errorf("read problem.xml: %w", err)
 	}

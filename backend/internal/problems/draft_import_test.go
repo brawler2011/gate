@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 
@@ -216,6 +217,25 @@ func TestImportKeepsProgramHeadersApart(t *testing.T) {
 	require.Equal(t, map[string]string{"helper.h": "lib/helper.h"}, plan.draft.Component("checker").Dependencies)
 	require.Equal(t, map[string]string{"helper.h": "lib/helper-2.h"}, plan.draft.Component("validator").Dependencies)
 	require.Equal(t, "// B\n", plan.draft.Files["lib/helper-2.h"])
+}
+
+// CRLF conversion streams: a CRLF split across reads is still converted, and
+// a lone CR is kept.
+func TestCopyLF(t *testing.T) {
+	for _, tc := range []struct {
+		in, out   string
+		converted bool
+	}{
+		{"a\r\nb\rc\r\n\r", "a\nb\rc\n\r", true},
+		{"a\nb\n", "a\nb\n", false},
+		{"\r", "\r", false},
+	} {
+		var out bytes.Buffer
+		converted, err := copyLF(&out, iotest.OneByteReader(strings.NewReader(tc.in)))
+		require.NoError(t, err)
+		require.Equal(t, tc.out, out.String(), tc.in)
+		require.Equal(t, tc.converted, converted, tc.in)
+	}
 }
 
 // importAPlusB imports the gfmt a-plus-b package with extra files added.

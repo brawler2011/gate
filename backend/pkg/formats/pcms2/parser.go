@@ -23,7 +23,7 @@ var sourceDirs = []string{".", "src", "files"}
 // Read reads the PCMS2 package in dir as described by its problem.xml. PCMS2
 // names compiled programs only, so their sources are found by file stem.
 func Read(fsys fs.FS) (*spec.Problem, error) {
-	data, err := fs.ReadFile(fsys, "problem.xml")
+	data, err := spec.ReadFile(fsys, "problem.xml")
 	if err != nil {
 		return nil, fmt.Errorf("read problem.xml: %w", err)
 	}
@@ -173,23 +173,22 @@ func program(folder, name string, entries []fs.DirEntry) *spec.Program {
 // else the examples its LaTeX names. PCMS2 shows the first tests as examples.
 func samples(fsys fs.FS) int {
 	languages, _ := fs.ReadDir(fsys, "statements")
-	files, named := 0, 0
+	files := 0
 	for _, language := range languages {
-		if !language.IsDir() {
-			continue
-		}
-		dir := path.Join("statements", language.Name())
 		n := 0
-		for regular(fsys, path.Join(dir, fmt.Sprintf("example.%02d", n+1))) {
+		for language.IsDir() && regular(fsys, path.Join("statements", language.Name(), fmt.Sprintf("example.%02d", n+1))) {
 			n++
 		}
 		files = max(files, n)
-		if text, err := fs.ReadFile(fsys, path.Join(dir, "problem.tex")); err == nil {
-			named = max(named, examples(string(text)))
-		}
 	}
 	if files > 0 {
 		return files
+	}
+	named := 0
+	for _, language := range languages {
+		if text, err := spec.ReadFile(fsys, path.Join("statements", language.Name(), "problem.tex")); err == nil {
+			named = max(named, examples(string(text)))
+		}
 	}
 	return named
 }

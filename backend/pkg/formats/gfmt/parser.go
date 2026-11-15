@@ -17,7 +17,7 @@ var programFolders = []string{"checkers", "validators", "interactors", "generato
 
 // Read reads an author gfmt package: problem.yaml and the files of its folders.
 func Read(fsys fs.FS) (*spec.Problem, error) {
-	data, err := fs.ReadFile(fsys, "problem.yaml")
+	data, err := spec.ReadFile(fsys, "problem.yaml")
 	if err != nil {
 		return nil, fmt.Errorf("read problem.yaml: %w", err)
 	}

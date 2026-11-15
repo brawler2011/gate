@@ -21,7 +21,7 @@ import (
 // Read reads the ICPC package in fsys. Tests are the .in files of data/sample
 // and data/secret; each subdirectory of data/secret is a test group.
 func Read(fsys fs.FS) (*spec.Problem, error) {
-	data, err := fs.ReadFile(fsys, "problem.yaml")
+	data, err := spec.ReadFile(fsys, "problem.yaml")
 	if err != nil {
 		return nil, fmt.Errorf("read problem.yaml: %w", err)
 	}
