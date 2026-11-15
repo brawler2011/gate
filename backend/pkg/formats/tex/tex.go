@@ -1,12 +1,14 @@
-package gfmt
+// Package tex converts LaTeX problem statements of Polygon, PCMS2 and ICPC
+// packages into Gate statement Markdown.
+package tex
 
 import (
 	"sort"
 	"strings"
 )
 
-// MapLanguageCode maps language names to standard two-letter codes.
-func MapLanguageCode(lang string) string {
+// LanguageCode maps a language name such as "russian" to its two-letter code.
+func LanguageCode(lang string) string {
 	switch strings.ToLower(lang) {
 	case "english":
 		return "en"
@@ -20,8 +22,8 @@ func MapLanguageCode(lang string) string {
 	}
 }
 
-// ConvertTexToMarkdown converts a standard Polygon/PCMS2/ICPC LaTeX problem statement into GFMT markdown.
-func ConvertTexToMarkdown(texContent string) string {
+// ToMarkdown converts an olymp.sty problem statement into statement Markdown.
+func ToMarkdown(texContent string) string {
 	startIdx := strings.Index(texContent, "\\begin{problem}")
 	if startIdx == -1 {
 		return ""

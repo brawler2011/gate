@@ -76,18 +76,6 @@ type CompiledComponent struct {
 	Dependencies map[string]string `yaml:"dependencies" json:"dependencies"`
 }
 
-// FileMapping maps a source file in the unpacked package directory to its target path in the gfmt layout.
-type FileMapping struct {
-	SourcePath string
-	TargetPath string
-}
-
-// ImportPlan represents the transformed problem manifest and the list of files to copy.
-type ImportPlan struct {
-	Problem  *Problem
-	Mappings []FileMapping
-}
-
 // OrderedSubtaskNames defines test numbering: samples first, then group names;
 // tests retain their manifest list order. Files do not determine membership.
 func (p *Problem) OrderedSubtaskNames() []string {

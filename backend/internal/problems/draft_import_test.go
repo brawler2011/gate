@@ -6,6 +6,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
@@ -51,10 +52,66 @@ func TestBuiltinTemplatesImportIntoValidDrafts(t *testing.T) {
 	}
 }
 
+// Every author package in pkg/testdata must import into a draft that build
+// validation accepts: programs sit in their role folders with the library
+// attached, and tests reference existing generators and objects.
+func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
+	packages, err := filepath.Glob("../../pkg/testdata/*/*")
+	require.NoError(t, err)
+	require.NotEmpty(t, packages)
+	// PCMS2 records no solution verdicts, so the author picks the main
+	// solution an interactive problem needs in the workshop.
+	buildErrors := map[string]string{"pcms2/interactive-guess": "solution is required"}
+	for _, dir := range packages {
+		name := filepath.Base(filepath.Dir(dir)) + "/" + filepath.Base(dir)
+		t.Run(name, func(t *testing.T) {
+			plan, err := importDir(t, dir, nil)
+			require.NoError(t, err)
+			defer plan.Close()
+			d := plan.draft
+			require.NoError(t, d.Validate(importQuotas, false))
+			if want, ok := buildErrors[name]; ok {
+				require.EqualError(t, d.Validate(importQuotas, true), want)
+				return
+			}
+			require.NoError(t, d.Validate(importQuotas, true))
+			for _, c := range d.Components {
+				require.Contains(t, c.Dependencies, "testlib.h", c.Path)
+			}
+		})
+	}
+}
+
+// Polygon packages made on Windows keep well-formed tests with CRLF line
+// endings, which testlib rejects on Linux; the importer stores them with LF.
+func TestImportConvertsWellFormedPolygonTestsToLF(t *testing.T) {
+	plan, err := importDir(t, "../../pkg/testdata/polygon/a-plus-b", nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	source, err := os.ReadFile("../../pkg/testdata/polygon/a-plus-b/tests/01")
+	require.NoError(t, err)
+	require.Contains(t, string(source), "\r\n")
+	input := plan.draft.Tests[0].Input.ObjectID
+	for _, o := range plan.objects {
+		if o.temporaryID == *input {
+			data, err := os.ReadFile(o.path)
+			require.NoError(t, err)
+			require.Equal(t, strings.ReplaceAll(string(source), "\r\n", "\n"), string(data))
+			return
+		}
+	}
+	t.Fatal("input object not found")
+}
+
 // importAPlusB imports the gfmt a-plus-b package with extra files added.
 func importAPlusB(t *testing.T, extra map[string]string) (*draftImport, error) {
+	return importDir(t, "../../pkg/testdata/gfmt/a-plus-b", extra)
+}
+
+// importDir imports the package in source with extra files added.
+func importDir(t *testing.T, source string, extra map[string]string) (*draftImport, error) {
 	dir := t.TempDir()
-	require.NoError(t, os.CopyFS(dir, os.DirFS("../../pkg/testdata/gfmt/a-plus-b")))
+	require.NoError(t, os.CopyFS(dir, os.DirFS(source)))
 	for path, text := range extra {
 		require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(dir, path)), 0o700))
 		require.NoError(t, os.WriteFile(filepath.Join(dir, path), []byte(text), 0o600))

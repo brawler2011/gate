@@ -1,3 +1,5 @@
+// Package formats detects and reads problem packages of every supported
+// author format.
 package formats
 
 import (
@@ -10,15 +12,9 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/formats/icpc"
 	"github.com/brawler2011/gate/backend/pkg/formats/pcms2"
 	"github.com/brawler2011/gate/backend/pkg/formats/polygon"
+	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"gopkg.in/yaml.v3"
 )
-
-// Parser is the interface that all format parsers must implement.
-// It parses a problem package directory into a unified GFMT Problem representation and file mappings.
-type Parser interface {
-	Parse(packageDir string) (*gfmt.ImportPlan, error)
-	GetFormat() string
-}
 
 // DetectFormat detects the format of a package directory.
 func DetectFormat(packageDir string) (string, error) {
@@ -59,18 +55,20 @@ func DetectFormat(packageDir string) (string, error) {
 	return "", fmt.Errorf("unknown problem format: no problem.xml or problem.yaml found in %s", packageDir)
 }
 
-// GetParser returns the appropriate parser for the given format name.
-func GetParser(formatName string) (Parser, error) {
-	switch formatName {
+// Read detects the format of the package in dir and reads it.
+func Read(dir string) (*spec.Problem, error) {
+	format, err := DetectFormat(dir)
+	if err != nil {
+		return nil, err
+	}
+	switch format {
 	case "gfmt":
-		return gfmt.NewParser(), nil
+		return gfmt.Read(dir)
 	case "polygon":
-		return polygon.NewParser(), nil
+		return polygon.Read(dir)
 	case "pcms2":
-		return pcms2.NewParser(), nil
-	case "icpc":
-		return icpc.NewParser(), nil
+		return pcms2.Read(dir)
 	default:
-		return nil, fmt.Errorf("unsupported format: %s", formatName)
+		return icpc.Read(dir)
 	}
 }

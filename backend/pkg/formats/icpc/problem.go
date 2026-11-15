@@ -2,6 +2,7 @@ package icpc
 
 // Problem represents the ICPC problem.yaml specification.
 type Problem struct {
+	Type       string      `yaml:"type"` // "pass-fail" or "scoring"
 	Name       string      `yaml:"name"`
 	Author     string      `yaml:"author"`
 	Source     string      `yaml:"source"`

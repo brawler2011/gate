@@ -22,11 +22,18 @@
     <files>
         <resources>
             <file path="files/olymp.sty"/>
+            <file path="files/testlib.h" type="h.g++"/>
         </resources>
         <executables>
-            <executable path="files/validator.cpp" type="cpp.g++17"/>
-            <executable path="files/interactor.cpp" type="cpp.g++17"/>
-            <executable path="files/check.cpp" type="cpp.g++17"/>
+            <executable>
+                <source path="files/validator.cpp" type="cpp.g++17"/>
+            </executable>
+            <executable>
+                <source path="files/interactor.cpp" type="cpp.g++17"/>
+            </executable>
+            <executable>
+                <source path="files/check.cpp" type="cpp.g++17"/>
+            </executable>
         </executables>
     </files>
     <assets>
@@ -54,6 +61,6 @@
         </solutions>
     </assets>
     <properties>
-        <property name="tests-well-formed" value="true"/>
+        <property name="tests-wellformed" value="true"/>
     </properties>
 </problem>

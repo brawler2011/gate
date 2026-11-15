@@ -14,6 +14,13 @@ type Problem struct {
 	Judging     Judging     `xml:"judging"`
 	Files       *Files      `xml:"files"`
 	Assets      *Assets     `xml:"assets"`
+	Properties  []Property  `xml:"properties>property"`
+}
+
+// Property is a problem setting, such as tests-wellformed.
+type Property struct {
+	Name  string `xml:"name,attr"`
+	Value string `xml:"value,attr"`
 }
 
 // Name represents a problem name in a specific language.
@@ -102,11 +109,18 @@ type Binary struct {
 	Type string `xml:"type,attr"`
 }
 
-// Assets holds checkers, validators, and solution sources.
+// Assets holds the checker, validators, interactor and solution sources.
 type Assets struct {
 	Checker    *Checker    `xml:"checker"`
 	Validators []Validator `xml:"validators>validator"`
+	Interactor *Interactor `xml:"interactor"`
 	Solutions  []Solution  `xml:"solutions>solution"`
+}
+
+// Interactor represents the interactor of an interactive problem.
+type Interactor struct {
+	Source Source `xml:"source"`
+	Binary Binary `xml:"binary"`
 }
 
 // Checker represents a problem checker executable.
