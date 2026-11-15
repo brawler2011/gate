@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"path"
 	"slices"
 	"strconv"
@@ -57,9 +58,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	}
 	p.Type = problemType(run, p.Groups)
 	p.KeepInteractiveInputsPrivate()
-	if p.Statements, err = statements(fsys, prob.Statements); err != nil {
-		return nil, err
-	}
+	p.Statements = statements(fsys, prob.Statements)
 	return p, nil
 }
 
@@ -253,7 +252,7 @@ func groups(fsys fs.FS, testset Testset, samples int) ([]spec.Group, error) {
 
 // statements converts the LaTeX statements; packages that list only rendered
 // statements still carry statements/<language>/problem.tex.
-func statements(fsys fs.FS, list []Statement) ([]spec.Statement, error) {
+func statements(fsys fs.FS, list []Statement) []spec.Statement {
 	sources := map[string]string{}
 	for _, s := range list {
 		if s.Type == "application/x-tex" {
@@ -264,23 +263,14 @@ func statements(fsys fs.FS, list []Statement) ([]spec.Statement, error) {
 		languages, _ := fs.ReadDir(fsys, "statements")
 		for _, language := range languages {
 			file := path.Join("statements", language.Name(), "problem.tex")
-			if _, err := fs.Stat(fsys, file); err == nil && !strings.HasPrefix(language.Name(), ".") {
+			if regular(fsys, file) && !strings.HasPrefix(language.Name(), ".") {
 				sources[tex.LanguageCode(language.Name())] = file
 			}
 		}
 	}
-	languages := make([]string, 0, len(sources))
-	for language := range sources {
-		languages = append(languages, language)
-	}
-	slices.Sort(languages)
 	var result []spec.Statement
-	for _, language := range languages {
-		data, err := fs.ReadFile(fsys, sources[language])
-		if err != nil {
-			return nil, fmt.Errorf("read statement: %w", err)
-		}
-		result = append(result, spec.Statement{Language: language, Markdown: tex.ToMarkdown(string(data))})
+	for _, language := range slices.Sorted(maps.Keys(sources)) {
+		result = append(result, spec.Statement{Language: language, Path: sources[language], TeX: true})
 	}
-	return result, nil
+	return result
 }

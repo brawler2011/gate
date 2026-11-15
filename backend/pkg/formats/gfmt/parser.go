@@ -50,11 +50,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		case folder == "assets" && name != "":
 			p.Assets = append(p.Assets, spec.File{Name: name, Path: rel})
 		case folder == "statements" && path.Ext(name) == ".md" && !strings.Contains(name, "/"):
-			text, err := fs.ReadFile(fsys, rel)
-			if err != nil {
-				return fmt.Errorf("read statement: %w", err)
-			}
-			p.Statements = append(p.Statements, spec.Statement{Language: strings.TrimSuffix(name, ".md"), Markdown: string(text)})
+			p.Statements = append(p.Statements, spec.Statement{Language: strings.TrimSuffix(name, ".md"), Path: rel})
 		default:
 			return fmt.Errorf("unexpected file %s", rel)
 		}

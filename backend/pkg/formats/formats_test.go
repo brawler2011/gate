@@ -86,9 +86,6 @@ func TestReadTestdataPackages(t *testing.T) {
 			p, err := Read(filepath.Join("..", "testdata", name))
 			require.NoError(t, err)
 			require.Equal(t, want, summarize(p))
-			for _, s := range p.Statements {
-				require.Contains(t, s.Markdown, "<!-- output -->", s.Language)
-			}
 		})
 	}
 }
@@ -198,24 +195,22 @@ func TestICPCProgramHeaders(t *testing.T) {
 }
 
 // Readers see the package through an os.Root: a path in problem.xml cannot
-// reach a file outside the package.
+// reach a file outside the package, through ../ or a symlink.
 func TestReadersStayInsidePackage(t *testing.T) {
 	parent := t.TempDir()
-	write(t, parent, "outside.tex", "\\begin{problem}{x}{}{}{}{}secret\\end{problem}\n")
+	write(t, parent, "01.a", "outside\n")
 	dir := filepath.Join(parent, "package")
-	write(t, dir, "problem.xml", `<problem short-name="escape">
-  <statements><statement language="english" path="../outside.tex" type="application/x-tex"/></statements>
-  <judging><testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit></testset></judging>
-</problem>`)
-	_, err := Read(dir)
-	require.Error(t, err)
-	require.NoError(t, os.Symlink(filepath.Join(parent, "outside.tex"), filepath.Join(dir, "link.tex")))
-	write(t, dir, "problem.xml", `<problem short-name="escape">
-  <statements><statement language="english" path="link.tex" type="application/x-tex"/></statements>
-  <judging><testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit></testset></judging>
-</problem>`)
-	_, err = Read(dir)
-	require.Error(t, err)
+	write(t, dir, "tests/01", "1\n")
+	require.NoError(t, os.Symlink(filepath.Join(parent, "01.a"), filepath.Join(dir, "tests", "01.a")))
+	for _, pattern := range []string{"../%02d.a", "tests/%02d.a"} {
+		write(t, dir, "problem.xml", `<problem short-name="escape"><judging><testset name="tests">
+  <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
+  <input-path-pattern>tests/%02d</input-path-pattern><answer-path-pattern>`+pattern+`</answer-path-pattern>
+  <tests><test method="manual"/></tests></testset></judging></problem>`)
+		p, err := Read(dir)
+		require.NoError(t, err)
+		require.Empty(t, p.Groups[0].Tests[0].Answer, pattern)
+	}
 }
 
 // Gate runs one program per role; a package with more is rejected rather

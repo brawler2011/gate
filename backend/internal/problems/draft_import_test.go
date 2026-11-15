@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -76,6 +77,11 @@ func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 				return
 			}
 			require.NoError(t, d.Validate(importQuotas, true))
+			for path, text := range d.Files {
+				if strings.HasPrefix(path, "statements/") {
+					require.Contains(t, text, "<!-- output -->", path)
+				}
+			}
 			// Every testdata checker, validator, interactor and generator uses testlib.
 			for _, c := range d.Components {
 				if c.Role != "solution" {
@@ -133,6 +139,46 @@ func TestImportKeepsMainSolutionAcrossNameClash(t *testing.T) {
 	}
 	require.Equal(t, "solutions/main-2.cpp", main.Path)
 	require.Equal(t, "int main() {}\n", plan.draft.Files[main.Path])
+}
+
+// The importer reads only files inside the package.
+func TestImportRejectsPathsOutsidePackage(t *testing.T) {
+	_, err := importDir(t, t.TempDir(), map[string]string{
+		"problem.xml": `<problem short-name="escape">
+  <statements><statement language="english" path="../outside.tex" type="application/x-tex"/></statements>
+  <judging><testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit></testset></judging></problem>`,
+	})
+	require.ErrorContains(t, err, "invalid package path ../outside.tex")
+}
+
+// Identical copies of a library file count once against the quotas.
+func TestImportChargesSharedLibraryOnce(t *testing.T) {
+	header := strings.Repeat("// testlib\n", 20000)
+	files := map[string]string{"problem.yaml": "name: Shared\nvalidation: custom\n", "data/secret/1.in": "1\n", "data/secret/1.ans": "1\n"}
+	copies := int(importQuotas.TextBytes)/len(header) + 1
+	for i := range copies {
+		files[fmt.Sprintf("generators/g%d/g.cpp", i)] = "int main() {}\n"
+		files[fmt.Sprintf("generators/g%d/testlib.h", i)] = header
+	}
+	files["output_validators/check.cpp"] = "int main() {}\n"
+	plan, err := importDir(t, t.TempDir(), files)
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, header, plan.draft.Files["lib/testlib.h"])
+	require.NotContains(t, plan.draft.Files, "lib/testlib-2.h")
+}
+
+// Many statements naming one large file are charged as they are converted.
+func TestImportChargesStatements(t *testing.T) {
+	statements := ""
+	for i := range 20 {
+		statements += fmt.Sprintf(`<statement language="%c%c" path="statement.tex" type="application/x-tex"/>`, 'a'+i/26, 'a'+i%26)
+	}
+	_, err := importDir(t, t.TempDir(), map[string]string{
+		"statement.tex": "\\begin{problem}{x}{}{}{}{}" + strings.Repeat("text ", int(importQuotas.FileBytes)/5-10) + "\\end{problem}\n",
+		"problem.xml":   `<problem short-name="many"><statements>` + statements + `</statements><judging><testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit></testset></judging></problem>`,
+	})
+	require.ErrorIs(t, err, pkg.ErrPayloadTooLarge)
 }
 
 // Draft quotas apply while the draft is built: a manifest naming one source

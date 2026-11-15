@@ -90,9 +90,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			p.TextTests = true
 		}
 	}
-	if p.Statements, err = statements(fsys, prob.Statements); err != nil {
-		return nil, err
-	}
+	p.Statements = statements(prob.Statements)
 	return p, nil
 }
 
@@ -253,25 +251,17 @@ func parsePoints(value float64) (points.Value, error) {
 	return points.Parse(strconv.FormatFloat(value, 'f', -1, 64))
 }
 
-func statements(fsys fs.FS, list []Statement) ([]spec.Statement, error) {
+func statements(list []Statement) []spec.Statement {
 	var result []spec.Statement
 	seen := map[string]bool{}
 	for _, s := range list {
-		if s.Type != "application/x-tex" {
-			continue
-		}
 		language := tex.LanguageCode(s.Language)
-		if seen[language] {
-			continue
+		if s.Type == "application/x-tex" && !seen[language] {
+			seen[language] = true
+			result = append(result, spec.Statement{Language: language, Path: s.Path, TeX: true})
 		}
-		data, err := fs.ReadFile(fsys, s.Path)
-		if err != nil {
-			return nil, fmt.Errorf("read statement: %w", err)
-		}
-		seen[language] = true
-		result = append(result, spec.Statement{Language: language, Markdown: tex.ToMarkdown(string(data))})
 	}
-	return result, nil
+	return result
 }
 
 func exists(fsys fs.FS, name string) bool {

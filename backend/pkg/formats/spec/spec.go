@@ -53,10 +53,12 @@ type Program struct {
 	Dependencies map[string]string
 }
 
-// Statement is the Markdown statement in one language.
+// Statement is the statement file in one language: Markdown, or LaTeX in
+// olymp.sty or ICPC style when TeX is set.
 type Statement struct {
 	Language string
-	Markdown string
+	Path     string
+	TeX      bool
 }
 
 // Group is a subtask: tests scored together under one policy.

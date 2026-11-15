@@ -91,9 +91,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		return nil, err
 	}
 	p.KeepInteractiveInputsPrivate()
-	if p.Statements, err = statements(fsys); err != nil {
-		return nil, err
-	}
+	p.Statements = statements(fsys)
 	return p, nil
 }
 
@@ -238,7 +236,7 @@ func testFiles(fsys fs.FS, dir string, sample bool) ([]spec.Test, error) {
 // statements reads problem.<language>.tex (problem.tex is English) from
 // problem_statement/, or from statement/ as in the 2023 format, which may
 // also hold problem.<language>.md.
-func statements(fsys fs.FS) ([]spec.Statement, error) {
+func statements(fsys fs.FS) []spec.Statement {
 	for _, dir := range []string{"problem_statement", "statement"} {
 		entries, err := fs.ReadDir(fsys, dir)
 		if err != nil {
@@ -254,28 +252,18 @@ func statements(fsys fs.FS) ([]spec.Statement, error) {
 			if base == "problem" {
 				language, ok = "en", true
 			}
-			if !ok || (ext != ".tex" && ext != ".md") || !e.Type().IsRegular() {
+			language = tex.LanguageCode(language)
+			if !ok || (ext != ".tex" && ext != ".md") || !e.Type().IsRegular() || seen[language] {
 				continue
-			}
-			if seen[language] {
-				continue
-			}
-			data, err := fs.ReadFile(fsys, path.Join(dir, name))
-			if err != nil {
-				return nil, fmt.Errorf("read statement: %w", err)
-			}
-			text := string(data)
-			if ext == ".tex" {
-				text = tex.ToMarkdown(text)
 			}
 			seen[language] = true
-			result = append(result, spec.Statement{Language: tex.LanguageCode(language), Markdown: text})
+			result = append(result, spec.Statement{Language: language, Path: path.Join(dir, name), TeX: ext == ".tex"})
 		}
 		if len(result) > 0 {
-			return result, nil
+			return result
 		}
 	}
-	return nil, nil
+	return nil
 }
 
 func regular(fsys fs.FS, name string) bool {

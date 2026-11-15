@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
+	"github.com/brawler2011/gate/backend/pkg/formats/tex"
 	"github.com/brawler2011/gate/backend/pkg/ziputil"
 	"github.com/google/uuid"
 )
@@ -243,6 +245,8 @@ func (c *importConverter) convert(p *spec.Problem) error {
 		}
 		c.draft.Assets = append(c.draft.Assets, model.DraftAsset{Path: path, ObjectID: oid})
 	}
+	// Components are listed by path, as the workshop shows the folders.
+	slices.SortFunc(c.draft.Components, func(a, b model.DraftComponent) int { return strings.Compare(a.Path, b.Path) })
 	return c.addGroups(p.Groups, generators)
 }
 
@@ -262,6 +266,9 @@ func (c *importConverter) addLibrary(f spec.File) error {
 	}
 	path, err := c.place(model.LibraryFolder, f.Name)
 	if err != nil {
+		return err
+	}
+	if err := c.charge(len(text)); err != nil {
 		return err
 	}
 	c.draft.Files[path] = text
@@ -306,6 +313,9 @@ func (c *importConverter) addComponent(role string, program spec.Program) (uuid.
 	if err != nil {
 		return uuid.Nil, err
 	}
+	if err := c.charge(len(text)); err != nil {
+		return uuid.Nil, err
+	}
 	deps := map[string]string{}
 	if program.Dependencies == nil {
 		for name, paths := range c.names {
@@ -328,6 +338,8 @@ func (c *importConverter) addComponent(role string, program spec.Program) (uuid.
 	return cid, nil
 }
 
+// addStatement stores a statement as statements/<language>.md, converting
+// LaTeX to Markdown.
 func (c *importConverter) addStatement(s spec.Statement) error {
 	path := model.StatementFolder + "/" + s.Language + ".md"
 	if !model.ValidDraftPath(path) || strings.Contains(s.Language, "/") {
@@ -336,16 +348,20 @@ func (c *importConverter) addStatement(s spec.Statement) error {
 	if c.taken(path) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "several statements in "+s.Language)
 	}
-	if len(s.Markdown) > int(c.uc.DraftQuotas.FileBytes) {
-		return pkg.ErrPayloadTooLarge
-	}
-	if err := c.charge(len(s.Markdown)); err != nil {
+	text, err := c.readText(s.Path)
+	if err != nil {
 		return err
 	}
-	if !utf8.ValidString(s.Markdown) {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "statement text must be UTF-8")
+	if s.TeX {
+		text = tex.ToMarkdown(text)
 	}
-	c.draft.Files[path] = s.Markdown
+	if len(text) > int(c.uc.DraftQuotas.FileBytes) {
+		return pkg.ErrPayloadTooLarge
+	}
+	if err := c.charge(len(text)); err != nil {
+		return err
+	}
+	c.draft.Files[path] = text
 	return nil
 }
 
@@ -418,7 +434,7 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map
 	return t, nil
 }
 
-// readText reads a source or library file of the package.
+// readText reads a text file of the package; the caller charges what it keeps.
 func (c *importConverter) readText(path string) (string, error) {
 	full, err := c.file(path)
 	if err != nil {
@@ -436,10 +452,7 @@ func (c *importConverter) readText(path string) (string, error) {
 		return "", fmt.Errorf("readfile: %w", err)
 	}
 	if !utf8.Valid(data) {
-		return "", pkg.Wrap(pkg.ErrBadInput, nil, "source text must be UTF-8: "+path)
-	}
-	if err := c.charge(len(data)); err != nil {
-		return "", err
+		return "", pkg.Wrap(pkg.ErrBadInput, nil, "text must be UTF-8: "+path)
 	}
 	return string(data), nil
 }
