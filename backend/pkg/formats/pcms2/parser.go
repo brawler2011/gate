@@ -102,7 +102,8 @@ func problemType(run Run, groups []spec.Group) string {
 }
 
 // findProgram finds the source of a compiled program, such as check.cpp for
-// check.exe. A program named without a source in the package is an error.
+// check.exe, which includes the headers next to it. A program named without
+// a source in the package is an error.
 func findProgram(fsys fs.FS, executable string) (*spec.Program, error) {
 	if executable == "" {
 		return nil, nil
@@ -115,17 +116,18 @@ func findProgram(fsys fs.FS, executable string) (*spec.Program, error) {
 		}
 		for _, e := range entries {
 			if e.Type().IsRegular() && spec.Stem(e.Name()) == stem && spec.IsSourceFile(e.Name()) {
-				return &spec.Program{File: spec.File{Name: e.Name(), Path: path.Join(folder, e.Name())}}, nil
+				return program(folder, e.Name(), entries), nil
 			}
 		}
 	}
 	return nil, fmt.Errorf("source of %s not found", executable)
 }
 
-// headers are the C++ headers next to the program sources, such as testlib.h.
+// headers are the C++ headers next to the program sources, such as testlib.h;
+// a program includes those of its own folder.
 func headers(fsys fs.FS) []spec.File {
 	var result []spec.File
-	for _, folder := range sourceDirs {
+	for _, folder := range append(slices.Clone(sourceDirs), "solutions") {
 		entries, err := fs.ReadDir(fsys, folder)
 		if err != nil {
 			continue
@@ -152,10 +154,20 @@ func solutions(fsys fs.FS) ([]spec.Program, error) {
 	var result []spec.Program
 	for _, e := range entries {
 		if e.Type().IsRegular() && spec.IsSourceFile(e.Name()) {
-			result = append(result, spec.Program{File: spec.File{Name: e.Name(), Path: "solutions/" + e.Name()}})
+			result = append(result, *program("solutions", e.Name(), entries))
 		}
 	}
 	return result, nil
+}
+
+func program(folder, name string, entries []fs.DirEntry) *spec.Program {
+	deps := map[string]string{}
+	for _, e := range entries {
+		if e.Type().IsRegular() && spec.IsHeaderFile(e.Name()) {
+			deps[e.Name()] = path.Join(folder, e.Name())
+		}
+	}
+	return &spec.Program{File: spec.File{Name: name, Path: path.Join(folder, name)}, Dependencies: deps}
 }
 
 // samples counts the examples of the statement, statements/<language>/example.NN;

@@ -124,31 +124,49 @@ func TestPolygonGroups(t *testing.T) {
 	}}, p.Groups[1])
 }
 
-// Every directory of tests is a group, at any depth. A test is worth the
-// accept_score of the nearest testdata.yaml above it, and an explicit zero is
-// kept.
-func TestICPCScoringGroups(t *testing.T) {
+// Every directory of tests is a group, named by its path under data/.
+func TestICPCGroups(t *testing.T) {
 	dir := t.TempDir()
-	write(t, dir, "problem.yaml", "name: Groups\ntype: scoring\n")
+	write(t, dir, "problem.yaml", "name: Groups\nvalidation: custom\n")
 	write(t, dir, "data/sample/1.in", "1\n")
 	write(t, dir, "data/sample/1.ans", "1\n")
-	write(t, dir, "data/secret/testdata.yaml", "accept_score: 5\n")
 	write(t, dir, "data/secret/group1/a.in", "2\n")
 	write(t, dir, "data/secret/group1/a.ans", "2\n")
-	write(t, dir, "data/secret/group1/testdata.yaml", "accept_score: 0\n")
-	write(t, dir, "data/secret/group2/b.in", "3\n")
 	write(t, dir, "data/secret/group2/nested/c.in", "4\n")
 	write(t, dir, "output_validators/checker/checker.cpp", "int main() {}\n")
 	write(t, dir, "output_validators/checker/testlib.h", "\n")
 	p, err := Read(dir)
 	require.NoError(t, err)
-	require.Equal(t, summary{Type: "scoring", Checker: "checker.cpp", Library: []string{"testlib.h"},
-		Groups: []string{"sample/each/1.00/1.00/1.00", "secret/group1/each/1.00/0.00/0.00", "secret/group2/each/1.00/0.00/5.00", "secret/group2/nested/each/1.00/0.00/5.00"}}, summarize(p))
+	require.Equal(t, summary{Type: "pass-fail", Checker: "checker.cpp", Library: []string{"testlib.h"},
+		Groups: []string{"sample/each/1.00/1.00/0.00", "secret/group1/each/1.00/0.00/0.00", "secret/group2/nested/each/1.00/0.00/0.00"}}, summarize(p))
 	require.Equal(t, "output_validators/checker/checker.cpp", p.Checker.Path)
 	require.Empty(t, p.Groups[2].Tests[0].Answer)
 }
 
-// Each ICPC program includes the headers of its own directory.
+// The ICPC grader aggregates group scores in ways Gate's per-test points
+// cannot express, so a scoring package is rejected rather than rescored.
+func TestICPCRejectsScoring(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, "problem.yaml", "name: Scoring\ntype: scoring\n")
+	_, err := Read(dir)
+	require.ErrorContains(t, err, "ICPC scoring problems are not supported")
+}
+
+// A PCMS2 program includes the headers of its own folder, so different
+// copies of testlib.h in separate folders do not clash.
+func TestPCMS2ProgramHeaders(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, "problem.xml", `<!DOCTYPE problem PUBLIC "-//PCMS2//DTD Problem Description 1.0//EN" "http://pcms2.ru/dtd/problem-0.2.dtd">
+<problem id="headers"><judging><run><verifier type="testlib"><binary executable="check.exe"/></verifier></run>
+  <testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit></testset></judging></problem>`)
+	write(t, dir, "check.cpp", "\n")
+	write(t, dir, "testlib.h", "new\n")
+	write(t, dir, "files/testlib.h", "old\n")
+	p, err := Read(dir)
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"testlib.h": "testlib.h"}, p.Checker.Dependencies)
+}
+
 // Polygon resources are library files, except the statement templates.
 func TestPolygonResources(t *testing.T) {
 	dir := t.TempDir()

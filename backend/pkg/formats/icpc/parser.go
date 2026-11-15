@@ -11,12 +11,10 @@ import (
 	"io/fs"
 	"path"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/formats/tex"
-	"github.com/brawler2011/gate/backend/pkg/points"
 	"gopkg.in/yaml.v3"
 )
 
@@ -34,13 +32,16 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if prob == nil {
 		return nil, fmt.Errorf("problem.yaml must contain a mapping")
 	}
+	// The ICPC grader aggregates group scores (sum, min, max, avg, stopping at
+	// the first rejection by default), which Gate's per-test points cannot
+	// express; importing such a package would silently change its scores.
+	if prob.Type == "scoring" {
+		return nil, fmt.Errorf("ICPC scoring problems are not supported")
+	}
 	p := &spec.Problem{Title: prob.Name, Type: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256}
 	interactive := slices.Contains(strings.Fields(prob.Validation), "interactive")
-	switch {
-	case interactive:
+	if interactive {
 		p.Type = "interactive"
-	case prob.Type == "scoring":
-		p.Type = "scoring"
 	}
 	if prob.Limits != nil {
 		if prob.Limits.Time > 0 {
@@ -86,7 +87,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if p.Solutions, p.MainSolution, err = submissions(fsys, collect); err != nil {
 		return nil, err
 	}
-	if p.Groups, err = groups(fsys, p.Type == "scoring"); err != nil {
+	if p.Groups, err = groups(fsys); err != nil {
 		return nil, err
 	}
 	p.KeepInteractiveInputsPrivate()
@@ -185,10 +186,8 @@ func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error)) ([]sp
 }
 
 // groups reads data/sample and data/secret. Every directory holding tests,
-// at any depth, is a group named by its path under data/. In a scoring problem
-// every test is worth the accept_score of the nearest testdata.yaml above it,
-// 1 by default.
-func groups(fsys fs.FS, scoring bool) ([]spec.Group, error) {
+// at any depth, is a group named by its path under data/.
+func groups(fsys fs.FS) ([]spec.Group, error) {
 	var result []spec.Group
 	for _, top := range []string{"sample", "secret"} {
 		err := fs.WalkDir(fsys, path.Join("data", top), func(dir string, d fs.DirEntry, err error) error {
@@ -198,13 +197,7 @@ func groups(fsys fs.FS, scoring bool) ([]spec.Group, error) {
 			if err != nil || !d.IsDir() {
 				return err
 			}
-			weight := points.Value(0)
-			if scoring {
-				if weight, err = acceptScore(fsys, dir); err != nil {
-					return err
-				}
-			}
-			tests, err := testFiles(fsys, dir, weight, top == "sample")
+			tests, err := testFiles(fsys, dir, top == "sample")
 			if err != nil || len(tests) == 0 {
 				return err
 			}
@@ -218,28 +211,8 @@ func groups(fsys fs.FS, scoring bool) ([]spec.Group, error) {
 	return result, nil
 }
 
-func acceptScore(fsys fs.FS, dir string) (points.Value, error) {
-	for ; dir != "."; dir = path.Dir(dir) {
-		data, err := fs.ReadFile(fsys, path.Join(dir, "testdata.yaml"))
-		if errors.Is(err, fs.ErrNotExist) {
-			continue
-		}
-		if err != nil {
-			return 0, fmt.Errorf("read %s/testdata.yaml: %w", dir, err)
-		}
-		var td Testdata
-		if err := yaml.Unmarshal(data, &td); err != nil {
-			return 0, fmt.Errorf("parse %s/testdata.yaml: %w", dir, err)
-		}
-		if td.AcceptScore != nil {
-			return points.Parse(strconv.FormatFloat(*td.AcceptScore, 'f', -1, 64))
-		}
-	}
-	return points.Unit, nil
-}
-
 // testFiles lists the .in files directly in dir with their .ans answers.
-func testFiles(fsys fs.FS, dir string, weight points.Value, sample bool) ([]spec.Test, error) {
+func testFiles(fsys fs.FS, dir string, sample bool) ([]spec.Test, error) {
 	entries, err := fs.ReadDir(fsys, dir)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
@@ -253,7 +226,7 @@ func testFiles(fsys fs.FS, dir string, weight points.Value, sample bool) ([]spec
 		if !e.Type().IsRegular() || !ok {
 			continue
 		}
-		test := spec.Test{Input: path.Join(dir, e.Name()), Points: weight, Sample: sample}
+		test := spec.Test{Input: path.Join(dir, e.Name()), Sample: sample}
 		if answer := path.Join(dir, stem+".ans"); regular(fsys, answer) {
 			test.Answer = answer
 		}

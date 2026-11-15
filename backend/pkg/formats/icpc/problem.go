@@ -24,12 +24,3 @@ type Limits struct {
 	ValidationTime   float64 `yaml:"validation_time"`
 	ValidationOutput int     `yaml:"validation_output"`
 }
-
-// Testdata represents the ICPC testdata.yaml specification.
-type Testdata struct {
-	OnReject    string   `yaml:"on_reject"` // "break", "continue"
-	AcceptScore *float64 `yaml:"accept_score"`
-	ScoreType   string   `yaml:"score_type"` // "sum", "average", "pass-fail"
-	Grading     string   `yaml:"grading"`    // "default", "custom"
-	Range       string   `yaml:"range"`
-}
