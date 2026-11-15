@@ -17,18 +17,25 @@
                 <test method="manual" sample="true"/>
                 <test method="manual" sample="true"/>
                 <test cmd="generator 10 5" method="generated"/>
-                <test cmd="generator 100 -50" method="generated"/>
+                <test cmd="generator 100 50" method="generated"/>
             </tests>
         </testset>
     </judging>
     <files>
         <resources>
             <file path="files/olymp.sty"/>
+            <file path="files/testlib.h" type="h.g++"/>
         </resources>
         <executables>
-            <executable path="files/validator.cpp" type="cpp.g++17"/>
-            <executable path="files/generator.cpp" type="cpp.g++17"/>
-            <executable path="files/check.cpp" type="cpp.g++17"/>
+            <executable>
+                <source path="files/validator.cpp" type="cpp.g++17"/>
+            </executable>
+            <executable>
+                <source path="files/generator.cpp" type="cpp.g++17"/>
+            </executable>
+            <executable>
+                <source path="files/check.cpp" type="cpp.g++17"/>
+            </executable>
         </executables>
     </files>
     <assets>
@@ -52,6 +59,6 @@
         </solutions>
     </assets>
     <properties>
-        <property name="tests-well-formed" value="true"/>
+        <property name="tests-wellformed" value="true"/>
     </properties>
 </problem>

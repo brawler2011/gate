@@ -1,387 +1,265 @@
+// Package pcms2 reads PCMS2 problem packages.
 package pcms2
 
 import (
-	"bufio"
 	"encoding/xml"
+	"errors"
 	"fmt"
-	pointvalue "github.com/brawler2011/gate/backend/pkg/points"
-	"os"
-	"path/filepath"
+	"io/fs"
+	"maps"
+	"path"
+	"slices"
 	"strconv"
 	"strings"
 
-	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/formats/spec"
+	"github.com/brawler2011/gate/backend/pkg/formats/tex"
+	"github.com/brawler2011/gate/backend/pkg/points"
 )
 
-// Parser parses a PCMS2 package directory.
-type Parser struct{}
+// sourceDirs are where PCMS2 packages keep program sources and headers.
+var sourceDirs = []string{".", "src", "files"}
 
-// NewParser creates a new PCMS2 parser.
-func NewParser() *Parser {
-	return &Parser{}
-}
-
-// GetFormat returns the format name.
-func (p *Parser) GetFormat() string {
-	return "pcms2"
-}
-
-// Parse parses the PCMS2 problem.xml configuration and creates an ImportPlan.
-func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
-	xmlPath := filepath.Join(packageDir, "problem.xml")
-	data, err := os.ReadFile(xmlPath)
+// Read reads the PCMS2 package in dir as described by its problem.xml. PCMS2
+// names compiled programs only, so their sources are found by file stem.
+func Read(fsys fs.FS) (*spec.Problem, error) {
+	data, err := spec.ReadFile(fsys, "problem.xml")
 	if err != nil {
-		return nil, fmt.Errorf("failed to read problem.xml: %w", err)
+		return nil, fmt.Errorf("read problem.xml: %w", err)
 	}
-
 	var prob Problem
 	if err := xml.Unmarshal(data, &prob); err != nil {
-		return nil, fmt.Errorf("failed to parse PCMS2 problem.xml: %w", err)
+		return nil, fmt.Errorf("parse PCMS2 problem.xml: %w", err)
 	}
-
-	// 1. Find the active testset (usually named "tests")
-	var testset Testset
-	found := false
-	for _, ts := range prob.Judging.Testsets {
-		if ts.Name == "tests" {
-			testset = ts
-			found = true
-			break
+	testset, err := mainTestset(prob.Judging.Testsets)
+	if err != nil {
+		return nil, err
+	}
+	p := &spec.Problem{
+		Title:         title(prob),
+		TimeLimitMs:   testset.TimeLimit,
+		MemoryLimitMb: int(testset.MemoryLimit / (1 << 20)),
+	}
+	run := prob.Judging.Run
+	if p.Checker, err = findProgram(fsys, run.Verifier.Binary.Executable); err != nil {
+		return nil, err
+	}
+	if run.Interactor != nil {
+		if p.Interactor, err = findProgram(fsys, run.Interactor.Binary.Executable); err != nil {
+			return nil, err
 		}
 	}
-	if !found && len(prob.Judging.Testsets) > 0 {
-		testset = prob.Judging.Testsets[0]
+	p.Library = headers(fsys)
+	if p.Solutions, err = solutions(fsys); err != nil {
+		return nil, err
 	}
+	if p.Groups, err = groups(fsys, testset, samples(fsys)); err != nil {
+		return nil, err
+	}
+	p.Type = problemType(run, p.Groups)
+	p.KeepInteractiveInputsPrivate()
+	p.Statements = statements(fsys, prob.Statements)
+	return p, nil
+}
 
-	// 2. Extract title
-	title := prob.ID
+func mainTestset(testsets []Testset) (Testset, error) {
+	for _, ts := range testsets {
+		if ts.Name == "tests" {
+			return ts, nil
+		}
+	}
+	if len(testsets) == 0 {
+		return Testset{}, fmt.Errorf("problem.xml has no testset")
+	}
+	return testsets[0], nil
+}
+
+func title(prob Problem) string {
 	for _, name := range prob.Names {
 		if name.Language == "english" {
-			title = name.Value
-			break
+			return name.Value
 		}
 	}
-	if title == prob.ID && len(prob.Names) > 0 {
-		title = prob.Names[0].Value
+	if len(prob.Names) > 0 {
+		return prob.Names[0].Value
 	}
+	return prob.ID
+}
 
-	// 3. Determine problem type
-	probType := "pass-fail"
-	if prob.Judging.Run.Interactor != nil {
-		probType = "interactive"
-	} else {
-		// Calculate total points
-		var totalPoints float64
-		for _, test := range testset.Tests {
-			totalPoints += test.Points
-		}
-		if totalPoints > 0 {
-			probType = "scoring"
-		}
+func problemType(run Run, groups []spec.Group) string {
+	if run.Interactor != nil {
+		return "interactive"
 	}
-
-	// 4. Map limits
-	limits := gfmt.Limits{
-		TimeMs:   testset.TimeLimit,
-		MemoryMb: int(testset.MemoryLimit / (1024 * 1024)),
-	}
-
-	// 5. Map subtasks and tests
-	subtasks := make(map[string]gfmt.Subtask)
-
-	// Check if we have explicit groups/subtasks
-	hasGroups := false
-	for _, test := range testset.Tests {
-		if test.Group != "" {
-			hasGroups = true
-			break
-		}
-	}
-
-	if hasGroups {
-		// Group tests by their group attribute
-		testsByGroup := make(map[string][]gfmt.Test)
-		pointsByGroup := make(map[string]pointvalue.Value)
-		numSamples := countSamples(packageDir)
-		var sampleTests []gfmt.Test
-
-		for i, test := range testset.Tests {
-			gName := test.Group
-			if gName == "" {
-				gName = "default"
-			}
-			if strings.HasSuffix(prob.ID, "subtasks-groups") {
-				if gName == "1" {
-					gName = "even_subtask"
-				} else if gName == "2" {
-					gName = "odd_subtask"
-				}
-			}
-
-			testIndex := i + 1
-			filename := fmt.Sprintf("%02d.in", testIndex)
-
-			t := gfmt.Test{
-				Manual: filename,
-			}
-
-			weight, err := pointvalue.Parse(strconv.FormatFloat(test.Points, 'f', -1, 64))
-			if err != nil {
-				return nil, err
-			}
-			t.Points = weight
-			pointsByGroup[gName] += weight
-			testsByGroup[gName] = append(testsByGroup[gName], t)
-
-			if i < numSamples {
-				sampleTests = append(sampleTests, t)
-			}
-		}
-
-		for gName, tests := range testsByGroup {
-			subtasks[gName] = gfmt.Subtask{
-				Points: pointsByGroup[gName],
-				Policy: "complete",
-				Tests:  tests,
-			}
-		}
-
-		if len(sampleTests) > 0 {
-			subtasks["samples"] = gfmt.Subtask{
-				Points: 0,
-				Policy: "complete",
-				Tests:  sampleTests,
-			}
-		}
-	} else {
-		// Count samples from statement heuristics
-		numSamples := countSamples(packageDir)
-
-		var sampleTests []gfmt.Test
-		var secretTests []gfmt.Test
-
-		for i := range testset.Tests {
-			testIndex := i + 1
-			filename := fmt.Sprintf("%02d.in", testIndex)
-			t := gfmt.Test{
-				Manual: filename,
-			}
-
-			if i < numSamples {
-				sampleTests = append(sampleTests, t)
-			} else {
-				secretTests = append(secretTests, t)
-			}
-		}
-
-		switch {
-		case len(sampleTests) > 0 && len(secretTests) > 0:
-			subtasks["samples"] = gfmt.Subtask{
-				Points: 0,
-				Policy: "complete",
-				Tests:  sampleTests,
-			}
-			subtasks["secret"] = gfmt.Subtask{
-				Points:       pointvalue.Value(100) * pointvalue.Unit,
-				Policy:       "each",
-				Dependencies: []string{"samples"},
-				Tests:        secretTests,
-			}
-		case len(sampleTests) > 0:
-			subtasks["samples"] = gfmt.Subtask{
-				Points: pointvalue.Value(100) * pointvalue.Unit,
-				Policy: "each",
-				Tests:  sampleTests,
-			}
-		case len(secretTests) > 0:
-			subtasks["secret"] = gfmt.Subtask{
-				Points: pointvalue.Value(100) * pointvalue.Unit,
-				Policy: "each",
-				Tests:  secretTests,
+	for _, g := range groups {
+		for _, t := range g.Tests {
+			if t.Points > 0 {
+				return "scoring"
 			}
 		}
 	}
+	return "pass-fail"
+}
 
-	// 6. Map solutions (PCMS2 doesn't store solutions in XML, return empty map)
-	solutions := make(map[string]string)
-
-	// 7. Collect file mappings
-	var mappings []gfmt.FileMapping
-
-	// Checker (verifier)
-	if prob.Judging.Run.Verifier.Binary.Executable != "" {
-		verifierSrc := findSourceForExecutable(packageDir, prob.Judging.Run.Verifier.Binary.Executable)
-		if verifierSrc != "" {
-			mappings = append(mappings, gfmt.FileMapping{
-				SourcePath: verifierSrc,
-				TargetPath: "checkers/checker.cpp",
-			})
-		}
+// findProgram finds the source of a compiled program, such as check.cpp for
+// check.exe, which includes the headers next to it. A program named without
+// a source in the package is an error.
+func findProgram(fsys fs.FS, executable string) (*spec.Program, error) {
+	if executable == "" {
+		return nil, nil
 	}
-
-	// Interactor (if present)
-	if prob.Judging.Run.Interactor != nil && prob.Judging.Run.Interactor.Binary.Executable != "" {
-		interactorSrc := findSourceForExecutable(packageDir, prob.Judging.Run.Interactor.Binary.Executable)
-		if interactorSrc != "" {
-			mappings = append(mappings, gfmt.FileMapping{
-				SourcePath: interactorSrc,
-				TargetPath: "interactors/interactor.cpp",
-			})
-		}
-	}
-
-	// Look for testlib.h or other header dependencies in root, src/, files/
-	for _, dir := range []string{".", "src", "files"} {
-		testlibPath := filepath.Join(dir, "testlib.h")
-		if _, err := os.Stat(filepath.Join(packageDir, testlibPath)); err == nil {
-			mappings = append(mappings, gfmt.FileMapping{
-				SourcePath: filepath.ToSlash(testlibPath),
-				TargetPath: "lib/testlib.h",
-			})
-			break
-		}
-	}
-
-	// Test inputs and answers (outputs)
-	for i := range testset.Tests {
-		testIndex := i + 1
-		inputPath := fmt.Sprintf(testset.InputPathPattern, testIndex)
-		outputPath := fmt.Sprintf(testset.AnswerPathPattern, testIndex)
-
-		// Map to target tests/01.in and tests/01.out if they exist
-		if _, err := os.Stat(filepath.Join(packageDir, inputPath)); err == nil {
-			mappings = append(mappings, gfmt.FileMapping{
-				SourcePath: inputPath,
-				TargetPath: fmt.Sprintf("tests/%02d.in", testIndex),
-			})
-		}
-		if _, err := os.Stat(filepath.Join(packageDir, outputPath)); err == nil {
-			mappings = append(mappings, gfmt.FileMapping{
-				SourcePath: outputPath,
-				TargetPath: fmt.Sprintf("tests/%02d.out", testIndex),
-			})
-		}
-	}
-
-	// Process statements
-	for _, stmt := range prob.Statements {
-		if stmt.Type != "application/x-tex" && !strings.HasSuffix(stmt.File, ".tex") {
-			continue
-		}
-		texPath := filepath.Join(packageDir, stmt.File)
-		texBytes, err := os.ReadFile(texPath)
+	stem := spec.Stem(executable)
+	for _, folder := range sourceDirs {
+		entries, err := fs.ReadDir(fsys, folder)
 		if err != nil {
 			continue
 		}
-		mdContent := gfmt.ConvertTexToMarkdown(string(texBytes))
-		langCode := gfmt.MapLanguageCode(stmt.Language)
-
-		mdRelPath := filepath.Join("statements", langCode+".md")
-		mdAbsPath := filepath.Join(packageDir, mdRelPath)
-		if err := os.MkdirAll(filepath.Dir(mdAbsPath), 0755); err != nil {
-			return nil, fmt.Errorf("failed to create directory for markdown statement: %w", err)
-		}
-		if err := os.WriteFile(mdAbsPath, []byte(mdContent), 0600); err != nil {
-			return nil, fmt.Errorf("failed to write markdown statement: %w", err)
-		}
-
-		mappings = append(mappings, gfmt.FileMapping{
-			SourcePath: filepath.ToSlash(mdRelPath),
-			TargetPath: filepath.ToSlash(mdRelPath),
-		})
-	}
-
-	return &gfmt.ImportPlan{
-		Problem: &gfmt.Problem{
-			FormatVersion: "1.0",
-			Title:         title,
-			Type:          probType,
-			Limits:        limits,
-			Subtasks:      subtasks,
-			Solutions:     solutions,
-		},
-		Mappings: mappings,
-	}, nil
-}
-
-func findSourceForExecutable(packageDir, executable string) string {
-	if executable == "" {
-		return ""
-	}
-	base := filepath.Base(executable)
-	ext := filepath.Ext(base)
-	stem := strings.TrimSuffix(base, ext)
-
-	candidates := []string{
-		stem + ".cpp",
-		stem + ".py",
-		stem + ".java",
-		stem + ".pas",
-	}
-
-	dirs := []string{".", "src", "files"}
-	for _, dir := range dirs {
-		for _, cand := range candidates {
-			relPath := filepath.Join(dir, cand)
-			if _, err := os.Stat(filepath.Join(packageDir, relPath)); err == nil {
-				return filepath.ToSlash(relPath)
+		for _, e := range entries {
+			if e.Type().IsRegular() && spec.Stem(e.Name()) == stem && spec.IsSourceFile(e.Name()) {
+				return program(folder, e.Name(), entries), nil
 			}
 		}
 	}
-	return ""
+	return nil, fmt.Errorf("source of %s not found", executable)
 }
 
-func countSamples(packageDir string) int {
-	var texPath string
-	_ = filepath.Walk(packageDir, func(path string, info os.FileInfo, err error) error {
-		if err == nil && info.Name() == "problem.tex" {
-			texPath = path
-			return filepath.SkipDir
+// headers are the C++ headers next to the program sources, such as testlib.h;
+// a program includes those of its own folder.
+func headers(fsys fs.FS) []spec.File {
+	var result []spec.File
+	for _, folder := range append(slices.Clone(sourceDirs), "solutions") {
+		entries, err := fs.ReadDir(fsys, folder)
+		if err != nil {
+			continue
 		}
-		return nil
-	})
-
-	if texPath == "" {
-		count := 0
-		for {
-			name := fmt.Sprintf("example.%02d", count+1)
-			pathEng := filepath.Join(packageDir, "statements", "english", name)
-			pathRus := filepath.Join(packageDir, "statements", "russian", name)
-			if _, err1 := os.Stat(pathEng); err1 != nil {
-				if _, err2 := os.Stat(pathRus); err2 != nil {
-					break
-				}
+		for _, e := range entries {
+			if e.Type().IsRegular() && spec.IsHeaderFile(e.Name()) {
+				result = append(result, spec.File{Name: e.Name(), Path: path.Join(folder, e.Name())})
 			}
-			count++
 		}
-		if count > 0 {
-			return count
-		}
-		return 1
 	}
+	return result
+}
 
-	data, err := os.ReadFile(texPath)
+// solutions are the sources in solutions/. PCMS2 records no verdicts, so none
+// is the main solution.
+func solutions(fsys fs.FS) ([]spec.Program, error) {
+	entries, err := fs.ReadDir(fsys, "solutions")
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
 	if err != nil {
-		return 1
+		return nil, fmt.Errorf("read solutions: %w", err)
 	}
-	content := string(data)
-
-	exmpCount := strings.Count(content, "\\exmp")
-	if exmpCount > 0 {
-		return exmpCount
-	}
-
-	inputCount := 0
-	scanner := bufio.NewScanner(strings.NewReader(content))
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.Contains(line, "\\input{") && strings.Contains(line, "tests/") {
-			inputCount++
+	var result []spec.Program
+	for _, e := range entries {
+		if e.Type().IsRegular() && spec.IsSourceFile(e.Name()) {
+			result = append(result, *program("solutions", e.Name(), entries))
 		}
 	}
-	if inputCount > 0 {
-		return inputCount
-	}
+	return result, nil
+}
 
-	return 1
+func program(folder, name string, entries []fs.DirEntry) *spec.Program {
+	deps := map[string]string{}
+	for _, e := range entries {
+		if e.Type().IsRegular() && spec.IsHeaderFile(e.Name()) {
+			deps[e.Name()] = path.Join(folder, e.Name())
+		}
+	}
+	return &spec.Program{File: spec.File{Name: name, Path: path.Join(folder, name)}, Dependencies: deps}
+}
+
+// samples counts the examples of the statement: its example.NN files, or
+// else the examples its LaTeX names. PCMS2 shows the first tests as examples.
+func samples(fsys fs.FS) int {
+	languages, _ := fs.ReadDir(fsys, "statements")
+	files := 0
+	for _, language := range languages {
+		n := 0
+		for language.IsDir() && regular(fsys, path.Join("statements", language.Name(), fmt.Sprintf("example.%02d", n+1))) {
+			n++
+		}
+		files = max(files, n)
+	}
+	if files > 0 {
+		return files
+	}
+	named := 0
+	for _, language := range languages {
+		if text, err := spec.ReadFile(fsys, path.Join("statements", language.Name(), "problem.tex")); err == nil {
+			named = max(named, examples(string(text)))
+		}
+	}
+	return named
+}
+
+// examples counts the \exmp and \exmpfile entries of an olymp.sty statement.
+func examples(text string) int {
+	return strings.Count(text, "\\exmp{") + strings.Count(text, "\\exmpfile{")
+}
+
+func regular(fsys fs.FS, name string) bool {
+	info, err := fs.Stat(fsys, name)
+	return err == nil && info.Mode().IsRegular()
+}
+
+// groups keeps the test order. Tests of a named group score together; a
+// testset without groups is one group scored test by test.
+func groups(fsys fs.FS, testset Testset, samples int) ([]spec.Group, error) {
+	var result []spec.Group
+	index := map[string]int{}
+	for i, t := range testset.Tests {
+		number := i + 1
+		weight, err := points.Parse(strconv.FormatFloat(t.Points, 'f', -1, 64))
+		if err != nil {
+			return nil, err
+		}
+		test := spec.Test{Input: t.Input, Answer: t.Outcome, Points: weight, Sample: i < samples}
+		if test.Input == "" {
+			test.Input = fmt.Sprintf(testset.InputPathPattern, number)
+		}
+		if test.Answer == "" {
+			test.Answer = fmt.Sprintf(testset.AnswerPathPattern, number)
+		}
+		if !regular(fsys, test.Answer) {
+			test.Answer = ""
+		}
+		name, policy := t.Group, "complete"
+		if name == "" {
+			name, policy = "tests", "each"
+		}
+		n, ok := index[name]
+		if !ok {
+			n = len(result)
+			index[name] = n
+			result = append(result, spec.Group{Name: name, Policy: policy})
+		}
+		result[n].Tests = append(result[n].Tests, test)
+	}
+	return result, nil
+}
+
+// statements converts the LaTeX statements; packages that list only rendered
+// statements still carry statements/<language>/problem.tex.
+func statements(fsys fs.FS, list []Statement) []spec.Statement {
+	sources := map[string]string{}
+	for _, s := range list {
+		if s.Type == "application/x-tex" {
+			sources[tex.LanguageCode(s.Language)] = s.File
+		}
+	}
+	if len(sources) == 0 {
+		languages, _ := fs.ReadDir(fsys, "statements")
+		for _, language := range languages {
+			file := path.Join("statements", language.Name(), "problem.tex")
+			if regular(fsys, file) && !strings.HasPrefix(language.Name(), ".") {
+				sources[tex.LanguageCode(language.Name())] = file
+			}
+		}
+	}
+	var result []spec.Statement
+	for _, language := range slices.Sorted(maps.Keys(sources)) {
+		result = append(result, spec.Statement{Language: language, Path: sources[language], TeX: true})
+	}
+	return result
 }

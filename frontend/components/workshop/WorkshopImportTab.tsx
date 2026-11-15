@@ -71,7 +71,7 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
           <Stack gap="sm">
             <Text size="sm" c="dimmed">
               Загрузите zip-архив задачи: он заменит текущий черновик.
-              Поддерживаются форматы ICPC и Polygon, а также native-пакеты Gate.
+              Поддерживаются форматы Polygon, PCMS2 и ICPC, а также native-пакеты Gate.
             </Text>
 
             <Alert

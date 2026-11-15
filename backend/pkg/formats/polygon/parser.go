@@ -1,385 +1,270 @@
+// Package polygon reads Polygon problem packages.
 package polygon
 
 import (
 	"encoding/xml"
 	"fmt"
-	pointvalue "github.com/brawler2011/gate/backend/pkg/points"
-	"os"
-	"path/filepath"
+	"io/fs"
+	"path"
 	"strconv"
 	"strings"
 
-	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/formats/spec"
+	"github.com/brawler2011/gate/backend/pkg/formats/tex"
+	"github.com/brawler2011/gate/backend/pkg/points"
 )
 
-// Parser parses a Polygon package directory.
-type Parser struct{}
-
-// NewParser creates a new Polygon parser.
-func NewParser() *Parser {
-	return &Parser{}
-}
-
-// GetFormat returns the format name.
-func (p *Parser) GetFormat() string {
-	return "polygon"
-}
-
-// Parse parses the Polygon problem.xml configuration and creates an ImportPlan.
-func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
-	xmlPath := filepath.Join(packageDir, "problem.xml")
-	data, err := os.ReadFile(xmlPath)
+// Read reads the Polygon package in fsys as described by its problem.xml.
+func Read(fsys fs.FS) (*spec.Problem, error) {
+	data, err := spec.ReadFile(fsys, "problem.xml")
 	if err != nil {
-		return nil, fmt.Errorf("failed to read problem.xml: %w", err)
+		return nil, fmt.Errorf("read problem.xml: %w", err)
 	}
-
 	var prob Problem
 	if err := xml.Unmarshal(data, &prob); err != nil {
-		return nil, fmt.Errorf("failed to parse Polygon problem.xml: %w", err)
+		return nil, fmt.Errorf("parse Polygon problem.xml: %w", err)
 	}
-
-	// 1. Find the active testset (usually named "tests")
-	var testset Testset
-	found := false
-	for _, ts := range prob.Judging.Testsets {
-		if ts.Name == "tests" {
-			testset = ts
-			found = true
-			break
+	testset, err := mainTestset(prob.Judging.Testsets)
+	if err != nil {
+		return nil, err
+	}
+	p := &spec.Problem{
+		Title:         title(prob),
+		TimeLimitMs:   testset.TimeLimit,
+		MemoryLimitMb: int(testset.MemoryLimit / (1 << 20)),
+	}
+	assets := prob.Assets
+	if assets == nil {
+		assets = &Assets{}
+	}
+	roles := map[string]bool{}
+	if assets.Checker != nil {
+		p.Checker = program(assets.Checker.Source.Path)
+		roles[assets.Checker.Source.Path] = true
+	}
+	switch len(assets.Validators) {
+	case 0:
+	case 1:
+		p.Validator = program(assets.Validators[0].Source.Path)
+		roles[assets.Validators[0].Source.Path] = true
+	default:
+		return nil, fmt.Errorf("package has %d validators; Gate supports one", len(assets.Validators))
+	}
+	if assets.Interactor != nil {
+		p.Interactor = program(assets.Interactor.Source.Path)
+		roles[assets.Interactor.Source.Path] = true
+	}
+	for _, s := range assets.Solutions {
+		p.Solutions = append(p.Solutions, *program(s.Source.Path))
+	}
+	p.MainSolution = mainSolution(assets.Solutions)
+	// Generators are the remaining executables; tests call them by file stem.
+	generators := map[string]string{}
+	if prob.Files != nil {
+		for _, e := range prob.Files.Executables {
+			source := e.Source.Path
+			if roles[source] || !spec.IsSourceFile(source) {
+				continue
+			}
+			p.Generators = append(p.Generators, *program(source))
+			generators[spec.Stem(source)] = source
+		}
+		// Resources are files programs include, except the statement templates.
+		for _, r := range prob.Files.Resources {
+			switch path.Ext(r.Path) {
+			case ".sty", ".tex", ".ftl":
+			default:
+				p.Library = append(p.Library, spec.File{Name: path.Base(r.Path), Path: r.Path})
+			}
 		}
 	}
-	if !found && len(prob.Judging.Testsets) > 0 {
-		testset = prob.Judging.Testsets[0]
+	if p.Groups, err = groups(fsys, testset, generators); err != nil {
+		return nil, err
 	}
+	p.Type = problemType(prob, p.Groups)
+	p.KeepInteractiveInputsPrivate()
+	// Polygon checks that well-formed tests are text, and its Windows
+	// packages store them with CRLF line endings.
+	for _, property := range prob.Properties {
+		if property.Name == "tests-wellformed" && property.Value == "true" {
+			p.TextTests = true
+		}
+	}
+	p.Statements = statements(prob.Statements)
+	return p, nil
+}
 
-	// 2. Extract title
-	title := prob.ShortName
+// mainTestset is the testset Polygon judges with: "tests", or else the first.
+func mainTestset(testsets []Testset) (Testset, error) {
+	for _, ts := range testsets {
+		if ts.Name == "tests" {
+			return ts, nil
+		}
+	}
+	if len(testsets) == 0 {
+		return Testset{}, fmt.Errorf("problem.xml has no testset")
+	}
+	return testsets[0], nil
+}
+
+func title(prob Problem) string {
 	for _, name := range prob.Names {
 		if name.Language == "english" {
-			title = name.Value
-			break
+			return name.Value
 		}
 	}
-	if title == prob.ShortName && len(prob.Names) > 0 {
-		title = prob.Names[0].Value
+	if len(prob.Names) > 0 {
+		return prob.Names[0].Value
 	}
+	return prob.ShortName
+}
 
-	// 3. Determine problem type
-	probType := "pass-fail"
-	if prob.Interactive {
-		probType = "interactive"
-	} else {
-		// Calculate total points
-		var totalPoints float64
-		for _, test := range testset.Tests {
-			totalPoints += test.Points
-		}
-		for _, tg := range testset.Groups {
-			totalPoints += tg.Points
-		}
-		if totalPoints > 0 {
-			probType = "scoring"
-		}
-	}
+func program(source string) *spec.Program {
+	return &spec.Program{File: spec.File{Name: path.Base(source), Path: source}}
+}
 
-	// 4. Map limits
-	limits := gfmt.Limits{
-		TimeMs:   testset.TimeLimit,
-		MemoryMb: int(testset.MemoryLimit / (1024 * 1024)),
-	}
-
-	// 5. Map subtasks and tests
-	subtasks := make(map[string]gfmt.Subtask)
-
-	// Check if we have explicit groups/subtasks
-	hasGroups := false
-	for _, test := range testset.Tests {
-		if test.Group != "" {
-			hasGroups = true
-			break
-		}
-	}
-
-	// Map dependencies
-	depsMap := make(map[string][]string)
-	for _, tg := range testset.Groups {
-		var deps []string
-		for _, dep := range tg.Dependencies {
-			depName := dep.Group
-			if prob.ShortName == "subtasks-groups" {
-				if depName == "1" {
-					depName = "even_subtask"
-				} else if depName == "2" {
-					depName = "odd_subtask"
-				}
-			}
-			deps = append(deps, depName)
-		}
-		gName := tg.Name
-		if prob.ShortName == "subtasks-groups" {
-			if gName == "1" {
-				gName = "even_subtask"
-			} else if gName == "2" {
-				gName = "odd_subtask"
+// mainSolution is the solution tagged main, or else the first accepted one.
+func mainSolution(solutions []Solution) string {
+	for _, tag := range []string{"main", "accepted"} {
+		for _, s := range solutions {
+			if strings.EqualFold(s.Tag, tag) {
+				return s.Source.Path
 			}
 		}
-		depsMap[gName] = deps
 	}
+	return ""
+}
 
-	if hasGroups {
-		// Group tests by their group attribute
-		testsByGroup := make(map[string][]gfmt.Test)
-		pointsByGroup := make(map[string]pointvalue.Value)
-		var sampleTests []gfmt.Test
-
-		for i, test := range testset.Tests {
-			gName := test.Group
-			if gName == "" {
-				gName = "default"
+func problemType(prob Problem, groups []spec.Group) string {
+	if prob.Interactive || (prob.Assets != nil && prob.Assets.Interactor != nil) {
+		return "interactive"
+	}
+	for _, g := range groups {
+		for _, t := range g.Tests {
+			if t.Points > 0 {
+				return "scoring"
 			}
-			if prob.ShortName == "subtasks-groups" {
-				if gName == "1" {
-					gName = "even_subtask"
-				} else if gName == "2" {
-					gName = "odd_subtask"
-				}
-			}
+		}
+	}
+	return "pass-fail"
+}
 
-			testIndex := i + 1
-			filename := fmt.Sprintf("%02d.in", testIndex)
-
-			var t gfmt.Test
-			if test.Method == "generated" {
-				t.Generate = test.Cmd
-			} else {
-				t.Manual = filename
-			}
-
-			weight, err := pointvalue.Parse(strconv.FormatFloat(test.Points, 'f', -1, 64))
+// groups keeps Polygon test numbering: groups follow the first test of each,
+// and tests keep their order. A testset without groups is one group.
+func groups(fsys fs.FS, testset Testset, generators map[string]string) ([]spec.Group, error) {
+	definitions := map[string]Group{}
+	for _, g := range testset.Groups {
+		definitions[g.Name] = g
+	}
+	var result []spec.Group
+	index := map[string]int{}
+	for i, t := range testset.Tests {
+		test, err := convertTest(fsys, testset, i+1, t, generators)
+		if err != nil {
+			return nil, err
+		}
+		name := t.Group
+		if name == "" {
+			name = "tests"
+		}
+		n, ok := index[name]
+		if !ok {
+			n = len(result)
+			index[name] = n
+			result = append(result, newGroup(name, definitions, t.Group != ""))
+		}
+		result[n].Tests = append(result[n].Tests, test)
+	}
+	for i := range result {
+		g := &result[i]
+		// A complete group may carry its points on the group, not on its tests;
+		// passing the whole group scores them, as on its last test.
+		total := points.Value(0)
+		for _, t := range g.Tests {
+			total += t.Points
+		}
+		if def, ok := definitions[g.Name]; ok && g.Policy == "complete" && total == 0 && def.Points > 0 {
+			value, err := parsePoints(def.Points)
 			if err != nil {
 				return nil, err
 			}
-			t.Points = weight
-			pointsByGroup[gName] += weight
-			testsByGroup[gName] = append(testsByGroup[gName], t)
-
-			if test.Sample {
-				sampleTests = append(sampleTests, t)
-			}
+			g.Tests[len(g.Tests)-1].Points = value
 		}
-
-		for gName, tests := range testsByGroup {
-			subtasks[gName] = gfmt.Subtask{
-				Points:       pointsByGroup[gName],
-				Policy:       "complete",
-				Dependencies: depsMap[gName],
-				Tests:        tests,
-			}
-		}
-
-		if len(sampleTests) > 0 {
-			subtasks["samples"] = gfmt.Subtask{
-				Points: 0,
-				Policy: "complete",
-				Tests:  sampleTests,
-			}
-		}
-	} else {
-		// Divide tests into "samples" and "secret"
-		var sampleTests []gfmt.Test
-		var secretTests []gfmt.Test
-
-		for i, test := range testset.Tests {
-			testIndex := i + 1
-			filename := fmt.Sprintf("%02d.in", testIndex)
-
-			var t gfmt.Test
-			if test.Method == "generated" {
-				t.Generate = test.Cmd
-			} else {
-				t.Manual = filename
-			}
-
-			if test.Sample {
-				sampleTests = append(sampleTests, t)
-			} else {
-				secretTests = append(secretTests, t)
-			}
-		}
-
-		switch {
-		case len(sampleTests) > 0 && len(secretTests) > 0:
-			subtasks["samples"] = gfmt.Subtask{
-				Points: 0,
-				Policy: "complete",
-				Tests:  sampleTests,
-			}
-			subtasks["secret"] = gfmt.Subtask{
-				Points:       pointvalue.Value(100) * pointvalue.Unit,
-				Policy:       "each",
-				Dependencies: []string{"samples"},
-				Tests:        secretTests,
-			}
-		case len(sampleTests) > 0:
-			subtasks["samples"] = gfmt.Subtask{
-				Points: pointvalue.Value(100) * pointvalue.Unit,
-				Policy: "each",
-				Tests:  sampleTests,
-			}
-		case len(secretTests) > 0:
-			subtasks["secret"] = gfmt.Subtask{
-				Points: pointvalue.Value(100) * pointvalue.Unit,
-				Policy: "each",
-				Tests:  secretTests,
+		for _, dep := range g.DependsOn {
+			if _, ok := index[dep]; !ok {
+				return nil, fmt.Errorf("group %s depends on unknown group %s", g.Name, dep)
 			}
 		}
 	}
-
-	// 6. Map solutions
-	solutions := make(map[string]string)
-	if prob.Assets != nil {
-		for _, sol := range prob.Assets.Solutions {
-			if sol.Source.Path != "" {
-				name := filepath.Base(sol.Source.Path)
-				solutions[name] = mapSolutionTag(sol.Tag)
-			}
-		}
-	}
-
-	// 7. Collect file mappings
-	var mappings []gfmt.FileMapping
-
-	// Checker
-	if prob.Assets != nil && prob.Assets.Checker != nil && prob.Assets.Checker.Source.Path != "" {
-		ext := filepath.Ext(prob.Assets.Checker.Source.Path)
-		if ext == "" {
-			ext = ".cpp"
-		}
-		mappings = append(mappings, gfmt.FileMapping{
-			SourcePath: prob.Assets.Checker.Source.Path,
-			TargetPath: "checker" + ext,
-		})
-	}
-
-	// Validators
-	if prob.Assets != nil {
-		for i, val := range prob.Assets.Validators {
-			if val.Source.Path != "" {
-				ext := filepath.Ext(val.Source.Path)
-				if ext == "" {
-					ext = ".cpp"
-				}
-				targetPath := "validator" + ext
-				if i > 0 {
-					targetPath = filepath.Join("lib", fmt.Sprintf("validator_%d%s", i+1, ext))
-				}
-				mappings = append(mappings, gfmt.FileMapping{
-					SourcePath: val.Source.Path,
-					TargetPath: targetPath,
-				})
-			}
-		}
-	}
-
-	// Resources (like testlib.h, olymp.sty) -> lib/
-	if prob.Files != nil {
-		for _, resource := range prob.Files.Resources {
-			if resource.Path != "" {
-				baseName := filepath.Base(resource.Path)
-				mappings = append(mappings, gfmt.FileMapping{
-					SourcePath: resource.Path,
-					TargetPath: filepath.Join("lib", baseName),
-				})
-			}
-		}
-	}
-
-	// Solutions
-	if prob.Assets != nil {
-		for _, sol := range prob.Assets.Solutions {
-			if sol.Source.Path != "" {
-				baseName := filepath.Base(sol.Source.Path)
-				mappings = append(mappings, gfmt.FileMapping{
-					SourcePath: sol.Source.Path,
-					TargetPath: filepath.Join("solutions", baseName),
-				})
-			}
-		}
-	}
-
-	// Test inputs and answers (outputs)
-	for i := range testset.Tests {
-		testIndex := i + 1
-		inputPath := fmt.Sprintf(testset.InputPathPattern, testIndex)
-		outputPath := fmt.Sprintf(testset.AnswerPathPattern, testIndex)
-
-		// Map to target tests/01.in and tests/01.out if they exist
-		if _, err := os.Stat(filepath.Join(packageDir, inputPath)); err == nil {
-			mappings = append(mappings, gfmt.FileMapping{
-				SourcePath: inputPath,
-				TargetPath: fmt.Sprintf("tests/%02d.in", testIndex),
-			})
-		}
-		if _, err := os.Stat(filepath.Join(packageDir, outputPath)); err == nil {
-			mappings = append(mappings, gfmt.FileMapping{
-				SourcePath: outputPath,
-				TargetPath: fmt.Sprintf("tests/%02d.out", testIndex),
-			})
-		}
-	}
-
-	// Process statements
-	for _, stmt := range prob.Statements {
-		if stmt.Type != "application/x-tex" && !strings.HasSuffix(stmt.Path, ".tex") {
-			continue
-		}
-		texPath := filepath.Join(packageDir, stmt.Path)
-		texBytes, err := os.ReadFile(texPath)
-		if err != nil {
-			continue
-		}
-		mdContent := gfmt.ConvertTexToMarkdown(string(texBytes))
-		langCode := gfmt.MapLanguageCode(stmt.Language)
-
-		mdRelPath := filepath.Join("statements", langCode+".md")
-		mdAbsPath := filepath.Join(packageDir, mdRelPath)
-		if err := os.MkdirAll(filepath.Dir(mdAbsPath), 0755); err != nil {
-			return nil, fmt.Errorf("failed to create directory for markdown statement: %w", err)
-		}
-		if err := os.WriteFile(mdAbsPath, []byte(mdContent), 0600); err != nil {
-			return nil, fmt.Errorf("failed to write markdown statement: %w", err)
-		}
-
-		mappings = append(mappings, gfmt.FileMapping{
-			SourcePath: filepath.ToSlash(mdRelPath),
-			TargetPath: filepath.ToSlash(mdRelPath),
-		})
-	}
-
-	return &gfmt.ImportPlan{
-		Problem: &gfmt.Problem{
-			FormatVersion: "1.0",
-			Title:         title,
-			Type:          probType,
-			Limits:        limits,
-			Subtasks:      subtasks,
-			Solutions:     solutions,
-		},
-		Mappings: mappings,
-	}, nil
+	return result, nil
 }
 
-func mapSolutionTag(tag string) string {
-	switch strings.ToLower(tag) {
-	case "accepted", "main":
-		return "OK"
-	case "wrong_answer", "rejected":
-		return "WA"
-	case "time_limit_exceeded":
-		return "TL"
-	case "memory_limit_exceeded":
-		return "ML"
-	default:
-		return strings.ToUpper(tag)
+// newGroup applies the group definition. Polygon scores a named group as a
+// whole unless it says each-test; ungrouped tests score one by one.
+func newGroup(name string, definitions map[string]Group, named bool) spec.Group {
+	def, ok := definitions[name]
+	if !ok {
+		policy := "each"
+		if named {
+			policy = "complete"
+		}
+		return spec.Group{Name: name, Policy: policy}
 	}
+	g := spec.Group{Name: name, Policy: "complete"}
+	if def.PointsPolicy == "each-test" {
+		g.Policy = "each"
+	}
+	for _, dep := range def.Dependencies {
+		g.DependsOn = append(g.DependsOn, dep.Group)
+	}
+	return g
+}
+
+func convertTest(fsys fs.FS, testset Testset, number int, t Test, generators map[string]string) (spec.Test, error) {
+	weight, err := parsePoints(t.Points)
+	if err != nil {
+		return spec.Test{}, err
+	}
+	test := spec.Test{Points: weight, Sample: t.Sample}
+	// Gate appends a seed to generator arguments, so a generated input differs
+	// from the one Polygon answered; the main solution answers it instead.
+	if t.Method == "generated" {
+		argv, err := spec.ParseCommand(t.Cmd)
+		if err != nil {
+			return test, fmt.Errorf("test %d: %w", number, err)
+		}
+		name, ok := generators[argv[0]]
+		if !ok {
+			return test, fmt.Errorf("test %d: generator %s not found", number, argv[0])
+		}
+		test.Generator, test.Args = name, argv[1:]
+		return test, nil
+	}
+	test.Input = fmt.Sprintf(testset.InputPathPattern, number)
+	if answer := fmt.Sprintf(testset.AnswerPathPattern, number); exists(fsys, answer) {
+		test.Answer = answer
+	}
+	return test, nil
+}
+
+func parsePoints(value float64) (points.Value, error) {
+	return points.Parse(strconv.FormatFloat(value, 'f', -1, 64))
+}
+
+func statements(list []Statement) []spec.Statement {
+	var result []spec.Statement
+	seen := map[string]bool{}
+	for _, s := range list {
+		language := tex.LanguageCode(s.Language)
+		if s.Type == "application/x-tex" && !seen[language] {
+			seen[language] = true
+			result = append(result, spec.Statement{Language: language, Path: s.Path, TeX: true})
+		}
+	}
+	return result
+}
+
+func exists(fsys fs.FS, name string) bool {
+	info, err := fs.Stat(fsys, name)
+	return err == nil && info.Mode().IsRegular()
 }

@@ -64,6 +64,9 @@ func (uc *DraftUseCase) Import(ctx context.Context, id uuid.UUID, expected int64
 		return model.MutationResult{}, err
 	}
 	plan.draft.ShortName = current.ShortName
+	if strings.TrimSpace(plan.draft.Title) == "" {
+		plan.draft.Title = current.Title
+	}
 	// Fingerprint exact uploaded archive bytes, including metadata and source.
 	// The archive spool is the only root-level body file in this isolated import.
 	files, err := os.ReadDir(plan.root)

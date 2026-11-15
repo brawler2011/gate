@@ -1,0 +1,21 @@
+Two Polygon solutions share the file name main.cpp. The second is renamed
+in the draft, and the solution tagged main stays the main solution.
+
+-- problem.xml --
+<problem short-name="clash">
+  <judging><testset name="tests">
+    <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
+    <input-path-pattern>tests/%02d</input-path-pattern><answer-path-pattern>tests/%02d.a</answer-path-pattern>
+    <tests><test method="manual"/></tests>
+  </testset></judging>
+  <assets><solutions>
+    <solution tag="wrong_answer"><source path="wrong/main.cpp"/></solution>
+    <solution tag="main"><source path="correct/main.cpp"/></solution>
+  </solutions></assets>
+</problem>
+-- wrong/main.cpp --
+int main() { return 1; }
+-- correct/main.cpp --
+int main() {}
+-- tests/01 --
+1

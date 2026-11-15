@@ -51,7 +51,7 @@ func testBuildOptions(t *testing.T) problemsmodel.BuildOptions {
 	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 10*time.Second, 20*time.Second, 512<<20, 150
 	return problemsmodel.BuildOptions{
 		Toolchain:   problemsmodel.Toolchain{Digest: toolchainDigest, Architecture: "amd64", ABI: "linux-gnu", Languages: cfg.Langs},
-		Limits:      problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux},
+		Limits:      problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 1000, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux},
 		MaxAttempts: 3, Duration: 2 * time.Minute, Lease: time.Minute,
 	}
 }

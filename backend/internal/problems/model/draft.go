@@ -126,6 +126,9 @@ var componentFolders = map[string]string{
 // singletonRoles hold at most one component each; the role folder identifies it.
 var singletonRoles = map[string]bool{"checker": true, "validator": true, "interactor": true}
 
+// ComponentFolder returns the folder that holds components of role.
+func ComponentFolder(role string) string { return componentFolders[role] }
+
 // SingletonRole reports whether a draft holds at most one component of role.
 func SingletonRole(role string) bool { return singletonRoles[role] }
 

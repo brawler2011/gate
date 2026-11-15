@@ -1,396 +1,261 @@
+// Package icpc reads problem packages in the legacy ICPC problem package
+// format (https://icpc.io/problem-package-format/spec/legacy.html).
+//
+// Gate runs checkers, validators and interactors with the testlib protocol,
+// so a package imports as written only when its programs use testlib.
 package icpc
 
 import (
+	"errors"
 	"fmt"
-	pointvalue "github.com/brawler2011/gate/backend/pkg/points"
-	"os"
-	"path/filepath"
-	"sort"
+	"io/fs"
+	"path"
+	"slices"
 	"strings"
 
-	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/formats/spec"
+	"github.com/brawler2011/gate/backend/pkg/formats/tex"
 	"gopkg.in/yaml.v3"
 )
 
-// Parser parses an ICPC package directory.
-type Parser struct{}
-
-// NewParser creates a new ICPC parser.
-func NewParser() *Parser {
-	return &Parser{}
-}
-
-// GetFormat returns the format name.
-func (p *Parser) GetFormat() string {
-	return "icpc"
-}
-
-// Parse parses the ICPC problem.yaml configuration and creates an ImportPlan.
-func (p *Parser) Parse(packageDir string) (*gfmt.ImportPlan, error) {
-	yamlPath := filepath.Join(packageDir, "problem.yaml")
-	data, err := os.ReadFile(yamlPath)
+// Read reads the ICPC package in fsys. Tests are the .in files of data/sample
+// and data/secret; each subdirectory of data/secret is a test group.
+func Read(fsys fs.FS) (*spec.Problem, error) {
+	data, err := spec.ReadFile(fsys, "problem.yaml")
 	if err != nil {
-		return nil, fmt.Errorf("failed to read problem.yaml: %w", err)
+		return nil, fmt.Errorf("read problem.yaml: %w", err)
 	}
-
 	var prob *Problem
 	if err := yaml.Unmarshal(data, &prob); err != nil {
-		return nil, fmt.Errorf("failed to parse ICPC problem.yaml: %w", err)
+		return nil, fmt.Errorf("parse ICPC problem.yaml: %w", err)
 	}
 	if prob == nil {
 		return nil, fmt.Errorf("problem.yaml must contain a mapping")
 	}
-
-	// 1. Extract title
-	title := prob.Name
-	if title == "" {
-		title = filepath.Base(packageDir)
+	// The ICPC grader aggregates group scores (sum, min, max, avg, stopping at
+	// the first rejection by default), which Gate's per-test points cannot
+	// express; importing such a package would silently change its scores.
+	if prob.Type == "scoring" {
+		return nil, fmt.Errorf("ICPC scoring problems are not supported")
 	}
-
-	// 2. Determine problem type
-	probType := "pass-fail"
-	if prob.Validation != nil && prob.Validation.Type == "interactive" {
-		probType = "interactive"
+	p := &spec.Problem{Title: prob.Name, Type: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256}
+	interactive := slices.Contains(strings.Fields(prob.Validation), "interactive")
+	if interactive {
+		p.Type = "interactive"
 	}
-
-	// 3. Map limits
-	timeLimitMs := 1000  // default 1s
-	memoryLimitMb := 256 // default 256MB
 	if prob.Limits != nil {
 		if prob.Limits.Time > 0 {
-			timeLimitMs = int(prob.Limits.Time * 1000)
+			p.TimeLimitMs = int(prob.Limits.Time * 1000)
 		}
 		if prob.Limits.Memory > 0 {
-			memoryLimitMb = prob.Limits.Memory
+			p.MemoryLimitMb = prob.Limits.Memory
 		}
 	}
-	limits := gfmt.Limits{
-		TimeMs:   timeLimitMs,
-		MemoryMb: memoryLimitMb,
+	collect := func(folder string) ([]spec.Program, error) {
+		programs, headers, err := programs(fsys, folder)
+		p.Library = append(p.Library, headers...)
+		return programs, err
 	}
-
-	// 4. Scan tests
-	subtasks := make(map[string]gfmt.Subtask)
-	var mappings []gfmt.FileMapping
-	dataDir := filepath.Join(packageDir, "data")
-	globalIndex := 1
-
-	// Read samples
-	sampleDir := filepath.Join(dataDir, "sample")
-	samples, sampleMappings, _ := scanTestFiles(sampleDir, packageDir, &globalIndex)
-	mappings = append(mappings, sampleMappings...)
-
-	// Read secrets (look for subdirectories first)
-	secretDir := filepath.Join(dataDir, "secret")
-	var subdirs []string
-	if entries, err := os.ReadDir(secretDir); err == nil {
-		for _, entry := range entries {
-			if entry.IsDir() {
-				subdirs = append(subdirs, entry.Name())
-			}
-		}
+	output, err := collect("output_validators")
+	if err != nil {
+		return nil, err
 	}
-
-	isSubtasksGroups := filepath.Base(packageDir) == "subtasks-groups" || strings.Contains(strings.ToLower(title), "even or odd")
-
-	if len(subdirs) > 0 {
-		// Treat each subdirectory in secret/ as a subtask
-		for _, sd := range subdirs {
-			sdPath := filepath.Join(secretDir, sd)
-			tests, secretMappings, _ := scanTestFiles(sdPath, packageDir, &globalIndex)
-			if len(tests) == 0 {
-				continue
-			}
-			mappings = append(mappings, secretMappings...)
-
-			// Try to read testdata.yaml in the subdirectory
-			points := 0
-			policy := "complete"
-			tdPath := filepath.Join(sdPath, "testdata.yaml")
-			if tdData, err := os.ReadFile(tdPath); err == nil {
-				var td Testdata
-				if yaml.Unmarshal(tdData, &td) == nil {
-					if td.AcceptScore > 0 {
-						points = int(td.AcceptScore)
-					}
-				}
-			}
-
-			subtasks[sd] = gfmt.Subtask{
-				Points: pointvalue.Value(points) * pointvalue.Unit,
-				Policy: policy,
-				Tests:  tests,
-			}
-		}
-
-		// Also add samples if present
-		if len(samples) > 0 {
-			subtasks["samples"] = gfmt.Subtask{
-				Points: 0,
-				Policy: "complete",
-				Tests:  samples,
-			}
-		}
-	} else {
-		// No subdirs in secret/, standard samples/secret division
-		secrets, secretMappings, _ := scanTestFiles(secretDir, packageDir, &globalIndex)
-		mappings = append(mappings, secretMappings...)
-
-		if isSubtasksGroups {
-			probType = "scoring"
-			// Special-case "subtasks-groups" test case
-			subtasks["even_subtask"] = gfmt.Subtask{
-				Points: pointvalue.Value(40) * pointvalue.Unit,
-				Policy: "complete",
-				Tests:  samples,
-			}
-			subtasks["odd_subtask"] = gfmt.Subtask{
-				Points: pointvalue.Value(60) * pointvalue.Unit,
-				Policy: "complete",
-				Tests:  secrets,
-			}
+	if len(output) > 1 {
+		return nil, fmt.Errorf("package has %d output validators; Gate supports one", len(output))
+	}
+	if len(output) == 1 {
+		// The output validator of an interactive problem is its interactor.
+		if interactive {
+			p.Interactor = &output[0]
 		} else {
-			switch {
-			case len(samples) > 0 && len(secrets) > 0:
-				subtasks["samples"] = gfmt.Subtask{
-					Points: 0,
-					Policy: "complete",
-					Tests:  samples,
-				}
-				subtasks["secret"] = gfmt.Subtask{
-					Points:       pointvalue.Value(100) * pointvalue.Unit,
-					Policy:       "each",
-					Dependencies: []string{"samples"},
-					Tests:        secrets,
-				}
-			case len(samples) > 0:
-				subtasks["samples"] = gfmt.Subtask{
-					Points: pointvalue.Value(100) * pointvalue.Unit,
-					Policy: "each",
-					Tests:  samples,
-				}
-			case len(secrets) > 0:
-				subtasks["secret"] = gfmt.Subtask{
-					Points: pointvalue.Value(100) * pointvalue.Unit,
-					Policy: "each",
-					Tests:  secrets,
-				}
-			}
+			p.Checker = &output[0]
 		}
 	}
-
-	// 5. Scan submissions (solutions)
-	solutions := make(map[string]string)
-	submissionsDir := filepath.Join(packageDir, "submissions")
-	if entries, err := os.ReadDir(submissionsDir); err == nil {
-		for _, entry := range entries {
-			if !entry.IsDir() {
-				continue
-			}
-			var outcome string
-			switch entry.Name() {
-			case "accepted":
-				outcome = "OK"
-			case "wrong_answer":
-				outcome = "WA"
-			case "time_limit_exceeded":
-				outcome = "TL"
-			case "run_time_error":
-				outcome = "RTE"
-			case "memory_limit_exceeded":
-				outcome = "ML"
-			default:
-				outcome = strings.ToUpper(entry.Name())
-			}
-
-			submPath := filepath.Join(submissionsDir, entry.Name())
-			if files, err := os.ReadDir(submPath); err == nil {
-				for _, f := range files {
-					if !f.IsDir() {
-						solutions[f.Name()] = outcome
-						mappings = append(mappings, gfmt.FileMapping{
-							SourcePath: filepath.ToSlash(filepath.Join("submissions", entry.Name(), f.Name())),
-							TargetPath: filepath.Join("solutions", f.Name()),
-						})
-					}
-				}
-			}
-		}
+	input, err := collect("input_validators")
+	if err != nil {
+		return nil, err
 	}
-
-	// 6. Scan output_validators (checkers)
-	validatorsDir := filepath.Join(packageDir, "output_validators")
-	scanValidatorDir(validatorsDir, "output_validators", "checkers/checker.cpp", &mappings)
-
-	// 7. Scan input_validators (validators)
-	inputValidatorsDir := filepath.Join(packageDir, "input_validators")
-	scanValidatorDir(inputValidatorsDir, "input_validators", "validators/validator.cpp", &mappings)
-
-	// 8. Scan generators
-	generatorsDir := filepath.Join(packageDir, "generators")
-	if entries, err := os.ReadDir(generatorsDir); err == nil {
-		for _, entry := range entries {
-			if !entry.IsDir() {
-				mappings = append(mappings, gfmt.FileMapping{
-					SourcePath: filepath.ToSlash(filepath.Join("generators", entry.Name())),
-					TargetPath: filepath.Join("generators", entry.Name()),
-				})
-			}
-		}
+	if len(input) > 1 {
+		return nil, fmt.Errorf("package has %d input validators; Gate supports one", len(input))
 	}
-
-	// Process statements
-	for _, dirName := range []string{"statement", "statements"} {
-		dirPath := filepath.Join(packageDir, dirName)
-		if entries, err := os.ReadDir(dirPath); err == nil {
-			for _, entry := range entries {
-				if !entry.IsDir() {
-					continue
-				}
-				langDir := filepath.Join(dirPath, entry.Name())
-				texPath := filepath.Join(langDir, "problem.tex")
-				if _, err := os.Stat(texPath); err == nil {
-					if data, err := os.ReadFile(texPath); err == nil {
-						mdContent := gfmt.ConvertTexToMarkdown(string(data))
-						langCode := gfmt.MapLanguageCode(entry.Name())
-
-						mdRelPath := filepath.Join("statements", langCode+".md")
-						mdAbsPath := filepath.Join(packageDir, mdRelPath)
-						if err := os.MkdirAll(filepath.Dir(mdAbsPath), 0755); err != nil {
-							return nil, fmt.Errorf("failed to create directory for markdown statement: %w", err)
-						}
-						if err := os.WriteFile(mdAbsPath, []byte(mdContent), 0600); err != nil {
-							return nil, fmt.Errorf("failed to write markdown statement: %w", err)
-						}
-
-						mappings = append(mappings, gfmt.FileMapping{
-							SourcePath: filepath.ToSlash(mdRelPath),
-							TargetPath: filepath.ToSlash(mdRelPath),
-						})
-					}
-				}
-			}
-		}
+	if len(input) == 1 {
+		p.Validator = &input[0]
 	}
-
-	return &gfmt.ImportPlan{
-		Problem: &gfmt.Problem{
-			FormatVersion: "1.0",
-			Title:         title,
-			Type:          probType,
-			Limits:        limits,
-			Subtasks:      subtasks,
-			Solutions:     solutions,
-		},
-		Mappings: mappings,
-	}, nil
+	if p.Generators, err = collect("generators"); err != nil {
+		return nil, err
+	}
+	if p.Solutions, p.MainSolution, err = submissions(fsys, collect); err != nil {
+		return nil, err
+	}
+	if p.Groups, err = groups(fsys); err != nil {
+		return nil, err
+	}
+	p.KeepInteractiveInputsPrivate()
+	p.Statements = statements(fsys)
+	return p, nil
 }
 
-func scanTestFiles(dir string, packageDir string, globalIndex *int) ([]gfmt.Test, []gfmt.FileMapping, error) {
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
+// programs lists the programs in folder: each source file directly in it, and
+// each subdirectory, whose single source file is the program. A program
+// includes the headers next to it.
+func programs(fsys fs.FS, folder string) ([]spec.Program, []spec.File, error) {
+	entries, err := fs.ReadDir(fsys, folder)
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil, nil
 	}
-
-	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read test directory %s: %w", dir, err)
+		return nil, nil, fmt.Errorf("read %s: %w", folder, err)
 	}
-
-	var tests []gfmt.Test
-	var mappings []gfmt.FileMapping
-	var inFiles []string
-
-	for _, entry := range entries {
-		if entry.IsDir() {
+	sources, headers := split(folder, entries)
+	var result []spec.Program
+	for _, source := range sources {
+		result = append(result, program(source, headers))
+	}
+	library := headers
+	for _, e := range entries {
+		if !e.IsDir() {
 			continue
 		}
-		name := entry.Name()
-		if strings.HasSuffix(name, ".in") {
-			inFiles = append(inFiles, name)
-		}
-	}
-
-	sort.Strings(inFiles)
-
-	for _, name := range inFiles {
-		fullPath := filepath.Join(dir, name)
-		relInputPath, err := filepath.Rel(packageDir, fullPath)
+		dir := path.Join(folder, e.Name())
+		files, err := fs.ReadDir(fsys, dir)
 		if err != nil {
-			relInputPath = filepath.Join(filepath.Base(filepath.Dir(dir)), filepath.Base(dir), name)
+			return nil, nil, fmt.Errorf("read %s: %w", dir, err)
 		}
-
-		// Find corresponding answer file
-		stem := strings.TrimSuffix(name, ".in")
-		var relAnsPath string
-		ansCandidates := []string{stem + ".ans", stem + ".out"}
-		for _, cand := range ansCandidates {
-			ansPath := filepath.Join(dir, cand)
-			if _, err := os.Stat(ansPath); err == nil {
-				relAnsPath, _ = filepath.Rel(packageDir, ansPath)
-				break
-			}
+		sources, headers := split(dir, files)
+		if len(sources) != 1 {
+			return nil, nil, fmt.Errorf("%s must hold one source file, found %d", dir, len(sources))
 		}
-		if relAnsPath == "" {
-			relAnsPath = filepath.Join(filepath.Base(filepath.Dir(dir)), filepath.Base(dir), stem+".ans")
-		}
-
-		targetIndex := *globalIndex
-		filename := fmt.Sprintf("%02d.in", targetIndex)
-		ansFilename := fmt.Sprintf("%02d.out", targetIndex)
-
-		tests = append(tests, gfmt.Test{
-			Manual: filename,
-		})
-
-		mappings = append(mappings, gfmt.FileMapping{
-			SourcePath: filepath.ToSlash(relInputPath),
-			TargetPath: "tests/" + filename,
-		})
-		mappings = append(mappings, gfmt.FileMapping{
-			SourcePath: filepath.ToSlash(relAnsPath),
-			TargetPath: "tests/" + ansFilename,
-		})
-
-		*globalIndex++
+		result = append(result, program(sources[0], headers))
+		library = append(library, headers...)
 	}
-
-	return tests, mappings, nil
+	return result, library, nil
 }
 
-func scanValidatorDir(dir, targetPrefix, targetFile string, mappings *[]gfmt.FileMapping) {
-	if entries, err := os.ReadDir(dir); err == nil {
-		for _, entry := range entries {
-			if entry.IsDir() {
-				subDir := filepath.Join(dir, entry.Name())
-				if subEntries, err := os.ReadDir(subDir); err == nil {
-					for _, se := range subEntries {
-						if !se.IsDir() && strings.HasSuffix(se.Name(), ".cpp") {
-							*mappings = append(*mappings, gfmt.FileMapping{
-								SourcePath: filepath.ToSlash(filepath.Join(targetPrefix, entry.Name(), se.Name())),
-								TargetPath: targetFile,
-							})
-						} else if !se.IsDir() && se.Name() == "testlib.h" {
-							*mappings = append(*mappings, gfmt.FileMapping{
-								SourcePath: filepath.ToSlash(filepath.Join(targetPrefix, entry.Name(), se.Name())),
-								TargetPath: "lib/testlib.h",
-							})
-						}
-					}
-				}
-				continue
-			}
-			name := entry.Name()
-			if strings.HasSuffix(name, ".cpp") {
-				*mappings = append(*mappings, gfmt.FileMapping{
-					SourcePath: filepath.ToSlash(filepath.Join(targetPrefix, name)),
-					TargetPath: targetFile,
-				})
-			} else if name == "testlib.h" {
-				*mappings = append(*mappings, gfmt.FileMapping{
-					SourcePath: filepath.ToSlash(filepath.Join(targetPrefix, name)),
-					TargetPath: "lib/testlib.h",
-				})
-			}
+// split separates the source files and headers among entries of dir.
+func split(dir string, entries []fs.DirEntry) ([]string, []spec.File) {
+	var sources []string
+	var headers []spec.File
+	for _, e := range entries {
+		switch {
+		case !e.Type().IsRegular():
+		case spec.IsHeaderFile(e.Name()):
+			headers = append(headers, spec.File{Name: e.Name(), Path: path.Join(dir, e.Name())})
+		case spec.IsSourceFile(e.Name()):
+			sources = append(sources, path.Join(dir, e.Name()))
 		}
 	}
+	return sources, headers
+}
+
+func program(source string, headers []spec.File) spec.Program {
+	deps := map[string]string{}
+	for _, h := range headers {
+		deps[h.Name] = h.Path
+	}
+	return spec.Program{File: spec.File{Name: path.Base(source), Path: source}, Dependencies: deps}
+}
+
+// submissions lists the solutions of every verdict directory; the first
+// accepted one is the main solution.
+func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error)) ([]spec.Program, string, error) {
+	verdicts, err := fs.ReadDir(fsys, "submissions")
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, "", nil
+	}
+	if err != nil {
+		return nil, "", fmt.Errorf("read submissions: %w", err)
+	}
+	var result []spec.Program
+	main := ""
+	for _, verdict := range verdicts {
+		if !verdict.IsDir() {
+			continue
+		}
+		list, err := collect(path.Join("submissions", verdict.Name()))
+		if err != nil {
+			return nil, "", err
+		}
+		if verdict.Name() == "accepted" && len(list) > 0 {
+			main = list[0].Path
+		}
+		result = append(result, list...)
+	}
+	return result, main, nil
+}
+
+// groups reads data/sample and data/secret. Every directory holding tests,
+// at any depth, is a group named by its path under data/.
+func groups(fsys fs.FS) ([]spec.Group, error) {
+	var result []spec.Group
+	for _, top := range []string{"sample", "secret"} {
+		err := fs.WalkDir(fsys, path.Join("data", top), func(dir string, d fs.DirEntry, err error) error {
+			if errors.Is(err, fs.ErrNotExist) && dir == path.Join("data", top) {
+				return fs.SkipDir
+			}
+			if err != nil || !d.IsDir() {
+				return err
+			}
+			tests, err := testFiles(fsys, dir, top == "sample")
+			if err != nil || len(tests) == 0 {
+				return err
+			}
+			result = append(result, spec.Group{Name: strings.TrimPrefix(dir, "data/"), Policy: "each", Tests: tests})
+			return nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("read tests: %w", err)
+		}
+	}
+	return result, nil
+}
+
+// testFiles lists the .in files directly in dir with their .ans answers.
+func testFiles(fsys fs.FS, dir string, sample bool) ([]spec.Test, error) {
+	entries, err := fs.ReadDir(fsys, dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", dir, err)
+	}
+	var tests []spec.Test
+	for _, e := range entries {
+		stem, ok := strings.CutSuffix(e.Name(), ".in")
+		if !e.Type().IsRegular() || !ok {
+			continue
+		}
+		test := spec.Test{Input: path.Join(dir, e.Name()), Sample: sample}
+		if answer := path.Join(dir, stem+".ans"); regular(fsys, answer) {
+			test.Answer = answer
+		}
+		tests = append(tests, test)
+	}
+	return tests, nil
+}
+
+// statements lists problem_statement/problem.<language>.tex; problem.tex is
+// the English statement.
+func statements(fsys fs.FS) []spec.Statement {
+	entries, _ := fs.ReadDir(fsys, "problem_statement")
+	var result []spec.Statement
+	seen := map[string]bool{}
+	for _, e := range entries {
+		base, ok := strings.CutSuffix(e.Name(), ".tex")
+		language, named := strings.CutPrefix(base, "problem.")
+		if base == "problem" {
+			language, named = "en", true
+		}
+		language = tex.LanguageCode(language)
+		if !ok || !named || !e.Type().IsRegular() || seen[language] {
+			continue
+		}
+		seen[language] = true
+		result = append(result, spec.Statement{Language: language, Path: path.Join("problem_statement", e.Name()), TeX: true})
+	}
+	return result
+}
+
+func regular(fsys fs.FS, name string) bool {
+	info, err := fs.Stat(fsys, name)
+	return err == nil && info.Mode().IsRegular()
 }

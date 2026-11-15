@@ -2,23 +2,26 @@ package problems
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats"
-	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/formats/spec"
+	"github.com/brawler2011/gate/backend/pkg/formats/tex"
 	"github.com/brawler2011/gate/backend/pkg/ziputil"
 	"github.com/google/uuid"
 )
@@ -88,19 +91,11 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 			result.objects = append(result.objects, o)
 		}
 	} else {
-		format, err := formats.DetectFormat(packageRoot)
-		if err != nil {
-			return nil, pkg.Wrap(pkg.ErrBadInput, err, "unsupported import format")
-		}
-		parser, err := formats.GetParser(format)
-		if err != nil {
-			return nil, err
-		}
-		plan, err := parser.Parse(packageRoot)
+		problem, err := formats.Read(packageRoot)
 		if err != nil {
 			return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid author package")
 		}
-		if err := uc.convertImport(result, packageRoot, plan, id, revision); err != nil {
+		if err := uc.convertImport(result, packageRoot, problem, id, revision); err != nil {
 			return nil, err
 		}
 	}
@@ -163,295 +158,425 @@ func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (import
 	}
 	return importObject{temporaryID: id, path: path, spec: model.UploadSpec{Purpose: purpose, SHA256: hex.EncodeToString(h.Sum(nil)), Size: n}}, nil
 }
-func (uc *DraftUseCase) convertImport(result *draftImport, root string, plan *gfmt.ImportPlan, id uuid.UUID, revision int64) error {
-	p := plan.Problem
-	d := model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, TimeLimitMs: p.Limits.TimeMs, MemoryLimitMb: p.Limits.MemoryMb, Files: map[string]string{}, Components: []model.DraftComponent{}, Tests: []model.DraftTest{}, Subtasks: []model.DraftSubtask{}, Assets: []model.DraftAsset{}}
-	paths := map[string]string{}
-	for _, mapping := range plan.Mappings {
-		if !fs.ValidPath(mapping.SourcePath) || !model.ValidDraftPath(mapping.TargetPath) {
-			return pkg.ErrBadInput
-		}
-		if _, ok := paths[mapping.TargetPath]; ok {
-			return pkg.ErrBadInput
-		}
-		paths[mapping.TargetPath] = filepath.Join(root, mapping.SourcePath)
+
+// convertImport places a package read from an author format into the draft
+// layout: each program in its role folder, shared sources in lib/,
+// statements in statements/<language>.md and statement resources in assets/.
+// Test inputs, answers and assets become objects.
+func (uc *DraftUseCase) convertImport(result *draftImport, root string, p *spec.Problem, id uuid.UUID, revision int64) error {
+	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}, library: map[string]string{}, names: map[string][]string{}}
+	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb, Files: map[string]string{}, Components: []model.DraftComponent{}, Tests: []model.DraftTest{}, Subtasks: []model.DraftSubtask{}, Assets: []model.DraftAsset{}}
+	if err := c.convert(p); err != nil {
+		return err
 	}
-	names := make([]string, 0, len(paths))
-	for path := range paths {
-		names = append(names, path)
+	result.draft = c.draft
+	return nil
+}
+
+type importConverter struct {
+	uc     *DraftUseCase
+	result *draftImport
+	root   string
+	draft  model.Draft
+	// textTests converts CRLF line endings of test files to LF.
+	textTests bool
+	// objects maps a package path to the object holding it.
+	objects map[string]uuid.UUID
+	// library maps the package path of a library file to its draft path, and
+	// names maps each library file name to the draft paths of that name.
+	library map[string]string
+	names   map[string][]string
+	// files and textBytes count the draft as it grows, against DraftQuotas.
+	files     int
+	textBytes int64
+}
+
+func (c *importConverter) convert(p *spec.Problem) error {
+	for _, f := range p.Library {
+		if err := c.addLibrary(f); err != nil {
+			return err
+		}
 	}
-	sort.Strings(names)
-	componentIDs := map[string]uuid.UUID{}
-	singletons := map[string]bool{}
-	generatorIDs := map[string]uuid.UUID{}
-	for _, path := range names {
-		role := model.ComponentRole(path)
-		if role != "" || strings.HasPrefix(path, model.LibraryFolder+"/") || strings.HasPrefix(path, model.StatementFolder+"/") {
-			info, err := os.Stat(paths[path])
-			if err != nil {
-				return fmt.Errorf("stat: %w", err)
-			}
-			if info.Size() > int64(uc.DraftQuotas.FileBytes) {
-				return pkg.ErrPayloadTooLarge
-			}
-			data, err := os.ReadFile(paths[path])
-			if err != nil {
-				return fmt.Errorf("readfile: %w", err)
-			}
-			if !utf8.Valid(data) {
-				return pkg.Wrap(pkg.ErrBadInput, nil, "source text must be UTF-8")
-			}
-			d.Files[path] = string(data)
-			if role != "" {
-				cid := uuid.New()
-				componentIDs[path] = cid
-				if _, ok := uc.BuildOptions.Toolchain.Languages[model.LanguageForPath(path)]; !ok {
-					return pkg.Wrap(pkg.ErrBadInput, nil, "unsupported source language: "+path)
-				}
-				if model.SingletonRole(role) {
-					if singletons[role] {
-						folder, _, _ := strings.Cut(path, "/")
-						return pkg.Wrap(pkg.ErrBadInput, nil, "more than one "+role+" in "+folder+"/")
-					}
-					singletons[role] = true
-				}
-				deps := map[string]string{}
-				for destination, source := range p.Sources[path].DependencyMap {
-					deps[destination] = source
-				}
-				for _, source := range p.Sources[path].Dependencies {
-					if !strings.HasPrefix(source, "lib/") {
-						source = "lib/" + source
-					}
-					deps[strings.TrimPrefix(source, "lib/")] = source
-				}
-				if len(deps) == 0 {
-					for _, source := range names {
-						if strings.HasPrefix(source, "lib/") {
-							deps[strings.TrimPrefix(source, "lib/")] = source
-						}
-					}
-				}
-				d.Components = append(d.Components, model.DraftComponent{ID: cid, Role: role, Path: path, Dependencies: deps})
-				if role == "generator" {
-					// Tests name generators by stem, so the stem must identify one file.
-					name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-					if _, ok := generatorIDs[name]; ok {
-						return pkg.Wrap(pkg.ErrBadInput, nil, "several generators named "+name)
-					}
-					generatorIDs[name] = cid
-				}
+	for _, singleton := range []struct {
+		role    string
+		program *spec.Program
+	}{{"checker", p.Checker}, {"validator", p.Validator}, {"interactor", p.Interactor}} {
+		if singleton.program != nil {
+			if _, err := c.addComponent(singleton.role, *singleton.program); err != nil {
+				return err
 			}
 		}
 	}
-	selection := func(path, dir string) *uuid.UUID {
-		if path == "" {
-			return nil
-		}
-		if !strings.HasPrefix(path, dir+"/") {
-			path = dir + "/" + path
-		}
-		id, ok := componentIDs[path]
-		if !ok {
-			return nil
-		}
-		return &id
-	}
-	d.MainSolutionID = selection(p.Solutions["main"], "solutions")
-	if d.MainSolutionID == nil {
-		for _, path := range names {
-			if p.Solutions[strings.TrimPrefix(path, "solutions/")] == "OK" {
-				d.MainSolutionID = selection(path, "solutions")
-				break
-			}
-		}
-	}
-	objectIDs := map[string]uuid.UUID{}
-	addObject := func(path, purpose string) (*uuid.UUID, error) {
-		if oid, ok := objectIDs[path]; ok {
-			return &oid, nil
-		}
-		actual, ok := paths[path]
-		if !ok {
-			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing imported file "+path)
-		}
-		oid := uuid.New()
-		object, err := uc.importObject(actual, purpose, oid)
-		if err != nil {
-			return nil, err
-		}
-		result.objects = append(result.objects, object)
-		objectIDs[path] = oid
-		return &oid, nil
-	}
-	groupIDs := map[string]uuid.UUID{}
-	for _, name := range p.OrderedSubtaskNames() {
-		groupIDs[name] = uuid.New()
-	}
-	sampleKeys := map[string]bool{}
-	normalKeys := map[string]bool{}
-	testKey := func(t gfmt.Test) string {
-		if t.Manual != "" {
-			return "manual:" + t.Manual
-		}
-		return "generator:" + t.Generate
-	}
-	for name, group := range p.Subtasks {
-		for _, test := range group.Tests {
-			if test.Sample || name == "samples" {
-				sampleKeys[testKey(test)] = true
-			}
-			if name != "samples" {
-				normalKeys[testKey(test)] = true
-			}
-		}
-	}
-	for _, name := range p.OrderedSubtaskNames() {
-		group := p.Subtasks[name]
-		subtask := model.DraftSubtask{ID: groupIDs[name], Ordinal: len(d.Subtasks) + 1, Name: name, Policy: group.Policy, DependsOn: []uuid.UUID{}}
-		for _, dep := range group.Dependencies {
-			did, ok := groupIDs[dep]
-			if !ok {
-				return pkg.ErrBadInput
-			}
-			subtask.DependsOn = append(subtask.DependsOn, did)
-		}
-		for _, test := range group.Tests {
-			if name == "samples" && normalKeys[testKey(test)] {
-				continue
-			}
-			t := model.DraftTest{ID: uuid.New(), Ordinal: len(d.Tests) + 1, SubtaskID: subtask.ID, Points: test.Points, Sample: sampleKeys[testKey(test)]}
-			if test.Manual != "" {
-				path := test.Manual
-				if !strings.HasPrefix(path, "tests/") {
-					path = "tests/" + path
-				}
-				oid, err := addObject(path, "test-input")
-				if err != nil {
-					return err
-				}
-				t.Input = model.DraftInput{Mode: "manual", ObjectID: oid, Args: []string{}}
-			} else {
-				argv, err := parseGeneratorArgv(test.Generate)
-				if err != nil || len(argv) == 0 {
-					return pkg.Wrap(pkg.ErrBadInput, err, "invalid generator recipe")
-				}
-				gen, ok := generatorIDs[argv[0]]
-				if !ok {
-					return pkg.Wrap(pkg.ErrBadInput, nil, "imported generator not found")
-				}
-				seed := int64(0)
-				t.Input = model.DraftInput{Mode: "generator", ComponentID: &gen, Args: argv[1:], Seed: &seed}
-			}
-			if d.Type == "interactive" {
-				t.Answer = model.DraftAnswer{Mode: "interactive"}
-			} else {
-				answerPath := test.Answer
-				if answerPath == "" && test.Manual != "" {
-					base := strings.TrimPrefix(test.Manual, "tests/")
-					for _, candidate := range gfmt.TestOutputNames(base) {
-						path := "tests/" + candidate
-						if _, ok := paths[path]; ok {
-							answerPath = path
-							break
-						}
-					}
-				}
-				if answerPath != "" {
-					if !strings.HasPrefix(answerPath, "tests/") {
-						answerPath = "tests/" + answerPath
-					}
-					oid, err := addObject(answerPath, "test-answer")
-					if err != nil {
-						return err
-					}
-					t.Answer = model.DraftAnswer{Mode: "provided", ObjectID: oid}
-				} else {
-					t.Answer = model.DraftAnswer{Mode: "generated", ComponentID: d.MainSolutionID}
-				}
-			}
-			d.Tests = append(d.Tests, t)
-		}
-		if name == "samples" && len(group.Tests) > 0 && len(d.Tests) == 0 {
-			continue
-		}
-		d.Subtasks = append(d.Subtasks, subtask)
-	}
-	for _, path := range names {
-		if _, ok := d.Files[path]; ok || strings.HasPrefix(path, "tests/") {
-			continue
-		}
-		if !strings.HasPrefix(path, model.AssetFolder+"/") {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "unexpected file "+path)
-		}
-		oid, err := addObject(path, "asset")
+	generators := map[string]uuid.UUID{}
+	for _, g := range p.Generators {
+		cid, err := c.addComponent("generator", g)
 		if err != nil {
 			return err
 		}
-		d.Assets = append(d.Assets, model.DraftAsset{Path: path, ObjectID: *oid})
+		generators[g.Path] = cid
 	}
-	result.draft = d
+	for _, s := range p.Solutions {
+		cid, err := c.addComponent("solution", s)
+		if err != nil {
+			return err
+		}
+		if s.Path == p.MainSolution {
+			c.draft.MainSolutionID = &cid
+		}
+	}
+	if p.MainSolution != "" && c.draft.MainSolutionID == nil {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "main solution "+p.MainSolution+" not found")
+	}
+	for _, s := range p.Statements {
+		if err := c.addStatement(s); err != nil {
+			return err
+		}
+	}
+	for _, a := range p.Assets {
+		path := model.AssetFolder + "/" + a.Name
+		if !model.ValidDraftPath(path) {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "invalid asset name "+a.Name)
+		}
+		if err := c.charge(0); err != nil {
+			return err
+		}
+		oid, err := c.object(a.Path, "asset")
+		if err != nil {
+			return err
+		}
+		c.draft.Assets = append(c.draft.Assets, model.DraftAsset{Path: path, ObjectID: oid})
+	}
+	// Components are listed by path, as the workshop shows the folders.
+	slices.SortFunc(c.draft.Components, func(a, b model.DraftComponent) int { return strings.Compare(a.Path, b.Path) })
+	return c.addGroups(p.Groups, generators)
+}
+
+// addLibrary stores a library file in lib/ under its name. Copies with equal
+// text, such as testlib.h in every ICPC program folder, share one file; a
+// different file of the same name gets a numbered one.
+func (c *importConverter) addLibrary(f spec.File) error {
+	text, err := c.readText(f.Path)
+	if err != nil {
+		return err
+	}
+	for _, path := range c.names[f.Name] {
+		if c.draft.Files[path] == text {
+			c.library[f.Path] = path
+			return nil
+		}
+	}
+	path, err := c.place(model.LibraryFolder, f.Name)
+	if err != nil {
+		return err
+	}
+	if err := c.charge(len(text)); err != nil {
+		return err
+	}
+	c.draft.Files[path] = text
+	c.library[f.Path] = path
+	c.names[f.Name] = append(c.names[f.Name], path)
 	return nil
 }
-func parseGeneratorArgv(command string) ([]string, error) {
-	// Only argument quoting/escaping is parsed. Redirection is presentation syntax;
-	// execution always uses argv, never a shell or expansion.
-	command = strings.TrimSpace(command)
-	if strings.HasSuffix(command, "> $") {
-		command = strings.TrimSpace(strings.TrimSuffix(command, "> $"))
+
+// place returns a free draft path for name in folder, numbering the name when
+// another file took it.
+func (c *importConverter) place(folder, name string) (string, error) {
+	path := folder + "/" + name
+	ext := filepath.Ext(name)
+	for n := 2; c.taken(path); n++ {
+		path = fmt.Sprintf("%s/%s-%d%s", folder, strings.TrimSuffix(name, ext), n, ext)
 	}
-	args := []string{}
-	var current strings.Builder
-	var quote rune
-	escaped, started := false, false
-	for _, r := range command {
-		if escaped {
-			current.WriteRune(r)
-			escaped = false
-			started = true
-			continue
-		}
-		if r == '\\' && quote != '\'' {
-			escaped = true
-			started = true
-			continue
-		}
-		if quote != 0 {
-			if r == quote {
-				quote = 0
-			} else {
-				current.WriteRune(r)
-			}
-			started = true
-			continue
-		}
-		if r == '\'' || r == '"' {
-			quote = r
-			started = true
-			continue
-		}
-		if r == ' ' || r == '\t' {
-			if started {
-				args = append(args, current.String())
-				current.Reset()
-				started = false
-			}
-			continue
-		}
-		if strings.ContainsRune("|;&><`$\n\r", r) {
-			return nil, fmt.Errorf("shell syntax is not supported in generator arguments")
-		}
-		current.WriteRune(r)
-		started = true
+	if !model.ValidDraftPath(path) {
+		return "", pkg.Wrap(pkg.ErrBadInput, nil, "invalid file name "+name)
 	}
-	if quote != 0 || escaped {
-		return nil, fmt.Errorf("unterminated generator argument")
-	}
-	if started {
-		args = append(args, current.String())
-	}
-	return args, nil
+	return path, nil
 }
+
+func (c *importConverter) taken(path string) bool {
+	_, ok := c.draft.Files[path]
+	return ok
+}
+
+// addComponent places a program in its role folder and attaches its library
+// dependencies.
+func (c *importConverter) addComponent(role string, program spec.Program) (uuid.UUID, error) {
+	if len(c.draft.Components) >= c.uc.DraftQuotas.Components {
+		return uuid.Nil, pkg.ErrPayloadTooLarge
+	}
+	path, err := c.place(model.ComponentFolder(role), program.Name)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if _, ok := c.uc.BuildOptions.Toolchain.Languages[model.LanguageForPath(path)]; !ok {
+		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "unsupported source language: "+path)
+	}
+	text, err := c.readText(program.Path)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if err := c.charge(len(text)); err != nil {
+		return uuid.Nil, err
+	}
+	deps := map[string]string{}
+	if program.Dependencies == nil {
+		for name, paths := range c.names {
+			if len(paths) > 1 {
+				return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "different library files named "+name)
+			}
+			deps[name] = paths[0]
+		}
+	}
+	for destination, source := range program.Dependencies {
+		lib, ok := c.library[source]
+		if !ok {
+			return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "dependency "+source+" of "+program.Path+" is not a library file")
+		}
+		deps[destination] = lib
+	}
+	c.draft.Files[path] = text
+	cid := uuid.New()
+	c.draft.Components = append(c.draft.Components, model.DraftComponent{ID: cid, Role: role, Path: path, Dependencies: deps})
+	return cid, nil
+}
+
+// addStatement stores a statement as statements/<language>.md, converting
+// LaTeX to Markdown.
+func (c *importConverter) addStatement(s spec.Statement) error {
+	path := model.StatementFolder + "/" + s.Language + ".md"
+	if !model.ValidDraftPath(path) || strings.Contains(s.Language, "/") {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid statement language "+s.Language)
+	}
+	if c.taken(path) {
+		return pkg.Wrap(pkg.ErrBadInput, nil, "several statements in "+s.Language)
+	}
+	text, err := c.readText(s.Path)
+	if err != nil {
+		return err
+	}
+	if s.TeX {
+		text = tex.ToMarkdown(text)
+	}
+	if len(text) > int(c.uc.DraftQuotas.FileBytes) {
+		return pkg.ErrPayloadTooLarge
+	}
+	if err := c.charge(len(text)); err != nil {
+		return err
+	}
+	c.draft.Files[path] = text
+	return nil
+}
+
+func (c *importConverter) addGroups(groups []spec.Group, generators map[string]uuid.UUID) error {
+	if len(groups) > c.uc.DraftQuotas.Subtasks {
+		return pkg.ErrPayloadTooLarge
+	}
+	ids := map[string]uuid.UUID{}
+	for _, g := range groups {
+		if _, ok := ids[g.Name]; ok {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "several test groups named "+g.Name)
+		}
+		ids[g.Name] = uuid.New()
+	}
+	for _, g := range groups {
+		subtask := model.DraftSubtask{ID: ids[g.Name], Ordinal: len(c.draft.Subtasks) + 1, Name: g.Name, Policy: g.Policy, DependsOn: []uuid.UUID{}}
+		for _, dep := range g.DependsOn {
+			did, ok := ids[dep]
+			if !ok {
+				return pkg.Wrap(pkg.ErrBadInput, nil, "test group "+g.Name+" depends on unknown group "+dep)
+			}
+			subtask.DependsOn = append(subtask.DependsOn, did)
+		}
+		for _, test := range g.Tests {
+			t, err := c.test(test, subtask.ID, generators)
+			if err != nil {
+				return err
+			}
+			c.draft.Tests = append(c.draft.Tests, t)
+		}
+		c.draft.Subtasks = append(c.draft.Subtasks, subtask)
+	}
+	return nil
+}
+
+func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map[string]uuid.UUID) (model.DraftTest, error) {
+	if len(c.draft.Tests) >= c.uc.DraftQuotas.Tests {
+		return model.DraftTest{}, pkg.ErrPayloadTooLarge
+	}
+	t := model.DraftTest{ID: uuid.New(), Ordinal: len(c.draft.Tests) + 1, SubtaskID: subtask, Points: test.Points, Sample: test.Sample}
+	if test.Generator != "" {
+		gen, ok := generators[test.Generator]
+		if !ok {
+			return t, pkg.Wrap(pkg.ErrBadInput, nil, "generator "+test.Generator+" not found")
+		}
+		seed := int64(0)
+		t.Input = model.DraftInput{Mode: "generator", ComponentID: &gen, Args: test.Args, Seed: &seed}
+		if t.Input.Args == nil {
+			t.Input.Args = []string{}
+		}
+	} else {
+		oid, err := c.object(test.Input, "test-input")
+		if err != nil {
+			return t, err
+		}
+		t.Input = model.DraftInput{Mode: "manual", ObjectID: &oid, Args: []string{}}
+	}
+	switch {
+	case c.draft.Type == "interactive":
+		t.Answer = model.DraftAnswer{Mode: "interactive"}
+	case test.Answer != "":
+		oid, err := c.object(test.Answer, "test-answer")
+		if err != nil {
+			return t, err
+		}
+		t.Answer = model.DraftAnswer{Mode: "provided", ObjectID: &oid}
+	default:
+		t.Answer = model.DraftAnswer{Mode: "generated", ComponentID: c.draft.MainSolutionID}
+	}
+	return t, nil
+}
+
+// readText reads a text file of the package; the caller charges what it keeps.
+func (c *importConverter) readText(path string) (string, error) {
+	full, err := c.file(path)
+	if err != nil {
+		return "", err
+	}
+	info, err := os.Stat(full)
+	if err != nil {
+		return "", fmt.Errorf("stat: %w", err)
+	}
+	if info.Size() > int64(c.uc.DraftQuotas.FileBytes) {
+		return "", pkg.ErrPayloadTooLarge
+	}
+	data, err := os.ReadFile(full)
+	if err != nil {
+		return "", fmt.Errorf("readfile: %w", err)
+	}
+	if !utf8.Valid(data) {
+		return "", pkg.Wrap(pkg.ErrBadInput, nil, "text must be UTF-8: "+path)
+	}
+	return string(data), nil
+}
+
+// charge counts a draft file of n text bytes against the draft quotas as the
+// draft grows, so a manifest naming one file many times cannot inflate it.
+func (c *importConverter) charge(n int) error {
+	c.files++
+	c.textBytes += int64(n)
+	if c.files > c.uc.DraftQuotas.Files || c.textBytes > int64(c.uc.DraftQuotas.TextBytes) {
+		return pkg.ErrPayloadTooLarge
+	}
+	return nil
+}
+
+// object stores a package file as an object, once per path.
+func (c *importConverter) object(path, purpose string) (uuid.UUID, error) {
+	if oid, ok := c.objects[path]; ok {
+		return oid, nil
+	}
+	full, err := c.file(path)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if c.textTests && purpose != "asset" {
+		if full, err = c.toLF(full); err != nil {
+			return uuid.Nil, err
+		}
+	}
+	oid := uuid.New()
+	object, err := c.uc.importObject(full, purpose, oid)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	c.result.objects = append(c.result.objects, object)
+	c.objects[path] = oid
+	return oid, nil
+}
+
+// toLF returns a copy of the text file at full with LF line endings, or full
+// itself when it has no CRLF. It streams, so test size does not bound memory.
+func (c *importConverter) toLF(full string) (string, error) {
+	src, err := os.Open(full)
+	if err != nil {
+		return "", fmt.Errorf("open: %w", err)
+	}
+	defer src.Close()
+	dir := filepath.Join(c.result.root, "lf")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", fmt.Errorf("mkdirall: %w", err)
+	}
+	dst, err := os.CreateTemp(dir, "test-")
+	if err != nil {
+		return "", fmt.Errorf("createtemp: %w", err)
+	}
+	converted, err := copyLF(dst, src)
+	if closeErr := dst.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil || !converted {
+		_ = os.Remove(dst.Name())
+		if err != nil {
+			return "", fmt.Errorf("convert line endings: %w", err)
+		}
+		return full, nil
+	}
+	return dst.Name(), nil
+}
+
+// copyLF copies src to dst with each CRLF replaced by LF and reports whether
+// it replaced any.
+func copyLF(dst io.Writer, src io.Reader) (bool, error) {
+	crlf, lf := []byte("\r\n"), []byte("\n")
+	buf := make([]byte, 64<<10)
+	converted, heldCR := false, false
+	for {
+		n, readErr := src.Read(buf)
+		chunk := buf[:n]
+		if heldCR && n > 0 {
+			// A CR that ended the previous chunk ends a line only before LF.
+			if chunk[0] == '\n' {
+				converted = true
+			} else if _, err := dst.Write([]byte{'\r'}); err != nil {
+				return false, fmt.Errorf("write: %w", err)
+			}
+			heldCR = false
+		}
+		if len(chunk) > 0 && chunk[len(chunk)-1] == '\r' {
+			heldCR, chunk = true, chunk[:len(chunk)-1]
+		}
+		if bytes.Contains(chunk, crlf) {
+			converted, chunk = true, bytes.ReplaceAll(chunk, crlf, lf)
+		}
+		if _, err := dst.Write(chunk); err != nil {
+			return false, fmt.Errorf("write: %w", err)
+		}
+		if errors.Is(readErr, io.EOF) {
+			if heldCR {
+				if _, err := dst.Write([]byte{'\r'}); err != nil {
+					return false, fmt.Errorf("write: %w", err)
+				}
+			}
+			return converted, nil
+		}
+		if readErr != nil {
+			return false, fmt.Errorf("read: %w", readErr)
+		}
+	}
+}
+
+// file resolves a package path to a regular file inside the package.
+func (c *importConverter) file(path string) (string, error) {
+	if !fs.ValidPath(path) || path == "." {
+		return "", pkg.Wrap(pkg.ErrBadInput, nil, "invalid package path "+path)
+	}
+	full := filepath.Join(c.root, filepath.FromSlash(path))
+	info, err := os.Lstat(full)
+	if err != nil || !info.Mode().IsRegular() {
+		return "", pkg.Wrap(pkg.ErrBadInput, err, "missing package file "+path)
+	}
+	return full, nil
+}
+
 func (i *draftImport) bind(ids []uuid.UUID) error {
 	if len(ids) != len(i.objects) {
 		return pkg.ErrConflict
