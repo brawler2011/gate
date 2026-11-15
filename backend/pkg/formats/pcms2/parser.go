@@ -170,22 +170,49 @@ func program(folder, name string, entries []fs.DirEntry) *spec.Program {
 	return &spec.Program{File: spec.File{Name: name, Path: path.Join(folder, name)}, Dependencies: deps}
 }
 
-// samples counts the examples of the statement, statements/<language>/example.NN;
-// PCMS2 shows the first tests as examples.
+// samples counts the examples of the statement: its example.NN files, or
+// else the examples its LaTeX names. PCMS2 shows the first tests as examples.
 func samples(fsys fs.FS) int {
 	languages, _ := fs.ReadDir(fsys, "statements")
-	count := 0
+	files, named := 0, 0
 	for _, language := range languages {
+		if !language.IsDir() {
+			continue
+		}
+		dir := path.Join("statements", language.Name())
 		n := 0
-		for language.IsDir() {
-			if _, err := fs.Stat(fsys, path.Join("statements", language.Name(), fmt.Sprintf("example.%02d", n+1))); err != nil {
-				break
-			}
+		for regular(fsys, path.Join(dir, fmt.Sprintf("example.%02d", n+1))) {
 			n++
 		}
-		count = max(count, n)
+		files = max(files, n)
+		if text, err := fs.ReadFile(fsys, path.Join(dir, "problem.tex")); err == nil {
+			named = max(named, examples(string(text)))
+		}
 	}
-	return count
+	if files > 0 {
+		return files
+	}
+	return named
+}
+
+// examples counts the examples of an olymp.sty statement: \exmp and
+// \exmpfile entries, or inputs of tests/ files in an example section.
+func examples(text string) int {
+	if n := strings.Count(text, "\\exmp{") + strings.Count(text, "\\exmpfile{"); n > 0 {
+		return n
+	}
+	n := 0
+	for line := range strings.Lines(text) {
+		if strings.Contains(line, "\\input{") && strings.Contains(line, "tests/") {
+			n++
+		}
+	}
+	return n
+}
+
+func regular(fsys fs.FS, name string) bool {
+	info, err := fs.Stat(fsys, name)
+	return err == nil && info.Mode().IsRegular()
 }
 
 // groups keeps the test order. Tests of a named group score together; a
@@ -206,7 +233,7 @@ func groups(fsys fs.FS, testset Testset, samples int) ([]spec.Group, error) {
 		if test.Answer == "" {
 			test.Answer = fmt.Sprintf(testset.AnswerPathPattern, number)
 		}
-		if info, err := fs.Stat(fsys, test.Answer); err != nil || !info.Mode().IsRegular() {
+		if !regular(fsys, test.Answer) {
 			test.Answer = ""
 		}
 		name, policy := t.Group, "complete"

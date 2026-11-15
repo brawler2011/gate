@@ -183,6 +183,9 @@ type importConverter struct {
 	// names maps each library file name to the draft paths of that name.
 	library map[string]string
 	names   map[string][]string
+	// files and textBytes count the draft as it grows, against DraftQuotas.
+	files     int
+	textBytes int64
 }
 
 func (c *importConverter) convert(p *spec.Problem) error {
@@ -230,6 +233,9 @@ func (c *importConverter) convert(p *spec.Problem) error {
 		path := model.AssetFolder + "/" + a.Name
 		if !model.ValidDraftPath(path) {
 			return pkg.Wrap(pkg.ErrBadInput, nil, "invalid asset name "+a.Name)
+		}
+		if err := c.charge(0); err != nil {
+			return err
 		}
 		oid, err := c.object(a.Path, "asset")
 		if err != nil {
@@ -286,6 +292,9 @@ func (c *importConverter) taken(path string) bool {
 // addComponent places a program in its role folder and attaches its library
 // dependencies.
 func (c *importConverter) addComponent(role string, program spec.Program) (uuid.UUID, error) {
+	if len(c.draft.Components) >= c.uc.DraftQuotas.Components {
+		return uuid.Nil, pkg.ErrPayloadTooLarge
+	}
 	path, err := c.place(model.ComponentFolder(role), program.Name)
 	if err != nil {
 		return uuid.Nil, err
@@ -330,6 +339,9 @@ func (c *importConverter) addStatement(s spec.Statement) error {
 	if len(s.Markdown) > int(c.uc.DraftQuotas.FileBytes) {
 		return pkg.ErrPayloadTooLarge
 	}
+	if err := c.charge(len(s.Markdown)); err != nil {
+		return err
+	}
 	if !utf8.ValidString(s.Markdown) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "statement text must be UTF-8")
 	}
@@ -338,6 +350,9 @@ func (c *importConverter) addStatement(s spec.Statement) error {
 }
 
 func (c *importConverter) addGroups(groups []spec.Group, generators map[string]uuid.UUID) error {
+	if len(groups) > c.uc.DraftQuotas.Subtasks {
+		return pkg.ErrPayloadTooLarge
+	}
 	ids := map[string]uuid.UUID{}
 	for _, g := range groups {
 		if _, ok := ids[g.Name]; ok {
@@ -367,6 +382,9 @@ func (c *importConverter) addGroups(groups []spec.Group, generators map[string]u
 }
 
 func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map[string]uuid.UUID) (model.DraftTest, error) {
+	if len(c.draft.Tests) >= c.uc.DraftQuotas.Tests {
+		return model.DraftTest{}, pkg.ErrPayloadTooLarge
+	}
 	t := model.DraftTest{ID: uuid.New(), Ordinal: len(c.draft.Tests) + 1, SubtaskID: subtask, Points: test.Points, Sample: test.Sample}
 	if test.Generator != "" {
 		gen, ok := generators[test.Generator]
@@ -420,7 +438,21 @@ func (c *importConverter) readText(path string) (string, error) {
 	if !utf8.Valid(data) {
 		return "", pkg.Wrap(pkg.ErrBadInput, nil, "source text must be UTF-8: "+path)
 	}
+	if err := c.charge(len(data)); err != nil {
+		return "", err
+	}
 	return string(data), nil
+}
+
+// charge counts a draft file of n text bytes against the draft quotas as the
+// draft grows, so a manifest naming one file many times cannot inflate it.
+func (c *importConverter) charge(n int) error {
+	c.files++
+	c.textBytes += int64(n)
+	if c.files > c.uc.DraftQuotas.Files || c.textBytes > int64(c.uc.DraftQuotas.TextBytes) {
+		return pkg.ErrPayloadTooLarge
+	}
+	return nil
 }
 
 // object stores a package file as an object, once per path.

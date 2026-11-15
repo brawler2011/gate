@@ -76,8 +76,10 @@ func TestReadTestdataPackages(t *testing.T) {
 			Groups: []string{"tests/each/12.00/3.00/0.00"}},
 		"pcms2/interactive-guess": {Type: "interactive", Checker: "check.cpp", Interactor: "interactor.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"tests/each/2.00/0.00/0.00"}},
+		"pcms2/max-subarray": {Type: "pass-fail", Checker: "check.cpp", Library: testlib, Statements: []string{"en"},
+			Groups: []string{"tests/each/4.00/2.00/0.00"}},
 		"pcms2/subtasks-groups": {Type: "scoring", Checker: "check.cpp", Library: testlib, Statements: []string{"en"},
-			Groups: []string{"1/complete/1.00/0.00/40.00", "2/complete/1.00/0.00/60.00"}},
+			Groups: []string{"1/complete/1.00/1.00/40.00", "2/complete/1.00/0.00/60.00"}},
 	}
 	for name, want := range cases {
 		t.Run(name, func(t *testing.T) {

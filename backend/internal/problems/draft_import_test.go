@@ -13,6 +13,7 @@ import (
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -132,6 +133,24 @@ func TestImportKeepsMainSolutionAcrossNameClash(t *testing.T) {
 	}
 	require.Equal(t, "solutions/main-2.cpp", main.Path)
 	require.Equal(t, "int main() {}\n", plan.draft.Files[main.Path])
+}
+
+// Draft quotas apply while the draft is built: a manifest naming one source
+// as many solutions is rejected before its copies add up.
+func TestImportEnforcesQuotasWhileConverting(t *testing.T) {
+	solutions := ""
+	for range importQuotas.Components + 1 {
+		solutions += `<solution tag="accepted"><source path="main.cpp"/></solution>`
+	}
+	_, err := importDir(t, t.TempDir(), map[string]string{
+		"main.cpp": "int main() {}\n", "tests/01": "1\n",
+		"problem.xml": `<problem short-name="many"><judging><testset name="tests">
+  <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
+  <input-path-pattern>tests/%02d</input-path-pattern><answer-path-pattern>tests/%02d.a</answer-path-pattern>
+  <tests><test method="manual"/></tests></testset></judging>
+  <assets><solutions>` + solutions + `</solutions></assets></problem>`,
+	})
+	require.ErrorIs(t, err, pkg.ErrPayloadTooLarge)
 }
 
 // Different headers of one name stay apart, each attached to its program.
