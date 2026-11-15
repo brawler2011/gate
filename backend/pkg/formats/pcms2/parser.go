@@ -193,19 +193,9 @@ func samples(fsys fs.FS) int {
 	return named
 }
 
-// examples counts the examples of an olymp.sty statement: \exmp and
-// \exmpfile entries, or inputs of tests/ files in an example section.
+// examples counts the \exmp and \exmpfile entries of an olymp.sty statement.
 func examples(text string) int {
-	if n := strings.Count(text, "\\exmp{") + strings.Count(text, "\\exmpfile{"); n > 0 {
-		return n
-	}
-	n := 0
-	for line := range strings.Lines(text) {
-		if strings.Contains(line, "\\input{") && strings.Contains(line, "tests/") {
-			n++
-		}
-	}
-	return n
+	return strings.Count(text, "\\exmp{") + strings.Count(text, "\\exmpfile{")
 }
 
 func regular(fsys fs.FS, name string) bool {

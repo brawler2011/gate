@@ -233,37 +233,26 @@ func testFiles(fsys fs.FS, dir string, sample bool) ([]spec.Test, error) {
 	return tests, nil
 }
 
-// statements reads problem.<language>.tex (problem.tex is English) from
-// problem_statement/, or from statement/ as in the 2023 format, which may
-// also hold problem.<language>.md.
+// statements lists problem_statement/problem.<language>.tex; problem.tex is
+// the English statement.
 func statements(fsys fs.FS) []spec.Statement {
-	for _, dir := range []string{"problem_statement", "statement"} {
-		entries, err := fs.ReadDir(fsys, dir)
-		if err != nil {
+	entries, _ := fs.ReadDir(fsys, "problem_statement")
+	var result []spec.Statement
+	seen := map[string]bool{}
+	for _, e := range entries {
+		base, ok := strings.CutSuffix(e.Name(), ".tex")
+		language, named := strings.CutPrefix(base, "problem.")
+		if base == "problem" {
+			language, named = "en", true
+		}
+		language = tex.LanguageCode(language)
+		if !ok || !named || !e.Type().IsRegular() || seen[language] {
 			continue
 		}
-		var result []spec.Statement
-		seen := map[string]bool{}
-		for _, e := range entries {
-			name := e.Name()
-			ext := path.Ext(name)
-			base := strings.TrimSuffix(name, ext)
-			language, ok := strings.CutPrefix(base, "problem.")
-			if base == "problem" {
-				language, ok = "en", true
-			}
-			language = tex.LanguageCode(language)
-			if !ok || (ext != ".tex" && ext != ".md") || !e.Type().IsRegular() || seen[language] {
-				continue
-			}
-			seen[language] = true
-			result = append(result, spec.Statement{Language: language, Path: path.Join(dir, name), TeX: ext == ".tex"})
-		}
-		if len(result) > 0 {
-			return result
-		}
+		seen[language] = true
+		result = append(result, spec.Statement{Language: language, Path: path.Join("problem_statement", e.Name()), TeX: true})
 	}
-	return nil
+	return result
 }
 
 func regular(fsys fs.FS, name string) bool {

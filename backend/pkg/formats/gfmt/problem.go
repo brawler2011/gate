@@ -96,5 +96,4 @@ func (p *Problem) OrderedSubtaskNames() []string {
 // come from the package layout and file extensions.
 type Source struct {
 	DependencyMap map[string]string `yaml:"dependency_map,omitempty" json:"dependency_map,omitempty"`
-	Dependencies  []string          `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
 }

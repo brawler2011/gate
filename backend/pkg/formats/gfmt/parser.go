@@ -95,29 +95,24 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	return p, nil
 }
 
-// dependencies converts gfmt build settings into library dependencies.
+// dependencies converts gfmt build settings into library dependencies; a
+// program without them includes the whole library.
 func dependencies(s Source) (map[string]string, error) {
-	if len(s.DependencyMap) == 0 && len(s.Dependencies) == 0 {
+	if len(s.DependencyMap) == 0 {
 		return nil, nil
 	}
-	deps := map[string]string{}
-	for destination, source := range s.DependencyMap {
+	for _, source := range s.DependencyMap {
 		if !strings.HasPrefix(source, "lib/") {
 			return nil, fmt.Errorf("dependency %s is outside lib/", source)
 		}
-		deps[destination] = source
 	}
-	for _, source := range s.Dependencies {
-		name := strings.TrimPrefix(source, "lib/")
-		deps[name] = "lib/" + name
-	}
-	return deps, nil
+	return s.DependencyMap, nil
 }
 
 // mainSolution is solutions.main, or else the first solution expected to pass.
 func mainSolution(verdicts map[string]string, solutions []spec.Program) string {
 	if main := verdicts["main"]; main != "" {
-		return inFolder("solutions", main)
+		return "solutions/" + main
 	}
 	for _, s := range solutions {
 		if verdicts[s.Name] == "OK" {
@@ -180,7 +175,7 @@ func groups(manifest *Problem, generators map[string]string, files map[string]bo
 func convertTest(t Test, generators map[string]string, files map[string]bool) (spec.Test, error) {
 	test := spec.Test{Points: t.Points}
 	if t.Manual != "" {
-		test.Input = inTests(t.Manual)
+		test.Input = "tests/" + t.Manual
 	} else {
 		argv, err := spec.ParseCommand(t.Generate)
 		if err != nil {
@@ -194,9 +189,9 @@ func convertTest(t Test, generators map[string]string, files map[string]bool) (s
 	}
 	switch {
 	case t.Answer != "":
-		test.Answer = inTests(t.Answer)
+		test.Answer = "tests/" + t.Answer
 	case t.Manual != "":
-		for _, candidate := range TestOutputNames(strings.TrimPrefix(t.Manual, "tests/")) {
+		for _, candidate := range TestOutputNames(t.Manual) {
 			if files["tests/"+candidate] {
 				test.Answer = "tests/" + candidate
 				break
@@ -204,13 +199,4 @@ func convertTest(t Test, generators map[string]string, files map[string]bool) (s
 		}
 	}
 	return test, nil
-}
-
-func inTests(name string) string { return inFolder("tests", name) }
-
-func inFolder(folder, name string) string {
-	if strings.HasPrefix(name, folder+"/") {
-		return name
-	}
-	return folder + "/" + name
 }
