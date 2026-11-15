@@ -3,10 +3,10 @@ package pcms2
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
-	"os"
+	"io/fs"
 	"path"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -21,8 +21,8 @@ var sourceDirs = []string{".", "src", "files"}
 
 // Read reads the PCMS2 package in dir as described by its problem.xml. PCMS2
 // names compiled programs only, so their sources are found by file stem.
-func Read(dir string) (*spec.Problem, error) {
-	data, err := os.ReadFile(filepath.Join(dir, "problem.xml"))
+func Read(fsys fs.FS) (*spec.Problem, error) {
+	data, err := fs.ReadFile(fsys, "problem.xml")
 	if err != nil {
 		return nil, fmt.Errorf("read problem.xml: %w", err)
 	}
@@ -40,23 +40,23 @@ func Read(dir string) (*spec.Problem, error) {
 		MemoryLimitMb: int(testset.MemoryLimit / (1 << 20)),
 	}
 	run := prob.Judging.Run
-	if p.Checker, err = findProgram(dir, run.Verifier.Binary.Executable); err != nil {
+	if p.Checker, err = findProgram(fsys, run.Verifier.Binary.Executable); err != nil {
 		return nil, err
 	}
 	if run.Interactor != nil {
-		if p.Interactor, err = findProgram(dir, run.Interactor.Binary.Executable); err != nil {
+		if p.Interactor, err = findProgram(fsys, run.Interactor.Binary.Executable); err != nil {
 			return nil, err
 		}
 	}
-	p.Library = headers(dir)
-	if p.Solutions, err = solutions(dir); err != nil {
+	p.Library = headers(fsys)
+	if p.Solutions, err = solutions(fsys); err != nil {
 		return nil, err
 	}
-	if p.Groups, err = groups(dir, testset, samples(dir)); err != nil {
+	if p.Groups, err = groups(fsys, testset, samples(fsys)); err != nil {
 		return nil, err
 	}
 	p.Type = problemType(run, p.Groups)
-	if p.Statements, err = statements(dir, prob.Statements); err != nil {
+	if p.Statements, err = statements(fsys, prob.Statements); err != nil {
 		return nil, err
 	}
 	return p, nil
@@ -102,13 +102,13 @@ func problemType(run Run, groups []spec.Group) string {
 
 // findProgram finds the source of a compiled program, such as check.cpp for
 // check.exe. A program named without a source in the package is an error.
-func findProgram(dir, executable string) (*spec.Program, error) {
+func findProgram(fsys fs.FS, executable string) (*spec.Program, error) {
 	if executable == "" {
 		return nil, nil
 	}
 	stem := spec.Stem(executable)
 	for _, folder := range sourceDirs {
-		entries, err := os.ReadDir(filepath.Join(dir, folder))
+		entries, err := fs.ReadDir(fsys, folder)
 		if err != nil {
 			continue
 		}
@@ -122,10 +122,10 @@ func findProgram(dir, executable string) (*spec.Program, error) {
 }
 
 // headers are the C++ headers next to the program sources, such as testlib.h.
-func headers(dir string) []spec.File {
+func headers(fsys fs.FS) []spec.File {
 	var result []spec.File
 	for _, folder := range sourceDirs {
-		entries, err := os.ReadDir(filepath.Join(dir, folder))
+		entries, err := fs.ReadDir(fsys, folder)
 		if err != nil {
 			continue
 		}
@@ -140,9 +140,9 @@ func headers(dir string) []spec.File {
 
 // solutions are the sources in solutions/. PCMS2 records no verdicts, so none
 // is the main solution.
-func solutions(dir string) ([]spec.Program, error) {
-	entries, err := os.ReadDir(filepath.Join(dir, "solutions"))
-	if os.IsNotExist(err) {
+func solutions(fsys fs.FS) ([]spec.Program, error) {
+	entries, err := fs.ReadDir(fsys, "solutions")
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
 	if err != nil {
@@ -159,13 +159,13 @@ func solutions(dir string) ([]spec.Program, error) {
 
 // samples counts the examples of the statement, statements/<language>/example.NN;
 // PCMS2 shows the first tests as examples.
-func samples(dir string) int {
-	languages, _ := os.ReadDir(filepath.Join(dir, "statements"))
+func samples(fsys fs.FS) int {
+	languages, _ := fs.ReadDir(fsys, "statements")
 	count := 0
 	for _, language := range languages {
 		n := 0
 		for language.IsDir() {
-			if _, err := os.Stat(filepath.Join(dir, "statements", language.Name(), fmt.Sprintf("example.%02d", n+1))); err != nil {
+			if _, err := fs.Stat(fsys, path.Join("statements", language.Name(), fmt.Sprintf("example.%02d", n+1))); err != nil {
 				break
 			}
 			n++
@@ -177,7 +177,7 @@ func samples(dir string) int {
 
 // groups keeps the test order. Tests of a named group score together; a
 // testset without groups is one group scored test by test.
-func groups(dir string, testset Testset, samples int) ([]spec.Group, error) {
+func groups(fsys fs.FS, testset Testset, samples int) ([]spec.Group, error) {
 	var result []spec.Group
 	index := map[string]int{}
 	for i, t := range testset.Tests {
@@ -193,7 +193,7 @@ func groups(dir string, testset Testset, samples int) ([]spec.Group, error) {
 		if test.Answer == "" {
 			test.Answer = fmt.Sprintf(testset.AnswerPathPattern, number)
 		}
-		if info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(test.Answer))); err != nil || !info.Mode().IsRegular() {
+		if info, err := fs.Stat(fsys, test.Answer); err != nil || !info.Mode().IsRegular() {
 			test.Answer = ""
 		}
 		name, policy := t.Group, "complete"
@@ -213,7 +213,7 @@ func groups(dir string, testset Testset, samples int) ([]spec.Group, error) {
 
 // statements converts the LaTeX statements; packages that list only rendered
 // statements still carry statements/<language>/problem.tex.
-func statements(dir string, list []Statement) ([]spec.Statement, error) {
+func statements(fsys fs.FS, list []Statement) ([]spec.Statement, error) {
 	sources := map[string]string{}
 	for _, s := range list {
 		if s.Type == "application/x-tex" {
@@ -221,10 +221,10 @@ func statements(dir string, list []Statement) ([]spec.Statement, error) {
 		}
 	}
 	if len(sources) == 0 {
-		languages, _ := os.ReadDir(filepath.Join(dir, "statements"))
+		languages, _ := fs.ReadDir(fsys, "statements")
 		for _, language := range languages {
 			file := path.Join("statements", language.Name(), "problem.tex")
-			if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(file))); err == nil && !strings.HasPrefix(language.Name(), ".") {
+			if _, err := fs.Stat(fsys, file); err == nil && !strings.HasPrefix(language.Name(), ".") {
 				sources[tex.LanguageCode(language.Name())] = file
 			}
 		}
@@ -236,7 +236,7 @@ func statements(dir string, list []Statement) ([]spec.Statement, error) {
 	slices.Sort(languages)
 	var result []spec.Statement
 	for _, language := range languages {
-		data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(sources[language])))
+		data, err := fs.ReadFile(fsys, sources[language])
 		if err != nil {
 			return nil, fmt.Errorf("read statement: %w", err)
 		}

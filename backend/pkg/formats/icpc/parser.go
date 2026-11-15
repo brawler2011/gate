@@ -1,11 +1,15 @@
-// Package icpc reads problem packages in the ICPC problem package format.
+// Package icpc reads problem packages in the legacy ICPC problem package
+// format (https://icpc.io/problem-package-format/spec/legacy.html).
+//
+// Gate runs checkers, validators and interactors with the testlib protocol,
+// so a package imports as written only when its programs use testlib.
 package icpc
 
 import (
+	"errors"
 	"fmt"
-	"os"
+	"io/fs"
 	"path"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -16,10 +20,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Read reads the ICPC package in dir. Tests are the .in files of data/sample
+// Read reads the ICPC package in fsys. Tests are the .in files of data/sample
 // and data/secret; each subdirectory of data/secret is a test group.
-func Read(dir string) (*spec.Problem, error) {
-	data, err := os.ReadFile(filepath.Join(dir, "problem.yaml"))
+func Read(fsys fs.FS) (*spec.Problem, error) {
+	data, err := fs.ReadFile(fsys, "problem.yaml")
 	if err != nil {
 		return nil, fmt.Errorf("read problem.yaml: %w", err)
 	}
@@ -31,10 +35,7 @@ func Read(dir string) (*spec.Problem, error) {
 		return nil, fmt.Errorf("problem.yaml must contain a mapping")
 	}
 	p := &spec.Problem{Title: prob.Name, Type: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256}
-	if p.Title == "" {
-		p.Title = filepath.Base(dir)
-	}
-	interactive := prob.Validation != nil && strings.Contains(prob.Validation.Type, "interactive")
+	interactive := slices.Contains(strings.Fields(prob.Validation), "interactive")
 	switch {
 	case interactive:
 		p.Type = "interactive"
@@ -49,12 +50,9 @@ func Read(dir string) (*spec.Problem, error) {
 			p.MemoryLimitMb = prob.Limits.Memory
 		}
 	}
-	// Programs of each kind live in their directory, one file or one
-	// subdirectory per program; headers there are shared library files.
-	var library []spec.File
 	collect := func(folder string) ([]spec.Program, error) {
-		programs, headers, err := programs(dir, folder)
-		library = append(library, headers...)
+		programs, headers, err := programs(fsys, folder)
+		p.Library = append(p.Library, headers...)
 		return programs, err
 	}
 	output, err := collect("output_validators")
@@ -85,69 +83,83 @@ func Read(dir string) (*spec.Problem, error) {
 	if p.Generators, err = collect("generators"); err != nil {
 		return nil, err
 	}
-	if p.Solutions, p.MainSolution, err = submissions(dir, collect); err != nil {
+	if p.Solutions, p.MainSolution, err = submissions(fsys, collect); err != nil {
 		return nil, err
 	}
-	p.Library = library
-	if p.Groups, err = groups(dir, p.Type == "scoring"); err != nil {
+	if p.Groups, err = groups(fsys, p.Type == "scoring"); err != nil {
 		return nil, err
 	}
-	if p.Statements, err = statements(dir); err != nil {
+	if p.Statements, err = statements(fsys); err != nil {
 		return nil, err
 	}
 	return p, nil
 }
 
-// programs lists the programs in folder: each source file directly in it,
-// and the single source file of each subdirectory.
-func programs(dir, folder string) ([]spec.Program, []spec.File, error) {
-	entries, err := os.ReadDir(filepath.Join(dir, folder))
-	if os.IsNotExist(err) {
+// programs lists the programs in folder: each source file directly in it, and
+// each subdirectory, whose single source file is the program. A program
+// includes the headers next to it.
+func programs(fsys fs.FS, folder string) ([]spec.Program, []spec.File, error) {
+	entries, err := fs.ReadDir(fsys, folder)
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil, nil
 	}
 	if err != nil {
 		return nil, nil, fmt.Errorf("read %s: %w", folder, err)
 	}
+	sources, headers := split(folder, entries)
 	var result []spec.Program
-	var headers []spec.File
+	for _, source := range sources {
+		result = append(result, program(source, headers))
+	}
+	library := headers
 	for _, e := range entries {
-		rel := path.Join(folder, e.Name())
 		if !e.IsDir() {
-			switch {
-			case spec.IsHeaderFile(e.Name()):
-				headers = append(headers, spec.File{Name: e.Name(), Path: rel})
-			case spec.IsSourceFile(e.Name()):
-				result = append(result, spec.Program{File: spec.File{Name: e.Name(), Path: rel}})
-			}
 			continue
 		}
-		files, err := os.ReadDir(filepath.Join(dir, folder, e.Name()))
+		dir := path.Join(folder, e.Name())
+		files, err := fs.ReadDir(fsys, dir)
 		if err != nil {
-			return nil, nil, fmt.Errorf("read %s: %w", rel, err)
+			return nil, nil, fmt.Errorf("read %s: %w", dir, err)
 		}
-		var sources []string
-		for _, f := range files {
-			switch {
-			case f.IsDir():
-			case spec.IsHeaderFile(f.Name()):
-				headers = append(headers, spec.File{Name: f.Name(), Path: path.Join(rel, f.Name())})
-			case spec.IsSourceFile(f.Name()):
-				sources = append(sources, f.Name())
-			}
-		}
+		sources, headers := split(dir, files)
 		if len(sources) != 1 {
-			return nil, nil, fmt.Errorf("%s must hold one source file, found %d", rel, len(sources))
+			return nil, nil, fmt.Errorf("%s must hold one source file, found %d", dir, len(sources))
 		}
-		result = append(result, spec.Program{File: spec.File{Name: sources[0], Path: path.Join(rel, sources[0])}})
+		result = append(result, program(sources[0], headers))
+		library = append(library, headers...)
 	}
-	return result, headers, nil
+	return result, library, nil
+}
+
+// split separates the source files and headers among entries of dir.
+func split(dir string, entries []fs.DirEntry) ([]string, []spec.File) {
+	var sources []string
+	var headers []spec.File
+	for _, e := range entries {
+		switch {
+		case !e.Type().IsRegular():
+		case spec.IsHeaderFile(e.Name()):
+			headers = append(headers, spec.File{Name: e.Name(), Path: path.Join(dir, e.Name())})
+		case spec.IsSourceFile(e.Name()):
+			sources = append(sources, path.Join(dir, e.Name()))
+		}
+	}
+	return sources, headers
+}
+
+func program(source string, headers []spec.File) spec.Program {
+	deps := map[string]string{}
+	for _, h := range headers {
+		deps[h.Name] = h.Path
+	}
+	return spec.Program{File: spec.File{Name: path.Base(source), Path: source}, Dependencies: deps}
 }
 
 // submissions lists the solutions of every verdict directory; the first
 // accepted one is the main solution.
-func submissions(dir string, collect func(string) ([]spec.Program, error)) ([]spec.Program, string, error) {
-	verdicts, err := os.ReadDir(filepath.Join(dir, "submissions"))
-	if os.IsNotExist(err) {
+func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error)) ([]spec.Program, string, error) {
+	verdicts, err := fs.ReadDir(fsys, "submissions")
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil, "", nil
 	}
 	if err != nil {
@@ -164,27 +176,28 @@ func submissions(dir string, collect func(string) ([]spec.Program, error)) ([]sp
 			return nil, "", err
 		}
 		if verdict.Name() == "accepted" && len(list) > 0 {
-			main = list[0].Name
+			main = list[0].Path
 		}
 		result = append(result, list...)
 	}
 	return result, main, nil
 }
 
-// groups reads data/sample and data/secret. In a scoring problem every test
-// is worth its group's accept_score, 1 by default.
-func groups(dir string, scoring bool) ([]spec.Group, error) {
+// groups reads data/sample, data/secret and its subdirectories. In a scoring
+// problem every test is worth the accept_score of the nearest testdata.yaml
+// above it, 1 by default.
+func groups(fsys fs.FS, scoring bool) ([]spec.Group, error) {
 	var result []spec.Group
-	add := func(rel, name string, sample bool) error {
+	add := func(dir, name string, sample bool) error {
 		weight := points.Value(0)
 		if scoring {
-			score, err := acceptScore(dir, rel)
+			score, err := acceptScore(fsys, dir)
 			if err != nil {
 				return err
 			}
 			weight = score
 		}
-		tests, err := testFiles(dir, rel, weight, sample)
+		tests, err := testFiles(fsys, dir, weight, sample)
 		if err != nil || len(tests) == 0 {
 			return err
 		}
@@ -197,7 +210,7 @@ func groups(dir string, scoring bool) ([]spec.Group, error) {
 	if err := add("data/secret", "secret", false); err != nil {
 		return nil, err
 	}
-	entries, _ := os.ReadDir(filepath.Join(dir, "data", "secret"))
+	entries, _ := fs.ReadDir(fsys, "data/secret")
 	for _, e := range entries {
 		if e.IsDir() {
 			if err := add(path.Join("data/secret", e.Name()), e.Name(), false); err != nil {
@@ -208,41 +221,43 @@ func groups(dir string, scoring bool) ([]spec.Group, error) {
 	return result, nil
 }
 
-func acceptScore(dir, rel string) (points.Value, error) {
-	data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(rel), "testdata.yaml"))
-	if os.IsNotExist(err) {
-		return points.Unit, nil
+func acceptScore(fsys fs.FS, dir string) (points.Value, error) {
+	for ; dir != "."; dir = path.Dir(dir) {
+		data, err := fs.ReadFile(fsys, path.Join(dir, "testdata.yaml"))
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return 0, fmt.Errorf("read %s/testdata.yaml: %w", dir, err)
+		}
+		var td Testdata
+		if err := yaml.Unmarshal(data, &td); err != nil {
+			return 0, fmt.Errorf("parse %s/testdata.yaml: %w", dir, err)
+		}
+		if td.AcceptScore != nil {
+			return points.Parse(strconv.FormatFloat(*td.AcceptScore, 'f', -1, 64))
+		}
 	}
-	if err != nil {
-		return 0, fmt.Errorf("read testdata.yaml: %w", err)
-	}
-	var td Testdata
-	if err := yaml.Unmarshal(data, &td); err != nil {
-		return 0, fmt.Errorf("parse %s/testdata.yaml: %w", rel, err)
-	}
-	if td.AcceptScore == 0 {
-		return points.Unit, nil
-	}
-	return points.Parse(strconv.FormatFloat(td.AcceptScore, 'f', -1, 64))
+	return points.Unit, nil
 }
 
-// testFiles lists the .in files directly in rel with their .ans answers.
-func testFiles(dir, rel string, weight points.Value, sample bool) ([]spec.Test, error) {
-	entries, err := os.ReadDir(filepath.Join(dir, filepath.FromSlash(rel)))
-	if os.IsNotExist(err) {
+// testFiles lists the .in files directly in dir with their .ans answers.
+func testFiles(fsys fs.FS, dir string, weight points.Value, sample bool) ([]spec.Test, error) {
+	entries, err := fs.ReadDir(fsys, dir)
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", rel, err)
+		return nil, fmt.Errorf("read %s: %w", dir, err)
 	}
 	var tests []spec.Test
 	for _, e := range entries {
 		stem, ok := strings.CutSuffix(e.Name(), ".in")
-		if e.IsDir() || !ok {
+		if !e.Type().IsRegular() || !ok {
 			continue
 		}
-		test := spec.Test{Input: path.Join(rel, e.Name()), Points: weight, Sample: sample}
-		if answer := path.Join(rel, stem+".ans"); fileExists(dir, answer) {
+		test := spec.Test{Input: path.Join(dir, e.Name()), Points: weight, Sample: sample}
+		if answer := path.Join(dir, stem+".ans"); regular(fsys, answer) {
 			test.Answer = answer
 		}
 		tests = append(tests, test)
@@ -250,32 +265,50 @@ func testFiles(dir, rel string, weight points.Value, sample bool) ([]spec.Test, 
 	return tests, nil
 }
 
-// statements converts statement/<language>/problem.tex (statements/ in some
-// packages) for each language.
-func statements(dir string) ([]spec.Statement, error) {
-	var result []spec.Statement
-	seen := map[string]bool{}
-	for _, folder := range []string{"statement", "statements"} {
-		languages, _ := os.ReadDir(filepath.Join(dir, folder))
-		for _, language := range languages {
-			file := filepath.Join(dir, folder, language.Name(), "problem.tex")
-			code := tex.LanguageCode(language.Name())
-			if !language.IsDir() || seen[code] || !fileExists(dir, path.Join(folder, language.Name(), "problem.tex")) {
+// statements reads problem.<language>.tex (problem.tex is English) from
+// problem_statement/, or from statement/ as in the 2023 format, which may
+// also hold problem.<language>.md.
+func statements(fsys fs.FS) ([]spec.Statement, error) {
+	for _, dir := range []string{"problem_statement", "statement"} {
+		entries, err := fs.ReadDir(fsys, dir)
+		if err != nil {
+			continue
+		}
+		var result []spec.Statement
+		seen := map[string]bool{}
+		for _, e := range entries {
+			name := e.Name()
+			ext := path.Ext(name)
+			base := strings.TrimSuffix(name, ext)
+			language, ok := strings.CutPrefix(base, "problem.")
+			if base == "problem" {
+				language, ok = "en", true
+			}
+			if !ok || (ext != ".tex" && ext != ".md") || !e.Type().IsRegular() {
 				continue
 			}
-			data, err := os.ReadFile(file)
+			if seen[language] {
+				continue
+			}
+			data, err := fs.ReadFile(fsys, path.Join(dir, name))
 			if err != nil {
 				return nil, fmt.Errorf("read statement: %w", err)
 			}
-			seen[code] = true
-			result = append(result, spec.Statement{Language: code, Markdown: tex.ToMarkdown(string(data))})
+			text := string(data)
+			if ext == ".tex" {
+				text = tex.ToMarkdown(text)
+			}
+			seen[language] = true
+			result = append(result, spec.Statement{Language: tex.LanguageCode(language), Markdown: text})
+		}
+		if len(result) > 0 {
+			return result, nil
 		}
 	}
-	slices.SortFunc(result, func(a, b spec.Statement) int { return strings.Compare(a.Language, b.Language) })
-	return result, nil
+	return nil, nil
 }
 
-func fileExists(dir, rel string) bool {
-	info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel)))
+func regular(fsys fs.FS, name string) bool {
+	info, err := fs.Stat(fsys, name)
 	return err == nil && info.Mode().IsRegular()
 }

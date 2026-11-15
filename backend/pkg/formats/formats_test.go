@@ -13,7 +13,7 @@ import (
 // summary is what a package means, independent of where its files are.
 type summary struct {
 	Type, Checker, Validator, Interactor, Main string
-	Generators, Library, Statements             []string
+	Generators, Library, Statements            []string
 	// Groups lists "name/policy/tests/samples/points".
 	Groups []string
 }
@@ -55,21 +55,21 @@ func TestReadTestdataPackages(t *testing.T) {
 	testlib := []string{"testlib.h"}
 	icpcLib := []string{"testlib.h", "testlib.h", "testlib.h"}
 	cases := map[string]summary{
-		"gfmt/a-plus-b": {Type: "pass-fail", Checker: "checker.cpp", Validator: "validator.cpp", Main: "ok.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
+		"gfmt/a-plus-b": {Type: "pass-fail", Checker: "checker.cpp", Validator: "validator.cpp", Main: "solutions/ok.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"samples/complete/3.00/3.00/0.00", "secret/each/6.00/0.00/0.00"}},
-		"gfmt/interactive-guess": {Type: "interactive", Checker: "checker.cpp", Interactor: "interactor.cpp", Main: "ok.cpp", Library: testlib, Statements: []string{"en"},
+		"gfmt/interactive-guess": {Type: "interactive", Checker: "checker.cpp", Interactor: "interactor.cpp", Main: "solutions/ok.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"samples/complete/1.00/1.00/0.00", "secret/each/1.00/0.00/0.00"}},
-		"polygon/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validator: "v.cpp", Main: "solution_mm.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
+		"polygon/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validator: "v.cpp", Main: "solutions/solution_mm.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"tests/each/12.00/3.00/0.00"}},
-		"polygon/interactive-guess": {Type: "interactive", Checker: "check.cpp", Validator: "validator.cpp", Interactor: "interactor.cpp", Main: "accepted.cpp", Library: testlib, Statements: []string{"en"},
+		"polygon/interactive-guess": {Type: "interactive", Checker: "check.cpp", Validator: "validator.cpp", Interactor: "interactor.cpp", Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"tests/each/2.00/1.00/0.00"}},
-		"polygon/max-subarray": {Type: "pass-fail", Checker: "check.cpp", Validator: "validator.cpp", Main: "accepted.cpp", Generators: []string{"generator.cpp"}, Library: testlib, Statements: []string{"en"},
+		"polygon/max-subarray": {Type: "pass-fail", Checker: "check.cpp", Validator: "validator.cpp", Main: "solutions/accepted.cpp", Generators: []string{"generator.cpp"}, Library: testlib, Statements: []string{"en"},
 			Groups: []string{"tests/each/4.00/2.00/0.00"}},
-		"polygon/subtasks-groups": {Type: "scoring", Checker: "check.cpp", Validator: "validator.cpp", Main: "accepted.cpp", Library: testlib, Statements: []string{"en"},
+		"polygon/subtasks-groups": {Type: "scoring", Checker: "check.cpp", Validator: "validator.cpp", Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"1/complete/1.00/1.00/40.00", "2/complete/1.00/0.00/60.00"}},
-		"icpc/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validator: "v.cpp", Main: "accepted.cpp", Generators: []string{"echo.cpp"}, Library: icpcLib, Statements: []string{"en", "ru"},
+		"icpc/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validator: "v.cpp", Main: "submissions/accepted/accepted.cpp", Generators: []string{"echo.cpp"}, Library: icpcLib, Statements: []string{"en", "ru"},
 			Groups: []string{"sample/each/3.00/3.00/0.00", "secret/each/9.00/0.00/0.00"}},
-		"icpc/interactive-guess": {Type: "interactive", Validator: "validator.cpp", Interactor: "interactor.cpp", Main: "accepted.cpp", Library: []string{"testlib.h", "testlib.h"}, Statements: []string{"en"},
+		"icpc/interactive-guess": {Type: "interactive", Validator: "validator.cpp", Interactor: "interactor.cpp", Main: "submissions/accepted/accepted.cpp", Library: []string{"testlib.h", "testlib.h"}, Statements: []string{"en"},
 			Groups: []string{"sample/each/1.00/1.00/0.00", "secret/each/1.00/0.00/0.00"}},
 		"pcms2/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"tests/each/12.00/3.00/0.00"}},
@@ -83,6 +83,9 @@ func TestReadTestdataPackages(t *testing.T) {
 			p, err := Read(filepath.Join("..", "testdata", name))
 			require.NoError(t, err)
 			require.Equal(t, want, summarize(p))
+			for _, s := range p.Statements {
+				require.Contains(t, s.Markdown, "<!-- output -->", s.Language)
+			}
 		})
 	}
 }
@@ -110,6 +113,7 @@ func TestPolygonGroups(t *testing.T) {
 	p, err := Read(dir)
 	require.NoError(t, err)
 	require.Equal(t, "scoring", p.Type)
+	require.Equal(t, "gen.cpp", p.Generators[0].Path)
 	require.Len(t, p.Groups, 2)
 	require.Equal(t, spec.Group{Name: "samples", Policy: "each", Tests: []spec.Test{{Input: "tests/01", Sample: true}}}, p.Groups[0])
 	// The group's points are earned by passing all of it, as on its last test.
@@ -119,23 +123,61 @@ func TestPolygonGroups(t *testing.T) {
 	}}, p.Groups[1])
 }
 
+// A test is worth the accept_score of the nearest testdata.yaml above it, and
+// an explicit zero is kept.
 func TestICPCScoringGroups(t *testing.T) {
 	dir := t.TempDir()
 	write(t, dir, "problem.yaml", "name: Groups\ntype: scoring\n")
 	write(t, dir, "data/sample/1.in", "1\n")
 	write(t, dir, "data/sample/1.ans", "1\n")
+	write(t, dir, "data/secret/testdata.yaml", "accept_score: 5\n")
 	write(t, dir, "data/secret/group1/a.in", "2\n")
 	write(t, dir, "data/secret/group1/a.ans", "2\n")
-	write(t, dir, "data/secret/group1/testdata.yaml", "accept_score: 25\n")
+	write(t, dir, "data/secret/group1/testdata.yaml", "accept_score: 0\n")
 	write(t, dir, "data/secret/group2/b.in", "3\n")
 	write(t, dir, "output_validators/checker/checker.cpp", "int main() {}\n")
 	write(t, dir, "output_validators/checker/testlib.h", "\n")
 	p, err := Read(dir)
 	require.NoError(t, err)
 	require.Equal(t, summary{Type: "scoring", Checker: "checker.cpp", Library: []string{"testlib.h"},
-		Groups: []string{"sample/each/1.00/1.00/1.00", "group1/each/1.00/0.00/25.00", "group2/each/1.00/0.00/1.00"}}, summarize(p))
+		Groups: []string{"sample/each/1.00/1.00/1.00", "group1/each/1.00/0.00/0.00", "group2/each/1.00/0.00/5.00"}}, summarize(p))
 	require.Equal(t, "output_validators/checker/checker.cpp", p.Checker.Path)
 	require.Empty(t, p.Groups[2].Tests[0].Answer)
+}
+
+// Each ICPC program includes the headers of its own directory.
+func TestICPCProgramHeaders(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, "problem.yaml", "name: Headers\nvalidation: custom\n")
+	write(t, dir, "output_validators/check/check.cpp", "\n")
+	write(t, dir, "output_validators/check/helper.h", "A\n")
+	write(t, dir, "input_validators/validate/validate.cpp", "\n")
+	write(t, dir, "input_validators/validate/helper.h", "B\n")
+	p, err := Read(dir)
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"helper.h": "output_validators/check/helper.h"}, p.Checker.Dependencies)
+	require.Equal(t, map[string]string{"helper.h": "input_validators/validate/helper.h"}, p.Validator.Dependencies)
+}
+
+// Readers see the package through an os.Root: a path in problem.xml cannot
+// reach a file outside the package.
+func TestReadersStayInsidePackage(t *testing.T) {
+	parent := t.TempDir()
+	write(t, parent, "outside.tex", "\\begin{problem}{x}{}{}{}{}secret\\end{problem}\n")
+	dir := filepath.Join(parent, "package")
+	write(t, dir, "problem.xml", `<problem short-name="escape">
+  <statements><statement language="english" path="../outside.tex" type="application/x-tex"/></statements>
+  <judging><testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit></testset></judging>
+</problem>`)
+	_, err := Read(dir)
+	require.Error(t, err)
+	require.NoError(t, os.Symlink(filepath.Join(parent, "outside.tex"), filepath.Join(dir, "link.tex")))
+	write(t, dir, "problem.xml", `<problem short-name="escape">
+  <statements><statement language="english" path="link.tex" type="application/x-tex"/></statements>
+  <judging><testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit></testset></judging>
+</problem>`)
+	_, err = Read(dir)
+	require.Error(t, err)
 }
 
 // Gate runs one program per role; a package with more is rejected rather

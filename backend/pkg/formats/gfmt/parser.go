@@ -3,9 +3,7 @@ package gfmt
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"path"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -18,8 +16,8 @@ import (
 var programFolders = []string{"checkers", "validators", "interactors", "generators", "solutions"}
 
 // Read reads an author gfmt package: problem.yaml and the files of its folders.
-func Read(dir string) (*spec.Problem, error) {
-	data, err := os.ReadFile(filepath.Join(dir, "problem.yaml"))
+func Read(fsys fs.FS) (*spec.Problem, error) {
+	data, err := fs.ReadFile(fsys, "problem.yaml")
 	if err != nil {
 		return nil, fmt.Errorf("read problem.yaml: %w", err)
 	}
@@ -33,15 +31,10 @@ func Read(dir string) (*spec.Problem, error) {
 	p := &spec.Problem{Title: manifest.Title, Type: manifest.Type, TimeLimitMs: manifest.Limits.TimeMs, MemoryLimitMb: manifest.Limits.MemoryMb}
 	programs := map[string][]spec.Program{}
 	files := map[string]bool{}
-	err = filepath.WalkDir(dir, func(full string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(fsys, ".", func(rel string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}
-		rel, err := filepath.Rel(dir, full)
-		if err != nil {
-			return fmt.Errorf("rel: %w", err)
-		}
-		rel = filepath.ToSlash(rel)
 		files[rel] = true
 		folder, name, _ := strings.Cut(rel, "/")
 		switch {
@@ -57,7 +50,7 @@ func Read(dir string) (*spec.Problem, error) {
 		case folder == "assets" && name != "":
 			p.Assets = append(p.Assets, spec.File{Name: name, Path: rel})
 		case folder == "statements" && path.Ext(name) == ".md" && !strings.Contains(name, "/"):
-			text, err := os.ReadFile(full)
+			text, err := fs.ReadFile(fsys, rel)
 			if err != nil {
 				return fmt.Errorf("read statement: %w", err)
 			}
@@ -98,7 +91,7 @@ func Read(dir string) (*spec.Problem, error) {
 		if _, ok := generators[stem]; ok {
 			return nil, fmt.Errorf("several generators named %s", stem)
 		}
-		generators[stem] = g.Name
+		generators[stem] = g.Path
 	}
 	if p.Groups, err = groups(manifest, generators, files); err != nil {
 		return nil, err
@@ -113,27 +106,26 @@ func dependencies(s Source) (map[string]string, error) {
 	}
 	deps := map[string]string{}
 	for destination, source := range s.DependencyMap {
-		name, ok := strings.CutPrefix(source, "lib/")
-		if !ok {
+		if !strings.HasPrefix(source, "lib/") {
 			return nil, fmt.Errorf("dependency %s is outside lib/", source)
 		}
-		deps[destination] = name
+		deps[destination] = source
 	}
 	for _, source := range s.Dependencies {
 		name := strings.TrimPrefix(source, "lib/")
-		deps[name] = name
+		deps[name] = "lib/" + name
 	}
 	return deps, nil
 }
 
 // mainSolution is solutions.main, or else the first solution expected to pass.
 func mainSolution(verdicts map[string]string, solutions []spec.Program) string {
-	if main := strings.TrimPrefix(verdicts["main"], "solutions/"); main != "" {
-		return main
+	if main := verdicts["main"]; main != "" {
+		return inFolder("solutions", main)
 	}
 	for _, s := range solutions {
 		if verdicts[s.Name] == "OK" {
-			return s.Name
+			return s.Path
 		}
 	}
 	return ""
@@ -218,9 +210,11 @@ func convertTest(t Test, generators map[string]string, files map[string]bool) (s
 	return test, nil
 }
 
-func inTests(name string) string {
-	if strings.HasPrefix(name, "tests/") {
+func inTests(name string) string { return inFolder("tests", name) }
+
+func inFolder(folder, name string) string {
+	if strings.HasPrefix(name, folder+"/") {
 		return name
 	}
-	return "tests/" + name
+	return folder + "/" + name
 }

@@ -22,130 +22,43 @@ func LanguageCode(lang string) string {
 	}
 }
 
-// ToMarkdown converts an olymp.sty problem statement into statement Markdown.
+// sectionCommands start statement sections: olymp.sty commands and the
+// \section* headings of ICPC statements. At one position the first wins, so
+// \examples is not also read as \example.
+var sectionCommands = []struct{ section, command string }{
+	{"input", "\\inputfile"}, {"input", "\\section*{input}"},
+	{"output", "\\outputfile"}, {"output", "\\section*{output}"},
+	{"interaction", "\\interaction"}, {"interaction", "\\section*{interaction}"},
+	{"examples", "\\examples"}, {"examples", "\\example"}, {"examples", "\\begin{example}"},
+	{"notes", "\\notes"}, {"notes", "\\note"}, {"notes", "\\section*{notes}"},
+}
+
+// ToMarkdown converts a problem statement into statement Markdown: an
+// olymp.sty problem environment (Polygon, PCMS2) or an ICPC problem.tex body.
 func ToMarkdown(texContent string) string {
-	startIdx := strings.Index(texContent, "\\begin{problem}")
-	if startIdx == -1 {
-		return ""
-	}
-
-	content := texContent[startIdx:]
-	idx := strings.Index(content, "{")
-	if idx == -1 {
-		return ""
-	}
-
-	// Skip 5 braced arguments: {title}{input}{output}{time}{memory}
-	braceCount := 0
-	foundArgs := 0
-	for i := idx; i < len(content); i++ {
-		if content[i] == '{' {
-			braceCount++
-		} else if content[i] == '}' {
-			braceCount--
-			if braceCount == 0 {
-				foundArgs++
-				if foundArgs == 5 {
-					content = content[i+1:]
-					break
-				}
-			}
-		}
-	}
-
-	// Truncate at \end{problem}
-	if endIdx := strings.Index(content, "\\end{problem}"); endIdx != -1 {
-		content = content[:endIdx]
-	}
-
+	content := body(texContent)
 	type marker struct {
-		name string
-		pos  int
+		section    string
+		start, end int
 	}
-
+	lower := strings.ToLower(content)
 	var markers []marker
-	lowerContent := strings.ToLower(content)
-
-	addMarker := func(mName string, command string) {
-		if pos := strings.Index(lowerContent, command); pos != -1 {
-			markers = append(markers, marker{name: mName, pos: pos})
+	taken := map[int]bool{}
+	for _, c := range sectionCommands {
+		if pos := strings.Index(lower, c.command); pos != -1 && !taken[pos] {
+			taken[pos] = true
+			markers = append(markers, marker{c.section, pos, pos + len(c.command)})
 		}
 	}
-
-	addMarker("input", "\\inputfile")
-	addMarker("output", "\\outputfile")
-	addMarker("interaction", "\\interaction")
-	addMarker("examples", "\\example")
-	addMarker("examples", "\\begin{example}")
-	addMarker("notes", "\\note")
-
-	sort.Slice(markers, func(i, j int) bool {
-		return markers[i].pos < markers[j].pos
-	})
-
-	getSectionText := func(start int, end int) string {
-		text := content[start:end]
-		text = strings.TrimSpace(text)
-
-		// Strip the command itself
-		lowerText := strings.ToLower(text)
-		switch {
-		case strings.HasPrefix(lowerText, "\\inputfile"):
-			text = text[10:]
-		case strings.HasPrefix(lowerText, "\\outputfile"):
-			text = text[11:]
-		case strings.HasPrefix(lowerText, "\\interaction"):
-			text = text[12:]
-		case strings.HasPrefix(lowerText, "\\examples"):
-			text = text[9:]
-		case strings.HasPrefix(lowerText, "\\example"):
-			text = text[8:]
-		case strings.HasPrefix(lowerText, "\\begin{example}"):
-			text = text[15:]
-		case strings.HasPrefix(lowerText, "\\notes"):
-			text = text[6:]
-		case strings.HasPrefix(lowerText, "\\note"):
-			text = text[5:]
-		}
-		return strings.TrimSpace(text)
-	}
-
-	var legend, input, output, interaction, notes string
-	lastPos := 0
-	currentSection := "legend"
-
+	sort.Slice(markers, func(i, j int) bool { return markers[i].start < markers[j].start })
+	sections := map[string]string{}
+	current, start := "legend", 0
 	for _, m := range markers {
-		sectionText := getSectionText(lastPos, m.pos)
-		switch currentSection {
-		case "legend":
-			legend = sectionText
-		case "input":
-			input = sectionText
-		case "output":
-			output = sectionText
-		case "interaction":
-			interaction = sectionText
-		case "notes":
-			notes = sectionText
-		}
-		currentSection = m.name
-		lastPos = m.pos
+		sections[current] = strings.TrimSpace(content[start:m.start])
+		current, start = m.section, m.end
 	}
-
-	// Last section to the end of content
-	sectionText := getSectionText(lastPos, len(content))
-	switch currentSection {
-	case "legend":
-		legend = sectionText
-	case "input":
-		input = sectionText
-	case "output":
-		output = sectionText
-	case "interaction":
-		interaction = sectionText
-	case "notes":
-		notes = sectionText
-	}
+	sections[current] = strings.TrimSpace(content[start:])
+	legend, input, output, interaction, notes := sections["legend"], sections["input"], sections["output"], sections["interaction"], sections["notes"]
 
 	cleanLatex := func(s string) string {
 		if s == "" {
@@ -208,6 +121,60 @@ func ToMarkdown(texContent string) string {
 	}
 
 	return strings.Join(parts, "\n\n") + "\n"
+}
+
+// body returns the statement text: the problem environment without its five
+// header arguments, or else the whole document without \problemname.
+func body(texContent string) string {
+	start := strings.Index(texContent, "\\begin{problem}")
+	if start == -1 {
+		for {
+			i := strings.Index(texContent, "\\problemname{")
+			if i == -1 {
+				return texContent
+			}
+			end := closingBrace(texContent, i+len("\\problemname{"))
+			if end == -1 {
+				return texContent
+			}
+			texContent = texContent[:i] + texContent[end+1:]
+		}
+	}
+	content := texContent[start+len("\\begin{problem}"):]
+	// Skip {title}{input}{output}{time}{memory}.
+	for range 5 {
+		open := strings.Index(content, "{")
+		if open == -1 {
+			return ""
+		}
+		end := closingBrace(content, open+1)
+		if end == -1 {
+			return ""
+		}
+		content = content[end+1:]
+	}
+	if end := strings.Index(content, "\\end{problem}"); end != -1 {
+		content = content[:end]
+	}
+	return content
+}
+
+// closingBrace returns the index of the brace closing the group that starts
+// at from, just after its opening brace, or -1.
+func closingBrace(s string, from int) int {
+	depth := 1
+	for i := from; i < len(s); i++ {
+		switch s[i] {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return i
+			}
+		}
+	}
+	return -1
 }
 
 func replaceCurlyCommand(s, cmd, left, right string) string {

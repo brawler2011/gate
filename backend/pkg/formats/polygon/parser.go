@@ -4,9 +4,8 @@ package polygon
 import (
 	"encoding/xml"
 	"fmt"
-	"os"
+	"io/fs"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -15,9 +14,9 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/points"
 )
 
-// Read reads the Polygon package in dir as described by its problem.xml.
-func Read(dir string) (*spec.Problem, error) {
-	data, err := os.ReadFile(filepath.Join(dir, "problem.xml"))
+// Read reads the Polygon package in fsys as described by its problem.xml.
+func Read(fsys fs.FS) (*spec.Problem, error) {
+	data, err := fs.ReadFile(fsys, "problem.xml")
 	if err != nil {
 		return nil, fmt.Errorf("read problem.xml: %w", err)
 	}
@@ -67,9 +66,8 @@ func Read(dir string) (*spec.Problem, error) {
 			if roles[source] || !spec.IsSourceFile(source) {
 				continue
 			}
-			g := program(source)
-			p.Generators = append(p.Generators, *g)
-			generators[spec.Stem(source)] = g.Name
+			p.Generators = append(p.Generators, *program(source))
+			generators[spec.Stem(source)] = source
 		}
 		for _, r := range prob.Files.Resources {
 			if spec.IsHeaderFile(r.Path) {
@@ -77,7 +75,7 @@ func Read(dir string) (*spec.Problem, error) {
 			}
 		}
 	}
-	if p.Groups, err = groups(dir, testset, generators); err != nil {
+	if p.Groups, err = groups(fsys, testset, generators); err != nil {
 		return nil, err
 	}
 	p.Type = problemType(prob, p.Groups)
@@ -88,7 +86,7 @@ func Read(dir string) (*spec.Problem, error) {
 			p.TextTests = true
 		}
 	}
-	if p.Statements, err = statements(dir, prob.Statements); err != nil {
+	if p.Statements, err = statements(fsys, prob.Statements); err != nil {
 		return nil, err
 	}
 	return p, nil
@@ -128,7 +126,7 @@ func mainSolution(solutions []Solution) string {
 	for _, tag := range []string{"main", "accepted"} {
 		for _, s := range solutions {
 			if strings.EqualFold(s.Tag, tag) {
-				return path.Base(s.Source.Path)
+				return s.Source.Path
 			}
 		}
 	}
@@ -151,7 +149,7 @@ func problemType(prob Problem, groups []spec.Group) string {
 
 // groups keeps Polygon test numbering: groups follow the first test of each,
 // and tests keep their order. A testset without groups is one group.
-func groups(dir string, testset Testset, generators map[string]string) ([]spec.Group, error) {
+func groups(fsys fs.FS, testset Testset, generators map[string]string) ([]spec.Group, error) {
 	definitions := map[string]Group{}
 	for _, g := range testset.Groups {
 		definitions[g.Name] = g
@@ -159,7 +157,7 @@ func groups(dir string, testset Testset, generators map[string]string) ([]spec.G
 	var result []spec.Group
 	index := map[string]int{}
 	for i, t := range testset.Tests {
-		test, err := convertTest(dir, testset, i+1, t, generators)
+		test, err := convertTest(fsys, testset, i+1, t, generators)
 		if err != nil {
 			return nil, err
 		}
@@ -220,7 +218,7 @@ func newGroup(name string, definitions map[string]Group, named bool) spec.Group 
 	return g
 }
 
-func convertTest(dir string, testset Testset, number int, t Test, generators map[string]string) (spec.Test, error) {
+func convertTest(fsys fs.FS, testset Testset, number int, t Test, generators map[string]string) (spec.Test, error) {
 	weight, err := parsePoints(t.Points)
 	if err != nil {
 		return spec.Test{}, err
@@ -241,7 +239,7 @@ func convertTest(dir string, testset Testset, number int, t Test, generators map
 		return test, nil
 	}
 	test.Input = fmt.Sprintf(testset.InputPathPattern, number)
-	if answer := fmt.Sprintf(testset.AnswerPathPattern, number); exists(dir, answer) {
+	if answer := fmt.Sprintf(testset.AnswerPathPattern, number); exists(fsys, answer) {
 		test.Answer = answer
 	}
 	return test, nil
@@ -251,7 +249,7 @@ func parsePoints(value float64) (points.Value, error) {
 	return points.Parse(strconv.FormatFloat(value, 'f', -1, 64))
 }
 
-func statements(dir string, list []Statement) ([]spec.Statement, error) {
+func statements(fsys fs.FS, list []Statement) ([]spec.Statement, error) {
 	var result []spec.Statement
 	seen := map[string]bool{}
 	for _, s := range list {
@@ -262,7 +260,7 @@ func statements(dir string, list []Statement) ([]spec.Statement, error) {
 		if seen[language] {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(s.Path)))
+		data, err := fs.ReadFile(fsys, s.Path)
 		if err != nil {
 			return nil, fmt.Errorf("read statement: %w", err)
 		}
@@ -272,7 +270,7 @@ func statements(dir string, list []Statement) ([]spec.Statement, error) {
 	return result, nil
 }
 
-func exists(dir, rel string) bool {
-	info, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel)))
+func exists(fsys fs.FS, name string) bool {
+	info, err := fs.Stat(fsys, name)
 	return err == nil && info.Mode().IsRegular()
 }

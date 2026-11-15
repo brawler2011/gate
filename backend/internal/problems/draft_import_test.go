@@ -75,8 +75,11 @@ func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 				return
 			}
 			require.NoError(t, d.Validate(importQuotas, true))
+			// Every testdata checker, validator, interactor and generator uses testlib.
 			for _, c := range d.Components {
-				require.Contains(t, c.Dependencies, "testlib.h", c.Path)
+				if c.Role != "solution" {
+					require.Contains(t, c.Dependencies, "testlib.h", c.Path)
+				}
 			}
 		})
 	}
@@ -101,6 +104,53 @@ func TestImportConvertsWellFormedPolygonTestsToLF(t *testing.T) {
 		}
 	}
 	t.Fatal("input object not found")
+}
+
+// Programs are identified by package path: when two solutions share a file
+// name, the second is renamed and the tagged main solution stays main.
+func TestImportKeepsMainSolutionAcrossNameClash(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]string{
+		"wrong/main.cpp": "int main() { return 1; }\n", "correct/main.cpp": "int main() {}\n", "tests/01": "1\n",
+		"problem.xml": `<problem short-name="clash"><judging><testset name="tests">
+  <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
+  <input-path-pattern>tests/%02d</input-path-pattern><answer-path-pattern>tests/%02d.a</answer-path-pattern>
+  <tests><test method="manual"/></tests></testset></judging>
+  <assets><solutions>
+    <solution tag="wrong_answer"><source path="wrong/main.cpp"/></solution>
+    <solution tag="main"><source path="correct/main.cpp"/></solution>
+  </solutions></assets></problem>`,
+	}
+	plan, err := importDir(t, dir, files)
+	require.NoError(t, err)
+	defer plan.Close()
+	var main model.DraftComponent
+	for _, c := range plan.draft.Components {
+		if c.ID == *plan.draft.MainSolutionID {
+			main = c
+		}
+	}
+	require.Equal(t, "solutions/main-2.cpp", main.Path)
+	require.Equal(t, "int main() {}\n", plan.draft.Files[main.Path])
+}
+
+// Different headers of one name stay apart, each attached to its program.
+func TestImportKeepsProgramHeadersApart(t *testing.T) {
+	plan, err := importDir(t, t.TempDir(), map[string]string{
+		"problem.yaml":                           "name: Headers\nvalidation: custom\n",
+		"data/secret/1.in":                       "1\n",
+		"data/secret/1.ans":                      "1\n",
+		"output_validators/check/check.cpp":      "int main() {}\n",
+		"output_validators/check/helper.h":       "// A\n",
+		"input_validators/validate/validate.cpp": "int main() {}\n",
+		"input_validators/validate/helper.h":     "// B\n",
+	})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.NoError(t, plan.draft.Validate(importQuotas, true))
+	require.Equal(t, map[string]string{"helper.h": "lib/helper.h"}, plan.draft.Component("checker").Dependencies)
+	require.Equal(t, map[string]string{"helper.h": "lib/helper-2.h"}, plan.draft.Component("validator").Dependencies)
+	require.Equal(t, "// B\n", plan.draft.Files["lib/helper-2.h"])
 }
 
 // importAPlusB imports the gfmt a-plus-b package with extra files added.

@@ -2,13 +2,15 @@ package icpc
 
 // Problem represents the ICPC problem.yaml specification.
 type Problem struct {
-	Type       string      `yaml:"type"` // "pass-fail" or "scoring"
-	Name       string      `yaml:"name"`
-	Author     string      `yaml:"author"`
-	Source     string      `yaml:"source"`
-	Rights     string      `yaml:"rights"`
-	Limits     *Limits     `yaml:"limits"`
-	Validation *Validation `yaml:"validation"`
+	Type   string  `yaml:"type"` // "pass-fail" or "scoring"
+	Name   string  `yaml:"name"`
+	Author string  `yaml:"author"`
+	Source string  `yaml:"source"`
+	Rights string  `yaml:"rights"`
+	Limits *Limits `yaml:"limits"`
+	// Validation is "default" or "custom" followed by optional "score" and
+	// "interactive" flags.
+	Validation string `yaml:"validation"`
 }
 
 // Limits defines the resource limits for a problem.
@@ -23,16 +25,11 @@ type Limits struct {
 	ValidationOutput int     `yaml:"validation_output"`
 }
 
-// Validation represents problem validation configuration.
-type Validation struct {
-	Type string `yaml:"type"` // "default", "custom", "interactive"
-}
-
 // Testdata represents the ICPC testdata.yaml specification.
 type Testdata struct {
-	OnReject    string  `yaml:"on_reject"` // "break", "continue"
-	AcceptScore float64 `yaml:"accept_score"`
-	ScoreType   string  `yaml:"score_type"` // "sum", "average", "pass-fail"
-	Grading     string  `yaml:"grading"`    // "default", "custom"
-	Range       string  `yaml:"range"`
+	OnReject    string   `yaml:"on_reject"` // "break", "continue"
+	AcceptScore *float64 `yaml:"accept_score"`
+	ScoreType   string   `yaml:"score_type"` // "sum", "average", "pass-fail"
+	Grading     string   `yaml:"grading"`    // "default", "custom"
+	Range       string   `yaml:"range"`
 }

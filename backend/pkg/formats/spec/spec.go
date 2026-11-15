@@ -13,7 +13,8 @@ import (
 )
 
 // Problem is a package read from an author format. File paths are slash
-// separated and relative to the package root.
+// separated and relative to the package root; a path identifies a file, while
+// a name is only what the file is called in the problem and may repeat.
 type Problem struct {
 	Title         string
 	Type          string // "pass-fail", "scoring" or "interactive"
@@ -22,10 +23,10 @@ type Problem struct {
 	Checker       *Program
 	Validator     *Program
 	Interactor    *Program
-	// Generators are referenced by tests through Program.Name.
+	// Generators are referenced by tests through their Path.
 	Generators []Program
 	Solutions  []Program
-	// MainSolution is the Name of the solution that generates answers, or "".
+	// MainSolution is the Path of the solution that generates answers, or "".
 	MainSolution string
 	// Library holds source files that programs include, such as testlib.h.
 	Library    []File
@@ -47,8 +48,8 @@ type File struct {
 // generator or solution.
 type Program struct {
 	File
-	// Dependencies maps a name the program includes to a Library file name.
-	// Nil makes the whole library available.
+	// Dependencies maps a name the program includes to the Path of a Library
+	// file. Nil makes the whole library available under the file names.
 	Dependencies map[string]string
 }
 
@@ -66,8 +67,9 @@ type Group struct {
 	Tests     []Test
 }
 
-// Test takes its input from a package file (Input) or from a generator run
-// (Generator with Args). An empty Answer means the main solution produces it.
+// Test takes its input from a package file (Input) or from a run of the
+// generator at path Generator with Args. An empty Answer means the main
+// solution produces it.
 type Test struct {
 	Input     string
 	Generator string

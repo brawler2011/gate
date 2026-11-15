@@ -4,8 +4,8 @@ package formats
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
@@ -16,59 +16,62 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// DetectFormat detects the format of a package directory.
-func DetectFormat(packageDir string) (string, error) {
-	// Check for XML-based formats (PCMS2 or Polygon)
-	xmlPath := filepath.Join(packageDir, "problem.xml")
-	if _, err := os.Stat(xmlPath); err == nil {
-		data, err := os.ReadFile(xmlPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read problem.xml: %w", err)
-		}
+// DetectFormat detects the format of the package in dir.
+func DetectFormat(dir string) (string, error) {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return "", fmt.Errorf("open package: %w", err)
+	}
+	defer root.Close()
+	return detect(root.FS())
+}
+
+func detect(fsys fs.FS) (string, error) {
+	if data, err := fs.ReadFile(fsys, "problem.xml"); err == nil {
 		content := string(data)
 		if strings.Contains(content, "pcms2.ru") || strings.Contains(content, "-//PCMS2//") || strings.Contains(content, "<problem id=") {
 			return "pcms2", nil
 		}
 		return "polygon", nil
 	}
-
-	// Check for YAML-based formats (GFMT or ICPC)
-	yamlPath := filepath.Join(packageDir, "problem.yaml")
-	if _, err := os.Stat(yamlPath); err == nil {
-		data, err := os.ReadFile(yamlPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read problem.yaml: %w", err)
-		}
-		var config map[string]any
-		if err := yaml.Unmarshal(data, &config); err != nil {
-			return "", fmt.Errorf("invalid problem.yaml: %w", err)
-		}
-		if config == nil {
-			return "", fmt.Errorf("problem.yaml must contain a mapping")
-		}
-		if _, ok := config["format_version"]; ok {
-			return "gfmt", nil
-		}
-		return "icpc", nil
+	data, err := fs.ReadFile(fsys, "problem.yaml")
+	if err != nil {
+		return "", fmt.Errorf("unknown problem format: no problem.xml or problem.yaml found")
 	}
-
-	return "", fmt.Errorf("unknown problem format: no problem.xml or problem.yaml found in %s", packageDir)
+	var config map[string]any
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return "", fmt.Errorf("invalid problem.yaml: %w", err)
+	}
+	if config == nil {
+		return "", fmt.Errorf("problem.yaml must contain a mapping")
+	}
+	if _, ok := config["format_version"]; ok {
+		return "gfmt", nil
+	}
+	return "icpc", nil
 }
 
-// Read detects the format of the package in dir and reads it.
+// Read detects the format of the package in dir and reads it. Readers see
+// the package through an os.Root, so no path a package names can leave it.
 func Read(dir string) (*spec.Problem, error) {
-	format, err := DetectFormat(dir)
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, fmt.Errorf("open package: %w", err)
+	}
+	defer root.Close()
+	fsys := root.FS()
+	format, err := detect(fsys)
 	if err != nil {
 		return nil, err
 	}
 	switch format {
 	case "gfmt":
-		return gfmt.Read(dir)
+		return gfmt.Read(fsys)
 	case "polygon":
-		return polygon.Read(dir)
+		return polygon.Read(fsys)
 	case "pcms2":
-		return pcms2.Read(dir)
+		return pcms2.Read(fsys)
 	default:
-		return icpc.Read(dir)
+		return icpc.Read(fsys)
 	}
 }

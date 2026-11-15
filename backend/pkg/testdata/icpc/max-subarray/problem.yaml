@@ -2,5 +2,4 @@ name: "Maximum Subarray Sum"
 limits:
   time: 1.0
   memory: 256
-validation:
-  type: "custom"
+validation: custom
