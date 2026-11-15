@@ -1,0 +1,16 @@
+A PCMS2 program includes the headers of its own folder: the checker in
+the package root uses the root testlib.h, not the one in files/.
+
+-- problem.xml --
+<!DOCTYPE problem PUBLIC "-//PCMS2//DTD Problem Description 1.0//EN" "http://pcms2.ru/dtd/problem-0.2.dtd">
+<problem id="headers">
+  <judging>
+    <run><verifier type="testlib"><binary executable="check.exe"/></verifier></run>
+    <testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit></testset>
+  </judging>
+</problem>
+-- check.cpp --
+-- testlib.h --
+new
+-- files/testlib.h --
+old

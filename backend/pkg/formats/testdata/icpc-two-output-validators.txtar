@@ -1,0 +1,7 @@
+Two ICPC output validators: Gate runs one checker, so the package is
+rejected rather than imported with one of them dropped.
+
+-- problem.yaml --
+name: Two
+-- output_validators/a.cpp --
+-- output_validators/b.cpp --

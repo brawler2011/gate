@@ -1,0 +1,18 @@
+Two ICPC programs each include a different helper.h from their own
+directory; the draft keeps both, attached to their programs.
+
+-- problem.yaml --
+name: Headers
+validation: custom
+-- data/secret/1.in --
+1
+-- data/secret/1.ans --
+1
+-- output_validators/check/check.cpp --
+int main() {}
+-- output_validators/check/helper.h --
+// A
+-- input_validators/validate/validate.cpp --
+int main() {}
+-- input_validators/validate/helper.h --
+// B

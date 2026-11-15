@@ -1,0 +1,15 @@
+Polygon resources are library files, except the statement templates.
+
+-- problem.xml --
+<problem short-name="resources">
+  <judging><testset name="tests">
+    <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
+  </testset></judging>
+  <files><resources>
+    <file path="files/olymp.sty"/>
+    <file path="files/problem.tex"/>
+    <file path="files/statements.ftl"/>
+    <file path="files/testlib.h" type="h.g++"/>
+    <file path="files/helper.inc"/>
+  </resources></files>
+</problem>

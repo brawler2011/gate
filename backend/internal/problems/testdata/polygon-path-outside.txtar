@@ -1,0 +1,11 @@
+A Polygon statement path that leaves the package.
+
+-- problem.xml --
+<problem short-name="escape">
+  <statements>
+    <statement language="english" path="../outside.tex" type="application/x-tex"/>
+  </statements>
+  <judging><testset name="tests">
+    <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
+  </testset></judging>
+</problem>

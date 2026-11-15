@@ -1,0 +1,19 @@
+Every ICPC directory of tests is a group named by its path under data/,
+at any depth. A test without .ans is answered by the main solution.
+
+-- problem.yaml --
+name: Groups
+validation: custom
+-- data/sample/1.in --
+1
+-- data/sample/1.ans --
+1
+-- data/secret/group1/a.in --
+2
+-- data/secret/group1/a.ans --
+2
+-- data/secret/group2/nested/c.in --
+4
+-- output_validators/checker/checker.cpp --
+int main() {}
+-- output_validators/checker/testlib.h --

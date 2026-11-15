@@ -1,0 +1,6 @@
+An ICPC scoring problem: its grader aggregation cannot be expressed with
+Gate's per-test points, so the package is rejected.
+
+-- problem.yaml --
+name: Scoring
+type: scoring

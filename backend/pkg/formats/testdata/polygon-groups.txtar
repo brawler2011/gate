@@ -1,0 +1,28 @@
+Polygon groups keep their policies and dependencies. The points of a
+complete group with no points on its tests go to its last test.
+
+-- problem.xml --
+<problem short-name="groups">
+  <judging><testset name="tests">
+    <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
+    <input-path-pattern>tests/%02d</input-path-pattern><answer-path-pattern>tests/%02d.a</answer-path-pattern>
+    <tests>
+      <test method="manual" sample="true" group="samples"/>
+      <test method="generated" cmd="gen 'a b' 2" group="main" points="0"/>
+      <test method="generated" cmd="gen 3" group="main"/>
+    </tests>
+    <groups>
+      <group name="samples" points-policy="each-test" points="0"/>
+      <group name="main" points-policy="complete-group" points="100">
+        <dependencies><dependency group="samples"/></dependencies>
+      </group>
+    </groups>
+  </testset></judging>
+  <files><executables>
+    <executable><source path="gen.cpp" type="cpp.g++17"/></executable>
+  </executables></files>
+</problem>
+-- tests/01 --
+1
+-- gen.cpp --
+int main() {}

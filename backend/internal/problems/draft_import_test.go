@@ -18,6 +18,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/tools/txtar"
 )
 
 var importQuotas = model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 1000, Tests: 1000, Components: 100, Subtasks: 100}
@@ -114,22 +115,8 @@ func TestImportConvertsWellFormedPolygonTestsToLF(t *testing.T) {
 	t.Fatal("input object not found")
 }
 
-// Programs are identified by package path: when two solutions share a file
-// name, the second is renamed and the tagged main solution stays main.
 func TestImportKeepsMainSolutionAcrossNameClash(t *testing.T) {
-	dir := t.TempDir()
-	files := map[string]string{
-		"wrong/main.cpp": "int main() { return 1; }\n", "correct/main.cpp": "int main() {}\n", "tests/01": "1\n",
-		"problem.xml": `<problem short-name="clash"><judging><testset name="tests">
-  <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
-  <input-path-pattern>tests/%02d</input-path-pattern><answer-path-pattern>tests/%02d.a</answer-path-pattern>
-  <tests><test method="manual"/></tests></testset></judging>
-  <assets><solutions>
-    <solution tag="wrong_answer"><source path="wrong/main.cpp"/></solution>
-    <solution tag="main"><source path="correct/main.cpp"/></solution>
-  </solutions></assets></problem>`,
-	}
-	plan, err := importDir(t, dir, files)
+	plan, err := importDir(t, unpack(t, "polygon-solution-name-clash"), nil)
 	require.NoError(t, err)
 	defer plan.Close()
 	var main model.DraftComponent
@@ -142,13 +129,8 @@ func TestImportKeepsMainSolutionAcrossNameClash(t *testing.T) {
 	require.Equal(t, "int main() {}\n", plan.draft.Files[main.Path])
 }
 
-// The importer reads only files inside the package.
 func TestImportRejectsPathsOutsidePackage(t *testing.T) {
-	_, err := importDir(t, t.TempDir(), map[string]string{
-		"problem.xml": `<problem short-name="escape">
-  <statements><statement language="english" path="../outside.tex" type="application/x-tex"/></statements>
-  <judging><testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit></testset></judging></problem>`,
-	})
+	_, err := importDir(t, unpack(t, "polygon-path-outside"), nil)
 	require.ErrorContains(t, err, "invalid package path ../outside.tex")
 }
 
@@ -200,17 +182,8 @@ func TestImportEnforcesQuotasWhileConverting(t *testing.T) {
 	require.ErrorIs(t, err, pkg.ErrPayloadTooLarge)
 }
 
-// Different headers of one name stay apart, each attached to its program.
 func TestImportKeepsProgramHeadersApart(t *testing.T) {
-	plan, err := importDir(t, t.TempDir(), map[string]string{
-		"problem.yaml":                           "name: Headers\nvalidation: custom\n",
-		"data/secret/1.in":                       "1\n",
-		"data/secret/1.ans":                      "1\n",
-		"output_validators/check/check.cpp":      "int main() {}\n",
-		"output_validators/check/helper.h":       "// A\n",
-		"input_validators/validate/validate.cpp": "int main() {}\n",
-		"input_validators/validate/helper.h":     "// B\n",
-	})
+	plan, err := importDir(t, unpack(t, "icpc-program-headers"), nil)
 	require.NoError(t, err)
 	defer plan.Close()
 	require.NoError(t, plan.draft.Validate(importQuotas, true))
@@ -241,6 +214,19 @@ func TestCopyLF(t *testing.T) {
 // importAPlusB imports the gfmt a-plus-b package with extra files added.
 func importAPlusB(t *testing.T, extra map[string]string) (*draftImport, error) {
 	return importDir(t, "../../pkg/testdata/gfmt/a-plus-b", extra)
+}
+
+// unpack writes the package of testdata/<name>.txtar into a temporary
+// directory. The comment of each archive describes its case.
+func unpack(t *testing.T, name string) string {
+	t.Helper()
+	archive, err := txtar.ParseFile(filepath.Join("testdata", name+".txtar"))
+	require.NoError(t, err)
+	fsys, err := txtar.FS(archive)
+	require.NoError(t, err)
+	dir := t.TempDir()
+	require.NoError(t, os.CopyFS(dir, fsys))
+	return dir
 }
 
 // importDir imports the package in source with extra files added.
