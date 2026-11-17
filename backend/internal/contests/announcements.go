@@ -33,13 +33,10 @@ func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *c
 	if user.IsGuest() {
 		return nil, pkg.ErrUnauthenticated
 	}
-	if input.AuthorID != user.Id {
-		return nil, pkg.NoPermission
-	}
 	var announcement *contestsmodel.ContestAnnouncement
 	err := withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionManageContest, func(tx ContestEventsTxStore) error {
 		var err error
-		announcement, err = tx.CreateAnnouncement(ctx, input)
+		announcement, err = tx.CreateAnnouncement(ctx, user.Id, input)
 		if err != nil {
 			return err
 		}

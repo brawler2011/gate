@@ -24,7 +24,6 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 
 	draftCreation := &contestsmodel.ContestDraftCreation{
 		ContestID: contest.ID,
-		UserID:    user.Id,
 		Code:      req.Code,
 	}
 
@@ -39,8 +38,6 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 }
 
 func (h *CoreServer) ListContestDrafts(ctx context.Context, params corev1.ListContestDraftsParams) (*corev1.ListContestDraftsResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-
 	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
@@ -51,7 +48,6 @@ func (h *CoreServer) ListContestDrafts(ctx context.Context, params corev1.ListCo
 
 	draftsList, err := h.Drafts.ListDrafts(ctx, contestsmodel.ContestDraftsFilter{
 		ContestID: contest.ID,
-		UserID:    user.Id,
 		Page:      page,
 		PageSize:  pageSize,
 	})

@@ -45,12 +45,10 @@ func (uc *OrganizationsUseCase) CreateOrganization(ctx context.Context, input *o
 	if err := accessmodel.RequireAdmin(ctx); err != nil {
 		return nil, err
 	}
-	if accessmodel.UserFromContext(ctx).Id != input.CreatorID {
-		return nil, pkg.NoPermission
-	}
+	creatorID := accessmodel.UserFromContext(ctx).Id
 	var org *organizationsmodel.Organization
 	err := uc.transactor.Within(ctx, func(tx OrganizationTxStore) error {
-		creator, err := tx.GetUserById(ctx, input.CreatorID)
+		creator, err := tx.GetUserById(ctx, creatorID)
 		if err != nil {
 			return err
 		}
@@ -68,7 +66,7 @@ func (uc *OrganizationsUseCase) CreateOrganization(ctx context.Context, input *o
 		}
 
 		// Add creator as owner
-		err = tx.AddMember(ctx, org.ID, input.CreatorID, organizationsmodel.OrgRoleOwner)
+		err = tx.AddMember(ctx, org.ID, creatorID, organizationsmodel.OrgRoleOwner)
 		if err != nil {
 			return fmt.Errorf("add creator as owner: %w", err)
 		}

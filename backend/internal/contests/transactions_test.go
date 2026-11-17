@@ -23,12 +23,12 @@ func (s contestEventsTestStore) GetContest(context.Context, uuid.UUID) (contests
 }
 
 type AnnouncementsRepo interface {
-	CreateAnnouncement(context.Context, *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error)
+	CreateAnnouncement(context.Context, uuid.UUID, *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error)
 	DeleteAnnouncement(context.Context, uuid.UUID, uuid.UUID) error
 }
 
 type ClarificationsRepo interface {
-	CreateClarification(context.Context, *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error)
+	CreateClarification(context.Context, uuid.UUID, *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error)
 	AnswerClarification(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, string) (*contestsmodel.ContestClarification, error)
 }
 

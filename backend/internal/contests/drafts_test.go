@@ -26,12 +26,12 @@ func newMockDraftsRepo() *mockDraftsRepo {
 	}
 }
 
-func (m *mockDraftsRepo) CreateDraft(ctx context.Context, creation *contestsmodel.ContestDraftCreation) (uuid.UUID, error) {
+func (m *mockDraftsRepo) CreateDraft(ctx context.Context, userID uuid.UUID, creation *contestsmodel.ContestDraftCreation) (uuid.UUID, error) {
 	id := uuid.New()
 	m.drafts[id] = contestsmodel.ContestDraft{
 		ID:        id,
 		ContestID: creation.ContestID,
-		UserID:    creation.UserID,
+		UserID:    userID,
 		Code:      creation.Code,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -77,7 +77,6 @@ func TestDraftsUseCase_Validation(t *testing.T) {
 	// 1. Empty code
 	_, err := uc.CreateDraft(ctx, &contestsmodel.ContestDraftCreation{
 		ContestID: contestID,
-		UserID:    userID,
 		Code:      "",
 	})
 	if err == nil {
@@ -88,7 +87,6 @@ func TestDraftsUseCase_Validation(t *testing.T) {
 	largeCode := strings.Repeat("a", 65*1024)
 	_, err = uc.CreateDraft(ctx, &contestsmodel.ContestDraftCreation{
 		ContestID: contestID,
-		UserID:    userID,
 		Code:      largeCode,
 	})
 	if err == nil {
@@ -106,9 +104,8 @@ func TestDraftsUseCase_LimitPerUser(t *testing.T) {
 
 	// Fill 50 drafts
 	for i := 0; i < 50; i++ {
-		_, err := repo.CreateDraft(ctx, &contestsmodel.ContestDraftCreation{
+		_, err := repo.CreateDraft(ctx, userID, &contestsmodel.ContestDraftCreation{
 			ContestID: contestID,
-			UserID:    userID,
 			Code:      "code",
 		})
 		if err != nil {
@@ -119,7 +116,6 @@ func TestDraftsUseCase_LimitPerUser(t *testing.T) {
 	// Attempt 51st draft
 	_, err := uc.CreateDraft(ctx, &contestsmodel.ContestDraftCreation{
 		ContestID: contestID,
-		UserID:    userID,
 		Code:      "code 51",
 	})
 	if err == nil {
@@ -136,9 +132,8 @@ func TestDraftsUseCase_DeletePermissions(t *testing.T) {
 	contestID := uuid.New()
 	ctx := context.Background()
 
-	draftID, err := repo.CreateDraft(ctx, &contestsmodel.ContestDraftCreation{
+	draftID, err := repo.CreateDraft(ctx, authorID, &contestsmodel.ContestDraftCreation{
 		ContestID: contestID,
-		UserID:    authorID,
 		Code:      "package main",
 	})
 	if err != nil {
@@ -158,9 +153,8 @@ func TestDraftsUseCase_DeletePermissions(t *testing.T) {
 	}
 
 	// Author can delete
-	draftID2, _ := repo.CreateDraft(ctx, &contestsmodel.ContestDraftCreation{
+	draftID2, _ := repo.CreateDraft(ctx, authorID, &contestsmodel.ContestDraftCreation{
 		ContestID: contestID,
-		UserID:    authorID,
 		Code:      "package main",
 	})
 	err = uc.DeleteDraft(accessmodel.WithUser(ctx, accessmodel.User{Id: authorID, Role: accessmodel.UserRoleUser}), contestID, draftID2)
@@ -178,32 +172,32 @@ func (draftTestStore) HasContestPermission(ctx context.Context, _, _ uuid.UUID, 
 	return action == accessmodel.ActionGetContest || accessmodel.UserFromContext(ctx).IsAdmin(), nil
 }
 
-func (m *mockDraftsRepo) ListDrafts(_ context.Context, filter contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error) {
+func (m *mockDraftsRepo) ListDrafts(_ context.Context, userID uuid.UUID, filter contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error) {
 	m.listFilter = &filter
 	result := &contestsmodel.ContestDraftsList{}
 	for _, draft := range m.drafts {
-		if draft.ContestID == filter.ContestID && draft.UserID == filter.UserID {
+		if draft.ContestID == filter.ContestID && draft.UserID == userID {
 			result.Drafts = append(result.Drafts, draft)
 		}
 	}
 	return result, nil
 }
 
-func TestDraftListRejectsCallerSpoofingOutsideHTTP(t *testing.T) {
+func TestDraftListReturnsOnlyCallerDrafts(t *testing.T) {
 	repo := newMockDraftsRepo()
 	uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}}, repo, draftTestStore{repo})
 	owner, other, contest := uuid.New(), uuid.New(), uuid.New()
-	id, err := repo.CreateDraft(context.Background(), &contestsmodel.ContestDraftCreation{ContestID: contest, UserID: owner, Code: "private"})
+	id, err := repo.CreateDraft(context.Background(), owner, &contestsmodel.ContestDraftCreation{ContestID: contest, Code: "private"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	filter := contestsmodel.ContestDraftsFilter{ContestID: contest, UserID: owner}
+	filter := contestsmodel.ContestDraftsFilter{ContestID: contest}
 	if _, err := uc.ListDrafts(context.Background(), filter); !errors.Is(err, pkg.ErrUnauthenticated) {
 		t.Fatalf("guest: %v", err)
 	}
 	otherCtx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: other, Role: accessmodel.UserRoleUser})
-	if _, err := uc.ListDrafts(otherCtx, filter); !errors.Is(err, pkg.NoPermission) {
-		t.Fatalf("other user: %v", err)
+	if list, err := uc.ListDrafts(otherCtx, filter); err != nil || len(list.Drafts) != 0 {
+		t.Fatalf("other user: %+v, %v", list, err)
 	}
 	ownerCtx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: owner, Role: accessmodel.UserRoleUser})
 	list, err := uc.ListDrafts(ownerCtx, filter)
@@ -241,7 +235,7 @@ func TestDraftListPagination(t *testing.T) {
 				// Any transaction access would panic for invalid pagination.
 				uc = NewDraftsUseCase(nil, nil, nil)
 			}
-			filter := contestsmodel.ContestDraftsFilter{ContestID: uuid.New(), UserID: user.Id, Page: tc.page, PageSize: tc.size}
+			filter := contestsmodel.ContestDraftsFilter{ContestID: uuid.New(), Page: tc.page, PageSize: tc.size}
 			_, err := uc.ListDrafts(ctx, filter)
 			require.ErrorIs(t, err, tc.err)
 			if tc.err != nil {
@@ -257,10 +251,6 @@ func TestDraftListPagination(t *testing.T) {
 
 func TestDraftListAuthorizesBeforePagination(t *testing.T) {
 	uc := NewDraftsUseCase(nil, nil, nil)
-	filter := contestsmodel.ContestDraftsFilter{UserID: uuid.New(), Page: -1}
-	_, err := uc.ListDrafts(context.Background(), filter)
+	_, err := uc.ListDrafts(context.Background(), contestsmodel.ContestDraftsFilter{Page: -1})
 	require.ErrorIs(t, err, pkg.ErrUnauthenticated)
-	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
-	_, err = uc.ListDrafts(ctx, filter)
-	require.ErrorIs(t, err, pkg.NoPermission)
 }

@@ -401,7 +401,7 @@ func TestConcurrentDraftLimit(t *testing.T) {
 	})
 	uc := contests.NewDraftsUseCase(postgres.NewDraftTransactions(f.pool), postgres.NewDraftsRepo(f.pool), f.permissions)
 	create := func(user int) error {
-		_, err := uc.CreateDraft(f.userContext(user), &contestsmodel.ContestDraftCreation{ContestID: f.contest, UserID: f.users[user], Code: "print(1)"})
+		_, err := uc.CreateDraft(f.userContext(user), &contestsmodel.ContestDraftCreation{ContestID: f.contest, Code: "print(1)"})
 		return err
 	}
 	results := make([]<-chan error, 8)
