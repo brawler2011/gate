@@ -38,15 +38,16 @@ type BuildRepository interface {
 	FinishBuildAttempt(context.Context, uuid.UUID, uuid.UUID, json.RawMessage, bool) error
 }
 type Pipeline struct {
-	Repo        BuildRepository
-	Store       ObjectStore
-	Bucket      string
-	TempDir     string
-	Client      *sandbox.Client
-	Files       *sandbox.FileTransport
-	Environment model.Toolchain
-	UploadTTL   time.Duration
-	Logger      *slog.Logger
+	Repo    BuildRepository
+	Store   ObjectStore
+	Bucket  string
+	TempDir string
+	Client  *sandbox.Client
+	Files   *sandbox.FileTransport
+	// Languages are the running judge image's; a build compiles with them.
+	Languages *sandbox.Config
+	UploadTTL time.Duration
+	Logger    *slog.Logger
 }
 type Failure struct {
 	Stage     string `json:"stage"`
@@ -94,9 +95,6 @@ type execution struct {
 
 func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID, error) {
 	s := b.Snapshot
-	if s.Toolchain.Digest != p.Environment.Digest || s.Toolchain.Architecture != p.Environment.Architecture || s.Toolchain.ABI != p.Environment.ABI {
-		return uuid.Nil, fail("environment", 0, "infrastructure", fmt.Errorf("pinned toolchain is unavailable"))
-	}
 	if s.Limits.DiskBytes <= 0 || s.Limits.FileCount <= 0 || s.Limits.ObjectBytes <= 0 || s.Limits.TestOutputBytes <= 0 {
 		return uuid.Nil, fail("limits", 0, "infrastructure", fmt.Errorf("invalid fixed build budgets"))
 	}
@@ -125,7 +123,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := os.Mkdir(tree, 0700); err != nil {
 		return uuid.Nil, fmt.Errorf("mkdir: %w", err)
 	}
-	e := &execution{pipeline: p, build: b, dir: &directory{root: tree, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, &sandbox.Config{Langs: s.Toolchain.Languages}), compiled: make(map[uuid.UUID]compilation), samples: []model.Sample{}}
+	e := &execution{pipeline: p, build: b, dir: &directory{root: tree, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, p.Languages), compiled: make(map[uuid.UUID]compilation), samples: []model.Sample{}}
 	defer e.releaseComponents()
 	if err := e.materialize(ctx); err != nil {
 		return uuid.Nil, fail("materialize", 0, "infrastructure", err)
@@ -246,10 +244,7 @@ func (e *execution) materialize(ctx context.Context) error {
 func (e *execution) makeManifest() {
 	s := e.build.Snapshot
 	d := s.Draft
-	m := &gfmt.Problem{FormatVersion: "2", Title: d.Title, Type: d.Type, MaxScore: d.MaxScore, Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb}, ToolchainDigest: s.Toolchain.Digest, Architecture: s.Toolchain.Architecture, ABI: s.Toolchain.ABI, Languages: map[string]gfmt.LanguageConfig{}, Compiled: map[string]gfmt.CompiledComponent{}, Subtasks: map[string]gfmt.Subtask{}, Solutions: map[string]string{}, Sources: map[string]gfmt.Source{}}
-	for key, lang := range s.Toolchain.Languages {
-		m.Languages[key] = gfmt.LanguageConfig{Type: lang.Type, Compile: lang.Compile, CodeFile: lang.CodeFile, CompileFile: lang.CompileFile, Execute: lang.Execute}
-	}
+	m := &gfmt.Problem{FormatVersion: "2", Title: d.Title, Type: d.Type, MaxScore: d.MaxScore, Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb}, Programs: map[string]gfmt.Program{}, Subtasks: map[string]gfmt.Subtask{}, Solutions: map[string]string{}}
 	for _, g := range d.Subtasks {
 		deps := []string{}
 		for _, id := range g.DependsOn {
@@ -319,6 +314,10 @@ func (e *execution) compile(ctx context.Context) error {
 		if !required[c.ID] {
 			continue
 		}
+		// The draft was checked against the languages at enqueue; the image may have changed since.
+		if _, ok := e.pipeline.Languages.Langs[c.Language()]; !ok {
+			return fail("compile", 0, "author", fmt.Errorf("%s: language %q is not available on the judge", c.Path, c.Language()))
+		}
 		deps := map[string][]byte{}
 		for destination, path := range c.Dependencies {
 			deps[destination] = []byte(s.Draft.Files[path])
@@ -328,20 +327,10 @@ func (e *execution) compile(ctx context.Context) error {
 			return fail("compile", 0, processKind(err), fmt.Errorf("%s: %w", c.Path, err))
 		}
 		e.compiled[c.ID] = compilation{source: c, executable: executable}
-		entry := ".gate/bin/" + c.ID.String() + "/entry"
-		if err := e.download(ctx, entry, executable.PrimaryFileID, int64(s.Limits.Compile.Output)); err != nil {
-			return fail("export", 0, "infrastructure", err)
+		// The package keeps the judge's programs as sources; each judge compiles them with its own image.
+		if c.Role == "checker" || c.Role == "interactor" {
+			e.manifest.Programs[c.Role] = gfmt.Program{Source: c.Path, Language: c.Language(), Dependencies: c.Dependencies}
 		}
-		artifact := gfmt.CompiledComponent{Role: c.Role, Language: c.Language(), Entry: entry, Dependencies: map[string]string{}}
-		for path, id := range executable.Dependencies {
-			dest := ".gate/bin/" + c.ID.String() + "/dependencies/" + path
-			if err := e.download(ctx, dest, id, int64(s.Limits.Compile.Output)); err != nil {
-				return fail("export", 0, "infrastructure", err)
-			}
-			artifact.Dependencies[path] = dest
-		}
-		e.manifest.Compiled[c.ID.String()] = artifact
-		e.manifest.Sources[c.Path] = gfmt.Source{DependencyMap: c.Dependencies}
 	}
 	return nil
 }

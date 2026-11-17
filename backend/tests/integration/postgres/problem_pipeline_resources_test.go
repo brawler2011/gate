@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -65,7 +66,7 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 10*time.Second, 30*time.Second, 512<<20, 150
 	limits := model.BuildLimits{DiskBytes: bytesize.Size(diskBytes), FileCount: 100, ObjectBytes: bytesize.Size(objectBytes), TestOutputBytes: bytesize.Size(objectBytes), Compile: compile, Auxiliary: aux}
 	options := postgres.ProblemBuildOptions{
-		Toolchain: model.Toolchain{Digest: "sha256:" + strings.Repeat("a", 64), Architecture: "amd64", ABI: "linux-gnu", Languages: services.langs},
+		Languages: services.langs,
 		Limits:    limits, MaxAttempts: 1, Duration: 5 * time.Minute, Lease: 3 * time.Second,
 	}
 	uploads := &problems.DraftUseCase{
@@ -79,7 +80,7 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 
 func (h *pipelineHarness) pipeline() *builder.Pipeline {
 	return &builder.Pipeline{Repo: h.repo, Store: h.services.store, Bucket: "objects", TempDir: h.work, Client: h.services.client,
-		Files: h.services.files, Environment: h.options.Toolchain, UploadTTL: time.Minute, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		Files: h.services.files, Languages: &sandbox.Config{Langs: h.options.Languages}, UploadTTL: time.Minute, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 }
 
 func (h *pipelineHarness) save(t *testing.T, change func(*model.Draft)) {
@@ -194,6 +195,40 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 	for _, e := range entries {
 		require.False(t, strings.HasPrefix(e.Name(), "build-"), "build directory %s must be removed", e.Name())
 	}
+}
+
+// A build compiles with the languages of the judge image that runs it, not of the one it
+// was enqueued under: an image change in between does not fail it, and a language the
+// running image lacks is the author's build failure.
+func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
+	t.Parallel()
+	h := newPipelineHarness(t, 1<<20, 64<<20)
+	checker, subtask := uuid.New(), uuid.New()
+	h.save(t, func(d *model.Draft) {
+		d.Files = map[string]string{"checkers/check.cpp": "#ifndef NEW_IMAGE\n#error compiled with the enqueue-time languages\n#endif\n" + acceptEverythingChecker}
+		d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.cpp"}}
+		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
+	})
+	h.uploadPair(t, model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 100, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}, 16)
+
+	without := maps.Clone(h.options.Languages)
+	delete(without, "cpp")
+	pipeline := h.pipeline()
+	pipeline.Languages = &sandbox.Config{Langs: without}
+	_, err := pipeline.Execute(h.ctx, h.enqueueAndClaim(t))
+	var failure *builder.Failure
+	require.ErrorAs(t, err, &failure)
+	require.Equal(t, "compile", failure.Stage)
+	require.Equal(t, "author", failure.Kind)
+	require.Contains(t, failure.Message, "checkers/check.cpp")
+
+	changed := maps.Clone(h.options.Languages)
+	cpp := changed["cpp"]
+	cpp.Compile = strings.Replace(cpp.Compile, "g++ ", "g++ -DNEW_IMAGE ", 1)
+	changed["cpp"] = cpp
+	pipeline.Languages = &sandbox.Config{Langs: changed}
+	_, err = pipeline.Execute(h.ctx, h.enqueueAndClaim(t))
+	require.NoError(t, err)
 }
 
 // generatorBuild saves a draft whose only test is produced by the given generator script.

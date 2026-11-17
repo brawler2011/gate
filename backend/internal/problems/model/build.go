@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
 )
 
 type BuildOptions struct {
-	Toolchain   Toolchain
+	// Languages are those of the judge image, which builds with its own config.
+	Languages   map[string]sandbox.Language
 	Limits      BuildLimits
 	MaxAttempts int
 	Duration    time.Duration

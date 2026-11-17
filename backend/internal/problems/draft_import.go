@@ -307,7 +307,7 @@ func (c *importConverter) addComponent(role string, program spec.Program) (uuid.
 	if err != nil {
 		return uuid.Nil, err
 	}
-	if _, ok := c.uc.BuildOptions.Toolchain.Languages[model.LanguageForPath(path)]; !ok {
+	if _, ok := c.uc.BuildOptions.Languages[model.LanguageForPath(path)]; !ok {
 		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "unsupported source language: "+path)
 	}
 	text, err := c.readText(program.Path)

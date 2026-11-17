@@ -10,6 +10,9 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,7 +40,6 @@ import (
 
 const (
 	seaweedS3Port    = "8333/tcp"
-	toolchainDigest  = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	goJudgeHTTPPort  = "5050/tcp"
 	goJudgeGRPCPort  = "5051/tcp"
 	e2eSandboxTimout = 90 * time.Second
@@ -60,7 +62,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	ctx, dbPool, js := setupE2EEnvironment(t)
 	store, bucket := newSeaweedBackedS3Storage(t)
 	client, files := newGoJudge(t)
-	// The toolchain identity and languages come from the judge image, as in production.
+	// The languages come from the judge image, as in production.
 	imageCtx, cancel := context.WithTimeout(ctx, e2eSandboxTimout)
 	image, err := sandbox.ReadImage(imageCtx, client)
 	cancel()
@@ -120,23 +122,28 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	compile := aux
 	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 10*time.Second, 20*time.Second, 512<<20, 150
 	limits := problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux}
-	toolchain := problemsmodel.Toolchain{Digest: image.Identity.Digest, Architecture: image.Identity.Architecture, ABI: image.Identity.ABI, Languages: cfg.Langs}
-	_, err = drafts.EnqueueBuild(ctx, mutationKey(org.ID, "build", d.Revision), problemID, d.Revision, problemsmodel.BuildOptions{Toolchain: toolchain, Limits: limits, MaxAttempts: 3, Duration: 2 * time.Minute, Lease: time.Minute})
+	_, err = drafts.EnqueueBuild(ctx, mutationKey(org.ID, "build", d.Revision), problemID, d.Revision, problemsmodel.BuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: 2 * time.Minute, Lease: time.Minute})
 	require.NoError(t, err)
 	build, err := drafts.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)
 	work := diskTempDir(t)
-	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Environment: toolchain, UploadTTL: time.Minute, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Languages: cfg, UploadTTL: time.Minute, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	packageID, err := pipeline.Execute(ctx, build)
 	require.NoError(t, err)
-	var recorded string
-	require.NoError(t, dbPool.QueryRow(ctx, "SELECT toolchain_digest FROM problem_builds WHERE id=$1", build.ID).Scan(&recorded))
-	assert.Equal(t, image.Identity.Digest, recorded)
 
-	judgeUC := judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), submissionsRepo,
-		&judging.PackageLoader{Store: store, Bucket: bucket, TempDir: diskTempDir(t), Packages: drafts, Limits: limits},
-		&judging.PackageJudge{Client: client, Files: files, Environment: toolchain, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))},
-		judgeworker.NewEventPublisher(js))
+	// A judge compiles the package's checker with its own image; digest names that image.
+	cache := diskTempDir(t)
+	newJudge := func(digest string) *judging.JudgeUseCase {
+		executor := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		executor.Programs = &judging.ProgramCache{Root: cache, Digest: digest, Compile: executor.CompileProgram}
+		return judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), submissionsRepo,
+			&judging.PackageLoader{Store: store, Bucket: bucket, TempDir: diskTempDir(t), Packages: drafts, Limits: limits},
+			executor, judgeworker.NewEventPublisher(js))
+	}
+	judgeUC := newJudge(image.Identity.Digest)
+	checkerEntry := func(digest string) string {
+		return filepath.Join(cache, packageID.String(), strings.TrimPrefix(digest, "sha256:"), "checker", "entry")
+	}
 
 	contestID := uuid.New()
 	start, end := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)
@@ -167,6 +174,24 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		assert.Equal(t, points.Value(0), sub.Score)
 		require.NotNil(t, sub.FailedTest)
 		assert.EqualValues(t, 1, *sub.FailedTest)
+	})
+	t.Run("CheckerCompiledOncePerImage", func(t *testing.T) {
+		before, err := os.Stat(checkerEntry(image.Identity.Digest))
+		require.NoError(t, err, "the first submissions compiled the checker into the cache")
+		sub := judge(t, problemID, submissionsmodel.Python, "print(sum(map(int, input().split())))")
+		assert.Equal(t, submissionsmodel.Accepted, sub.State)
+		after, err := os.Stat(checkerEntry(image.Identity.Digest))
+		require.NoError(t, err)
+		assert.True(t, os.SameFile(before, after), "a cached checker is not compiled again")
+	})
+	t.Run("OtherJudgeImageCompilesItsOwnChecker", func(t *testing.T) {
+		// The package carries no binaries, so a worker on another image judges it with its own build.
+		other := "sha256:" + strings.Repeat("b", 64)
+		judgeUC = newJudge(other)
+		assert.Equal(t, submissionsmodel.Accepted, judge(t, problemID, submissionsmodel.Python, "print(sum(map(int, input().split())))").State)
+		assert.Equal(t, submissionsmodel.GotWA, judge(t, problemID, submissionsmodel.Python, "print(42)").State)
+		_, err := os.Stat(checkerEntry(other))
+		require.NoError(t, err)
 	})
 	t.Run("UnreadablePackageIsInternalError", func(t *testing.T) {
 		// A Package whose archive object was never uploaded cannot be loaded.

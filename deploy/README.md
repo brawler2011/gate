@@ -10,7 +10,7 @@ Gate runs on k3s and is deployed with Helm as two releases in the `gate` namespa
 The backend binary runs in one of two modes, and the chart deploys each as its own
 Deployment, scaled by `api.replicas` and `worker.replicas`:
 
-- **API** (`-mode=api`): HTTP and WebSocket. It publishes submissions and problem builds and runs no sandbox. An init container copies the judge image's manifest (languages, toolchain identity) into the pod.
+- **API** (`-mode=api`): HTTP and WebSocket. It publishes submissions and problem builds and runs no sandbox. An init container copies the judge image's manifest into the pod; the API reads the judge's languages from it.
 - **Worker** (`-mode=worker`): judges submissions, builds problem packages and compiles contest booklets for the API (NATS request-reply), in a privileged go-judge sidecar. It serves only `/health`.
 
 Both belong to one release and roll back together. Locally, `task dev` runs both in

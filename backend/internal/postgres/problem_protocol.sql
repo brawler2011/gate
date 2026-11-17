@@ -176,9 +176,9 @@ SELECT (result IS NULL AND lease_deadline<=clock_timestamp())::boolean AS expire
 WHERE organization_id=$1 AND operation=$2 AND key=$3;
 
 -- name: InsertProblemBuild :exec
-INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,toolchain_digest,state,max_attempts,deadline)
+INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,state,max_attempts,deadline)
 VALUES(sqlc.arg(id),sqlc.arg(problem_id),sqlc.arg(organization_id),sqlc.arg(revision),sqlc.arg(snapshot)::jsonb,
- sqlc.arg(toolchain_digest),'queued',sqlc.arg(max_attempts),clock_timestamp()+sqlc.arg(duration_ms)::bigint*interval '1 millisecond');
+ 'queued',sqlc.arg(max_attempts),clock_timestamp()+sqlc.arg(duration_ms)::bigint*interval '1 millisecond');
 
 -- name: InsertBuildInput :exec
 INSERT INTO problem_build_objects(build_id,object_id,role)VALUES($1,$2,'input');

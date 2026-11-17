@@ -28,9 +28,9 @@ func newImportUseCase(t *testing.T) *DraftUseCase {
 		TempDir: t.TempDir(), UploadTTL: 1e10, ObjectBytes: 1 << 30, DraftQuotas: importQuotas,
 		BuildOptions: model.BuildOptions{
 			Limits: model.BuildLimits{DiskBytes: 1 << 30, FileCount: 1000},
-			Toolchain: model.Toolchain{Languages: map[string]sandbox.Language{
+			Languages: map[string]sandbox.Language{
 				"cpp": {}, "python": {}, "go": {}, "java": {},
-			}},
+			},
 		},
 	}
 }

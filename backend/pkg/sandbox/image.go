@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"regexp"
 	"time"
 
@@ -23,7 +21,7 @@ const manifestFileLimit = 1 << 20
 
 var digestPattern = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 
-// Identity identifies the sandbox toolchain a problem build is compiled with.
+// Identity identifies the running judge image; judges key compiled package programs by its digest.
 type Identity struct {
 	Digest       string `json:"digest"`
 	Architecture string `json:"architecture"`
@@ -61,16 +59,6 @@ func ReadImage(ctx context.Context, client *Client) (Image, error) {
 func unavailable(err error) bool {
 	var s interface{ GRPCStatus() *status.Status }
 	return errors.As(err, &s) && s.GRPCStatus().Code() == codes.Unavailable
-}
-
-// ReadImageDir reads the judge image manifest from a copy of its manifest
-// directory, for an instance without a sandbox.
-func ReadImageDir(dir string) (Image, error) {
-	image, err := parseImage(func(name string) ([]byte, error) { return os.ReadFile(filepath.Join(dir, name)) })
-	if err != nil {
-		return Image{}, fmt.Errorf("read judge image manifest from %s: %w", dir, err)
-	}
-	return image, nil
 }
 
 func readImage(ctx context.Context, client *Client) (Image, error) {

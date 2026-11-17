@@ -60,8 +60,8 @@ type Inbox struct {
 
 type Judge struct {
 	Workers int `yaml:"workers"`
-	// ManifestDir holds the judge image manifest (identity.json, langs.toml) for an
-	// API instance, which has no sandbox to read it from.
+	// ManifestDir holds a copy of the judge image manifest; an API instance, which
+	// has no sandbox, reads the judge's languages (langs.toml) from it.
 	ManifestDir string `yaml:"manifest_dir"`
 }
 

@@ -10,7 +10,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
 
@@ -81,7 +80,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	ctx, pool, repo, org, d := draftFixture(t)
 	services := startPipelineServices(t)
 	store, client, files := services.store, services.client, services.files
-	cfg := struct{ Langs map[string]sandbox.Language }{services.langs}
+	cfg := &sandbox.Config{Langs: services.langs}
 	checker, generator, solution, validator, subtask := uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	d.Files = map[string]string{
 		"checkers/check.cpp":     "#include <fstream>\nint main(int n,char**v){long long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}",
@@ -105,9 +104,8 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	compile.Wall = 20 * time.Second
 	compile.Memory = 512 << 20
 	compile.Processes = 150
-	environment := model.Toolchain{Digest: "sha256:" + strings.Repeat("a", 64), Architecture: "amd64", ABI: "linux-gnu", Languages: cfg.Langs}
 	limits := model.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux}
-	_, err = repo.EnqueueBuild(ctx, mutationKey(org, "build", d.Revision), d.ProblemID, d.Revision, postgres.ProblemBuildOptions{Toolchain: environment, Limits: limits, MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute})
+	_, err = repo.EnqueueBuild(ctx, mutationKey(org, "build", d.Revision), d.ProblemID, d.Revision, postgres.ProblemBuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute})
 	require.NoError(t, err)
 	d.Title = "Changed after enqueue"
 	d.Files["solutions/main.cpp"] = "invalid later source"
@@ -117,7 +115,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, uuid.Nil, b.ID)
 	temp := dbfixtures.DiskTempDir(t)
-	pipeline := builder.Pipeline{Repo: repo, Store: store, Bucket: "objects", TempDir: temp, Client: client, Files: files, Environment: environment, UploadTTL: time.Minute, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: repo, Store: store, Bucket: "objects", TempDir: temp, Client: client, Files: files, Languages: cfg, UploadTTL: time.Minute, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	pid, err := pipeline.Execute(ctx, b)
 	require.NoError(t, err)
 	published, err := repo.GetBuild(ctx, b.ID)

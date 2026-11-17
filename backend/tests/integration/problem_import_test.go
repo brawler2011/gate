@@ -47,7 +47,7 @@ func (s *IntegrationTestSuite) TestAuthorPackagesImportAndBuild() {
 			if draft.Type == corev1.ProblemDraftTypeInteractive {
 				role = "interactor"
 			}
-			_, ok := built.CompiledRole(role)
+			_, ok := built.Programs[role]
 			s.True(ok, "package has no %s", role)
 		})
 	}

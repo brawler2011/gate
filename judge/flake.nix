@@ -60,7 +60,7 @@
         echo 0 > $out/trim.txt
       '';
 
-      # Toolchain identity pinned into every problem build. The store paths change
+      # Image identity: judges key the problem programs they compile by its digest. The store paths change
       # whenever any compiler, library or flake input changes, and only then.
       identity = {
         digest =
