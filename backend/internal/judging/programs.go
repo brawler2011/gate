@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"golang.org/x/sync/singleflight"
@@ -19,17 +18,18 @@ type CompileFunc func(ctx context.Context, pkg *LoadedPackage, program gfmt.Prog
 
 // ProgramCache keeps the checker and interactor of each package compiled by
 // this worker's judge image on local disk, so a program is compiled once per
-// package and image rather than for every submission. Packages are immutable,
+// package and compiler rather than for every submission. Packages are immutable,
 // so entries are never invalidated.
 //
-// An entry is <Root>/<package ID>/<image digest>/<role>. It is compiled in a
+// An entry is <Root>/<package ID>/<compiler>/<role>. It is compiled in a
 // temporary directory next to it and renamed into place, so a present entry is
 // always complete; a crash leaves only a temporary directory, which is never read.
 type ProgramCache struct {
-	Root    string
-	Digest  string
-	Compile CompileFunc
-	group   singleflight.Group
+	Root string
+	// Compiler identifies the judge image and its language configuration (sandbox.Image.Compiler).
+	Compiler string
+	Compile  CompileFunc
+	group    singleflight.Group
 }
 
 // Get returns the directory holding the compiled program of role.
@@ -39,7 +39,7 @@ func (c *ProgramCache) Get(ctx context.Context, pkg *LoadedPackage, role string)
 		return "", fmt.Errorf("package has no %s", role)
 	}
 	packageDir := filepath.Join(c.Root, pkg.Descriptor.ID.String())
-	dir := filepath.Join(packageDir, strings.TrimPrefix(c.Digest, "sha256:"), role)
+	dir := filepath.Join(packageDir, c.Compiler, role)
 	_, err, _ := c.group.Do(dir, func() (any, error) {
 		if _, err := os.Stat(dir); err == nil {
 			return nil, nil

@@ -239,7 +239,7 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 	judgeJobs := pgstore.NewJudgeJobs(d.pool)
 	judgeTransactions := pgstore.NewJudgeTransactions(d.pool)
 	packageJudge := &judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Logger: d.logger}
-	packageJudge.Programs = &judging.ProgramCache{Root: filepath.Join(problemPolicy.WorkDir, "judge-cache"), Digest: judgeImage.Identity.Digest, Compile: packageJudge.CompileProgram}
+	packageJudge.Programs = &judging.ProgramCache{Root: filepath.Join(problemPolicy.WorkDir, "judge-cache"), Compiler: judgeImage.Compiler(), Compile: packageJudge.CompileProgram}
 	judgeUC := judging.NewJudgeUseCase(judgeJobs, judgeTransactions, pgstore.NewSubmissionsRepo(d.pool),
 		&judging.PackageLoader{Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Packages: d.problemDrafts, Limits: problemPolicy.Limits},
 		packageJudge, judgeworker.NewEventPublisher(d.natsJS))

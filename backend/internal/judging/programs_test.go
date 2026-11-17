@@ -36,7 +36,7 @@ func TestProgramCacheCompilesOncePerPackageAndImage(t *testing.T) {
 		<-release
 		return os.WriteFile(filepath.Join(dir, "entry"), []byte("binary"), 0o600)
 	}
-	x := &ProgramCache{Root: root, Digest: "sha256:aa", Compile: compile}
+	x := &ProgramCache{Root: root, Compiler: "aa", Compile: compile}
 	pkg := cachedPackage()
 
 	var wg sync.WaitGroup
@@ -61,7 +61,7 @@ func TestProgramCacheCompilesOncePerPackageAndImage(t *testing.T) {
 	assert.Equal(t, dirs[0], dir)
 	assert.EqualValues(t, 1, compiles.Load())
 
-	y := &ProgramCache{Root: root, Digest: "sha256:bb", Compile: compile}
+	y := &ProgramCache{Root: root, Compiler: "bb", Compile: compile}
 	other, err := y.Get(context.Background(), pkg, "checker")
 	require.NoError(t, err)
 	assert.NotEqual(t, dir, other)
@@ -71,7 +71,7 @@ func TestProgramCacheCompilesOncePerPackageAndImage(t *testing.T) {
 // A failed or interrupted compilation leaves no entry, so the next job compiles again.
 func TestProgramCacheDoesNotKeepFailedCompilation(t *testing.T) {
 	failing := true
-	cache := &ProgramCache{Root: t.TempDir(), Digest: "sha256:aa", Compile: func(_ context.Context, _ *LoadedPackage, _ gfmt.Program, dir string) error {
+	cache := &ProgramCache{Root: t.TempDir(), Compiler: "aa", Compile: func(_ context.Context, _ *LoadedPackage, _ gfmt.Program, dir string) error {
 		if err := os.WriteFile(filepath.Join(dir, "entry"), []byte("partial"), 0o600); err != nil {
 			return fmt.Errorf("write: %w", err)
 		}

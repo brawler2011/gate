@@ -2,6 +2,8 @@ package sandbox
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,7 +23,7 @@ const manifestFileLimit = 1 << 20
 
 var digestPattern = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 
-// Identity identifies the running judge image; judges key compiled package programs by its digest.
+// Identity identifies the running judge image.
 type Identity struct {
 	Digest       string `json:"digest"`
 	Architecture string `json:"architecture"`
@@ -32,6 +34,14 @@ type Identity struct {
 type Image struct {
 	Identity Identity
 	Config   *Config
+}
+
+// Compiler identifies what compiles programs on this image: its digest and its
+// language configuration, which can change without changing the digest.
+func (i Image) Compiler() string {
+	langs, _ := json.Marshal(i.Config.Langs) // string fields only; map keys are sorted
+	sum := sha256.Sum256(append([]byte(i.Identity.Digest+"\n"), langs...))
+	return hex.EncodeToString(sum[:])
 }
 
 // ReadImage reads the manifest the judge image was built with. It waits while

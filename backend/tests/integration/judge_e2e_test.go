@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -93,7 +94,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	require.NoError(t, err)
 	checker, generator, solution, group := uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	d.Files = map[string]string{
-		"checkers/check.cpp": "#include <fstream>\nint main(int n,char**v){long long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}",
+		"checkers/check.cpp": "#include <fstream>\nint main(int n,char**v){\n#ifdef REJECT_ALL\nreturn 1;\n#endif\nlong long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}",
 		"generators/gen.py":  "import sys\nprint(sys.argv[1], sys.argv[2])\n",
 		"solutions/main.cpp": "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}",
 		"statements/en.md":   "Print a+b.",
@@ -133,16 +134,16 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 
 	// A judge compiles the package's checker with its own image; digest names that image.
 	cache := diskTempDir(t)
-	newJudge := func(digest string) *judging.JudgeUseCase {
-		executor := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
-		executor.Programs = &judging.ProgramCache{Root: cache, Digest: digest, Compile: executor.CompileProgram}
+	newJudge := func(image sandbox.Image) *judging.JudgeUseCase {
+		executor := &judging.PackageJudge{Client: client, Files: files, Languages: image.Config, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		executor.Programs = &judging.ProgramCache{Root: cache, Compiler: image.Compiler(), Compile: executor.CompileProgram}
 		return judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), submissionsRepo,
 			&judging.PackageLoader{Store: store, Bucket: bucket, TempDir: diskTempDir(t), Packages: drafts, Limits: limits},
 			executor, judgeworker.NewEventPublisher(js))
 	}
-	judgeUC := newJudge(image.Identity.Digest)
-	checkerEntry := func(digest string) string {
-		return filepath.Join(cache, packageID.String(), strings.TrimPrefix(digest, "sha256:"), "checker", "entry")
+	judgeUC := newJudge(image)
+	checkerEntry := func(image sandbox.Image) string {
+		return filepath.Join(cache, packageID.String(), image.Compiler(), "checker", "entry")
 	}
 
 	contestID := uuid.New()
@@ -176,22 +177,30 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		assert.EqualValues(t, 1, *sub.FailedTest)
 	})
 	t.Run("CheckerCompiledOncePerImage", func(t *testing.T) {
-		before, err := os.Stat(checkerEntry(image.Identity.Digest))
+		before, err := os.Stat(checkerEntry(image))
 		require.NoError(t, err, "the first submissions compiled the checker into the cache")
 		sub := judge(t, problemID, submissionsmodel.Python, "print(sum(map(int, input().split())))")
 		assert.Equal(t, submissionsmodel.Accepted, sub.State)
-		after, err := os.Stat(checkerEntry(image.Identity.Digest))
+		after, err := os.Stat(checkerEntry(image))
 		require.NoError(t, err)
 		assert.True(t, os.SameFile(before, after), "a cached checker is not compiled again")
 	})
-	t.Run("OtherJudgeImageCompilesItsOwnChecker", func(t *testing.T) {
-		// The package carries no binaries, so a worker on another image judges it with its own build.
-		other := "sha256:" + strings.Repeat("b", 64)
-		judgeUC = newJudge(other)
-		assert.Equal(t, submissionsmodel.Accepted, judge(t, problemID, submissionsmodel.Python, "print(sum(map(int, input().split())))").State)
-		assert.Equal(t, submissionsmodel.GotWA, judge(t, problemID, submissionsmodel.Python, "print(42)").State)
-		_, err := os.Stat(checkerEntry(other))
+	t.Run("ChangedJudgeImageCompilesItsOwnChecker", func(t *testing.T) {
+		// The package carries no binaries: a worker whose image differs, here only in its
+		// language configuration, compiles the checker itself instead of reusing the cached one.
+		langs := maps.Clone(image.Config.Langs)
+		cpp := langs["cpp"]
+		cpp.Compile = strings.Replace(cpp.Compile, "g++ ", "g++ -DREJECT_ALL ", 1)
+		langs["cpp"] = cpp
+		changed := sandbox.Image{Identity: image.Identity, Config: &sandbox.Config{Langs: langs}}
+		judgeUC = newJudge(changed)
+		sub := judge(t, problemID, submissionsmodel.Python, "print(sum(map(int, input().split())))")
+		assert.Equal(t, submissionsmodel.GotWA, sub.State, "the checker compiled with the changed configuration rejects everything")
+		_, err := os.Stat(checkerEntry(changed))
 		require.NoError(t, err)
+		judgeUC = newJudge(image)
+		sub = judge(t, problemID, submissionsmodel.Python, "print(sum(map(int, input().split())))")
+		assert.Equal(t, submissionsmodel.Accepted, sub.State)
 	})
 	t.Run("UnreadablePackageIsInternalError", func(t *testing.T) {
 		// A Package whose archive object was never uploaded cannot be loaded.

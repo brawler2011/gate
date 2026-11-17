@@ -6,7 +6,6 @@ package integration
 import (
 	"io"
 	"log/slog"
-	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -64,7 +63,7 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 			client, files := newGoJudge(s.T())
 			cfg := &sandbox.Config{Langs: testBuildOptions(s.T()).Languages}
 			judge := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
-			judge.Programs = &judging.ProgramCache{Root: diskTempDir(s.T()), Digest: "sha256:" + strings.Repeat("c", 64), Compile: judge.CompileProgram}
+			judge.Programs = &judging.ProgramCache{Root: diskTempDir(s.T()), Compiler: "test", Compile: judge.CompileProgram}
 			verdict, err := judge.Judge(s.ctx, pkg, uuid.New(), draft.Files[main], language, silentJudgeProgress{}, submissionsmodel.SubmissionEventMeta{})
 			s.Require().NoError(err)
 			s.Equal(submissionsmodel.Accepted, verdict.State, "%+v", verdict)
