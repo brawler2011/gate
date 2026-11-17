@@ -20,7 +20,8 @@ resources in `assets/`.
 A draft holds at most one checker, validator and interactor; the role folder
 identifies each, so there is no selection. A component's language comes from its
 file extension (`.cpp`, `.cc`, `.cxx`, `.py`, `.go`, `.java`) and must be available
-in the pinned toolchain. The main solution is the only selected component.
+on the judge image (checked at enqueue and again when the build runs, which uses
+the languages of the image it runs on). The main solution is the only selected component.
 
 - `pass-fail` and `scoring` require a checker. Each test requires either a provided
   answer object or a solution component that generates the answer. An optional
@@ -41,20 +42,25 @@ in the pinned toolchain. The main solution is the only selected component.
   or interactor execution must succeed before the archive can be published.
 
 The ready GFMT v2 archive contains `problem.yaml`, the author snapshot at
-`.gate/snapshot.json`, source files/assets, compiled components and dependencies,
-and every declared test input and noninteractive answer. Generated tests have no
+`.gate/snapshot.json`, source files/assets and every declared test input and noninteractive answer. Generated tests have no
 remaining execution recipe in the ready manifest. `gfmt.OpenBuiltPackage` checks
-the final tree, including regular files, one compiled component per singleton role
-(a checker, or an interactor for interactive problems), test modes and group graph,
+the final tree, including regular files, the checker or interactor source named in
+`programs` (a checker, or an interactor for interactive problems), test modes and group graph,
 before archiving. Missing or changed input objects fail materialization with the
 object UUID and affected test input/answer or asset path.
+
+A package holds no binaries and does not depend on a judge image. The judge
+compiles the checker or interactor with its own image on first use and keeps it
+under `<work_dir>/judge-cache/<package>/<compiler>/<role>`, where the compiler
+is the image digest together with its language configuration
+(`judging.ProgramCache`). Verdicts are reproducible against the current image only.
 
 ## Version and failure boundaries
 
 Draft saves and paired uploads atomically replace files and metadata under an
 expected revision check. An incomplete upload never becomes a draft reference.
 Enqueue locks that revision, validates it, and persists the entire snapshot,
-including text files, metadata, limits, toolchain and immutable input object roots.
+including text files, metadata, limits and immutable input object roots.
 Later saves can proceed while the worker builds exclusively from that snapshot.
 The worker verifies each input object's size and SHA-256 against its registry row.
 

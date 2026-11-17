@@ -4,9 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -22,6 +19,18 @@ func TestUnavailable(t *testing.T) {
 	assert.False(t, unavailable(errors.New("invalid identity.json")))
 }
 
+// Compiled programs are reused only by a judge with the same image and language
+// configuration; a changed compiler flag must not reuse old binaries.
+func TestImageCompilerCoversLanguageConfig(t *testing.T) {
+	image := func(digest, compile string) Image {
+		return Image{Identity: Identity{Digest: digest}, Config: &Config{Langs: map[string]Language{"cpp": {Compile: compile}, "python": {}}}}
+	}
+	base := image("sha256:aa", "g++ -O2")
+	assert.Equal(t, base.Compiler(), image("sha256:aa", "g++ -O2").Compiler())
+	assert.NotEqual(t, base.Compiler(), image("sha256:aa", "g++ -O2 -DX").Compiler())
+	assert.NotEqual(t, base.Compiler(), image("sha256:bb", "g++ -O2").Compiler())
+}
+
 // An unreachable go-judge is retried until the deadline and reported as such.
 func TestReadImageWaitsForUnreachableJudge(t *testing.T) {
 	client, err := NewClient("127.0.0.1:1")
@@ -32,23 +41,4 @@ func TestReadImageWaitsForUnreachableJudge(t *testing.T) {
 	_, err = ReadImage(ctx, client)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "go-judge unreachable")
-}
-
-// An API instance reads the manifest that the judge image ships, copied to a directory.
-func TestReadImageDir(t *testing.T) {
-	dir := t.TempDir()
-	langs, err := os.ReadFile(filepath.Join("..", "..", "..", "judge", "langs.toml"))
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "langs.toml"), langs, 0o600))
-	digest := "sha256:" + strings.Repeat("ab", 32)
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "identity.json"), []byte(`{"digest":"`+digest+`","architecture":"x86_64","abi":"linux-gnu"}`), 0o600))
-
-	image, err := ReadImageDir(dir)
-	require.NoError(t, err)
-	assert.Equal(t, Identity{Digest: digest, Architecture: "x86_64", ABI: "linux-gnu"}, image.Identity)
-	assert.Contains(t, image.Config.Langs, "cpp")
-
-	_, err = ReadImageDir(t.TempDir())
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "identity.json")
 }

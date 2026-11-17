@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
 	"time"
 
-	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
@@ -20,10 +20,12 @@ import (
 )
 
 type PackageJudge struct {
-	Client      *sandbox.Client
-	Files       *sandbox.FileTransport
-	Environment model.Toolchain
-	Logger      *slog.Logger
+	Client *sandbox.Client
+	Files  *sandbox.FileTransport
+	// Languages are the running judge image's; submissions and package programs compile with them.
+	Languages *sandbox.Config
+	Programs  *ProgramCache
+	Logger    *slog.Logger
 }
 
 func (j *PackageJudge) release(id string) {
@@ -44,36 +46,106 @@ func (j *PackageJudge) upload(ctx context.Context, root, path string, limit int6
 	defer f.Close()
 	return j.Files.Upload(ctx, f, limit)
 }
-func (j *PackageJudge) restore(ctx context.Context, pkg *LoadedPackage, component gfmt.CompiledComponent) (sandbox.Executable, error) {
-	executable := sandbox.Executable{Dependencies: map[string]string{}}
-	id, err := j.upload(ctx, pkg.Format.Path, component.Entry, int64(pkg.Descriptor.Snapshot.Limits.Compile.Output))
-	if err != nil {
-		return executable, err
-	}
-	executable.PrimaryFileID = id
-	for path, artifact := range component.Dependencies {
-		id, err := j.upload(ctx, pkg.Format.Path, artifact, int64(pkg.Descriptor.Snapshot.Limits.Compile.Output))
+
+// CompileProgram compiles a package program with this judge's image into dir
+// (the ProgramCache layout: "entry" and "deps/").
+func (j *PackageJudge) CompileProgram(ctx context.Context, pkg *LoadedPackage, program gfmt.Program, dir string) error {
+	read := func(path string) ([]byte, error) {
+		data, err := os.ReadFile(filepath.Join(pkg.Format.Path, path))
 		if err != nil {
-			j.release(executable.PrimaryFileID)
-			for _, id := range executable.Dependencies {
-				j.release(id)
-			}
-			return sandbox.Executable{}, err
+			return nil, fmt.Errorf("read: %w", err)
 		}
-		executable.Dependencies[path] = id
+		return data, nil
+	}
+	source, err := read(program.Source)
+	if err != nil {
+		return err
+	}
+	deps := map[string][]byte{}
+	for destination, path := range program.Dependencies {
+		if deps[destination], err = read(path); err != nil {
+			return err
+		}
+	}
+	limits := pkg.Descriptor.Snapshot.Limits.Compile
+	executable, err := sandbox.NewSandbox(j.Client, j.Languages).CompileWithLimits(ctx, source, program.Language, deps, limits)
+	if err != nil {
+		return err
+	}
+	defer j.releaseExecutable(executable)
+	download := func(name, id string) error {
+		if !fs.ValidPath(name) || name == "." {
+			return fmt.Errorf("invalid compiled file name %q", name)
+		}
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			return fmt.Errorf("mkdir: %w", err)
+		}
+		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+		if err != nil {
+			return fmt.Errorf("create: %w", err)
+		}
+		_, copyErr := j.Files.Download(ctx, id, f, int64(limits.Output))
+		return errors.Join(copyErr, f.Close())
+	}
+	if err := download("entry", executable.PrimaryFileID); err != nil {
+		return err
+	}
+	for name, id := range executable.Dependencies {
+		if err := download("deps/"+name, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// program uploads the cached compiled program of role to the sandbox.
+func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, role string) (sandbox.Executable, error) {
+	dir, err := j.Programs.Get(ctx, pkg, role)
+	if err != nil {
+		return sandbox.Executable{}, err
+	}
+	limit := int64(pkg.Descriptor.Snapshot.Limits.Compile.Output)
+	executable := sandbox.Executable{Dependencies: map[string]string{}}
+	if executable.PrimaryFileID, err = j.upload(ctx, dir, "entry", limit); err != nil {
+		return sandbox.Executable{}, err
+	}
+	deps := filepath.Join(dir, "deps")
+	err = filepath.WalkDir(deps, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			if errors.Is(err, fs.ErrNotExist) && path == deps {
+				return nil
+			}
+			return err
+		}
+		name, err := filepath.Rel(deps, path)
+		if err != nil {
+			return fmt.Errorf("rel: %w", err)
+		}
+		id, err := j.upload(ctx, deps, name, limit)
+		if err != nil {
+			return err
+		}
+		executable.Dependencies[filepath.ToSlash(name)] = id
+		return nil
+	})
+	if err != nil {
+		j.releaseExecutable(executable)
+		return sandbox.Executable{}, fmt.Errorf("upload compiled %s: %w", role, err)
 	}
 	return executable, nil
 }
 
-// errEnvironmentMismatch means this worker cannot reproduce the package's pinned toolchain.
-var errEnvironmentMismatch = errors.New("pinned judging environment unavailable")
+func (j *PackageJudge) releaseExecutable(executable sandbox.Executable) {
+	j.release(executable.PrimaryFileID)
+	for _, id := range executable.Dependencies {
+		j.release(id)
+	}
+}
 
 func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submissionID uuid.UUID, source string, language submissionsmodel.LanguageName, progress Progress, meta submissionsmodel.SubmissionEventMeta) (*FinalVerdict, error) {
 	s := pkg.Descriptor.Snapshot
-	if s.Toolchain.Digest != j.Environment.Digest || s.Toolchain.Architecture != j.Environment.Architecture || s.Toolchain.ABI != j.Environment.ABI {
-		return nil, errEnvironmentMismatch
-	}
-	sb := sandbox.NewSandbox(j.Client, &sandbox.Config{Langs: s.Toolchain.Languages})
+	sb := sandbox.NewSandbox(j.Client, j.Languages)
 	lang := convertLanguage(language)
 	sol, err := sb.CompileWithLimits(ctx, []byte(source), lang, nil, s.Limits.Compile)
 	if err != nil {
@@ -86,30 +158,17 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 		}
 		return &FinalVerdict{State: submissionsmodel.GotCE, Message: output, TestDetails: &submissionsmodel.SubmissionTestDetails{CompilerOutput: &output, ErrorLine: ParseErrorLine(language, output)}}, nil
 	}
-	defer func() {
-		j.release(sol.PrimaryFileID)
-		for _, id := range sol.Dependencies {
-			j.release(id)
-		}
-	}()
+	defer j.releaseExecutable(sol)
 	role := "checker"
 	if s.Draft.Type == "interactive" {
 		role = "interactor"
 	}
-	component, ok := pkg.Format.Problem.CompiledRole(role)
-	if !ok {
-		return nil, fmt.Errorf("missing published %s", role)
-	}
-	executable, err := j.restore(ctx, pkg, component)
+	component := pkg.Format.Problem.Programs[role]
+	executable, err := j.program(ctx, pkg, role)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		j.release(executable.PrimaryFileID)
-		for _, id := range executable.Dependencies {
-			j.release(id)
-		}
-	}()
+	defer j.releaseExecutable(executable)
 	if err := progress.PublishTestingStarted(ctx, submissionID, meta); err != nil {
 		return nil, err
 	}
@@ -134,7 +193,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 	}
 	return NewVerdictCalculator(s.Draft.Type, pkg.Format.Problem).Calculate(results), nil
 }
-func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, sol sandbox.Executable, lang string, executable sandbox.Executable, component gfmt.CompiledComponent, test FlatTest, details bool) (TestResult, error) {
+func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, sol sandbox.Executable, lang string, executable sandbox.Executable, component gfmt.Program, test FlatTest, details bool) (TestResult, error) {
 	s := pkg.Descriptor.Snapshot
 	limits := s.Limits.Auxiliary
 	limits.CPU = time.Duration(s.Draft.TimeLimitMs) * time.Millisecond

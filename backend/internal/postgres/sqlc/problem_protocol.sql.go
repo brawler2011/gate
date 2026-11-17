@@ -553,20 +553,19 @@ func (q *Queries) InsertPackageObject(ctx context.Context, arg InsertPackageObje
 }
 
 const insertProblemBuild = `-- name: InsertProblemBuild :exec
-INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,toolchain_digest,state,max_attempts,deadline)
+INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,state,max_attempts,deadline)
 VALUES($1,$2,$3,$4,$5::jsonb,
- $6,'queued',$7,clock_timestamp()+$8::bigint*interval '1 millisecond')
+ 'queued',$6,clock_timestamp()+$7::bigint*interval '1 millisecond')
 `
 
 type InsertProblemBuildParams struct {
-	ID              uuid.UUID `json:"id"`
-	ProblemID       uuid.UUID `json:"problem_id"`
-	OrganizationID  uuid.UUID `json:"organization_id"`
-	Revision        int64     `json:"revision"`
-	Snapshot        []byte    `json:"snapshot"`
-	ToolchainDigest string    `json:"toolchain_digest"`
-	MaxAttempts     int32     `json:"max_attempts"`
-	DurationMs      int64     `json:"duration_ms"`
+	ID             uuid.UUID `json:"id"`
+	ProblemID      uuid.UUID `json:"problem_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Revision       int64     `json:"revision"`
+	Snapshot       []byte    `json:"snapshot"`
+	MaxAttempts    int32     `json:"max_attempts"`
+	DurationMs     int64     `json:"duration_ms"`
 }
 
 func (q *Queries) InsertProblemBuild(ctx context.Context, arg InsertProblemBuildParams) error {
@@ -576,7 +575,6 @@ func (q *Queries) InsertProblemBuild(ctx context.Context, arg InsertProblemBuild
 		arg.OrganizationID,
 		arg.Revision,
 		arg.Snapshot,
-		arg.ToolchainDigest,
 		arg.MaxAttempts,
 		arg.DurationMs,
 	)

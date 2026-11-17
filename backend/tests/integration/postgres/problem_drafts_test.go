@@ -120,7 +120,7 @@ func TestProblemBuildSnapshotAndRecovery(t *testing.T) {
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
-	options := postgres.ProblemBuildOptions{Toolchain: model.Toolchain{Digest: "sha256:" + strings.Repeat("a", 64), Architecture: "amd64", ABI: "linux-gnu", Languages: map[string]sandbox.Language{"cpp": {Type: "compiler"}}}, MaxAttempts: 3, Duration: time.Minute, Lease: time.Second}
+	options := postgres.ProblemBuildOptions{Languages: map[string]sandbox.Language{"cpp": {Type: "compiler"}}, MaxAttempts: 3, Duration: time.Minute, Lease: time.Second}
 	key := mutationKey(org, "build", d.Revision)
 	result, err := repo.EnqueueBuild(ctx, key, d.ProblemID, d.Revision, options)
 	require.NoError(t, err)

@@ -4,29 +4,37 @@
 package integration
 
 import (
-	"strings"
+	"io"
+	"log/slog"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/judging"
+	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
+	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
 )
 
 // loadBuiltPackage opens a published package exactly as the judge does.
 func (s *IntegrationTestSuite) loadBuiltPackage(id uuid.UUID) *gfmt.Problem {
+	return s.loadPackage(id).Format.Problem
+}
+
+func (s *IntegrationTestSuite) loadPackage(id uuid.UUID) *judging.LoadedPackage {
 	s.T().Helper()
 	loader := &judging.PackageLoader{Store: s.objectStore, Bucket: s.bucket, TempDir: diskTempDir(s.T()), Packages: s.problemDrafts, Limits: testBuildOptions(s.T()).Limits}
 	pkg, err := loader.LoadPackage(s.ctx, id)
 	s.Require().NoError(err)
 	s.T().Cleanup(pkg.Cleanup)
-	return pkg.Format.Problem
+	return pkg
 }
 
-// Every builtin template builds, and its package holds the single checker,
-// validator and interactor its role folders define.
-func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildWithSingletonRoles() {
+// Every builtin template builds into a package that names the sources of its
+// checker and interactor, and the judge accepts the template's main solution.
+func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 	admin := s.createUser("admin_roles", accessmodel.UserRoleAdmin)
 	org := s.createOrganization("roles-org", "Roles Organization", admin.Id)
 	ctx := withTestUser(s.ctx, admin.Id)
@@ -36,21 +44,29 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildWithSingletonRoles() {
 			s.Require().NoError(err)
 			draft, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: problem.ID})
 			s.Require().NoError(err)
-			built := s.loadBuiltPackage(s.buildPackage(admin.Id, problem.ID))
+			pkg := s.loadPackage(s.buildPackage(admin.Id, problem.ID))
+			var main string
 			for _, c := range draft.Components {
-				if c.Role != corev1.ProblemDraftComponentRoleChecker && c.Role != corev1.ProblemDraftComponentRoleValidator && c.Role != corev1.ProblemDraftComponentRoleInteractor {
+				if id, ok := draft.MainSolutionID.Get(); ok && c.ID == id {
+					main = c.Path
+				}
+				if c.Role != corev1.ProblemDraftComponentRoleChecker && c.Role != corev1.ProblemDraftComponentRoleInteractor {
 					continue
 				}
-				compiled, ok := built.CompiledRole(string(c.Role))
+				program, ok := pkg.Format.Problem.Programs[string(c.Role)]
 				s.Require().True(ok, "%s missing from package", c.Role)
-				s.Equal(built.Compiled[c.ID.String()], compiled)
+				s.Equal(gfmt.Program{Source: c.Path, Language: problemsmodel.LanguageForPath(c.Path), Dependencies: map[string]string(c.Dependencies)}, program)
 			}
-			role := "checker"
-			if draft.Type == corev1.ProblemDraftTypeInteractive {
-				role = "interactor"
-			}
-			_, ok := built.CompiledRole(role)
-			s.True(ok, "package has no %s", role)
+			languages := map[string]submissionsmodel.LanguageName{"cpp": submissionsmodel.Cpp, "python": submissionsmodel.Python, "go": submissionsmodel.Golang}
+			language, ok := languages[problemsmodel.LanguageForPath(main)]
+			s.Require().True(ok, "main solution %q", main)
+			client, files := newGoJudge(s.T())
+			cfg := &sandbox.Config{Langs: testBuildOptions(s.T()).Languages}
+			judge := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+			judge.Programs = &judging.ProgramCache{Root: diskTempDir(s.T()), Compiler: "test", Compile: judge.CompileProgram}
+			verdict, err := judge.Judge(s.ctx, pkg, uuid.New(), draft.Files[main], language, silentJudgeProgress{}, submissionsmodel.SubmissionEventMeta{})
+			s.Require().NoError(err)
+			s.Equal(submissionsmodel.Accepted, verdict.State, "%+v", verdict)
 		})
 	}
 }
@@ -84,12 +100,5 @@ func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 	s.Require().Equal(draft.Tests, saved.Tests)
 
 	built := s.loadBuiltPackage(s.buildPackage(admin.Id, problem.ID))
-	compiled, ok := built.Compiled[checker.ID.String()]
-	s.Require().True(ok, "checker keeps its component ID")
-	s.Equal("checker", compiled.Role)
-	s.Equal("python", compiled.Language)
-	s.Equal(map[string]string(checker.Dependencies), built.Sources["checkers/checker.py"].DependencyMap)
-	for path := range built.Sources {
-		s.False(strings.HasSuffix(path, "checker.cpp"), "old checker source remains: %s", path)
-	}
+	s.Equal(gfmt.Program{Source: "checkers/checker.py", Language: "python", Dependencies: map[string]string(checker.Dependencies)}, built.Programs["checker"])
 }

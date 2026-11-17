@@ -21,7 +21,7 @@ import (
 
 func testBuildOptions() postgres.ProblemBuildOptions {
 	return postgres.ProblemBuildOptions{
-		Toolchain:   model.Toolchain{Digest: "sha256:" + strings.Repeat("a", 64), Architecture: "amd64", ABI: "linux-gnu", Languages: map[string]sandbox.Language{"cpp": {Type: "compiler"}}},
+		Languages:   map[string]sandbox.Language{"cpp": {Type: "compiler"}},
 		MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute,
 	}
 }
@@ -112,12 +112,12 @@ func TestBuildRequestSnapshotsOneRevisionWhileEditing(t *testing.T) {
 func TestBuildSnapshotInputSetMustMatchReferences(t *testing.T) {
 	t.Parallel()
 	ctx, pool, _, org, d, oid := buildableFixture(t)
-	snapshot := `{"organization_id":"` + org.String() + `","toolchain":{"digest":"sha256:` + strings.Repeat("a", 64) + `"},` +
+	snapshot := `{"organization_id":"` + org.String() + `",` +
 		`"input_objects":["` + oid.String() + `"],"draft":{"problem_id":"` + d.ProblemID.String() + `","revision":` + "2" + `,` +
 		`"tests":[{"input":{"object_id":"` + oid.String() + `"},"answer":{"object_id":null}}],"assets":[]}}`
-	_, err := pool.Exec(ctx, `INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,toolchain_digest,state,max_attempts,deadline)
- VALUES($1,$2,$3,2,$4::jsonb,$5,'queued',1,clock_timestamp()+interval '1 minute')`,
-		uuid.New(), d.ProblemID, org, snapshot, "sha256:"+strings.Repeat("a", 64))
+	_, err := pool.Exec(ctx, `INSERT INTO problem_builds(id,problem_id,organization_id,revision,snapshot,state,max_attempts,deadline)
+ VALUES($1,$2,$3,2,$4::jsonb,'queued',1,clock_timestamp()+interval '1 minute')`,
+		uuid.New(), d.ProblemID, org, snapshot)
 	require.ErrorContains(t, err, "snapshot input object set mismatch")
 }
 

@@ -5,7 +5,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/brawler2011/gate/backend/pkg/points"
@@ -13,15 +12,16 @@ import (
 
 // OpenBuiltPackage is the shared Builder/Judge contract for published GFMT v2.
 // Import parsers may read author formats; published packages contain no recipe
-// requiring generators or component compilation during judging.
+// requiring generators, and only their checker or interactor is compiled, by the
+// judge with its own image.
 func OpenBuiltPackage(dir string) (*GateFormat, error) {
 	g, err := OpenPackage(dir)
 	if err != nil {
 		return nil, err
 	}
 	p := g.Problem
-	if p.FormatVersion != "2" || !regexp.MustCompile(`^sha256:[0-9a-f]{64}$`).MatchString(p.ToolchainDigest) || p.Architecture == "" || p.ABI == "" {
-		return nil, fmt.Errorf("invalid built package environment")
+	if p.FormatVersion != "2" {
+		return nil, fmt.Errorf("invalid built package format version")
 	}
 	if p.Type != "pass-fail" && p.Type != "scoring" && p.Type != "interactive" {
 		return nil, fmt.Errorf("invalid package type")
@@ -54,15 +54,14 @@ func OpenBuiltPackage(dir string) (*GateFormat, error) {
 		}
 		return nil
 	}
-	for id, c := range p.Compiled {
-		if id == "" || c.Role == "" {
-			return nil, fmt.Errorf("invalid compiled component")
+	for role, c := range p.Programs {
+		if role != "checker" && role != "interactor" {
+			return nil, fmt.Errorf("invalid program role %q", role)
 		}
-		lang, ok := p.Languages[c.Language]
-		if !ok || lang.Execute == "" {
-			return nil, fmt.Errorf("missing component language configuration")
+		if c.Language == "" {
+			return nil, fmt.Errorf("program %s has no language", role)
 		}
-		if err := regular(c.Entry); err != nil {
+		if err := regular(c.Source); err != nil {
 			return nil, err
 		}
 		for dest, path := range c.Dependencies {
@@ -74,16 +73,9 @@ func OpenBuiltPackage(dir string) (*GateFormat, error) {
 			}
 		}
 	}
-	roles := map[string]int{}
-	for _, c := range p.Compiled {
-		roles[c.Role]++
-	}
-	for _, s := range []struct {
-		role     string
-		required bool
-	}{{"checker", p.Type != "interactive"}, {"interactor", p.Type == "interactive"}, {"validator", false}} {
-		if roles[s.role] > 1 || (s.required && roles[s.role] == 0) {
-			return nil, fmt.Errorf("built package needs exactly one %s", s.role)
+	for role, required := range map[string]bool{"checker": p.Type != "interactive", "interactor": p.Type == "interactive"} {
+		if _, ok := p.Programs[role]; required && !ok {
+			return nil, fmt.Errorf("built package needs a %s", role)
 		}
 	}
 	ordinals := map[int]bool{}

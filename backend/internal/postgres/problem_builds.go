@@ -55,11 +55,11 @@ func (r *ProblemDraftsRepo) EnqueueBuild(ctx context.Context, k model.MutationKe
 		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "draft cannot be built")
 	}
 	for _, c := range draft.Components {
-		if _, ok := options.Toolchain.Languages[c.Language()]; !ok {
-			return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, nil, "component language is unavailable in pinned toolchain")
+		if _, ok := options.Languages[c.Language()]; !ok {
+			return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, nil, "component language is unavailable on the judge: "+c.Path)
 		}
 	}
-	snapshot := model.BuildSnapshot{OrganizationID: org, Draft: draft, Toolchain: options.Toolchain, Limits: options.Limits, InputObjects: draft.InputObjects()}
+	snapshot := model.BuildSnapshot{OrganizationID: org, Draft: draft, Limits: options.Limits, InputObjects: draft.InputObjects()}
 	data, err := json.Marshal(snapshot)
 	if err != nil {
 		return model.MutationResult{}, fmt.Errorf("encode build snapshot: %w", err)
@@ -76,7 +76,7 @@ func (r *ProblemDraftsRepo) EnqueueBuild(ctx context.Context, k model.MutationKe
 	buildID := uuid.New()
 	if err := q.InsertProblemBuild(ctx, sqlc.InsertProblemBuildParams{
 		ID: buildID, ProblemID: id, OrganizationID: org, Revision: revision, Snapshot: data,
-		ToolchainDigest: options.Toolchain.Digest, MaxAttempts: int32(options.MaxAttempts), DurationMs: options.Duration.Milliseconds(), //nolint:gosec // validated small attempt count
+		MaxAttempts: int32(options.MaxAttempts), DurationMs: options.Duration.Milliseconds(), //nolint:gosec // validated small attempt count
 	}); err != nil {
 		return model.MutationResult{}, fmt.Errorf("insert build: %w", err)
 	}

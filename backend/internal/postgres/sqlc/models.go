@@ -726,21 +726,20 @@ type Problem struct {
 }
 
 type ProblemBuild struct {
-	ID              uuid.UUID  `json:"id"`
-	ProblemID       uuid.UUID  `json:"problem_id"`
-	OrganizationID  uuid.UUID  `json:"organization_id"`
-	Revision        int64      `json:"revision"`
-	Snapshot        []byte     `json:"snapshot"`
-	ToolchainDigest string     `json:"toolchain_digest"`
-	State           string     `json:"state"`
-	LeaseToken      *uuid.UUID `json:"lease_token"`
-	LeaseDeadline   *time.Time `json:"lease_deadline"`
-	Attempt         int32      `json:"attempt"`
-	MaxAttempts     int32      `json:"max_attempts"`
-	Deadline        time.Time  `json:"deadline"`
-	Diagnostic      []byte     `json:"diagnostic"`
-	CreatedAt       time.Time  `json:"created_at"`
-	FinishedAt      *time.Time `json:"finished_at"`
+	ID             uuid.UUID  `json:"id"`
+	ProblemID      uuid.UUID  `json:"problem_id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	Revision       int64      `json:"revision"`
+	Snapshot       []byte     `json:"snapshot"`
+	State          string     `json:"state"`
+	LeaseToken     *uuid.UUID `json:"lease_token"`
+	LeaseDeadline  *time.Time `json:"lease_deadline"`
+	Attempt        int32      `json:"attempt"`
+	MaxAttempts    int32      `json:"max_attempts"`
+	Deadline       time.Time  `json:"deadline"`
+	Diagnostic     []byte     `json:"diagnostic"`
+	CreatedAt      time.Time  `json:"created_at"`
+	FinishedAt     *time.Time `json:"finished_at"`
 }
 
 type ProblemBuildObject struct {

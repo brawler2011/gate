@@ -551,7 +551,6 @@ CREATE TABLE problem_builds (
     organization_id uuid NOT NULL,
     revision bigint NOT NULL,
     snapshot jsonb NOT NULL,
-    toolchain_digest text NOT NULL,
     state text NOT NULL,
     lease_token uuid,
     lease_deadline timestamptz,
@@ -569,7 +568,6 @@ CREATE TABLE problem_builds (
     CONSTRAINT problem_builds_revision_check CHECK ((revision > 0)),
     CONSTRAINT problem_builds_snapshot_check CHECK ((jsonb_typeof(snapshot) = 'object'::text)),
     CONSTRAINT problem_builds_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'running'::text, 'succeeded'::text, 'failed'::text, 'cancelled'::text]))),
-    CONSTRAINT problem_builds_toolchain_digest_check CHECK ((toolchain_digest ~ '^sha256:[0-9a-f]{64}$'::text)),
     CONSTRAINT problem_builds_id_problem_id_organization_id_key UNIQUE (id, problem_id, organization_id),
     CONSTRAINT problem_builds_pkey PRIMARY KEY (id),
     CONSTRAINT problem_builds_problem_id_organization_id_fkey FOREIGN KEY (problem_id, organization_id) REFERENCES problems(id, organization_id) ON DELETE RESTRICT
@@ -654,8 +652,8 @@ CREATE FUNCTION guard_problem_build() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    IF (NEW.id,NEW.problem_id,NEW.organization_id,NEW.revision,NEW.snapshot,NEW.toolchain_digest,NEW.created_at,NEW.max_attempts,NEW.deadline)
-      IS DISTINCT FROM (OLD.id,OLD.problem_id,OLD.organization_id,OLD.revision,OLD.snapshot,OLD.toolchain_digest,OLD.created_at,OLD.max_attempts,OLD.deadline) THEN
+    IF (NEW.id,NEW.problem_id,NEW.organization_id,NEW.revision,NEW.snapshot,NEW.created_at,NEW.max_attempts,NEW.deadline)
+      IS DISTINCT FROM (OLD.id,OLD.problem_id,OLD.organization_id,OLD.revision,OLD.snapshot,OLD.created_at,OLD.max_attempts,OLD.deadline) THEN
         RAISE EXCEPTION 'immutable build snapshot and settings';
     END IF;
     IF OLD.state IN ('succeeded','failed','cancelled') THEN RAISE EXCEPTION 'terminal build is immutable'; END IF;
@@ -694,8 +692,7 @@ BEGIN
     IF actual<>declared OR actual<>embedded THEN RAISE EXCEPTION 'snapshot input object set mismatch'; END IF;
     IF (snap->'draft'->>'revision')::bigint<>(SELECT revision FROM problem_builds WHERE id=bid)
       OR (snap->'draft'->>'problem_id')::uuid<>(SELECT problem_id FROM problem_builds WHERE id=bid)
-      OR (snap->>'organization_id')::uuid<>(SELECT organization_id FROM problem_builds WHERE id=bid)
-      OR snap->'toolchain'->>'digest'<>(SELECT toolchain_digest FROM problem_builds WHERE id=bid) THEN
+      OR (snap->>'organization_id')::uuid<>(SELECT organization_id FROM problem_builds WHERE id=bid) THEN
         RAISE EXCEPTION 'snapshot identity mismatch';
     END IF;
     RETURN NULL;

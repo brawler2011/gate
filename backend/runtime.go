@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -164,7 +165,7 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 	shared := sharedDeps{cfg: cfg, logger: logger, pool: pool, store: store, natsJS: natsJS, problemDrafts: pgstore.NewProblemDraftsRepo(pool, cfg.Problems.Draft, cfg.Problems.OperationLease)}
 
 	var services []appService
-	var judgeImage sandbox.Image
+	var languages *sandbox.Config
 	if mode.Worker() {
 		sandboxClient, err := sandbox.NewClient(cfg.GoJudge.GRPCAddr)
 		if err != nil {
@@ -173,13 +174,15 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 		defer sandboxClient.Close()
 		logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudge.GRPCAddr))
 
-		// The toolchain identity and languages come from the running judge image itself.
+		// The image digest and languages come from the running judge image itself.
 		imageCtx, cancelImage := context.WithTimeout(context.Background(), time.Minute)
-		judgeImage, err = sandbox.ReadImage(imageCtx, sandboxClient)
+		judgeImage, err := sandbox.ReadImage(imageCtx, sandboxClient)
 		cancelImage()
 		if err != nil {
 			return err
 		}
+		logger.Info("read judge image manifest", slog.String("judge_image_digest", judgeImage.Identity.Digest))
+		languages = judgeImage.Config
 		workers, err := workerServices(shared, sandboxClient, judgeImage)
 		if err != nil {
 			return err
@@ -192,19 +195,18 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 	if mode.API() {
 		if !mode.Worker() {
 			// Copied from the judge image of the same release (deploy/charts/gate).
-			judgeImage, err = sandbox.ReadImageDir(cfg.Judge.ManifestDir)
+			languages, err = sandbox.LoadConfig(filepath.Join(cfg.Judge.ManifestDir, "langs.toml"))
 			if err != nil {
 				return err
 			}
 		}
-		api, closeAPI, err := apiServices(shared, judgeImage)
+		api, closeAPI, err := apiServices(shared, languages)
 		if err != nil {
 			return err
 		}
 		defer closeAPI()
 		services = append(services, api...)
 	}
-	logger.Info("read judge image manifest", slog.String("toolchain_digest", judgeImage.Identity.Digest))
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -221,29 +223,26 @@ type sharedDeps struct {
 	problemDrafts *pgstore.ProblemDraftsRepo
 }
 
-func toolchainOf(image sandbox.Image) problemsmodel.Toolchain {
-	return problemsmodel.Toolchain{Digest: image.Identity.Digest, Architecture: image.Identity.Architecture, ABI: image.Identity.ABI, Languages: image.Config.Langs}
-}
-
 // workerServices judge submissions, build problem packages and compile booklets
 // in the sandbox.
 func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sandbox.Image) ([]appService, error) {
 	problemPolicy := d.cfg.Problems
-	toolchain := toolchainOf(judgeImage)
 	fileTransport, err := sandbox.NewFileTransport(d.cfg.GoJudge.HTTPURL, &http.Client{Timeout: problemPolicy.UploadTTL})
 	if err != nil {
 		return nil, err
 	}
 
-	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Environment: toolchain, UploadTTL: problemPolicy.UploadTTL, Logger: d.logger}
+	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, UploadTTL: problemPolicy.UploadTTL, Logger: d.logger}
 	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll}
 	problemGC := &builder.GC{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: d.logger}
 
 	judgeJobs := pgstore.NewJudgeJobs(d.pool)
 	judgeTransactions := pgstore.NewJudgeTransactions(d.pool)
+	packageJudge := &judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Logger: d.logger}
+	packageJudge.Programs = &judging.ProgramCache{Root: filepath.Join(problemPolicy.WorkDir, "judge-cache"), Compiler: judgeImage.Compiler(), Compile: packageJudge.CompileProgram}
 	judgeUC := judging.NewJudgeUseCase(judgeJobs, judgeTransactions, pgstore.NewSubmissionsRepo(d.pool),
 		&judging.PackageLoader{Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Packages: d.problemDrafts, Limits: problemPolicy.Limits},
-		&judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Environment: toolchain, Logger: d.logger}, judgeworker.NewEventPublisher(d.natsJS))
+		packageJudge, judgeworker.NewEventPublisher(d.natsJS))
 	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), d.natsJS, judgeUC, d.cfg.Judge.Workers)
 	if err != nil {
 		return nil, fmt.Errorf("create judge worker: %w", err)
@@ -303,7 +302,7 @@ func workerHealthHandler() http.Handler {
 
 // apiServices serve HTTP and WebSocket and publish work to the workers. The
 // returned function closes what they opened.
-func apiServices(d sharedDeps, judgeImage sandbox.Image) (services []appService, closeAPI func(), err error) {
+func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService, closeAPI func(), err error) {
 	cfg, logger, pool, store, natsJS := d.cfg, d.logger, d.pool, d.store, d.natsJS
 
 	usersRepo := pgstore.NewUsersRepo(pool)
@@ -362,11 +361,9 @@ func apiServices(d sharedDeps, judgeImage sandbox.Image) (services []appService,
 	logger.Info("successfully initialized use cases")
 
 	problemPolicy := cfg.Problems
-	toolchain := toolchainOf(judgeImage)
-	sandboxCfg := judgeImage.Config
 	problemDrafts := d.problemDrafts
 	objectStore := store
-	buildOptions := problemsmodel.BuildOptions{Toolchain: toolchain, Limits: problemPolicy.Limits, MaxAttempts: problemPolicy.Attempts, Duration: problemPolicy.Duration, Lease: problemPolicy.Lease}
+	buildOptions := problemsmodel.BuildOptions{Languages: languages.Langs, Limits: problemPolicy.Limits, MaxAttempts: problemPolicy.Attempts, Duration: problemPolicy.Duration, Lease: problemPolicy.Lease}
 	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, UploadTTL: problemPolicy.UploadTTL, ObjectBytes: int64(problemPolicy.Limits.ObjectBytes), BuildOptions: buildOptions}
 	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket}
 	draftUC.PackageContent = packageContent
@@ -447,7 +444,7 @@ func apiServices(d sharedDeps, judgeImage sandbox.Image) (services []appService,
 		BlogReads:          blogsRepo,
 		NATS:               natsJS,
 		Capabilities:       access.NewCapabilities(pgstore.NewPolicyFactsRepo(pool)),
-	}, cfg.HTTP.SecureCookies).WithLanguages(sandboxCfg.Langs)
+	}, cfg.HTTP.SecureCookies).WithLanguages(languages.Langs)
 
 	secHandler := middleware.NewSecurityHandler()
 	authzMw := middleware.AuthzMiddleware()

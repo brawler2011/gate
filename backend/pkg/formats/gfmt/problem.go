@@ -8,31 +8,26 @@ import (
 
 // Problem represents the GFMT problem specification.
 type Problem struct {
-	ToolchainDigest string                       `yaml:"toolchain_digest,omitempty" json:"toolchain_digest,omitempty"`
-	Architecture    string                       `yaml:"architecture,omitempty" json:"architecture,omitempty"`
-	ABI             string                       `yaml:"abi,omitempty" json:"abi,omitempty"`
-	Languages       map[string]LanguageConfig    `yaml:"languages,omitempty" json:"languages,omitempty"`
-	Compiled        map[string]CompiledComponent `yaml:"compiled,omitempty" json:"compiled,omitempty"`
-	UpdatedAt       time.Time                    `yaml:"updated_at,omitempty" json:"updated_at,omitempty"`
-	MaxScore        *points.Value                `yaml:"max_score,omitempty" json:"max_score,omitempty"`
-	Sources         map[string]Source            `yaml:"sources,omitempty" json:"sources,omitempty"`
-	FormatVersion   string                       `yaml:"format_version" json:"format_version"`
-	Title           string                       `yaml:"title" json:"title"`
-	Type            string                       `yaml:"type" json:"type"` // "pass-fail", "interactive", "scoring"
-	Limits          Limits                       `yaml:"limits" json:"limits"`
-	Subtasks        map[string]Subtask           `yaml:"subtasks" json:"subtasks"`
-	Solutions       map[string]string            `yaml:"solutions" json:"solutions"`
+	// Programs are the sources the judge compiles, by role (checker,
+	// interactor); a built package names each role at most once.
+	Programs      map[string]Program `yaml:"programs,omitempty" json:"programs,omitempty"`
+	UpdatedAt     time.Time          `yaml:"updated_at,omitempty" json:"updated_at,omitempty"`
+	MaxScore      *points.Value      `yaml:"max_score,omitempty" json:"max_score,omitempty"`
+	Sources       map[string]Source  `yaml:"sources,omitempty" json:"sources,omitempty"`
+	FormatVersion string             `yaml:"format_version" json:"format_version"`
+	Title         string             `yaml:"title" json:"title"`
+	Type          string             `yaml:"type" json:"type"` // "pass-fail", "interactive", "scoring"
+	Limits        Limits             `yaml:"limits" json:"limits"`
+	Subtasks      map[string]Subtask `yaml:"subtasks" json:"subtasks"`
+	Solutions     map[string]string  `yaml:"solutions" json:"solutions"`
 }
 
-// CompiledRole returns the compiled component of a singleton role (checker,
-// validator, interactor); a built package holds at most one of each.
-func (p *Problem) CompiledRole(role string) (CompiledComponent, bool) {
-	for _, c := range p.Compiled {
-		if c.Role == role {
-			return c, true
-		}
-	}
-	return CompiledComponent{}, false
+// Program is a source file of a built package that the judge compiles with its
+// own image. Dependencies map a file name in the compile directory to a package path.
+type Program struct {
+	Source       string            `yaml:"source" json:"source"`
+	Language     string            `yaml:"language" json:"language"`
+	Dependencies map[string]string `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
 }
 
 // Limits defines the resource limits for a problem.
@@ -59,21 +54,6 @@ type Test struct {
 	Manual     string       `yaml:"manual,omitempty" json:"manual,omitempty"`
 	Generate   string       `yaml:"generate,omitempty" json:"generate,omitempty"`
 	Sample     bool         `yaml:"sample,omitempty" json:"sample,omitempty"`
-}
-
-type LanguageConfig struct {
-	Type        string `yaml:"type" json:"type"`
-	Compile     string `yaml:"compile" json:"compile"`
-	CodeFile    string `yaml:"code_file" json:"code_file"`
-	CompileFile string `yaml:"compile_file" json:"compile_file"`
-	Execute     string `yaml:"execute" json:"execute"`
-}
-
-type CompiledComponent struct {
-	Role         string            `yaml:"role" json:"role"`
-	Language     string            `yaml:"language" json:"language"`
-	Entry        string            `yaml:"entry" json:"entry"`
-	Dependencies map[string]string `yaml:"dependencies" json:"dependencies"`
 }
 
 // OrderedSubtaskNames defines test numbering: samples first, then group names;

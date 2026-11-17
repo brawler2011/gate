@@ -87,7 +87,7 @@ func (l *PackageLoader) LoadPackage(ctx context.Context, id uuid.UUID) (result *
 		return nil, err
 	}
 	d := p.Snapshot.Draft
-	if format.Problem.Title != d.Title || format.Problem.Type != d.Type || format.Problem.Limits.TimeMs != d.TimeLimitMs || format.Problem.Limits.MemoryMb != d.MemoryLimitMb || format.Problem.ToolchainDigest != p.Snapshot.Toolchain.Digest {
+	if format.Problem.Title != d.Title || format.Problem.Type != d.Type || format.Problem.Limits.TimeMs != d.TimeLimitMs || format.Problem.Limits.MemoryMb != d.MemoryLimitMb {
 		return nil, fmt.Errorf("package metadata differs from build snapshot")
 	}
 	return &LoadedPackage{Dir: tree, Format: format, Descriptor: p}, nil

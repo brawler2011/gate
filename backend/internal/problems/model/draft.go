@@ -80,7 +80,6 @@ type DraftAsset struct {
 type BuildSnapshot struct {
 	OrganizationID uuid.UUID   `json:"organization_id"`
 	Draft          Draft       `json:"draft"`
-	Toolchain      Toolchain   `json:"toolchain"`
 	Limits         BuildLimits `json:"limits"`
 	// InputObjects is derived from Draft, never accepted from the caller.
 	InputObjects []uuid.UUID `json:"input_objects"`
@@ -93,13 +92,6 @@ type BuildLimits struct {
 	TestOutputBytes bytesize.Size         `json:"test_output_bytes" yaml:"test_output_bytes"`
 	Compile         sandbox.FileRunLimits `json:"compile" yaml:"compile"`
 	Auxiliary       sandbox.FileRunLimits `json:"auxiliary" yaml:"auxiliary"`
-}
-
-type Toolchain struct {
-	Digest       string                      `json:"digest"`
-	Architecture string                      `json:"architecture"`
-	ABI          string                      `json:"abi"`
-	Languages    map[string]sandbox.Language `json:"languages"`
 }
 
 type DraftQuotas struct {
