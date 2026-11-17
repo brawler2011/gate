@@ -271,22 +271,16 @@ CREATE TABLE stored_objects (
     key text NOT NULL,
     sha256 text NOT NULL,
     size bigint NOT NULL,
-    state text NOT NULL,
-    upload_deadline timestamptz NOT NULL,
-    unreferenced_at timestamptz,
     created_at timestamptz DEFAULT clock_timestamp() NOT NULL,
-    updated_at timestamptz DEFAULT clock_timestamp() NOT NULL,
     CONSTRAINT stored_objects_check CHECK ((key = ((('objects/'::text || (organization_id)::text) || '/'::text) || (id)::text))),
     CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'asset'::text, 'package'::text]))),
     CONSTRAINT stored_objects_sha256_check CHECK ((sha256 ~ '^[0-9a-f]{64}$'::text)),
     CONSTRAINT stored_objects_size_check CHECK ((size >= 0)),
-    CONSTRAINT stored_objects_state_check CHECK ((state = ANY (ARRAY['uploading'::text, 'available'::text, 'deleting'::text, 'deleted'::text]))),
     CONSTRAINT stored_objects_id_organization_id_key UNIQUE (id, organization_id),
     CONSTRAINT stored_objects_key_key UNIQUE (key),
     CONSTRAINT stored_objects_pkey PRIMARY KEY (id),
     CONSTRAINT stored_objects_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE RESTRICT
 );
-CREATE INDEX stored_objects_gc ON stored_objects USING btree (state, unreferenced_at);
 
 CREATE TABLE request_idempotency (
     organization_id uuid NOT NULL,
@@ -295,7 +289,6 @@ CREATE TABLE request_idempotency (
     fingerprint text NOT NULL,
     token uuid NOT NULL,
     lease_deadline timestamptz NOT NULL,
-    upload_id uuid,
     result jsonb,
     http_status integer,
     created_at timestamptz DEFAULT clock_timestamp() NOT NULL,
@@ -304,52 +297,20 @@ CREATE TABLE request_idempotency (
     CONSTRAINT request_idempotency_http_status_check CHECK (((http_status >= 200) AND (http_status <= 299))),
     CONSTRAINT request_idempotency_key_check CHECK (((octet_length(key) >= 1) AND (octet_length(key) <= 200))),
     CONSTRAINT request_idempotency_pkey PRIMARY KEY (organization_id, operation, key),
-    CONSTRAINT request_idempotency_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE RESTRICT,
-    CONSTRAINT request_idempotency_upload_id_fkey FOREIGN KEY (upload_id) REFERENCES stored_objects(id) ON DELETE RESTRICT
+    CONSTRAINT request_idempotency_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE RESTRICT
 );
 
-CREATE TABLE request_upload_objects (
-    organization_id uuid NOT NULL,
-    operation text NOT NULL,
-    key text NOT NULL,
-    ordinal integer NOT NULL,
-    object_id uuid NOT NULL,
-    CONSTRAINT request_upload_objects_ordinal_check CHECK ((ordinal > 0)),
-    CONSTRAINT request_upload_objects_object_id_key UNIQUE (object_id),
-    CONSTRAINT request_upload_objects_pkey PRIMARY KEY (organization_id, operation, key, ordinal),
-    CONSTRAINT request_upload_objects_object_id_fkey FOREIGN KEY (object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
-    CONSTRAINT request_upload_objects_organization_id_operation_key_fkey FOREIGN KEY (organization_id, operation, key) REFERENCES request_idempotency(organization_id, operation, key) ON DELETE RESTRICT
-);
-
+-- A row exists only once its bytes were uploaded and verified, and it is
+-- inserted together with its first reference. Rows are deleted, never changed.
 -- +goose StatementBegin
 CREATE FUNCTION guard_stored_object() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
-BEGIN
-    IF TG_OP='INSERT' THEN
-        IF NEW.state <> 'uploading' THEN RAISE EXCEPTION 'objects start uploading'; END IF;
-        RETURN NEW;
-    END IF;
-    IF (NEW.id,NEW.organization_id,NEW.purpose,NEW.key,NEW.sha256,NEW.size,NEW.upload_deadline,NEW.created_at)
-       IS DISTINCT FROM (OLD.id,OLD.organization_id,OLD.purpose,OLD.key,OLD.sha256,OLD.size,OLD.upload_deadline,OLD.created_at) THEN
-       RAISE EXCEPTION 'immutable stored object identity';
-    END IF;
-    IF NEW.state<>OLD.state AND NOT (
-        (OLD.state='uploading' AND NEW.state IN ('available','deleting')) OR
-        (OLD.state='available' AND NEW.state='deleting') OR
-        (OLD.state='deleting' AND NEW.state='deleted')) THEN
-        RAISE EXCEPTION 'invalid object transition';
-    END IF;
-    IF NEW.state='available' AND OLD.state='uploading' AND NEW.upload_deadline<=clock_timestamp() THEN
-        RAISE EXCEPTION 'upload expired';
-    END IF;
-    NEW.updated_at=clock_timestamp();
-    RETURN NEW;
-END;
+BEGIN RAISE EXCEPTION 'stored object is immutable'; END;
 $$;
 -- +goose StatementEnd
 
-CREATE TRIGGER stored_object_guard BEFORE INSERT OR UPDATE ON stored_objects FOR EACH ROW EXECUTE FUNCTION guard_stored_object();
+CREATE TRIGGER stored_object_guard BEFORE UPDATE ON stored_objects FOR EACH ROW EXECUTE FUNCTION guard_stored_object();
 
 -- ==========================================================================
 -- Problems
@@ -425,6 +386,7 @@ CREATE TABLE problem_drafts (
     CONSTRAINT problem_drafts_type_check CHECK ((type = ANY (ARRAY['pass-fail'::text, 'scoring'::text, 'interactive'::text]))),
     CONSTRAINT problem_drafts_organization_id_short_name_key UNIQUE (organization_id, short_name),
     CONSTRAINT problem_drafts_pkey PRIMARY KEY (problem_id),
+    CONSTRAINT problem_drafts_problem_id_organization_id_key UNIQUE (problem_id, organization_id),
     CONSTRAINT problem_drafts_problem_id_organization_id_fkey FOREIGN KEY (problem_id, organization_id) REFERENCES problems(id, organization_id) ON DELETE CASCADE
 );
 CREATE INDEX problem_drafts_title_trgm ON problem_drafts USING gin (title gin_trgm_ops);
@@ -456,12 +418,13 @@ CREATE UNIQUE INDEX problem_draft_components_singleton_role ON problem_draft_com
 
 CREATE TABLE problem_draft_assets (
     problem_id uuid NOT NULL,
+    organization_id uuid NOT NULL,
     path text NOT NULL,
     object_id uuid NOT NULL,
     CONSTRAINT problem_draft_assets_path_check CHECK (valid_draft_path(path)),
     CONSTRAINT problem_draft_assets_pkey PRIMARY KEY (problem_id, path),
-    CONSTRAINT problem_draft_assets_object_id_fkey FOREIGN KEY (object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
-    CONSTRAINT problem_draft_assets_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problem_drafts(problem_id) ON DELETE CASCADE
+    CONSTRAINT problem_draft_assets_object_id_fkey FOREIGN KEY (object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT,
+    CONSTRAINT problem_draft_assets_problem_id_fkey FOREIGN KEY (problem_id, organization_id) REFERENCES problem_drafts(problem_id, organization_id) ON DELETE CASCADE
 );
 CREATE INDEX problem_draft_assets_object ON problem_draft_assets USING btree (object_id);
 
@@ -492,6 +455,7 @@ CREATE TABLE problem_draft_subtask_dependencies (
 
 CREATE TABLE problem_draft_tests (
     problem_id uuid NOT NULL,
+    organization_id uuid NOT NULL,
     id uuid NOT NULL,
     ordinal integer NOT NULL,
     subtask_id uuid NOT NULL,
@@ -513,9 +477,9 @@ CREATE TABLE problem_draft_tests (
     CONSTRAINT problem_draft_tests_points_check CHECK ((points >= (0)::numeric)),
     CONSTRAINT problem_draft_tests_pkey PRIMARY KEY (problem_id, id),
     CONSTRAINT problem_draft_tests_problem_id_ordinal_key UNIQUE (problem_id, ordinal) DEFERRABLE INITIALLY DEFERRED,
-    CONSTRAINT problem_draft_tests_answer_object_id_fkey FOREIGN KEY (answer_object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
-    CONSTRAINT problem_draft_tests_input_object_id_fkey FOREIGN KEY (input_object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
-    CONSTRAINT problem_draft_tests_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problem_drafts(problem_id) ON DELETE CASCADE,
+    CONSTRAINT problem_draft_tests_answer_object_id_fkey FOREIGN KEY (answer_object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT,
+    CONSTRAINT problem_draft_tests_input_object_id_fkey FOREIGN KEY (input_object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT,
+    CONSTRAINT problem_draft_tests_problem_id_fkey FOREIGN KEY (problem_id, organization_id) REFERENCES problem_drafts(problem_id, organization_id) ON DELETE CASCADE,
     CONSTRAINT problem_draft_tests_problem_id_generator_id_fkey FOREIGN KEY (problem_id, generator_id) REFERENCES problem_draft_components(problem_id, id) DEFERRABLE INITIALLY DEFERRED,
     CONSTRAINT problem_draft_tests_problem_id_solution_id_fkey FOREIGN KEY (problem_id, solution_id) REFERENCES problem_draft_components(problem_id, id) DEFERRABLE INITIALLY DEFERRED,
     CONSTRAINT problem_draft_tests_problem_id_subtask_id_fkey FOREIGN KEY (problem_id, subtask_id) REFERENCES problem_draft_subtasks(problem_id, id) DEFERRABLE INITIALLY DEFERRED
@@ -569,24 +533,23 @@ CREATE TABLE problem_builds (
     CONSTRAINT problem_builds_snapshot_check CHECK ((jsonb_typeof(snapshot) = 'object'::text)),
     CONSTRAINT problem_builds_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'running'::text, 'succeeded'::text, 'failed'::text, 'cancelled'::text]))),
     CONSTRAINT problem_builds_id_problem_id_organization_id_key UNIQUE (id, problem_id, organization_id),
+    CONSTRAINT problem_builds_id_organization_id_key UNIQUE (id, organization_id),
     CONSTRAINT problem_builds_pkey PRIMARY KEY (id),
     CONSTRAINT problem_builds_problem_id_organization_id_fkey FOREIGN KEY (problem_id, organization_id) REFERENCES problems(id, organization_id) ON DELETE RESTRICT
 );
 CREATE INDEX problem_builds_queue ON problem_builds USING btree (created_at, id) WHERE (state = 'queued'::text);
 CREATE INDEX problem_builds_recovery ON problem_builds USING btree (lease_deadline) WHERE (state = 'running'::text);
 
-CREATE TABLE problem_build_objects (
+-- Objects a build snapshot reads; they live as long as the build.
+CREATE TABLE problem_build_inputs (
     build_id uuid NOT NULL,
+    organization_id uuid NOT NULL,
     object_id uuid NOT NULL,
-    role text NOT NULL,
-    attempt_token uuid,
-    CONSTRAINT problem_build_objects_check CHECK ((((role = 'input'::text) AND (attempt_token IS NULL)) OR ((role = 'output'::text) AND (attempt_token IS NOT NULL)))),
-    CONSTRAINT problem_build_objects_role_check CHECK ((role = ANY (ARRAY['input'::text, 'output'::text]))),
-    CONSTRAINT problem_build_objects_pkey PRIMARY KEY (build_id, object_id, role),
-    CONSTRAINT problem_build_objects_build_id_fkey FOREIGN KEY (build_id) REFERENCES problem_builds(id) ON DELETE CASCADE,
-    CONSTRAINT problem_build_objects_object_id_fkey FOREIGN KEY (object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT
+    CONSTRAINT problem_build_inputs_pkey PRIMARY KEY (build_id, object_id),
+    CONSTRAINT problem_build_inputs_build_id_fkey FOREIGN KEY (build_id, organization_id) REFERENCES problem_builds(id, organization_id) ON DELETE CASCADE,
+    CONSTRAINT problem_build_inputs_object_id_fkey FOREIGN KEY (object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT
 );
-CREATE INDEX problem_build_objects_object ON problem_build_objects USING btree (object_id);
+CREATE INDEX problem_build_inputs_object ON problem_build_inputs USING btree (object_id);
 
 CREATE TABLE problem_packages (
     id uuid DEFAULT uuidv7() NOT NULL,
@@ -606,9 +569,10 @@ CREATE TABLE problem_packages (
     CONSTRAINT problem_packages_revision_check CHECK ((revision > 0)),
     CONSTRAINT problem_packages_samples_check CHECK ((jsonb_typeof(samples) = 'array'::text)),
     CONSTRAINT problem_packages_build_id_key UNIQUE (build_id),
+    CONSTRAINT problem_packages_id_organization_id_key UNIQUE (id, organization_id),
     CONSTRAINT problem_packages_pkey PRIMARY KEY (id),
     CONSTRAINT problem_packages_build_id_fkey FOREIGN KEY (build_id) REFERENCES problem_builds(id) ON DELETE RESTRICT,
-    CONSTRAINT problem_packages_object_id_fkey FOREIGN KEY (object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
+    CONSTRAINT problem_packages_object_id_fkey FOREIGN KEY (object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT,
     CONSTRAINT problem_packages_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
     CONSTRAINT problem_packages_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE
 );
@@ -622,12 +586,13 @@ CREATE INDEX problem_packages_problem_id_idx ON problem_packages USING btree (pr
 -- serving an image never opens the package archive.
 CREATE TABLE problem_package_assets (
     package_id uuid NOT NULL,
+    organization_id uuid NOT NULL,
     path text NOT NULL,
     object_id uuid NOT NULL,
     CONSTRAINT problem_package_assets_path_check CHECK (valid_draft_path(path)),
     CONSTRAINT problem_package_assets_pkey PRIMARY KEY (package_id, path),
-    CONSTRAINT problem_package_assets_object_id_fkey FOREIGN KEY (object_id) REFERENCES stored_objects(id) ON DELETE RESTRICT,
-    CONSTRAINT problem_package_assets_package_id_fkey FOREIGN KEY (package_id) REFERENCES problem_packages(id) ON DELETE CASCADE
+    CONSTRAINT problem_package_assets_object_id_fkey FOREIGN KEY (object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT,
+    CONSTRAINT problem_package_assets_package_id_fkey FOREIGN KEY (package_id, organization_id) REFERENCES problem_packages(id, organization_id) ON DELETE CASCADE
 );
 CREATE INDEX problem_package_assets_object ON problem_package_assets USING btree (object_id);
 
@@ -681,7 +646,7 @@ BEGIN
     SELECT snapshot INTO snap FROM problem_builds WHERE id=bid;
     IF NOT FOUND THEN RETURN NULL; END IF;
     SELECT COALESCE(array_agg(object_id ORDER BY object_id),'{}') INTO actual
-      FROM problem_build_objects WHERE build_id=bid AND role='input';
+      FROM problem_build_inputs WHERE build_id=bid;
     SELECT COALESCE(array_agg(DISTINCT v::uuid ORDER BY v::uuid),'{}') INTO declared
       FROM jsonb_array_elements_text(snap->'input_objects') e(v);
     SELECT COALESCE(array_agg(DISTINCT (v#>>'{}')::uuid ORDER BY (v#>>'{}')::uuid),'{}') INTO embedded FROM (
@@ -705,10 +670,9 @@ CREATE FUNCTION guard_build_input() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    IF OLD.role='input' AND EXISTS(SELECT 1 FROM problem_builds WHERE id=OLD.build_id) THEN
+    IF TG_OP='UPDATE' OR EXISTS(SELECT 1 FROM problem_builds WHERE id=OLD.build_id) THEN
         RAISE EXCEPTION 'build inputs are immutable';
     END IF;
-    IF TG_OP='UPDATE' THEN RAISE EXCEPTION 'build object references cannot be updated'; END IF;
     RETURN OLD;
 END;
 $$;
@@ -732,7 +696,7 @@ BEGIN
     SELECT * INTO b FROM problem_builds WHERE id=NEW.build_id;
     SELECT * INTO o FROM stored_objects WHERE id=NEW.object_id;
     IF b.state<>'running' OR b.lease_deadline<=clock_timestamp() OR b.problem_id<>NEW.problem_id
-       OR b.organization_id<>NEW.organization_id OR o.organization_id<>NEW.organization_id OR o.state<>'available'
+       OR b.organization_id<>NEW.organization_id OR o.organization_id<>NEW.organization_id
        OR o.purpose<>'package' OR o.sha256<>NEW.package_hash THEN RAISE EXCEPTION 'invalid package publication'; END IF;
     NEW.revision=b.revision;
     NEW.title=b.snapshot->'draft'->>'title';
@@ -747,8 +711,8 @@ $$;
 CREATE CONSTRAINT TRIGGER build_publication AFTER INSERT OR UPDATE ON problem_builds DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_build_publication();
 CREATE TRIGGER problem_build_guard BEFORE UPDATE ON problem_builds FOR EACH ROW EXECUTE FUNCTION guard_problem_build();
 CREATE CONSTRAINT TRIGGER problem_build_inputs_snapshot AFTER INSERT OR UPDATE ON problem_builds DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_build_inputs();
-CREATE TRIGGER problem_build_input_guard BEFORE DELETE OR UPDATE ON problem_build_objects FOR EACH ROW EXECUTE FUNCTION guard_build_input();
-CREATE CONSTRAINT TRIGGER problem_build_inputs_refs AFTER INSERT OR DELETE OR UPDATE ON problem_build_objects DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_build_inputs();
+CREATE TRIGGER problem_build_input_guard BEFORE DELETE OR UPDATE ON problem_build_inputs FOR EACH ROW EXECUTE FUNCTION guard_build_input();
+CREATE CONSTRAINT TRIGGER problem_build_inputs_refs AFTER INSERT OR DELETE OR UPDATE ON problem_build_inputs DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_build_inputs();
 CREATE TRIGGER package_immutable BEFORE UPDATE ON problem_packages FOR EACH ROW EXECUTE FUNCTION guard_package_immutable();
 CREATE TRIGGER package_asset_immutable BEFORE UPDATE ON problem_package_assets FOR EACH ROW EXECUTE FUNCTION guard_package_immutable();
 CREATE TRIGGER package_metadata BEFORE INSERT ON problem_packages FOR EACH ROW EXECUTE FUNCTION capture_package_metadata();
@@ -1302,85 +1266,3 @@ CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON conte
 CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON contest_problems FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
 CREATE TRIGGER access_revision_changed AFTER INSERT OR DELETE OR UPDATE ON contest_user_problem_blocks FOR EACH STATEMENT EXECUTE FUNCTION bump_access_revision();
 
--- ==========================================================================
--- Stored object references: objects become unreferenced when no row points to them
--- ==========================================================================
-
--- +goose StatementBegin
-CREATE FUNCTION stored_object_has_references(oid uuid) RETURNS boolean
-    LANGUAGE sql
-    AS $$
- SELECT EXISTS(SELECT 1 FROM problem_draft_tests WHERE input_object_id=oid OR answer_object_id=oid)
- OR EXISTS(SELECT 1 FROM problem_draft_assets WHERE object_id=oid)
- OR EXISTS(SELECT 1 FROM problem_build_objects WHERE object_id=oid)
- OR EXISTS(SELECT 1 FROM problem_packages WHERE object_id=oid)
- OR EXISTS(SELECT 1 FROM problem_package_assets WHERE object_id=oid)
- OR EXISTS(SELECT 1 FROM request_idempotency WHERE upload_id=oid)
- OR EXISTS(SELECT 1 FROM request_upload_objects WHERE object_id=oid);
-$$;
--- +goose StatementEnd
-
--- +goose StatementBegin
-CREATE FUNCTION maintain_stored_object_references() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-DECLARE old_ids uuid[]='{}'; new_ids uuid[]='{}'; ids uuid[]; oid uuid; owner_org uuid; obj stored_objects; is_output boolean=false;
-BEGIN
- IF TG_TABLE_NAME='problem_draft_tests' THEN
-  IF TG_OP<>'INSERT' THEN old_ids=ARRAY[OLD.input_object_id,OLD.answer_object_id]; END IF;
-  IF TG_OP<>'DELETE' THEN
-   new_ids=ARRAY[NEW.input_object_id,NEW.answer_object_id];
-   SELECT organization_id INTO owner_org FROM problems WHERE id=NEW.problem_id;
-  END IF;
- ELSIF TG_TABLE_NAME='problem_draft_assets' THEN
-  IF TG_OP<>'INSERT' THEN old_ids=ARRAY[OLD.object_id]; END IF;
-  IF TG_OP<>'DELETE' THEN
-   new_ids=ARRAY[NEW.object_id]; SELECT organization_id INTO owner_org FROM problems WHERE id=NEW.problem_id;
-  END IF;
- ELSIF TG_TABLE_NAME='problem_build_objects' THEN
-  IF TG_OP<>'INSERT' THEN old_ids=ARRAY[OLD.object_id]; END IF;
-  IF TG_OP<>'DELETE' THEN
-   new_ids=ARRAY[NEW.object_id]; SELECT organization_id INTO owner_org FROM problem_builds WHERE id=NEW.build_id;
-   is_output=NEW.role='output';
-  END IF;
- ELSIF TG_TABLE_NAME='problem_packages' THEN
-  IF TG_OP<>'INSERT' THEN old_ids=ARRAY[OLD.object_id]; END IF;
-  IF TG_OP<>'DELETE' THEN new_ids=ARRAY[NEW.object_id];owner_org=NEW.organization_id; END IF;
- ELSIF TG_TABLE_NAME='problem_package_assets' THEN
-  IF TG_OP<>'INSERT' THEN old_ids=ARRAY[OLD.object_id]; END IF;
-  IF TG_OP<>'DELETE' THEN
-   new_ids=ARRAY[NEW.object_id]; SELECT organization_id INTO owner_org FROM problem_packages WHERE id=NEW.package_id;
-  END IF;
- ELSIF TG_TABLE_NAME='request_upload_objects' THEN
-  IF TG_OP<>'INSERT' THEN old_ids=ARRAY[OLD.object_id]; END IF;
-  IF TG_OP<>'DELETE' THEN new_ids=ARRAY[NEW.object_id];owner_org=NEW.organization_id;is_output=true; END IF;
- ELSIF TG_TABLE_NAME='request_idempotency' THEN
-  IF TG_OP<>'INSERT' THEN old_ids=ARRAY[OLD.upload_id]; END IF;
-  IF TG_OP<>'DELETE' THEN new_ids=ARRAY[NEW.upload_id];owner_org=NEW.organization_id;is_output=true; END IF;
- END IF;
- SELECT COALESCE(array_agg(DISTINCT id ORDER BY id),'{}') INTO ids FROM unnest(old_ids||new_ids) x(id) WHERE id IS NOT NULL;
- FOREACH oid IN ARRAY ids LOOP
-  PERFORM 1 FROM stored_objects WHERE id=oid FOR UPDATE;
- END LOOP;
- -- These are separate statements after all waits have completed.
- FOREACH oid IN ARRAY new_ids LOOP
-  IF oid IS NULL THEN CONTINUE; END IF;
-  SELECT * INTO obj FROM stored_objects WHERE id=oid;
-  IF NOT FOUND OR obj.organization_id<>owner_org OR obj.state NOT IN ('available','uploading')
-   OR (NOT is_output AND obj.state<>'available') THEN RAISE EXCEPTION 'object reference is not available in owner organization'; END IF;
- END LOOP;
- FOREACH oid IN ARRAY ids LOOP
-  UPDATE stored_objects SET unreferenced_at=CASE WHEN stored_object_has_references(oid) THEN NULL ELSE COALESCE(unreferenced_at,clock_timestamp()) END WHERE id=oid;
- END LOOP;
- RETURN NULL;
-END;
-$$;
--- +goose StatementEnd
-
-CREATE TRIGGER request_object_refs AFTER INSERT OR DELETE OR UPDATE ON request_idempotency FOR EACH ROW EXECUTE FUNCTION maintain_stored_object_references();
-CREATE TRIGGER upload_object_refs AFTER INSERT OR DELETE OR UPDATE ON request_upload_objects FOR EACH ROW EXECUTE FUNCTION maintain_stored_object_references();
-CREATE TRIGGER draft_asset_object_refs AFTER INSERT OR DELETE OR UPDATE ON problem_draft_assets FOR EACH ROW EXECUTE FUNCTION maintain_stored_object_references();
-CREATE TRIGGER draft_test_object_refs AFTER INSERT OR DELETE OR UPDATE ON problem_draft_tests FOR EACH ROW EXECUTE FUNCTION maintain_stored_object_references();
-CREATE TRIGGER build_object_refs AFTER INSERT OR DELETE OR UPDATE ON problem_build_objects FOR EACH ROW EXECUTE FUNCTION maintain_stored_object_references();
-CREATE TRIGGER package_object_refs AFTER INSERT OR DELETE OR UPDATE ON problem_packages FOR EACH ROW EXECUTE FUNCTION maintain_stored_object_references();
-CREATE TRIGGER package_asset_object_refs AFTER INSERT OR DELETE OR UPDATE ON problem_package_assets FOR EACH ROW EXECUTE FUNCTION maintain_stored_object_references();

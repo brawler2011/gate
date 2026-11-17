@@ -245,7 +245,7 @@ func TestPublicationUploadVerificationAndRetry(t *testing.T) {
 			}
 			require.Equal(t, "infrastructure", failure.Kind)
 			require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, b.ID))
-			require.Equal(t, 1, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_build_objects b JOIN stored_objects o ON o.id=b.object_id WHERE b.build_id=$1 AND b.role='output' AND o.state='uploading'`, b.ID))
+			require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM stored_objects o WHERE o.purpose='package' AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)`), "a failed attempt leaves its archive bytes without a row")
 			// Change the author revision before a fresh worker attempt retries the build.
 			h.save(t, func(d *model.Draft) {
 				d.Title = "Later revision " + fault
@@ -346,7 +346,7 @@ func TestPublicationCommitFailure(t *testing.T) {
 	b := h.enqueueAndClaim(t)
 	t.Run("rollback at commit", func(t *testing.T) {
 		// The database is private to this top-level test. Fail at COMMIT, after the
-		// object state, package row, output hold and build state have all been changed.
+		// object row, package row and build state have all been written.
 		_, err := h.pool.Exec(h.ctx, `CREATE FUNCTION reject_publication() RETURNS trigger LANGUAGE plpgsql AS $$
  BEGIN RAISE EXCEPTION 'injected publication commit failure'; END $$;
  CREATE CONSTRAINT TRIGGER reject_publication AFTER UPDATE ON problem_builds
@@ -359,7 +359,7 @@ func TestPublicationCommitFailure(t *testing.T) {
 		_, err = h.pipeline().Execute(h.ctx, b)
 		require.ErrorContains(t, err, "injected publication commit failure")
 		require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, b.ID))
-		require.Equal(t, 1, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_build_objects b JOIN stored_objects o ON o.id=b.object_id WHERE b.build_id=$1 AND b.role='output' AND o.state='uploading'`, b.ID))
+		require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM stored_objects o WHERE o.purpose='package' AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)`), "the rolled-back publication leaves no object row")
 		current, err := h.repo.GetBuild(h.ctx, b.ID)
 		require.NoError(t, err)
 		require.Equal(t, "running", current.State)

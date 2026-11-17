@@ -742,11 +742,10 @@ type ProblemBuild struct {
 	FinishedAt     *time.Time `json:"finished_at"`
 }
 
-type ProblemBuildObject struct {
-	BuildID      uuid.UUID  `json:"build_id"`
-	ObjectID     uuid.UUID  `json:"object_id"`
-	Role         string     `json:"role"`
-	AttemptToken *uuid.UUID `json:"attempt_token"`
+type ProblemBuildInput struct {
+	BuildID        uuid.UUID `json:"build_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	ObjectID       uuid.UUID `json:"object_id"`
 }
 
 type ProblemCatalog struct {
@@ -778,9 +777,10 @@ type ProblemDraft struct {
 }
 
 type ProblemDraftAsset struct {
-	ProblemID uuid.UUID `json:"problem_id"`
-	Path      string    `json:"path"`
-	ObjectID  uuid.UUID `json:"object_id"`
+	ProblemID      uuid.UUID `json:"problem_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Path           string    `json:"path"`
+	ObjectID       uuid.UUID `json:"object_id"`
 }
 
 type ProblemDraftComponent struct {
@@ -814,6 +814,7 @@ type ProblemDraftSubtaskDependency struct {
 
 type ProblemDraftTest struct {
 	ProblemID      uuid.UUID    `json:"problem_id"`
+	OrganizationID uuid.UUID    `json:"organization_id"`
 	ID             uuid.UUID    `json:"id"`
 	Ordinal        int32        `json:"ordinal"`
 	SubtaskID      uuid.UUID    `json:"subtask_id"`
@@ -853,9 +854,10 @@ type ProblemPackage struct {
 }
 
 type ProblemPackageAsset struct {
-	PackageID uuid.UUID `json:"package_id"`
-	Path      string    `json:"path"`
-	ObjectID  uuid.UUID `json:"object_id"`
+	PackageID      uuid.UUID `json:"package_id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Path           string    `json:"path"`
+	ObjectID       uuid.UUID `json:"object_id"`
 }
 
 type ProblemTeam struct {
@@ -866,24 +868,15 @@ type ProblemTeam struct {
 }
 
 type RequestIdempotency struct {
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	Operation      string     `json:"operation"`
-	Key            string     `json:"key"`
-	Fingerprint    string     `json:"fingerprint"`
-	Token          uuid.UUID  `json:"token"`
-	LeaseDeadline  time.Time  `json:"lease_deadline"`
-	UploadID       *uuid.UUID `json:"upload_id"`
-	Result         []byte     `json:"result"`
-	HttpStatus     *int32     `json:"http_status"`
-	CreatedAt      time.Time  `json:"created_at"`
-}
-
-type RequestUploadObject struct {
 	OrganizationID uuid.UUID `json:"organization_id"`
 	Operation      string    `json:"operation"`
 	Key            string    `json:"key"`
-	Ordinal        int32     `json:"ordinal"`
-	ObjectID       uuid.UUID `json:"object_id"`
+	Fingerprint    string    `json:"fingerprint"`
+	Token          uuid.UUID `json:"token"`
+	LeaseDeadline  time.Time `json:"lease_deadline"`
+	Result         []byte    `json:"result"`
+	HttpStatus     *int32    `json:"http_status"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type Session struct {
@@ -894,17 +887,13 @@ type Session struct {
 }
 
 type StoredObject struct {
-	ID             uuid.UUID  `json:"id"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
-	Purpose        string     `json:"purpose"`
-	Key            string     `json:"key"`
-	Sha256         string     `json:"sha256"`
-	Size           int64      `json:"size"`
-	State          string     `json:"state"`
-	UploadDeadline time.Time  `json:"upload_deadline"`
-	UnreferencedAt *time.Time `json:"unreferenced_at"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Purpose        string    `json:"purpose"`
+	Key            string    `json:"key"`
+	Sha256         string    `json:"sha256"`
+	Size           int64     `json:"size"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type Submission struct {

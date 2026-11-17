@@ -13,34 +13,43 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (r *ProblemDraftsRepo) ListGCObjects(ctx context.Context, retention time.Duration) ([]model.StoredObject, error) {
-	q := sqlc.New(r.pool)
-	ids, err := q.ListGCObjectIDs(ctx, retention.Milliseconds())
+// ListUnreferencedObjects lists objects that no row references right now.
+func (r *ProblemDraftsRepo) ListUnreferencedObjects(ctx context.Context) ([]model.StoredObject, error) {
+	rows, err := sqlc.New(r.pool).ListUnreferencedObjects(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("list objects for collection: %w", err)
+		return nil, fmt.Errorf("list unreferenced objects: %w", err)
 	}
-	result := make([]model.StoredObject, 0, len(ids))
-	for _, id := range ids {
-		o, err := q.ReadStoredObject(ctx, id)
-		if err != nil {
-			return nil, fmt.Errorf("read object %s: %w", id, err)
-		}
-		result = append(result, mapStoredObject(o))
+	objects := make([]model.StoredObject, len(rows))
+	for i, row := range rows {
+		objects[i] = model.StoredObject{ID: row.ID, Key: row.Key}
 	}
-	return result, nil
+	return objects, nil
 }
 
-func (r *ProblemDraftsRepo) ObjectByKey(ctx context.Context, key string) (model.StoredObject, error) {
-	q := sqlc.New(r.pool)
-	id, err := q.StoredObjectIDByKey(ctx, key)
-	if err != nil {
-		return model.StoredObject{}, HandlePgErr(err)
+// DeleteObject deletes an object row unless a reference holds it. The foreign
+// keys decide, including for a reference committed concurrently.
+func (r *ProblemDraftsRepo) DeleteObject(ctx context.Context, id uuid.UUID) (bool, error) {
+	err := sqlc.New(r.pool).DeleteStoredObject(ctx, id)
+	if isForeignKeyViolation(err) {
+		return false, nil
 	}
-	o, err := q.ReadStoredObject(ctx, id)
 	if err != nil {
-		return model.StoredObject{}, HandlePgErr(err)
+		return false, fmt.Errorf("delete stored object: %w", err)
 	}
-	return mapStoredObject(o), nil
+	return true, nil
+}
+
+// ExistingObjectKeys returns which of the given keys have an object row.
+func (r *ProblemDraftsRepo) ExistingObjectKeys(ctx context.Context, keys []string) (map[string]bool, error) {
+	rows, err := sqlc.New(r.pool).ListStoredObjectKeys(ctx, keys)
+	if err != nil {
+		return nil, fmt.Errorf("list stored object keys: %w", err)
+	}
+	existing := make(map[string]bool, len(rows))
+	for _, key := range rows {
+		existing[key] = true
+	}
+	return existing, nil
 }
 
 func (r *ProblemDraftsRepo) PrunePackages(ctx context.Context, retention time.Duration) error {
@@ -59,8 +68,8 @@ func (r *ProblemDraftsRepo) PrunePackages(ctx context.Context, retention time.Du
 	return nil
 }
 
-// prunePackage re-checks eligibility under the Build then Package then object
-// locks, so a consumer created meanwhile keeps the Package alive.
+// prunePackage re-checks eligibility under the Build then Package locks, so a
+// consumer created meanwhile keeps the Package alive.
 func (r *ProblemDraftsRepo) prunePackage(ctx context.Context, id uuid.UUID, retention time.Duration) error {
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
@@ -81,11 +90,9 @@ func (r *ProblemDraftsRepo) prunePackage(ctx context.Context, id uuid.UUID, rete
 	} else if err != nil {
 		return fmt.Errorf("lock build: %w", err)
 	}
-	objectID, err := q.LockPackageObject(ctx, id)
-	if errors.Is(err, pgx.ErrNoRows) {
+	if _, err := q.LockProblemPackage(ctx, id); errors.Is(err, pgx.ErrNoRows) {
 		return nil
-	}
-	if err != nil {
+	} else if err != nil {
 		return fmt.Errorf("lock package: %w", err)
 	}
 	eligible, err := q.PackagePruneEligible(ctx, sqlc.PackagePruneEligibleParams{RetentionMs: retention.Milliseconds(), ID: id})
@@ -95,24 +102,8 @@ func (r *ProblemDraftsRepo) prunePackage(ctx context.Context, id uuid.UUID, rete
 	if !eligible {
 		return nil
 	}
-	assetIDs, err := q.ListPackageAssetObjectIDs(ctx, id)
-	if err != nil {
-		return fmt.Errorf("list package assets: %w", err)
-	}
-	objectIDs := append([]uuid.UUID{objectID}, assetIDs...)
-	// Deleting the Package bumps the access revision; take it before the
-	// asset objects, which a template clone may lock after it.
-	if err := q.LockAccessRevision(ctx); err != nil {
-		return fmt.Errorf("lock access revision: %w", err)
-	}
-	if _, err := lockObjects(ctx, tx, objectIDs); err != nil {
-		return err
-	}
 	if err := q.DeleteProblemPackage(ctx, id); err != nil {
 		return fmt.Errorf("delete package: %w", err)
-	}
-	if err := refreshObjectReferences(ctx, tx, objectIDs); err != nil {
-		return err
 	}
 	return commitTx(ctx, tx)
 }
@@ -152,18 +143,8 @@ func (r *ProblemDraftsRepo) pruneBuild(ctx context.Context, id uuid.UUID, retent
 	if !eligible {
 		return nil
 	}
-	objectIDs, err := q.ListBuildObjectIDs(ctx, id)
-	if err != nil {
-		return fmt.Errorf("list build objects: %w", err)
-	}
-	if _, err := lockObjects(ctx, tx, objectIDs); err != nil {
-		return err
-	}
 	if err := q.DeleteProblemBuild(ctx, id); err != nil {
 		return fmt.Errorf("delete build: %w", err)
-	}
-	if err := refreshObjectReferences(ctx, tx, objectIDs); err != nil {
-		return err
 	}
 	return commitTx(ctx, tx)
 }

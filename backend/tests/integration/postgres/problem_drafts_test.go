@@ -53,10 +53,8 @@ func makeBuildableDraft(d model.Draft, oid uuid.UUID) model.Draft {
 func insertAvailableObject(t *testing.T, ctx context.Context, pool *pgxpool.Pool, org uuid.UUID) uuid.UUID {
 	t.Helper()
 	id := uuid.New()
-	_, err := pool.Exec(ctx, `INSERT INTO stored_objects(id,organization_id,purpose,key,sha256,size,state,upload_deadline,unreferenced_at)
- VALUES($1,$2,'test-input',$4,$3,0,'uploading',clock_timestamp()+interval '1 hour',clock_timestamp());`, id, org, strings.Repeat("0", 64), "objects/"+org.String()+"/"+id.String())
-	require.NoError(t, err)
-	_, err = pool.Exec(ctx, `UPDATE stored_objects SET state='available' WHERE id=$1`, id)
+	_, err := pool.Exec(ctx, `INSERT INTO stored_objects(id,organization_id,purpose,key,sha256,size) VALUES($1,$2,'test-input',$4,$3,0)`,
+		id, org, strings.Repeat("0", 64), "objects/"+org.String()+"/"+id.String())
 	require.NoError(t, err)
 	return id
 }
@@ -151,12 +149,12 @@ func TestProblemBuildSnapshotAndRecovery(t *testing.T) {
 	require.Equal(t, b.Snapshot, next.Snapshot)
 	require.ErrorIs(t, repo.FinishBuildAttempt(ctx, b.ID, *b.LeaseToken, json.RawMessage(`{"message":"late"}`), false), pkg.ErrConflict)
 	var roots int
-	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM problem_build_objects WHERE build_id=$1 AND role='input'`, b.ID).Scan(&roots))
+	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM problem_build_inputs WHERE build_id=$1`, b.ID).Scan(&roots))
 	require.Equal(t, 1, roots)
 	// Snapshot and root set cannot be corrupted even by a direct DB writer.
 	_, err = pool.Exec(ctx, `UPDATE problem_builds SET snapshot=jsonb_set(snapshot,'{draft,title}','"Tampered"') WHERE id=$1`, b.ID)
 	require.ErrorContains(t, err, "immutable build")
-	_, err = pool.Exec(ctx, `DELETE FROM problem_build_objects WHERE build_id=$1 AND role='input'`, b.ID)
+	_, err = pool.Exec(ctx, `DELETE FROM problem_build_inputs WHERE build_id=$1`, b.ID)
 	require.ErrorContains(t, err, "immutable")
 	_, err = repo.CancelBuild(ctx, mutationKey(org, "cancel", b.ID), b.ID)
 	require.NoError(t, err)

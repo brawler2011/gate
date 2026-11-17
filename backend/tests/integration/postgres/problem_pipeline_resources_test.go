@@ -80,7 +80,7 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 
 func (h *pipelineHarness) pipeline() *builder.Pipeline {
 	return &builder.Pipeline{Repo: h.repo, Store: h.services.store, Bucket: "objects", TempDir: h.work, Client: h.services.client,
-		Files: h.services.files, Languages: &sandbox.Config{Langs: h.options.Languages}, UploadTTL: time.Minute, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		Files: h.services.files, Languages: &sandbox.Config{Langs: h.options.Languages}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 }
 
 func (h *pipelineHarness) save(t *testing.T, change func(*model.Draft)) {
@@ -309,7 +309,7 @@ func TestPipelineOutputOverflowFailsBuildWithBoundedDiagnostic(t *testing.T) {
 	require.Equal(t, 1, diagnostic.Test)
 	require.LessOrEqual(t, len(diagnostic.Message), 8192)
 	require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, build.ID))
-	require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_build_objects WHERE build_id=$1 AND role='output'`, build.ID))
+	require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM stored_objects o WHERE o.purpose='package' AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)`))
 }
 
 // Cancelling a running build frees the single worker slot: a generator that would sleep for

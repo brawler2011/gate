@@ -64,15 +64,6 @@ func (r *ProblemDraftsRepo) EnqueueBuild(ctx context.Context, k model.MutationKe
 	if err != nil {
 		return model.MutationResult{}, fmt.Errorf("encode build snapshot: %w", err)
 	}
-	objects, err := lockObjects(ctx, tx, snapshot.InputObjects)
-	if err != nil {
-		return model.MutationResult{}, err
-	}
-	for _, o := range objects {
-		if o.OrganizationID != org || o.State != "available" {
-			return model.MutationResult{}, pkg.ErrConflict
-		}
-	}
 	buildID := uuid.New()
 	if err := q.InsertProblemBuild(ctx, sqlc.InsertProblemBuildParams{
 		ID: buildID, ProblemID: id, OrganizationID: org, Revision: revision, Snapshot: data,
@@ -81,12 +72,9 @@ func (r *ProblemDraftsRepo) EnqueueBuild(ctx context.Context, k model.MutationKe
 		return model.MutationResult{}, fmt.Errorf("insert build: %w", err)
 	}
 	for _, oid := range snapshot.InputObjects {
-		if err := q.InsertBuildInput(ctx, sqlc.InsertBuildInputParams{BuildID: buildID, ObjectID: oid}); err != nil {
-			return model.MutationResult{}, fmt.Errorf("insert build input: %w", err)
+		if err := q.InsertBuildInput(ctx, sqlc.InsertBuildInputParams{BuildID: buildID, OrganizationID: org, ObjectID: oid}); err != nil {
+			return model.MutationResult{}, objectReferenceErr(err, "insert build input")
 		}
-	}
-	if err := refreshObjectReferences(ctx, tx, snapshot.InputObjects); err != nil {
-		return model.MutationResult{}, err
 	}
 	result, err := finishOperation(ctx, tx, k, 202, map[string]any{"build_id": buildID, "revision": revision})
 	if err != nil {
@@ -179,23 +167,6 @@ func (r *ProblemDraftsRepo) HeartbeatBuild(ctx context.Context, id, token uuid.U
 	return commitTx(ctx, tx)
 }
 
-// closeBuildAttempt runs only under the Build lock and releases exactly the
-// closing attempt's outputs. Input roots and newer attempts are untouched.
-func closeBuildAttempt(ctx context.Context, tx pgx.Tx, id, token uuid.UUID) error {
-	q := sqlc.New(tx)
-	ids, err := q.ListAttemptOutputObjects(ctx, sqlc.ListAttemptOutputObjectsParams{BuildID: id, AttemptToken: &token})
-	if err != nil {
-		return fmt.Errorf("list attempt outputs: %w", err)
-	}
-	if _, err := lockObjects(ctx, tx, ids); err != nil {
-		return err
-	}
-	if err := q.DeleteAttemptOutputs(ctx, sqlc.DeleteAttemptOutputsParams{BuildID: id, AttemptToken: &token}); err != nil {
-		return fmt.Errorf("release attempt outputs: %w", err)
-	}
-	return refreshObjectReferences(ctx, tx, ids)
-}
-
 func (r *ProblemDraftsRepo) FinishBuildAttempt(ctx context.Context, id, token uuid.UUID, diagnostic json.RawMessage, retry bool) error {
 	if len(diagnostic) > 131072 || !json.Valid(diagnostic) {
 		return pkg.ErrBadInput
@@ -216,9 +187,6 @@ func (r *ProblemDraftsRepo) FinishBuildAttempt(ctx context.Context, id, token uu
 	if !active {
 		return pkg.ErrConflict
 	}
-	if err := closeBuildAttempt(ctx, tx, id, token); err != nil {
-		return err
-	}
 	if err := q.FinishBuildAttemptRow(ctx, sqlc.FinishBuildAttemptRowParams{Retry: retry, Diagnostic: diagnostic, ID: id, Token: &token}); err != nil {
 		return fmt.Errorf("finish build attempt: %w", err)
 	}
@@ -226,7 +194,6 @@ func (r *ProblemDraftsRepo) FinishBuildAttempt(ctx context.Context, id, token uu
 }
 
 func (r *ProblemDraftsRepo) RecoverBuilds(ctx context.Context) error {
-	// Candidate selection never locks an object before its owner Build.
 	ids, err := sqlc.New(r.pool).ListRecoverableBuildIDs(ctx)
 	if err != nil {
 		return fmt.Errorf("list recoverable builds: %w", err)
@@ -260,9 +227,6 @@ func (r *ProblemDraftsRepo) recoverBuild(ctx context.Context, id uuid.UUID) erro
 	if !expired {
 		return nil
 	}
-	if err := closeBuildAttempt(ctx, tx, id, *b.LeaseToken); err != nil {
-		return err
-	}
 	if err := q.RequeueExpiredBuild(ctx, id); err != nil {
 		return fmt.Errorf("requeue expired build: %w", err)
 	}
@@ -292,11 +256,6 @@ func (r *ProblemDraftsRepo) CancelBuild(ctx context.Context, k model.MutationKey
 	}
 	if b.State != "queued" && b.State != "running" {
 		return model.MutationResult{}, pkg.ErrConflict
-	}
-	if b.LeaseToken != nil {
-		if err := closeBuildAttempt(ctx, tx, id, *b.LeaseToken); err != nil {
-			return model.MutationResult{}, err
-		}
 	}
 	if err := q.CancelBuildRow(ctx, id); err != nil {
 		return model.MutationResult{}, fmt.Errorf("cancel build: %w", err)
