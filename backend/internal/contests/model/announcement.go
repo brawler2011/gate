@@ -24,7 +24,6 @@ type ContestAnnouncement struct {
 type CreateContestAnnouncementInput struct {
 	ContestID uuid.UUID
 	ProblemID *uuid.UUID
-	AuthorID  uuid.UUID
 	Title     string
 	Body      string
 }

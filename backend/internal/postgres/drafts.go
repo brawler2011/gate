@@ -20,10 +20,10 @@ func NewDraftsRepo(db *pgxpool.Pool) *DraftsRepo {
 	}
 }
 
-func (r *DraftsRepo) CreateDraft(ctx context.Context, creation *contestsmodel.ContestDraftCreation) (uuid.UUID, error) {
+func (r *DraftsRepo) CreateDraft(ctx context.Context, userID uuid.UUID, creation *contestsmodel.ContestDraftCreation) (uuid.UUID, error) {
 	id, err := r.queries.CreateDraft(ctx, sqlc.CreateDraftParams{
 		ContestID: creation.ContestID,
-		UserID:    creation.UserID,
+		UserID:    userID,
 		Code:      creation.Code,
 	})
 	if err != nil {
@@ -65,10 +65,10 @@ func (r *DraftsRepo) GetDraftsCount(ctx context.Context, contestID, userID uuid.
 	return count, nil
 }
 
-func (r *DraftsRepo) ListDrafts(ctx context.Context, filter contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error) {
+func (r *DraftsRepo) ListDrafts(ctx context.Context, userID uuid.UUID, filter contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error) {
 	totalCount, err := r.queries.CountDrafts(ctx, sqlc.CountDraftsParams{
 		ContestID: filter.ContestID,
-		UserID:    filter.UserID,
+		UserID:    userID,
 	})
 	if err != nil {
 		return nil, HandlePgErr(err)
@@ -76,7 +76,7 @@ func (r *DraftsRepo) ListDrafts(ctx context.Context, filter contestsmodel.Contes
 
 	rows, err := r.queries.ListDrafts(ctx, sqlc.ListDraftsParams{
 		ContestID: filter.ContestID,
-		UserID:    filter.UserID,
+		UserID:    userID,
 		OffsetVal: Offset(filter.Page, filter.PageSize),
 		LimitVal:  filter.PageSize,
 	})

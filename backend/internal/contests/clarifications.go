@@ -29,9 +29,6 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 	if user.IsGuest() {
 		return nil, pkg.ErrUnauthenticated
 	}
-	if user.Id != input.UserID {
-		return nil, pkg.NoPermission
-	}
 
 	var clarification *contestsmodel.ContestClarification
 	err := withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionGetContest, func(tx ContestEventsTxStore) error {
@@ -46,7 +43,7 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 			return pkg.Wrap(pkg.NoPermission, nil, "clarifications are disabled for this contest")
 		}
 
-		clarification, err = tx.CreateClarification(ctx, input)
+		clarification, err = tx.CreateClarification(ctx, user.Id, input)
 		if err != nil {
 			return err
 		}
@@ -87,9 +84,6 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 	if user.IsGuest() {
 		return nil, pkg.ErrUnauthenticated
 	}
-	if user.Id != input.AnsweredBy {
-		return nil, pkg.NoPermission
-	}
 	var clarification *contestsmodel.ContestClarification
 	err := withinContestEvents(ctx, uc.transactor, input.ContestID, accessmodel.ActionManageContest, func(tx ContestEventsTxStore) error {
 		var err error
@@ -97,7 +91,7 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 			ctx,
 			input.ClarificationID,
 			input.ContestID,
-			input.AnsweredBy,
+			user.Id,
 			input.Answer,
 		)
 		if err != nil {
@@ -123,7 +117,7 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 			Username:           clarification.Username,
 			Question:           clarification.Question,
 			Answer:             input.Answer,
-			AnsweredBy:         input.AnsweredBy,
+			AnsweredBy:         user.Id,
 			AnsweredByUsername: ansByUsername,
 			AnsweredAt:         ansAt,
 		}
@@ -149,10 +143,9 @@ func (uc *ClarificationsUseCase) AnswerClarification(ctx context.Context, input 
 			}
 
 			body := fmt.Sprintf("**Вопрос:** %s\n\n**Ответ:** %s", clarification.Question, input.Answer)
-			announcement, err := tx.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{
+			announcement, err := tx.CreateAnnouncement(ctx, user.Id, &contestsmodel.CreateContestAnnouncementInput{
 				ContestID: clarification.ContestID,
 				ProblemID: clarification.ProblemID,
-				AuthorID:  input.AnsweredBy,
 				Title:     title,
 				Body:      body,
 			})

@@ -19,13 +19,11 @@ type ContestDraft struct {
 
 type ContestDraftCreation struct {
 	ContestID uuid.UUID
-	UserID    uuid.UUID
 	Code      string
 }
 
 type ContestDraftsFilter struct {
 	ContestID uuid.UUID
-	UserID    uuid.UUID
 	Page      int32
 	PageSize  int32
 }

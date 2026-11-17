@@ -23,7 +23,7 @@ func newMockClarificationsRepo() *mockClarificationsRepo {
 	}
 }
 
-func (m *mockClarificationsRepo) CreateClarification(ctx context.Context, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error) {
+func (m *mockClarificationsRepo) CreateClarification(ctx context.Context, userID uuid.UUID, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error) {
 	id := uuid.New()
 	letter := "B"
 	c := contestsmodel.ContestClarification{
@@ -31,7 +31,7 @@ func (m *mockClarificationsRepo) CreateClarification(ctx context.Context, input 
 		ContestID:     input.ContestID,
 		ProblemID:     input.ProblemID,
 		ProblemLetter: &letter,
-		UserID:        input.UserID,
+		UserID:        userID,
 		Username:      "participant1",
 		Question:      input.Question,
 		Status:        contestsmodel.ClarificationStatusPending,
@@ -83,7 +83,6 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	clar, err := uc.CreateClarification(accessmodel.WithUser(ctx, accessmodel.User{Id: participantID, Role: accessmodel.UserRoleUser}), &contestsmodel.CreateContestClarificationInput{
 		ContestID: contestID,
 		ProblemID: &probID,
-		UserID:    participantID,
 		Question:  "Are arrays 1-indexed in problem B?",
 	})
 	require.NoError(t, err)
@@ -97,7 +96,6 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 		ClarificationID:       clar.ID,
 		ContestID:             contestID,
 		Answer:                "Yes, arrays are 1-indexed.",
-		AnsweredBy:            juryID,
 		PublishAsAnnouncement: true,
 		AnnouncementTitle:     "Уточнение по задаче B",
 	})

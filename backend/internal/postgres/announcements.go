@@ -25,13 +25,13 @@ func NewAnnouncementsRepo(pool *pgxpool.Pool) *AnnouncementsRepo {
 	}
 }
 
-func (r *AnnouncementsRepo) CreateAnnouncement(ctx context.Context, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error) {
+func (r *AnnouncementsRepo) CreateAnnouncement(ctx context.Context, authorID uuid.UUID, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error) {
 	id := uuid.New()
 	row, err := r.queries.CreateContestAnnouncement(ctx, sqlc.CreateContestAnnouncementParams{
 		ID:        id,
 		ContestID: input.ContestID,
 		ProblemID: input.ProblemID,
-		AuthorID:  input.AuthorID,
+		AuthorID:  authorID,
 		Title:     input.Title,
 		Body:      input.Body,
 	})

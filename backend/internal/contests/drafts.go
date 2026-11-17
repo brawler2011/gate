@@ -20,7 +20,7 @@ type DraftTxStore interface {
 	LockDraftOwner(context.Context, uuid.UUID, uuid.UUID) error
 	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ContestAction) (bool, error)
 	GetContest(context.Context, uuid.UUID) (contestsmodel.Contest, error)
-	CreateDraft(context.Context, *contestsmodel.ContestDraftCreation) (uuid.UUID, error)
+	CreateDraft(ctx context.Context, userID uuid.UUID, creation *contestsmodel.ContestDraftCreation) (uuid.UUID, error)
 	GetDraft(context.Context, uuid.UUID) (contestsmodel.ContestDraft, error)
 	GetDraftsCount(context.Context, uuid.UUID, uuid.UUID) (int64, error)
 	DeleteDraft(context.Context, uuid.UUID) error
@@ -31,7 +31,7 @@ type DraftTransactions interface {
 }
 
 type DraftReads interface {
-	ListDrafts(context.Context, contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error)
+	ListDrafts(ctx context.Context, userID uuid.UUID, filter contestsmodel.ContestDraftsFilter) (*contestsmodel.ContestDraftsList, error)
 }
 type DraftsUseCase struct {
 	transactions DraftTransactions
@@ -51,12 +51,9 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmode
 	if user.IsGuest() {
 		return uuid.Nil, pkg.ErrUnauthenticated
 	}
-	if user.Id != creation.UserID {
-		return uuid.Nil, pkg.NoPermission
-	}
 	var id uuid.UUID
 	err := uc.transactions.Within(ctx, func(tx DraftTxStore) error {
-		if err := tx.LockDraftOwner(ctx, creation.ContestID, creation.UserID); err != nil {
+		if err := tx.LockDraftOwner(ctx, creation.ContestID, user.Id); err != nil {
 			return err
 		}
 		allowed, err := tx.HasContestPermission(ctx, creation.ContestID, user.Id, accessmodel.ActionGetContest)
@@ -86,7 +83,7 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmode
 		if count >= maxDraftsPerUser {
 			return pkg.Wrap(pkg.ErrBadInput, nil, "maximum number of drafts reached (limit: 50)")
 		}
-		id, err = tx.CreateDraft(ctx, creation)
+		id, err = tx.CreateDraft(ctx, user.Id, creation)
 		return err
 	})
 	if err != nil {
@@ -133,9 +130,6 @@ func (uc *DraftsUseCase) ListDrafts(ctx context.Context, filter contestsmodel.Co
 	if user.IsGuest() {
 		return nil, pkg.ErrUnauthenticated
 	}
-	if user.Id != filter.UserID {
-		return nil, pkg.NoPermission
-	}
 	var err error
 	filter.Page, filter.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 20)
 	if err != nil {
@@ -149,5 +143,5 @@ func (uc *DraftsUseCase) ListDrafts(ctx context.Context, filter contestsmodel.Co
 	if !allowed {
 		return nil, pkg.NoPermission
 	}
-	return uc.reads.ListDrafts(ctx, filter)
+	return uc.reads.ListDrafts(ctx, user.Id, filter)
 }

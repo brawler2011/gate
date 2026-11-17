@@ -44,7 +44,6 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.
 	announcement, err := h.Announcements.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{
 		ContestID: contest.ID,
 		ProblemID: problemID,
-		AuthorID:  user.Id,
 		Title:     req.Title,
 		Body:      req.Body,
 	})

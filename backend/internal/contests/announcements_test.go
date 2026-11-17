@@ -23,7 +23,7 @@ func newMockAnnouncementsRepo() *mockAnnouncementsRepo {
 	}
 }
 
-func (m *mockAnnouncementsRepo) CreateAnnouncement(ctx context.Context, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error) {
+func (m *mockAnnouncementsRepo) CreateAnnouncement(ctx context.Context, authorID uuid.UUID, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error) {
 	id := uuid.New()
 	letter := "A"
 	a := contestsmodel.ContestAnnouncement{
@@ -32,7 +32,7 @@ func (m *mockAnnouncementsRepo) CreateAnnouncement(ctx context.Context, input *c
 		ProblemID:      input.ProblemID,
 		ProblemTitle:   nil,
 		ProblemLetter:  &letter,
-		AuthorID:       input.AuthorID,
+		AuthorID:       authorID,
 		AuthorUsername: "jury_admin",
 		Title:          input.Title,
 		Body:           input.Body,
@@ -98,7 +98,6 @@ func TestAnnouncementsUseCase_CreateAndDelete(t *testing.T) {
 	// 1. Validation error on empty title
 	_, err := uc.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{
 		ContestID: contestID,
-		AuthorID:  authorID,
 		Title:     "",
 		Body:      "Some body",
 	})
@@ -107,7 +106,6 @@ func TestAnnouncementsUseCase_CreateAndDelete(t *testing.T) {
 	// 2. Successful creation
 	ann, err := uc.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{
 		ContestID: contestID,
-		AuthorID:  authorID,
 		Title:     "Test Announcement",
 		Body:      "Test announcement body with Markdown",
 	})

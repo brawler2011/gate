@@ -60,7 +60,6 @@ func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1
 	clarification, err := h.Clarifications.CreateClarification(ctx, &contestsmodel.CreateContestClarificationInput{
 		ContestID: contest.ID,
 		ProblemID: problemID,
-		UserID:    user.Id,
 		Question:  req.Question,
 	})
 	if err != nil {
@@ -88,7 +87,6 @@ func (h *CoreServer) AnswerContestClarification(ctx context.Context, req *corev1
 		ClarificationID:       params.ClarificationID,
 		ContestID:             contest.ID,
 		Answer:                req.Answer,
-		AnsweredBy:            user.Id,
 		PublishAsAnnouncement: publishAsAnnouncement,
 		AnnouncementTitle:     announcementTitle,
 	})
