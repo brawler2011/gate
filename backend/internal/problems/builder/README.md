@@ -28,7 +28,11 @@ the languages of the image it runs on). The main solution is the only selected c
   main solution is checked against provided answers.
 - `interactive` requires an interactor and a main solution. Its tests explicitly
   use interactive answer mode and must not reference ordinary answer objects or
-  answer generators. The build runs the solution with the interactor.
+  answer generators. The build runs the solution with the interactor, which is
+  called as `interactor <input> <output> [<answer>]`; as in Polygon, its output
+  on the main solution becomes the test answer. An optional checker then runs
+  with `<input> <interactor output> <answer>`, during the build and when judging
+  after the interactor accepts, and decides the verdict.
 - Manual inputs reference available objects in the same organization. Generated
   inputs reference a generator component, explicit arguments and a seed. The
   generator executes during the build; the package contains its resulting input.
@@ -42,7 +46,7 @@ the languages of the image it runs on). The main solution is the only selected c
   or interactor execution must succeed before the archive can be published.
 
 The ready GFMT v2 archive contains `problem.yaml`, the author snapshot at
-`.gate/snapshot.json`, source files/assets and every declared test input and noninteractive answer. Generated tests have no
+`.gate/snapshot.json`, source files/assets and every declared test input and answer. Generated tests have no
 remaining execution recipe in the ready manifest. `gfmt.OpenBuiltPackage` checks
 the final tree, including regular files, the checker or interactor source named in
 `programs` (a checker, or an interactor for interactive problems), test modes and group graph,
@@ -50,7 +54,7 @@ before archiving. Missing or changed input objects fail materialization with the
 object UUID and affected test input/answer or asset path.
 
 A package holds no binaries and does not depend on a judge image. The judge
-compiles the checker or interactor with its own image on first use and keeps it
+compiles the checker and interactor with its own image on first use and keeps it
 under `<work_dir>/judge-cache/<package>/<compiler>/<role>`, where the compiler
 is the image digest together with its language configuration
 (`judging.ProgramCache`). Verdicts are reproducible against the current image only.

@@ -95,17 +95,12 @@ func OpenBuiltPackage(dir string) (*GateFormat, error) {
 			if err := regular(test.Manual); err != nil {
 				return nil, err
 			}
-			if p.Type == "interactive" {
-				if test.AnswerMode != "interactive" || test.Answer != "" {
-					return nil, fmt.Errorf("invalid interactive test")
-				}
-			} else {
-				if test.AnswerMode != "generated" && test.AnswerMode != "provided" {
-					return nil, fmt.Errorf("invalid answer mode")
-				}
-				if err := regular(test.Answer); err != nil {
-					return nil, err
-				}
+			interactive := test.AnswerMode == "interactive"
+			if interactive != (p.Type == "interactive") || !interactive && test.AnswerMode != "generated" && test.AnswerMode != "provided" {
+				return nil, fmt.Errorf("invalid answer mode")
+			}
+			if err := regular(test.Answer); err != nil {
+				return nil, err
 			}
 		}
 	}

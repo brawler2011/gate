@@ -391,18 +391,26 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		}
 	}
 	answerPath := ""
+	var outputID, answerID string
 	if s.Draft.Type == "interactive" {
+		// As in Polygon, the interactor's output on the main solution is the
+		// answer the interactor and the checker later receive.
 		sol := e.compiled[*s.Draft.MainSolutionID]
 		intr := e.compiled[s.Draft.Component("interactor").ID]
-		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.source.Language(), intr.executable, intr.source.Language(), inputID, e.solutionLimits(), aux)
+		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.source.Language(), intr.executable, intr.source.Language(), inputID, "", e.solutionLimits(), aux)
 		if err != nil {
 			return fail("interact", test.Ordinal, "infrastructure", err)
 		}
+		ids = append(ids, result.OutputID)
 		if result.Status != sandbox.StatusOK {
 			return fail("interact", test.Ordinal, string(result.Status), errors.New(result.Message))
 		}
+		outputID, answerID = result.OutputID, result.OutputID
+		answerPath = ".gate/tests/" + test.ID.String() + ".ans"
+		if err := e.download(ctx, answerPath, answerID, int64(s.Limits.ObjectBytes)); err != nil {
+			return fail("interact", test.Ordinal, "infrastructure", err)
+		}
 	} else {
-		var answerID string
 		if test.Answer.Mode == "provided" {
 			answerPath = ".gate/objects/" + test.Answer.ObjectID.String()
 			id, err := e.upload(ctx, answerPath)
@@ -416,7 +424,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		if test.Answer.Mode == "provided" {
 			solID = s.Draft.MainSolutionID
 		}
-		outputID := answerID
+		outputID = answerID
 		if solID != nil {
 			sol := e.compiled[*solID]
 			result, err := e.sandbox.RunFiles(ctx, sol.executable, sol.source.Language(), inputID, nil, nil, e.solutionLimits())
@@ -436,7 +444,11 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 				}
 			}
 		}
-		checker := e.compiled[s.Draft.Component("checker").ID]
+	}
+	// An interactive problem's checker is optional; when present it decides
+	// the verdict after the interactor accepts.
+	if c := s.Draft.Component("checker"); c != nil {
+		checker := e.compiled[c.ID]
 		result, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.source.Language(), inputID, outputID, answerID, aux)
 		if err != nil {
 			return fail("check", test.Ordinal, "infrastructure", err)
@@ -446,7 +458,11 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		}
 	}
 	if test.Sample {
-		if err := e.addSample(inputPath, answerPath); err != nil {
+		sampleAnswer := answerPath
+		if s.Draft.Type == "interactive" {
+			sampleAnswer = "" // the interactor's output is no sample output
+		}
+		if err := e.addSample(inputPath, sampleAnswer); err != nil {
 			return fail("sample", test.Ordinal, "infrastructure", err)
 		}
 	}
