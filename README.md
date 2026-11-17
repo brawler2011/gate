@@ -1,7 +1,10 @@
 # Gate
 
-[![CI](https://github.com/brawler2011/gate/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/brawler2011/gate/actions/workflows/ci.yml)
-[![Deploy Production](https://github.com/brawler2011/gate/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/brawler2011/gate/actions/workflows/deploy-prod.yml)
+![Go](https://img.shields.io/badge/Go-00ADD8?logo=go&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
 ## Dependencies
@@ -22,9 +25,3 @@ task docker:up                  # PostgreSQL, Redis, NATS, SeaweedFS, go-judge
 task be:migrate
 task dev                        # backend on :8080, frontend on http://localhost:3000
 ```
-
-Tooling tasks use `<area>:<action>[:<qualifier>]` (for example, `be:test` and
-`contracts:gen`). Bare names `dev`, `test`, `gen`, `check`, and `clean` cover all
-areas. Run `task --list` for commands; `task check` runs the required CI checks
-except integration tests and image builds. The development and check scripts in
-`package.json` keep their standard names (`dev`, `build`, `typecheck`, `test`, `lint`, `knip`).
