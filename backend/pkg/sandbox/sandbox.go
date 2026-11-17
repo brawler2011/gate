@@ -109,6 +109,7 @@ type InteractiveResult struct {
 	Status           Status
 	SolutionResult   RunResult
 	InteractorResult RunResult
+	OutputID         string // interactor output in the file store, set only by InteractFiles
 	Message          string
 	Score            *float64
 }

@@ -132,12 +132,23 @@ func (s *Sandbox) CheckFiles(ctx context.Context, executable Executable, languag
 	return &CheckerResult{Status: status, ExitStatus: int(r.GetExitStatus()), Message: string(r.GetFiles()["stderr"]), Score: score}, nil
 }
 
-func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, solutionLanguage string, interactor Executable, interactorLanguage, inputID string, solutionLimits, interactorLimits FileRunLimits) (*InteractiveResult, error) {
+// interactorOutput is the file the interactor writes in its working directory.
+const interactorOutput = "output.txt"
+
+// InteractFiles connects the solution to a testlib interactor run as
+// "interactor <input> <output> [<answer>]"; answerID may be empty. The
+// interactor's output file, which a checker reads as the contestant output,
+// is returned as OutputID and belongs to the caller, including on failure.
+func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, solutionLanguage string, interactor Executable, interactorLanguage, inputID, answerID string, solutionLimits, interactorLimits FileRunLimits) (*InteractiveResult, error) {
 	sol, err := s.fileCommand(solution, solutionLanguage, "", nil, nil, solutionLimits)
 	if err != nil {
 		return nil, err
 	}
-	intr, err := s.fileCommand(interactor, interactorLanguage, "", []string{"/dev/fd/3", "log.txt"}, []string{inputID}, interactorLimits)
+	args, extra := []string{"/dev/fd/3", interactorOutput}, []string{inputID}
+	if answerID != "" {
+		args, extra = append(args, "/dev/fd/4"), append(extra, answerID)
+	}
+	intr, err := s.fileCommand(interactor, interactorLanguage, "", args, extra, interactorLimits)
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +159,11 @@ func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, soluti
 		cmd.SetFiles(files)
 		cmd.SetCopyOutCached(nil)
 	}
-	intr.SetCopyOut([]*pb.Request_CmdCopyOutFile{pb.Request_CmdCopyOutFile_builder{Name: "log.txt", Optional: true}.Build()})
-	intr.SetCopyOutMax(uint64(interactorLimits.Diagnostic)) //nolint:gosec // limits are validated non-negative by the caller
+	// An interactor that writes no output still yields an empty one.
+	copyIn := intr.GetCopyIn()
+	copyIn[interactorOutput] = newMemoryFile(nil)
+	intr.SetCopyIn(copyIn)
+	intr.SetCopyOutCached([]*pb.Request_CmdCopyOutFile{pb.Request_CmdCopyOutFile_builder{Name: interactorOutput}.Build()})
 	pipes := []*pb.Request_PipeMap{
 		pb.Request_PipeMap_builder{In: pb.Request_PipeMap_PipeIndex_builder{Index: 0, Fd: 1}.Build(), Out: pb.Request_PipeMap_PipeIndex_builder{Index: 1, Fd: 0}.Build(), Proxy: true, Max: uint64(solutionLimits.Output)}.Build(),   //nolint:gosec // limits are validated non-negative by the caller
 		pb.Request_PipeMap_builder{In: pb.Request_PipeMap_PipeIndex_builder{Index: 1, Fd: 1}.Build(), Out: pb.Request_PipeMap_PipeIndex_builder{Index: 0, Fd: 0}.Build(), Proxy: true, Max: uint64(interactorLimits.Output)}.Build(), //nolint:gosec // limits are validated non-negative by the caller
@@ -162,7 +176,8 @@ func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, soluti
 		return nil, fmt.Errorf("interactive execution requires two results")
 	}
 	a, b := resp.GetResults()[0], resp.GetResults()[1]
-	status, score := parseTestlibVerdict(int(b.GetExitStatus()), string(b.GetFiles()["stderr"]), string(b.GetFiles()["log.txt"]))
+	outputID := b.GetFileIDs()[interactorOutput]
+	status, score := parseTestlibVerdict(int(b.GetExitStatus()), "", string(b.GetFiles()["stderr"]))
 	if b.GetStatus() != pb.Response_Result_Accepted && b.GetStatus() != pb.Response_Result_NonZeroExitStatus {
 		status = StatusFail
 		score = nil
@@ -171,7 +186,7 @@ func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, soluti
 		status = statusToString(a.GetStatus())
 		score = nil
 	}
-	return &InteractiveResult{Status: status, Score: score, Message: string(b.GetFiles()["stderr"]),
+	return &InteractiveResult{Status: status, Score: score, Message: string(b.GetFiles()["stderr"]), OutputID: outputID,
 		SolutionResult:   RunResult{Status: statusToString(a.GetStatus()), ExitStatus: int(a.GetExitStatus()), Time: safeDuration(a.GetTime()), Memory: safeInt64(a.GetMemory()), Stderr: a.GetFiles()["stderr"]},
 		InteractorResult: RunResult{Status: statusToString(b.GetStatus()), ExitStatus: int(b.GetExitStatus()), Time: safeDuration(b.GetTime()), Memory: safeInt64(b.GetMemory()), Stderr: b.GetFiles()["stderr"]}}, nil
 }

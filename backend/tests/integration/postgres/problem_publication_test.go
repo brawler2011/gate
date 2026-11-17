@@ -415,8 +415,8 @@ func TestPublicationSupportedTypes(t *testing.T) {
 				for _, test := range built.Tests {
 					require.Equal(t, "original input\n", string(files[test.Manual]))
 					if kind == "interactive" {
-						require.Empty(t, test.Answer)
 						require.Equal(t, "interactive", test.AnswerMode)
+						require.Contains(t, files, test.Answer, "the interactor's output on the main solution is the answer")
 					} else {
 						require.Equal(t, "original answer\n", string(files[test.Answer]))
 					}

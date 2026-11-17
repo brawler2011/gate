@@ -136,6 +136,31 @@ func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, role str
 	return executable, nil
 }
 
+// roleProgram is a package program uploaded to the sandbox for one submission.
+type roleProgram struct {
+	executable sandbox.Executable
+	language   string
+}
+
+// roleProgram uploads the compiled program of role, or returns nil when the
+// package has none.
+func (j *PackageJudge) roleProgram(ctx context.Context, pkg *LoadedPackage, role string) (*roleProgram, error) {
+	source, ok := pkg.Format.Problem.Programs[role]
+	if !ok {
+		return nil, nil
+	}
+	executable, err := j.program(ctx, pkg, role)
+	if err != nil {
+		return nil, err
+	}
+	return &roleProgram{executable: executable, language: source.Language}, nil
+}
+func (j *PackageJudge) releaseRoleProgram(p *roleProgram) {
+	if p != nil {
+		j.releaseExecutable(p.executable)
+	}
+}
+
 func (j *PackageJudge) releaseExecutable(executable sandbox.Executable) {
 	j.release(executable.PrimaryFileID)
 	for _, id := range executable.Dependencies {
@@ -159,16 +184,26 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 		return &FinalVerdict{State: submissionsmodel.GotCE, Message: output, TestDetails: &submissionsmodel.SubmissionTestDetails{CompilerOutput: &output, ErrorLine: ParseErrorLine(language, output)}}, nil
 	}
 	defer j.releaseExecutable(sol)
-	role := "checker"
-	if s.Draft.Type == "interactive" {
-		role = "interactor"
-	}
-	component := pkg.Format.Problem.Programs[role]
-	executable, err := j.program(ctx, pkg, role)
+	// An interactive problem may also have a checker, which decides after the
+	// interactor accepts; any other problem has only a checker.
+	checker, err := j.roleProgram(ctx, pkg, "checker")
+	defer j.releaseRoleProgram(checker)
 	if err != nil {
 		return nil, err
 	}
-	defer j.releaseExecutable(executable)
+	var interactor *roleProgram
+	if s.Draft.Type == "interactive" {
+		interactor, err = j.roleProgram(ctx, pkg, "interactor")
+		defer j.releaseRoleProgram(interactor)
+		if err != nil {
+			return nil, err
+		}
+		if interactor == nil {
+			return nil, errors.New("package has no interactor")
+		}
+	} else if checker == nil {
+		return nil, errors.New("package has no checker")
+	}
 	if err := progress.PublishTestingStarted(ctx, submissionID, meta); err != nil {
 		return nil, err
 	}
@@ -179,7 +214,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 		if err := progress.PublishTestStarted(ctx, submissionID, safeInt32(test.TestIndex), meta); err != nil {
 			return nil, err
 		}
-		result, err := j.test(ctx, sb, pkg, sol, lang, executable, component, test, !hasFailureDetails)
+		result, err := j.test(ctx, sb, pkg, sol, lang, checker, interactor, test, !hasFailureDetails)
 		if err != nil {
 			return nil, err
 		}
@@ -193,7 +228,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 	}
 	return NewVerdictCalculator(s.Draft.Type, pkg.Format.Problem).Calculate(results), nil
 }
-func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, sol sandbox.Executable, lang string, executable sandbox.Executable, component gfmt.Program, test FlatTest, details bool) (TestResult, error) {
+func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, sol sandbox.Executable, lang string, checker, interactor *roleProgram, test FlatTest, details bool) (TestResult, error) {
 	s := pkg.Descriptor.Snapshot
 	limits := s.Limits.Auxiliary
 	limits.CPU = time.Duration(s.Draft.TimeLimitMs) * time.Millisecond
@@ -205,45 +240,51 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 		return TestResult{}, err
 	}
 	defer j.release(input)
+	answer, err := j.upload(ctx, pkg.Format.Path, test.Test.Answer, int64(s.Limits.ObjectBytes))
+	if err != nil {
+		return TestResult{}, err
+	}
+	defer j.release(answer)
 	result := TestResult{TestNumber: test.TestIndex}
-	if s.Draft.Type == "interactive" {
-		r, err := sb.InteractFiles(ctx, sol, lang, executable, component.Language, input, limits, s.Limits.Auxiliary)
+	var output string
+	if interactor != nil {
+		r, err := sb.InteractFiles(ctx, sol, lang, interactor.executable, interactor.language, input, answer, limits, s.Limits.Auxiliary)
 		if err != nil {
 			return result, err
 		}
+		defer j.release(r.OutputID)
+		output = r.OutputID
 		result.Verdict = string(r.Status)
 		result.Message = r.Message
 		result.Time = r.SolutionResult.Time.Nanoseconds()
 		result.Memory = r.SolutionResult.Memory
 		result.Score = r.Score
 	} else {
-		answer, err := j.upload(ctx, pkg.Format.Path, test.Test.Answer, int64(s.Limits.ObjectBytes))
-		if err != nil {
-			return result, err
-		}
-		defer j.release(answer)
 		r, err := sb.RunFiles(ctx, sol, lang, input, nil, nil, limits)
 		if err != nil {
 			return result, err
 		}
 		defer j.release(r.OutputID)
+		output = r.OutputID
 		result.Verdict = string(r.Status)
 		result.Message = string(r.Stderr)
 		result.Time = r.Time.Nanoseconds()
 		result.Memory = r.Memory
-		if r.Status == sandbox.StatusOK {
-			check, err := sb.CheckFiles(ctx, executable, component.Language, input, r.OutputID, answer, s.Limits.Auxiliary)
-			if err != nil {
-				return result, err
-			}
-			result.Verdict = string(check.Status)
-			result.Message = check.Message
-			result.CheckerOutput = check.Message
-			result.Score = check.Score
+	}
+	if checker != nil && result.Verdict == string(sandbox.StatusOK) {
+		check, err := sb.CheckFiles(ctx, checker.executable, checker.language, input, output, answer, s.Limits.Auxiliary)
+		if err != nil {
+			return result, err
 		}
-		if details && result.Verdict != "OK" {
-			preview, truncated, err := j.Files.Preview(ctx, r.OutputID, maxTestDetailSize)
-			if err != nil && r.OutputID != "" {
+		result.Verdict = string(check.Status)
+		result.Message = check.Message
+		result.CheckerOutput = check.Message
+		result.Score = check.Score
+	}
+	if details && result.Verdict != "OK" {
+		if interactor == nil {
+			preview, truncated, err := j.Files.Preview(ctx, output, maxTestDetailSize)
+			if err != nil && output != "" {
 				return result, err
 			}
 			result.Output = string(preview)
@@ -253,8 +294,6 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 				return result, err
 			}
 		}
-	}
-	if details && result.Verdict != "OK" {
 		result.Input, err = packagePreview(pkg.Format.Path, test.Test.Manual)
 		if err != nil {
 			return result, err
