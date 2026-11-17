@@ -2,6 +2,7 @@ package contests
 
 import (
 	"context"
+	"encoding/json"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"testing"
 	"time"
@@ -87,6 +88,7 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, contestsmodel.ClarificationStatusPending, clar.Status)
+	assert.Equal(t, participantID, clar.UserID, "the asker comes from the caller context")
 	assert.Equal(t, "Are arrays 1-indexed in problem B?", clar.Question)
 	assert.Len(t, outboxRepo.events, 1)
 	assert.Equal(t, eventdata.OutboxEventContestClarificationCreated, outboxRepo.events[0].EventType)
@@ -103,16 +105,23 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	assert.Equal(t, contestsmodel.ClarificationStatusAnswered, answered.Status)
 	assert.NotNil(t, answered.Answer)
 	assert.Equal(t, "Yes, arrays are 1-indexed.", *answered.Answer)
+	require.NotNil(t, answered.AnsweredBy)
+	assert.Equal(t, juryID, *answered.AnsweredBy, "the answerer comes from the caller context")
 
 	// Verify events: 1 (created) + 1 (answered) + 1 (announcement created) = 3 events
 	assert.Len(t, outboxRepo.events, 3)
 	assert.Equal(t, eventdata.OutboxEventContestClarificationAnswered, outboxRepo.events[1].EventType)
 	assert.Equal(t, eventdata.OutboxEventContestAnnouncementCreated, outboxRepo.events[2].EventType)
+	var answeredEvent contestsmodel.ContestClarificationAnsweredEvent
+	require.NoError(t, json.Unmarshal(outboxRepo.events[1].Payload, &answeredEvent))
+	assert.Equal(t, juryID, answeredEvent.AnsweredBy)
+	assert.Equal(t, participantID, answeredEvent.UserID)
 
 	// Verify announcement was created in annRepo
 	require.Len(t, annRepo.announcements, 1)
 	for _, announcement := range annRepo.announcements {
 		assert.Equal(t, contestID, announcement.ContestID)
 		assert.Equal(t, "Уточнение по задаче B", announcement.Title)
+		assert.Equal(t, juryID, announcement.AuthorID, "the published announcement is authored by the answerer")
 	}
 }
