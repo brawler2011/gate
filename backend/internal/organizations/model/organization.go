@@ -100,7 +100,6 @@ type CreateOrganizationInput struct {
 	Description string
 	AvatarURL   *string
 	JoinPolicy  OrganizationJoinPolicy
-	CreatorID   uuid.UUID // The user who creates the org becomes the owner
 }
 
 // UpdateOrganizationInput is the input for updating an organization

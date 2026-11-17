@@ -110,13 +110,13 @@ func TestCommunicationCommandsRequireTransactionBoundPermission(t *testing.T) {
 	actor := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 	ctx := accessmodel.WithUser(context.Background(), actor)
 	announcements := NewAnnouncementsUseCase(transactions, nil, nil)
-	_, err := announcements.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{ContestID: uuid.New(), AuthorID: actor.Id, Title: "Title", Body: "Body"})
+	_, err := announcements.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{ContestID: uuid.New(), Title: "Title", Body: "Body"})
 	require.ErrorIs(t, err, pkg.NoPermission)
 	require.ErrorIs(t, announcements.DeleteAnnouncement(ctx, uuid.New(), uuid.New()), pkg.NoPermission)
 	clarifications := NewClarificationsUseCase(transactions, nil, nil)
-	_, err = clarifications.CreateClarification(ctx, &contestsmodel.CreateContestClarificationInput{ContestID: uuid.New(), UserID: actor.Id, Question: "Question"})
+	_, err = clarifications.CreateClarification(ctx, &contestsmodel.CreateContestClarificationInput{ContestID: uuid.New(), Question: "Question"})
 	require.ErrorIs(t, err, pkg.NoPermission)
-	_, err = clarifications.AnswerClarification(ctx, &contestsmodel.AnswerContestClarificationInput{ContestID: uuid.New(), AnsweredBy: actor.Id, Answer: "Answer"})
+	_, err = clarifications.AnswerClarification(ctx, &contestsmodel.AnswerContestClarificationInput{ContestID: uuid.New(), Answer: "Answer"})
 	require.ErrorIs(t, err, pkg.NoPermission)
 }
 
@@ -124,7 +124,7 @@ func TestClarificationsSettingCheckedInsideTransaction(t *testing.T) {
 	store := contestEventsTestStore{Contest: contestsmodel.Contest{Settings: map[string]interface{}{"allow_clarifications": false}}}
 	user := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 	uc := NewClarificationsUseCase(testTransactions[ContestEventsTxStore]{store}, nil, nil)
-	_, err := uc.CreateClarification(accessmodel.WithUser(context.Background(), user), &contestsmodel.CreateContestClarificationInput{ContestID: uuid.New(), UserID: user.Id, Question: "Question"})
+	_, err := uc.CreateClarification(accessmodel.WithUser(context.Background(), user), &contestsmodel.CreateContestClarificationInput{ContestID: uuid.New(), Question: "Question"})
 	require.ErrorIs(t, err, pkg.NoPermission)
 }
 

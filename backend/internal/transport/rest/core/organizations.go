@@ -46,8 +46,6 @@ func (h *CoreServer) ListOrganizations(ctx context.Context, params corev1.ListOr
 
 // CreateOrganization handles POST /organizations
 func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.CreateOrganizationParams) (*corev1.CreateOrganizationResponseModel, error) {
-	user := accessmodel.UserFromContext(ctx)
-
 	if err := validateCreateOrganizationParams(params.Name); err != nil {
 		return nil, err
 	}
@@ -79,7 +77,6 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.Creat
 		Description: "",
 		AvatarURL:   nil,
 		JoinPolicy:  joinPolicy,
-		CreatorID:   user.Id,
 	}
 
 	org, err := h.Organizations.CreateOrganization(ctx, input)

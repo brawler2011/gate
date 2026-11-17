@@ -35,7 +35,6 @@ type ContestClarification struct {
 type CreateContestClarificationInput struct {
 	ContestID uuid.UUID
 	ProblemID *uuid.UUID
-	UserID    uuid.UUID
 	Question  string
 }
 
@@ -43,7 +42,6 @@ type AnswerContestClarificationInput struct {
 	ClarificationID       uuid.UUID
 	ContestID             uuid.UUID
 	Answer                string
-	AnsweredBy            uuid.UUID
 	PublishAsAnnouncement bool
 	AnnouncementTitle     string
 }

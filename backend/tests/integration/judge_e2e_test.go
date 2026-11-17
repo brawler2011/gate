@@ -79,7 +79,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	userID := uuid.New()
 	email := "test@example.com"
 	require.NoError(t, usersRepo.CreateUser(ctx, identitymodel.CreateUserParams{Id: userID, Username: "testuser", Email: &email, PasswordHash: "hashed_password", Role: accessmodel.UserRoleUser}))
-	org, err := orgsRepo.CreateOrganization(ctx, &organizationsmodel.CreateOrganizationInput{Login: "test-org", Name: "Test Org", CreatorID: userID})
+	org, err := orgsRepo.CreateOrganization(ctx, &organizationsmodel.CreateOrganizationInput{Login: "test-org", Name: "Test Org"})
 	require.NoError(t, err)
 	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
 

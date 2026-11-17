@@ -25,13 +25,13 @@ func NewClarificationsRepo(pool *pgxpool.Pool) *ClarificationsRepo {
 	}
 }
 
-func (r *ClarificationsRepo) CreateClarification(ctx context.Context, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error) {
+func (r *ClarificationsRepo) CreateClarification(ctx context.Context, userID uuid.UUID, input *contestsmodel.CreateContestClarificationInput) (*contestsmodel.ContestClarification, error) {
 	id := uuid.New()
 	row, err := r.queries.CreateContestClarification(ctx, sqlc.CreateContestClarificationParams{
 		ID:        id,
 		ContestID: input.ContestID,
 		ProblemID: input.ProblemID,
-		UserID:    input.UserID,
+		UserID:    userID,
 		Question:  input.Question,
 	})
 	if err != nil {

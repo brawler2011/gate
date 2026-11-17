@@ -237,9 +237,8 @@ func (s *IntegrationTestSuite) createUser(username string, role accessmodel.User
 
 func (s *IntegrationTestSuite) createOrganization(login string, name string, ownerID uuid.UUID) *organizationsmodel.Organization {
 	org, err := s.organizationsRepo.CreateOrganization(s.ctx, &organizationsmodel.CreateOrganizationInput{
-		Login:     login,
-		Name:      name,
-		CreatorID: ownerID,
+		Login: login,
+		Name:  name,
 	})
 	s.Require().NoError(err)
 
