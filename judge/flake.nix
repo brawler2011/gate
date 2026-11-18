@@ -18,7 +18,39 @@
 
       # langs.toml is shared with the backend: each language names its nixpkgs package.
       langs = builtins.fromTOML (builtins.readFile ./langs.toml);
-      langPackages = map (lang: pkgs.${lang.package}) (builtins.attrValues langs);
+      # A language may install a trimmed build of its package instead of the package itself.
+      trimmed = {
+        java = jlinkRuntime;
+      };
+      langPackages = builtins.mapAttrs (
+        name: lang: (trimmed.${name} or (pkg: pkg)) pkgs.${lang.package}
+      ) langs;
+
+      # A Java runtime with the standard API (java.se), javac (jdk.compiler) and
+      # sun.misc.Unsafe (jdk.unsupported). It leaves out jmods, src.zip and the
+      # tooling modules of the full JDK. The CDS archive keeps JVM startup as fast as
+      # the JDK's; modules stay uncompressed for the same reason.
+      jlinkRuntime =
+        jdk:
+        pkgs.runCommand "${jdk.pname}-jlink-${jdk.version}"
+          {
+            nativeBuildInputs = [
+              jdk
+              pkgs.binutils
+              pkgs.removeReferencesTo
+            ];
+            disallowedReferences = [ jdk ];
+          }
+          ''
+            jlink --module-path ${jdk}/lib/openjdk/jmods \
+              --add-modules java.se,jdk.compiler,jdk.unsupported \
+              --strip-debug --no-man-pages --no-header-files --generate-cds-archive \
+              --output $out
+            # The copied libraries keep the JDK's lib directory in their RPATH next
+            # to $ORIGIN, which already finds them; drop it so the image does not
+            # carry the full JDK.
+            find $out -type f -exec remove-references-to -t ${jdk} {} +
+          '';
 
       go = pkgs.${langs.go.package};
 
@@ -30,9 +62,11 @@
       # metafont generates the Cyrillic (LH) font metrics on demand.
       tex = pkgs.texliveBasic.withPackages (
         ps: with ps; [
-          collection-latexrecommended
-          collection-fontsrecommended
-          collection-langcyrillic
+          babel-russian
+          cm-super
+          cyrillic
+          hyphen-russian
+          lh
           metafont
         ]
       );
@@ -45,7 +79,7 @@
           pkgs.coreutils
           tex
         ]
-        ++ langPackages;
+        ++ builtins.attrValues langPackages;
       };
 
       # Go 1.20+ ships no precompiled standard library, so a cold build exceeds
@@ -97,28 +131,32 @@
         ln -s ${source "mount.yaml"} $out/opt/mount.yaml
       '';
 
-      # One layer for the shared base, one per language, then TeX, the Go cache
-      # and go-judge. Each layer skips the store paths of the layers before it.
-      # Shared paths belong to the first layer that needs them, in language-name
-      # order (cpp, go, java, python). Updating an early language can move shared
-      # paths into or out of later language, TeX, Go cache and go-judge layers,
-      # changing those layers too. Updating Go also rebuilds its standard-library
-      # cache. The last layer (runtime env, manifest, /opt) changes with any language.
-      # This layout reduces transfers but does not guarantee language isolation.
-      layers = builtins.foldl' (built: deps: built ++ [ (n2c.buildLayer { inherit deps; layers = built; }) ]) [ ] (
-        [
-          [
-            pkgs.bash
-            pkgs.coreutils
-          ]
-        ]
-        ++ map (pkg: [ pkg ]) langPackages
-        ++ [
-          [ tex ]
-          [ goCache ]
-          [ pkgs.go-judge ]
-        ]
-      );
+      # The base layer (bash, coreutils and glibc), then one layer per language, TeX
+      # and go-judge, each holding its closure minus the base. These layers do not
+      # depend on each other: a store path two of them need is in both (identical
+      # files, so the overlay is unaffected), and changing one language changes only
+      # its layer and the last one (runtime env, manifest, /opt). The Go
+      # standard-library cache refers to Go and changes with it, so it shares Go's layer.
+      base = n2c.buildLayer {
+        deps = [
+          pkgs.bash
+          pkgs.coreutils
+        ];
+      };
+      layer =
+        deps:
+        n2c.buildLayer {
+          inherit deps;
+          layers = [ base ];
+        };
+      layers = [
+        base
+      ]
+      ++ pkgs.lib.mapAttrsToList (name: pkg: layer ([ pkg ] ++ pkgs.lib.optional (name == "go") goCache)) langPackages
+      ++ [
+        (layer [ tex ])
+        (layer [ pkgs.go-judge ])
+      ];
 
       image = n2c.buildImage {
         name = "gate-go-judge";

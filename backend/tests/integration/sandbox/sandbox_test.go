@@ -426,8 +426,35 @@ func TestIntegrationSandbox(t *testing.T) {
 		}
 	})
 
+	// The image ships a jlink runtime; submissions still reach the modules of java.se.
+	t.Run("java standard modules", func(t *testing.T) {
+		source := `import java.awt.Point;
+import java.sql.Timestamp;
+import java.util.logging.Logger;
+
+public class Main {
+    public static void main(String[] args) {
+        Logger.getLogger("main").fine("unused");
+        System.out.println(new Point(1, 2).y + new Timestamp(0).getNanos());
+    }
+}`
+		executable, err := sb.Compile(ctx, []byte(source), "java", nil)
+		if err != nil {
+			t.Fatalf("failed to compile: %v", err)
+		}
+		result, err := sb.Test(ctx, executable, "java", nil, 5000, 256)
+		if err != nil {
+			t.Fatalf("failed to run: %v", err)
+		}
+		if result.Status != sandbox.StatusOK || strings.TrimSpace(string(result.Stdout)) != "2" {
+			t.Fatalf("got %s with output %q (stderr %q)", result.Status, result.Stdout, result.Stderr)
+		}
+	})
+
 	t.Run("compile latex booklet", func(t *testing.T) {
-		texSource := `\documentclass[11pt,a4paper,oneside]{article}
+		// Uncompressed PDF objects keep the font dictionaries readable below.
+		texSource := `\pdfobjcompresslevel=0 \pdfcompresslevel=0
+\documentclass[11pt,a4paper,oneside]{article}
 \usepackage[T2A]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[russian,english]{babel}
@@ -436,7 +463,7 @@ func TestIntegrationSandbox(t *testing.T) {
 \contest{Test Contest}{Org}{2026}
 \begin{document}
 \begin{problem}{A. Test Problem}{stdin}{stdout}{1.0 сек}{256 МБ}
-Test legend.
+Test legend. Условие задачи на русском языке.
 \end{problem}
 \end{document}`
 		pdfBytes, err := sb.CompilePDF(ctx, texSource)
@@ -445,6 +472,11 @@ Test legend.
 		}
 		if len(pdfBytes) < 4 || !strings.HasPrefix(string(pdfBytes[:4]), "%PDF") {
 			t.Fatalf("expected valid PDF header, got %q", string(pdfBytes[:4]))
+		}
+		// Cyrillic text uses cm-super outline fonts; without them pdfTeX falls back to
+		// bitmap (Type 3) fonts that metafont renders, which look different.
+		if strings.Contains(string(pdfBytes), "/Type3") {
+			t.Fatal("booklet uses bitmap Type 3 fonts")
 		}
 	})
 }
