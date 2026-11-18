@@ -87,9 +87,11 @@ const ProgramEditor = (props: ProgramEditorProps): ReactNode => {
   );
 };
 
-const NewProgramForm = ({withName, saving, onCreate}: {
+const NewProgramForm = ({withName, saving, ready, onCreate}: {
   withName: boolean;
   saving: boolean;
+  /** False until the defaults of a new program, such as its system library dependencies, are known. */
+  ready: boolean;
   onCreate: (name: string, language: string) => Promise<boolean>;
 }): ReactNode => {
   const [name, setName] = useState("");
@@ -110,7 +112,7 @@ const NewProgramForm = ({withName, saving, onCreate}: {
       />
       <Button
         variant="light"
-        disabled={(withName && name.trim() === "") || !language}
+        disabled={(withName && name.trim() === "") || !language || !ready}
         loading={saving}
         onClick={() => language && void onCreate(name.trim(), language).then((ok) => ok && setName(""))}
       >
@@ -137,10 +139,11 @@ const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNod
           <NewProgramForm
             withName={false}
             saving={isSaving}
+            ready={system !== undefined}
             onCreate={(_, language) =>
               save((current) => {
                 const source = template(catalog, role, language);
-                const dependencies = systemDependencies(current, system, catalog.find((l) => l.id === language));
+                const dependencies = systemDependencies(current, system ?? [], catalog.find((l) => l.id === language));
                 return setSingleProgram(current, role, {language, source, dependencies});
               })
             }
@@ -201,7 +204,7 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
   const create = async (newName: string, language: string): Promise<boolean> => {
     let createdId: string | undefined;
     const ok = await save((current) => {
-      const dependencies = systemDependencies(current, system, catalog.find((l) => l.id === language));
+      const dependencies = systemDependencies(current, system ?? [], catalog.find((l) => l.id === language));
       const next = addProgram(current, role, newName, language, template(catalog, role, language), dependencies);
       createdId = programsOf(next, role).at(-1)?.id;
       return next;
@@ -238,7 +241,7 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
                 onClick={() => open(program.id)}
               />
             ))}
-            <NewProgramForm withName saving={isSaving} onCreate={create} />
+            <NewProgramForm withName saving={isSaving} ready={system !== undefined} onCreate={create} />
           </Stack>
         </SectionPaper>
       </Grid.Col>

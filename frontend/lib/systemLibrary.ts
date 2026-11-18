@@ -6,14 +6,10 @@ import type {SystemLibraryFile} from "@/contracts/core/v1/schema";
 
 export type {SystemLibraryFile};
 
-const NONE: SystemLibraryFile[] = [];
-
-/** The system library files that auto-updated draft library files build with. */
-export const useSystemLibrary = (): SystemLibraryFile[] => {
-  const {data} = useQuery({
+/** The system library files that auto-updated draft library files build with; undefined until loaded. */
+export const useSystemLibrary = (): SystemLibraryFile[] | undefined =>
+  useQuery({
     queryKey: ["system-library"],
     queryFn: async () => (await unwrap(api.GET("/lib"))).files,
     staleTime: Infinity,
-  });
-  return data ?? NONE;
-};
+  }).data;

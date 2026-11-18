@@ -42,7 +42,7 @@ type SystemFileProps = {
 
 /** An auto-updated file: the system text, read-only until auto-update is turned off. */
 const SystemFile = ({file, saving, onStop, onDelete}: SystemFileProps): ReactNode => {
-  const system = useSystemLibrary().find((s) => s.name === file.name);
+  const system = useSystemLibrary()?.find((s) => s.name === file.name);
   return (
     <Stack gap="md">
       <Group gap="xs">
@@ -95,7 +95,7 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
     }
   };
 
-  const system = useSystemLibrary();
+  const system = useSystemLibrary() ?? [];
   const missing = system.filter((s) => !draft.library.some((file) => file.auto_update && file.name === s.name));
 
   const handleAddSystem = async (name: string) => {
