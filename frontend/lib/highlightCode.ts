@@ -13,12 +13,10 @@ const loadGrammar = async (syntax: string): Promise<boolean> => {
   }
   // Vite turns this into a chunk per grammar refractor ships, loaded the first
   // time a language configuration's syntax names it.
-  const grammar = await import(`../../node_modules/refractor/lang/${syntax}.js`)
-    .then((module: {default: Syntax}) => module.default, () => undefined);
-  if (!grammar) {
-    return false;
-  }
-  refractor.register(grammar);
+  // A failed load (a stale chunk, the network, an unknown grammar) rejects, so
+  // the query retries it instead of caching plain text.
+  const grammar = await import(`../../node_modules/refractor/lang/${syntax}.js`) as {default: Syntax};
+  refractor.register(grammar.default);
   return true;
 };
 

@@ -23,6 +23,7 @@ func TestParseErrorLine(t *testing.T) {
 		expected *int32
 	}{
 		{"C gcc error", "c", "foo.c: In function 'main':\nfoo.c:4:5: error: expected ';' before 'return'", ptrInt32(4)},
+		{"C++ warning before error", "cpp20", "foo.cc: In function 'int main()':\nfoo.cc:3:9: warning: unused variable 'y' [-Wunused-variable]\nfoo.cc:5:5: error: 'z' was not declared in this scope", ptrInt32(5)},
 		{"C++ gcc error", "cpp17", "foo.cc: In function 'int main()':\nfoo.cc:15:23: error: expected ';' before '}' token", ptrInt32(15)},
 		{"Python traceback", "python3", "Traceback (most recent call last):\n  File \"/w/foo.py\", line 12, in <module>\n    print(1/0)\nZeroDivisionError: division by zero", ptrInt32(12)},
 		{"PyPy syntax error", "pypy3", "  File \"foo.py\", line 7\n    def test(\n             ^\nSyntaxError: unexpected EOF while parsing", ptrInt32(7)},
@@ -30,6 +31,8 @@ func TestParseErrorLine(t *testing.T) {
 		{"Java compiler error", "java", "Main.java:5: error: ';' expected\n        int x = 1\n                 ^\n1 error", ptrInt32(5)},
 		{"Java exception", "java", "Exception in thread \"main\" java.lang.ArithmeticException: / by zero\n\tat Main.main(Main.java:9)", ptrInt32(9)},
 		{"Rust compiler error", "rust", "error[E0425]: cannot find value `y` in this scope\n --> foo.rs:3:13\n  |\n3 |     let x = y;", ptrInt32(3)},
+		{"Rust warning before error", "rust", "warning: unused variable: `y`\n --> foo.rs:2:9\n  |\n2 |     let y = 1;\n\nerror[E0425]: cannot find value `z` in this scope\n --> foo.rs:4:13\n  |", ptrInt32(4)},
+		{"Rust panic", "rust", "thread 'main' panicked at foo.rs:7:5:\nattempt to divide by zero", ptrInt32(7)},
 		{"Node.js exception", "node", "/w/foo.js:6\n    throw new Error('boom');\n    ^\n\nError: boom\n    at Object.<anonymous> (/w/foo.js:6:11)", ptrInt32(6)},
 		{"Generic line fallback", "cpp17", "Runtime error at line 99", ptrInt32(99)},
 		{"Empty output", "cpp17", "", nil},
