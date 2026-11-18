@@ -4670,6 +4670,51 @@ func (o NilProblemBuildDiagnostic) Or(d ProblemBuildDiagnostic) ProblemBuildDiag
 	return d
 }
 
+// NewNilProblemDraftChecker returns new NilProblemDraftChecker with value set to v.
+func NewNilProblemDraftChecker(v ProblemDraftChecker) NilProblemDraftChecker {
+	return NilProblemDraftChecker{
+		Value: v,
+	}
+}
+
+// NilProblemDraftChecker is nullable ProblemDraftChecker.
+type NilProblemDraftChecker struct {
+	Value ProblemDraftChecker
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilProblemDraftChecker) SetTo(v ProblemDraftChecker) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilProblemDraftChecker) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilProblemDraftChecker) SetToNull() {
+	o.Null = true
+	var v ProblemDraftChecker
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilProblemDraftChecker) Get() (v ProblemDraftChecker, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilProblemDraftChecker) Or(d ProblemDraftChecker) ProblemDraftChecker {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilProblemDraftProgram returns new NilProblemDraftProgram with value set to v.
 func NewNilProblemDraftProgram(v ProblemDraftProgram) NilProblemDraftProgram {
 	return NilProblemDraftProgram{
@@ -7924,7 +7969,7 @@ type ProblemDraft struct {
 	TimeLimitMs   int64                  `json:"time_limit_ms"`
 	MemoryLimitMB int64                  `json:"memory_limit_mb"`
 	MaxScore      NilFloat64             `json:"max_score"`
-	Checker       NilProblemDraftProgram `json:"checker"`
+	Checker       NilProblemDraftChecker `json:"checker"`
 	Interactor    NilProblemDraftProgram `json:"interactor"`
 	// At most one validator.
 	Validators     []ProblemDraftNamedProgram `json:"validators"`
@@ -7979,7 +8024,7 @@ func (s *ProblemDraft) GetMaxScore() NilFloat64 {
 }
 
 // GetChecker returns the value of Checker.
-func (s *ProblemDraft) GetChecker() NilProblemDraftProgram {
+func (s *ProblemDraft) GetChecker() NilProblemDraftChecker {
 	return s.Checker
 }
 
@@ -8074,7 +8119,7 @@ func (s *ProblemDraft) SetMaxScore(val NilFloat64) {
 }
 
 // SetChecker sets the value of Checker.
-func (s *ProblemDraft) SetChecker(val NilProblemDraftProgram) {
+func (s *ProblemDraft) SetChecker(val NilProblemDraftChecker) {
 	s.Checker = val
 }
 
@@ -8240,6 +8285,47 @@ func (s *ProblemDraftAsset) SetName(val string) {
 // SetObjectID sets the value of ObjectID.
 func (s *ProblemDraftAsset) SetObjectID(val uuid.UUID) {
 	s.ObjectID = val
+}
+
+// The checker. A standard checker (standard is set) has an empty source; every build takes its current
+// version from GET /lib with the system testlib.h, compiled in the C++ configuration language.
+// Ref: #/components/schemas/ProblemDraftChecker
+type ProblemDraftChecker struct {
+	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
+	Language string `json:"language"`
+	Source   string `json:"source"`
+	// Name of a standard checker from GET /lib, such as wcmp, or empty for the author's own source.
+	Standard string `json:"standard"`
+}
+
+// GetLanguage returns the value of Language.
+func (s *ProblemDraftChecker) GetLanguage() string {
+	return s.Language
+}
+
+// GetSource returns the value of Source.
+func (s *ProblemDraftChecker) GetSource() string {
+	return s.Source
+}
+
+// GetStandard returns the value of Standard.
+func (s *ProblemDraftChecker) GetStandard() string {
+	return s.Standard
+}
+
+// SetLanguage sets the value of Language.
+func (s *ProblemDraftChecker) SetLanguage(val string) {
+	s.Language = val
+}
+
+// SetSource sets the value of Source.
+func (s *ProblemDraftChecker) SetSource(val string) {
+	s.Source = val
+}
+
+// SetStandard sets the value of Standard.
+func (s *ProblemDraftChecker) SetStandard(val string) {
+	s.Standard = val
 }
 
 // Ref: #/components/schemas/ProblemDraftInput
@@ -10685,10 +10771,50 @@ func (s *SupportedLanguagesResponse) SetLanguages(val []SupportedLanguage) {
 	s.Languages = val
 }
 
-// The system library files a draft can include at their current version.
+// A testlib standard checker, vendored with testlib.h.
+// Ref: #/components/schemas/SystemChecker
+type SystemChecker struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Content     string `json:"content"`
+}
+
+// GetName returns the value of Name.
+func (s *SystemChecker) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *SystemChecker) GetDescription() string {
+	return s.Description
+}
+
+// GetContent returns the value of Content.
+func (s *SystemChecker) GetContent() string {
+	return s.Content
+}
+
+// SetName sets the value of Name.
+func (s *SystemChecker) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *SystemChecker) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetContent sets the value of Content.
+func (s *SystemChecker) SetContent(val string) {
+	s.Content = val
+}
+
+// The system library files a draft can include at their current version, and the standard checkers it
+// can use.
 // Ref: #/components/schemas/SystemLibrary
 type SystemLibrary struct {
-	Files []SystemLibraryFile `json:"files"`
+	Files    []SystemLibraryFile `json:"files"`
+	Checkers []SystemChecker     `json:"checkers"`
 }
 
 // GetFiles returns the value of Files.
@@ -10696,9 +10822,19 @@ func (s *SystemLibrary) GetFiles() []SystemLibraryFile {
 	return s.Files
 }
 
+// GetCheckers returns the value of Checkers.
+func (s *SystemLibrary) GetCheckers() []SystemChecker {
+	return s.Checkers
+}
+
 // SetFiles sets the value of Files.
 func (s *SystemLibrary) SetFiles(val []SystemLibraryFile) {
 	s.Files = val
+}
+
+// SetCheckers sets the value of Checkers.
+func (s *SystemLibrary) SetCheckers(val []SystemChecker) {
+	s.Checkers = val
 }
 
 // A system library file and the upstream commit it is vendored from.

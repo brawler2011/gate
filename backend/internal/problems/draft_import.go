@@ -191,7 +191,7 @@ func (c *importConverter) convert(p *spec.Problem) error {
 	}
 	var err error
 	if p.Checker != nil {
-		if c.draft.Checker, err = c.program(*p.Checker); err != nil {
+		if c.draft.Checker, err = c.checker(*p.Checker); err != nil {
 			return err
 		}
 	}
@@ -352,21 +352,29 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 	return nil
 }
 
+// checker reads the checker; a standard checker Gate has becomes a reference
+// to it, and any other one, such as a standard checker unknown to Gate, is
+// imported from its source.
+func (c *importConverter) checker(program spec.Program) (*model.DraftChecker, error) {
+	if _, ok := syslib.LookupChecker(program.Standard); ok {
+		language, err := c.language(program)
+		if err != nil {
+			return nil, err
+		}
+		return &model.DraftChecker{DraftProgram: model.DraftProgram{Language: language}, Standard: program.Standard}, nil
+	}
+	p, err := c.program(program)
+	if err != nil {
+		return nil, err
+	}
+	return &model.DraftChecker{DraftProgram: *p}, nil
+}
+
 // program reads a program source.
 func (c *importConverter) program(program spec.Program) (*model.DraftProgram, error) {
-	if c.programs++; c.programs > c.uc.DraftQuotas.Components {
-		return nil, pkg.ErrPayloadTooLarge
-	}
-	// The format names the configuration, or the extension suggests one.
-	language := program.Language
-	if language == "" {
-		language = c.uc.Languages.ForPath(program.Name)
-	}
-	if _, ok := c.uc.Languages.Langs[language]; !ok {
-		if language == "" {
-			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "no language configuration accepts "+program.Path)
-		}
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "unsupported language configuration "+language+" of "+program.Path)
+	language, err := c.language(program)
+	if err != nil {
+		return nil, err
 	}
 	text, err := c.readText(program.Path)
 	if err != nil {
@@ -376,6 +384,26 @@ func (c *importConverter) program(program spec.Program) (*model.DraftProgram, er
 		return nil, err
 	}
 	return &model.DraftProgram{Language: language, Source: text}, nil
+}
+
+// language counts a program against the quota and returns its language
+// configuration.
+func (c *importConverter) language(program spec.Program) (string, error) {
+	if c.programs++; c.programs > c.uc.DraftQuotas.Components {
+		return "", pkg.ErrPayloadTooLarge
+	}
+	// The format names the configuration, or the extension suggests one.
+	language := program.Language
+	if language == "" {
+		language = c.uc.Languages.ForPath(program.Name)
+	}
+	if _, ok := c.uc.Languages.Langs[language]; !ok {
+		if language == "" {
+			return "", pkg.Wrap(pkg.ErrBadInput, nil, "no language configuration accepts "+program.Path)
+		}
+		return "", pkg.Wrap(pkg.ErrBadInput, nil, "unsupported language configuration "+language+" of "+program.Path)
+	}
+	return language, nil
 }
 
 // named adds a program of a role a draft holds several of, named after its

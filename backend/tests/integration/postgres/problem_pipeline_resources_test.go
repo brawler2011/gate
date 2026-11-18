@@ -141,7 +141,7 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 	h := newPipelineHarness(t, 64<<20, 2<<30)
 	subtask := uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Checker = program("cpp17", acceptEverythingChecker)
+		d.Checker = checker("cpp17", acceptEverythingChecker)
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 	})
 	for i := 1; i <= tests; i++ {
@@ -205,7 +205,7 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	h := newPipelineHarness(t, 1<<20, 64<<20)
 	subtask := uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Checker = program("cpp17", "#ifndef NEW_IMAGE\n#error compiled with the enqueue-time languages\n#endif\n"+acceptEverythingChecker)
+		d.Checker = checker("cpp17", "#ifndef NEW_IMAGE\n#error compiled with the enqueue-time languages\n#endif\n"+acceptEverythingChecker)
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 	})
 	h.uploadPair(t, model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 100, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}, 16)
@@ -235,7 +235,7 @@ func (h *pipelineHarness) generatorBuild(t *testing.T, script string) {
 	t.Helper()
 	generator, solution, subtask := uuid.New(), uuid.New(), uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Checker = program("cpp17", acceptEverythingChecker)
+		d.Checker = checker("cpp17", acceptEverythingChecker)
 		d.Generators = []model.DraftNamedProgram{named(generator, "gen", "python3", script)}
 		d.Solutions = []model.DraftNamedProgram{named(solution, "main", "python3", "print(1)\n")}
 		d.MainSolutionID = &solution
@@ -378,7 +378,7 @@ func TestPipelineDiskQuotaRejectsOversizedSnapshot(t *testing.T) {
 	h := newPipelineHarness(t, 16<<20, 4<<20)
 	subtask := uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Checker = program("cpp17", acceptEverythingChecker)
+		d.Checker = checker("cpp17", acceptEverythingChecker)
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 	})
 	h.uploadPair(t, model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}, 3<<20)

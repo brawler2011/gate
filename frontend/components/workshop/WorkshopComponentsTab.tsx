@@ -1,20 +1,24 @@
 "use client";
 
-import {Badge, Box, Button, Grid, Group, NavLink, Select, Stack, Text, TextInput} from "@mantine/core";
+import {Badge, Box, Button, Code, Grid, Group, NavLink, ScrollArea, Select, Stack, Text, TextInput} from "@mantine/core";
 import {useState} from "react";
 import {useSearchParams} from "react-router-dom";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {languageName, useLanguages, type SupportedLanguage} from "@/lib/languages";
+import {useStandardCheckers, useSystemLibrary} from "@/lib/systemLibrary";
 
 import {DraftGate} from "./draft/DraftGate";
 import {
   addProgram,
+  customChecker,
+  customizeChecker,
   isSingleRole,
   programsOf,
   removeProgram,
   ROLE_LABELS,
   setSingleProgram,
+  standardChecker,
   updateProgram,
   type ComponentRole,
   type ListRole,
@@ -24,7 +28,7 @@ import {SourceEditor} from "./draft/SourceEditor";
 import {componentTemplate} from "./draft/templates";
 import {useSaveDraft} from "./draft/useDraft";
 
-import type {ProblemDraft, ProblemDraftProgram} from "@/contracts/core/v1/schema";
+import type {ProblemDraft, ProblemDraftChecker, ProblemDraftProgram} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 /** The catalog configurations as select options. */
@@ -108,28 +112,137 @@ const NewProgramForm = ({withName, saving, onCreate}: {
   );
 };
 
+/** The C++ configurations of the catalog, which standard checkers compile in. */
+const cppLanguages = (catalog: SupportedLanguage[]) => catalog.filter((language) => language.extensions.includes("cpp"));
+
+/** A select of the standard checkers by name and description. */
+type StandardCheckerSelectProps = {value: string | null; onChange: (name: string) => void};
+
+const StandardCheckerSelect = ({value, onChange}: StandardCheckerSelectProps): ReactNode => {
+  const checkers = useStandardCheckers() ?? [];
+  return (
+    <Select
+      label="Стандартный чекер"
+      description="Готовый чекер testlib"
+      placeholder="Выберите чекер"
+      data={checkers.map((checker) => ({value: checker.name, label: `${checker.name} — ${checker.description}`}))}
+      value={value}
+      searchable
+      allowDeselect={false}
+      onChange={(name) => name && onChange(name)}
+      w={520}
+    />
+  );
+};
+
+type NewStandardCheckerProps = {saving: boolean; onChoose: (name: string, language: string) => Promise<boolean>};
+
+const NewStandardChecker = ({saving, onChoose}: NewStandardCheckerProps): ReactNode => {
+  const [name, setName] = useState<string | null>(null);
+  const language = cppLanguages(useLanguages())[0]?.id;
+  return (
+    <>
+      <StandardCheckerSelect value={name} onChange={setName} />
+      <Button variant="light" disabled={!name || !language} loading={saving} onClick={() => name && language && void onChoose(name, language)}>
+        Выбрать
+      </Button>
+    </>
+  );
+};
+
+type StandardCheckerProps = {
+  checker: ProblemDraftChecker;
+  saving: boolean;
+  onChange: (patch: Partial<ProblemDraftChecker>) => void;
+  onCustomize: (source: string) => void;
+  onDelete: () => void;
+};
+
+/** A standard checker: its current source, read-only until the author makes a copy. */
+const StandardChecker = ({checker, saving, onChange, onCustomize, onDelete}: StandardCheckerProps): ReactNode => {
+  const catalog = useLanguages();
+  const standard = useStandardCheckers()?.find((s) => s.name === checker.standard);
+  return (
+    <SectionPaper>
+      <Stack gap="md">
+        <Group align="flex-end" wrap="wrap">
+          <StandardCheckerSelect value={checker.standard} onChange={(name) => onChange({standard: name})} />
+          <Select
+            label="Язык"
+            description="Компилятор C++"
+            data={languageOptions(cppLanguages(catalog))}
+            value={checker.language}
+            allowDeselect={false}
+            onChange={(value) => value && onChange({language: value})}
+            w={260}
+          />
+        </Group>
+        <Text size="sm" c="dimmed">
+          Каждая сборка берёт текущую версию чекера и компилирует его с системным testlib.h. Чтобы изменить чекер,
+          сделайте редактируемую копию.
+        </Text>
+        <ScrollArea.Autosize mah={480}>
+          <Code block>{standard?.content ?? ""}</Code>
+        </ScrollArea.Autosize>
+        <Group justify="space-between">
+          <Button variant="subtle" color="red" loading={saving} onClick={onDelete}>
+            Удалить
+          </Button>
+          <Button variant="default" disabled={!standard} loading={saving} onClick={() => standard && onCustomize(standard.content)}>
+            Сделать редактируемую копию
+          </Button>
+        </Group>
+      </Stack>
+    </SectionPaper>
+  );
+};
+
 type PanelProps<Role> = {draft: ProblemDraft; problemId: string; role: Role};
 
 const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
   const catalog = useLanguages();
+  const systemFiles = useSystemLibrary()?.map((file) => file.name) ?? [];
   const program = draft[role];
   if (!program) {
     return (
       <SectionPaper title={ROLE_LABELS[role]}>
-        <Stack gap="xs" maw={320}>
+        <Stack gap="xs" maw={role === "checker" ? 520 : 320}>
           <Text size="sm" c="dimmed">
             {ROLE_LABELS[role]} ещё не создан.
           </Text>
+          {role === "checker" && (
+            <NewStandardChecker
+              saving={isSaving}
+              onChoose={(name, language) => save((current) => setSingleProgram(current, "checker", standardChecker(name, language)))}
+            />
+          )}
           <NewProgramForm
             withName={false}
             saving={isSaving}
-            onCreate={(_, language) =>
-              save((current) => setSingleProgram(current, role, {language, source: template(catalog, role, language)}))
-            }
+            onCreate={(_, language) => {
+              const source = template(catalog, role, language);
+              return save((current) =>
+                role === "checker"
+                  ? setSingleProgram(current, "checker", customChecker(language, source))
+                  : setSingleProgram(current, "interactor", {language, source}),
+              );
+            }}
           />
         </Stack>
       </SectionPaper>
+    );
+  }
+  const checker = role === "checker" ? draft.checker : null;
+  if (checker?.standard) {
+    return (
+      <StandardChecker
+        checker={checker}
+        saving={isSaving}
+        onChange={(patch) => void save((current) => setSingleProgram(current, "checker", {...(current.checker ?? checker), ...patch}))}
+        onCustomize={(source) => void save((current) => customizeChecker(current, source, systemFiles))}
+        onDelete={() => void save((current) => setSingleProgram(current, "checker", null))}
+      />
     );
   }
   return (

@@ -74,7 +74,7 @@ func publicationHarness(t *testing.T) *pipelineHarness {
 	h.options.Lease = time.Minute
 	group := uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Checker = program("python3", "import sys\nassert open(sys.argv[2]).read() == open(sys.argv[3]).read()\n")
+		d.Checker = checker("python3", "import sys\nassert open(sys.argv[2]).read() == open(sys.argv[3]).read()\n")
 		d.Statements = []model.DraftStatement{{Language: "en", Legend: "Original statement"}}
 		d.Subtasks = []model.DraftSubtask{{ID: group, Ordinal: 1, Policy: "each"}}
 	})

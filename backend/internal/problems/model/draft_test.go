@@ -15,7 +15,7 @@ func validDraft() Draft {
 	gen, sol, sub, seed := uuid.New(), uuid.New(), uuid.New(), int64(1)
 	return Draft{ProblemID: uuid.New(), Revision: 1, Title: "A", ShortName: "a", Type: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256,
 		DraftContent: DraftContent{
-			Checker:        &DraftProgram{Language: "cpp"},
+			Checker:        &DraftChecker{DraftProgram: DraftProgram{Language: "cpp"}},
 			Generators:     []DraftNamedProgram{{ID: gen, Name: "gen", DraftProgram: DraftProgram{Language: "python"}}},
 			Solutions:      []DraftNamedProgram{{ID: sol, Name: "main", DraftProgram: DraftProgram{Language: "cpp"}}},
 			MainSolutionID: &sol,

@@ -11,6 +11,10 @@ func program(language, source string) *model.DraftProgram {
 	return &model.DraftProgram{Language: language, Source: source}
 }
 
+func checker(language, source string) *model.DraftChecker {
+	return &model.DraftChecker{DraftProgram: *program(language, source)}
+}
+
 func named(id uuid.UUID, name, language, source string) model.DraftNamedProgram {
 	return model.DraftNamedProgram{ID: id, Name: name, DraftProgram: model.DraftProgram{Language: language, Source: source}}
 }

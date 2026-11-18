@@ -45,13 +45,17 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 			draft, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: problem.ID})
 			s.Require().NoError(err)
 			pkg := s.loadPackage(s.buildPackage(admin.Id, problem.ID))
-			for role, program := range map[string]corev1.NilProblemDraftProgram{"checker": draft.Checker, "interactor": draft.Interactor} {
-				if program.Null {
-					continue
-				}
+			languages := map[string]string{}
+			if checker, ok := draft.Checker.Get(); ok {
+				languages["checker"] = checker.Language
+			}
+			if interactor, ok := draft.Interactor.Get(); ok {
+				languages["interactor"] = interactor.Language
+			}
+			for role, language := range languages {
 				built, ok := pkg.Format.Problem.Programs[role]
 				s.Require().True(ok, "%s missing from package", role)
-				s.Equal(program.Value.Language, built.Language)
+				s.Equal(language, built.Language)
 			}
 			var main corev1.ProblemDraftNamedProgram
 			for _, solution := range draft.Solutions {

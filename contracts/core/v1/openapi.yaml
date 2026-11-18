@@ -3129,6 +3129,22 @@ components:
           description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
         source:
           type: string
+    ProblemDraftChecker:
+      description: The checker. A standard checker (standard is set) has an empty source; every build takes its current version from GET /lib with the system testlib.h, compiled in the C++ configuration language.
+      type: object
+      required:
+      - language
+      - source
+      - standard
+      properties:
+        language:
+          type: string
+          description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
+        source:
+          type: string
+        standard:
+          type: string
+          description: Name of a standard checker from GET /lib, such as wcmp, or empty for the author's own source.
     ProblemDraftNamedProgram:
       description: A validator, generator or solution; tests and the main solution refer to it by ID.
       type: object
@@ -3321,7 +3337,7 @@ components:
         checker:
           nullable: true
           allOf:
-          - $ref: '#/components/schemas/ProblemDraftProgram'
+          - $ref: '#/components/schemas/ProblemDraftChecker'
         interactor:
           nullable: true
           allOf:
@@ -6344,15 +6360,38 @@ components:
           type: string
           example: cpp
     SystemLibrary:
-      description: "The system library files a draft can include at their current version."
+      description: "The system library files a draft can include at their current version, and the standard checkers it can use."
       type: object
       required:
         - files
+        - checkers
       properties:
         files:
           type: array
           items:
             $ref: "#/components/schemas/SystemLibraryFile"
+        checkers:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemChecker"
+    SystemChecker:
+      description: "A testlib standard checker, vendored with testlib.h."
+      example:
+        name: wcmp
+        description: Последовательность слов (токенов)
+        content: "#include \"testlib.h\""
+      type: object
+      required:
+        - name
+        - description
+        - content
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        content:
+          type: string
     SystemLibraryFile:
       description: "A system library file and the upstream commit it is vendored from."
       example:

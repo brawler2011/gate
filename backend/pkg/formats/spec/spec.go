@@ -59,6 +59,9 @@ type Program struct {
 	// Dependencies maps a name the program includes to the Path of a Library
 	// file. Nil makes the whole library available under the file names.
 	Dependencies map[string]string
+	// Standard names the testlib standard checker, such as wcmp, that the
+	// format says the checker is; its source is still in the package.
+	Standard string
 }
 
 // Statement is the statement in one language: one LaTeX file in olymp.sty

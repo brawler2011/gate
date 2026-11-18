@@ -3,8 +3,8 @@
 // draft can include one at its current version (auto-update) instead of
 // carrying a copy. Each project lives in its own folder with its license,
 // the upstream commit (COMMIT) and the Git blob IDs of every upstream version
-// of its file (upstream.txt). Update testlib with
-// `task testlib:update -- <commit>`.
+// of its file (upstream.txt). Testlib also brings its standard checkers
+// (checkers/). Update testlib with `task testlib:update -- <commit>`.
 package syslib
 
 import (
@@ -52,6 +52,86 @@ func load(dir, name string, extensions []string, version string) File {
 		f.upstream[id] = true
 	}
 	return f
+}
+
+// Checker is a testlib standard checker, such as wcmp.
+type Checker struct {
+	Name        string
+	Description string
+	// Content is the upstream source; it includes testlib.h.
+	Content string
+}
+
+// checkerDescriptions describes every vendored standard checker; a checker
+// a testlib update adds needs a description here.
+var checkerDescriptions = map[string]string{
+	"acmp":       "Одно вещественное число, абсолютная погрешность 1.5e-6",
+	"caseicmp":   "Одно целое число в каждом тесте вида «Case N: …»",
+	"casencmp":   "Последовательность целых чисел в каждом тесте вида «Case N: …»",
+	"casewcmp":   "Последовательность слов в каждом тесте вида «Case N: …»",
+	"dcmp":       "Одно вещественное число, абсолютная или относительная погрешность 1e-6",
+	"fcmp":       "Файлы построчно, строки совпадают в точности",
+	"hcmp":       "Одно целое число произвольной длины",
+	"icmp":       "Одно 32-битное целое число",
+	"lcmp":       "Слова по строкам: строки совпадают как последовательности слов",
+	"ncmp":       "Упорядоченная последовательность 64-битных целых чисел",
+	"nyesno":     "Последовательность ответов YES/NO без учёта регистра",
+	"pointscmp":  "Пример чекера с баллами: баллы — разность ответов",
+	"pointsinfo": "Пример чекера с points_info",
+	"rcmp":       "Одно вещественное число, абсолютная погрешность 1.5e-6",
+	"rcmp4":      "Последовательность вещественных чисел, абсолютная или относительная погрешность 1e-4",
+	"rcmp6":      "Последовательность вещественных чисел, абсолютная или относительная погрешность 1e-6",
+	"rcmp9":      "Последовательность вещественных чисел, абсолютная или относительная погрешность 1e-9",
+	"rncmp":      "Последовательность вещественных чисел, абсолютная погрешность 1.5e-5",
+	"uncmp":      "Неупорядоченная последовательность 64-битных целых чисел",
+	"wcmp":       "Последовательность слов (токенов)",
+	"yesno":      "Один ответ YES или NO без учёта регистра",
+}
+
+var checkers = loadCheckers()
+
+func loadCheckers() []Checker {
+	entries, err := vendored.ReadDir("testlib/checkers")
+	if err != nil {
+		panic(err)
+	}
+	list := make([]Checker, 0, len(entries))
+	for _, e := range entries {
+		name := strings.TrimSuffix(e.Name(), ".cpp")
+		data, err := vendored.ReadFile("testlib/checkers/" + e.Name())
+		if err != nil {
+			panic(err)
+		}
+		description, ok := checkerDescriptions[name]
+		if !ok || !strings.Contains(string(data), testlibInclude) {
+			panic("syslib: standard checker " + name + " has no description or does not include testlib.h")
+		}
+		list = append(list, Checker{Name: name, Description: description, Content: string(data)})
+	}
+	return list
+}
+
+const testlibInclude = "#include \"testlib.h\"\n"
+
+// Checkers returns the standard checkers by name.
+func Checkers() []Checker { return checkers }
+
+// LookupChecker returns the standard checker named name.
+func LookupChecker(name string) (*Checker, bool) {
+	for i := range checkers {
+		if checkers[i].Name == name {
+			return &checkers[i], true
+		}
+	}
+	return nil, false
+}
+
+// Standalone returns the checker source with the system testlib.h in place of
+// its include, so that it builds with the system version whatever testlib.h
+// the problem library holds.
+func (c *Checker) Standalone() string {
+	testlib, _ := Lookup("testlib.h")
+	return strings.Replace(c.Content, testlibInclude, testlib.Content+"\n", 1)
 }
 
 // Files returns the catalog.

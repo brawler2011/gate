@@ -38,7 +38,7 @@ func placeDraft(d model.Draft, languages *sandbox.Config) packageLayout {
 		l.programs = append(l.programs, placedProgram{key: key, role: role, path: path, program: p})
 	}
 	if d.Checker != nil {
-		place("checker", "checker", "check", *d.Checker)
+		place("checker", "checker", "check", model.DraftProgram{Language: d.Checker.Language, Source: d.Checker.Text()})
 	}
 	if d.Interactor != nil {
 		place("interactor", "interactor", "interactor", *d.Interactor)

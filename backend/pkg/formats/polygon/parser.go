@@ -43,6 +43,10 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		if p.Checker, err = program(assets.Checker.Source); err != nil {
 			return nil, err
 		}
+		// Polygon records a checker chosen from its list as std::wcmp.cpp.
+		if name, ok := strings.CutPrefix(assets.Checker.Name, "std::"); ok {
+			p.Checker.Standard = strings.TrimSuffix(name, ".cpp")
+		}
 		roles[assets.Checker.Source.Path] = true
 	}
 	switch len(assets.Validators) {

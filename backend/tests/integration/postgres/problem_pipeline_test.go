@@ -82,7 +82,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	store, client, files := services.store, services.client, services.files
 	cfg := &sandbox.Config{Langs: services.langs}
 	generator, solution, validator, subtask := uuid.New(), uuid.New(), uuid.New(), uuid.New()
-	d.Checker = program("cpp17", "#include <fstream>\nint main(int n,char**v){long long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}")
+	d.Checker = checker("cpp17", "#include <fstream>\nint main(int n,char**v){long long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}")
 	d.Generators = []model.DraftNamedProgram{named(generator, "gen", "python3", "import sys\nprint(sys.argv[1], sys.argv[2])\n")}
 	d.Solutions = []model.DraftNamedProgram{named(solution, "main", "cpp17", "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}")}
 	d.Validators = []model.DraftNamedProgram{named(validator, "validate", "python3", "import sys\na,b=map(int,sys.stdin.read().split())\nassert a>=0 and b>=0\n")}
