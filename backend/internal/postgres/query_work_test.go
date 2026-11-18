@@ -30,9 +30,9 @@ var databaseCommand = []string{
 	"-c", "shared_preload_libraries=pg_stat_statements", "-c", "pg_stat_statements.track_utility=off",
 }
 
-const queryWorkGolden = "testdata/query_work.json"
+const queryWorkBudgets = "testdata/query_work.json"
 
-var updateQueryWork = flag.Bool("update", false, "rewrite "+queryWorkGolden+" with the measured query work")
+var updateQueryWork = flag.Bool("update", false, "raise "+queryWorkBudgets+" budgets to include the measured query work")
 
 // queryWorkLargeTables are the tables the seeds fill with up to 100,000 rows; a
 // sequential scan of any of them is part of the work metrics.
@@ -125,18 +125,24 @@ func TestQueryWork(t *testing.T) {
 
 	data, err := json.MarshalIndent(actual, "", "  ")
 	require.NoError(t, err)
-	// The full measurement, so runs (also in CI) can be compared exactly.
+	// Keep full measurements for diagnosing planner changes in CI.
 	t.Logf("measured query work:\n%s", data)
+	data, err = os.ReadFile(queryWorkBudgets)
+	var budgets map[string]queryWork
+	if *updateQueryWork && errors.Is(err, os.ErrNotExist) {
+		budgets = map[string]queryWork{}
+	} else {
+		require.NoError(t, err, "record budgets with `%s`", queryWorkUpdate)
+		require.NoError(t, json.Unmarshal(data, &budgets))
+	}
 	if *updateQueryWork {
-		require.NoError(t, os.WriteFile(queryWorkGolden, append(data, '\n'), 0o644))
-		t.Logf("wrote %s", queryWorkGolden)
+		data, err = json.MarshalIndent(updateQueryWorkBudgets(budgets, actual), "", "  ")
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(queryWorkBudgets, append(data, '\n'), 0o644))
+		t.Logf("wrote %s; existing ceilings preserved (edit explicitly to tighten)", queryWorkBudgets)
 		return
 	}
-	data, err = os.ReadFile(queryWorkGolden)
-	require.NoError(t, err, "record the golden file with `%s`", queryWorkUpdate)
-	var golden map[string]queryWork
-	require.NoError(t, json.Unmarshal(data, &golden))
-	for _, problem := range compareQueryWork(golden, actual, queryWorkTolerance) {
+	for _, problem := range compareQueryWork(budgets, actual, queryWorkTolerance) {
 		t.Error(problem)
 	}
 }
