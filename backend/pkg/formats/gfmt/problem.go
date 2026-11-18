@@ -26,11 +26,10 @@ type Problem struct {
 }
 
 // Program is a source file of a built package that the judge compiles with its
-// own image. Dependencies map a file name in the compile directory to a package path.
+// own image, together with every file of lib/ under its name.
 type Program struct {
-	Source       string            `yaml:"source" json:"source"`
-	Language     string            `yaml:"language" json:"language"`
-	Dependencies map[string]string `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
+	Source   string `yaml:"source" json:"source"`
+	Language string `yaml:"language" json:"language"`
 }
 
 // Limits defines the resource limits for a problem.

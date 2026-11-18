@@ -95,5 +95,4 @@ func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 	s.Require().True(ok, "package has the checker")
 	s.Equal("python3", program.Language)
 	s.True(strings.HasSuffix(program.Source, ".py"), "checker source follows the language: %s", program.Source)
-	s.Equal(map[string]string{"testlib.h": "lib/testlib.h"}, program.Dependencies)
 }

@@ -1,6 +1,7 @@
 package gfmt
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -64,13 +65,14 @@ func OpenBuiltPackage(dir string) (*GateFormat, error) {
 		if err := regular(c.Source); err != nil {
 			return nil, err
 		}
-		for dest, path := range c.Dependencies {
-			if !fs.ValidPath(dest) || dest == "." || strings.ContainsAny(dest, "\\\x00") {
-				return nil, fmt.Errorf("invalid component dependency destination")
-			}
-			if err := regular(path); err != nil {
-				return nil, err
-			}
+	}
+	library, err := os.ReadDir(filepath.Join(dir, LibraryFolder))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("readdir: %w", err)
+	}
+	for _, f := range library {
+		if err := regular(LibraryFolder + "/" + f.Name()); err != nil {
+			return nil, err
 		}
 	}
 	for role, required := range map[string]bool{"checker": p.Type != "interactive", "interactor": p.Type == "interactive"} {

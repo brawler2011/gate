@@ -99,6 +99,10 @@ export const addSystemFile = (draft: ProblemDraft, name: string): ProblemDraft =
   library: [...draft.library, {name, content: "", auto_update: true}],
 });
 
+/** Replaces the text of a file with the system library file of its name, at its current version. */
+export const startAutoUpdate = (draft: ProblemDraft, name: string): ProblemDraft =>
+  updateLibraryFile(draft, name, {content: "", auto_update: true});
+
 /** Turns an auto-updated file into an editable copy of the system text. */
 export const stopAutoUpdate = (draft: ProblemDraft, name: string, systemText: string): ProblemDraft =>
   updateLibraryFile(draft, name, {content: systemText, auto_update: false});

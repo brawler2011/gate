@@ -268,8 +268,13 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			texts[name] = nil
 		}
 		generated[name] = generated[name] || generator
+		// Each distinct text is charged as it is read, so a package cannot
+		// hold more text in memory than the draft quotas allow.
 		if f.System {
-			system[name] = true
+			if !system[name] {
+				system[name] = true
+				return c.charge(0)
+			}
 			return nil
 		}
 		text, err := c.readText(f.Path)
@@ -277,6 +282,9 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			return err
 		}
 		if !slices.Contains(texts[name], text) {
+			if err := c.charge(len(text)); err != nil {
+				return err
+			}
 			texts[name] = append(texts[name], text)
 		}
 		return nil
@@ -333,9 +341,6 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			file.Content = list[0]
 		default:
 			return pkg.Wrap(pkg.ErrBadInput, nil, "programs include different files named "+name)
-		}
-		if err := c.charge(len(file.Content)); err != nil {
-			return err
 		}
 		c.draft.Library = append(c.draft.Library, file)
 	}

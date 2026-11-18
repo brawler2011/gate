@@ -1,6 +1,6 @@
 "use client";
 
-import {Badge, Box, Button, Code, Grid, Group, Menu, NavLink, ScrollArea, Stack, Text, TextInput} from "@mantine/core";
+import {Badge, Box, Button, Code, Grid, Group, Menu, Modal, NavLink, ScrollArea, Stack, Text, TextInput} from "@mantine/core";
 import {useState} from "react";
 import {useSearchParams} from "react-router-dom";
 
@@ -8,7 +8,14 @@ import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {useSystemLibrary} from "@/lib/systemLibrary";
 
 import {DraftGate} from "./draft/DraftGate";
-import {addLibraryFile, addSystemFile, removeLibraryFile, stopAutoUpdate, updateLibraryFile} from "./draft/draftOps";
+import {
+  addLibraryFile,
+  addSystemFile,
+  removeLibraryFile,
+  startAutoUpdate,
+  stopAutoUpdate,
+  updateLibraryFile,
+} from "./draft/draftOps";
 import {SourceEditor} from "./draft/SourceEditor";
 import {useSaveDraft} from "./draft/useDraft";
 
@@ -70,6 +77,41 @@ const SystemFile = ({file, saving, onStop, onDelete}: SystemFileProps): ReactNod
   );
 };
 
+type StartProps = {name: string; version: string; saving: boolean; onStart: () => void};
+
+/** Turns a copy of a system library file back into the auto-updated one, after confirmation. */
+const StartAutoUpdate = ({name, version, saving, onStart}: StartProps): ReactNode => {
+  const [confirming, setConfirming] = useState(false);
+  return (
+    <>
+      <Button variant="default" loading={saving} onClick={() => setConfirming(true)}>
+        Включить автообновление
+      </Button>
+      <Modal opened={confirming} onClose={() => setConfirming(false)} title="Включить автообновление?" centered>
+        <Stack>
+          <Text size="sm">
+            Текст {name} заменится системным {version}, и каждая сборка будет брать его текущую версию.
+            Тесты генераторов могут измениться.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setConfirming(false)}>
+              Отмена
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirming(false);
+                onStart();
+              }}
+            >
+              Заменить
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+    </>
+  );
+};
+
 const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: string}): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
   const [params, setParams] = useSearchParams();
@@ -97,7 +139,8 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
   };
 
   const system = useSystemLibrary() ?? [];
-  const missing = system.filter((s) => !draft.library.some((file) => file.auto_update && file.name === s.name));
+  const missing = system.filter((s) => !draft.library.some((file) => file.name === s.name));
+  const systemCopy = system.find((s) => s.name === selected?.name);
 
   const handleAddSystem = async (name: string) => {
     if (await save((current) => addSystemFile(current, name))) {
@@ -163,14 +206,22 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
         {selected && !selected.auto_update && (
           <SectionPaper>
             <Stack gap="md">
+              {systemCopy && (
+                <StartAutoUpdate
+                  name={selected.name}
+                  version={systemCopy.version}
+                  saving={isSaving}
+                  onStart={() => void save((current) => startAutoUpdate(current, selected.name))}
+                />
+              )}
               <RenameFile
-                key={selected.name}
+                key={`rename:${selected.name}`}
                 name={selected.name}
                 saving={isSaving}
                 onRename={(name) => void handleRename(selected.name, name)}
               />
               <SourceEditor
-                key={selected.name}
+                key={`source:${selected.name}`}
                 label={selected.name}
                 content={selected.content}
                 saving={isSaving}

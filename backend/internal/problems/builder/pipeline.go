@@ -315,8 +315,9 @@ func (e *execution) compile(ctx context.Context) error {
 		if !required[p.key] {
 			continue
 		}
+		// Judge programs compile with the whole library; solutions alone.
 		deps := map[string][]byte{}
-		if len(p.dependencies) > 0 {
+		if p.role != "solution" {
 			for i := range d.Library {
 				deps[d.Library[i].Name] = []byte(d.Library[i].Text())
 			}
@@ -328,7 +329,7 @@ func (e *execution) compile(ctx context.Context) error {
 		e.compiled[p.key] = compilation{language: p.program.Language, executable: executable}
 		// The package keeps the judge's programs as sources; each judge compiles them with its own image.
 		if p.role == "checker" || p.role == "interactor" {
-			e.manifest.Programs[p.role] = gfmt.Program{Source: p.path, Language: p.program.Language, Dependencies: p.dependencies}
+			e.manifest.Programs[p.role] = gfmt.Program{Source: p.path, Language: p.program.Language}
 		}
 	}
 	return nil

@@ -61,9 +61,14 @@ func (j *PackageJudge) CompileProgram(ctx context.Context, pkg *LoadedPackage, p
 	if err != nil {
 		return err
 	}
+	// A judge program compiles with the whole package library.
 	deps := map[string][]byte{}
-	for destination, path := range program.Dependencies {
-		if deps[destination], err = read(path); err != nil {
+	library, err := os.ReadDir(filepath.Join(pkg.Format.Path, gfmt.LibraryFolder))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("readdir: %w", err)
+	}
+	for _, f := range library {
+		if deps[f.Name()], err = read(gfmt.LibraryFolder + "/" + f.Name()); err != nil {
 			return err
 		}
 	}
