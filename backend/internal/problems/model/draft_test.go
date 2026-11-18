@@ -24,7 +24,7 @@ func validDraft() Draft {
 			Assets:       []DraftAsset{{Name: "graph.png", ObjectID: uuid.New()}},
 			Subtasks:     []DraftSubtask{{ID: sub, Ordinal: 1, Name: "main", Policy: "complete"}},
 			Tests: []DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: sub,
-				Input:  DraftInput{Mode: "generator", Generator: &gen, Args: []string{"1"}},
+				Input:  DraftInput{Mode: "generator", Generator: &gen},
 				Answer: DraftAnswer{Mode: "generated", Solution: &sol}}},
 		}}
 }
