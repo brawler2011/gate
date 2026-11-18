@@ -1,4 +1,3 @@
-// Contest layout dimensions
-export const CONTEST_CONTENT_MAX_WIDTH = '1080px';    // Контент (таблицы, формы)
+export const CONTEST_CONTENT_MAX_WIDTH = '1080px';
 export const CONTEST_SIDEBAR_LEFT_WIDTH = '250px';
 export const CONTEST_SIDEBAR_RIGHT_WIDTH = '520px';

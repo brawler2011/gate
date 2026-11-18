@@ -7,7 +7,6 @@ spec:
   ports:
     - {name: s3, port: 8333}
 ---
-# Master, volume, filer and S3 gateway in one process: one node needs no more.
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -21,7 +20,6 @@ spec:
     metadata:
       labels: {app.kubernetes.io/name: seaweedfs}
     spec:
-      # Services are found by DNS; their env variables (e.g. S3_PORT) would clash with app settings.
       enableServiceLinks: false
       securityContext:
         {{- include "gate-infra.podSecurity" . | nindent 8 }}
@@ -33,13 +31,7 @@ spec:
               valueFrom: {secretKeyRef: {name: {{ .Values.secretName }}, key: S3_ACCESS_KEY}}
             - name: S3_SECRET_KEY
               valueFrom: {secretKeyRef: {name: {{ .Values.secretName }}, key: S3_SECRET_KEY}}
-          # The S3 identity comes from the shared secret, the same keys the backend uses.
-          # Every bucket is a collection with volumes of its own. Volumes are not
-          # preallocated, so many small ones only cost slots. minFreeSpace stops
-          # volume writes to leave filesystem space for other services; the PVC
-          # storage request is not a quota on local-path. With -volume.max=0
-          # SeaweedFS instead derives the count from free space and 30 GB volumes,
-          # which on a small disk leaves a single volume for every bucket.
+          # Use explicit volume slots: auto-sizing by free space can leave too few for separate buckets.
           command: [/bin/sh, -c]
           args:
             - |

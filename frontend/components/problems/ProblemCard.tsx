@@ -34,7 +34,6 @@ export const ProblemCard = ({problem, showEditButton}: Props): ReactNode => {
         className={classes.problemCard}
       >
         <Stack gap="xs" h="100%" justify="space-between">
-          {/* Problem Header */}
           <Group justify="space-between" wrap="nowrap" gap="xs">
             <Stack gap="0" style={{flex: 1, minWidth: 0}}>
               <Title
@@ -45,7 +44,6 @@ export const ProblemCard = ({problem, showEditButton}: Props): ReactNode => {
                 {problem.title}
               </Title>
             </Stack>
-            {/* Edit button - only in "My Problems" section */}
             {showEditButton && (
               <ActionIcon
                 variant="subtle"
@@ -65,7 +63,6 @@ export const ProblemCard = ({problem, showEditButton}: Props): ReactNode => {
             )}
           </Group>
 
-          {/* Problem Stats */}
           <Group justify="space-between" gap="xs">
             <Text
               size="xs"

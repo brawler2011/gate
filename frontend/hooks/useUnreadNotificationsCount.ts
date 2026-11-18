@@ -40,7 +40,6 @@ export const useUnreadNotificationsCount = (
       return;
     }
 
-    // Background polling every 45s
     const interval = setInterval(fetchCount, 45000);
 
     const handleUpdate = () => {

@@ -1,9 +1,4 @@
 #!/bin/sh
-# Prepares a server for Gate: swap, an AppArmor profile for pods, k3s with the API
-# closed to the outside, and a kubeconfig for the deploy user. Run as root; safe to run again. Docker and its
-# containers are left alone: k3s runs its own containerd.
-#
-#   sudo sh install.sh deployer
 set -eu
 
 K3S_VERSION=v1.37.1+k3s1
@@ -13,8 +8,7 @@ DEPLOY_USER="${1:?usage: install.sh <deploy user>}"
 [ "$(id -u)" = 0 ] || { echo "run as root" >&2; exit 1; }
 id "$DEPLOY_USER" > /dev/null
 
-# Swap takes memory peaks (compiles, startup) instead of the OOM killer. Host
-# processes use it, and pods may too (LimitedSwap, below).
+# Allow compile and startup memory peaks to spill to swap instead of triggering OOM kills.
 if ! swapon --show=NAME --noheadings | grep -qx /swapfile; then
   [ -f /swapfile ] || fallocate -l "$SWAP_SIZE" /swapfile
   chmod 600 /swapfile
@@ -25,9 +19,7 @@ grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fs
 echo 'vm.swappiness=10' > /etc/sysctl.d/90-gate-swap.conf
 sysctl -q -p /etc/sysctl.d/90-gate-swap.conf
 
-# k3s listens for its API on every interface. The deploy reaches it through an SSH
-# tunnel, so the port is closed on the interface of the default route; pods still
-# reach the API through the cluster network. A unit restores the rule on boot.
+# Block the public API interface while retaining cluster access and the deploy SSH tunnel.
 cat > /usr/local/sbin/gate-close-k3s-api <<'EOF'
 #!/bin/sh
 set -eu
@@ -56,17 +48,10 @@ EOF
 systemctl daemon-reload
 systemctl enable --now gate-close-k3s-api.service
 
-# containerd's default AppArmor profile denies signals inside containers on kernels
-# that stack the host's label, which hangs PostgreSQL and gosu. Production pods use
-# this profile instead (appArmorProfile in deploy/prod). The apparmor service loads
-# it again on boot.
 cat > /etc/apparmor.d/gate-default <<'EOF'
 #include <tunables/global>
 
-# Default profile for Gate's containers, after containerd's own. On kernels that
-# stack the host's label (Ubuntu 26.04), a container process is labelled
-# "gate-default//&unconfined", so peer rules name both forms; containerd's profile
-# names only the first and denies signals inside containers.
+# Stacked host labels require both peer forms; containerd's profile otherwise denies container signals.
 profile gate-default flags=(attach_disconnected,mediate_deleted) {
   #include <abstractions/base>
 
@@ -75,11 +60,9 @@ profile gate-default flags=(attach_disconnected,mediate_deleted) {
   file,
   umount,
 
-  # The host and the runtime stop and signal containers.
   signal (receive) peer=unconfined,
   signal (receive) peer=runc,
   signal (receive) peer=crun,
-  # Processes of a container signal and inspect each other.
   signal (send,receive) peer=gate-default,
   signal (send,receive) peer=gate-default//&unconfined,
   ptrace (trace,read,tracedby,readby) peer=gate-default,
@@ -104,8 +87,7 @@ profile gate-default flags=(attach_disconnected,mediate_deleted) {
 EOF
 apparmor_parser -r -W /etc/apparmor.d/gate-default
 
-# Burstable pods may swap in proportion to their memory request. The kubelet has
-# no flag for this; k3s reads drop-in kubelet configs from this directory.
+# k3s requires a kubelet config drop-in for LimitedSwap.
 install -d /var/lib/rancher/k3s/agent/etc/kubelet.conf.d
 cat > /var/lib/rancher/k3s/agent/etc/kubelet.conf.d/90-gate-swap.conf <<'EOF'
 apiVersion: kubelet.config.k8s.io/v1beta1
@@ -114,7 +96,6 @@ memorySwap:
   swapBehavior: LimitedSwap
 EOF
 
-# The installer script comes from the same tag as the binary it installs.
 curl -sfL "https://raw.githubusercontent.com/k3s-io/k3s/$K3S_VERSION/install.sh" \
   | INSTALL_K3S_VERSION="$K3S_VERSION" sh -s - \
     --disable metrics-server --write-kubeconfig-mode 600
@@ -124,7 +105,7 @@ group="$(id -gn "$DEPLOY_USER")"
 install -d -m 700 -o "$DEPLOY_USER" -g "$group" "$home/.kube"
 install -m 600 -o "$DEPLOY_USER" -g "$group" /etc/rancher/k3s/k3s.yaml "$home/.kube/config"
 
-# The node registers shortly after k3s starts; wait for it before waiting for Ready.
+# Wait for node registration before waiting for readiness.
 timeout 180 sh -c 'until k3s kubectl get nodes -o name 2> /dev/null | grep -q .; do sleep 2; done'
 k3s kubectl wait --for=condition=Ready node --all --timeout=180s
 echo "k3s $K3S_VERSION is ready; kubeconfig for $DEPLOY_USER is in $home/.kube/config"

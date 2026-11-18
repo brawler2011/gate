@@ -20,7 +20,6 @@ spec:
     metadata:
       labels: {app.kubernetes.io/name: nats}
     spec:
-      # Services are found by DNS; their env variables (e.g. S3_PORT) would clash with app settings.
       enableServiceLinks: false
       securityContext:
         {{- include "gate-infra.podSecurity" . | nindent 8 }}

@@ -21,7 +21,6 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
   const {user: sessionUser, setUser} = useSession();
   const user = sessionUser || initialUser;
 
-  // Change Password State
   const [passwordLoading, setPasswordLoading] = useState(false);
   const passwordForm = useForm({
     initialValues: {
@@ -38,7 +37,6 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
     },
   });
 
-  // Change Email State
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailChangeSuccess, setEmailChangeSuccess] = useState<string | null>(null);
   const [resendLoading, setResendLoading] = useState(false);
@@ -181,7 +179,6 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
           </Text>
         </div>
 
-        {/* 1. Account Info Overview */}
         <Paper withBorder radius="md" p="xl">
           <Stack gap="md">
             <Group justify="space-between" align="center">
@@ -263,7 +260,6 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
           </Stack>
         </Paper>
 
-        {/* 2. Change Email */}
         <Paper withBorder radius="md" p="xl">
           <Stack gap="md">
             <Group gap="sm">
@@ -326,7 +322,6 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
           </Stack>
         </Paper>
 
-        {/* 3. Change Password */}
         <Paper withBorder radius="md" p="xl">
           <Stack gap="md">
             <Group gap="sm">
@@ -382,7 +377,6 @@ export const UserSettingsContent = ({initialUser}: Props): ReactNode => {
           </Stack>
         </Paper>
 
-        {/* 4. Claim Temporary Account Section */}
         <ClaimTemporaryAccountSection />
       </Stack>
     </Container>

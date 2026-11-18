@@ -20,10 +20,9 @@ spec:
     metadata:
       labels: {app.kubernetes.io/name: postgres}
     spec:
-      # Services are found by DNS; their env variables (e.g. S3_PORT) would clash with app settings.
+      # Disable service env injection: names such as S3_PORT clash with application settings.
       enableServiceLinks: false
-      # The image's own postgres user: the server never runs as root, and the entrypoint
-      # needs no gosu to switch users.
+      # Run as the image user to avoid requiring gosu in the entrypoint.
       securityContext:
         {{- include "gate-infra.podSecurity" . | nindent 8 }}
         runAsUser: 70
@@ -46,7 +45,7 @@ spec:
             periodSeconds: 5
           resources: {{- toYaml .Values.postgres.resources | nindent 12 }}
           volumeMounts:
-            # PostgreSQL 18 images keep data in a versioned directory below this path.
+            # Mount the parent because PostgreSQL stores data in a versioned subdirectory.
             - {name: data, mountPath: /var/lib/postgresql}
   volumeClaimTemplates:
     - metadata: {name: data}

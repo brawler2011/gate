@@ -178,7 +178,6 @@ export const OrgJoinButton = ({
     );
   }
 
-  // By request
   return (
     <>
       <Button

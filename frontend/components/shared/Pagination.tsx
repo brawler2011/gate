@@ -15,7 +15,6 @@ const RoutePagination = ({
   baseUrl,
   queryParams = {},
 }: RoutePaginationProps): ReactNode => {
-  // Helper function to build query string
   const buildQueryString = (
     params: Record<string, string | number | undefined>,
   ) => {

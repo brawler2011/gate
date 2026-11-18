@@ -120,7 +120,7 @@ describe("points", () => {
   test("weights are summed in exact hundredths", () => {
     const base = addSubtask(emptyDraft(), "A");
     const test = (points: number) => ({...newManualTest(base, base.subtasks[0].id), points});
-    // Naive float addition gives 0.30000000000000004.
+    // Point totals avoid floating-point rounding errors.
     expect(sumPoints([test(0.1), test(0.2)])).toBe(0.3);
     expect(sumPoints([test(33.33), test(33.33), test(33.34)])).toBe(100);
   });

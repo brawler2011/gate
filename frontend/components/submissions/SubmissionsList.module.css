@@ -26,13 +26,11 @@
     }
 }
 
-/* Verdict column - flexible width with minimum */
 .colVerdict {
     min-width: 160px;
     box-sizing: border-box;
 }
 
-/* Progress text with spinner */
 .progressText {
     display: flex;
     align-items: center;
@@ -50,7 +48,6 @@
     color: var(--mantine-color-gray-4);
 }
 
-/* Queue text styling */
 .queueText {
     display: flex;
     align-items: center;
@@ -66,7 +63,6 @@
     color: var(--mantine-color-gray-5);
 }
 
-/* Row highlight animation */
 .rowHighlight {
     animation: highlightFade 2s ease-out forwards;
 }
@@ -81,7 +77,6 @@
     }
 }
 
-/* Slide-fade animation for new rows */
 .rowNew {
     animation: slideInFade 0.4s ease-out forwards;
 }
@@ -98,7 +93,6 @@
     }
 }
 
-/* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
     .rowHighlight {
         animation: none;

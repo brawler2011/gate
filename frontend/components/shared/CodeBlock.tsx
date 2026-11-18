@@ -12,7 +12,7 @@ import type {ReactNode} from "react";
 
 interface CodeBlockProps {
     code: string;
-    /** The language configuration's syntax: its Prism grammar, or "" for plain text. */
+    /** Prism grammar name; empty means plain text. */
     syntax: string;
 }
 

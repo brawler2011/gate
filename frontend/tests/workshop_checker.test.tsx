@@ -58,7 +58,7 @@ describe("workshop checker", () => {
     fireEvent.click(button);
     await waitFor(() => expect(puts).toHaveLength(1));
     expect(puts[0].checker).toEqual({language: "cpp20", source: WCMP, standard: ""});
-    // The draft had no testlib.h: the standard checker brought the system one.
+    // Customizing a standard checker supplies its missing system includes.
     expect(puts[0].library).toEqual([{name: "testlib.h", content: "", auto_update: true}]);
     // The copy is an ordinary checker the author edits.
     await waitFor(() => expect(view.getByRole("button", {name: "Сохранить"})).toBeTruthy());

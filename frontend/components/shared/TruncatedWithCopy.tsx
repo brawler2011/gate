@@ -29,7 +29,6 @@ export const TruncatedWithCopy = ({
     }
   }, [copied]);
 
-  // Handle undefined, null, or non-string values
   const stringValue = value?.toString() || "";
   if (stringValue.length === 0) {
     return null;

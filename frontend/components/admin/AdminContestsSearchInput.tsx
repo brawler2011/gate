@@ -13,7 +13,6 @@ export const AdminContestsSearchInput = (): ReactNode => {
   const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isFirstRender = useRef(true);
 
-  // Sync state with URL when searchParams change externally (e.g., browser back)
   useEffect(() => {
     const urlSearch = searchParams.get("search") || "";
     if (urlSearch !== search) {
@@ -21,15 +20,12 @@ export const AdminContestsSearchInput = (): ReactNode => {
     }
   }, [searchParams, search]);
 
-  // Only update URL when user actually types (not on initial render or URL change)
   useEffect(() => {
-    // Skip initial render
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
 
-    // Skip if search matches current URL (was set from URL sync)
     const urlSearch = searchParams.get("search") || "";
     if (search === urlSearch) {
       return;
@@ -41,7 +37,7 @@ export const AdminContestsSearchInput = (): ReactNode => {
 
     searchTimeoutRef.current = setTimeout(() => {
       const params = new URLSearchParams(searchParams);
-      params.delete("page"); // Reset to first page on search
+      params.delete("page");
       if (search) {
         params.set("search", search);
       } else {

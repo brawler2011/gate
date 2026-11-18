@@ -31,19 +31,15 @@ type Props = { orgLogin: string };
 export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
   const [activeTab, setActiveTab] = useState<string | null>("members");
 
-  // Members state
   const {pendingId: deletingMemberId, run: mutateMembers} = useEntityMutation();
 
-  // Invitations state
   const {pendingId: cancelingInvitationId, run: mutateInvitations} = useEntityMutation();
 
-  // Requests state
   const {pendingId: processingRequestId, run: mutateRequests} = useEntityMutation();
   const [approveModalOpened, {open: openApproveModal, close: closeApproveModal}] = useDisclosure(false);
   const [selectedRequest, setSelectedRequest] = useState<OrganizationJoinRequestModel | null>(null);
   const [approveRole, setApproveRole] = useState<string>("member");
 
-  // Invite modal / user search state
   const [inviteModalOpened, {open: openInviteModal, close: closeInviteModal}] = useDisclosure(false);
   const [batchModalOpened, setBatchModalOpened] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -308,7 +304,6 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
             </Group>
           </Group>
 
-          {/* Members Tab */}
           <Tabs.Panel value="members">
             {membersError && <Text c="red">{membersError.message}</Text>}
             {membersData && membersData.pagination.total_pages > 1 && (
@@ -381,7 +376,6 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
             )}
           </Tabs.Panel>
 
-          {/* Invitations Tab */}
           <Tabs.Panel value="invitations">
             {loadingInvitations && (
               <Center py="xl">
@@ -460,7 +454,6 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
             )}
           </Tabs.Panel>
 
-          {/* Join Requests Tab */}
           <Tabs.Panel value="requests">
             {loadingRequests && (
               <Center py="xl">
@@ -549,7 +542,6 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
         </Tabs>
       </Stack>
 
-      {/* Invite Member Modal */}
       <Modal
         opened={inviteModalOpened}
         onClose={closeInviteModal}
@@ -596,7 +588,6 @@ export const OrgMembersManagement = ({orgLogin}: Props): ReactNode => {
         </Stack>
       </Modal>
 
-      {/* Approve Request Modal */}
       <Modal
         opened={approveModalOpened}
         onClose={closeApproveModal}

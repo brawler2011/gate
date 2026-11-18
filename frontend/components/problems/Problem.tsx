@@ -41,7 +41,6 @@ export type ProblemProps = {
   letter?: string;
   isManager?: boolean;
   hideStatements?: boolean;
-  /** Resolves statement image paths to URLs. */
   assetUrl?: AssetUrl;
 };
 

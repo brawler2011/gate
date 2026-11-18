@@ -16,14 +16,11 @@
       pkgs = nixpkgs.legacyPackages.${system};
       n2c = nix2container.packages.${system}.nix2container;
 
-      # langs.toml is shared with the backend: each configuration names its nixpkgs
-      # package, and configurations may share one (the C++ standards share GCC).
+      # Configurations may share a compiler package.
       langs = builtins.fromTOML (builtins.readFile ./langs.toml);
-      # A package may be installed as a trimmed build instead of the package itself.
       trimmed = {
         ${langs.java.package} = jlinkRuntime;
       };
-      # The language packages by nixpkgs attribute, each once.
       langPackages = builtins.listToAttrs (
         map (name: {
           inherit name;
@@ -31,11 +28,7 @@
         }) (pkgs.lib.unique (map (lang: lang.package) (builtins.attrValues langs)))
       );
 
-      # A Java runtime with the standard API (java.se), javac (jdk.compiler), the
-      # non-US locale data standard APIs use (jdk.localedata) and sun.misc.Unsafe
-      # (jdk.unsupported). It leaves out jmods, src.zip and the
-      # tooling modules of the full JDK. The CDS archive keeps JVM startup as fast as
-      # the JDK's; modules stay uncompressed for the same reason.
+      # Keep CDS and uncompressed modules for JVM startup speed.
       jlinkRuntime =
         jdk:
         pkgs.runCommand "${jdk.pname}-jlink-${jdk.version}"
@@ -52,20 +45,16 @@
               --add-modules java.se,jdk.compiler,jdk.localedata,jdk.unsupported \
               --strip-debug --no-man-pages --no-header-files --generate-cds-archive \
               --output $out
-            # The copied libraries keep the JDK's lib directory in their RPATH next
-            # to $ORIGIN, which already finds them; drop it so the image does not
-            # carry the full JDK.
+            # Drop the full JDK reference from RPATH; $ORIGIN already finds the copied libraries.
             find $out -type f -exec remove-references-to -t ${jdk} {} +
           '';
 
       go = pkgs.${langs.go.package};
 
-      # A file of this directory by content only: copying the path itself would keep
-      # the checkout's file mode, and a different mode gives a different image.
+      # Copy content only: checkout file modes must not affect image identity.
       source = name: pkgs.writeText name (builtins.readFile (./. + "/${name}"));
 
-      # pdflatex with the packages needed for contest booklets (olymp.sty, Cyrillic).
-      # metafont generates the Cyrillic (LH) font metrics on demand.
+      # metafont generates Cyrillic font metrics on demand.
       tex = pkgs.texliveBasic.withPackages (
         ps: with ps; [
           babel-russian
@@ -77,7 +66,7 @@
         ]
       );
 
-      # Everything visible inside the sandbox: its bin/ is mounted as /usr/bin and /bin.
+      # Expose the Nix runtime as /usr/bin and /bin in mount.yaml.
       runtime = pkgs.buildEnv {
         name = "judge-runtime";
         paths = [
@@ -88,20 +77,16 @@
         ++ builtins.attrValues langPackages;
       };
 
-      # Go 1.20+ ships no precompiled standard library, so a cold build exceeds
-      # the compile limit. The sandbox mounts this cache read-only as GOCACHE.
+      # Prebuild the standard library so cold Go builds fit the compile limit.
       goCache = pkgs.runCommand "go-std-cache" { nativeBuildInputs = [ go ]; } ''
         export HOME=$TMPDIR GOCACHE=$out CGO_ENABLED=0
         go build std
-        # Go stamps each action entry and trim.txt with the current time. Fix both,
-        # so the same toolchain gives the same cache and image layer. Entries keep
-        # their fixed width (the time is the last 20 characters).
+        # Normalize timestamps for reproducible layers while preserving fixed-width cache entries.
         find $out -name '*-a' -exec sed -i -E 's/.{20}$/                   0/' {} +
         echo 0 > $out/trim.txt
       '';
 
-      # Image identity: judges key the problem programs they compile by its digest. The store paths change
-      # whenever any compiler, library or flake input changes, and only then.
+      # Compiled program cache keys must change with the toolchain.
       identity = {
         digest =
           "sha256:"
@@ -117,7 +102,6 @@
         abi = "linux-gnu";
       };
 
-      # What the backend reads from the sandbox at startup (mounted at /etc/judge).
       manifest = pkgs.runCommand "judge-manifest" {
         identity = builtins.toJSON identity;
         passAsFile = [ "identity" ];
@@ -127,7 +111,6 @@
         cp ${source "langs.toml"} $out/langs.toml
       '';
 
-      # The image root: /opt as mount.yaml expects it, and a writable /tmp.
       root = pkgs.runCommand "judge-root" { } ''
         mkdir -p $out/opt $out/tmp
         ln -s ${runtime} $out/opt/runtime
@@ -137,12 +120,7 @@
         ln -s ${source "mount.yaml"} $out/opt/mount.yaml
       '';
 
-      # The base layer (bash, coreutils and glibc), then one layer per language package, TeX
-      # and go-judge, each holding its closure minus the base. These layers do not
-      # depend on each other: a store path two of them need is in both (identical
-      # files, so the overlay is unaffected), and changing one language changes only
-      # its layer and the last one (runtime env, manifest, /opt). The Go
-      # standard-library cache refers to Go and changes with it, so it shares Go's layer.
+      # Independent language layers avoid rebuilding other toolchains; Go's cache shares its compiler layer.
       base = n2c.buildLayer {
         deps = [
           pkgs.bash
@@ -180,7 +158,7 @@
             "/opt/go-judge"
             "-mount-conf=/opt/mount.yaml"
           ];
-          # Lets `docker exec` reach the runtime tools for debugging; sandboxed commands get their own PATH.
+          # Allow docker exec to reach runtime tools; sandboxed commands receive their own PATH.
           env = [ "PATH=/opt/runtime/bin" ];
           workingDir = "/opt";
           exposedPorts = {

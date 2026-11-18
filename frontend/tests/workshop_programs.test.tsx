@@ -60,8 +60,7 @@ describe("workshop programs", () => {
     expect(view.queryByDisplayValue("FIRST SOURCE")).toBeNull();
   });
 
-  // happy-dom does not deliver these change events to React, so edits go
-  // through the element's React change handler.
+  // happy-dom requires invoking React's change handler directly.
   const type = async (element: Element, text: string): Promise<void> => {
     const propsKey = Object.keys(element).find((key) => key.startsWith("__reactProps")) as string;
     const props = (element as unknown as Record<string, {onChange: (event: unknown) => void}>)[propsKey];

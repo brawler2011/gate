@@ -56,8 +56,7 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
         return data;
       });
     };
-    // A completed HTTP snapshot can overwrite progress received before or during
-    // the fetch. Reapply it only when its submission revision is still current.
+    // HTTP snapshots may overwrite progress; reapply only matching revisions.
     const unsubscribe = client.getQueryCache().subscribe(event => {
       if (event.type === 'updated' && event.action.type === 'success' && !event.action.manual
         && client.getQueryCache().findAll(submissions).includes(event.query)) {
@@ -77,8 +76,7 @@ export const SubmissionsProvider = ({contestId, orgLogin, contestLogin, userId, 
         if (refreshScoreboard) {
           await Promise.all([client.cancelQueries(submissions), client.cancelQueries(scoreboard)]);
         } else {
-          // A fetch already in flight may predate the triggering event. Wait
-          // for it, then request a fresh snapshot rather than reusing its result.
+          // An in-flight fetch may predate the event, so wait for it before fetching again.
           await Promise.allSettled(client.getQueryCache().findAll(submissions).map(query => query.promise));
         }
         if (disposed) {

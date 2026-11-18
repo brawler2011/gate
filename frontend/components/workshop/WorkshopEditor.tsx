@@ -18,7 +18,6 @@ type Props = {
   activeTab: string;
 };
 
-/** Route segment → program role edited on that tab. */
 const COMPONENT_TABS: Record<string, ComponentRole> = {
   checkers: "checker",
   validators: "validator",

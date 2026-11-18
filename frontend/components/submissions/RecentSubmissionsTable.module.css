@@ -1,4 +1,3 @@
-/* Status cell styles */
 .statusCell {
     display: flex;
     align-items: center;
@@ -14,7 +13,6 @@
     color: var(--mantine-color-gray-4);
 }
 
-/* Status column - strictly fixed width */
 .statusColumn {
     width: 200px !important;
     min-width: 200px !important;
@@ -22,7 +20,6 @@
     box-sizing: border-box;
 }
 
-/* Queue status */
 .queueStatus {
     display: flex;
     align-items: center;
@@ -38,7 +35,6 @@
     color: var(--mantine-color-gray-5);
 }
 
-/* Row highlight animation */
 .rowHighlight {
     animation: highlightFade 2s ease-out forwards;
 }
@@ -53,7 +49,6 @@
     }
 }
 
-/* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
     .rowHighlight {
         animation: none;

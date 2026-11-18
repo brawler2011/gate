@@ -1,9 +1,7 @@
-# Secret written by deploy/secrets.sh; shared with the gate chart.
 secretName: gate-secrets
 
 postgres:
   image: postgres:18-alpine
-  # deploy/secrets.sh puts this name into the backend's POSTGRES_DSN.
   database: gate
   storage: 10Gi
   resources:
@@ -27,17 +25,12 @@ nats:
 
 seaweedfs:
   image: chrislusf/seaweedfs:4.53_full
-  # PVC request only; local-path does not enforce a disk quota.
   storage: 50Gi
-  # Stop volume writes below this filesystem free space; leave room for other services.
   minFreeSpace: "5GiB"
-  # Each bucket takes about 7 volumes on its first write (templates/seaweedfs.yaml).
   volumeSizeLimitMB: 1024
   maxVolumes: 100
   resources:
     requests: {cpu: 100m, memory: 256Mi}
     limits: {memory: 2Gi}
 
-# AppArmor profile of every pod; empty omits the field from pod securityContext.
-# The go-judge sidecar always runs unconfined (templates/worker.yaml in the gate chart).
 appArmorProfile: {}

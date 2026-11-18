@@ -1,6 +1,5 @@
 name: GHCR Cleanup
 
-# Keeps the newest releases for rollback and drops CI images nobody released.
 on:
   schedule:
     - cron: '0 3 * * 1'

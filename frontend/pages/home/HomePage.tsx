@@ -21,7 +21,6 @@ const Page = (): ReactNode => {
   const blogError = blog.error;
 
   if (authenticated) {
-    // Authenticated user view: Dashboard with personal quick navigation & compact sidebar blog
     const recentContests = dashboardData?.recent_contests || [];
     const myProblems = dashboardData?.my_problems || [];
     const blogPosts = blogData?.posts || [];

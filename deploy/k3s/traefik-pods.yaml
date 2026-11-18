@@ -1,6 +1,4 @@
-# Headless service whose DNS name resolves to the Traefik pod IPs. The backend's
-# http.trusted_proxy names it: only requests from these pods may carry a client IP
-# in X-Forwarded-For.
+# Resolve only Traefik pod IPs for the backend's trusted proxy list.
 apiVersion: v1
 kind: Service
 metadata:

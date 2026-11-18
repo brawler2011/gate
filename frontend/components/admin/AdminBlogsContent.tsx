@@ -28,12 +28,10 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
     message: string;
   } | null>(null);
 
-  // Form modal state
   const [formOpened, setFormOpened] = useState(false);
   const [editingPost, setEditingPost] = useState<PostModel | null>(null);
   const [_submitting, setSubmitting] = useState(false);
 
-  // SWR for data fetching
   const {data, error, refetch: mutate, isLoading} = useQuery({
     queryKey: ["admin-blogs", page, search],
     queryFn: () =>
@@ -135,7 +133,6 @@ export const AdminBlogsContent = ({page, search}: AdminBlogsContentProps): React
       type: "success",
       message: "Пост успешно удалён",
     });
-    // Reload posts after deletion
     mutate();
   };
 

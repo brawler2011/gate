@@ -8,11 +8,6 @@ import type {
   ProblemDraftTest,
 } from "@/contracts/core/v1/schema";
 
-/**
- * Edit operations of the workshop. They only change the draft; the server
- * validates the result on save and names the offending entry.
- */
-
 export type ComponentRole = "checker" | "validator" | "interactor" | "generator" | "solution";
 
 export const ROLE_LABELS: Record<ComponentRole, string> = {
@@ -23,7 +18,6 @@ export const ROLE_LABELS: Record<ComponentRole, string> = {
   solution: "Решение",
 };
 
-/** Roles the draft holds as a single program field rather than a list. */
 export type SingleRole = "checker" | "interactor";
 export type ListRole = "validator" | "generator" | "solution";
 
@@ -35,7 +29,7 @@ export type OpResult = {draft: ProblemDraft} | {error: string};
 
 const newId = (): string => crypto.randomUUID();
 
-/** Points are exact hundredths; arithmetic runs on integers. */
+// Use integer hundredths to avoid floating-point errors in point totals.
 export const toHundredths = (points: number): number => Math.round(points * 100);
 const fromHundredths = (hundredths: number): number => hundredths / 100;
 export const formatPoints = (points: number): string => points.toFixed(2).replace(/\.?0+$/, "");
@@ -45,7 +39,6 @@ export const sumPoints = (tests: ProblemDraftTest[]): number =>
 
 export const programsOf = (draft: ProblemDraft, role: ListRole): ProblemDraftNamedProgram[] => draft[LIST_FIELDS[role]];
 
-/** Sets the single checker or interactor; null removes it. */
 export const setSingleProgram = <Role extends SingleRole>(
   draft: ProblemDraft,
   role: Role,
@@ -55,17 +48,11 @@ export const setSingleProgram = <Role extends SingleRole>(
     [role]: program,
   });
 
-/** A checker in the author's source. */
 export const customChecker = (language: string, source: string): ProblemDraftChecker => ({language, source, standard: ""});
 
-/** A standard checker: each build takes its current version. */
 export const standardChecker = (name: string, language: string): ProblemDraftChecker => ({language, source: "", standard: name});
 
-/**
- * Turns a standard checker into the author's copy of its current source. A
- * standard checker builds with the system files it includes, so those the
- * library lacks are added auto-updated.
- */
+// Preserve system includes when converting a standard checker to editable source.
 export const customizeChecker = (draft: ProblemDraft, source: string, systemFiles: string[]): ProblemDraft => {
   if (!draft.checker) {
     return draft;
@@ -81,7 +68,6 @@ const nameTaken = (role: ListRole, name: string): OpResult => ({
   error: `${ROLE_LABELS[role]} с именем «${name}» уже есть`,
 });
 
-/** Programs are identified by their names, which are unique within a role. */
 export const addProgram = (
   draft: ProblemDraft,
   role: ListRole,
@@ -97,7 +83,6 @@ export const addProgram = (
     draft: {
       ...draft,
       [LIST_FIELDS[role]]: [...programsOf(draft, role), program],
-      // The first solution becomes the main one.
       main_solution: role === "solution" && !draft.main_solution ? name : draft.main_solution,
     },
   };
@@ -113,7 +98,6 @@ export const updateProgram = (
   [LIST_FIELDS[role]]: programsOf(draft, role).map((p) => (p.name === name ? {...p, ...patch} : p)),
 });
 
-/** Renames a program together with the tests and the main solution that refer to it. */
 export const renameProgram = (draft: ProblemDraft, role: ListRole, from: string, to: string): OpResult => {
   if (programsOf(draft, role).some((p) => p.name === to)) {
     return nameTaken(role, to);
@@ -139,23 +123,19 @@ export const removeProgram = (draft: ProblemDraft, role: ListRole, name: string)
   main_solution: role === "solution" && draft.main_solution === name ? null : draft.main_solution,
 });
 
-/** Library files are identified by their names, which are unique in a draft. */
 export const addLibraryFile = (draft: ProblemDraft, name: string): ProblemDraft => ({
   ...draft,
   library: [...draft.library, {name, content: "", auto_update: false}],
 });
 
-/** Adds the system library file `name`, which every build takes at its current version. */
 export const addSystemFile = (draft: ProblemDraft, name: string): ProblemDraft => ({
   ...draft,
   library: [...draft.library, {name, content: "", auto_update: true}],
 });
 
-/** Replaces the text of a file with the system library file of its name, at its current version. */
 export const startAutoUpdate = (draft: ProblemDraft, name: string): ProblemDraft =>
   updateLibraryFile(draft, name, {content: "", auto_update: true});
 
-/** Turns an auto-updated file into an editable copy of the system text. */
 export const stopAutoUpdate = (draft: ProblemDraft, name: string, systemText: string): ProblemDraft =>
   updateLibraryFile(draft, name, {content: systemText, auto_update: false});
 
@@ -183,7 +163,6 @@ export const emptyStatement = (language: string): ProblemDraftStatement => ({
   scoring: "",
 });
 
-/** Replaces the statement of `statement.language`, adding it when missing. */
 export const setStatement = (draft: ProblemDraft, statement: ProblemDraftStatement): ProblemDraft => ({
   ...draft,
   statements: draft.statements.some((s) => s.language === statement.language)
@@ -213,7 +192,6 @@ export const addSubtask = (draft: ProblemDraft, name: string): ProblemDraft => {
   return {...draft, subtasks: [...draft.subtasks, subtask]};
 };
 
-/** Removes a subtask and the dependencies other subtasks have on it. */
 export const removeSubtask = (draft: ProblemDraft, id: string): ProblemDraft => ({
   ...draft,
   subtasks: draft.subtasks
@@ -229,7 +207,6 @@ export const setSubtaskDependencies = (draft: ProblemDraft, id: string, dependen
 const nextOrdinal = (tests: ProblemDraftTest[]): number =>
   tests.reduce((max, test) => Math.max(max, test.ordinal), 0) + 1;
 
-/** Closes gaps so test ordinals are exactly 1..n in their current order. */
 const renumberTests = (draft: ProblemDraft): ProblemDraft => ({
   ...draft,
   tests: [...draft.tests]
@@ -246,7 +223,6 @@ export const upsertTest = (draft: ProblemDraft, test: ProblemDraftTest): Problem
 export const removeTest = (draft: ProblemDraft, id: string): ProblemDraft =>
   renumberTests({...draft, tests: draft.tests.filter((t) => t.id !== id)});
 
-/** Moves a test by `delta` positions, keeping ordinals exactly 1..n. */
 export const moveTest = (draft: ProblemDraft, id: string, delta: number): ProblemDraft => {
   const tests = [...draft.tests].sort((a, b) => a.ordinal - b.ordinal);
   const from = tests.findIndex((t) => t.id === id);
@@ -293,10 +269,6 @@ const SECTION_LABELS: Record<string, string> = {
   scoring: "оценивание",
 };
 
-/**
- * Turns a JSON Pointer the server reported into a label of the draft entry it
- * points at, for example "Генератор gen" or "Тест 4".
- */
 export const describePointer = (draft: ProblemDraft, pointer: string): string => {
   const [field, index, sub] = pointer.split("/").slice(1);
   const at = Number(index);

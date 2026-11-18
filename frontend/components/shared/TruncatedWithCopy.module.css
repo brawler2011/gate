@@ -47,7 +47,6 @@
   margin-left: -8px;
 }
 
-/* Dark mode support */
 [data-mantine-color-scheme="dark"] .iconWrapper {
   background-color: var(--mantine-color-dark-5);
 }
@@ -62,7 +61,6 @@
   transition: opacity 0.2s ease;
 }
 
-/* Show icon on row hover */
 tr:hover .showOnHover {
   opacity: 1;
 }

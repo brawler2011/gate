@@ -3,7 +3,6 @@ name: Deploy Production
 on:
   push:
     branches: [main]
-  # Rollback: run with the commit of a previous release.
   workflow_dispatch:
     inputs:
       release:

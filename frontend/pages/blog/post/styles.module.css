@@ -40,7 +40,6 @@
   );
 }
 
-/* Content Typography Styles */
 .content {
   font-size: 1.125rem;
   line-height: 1.8;
@@ -187,7 +186,6 @@
   margin: 1.5rem 0;
 }
 
-/* Tables */
 .content table {
   width: 100%;
   border-collapse: collapse;
@@ -215,7 +213,6 @@
   background-color: var(--mantine-color-dark-6);
 }
 
-/* First paragraph after headings */
 .content h1 + p,
 .content h2 + p,
 .content h3 + p,

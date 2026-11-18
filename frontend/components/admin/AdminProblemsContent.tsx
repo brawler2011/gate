@@ -25,22 +25,18 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Search input state
   const [searchInput, setSearchInput] = useState(search || "");
   const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isFirstRender = useRef(true);
 
-  // Delete modal state
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [problemToDelete, setProblemToDelete] = useState<ProblemsListItemModel | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Sync state with URL when searchParams change externally
   useEffect(() => {
     setSearchInput(search || "");
   }, [search]);
 
-  // Handle search input change with debounce
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -53,7 +49,7 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
 
     searchTimeoutRef.current = setTimeout(() => {
       const params = new URLSearchParams(searchParams);
-      params.delete("page"); // Reset to first page
+      params.delete("page");
       if (searchInput) {
         params.set("search", searchInput);
       } else {
@@ -69,7 +65,6 @@ export const AdminProblemsContent = ({page, search}: AdminProblemsContentProps):
     };
   }, [searchInput, navigate, searchParams]);
 
-  // Fetch problems
   const {data, error, isLoading, refetch: mutate} = useQuery({
     queryKey: ["admin-problems", page, search],
     queryFn: () =>

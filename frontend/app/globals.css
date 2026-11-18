@@ -1,4 +1,3 @@
-/* Global dark mode colors */
 [data-mantine-color-scheme="dark"] body {
   background-color: var(--mantine-color-dark-8);
 }

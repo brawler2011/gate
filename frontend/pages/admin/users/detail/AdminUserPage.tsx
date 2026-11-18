@@ -13,7 +13,6 @@ export const loader = (async ({params: routeParams}: LoaderFunctionArgs) => {
   const {username} = routeParams as {username: string};
   const decoded = username;
 
-  // Check admin rights
   const {data: meData, error: meError} = await api.GET("/users/me");
   if (meError || !meData?.user || meData.user.role !== "admin") {
     throw redirect("/auth/login?return_to=/admin/users/" + encodeURIComponent(decoded));

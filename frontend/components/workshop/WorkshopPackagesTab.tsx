@@ -58,13 +58,11 @@ const DiagnosticView = ({diagnostic}: {diagnostic: ProblemBuild["diagnostic"]}):
 export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
   const queryClient = useQueryClient();
   const draft = useProblemDraft(problemId);
-  // Problems the server found in the draft at the last build attempt.
   const [problems, setProblems] = useState<string[]>([]);
 
   const builds = useQuery({
     queryKey: ["problem-builds", problemId],
     queryFn: () => unwrap(api.GET("/problems/{id}/builds", {params: {path: {id: problemId}}})),
-    // Poll while any build is still in flight.
     refetchInterval: (query) => (query.state.data?.some((build) => ACTIVE_STATES.has(build.state)) ? 2000 : false),
   });
 

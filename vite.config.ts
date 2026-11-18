@@ -3,7 +3,6 @@ import {fileURLToPath} from "node:url";
 import react from "@vitejs/plugin-react";
 import {defineConfig} from "vite";
 
-// The dev server proxies API and WebSocket traffic to the local backend (deploy/local/config.yaml).
 const backend = "http://localhost:8080";
 
 export default defineConfig(() => {

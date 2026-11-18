@@ -7,35 +7,25 @@ Gate runs on k3s and is deployed with Helm as two releases in the `gate` namespa
 | `gate-infra` | `charts/gate-infra` | PostgreSQL, Redis, NATS, SeaweedFS (StatefulSets on node disk) | rarely; never rolled back with the app |
 | `gate` | `charts/gate` | API and worker Deployments, migration Job, Traefik routes | every release |
 
-The backend binary runs in one of two modes, and the chart deploys each as its own
-Deployment, scaled by `api.replicas` and `worker.replicas`:
+API and worker deployments scale independently through `api.replicas` and
+`worker.replicas`. Both roll back together; infrastructure stays separate.
 
-- **API** (`-mode=api`): HTTP and WebSocket. It publishes submissions and problem builds and runs no sandbox. An init container copies the judge image's manifest into the pod; the API reads the judge's languages from it.
-- **Worker** (`-mode=worker`): judges submissions, builds problem packages and compiles contest booklets for the API (NATS request-reply), in a privileged go-judge sidecar. It serves only `/health`.
+A migration hook runs before the app rollout; see
+[schema reset behavior](../backend/migrations/README.md) before changing the schema. Helm restores the previous release if migration or readiness
+fails. The external health check catches routing, certificate and DNS failures,
+but does not trigger rollback.
 
-Both belong to one release and roll back together. Locally, `task dev` runs both in
-one process (`-mode=all`, the default).
-
-`.github/workflows/deploy.yml` tags the images that CI tested as `release-<commit>`.
-It then runs `helm upgrade --install gate --rollback-on-failure` with that tag:
-
-1. A `pre-upgrade` Job runs `backend --migrate`: when the schema changed, it wipes all data and applies the new schema (`backend/migrations/README.md`). If it fails, nothing of the new release starts.
-2. API and worker pods roll one at a time (`maxUnavailable: 0`). A new pod must pass `/health` before an old one stops. A stopping worker returns its running judgements to the queue, and a running worker judges them again.
-3. If the migration or the rollout fails within the timeout, Helm restores the previous release and the workflow fails. The previous pods serve throughout, unless the schema was reset under them.
-4. The workflow then checks `https://<host>/health` from outside. A failure there (route, certificate, DNS) fails the workflow but does not roll back.
-
-A rollback restores images, not data: after a schema reset, an earlier release
-resets the data again on its next deploy. To roll back by hand, run Deploy Production
-with the commit of an earlier release, or run `helm -n gate rollback gate`; the latter
-skips the migrate Job, so it does not fit a release with a different schema.
+Rollback restores images, not data. Run Deploy Production with an earlier release
+commit to include the migration hook. Manual `helm -n gate rollback gate` skips
+that hook, so use it only when the schema matches.
 
 ## Layout
 
 - `charts/`: the two charts. Their defaults fit one node.
 - `secrets.sh`: writes the `gate-secrets` secret, used by the deploy and `task k3d:deploy`.
-- `prod/`: the production backend config (`config.yaml`, mounted with `--set-file backend.config=…`, loaded by the config tests) and chart values (domain, sizing).
-- `k3s/`: `install.sh` prepares a server once; the manifests are cluster bootstrap applied on every deploy. It configures the bundled Traefik (HTTPS redirect, Let's Encrypt, client IPs) and the headless `traefik-pods` service that `http.trusted_proxy` names.
-- `k3d/`: the same files for the local cluster.
+- `prod/`: the production backend config and chart values (domain, sizing).
+- `k3s/`: server setup and cluster bootstrap manifests, applied on every deploy.
+- `k3d/`: backend config and chart values for the local cluster.
 - `local/`: Docker Compose services for `task dev`.
 
 ## Server
@@ -46,56 +36,29 @@ Prepare a server once, as root:
 sudo sh install.sh deployer   # deploy/k3s/install.sh copied to the server
 ```
 
-The script:
-
-- adds 2 GB of swap; the kubelet runs with `LimitedSwap`, so pods can use it too;
-- closes port 6443 on the default-route interface with a boot-time unit;
-- installs k3s (pinned version, installer from the same tag, without metrics-server);
-- copies the kubeconfig to `~deployer/.kube/config`.
-
-It is safe to run again and leaves Docker and its containers alone. The server also
+It is safe to run again and leaves Docker and its containers alone. The server
 needs DNS for the domain in `prod/gate.yaml`, and ports 80 and 443 open and free:
-k3s's Traefik binds them, so nothing else on the host may hold them.
+k3s's Traefik binds them.
 
-The deploy opens an SSH tunnel to the server with the `SSH_*` secrets and talks to
-the API on `127.0.0.1:6443`.
-
-The production values fit the current server: 1 vCPU, 2 GB RAM, shared with two
-Docker services. **On one shared vCPU, time verdicts are not reliable.** The
-sandbox shares the core with the rest of the stack, so it is a trial environment,
-not one for real contests. Dedicated judge cores are #216. Disk is also tight: the
-go-judge image takes about 2.2 GB on a node (a 0.55 GB zstd download plus 1.6 GB
-unpacked), and a release that changes the toolchain keeps
-two versions until the kubelet's image garbage collection removes the old one (at 85%
-disk use).
+Deploys reach the private Kubernetes API through an SSH tunnel using the `SSH_*`
+secrets. Provision dedicated judge CPU capacity for reliable time verdicts, and
+leave disk headroom for overlapping toolchain images during rollouts.
 
 ## Disk space
 
-The k3s `local-path` provisioner stores PVC data in directories on the node's
-filesystem; it does not enforce the requested capacity. In particular,
-`seaweedfs.storage: 8Gi` in prod is a PVC request, not an 8 GiB quota. SeaweedFS
-shares the root disk with PostgreSQL, NATS, container images and other services.
+The k3s `local-path` provisioner does not enforce PVC capacity. SeaweedFS shares
+the node filesystem with databases, container images and other services.
 
-The gate-infra chart passes `seaweedfs.minFreeSpace` to `weed server` as
-`-volume.minFreeSpace`. Both the chart default and prod set `"5GiB"`, leaving room
-for the other services by stopping volume writes when filesystem free space falls
-below that threshold. Existing objects remain readable. The value uses SeaweedFS
-syntax: `5GiB` is an absolute amount; `10` means 10 percent of the filesystem.
+`seaweedfs.minFreeSpace` stops volume writes below the configured free-space
+threshold. SeaweedFS syntax accepts an absolute amount such as `5GiB` or a
+percentage such as `10`. Update it through an infra chart upgrade; app releases
+do not update infrastructure.
 
-SeaweedFS 4.53 checks disk space once per minute, so writes can consume part of the
-reserve before the next check. This is not a hard quota or a guaranteed reserve:
-other processes can still fill the filesystem. Monitor node free space and leave
-additional headroom for large uploads and image pulls. An infra chart upgrade
-applies a changed threshold; the normal app-only release does not update it.
-
-When the threshold is reached, uploads fail through the existing API error path.
-An avatar upload (`POST /api/users/{username}/avatar`) returns HTTP 500 with
-`{"error":"Internal Server Error","message":"failed to upload avatar"}` (and a
-`request_id` when request logging middleware is active). It does not expose a
-specific disk-full message; other upload endpoints may return different generic
-messages. Free space on the backing filesystem, then allow the next disk check
-to restore writes. Deleting objects alone may not immediately reclaim volume
-file space.
+Disk checks are periodic, and other processes can fill the filesystem, so this
+is not a guaranteed reserve. Monitor free space and leave headroom for uploads
+and image pulls. At the threshold, existing objects remain readable and uploads
+fail with generic API errors. Free filesystem space and wait for the next disk
+check to restore writes; deleting objects may not immediately shrink volume files.
 
 ## GitHub secrets and variables
 
@@ -108,8 +71,7 @@ file space.
 | `S3_ACCESS_KEY`, `S3_SECRET_KEY` | `prod` secrets | random strings; SeaweedFS and the backend share them |
 | `RESEND_API_KEY` | `prod` secret | Resend API key for email |
 
-`deploy/secrets.sh` writes the application values to the `gate-secrets` secret. The
-images in ghcr.io are public, so the cluster pulls them without credentials.
+The images in ghcr.io are public, so the cluster pulls them without credentials.
 
 ## Local cluster
 

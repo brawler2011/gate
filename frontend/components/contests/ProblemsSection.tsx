@@ -67,7 +67,6 @@ export const ProblemsSection = ({
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Modal for replacing package version
   const [replaceTarget, setReplaceTarget] = useState<{ problemId: string; title: string } | null>(null);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [replacing, setReplacing] = useState(false);
@@ -365,7 +364,6 @@ export const ProblemsSection = ({
   return (
     <>
       <Stack gap="md">
-        {/* Add Problem Form */}
         <Stack gap="xs">
           <Text size="sm" fw={500}>
             Добавить задачу
@@ -399,7 +397,6 @@ export const ProblemsSection = ({
 
         <Divider />
 
-        {/* Problems Header & Controls */}
         <Group justify="space-between" align="center" wrap="wrap" gap="sm">
           <Text size="sm" fw={500}>
             Задачи контеста {problems.length > 0 && `(${problems.length})`}
@@ -446,7 +443,6 @@ export const ProblemsSection = ({
           </Group>
         </Group>
 
-        {/* Problems List */}
         {problems.length === 0 ? (
           <Center py="xl">
             <Stack align="center" gap="sm">

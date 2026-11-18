@@ -67,7 +67,6 @@ export const AdminContestsContent = ({page, search}: AdminContestsContentProps):
       type: "success",
       message: "Контест успешно удалён",
     });
-    // Reload contests after deletion
     mutate();
   };
 

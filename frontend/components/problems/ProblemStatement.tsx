@@ -103,7 +103,6 @@ const renderSafeImage = (
   return SafeImage;
 };
 
-/** Resolves a statement asset path in the package to its URL. */
 export type AssetUrl = (path: string) => string | undefined;
 
 export interface ProblemStatementProps {

@@ -21,8 +21,7 @@ beforeAll(async () => {
     }
     return new Response('backend missing', {status: 404});
   }});
-  // The proxy rules come from vite.config.ts; only their localhost:8080 target is
-  // redirected to this test backend.
+  // Redirect the production proxy target to the test backend.
   const configFile = `${import.meta.dir}/../../vite.config.ts`;
   const loaded = await loadConfigFromFile({command: 'serve', mode: 'development'}, configFile);
   const rules = loaded!.config.server!.proxy as Record<string, ProxyOptions>;

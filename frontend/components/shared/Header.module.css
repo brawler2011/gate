@@ -8,13 +8,14 @@
     height: 60px;
 }
 
+/* stylelint-disable block-no-empty -- Preserve CSS module exports consumed by Header. */
 .leftSection {
-    /* On mobile: no flex, just wrap content */
 }
 
 .rightSection {
-    /* On mobile: no flex, just wrap content */
 }
+
+/* stylelint-enable block-no-empty */
 
 .logoLink {
     display: flex;

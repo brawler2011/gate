@@ -102,7 +102,7 @@ fetchClient.use({
           info = body as Record<string, unknown>;
         }
       } catch {
-        // ignore
+        // Non-JSON error bodies use the status text below.
       }
       const requestId = typeof info?.request_id === "string" ? info.request_id : undefined;
       if (response.status !== 401) {

@@ -31,7 +31,6 @@ const Page = (): ReactNode => {
       <Container size="md" py="xl">
         <article className={classes.article}>
           <Stack gap="xl">
-            {/* Header */}
             <Stack gap="md">
               <Title order={1} className={classes.mainTitle}>
                 {post.title}
@@ -50,7 +49,6 @@ const Page = (): ReactNode => {
               </Group>
             </Stack>
 
-            {/* Content */}
             <div className={classes.content}>
               <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
                 {post.text}
