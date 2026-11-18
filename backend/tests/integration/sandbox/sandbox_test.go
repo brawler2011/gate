@@ -430,12 +430,16 @@ func TestIntegrationSandbox(t *testing.T) {
 	t.Run("java standard modules", func(t *testing.T) {
 		source := `import java.awt.Point;
 import java.sql.Timestamp;
+import java.util.Locale;
+import java.util.Scanner;
 import java.util.logging.Logger;
 
 public class Main {
     public static void main(String[] args) {
         Logger.getLogger("main").fine("unused");
-        System.out.println(new Point(1, 2).y + new Timestamp(0).getNanos());
+        // Locale data beyond US English lives in jdk.localedata.
+        double half = new Scanner("0,5").useLocale(Locale.GERMANY).nextDouble();
+        System.out.println(new Point(1, 2).y + new Timestamp(0).getNanos() + half);
     }
 }`
 		executable, err := sb.Compile(ctx, []byte(source), "java", nil)
@@ -446,7 +450,7 @@ public class Main {
 		if err != nil {
 			t.Fatalf("failed to run: %v", err)
 		}
-		if result.Status != sandbox.StatusOK || strings.TrimSpace(string(result.Stdout)) != "2" {
+		if result.Status != sandbox.StatusOK || strings.TrimSpace(string(result.Stdout)) != "2.5" {
 			t.Fatalf("got %s with output %q (stderr %q)", result.Status, result.Stdout, result.Stderr)
 		}
 	})

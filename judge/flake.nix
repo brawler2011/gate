@@ -26,8 +26,9 @@
         name: lang: (trimmed.${name} or (pkg: pkg)) pkgs.${lang.package}
       ) langs;
 
-      # A Java runtime with the standard API (java.se), javac (jdk.compiler) and
-      # sun.misc.Unsafe (jdk.unsupported). It leaves out jmods, src.zip and the
+      # A Java runtime with the standard API (java.se), javac (jdk.compiler), the
+      # non-US locale data standard APIs use (jdk.localedata) and sun.misc.Unsafe
+      # (jdk.unsupported). It leaves out jmods, src.zip and the
       # tooling modules of the full JDK. The CDS archive keeps JVM startup as fast as
       # the JDK's; modules stay uncompressed for the same reason.
       jlinkRuntime =
@@ -43,7 +44,7 @@
           }
           ''
             jlink --module-path ${jdk}/lib/openjdk/jmods \
-              --add-modules java.se,jdk.compiler,jdk.unsupported \
+              --add-modules java.se,jdk.compiler,jdk.localedata,jdk.unsupported \
               --strip-debug --no-man-pages --no-header-files --generate-cds-archive \
               --output $out
             # The copied libraries keep the JDK's lib directory in their RPATH next
