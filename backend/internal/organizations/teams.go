@@ -60,13 +60,11 @@ func (uc *TeamsUseCase) CreateTeam(ctx context.Context, input *organizationsmode
 			return pkg.NoPermission
 		}
 
-		// Create team
 		team, err = tx.CreateTeam(ctx, input)
 		if err != nil {
 			return fmt.Errorf("create team: %w", err)
 		}
 
-		// Add creator as maintainer
 		err = tx.AddTeamMember(ctx, team.ID, creatorID, organizationsmodel.TeamRoleMaintainer)
 		if err != nil {
 			return fmt.Errorf("add creator as maintainer: %w", err)

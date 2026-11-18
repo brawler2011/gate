@@ -98,8 +98,7 @@ func (f *concurrencyFixture) job(t *testing.T, user, minute int) judgingmodel.Jo
 	return job
 }
 
-// Exercise the complete verdict transaction, including the first standings insert
-// and outbox write, rather than just proving a lock can be acquired.
+// Verdict transactions cover standings insertion and outbox writes under contention.
 func applyConcurrentVerdict(ctx context.Context, tx judging.JudgeTxStore, job judgingmodel.Job, state submissionsmodel.State) error {
 	current, err := tx.CompleteJob(ctx, job)
 	if err != nil || !current {
@@ -122,8 +121,6 @@ func (f *concurrencyFixture) complete(job judgingmodel.Job, state submissionsmod
 	return postgres.NewJudgeTransactions(f.pool).Within(f.ctx, func(tx judging.JudgeTxStore) error { return applyConcurrentVerdict(f.ctx, tx, job, state) })
 }
 
-// barrierSubmissionTransactions runs the production command transaction and
-// holds it open at barrier once the command's work is done.
 type barrierSubmissionTransactions struct {
 	submissions.SubmissionTransactions
 	barrier func() error
@@ -138,7 +135,6 @@ func (tx barrierSubmissionTransactions) Within(ctx context.Context, fn func(subm
 	})
 }
 
-// holdTuple keeps the scoring tuple of a user locked by an open transaction on blockers.
 func (f *concurrencyFixture) holdTuple(t *testing.T, blockers blockerPool, user int) (release func(commit bool) error) {
 	t.Helper()
 	return holdTransaction(t, func(ctx context.Context, barrier func() error) error {
@@ -311,9 +307,7 @@ func TestBulkRejudgeLockingAndRollback(t *testing.T) {
 	t.Parallel()
 	f := newConcurrencyFixture(t)
 	jobs := []judgingmodel.Job{f.job(t, 1, 10), f.job(t, 2, 20)}
-	// Bulk commands lock all candidate tuples in key order. Hold both tuples and
-	// find the first one by which holder the commands wait for: while waiting
-	// there, they hold no tuple lock, so the other tuple can be released.
+	// Hold both tuples to observe lock order; a command waiting on the first must not lock the second.
 	blockers := map[int]blockerPool{1: newBlockerPool(t), 2: newBlockerPool(t)}
 	releases := map[int]func(bool) error{}
 	for user, pool := range blockers {
@@ -337,8 +331,7 @@ func TestBulkRejudgeLockingAndRollback(t *testing.T) {
 		}
 		return false
 	}, 3*time.Second, 5*time.Millisecond)
-	// Both commands have captured their candidates before waiting. A later insert
-	// into another tuple proceeds and must remain outside those bulk commands.
+	// Bulk commands exclude candidates inserted after their candidate snapshot.
 	newUser := 3 - first
 	require.NoError(t, releases[newUser](true))
 	var created uuid.UUID

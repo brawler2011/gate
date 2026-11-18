@@ -1,4 +1,3 @@
--- Teams queries
 
 -- name: CreateTeam :one
 INSERT INTO teams (id, organization_id, name, slug, description, privacy, parent_team_id)
@@ -23,7 +22,6 @@ WHERE id = $1;
 -- name: DeleteTeam :exec
 DELETE FROM teams WHERE id = $1;
 
--- Team Members
 
 -- name: AddTeamMember :exec
 INSERT INTO team_members (team_id, user_id, role)

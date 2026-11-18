@@ -66,7 +66,7 @@ func (v testCustomLogValuer) LogValue() slog.Value {
 	)
 }
 
-// TestAdversarial_Sanitization_LogValuerBypass verifies that custom slog.LogValuer structs are properly resolved and redacted
+// LogValuer values must be resolved before redaction.
 func TestAdversarial_Sanitization_LogValuerBypass(t *testing.T) {
 	var buf bytes.Buffer
 	baseHandler := slog.NewJSONHandler(&buf, nil)
@@ -86,7 +86,7 @@ func TestAdversarial_Sanitization_LogValuerBypass(t *testing.T) {
 	assert.Contains(t, output, "admin_user", "Safe field inside LogValuer must be preserved")
 }
 
-// TestAdversarial_Sanitization_InfixAndCamelCaseBypass verifies that infix and camelCase keys are properly redacted
+// Infix and camelCase keys must not bypass redaction.
 func TestAdversarial_Sanitization_InfixAndCamelCaseBypass(t *testing.T) {
 	bypasses := []struct {
 		key         string

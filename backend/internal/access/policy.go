@@ -205,8 +205,7 @@ func decision(allowed bool) error {
 	return nil
 }
 
-// RequireOrganization evaluates only the action gate. ACL operations additionally
-// require RequireGrantOrgRole; leave additionally requires RequireLeaveOrganization.
+// Organization action gates do not replace grant-role or leave checks.
 func RequireOrganization(in m.PolicyInput, c m.OrganizationContext, action m.OrgAction) error {
 	r, err := organizationRank(in, c)
 	if err != nil {

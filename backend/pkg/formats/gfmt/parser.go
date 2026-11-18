@@ -12,7 +12,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Read reads an author gfmt package: problem.yaml and the files of its folders.
 func Read(fsys fs.FS) (*spec.Problem, error) {
 	data, err := spec.ReadFile(fsys, "problem.yaml")
 	if err != nil {
@@ -94,7 +93,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	}
 	p.Generators, p.Solutions = programs[RoleFolder("generator")], programs[RoleFolder("solution")]
 	p.MainSolution = mainSolution(manifest.Solutions, p.Solutions)
-	// Tests name generators by file stem, so the stem must identify one file.
+	// Generator stems must be unique because tests refer to them without extensions.
 	generators := map[string]string{}
 	for _, g := range p.Generators {
 		stem := spec.Stem(g.Name)
@@ -109,8 +108,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	return p, nil
 }
 
-// dependencies converts gfmt build settings into library dependencies; a
-// program without them includes the whole library.
+// Programs without explicit dependencies include the whole library.
 func dependencies(s Source) (map[string]string, error) {
 	if len(s.DependencyMap) == 0 {
 		return nil, nil
@@ -123,7 +121,7 @@ func dependencies(s Source) (map[string]string, error) {
 	return s.DependencyMap, nil
 }
 
-// mainSolution is solutions.main, or else the first solution expected to pass.
+// Use solutions.main, falling back to the first solution expected to pass.
 func mainSolution(verdicts map[string]string, solutions []spec.Program) string {
 	if main := verdicts["main"]; main != "" {
 		return RoleFolder("solution") + "/" + main
@@ -136,8 +134,7 @@ func mainSolution(verdicts map[string]string, solutions []spec.Program) string {
 	return ""
 }
 
-// groups lists subtasks in test numbering order. A test marked as a sample in
-// a scored subtask is numbered there, not again under "samples".
+// Samples in scored subtasks are numbered there, not duplicated under samples.
 func groups(manifest *Problem, generators map[string]string, files map[string]bool) ([]spec.Group, error) {
 	key := func(t Test) string {
 		if t.Manual != "" {

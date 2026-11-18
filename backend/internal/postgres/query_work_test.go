@@ -20,9 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The query work check counts work instead of timing it, so durability is off.
-// pg_stat_statements reports the pages each executed statement touched; parallel
-// workers and autovacuum would make plans and page counts depend on timing.
+// Disable background and parallel work so query page counts do not depend on timing.
 var databaseCommand = []string{
 	"postgres",
 	"-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off",
@@ -34,14 +32,12 @@ const queryWorkBudgets = "testdata/query_work.json"
 
 var updateQueryWork = flag.Bool("update", false, "raise "+queryWorkBudgets+" budgets to include the measured query work")
 
-// queryWorkLargeTables are the tables the seeds fill with up to 100,000 rows; a
-// sequential scan of any of them is part of the work metrics.
+// Sequential-scan metrics count only tables populated by the benchmark seeds.
 var queryWorkLargeTables = map[string]bool{
 	"outbox_events": true, "event_aggregates": true, "submissions": true,
 	"users": true, "contest_members": true, "contest_problem_results": true,
 }
 
-// statementRecorder captures the statements a connection sends while recording.
 type statementRecorder struct {
 	mu         sync.Mutex
 	recording  bool
@@ -77,14 +73,12 @@ func (r *statementRecorder) stop() []recordedStatement {
 	return r.statements
 }
 
-// workScenario is one operation of database_benchmark_test.go. A write runs in a
-// transaction that is rolled back, so every scenario sees the same seeded data.
+// Write scenarios roll back so each scenario sees the same seeded data.
 type workScenario struct {
 	name  string
 	write bool
 	// setup prepares a write's transaction; its statements are not measured.
 	setup func(ctx context.Context, tx pgx.Tx) error
-	// run performs the operation; tx is nil for reads, which use the pool.
 	run func(ctx context.Context, tx pgx.Tx) error
 }
 
@@ -147,9 +141,7 @@ func TestQueryWork(t *testing.T) {
 	}
 }
 
-// workScenarios runs in this order: a write's measured pass sees its own rolled-back
-// warm-up, and later scenarios run after the VACUUM that follows it, so page counts
-// may change when the order does.
+// Scenario order affects page counts because write warm-ups roll back and are followed by VACUUM.
 func workScenarios(pool *pgxpool.Pool, f submissionBenchFixture) []workScenario {
 	outbox := NewOutboxRepo(pool)
 	submissions := NewSubmissionsRepo(pool)
@@ -157,7 +149,6 @@ func workScenarios(pool *pgxpool.Pool, f submissionBenchFixture) []workScenario 
 	creation := submissionsmodel.SubmissionCreation{ContestId: f.contest, ProblemId: f.problem, UserId: f.user, Solution: strings.Repeat("print(1)\n", 32), Language: "python3"}
 	order := int32(-1)
 	filter := submissionsmodel.SubmissionsFilter{ContestId: &f.contest, Page: 1, PageSize: 50, Order: &order}
-	// The second event of the first aggregate: its first version is completed.
 	var leased, token uuid.UUID
 	return []workScenario{
 		{name: "Outbox/PickEvents", write: true, run: func(ctx context.Context, tx pgx.Tx) error {
@@ -221,8 +212,7 @@ func workScenarios(pool *pgxpool.Pool, f submissionBenchFixture) []workScenario 
 	}
 }
 
-// measureQueryWork runs the scenario twice, so the measured pass finds prepared
-// statements and warm catalog caches, and returns the measured pass's work.
+// Warm prepared statements and catalog caches before measuring.
 func measureQueryWork(t *testing.T, admin *pgx.Conn, pool *pgxpool.Pool, recorder *statementRecorder, scenario workScenario) queryWork {
 	t.Helper()
 	ctx := context.Background()
@@ -269,8 +259,7 @@ func measureQueryWork(t *testing.T, admin *pgx.Conn, pool *pgxpool.Pool, recorde
 			}
 		}()
 	}
-	// Rolled-back writes leave dead tuples behind; vacuum them so the next
-	// scenario sees the seeded state.
+	// Vacuum rolled-back writes so the next scenario sees the seeded state.
 	if scenario.write {
 		fixtureExec(t, pool, "VACUUM")
 	}
@@ -286,8 +275,7 @@ func isTransactionControl(sql string) bool {
 	return false
 }
 
-// explainPlanShape counts the Sort nodes and the sequential scans of large tables
-// in the plan of a captured statement. EXPLAIN without ANALYZE does not run it.
+// EXPLAIN without ANALYZE inspects plan shape without executing the statement.
 func explainPlanShape(t *testing.T, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }, statement recordedStatement) (sorts, seqScans int64) {

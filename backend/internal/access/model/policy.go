@@ -6,9 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// PolicyInput fixes the actor and clock for a complete decision. LoadError must
-// retain any failed facts read; only confirmed missing membership is a zero role.
-// The policy layer has no repository or transaction dependency.
+// Failed fact reads must survive in LoadError; only confirmed missing membership is a zero role.
 type PolicyInput struct {
 	Actor     User
 	Now       time.Time
@@ -105,8 +103,7 @@ type TeamContext struct {
 	Privacy      TeamPrivacy
 }
 
-// TeamGrant contains a direct, active membership, not parent-team inheritance.
-// Inactive or unrelated memberships never contribute a resource role.
+// Only direct, active team membership contributes a resource role.
 type TeamGrant[R ~string] struct {
 	OrganizationID uuid.UUID
 	Membership     TeamRole
@@ -123,7 +120,6 @@ type ProblemContext struct {
 	Visibility   Visibility
 }
 
-// ContestConditions supplies the contest lifecycle and audience gates.
 type ContestConditions struct {
 	ViewStatements        bool
 	ViewScoreboard        bool
@@ -153,17 +149,14 @@ type ContestContext struct {
 	Submission        SubmissionContext
 }
 
-// OwnerState is the explicit active owner set, excluding inherited org owners.
-// PrimaryID is optional for organizations, mandatory when a resource uses owner_id.
-// Mutation repositories must enforce the validated transition atomically; a
-// policy precheck alone cannot protect against concurrent leaves or revocations.
+// Count explicit active owners, excluding inherited organization owners.
+// PrimaryID is optional for organizations and required for resources with owner_id.
 type OwnerState struct {
 	Owners    []User
 	PrimaryID uuid.UUID
 }
 
-// RoleChange uses an empty role for an absent/revoked grant. AfterOwners is
-// required whenever explicit ownership changes, including primary-owner changes.
+// An empty role revokes a grant; ownership changes require the complete AfterOwners set.
 type RoleChange[R ~string] struct {
 	Target       User
 	Old          R

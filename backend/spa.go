@@ -8,7 +8,6 @@ import (
 	"strings"
 )
 
-// spaHandler serves files and lets the client router resolve page URLs.
 func spaHandler(directory string) http.Handler {
 	files := http.FileServer(http.Dir(directory))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

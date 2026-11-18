@@ -30,8 +30,6 @@ func (h *CoreServer) UploadAvatar(ctx context.Context, req *corev1.UploadAvatarR
 	file := req.Avatar
 	filename := file.Name
 	contentType := file.Header.Get("Content-Type")
-	// FIXME: эта проверка уже есть в Header.Get,
-	// NOTE: вообще стоит изучить как правильно загружать медиа файлы
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
@@ -55,7 +53,6 @@ func (h *CoreServer) DeleteAvatar(ctx context.Context, params corev1.DeleteAvata
 	return nil
 }
 
-// FIXME: блядь здесь происходит что-то не то
 func (h *CoreServer) GetUserAvatar(ctx context.Context, params corev1.GetUserAvatarParams) (corev1.GetUserAvatarRes, error) {
 	var ifNoneMatch *string
 	if params.IfNoneMatch.IsSet() {

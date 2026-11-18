@@ -7,9 +7,8 @@ import (
 
 type commandDecisionKey struct{}
 
-// CommandDecision binds nonlocking prechecks to an optimistic write guard.
-// Revision is captured before reading facts; any intervening security change
-// invalidates it. ValidUntil is exclusive, including the contest's end boundary.
+// Capture Revision before reading facts; security changes invalidate the precheck.
+// ValidUntil is exclusive, including the contest end boundary.
 type CommandDecision struct {
 	Revision   int64
 	ValidUntil *time.Time

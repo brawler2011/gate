@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// SubmissionVisibility is shared by REST and observer presentation.
 type SubmissionVisibility struct {
 	Frozen  bool
 	Source  bool

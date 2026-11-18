@@ -1,4 +1,3 @@
--- Problem Packages queries
 
 -- name: GetProblemPackageByID :one
 SELECT * FROM problem_packages WHERE id = $1;

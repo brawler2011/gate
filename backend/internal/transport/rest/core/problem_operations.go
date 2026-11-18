@@ -16,7 +16,6 @@ type PackagesReader interface {
 	DownloadPackage(ctx context.Context, problemID, packageID uuid.UUID) (io.ReadCloser, error)
 }
 
-// ImportProblem handles POST /problems/{id}/import.
 func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProblemReq, params corev1.ImportProblemParams) (*corev1.ProblemDraft, error) {
 	if req == nil || req.Package.File == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "expected 'package' field")
@@ -24,7 +23,6 @@ func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProble
 	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.Import(ctx, params.ID, params.ExpectedRevision, params.IdempotencyKey, req.Package.File))
 }
 
-// ListProblemPackages handles GET /problems/{id}/packages.
 func (h *CoreServer) ListProblemPackages(ctx context.Context, params corev1.ListProblemPackagesParams) (*corev1.ListProblemPackagesOK, error) {
 	packages, err := h.Packages.ListPackages(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
@@ -37,7 +35,6 @@ func (h *CoreServer) ListProblemPackages(ctx context.Context, params corev1.List
 	return &corev1.ListProblemPackagesOK{Packages: items, Pagination: PaginationDTO(packages.Pagination)}, nil
 }
 
-// DownloadProblemPackage handles GET /problems/{id}/packages/{packageId}/download.
 func (h *CoreServer) DownloadProblemPackage(ctx context.Context, params corev1.DownloadProblemPackageParams) (corev1.DownloadProblemPackageOK, error) {
 	reader, err := h.Packages.DownloadPackage(ctx, params.ID, params.PackageId)
 	if err != nil {

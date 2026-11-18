@@ -29,7 +29,6 @@ func testBuildOptions() postgres.ProblemBuildOptions {
 	}
 }
 
-// buildableFixture is a saved, buildable draft that references one available object.
 func buildableFixture(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.ProblemDraftsRepo, uuid.UUID, model.Draft, uuid.UUID) {
 	t.Helper()
 	ctx, pool, repo, org, d := draftFixture(t)
@@ -61,8 +60,7 @@ func countRows(t *testing.T, ctx context.Context, pool *pgxpool.Pool, query stri
 	return n
 }
 
-// An editor and a build request race for the same draft: the build either conflicts (the edit
-// won) or snapshots exactly the revision it was requested for, never a mixture with the edit.
+// A racing build snapshots its requested revision or conflicts; it never mixes revisions.
 func TestBuildRequestSnapshotsOneRevisionWhileEditing(t *testing.T) {
 	t.Parallel()
 	ctx, _, repo, org, d, _ := buildableFixture(t)
@@ -110,8 +108,7 @@ func TestBuildRequestSnapshotsOneRevisionWhileEditing(t *testing.T) {
 	t.Logf("built=%d conflicted=%d", built, conflicted)
 }
 
-// The snapshot's object set and the held input references are enforced to be equal by the
-// database itself, so a writer that gets them out of sync cannot commit.
+// The database rejects mismatches between snapshot objects and held references.
 func TestBuildSnapshotInputSetMustMatchReferences(t *testing.T) {
 	t.Parallel()
 	ctx, pool, _, org, d, oid := buildableFixture(t)
@@ -128,8 +125,7 @@ func packageObject(org uuid.UUID) model.StoredObject {
 	return model.NewStoredObject(org, model.UploadSpec{Purpose: "package", SHA256: strings.Repeat("a", 64), Size: 10})
 }
 
-// A stale worker cannot finish or publish after its attempt was recovered, and its archive
-// never gets a row; the newer attempt publishes, and a retry resolves to the same Package.
+// Recovered attempts cannot publish; the current attempt publishes one replayable package.
 func TestStaleAttemptCannotPublish(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d, _ := buildableFixture(t)
@@ -159,8 +155,7 @@ func TestStaleAttemptCannotPublish(t *testing.T) {
 	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE purpose='package'`))
 }
 
-// Every reference is a foreign key: an object row that something references cannot be
-// deleted, by GC or directly, and a reference must point at an object of its own organization.
+// Foreign keys prevent referenced-object deletion and references across organizations.
 func TestObjectReferencesAreForeignKeys(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
@@ -216,7 +211,6 @@ func TestObjectReferencesAreForeignKeys(t *testing.T) {
 	_, err = pool.Exec(ctx, `INSERT INTO problem_package_assets(package_id,organization_id,name,object_id) VALUES($1,$2,'f.png',$3)`, packageID, other, foreign)
 	require.ErrorContains(t, err, "problem_package_assets_package_id_fkey", "the reference's organization is its owner's")
 
-	// Once the Package and the build are pruned, nothing holds the objects any more.
 	time.Sleep(5 * time.Millisecond)
 	require.NoError(t, repo.PrunePackages(ctx, time.Millisecond))
 	require.NoError(t, repo.PruneBuilds(ctx, time.Millisecond))
@@ -227,8 +221,7 @@ func TestObjectReferencesAreForeignKeys(t *testing.T) {
 	}
 }
 
-// GC deleting an object and a writer adding the first reference to it serialize on the
-// object row: a reference committed while GC waits makes the deletion fail.
+// A reference committed while GC waits prevents object deletion.
 func TestObjectDeletionWaitsForConcurrentReference(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
@@ -262,8 +255,7 @@ func TestObjectDeletionWaitsForConcurrentReference(t *testing.T) {
 	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, object))
 }
 
-// Concurrent GC and a new reference never leave a dangling reference: either the object
-// is deleted and the reference is rejected, or the reference wins and the object stays.
+// Concurrent GC and reference creation cannot leave a dangling reference.
 func TestObjectDeletionRacingWithNewReference(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
@@ -299,7 +291,6 @@ func TestObjectDeletionRacingWithNewReference(t *testing.T) {
 		}
 		require.NoError(t, linkErr)
 		require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_draft_objects WHERE object_id=$1`, object))
-		// Release the reference again so the next round starts from a clean draft.
 		cleared, err := repo.GetDraft(ctx, d.ProblemID)
 		require.NoError(t, err)
 		cleared.Assets = nil
@@ -308,8 +299,7 @@ func TestObjectDeletionRacingWithNewReference(t *testing.T) {
 	}
 }
 
-// An executor whose operation lease expired cannot finalize, and after a takeover its
-// uploaded bytes never get a row; the new executor finalizes with its own objects.
+// An expired executor cannot finalize or publish its uploaded objects after takeover.
 func TestUploadFinalizeIsFencedByOperationToken(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
@@ -347,7 +337,6 @@ func TestUploadFinalizeIsFencedByOperationToken(t *testing.T) {
 	require.JSONEq(t, string(result.Body), string(replay.Body))
 }
 
-// sweepStore is an object store listing with controlled modification times.
 type sweepStore struct {
 	objects map[string]time.Time
 	deleted []string
@@ -367,8 +356,7 @@ func (s *sweepStore) ListObjects(context.Context, string, string) ([]storage.Obj
 	return listed, nil
 }
 
-// GC deletes unreferenced object rows with their bytes, and bytes without a row once they
-// are older than the retention; bytes with a row and young bytes stay.
+// GC preserves referenced objects and bytes that are still within retention.
 func TestGCDeletesUnreferencedObjectsAndOrphanedBytes(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
@@ -392,8 +380,7 @@ func TestGCDeletesUnreferencedObjectsAndOrphanedBytes(t *testing.T) {
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, unreferenced))
 }
 
-// Retention removes only Packages without consumers: a Package pinned by a contest survives
-// any age, an unused one is deleted and its archive is released for collection.
+// Retention preserves pinned packages and releases unconsumed archives for GC.
 func TestPackageRetentionKeepsPinnedPackages(t *testing.T) {
 	t.Parallel()
 	f := newContestProblemFixture(t)
@@ -423,8 +410,6 @@ func TestPackageRetentionKeepsPinnedPackages(t *testing.T) {
 	}(), "foreign keys forbid deleting a pinned package")
 }
 
-// claimedBuildWithAsset is a claimed build whose draft has one statement asset,
-// with its output object ready to publish.
 func claimedBuildWithAsset(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.ProblemDraftsRepo, uuid.UUID, model.Draft, model.ProblemBuild, model.StoredObject, uuid.UUID) {
 	t.Helper()
 	ctx, pool, repo, org, d, _ := buildableFixture(t)
@@ -441,8 +426,7 @@ func claimedBuildWithAsset(t *testing.T) (context.Context, *pgxpool.Pool, *postg
 	return ctx, pool, repo, org, d, build, packageObject(org), asset
 }
 
-// A Package stores its statement samples and references its statement assets at
-// publication; the assets stay alive with the Package and are released when it is pruned.
+// Package publication retains statement samples and assets until pruning.
 func TestPackageStatementContentLivesWithPackage(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d, build, output, asset := claimedBuildWithAsset(t)

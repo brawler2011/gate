@@ -61,7 +61,7 @@ func TestTeamResourcesViewerAccess(t *testing.T) {
 		contestID, problemID := uuid.New(), uuid.New()
 		contestIDs = append(contestIDs, contestID)
 		problemIDs = append(problemIDs, problemID)
-		// Distinct timestamps make preservation of the existing descending order verifiable.
+		// Resource lists preserve descending creation order.
 		exec(`INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, settings, created_at)
         VALUES ($1, $2, $3, $4, 'Contest', $5, '{}', '2026-01-01'::timestamptz + $6 * interval '1 day')`, contestID, orgID, users["owner"], visibility, contestID.String(), i)
 		owner := users["owner"]

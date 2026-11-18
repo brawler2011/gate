@@ -82,7 +82,6 @@ func TestNotificationsUseCase_EmailAndRead(t *testing.T) {
 
 	uc := NewNotificationsUseCase(notifsRepo, usersRepo, emailSvc)
 
-	// Create in-app notification
 	link := "/org/settings"
 	notif, err := notifsRepo.CreateNotification(ctx, &notificationsmodel.CreateNotificationInput{
 		UserID: userID,
@@ -103,7 +102,6 @@ func TestNotificationsUseCase_EmailAndRead(t *testing.T) {
 
 	uc.SendEmail(ctx, *notif)
 
-	// Mark as read
 	err = uc.MarkAsRead(accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser}), notif.ID)
 	require.NoError(t, err)
 	assert.True(t, notifsRepo.notifications[notif.ID].IsRead)

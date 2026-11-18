@@ -15,7 +15,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 )
 
-// generateLogin creates a URL-safe login from a name
 func generateLogin(name string) string {
 	login := strings.ToLower(name)
 	login = regexp.MustCompile(`[^a-z0-9-]+`).ReplaceAllString(login, "-")
@@ -24,7 +23,6 @@ func generateLogin(name string) string {
 	return login
 }
 
-// ListOrganizations handles GET /organizations
 func (h *CoreServer) ListOrganizations(ctx context.Context, params corev1.ListOrganizationsParams) (*corev1.ListOrganizationsResponseModel, error) {
 	page := params.Page.Or(1)
 	pageSize := params.PageSize.Or(50)
@@ -44,7 +42,6 @@ func (h *CoreServer) ListOrganizations(ctx context.Context, params corev1.ListOr
 	return projectResponse(h, ctx, listOrganizationsDTO(organizationsList))
 }
 
-// CreateOrganization handles POST /organizations
 func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.CreateOrganizationParams) (*corev1.CreateOrganizationResponseModel, error) {
 	if err := validateCreateOrganizationParams(params.Name); err != nil {
 		return nil, err
@@ -90,7 +87,6 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.Creat
 	}, nil
 }
 
-// GetOrganization handles GET /organizations/{login}
 func (h *CoreServer) GetOrganization(ctx context.Context, params corev1.GetOrganizationParams) (*corev1.GetOrganizationResponseModel, error) {
 	org, err := h.Organizations.GetOrganizationByLogin(ctx, params.Login)
 	if err != nil {
@@ -102,7 +98,6 @@ func (h *CoreServer) GetOrganization(ctx context.Context, params corev1.GetOrgan
 	})
 }
 
-// UpdateOrganization handles PATCH /organizations/{login}
 func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateOrganizationRequestModel, params corev1.UpdateOrganizationParams) error {
 	if err := validateUpdateOrganizationRequest(req); err != nil {
 		return err
@@ -141,7 +136,6 @@ func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateO
 	return nil
 }
 
-// DeleteOrganization handles DELETE /organizations/{login}
 func (h *CoreServer) DeleteOrganization(ctx context.Context, params corev1.DeleteOrganizationParams) error {
 	err := h.Organizations.DeleteOrganizationByLogin(ctx, params.Login)
 	if err != nil {
@@ -151,7 +145,6 @@ func (h *CoreServer) DeleteOrganization(ctx context.Context, params corev1.Delet
 	return nil
 }
 
-// ListOrganizationMembers handles GET /organizations/{login}/members
 func (h *CoreServer) ListOrganizationMembers(ctx context.Context, params corev1.ListOrganizationMembersParams) (*corev1.ListOrganizationMembersResponseModel, error) {
 	members, err := h.Organizations.ListMembersByLogin(ctx, params.Login, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
@@ -161,7 +154,6 @@ func (h *CoreServer) ListOrganizationMembers(ctx context.Context, params corev1.
 	return projectResponse(h, ctx, listOrganizationMembersDTO(members.Items, members.Pagination))
 }
 
-// AddOrganizationMember handles POST /organizations/{login}/members
 func (h *CoreServer) AddOrganizationMember(ctx context.Context, params corev1.AddOrganizationMemberParams) error {
 	if !validateOrganizationRole(string(params.Role)) {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role, must be 'owner', 'admin', or 'member'")
@@ -180,7 +172,6 @@ func (h *CoreServer) AddOrganizationMember(ctx context.Context, params corev1.Ad
 	return nil
 }
 
-// RemoveOrganizationMember handles DELETE /organizations/{login}/members
 func (h *CoreServer) RemoveOrganizationMember(ctx context.Context, params corev1.RemoveOrganizationMemberParams) error {
 	err := h.Organizations.RemoveMemberByLogin(ctx, params.Login, params.UserID)
 	if err != nil {
@@ -190,7 +181,6 @@ func (h *CoreServer) RemoveOrganizationMember(ctx context.Context, params corev1
 	return nil
 }
 
-// BatchCreateOrganizationUsers handles POST /organizations/{login}/members/batch
 func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, req *corev1.BatchCreateOrganizationUsersRequestModel, params corev1.BatchCreateOrganizationUsersParams) (*corev1.BatchCreateOrganizationUsersResponseModel, error) {
 	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
@@ -231,7 +221,6 @@ func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, req *core
 	}, nil
 }
 
-// ListOrganizationInvitations handles GET /organizations/{login}/invitations
 func (h *CoreServer) ListOrganizationInvitations(ctx context.Context, params corev1.ListOrganizationInvitationsParams) (*corev1.ListOrganizationInvitationsResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
@@ -246,7 +235,6 @@ func (h *CoreServer) ListOrganizationInvitations(ctx context.Context, params cor
 	return ListOrganizationInvitationsResponseDTO(invs), nil
 }
 
-// InviteOrganizationMember handles POST /organizations/{login}/invitations
 func (h *CoreServer) InviteOrganizationMember(ctx context.Context, req *corev1.InviteOrganizationMemberRequestModel, params corev1.InviteOrganizationMemberParams) (*corev1.OrganizationInvitationModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
@@ -271,7 +259,6 @@ func (h *CoreServer) InviteOrganizationMember(ctx context.Context, req *corev1.I
 	return &res, nil
 }
 
-// CancelOrganizationInvitation handles DELETE /organizations/{login}/invitations/{id}
 func (h *CoreServer) CancelOrganizationInvitation(ctx context.Context, params corev1.CancelOrganizationInvitationParams) error {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
@@ -286,7 +273,6 @@ func (h *CoreServer) CancelOrganizationInvitation(ctx context.Context, params co
 	return nil
 }
 
-// AcceptOrganizationInvitation handles POST /invitations/{id}/accept
 func (h *CoreServer) AcceptOrganizationInvitation(ctx context.Context, params corev1.AcceptOrganizationInvitationParams) error {
 
 	err := h.Organizations.AcceptInvitation(ctx, params.ID)
@@ -297,7 +283,6 @@ func (h *CoreServer) AcceptOrganizationInvitation(ctx context.Context, params co
 	return nil
 }
 
-// DeclineOrganizationInvitation handles POST /invitations/{id}/decline
 func (h *CoreServer) DeclineOrganizationInvitation(ctx context.Context, params corev1.DeclineOrganizationInvitationParams) error {
 
 	err := h.Organizations.DeclineInvitation(ctx, params.ID)
@@ -308,7 +293,6 @@ func (h *CoreServer) DeclineOrganizationInvitation(ctx context.Context, params c
 	return nil
 }
 
-// ListOrganizationJoinRequests handles GET /organizations/{login}/requests
 func (h *CoreServer) ListOrganizationJoinRequests(ctx context.Context, params corev1.ListOrganizationJoinRequestsParams) (*corev1.ListOrganizationJoinRequestsResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
@@ -323,7 +307,6 @@ func (h *CoreServer) ListOrganizationJoinRequests(ctx context.Context, params co
 	return ListOrganizationJoinRequestsResponseDTO(reqs), nil
 }
 
-// CreateOrganizationJoinRequest handles POST /organizations/{login}/requests
 func (h *CoreServer) CreateOrganizationJoinRequest(ctx context.Context, req corev1.OptCreateOrganizationJoinRequestModel, params corev1.CreateOrganizationJoinRequestParams) (*corev1.OrganizationJoinRequestResponseModel, error) {
 
 	var message *string
@@ -348,7 +331,6 @@ func (h *CoreServer) CreateOrganizationJoinRequest(ctx context.Context, req core
 	}, nil
 }
 
-// GetMyOrganizationJoinRequest handles GET /organizations/{login}/requests/mine
 func (h *CoreServer) GetMyOrganizationJoinRequest(ctx context.Context, params corev1.GetMyOrganizationJoinRequestParams) (*corev1.OrganizationJoinRequestNullableResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
@@ -371,7 +353,6 @@ func (h *CoreServer) GetMyOrganizationJoinRequest(ctx context.Context, params co
 	}, nil
 }
 
-// CancelOrganizationJoinRequest handles DELETE /organizations/{login}/requests/mine
 func (h *CoreServer) CancelOrganizationJoinRequest(ctx context.Context, params corev1.CancelOrganizationJoinRequestParams) error {
 
 	err := h.Organizations.CancelJoinRequest(ctx, params.Login)
@@ -382,7 +363,6 @@ func (h *CoreServer) CancelOrganizationJoinRequest(ctx context.Context, params c
 	return nil
 }
 
-// ApproveOrganizationJoinRequest handles POST /organizations/{login}/requests/{id}/approve
 func (h *CoreServer) ApproveOrganizationJoinRequest(ctx context.Context, req corev1.OptApproveOrganizationJoinRequestModel, params corev1.ApproveOrganizationJoinRequestParams) error {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
@@ -405,7 +385,6 @@ func (h *CoreServer) ApproveOrganizationJoinRequest(ctx context.Context, req cor
 	return nil
 }
 
-// RejectOrganizationJoinRequest handles POST /organizations/{login}/requests/{id}/reject
 func (h *CoreServer) RejectOrganizationJoinRequest(ctx context.Context, params corev1.RejectOrganizationJoinRequestParams) error {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
@@ -433,7 +412,5 @@ func wrapOrgUCError(err error, fallbackMsg string) error {
 	if errors.Is(err, pkg.ErrBadInput) {
 		return pkg.Wrap(pkg.ErrBadInput, err, fallbackMsg)
 	}
-	// Adding context must not change the use case error classification.
-	// Unclassified failures still map to HTTP 500 in pkg.ToREST.
 	return pkg.Wrap(nil, err, fallbackMsg)
 }

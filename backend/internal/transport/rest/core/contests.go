@@ -93,7 +93,6 @@ func (h *CoreServer) generateUniqueContestLogin(ctx context.Context, orgLogin, t
 
 func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateContestParams) (*corev1.CreationResponseModel, error) {
 
-	// FIXME: валидация не должна быть ручной
 	err := validateCreateContestParams(params.Title, params.Login)
 	if err != nil {
 		return nil, err
@@ -106,7 +105,6 @@ func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateCont
 		return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
 	}
 
-	// NOTE: сложновато, что-то где-то не додумано
 	var login string
 	if params.Login.IsSet() && params.Login.Value != "" {
 		login = strings.ToLower(params.Login.Value)
@@ -137,7 +135,7 @@ func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateCont
 
 	return &corev1.CreationResponseModel{
 		ID:    contestID,
-		Login: corev1.NewOptString(login), // FIXME: required
+		Login: corev1.NewOptString(login),
 	}, nil
 }
 
@@ -482,8 +480,7 @@ func (h *CoreServer) GetContestProblem(ctx context.Context, params corev1.GetCon
 	return projectResponse(h, ctx, response, details.Link.ContestID)
 }
 
-// statementAssetPolicy keeps an image opened directly by URL, notably SVG,
-// from running scripts or loading anything in the site's origin.
+// Prevent directly opened statement assets, especially SVG, from running scripts in the site origin.
 const statementAssetPolicy = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
 
 func (h *CoreServer) GetContestProblemAsset(ctx context.Context, params corev1.GetContestProblemAssetParams) (*corev1.GetContestProblemAssetOKHeaders, error) {
@@ -492,9 +489,7 @@ func (h *CoreServer) GetContestProblemAsset(ctx context.Context, params corev1.G
 		return nil, err
 	}
 	return &corev1.GetContestProblemAssetOKHeaders{
-		// The URL names the content, so the response never changes. Only the
-		// viewer may cache it: a shared cache would keep serving it after the
-		// statement stops being visible.
+		// Only private caching is safe: shared caches could serve assets after access is revoked.
 		CacheControl:          corev1.NewOptString("private, max-age=31536000, immutable"),
 		ETag:                  corev1.NewOptString(`"` + params.SHA256 + `"`),
 		ContentSecurityPolicy: corev1.NewOptString(statementAssetPolicy),
@@ -596,13 +591,11 @@ func (h *CoreServer) UpdateContestMember(ctx context.Context, params corev1.Upda
 
 	user := accessmodel.UserFromContext(ctx)
 
-	// Prevent user from updating their own role
 	if params.UserID == user.Id {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "cannot update own role")
 	}
 
 	roleStr := string(params.Role)
-	// Validate role value
 	if roleStr != contestsmodel.ContestRoleOwner && roleStr != contestsmodel.ContestRoleModerator && roleStr != contestsmodel.ContestRoleParticipant {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role value")
 	}
@@ -895,7 +888,6 @@ func (h *CoreServer) GetProblemBlockStatusForUser(ctx context.Context, params co
 	}, nil
 }
 
-// ListContestJoinRequests handles GET /organizations/{org_login}/contests/{contest_login}/requests
 func (h *CoreServer) ListContestJoinRequests(ctx context.Context, params corev1.ListContestJoinRequestsParams) (*corev1.ListContestJoinRequestsResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
@@ -910,7 +902,6 @@ func (h *CoreServer) ListContestJoinRequests(ctx context.Context, params corev1.
 	return ListContestJoinRequestsResponseDTO(reqs), nil
 }
 
-// CreateContestJoinRequest handles POST /organizations/{org_login}/contests/{contest_login}/requests
 func (h *CoreServer) CreateContestJoinRequest(ctx context.Context, req corev1.OptCreateContestJoinRequestModel, params corev1.CreateContestJoinRequestParams) (*corev1.ContestJoinRequestResponseModel, error) {
 
 	var message *string
@@ -935,7 +926,6 @@ func (h *CoreServer) CreateContestJoinRequest(ctx context.Context, req corev1.Op
 	}, nil
 }
 
-// GetMyContestJoinRequest handles GET /organizations/{org_login}/contests/{contest_login}/requests/mine
 func (h *CoreServer) GetMyContestJoinRequest(ctx context.Context, params corev1.GetMyContestJoinRequestParams) (*corev1.ContestJoinRequestNullableResponseModel, error) {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
@@ -958,7 +948,6 @@ func (h *CoreServer) GetMyContestJoinRequest(ctx context.Context, params corev1.
 	}, nil
 }
 
-// CancelContestJoinRequest handles DELETE /organizations/{org_login}/contests/{contest_login}/requests/mine
 func (h *CoreServer) CancelContestJoinRequest(ctx context.Context, params corev1.CancelContestJoinRequestParams) error {
 
 	err := h.Contests.CancelJoinRequest(ctx, params.OrgLogin, params.ContestLogin)
@@ -969,7 +958,6 @@ func (h *CoreServer) CancelContestJoinRequest(ctx context.Context, params corev1
 	return nil
 }
 
-// ApproveContestJoinRequest handles POST /organizations/{org_login}/contests/{contest_login}/requests/{id}/approve
 func (h *CoreServer) ApproveContestJoinRequest(ctx context.Context, params corev1.ApproveContestJoinRequestParams) error {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
@@ -984,7 +972,6 @@ func (h *CoreServer) ApproveContestJoinRequest(ctx context.Context, params corev
 	return nil
 }
 
-// RejectContestJoinRequest handles POST /organizations/{org_login}/contests/{contest_login}/requests/{id}/reject
 func (h *CoreServer) RejectContestJoinRequest(ctx context.Context, params corev1.RejectContestJoinRequestParams) error {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
@@ -1012,7 +999,5 @@ func wrapContestUCError(err error, fallbackMsg string) error {
 	if errors.Is(err, pkg.ErrBadInput) {
 		return pkg.Wrap(pkg.ErrBadInput, err, fallbackMsg)
 	}
-	// Adding context must not change the use case error classification.
-	// Unclassified failures still map to HTTP 500 in pkg.ToREST.
 	return pkg.Wrap(nil, err, fallbackMsg)
 }

@@ -187,7 +187,6 @@ func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c contestsmodel
 	return HandlePgErr(err)
 }
 
-// contestProblemPackage resolves and validates the immutable package to pin.
 func (r *ContestsRepo) ResolveContestProblemPackage(ctx context.Context, problemID, packageID uuid.UUID, allowLatest bool) (access.PackageContext, error) {
 	if packageID == uuid.Nil && !allowLatest {
 		return access.PackageContext{}, pkg.Wrap(pkg.ErrBadInput, nil, "package is required")
@@ -233,7 +232,7 @@ func (r *ContestsRepo) DeleteContestProblem(ctx context.Context, c contestsmodel
 func (r *ContestsRepo) ReorderContestProblems(ctx context.Context, contestId uuid.UUID, problems []contestsmodel.ContestProblemReorderItem) error {
 	q := r.queries
 
-	// Reserve temporary positions above both existing and requested ordinals.
+	// Temporary positions must exceed existing and requested ordinals to avoid uniqueness conflicts.
 	maximum, err := q.GetMaxContestProblemOrdinal(ctx, contestId)
 	if err != nil {
 		return HandlePgErr(err)
@@ -256,7 +255,6 @@ func (r *ContestsRepo) ReorderContestProblems(ctx context.Context, contestId uui
 		}
 	}
 
-	// Step 2: Assign final ordinals
 	for _, p := range problems {
 		err := q.UpdateContestProblemOrdinal(ctx, sqlc.UpdateContestProblemOrdinalParams{
 			ContestID: contestId,

@@ -36,7 +36,6 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 		Header: textproto.MIMEHeader{"Content-Type": []string{"image/png"}},
 	}
 
-	// 1. Upload Avatar
 	var imgID uuid.UUID
 	s.Run("UploadAvatar", func() {
 		resp, err := s.client.UploadAvatar(withTestUser(s.ctx, user.Id), &corev1.UploadAvatarReq{
@@ -50,7 +49,6 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 		s.NotEmpty(imgID.String())
 	})
 
-	// 2. Get User Profile and Check ImgID
 	s.Run("GetUserProfileWithImgID", func() {
 		resp, err := s.client.GetUser(withTestUser(s.ctx, user.Id), corev1.GetUserParams{
 			Username: user.Username,
@@ -61,7 +59,6 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 		s.Equal(imgID, resp.User.ImgID.Value)
 	})
 
-	// 3. Get Avatar Image
 	var etag string
 	s.Run("GetAvatarImage", func() {
 		resp, err := s.client.GetUserAvatar(s.ctx, corev1.GetUserAvatarParams{
@@ -81,7 +78,6 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 		s.Equal(avatarContent, data)
 	})
 
-	// 4. Get Avatar Image with If-None-Match (304 Not Modified)
 	s.Run("GetAvatarImage304", func() {
 		resp, err := s.client.GetUserAvatar(s.ctx, corev1.GetUserAvatarParams{
 			Username:    user.Username,
@@ -92,7 +88,6 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 		s.True(isNotModified)
 	})
 
-	// 5. Delete Avatar
 	s.Run("DeleteAvatar", func() {
 		err := s.client.DeleteAvatar(withTestUser(s.ctx, user.Id), corev1.DeleteAvatarParams{
 			Username: user.Username,
@@ -100,7 +95,6 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 		s.Require().NoError(err)
 	})
 
-	// 6. Get User Profile and Check ImgID is nil
 	s.Run("GetUserProfileWithImgIDNil", func() {
 		resp, err := s.client.GetUser(withTestUser(s.ctx, user.Id), corev1.GetUserParams{
 			Username: user.Username,
@@ -110,7 +104,6 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 		s.False(resp.User.ImgID.IsSet())
 	})
 
-	// 7. Get Avatar Image (404 Not Found)
 	s.Run("GetAvatarImage404", func() {
 		resp, err := s.client.GetUserAvatar(s.ctx, corev1.GetUserAvatarParams{
 			Username: user.Username,
@@ -122,11 +115,9 @@ func (s *IntegrationTestSuite) TestUserAvatar() {
 }
 
 func (s *IntegrationTestSuite) TestUsers() {
-	// 1. Create Users
 	user1 := s.createUser("user1", accessmodel.UserRoleUser)
 	user2 := s.createUser("user2", accessmodel.UserRoleAdmin)
 
-	// 2. GetMe
 	s.Run("GetMe", func() {
 		resp, err := s.client.GetMe(withTestUser(s.ctx, user1.Id))
 		s.Require().NoError(err)
@@ -135,7 +126,6 @@ func (s *IntegrationTestSuite) TestUsers() {
 		s.Equal(user1.Username, resp.User.Username)
 	})
 
-	// 3. GetUser
 	s.Run("GetUser", func() {
 		resp, err := s.client.GetUser(withTestUser(s.ctx, user1.Id), corev1.GetUserParams{
 			Username: user2.Username,
@@ -146,7 +136,6 @@ func (s *IntegrationTestSuite) TestUsers() {
 		s.Equal(user2.Username, resp.User.Username)
 	})
 
-	// 4. ListUsers
 	s.Run("ListUsers", func() {
 		searchPrefix := "pagetest" + uuid.NewString()[:8]
 		searchUser1 := s.createUser(searchPrefix+"alpha", accessmodel.UserRoleUser)
@@ -248,9 +237,7 @@ func (s *IntegrationTestSuite) createOrganization(login string, name string, own
 	return org
 }
 
-// createOrganizationWithID creates an organization with a specific ID (for test scenarios)
 func (s *IntegrationTestSuite) createOrganizationWithID(id uuid.UUID, login string, name string) *organizationsmodel.Organization {
-	// Directly insert using SQL to set a specific ID
 	_, err := s.dbPool.Exec(s.ctx,
 		"INSERT INTO organizations (id, login, name, description) VALUES ($1, $2, $3, $4)",
 		id, login, name, "")
@@ -263,7 +250,6 @@ func (s *IntegrationTestSuite) createOrganizationWithID(id uuid.UUID, login stri
 	}
 }
 
-// createDummyProblemPackage creates a dummy problem package for testing
 func (s *IntegrationTestSuite) createDummyProblemPackage(problemID uuid.UUID, orgID uuid.UUID) uuid.UUID {
 	packageID, err := dbfixtures.InsertPackage(s.ctx, s.dbPool, problemID, orgID, time.Time{})
 	s.Require().NoError(err)

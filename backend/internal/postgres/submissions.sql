@@ -90,7 +90,6 @@ SET generation = s.generation + 1, state = 300, score = 0, ban_reason = @ban_rea
 FROM previous WHERE s.id = previous.id
 RETURNING s.id, previous.state AS previous_state, s.revision;
 
--- Submission listing
 -- name: ListSubmissions :many
 SELECT s.id,
   s.owner_id,

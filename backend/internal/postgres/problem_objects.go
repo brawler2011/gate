@@ -27,11 +27,8 @@ func (r *ProblemDraftsRepo) BuildInputObjects(ctx context.Context, id uuid.UUID)
 	return objects, nil
 }
 
-// PublishBuild is called after the worker stored the archive under the
-// object's key with a verified SHA-256. One transaction records the object
-// with the Package that references it, so an attempt that loses its lease
-// leaves only bytes without a row. Statement samples and asset references are
-// stored with the Package so that statement reads never open its archive.
+// The caller must store the archive with a verified SHA-256 before publication.
+// Publish object and package together so losing a lease leaves only unreferenced bytes.
 func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUID, object model.StoredObject, samples []model.Sample) (uuid.UUID, error) {
 	if samples == nil {
 		samples = []model.Sample{}
@@ -133,8 +130,6 @@ func (r *ProblemDraftsRepo) GetPackageStatement(ctx context.Context, id uuid.UUI
 	return p, nil
 }
 
-// FindPackageAssets lists the statement assets of a Package with the given
-// content hash.
 func (r *ProblemDraftsRepo) FindPackageAssets(ctx context.Context, id uuid.UUID, sha256 string) ([]model.PackageAsset, error) {
 	rows, err := sqlc.New(r.pool).ListPackageAssetsBySHA256(ctx, sqlc.ListPackageAssetsBySHA256Params{PackageID: id, Sha256: sha256})
 	if err != nil {

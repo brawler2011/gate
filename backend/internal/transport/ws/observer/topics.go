@@ -22,8 +22,7 @@ func contestTopic(id uuid.UUID, audience string) string {
 }
 func ownTopic(id, user uuid.UUID) string { return contestTopic(id, "own/"+user.String()) }
 
-// Event payloads are projected once before entering history or any subscriber
-// queue. A queue contains only already-scoped frames; delivery never redacts.
+// Project payloads before history or enqueue; delivery must not redact them again.
 func (h *Hub) projectTopics(ctx context.Context, e *WrappedEvent) error {
 	meta := eventMeta(e)
 	if meta == nil || meta.ContestId == nil {

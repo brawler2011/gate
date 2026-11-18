@@ -26,12 +26,9 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// postgresImage is pinned to an exact release: query plans and page counts may
-// change between minor versions.
+// Pin the PostgreSQL release because query plans and page counts can change between minor versions.
 const postgresImage = "postgres:18.3-alpine"
 
-// One PostgreSQL container serves the package run, started with databaseCommand,
-// which the benchmark and the query work builds define for their own needs.
 var (
 	databaseOnce      sync.Once
 	databaseContainer *tcpostgres.PostgresContainer
@@ -69,7 +66,6 @@ func startDatabase(ctx context.Context) (string, error) {
 	return container.ConnectionString(ctx, "sslmode=disable")
 }
 
-// sharedDatabase starts the package's container on first use and returns its DSN.
 func sharedDatabase(tb testing.TB) string {
 	tb.Helper()
 	databaseOnce.Do(func() { databaseDSN, databaseErr = startDatabase(context.Background()) })
@@ -77,8 +73,6 @@ func sharedDatabase(tb testing.TB) string {
 	return databaseDSN
 }
 
-// migratedSchema creates a fresh schema with the migrated database layout, dropped
-// when tb ends, and returns a pool configuration that uses it.
 func migratedSchema(tb testing.TB) *pgxpool.Config {
 	tb.Helper()
 	ctx := context.Background()

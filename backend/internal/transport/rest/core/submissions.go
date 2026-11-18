@@ -18,7 +18,6 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSub
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	// Validate solution size
 	solutionSize := int64(len(req.Submission))
 	if solutionSize == 0 || solutionSize > maxSolutionSize {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid solution size")
@@ -118,7 +117,6 @@ func ListSolutionsParamsDTO(params corev1.ListSubmissionsParams) submissionsmode
 		state = &t
 	}
 
-	// Convert sortOrder string to integer: -1 for desc, 0 for asc
 	var order *int32 = nil
 	if params.SortOrder.IsSet() {
 		var orderVal int32

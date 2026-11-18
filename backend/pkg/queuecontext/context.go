@@ -1,4 +1,3 @@
-// Package queuecontext carries existing outbox metadata to event publishers.
 package queuecontext
 
 import (

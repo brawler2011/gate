@@ -45,8 +45,7 @@ func (r authorizationUsers) GetUserById(ctx context.Context, id uuid.UUID) (acce
 	return accessmodel.User{Id: user.ID, Username: user.Username, Role: user.Role, ExpiresAt: user.ExpiresAt}, nil
 }
 
-// Transactional authorization holds only the membership rows used for access.
-// Ordinary repositories use nonlocking queries for pool-backed reads.
+// Transactional authorization locks only memberships used for access; pool reads take no locks.
 type authorizationOrganizations struct{ *OrganizationsRepo }
 
 func (r authorizationOrganizations) GetMember(ctx context.Context, org, user uuid.UUID) (*organizationsmodel.OrganizationMember, error) {
@@ -95,8 +94,7 @@ func (r authorizationTeams) GetTeamMember(ctx context.Context, team, user uuid.U
 	return &organizationsmodel.TeamMember{TeamID: row.TeamID, UserID: row.UserID, Role: organizationsmodel.TeamRole(row.Role), CreatedAt: row.CreatedAt}, nil
 }
 
-// Organization creation needs to keep the creator's privileges stable without
-// serializing unrelated creations by the same administrator.
+// Hold creator privileges stable without serializing unrelated creations by the same administrator.
 type organizationUsers struct{ *UsersRepo }
 
 func (r organizationUsers) GetUserById(ctx context.Context, id uuid.UUID) (accessmodel.User, error) {

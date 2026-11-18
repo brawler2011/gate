@@ -270,8 +270,7 @@ func (r *OrganizationsRepo) UpdateMemberRole(ctx context.Context, orgID, userID 
 }
 
 func (r *OrganizationsRepo) RemoveMember(ctx context.Context, orgID, userID uuid.UUID) error {
-	// Lock only the departing membership. Concurrent attachments hold FOR SHARE on
-	// this row until commit, so cleanup sees all their committed dependent rows.
+	// Lock the departing membership so cleanup sees dependent rows committed by concurrent attachments.
 	if _, err := r.q.LockOrganizationMember(ctx, sqlc.LockOrganizationMemberParams{OrganizationID: orgID, UserID: userID}); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return HandlePgErr(err)
 	}

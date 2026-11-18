@@ -9,14 +9,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// GateFormat is a wrapper around a GFMT problem directory that provides
-// safe and easy access to problem assets, solutions, and tests.
 type GateFormat struct {
 	Path    string
 	Problem *Problem
 }
 
-// OpenPackage parses problem.yaml and returns a GateFormat instance for the package.
 func OpenPackage(dir string) (*GateFormat, error) {
 	yamlPath := filepath.Join(dir, "problem.yaml")
 	data, err := os.ReadFile(yamlPath)
@@ -46,7 +43,6 @@ func readFile(path string) ([]byte, error) {
 	return data, nil
 }
 
-// GetSolution reads the content of the specified solution file.
 func (g *GateFormat) GetSolution(name string) ([]byte, error) {
 	if strings.HasPrefix(name, "solutions/") {
 		return readFile(filepath.Join(g.Path, name))
@@ -54,7 +50,6 @@ func (g *GateFormat) GetSolution(name string) ([]byte, error) {
 	return readFile(filepath.Join(g.Path, "solutions", name))
 }
 
-// GetChecker reads the content of the specified checker file.
 func (g *GateFormat) GetChecker(name string) ([]byte, error) {
 	if strings.HasPrefix(name, "checkers/") {
 		return readFile(filepath.Join(g.Path, name))
@@ -62,7 +57,6 @@ func (g *GateFormat) GetChecker(name string) ([]byte, error) {
 	return readFile(filepath.Join(g.Path, "checkers", name))
 }
 
-// GetGenerator reads the content of the specified generator file.
 func (g *GateFormat) GetGenerator(name string) ([]byte, error) {
 	if strings.HasPrefix(name, "generators/") {
 		return readFile(filepath.Join(g.Path, name))
@@ -70,7 +64,6 @@ func (g *GateFormat) GetGenerator(name string) ([]byte, error) {
 	return readFile(filepath.Join(g.Path, "generators", name))
 }
 
-// GetInteractor reads the content of the specified interactor file.
 func (g *GateFormat) GetInteractor(name string) ([]byte, error) {
 	if strings.HasPrefix(name, "interactors/") {
 		return readFile(filepath.Join(g.Path, name))
@@ -78,7 +71,6 @@ func (g *GateFormat) GetInteractor(name string) ([]byte, error) {
 	return readFile(filepath.Join(g.Path, "interactors", name))
 }
 
-// GetLib reads the content of the specified library file.
 func (g *GateFormat) GetLib(name string) ([]byte, error) {
 	if strings.HasPrefix(name, "lib/") {
 		return readFile(filepath.Join(g.Path, name))
@@ -86,7 +78,6 @@ func (g *GateFormat) GetLib(name string) ([]byte, error) {
 	return readFile(filepath.Join(g.Path, "lib", name))
 }
 
-// GetTestInput reads the content of the specified test input file.
 func (g *GateFormat) GetTestInput(name string) ([]byte, error) {
 	candidates := TestInputNames(name)
 
@@ -99,7 +90,6 @@ func (g *GateFormat) GetTestInput(name string) ([]byte, error) {
 	return nil, fmt.Errorf("test input file not found for %s", name)
 }
 
-// GetTestOutput reads the content of the specified test output file.
 func (g *GateFormat) GetTestOutput(name string) ([]byte, error) {
 	candidates := TestOutputNames(name)
 
@@ -112,7 +102,6 @@ func (g *GateFormat) GetTestOutput(name string) ([]byte, error) {
 	return nil, fmt.Errorf("test output file not found for %s", name)
 }
 
-// TestOutputNames lists supported answer names in resolution order.
 func TestOutputNames(name string) []string {
 	var candidates []string
 	ext := filepath.Ext(name)
@@ -129,7 +118,6 @@ func TestOutputNames(name string) []string {
 	return candidates
 }
 
-// TestInputNames lists supported input names in resolution order.
 func TestInputNames(name string) []string {
 	candidates := []string{name}
 	ext := filepath.Ext(name)

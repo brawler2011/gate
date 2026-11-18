@@ -20,9 +20,7 @@ import (
 	ht "github.com/ogen-go/ogen/http"
 )
 
-// Every author package in pkg/testdata imports through the API and builds on
-// the real judge: its programs compile with their library, generators and the
-// main solution run, and the package holds the checker or interactor.
+// Author packages import and build with the real judge.
 func (s *IntegrationTestSuite) TestAuthorPackagesImportAndBuild() {
 	admin := s.createUser("admin_import", accessmodel.UserRoleAdmin)
 	org := s.createOrganization("import-org", "Import Organization", admin.Id)
@@ -62,9 +60,7 @@ func (s *IntegrationTestSuite) TestAuthorPackagesImportAndBuild() {
 	}
 }
 
-// requirePolygonInputs checks that every test input of a Polygon package found
-// in its tests/ folder, generated ones included, is the input Gate built: the
-// generator receives exactly the arguments of the test, as in Polygon.
+// Built inputs match the Polygon package, including generated tests.
 func (s *IntegrationTestSuite) requirePolygonInputs(dir string, built *gfmt.GateFormat) {
 	for _, subtask := range built.Problem.Subtasks {
 		for _, test := range subtask.Tests {

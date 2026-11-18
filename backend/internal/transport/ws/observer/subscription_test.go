@@ -20,8 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// A controlled connection blocks its first event write until release, timeout,
-// or transport closure. Timeout is signalled explicitly, without a real 10s wait.
+// Explicit timeout signals avoid waiting for real transport deadlines.
 type controlledConnection struct {
 	closed      chan struct{}
 	started     chan struct{}
@@ -346,8 +345,7 @@ func TestHistoryRangeErrors(t *testing.T) {
 	}
 }
 
-// Accelerate only transport write deadlines, preserving the real WebSocket
-// writer and read pump. A deadline failure must release the HTTP subscription.
+// Accelerate write deadlines; a real WebSocket timeout must release the HTTP subscription.
 type expiringListener struct {
 	net.Listener
 	deadlines chan time.Time

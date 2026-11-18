@@ -74,7 +74,6 @@ func TestDraftsUseCase_Validation(t *testing.T) {
 
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
 
-	// 1. Empty code
 	_, err := uc.CreateDraft(ctx, &contestsmodel.ContestDraftCreation{
 		ContestID: contestID,
 		Code:      "",
@@ -83,7 +82,6 @@ func TestDraftsUseCase_Validation(t *testing.T) {
 		t.Fatal("expected error on empty code, got nil")
 	}
 
-	// 2. Code too large (> 64KB)
 	largeCode := strings.Repeat("a", 65*1024)
 	_, err = uc.CreateDraft(ctx, &contestsmodel.ContestDraftCreation{
 		ContestID: contestID,
@@ -102,7 +100,6 @@ func TestDraftsUseCase_LimitPerUser(t *testing.T) {
 	userID := uuid.New()
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
 
-	// Fill 50 drafts
 	for i := 0; i < 50; i++ {
 		_, err := repo.CreateDraft(ctx, userID, &contestsmodel.ContestDraftCreation{
 			ContestID: contestID,
@@ -113,7 +110,6 @@ func TestDraftsUseCase_LimitPerUser(t *testing.T) {
 		}
 	}
 
-	// Attempt 51st draft
 	_, err := uc.CreateDraft(ctx, &contestsmodel.ContestDraftCreation{
 		ContestID: contestID,
 		Code:      "code 51",
@@ -140,19 +136,19 @@ func TestDraftsUseCase_DeletePermissions(t *testing.T) {
 		t.Fatalf("failed to create draft: %v", err)
 	}
 
-	// Other user cannot delete
+	// Other users cannot delete the draft.
 	err = uc.DeleteDraft(accessmodel.WithUser(ctx, accessmodel.User{Id: otherUserID, Role: accessmodel.UserRoleUser}), contestID, draftID)
 	if err == nil {
 		t.Fatal("expected permission error when deleting other user's draft as non-manager, got nil")
 	}
 
-	// Manager can delete
+	// Managers can delete drafts.
 	err = uc.DeleteDraft(accessmodel.WithUser(ctx, accessmodel.User{Id: otherUserID, Role: accessmodel.UserRoleAdmin}), contestID, draftID)
 	if err != nil {
 		t.Fatalf("manager should be able to delete draft, got: %v", err)
 	}
 
-	// Author can delete
+	// Authors can delete their own drafts.
 	draftID2, _ := repo.CreateDraft(ctx, authorID, &contestsmodel.ContestDraftCreation{
 		ContestID: contestID,
 		Code:      "package main",
@@ -232,7 +228,7 @@ func TestDraftListPagination(t *testing.T) {
 			repo := newMockDraftsRepo()
 			uc := NewDraftsUseCase(testTransactions[DraftTxStore]{draftTestStore{repo}}, repo, draftTestStore{repo})
 			if tc.err != nil {
-				// Any transaction access would panic for invalid pagination.
+				// Invalid pagination must return before accessing a transaction.
 				uc = NewDraftsUseCase(nil, nil, nil)
 			}
 			filter := contestsmodel.ContestDraftsFilter{ContestID: uuid.New(), Page: tc.page, PageSize: tc.size}

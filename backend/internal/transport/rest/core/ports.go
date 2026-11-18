@@ -61,7 +61,6 @@ type ContestsUC interface {
 	UnblockProblemForUser(ctx context.Context, contestID, userID, problemID uuid.UUID, rejudgeSubmissions bool) error
 	GetProblemBlockStatusForUser(ctx context.Context, contestID, userID, problemID uuid.UUID) (*contestsmodel.ContestUserProblemBlock, error)
 
-	// Contest Join Requests
 	CreateJoinRequest(ctx context.Context, orgLogin, contestLogin string, message *string) (*contestsmodel.ContestJoinRequest, bool, error)
 	ListJoinRequests(ctx context.Context, orgLogin, contestLogin string) ([]contestsmodel.ContestJoinRequest, error)
 	CancelJoinRequest(ctx context.Context, orgLogin, contestLogin string) error
@@ -97,20 +96,17 @@ type OrganizationsUC interface {
 	UpdateOrganizationByLogin(ctx context.Context, login string, input *organizationsmodel.UpdateOrganizationInput) error
 	DeleteOrganizationByLogin(ctx context.Context, login string) error
 
-	// Member management
 	AddMemberByLogin(ctx context.Context, login string, input *organizationsmodel.AddOrganizationMemberInput) error
 	ListMembersByLogin(ctx context.Context, login string, request paging.Request) (*paging.List[organizationsmodel.OrganizationMember], error)
 	RemoveMemberByLogin(ctx context.Context, login string, userID uuid.UUID) error
 	BatchCreateUsers(ctx context.Context, input organizationsmodel.BatchCreateOrganizationUsersInput) (*organizationsmodel.BatchCreateOrganizationUsersResult, error)
 
-	// Invitations
 	InviteMember(ctx context.Context, orgLogin string, targetUserID uuid.UUID, role organizationsmodel.OrganizationRole) (*organizationsmodel.OrganizationInvitation, error)
 	ListInvitations(ctx context.Context, orgLogin string) ([]organizationsmodel.OrganizationInvitation, error)
 	CancelInvitation(ctx context.Context, orgLogin string, invitationID uuid.UUID) error
 	AcceptInvitation(ctx context.Context, invitationID uuid.UUID) error
 	DeclineInvitation(ctx context.Context, invitationID uuid.UUID) error
 
-	// Join Requests
 	CreateJoinRequest(ctx context.Context, orgLogin string, message *string) (*organizationsmodel.OrganizationJoinRequest, bool, error)
 	ListJoinRequests(ctx context.Context, orgLogin string) ([]organizationsmodel.OrganizationJoinRequest, error)
 	CancelJoinRequest(ctx context.Context, orgLogin string) error
@@ -164,13 +160,11 @@ type TeamsUC interface {
 	UpdateTeam(ctx context.Context, teamID uuid.UUID, input *organizationsmodel.UpdateTeamInput) error
 	DeleteTeam(ctx context.Context, teamID uuid.UUID) error
 
-	// Member management
 	AddTeamMember(ctx context.Context, input *organizationsmodel.AddTeamMemberInput) error
 	ListTeamMembers(ctx context.Context, teamID uuid.UUID, request paging.Request) (*paging.List[organizationsmodel.TeamMember], error)
 	UpdateTeamMemberRole(ctx context.Context, teamID, userID uuid.UUID, role organizationsmodel.TeamRole) error
 	RemoveTeamMember(ctx context.Context, teamID, userID uuid.UUID) error
 
-	// Resource associations
 	GetTeamContests(ctx context.Context, teamID uuid.UUID, request paging.Request) (*paging.List[contestsmodel.Contest], error)
 	GetTeamProblems(ctx context.Context, teamID uuid.UUID, request paging.Request) (*paging.List[problemsmodel.Problem], error)
 }

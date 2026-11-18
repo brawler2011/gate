@@ -21,7 +21,6 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
-// JudgeWorker processes submission judging events
 type JudgeWorker struct {
 	js          jetstream.JetStream
 	judgeUC     JudgeUseCase
@@ -33,7 +32,6 @@ type JudgeWorker struct {
 	wg          sync.WaitGroup
 }
 
-// NewJudgeWorker creates a new judge worker
 func NewJudgeWorker(
 	ctx context.Context,
 	js jetstream.JetStream,
@@ -46,13 +44,12 @@ func NewJudgeWorker(
 		filterSubject = "submissions.created"
 	)
 
-	// Create or update consumer
 	consumer, err := js.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
 		Durable:       durableName,
 		FilterSubject: filterSubject,
 		AckPolicy:     jetstream.AckExplicitPolicy,
 		MaxDeliver:    -1,
-		AckWait:       5 * time.Minute, // 5 minutes to process
+		AckWait:       5 * time.Minute,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create judge consumer: %w", err)
@@ -67,7 +64,6 @@ func NewJudgeWorker(
 	}, nil
 }
 
-// Start starts the judge worker pool
 func (w *JudgeWorker) Start(ctx context.Context) error {
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -83,7 +79,6 @@ func (w *JudgeWorker) Start(ctx context.Context) error {
 
 	w.logger.Info("starting judge worker", "worker_count", w.workerCount)
 
-	// Start worker pool
 	for i := 0; i < w.workerCount; i++ {
 		w.wg.Add(1)
 		go w.workerRoutine(runCtx, i)
@@ -92,14 +87,12 @@ func (w *JudgeWorker) Start(ctx context.Context) error {
 	<-runCtx.Done()
 	w.logger.Info("stopping judge worker, waiting for workers to finish...")
 
-	// Wait for all workers to complete
 	w.wg.Wait()
 	w.logger.Info("judge worker stopped")
 
 	return runCtx.Err()
 }
 
-// workerRoutine is the main loop for a single worker
 func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 	defer w.wg.Done()
 
@@ -112,19 +105,16 @@ func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 			logger.Info("worker stopping")
 			return
 		default:
-			// Fetch next message
 			msgs, err := w.consumer.Fetch(1, jetstream.FetchMaxWait(5*time.Second))
 			if err != nil {
 				if errors.Is(err, jetstream.ErrNoMessages) || errors.Is(err, context.DeadlineExceeded) {
-					// No messages available, continue
 					continue
 				}
 				logger.Error("failed to fetch message", "error", err)
-				time.Sleep(1 * time.Second) // backoff on error
+				time.Sleep(1 * time.Second)
 				continue
 			}
 
-			// Process the message
 			for msg := range msgs.Messages() {
 				w.handleMessage(ctx, msg, logger)
 			}
@@ -132,7 +122,6 @@ func (w *JudgeWorker) workerRoutine(ctx context.Context, workerID int) {
 	}
 }
 
-// handleMessage processes a single submission.created message
 func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logger *slog.Logger) {
 	const handlerTimeout = 5 * time.Minute
 
@@ -149,7 +138,6 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 
 	defer cancel()
 
-	// Parse event
 	var event submissionsmodel.SubmissionCreatedEvent
 	if err := json.Unmarshal(msg.Data(), &event); err != nil {
 		logger.Error("failed to unmarshal event", "operation", "decode_submission", "error_type", fmt.Sprintf("%T", err))
@@ -185,7 +173,6 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 		logger.Info("submission_judging_started", "event", "submission_judging_started", "queue_wait_unavailable_reason", reason)
 	}
 
-	// Judge the submission
 	startTime := time.Now()
 	err := w.runJudge(judgeCtx, msg, judgingmodel.JobRef{ID: event.JobID, SubmissionID: event.Id, Generation: event.Generation})
 	duration := time.Since(startTime)
@@ -211,13 +198,11 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 		"duration_ms", duration.Milliseconds(),
 	)
 
-	// Acknowledge successful processing
 	if err := msg.Ack(); err != nil {
 		logger.Error("failed to ack message", "operation", "nats_ack", "error_type", fmt.Sprintf("%T", err))
 	}
 }
 
-// Stop gracefully stops the worker
 func (w *JudgeWorker) Stop() {
 	w.mu.Lock()
 	cancel := w.cancel

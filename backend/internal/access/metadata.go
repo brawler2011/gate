@@ -9,16 +9,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// PolicyFacts reads a whole page in a bounded number of nonlocking queries.
-// Missing resources are absent from the map; failed reads must return an error.
+// Missing resources are absent; failed fact reads must return an error.
 type PolicyFacts interface {
 	LoadProblemFacts(context.Context, uuid.UUID, []uuid.UUID) (map[uuid.UUID]m.ProblemContext, error)
 	LoadContestFacts(context.Context, uuid.UUID, []uuid.UUID) (map[uuid.UUID]m.ContestContext, error)
 	LoadTeamFacts(context.Context, uuid.UUID, []uuid.UUID) (map[uuid.UUID]m.TeamContext, error)
 }
 
-// MetadataPermissions evaluates metadata and contest lifecycle policies through
-// pool-backed facts. Unmigrated problem actions retain their existing adapter.
 type MetadataPermissions struct {
 	*PermissionsUseCase
 	facts PolicyFacts
@@ -96,7 +93,6 @@ func (uc *MetadataPermissions) HasTeamPermission(ctx context.Context, id, user u
 	return metadataDecision(RequireTeam(in, c, action))
 }
 
-// CheckReadActor rejects expired identities before any metadata list is read.
 func CheckReadActor(ctx context.Context) error {
 	in := m.PolicyInput{Actor: m.UserFromContext(ctx), Now: m.ReadTime(ctx)}
 	return validateInput(in)

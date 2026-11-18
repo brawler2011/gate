@@ -95,7 +95,6 @@ func TestAnnouncementsUseCase_CreateAndDelete(t *testing.T) {
 	authorID := uuid.New()
 	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: authorID, Role: accessmodel.UserRoleUser})
 
-	// 1. Validation error on empty title
 	_, err := uc.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{
 		ContestID: contestID,
 		Title:     "",
@@ -103,7 +102,6 @@ func TestAnnouncementsUseCase_CreateAndDelete(t *testing.T) {
 	})
 	require.Error(t, err)
 
-	// 2. Successful creation
 	ann, err := uc.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{
 		ContestID: contestID,
 		Title:     "Test Announcement",
@@ -115,11 +113,9 @@ func TestAnnouncementsUseCase_CreateAndDelete(t *testing.T) {
 	assert.Len(t, outboxRepo.events, 1)
 	assert.Equal(t, eventdata.OutboxEventContestAnnouncementCreated, outboxRepo.events[0].EventType)
 
-	// 3. Verify the created record
 	require.Len(t, repo.announcements, 1)
 	assert.Equal(t, *ann, repo.announcements[ann.ID])
 
-	// 4. Delete announcement
 	err = uc.DeleteAnnouncement(ctx, ann.ID, contestID)
 	require.NoError(t, err)
 	assert.Len(t, outboxRepo.events, 2)

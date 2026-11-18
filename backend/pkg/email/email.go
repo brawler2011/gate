@@ -24,8 +24,6 @@ type EmailService interface {
 	SendContestJoinRequestResolvedEmail(ctx context.Context, toEmail, username, contestTitle, orgLogin, contestLogin string, approved bool) error
 }
 
-// NewEmailService delivers mail through Resend when deliver is set and only logs it otherwise.
-// The configuration has already been validated.
 func NewEmailService(deliver bool, apiKey, fromEmail, appBaseURL string) EmailService {
 	appBaseURL = strings.TrimRight(appBaseURL, "/")
 	if !deliver {
@@ -41,7 +39,6 @@ func NewEmailService(deliver bool, apiKey, fromEmail, appBaseURL string) EmailSe
 	}
 }
 
-// LogEmailService logs emails via slog for local development and testing
 type LogEmailService struct {
 	AppBaseURL string
 }
@@ -153,7 +150,6 @@ func (s *LogEmailService) SendContestJoinRequestResolvedEmail(ctx context.Contex
 	return nil
 }
 
-// ResendEmailService delivers emails using the Resend HTTP API
 type ResendEmailService struct {
 	APIKey     string
 	FromEmail  string

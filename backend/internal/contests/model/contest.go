@@ -230,7 +230,7 @@ type Contest struct {
 	Title             string
 	Login             string
 	Description       string
-	Settings          map[string]interface{} // JSONB for contest settings
+	Settings          map[string]interface{}
 	StartTime         *time.Time
 	EndTime           *time.Time
 	CreatedAt         time.Time
@@ -313,13 +313,10 @@ type ContestSettings struct {
 	EnableVirtualContests  *bool  `json:"enable_virtual_contests,omitempty"`
 	ParticipationMode      string `json:"participation_mode,omitempty"`
 	HideStatements         *bool  `json:"hide_statements,omitempty"`
-	// Languages are the language configurations contestants may submit in;
-	// empty allows the whole catalog.
 	Languages []string `json:"languages,omitempty"`
 }
 
-// AllowsLanguage reports whether contestants may submit in the language
-// configuration id. It does not restrict the programs of the problems.
+// Contest language restrictions do not apply to problem programs.
 func (s ContestSettings) AllowsLanguage(id string) bool {
 	return len(s.Languages) == 0 || slices.Contains(s.Languages, id)
 }
@@ -662,7 +659,6 @@ type ScoreboardResponse struct {
 	Items             []ScoreboardItem          `json:"items"`
 }
 
-// ScoreboardSubmission identifies a submission within a contest-wide history.
 type ScoreboardSubmission struct {
 	UserID    uuid.UUID
 	ProblemID uuid.UUID

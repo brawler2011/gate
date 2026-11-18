@@ -13,8 +13,7 @@ import (
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 )
 
-// SQL emits exactly one null resource when the page is empty, including when
-// offset exceeds the total. Removing this sentinel is not access filtering.
+// Discard the null empty-page sentinel; visibility was already filtered by SQL.
 func emptyScopeRow(data []byte) bool { return len(data) == 0 || string(data) == "null" }
 
 func scopeProblems(ctx context.Context, q *sqlc.Queries, params sqlc.ScopeProblemsParams) ([]problemsmodel.Problem, int32, error) {

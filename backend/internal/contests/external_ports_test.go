@@ -53,7 +53,6 @@ type ContestsRepo interface {
 	ListUserContestMemberships(ctx context.Context, userID uuid.UUID) ([]contestsmodel.UserContestMembership, error)
 	AddContestMemberIfNotExists(ctx context.Context, contestID, userID uuid.UUID, role string) error
 
-	// Contest Join Requests
 	CreateContestJoinRequest(ctx context.Context, input *contestsmodel.CreateContestJoinRequestInput) (*contestsmodel.ContestJoinRequest, error)
 	GetContestJoinRequestByID(ctx context.Context, id uuid.UUID) (*contestsmodel.ContestJoinRequest, error)
 	GetPendingContestJoinRequest(ctx context.Context, contestID, userID uuid.UUID) (*contestsmodel.ContestJoinRequest, error)

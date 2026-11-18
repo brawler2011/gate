@@ -70,7 +70,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 	}
 	assertPage("", 1, 0, nil)
 
-	// Include nullable joins, an unlinked problem and a valid zero UUID with an empty title.
+	// Nullable joins and empty titles must survive announcement projection.
 	problemIDs := []*uuid.UUID{nil}
 	for i, ordinal := range []int32{0, 25, 26, 27, 28} {
 		id := uuid.New()
@@ -161,7 +161,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 	get("/organizations/"+org.Login+"/contests/missing/announcements", owner.Id, http.StatusNotFound)
 	get("/organizations/missing/contests/ann-public/announcements", owner.Id, http.StatusNotFound)
 
-	// Cross the default page size to distinguish the default of 50 from other limits.
+	// The fixture crosses a page boundary to expose an incorrect default limit.
 	_, err = s.dbPool.Exec(s.ctx, `
 		INSERT INTO contest_announcements (contest_id, author_id, title, body)
 		SELECT $1, $2, 'Extra announcement', 'Body' FROM generate_series(1, 45)`, contestID, owner.Id)

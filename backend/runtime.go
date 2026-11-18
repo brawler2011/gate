@@ -174,7 +174,6 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 		defer sandboxClient.Close()
 		logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudge.GRPCAddr))
 
-		// The image digest and languages come from the running judge image itself.
 		imageCtx, cancelImage := context.WithTimeout(context.Background(), time.Minute)
 		judgeImage, err := sandbox.ReadImage(imageCtx, sandboxClient)
 		cancelImage()
@@ -194,7 +193,6 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 	}
 	if mode.API() {
 		if !mode.Worker() {
-			// Copied from the judge image of the same release (deploy/charts/gate).
 			languages, err = sandbox.LoadConfig(filepath.Join(cfg.Judge.ManifestDir, "langs.toml"))
 			if err != nil {
 				return err
@@ -213,7 +211,6 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 	return runServices(ctx, logger, services)
 }
 
-// sharedDeps are the connections and stores that API and worker instances both use.
 type sharedDeps struct {
 	cfg           config.Config
 	logger        *slog.Logger
@@ -223,8 +220,6 @@ type sharedDeps struct {
 	problemDrafts *pgstore.ProblemDraftsRepo
 }
 
-// workerServices judge submissions, build problem packages and compile booklets
-// in the sandbox.
 func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sandbox.Image) ([]appService, error) {
 	problemPolicy := d.cfg.Problems
 	fileTransport, err := sandbox.NewFileTransport(d.cfg.GoJudge.HTTPURL, &http.Client{Timeout: problemPolicy.UploadTTL})
@@ -289,8 +284,6 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 	}, nil
 }
 
-// workerHealthHandler answers the probes of a worker-only instance, which serves
-// no API. It is ready once its workers have started.
 func workerHealthHandler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
@@ -300,8 +293,6 @@ func workerHealthHandler() http.Handler {
 	return mux
 }
 
-// apiServices serve HTTP and WebSocket and publish work to the workers. The
-// returned function closes what they opened.
 func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService, closeAPI func(), err error) {
 	cfg, logger, pool, store, natsJS := d.cfg, d.logger, d.pool, d.store, d.natsJS
 
@@ -528,7 +519,6 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 				ticker := time.NewTicker(10 * time.Minute)
 				defer ticker.Stop()
 
-				// Run first cleanup immediately on startup
 				if err := authUC.CleanupExpiredSessions(ctx); err != nil {
 					slog.Error("failed to cleanup expired sessions", "error", err)
 				}
@@ -553,7 +543,6 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 	return services, closeAPI, nil
 }
 
-// loadConfig reads the YAML config for mode; envFile, when set, supplies secrets for local runs.
 func loadConfig(configFile, envFile string, mode config.Mode) (config.Config, error) {
 	if envFile != "" {
 		if err := godotenv.Load(envFile); err != nil {

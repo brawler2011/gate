@@ -18,7 +18,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// loadBuiltPackage opens a published package exactly as the judge does.
 func (s *IntegrationTestSuite) loadBuiltPackage(id uuid.UUID) *gfmt.Problem {
 	return s.loadPackage(id).Format.Problem
 }
@@ -32,8 +31,7 @@ func (s *IntegrationTestSuite) loadPackage(id uuid.UUID) *judging.LoadedPackage 
 	return pkg
 }
 
-// Every builtin template builds into a package that names the sources of its
-// checker and interactor, and the judge accepts the template's main solution.
+// Builtin templates publish their checker/interactor sources and accept the main solution.
 func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 	admin := s.createUser("admin_roles", accessmodel.UserRoleAdmin)
 	org := s.createOrganization("roles-org", "Roles Organization", admin.Id)
@@ -74,8 +72,7 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 	}
 }
 
-// Changing the checker language keeps the component; the build compiles it
-// in the new language with the library, and the package file follows the language.
+// Changing checker language preserves the component and builds it with its library.
 func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 	admin := s.createUser("admin_rename", accessmodel.UserRoleAdmin)
 	org := s.createOrganization("rename-org", "Rename Organization", admin.Id)

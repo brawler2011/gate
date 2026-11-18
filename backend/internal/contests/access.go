@@ -64,8 +64,7 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID u
 }
 
 func (uc *ContestsUseCase) withinContest(ctx context.Context, id uuid.UUID, action accessmodel.ContestAction, fn func(CommandTxStore) error) error {
-	// Serialization failures require a fresh external precheck, never a replay
-	// of the decision inside the transaction.
+	// Serialization failures require a fresh external precheck.
 	var err error
 	for attempt := 0; attempt < 3; attempt++ {
 		err = uc.withinContestOnce(ctx, id, action, fn)

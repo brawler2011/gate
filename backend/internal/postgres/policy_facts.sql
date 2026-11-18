@@ -1,4 +1,3 @@
--- Bounded batch reads for metadata policies and future capability projections.
 
 -- name: LoadProblemFacts :many
 SELECT p.id, jsonb_build_object('Owners', (SELECT jsonb_agg(jsonb_build_object('Id', u.id, 'Role', u.role, 'ExpiresAt', u.expires_at)) FROM users u WHERE u.expires_at IS NULL AND (u.id = p.owner_id OR EXISTS (SELECT 1 FROM problem_members own WHERE own.problem_id = p.id AND own.user_id = u.id AND own.role = 'owner'))), 'ID', p.id, 'Organization', jsonb_build_object('ID', o.id, 'Role', COALESCE(om.role::text, ''), 'JoinPolicy', o.join_policy), 'OwnerID', COALESCE(p.owner_id, '00000000-0000-0000-0000-000000000000'::uuid),

@@ -79,7 +79,6 @@ func (s *IntegrationTestSuite) TestDraftListChecksCurrentAccessOutsideHTTP() {
 	s.Require().NoError(err)
 	s.Require().Len(list.Drafts, 1)
 	s.Equal(id, list.Drafts[0].ID)
-	// Remove current access while preserving the author's draft.
 	_, err = s.dbPool.Exec(s.ctx, "UPDATE contests SET visibility='private' WHERE id=$1", contest)
 	s.Require().NoError(err)
 	_, err = s.dbPool.Exec(s.ctx, "DELETE FROM contest_members WHERE contest_id=$1", contest)

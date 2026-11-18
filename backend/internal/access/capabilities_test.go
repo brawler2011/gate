@@ -64,8 +64,7 @@ func TestCapabilitiesRelationshipBoundaries(t *testing.T) {
 	caps, err = uc.Project(m.WithUser(ctx, actor), requests[3:4])
 	require.NoError(t, err)
 	require.Empty(t, caps[0], "admin cannot change an equal moderator or transfer ownership")
-	// A moderator may remove a participant but cannot change its role to an equal
-	// moderator; rewriting the same participant role is not a change capability.
+	// A moderator can remove participants but cannot promote them to moderator.
 	request := requests[3]
 	request.Role = "participant"
 	caps, err = uc.Project(m.WithUser(ctx, actor), []CapabilityRequest{request})

@@ -11,8 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Fixed-width UUIDs and separate namespaces distinguish independent lock domains.
-// Hash collisions only cause extra contention, never a loss of mutual exclusion.
+// Hash collisions only add contention; fixed-width UUIDs and namespaces separate lock domains.
 func advisoryKey(namespace string, ids ...uuid.UUID) int64 {
 	h := sha256.New()
 	h.Write([]byte(namespace))
@@ -26,9 +25,8 @@ func submissionTupleKey(contest, user, problem uuid.UUID) int64 {
 	return advisoryKey("gate:submission-tuple:", contest, user, problem)
 }
 
-// LockSubmissionTuple must precede submission row locks and standings reads. It
-// also protects an absent standings row and the user/problem block predicate.
-// Call only on a transaction-bound repository, retaining it through recalculation.
+// Transaction only: acquire before submission rows and retain through standings recalculation.
+// The lock also protects absent standings rows and the user/problem block predicate.
 func (r *ContestsRepo) LockSubmissionTuple(ctx context.Context, contest, user, problem uuid.UUID) error {
 	return HandlePgErr(r.queries.AdvisoryTransactionLock(ctx, submissionTupleKey(contest, user, problem)))
 }
@@ -37,8 +35,7 @@ func (r *DraftsRepo) LockDraftOwner(ctx context.Context, contest, user uuid.UUID
 	return HandlePgErr(r.queries.AdvisoryTransactionLock(ctx, advisoryKey("gate:draft-owner:", contest, user)))
 }
 
-// Capture candidates before waiting. A bulk command affects exactly this set,
-// acquiring all tuple locks in key order before acquiring any submission rows.
+// Snapshot bulk candidates before waiting, then lock all tuples in key order before submission rows.
 func (r *SubmissionsRepo) lockCandidates(ctx context.Context, filter sqlc.SubmissionCandidatesParams) ([]uuid.UUID, error) {
 	candidates, err := r.queries.SubmissionCandidates(ctx, filter)
 	if err != nil {
@@ -58,8 +55,7 @@ func (r *SubmissionsRepo) lockCandidates(ctx context.Context, filter sqlc.Submis
 			return nil, HandlePgErr(err)
 		}
 	}
-	// SubmissionCandidates orders IDs, so overlapping bulk operations lock rows
-	// identically even when some foreign-key identifiers have been deleted.
+	// Candidate IDs define row-lock order even if foreign-key targets have been deleted.
 	for _, id := range ids {
 		if _, err := r.queries.LockSubmission(ctx, id); err != nil {
 			return nil, HandlePgErr(err)

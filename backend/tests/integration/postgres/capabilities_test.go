@@ -36,8 +36,7 @@ func TestCapabilityFactsRemainBatchedAndNonlocking(t *testing.T) {
 			}
 		}
 	}
-	// A persisted per-problem block removes submit from the link without exposing
-	// any permissions on its inaccessible source Problem.
+	// A problem block removes submit without exposing the inaccessible source problem.
 	_, err := f.pool.Exec(f.ctx, `INSERT INTO contest_user_problem_blocks(contest_id,user_id,problem_id) VALUES($1,$2,$3)`, f.contest, f.actor, f.problem)
 	require.NoError(t, err)
 	values, err := uc.Project(f.ctx, []access.CapabilityRequest{{Scope: "contest", ID: f.contest, Kind: "problem", Target: f.problem}})

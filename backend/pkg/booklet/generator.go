@@ -44,7 +44,6 @@ type ContestData struct {
 	Problems     []ProblemData `json:"problems"`
 }
 
-// GenerateLatex generates a complete LaTeX document for the contest using olymp.sty.
 func GenerateLatex(data ContestData) (string, error) {
 	lang := strings.ToLower(strings.TrimSpace(data.Language))
 	if lang == "" || (lang != "en" && lang != "english") {
@@ -219,7 +218,7 @@ func formatMemoryLimit(mb int, lang string) string {
 }
 
 func formatSampleContent(s string) string {
-	// Ensure trailing newline for proper olymp.sty formatting
+	// olymp.sty requires a trailing newline.
 	s = strings.ReplaceAll(s, "\r\n", "\n")
 	s = strings.ReplaceAll(s, "\r", "\n")
 	if !strings.HasSuffix(s, "\n") {
@@ -228,17 +227,14 @@ func formatSampleContent(s string) string {
 	return s
 }
 
-// Compiler represents an interface capable of compiling LaTeX documents into PDF bytes.
 type Compiler interface {
 	CompilePDF(ctx context.Context, texSource string) ([]byte, error)
 }
 
-// CompilePDF compiles the given LaTeX source into a PDF file using local pdflatex or xelatex.
 func CompilePDF(ctx context.Context, texSource string) ([]byte, error) {
 	return CompilePDFLocal(ctx, texSource)
 }
 
-// CompilePDFLocal compiles the given LaTeX source into a PDF file using pdflatex or xelatex.
 func CompilePDFLocal(ctx context.Context, texSource string) ([]byte, error) {
 	tempDir, err := os.MkdirTemp("", "booklet-*")
 	if err != nil {
@@ -246,12 +242,10 @@ func CompilePDFLocal(ctx context.Context, texSource string) ([]byte, error) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	// Write olymp.sty
 	if err := os.WriteFile(filepath.Join(tempDir, "olymp.sty"), OlympSty, 0600); err != nil {
 		return nil, fmt.Errorf("failed to write olymp.sty: %w", err)
 	}
 
-	// Write booklet.tex
 	texPath := filepath.Join(tempDir, "booklet.tex")
 	if err := os.WriteFile(texPath, []byte(texSource), 0600); err != nil {
 		return nil, fmt.Errorf("failed to write booklet.tex: %w", err)
@@ -266,7 +260,7 @@ func CompilePDFLocal(ctx context.Context, texSource string) ([]byte, error) {
 		}
 	}
 
-	// Run compiler twice for labels / page numbers
+	// A second compiler pass resolves labels and page numbers.
 	for run := 1; run <= 2; run++ {
 		//nolint:gosec // compiler is selected from fixed binary names pdflatex or xelatex
 		cmd := exec.CommandContext(ctx, compiler,
@@ -298,7 +292,6 @@ func CompilePDFLocal(ctx context.Context, texSource string) ([]byte, error) {
 	return pdfBytes, nil
 }
 
-// MarkdownToLatex converts Markdown text to LaTeX while preserving math and LaTeX commands.
 func MarkdownToLatex(text string) string {
 	if text == "" {
 		return ""
@@ -307,7 +300,6 @@ func MarkdownToLatex(text string) string {
 	text = strings.ReplaceAll(text, "\r\n", "\n")
 	text = strings.ReplaceAll(text, "\r", "\n")
 
-	// Segment text into math chunks ($...$, $$...$$, \[...\], \begin{equation}...\end{equation}), code blocks, and plain text chunks
 	type chunk struct {
 		isSpecial bool
 		content   string
@@ -316,7 +308,6 @@ func MarkdownToLatex(text string) string {
 	var chunks []chunk
 	lastIdx := 0
 
-	// Match display math ($$...$$, \[...\]), inline math ($...$), code blocks (```...```), and inline code (`...`)
 	specialRegex := regexp.MustCompile("(?s)(\\$\\$.*?\\$\\$|\\\\\\[.*?\\\\\\]|```.*?```|`[^`\\n]+`|\\$[^$\\n]+\\$)")
 	matches := specialRegex.FindAllStringIndex(text, -1)
 
@@ -351,11 +342,9 @@ func MarkdownToLatex(text string) string {
 				inner := strings.TrimPrefix(strings.TrimSuffix(c.content, "`"), "`")
 				fmt.Fprintf(&sb, "\\texttt{%s}", escapeLatex(inner))
 			default:
-				// Math mode chunk: output as is
 				sb.WriteString(c.content)
 			}
 		} else {
-			// Convert markdown markup in regular text
 			sb.WriteString(convertPlainTextToLatex(c.content))
 		}
 	}
@@ -385,7 +374,6 @@ func convertPlainTextToLatex(text string) string {
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
-		// Headers
 		if strings.HasPrefix(trimmed, "### ") {
 			closeList()
 			headerText := strings.TrimPrefix(trimmed, "### ")
@@ -405,7 +393,6 @@ func convertPlainTextToLatex(text string) string {
 			continue
 		}
 
-		// Bullet lists
 		if strings.HasPrefix(trimmed, "- ") || strings.HasPrefix(trimmed, "* ") {
 			if !inList || listType != "itemize" {
 				closeList()
@@ -418,7 +405,6 @@ func convertPlainTextToLatex(text string) string {
 			continue
 		}
 
-		// Numbered lists
 		numListRegex := regexp.MustCompile(`^(\d+)\.\s+(.*)$`)
 		if m := numListRegex.FindStringSubmatch(trimmed); m != nil {
 			if !inList || listType != "enumerate" {
@@ -431,14 +417,12 @@ func convertPlainTextToLatex(text string) string {
 			continue
 		}
 
-		// Empty line
 		if trimmed == "" {
 			closeList()
 			resultLines = append(resultLines, "")
 			continue
 		}
 
-		// Regular line
 		resultLines = append(resultLines, formatInlineMarkdown(line))
 	}
 
@@ -447,21 +431,18 @@ func convertPlainTextToLatex(text string) string {
 }
 
 func formatInlineMarkdown(text string) string {
-	// Convert bold **text** -> \textbf{text}
 	boldRegex := regexp.MustCompile(`\*\*(.*?)\*\*`)
 	text = boldRegex.ReplaceAllStringFunc(text, func(m string) string {
 		inner := m[2 : len(m)-2]
 		return fmt.Sprintf("\\textbf{%s}", escapeLatexSymbols(inner))
 	})
 
-	// Convert italic *text* -> \textit{text}
 	italicRegex := regexp.MustCompile(`\*([^*]+)\*`)
 	text = italicRegex.ReplaceAllStringFunc(text, func(m string) string {
 		inner := m[1 : len(m)-1]
 		return fmt.Sprintf("\\textit{%s}", escapeLatexSymbols(inner))
 	})
 
-	// Escape remaining latex symbols in plain text
 	text = escapeLatexSymbols(text)
 	return text
 }

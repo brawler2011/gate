@@ -1,5 +1,4 @@
--- Metadata scopes use EXISTS grants so resources occur exactly once.
--- A nullable JSON row is the empty-page sentinel, preserving the total.
+-- EXISTS grants prevent duplicate resources; the null empty-page sentinel preserves totals.
 
 -- name: ScopeProblems :many
 WITH actor AS (

@@ -159,8 +159,7 @@ func TestProblemBuildSnapshotAndRecovery(t *testing.T) {
 	require.ErrorIs(t, repo.HeartbeatBuild(ctx, next.ID, *next.LeaseToken, time.Minute), pkg.ErrConflict)
 }
 
-// Renaming library files and assets keeps the object references that keep
-// uploads alive; a program is renamed together with the tests that name it.
+// Renames preserve object references and update tests that name the program.
 func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
@@ -189,7 +188,7 @@ func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 	require.Equal(t, saved.Tests, renamed.Tests)
 	require.Equal(t, []model.DraftAsset{{Name: "graph.png", ObjectID: object}}, renamed.Assets)
 
-	// The object stays referenced while the test still uses it.
+	// Renaming a program must preserve objects still used by its tests.
 	renamed.Assets = nil
 	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", renamed), renamed)
 	require.NoError(t, err)

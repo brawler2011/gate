@@ -532,7 +532,6 @@ func TestContestABAC_PreStart(t *testing.T) {
 		ContestRole: contestsmodel.ContestRoleModerator,
 	}
 
-	// 1. Participant / Guest before start
 	canViewProblem, err := f.permUC.HasContestPermission(ctx, f.contestID, partID, accessmodel.ActionGetContestProblem)
 	require.NoError(t, err)
 	assert.False(t, canViewProblem, "Participant should NOT view problem before contest start")
@@ -545,7 +544,6 @@ func TestContestABAC_PreStart(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, canViewMonitor, "Participant should NOT view monitor before contest start")
 
-	// 2. Moderator before start
 	modCanViewProblem, err := f.permUC.HasContestPermission(ctx, f.contestID, modID, accessmodel.ActionGetContestProblem)
 	require.NoError(t, err)
 	assert.True(t, modCanViewProblem, "Moderator should view problem before start")
@@ -590,7 +588,6 @@ func TestContestABAC_Running(t *testing.T) {
 		ContestRole: contestsmodel.ContestRoleModerator,
 	}
 
-	// Participant checks
 	canViewProb, err := f.permUC.HasContestPermission(ctx, f.contestID, partID, accessmodel.ActionGetContestProblem)
 	require.NoError(t, err)
 	assert.True(t, canViewProb)
@@ -611,7 +608,6 @@ func TestContestABAC_Running(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, canListOwn, "Participant can list own submissions")
 
-	// Guest checks (uuid.Nil)
 	guestCanMon, err := f.permUC.HasContestPermission(ctx, f.contestID, uuid.Nil, accessmodel.ActionGetMonitor)
 	require.NoError(t, err)
 	assert.False(t, guestCanMon, "Guest does NOT meet monitor_scope='participant'")
@@ -723,14 +719,12 @@ func TestOrganizationPermissions(t *testing.T) {
 		Role:           organizationsmodel.OrgRoleMember,
 	}
 
-	// 1. ActionViewOrganization
 	for _, uid := range []uuid.UUID{ownerID, adminID, memberID, outsiderID, globalAdminID} {
 		canView, err := f.permUC.HasOrganizationPermission(ctx, f.orgID, uid, accessmodel.ActionViewOrganization)
 		require.NoError(t, err)
 		assert.True(t, canView)
 	}
 
-	// 2. ActionManageOrganization
 	orgAdminCanManage, err := f.permUC.HasOrganizationPermission(ctx, f.orgID, adminID, accessmodel.ActionManageOrganization)
 	require.NoError(t, err)
 	assert.True(t, orgAdminCanManage)
@@ -751,7 +745,6 @@ func TestOrganizationPermissions(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, globalAdminCanManage)
 
-	// 3. ActionDeleteOrganization
 	orgOwnerCanDelete, err := f.permUC.HasOrganizationPermission(ctx, f.orgID, ownerID, accessmodel.ActionDeleteOrganization)
 	require.NoError(t, err)
 	assert.True(t, orgOwnerCanDelete)

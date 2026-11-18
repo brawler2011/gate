@@ -1,4 +1,3 @@
--- Organizations queries
 
 -- name: CreateOrganization :one
 INSERT INTO organizations (id, login, name, description, avatar_url, join_policy)
@@ -33,7 +32,6 @@ WHERE id = $1;
 -- name: DeleteOrganization :exec
 DELETE FROM organizations WHERE id = $1;
 
--- Organization Members
 
 -- name: AddOrganizationMember :exec
 INSERT INTO organization_members (organization_id, user_id, role)

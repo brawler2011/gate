@@ -6,8 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// RequireContestAudience gates a concrete server topic. Own access always also
-// requires current contest visibility, including after participation revocation.
+// Own-topic access still requires current contest visibility after participation revocation.
 func RequireContestAudience(in m.PolicyInput, c m.ContestContext, audience string, owner uuid.UUID) error {
 	if err := ApplyContestLifecycle(in, &c); err != nil {
 		return err

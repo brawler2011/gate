@@ -42,8 +42,7 @@ type IdentityTransactions interface {
 	Within(context.Context, func(IdentityTxStore) error) error
 }
 
-// Account commands lock both the actor and the target in a stable order.
-// Authorization is checked from these rows rather than the HTTP snapshot.
+// Authorize from locked accounts rather than the HTTP snapshot; lock actor and target in stable order.
 func withinAccount(ctx context.Context, transactions IdentityTransactions, target uuid.UUID, adminOnly bool, fn func(IdentityTxStore) error) error {
 	actor := accessmodel.UserFromContext(ctx)
 	if actor.IsGuest() {

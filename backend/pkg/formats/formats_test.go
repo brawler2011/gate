@@ -12,7 +12,6 @@ import (
 	"golang.org/x/tools/txtar"
 )
 
-// summary is what a package means, independent of where its files are.
 type summary struct {
 	Type, Checker, Validator, Interactor, Main string
 	Generators, Library, Statements            []string
@@ -136,8 +135,7 @@ func TestPCMS2ProgramHeaders(t *testing.T) {
 	require.Equal(t, map[string]string{"testlib.h": "testlib.h"}, p.Checker.Dependencies)
 }
 
-// Readers see the package through an os.Root: a path in problem.xml cannot
-// reach a file outside the package, through ../ or a symlink.
+// Package paths cannot escape os.Root through traversal or symlinks.
 func TestReadersStayInsidePackage(t *testing.T) {
 	parent := t.TempDir()
 	write(t, parent, "01.a", "outside\n")
@@ -192,8 +190,6 @@ func TestParseCommand(t *testing.T) {
 	}
 }
 
-// unpack writes the package of testdata/<name>.txtar into a temporary
-// directory. The comment of each archive describes its case.
 func unpack(t *testing.T, name string) string {
 	t.Helper()
 	archive, err := txtar.ParseFile(filepath.Join("testdata", name+".txtar"))

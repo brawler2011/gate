@@ -19,9 +19,7 @@ func (r subjectRecorder) Dispatch(_ context.Context, subject string, _ []byte) e
 	return nil
 }
 
-// TestObserverEventsReachEveryReplica runs two backend replicas' observer
-// subscribers side by side, as during a rolling update: each WebSocket hub keeps
-// its own state, so every replica must receive every event.
+// Every replica must receive each observer event for its own WebSocket state.
 func TestObserverEventsReachEveryReplica(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

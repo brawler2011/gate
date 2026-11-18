@@ -290,27 +290,22 @@ func (uc *PermissionsUseCase) canViewSubmissionDetails(cc *contestContext) bool 
 }
 
 func (uc *PermissionsUseCase) canSubmit(cc *contestContext) bool {
-	// Moderator/Owner can always submit for testing
 	if cc.isModerator {
 		return true
 	}
 
-	// Guests cannot submit
 	if cc.user.IsGuest() || cc.user.Id == uuid.Nil {
 		return false
 	}
 
-	// Before start: regular participants cannot submit
 	if !cc.isStarted {
 		return false
 	}
 
-	// Running contest: participants can submit
 	if !cc.isFinished {
 		return cc.isParticipant
 	}
 
-	// Finished contest: upsolving mode (Codeforces style)
 	settings := cc.contest.TypedSettings()
 	if settings.GetEnableUpsolving() {
 		return uc.canViewContest(cc)
@@ -319,7 +314,6 @@ func (uc *PermissionsUseCase) canSubmit(cc *contestContext) bool {
 	return false
 }
 
-// HasProblemPermission проверяет право на действие с задачей
 func (uc *PermissionsUseCase) HasProblemPermission(
 	ctx context.Context,
 	problemID uuid.UUID,
@@ -538,7 +532,6 @@ func (uc *PermissionsUseCase) HasOrganizationPermission(
 		return false, fmt.Errorf("get user: %w", err)
 	}
 
-	// Global admins have full access
 	if user.Role == accessmodel.UserRoleAdmin {
 		return true, nil
 	}
@@ -546,7 +539,6 @@ func (uc *PermissionsUseCase) HasOrganizationPermission(
 	member, err := uc.orgsRepo.GetMember(ctx, orgID, userID)
 	if err != nil {
 		if errors.Is(err, pkg.ErrNotFound) {
-			// User is not a member of the organization
 			if action == accessmodel.ActionViewOrganization {
 				return true, nil
 			}
@@ -567,7 +559,6 @@ func (uc *PermissionsUseCase) HasOrganizationPermission(
 	}
 }
 
-// RBAC Subject Resolution for Contests
 func (uc *PermissionsUseCase) resolveEffectiveContestRole(
 	ctx context.Context,
 	contest *contestsmodel.Contest,
@@ -582,19 +573,16 @@ func (uc *PermissionsUseCase) resolveEffectiveContestRole(
 		return nil, fmt.Errorf("get user: %w", err)
 	}
 
-	// 1. Global Admin gets RoleOwner
 	if user.Role == accessmodel.UserRoleAdmin {
 		ownerRole := contestsmodel.ContestRoleOwner
 		return &ownerRole, nil
 	}
 
-	// 2. Contest Owner gets RoleOwner
 	if contest.OwnerID != nil && *contest.OwnerID == userID {
 		ownerRole := contestsmodel.ContestRoleOwner
 		return &ownerRole, nil
 	}
 
-	// 3. Organization Owner / Admin gets RoleOwner on all org contests
 	if uc.orgsRepo != nil && contest.OrganizationID != uuid.Nil {
 		orgMember, err := uc.orgsRepo.GetMember(ctx, contest.OrganizationID, userID)
 		if err == nil {
@@ -609,7 +597,6 @@ func (uc *PermissionsUseCase) resolveEffectiveContestRole(
 
 	var bestRole *contestsmodel.ContestRole
 
-	// 4. Direct Contest Member
 	if uc.contestsRepo != nil {
 		directMember, err := uc.contestsRepo.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{
 			ContestId: contest.ID,
@@ -621,7 +608,6 @@ func (uc *PermissionsUseCase) resolveEffectiveContestRole(
 			return nil, fmt.Errorf("get contest member: %w", err)
 		}
 
-		// 5. Team Contest Members
 		contestTeams, err := uc.contestsRepo.GetContestTeams(ctx, contest.ID)
 		if err != nil {
 			return nil, fmt.Errorf("get contest teams: %w", err)
@@ -645,7 +631,6 @@ func (uc *PermissionsUseCase) resolveEffectiveContestRole(
 		}
 	}
 
-	// 6. Public Contest with open participation gives RoleParticipant to any authenticated user
 	if bestRole == nil && contest.Visibility == contestsmodel.ContestVisibilityPublic {
 		settings := contest.TypedSettings()
 		if settings.GetParticipationMode() == contestsmodel.ParticipationModeOpen {
@@ -657,7 +642,6 @@ func (uc *PermissionsUseCase) resolveEffectiveContestRole(
 	return bestRole, nil
 }
 
-// RBAC Subject Resolution for Problems
 func (uc *PermissionsUseCase) resolveProblemPermission(
 	ctx context.Context,
 	problem *problemsmodel.Problem,
@@ -672,19 +656,16 @@ func (uc *PermissionsUseCase) resolveProblemPermission(
 		return nil, fmt.Errorf("get user: %w", err)
 	}
 
-	// 1. Global Admin gets ProblemPermissionAdmin
 	if user.Role == accessmodel.UserRoleAdmin {
 		adminPerm := problemsmodel.ProblemPermissionAdmin
 		return &adminPerm, nil
 	}
 
-	// 2. Problem Owner gets ProblemPermissionAdmin
 	if problem.OwnerID != nil && *problem.OwnerID == userID {
 		adminPerm := problemsmodel.ProblemPermissionAdmin
 		return &adminPerm, nil
 	}
 
-	// 3. Org Owner / Admin gets ProblemPermissionAdmin on all org problems
 	if uc.orgsRepo != nil && problem.OrganizationID != uuid.Nil {
 		orgMember, err := uc.orgsRepo.GetMember(ctx, problem.OrganizationID, userID)
 		if err == nil {
@@ -699,7 +680,6 @@ func (uc *PermissionsUseCase) resolveProblemPermission(
 
 	var bestPermission *problemsmodel.ProblemPermission
 
-	// 4. Direct Problem Member
 	if uc.problemsRepo != nil {
 		directMember, err := uc.problemsRepo.GetProblemMember(ctx, problem.ID, userID)
 		if err == nil {
@@ -710,7 +690,6 @@ func (uc *PermissionsUseCase) resolveProblemPermission(
 			return nil, fmt.Errorf("get problem member: %w", err)
 		}
 
-		// 5. Team Problem Members
 		problemTeams, err := uc.problemsRepo.GetProblemTeams(ctx, problem.ID)
 		if err != nil {
 			return nil, fmt.Errorf("get problem teams: %w", err)

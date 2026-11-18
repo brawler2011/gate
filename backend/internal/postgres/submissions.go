@@ -198,7 +198,6 @@ func mapGetSubmissionRow(row sqlc.GetSubmissionRow) submissionsmodel.Submission 
 		username = *row.Username
 	}
 
-	// Prefer title from linked entities, fallback to short_name.
 	var problemTitle string
 	if row.ProblemTitle != nil {
 		problemTitle = *row.ProblemTitle
@@ -276,7 +275,6 @@ func mapListSubmissionsRow(row sqlc.ListSubmissionsRow) submissionsmodel.Submiss
 		username = *row.Username
 	}
 
-	// Prefer title from linked entities, fallback to short_name.
 	var problemTitle string
 	if row.ProblemTitle != nil {
 		problemTitle = *row.ProblemTitle

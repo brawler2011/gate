@@ -12,15 +12,10 @@ import (
 )
 
 const (
-	// interval to poll for new events
 	pollInterval = 1 * time.Second
-	// interval to run maintenance tasks
 	maintenanceInt = 1 * time.Minute
-	// number of events to process in a batch
 	batchSize = 10
-	// timeout for processing a single event (seconds)
 	eventTimeoutSec = 30
-	// number of days to keep completed events
 	retentionDays = 14
 )
 

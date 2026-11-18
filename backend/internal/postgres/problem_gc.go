@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// ListUnreferencedObjects lists objects that no row references right now.
 func (r *ProblemDraftsRepo) ListUnreferencedObjects(ctx context.Context) ([]model.StoredObject, error) {
 	rows, err := sqlc.New(r.pool).ListUnreferencedObjects(ctx)
 	if err != nil {
@@ -26,8 +25,7 @@ func (r *ProblemDraftsRepo) ListUnreferencedObjects(ctx context.Context) ([]mode
 	return objects, nil
 }
 
-// DeleteObject deletes an object row unless a reference holds it. The foreign
-// keys decide, including for a reference committed concurrently.
+// Foreign keys arbitrate deletion against references committed concurrently.
 func (r *ProblemDraftsRepo) DeleteObject(ctx context.Context, id uuid.UUID) (bool, error) {
 	err := sqlc.New(r.pool).DeleteStoredObject(ctx, id)
 	if isForeignKeyViolation(err) {
@@ -39,7 +37,6 @@ func (r *ProblemDraftsRepo) DeleteObject(ctx context.Context, id uuid.UUID) (boo
 	return true, nil
 }
 
-// ExistingObjectKeys returns which of the given keys have an object row.
 func (r *ProblemDraftsRepo) ExistingObjectKeys(ctx context.Context, keys []string) (map[string]bool, error) {
 	rows, err := sqlc.New(r.pool).ListStoredObjectKeys(ctx, keys)
 	if err != nil {
@@ -68,8 +65,7 @@ func (r *ProblemDraftsRepo) PrunePackages(ctx context.Context, retention time.Du
 	return nil
 }
 
-// prunePackage re-checks eligibility under the Build then Package locks, so a
-// consumer created meanwhile keeps the Package alive.
+// Lock Build then Package and recheck eligibility so concurrent consumers keep the package alive.
 func (r *ProblemDraftsRepo) prunePackage(ctx context.Context, id uuid.UUID, retention time.Duration) error {
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {

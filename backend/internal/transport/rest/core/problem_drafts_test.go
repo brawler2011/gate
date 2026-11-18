@@ -9,8 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fill sets every field reachable from v to a non-zero value, so that a
-// field added to the draft model later is covered without editing this test.
+// Fill every reachable field so model additions are covered automatically.
 func fill(v reflect.Value, n *int) {
 	*n++
 	switch v.Kind() {
@@ -39,8 +38,7 @@ func fill(v reflect.Value, n *int) {
 	}
 }
 
-// A draft field the contract does not carry would be lost on the next save
-// without any error, because the workshop saves what it read.
+// Every draft field must round-trip through the contract to survive a workshop save.
 func TestDraftSurvivesContractRoundTrip(t *testing.T) {
 	var d model.Draft
 	n := 0

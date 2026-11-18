@@ -117,7 +117,6 @@ func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter
 	}
 	audience, viewer, configuration := filter.audience, filter.viewer, filter.configuration
 	if filter.ContestId == nil {
-		// The global feed is available only to a currently authenticated global admin.
 		user, _, err := s.currentAccess(ctx, filter)
 		if err != nil {
 			return closeVerification(conn, err)

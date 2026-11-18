@@ -1,5 +1,3 @@
-// Package judgeimage names the go-judge image built from the current judge/
-// sources. Tests, `task judge:image`, CI and deploy all use this one name.
 package judgeimage
 
 import (
@@ -16,9 +14,7 @@ import (
 
 const repo = "ghcr.io/brawler2011/gate-go-judge"
 
-// Ref is repo:<content hash of judge/>. It hashes the working-tree contents
-// of the files git does not ignore, so uncommitted changes get their own image
-// and editor or direnv files never change the name.
+// Hash tracked and unignored working-tree contents so uncommitted judge changes get a distinct image.
 func Ref() (string, error) {
 	_, file, _, _ := runtime.Caller(0)
 	dir := filepath.Join(filepath.Dir(file), "..", "..", "..", "judge")

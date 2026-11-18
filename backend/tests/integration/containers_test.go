@@ -34,9 +34,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// Expensive services are started at most once per package run and shared by all tests;
-// tests isolate their data instead (a database and a bucket per test), so they can run
-// in parallel.
+// Shared containers keep startup costs low; separate databases and buckets allow parallel tests.
 var (
 	shared   sharedContainers
 	sharedMu sync.Mutex
@@ -44,14 +42,13 @@ var (
 
 type sharedContainers struct {
 	containers []testcontainers.Container
-	postgres   string // connection string of the maintenance database; empty until started
+	postgres   string // Empty until the shared container starts.
 	s3Endpoint string
 	judge      *goJudge
 }
 
 const (
 	postgresPort = "5432/tcp"
-	// templateDatabase holds the migrated schema that every test database is cloned from.
 	templateDatabase = "gate_template"
 )
 
@@ -73,8 +70,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// terminate removes a throwaway container without a graceful stop; SeaweedFS ignores
-// SIGTERM, so a graceful stop always waits for Docker's full stop timeout.
+// SeaweedFS ignores SIGTERM, so graceful termination waits for the full Docker timeout.
 func terminate(c testcontainers.Container) error {
 	return c.Terminate(context.Background(), testcontainers.StopTimeout(0))
 }
@@ -91,8 +87,6 @@ func startShared(ctx context.Context, name string, request testcontainers.Contai
 	return c, nil
 }
 
-// newTestDB returns a pool for a fresh, migrated database owned by the calling test,
-// cloned from the template database of the package's PostgreSQL container.
 func newTestDB(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	ctx := context.Background()
@@ -108,8 +102,6 @@ func newTestDB(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
-// sharedPostgres starts the package's PostgreSQL container on first use, migrates the
-// template database and returns the maintenance database's connection string.
 func sharedPostgres(t *testing.T) string {
 	t.Helper()
 	ctx := context.Background()
@@ -152,8 +144,6 @@ func withDatabase(t *testing.T, connString, database string) string {
 	return u.String()
 }
 
-// newSeaweedBackedS3Storage returns the package's real S3-compatible store and a fresh,
-// empty bucket owned by the calling test.
 func newSeaweedBackedS3Storage(t *testing.T) (*storage.S3Storage, string) {
 	t.Helper()
 	ctx := context.Background()
@@ -164,7 +154,6 @@ func newSeaweedBackedS3Storage(t *testing.T) (*storage.S3Storage, string) {
 	return store, bucket
 }
 
-// sharedSeaweedEndpoint holds the lock only for shared container initialization.
 func sharedSeaweedEndpoint(t *testing.T) string {
 	t.Helper()
 	ctx := context.Background()
@@ -187,7 +176,6 @@ func sharedSeaweedEndpoint(t *testing.T) string {
 	return shared.s3Endpoint
 }
 
-// newGoJudge returns the package's real sandbox started from the project's image.
 func newGoJudge(t *testing.T) (*sandbox.Client, *sandbox.FileTransport) {
 	t.Helper()
 	ctx := context.Background()

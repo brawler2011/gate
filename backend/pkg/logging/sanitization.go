@@ -8,10 +8,8 @@ import (
 	"strings"
 )
 
-// RedactedValue is the replacement string used for masked sensitive values.
 const RedactedValue = "[REDACTED]"
 
-// sensitiveHeaders contains lowercase names of HTTP headers that must be redacted.
 var sensitiveHeaders = map[string]struct{}{
 	"authorization":       {},
 	"proxy-authorization": {},
@@ -25,7 +23,6 @@ var sensitiveHeaders = map[string]struct{}{
 	"x-xsrf-token":        {},
 }
 
-// exactSensitiveKeys contains lowercase normalized keys that are always redacted.
 var exactSensitiveKeys = map[string]struct{}{
 	"password":      {},
 	"passwd":        {},
@@ -74,7 +71,6 @@ var exactSensitiveKeys = map[string]struct{}{
 	"ssn":           {},
 }
 
-// sensitiveSuffixes contains suffixes indicating sensitive attributes.
 var sensitiveSuffixes = []string{
 	"_password",
 	"-password",
@@ -104,7 +100,6 @@ var sensitiveSuffixes = []string{
 	"-credential",
 }
 
-// sensitivePrefixes contains prefixes indicating sensitive attributes.
 var sensitivePrefixes = []string{
 	"password_",
 	"password-",
@@ -136,7 +131,6 @@ var sensitivePrefixes = []string{
 	"credential-",
 }
 
-// sensitiveSegments contains individual token words that indicate sensitive attributes when present as delimited segments.
 var sensitiveSegments = map[string]struct{}{
 	"password":    {},
 	"passwd":      {},
@@ -149,7 +143,6 @@ var sensitiveSegments = map[string]struct{}{
 	"ssn":         {},
 }
 
-// camelToSnake converts camelCase / PascalCase strings into lower_snake_case.
 func camelToSnake(s string) string {
 	var b strings.Builder
 	b.Grow(len(s) + 4)
@@ -168,7 +161,6 @@ func camelToSnake(s string) string {
 	return strings.ToLower(b.String())
 }
 
-// hasSensitiveSegment checks if any delimited segment (split by _, -, ., /) matches a sensitive keyword.
 func hasSensitiveSegment(s string) bool {
 	parts := strings.FieldsFunc(s, func(r rune) bool {
 		return r == '_' || r == '-' || r == '.' || r == '/'
@@ -181,7 +173,6 @@ func hasSensitiveSegment(s string) bool {
 	return false
 }
 
-// IsSensitiveHeader checks if an HTTP header name is sensitive (case-insensitive).
 func IsSensitiveHeader(header string) bool {
 	lower := strings.ToLower(strings.TrimSpace(header))
 	if lower == "" {
@@ -202,7 +193,6 @@ func IsSensitiveHeader(header string) bool {
 	return false
 }
 
-// SanitizeHTTPHeaders returns a sanitized copy of HTTP headers with sensitive values masked.
 func SanitizeHTTPHeaders(headers http.Header) http.Header {
 	if headers == nil {
 		return nil
@@ -220,7 +210,6 @@ func SanitizeHTTPHeaders(headers http.Header) http.Header {
 	return sanitized
 }
 
-// IsSensitiveKey checks whether an attribute key name represents sensitive information.
 func IsSensitiveKey(key string) bool {
 	trimmed := strings.TrimSpace(key)
 	if trimmed == "" {
@@ -228,24 +217,20 @@ func IsSensitiveKey(key string) bool {
 	}
 	clean := strings.ToLower(trimmed)
 
-	// 1. Direct exact match
 	if _, exists := exactSensitiveKeys[clean]; exists {
 		return true
 	}
 
-	// 2. Normalized separator match (e.g., session-id -> session_id)
 	normalized := strings.ReplaceAll(clean, "-", "_")
 	if _, exists := exactSensitiveKeys[normalized]; exists {
 		return true
 	}
 
-	// 3. Compact match for camelCase / mixed conversions (e.g., sessionId -> sessionid, apiKey -> apikey)
 	compact := strings.ReplaceAll(strings.ReplaceAll(clean, "_", ""), "-", "")
 	if _, exists := exactSensitiveKeys[compact]; exists {
 		return true
 	}
 
-	// 4. CamelCase conversion match (e.g. accessToken -> access_token, clientSecret -> client_secret)
 	snake := camelToSnake(trimmed)
 	if snake != clean {
 		if _, exists := exactSensitiveKeys[snake]; exists {
@@ -257,21 +242,18 @@ func IsSensitiveKey(key string) bool {
 		}
 	}
 
-	// 5. Suffix match for compound field names (e.g., user_password, client_secret, db-password)
 	for _, suffix := range sensitiveSuffixes {
 		if strings.HasSuffix(clean, suffix) || (snake != clean && strings.HasSuffix(snake, suffix)) {
 			return true
 		}
 	}
 
-	// 6. Prefix match for compound field names (e.g., secret_key, session_id_l2, auth_code)
 	for _, prefix := range sensitivePrefixes {
 		if strings.HasPrefix(clean, prefix) || (snake != clean && strings.HasPrefix(snake, prefix)) {
 			return true
 		}
 	}
 
-	// 7. Infix multi-word compound patterns
 	if strings.Contains(normalized, "_session_id_") ||
 		strings.Contains(normalized, "_private_key_") ||
 		strings.Contains(normalized, "_api_key_") ||
@@ -290,7 +272,6 @@ func IsSensitiveKey(key string) bool {
 		}
 	}
 
-	// 8. Delimited segment match for individual sensitive keywords (e.g. user_password_hash, client_secret_id, db_password_plaintext)
 	if hasSensitiveSegment(clean) || (snake != clean && hasSensitiveSegment(snake)) {
 		return true
 	}
@@ -298,7 +279,6 @@ func IsSensitiveKey(key string) bool {
 	return false
 }
 
-// SanitizeString inspects a string value for sensitive patterns (e.g. Bearer tokens, Basic auth).
 func SanitizeString(val string) string {
 	lower := strings.ToLower(val)
 	if strings.HasPrefix(lower, "bearer ") {
@@ -310,12 +290,10 @@ func SanitizeString(val string) string {
 	return val
 }
 
-// SanitizeAttr masks sensitive slog.Attr keys and nested group attributes.
 func SanitizeAttr(attr slog.Attr) slog.Attr {
 	return RedactSensitiveSlogAttrs(nil, attr)
 }
 
-// SanitizeAttrs sanitizes a slice of slog attributes.
 func SanitizeAttrs(attrs []slog.Attr) []slog.Attr {
 	if attrs == nil {
 		return nil
@@ -327,7 +305,6 @@ func SanitizeAttrs(attrs []slog.Attr) []slog.Attr {
 	return sanitized
 }
 
-// RedactSensitiveSlogAttrs is a slog.HandlerOptions ReplaceAttr function that masks sensitive attributes.
 func RedactSensitiveSlogAttrs(groups []string, a slog.Attr) slog.Attr {
 	if IsSensitiveKey(a.Key) {
 		return slog.String(a.Key, RedactedValue)
@@ -340,7 +317,6 @@ func RedactSensitiveSlogAttrs(groups []string, a slog.Attr) slog.Attr {
 		}
 	}
 
-	// Handle nested attribute groups (including groups resolved from slog.LogValuer)
 	if val.Kind() == slog.KindGroup {
 		groupAttrs := val.Group()
 		sanitized := make([]slog.Attr, len(groupAttrs))
@@ -353,7 +329,6 @@ func RedactSensitiveSlogAttrs(groups []string, a slog.Attr) slog.Attr {
 		}
 	}
 
-	// Check if the string value contains sensitive authentication prefixes
 	if val.Kind() == slog.KindString {
 		strVal := val.String()
 		if sanitized := SanitizeString(strVal); sanitized != strVal {
@@ -367,23 +342,19 @@ func RedactSensitiveSlogAttrs(groups []string, a slog.Attr) slog.Attr {
 	}
 }
 
-// SanitizingHandler wraps an existing slog.Handler and redacts sensitive attributes.
 type SanitizingHandler struct {
 	next   slog.Handler
 	groups []string
 }
 
-// NewSanitizingHandler creates a new SanitizingHandler wrapping next.
 func NewSanitizingHandler(next slog.Handler) *SanitizingHandler {
 	return &SanitizingHandler{next: next}
 }
 
-// Enabled implements slog.Handler.
 func (h *SanitizingHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return h.next.Enabled(ctx, level)
 }
 
-// Handle implements slog.Handler.
 func (h *SanitizingHandler) Handle(ctx context.Context, r slog.Record) error {
 	newRecord := slog.NewRecord(r.Time, r.Level, r.Message, r.PC)
 	r.Attrs(func(a slog.Attr) bool {
@@ -396,7 +367,6 @@ func (h *SanitizingHandler) Handle(ctx context.Context, r slog.Record) error {
 	return nil
 }
 
-// WithAttrs implements slog.Handler.
 func (h *SanitizingHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	sanitized := make([]slog.Attr, len(attrs))
 	for i, a := range attrs {
@@ -405,7 +375,6 @@ func (h *SanitizingHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &SanitizingHandler{next: h.next.WithAttrs(sanitized), groups: h.groups}
 }
 
-// WithGroup implements slog.Handler.
 func (h *SanitizingHandler) WithGroup(name string) slog.Handler {
 	groups := append(append([]string(nil), h.groups...), name)
 	return &SanitizingHandler{next: h.next.WithGroup(name), groups: groups}

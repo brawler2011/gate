@@ -67,8 +67,7 @@ func TestMetadataPermissionsFailClosed(t *testing.T) {
 			}
 		})
 	}
-	// A persisted expiry at the fixed request clock rejects the actor even if the
-	// session context still carries active credentials. No facts may be loaded.
+	// A persisted expiry rejects stale active credentials before any facts are loaded.
 	now := time.Now().UTC()
 	u.ExpiresAt = &now
 	users.users[u.Id] = u

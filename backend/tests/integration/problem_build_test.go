@@ -20,8 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// buildPackage drives the public build API and runs the build worker pipeline once
-// against the real sandbox and object store, returning the published Package id.
 func (s *IntegrationTestSuite) buildPackage(userID, problemID uuid.UUID) uuid.UUID {
 	s.T().Helper()
 	ctx := withTestUser(s.ctx, userID)
@@ -32,8 +30,7 @@ func (s *IntegrationTestSuite) buildPackage(userID, problemID uuid.UUID) uuid.UU
 	s.Require().NoError(err)
 	client, files := newGoJudge(s.T())
 	options := testBuildOptions(s.T())
-	// No heartbeat renews this lease, unlike the worker's, so it covers a whole
-	// build compiling testlib programs while the suite runs in parallel.
+	// Without a heartbeat, the lease must cover the whole build under parallel test load.
 	build, err := s.problemDrafts.ClaimBuild(s.ctx, 5*time.Minute)
 	s.Require().NoError(err)
 	s.Require().Equal(accepted.BuildID, build.ID)
@@ -43,7 +40,6 @@ func (s *IntegrationTestSuite) buildPackage(userID, problemID uuid.UUID) uuid.UU
 	return packageID
 }
 
-// testBuildOptions are the build settings the HTTP suite and its worker share.
 func testLanguages(t *testing.T) *sandbox.Config {
 	t.Helper()
 	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml")
@@ -65,7 +61,6 @@ func testBuildOptions(t *testing.T) problemsmodel.BuildOptions {
 	}
 }
 
-// diskTempDir returns a disk-backed working directory; the builder refuses tmpfs.
 func diskTempDir(t *testing.T) string {
 	t.Helper()
 	return dbfixtures.DiskTempDir(t)

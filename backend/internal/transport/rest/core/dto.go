@@ -182,13 +182,11 @@ func SubmissionsListToDTO(submissionsList *submissionsmodel.SubmissionsList) *co
 func ContestDTO(c contestsmodel.Contest, owner *identitymodel.UserProfile) corev1.ContestModel {
 	title := c.Title
 
-	// Extract owner ID
 	var createdBy uuid.UUID
 	if c.OwnerID != nil {
 		createdBy = *c.OwnerID
 	}
 
-	// Convert visibility
 	visibility := string(c.Visibility)
 	settings := c.TypedSettings()
 	monitorScope := "moderator"

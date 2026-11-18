@@ -152,7 +152,7 @@ func (s *IntegrationTestSuite) TestProblemListAuthenticatedAccess() {
 	}
 	// Multiple grants must not duplicate problems or inflate pagination.
 	s.Require().NoError(s.teamsRepo.AddTeamMember(s.ctx, readTeamID, directViewer.Id, organizationsmodel.TeamRoleMember))
-	// A team in another organization must not grant access (same as GetProblem).
+	// A team in another organization must not grant problem access.
 	s.Require().NoError(s.problemsRepo.AddProblemTeam(s.ctx, foreignID, readTeamID, problemsmodel.ProblemPermissionRead))
 
 	assertList := func(ctx context.Context, params corev1.ListProblemsParams, want []uuid.UUID) {
@@ -218,7 +218,6 @@ func (s *IntegrationTestSuite) TestProblemListAuthenticatedAccess() {
 	assertList(withTestUser(s.ctx, problemOwner.Id), corev1.ListProblemsParams{Owner: corev1.NewOptBool(true)}, []uuid.UUID{ownedID})
 	assertList(withTestUser(s.ctx, admin.Id), corev1.ListProblemsParams{Owner: corev1.NewOptBool(true)}, nil)
 
-	// Revoke both grants for the viewer, then organization inheritance and ownership.
 	for _, id := range []uuid.UUID{privateID, unlistedID} {
 		s.Require().NoError(s.problemsRepo.RemoveProblemMember(s.ctx, id, directViewer.Id))
 		s.Require().NoError(s.problemsRepo.RemoveProblemTeam(s.ctx, id, readTeamID))

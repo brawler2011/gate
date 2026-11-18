@@ -1,4 +1,3 @@
-// Package polygon reads Polygon problem packages.
 package polygon
 
 import (
@@ -15,7 +14,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/points"
 )
 
-// Read reads the Polygon package in fsys as described by its problem.xml.
 func Read(fsys fs.FS) (*spec.Problem, error) {
 	data, err := spec.ReadFile(fsys, "problem.xml")
 	if err != nil {
@@ -43,7 +41,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		if p.Checker, err = program(assets.Checker.Source); err != nil {
 			return nil, err
 		}
-		// Polygon records a checker chosen from its list as std::wcmp.cpp.
+		// Polygon names standard checkers with the std:: prefix.
 		if name, ok := strings.CutPrefix(assets.Checker.Name, "std::"); ok {
 			p.Checker.Standard = strings.TrimSuffix(name, ".cpp")
 		}
@@ -73,7 +71,6 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		p.Solutions = append(p.Solutions, *solution)
 	}
 	p.MainSolution = mainSolution(assets.Solutions)
-	// Generators are the remaining executables; tests call them by file stem.
 	generators := map[string]string{}
 	if prob.Files != nil {
 		for _, e := range prob.Files.Executables {
@@ -88,7 +85,6 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			p.Generators = append(p.Generators, *generator)
 			generators[spec.Stem(source)] = source
 		}
-		// Resources are files programs include, except the statement templates.
 		for _, r := range prob.Files.Resources {
 			switch path.Ext(r.Path) {
 			case ".sty", ".tex", ".ftl":
@@ -102,8 +98,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	}
 	p.Type = problemType(prob, p.Groups)
 	p.KeepInteractiveInputsPrivate()
-	// Polygon checks that well-formed tests are text, and its Windows
-	// packages store them with CRLF line endings.
+	// Well-formed Polygon tests are text; Windows packages use CRLF.
 	for _, property := range prob.Properties {
 		if property.Name == "tests-wellformed" && property.Value == "true" {
 			p.TextTests = true
@@ -113,7 +108,6 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	return p, nil
 }
 
-// mainTestset is the testset Polygon judges with: "tests", or else the first.
 func mainTestset(testsets []Testset) (Testset, error) {
 	for _, ts := range testsets {
 		if ts.Name == "tests" {
@@ -147,19 +141,13 @@ func program(s Source) (*spec.Program, error) {
 }
 
 var (
-	// gccType is a GNU C++ type of any GCC build, such as cpp.g++17,
-	// cpp.gcc13-64-winlibs-g++20 or cpp.msys2-mingw64-9-g++17; a bare cpp.g++
-	// names no standard.
+	// GCC type names encode versions and builds; a bare cpp.g++ specifies no standard.
 	gccType  = regexp.MustCompile(`^cpp\.(?:[a-z0-9]+(?:-[a-z0-9]+)*-)?g\+\+(\d\d)$`)
 	javaType = regexp.MustCompile(`^java\d*$`)
 )
 
-// Language returns the Gate language configuration of a Polygon source type,
-// or "" for a source without a type. Gate runs one compiler version per
-// language, so Polygon's compiler versions and builds of one implementation
-// map to its configuration, but a language standard or another implementation
-// (Clang, MSVC, PyPy) is a different configuration, never substituted: a type
-// Gate has no configuration for is an error.
+// Compiler versions share a configuration; language standards and implementations must match exactly.
+// An unsupported source type is an error; an absent type defers to the file extension.
 func Language(sourceType string) (string, error) {
 	if m := gccType.FindStringSubmatch(sourceType); m != nil {
 		return "cpp" + m[1], nil
@@ -185,7 +173,6 @@ func Language(sourceType string) (string, error) {
 	return "", fmt.Errorf("unsupported Polygon source type %q", sourceType)
 }
 
-// mainSolution is the solution tagged main, or else the first accepted one.
 func mainSolution(solutions []Solution) string {
 	for _, tag := range []string{"main", "accepted"} {
 		for _, s := range solutions {
@@ -211,8 +198,7 @@ func problemType(prob Problem, groups []spec.Group) string {
 	return "pass-fail"
 }
 
-// groups keeps Polygon test numbering: groups follow the first test of each,
-// and tests keep their order. A testset without groups is one group.
+// Groups follow their first test, preserving Polygon test numbering.
 func groups(fsys fs.FS, testset Testset, generators map[string]string) ([]spec.Group, error) {
 	definitions := map[string]Group{}
 	for _, g := range testset.Groups {
@@ -239,8 +225,7 @@ func groups(fsys fs.FS, testset Testset, generators map[string]string) ([]spec.G
 	}
 	for i := range result {
 		g := &result[i]
-		// A complete group may carry its points on the group, not on its tests;
-		// passing the whole group scores them, as on its last test.
+		// Complete-group points are awarded on the last test only when the whole group passes.
 		total := points.Value(0)
 		for _, t := range g.Tests {
 			total += t.Points
@@ -261,8 +246,7 @@ func groups(fsys fs.FS, testset Testset, generators map[string]string) ([]spec.G
 	return result, nil
 }
 
-// newGroup applies the group definition. Polygon scores a named group as a
-// whole unless it says each-test; ungrouped tests score one by one.
+// Named groups score as a whole unless marked each-test; ungrouped tests score individually.
 func newGroup(name string, definitions map[string]Group, named bool) spec.Group {
 	def, ok := definitions[name]
 	if !ok {
@@ -288,8 +272,6 @@ func convertTest(fsys fs.FS, testset Testset, number int, t Test, generators map
 		return spec.Test{}, err
 	}
 	test := spec.Test{Points: weight, Sample: t.Sample}
-	// The generator runs with exactly the test's arguments, as in Polygon; the
-	// main solution answers the generated input.
 	if t.Method == "generated" {
 		argv, err := spec.ParseCommand(t.Cmd)
 		if err != nil {

@@ -24,7 +24,6 @@ type BlogsReader interface {
 }
 
 func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParams) (*corev1.ListPostsResponseModel, error) {
-	// FIXME: удалить этот бойлерплейт
 	page := int(params.Page.Or(1))
 	pageSize := int(params.PageSize.Or(10))
 	sortOrder := string(params.SortOrder.Or("desc"))
@@ -34,7 +33,6 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 		return nil, wrapBlogError(err, "failed to list posts")
 	}
 
-	// Convert to response model
 	posts := make([]corev1.PostModel, len(items))
 	for i, post := range items {
 		posts[i] = corev1.PostModel{
@@ -56,9 +54,7 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 	}, nil
 }
 
-// CreatePost implements the CreatePost operation
 func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) (corev1.CreatePostRes, error) {
-	// FIXME: эти провери должны быть в мидлваре
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
@@ -78,9 +74,8 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 		return nil, wrapBlogError(err, "failed to create post")
 	}
 
-	// FIXME: вроде как в схеме есть reusable структура для таких ответов
 	return &corev1.CreatedPost{
-		PostID: corev1.NewOptUUID(postID), // FIXME: эта хуйня тоже не должна быть optional
+		PostID: corev1.NewOptUUID(postID),
 	}, nil
 }
 
@@ -185,7 +180,5 @@ func wrapBlogError(err error, fallbackMsg string) error {
 	if errors.Is(err, pkg.ErrBadInput) {
 		return pkg.Wrap(pkg.ErrBadInput, err, fallbackMsg)
 	}
-	// Adding context must not change the use case error classification.
-	// Unclassified failures still map to HTTP 500 in pkg.ToREST.
 	return pkg.Wrap(nil, err, fallbackMsg)
 }

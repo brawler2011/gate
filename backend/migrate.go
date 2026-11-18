@@ -17,7 +17,6 @@ import (
 //go:embed migrations/*.sql
 var embedMigrations embed.FS
 
-// runMigrations applies the schema, resetting all data if the schema changed.
 func runMigrations(configFile, envFile string) error {
 	cfg, err := loadConfig(configFile, envFile, config.ModeAll)
 	if err != nil {

@@ -30,10 +30,7 @@ func NewNatsJetStream(natsUrl string) (jetstream.JetStream, error) {
 	return js, nil
 }
 
-// EnsureSubmissionsStream creates the SUBMISSIONS JetStream stream if it does not
-// already exist. Both the API server (publisher) and the judge worker (consumer)
-// should call this before using the stream so that whichever process starts first
-// wins the creation race without error.
+// Both publishers and consumers must ensure the stream before use; creation is race-safe.
 func EnsureSubmissionsStream(ctx context.Context, js jetstream.JetStream) error {
 	_, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name:     SubmissionsStreamName,

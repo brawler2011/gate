@@ -57,7 +57,6 @@ func commitTx(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-// rollback is deferred after Begin; the error of a rollback after a commit is irrelevant.
 func rollback(ctx context.Context, tx pgx.Tx) { _ = tx.Rollback(ctx) }
 
 // reserveOperation must precede every owner/object lock in the transaction.
@@ -118,8 +117,7 @@ func finishOperation(ctx context.Context, tx pgx.Tx, k model.MutationKey, status
 	return model.MutationResult{Status: status, Body: data}, nil
 }
 
-// resolveMutation returns a durable result even if the commit acknowledgement
-// was lost. A retry retains the same key and fingerprint and cannot duplicate it.
+// Retries retain the key and fingerprint to resolve a lost commit response without duplication.
 func (r *ProblemDraftsRepo) resolveMutation(ctx context.Context, tx pgx.Tx, k model.MutationKey, result model.MutationResult) (model.MutationResult, error) {
 	err := commitTx(ctx, tx)
 	if err == nil {
@@ -185,8 +183,7 @@ func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, k model.MutationKey, 
 	return r.resolveMutation(ctx, tx, k, result)
 }
 
-// writeDraft replaces the draft. Its object references are foreign keys, so
-// a missing object or one of another organization fails with ErrConflict.
+// Foreign keys reject missing or cross-organization draft objects with ErrConflict.
 func writeDraft(ctx context.Context, tx pgx.Tx, d model.Draft) error {
 	d.Normalize()
 	content, err := json.Marshal(d.DraftContent)
@@ -201,8 +198,7 @@ func writeDraft(ctx context.Context, tx pgx.Tx, d model.Draft) error {
 	}); err != nil {
 		return fmt.Errorf("update draft: %w", err)
 	}
-	// The object references are derived from the content; revision locking
-	// makes their replacement atomic.
+	// Derive references from content under the revision lock to replace both atomically.
 	if err := q.DeleteDraftObjects(ctx, d.ProblemID); err != nil {
 		return fmt.Errorf("clear draft objects: %w", err)
 	}

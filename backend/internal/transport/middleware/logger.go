@@ -24,7 +24,6 @@ type errorResponse struct {
 	Err       string `json:"error"`
 	Msg       string `json:"message"`
 	RequestID string `json:"request_id,omitempty"`
-	// Fields locate invalid values of the request body.
 	Fields pkg.FieldErrors `json:"fields,omitempty"`
 }
 
@@ -93,10 +92,8 @@ func RequestLoggerMiddleware(logger *slog.Logger, route func(*http.Request) stri
 	}
 }
 
-// ResponseErrorHandler handles errors returned by handlers and ogen validation/decoding
 func ResponseErrorHandler(logger *slog.Logger) func(ctx context.Context, w http.ResponseWriter, r *http.Request, err error) {
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, err error) {
-		// Retrieve Request Id from context
 		if ctx == nil {
 			ctx = r.Context()
 		}

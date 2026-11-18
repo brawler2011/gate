@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// ApplyContestLifecycle computes every temporal gate from the same server clock.
 func ApplyContestLifecycle(in m.PolicyInput, c *m.ContestContext) error {
 	if err := validateInput(in); err != nil {
 		return err
@@ -96,8 +95,7 @@ func ApplyContestLifecycle(in m.PolicyInput, c *m.ContestContext) error {
 	return nil
 }
 
-// RequireAttachProblem is also the relink policy, including during Running.
-// Destination ownership never substitutes for source authorization.
+// Relinking still requires source authorization, even during a running contest.
 func RequireAttachProblem(in m.PolicyInput, contest m.ContestContext, problem m.ProblemContext, pack PackageContext) error {
 	if err := RequireContest(in, contest, m.ActionManageContest); err != nil {
 		return err
@@ -112,8 +110,6 @@ type PackageContext struct {
 	ID, ProblemID uuid.UUID
 }
 
-// GetContestPermissions retains the legacy transport shape until the DTO PR.
-// Every field delegates to the same typed policy and lifecycle gates.
 func (uc *MetadataPermissions) GetContestPermissions(ctx context.Context, id, user uuid.UUID) (*m.ContestPermissions, error) {
 	in, err := uc.input(ctx, user)
 	if err != nil {
@@ -130,8 +126,7 @@ func (uc *MetadataPermissions) GetContestPermissions(ctx context.Context, id, us
 	if err := ApplyContestLifecycle(in, &c); err != nil {
 		return nil, err
 	}
-	// These booleans describe audience access; the concrete submission's owner and
-	// contest are checked by the submission use case before applying them.
+	// Submission use cases must check the concrete owner and contest before applying audience gates.
 	c.Submission = m.SubmissionContext{ContestID: id, OwnerID: uuid.New()}
 	allowed := func(a m.ContestAction) bool { return RequireContest(in, c, a) == nil }
 	p := &m.ContestPermissions{
@@ -143,12 +138,10 @@ func (uc *MetadataPermissions) GetContestPermissions(ctx context.Context, id, us
 	return p, nil
 }
 
-// ContestFromFacts provides the shared domain time representation.
 func ContestFromFacts(c m.ContestContext) contestsmodel.Contest {
 	return contestsmodel.Contest{ID: c.ID, StartTime: c.StartTime, EndTime: c.EndTime, Settings: c.Settings}
 }
 
-// RelationshipPermissions must use pool-backed readers.
 type RelationshipPermissions interface {
 	HasContestPermission(context.Context, uuid.UUID, uuid.UUID, m.ContestAction) (bool, error)
 	HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, m.ProblemAction) (bool, error)

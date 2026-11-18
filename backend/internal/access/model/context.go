@@ -43,7 +43,6 @@ func RequireSelfOrAdmin(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// RequireUser returns the authenticated caller, rejecting guests and expired users.
 func RequireUser(ctx context.Context) (User, error) {
 	user := UserFromContext(ctx)
 	if user.IsGuest() || user.IsExpired() {
@@ -54,8 +53,7 @@ func RequireUser(ctx context.Context) (User, error) {
 
 type readTimeKey struct{}
 
-// WithReadTime fixes the authorization clock for the whole request, including
-// SQL scopes and in-memory decisions. Callers must use a server-supplied time.
+// Use a server-supplied clock consistently across SQL scopes and in-memory authorization.
 func WithReadTime(ctx context.Context, now time.Time) context.Context {
 	return context.WithValue(ctx, readTimeKey{}, now.UTC())
 }

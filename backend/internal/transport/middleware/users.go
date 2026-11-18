@@ -7,13 +7,11 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 )
 
-// UsersMiddleware loads user from session into context
 func UsersMiddleware(usersUC UsersUC) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
-			// If user is already set (e.g. by AuthMiddleware or test middleware), proceed
 			if user := accessmodel.UserFromContext(ctx); !user.IsGuest() {
 				next.ServeHTTP(w, r)
 				return

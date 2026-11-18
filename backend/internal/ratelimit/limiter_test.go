@@ -47,8 +47,7 @@ func TestSlidingQuotas(t *testing.T) {
 				require.ErrorAs(t, l.Allow(ctx, "quota", tc.quotas...), &limited)
 				require.Positive(t, limited.RetryAfter)
 				require.LessOrEqual(t, limited.RetryAfter, q.Window)
-				// Start a fresh log for the next window, isolate each tier by using
-				// a relaxed shorter-window limit.
+				// Relax shorter windows to test each quota tier independently.
 				server.FlushAll()
 			}
 		})
@@ -135,7 +134,7 @@ func TestLoginFailureSlidingWindow(t *testing.T) {
 		require.NoError(t, l.LoginFailure(ctx, "user"))
 	}
 	server.SetTime(now.Add(5 * time.Minute))
-	// Only the first ten failures have expired, leaving room for ten more.
+	// Expired failures release quota while unexpired failures still count.
 	for range 10 {
 		require.NoError(t, l.LoginFailure(ctx, "user"))
 	}

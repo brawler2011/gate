@@ -325,26 +325,24 @@ func TestRegistrationAndEmailVerification(t *testing.T) {
 
 	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc, nil)
 
-	// 1. Register new user
 	user, err := authUC.Register(ctx, "testuser", "test@example.com", "SecretPass123")
 	require.NoError(t, err)
 	assert.False(t, user.IsEmailVerified)
 	assert.Equal(t, "test@example.com", emailSvc.lastVerificationEmail.ToEmail)
 	assert.NotEmpty(t, emailSvc.lastVerificationEmail.Token)
 
-	// 2. Login before verification should fail
+	// Unverified users cannot log in.
 	_, _, err = authUC.Login(ctx, "testuser", "SecretPass123")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "email not verified")
 
-	// 3. Verify email with token
 	token := emailSvc.lastVerificationEmail.Token
 	verifiedUser, sessionID, err := authUC.VerifyEmail(ctx, token)
 	require.NoError(t, err)
 	assert.True(t, verifiedUser.IsEmailVerified)
 	assert.NotEqual(t, uuid.Nil, sessionID)
 
-	// 4. Now login succeeds
+	// Email verification permits login.
 	_, loginSessionID, err := authUC.Login(ctx, "testuser", "SecretPass123")
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, loginSessionID)
@@ -358,14 +356,12 @@ func TestRegistrationRetryUnverifiedUser(t *testing.T) {
 
 	authUC := NewAuthUseCase(usersRepo, authRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, identityAuthStore: authRepo}}, emailSvc, nil)
 
-	// 1. Initial registration (email not verified yet)
 	user1, err := authUC.Register(ctx, "unverifieduser", "unverified@example.com", "FirstPassword123")
 	require.NoError(t, err)
 	assert.False(t, user1.IsEmailVerified)
 	token1 := emailSvc.lastVerificationEmail.Token
 	require.NotEmpty(t, token1)
 
-	// 2. Re-register with the same unverified username & email, updated password
 	user2, err := authUC.Register(ctx, "unverifieduser", "unverified@example.com", "NewPassword456")
 	require.NoError(t, err)
 	assert.Equal(t, user1.Id, user2.Id)
@@ -374,26 +370,24 @@ func TestRegistrationRetryUnverifiedUser(t *testing.T) {
 	require.NotEmpty(t, token2)
 	assert.NotEqual(t, token1, token2)
 
-	// 3. Old token should no longer work
+	// Re-registration invalidates the previous verification token.
 	_, _, err = authUC.VerifyEmail(ctx, token1)
 	require.Error(t, err)
 
-	// 4. New token works and verifies the account
+	// The replacement verification token activates the account.
 	verifiedUser, sessionID, err := authUC.VerifyEmail(ctx, token2)
 	require.NoError(t, err)
 	assert.True(t, verifiedUser.IsEmailVerified)
 	assert.NotEqual(t, uuid.Nil, sessionID)
 
-	// 5. Login with new password succeeds
 	_, loginSessID, err := authUC.Login(ctx, "unverifieduser", "NewPassword456")
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, loginSessID)
 
-	// 6. Login with old password fails
 	_, _, err = authUC.Login(ctx, "unverifieduser", "FirstPassword123")
 	require.Error(t, err)
 
-	// 7. Trying to register again after email is verified should fail with conflict
+	// Verified accounts reject re-registration.
 	_, err = authUC.Register(ctx, "unverifieduser", "different@example.com", "AnotherPass123")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "username already taken")
@@ -423,30 +417,25 @@ func TestPasswordResetFlow(t *testing.T) {
 		IsEmailVerified: true,
 	})
 
-	// Create an active session
 	sessID := uuid.New()
 	_ = authRepo.CreateSession(ctx, sessID, userID, time.Now().Add(time.Hour))
 
-	// 1. Request password reset
 	err := authUC.ForgotPassword(ctx, "resetuser")
 	require.NoError(t, err)
 	assert.Equal(t, emailStr, emailSvc.lastPasswordResetEmail.ToEmail)
 	assert.NotEmpty(t, emailSvc.lastPasswordResetEmail.Token)
 
-	// 2. Reset password with token
 	token := emailSvc.lastPasswordResetEmail.Token
 	err = authUC.ResetPassword(ctx, token, "NewPassword123")
 	require.NoError(t, err)
 
-	// 3. Old session must be deleted
+	// Resetting a password invalidates existing sessions.
 	_, err = authRepo.GetSession(ctx, sessID)
 	require.Error(t, err)
 
-	// 4. Login with old password fails
 	_, _, err = authUC.Login(ctx, "resetuser", "OldPassword123")
 	require.Error(t, err)
 
-	// 5. Login with new password succeeds
 	_, newSessID, err := authUC.Login(ctx, "resetuser", "NewPassword123")
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, newSessID)
@@ -474,7 +463,6 @@ func TestEmailChangeFlow(t *testing.T) {
 
 	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
 
-	// 1. Request email change
 	newEmail := "new@example.com"
 	err := authUC.RequestEmailChange(ctx, userID, "MyPassword123", newEmail)
 	require.NoError(t, err)
@@ -482,17 +470,15 @@ func TestEmailChangeFlow(t *testing.T) {
 	assert.Equal(t, oldEmail, emailSvc.lastEmailChangeAlert.ToOldEmail)
 	assert.NotEmpty(t, emailSvc.lastEmailChangeVerification.Token)
 
-	// 2. Before confirmation, old email is still active
+	// An email change leaves the previous address active until confirmation.
 	u, err := usersRepo.GetUserById(ctx, userID)
 	require.NoError(t, err)
 	assert.Equal(t, oldEmail, *u.Email)
 
-	// 3. Confirm email change
 	token := emailSvc.lastEmailChangeVerification.Token
 	err = authUC.ConfirmEmailChange(ctx, token)
 	require.NoError(t, err)
 
-	// 4. Email is now updated
 	u, err = usersRepo.GetUserById(ctx, userID)
 	require.NoError(t, err)
 	assert.Equal(t, newEmail, *u.Email)
@@ -518,7 +504,6 @@ func TestAdminUserManagement(t *testing.T) {
 		IsEmailVerified: false,
 	})
 
-	// 1. Admin direct email change without confirmation
 	require.ErrorIs(t, usersUC.AdminSetPassword(ctx, "targetuser", "DeniedPassword99"), pkg.ErrUnauthenticated)
 	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
 	require.ErrorIs(t, usersUC.AdminSetPassword(ctx, "targetuser", "DeniedPassword99"), pkg.NoPermission)
@@ -533,17 +518,15 @@ func TestAdminUserManagement(t *testing.T) {
 	assert.Equal(t, "direct@example.com", *u.Email)
 	assert.True(t, u.IsEmailVerified)
 
-	// 2. Admin set password directly
 	sessID := uuid.New()
 	_ = authRepo.CreateSession(ctx, sessID, userID, time.Now().Add(time.Hour))
 	err = usersUC.AdminSetPassword(ctx, "targetuser", "DirectNewPassword99")
 	require.NoError(t, err)
 
-	// Session was invalidated
+	// An administrator password change invalidates sessions.
 	_, err = authRepo.GetSession(ctx, sessID)
 	require.Error(t, err)
 
-	// 3. Admin send password reset link
 	err = usersUC.AdminSendPasswordReset(ctx, "targetuser")
 	require.NoError(t, err)
 	assert.Equal(t, "direct@example.com", emailSvc.lastPasswordResetEmail.ToEmail)

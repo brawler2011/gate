@@ -64,8 +64,7 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 				}
 				require.NoError(t, repo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: contest, UserId: user, Role: role}))
 			}
-			// Insert out of chronological order to exercise SQL ordering. The accepted
-			// submission must not erase the earlier failed attempt.
+			// Out-of-order inserts must not let acceptance erase earlier failed attempts.
 			add := func(c, u, p uuid.UUID, state submissionsmodel.State, minute int) {
 				exec(`INSERT INTO submissions(contest_id,owner_id,problem_id,source,language,state,created_at) VALUES ($1,$2,$3,'print(1)',30,$4,$5)`, c, u, p, state, start.Add(time.Duration(minute)*time.Minute))
 			}
@@ -81,10 +80,8 @@ func TestScoreboardBatchedHistoryPostgres(t *testing.T) {
 			add(contest, users[0], problems[size], submissionsmodel.Accepted, 5)
 			add(contest, users[size+1], problems[0], submissionsmodel.Accepted, 5)
 
-			// The fixture simulates verdicts observed when each historical submission was created.
 			exec(`UPDATE submission_state_history h SET observed_at=s.created_at FROM submissions s WHERE s.id=h.submission_id AND s.contest_id=$1`, contest)
 			ctx = accessmodel.WithReadTime(ctx, end.Add(-time.Nanosecond))
-			// Populate live standings through the same path used after verdicts.
 			for _, user := range users[:size] {
 				for _, problem := range problems[:size] {
 					require.NoError(t, contests.ApplySubmissionResult(ctx, repo, &submissionsmodel.Submission{ContestID: &contest, CreatedBy: &user, ProblemID: &problem}))
@@ -162,8 +159,7 @@ func TestScoreboardFreezePreservesObservedVerdicts(t *testing.T) {
 		_, err = f.pool.Exec(f.ctx, `UPDATE submissions SET state=$2 WHERE id=$1`, id, after)
 		require.NoError(t, err)
 	}
-	// A pre-freeze submission is accepted only after freeze. Another participant's
-	// old accepted verdict is rejudged after freeze; the masked board retains it.
+	// Freeze masking preserves verdicts visible before post-freeze judging and rejudging.
 	add(users[0], freeze.Add(-time.Minute), freeze.Add(-time.Minute), submissionsmodel.Saved, submissionsmodel.Accepted)
 	add(users[0], freeze, freeze, submissionsmodel.Saved, submissionsmodel.Accepted)
 	add(users[1], freeze.Add(-2*time.Minute), freeze.Add(-time.Minute), submissionsmodel.Accepted, submissionsmodel.GotWA)

@@ -18,7 +18,6 @@ type EvalContext struct {
 
 type AccessEvaluator func(ctx context.Context, evalCtx *EvalContext) error
 
-// Parameterless Evaluators (Bare Function Pointers)
 func Public(ctx context.Context, evalCtx *EvalContext) error {
 	return nil
 }
@@ -40,7 +39,6 @@ func RequireAdmin(ctx context.Context, evalCtx *EvalContext) error {
 	return nil
 }
 
-// Parameterized Evaluator Factories (Closure Factories)
 func RequireSelfOrAdmin() AccessEvaluator {
 	return func(ctx context.Context, evalCtx *EvalContext) error {
 		if evalCtx.User.IsGuest() {
@@ -63,7 +61,6 @@ func RequireSelfOrAdmin() AccessEvaluator {
 
 var endpointPolicies = buildEndpointPolicies()
 
-// endpointPolicy keeps body-independent identity checks alongside the full policy.
 type endpointPolicy struct {
 	beforeBody []AccessEvaluator
 	evaluators []AccessEvaluator
@@ -249,8 +246,7 @@ func buildEndpointPolicies() map[string]endpointPolicy {
 	return policies
 }
 
-// authorizeBeforeBody rejects missing identities and admin access without decoding
-// request bodies. Self-or-admin checks use ogen's decoded username parameter.
+// Authorize identities before decoding bodies; self-or-admin checks need the decoded username.
 func authorizeBeforeBody(ctx context.Context, operationID string) error {
 	policy, ok := endpointPolicies[operationID]
 	if !ok || len(policy.evaluators) == 0 {
@@ -265,13 +261,11 @@ func authorizeBeforeBody(ctx context.Context, operationID string) error {
 	return nil
 }
 
-// AuthzMiddleware validates operation access before handlers are called.
 func AuthzMiddleware() corev1.Middleware {
 	return func(req ogenMiddleware.Request, next func(req ogenMiddleware.Request) (ogenMiddleware.Response, error)) (ogenMiddleware.Response, error) {
 		operationID := req.OperationID
 		policy, ok := endpointPolicies[operationID]
 		if !ok || len(policy.evaluators) == 0 {
-			// Zero-Trust Default Deny
 			return ogenMiddleware.Response{}, pkg.Wrap(pkg.NoPermission, nil, "endpoint not permitted by authorization policy")
 		}
 

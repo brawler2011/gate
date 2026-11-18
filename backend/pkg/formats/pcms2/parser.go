@@ -1,4 +1,3 @@
-// Package pcms2 reads PCMS2 problem packages.
 package pcms2
 
 import (
@@ -17,11 +16,9 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/points"
 )
 
-// sourceDirs are where PCMS2 packages keep program sources and headers.
 var sourceDirs = []string{".", "src", "files"}
 
-// Read reads the PCMS2 package in dir as described by its problem.xml. PCMS2
-// names compiled programs only, so their sources are found by file stem.
+// PCMS2 names binaries, so sources are resolved by file stem.
 func Read(fsys fs.FS) (*spec.Problem, error) {
 	data, err := spec.ReadFile(fsys, "problem.xml")
 	if err != nil {
@@ -100,9 +97,7 @@ func problemType(run Run, groups []spec.Group) string {
 	return "pass-fail"
 }
 
-// findProgram finds the source of a compiled program, such as check.cpp for
-// check.exe, which includes the headers next to it. A program named without
-// a source in the package is an error.
+// A named binary without a corresponding source is an error.
 func findProgram(fsys fs.FS, executable string) (*spec.Program, error) {
 	if executable == "" {
 		return nil, nil
@@ -122,8 +117,7 @@ func findProgram(fsys fs.FS, executable string) (*spec.Program, error) {
 	return nil, fmt.Errorf("source of %s not found", executable)
 }
 
-// headers are the C++ headers next to the program sources, such as testlib.h;
-// a program includes those of its own folder.
+// Programs include headers from their own source folder.
 func headers(fsys fs.FS) []spec.File {
 	var result []spec.File
 	for _, folder := range append(slices.Clone(sourceDirs), "solutions") {
@@ -140,8 +134,7 @@ func headers(fsys fs.FS) []spec.File {
 	return result
 }
 
-// solutions are the sources in solutions/. PCMS2 records no verdicts, so none
-// is the main solution.
+// PCMS2 records no solution verdicts, so no main solution can be selected.
 func solutions(fsys fs.FS) ([]spec.Program, error) {
 	entries, err := fs.ReadDir(fsys, "solutions")
 	if errors.Is(err, fs.ErrNotExist) {
@@ -169,8 +162,7 @@ func program(folder, name string, entries []fs.DirEntry) *spec.Program {
 	return &spec.Program{File: spec.File{Name: name, Path: path.Join(folder, name)}, Dependencies: deps}
 }
 
-// samples counts the examples of the statement: its example.NN files, or
-// else the examples its LaTeX names. PCMS2 shows the first tests as examples.
+// PCMS2 displays the first tests as examples; infer their count from files or LaTeX.
 func samples(fsys fs.FS) int {
 	languages, _ := fs.ReadDir(fsys, "statements")
 	files := 0
@@ -193,7 +185,6 @@ func samples(fsys fs.FS) int {
 	return named
 }
 
-// examples counts the \exmp and \exmpfile entries of an olymp.sty statement.
 func examples(text string) int {
 	return strings.Count(text, "\\exmp{") + strings.Count(text, "\\exmpfile{")
 }
@@ -203,8 +194,7 @@ func regular(fsys fs.FS, name string) bool {
 	return err == nil && info.Mode().IsRegular()
 }
 
-// groups keeps the test order. Tests of a named group score together; a
-// testset without groups is one group scored test by test.
+// Named groups score together; ungrouped testsets score test by test.
 func groups(fsys fs.FS, testset Testset, samples int) ([]spec.Group, error) {
 	var result []spec.Group
 	index := map[string]int{}
@@ -239,8 +229,7 @@ func groups(fsys fs.FS, testset Testset, samples int) ([]spec.Group, error) {
 	return result, nil
 }
 
-// statements converts the LaTeX statements; packages that list only rendered
-// statements still carry statements/<language>/problem.tex.
+// Packages listing only rendered statements still carry statements/<language>/problem.tex.
 func statements(fsys fs.FS, list []Statement) []spec.Statement {
 	sources := map[string]string{}
 	for _, s := range list {

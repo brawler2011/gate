@@ -34,7 +34,6 @@ import (
 func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 	pngSig := []byte("\x89PNG\r\n\x1a\n")
 
-	// Helper to generate test images in various formats
 	makeImage := func() *image.RGBA {
 		img := image.NewRGBA(image.Rect(0, 0, 16, 16))
 		for x := 0; x < 16; x++ {
@@ -57,11 +56,10 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		return buf.Bytes()
 	}
 
-	// 1. Avatar Media Normalization & Legacy Stored Object
 	s.Run("AvatarUploadNormalization", func() {
 		user := s.createUser("align_avatar_usr", accessmodel.UserRoleUser)
 
-		// A. Upload JPEG avatar: must be normalized to PNG
+		// JPEG avatars are normalized to PNG.
 		jpegBytes := makeJPEGBytes()
 		resp, err := s.client.UploadAvatar(withTestUser(s.ctx, user.Id), &corev1.UploadAvatarReq{
 			Avatar: ht.MultipartFile{
@@ -74,7 +72,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Require().NoError(err)
 		s.Require().NotNil(resp)
 
-		// Download avatar: returned bytes must be valid PNG with PNG magic header
+		// Downloaded avatars contain valid PNG bytes.
 		avatarRes, err := s.client.GetUserAvatar(s.ctx, corev1.GetUserAvatarParams{Username: user.Username})
 		s.Require().NoError(err)
 		okResp, ok := avatarRes.(*corev1.GetUserAvatarOKHeaders)
@@ -96,7 +94,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		_, is304 := notModRes.(*corev1.GetUserAvatarNotModified)
 		s.True(is304, "matching ETag must return 304 Not Modified")
 
-		// B. Upload GIF avatar: normalized to PNG
+		// GIF avatars are normalized to PNG.
 		gifBytes := makeGIFBytes()
 		_, err = s.client.UploadAvatar(withTestUser(s.ctx, user.Id), &corev1.UploadAvatarReq{
 			Avatar: ht.MultipartFile{
@@ -116,7 +114,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Require().NoError(err)
 		s.True(bytes.HasPrefix(data2, pngSig), "GIF avatar must normalize to PNG")
 
-		// C. Corrupted bytes rejected with 400 Bad Request
+		// Corrupt avatar bytes return Bad Request.
 		_, err = s.client.UploadAvatar(withTestUser(s.ctx, user.Id), &corev1.UploadAvatarReq{
 			Avatar: ht.MultipartFile{
 				Name:   "broken.png",
@@ -129,15 +127,13 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Equal(http.StatusBadRequest, s.getStatusCode(err))
 	})
 
-	// 2. Missing Multipart Required Fields Validation
 	s.Run("MissingMultipartRequiredFields", func() {
 		admin := s.createUser("align_blog_adm", accessmodel.UserRoleAdmin)
 
-		// POST /posts without preview_image or required fields triggers 400 Bad Request
+		// Missing required post fields return Bad Request.
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
 		_ = writer.WriteField("title", "Post Title")
-		// Missing description, text, preview_image
 		_ = writer.Close()
 
 		req := httptest.NewRequest(http.MethodPost, "/posts", body)
@@ -149,7 +145,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.handler.ServeHTTP(rec, req)
 		s.Equal(http.StatusBadRequest, rec.Code, "missing multipart required fields must return 400")
 
-		// POST /problems/{id}/import missing package field returns 400
+		// Imports without a package return Bad Request.
 		org := s.createOrganization("import_prob_org", "Import Prob Org", admin.Id)
 		problemResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
 			Title:          "Import Problem",
@@ -173,12 +169,10 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Equal(http.StatusBadRequest, impRec.Code, "missing 'package' multipart field must return 400")
 	})
 
-	// 3. Team Name Length Constraints (3 to 64)
 	s.Run("TeamNameConstraints", func() {
 		user := s.createUser("align_team_usr", accessmodel.UserRoleUser)
 		org := s.createOrganization("team_org", "Team Org Name", user.Id)
 
-		// Name < 3 characters
 		_, err := s.client.CreateTeam(withTestUser(s.ctx, user.Id), &corev1.CreateTeamReq{
 			Name:           "ab",
 			OrganizationID: org.ID,
@@ -186,7 +180,6 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Require().Error(err)
 		s.Equal(http.StatusBadRequest, s.getStatusCode(err), "team name < 3 chars must return 400")
 
-		// Name > 64 characters
 		_, err = s.client.CreateTeam(withTestUser(s.ctx, user.Id), &corev1.CreateTeamReq{
 			Name:           strings.Repeat("x", 65),
 			OrganizationID: org.ID,
@@ -194,7 +187,6 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Require().Error(err)
 		s.Equal(http.StatusBadRequest, s.getStatusCode(err), "team name > 64 chars must return 400")
 
-		// Valid name (length 3..64)
 		resp, err := s.client.CreateTeam(withTestUser(s.ctx, user.Id), &corev1.CreateTeamReq{
 			Name:           "Valid Team Name",
 			OrganizationID: org.ID,
@@ -203,14 +195,13 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Require().NotNil(resp)
 	})
 
-	// 4. Role Validation Across Domain Vocabularies
 	s.Run("DomainRoleValidation", func() {
 		owner := s.createUser("align_role_own", accessmodel.UserRoleUser)
 		other := s.createUser("align_role_tgt", accessmodel.UserRoleUser)
 		org := s.createOrganization("align-role-org", "Role Org", owner.Id)
 		s.Require().NoError(s.organizationsRepo.AddMember(s.ctx, org.ID, other.Id, organizationsmodel.OrgRoleMember))
 
-		// Organization membership: invalid role "viewer" (valid are owner, admin, member)
+		// Organization membership rejects roles from other domains.
 		badOrgReq := httptest.NewRequest(http.MethodPost,
 			fmt.Sprintf("/organizations/%s/members?user_id=%s&role=viewer", org.Login, other.Id), nil)
 		badOrgReq.Header.Set("X-Test-User-ID", owner.Id.String())
@@ -219,7 +210,6 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.handler.ServeHTTP(badOrgRec, badOrgReq)
 		s.Equal(http.StatusBadRequest, badOrgRec.Code, "invalid org role must return 400")
 
-		// Team membership: create team first
 		teamResp, err := s.client.CreateTeam(withTestUser(s.ctx, owner.Id), &corev1.CreateTeamReq{
 			Name:           "Role Test Team",
 			OrganizationID: org.ID,
@@ -227,7 +217,6 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Require().NoError(err)
 		teamID := teamResp.ID
 
-		// Add member as valid "member"
 		err = s.client.AddTeamMember(withTestUser(s.ctx, owner.Id), corev1.AddTeamMemberParams{
 			ID:     teamID,
 			UserID: other.Id,
@@ -235,7 +224,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		})
 		s.Require().NoError(err)
 
-		// Team update: invalid role "admin" (valid are maintainer, member)
+		// Team membership rejects organization roles.
 		badTeamReq := httptest.NewRequest(http.MethodPatch,
 			fmt.Sprintf("/teams/%s/members?user_id=%s&role=admin", teamID, other.Id), nil)
 		badTeamReq.Header.Set("X-Test-User-ID", owner.Id.String())
@@ -244,7 +233,6 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.handler.ServeHTTP(badTeamRec, badTeamReq)
 		s.Equal(http.StatusBadRequest, badTeamRec.Code, "invalid team role must return 400")
 
-		// Contest membership: create contest
 		contestID := uuid.New()
 		err = s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 			ID:             contestID,
@@ -256,7 +244,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		})
 		s.Require().NoError(err)
 
-		// Update contest member: invalid role "viewer" (valid are owner, moderator, participant)
+		// Contest membership rejects problem roles.
 		badContestReq := httptest.NewRequest(http.MethodPatch,
 			fmt.Sprintf("/organizations/%s/contests/%s/members?user_id=%s&role=viewer", org.Login, "align-contest", other.Id), nil)
 		badContestReq.Header.Set("X-Test-User-ID", owner.Id.String())
@@ -265,7 +253,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.handler.ServeHTTP(badContestRec, badContestReq)
 		s.Equal(http.StatusBadRequest, badContestRec.Code, "invalid contest role must return 400")
 
-		// Contest team update: invalid role "invalid_role" (valid are moderator, participant)
+		// Contest team updates reject unknown roles.
 		badContestTeamReq := httptest.NewRequest(http.MethodPatch,
 			fmt.Sprintf("/organizations/%s/contests/%s/teams?team_id=%s&role=invalid_role", org.Login, "align-contest", teamID), nil)
 		badContestTeamReq.Header.Set("X-Test-User-ID", owner.Id.String())
@@ -275,9 +263,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Equal(http.StatusBadRequest, badContestTeamRec.Code, "invalid contest team role must return 400")
 	})
 
-	// 5. Error Response Envelope ({error, message, request_id})
 	s.Run("ErrorEnvelopeFormat", func() {
-		// Request a non-existent post to trigger middleware error handler
 		req := httptest.NewRequest(http.MethodGet, "/posts/"+uuid.NewString(), nil)
 		req.Header.Set("X-Request-ID", "envelope-test-id")
 
@@ -299,9 +285,7 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Equal("envelope-test-id", envelope.RequestID, "envelope 'request_id' must match client/middleware request id")
 	})
 
-	// 6. Relative Server Base Path (/api)
 	s.Run("ServerMetadataBasePath", func() {
-		// Verify openapi.yaml declares servers: [{url: /api, ...}]
 		_, b, _, _ := runtime.Caller(0)
 		basepath := filepath.Dir(b)
 		specPath := filepath.Join(basepath, "../../../contracts/core/v1/openapi.yaml")
@@ -309,7 +293,6 @@ func (s *IntegrationTestSuite) TestOpenAPIAlignment() {
 		s.Require().NoError(err)
 		s.Contains(string(content), "- url: /api")
 
-		// Verify runtime behavior: when mounted under /api/ with http.StripPrefix, endpoints resolve properly
 		apiMux := http.NewServeMux()
 		apiMux.Handle("/api/", http.StripPrefix("/api", s.handler))
 

@@ -38,8 +38,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// One PostgreSQL container per package run; migrations run once into a template
-// database, and every top-level test gets its own clone, so tests can run in parallel.
+// Template database clones let top-level tests run in parallel.
 var (
 	templateOnce sync.Once
 	adminDSN     string
@@ -51,9 +50,7 @@ var (
 
 const templateDatabase = "gate_template"
 
-// testDSN returns the DSN of the database owned by t's top-level test; its subtests
-// share it. Databases are keyed by test name, so with -count>1 later runs reuse
-// the database created by the first run.
+// Subtests share the top-level database; repeated runs with -count reuse it.
 func testDSN(t *testing.T) string {
 	t.Helper()
 	ctx := context.Background()
@@ -77,8 +74,6 @@ func testDSN(t *testing.T) string {
 	return dsn
 }
 
-// startTemplate starts the package's PostgreSQL container, migrates the template
-// database and returns the maintenance database's DSN.
 func startTemplate(ctx context.Context) (string, error) {
 	container, err := tcpostgres.Run(ctx,
 		"postgres:18-alpine",
@@ -127,7 +122,6 @@ func withDatabase(dsn, database string) (string, error) {
 	return u.String(), nil
 }
 
-// getTestPool returns a pool on the database owned by t's top-level test.
 func getTestPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	pool, err := pkg.NewPostgresDB(testDSN(t))
@@ -167,7 +161,6 @@ func TestUsersRepo_Integration(t *testing.T) {
 	exp := time.Now().Add(24 * time.Hour).Truncate(time.Microsecond)
 	userID := uuid.New()
 
-	// 1. CreateUser with all fields populated
 	err := repo.CreateUser(ctx, identitymodel.CreateUserParams{
 		Id:              userID,
 		Username:        username,
@@ -180,7 +173,6 @@ func TestUsersRepo_Integration(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// 2. GetUserById: verify all fields and mappings
 	user, err := repo.GetUserById(ctx, userID)
 	require.NoError(t, err)
 	require.Equal(t, userID, user.Id)
@@ -189,12 +181,11 @@ func TestUsersRepo_Integration(t *testing.T) {
 	require.Equal(t, &email, user.Email)
 	require.Equal(t, &avatar, user.AvatarUrl)
 
-	// 3. GetUserByUsername
 	byUsername, err := repo.GetUserByUsername(ctx, username)
 	require.NoError(t, err)
 	require.Equal(t, userID, byUsername.Id)
 
-	// 4. Duplicate username constraint violation -> pkg.ErrConflict via HandlePgErr
+	// Duplicate usernames map to ErrConflict.
 	err = repo.CreateUser(ctx, identitymodel.CreateUserParams{
 		Id:           uuid.New(),
 		Username:     username,
@@ -204,12 +195,11 @@ func TestUsersRepo_Integration(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrConflict), "expected ErrConflict on duplicate username, got: %v", err)
 
-	// 5. Non-existent ID -> pkg.ErrNotFound via HandlePgErr
+	// Missing users map to ErrNotFound.
 	_, err = repo.GetUserById(ctx, uuid.New())
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrNotFound), "expected ErrNotFound for missing user, got: %v", err)
 
-	// 6. UpdateUser: update avatar and email
 	newAvatar := "https://example.com/new_avatar.png"
 	newEmail := "new_" + suffix + "@example.com"
 	err = repo.UpdateUser(ctx, identitymodel.UpdateUserParams{
@@ -224,7 +214,6 @@ func TestUsersRepo_Integration(t *testing.T) {
 	require.Equal(t, &newAvatar, updatedUser.AvatarUrl)
 	require.Equal(t, &newEmail, updatedUser.Email)
 
-	// 7. UpdateUserRole
 	adminRole := accessmodel.UserRoleAdmin
 	err = repo.UpdateUser(ctx, identitymodel.UpdateUserParams{
 		Id:   userID,
@@ -249,7 +238,6 @@ func TestProblemsRepo_Integration(t *testing.T) {
 	title := "Test Problem " + suffix
 	shortName := "p_" + suffix
 
-	// 1. CreateProblem
 	err := repo.CreateProblem(ctx, &problemsmodel.CreateProblemParams{
 		ID:             probID,
 		OrganizationID: orgID,
@@ -259,7 +247,6 @@ func TestProblemsRepo_Integration(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// 2. GetProblemById: verify fields
 	prob, err := repo.GetProblemById(ctx, probID)
 	require.NoError(t, err)
 	require.Equal(t, probID, prob.ID)
@@ -269,7 +256,7 @@ func TestProblemsRepo_Integration(t *testing.T) {
 	require.Equal(t, 1000, prob.TimeLimitMs)
 	require.Equal(t, 256, prob.MemoryLimitMb)
 
-	// 3. Unique violation: same shortName in same org -> pkg.ErrConflict
+	// Duplicate short names within an organization map to ErrConflict.
 	err = repo.CreateProblem(ctx, &problemsmodel.CreateProblemParams{
 		ID:             uuid.New(),
 		OrganizationID: orgID,
@@ -280,7 +267,7 @@ func TestProblemsRepo_Integration(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrConflict), "expected ErrConflict on duplicate short_name in org, got: %v", err)
 
-	// 4. Foreign key violation: non-existent organization_id -> pkg.ErrBadInput
+	// Missing organizations map to ErrBadInput.
 	err = repo.CreateProblem(ctx, &problemsmodel.CreateProblemParams{
 		ID:             uuid.New(),
 		OrganizationID: uuid.New(),
@@ -291,12 +278,11 @@ func TestProblemsRepo_Integration(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrBadInput), "expected ErrBadInput on foreign key violation, got: %v", err)
 
-	// 5. Get non-existent problem -> pkg.ErrNotFound
+	// Missing problems map to ErrNotFound.
 	_, err = repo.GetProblemById(ctx, uuid.New())
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrNotFound), "expected ErrNotFound, got: %v", err)
 
-	// 6. ListProblems with filter
 	list, err := repo.ListProblems(ctx, &problemsmodel.ProblemsFilter{
 		OrganizationID: &orgID,
 		Page:           1,
@@ -324,7 +310,6 @@ func TestContestsRepo_Integration(t *testing.T) {
 		"penalty_per_wrong": float64(20),
 	}
 
-	// 1. CreateContest with JSON settings
 	err := repo.CreateContest(ctx, &contestsmodel.CreateContestParams{
 		ID:             contestID,
 		OrganizationID: orgID,
@@ -336,7 +321,6 @@ func TestContestsRepo_Integration(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// 2. GetContest & verify JSON unmarshaling
 	c, err := repo.GetContest(ctx, contestID)
 	require.NoError(t, err)
 	require.Equal(t, contestID, c.ID)
@@ -346,7 +330,7 @@ func TestContestsRepo_Integration(t *testing.T) {
 	require.Equal(t, true, c.Settings["freeze_monitor"])
 	require.Equal(t, float64(20), c.Settings["penalty_per_wrong"])
 
-	// 3. Unique violation: duplicate login -> pkg.ErrConflict
+	// Duplicate contest logins map to ErrConflict.
 	err = repo.CreateContest(ctx, &contestsmodel.CreateContestParams{
 		ID:             uuid.New(),
 		OrganizationID: orgID,
@@ -358,7 +342,7 @@ func TestContestsRepo_Integration(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrConflict), "expected ErrConflict on duplicate contest login, got: %v", err)
 
-	// 4. Foreign key violation: invalid org -> pkg.ErrBadInput
+	// Missing contest organizations map to ErrBadInput.
 	err = repo.CreateContest(ctx, &contestsmodel.CreateContestParams{
 		ID:             uuid.New(),
 		OrganizationID: uuid.New(),
@@ -370,12 +354,11 @@ func TestContestsRepo_Integration(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrBadInput), "expected ErrBadInput on foreign key violation, got: %v", err)
 
-	// 5. Get non-existent contest -> pkg.ErrNotFound
+	// Missing contests map to ErrNotFound.
 	_, err = repo.GetContest(ctx, uuid.New())
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrNotFound), "expected ErrNotFound, got: %v", err)
 
-	// 6. UpdateContest: start/end time and title
 	now := time.Now().Truncate(time.Microsecond)
 	end := now.Add(2 * time.Hour).Truncate(time.Microsecond)
 	updatedTitle := "Updated " + title
@@ -423,7 +406,6 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 	suffix := strings.ReplaceAll(uuid.NewString()[:8], "-", "")
 	orgID := helperCreateOrg(t, ctx, pool, "org_sub_"+suffix, "Sub Org "+suffix)
 
-	// Create user
 	userID := uuid.New()
 	uUsername := "sub_u_" + suffix
 	_, err := pool.Exec(ctx,
@@ -432,7 +414,6 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// Create contest
 	contestID := uuid.New()
 	_, err = pool.Exec(ctx,
 		`INSERT INTO contests (id, organization_id, visibility, title, login, description, settings)
@@ -441,7 +422,6 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// Create problem
 	problemID := uuid.New()
 	err = dbfixtures.InsertProblem(ctx, pool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: orgID, Title: "Sub Problem", ShortName: "sub_p_" + suffix})
 	require.NoError(t, err)
@@ -453,7 +433,6 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// 1. CreateSubmission
 	subID, err := repo.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{
 		ContestId: contestID,
 		ProblemId: problemID,
@@ -465,7 +444,6 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, uuid.Nil, subID)
 
-	// 2. GetSubmission: verify fields & default state
 	sub, err := repo.GetSubmission(ctx, subID)
 	require.NoError(t, err)
 	require.Equal(t, subID, sub.ID)
@@ -475,7 +453,6 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 	require.Equal(t, int32(10), sub.Penalty)
 	require.GreaterOrEqual(t, sub.Revision, int64(1))
 
-	// 3. UpdateSubmission: state, score, test_details JSON
 	failedTestIdx := int32(3)
 	change, err := repo.UpdateSubmission(ctx, subID, &submissionsmodel.SubmissionUpdate{
 		State:      submissionsmodel.Accepted,
@@ -503,12 +480,12 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 	require.Equal(t, &failedTestIdx, updatedSub.FailedTest)
 	require.Len(t, updatedSub.TestDetails.Tests, 2)
 
-	// 4. Non-existent submission -> pkg.ErrNotFound
+	// Missing submissions map to ErrNotFound.
 	_, err = repo.GetSubmission(ctx, uuid.New())
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrNotFound), "expected ErrNotFound, got: %v", err)
 
-	// 5. Foreign key error: invalid contest ID -> pkg.ErrBadInput
+	// Missing submission contests map to ErrBadInput.
 	_, err = repo.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{
 		ContestId: uuid.New(),
 		ProblemId: problemID,
@@ -531,7 +508,6 @@ func TestBlogsRepo_Integration(t *testing.T) {
 	authorName := "author_" + suffix
 	imgKey := "blogs/cover_" + suffix + ".jpg"
 
-	// 1. CreatePost with optional image_key
 	postID, err := repo.CreatePost(ctx, blogsmodel.CreatePostParams{
 		Title:       "Blog Post " + suffix,
 		Text:        "Full markdown text content " + suffix,
@@ -543,7 +519,6 @@ func TestBlogsRepo_Integration(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, uuid.Nil, postID)
 
-	// 2. GetPostByID: verify fields and nullable image_key
 	post, err := repo.GetPostByID(ctx, postID)
 	require.NoError(t, err)
 	require.Equal(t, postID, post.ID)
@@ -554,7 +529,6 @@ func TestBlogsRepo_Integration(t *testing.T) {
 	require.Equal(t, authorName, post.AuthorName)
 	require.Equal(t, imgKey, post.ImageKey)
 
-	// 3. UpdatePost
 	newTitle := "Updated Title " + suffix
 	newText := "Updated Text " + suffix
 	newDesc := "Updated desc"
@@ -571,12 +545,11 @@ func TestBlogsRepo_Integration(t *testing.T) {
 	require.Equal(t, newTitle, updatedPost.Title)
 	require.Equal(t, newText, updatedPost.Text)
 
-	// 4. Non-existent post -> pkg.ErrNotFound
+	// Missing posts map to ErrNotFound.
 	_, err = repo.GetPostByID(ctx, uuid.New())
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrNotFound), "expected ErrNotFound, got: %v", err)
 
-	// 5. DeletePost
 	err = repo.DeletePost(ctx, postID)
 	require.NoError(t, err)
 
@@ -584,7 +557,7 @@ func TestBlogsRepo_Integration(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrNotFound), "expected ErrNotFound after deletion, got: %v", err)
 
-	// 6. Delete non-existent post -> pkg.ErrNotFound
+	// Deleting a missing post maps to ErrNotFound.
 	err = repo.DeletePost(ctx, uuid.New())
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrNotFound), "expected ErrNotFound when deleting non-existent post, got: %v", err)

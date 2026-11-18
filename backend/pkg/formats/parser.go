@@ -1,5 +1,3 @@
-// Package formats detects and reads problem packages of every supported
-// author format.
 package formats
 
 import (
@@ -16,7 +14,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// DetectFormat detects the format of the package in dir.
 func DetectFormat(dir string) (string, error) {
 	root, err := os.OpenRoot(dir)
 	if err != nil {
@@ -58,8 +55,7 @@ func detect(fsys fs.FS) (string, error) {
 	return "icpc", nil
 }
 
-// Read detects the format of the package in dir and reads it. Readers see
-// the package through an os.Root, so no path a package names can leave it.
+// Readers are confined to the package root.
 func Read(dir string) (*spec.Problem, error) {
 	root, err := os.OpenRoot(dir)
 	if err != nil {

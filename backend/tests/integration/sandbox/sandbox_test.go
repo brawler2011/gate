@@ -27,7 +27,6 @@ func TestIntegrationSandbox(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Spin up the go-judge image built from judge/flake.nix
 	t.Log("Starting go-judge container...")
 	image, err := judgeimage.Ref()
 	if err != nil {
@@ -67,14 +66,12 @@ func TestIntegrationSandbox(t *testing.T) {
 	grpcAddr := fmt.Sprintf("%s:%s", ip, port.Port())
 	t.Logf("go-judge container started at gRPC address: %s", grpcAddr)
 
-	// Create gRPC client
 	client, err := sandbox.NewClient(grpcAddr)
 	if err != nil {
 		t.Fatalf("Failed to create sandbox client: %v", err)
 	}
 	defer client.Close()
 
-	// Load languages config
 	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml")
 	if err != nil {
 		t.Fatalf("Failed to load languages config: %v", err)
@@ -82,7 +79,6 @@ func TestIntegrationSandbox(t *testing.T) {
 
 	sb := sandbox.NewSandbox(client, cfg)
 
-	// Wait for go-judge gRPC server to be fully ready
 	for i := 0; i < 30; i++ {
 		probeCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 		_, err := sb.Compile(probeCtx, []byte("int main(){return 0;}"), "cpp17", nil)
@@ -93,7 +89,6 @@ func TestIntegrationSandbox(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	// Dynamically scan testdata/gfmt/ for packages
 	gfmtRoot := "../../../pkg/testdata/gfmt"
 	entries, err := os.ReadDir(gfmtRoot)
 	if err != nil {
@@ -115,7 +110,6 @@ func TestIntegrationSandbox(t *testing.T) {
 					t.Fatalf("failed to open package %s: %v", pkgName, err)
 				}
 
-				// Read all files in lib/
 				deps := make(map[string][]byte)
 				libDir := filepath.Join(pkgPath, "lib")
 				if libFiles, err := os.ReadDir(libDir); err == nil {
@@ -138,7 +132,6 @@ func TestIntegrationSandbox(t *testing.T) {
 					deps[name] = []byte(system.Content)
 				}
 
-				// Compile checker if it exists
 				var checker sandbox.Executable
 				checkersDir := filepath.Join(pkgPath, "checkers")
 				if checkerFiles, err := os.ReadDir(checkersDir); err == nil && len(checkerFiles) > 0 {
@@ -162,7 +155,6 @@ func TestIntegrationSandbox(t *testing.T) {
 					}
 				}
 
-				// Compile interactor if it exists
 				var interactor sandbox.Executable
 				interactorsDir := filepath.Join(pkgPath, "interactors")
 				if interactorFiles, err := os.ReadDir(interactorsDir); err == nil && len(interactorFiles) > 0 {
@@ -186,7 +178,6 @@ func TestIntegrationSandbox(t *testing.T) {
 					}
 				}
 
-				// Compile generators if they exist
 				generators := make(map[string]sandbox.Executable)
 				generatorsDir := filepath.Join(pkgPath, "generators")
 				if genFiles, err := os.ReadDir(generatorsDir); err == nil {
@@ -210,7 +201,6 @@ func TestIntegrationSandbox(t *testing.T) {
 					}
 				}
 
-				// Parse expected test cases
 				type TestCase struct {
 					Name     string
 					Manual   string
@@ -243,7 +233,6 @@ func TestIntegrationSandbox(t *testing.T) {
 					}
 				}
 
-				// Helper to resolve test case input
 				getInput := func(tc TestCase) ([]byte, error) {
 					if tc.Manual != "" {
 						return pkg.GetTestInput(tc.Manual)
@@ -261,7 +250,6 @@ func TestIntegrationSandbox(t *testing.T) {
 					return sb.Generate(ctx, genID, args)
 				}
 
-				// Discover solutions
 				solutionsDir := filepath.Join(pkgPath, "solutions")
 				solFiles, err := os.ReadDir(solutionsDir)
 				if err != nil {
@@ -304,7 +292,6 @@ func TestIntegrationSandbox(t *testing.T) {
 					t.Fatalf("No reference OK solution found in %s", pkgPath)
 				}
 
-				// Compile reference solver
 				refCode, err := pkg.GetSolution(referenceSol.Filename)
 				if err != nil {
 					t.Fatalf("failed to read reference solution %s: %v", referenceSol.Filename, err)
@@ -314,7 +301,6 @@ func TestIntegrationSandbox(t *testing.T) {
 					t.Fatalf("failed to compile reference solution %s: %v", referenceSol.Filename, err)
 				}
 
-				// Generate test case inputs and reference answers
 				type TestCaseData struct {
 					TC     TestCase
 					Input  []byte
@@ -353,7 +339,6 @@ func TestIntegrationSandbox(t *testing.T) {
 					})
 				}
 
-				// Test all solutions
 				for _, sol := range solutions {
 					t.Run(sol.Filename, func(t *testing.T) {
 						t.Parallel()
@@ -522,8 +507,7 @@ Test legend. Условие задачи на русском языке.
 		if len(pdfBytes) < 4 || !strings.HasPrefix(string(pdfBytes[:4]), "%PDF") {
 			t.Fatalf("expected valid PDF header, got %q", string(pdfBytes[:4]))
 		}
-		// Cyrillic text uses cm-super outline fonts; without them pdfTeX falls back to
-		// bitmap (Type 3) fonts that metafont renders, which look different.
+		// Cyrillic text uses outline fonts instead of falling back to bitmap fonts.
 		if strings.Contains(string(pdfBytes), "/Type3") {
 			t.Fatal("booklet uses bitmap Type 3 fonts")
 		}

@@ -24,7 +24,6 @@ type ContestDetails struct {
 type ContestProblemDetails struct {
 	Link contestsmodel.ContestProblem
 	problemsmodel.ProblemDetails
-	// Assets maps statement asset paths to the content hashes that address them.
 	Assets map[string]string
 }
 type ContestDetailsStore interface {
@@ -89,8 +88,6 @@ func (r *DetailsReader) GetContestDetails(ctx context.Context, org, login string
 	}
 	return result, err
 }
-// contestProblem returns the contest problem link and whether the caller may
-// read its statement.
 func (r *DetailsReader) contestProblem(ctx context.Context, org, login string, id uuid.UUID) (contestsmodel.ContestProblem, bool, error) {
 	contest, err := r.authorizedContest(ctx, org, login, accessmodel.ActionGetContestProblem)
 	if err != nil {
@@ -124,9 +121,7 @@ func (r *DetailsReader) GetContestProblemDetails(ctx context.Context, org, login
 	return result, nil
 }
 
-// OpenProblemAsset opens a statement image by content hash from the package
-// the contest currently uses for the problem and returns it with its content
-// type. It is readable exactly when the statement is.
+// Statement assets have the same visibility as their statement.
 func (r *DetailsReader) OpenProblemAsset(ctx context.Context, org, login string, id uuid.UUID, sha256 string) (io.ReadCloser, string, error) {
 	link, statementVisible, err := r.contestProblem(ctx, org, login, id)
 	if err != nil {

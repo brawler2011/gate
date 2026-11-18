@@ -52,7 +52,6 @@ func (s *IntegrationTestSuite) TestOutbox_HeadersPersistence() {
 		s.Equal(headers["X-Request-ID"], found.Headers["X-Request-ID"])
 		s.Equal(headers["custom-header"], found.Headers["custom-header"])
 
-		// Clean up
 		err = outboxRepo.MarkAsCompleted(s.ctx, eventID, found.LeaseToken)
 		s.Require().NoError(err)
 	})
@@ -86,7 +85,6 @@ func (s *IntegrationTestSuite) TestOutbox_HeadersPersistence() {
 		s.NotNil(found.Headers)
 		s.Empty(found.Headers)
 
-		// Clean up
 		err = outboxRepo.MarkAsCompleted(s.ctx, eventID, found.LeaseToken)
 		s.Require().NoError(err)
 	})

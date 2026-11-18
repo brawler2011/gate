@@ -13,7 +13,7 @@ import (
 
 func ExtractZip(r *zip.Reader, destDir string) error {
 	cleanDest := filepath.Clean(destDir)
-	const maxDecompressedFileSize = 500 * 1024 * 1024 // 500MB limit per file
+	const maxDecompressedFileSize = 500 * 1024 * 1024
 
 	for _, f := range r.File {
 		path := filepath.Join(cleanDest, filepath.Clean(f.Name))
@@ -56,8 +56,7 @@ func ExtractZip(r *zip.Reader, destDir string) error {
 	return nil
 }
 
-// ExtractZipLimited validates every path and enforces whole-archive byte and
-// inode budgets. It fails on oversized entries instead of silently truncating.
+// Oversized entries fail extraction instead of being silently truncated.
 func ExtractZipLimited(r *zip.Reader, destDir string, maxBytes int64, maxEntries int) error {
 	if maxBytes <= 0 || maxEntries <= 0 {
 		return fmt.Errorf("invalid ZIP extraction quotas")

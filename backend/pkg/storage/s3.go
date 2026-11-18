@@ -19,7 +19,6 @@ import (
 	"github.com/aws/smithy-go"
 )
 
-// S3Config holds configuration for S3 client
 type S3Config struct {
 	Endpoint  string
 	AccessKey string
@@ -27,12 +26,10 @@ type S3Config struct {
 	Region    string
 }
 
-// S3Storage implements the Storage interface for S3-compatible storage.
 type S3Storage struct {
 	client *s3.Client
 }
 
-// NewS3Storage creates a new S3 storage client
 func NewS3Storage(cfg S3Config) *S3Storage {
 	s3Client := s3.NewFromConfig(aws.Config{
 		Region: cfg.Region,
@@ -54,13 +51,11 @@ func NewS3Storage(cfg S3Config) *S3Storage {
 	}
 }
 
-// UploadFile uploads a file to S3
 func (s *S3Storage) UploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string) error {
 	return s.uploadFile(ctx, bucket, key, reader, contentType, nil)
 }
 
-// UploadFileWithSHA256 requires S3 to validate the body against the expected
-// hexadecimal SHA-256 before acknowledging the write.
+// S3 must verify the expected hexadecimal SHA-256 before acknowledging the write.
 func (s *S3Storage) UploadFileWithSHA256(ctx context.Context, bucket, key string, reader io.Reader, contentType, digest string) error {
 	checksum, err := hex.DecodeString(digest)
 	if err != nil || len(checksum) != sha256.Size {
@@ -70,8 +65,7 @@ func (s *S3Storage) UploadFileWithSHA256(ctx context.Context, bucket, key string
 }
 
 func (s *S3Storage) uploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string, checksum *string) error {
-	// The SDK needs a seekable body for signing and retries. Callers already
-	// holding a file avoid a copy; streams are spooled to disk, never the heap.
+	// Signing and retries require a seekable body; spool streams to disk to bound heap use.
 	body, ok := reader.(io.ReadSeeker)
 	if !ok {
 		file, err := os.CreateTemp("", "gate-s3-upload-*")
@@ -101,8 +95,6 @@ func (s *S3Storage) uploadFile(ctx context.Context, bucket, key string, reader i
 	return nil
 }
 
-// DownloadFile downloads a file from S3.
-// If ifNoneMatch matches, it returns ErrNotModified.
 func (s *S3Storage) DownloadFile(ctx context.Context, bucket, key string, ifNoneMatch *string) (io.ReadCloser, string, error) {
 	result, err := s.client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket:      aws.String(bucket),
@@ -131,7 +123,6 @@ func (s *S3Storage) DownloadFile(ctx context.Context, bucket, key string, ifNone
 	return result.Body, etag, nil
 }
 
-// GetPresignedURL generates a presigned URL for accessing an S3 object
 func (s *S3Storage) GetPresignedURL(ctx context.Context, bucket, key string, expiration time.Duration) (string, error) {
 	presignClient := s3.NewPresignClient(s.client)
 
@@ -147,7 +138,6 @@ func (s *S3Storage) GetPresignedURL(ctx context.Context, bucket, key string, exp
 	return presignedReq.URL, nil
 }
 
-// DeleteFile deletes a file from S3
 func (s *S3Storage) DeleteFile(ctx context.Context, bucket, key string) error {
 	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(bucket),
@@ -159,7 +149,6 @@ func (s *S3Storage) DeleteFile(ctx context.Context, bucket, key string) error {
 	return nil
 }
 
-// ListObjects lists objects with metadata in an S3 bucket with the given prefix
 func (s *S3Storage) ListObjects(ctx context.Context, bucket, prefix string) ([]ObjectInfo, error) {
 	paginator := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucket),
@@ -189,7 +178,6 @@ func (s *S3Storage) ListObjects(ctx context.Context, bucket, prefix string) ([]O
 	return objects, nil
 }
 
-// ListFiles lists files in an S3 bucket with the given prefix
 func (s *S3Storage) ListFiles(ctx context.Context, bucket, prefix string) ([]string, error) {
 	objects, err := s.ListObjects(ctx, bucket, prefix)
 	if err != nil {
@@ -204,7 +192,6 @@ func (s *S3Storage) ListFiles(ctx context.Context, bucket, prefix string) ([]str
 	return keys, nil
 }
 
-// ListBuckets returns the names of all buckets.
 func (s *S3Storage) ListBuckets(ctx context.Context) ([]string, error) {
 	paginator := s3.NewListBucketsPaginator(s.client, &s3.ListBucketsInput{})
 	var names []string
@@ -220,7 +207,6 @@ func (s *S3Storage) ListBuckets(ctx context.Context) ([]string, error) {
 	return names, nil
 }
 
-// EmptyBucket deletes every object in the bucket and keeps the bucket.
 func (s *S3Storage) EmptyBucket(ctx context.Context, bucket string) error {
 	keys, err := s.ListFiles(ctx, bucket, "")
 	if err != nil {
@@ -234,7 +220,6 @@ func (s *S3Storage) EmptyBucket(ctx context.Context, bucket string) error {
 	return nil
 }
 
-// BucketExists checks if an S3 bucket exists
 func (s *S3Storage) BucketExists(ctx context.Context, bucket string) (bool, error) {
 	_, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(bucket),
@@ -258,7 +243,6 @@ func (s *S3Storage) BucketExists(ctx context.Context, bucket string) (bool, erro
 	return true, nil
 }
 
-// CreateBucket creates a new S3 bucket
 func (s *S3Storage) CreateBucket(ctx context.Context, bucket string) error {
 	_, err := s.client.CreateBucket(ctx, &s3.CreateBucketInput{
 		Bucket: aws.String(bucket),
@@ -270,7 +254,6 @@ func (s *S3Storage) CreateBucket(ctx context.Context, bucket string) error {
 	return nil
 }
 
-// EnsureBucket creates a bucket if it doesn't exist
 func (s *S3Storage) EnsureBucket(ctx context.Context, bucket string) error {
 	exists, err := s.BucketExists(ctx, bucket)
 	if err != nil {

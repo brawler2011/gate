@@ -153,7 +153,6 @@ func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) erro
 	return nil
 }
 
-// subscribe captures history and registers the live queue under the same lock as broadcast.
 func (h *Hub) subscribe(conn websocketConnection, filter *SubmissionsFilter, replay bool) (*Subscriber, []*WrappedEvent, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

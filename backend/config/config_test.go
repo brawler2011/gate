@@ -23,8 +23,6 @@ func setSecrets(t *testing.T) {
 
 func TestEnvironmentConfigsLoad(t *testing.T) {
 	setSecrets(t)
-	// Local runs everything in one process; the clusters run API and worker pods
-	// from the same config.
 	envModes := map[string][]Mode{"local": {ModeAll}, "prod": {ModeAPI, ModeWorker}, "k3d": {ModeAPI, ModeWorker}}
 	for env, modes := range envModes {
 		for _, mode := range modes {

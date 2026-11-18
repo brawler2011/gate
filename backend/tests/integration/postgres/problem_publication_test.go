@@ -23,8 +23,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// These fault hooks still transfer bytes through real S3. Repository and sandbox
-// calls always use the real services, including publication transactions.
+// Fault hooks use real S3, repository transactions and sandbox calls.
 type publicationStore struct {
 	*storage.S3Storage
 	beforeUpload   func(io.Reader) (io.Reader, error)
@@ -245,7 +244,6 @@ func TestPublicationUploadVerificationAndRetry(t *testing.T) {
 			require.Equal(t, "infrastructure", failure.Kind)
 			require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, b.ID))
 			require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM stored_objects o WHERE o.purpose='package' AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)`), "a failed attempt leaves its archive bytes without a row")
-			// Change the author revision before a fresh worker attempt retries the build.
 			h.save(t, func(d *model.Draft) {
 				d.Title = "Later revision " + fault
 				d.Statements[0].Legend = "Later statement"
@@ -313,7 +311,6 @@ func TestPublicationConcurrentEdits(t *testing.T) {
 		d.Tests[0].Sample = true
 		d.Tests[0].Ordinal = 7
 	})
-	// Replace the input and answer as well while the older package is in flight.
 	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)
 	_, err = h.uploads.Upload(h.ctx, current.ProblemID, current.Revision, uuid.NewString(), model.UploadChange{Part: "pair", Test: &current.Tests[0]}, strings.NewReader("later input\n"), strings.NewReader("later answer\n"))
@@ -344,8 +341,7 @@ func TestPublicationCommitFailure(t *testing.T) {
 	h := publicationHarness(t)
 	b := h.enqueueAndClaim(t)
 	t.Run("rollback at commit", func(t *testing.T) {
-		// The database is private to this top-level test. Fail at COMMIT, after the
-		// object row, package row and build state have all been written.
+		// Fail at COMMIT after the object, package and build writes.
 		_, err := h.pool.Exec(h.ctx, `CREATE FUNCTION reject_publication() RETURNS trigger LANGUAGE plpgsql AS $$
  BEGIN RAISE EXCEPTION 'injected publication commit failure'; END $$;
  CREATE CONSTRAINT TRIGGER reject_publication AFTER UPDATE ON problem_builds
@@ -377,8 +373,7 @@ func TestPublicationSupportedTypes(t *testing.T) {
 			h.save(t, func(d *model.Draft) {
 				d.Type = kind
 				if kind == "scoring" {
-					// A second group depends on the first; both metadata and the dependency
-					// must survive publication with their authored test membership.
+					// Publication preserves subtask dependencies and authored test membership.
 					g := uuid.New()
 					d.Subtasks = append(d.Subtasks, model.DraftSubtask{ID: g, Ordinal: 2, Policy: "complete", DependsOn: []uuid.UUID{d.Subtasks[0].ID}})
 					test := d.Tests[0]
@@ -481,8 +476,7 @@ func TestPublicationRejectsIncompleteDrafts(t *testing.T) {
 	}
 }
 
-// A published package re-imports from its .gate/snapshot.json into a draft that builds
-// into a package with the same content.
+// A published snapshot re-imports into a draft that builds equivalent content.
 func TestPublicationReimportsSnapshot(t *testing.T) {
 	h := publicationHarness(t)
 	b := h.enqueueAndClaim(t)

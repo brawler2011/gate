@@ -109,9 +109,6 @@ func (f *wsFixture) connect(t *testing.T, path string) *websocket.Conn {
 	return conn
 }
 
-// requireUnsubscribed checks, without waiting, that no subscription is registered.
-// The server unregisters a subscription before writing its close frame, so once
-// a client observed the close, a reconnect cannot be confused with the old one.
 func (f *wsFixture) requireUnsubscribed(t *testing.T) {
 	t.Helper()
 	f.hub.mu.RLock()

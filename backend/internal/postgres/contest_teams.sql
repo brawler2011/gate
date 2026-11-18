@@ -1,4 +1,3 @@
--- Contest Teams queries (team-based access control)
 
 -- name: AddContestTeam :exec
 INSERT INTO contest_teams (contest_id, team_id, role)

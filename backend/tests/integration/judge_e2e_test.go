@@ -63,7 +63,6 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	ctx, dbPool, js := setupE2EEnvironment(t)
 	store, bucket := newSeaweedBackedS3Storage(t)
 	client, files := newGoJudge(t)
-	// The languages come from the judge image, as in production.
 	imageCtx, cancel := context.WithTimeout(ctx, e2eSandboxTimout)
 	image, err := sandbox.ReadImage(imageCtx, client)
 	cancel()
@@ -86,8 +85,6 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	require.NoError(t, err)
 	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
 
-	// Draft: generated inputs (1 2 and 3 2), answers produced by the main solution,
-	// explicit weights 40.00 and 60.00 in one "complete" group.
 	problemID := uuid.New()
 	require.NoError(t, dbfixtures.InsertProblem(ctx, dbPool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: org.ID, OwnerID: &userID, Visibility: "public", Title: "Sum of Two Numbers", ShortName: "sum-problem"}))
 	d, err := drafts.GetDraft(ctx, problemID)
@@ -124,7 +121,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	packageID, err := pipeline.Execute(ctx, build)
 	require.NoError(t, err)
 
-	// A judge compiles the package's checker with its own image; digest names that image.
+	// The checker cache is keyed by the judge image digest.
 	cache := diskTempDir(t)
 	newJudge := func(image sandbox.Image) *judging.JudgeUseCase {
 		executor := &judging.PackageJudge{Client: client, Files: files, Languages: image.Config, Programs: sandbox.NewProgramCache(cache, client, files, image), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
@@ -133,7 +130,6 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 			executor, judgeworker.NewEventPublisher(js))
 	}
 	judgeUC := newJudge(image)
-	// cached lists the compiled programs in the judges' cache.
 	cached := func(t *testing.T) []string {
 		t.Helper()
 		entries, err := os.ReadDir(cache)
@@ -191,8 +187,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		assert.Equal(t, programs, cached(t))
 	})
 	t.Run("ChangedJudgeImageCompilesItsOwnChecker", func(t *testing.T) {
-		// The package carries no binaries: a worker whose image differs, here only in its
-		// language configuration, compiles the checker itself instead of reusing the cached one.
+		// A different judge image recompiles the checker instead of reusing cached binaries.
 		langs := maps.Clone(image.Config.Langs)
 		cpp := langs["cpp17"]
 		cpp.Compile = strings.Replace(cpp.Compile, "g++ ", "g++ -DREJECT_ALL ", 1)
@@ -218,8 +213,6 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	})
 }
 
-// judgeHarness builds drafts on the real judge and judges submissions to them
-// in one contest.
 type judgeHarness struct {
 	ctx         context.Context
 	pool        *pgxpool.Pool
@@ -239,7 +232,6 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 	ctx, dbPool, js := setupE2EEnvironment(t)
 	store, bucket := newSeaweedBackedS3Storage(t)
 	client, files := newGoJudge(t)
-	// The languages come from the judge image, as in production.
 	imageCtx, cancel := context.WithTimeout(ctx, e2eSandboxTimout)
 	image, err := sandbox.ReadImage(imageCtx, client)
 	cancel()
@@ -280,7 +272,6 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 	return h
 }
 
-// build saves the draft that edit fills in to a new problem and builds it.
 func (h *judgeHarness) build(t *testing.T, shortName string, edit func(*problemsmodel.Draft)) (problemID, packageID uuid.UUID, err error) {
 	t.Helper()
 	ctx := h.ctx
@@ -302,7 +293,6 @@ func (h *judgeHarness) build(t *testing.T, shortName string, edit func(*problems
 	return problemID, packageID, err
 }
 
-// publish builds the draft and adds its package to the contest.
 func (h *judgeHarness) publish(t *testing.T, shortName string, edit func(*problemsmodel.Draft)) uuid.UUID {
 	t.Helper()
 	problemID, packageID, err := h.build(t, shortName, edit)
@@ -323,17 +313,13 @@ func (h *judgeHarness) submit(t *testing.T, problem uuid.UUID, language string, 
 	return sub
 }
 
-// An interactive problem may leave the verdict to its interactor or, as is
-// common in Polygon, let the interactor record the dialogue and the checker
-// compare it with the answer: the interactor's output on the main solution.
+// Interactive verdicts may come from the interactor or from a checker comparing recorded dialogue.
 func TestInteractiveJudgingE2E(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping E2E test in short mode")
 	}
 	t.Parallel()
 	h := newJudgeHarness(t)
-	// The interactor sends a; the solution must reply 2a. The interactor writes
-	// the reply to its output and exits with the given status expression.
 	interactor := func(status string) string {
 		return "import sys\na = int(open(sys.argv[1]).read())\nprint(a, flush=True)\nreply = input().strip()\nopen(sys.argv[2], 'w').write(reply + '\\n')\nsys.exit(" + status + ")\n"
 	}
@@ -359,8 +345,7 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 		wrong     = "print(int(input()) + 1, flush=True)"
 	)
 	cases := map[string]uuid.UUID{
-		// The build has no answer yet and trusts the main solution; judging
-		// compares the reply with the answer the interactor receives.
+		// Judging compares the dialogue against the answer generated during the build.
 		"InteractorDecides": h.publish(t, "interactor-decides", draft(interactor("0 if len(sys.argv) < 4 or reply == open(sys.argv[3]).read().strip() else 1"), acceptAll)),
 		"CheckerDecides": h.publish(t, "checker-decides", draft(interactor("0"),
 			"import sys\nout, ans = open(sys.argv[2]).read().split(), open(sys.argv[3]).read().split()\nsys.exit(0 if out == ans else 1)\n")),
@@ -379,8 +364,7 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 	})
 }
 
-// A standard checker is built from Gate's copy with the system testlib.h, so
-// the draft needs no testlib.h of its own.
+// Standard checkers build with the system testlib.h without a draft copy.
 func TestStandardCheckerE2E(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping E2E test in short mode")
@@ -407,9 +391,7 @@ func TestStandardCheckerE2E(t *testing.T) {
 	cases := []struct {
 		standard, solution, accepted, wrong string
 	}{
-		// wcmp compares tokens and ignores whitespace.
 		{"wcmp", read + "print(a, b)", read + "print(' ', a, '\\n\\n', b)", read + "print(b, a)"},
-		// rcmp6 accepts an absolute or relative error of 1e-6.
 		{"rcmp6", read + "print('%.10f' % (a / b))", read + "print('%.7f' % (a / b))", read + "print('%.4f' % (a / b + 1e-4))"},
 	}
 	for _, c := range cases {

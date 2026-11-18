@@ -9,8 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// CapabilityRequest describes the resource or relationship projected for the caller.
-// Role is the current target role, never the caller's effective role.
+// Role is the target's current role, not the caller's effective role.
 type CapabilityRequest struct {
 	Scope          string
 	ID             uuid.UUID
@@ -28,8 +27,7 @@ type Capabilities struct{ facts CapabilityFacts }
 
 func NewCapabilities(facts CapabilityFacts) *Capabilities { return &Capabilities{facts: facts} }
 
-// Project loads each scope once for the complete response, independent of page size.
-// Errors abort the response; capabilities are advisory, writes still authorize.
+// Capabilities are advisory; failed fact reads abort projection, and writes authorize independently.
 func (uc *Capabilities) Project(ctx context.Context, requests []CapabilityRequest) ([][]string, error) {
 	in := m.PolicyInput{Actor: m.UserFromContext(ctx), Now: m.ReadTime(ctx)}
 	if err := validateInput(in); err != nil {
@@ -248,8 +246,7 @@ func afterRemoval(before m.OwnerState, target uuid.UUID) m.OwnerState {
 	return after
 }
 
-// Relationship controls probe valid target-specific transitions, including the
-// full final owner set. They never expose a blanket right to assign any role.
+// Relationship controls validate specific transitions against the complete final owner set.
 func memberCapabilities[R ~string](r CapabilityRequest, u m.User, before m.OwnerState, roles []R, grant func(m.RoleChange[R]) error, transfer func() error) []string {
 	caps := []string{}
 	for _, role := range roles {
