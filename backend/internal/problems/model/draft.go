@@ -47,12 +47,12 @@ type DraftContent struct {
 	Tests          []DraftTest         `json:"tests"`
 }
 
-// DraftProgram is a source compiled with the library files it depends on.
-// Language is a toolchain key; each dependency is placed under its name.
+// DraftProgram is a source in a language configuration. The checker,
+// interactor, validators and generators compile with the whole library, each
+// file under its name; solutions compile alone.
 type DraftProgram struct {
-	Language     string      `json:"language"`
-	Source       string      `json:"source"`
-	Dependencies []uuid.UUID `json:"dependencies"`
+	Language string `json:"language"`
+	Source   string `json:"source"`
 }
 
 // DraftNamedProgram is a program of a role a draft may hold several of.
@@ -62,7 +62,8 @@ type DraftNamedProgram struct {
 	DraftProgram
 }
 
-// DraftLibraryFile is a source file programs include by its name. An
+// DraftLibraryFile is a source file judge programs include by its name;
+// names are unique in a draft. An
 // auto-updated file stores no content: it is the system library file of its
 // name, whose current text every build takes.
 type DraftLibraryFile struct {
@@ -215,16 +216,6 @@ func (d *Draft) Validator() *DraftNamedProgram {
 	return &d.Validators[0]
 }
 
-// LibraryFile returns the library file with id, or nil.
-func (d *Draft) LibraryFile(id uuid.UUID) *DraftLibraryFile {
-	for i := range d.Library {
-		if d.Library[i].ID == id {
-			return &d.Library[i]
-		}
-	}
-	return nil
-}
-
 // Normalize replaces absent lists with empty ones, so that a draft always
 // has every list of the contract.
 func (d *Draft) Normalize() {
@@ -232,18 +223,10 @@ func (d *Draft) Normalize() {
 		if *list == nil {
 			*list = []DraftNamedProgram{}
 		}
-		for i := range *list {
-			(*list)[i].normalize()
-		}
 	}
 	empty(&d.Validators)
 	empty(&d.Generators)
 	empty(&d.Solutions)
-	for _, p := range []*DraftProgram{d.Checker, d.Interactor} {
-		if p != nil {
-			p.normalize()
-		}
-	}
 	if d.Library == nil {
 		d.Library = []DraftLibraryFile{}
 	}
@@ -268,12 +251,6 @@ func (d *Draft) Normalize() {
 		if d.Tests[i].Input.Args == nil {
 			d.Tests[i].Input.Args = []string{}
 		}
-	}
-}
-
-func (p *DraftProgram) normalize() {
-	if p.Dependencies == nil {
-		p.Dependencies = []uuid.UUID{}
 	}
 }
 
@@ -432,35 +409,24 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		ids[id] = true
 	}
 
-	library := make(map[uuid.UUID]string)
+	library := make(map[string]bool)
 	for i, f := range d.Library {
 		at := fmt.Sprintf("/library/%d", i)
 		unique(at+"/id", f.ID)
-		if !ValidFileName(f.Name) {
-			v.fail(at+"/name", "invalid file name %q", f.Name)
+		if !ValidFileName(f.Name) || library[f.Name] {
+			v.fail(at+"/name", "invalid or duplicate file name %q", f.Name)
 		}
 		text(at+"/content", f.Content)
 		if _, ok := syslib.Lookup(f.Name); f.AutoUpdate && (!ok || f.Content != "") {
 			v.fail(at+"/auto_update", "only an empty system library file can be auto-updated")
 		}
-		library[f.ID] = f.Name
+		library[f.Name] = true
 	}
 	program := func(at string, p DraftProgram) {
 		if !languageKey.MatchString(p.Language) {
 			v.fail(at+"/language", "invalid language %q", p.Language)
 		}
 		text(at+"/source", p.Source)
-		names := make(map[string]bool)
-		for j, dep := range p.Dependencies {
-			name, ok := library[dep]
-			switch {
-			case !ok:
-				v.fail(fmt.Sprintf("%s/dependencies/%d", at, j), "dependency is not a library file")
-			case names[name]:
-				v.fail(fmt.Sprintf("%s/dependencies/%d", at, j), "two dependencies are named %q", name)
-			}
-			names[name] = true
-		}
 	}
 	if d.Checker != nil {
 		program("/checker", *d.Checker)

@@ -10,15 +10,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// An auto-updated library file stores no text; the package must carry the
-// system text, or the judge cannot compile the checker.
-func TestPlaceDraftPackagesSystemTestlib(t *testing.T) {
-	auto := uuid.New()
+// Judge programs compile with the whole library, an auto-updated file with
+// the system text the package must carry; solutions compile alone.
+func TestPlaceDraftSharesLibraryWithJudgePrograms(t *testing.T) {
 	d := model.Draft{DraftContent: model.DraftContent{
-		Library: []model.DraftLibraryFile{{ID: auto, Name: "testlib.h", AutoUpdate: true}},
-		Checker: &model.DraftProgram{Language: "cpp17", Dependencies: []uuid.UUID{auto}},
+		Library:   []model.DraftLibraryFile{{ID: uuid.New(), Name: "testlib.h", AutoUpdate: true}, {ID: uuid.New(), Name: "graph.h", Content: "// graph\n"}},
+		Checker:   &model.DraftProgram{Language: "cpp17"},
+		Solutions: []model.DraftNamedProgram{{ID: uuid.New(), Name: "main", DraftProgram: model.DraftProgram{Language: "cpp17"}}},
 	}}
 	l := placeDraft(d, &sandbox.Config{})
 	system, _ := syslib.Lookup("testlib.h")
-	require.Equal(t, system.Content, l.texts[l.programs[0].dependencies["testlib.h"]])
+	checker, solution := l.programs[0], l.programs[1]
+	require.Equal(t, "checker", checker.role)
+	require.Equal(t, system.Content, l.texts[checker.dependencies["testlib.h"]])
+	require.Equal(t, "// graph\n", l.texts[checker.dependencies["graph.h"]])
+	require.Empty(t, solution.dependencies)
 }

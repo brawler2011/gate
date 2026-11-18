@@ -18,7 +18,7 @@ const draft = (revision: number, title: string) => ({
   problem_id: "problem", revision, title, short_name: "a", type: "pass-fail", time_limit_ms: 1000,
   memory_limit_mb: 256, max_score: null,
   checker: null, interactor: null, validators: [], solutions: [], library: [], statements: [],
-  generators: [{id: "g1", name: "gen", language: "cpp", source: "", dependencies: []}],
+  generators: [{id: "g1", name: "gen", language: "cpp", source: ""}],
   main_solution_id: null, subtasks: [], tests: [], assets: [],
 });
 
@@ -84,14 +84,14 @@ describe("workshop draft editing", () => {
     const shown = spyOn(notifications, "show").mockReturnValue("test");
     mockApi(({method}) =>
       method === "PUT"
-        ? Response.json({message: "invalid draft", fields: [{pointer: "/generators/0/dependencies/0", message: "unknown library file"}]}, {status: 400})
+        ? Response.json({message: "invalid draft", fields: [{pointer: "/generators/0/language", message: "invalid language"}]}, {status: 400})
         : Response.json(draft(3, "Original")),
     );
     const view = renderWithProviders(<Editor />);
     await waitFor(() => expect(view.getByTestId("title").textContent).toBe("Original"));
     fireEvent.click(view.getByRole("button", {name: "save"}));
     await waitFor(() => expect(shown).toHaveBeenCalled());
-    expect(shown.mock.calls[0][0].message).toBe("Генератор gen: unknown library file");
+    expect(shown.mock.calls[0][0].message).toBe("Генератор gen: invalid language");
     shown.mockRestore();
   });
 });

@@ -8342,7 +8342,7 @@ func (s *ProblemDraftInputMode) UnmarshalText(data []byte) error {
 	}
 }
 
-// A source file programs include by its name.
+// A source file judge programs include by its name; names are unique in a draft.
 // Ref: #/components/schemas/ProblemDraftLibraryFile
 type ProblemDraftLibraryFile struct {
 	ID   uuid.UUID `json:"id"`
@@ -8400,9 +8400,8 @@ type ProblemDraftNamedProgram struct {
 	ID   uuid.UUID `json:"id"`
 	Name string    `json:"name"`
 	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
-	Language     string      `json:"language"`
-	Source       string      `json:"source"`
-	Dependencies []uuid.UUID `json:"dependencies"`
+	Language string `json:"language"`
+	Source   string `json:"source"`
 }
 
 // GetID returns the value of ID.
@@ -8425,11 +8424,6 @@ func (s *ProblemDraftNamedProgram) GetSource() string {
 	return s.Source
 }
 
-// GetDependencies returns the value of Dependencies.
-func (s *ProblemDraftNamedProgram) GetDependencies() []uuid.UUID {
-	return s.Dependencies
-}
-
 // SetID sets the value of ID.
 func (s *ProblemDraftNamedProgram) SetID(val uuid.UUID) {
 	s.ID = val
@@ -8450,19 +8444,13 @@ func (s *ProblemDraftNamedProgram) SetSource(val string) {
 	s.Source = val
 }
 
-// SetDependencies sets the value of Dependencies.
-func (s *ProblemDraftNamedProgram) SetDependencies(val []uuid.UUID) {
-	s.Dependencies = val
-}
-
-// A source compiled with the library files it depends on; each dependency is placed under its library
-// name.
+// A source in a language configuration. The checker, interactor, validators and generators compile
+// with the whole draft library, each file under its name; solutions compile alone.
 // Ref: #/components/schemas/ProblemDraftProgram
 type ProblemDraftProgram struct {
 	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
-	Language     string      `json:"language"`
-	Source       string      `json:"source"`
-	Dependencies []uuid.UUID `json:"dependencies"`
+	Language string `json:"language"`
+	Source   string `json:"source"`
 }
 
 // GetLanguage returns the value of Language.
@@ -8475,11 +8463,6 @@ func (s *ProblemDraftProgram) GetSource() string {
 	return s.Source
 }
 
-// GetDependencies returns the value of Dependencies.
-func (s *ProblemDraftProgram) GetDependencies() []uuid.UUID {
-	return s.Dependencies
-}
-
 // SetLanguage sets the value of Language.
 func (s *ProblemDraftProgram) SetLanguage(val string) {
 	s.Language = val
@@ -8488,11 +8471,6 @@ func (s *ProblemDraftProgram) SetLanguage(val string) {
 // SetSource sets the value of Source.
 func (s *ProblemDraftProgram) SetSource(val string) {
 	s.Source = val
-}
-
-// SetDependencies sets the value of Dependencies.
-func (s *ProblemDraftProgram) SetDependencies(val []uuid.UUID) {
-	s.Dependencies = val
 }
 
 // The statement in one language as Markdown sections.

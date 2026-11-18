@@ -3118,23 +3118,17 @@ components:
           format: uuid
           nullable: true
     ProblemDraftProgram:
-      description: A source compiled with the library files it depends on; each dependency is placed under its library name.
+      description: A source in a language configuration. The checker, interactor, validators and generators compile with the whole draft library, each file under its name; solutions compile alone.
       type: object
       required:
       - language
       - source
-      - dependencies
       properties:
         language:
           type: string
           description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
         source:
           type: string
-        dependencies:
-          type: array
-          items:
-            type: string
-            format: uuid
     ProblemDraftNamedProgram:
       description: A validator, generator or solution; tests and the main solution refer to it by ID.
       type: object
@@ -3143,7 +3137,6 @@ components:
       - name
       - language
       - source
-      - dependencies
       properties:
         id:
           type: string
@@ -3155,13 +3148,8 @@ components:
           description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
         source:
           type: string
-        dependencies:
-          type: array
-          items:
-            type: string
-            format: uuid
     ProblemDraftLibraryFile:
-      description: A source file programs include by its name.
+      description: A source file judge programs include by its name; names are unique in a draft.
       type: object
       required:
       - id
@@ -3283,8 +3271,9 @@ components:
           format: uuid
     ProblemDraft:
       description: >-
-        The editable problem as typed entries without package paths. Programs,
-        library files and tests are referred to by ID; names are labels.
+        The editable problem as typed entries without package paths. Programs
+        and tests are referred to by ID and their names are labels; library
+        files are included by their names.
       type: object
       required:
       - problem_id

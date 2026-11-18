@@ -1,12 +1,11 @@
 "use client";
 
-import {Badge, Box, Button, Grid, Group, MultiSelect, NavLink, Select, Stack, Text, TextInput} from "@mantine/core";
+import {Badge, Box, Button, Grid, Group, NavLink, Select, Stack, Text, TextInput} from "@mantine/core";
 import {useState} from "react";
 import {useSearchParams} from "react-router-dom";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {languageName, useLanguages, type SupportedLanguage} from "@/lib/languages";
-import {useSystemLibrary} from "@/lib/systemLibrary";
 
 import {DraftGate} from "./draft/DraftGate";
 import {
@@ -16,7 +15,6 @@ import {
   removeProgram,
   ROLE_LABELS,
   setSingleProgram,
-  systemDependencies,
   updateProgram,
   type ComponentRole,
   type ListRole,
@@ -38,7 +36,6 @@ const template = (catalog: SupportedLanguage[], role: ComponentRole, id: string)
   componentTemplate(role, catalog.find((language) => language.id === id));
 
 type ProgramEditorProps = {
-  draft: ProblemDraft;
   label: string;
   program: ProblemDraftProgram;
   saving: boolean;
@@ -47,9 +44,9 @@ type ProgramEditorProps = {
   children?: ReactNode;
 };
 
-/** Language, library dependencies and source of one program. */
+/** Language and source of one program. */
 const ProgramEditor = (props: ProgramEditorProps): ReactNode => {
-  const {draft, label, program, saving, onChange, onDelete, children} = props;
+  const {label, program, saving, onChange, onDelete, children} = props;
   const catalog = useLanguages();
   return (
     <SectionPaper>
@@ -66,15 +63,6 @@ const ProgramEditor = (props: ProgramEditorProps): ReactNode => {
           />
           {children}
         </Group>
-        <MultiSelect
-          label="Подключаемые файлы"
-          description="Файлы из библиотеки, доступные программе при сборке под своим именем"
-          data={draft.library.map((file) => ({value: file.id, label: file.auto_update ? `${file.name} (автообновление)` : file.name}))}
-          value={program.dependencies}
-          onChange={(dependencies) => onChange({dependencies})}
-          searchable
-          placeholder={draft.library.length === 0 ? "Библиотека пуста" : "Не подключено"}
-        />
         <SourceEditor
           label={label}
           content={program.source}
@@ -87,11 +75,9 @@ const ProgramEditor = (props: ProgramEditorProps): ReactNode => {
   );
 };
 
-const NewProgramForm = ({withName, saving, ready, onCreate}: {
+const NewProgramForm = ({withName, saving, onCreate}: {
   withName: boolean;
   saving: boolean;
-  /** False until the defaults of a new program, such as its system library dependencies, are known. */
-  ready: boolean;
   onCreate: (name: string, language: string) => Promise<boolean>;
 }): ReactNode => {
   const [name, setName] = useState("");
@@ -112,7 +98,7 @@ const NewProgramForm = ({withName, saving, ready, onCreate}: {
       />
       <Button
         variant="light"
-        disabled={(withName && name.trim() === "") || !language || !ready}
+        disabled={(withName && name.trim() === "") || !language}
         loading={saving}
         onClick={() => language && void onCreate(name.trim(), language).then((ok) => ok && setName(""))}
       >
@@ -127,7 +113,6 @@ type PanelProps<Role> = {draft: ProblemDraft; problemId: string; role: Role};
 const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
   const catalog = useLanguages();
-  const system = useSystemLibrary();
   const program = draft[role];
   if (!program) {
     return (
@@ -139,13 +124,8 @@ const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNod
           <NewProgramForm
             withName={false}
             saving={isSaving}
-            ready={system !== undefined}
             onCreate={(_, language) =>
-              save((current) => {
-                const source = template(catalog, role, language);
-                const dependencies = systemDependencies(current, system ?? [], catalog.find((l) => l.id === language));
-                return setSingleProgram(current, role, {language, source, dependencies});
-              })
+              save((current) => setSingleProgram(current, role, {language, source: template(catalog, role, language)}))
             }
           />
         </Stack>
@@ -154,7 +134,6 @@ const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNod
   }
   return (
     <ProgramEditor
-      draft={draft}
       label={ROLE_LABELS[role]}
       program={program}
       saving={isSaving}
@@ -189,7 +168,6 @@ const RenameControl = ({name, saving, onRename}: {
 
 const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode => {
   const catalog = useLanguages();
-  const system = useSystemLibrary();
   const {save, isSaving} = useSaveDraft(problemId);
   const [params, setParams] = useSearchParams();
   const programs = programsOf(draft, role);
@@ -204,8 +182,7 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
   const create = async (newName: string, language: string): Promise<boolean> => {
     let createdId: string | undefined;
     const ok = await save((current) => {
-      const dependencies = systemDependencies(current, system ?? [], catalog.find((l) => l.id === language));
-      const next = addProgram(current, role, newName, language, template(catalog, role, language), dependencies);
+      const next = addProgram(current, role, newName, language, template(catalog, role, language));
       createdId = programsOf(next, role).at(-1)?.id;
       return next;
     });
@@ -241,7 +218,7 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
                 onClick={() => open(program.id)}
               />
             ))}
-            <NewProgramForm withName saving={isSaving} ready={system !== undefined} onCreate={create} />
+            <NewProgramForm withName saving={isSaving} onCreate={create} />
           </Stack>
         </SectionPaper>
       </Grid.Col>
@@ -249,7 +226,6 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
         {selected ? (
           <ProgramEditor
             key={selected.id}
-            draft={draft}
             label={selected.name}
             program={selected}
             saving={isSaving}

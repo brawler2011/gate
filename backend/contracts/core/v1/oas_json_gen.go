@@ -16823,22 +16823,13 @@ func (s *ProblemDraftNamedProgram) encodeFields(e *jx.Encoder) {
 		e.FieldStart("source")
 		e.Str(s.Source)
 	}
-	{
-		e.FieldStart("dependencies")
-		e.ArrStart()
-		for _, elem := range s.Dependencies {
-			json.EncodeUUID(e, elem)
-		}
-		e.ArrEnd()
-	}
 }
 
-var jsonFieldsNameOfProblemDraftNamedProgram = [5]string{
+var jsonFieldsNameOfProblemDraftNamedProgram = [4]string{
 	0: "id",
 	1: "name",
 	2: "language",
 	3: "source",
-	4: "dependencies",
 }
 
 // Decode decodes ProblemDraftNamedProgram from json.
@@ -16898,26 +16889,6 @@ func (s *ProblemDraftNamedProgram) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"source\"")
 			}
-		case "dependencies":
-			requiredBitSet[0] |= 1 << 4
-			if err := func() error {
-				s.Dependencies = make([]uuid.UUID, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem uuid.UUID
-					v, err := json.DecodeUUID(d)
-					elem = v
-					if err != nil {
-						return err
-					}
-					s.Dependencies = append(s.Dependencies, elem)
-					return nil
-				}); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"dependencies\"")
-			}
 		default:
 			return d.Skip()
 		}
@@ -16928,7 +16899,7 @@ func (s *ProblemDraftNamedProgram) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00011111,
+		0b00001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -16991,20 +16962,11 @@ func (s *ProblemDraftProgram) encodeFields(e *jx.Encoder) {
 		e.FieldStart("source")
 		e.Str(s.Source)
 	}
-	{
-		e.FieldStart("dependencies")
-		e.ArrStart()
-		for _, elem := range s.Dependencies {
-			json.EncodeUUID(e, elem)
-		}
-		e.ArrEnd()
-	}
 }
 
-var jsonFieldsNameOfProblemDraftProgram = [3]string{
+var jsonFieldsNameOfProblemDraftProgram = [2]string{
 	0: "language",
 	1: "source",
-	2: "dependencies",
 }
 
 // Decode decodes ProblemDraftProgram from json.
@@ -17040,26 +17002,6 @@ func (s *ProblemDraftProgram) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"source\"")
 			}
-		case "dependencies":
-			requiredBitSet[0] |= 1 << 2
-			if err := func() error {
-				s.Dependencies = make([]uuid.UUID, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem uuid.UUID
-					v, err := json.DecodeUUID(d)
-					elem = v
-					if err != nil {
-						return err
-					}
-					s.Dependencies = append(s.Dependencies, elem)
-					return nil
-				}); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"dependencies\"")
-			}
 		default:
 			return d.Skip()
 		}
@@ -17070,7 +17012,7 @@ func (s *ProblemDraftProgram) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000111,
+		0b00000011,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

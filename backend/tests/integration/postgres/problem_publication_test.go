@@ -121,7 +121,9 @@ func TestPublicationRejectsInconsistentSaves(t *testing.T) {
 		name, message string
 		change        func(*model.Draft)
 	}{
-		{"missing dependency", "/checker/dependencies/0: dependency is not a library file", func(d *model.Draft) { d.Checker.Dependencies = []uuid.UUID{uuid.New()} }},
+		{"library name taken", "duplicate file name", func(d *model.Draft) {
+			d.Library = []model.DraftLibraryFile{{ID: uuid.New(), Name: "a.h"}, {ID: uuid.New(), Name: "a.h"}}
+		}},
 		{"unknown group", "/tests/0/subtask_id: unknown subtask", func(d *model.Draft) { d.Tests[0].SubtaskID = uuid.New() }},
 		{"unknown dependency", "unknown subtask", func(d *model.Draft) { d.Subtasks[0].DependsOn = []uuid.UUID{uuid.New()} }},
 		{"dependency cycle", "subtask dependencies form a cycle", func(d *model.Draft) { d.Subtasks[0].DependsOn = []uuid.UUID{d.Subtasks[0].ID} }},

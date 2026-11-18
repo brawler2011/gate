@@ -1,5 +1,5 @@
 Two ICPC programs each include a different helper.h from their own
-directory; the draft keeps both, attached to their programs.
+directory; a draft has one library file of each name, so import fails.
 
 -- problem.yaml --
 name: Headers

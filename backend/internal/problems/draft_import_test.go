@@ -16,6 +16,7 @@ import (
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/txtar"
@@ -99,22 +100,7 @@ func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 				require.NotEmpty(t, s.Output, s.Language)
 			}
 			// Every testdata checker, validator, interactor and generator uses testlib.
-			programs := []model.DraftProgram{}
-			for _, p := range []*model.DraftProgram{d.Checker, d.Interactor} {
-				if p != nil {
-					programs = append(programs, *p)
-				}
-			}
-			for _, p := range append(d.Validators, d.Generators...) {
-				programs = append(programs, p.DraftProgram)
-			}
-			for _, p := range programs {
-				names := []string{}
-				for _, id := range p.Dependencies {
-					names = append(names, d.LibraryFile(id).Name)
-				}
-				require.Contains(t, names, "testlib.h")
-			}
+			require.NotNil(t, libraryFile(d, "testlib.h"))
 		})
 	}
 }
@@ -201,62 +187,58 @@ func TestImportEnforcesQuotasWhileConverting(t *testing.T) {
 	require.ErrorIs(t, err, pkg.ErrPayloadTooLarge)
 }
 
-func TestImportKeepsProgramHeadersApart(t *testing.T) {
-	plan, err := importDir(t, unpack(t, "icpc-program-headers"), nil)
-	require.NoError(t, err)
-	defer plan.Close()
-	d := plan.draft
-	require.NoError(t, d.Validate(importQuotas, nil))
-	checker, validator := d.LibraryFile(d.Checker.Dependencies[0]), d.LibraryFile(d.Validator().Dependencies[0])
-	require.Equal(t, "helper.h", checker.Name)
-	require.Equal(t, "helper.h", validator.Name)
-	require.Equal(t, "// B\n", validator.Content)
-	require.NotEqual(t, checker.ID, validator.ID)
+// A draft has one library file of each name, and judge programs share it.
+func TestImportRejectsDifferentLibraryFilesOfOneName(t *testing.T) {
+	_, err := importDir(t, unpack(t, "icpc-program-headers"), nil)
+	require.ErrorContains(t, err, "different files named helper.h")
 }
 
-// libraryOf returns the library files program p depends on, by name.
-func libraryOf(d model.Draft, p model.DraftProgram) map[string]model.DraftLibraryFile {
-	files := map[string]model.DraftLibraryFile{}
-	for _, id := range p.Dependencies {
-		files[d.LibraryFile(id).Name] = *d.LibraryFile(id)
+// libraryFile returns the library file of d named name, or nil.
+func libraryFile(d model.Draft, name string) *model.DraftLibraryFile {
+	for i := range d.Library {
+		if d.Library[i].Name == name {
+			return &d.Library[i]
+		}
 	}
-	return files
+	return nil
 }
 
 // A package testlib.h equal to an upstream version becomes the auto-updated
 // one; a modified copy stays the author's.
 func TestImportRecognizesUpstreamTestlib(t *testing.T) {
-	plan, err := importDir(t, "../../pkg/testdata/polygon/a-plus-b", nil)
+	const pkgDir = "../../pkg/testdata/polygon/subtasks-groups"
+	plan, err := importDir(t, pkgDir, nil)
 	require.NoError(t, err)
 	defer plan.Close()
-	require.True(t, libraryOf(plan.draft, *plan.draft.Checker)["testlib.h"].AutoUpdate)
+	require.Equal(t, []model.DraftLibraryFile{{ID: plan.draft.Library[0].ID, Name: "testlib.h", AutoUpdate: true}}, plan.draft.Library)
 	require.NoError(t, plan.draft.Validate(importQuotas, nil))
 
-	original, err := os.ReadFile("../../pkg/testdata/polygon/a-plus-b/files/testlib.h")
+	original, err := os.ReadFile(pkgDir + "/files/testlib.h")
 	require.NoError(t, err)
 	patched := string(original) + "// patched\n"
-	plan, err = importDir(t, "../../pkg/testdata/polygon/a-plus-b", map[string]string{"files/testlib.h": patched})
+	plan, err = importDir(t, pkgDir, map[string]string{"files/testlib.h": patched})
 	require.NoError(t, err)
 	defer plan.Close()
-	require.Equal(t, model.DraftLibraryFile{ID: plan.draft.Checker.Dependencies[0], Name: "testlib.h", Content: patched},
-		libraryOf(plan.draft, *plan.draft.Checker)["testlib.h"])
+	require.Equal(t, []model.DraftLibraryFile{{ID: plan.draft.Library[0].ID, Name: "testlib.h", Content: patched}}, plan.draft.Library)
 }
 
-// rnd differs between testlib versions, so an imported generator keeps the
-// package testlib.h while the checker and validator take the system one.
+// rnd differs between testlib versions, so a package with generators keeps
+// its testlib.h unless it is the current system one; turning auto-update on
+// is the author's choice.
 func TestImportKeepsGeneratorTestlib(t *testing.T) {
-	plan, err := importDir(t, "../../pkg/testdata/polygon/max-subarray", nil)
+	const pkgDir = "../../pkg/testdata/polygon/max-subarray"
+	plan, err := importDir(t, pkgDir, nil)
 	require.NoError(t, err)
 	defer plan.Close()
-	d := plan.draft
-	original, err := os.ReadFile("../../pkg/testdata/polygon/max-subarray/files/testlib.h")
+	original, err := os.ReadFile(pkgDir + "/files/testlib.h")
 	require.NoError(t, err)
-	generator := libraryOf(d, d.Generators[0].DraftProgram)["testlib.h"]
-	require.False(t, generator.AutoUpdate)
-	require.Equal(t, string(original), generator.Content)
-	require.True(t, libraryOf(d, *d.Checker)["testlib.h"].AutoUpdate)
-	require.True(t, libraryOf(d, d.Validators[0].DraftProgram)["testlib.h"].AutoUpdate)
-	require.NoError(t, d.Validate(importQuotas, nil))
+	require.Equal(t, []model.DraftLibraryFile{{ID: plan.draft.Library[0].ID, Name: "testlib.h", Content: string(original)}}, plan.draft.Library)
+
+	system, _ := syslib.Lookup("testlib.h")
+	plan, err = importDir(t, pkgDir, map[string]string{"files/testlib.h": system.Content})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.True(t, plan.draft.Library[0].AutoUpdate)
 }
 
 // Builtin templates and gfmt packages name the system testlib.h instead of
@@ -266,7 +248,6 @@ func TestImportSystemLibrary(t *testing.T) {
 	require.NoError(t, err)
 	defer plan.Close()
 	require.Equal(t, []model.DraftLibraryFile{{ID: plan.draft.Library[0].ID, Name: "testlib.h", AutoUpdate: true}}, plan.draft.Library)
-	require.True(t, libraryOf(plan.draft, plan.draft.Generators[0].DraftProgram)["testlib.h"].AutoUpdate)
 
 	_, err = importAPlusB(t, map[string]string{"lib/testlib.h": "// copy\n"})
 	require.ErrorContains(t, err, "system library file")

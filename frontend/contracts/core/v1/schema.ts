@@ -1747,12 +1747,11 @@ export interface components {
             /** Format: uuid */
             solution_id: string | null;
         };
-        /** @description A source compiled with the library files it depends on; each dependency is placed under its library name. */
+        /** @description A source in a language configuration. The checker, interactor, validators and generators compile with the whole draft library, each file under its name; solutions compile alone. */
         ProblemDraftProgram: {
             /** @description Identifier of the language configuration from GET /languages, such as cpp17 or python3. */
             language: string;
             source: string;
-            dependencies: string[];
         };
         /** @description A validator, generator or solution; tests and the main solution refer to it by ID. */
         ProblemDraftNamedProgram: {
@@ -1762,9 +1761,8 @@ export interface components {
             /** @description Identifier of the language configuration from GET /languages, such as cpp17 or python3. */
             language: string;
             source: string;
-            dependencies: string[];
         };
-        /** @description A source file programs include by its name. */
+        /** @description A source file judge programs include by its name; names are unique in a draft. */
         ProblemDraftLibraryFile: {
             /** Format: uuid */
             id: string;

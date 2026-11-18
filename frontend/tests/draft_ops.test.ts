@@ -1,10 +1,8 @@
 import {describe, expect, test} from "bun:test";
 
 import {
-  addLibraryFile,
   addProgram,
   addSubtask,
-  addSystemFile,
   describePointer,
   emptyStatement,
   formatPoints,
@@ -15,7 +13,6 @@ import {
   removeTest,
   setSubtaskDependencies,
   sumPoints,
-  systemDependencies,
   upsertTest,
 } from "@/components/workshop/draft/draftOps";
 
@@ -51,19 +48,6 @@ describe("programs", () => {
     expect(draft.main_solution_id).toBe(main);
     expect(removeProgram(draft, "solution", draft.solutions[1].id).main_solution_id).toBe(main);
     expect(removeProgram(draft, "solution", main).main_solution_id).toBeNull();
-  });
-});
-
-describe("system library", () => {
-  test("a new program depends on the auto-updated files the system library provides for its language", () => {
-    const system = [{name: "testlib.h", extensions: ["cpp"], version: "1", commit: "c", content: ""}];
-    const {draft, id} = addSystemFile(emptyDraft(), "testlib.h");
-    const cpp = {id: "cpp17", name: "C++17", extensions: ["cpp", "cc"], syntax: "cpp"};
-    const python = {id: "python3", name: "Python 3", extensions: ["py"], syntax: "python"};
-    expect(systemDependencies(draft, system, cpp)).toEqual([id]);
-    expect(systemDependencies(draft, system, python)).toEqual([]);
-    // An ordinary copy is the author's choice, not attached automatically.
-    expect(systemDependencies(addLibraryFile(emptyDraft(), "testlib.h").draft, system, cpp)).toEqual([]);
   });
 });
 
@@ -122,7 +106,7 @@ describe("server error pointers", () => {
     let draft = addProgram(emptyDraft(), "generator", "gen", "cpp", "");
     draft = addSubtask({...draft, statements: [emptyStatement("ru")]}, "A");
     draft = upsertTest(draft, newManualTest(draft, draft.subtasks[0].id));
-    expect(describePointer(draft, "/generators/0/dependencies/1")).toBe("Генератор gen");
+    expect(describePointer(draft, "/generators/0/source")).toBe("Генератор gen");
     expect(describePointer(draft, "/checker/language")).toBe("Чекер");
     expect(describePointer(draft, "/statements/0/legend")).toBe("Условие RU, легенда");
     expect(describePointer(draft, "/tests/0/input/object_id")).toBe("Тест 1");

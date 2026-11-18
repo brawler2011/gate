@@ -22,7 +22,7 @@ const RenameFile = ({name, saving, onRename}: RenameProps): ReactNode => {
   return (
     <Grid gutter="xs" align="flex-end">
       <Grid.Col span="auto">
-        <TextInput label="Имя файла" description="Под этим именем программы подключают файл" value={value} onChange={(e) => setValue(e.currentTarget.value)} />
+        <TextInput label="Имя файла" description="Под этим именем программы жюри подключают файл" value={value} onChange={(e) => setValue(e.currentTarget.value)} />
       </Grid.Col>
       <Grid.Col span="content">
         <Button variant="default" disabled={value.trim() === "" || value.trim() === name} loading={saving} onClick={() => onRename(value.trim())}>
@@ -117,7 +117,8 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
           <Stack gap="xs">
             {draft.library.length === 0 && (
               <Text size="sm" c="dimmed">
-                Файлов пока нет.
+                Файлов пока нет. Файлы библиотеки доступны чекеру, валидатору, интерактору и генераторам
+                под своими именами.
               </Text>
             )}
             {draft.library.map((file) => (
