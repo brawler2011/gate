@@ -87,13 +87,13 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
           <SectionPaper>
             <Stack gap="md">
               <RenameFile
-                key={`${selected.id}:${draft.revision}`}
+                key={`${selected.id}:${selected.name}`}
                 name={selected.name}
                 saving={isSaving}
                 onRename={(name) => void save((current) => updateLibraryFile(current, selected.id, {name}))}
               />
               <SourceEditor
-                key={`${selected.id}:${draft.revision}`}
+                key={selected.id}
                 label={selected.name}
                 content={selected.content}
                 saving={isSaving}

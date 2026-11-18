@@ -66,7 +66,6 @@ const ProgramEditor = (props: ProgramEditorProps): ReactNode => {
           placeholder={draft.library.length === 0 ? "Библиотека пуста" : "Не подключено"}
         />
         <SourceEditor
-          key={draft.revision}
           label={label}
           content={program.source}
           saving={saving}
@@ -240,7 +239,7 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
             onDelete={() => void save((current) => removeProgram(current, role, selected.id))}
           >
             <RenameControl
-              key={`${selected.id}:${draft.revision}`}
+              key={`${selected.id}:${selected.name}`}
               name={selected.name}
               saving={isSaving}
               onRename={(name) => void save((current) => updateProgram(current, role, selected.id, {name}))}

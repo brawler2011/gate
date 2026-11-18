@@ -5,13 +5,8 @@ import {useClipboard} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
 import {IconCopy, IconPencil, IconTrash, IconUpload} from "@tabler/icons-react";
 import {useDeferredValue, useState} from "react";
-import ReactMarkdown from "react-markdown";
-import rehypeKatex from "rehype-katex";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
 
-import "katex/dist/katex.min.css";
-
+import {ProblemStatement} from "@/components/problems/ProblemStatement";
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 
 import {DraftGate} from "./draft/DraftGate";
@@ -36,10 +31,10 @@ type StatementProps = {draft: ProblemDraft; problemId: string; statement: Proble
 
 const Preview = ({draft, problemId, statement}: StatementProps): ReactNode => {
   const deferred = useDeferredValue(statement);
-  // Sections refer to assets by name; show the uploaded objects.
-  const resolve = (url: string): string => {
-    const asset = draft.assets.find((a) => a.name === url);
-    return asset ? objectUrl(problemId, asset.object_id) : url;
+  // Sections refer to assets by name, read as participants' statements read them.
+  const assetUrl = (name: string): string | undefined => {
+    const asset = draft.assets.find((a) => a.name === name);
+    return asset && objectUrl(problemId, asset.object_id);
   };
   return (
     <Stack gap="md" className="problem-statement">
@@ -53,9 +48,7 @@ const Preview = ({draft, problemId, statement}: StatementProps): ReactNode => {
               {SECTION_TITLES[key]}
             </Text>
           )}
-          <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]} urlTransform={resolve}>
-            {deferred[key]}
-          </ReactMarkdown>
+          <ProblemStatement value={deferred[key]} assetUrl={assetUrl} />
         </Box>
       ))}
     </Stack>
@@ -139,7 +132,7 @@ const StatementEditor = ({draft, problemId}: {draft: ProblemDraft; problemId: st
         <Text size="xs" c="dimmed">
           Название задачи берётся из черновика. Изображения подключаются по имени ресурса: ![](pic.png).
         </Text>
-        <StatementForm key={`${language}:${draft.revision}`} draft={draft} problemId={problemId} statement={stored} />
+        <StatementForm key={language} draft={draft} problemId={problemId} statement={stored} />
       </Stack>
     </SectionPaper>
   );
@@ -210,12 +203,12 @@ const AssetsSection = ({draft, problemId}: {draft: ProblemDraft; problemId: stri
                   <Table.Td w={120}>
                     <Group gap={4} wrap="nowrap">
                       <Tooltip label="Копировать Markdown-ссылку">
-                        <ActionIcon variant="subtle" onClick={() => clipboard.copy(`![](${asset.name})`)}>
+                        <ActionIcon variant="subtle" aria-label={`Копировать ссылку на ${asset.name}`} onClick={() => clipboard.copy(`![](${asset.name})`)}>
                           <IconCopy size={16} />
                         </ActionIcon>
                       </Tooltip>
                       <Tooltip label="Переименовать">
-                        <ActionIcon variant="subtle" disabled={isSaving} onClick={() => rename(asset.name)}>
+                        <ActionIcon variant="subtle" aria-label={`Переименовать ${asset.name}`} disabled={isSaving} onClick={() => rename(asset.name)}>
                           <IconPencil size={16} />
                         </ActionIcon>
                       </Tooltip>
@@ -223,6 +216,7 @@ const AssetsSection = ({draft, problemId}: {draft: ProblemDraft; problemId: stri
                         <ActionIcon
                           variant="subtle"
                           color="red"
+                          aria-label={`Удалить ${asset.name}`}
                           disabled={isSaving}
                           onClick={() => void save((current) => removeAsset(current, asset.name))}
                         >

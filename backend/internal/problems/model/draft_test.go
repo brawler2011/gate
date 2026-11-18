@@ -95,6 +95,7 @@ func TestRenamedAssetBlocksBuildUntilStatementFollows(t *testing.T) {
 
 func TestImageReferencesReadAsTheStatementRenders(t *testing.T) {
 	markdown := "![a](./a.png#center) ![b](<my pic.png>) ![c](https://example.com/c.png) ![d](100%25.png)\n" +
-		"![e](/rooted.png) ![f](data:image/png;base64,AA) `![g](code.png)` ![h][ref]\n\n[ref]: h.png\n"
-	require.Equal(t, []string{"a.png", "my pic.png", "100%.png", "h.png"}, ImageReferences(markdown))
+		"![e](/rooted.png) ![f](data:image/png;base64,AA) `![g](code.png)` ![h][ref]\n" +
+		"![i](a&amp;b.png) ![j](a\\(b\\).png) ![k](&#x433;.png) ![l](%D0%B3.png)\n\n[ref]: h.png\n"
+	require.Equal(t, []string{"a.png", "my pic.png", "100%.png", "h.png", "a&b.png", "a(b).png", "г.png", "г.png"}, ImageReferences(markdown))
 }
