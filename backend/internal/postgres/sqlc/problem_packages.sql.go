@@ -24,11 +24,9 @@ func (q *Queries) CountProblemPackages(ctx context.Context, problemID uuid.UUID)
 }
 
 const getProblemPackageByID = `-- name: GetProblemPackageByID :one
-
 SELECT id, problem_id, organization_id, package_hash, created_at, title, short_name, time_limit_ms, memory_limit_mb, build_id, object_id, revision, samples, statements FROM problem_packages WHERE id = $1
 `
 
-// Problem Packages queries
 func (q *Queries) GetProblemPackageByID(ctx context.Context, id uuid.UUID) (ProblemPackage, error) {
 	row := q.db.QueryRow(ctx, getProblemPackageByID, id)
 	var i ProblemPackage

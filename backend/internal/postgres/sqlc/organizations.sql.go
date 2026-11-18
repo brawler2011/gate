@@ -14,7 +14,6 @@ import (
 )
 
 const addOrganizationMember = `-- name: AddOrganizationMember :exec
-
 INSERT INTO organization_members (organization_id, user_id, role)
 VALUES ($1, $2, $3)
 `
@@ -25,7 +24,6 @@ type AddOrganizationMemberParams struct {
 	Role           organizationsmodel.OrganizationRole `json:"role"`
 }
 
-// Organization Members
 func (q *Queries) AddOrganizationMember(ctx context.Context, arg AddOrganizationMemberParams) error {
 	_, err := q.db.Exec(ctx, addOrganizationMember, arg.OrganizationID, arg.UserID, arg.Role)
 	return err
@@ -58,7 +56,6 @@ func (q *Queries) CountOrganizations(ctx context.Context, dollar_1 string) (int6
 }
 
 const createOrganization = `-- name: CreateOrganization :one
-
 INSERT INTO organizations (id, login, name, description, avatar_url, join_policy)
 VALUES ($1, $2, $3, $4, $5, COALESCE($6, 'by_request'))
 RETURNING id, login, name, description, avatar_url, created_at, updated_at, join_policy
@@ -73,7 +70,6 @@ type CreateOrganizationParams struct {
 	Column6     interface{} `json:"column_6"`
 }
 
-// Organizations queries
 func (q *Queries) CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error) {
 	row := q.db.QueryRow(ctx, createOrganization,
 		arg.ID,

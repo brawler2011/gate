@@ -542,11 +542,8 @@ type ListUnreferencedObjectsRow struct {
 	Key string    `json:"key"`
 }
 
-// Statements of the object, upload, build and idempotency protocols.
-// Locks are taken by the caller in the documented order; lock-then-recheck
-// statements are deliberately separate queries so each sees a fresh snapshot.
-// Only narrows the candidates: the foreign keys decide whether a row can go,
-// so a reference missing here makes a deletion fail, never succeed.
+// Lock-then-recheck queries use separate statements so each sees a fresh snapshot.
+// Foreign keys arbitrate deletion; this query only narrows candidates.
 func (q *Queries) ListUnreferencedObjects(ctx context.Context) ([]ListUnreferencedObjectsRow, error) {
 	rows, err := q.db.Query(ctx, listUnreferencedObjects)
 	if err != nil {

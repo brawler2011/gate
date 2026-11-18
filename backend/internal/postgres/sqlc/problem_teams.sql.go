@@ -14,7 +14,6 @@ import (
 )
 
 const addProblemTeam = `-- name: AddProblemTeam :exec
-
 INSERT INTO problem_teams (problem_id, team_id, permission)
 VALUES ($1, $2, $3)
 `
@@ -25,7 +24,6 @@ type AddProblemTeamParams struct {
 	Permission problemsmodel.ProblemPermission `json:"permission"`
 }
 
-// Problem Teams queries (team-based access control)
 func (q *Queries) AddProblemTeam(ctx context.Context, arg AddProblemTeamParams) error {
 	_, err := q.db.Exec(ctx, addProblemTeam, arg.ProblemID, arg.TeamID, arg.Permission)
 	return err

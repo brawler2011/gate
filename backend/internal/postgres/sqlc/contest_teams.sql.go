@@ -14,7 +14,6 @@ import (
 )
 
 const addContestTeam = `-- name: AddContestTeam :exec
-
 INSERT INTO contest_teams (contest_id, team_id, role)
 VALUES ($1, $2, $3)
 `
@@ -25,7 +24,6 @@ type AddContestTeamParams struct {
 	Role      contestsmodel.ContestRole `json:"role"`
 }
 
-// Contest Teams queries (team-based access control)
 func (q *Queries) AddContestTeam(ctx context.Context, arg AddContestTeamParams) error {
 	_, err := q.db.Exec(ctx, addContestTeam, arg.ContestID, arg.TeamID, arg.Role)
 	return err
