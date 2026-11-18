@@ -321,11 +321,12 @@ func (e *execution) compile(ctx context.Context) error {
 				deps[d.Library[i].Name] = []byte(d.Library[i].Text())
 			}
 		}
-		dir, err := e.pipeline.Programs.Get(ctx, sandbox.Program{Source: []byte(p.program.Source), Language: p.program.Language, Deps: deps}, s.Limits.Compile)
+		compiled, err := e.pipeline.Programs.Get(ctx, sandbox.Program{Source: []byte(p.program.Source), Language: p.program.Language, Deps: deps}, s.Limits.Compile)
 		if err != nil {
 			return fail("compile", 0, processKind(err), fmt.Errorf("%s: %w", p.path, err))
 		}
-		executable, err := e.pipeline.Files.UploadCompiled(ctx, dir, int64(s.Limits.Compile.Output))
+		executable, err := e.pipeline.Files.UploadCompiled(ctx, compiled.Dir(), int64(s.Limits.Compile.Output))
+		compiled.Release()
 		if err != nil {
 			return fail("compile", 0, "infrastructure", fmt.Errorf("%s: %w", p.path, err))
 		}

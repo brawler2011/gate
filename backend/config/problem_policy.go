@@ -11,6 +11,8 @@ import (
 type ProblemPolicy struct {
 	// Builds and judging require scratch space on a real disk, not tmpfs.
 	WorkDir          string            `yaml:"work_dir"`
+	// Worker disk budget for extracted packages and compiled programs under work_dir/cache.
+	CacheBytes       bytesize.Size     `yaml:"cache_bytes"`
 	Draft            model.DraftQuotas `yaml:"draft"`
 	Limits           model.BuildLimits `yaml:"limits"`
 	Parallelism      int               `yaml:"parallelism"`
@@ -38,6 +40,7 @@ func (p ProblemPolicy) validate(v *validator) {
 	v.check(p.Draft.Subtasks > 0, "problems.draft.subtasks", "must be positive")
 
 	v.check(p.Limits.DiskBytes > 0, "problems.limits.disk_bytes", "must be positive")
+	v.check(p.CacheBytes >= p.Limits.DiskBytes, "problems.cache_bytes", "must be at least problems.limits.disk_bytes")
 	v.check(p.Limits.FileCount > 0, "problems.limits.file_count", "must be positive")
 	v.check(p.Limits.ObjectBytes > 0 && p.Limits.ObjectBytes <= 5*bytesize.GiB, "problems.limits.object_bytes", "must be in (0, 5GiB]")
 	validateRunLimits(v, "problems.limits.compile", p.Limits.Compile)

@@ -18,6 +18,7 @@ judge:
   workers: 4
 problems:
   work_dir: /problem-work
+  cache_bytes: 16GiB
   draft:
     file_bytes: 1MiB
     text_bytes: 8MiB

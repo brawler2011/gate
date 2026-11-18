@@ -41,6 +41,7 @@ import (
 	wsobserver "github.com/brawler2011/gate/backend/internal/transport/ws/observer"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
+	"github.com/brawler2011/gate/backend/pkg/diskcache"
 	"github.com/brawler2011/gate/backend/pkg/email"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
@@ -227,7 +228,11 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 		return nil, err
 	}
 
-	programs := sandbox.NewProgramCache(filepath.Join(problemPolicy.WorkDir, "programs"), sandboxClient, fileTransport, judgeImage)
+	cache, err := diskcache.Open(filepath.Join(problemPolicy.WorkDir, "cache"), int64(problemPolicy.CacheBytes))
+	if err != nil {
+		return nil, err
+	}
+	programs := sandbox.NewProgramCache(cache, sandboxClient, fileTransport, judgeImage)
 	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Logger: d.logger}
 	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll}
 	problemGC := &builder.GC{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: d.logger}
@@ -236,7 +241,7 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 	judgeTransactions := pgstore.NewJudgeTransactions(d.pool)
 	packageJudge := &judging.PackageJudge{Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Logger: d.logger}
 	judgeUC := judging.NewJudgeUseCase(judgeJobs, judgeTransactions, pgstore.NewSubmissionsRepo(d.pool),
-		&judging.PackageLoader{Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Packages: d.problemDrafts, Limits: problemPolicy.Limits},
+		&judging.PackageLoader{Store: d.store, Bucket: defaultS3ObjectBucket, Cache: cache, Packages: d.problemDrafts, Limits: problemPolicy.Limits},
 		packageJudge, judgeworker.NewEventPublisher(d.natsJS))
 	judgeWorker, err := judgeworker.NewJudgeWorker(context.Background(), d.natsJS, judgeUC, d.cfg.Judge.Workers)
 	if err != nil {

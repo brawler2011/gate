@@ -69,11 +69,12 @@ func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, source g
 		}
 	}
 	limits := pkg.Descriptor.Snapshot.Limits.Compile
-	dir, err := j.Programs.Get(ctx, sandbox.Program{Source: text, Language: source.Language, Deps: deps}, limits)
+	compiled, err := j.Programs.Get(ctx, sandbox.Program{Source: text, Language: source.Language, Deps: deps}, limits)
 	if err != nil {
 		return sandbox.Executable{}, fmt.Errorf("compile %s: %w", source.Source, err)
 	}
-	return j.Files.UploadCompiled(ctx, dir, int64(limits.Output)) //nolint:wrapcheck // already describes the upload
+	defer compiled.Release()
+	return j.Files.UploadCompiled(ctx, compiled.Dir(), int64(limits.Output)) //nolint:wrapcheck // already describes the upload
 }
 
 type roleProgram struct {

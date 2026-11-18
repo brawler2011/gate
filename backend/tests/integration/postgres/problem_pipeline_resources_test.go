@@ -78,7 +78,7 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 	}
 	return &pipelineHarness{ctx: accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}),
 		pool: pool, repo: repo, org: org, draft: d, services: services, work: work, limits: limits, options: options, uploads: uploads,
-		programs: sandbox.NewProgramCache(dbfixtures.DiskTempDir(t), services.client, services.files, sandbox.Image{Config: &sandbox.Config{Langs: services.langs}})}
+		programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: &sandbox.Config{Langs: services.langs}})}
 }
 
 func (h *pipelineHarness) pipeline() *builder.Pipeline {
@@ -210,7 +210,7 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	delete(without, "cpp17")
 	pipeline := h.pipeline()
 	pipeline.Languages = &sandbox.Config{Langs: without}
-	pipeline.Programs = sandbox.NewProgramCache(dbfixtures.DiskTempDir(t), h.services.client, h.services.files, sandbox.Image{Config: pipeline.Languages})
+	pipeline.Programs = sandbox.NewProgramCache(dbfixtures.DiskCache(t), h.services.client, h.services.files, sandbox.Image{Config: pipeline.Languages})
 	_, err := pipeline.Execute(h.ctx, h.enqueueAndClaim(t))
 	var failure *builder.Failure
 	require.ErrorAs(t, err, &failure)
@@ -223,7 +223,7 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	cpp.Compile = strings.Replace(cpp.Compile, "g++ ", "g++ -DNEW_IMAGE ", 1)
 	changed["cpp17"] = cpp
 	pipeline.Languages = &sandbox.Config{Langs: changed}
-	pipeline.Programs = sandbox.NewProgramCache(dbfixtures.DiskTempDir(t), h.services.client, h.services.files, sandbox.Image{Config: pipeline.Languages})
+	pipeline.Programs = sandbox.NewProgramCache(dbfixtures.DiskCache(t), h.services.client, h.services.files, sandbox.Image{Config: pipeline.Languages})
 	_, err = pipeline.Execute(h.ctx, h.enqueueAndClaim(t))
 	require.NoError(t, err)
 }

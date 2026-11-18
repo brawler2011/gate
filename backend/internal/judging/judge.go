@@ -116,7 +116,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmo
 		}
 		return uc.markInternalError(ctx, job, fmt.Errorf("failed to load problem package: %w", err))
 	}
-	defer pkg.Cleanup()
+	defer pkg.Release()
 
 	if err := uc.eventPublisher.PublishCompilingStarted(ctx, submissionID, meta); err != nil {
 		logger.Error("failed to publish compiling started event", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))

@@ -472,5 +472,5 @@ func (s *IntegrationTestSuite) packageHash(packages *pgstore.PackagesRepo, id uu
 
 // Fixture packages have no archive, forcing internal errors without a sandbox.
 func (s *IntegrationTestSuite) unreadablePackageLoader() *judging.PackageLoader {
-	return &judging.PackageLoader{Store: s.objectStore, Bucket: s.bucket, TempDir: diskTempDir(s.T()), Packages: s.problemDrafts, Limits: testBuildOptions(s.T()).Limits}
+	return &judging.PackageLoader{Store: s.objectStore, Bucket: s.bucket, Cache: diskCache(s.T()), Packages: s.problemDrafts, Limits: testBuildOptions(s.T()).Limits}
 }
