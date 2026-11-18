@@ -6,8 +6,6 @@
 # extensions  source file extensions; the first names new files, and an extension
 #             suggests the first configuration (in file order) that accepts it
 # syntax      Prism (refractor) grammar the frontend highlights sources with
-# error_line  regular expression whose first non-empty group is the source line
-#             a compiler or runtime error names; without it, a generic pattern
 # package     nixpkgs attribute installed into the judge image (see flake.nix)
 # The other keys tell the backend how to compile and run code in the sandbox,
 # where the runtime's binaries are available under /usr/bin.
@@ -16,7 +14,6 @@
 name = "C (GCC 15)"
 extensions = ["c"]
 syntax = "c"
-error_line = 'foo\.c:(\d+):(?:\d+:)?\s*(?:fatal )?error'
 package = "gcc15"
 type = "compiler"
 code_file = "foo.c"
@@ -28,7 +25,6 @@ execute = "${dir}/${name}"
 name = "C++17 (GCC 15)"
 extensions = ["cpp", "cc", "cxx"]
 syntax = "cpp"
-error_line = 'foo\.cc:(\d+):(?:\d+:)?\s*(?:fatal )?error'
 package = "gcc15"
 type = "compiler"
 code_file = "foo.cc"
@@ -40,7 +36,6 @@ execute = "${dir}/${name}"
 name = "C++20 (GCC 15)"
 extensions = ["cpp", "cc", "cxx"]
 syntax = "cpp"
-error_line = 'foo\.cc:(\d+):(?:\d+:)?\s*(?:fatal )?error'
 package = "gcc15"
 type = "compiler"
 code_file = "foo.cc"
@@ -52,7 +47,6 @@ execute = "${dir}/${name}"
 name = "C++23 (GCC 15)"
 extensions = ["cpp", "cc", "cxx"]
 syntax = "cpp"
-error_line = 'foo\.cc:(\d+):(?:\d+:)?\s*(?:fatal )?error'
 package = "gcc15"
 type = "compiler"
 code_file = "foo.cc"
@@ -64,7 +58,6 @@ execute = "${dir}/${name}"
 name = "C++26 (GCC 15)"
 extensions = ["cpp", "cc", "cxx"]
 syntax = "cpp"
-error_line = 'foo\.cc:(\d+):(?:\d+:)?\s*(?:fatal )?error'
 package = "gcc15"
 type = "compiler"
 code_file = "foo.cc"
@@ -76,7 +69,6 @@ execute = "${dir}/${name}"
 name = "Python 3.14 (CPython)"
 extensions = ["py"]
 syntax = "python"
-error_line = 'File "[^"]*", line (\d+)'
 package = "python314"
 type = "interpreter"
 code_file = "foo.py"
@@ -86,7 +78,6 @@ execute = "/usr/bin/python3 ${dir}/foo.py"
 name = "Python 3.11 (PyPy 7.3)"
 extensions = ["py"]
 syntax = "python"
-error_line = 'File "[^"]*", line (\d+)'
 package = "pypy3"
 type = "interpreter"
 code_file = "foo.py"
@@ -96,7 +87,6 @@ execute = "/usr/bin/pypy3 ${dir}/foo.py"
 name = "Go 1.26"
 extensions = ["go"]
 syntax = "go"
-error_line = 'foo\.go:(\d+):'
 package = "go_1_26"
 type = "compiler"
 code_file = "foo.go"
@@ -108,7 +98,6 @@ execute = "${dir}/${name}"
 name = "Java 25 (OpenJDK)"
 extensions = ["java"]
 syntax = "java"
-error_line = 'Main\.java:(\d+)'
 package = "jdk25_headless"
 type = "compiler"
 code_file = "Main.java"
@@ -120,7 +109,6 @@ execute = "/usr/bin/java -Xmx192m -Xms32m -XX:ActiveProcessorCount=1 -cp ${dir} 
 name = "Rust 1.95"
 extensions = ["rs"]
 syntax = "rust"
-error_line = 'error(?:\[E\d+\])?:[^\n]*\n\s*--> foo\.rs:(\d+)|panicked at foo\.rs:(\d+)'
 package = "rustc"
 type = "compiler"
 code_file = "foo.rs"
@@ -132,7 +120,6 @@ execute = "${dir}/${name}"
 name = "JavaScript (Node.js 24)"
 extensions = ["js"]
 syntax = "javascript"
-error_line = 'foo\.js:(\d+)'
 package = "nodejs-slim_24"
 type = "interpreter"
 code_file = "foo.js"

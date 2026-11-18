@@ -2768,7 +2768,6 @@ export interface components {
          * @description Submission test details data.
          * @example {
          *       "compiler_output": "example",
-         *       "error_line": 12,
          *       "tests": [
          *         {
          *           "test_index": 1,
@@ -2790,11 +2789,6 @@ export interface components {
          */
         SubmissionTestDetailsModel: {
             compiler_output?: string | null;
-            /**
-             * Format: int32
-             * @example 12
-             */
-            error_line?: number | null;
             tests?: components["schemas"]["TestDetailItemModel"][];
             failed_test_details?: components["schemas"]["FailedTestDetailModel"];
         };

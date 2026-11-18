@@ -4568,7 +4568,6 @@ components:
       description: "Submission test details data."
       example:
         compiler_output: example
-        error_line: 12
         tests:
         - test_index: 1
           verdict: OK
@@ -4589,11 +4588,6 @@ components:
         compiler_output:
           type: string
           nullable: true
-        error_line:
-          type: integer
-          format: int32
-          nullable: true
-          example: 12
         tests:
           type: array
           items:

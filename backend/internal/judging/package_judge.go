@@ -182,7 +182,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 		if len(output) > maxTestDetailSize {
 			output = output[:maxTestDetailSize]
 		}
-		return &FinalVerdict{State: submissionsmodel.GotCE, Message: output, TestDetails: &submissionsmodel.SubmissionTestDetails{CompilerOutput: &output, ErrorLine: ParseErrorLine(j.Languages.Langs[lang].ErrorLine, output)}}, nil
+		return &FinalVerdict{State: submissionsmodel.GotCE, Message: output, TestDetails: &submissionsmodel.SubmissionTestDetails{CompilerOutput: &output}}, nil
 	}
 	defer j.releaseExecutable(sol)
 	// An interactive problem may also have a checker, which decides after the
@@ -299,7 +299,6 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 		if err != nil {
 			return result, err
 		}
-		result.ErrorLine = ParseErrorLine(j.Languages.Langs[lang].ErrorLine, result.Message)
 	}
 	return result, nil
 }
@@ -334,4 +333,3 @@ type FlatTest struct {
 	TestIndex   int
 	Test        gfmt.Test
 }
-

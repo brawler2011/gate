@@ -142,7 +142,6 @@ export const SubmissionDetailsContent = ({
 
   const testDetails = submission.test_details;
   const failedDetails = testDetails?.failed_test_details;
-  const errorLine = testDetails?.error_line;
   const compilerOutput = testDetails?.compiler_output;
   const tests = testDetails?.tests;
 
@@ -320,11 +319,6 @@ export const SubmissionDetailsContent = ({
               <Title order={4} c="red.6">
                 Вывод компилятора
               </Title>
-              {errorLine && (
-                <Badge color="red" variant="filled">
-                  Ошибка на строке {errorLine}
-                </Badge>
-              )}
             </Group>
             <Button
               size="xs"
@@ -365,11 +359,6 @@ export const SubmissionDetailsContent = ({
                 Детали упавшего теста #{failedDetails.test_index}
               </Title>
             </Group>
-            {errorLine && (
-              <Badge color="red" variant="light">
-                Строка {errorLine}
-              </Badge>
-            )}
           </Group>
 
           {failedDetails.is_truncated && (
@@ -493,11 +482,6 @@ export const SubmissionDetailsContent = ({
           <Group gap="xs">
             <IconFileCode size={20} />
             <Title order={4}>Исходный код решения</Title>
-            {errorLine && (
-              <Badge color="red" variant="filled">
-                Подсветка строки {errorLine}
-              </Badge>
-            )}
           </Group>
           <Button
             size="xs"
@@ -517,7 +501,6 @@ export const SubmissionDetailsContent = ({
           <CodeBlock
             code={submission.submission}
             syntax={languages.find((language) => language.id === submission.language)?.syntax ?? ""}
-            highlightLine={errorLine}
           />
         )}
       </Card>

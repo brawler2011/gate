@@ -10351,7 +10351,6 @@ func (s *SubmissionSortOrderQuery) UnmarshalText(data []byte) error {
 // Ref: #/components/schemas/SubmissionTestDetailsModel
 type SubmissionTestDetailsModel struct {
 	CompilerOutput    OptNilString             `json:"compiler_output"`
-	ErrorLine         OptNilInt32              `json:"error_line"`
 	Tests             []TestDetailItemModel    `json:"tests"`
 	FailedTestDetails OptFailedTestDetailModel `json:"failed_test_details"`
 }
@@ -10359,11 +10358,6 @@ type SubmissionTestDetailsModel struct {
 // GetCompilerOutput returns the value of CompilerOutput.
 func (s *SubmissionTestDetailsModel) GetCompilerOutput() OptNilString {
 	return s.CompilerOutput
-}
-
-// GetErrorLine returns the value of ErrorLine.
-func (s *SubmissionTestDetailsModel) GetErrorLine() OptNilInt32 {
-	return s.ErrorLine
 }
 
 // GetTests returns the value of Tests.
@@ -10379,11 +10373,6 @@ func (s *SubmissionTestDetailsModel) GetFailedTestDetails() OptFailedTestDetailM
 // SetCompilerOutput sets the value of CompilerOutput.
 func (s *SubmissionTestDetailsModel) SetCompilerOutput(val OptNilString) {
 	s.CompilerOutput = val
-}
-
-// SetErrorLine sets the value of ErrorLine.
-func (s *SubmissionTestDetailsModel) SetErrorLine(val OptNilInt32) {
-	s.ErrorLine = val
 }
 
 // SetTests sets the value of Tests.

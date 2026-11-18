@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"regexp"
 	"slices"
 	"strings"
 
@@ -26,16 +25,12 @@ type Language struct {
 	Extensions []string `toml:"extensions" json:"extensions"`
 	// Syntax is the Prism grammar the frontend highlights sources with; ""
 	// shows them as plain text. It is not part of the compiler identity.
-	Syntax string `toml:"syntax" json:"-"`
-	// ErrorLine is a regular expression whose first non-empty group is the
-	// source line a compiler or runtime error names; "" leaves only a generic
-	// pattern. It is not part of the compiler identity.
-	ErrorLine   string `toml:"error_line" json:"-"`
-	Type        string   `toml:"type" json:"type"`
-	Compile     string   `toml:"compile" json:"compile"`
-	CodeFile    string   `toml:"code_file" json:"code_file"`
-	CompileFile string   `toml:"compile_file" json:"compile_file"`
-	Execute     string   `toml:"execute" json:"execute"`
+	Syntax      string `toml:"syntax" json:"-"`
+	Type        string `toml:"type" json:"type"`
+	Compile     string `toml:"compile" json:"compile"`
+	CodeFile    string `toml:"code_file" json:"code_file"`
+	CompileFile string `toml:"compile_file" json:"compile_file"`
+	Execute     string `toml:"execute" json:"execute"`
 }
 
 // Config is the language catalog: configurations by identifier, and the
@@ -88,12 +83,6 @@ func ParseConfig(data []byte) (*Config, error) {
 		for _, ext := range lang.Extensions {
 			if ext == "" || ext != strings.ToLower(ext) || strings.ContainsAny(ext, "./") {
 				return nil, fmt.Errorf("language %q has invalid extension %q", id, ext)
-			}
-		}
-		if lang.ErrorLine != "" {
-			re, err := regexp.Compile(lang.ErrorLine)
-			if err != nil || re.NumSubexp() == 0 {
-				return nil, fmt.Errorf("language %q needs error_line to be a regular expression with a group capturing the line", id)
 			}
 		}
 	}

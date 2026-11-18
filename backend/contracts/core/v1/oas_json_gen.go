@@ -21132,12 +21132,6 @@ func (s *SubmissionTestDetailsModel) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.ErrorLine.Set {
-			e.FieldStart("error_line")
-			s.ErrorLine.Encode(e)
-		}
-	}
-	{
 		if s.Tests != nil {
 			e.FieldStart("tests")
 			e.ArrStart()
@@ -21155,11 +21149,10 @@ func (s *SubmissionTestDetailsModel) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSubmissionTestDetailsModel = [4]string{
+var jsonFieldsNameOfSubmissionTestDetailsModel = [3]string{
 	0: "compiler_output",
-	1: "error_line",
-	2: "tests",
-	3: "failed_test_details",
+	1: "tests",
+	2: "failed_test_details",
 }
 
 // Decode decodes SubmissionTestDetailsModel from json.
@@ -21179,16 +21172,6 @@ func (s *SubmissionTestDetailsModel) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"compiler_output\"")
-			}
-		case "error_line":
-			if err := func() error {
-				s.ErrorLine.Reset()
-				if err := s.ErrorLine.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"error_line\"")
 			}
 		case "tests":
 			if err := func() error {

@@ -7,51 +7,9 @@ import (
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/points"
-	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// The catalog's error_line patterns against real compiler and runtime output.
-func TestParseErrorLine(t *testing.T) {
-	catalog, err := sandbox.LoadConfig("../../../judge/langs.toml")
-	require.NoError(t, err)
-	tests := []struct {
-		name     string
-		language string
-		text     string
-		expected *int32
-	}{
-		{"C gcc error", "c", "foo.c: In function 'main':\nfoo.c:4:5: error: expected ';' before 'return'", ptrInt32(4)},
-		{"C++ warning before error", "cpp20", "foo.cc: In function 'int main()':\nfoo.cc:3:9: warning: unused variable 'y' [-Wunused-variable]\nfoo.cc:5:5: error: 'z' was not declared in this scope", ptrInt32(5)},
-		{"C++ gcc error", "cpp17", "foo.cc: In function 'int main()':\nfoo.cc:15:23: error: expected ';' before '}' token", ptrInt32(15)},
-		{"Python traceback", "python3", "Traceback (most recent call last):\n  File \"/w/foo.py\", line 12, in <module>\n    print(1/0)\nZeroDivisionError: division by zero", ptrInt32(12)},
-		{"PyPy syntax error", "pypy3", "  File \"foo.py\", line 7\n    def test(\n             ^\nSyntaxError: unexpected EOF while parsing", ptrInt32(7)},
-		{"Go compiler error", "go", "# command-line-arguments\n./foo.go:28:2: undefined: fmt.Printlnn", ptrInt32(28)},
-		{"Java compiler error", "java", "Main.java:5: error: ';' expected\n        int x = 1\n                 ^\n1 error", ptrInt32(5)},
-		{"Java exception", "java", "Exception in thread \"main\" java.lang.ArithmeticException: / by zero\n\tat Main.main(Main.java:9)", ptrInt32(9)},
-		{"Rust compiler error", "rust", "error[E0425]: cannot find value `y` in this scope\n --> foo.rs:3:13\n  |\n3 |     let x = y;", ptrInt32(3)},
-		{"Rust warning before error", "rust", "warning: unused variable: `y`\n --> foo.rs:2:9\n  |\n2 |     let y = 1;\n\nerror[E0425]: cannot find value `z` in this scope\n --> foo.rs:4:13\n  |", ptrInt32(4)},
-		{"Rust panic", "rust", "thread 'main' panicked at foo.rs:7:5:\nattempt to divide by zero", ptrInt32(7)},
-		{"Node.js exception", "node", "/w/foo.js:6\n    throw new Error('boom');\n    ^\n\nError: boom\n    at Object.<anonymous> (/w/foo.js:6:11)", ptrInt32(6)},
-		{"Generic line fallback", "cpp17", "Runtime error at line 99", ptrInt32(99)},
-		{"Empty output", "cpp17", "", nil},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			lang, ok := catalog.Langs[tc.language]
-			require.True(t, ok)
-			result := ParseErrorLine(lang.ErrorLine, tc.text)
-			if tc.expected == nil {
-				assert.Nil(t, result)
-			} else {
-				require.NotNil(t, result)
-				assert.Equal(t, *tc.expected, *result)
-			}
-		})
-	}
-}
 
 func TestCalculateStandardVerdict_WithTestDetails(t *testing.T) {
 	vc := NewVerdictCalculator("standard", &gfmt.Problem{})
@@ -122,10 +80,6 @@ func TestCalculateStandardVerdict_TruncatesLargeInput(t *testing.T) {
 	require.NotNil(t, verdict.TestDetails.FailedTestDetails)
 	assert.True(t, verdict.TestDetails.FailedTestDetails.IsTruncated)
 	assert.Len(t, verdict.TestDetails.FailedTestDetails.Input, maxTestDetailSize)
-}
-
-func ptrInt32(v int32) *int32 {
-	return &v
 }
 
 func TestVerdictCalculation(t *testing.T) {
