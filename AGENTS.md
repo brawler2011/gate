@@ -28,6 +28,15 @@ changes delivered quickly; skip ceremony that does not catch real problems.
   specific `*:gen` task). Never hand-edit paths listed in `GENERATED_PATHS` in
   `Taskfile.yml`.
 
+## Comments
+
+- A comment says only what the code cannot: a non-obvious reason, a
+  constraint, a trap. One line is the default.
+- Do not restate the code, narrate history, or record measurements; those go
+  in the issue or PR.
+- Explain a thing in one place: no copies across config files, between a field
+  and its users, or between code and READMEs.
+
 ## Tests
 
 A test must be able to fail for a reason someone would care about. Write one when:
@@ -87,8 +96,9 @@ Do not list the checks that passed.
 **Review.** Normal PRs get one independent review in a fresh context against the
 issue and the diff. Small PRs need no review. The reviewer reports only real
 problems — bugs, behavior that misses the issue, risky design — each with a
-file/line pointer. No style nits the linters accept; ask for a test only when
-naming a concrete behavior that could break unnoticed. Post the verdict
+file/line pointer. Long or restating comments count as real problems (see
+Comments). No style nits the linters accept; ask for a test only when naming a
+concrete behavior that could break unnoticed. Post the verdict
 (`APPROVE` or `REQUEST_CHANGES`) with `gh pr review --comment --body-file <path>`.
 Fixes that only address the review's findings do not need another review;
 re-review only when the fix changes the design or adds new behavior.
