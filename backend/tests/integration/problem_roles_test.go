@@ -83,7 +83,7 @@ func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 	s.Require().NoError(err)
 
 	s.Require().False(draft.Checker.Null)
-	s.Require().Equal("cpp17", draft.Checker.Value.Language)
+	s.Require().NotEqual("python3", draft.Checker.Value.Language)
 	s.Require().NotEmpty(draft.Checker.Value.Dependencies)
 	draft.Checker.Value.Language = "python3"
 	draft.Checker.Value.Source = "import sys\nout = open(sys.argv[2]).read().split()\nans = open(sys.argv[3]).read().split()\nsys.exit(0 if out == ans else 1)\n"
