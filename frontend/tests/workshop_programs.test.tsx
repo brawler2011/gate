@@ -5,7 +5,7 @@ import React from "react";
 
 import {WorkshopComponentsTab} from "@/components/workshop/WorkshopComponentsTab";
 
-import {cleanup, fireEvent, renderWithProviders, waitFor} from "./test-utils";
+import {act, cleanup, fireEvent, renderWithProviders, waitFor} from "./test-utils";
 
 import type {ProblemDraft} from "@/contracts/core/v1/schema";
 
@@ -24,7 +24,10 @@ const draft: ProblemDraft = {
   main_solution: null, statements: [], assets: [], subtasks: [], tests: [], library: [],
 };
 
-const mockApi = (stored: ProblemDraft): void => {
+let puts = 0;
+
+const mockApi = (stored: ProblemDraft, putStatus = 200): void => {
+  puts = 0;
   const fetch = spyOn(globalThis, "fetch").mockImplementation(Object.assign(
     (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input), "http://localhost");
@@ -32,6 +35,10 @@ const mockApi = (stored: ProblemDraft): void => {
         return Promise.resolve(Response.json({languages: [{id: "cpp20", name: "C++20", extensions: ["cpp"], syntax: "cpp"}]}));
       }
       if (init?.method === "PUT") {
+        puts++;
+        if (putStatus !== 200) {
+          return Promise.resolve(Response.json({message: "unavailable"}, {status: putStatus}));
+        }
         return Promise.resolve(Response.json({...(JSON.parse(String(init.body)) as ProblemDraft), revision: 4}));
       }
       return Promise.resolve(Response.json(stored));
@@ -52,4 +59,32 @@ describe("workshop programs", () => {
     await waitFor(() => expect(view.getByDisplayValue("SECOND SOURCE")).toBeTruthy());
     expect(view.queryByDisplayValue("FIRST SOURCE")).toBeNull();
   });
+
+  // happy-dom does not deliver these change events to React, so edits go
+  // through the element's React change handler.
+  const type = async (element: Element, text: string): Promise<void> => {
+    const propsKey = Object.keys(element).find((key) => key.startsWith("__reactProps")) as string;
+    const props = (element as unknown as Record<string, {onChange: (event: unknown) => void}>)[propsKey];
+    await act(async () => props.onChange({currentTarget: {value: text}, target: {value: text}}));
+  };
+
+  for (const [status, name] of [[200, "renamed"], [500, "second"]] as const) {
+    it(`a rename keeps unsaved source when the save answers ${status}`, async () => {
+      mockApi(draft, status);
+      const view = renderWithProviders(<WorkshopComponentsTab problemId="problem" role="generator" />);
+      await waitFor(() => expect(view.container.querySelector("textarea")?.value).toBe("FIRST SOURCE"));
+      fireEvent.click(view.getByText("second"));
+      await waitFor(() => expect(view.container.querySelector("textarea")?.value).toBe("SECOND SOURCE"));
+      await type(view.container.querySelector("textarea") as Element, "UNSAVED EDIT");
+      await waitFor(() => expect(view.getByRole("button", {name: "Сохранить"}).hasAttribute("disabled")).toBe(false));
+      await type(view.getByLabelText("Название"), "renamed");
+      await waitFor(() => expect(view.getByRole("button", {name: "Переименовать"}).hasAttribute("disabled")).toBe(false));
+      fireEvent.click(view.getByRole("button", {name: "Переименовать"}));
+      await waitFor(() => expect(puts).toBe(1));
+      const names = () => Array.from(view.container.querySelectorAll(".mantine-NavLink-label"), (label) => label.textContent);
+      await waitFor(() => expect(names()).toEqual(["first", name]));
+      expect(view.container.querySelector("textarea")?.value).toBe("UNSAVED EDIT");
+      expect(view.getByRole("button", {name: "Сохранить"}).hasAttribute("disabled")).toBe(false);
+    });
+  }
 });

@@ -305,6 +305,8 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
   const create = async (newName: string, language: string): Promise<boolean> => {
     const ok = await save((current) => addProgram(current, role, newName, language, template(catalog, role, language)));
     if (ok) {
+      // Never the identity of a program renamed away from this name.
+      setRenamed((current) => ({...current, [newName]: crypto.randomUUID()}));
       open(newName);
     }
     return ok;
@@ -313,10 +315,10 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
   const rename = async (from: string, to: string): Promise<void> => {
     // The saved draft renders before save resolves, so the identity moves first.
     const previous = renamed;
-    const {[from]: identity = crypto.randomUUID(), ...rest} = renamed;
-    setRenamed({...rest, [from]: identity, [to]: identity});
+    const identity = editorKey(from);
+    setRenamed({...renamed, [to]: identity});
     if (await save((current) => renameProgram(current, role, from, to))) {
-      setRenamed({...rest, [to]: identity});
+      // `from` keeps resolving to the renamed program until the URL follows.
       open(to);
     } else {
       setRenamed(previous);
