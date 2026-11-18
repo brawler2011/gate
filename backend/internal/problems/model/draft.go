@@ -140,7 +140,9 @@ type DraftInput struct {
 	ObjectID  *uuid.UUID `json:"object_id"`
 	Generator *string    `json:"generator"`
 	Args      []string   `json:"args"`
-	// Seed is appended as one decimal argv element after Args (testlib convention).
+	// Seed, when set, is appended as one decimal argv element after Args.
+	// Without it the generator runs with exactly Args, as in Polygon, where
+	// testlib derives its random seed from the arguments.
 	Seed *int64 `json:"seed"`
 }
 
@@ -592,9 +594,6 @@ func (d *Draft) validateTests(v *validation) {
 		case "generator":
 			if i.ObjectID != nil {
 				v.fail(at+"/input/object_id", "generated input cannot have content")
-			}
-			if i.Seed == nil {
-				v.fail(at+"/input/seed", "generated input needs a seed")
 			}
 			if i.Generator == nil || d.Generator(*i.Generator) == nil {
 				v.fail(at+"/input/generator", "generator is missing")

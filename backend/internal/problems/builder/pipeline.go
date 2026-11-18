@@ -366,7 +366,10 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		ids = append(ids, id)
 	} else {
 		gen := e.compiled[programKey("generator", *test.Input.Generator)]
-		args := append(append([]string{}, test.Input.Args...), strconv.FormatInt(*test.Input.Seed, 10))
+		args := append([]string{}, test.Input.Args...)
+		if test.Input.Seed != nil {
+			args = append(args, strconv.FormatInt(*test.Input.Seed, 10))
+		}
 		result, err := e.sandbox.RunFiles(ctx, gen.executable, gen.language, "", args, nil, aux)
 		if err != nil {
 			return fail("generate", test.Ordinal, "infrastructure", err)

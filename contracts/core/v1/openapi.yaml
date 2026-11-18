@@ -3093,6 +3093,7 @@ components:
           items:
             type: string
         seed:
+          description: Appended as the last generator argument when set; without it the generator gets exactly args.
           type: integer
           format: int64
           nullable: true

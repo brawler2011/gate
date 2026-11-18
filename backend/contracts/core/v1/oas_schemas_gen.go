@@ -8383,7 +8383,8 @@ type ProblemDraftInput struct {
 	// Name of a generator of the draft.
 	Generator NilString `json:"generator"`
 	Args      []string  `json:"args"`
-	Seed      NilInt64  `json:"seed"`
+	// Appended as the last generator argument when set; without it the generator gets exactly args.
+	Seed NilInt64 `json:"seed"`
 }
 
 // GetMode returns the value of Mode.
