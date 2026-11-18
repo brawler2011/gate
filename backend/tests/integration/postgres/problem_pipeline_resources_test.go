@@ -54,6 +54,7 @@ type pipelineHarness struct {
 	limits   model.BuildLimits
 	options  postgres.ProblemBuildOptions
 	uploads  *problems.DraftUseCase
+	programs *sandbox.ProgramCache
 }
 
 func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHarness {
@@ -76,12 +77,13 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 		Languages: &sandbox.Config{Langs: services.langs},
 	}
 	return &pipelineHarness{ctx: accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}),
-		pool: pool, repo: repo, org: org, draft: d, services: services, work: work, limits: limits, options: options, uploads: uploads}
+		pool: pool, repo: repo, org: org, draft: d, services: services, work: work, limits: limits, options: options, uploads: uploads,
+		programs: sandbox.NewProgramCache(dbfixtures.DiskTempDir(t), services.client, services.files, sandbox.Image{Config: &sandbox.Config{Langs: services.langs}})}
 }
 
 func (h *pipelineHarness) pipeline() *builder.Pipeline {
 	return &builder.Pipeline{Repo: h.repo, Store: h.services.store, Bucket: "objects", TempDir: h.work, Client: h.services.client,
-		Files: h.services.files, Languages: &sandbox.Config{Langs: h.options.Languages}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		Files: h.services.files, Languages: &sandbox.Config{Langs: h.options.Languages}, Programs: h.programs, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 }
 
 func (h *pipelineHarness) save(t *testing.T, change func(*model.Draft)) {
@@ -214,6 +216,8 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	delete(without, "cpp17")
 	pipeline := h.pipeline()
 	pipeline.Languages = &sandbox.Config{Langs: without}
+	// The worker's cache compiles with the same running image.
+	pipeline.Programs = sandbox.NewProgramCache(dbfixtures.DiskTempDir(t), h.services.client, h.services.files, sandbox.Image{Config: pipeline.Languages})
 	_, err := pipeline.Execute(h.ctx, h.enqueueAndClaim(t))
 	var failure *builder.Failure
 	require.ErrorAs(t, err, &failure)
@@ -226,6 +230,8 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	cpp.Compile = strings.Replace(cpp.Compile, "g++ ", "g++ -DNEW_IMAGE ", 1)
 	changed["cpp17"] = cpp
 	pipeline.Languages = &sandbox.Config{Langs: changed}
+	// The worker's cache compiles with the same running image.
+	pipeline.Programs = sandbox.NewProgramCache(dbfixtures.DiskTempDir(t), h.services.client, h.services.files, sandbox.Image{Config: pipeline.Languages})
 	_, err = pipeline.Execute(h.ctx, h.enqueueAndClaim(t))
 	require.NoError(t, err)
 }

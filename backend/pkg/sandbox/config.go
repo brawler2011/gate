@@ -7,6 +7,7 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -31,6 +32,25 @@ type Language struct {
 	CodeFile    string `toml:"code_file" json:"code_file"`
 	CompileFile string `toml:"compile_file" json:"compile_file"`
 	Execute     string `toml:"execute" json:"execute"`
+	// CompileCPU is the CPU time a submission may take to compile; a
+	// configuration with a compile command needs it. Programs of a problem
+	// compile with the problem limits instead (problems.limits.compile).
+	CompileCPU time.Duration `toml:"compile_cpu" json:"-"`
+}
+
+// compileWallFactor bounds a submission's compilation in wall-clock time as a
+// multiple of its CPU time: a busy single core stretches wall time.
+const compileWallFactor = 3
+
+// SubmissionCompileLimits returns the limits a submission in language compiles
+// with: base, with the configuration's own compile time. An unknown language
+// keeps base; compiling fails on it anyway.
+func (c *Config) SubmissionCompileLimits(language string, base FileRunLimits) FileRunLimits {
+	if lang, ok := c.Langs[language]; ok && lang.CompileCPU > 0 {
+		base.CPU = lang.CompileCPU
+		base.Wall = compileWallFactor * lang.CompileCPU
+	}
+	return base
 }
 
 // Config is the language catalog: configurations by identifier, and the
@@ -79,6 +99,9 @@ func ParseConfig(data []byte) (*Config, error) {
 		lang := langs[id]
 		if lang.Name == "" || len(lang.Extensions) == 0 || lang.CodeFile == "" || lang.Execute == "" {
 			return nil, fmt.Errorf("language %q needs name, extensions, code_file and execute", id)
+		}
+		if (lang.Compile != "") != (lang.CompileCPU > 0) {
+			return nil, fmt.Errorf("language %q needs compile_cpu exactly when it has a compile command", id)
 		}
 		for _, ext := range lang.Extensions {
 			if ext == "" || ext != strings.ToLower(ext) || strings.ContainsAny(ext, "./") {

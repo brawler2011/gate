@@ -44,7 +44,9 @@ type Pipeline struct {
 	Files   *sandbox.FileTransport
 	// Languages are the running judge image's; a build compiles with them.
 	Languages *sandbox.Config
-	Logger    *slog.Logger
+	// Programs is shared with the judge, which then reuses what a build compiled.
+	Programs *sandbox.ProgramCache
+	Logger   *slog.Logger
 }
 type Failure struct {
 	Stage     string `json:"stage"`
@@ -323,9 +325,13 @@ func (e *execution) compile(ctx context.Context) error {
 				deps[d.Library[i].Name] = []byte(d.Library[i].Text())
 			}
 		}
-		executable, err := e.sandbox.CompileWithLimits(ctx, []byte(p.program.Source), p.program.Language, deps, s.Limits.Compile)
+		dir, err := e.pipeline.Programs.Get(ctx, sandbox.Program{Source: []byte(p.program.Source), Language: p.program.Language, Deps: deps}, s.Limits.Compile)
 		if err != nil {
 			return fail("compile", 0, processKind(err), fmt.Errorf("%s: %w", p.path, err))
+		}
+		executable, err := e.pipeline.Files.UploadCompiled(ctx, dir, int64(s.Limits.Compile.Output))
+		if err != nil {
+			return fail("compile", 0, "infrastructure", fmt.Errorf("%s: %w", p.path, err))
 		}
 		e.compiled[p.key] = compilation{language: p.program.Language, executable: executable}
 		// The package keeps the judge's programs as sources; each judge compiles them with its own image.

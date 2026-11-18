@@ -24,8 +24,9 @@ type PackageJudge struct {
 	Files  *sandbox.FileTransport
 	// Languages are the running judge image's; submissions and package programs compile with them.
 	Languages *sandbox.Config
-	Programs  *ProgramCache
-	Logger    *slog.Logger
+	// Programs is shared with problem builds, so the judge reuses what a build compiled.
+	Programs *sandbox.ProgramCache
+	Logger   *slog.Logger
 }
 
 func (j *PackageJudge) release(id string) {
@@ -47,9 +48,9 @@ func (j *PackageJudge) upload(ctx context.Context, root, path string, limit int6
 	return j.Files.Upload(ctx, f, limit)
 }
 
-// CompileProgram compiles a package program with this judge's image into dir
-// (the ProgramCache layout: "entry" and "deps/").
-func (j *PackageJudge) CompileProgram(ctx context.Context, pkg *LoadedPackage, program gfmt.Program, dir string) error {
+// program uploads the checker or interactor of the package, compiled with
+// this judge's image, to the sandbox.
+func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, source gfmt.Program) (sandbox.Executable, error) {
 	read := func(path string) ([]byte, error) {
 		data, err := os.ReadFile(filepath.Join(pkg.Format.Path, path))
 		if err != nil {
@@ -57,88 +58,27 @@ func (j *PackageJudge) CompileProgram(ctx context.Context, pkg *LoadedPackage, p
 		}
 		return data, nil
 	}
-	source, err := read(program.Source)
+	text, err := read(source.Source)
 	if err != nil {
-		return err
+		return sandbox.Executable{}, err
 	}
 	// A judge program compiles with the whole package library.
 	deps := map[string][]byte{}
 	library, err := os.ReadDir(filepath.Join(pkg.Format.Path, gfmt.LibraryFolder))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("readdir: %w", err)
+		return sandbox.Executable{}, fmt.Errorf("readdir: %w", err)
 	}
 	for _, f := range library {
 		if deps[f.Name()], err = read(gfmt.LibraryFolder + "/" + f.Name()); err != nil {
-			return err
+			return sandbox.Executable{}, err
 		}
 	}
 	limits := pkg.Descriptor.Snapshot.Limits.Compile
-	executable, err := sandbox.NewSandbox(j.Client, j.Languages).CompileWithLimits(ctx, source, program.Language, deps, limits)
+	dir, err := j.Programs.Get(ctx, sandbox.Program{Source: text, Language: source.Language, Deps: deps}, limits)
 	if err != nil {
-		return err
+		return sandbox.Executable{}, fmt.Errorf("compile %s: %w", source.Source, err)
 	}
-	defer j.releaseExecutable(executable)
-	download := func(name, id string) error {
-		if !fs.ValidPath(name) || name == "." {
-			return fmt.Errorf("invalid compiled file name %q", name)
-		}
-		path := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-			return fmt.Errorf("mkdir: %w", err)
-		}
-		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
-		if err != nil {
-			return fmt.Errorf("create: %w", err)
-		}
-		_, copyErr := j.Files.Download(ctx, id, f, int64(limits.Output))
-		return errors.Join(copyErr, f.Close())
-	}
-	if err := download("entry", executable.PrimaryFileID); err != nil {
-		return err
-	}
-	for name, id := range executable.Dependencies {
-		if err := download("deps/"+name, id); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// program uploads the cached compiled program of role to the sandbox.
-func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, role string) (sandbox.Executable, error) {
-	dir, err := j.Programs.Get(ctx, pkg, role)
-	if err != nil {
-		return sandbox.Executable{}, err
-	}
-	limit := int64(pkg.Descriptor.Snapshot.Limits.Compile.Output)
-	executable := sandbox.Executable{Dependencies: map[string]string{}}
-	if executable.PrimaryFileID, err = j.upload(ctx, dir, "entry", limit); err != nil {
-		return sandbox.Executable{}, err
-	}
-	deps := filepath.Join(dir, "deps")
-	err = filepath.WalkDir(deps, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			if errors.Is(err, fs.ErrNotExist) && path == deps {
-				return nil
-			}
-			return err
-		}
-		name, err := filepath.Rel(deps, path)
-		if err != nil {
-			return fmt.Errorf("rel: %w", err)
-		}
-		id, err := j.upload(ctx, deps, name, limit)
-		if err != nil {
-			return err
-		}
-		executable.Dependencies[filepath.ToSlash(name)] = id
-		return nil
-	})
-	if err != nil {
-		j.releaseExecutable(executable)
-		return sandbox.Executable{}, fmt.Errorf("upload compiled %s: %w", role, err)
-	}
-	return executable, nil
+	return j.Files.UploadCompiled(ctx, dir, int64(limits.Output)) //nolint:wrapcheck // already describes the upload
 }
 
 // roleProgram is a package program uploaded to the sandbox for one submission.
@@ -154,7 +94,7 @@ func (j *PackageJudge) roleProgram(ctx context.Context, pkg *LoadedPackage, role
 	if !ok {
 		return nil, nil
 	}
-	executable, err := j.program(ctx, pkg, role)
+	executable, err := j.program(ctx, pkg, source)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +116,7 @@ func (j *PackageJudge) releaseExecutable(executable sandbox.Executable) {
 func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submissionID uuid.UUID, source string, lang string, progress Progress, meta submissionsmodel.SubmissionEventMeta) (*FinalVerdict, error) {
 	s := pkg.Descriptor.Snapshot
 	sb := sandbox.NewSandbox(j.Client, j.Languages)
-	sol, err := sb.CompileWithLimits(ctx, []byte(source), lang, nil, s.Limits.Compile)
+	sol, err := sb.CompileWithLimits(ctx, []byte(source), lang, nil, j.Languages.SubmissionCompileLimits(lang, s.Limits.Compile))
 	if err != nil {
 		// The API accepted a configuration this worker's catalog lacks: a
 		// system configuration error, not the contestant's compilation error.

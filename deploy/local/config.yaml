@@ -35,7 +35,10 @@ problems:
     object_bytes: 512MiB
     test_output_bytes: 512MiB
     compile:
-      # testlib.h takes about 5 s of CPU at -O2 on a fast core.
+      # Programs of a problem: the build, and the checker or interactor in the
+      # judge. A testlib program takes about 6 s of CPU (7 s wall) at -O2 on the
+      # production VPS. Submissions compile with their language's compile_cpu
+      # (judge/langs.toml) and the other limits here.
       cpu: 20s
       wall: 60s
       memory: 512MiB
