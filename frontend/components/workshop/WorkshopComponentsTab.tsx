@@ -285,7 +285,16 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
   const {save, isSaving} = useSaveDraft(problemId);
   const [params, setParams] = useSearchParams();
   const programs = programsOf(draft, role);
-  const selected = programs.find((p) => p.name === params.get("component")) ?? programs[0];
+  // A renamed program keeps its editor, and so its unsaved source, under an
+  // identity no other program can get; others are keyed by their names.
+  const [renamed, setRenamed] = useState<Record<string, string>>({});
+  const editorKey = (name: string): string => renamed[name] ?? `name:${name}`;
+  // While a rename is saved, the URL may still hold the old name.
+  const component = params.get("component");
+  const selected =
+    programs.find((p) => p.name === component) ??
+    programs.find((p) => component !== null && editorKey(p.name) === editorKey(component)) ??
+    programs[0];
 
   const open = (name: string) => {
     const next = new URLSearchParams(params);
@@ -302,8 +311,15 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
   };
 
   const rename = async (from: string, to: string): Promise<void> => {
+    // The saved draft renders before save resolves, so the identity moves first.
+    const previous = renamed;
+    const {[from]: identity = crypto.randomUUID(), ...rest} = renamed;
+    setRenamed({...rest, [from]: identity, [to]: identity});
     if (await save((current) => renameProgram(current, role, from, to))) {
+      setRenamed({...rest, [to]: identity});
       open(to);
+    } else {
+      setRenamed(previous);
     }
   };
 
@@ -340,8 +356,7 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
       <Grid.Col span={{base: 12, md: 8}}>
         {selected ? (
           <ProgramEditor
-            // A program's editor is its own: another program never inherits its unsaved source.
-            key={selected.name}
+            key={editorKey(selected.name)}
             label={selected.name}
             program={selected}
             saving={isSaving}
