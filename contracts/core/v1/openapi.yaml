@@ -4568,7 +4568,6 @@ components:
       description: "Submission test details data."
       example:
         compiler_output: example
-        error_line: 12
         tests:
         - test_index: 1
           verdict: OK
@@ -4589,11 +4588,6 @@ components:
         compiler_output:
           type: string
           nullable: true
-        error_line:
-          type: integer
-          format: int32
-          nullable: true
-          example: 12
         tests:
           type: array
           items:
@@ -6321,11 +6315,13 @@ components:
         id: cpp17
         name: C++17 (GCC 15)
         extensions: [cpp, cc, cxx]
+        syntax: cpp
       type: object
       required:
         - id
         - name
         - extensions
+        - syntax
       properties:
         id:
           description: Stable identifier that submissions and problem programs record.
@@ -6340,6 +6336,10 @@ components:
           type: array
           items:
             type: string
+        syntax:
+          description: Prism grammar to highlight sources with; empty shows them as plain text.
+          type: string
+          example: cpp
     SupportedLanguagesResponse:
       description: "The language catalog in display order."
       example:
@@ -6347,6 +6347,7 @@ components:
         - id: cpp17
           name: C++17 (GCC 15)
           extensions: [cpp, cc, cxx]
+          syntax: cpp
       type: object
       required:
         - languages

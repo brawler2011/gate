@@ -1,45 +1,47 @@
-import c from 'refractor/c';
-import {refractor} from 'refractor/core';
-import cpp from 'refractor/cpp';
-import go from 'refractor/go';
-import java from 'refractor/java';
-import javascript from 'refractor/javascript';
-import python from 'refractor/python';
-import rust from 'refractor/rust';
+import {useQuery} from '@tanstack/react-query';
+import {refractor, type Syntax} from 'refractor/core';
 
 import type {Root, Element, Text} from 'hast';
 
-// Register languages
-refractor.register(python);
-refractor.register(cpp);
-refractor.register(go);
-refractor.register(c);
-refractor.register(java);
-refractor.register(javascript);
-refractor.register(rust);
+/** Registers the grammar named syntax; false when refractor has no such grammar. */
+const loadGrammar = async (syntax: string): Promise<boolean> => {
+  if (refractor.registered(syntax)) {
+    return true;
+  }
+  if (!/^[a-z0-9-]+$/.test(syntax)) {
+    return false;
+  }
+  // Vite turns this into a chunk per grammar refractor ships, loaded the first
+  // time a language configuration's syntax names it.
+  // A failed load (a stale chunk, the network, an unknown grammar) rejects, so
+  // the query retries it instead of caching plain text.
+  const grammar = await import(`../../node_modules/refractor/lang/${syntax}.js`) as {default: Syntax};
+  refractor.register(grammar.default);
+  return true;
+};
+
+/**
+ * The grammar to highlight a language configuration's sources with: its syntax
+ * once the grammar has loaded, "text" (no highlighting) until then or when the
+ * grammar is unknown. Both refractor and react-syntax-highlighter see it.
+ */
+export const useGrammar = (syntax: string | undefined): string => {
+  const {data} = useQuery({
+    queryKey: ['grammar', syntax],
+    queryFn: () => loadGrammar(syntax ?? ''),
+    enabled: !!syntax,
+    staleTime: Infinity,
+  });
+  return data && syntax ? syntax : 'text';
+};
 
 type HastNode = Element | Text;
 
 /**
  * Wrap identifiers in text with variable span
  */
-const wrapIdentifiers = (text: string): string => {
-  // Match identifiers that are not Python keywords
-  const pythonKeywords = new Set([
-    'False', 'None', 'True', 'and', 'as', 'assert', 'async', 'await',
-    'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except',
-    'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is',
-    'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try',
-    'while', 'with', 'yield'
-  ]);
-    
-  return text.replace(/([a-zA-Z_][a-zA-Z0-9_]*)/g, (match) => {
-    if (pythonKeywords.has(match)) {
-      return match; // Don't wrap keywords
-    }
-    return `<span class="token variable">${match}</span>`;
-  });
-};
+const wrapIdentifiers = (text: string): string =>
+  text.replace(/([a-zA-Z_][a-zA-Z0-9_]*)/g, '<span class="token variable">$1</span>');
 
 /**
  * Convert hast AST to HTML string
@@ -93,33 +95,12 @@ const escapeHtml = (str: string): string => {
 };
 
 /**
- * Map language names to refractor language identifiers
+ * Highlight code with a registered grammar (see useGrammar) and return HTML;
+ * any other grammar leaves the code as plain text.
  */
-const mapLanguage = (language: string): string => {
-  const languageMap: Record<string, string> = {
-    'python': 'python',
-    'cpp': 'cpp',
-    'c++': 'cpp',
-    'golang': 'go',
-    'go': 'go',
-    'c': 'c',
-    'java': 'java',
-    'javascript': 'javascript',
-    'rust': 'rust',
-  };
-  return languageMap[language.toLowerCase()] || 'c';
-};
-
-/**
- * Highlight code using refractor and return HTML string
- */
-export const highlightCode = (code: string, language: string): string => {
-  try {
-    const lang = mapLanguage(language);
-    const tree = refractor.highlight(code, lang);
-    return hastToHtml(tree, true);
-  } catch {
-    // Fallback: return escaped code if highlighting fails
+export const highlightCode = (code: string, grammar: string): string => {
+  if (!refractor.registered(grammar)) {
     return escapeHtml(code);
   }
+  return hastToHtml(refractor.highlight(code, grammar), true);
 };

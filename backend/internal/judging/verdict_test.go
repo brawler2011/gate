@@ -11,70 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseErrorLine(t *testing.T) {
-	tests := []struct {
-		name     string
-		codeFile string
-		text     string
-		expected *int32
-	}{
-		{
-			name:     "C++ gcc error",
-			codeFile: "foo.cc",
-			text:     "foo.cc:15:23: error: expected ';' before '}' token",
-			expected: ptrInt32(15),
-		},
-		{
-			name:     "C++ clang error",
-			codeFile: "foo.cc",
-			text:     "solution.cpp:42:5: fatal error: 'iostream' file not found",
-			expected: ptrInt32(42),
-		},
-		{
-			name:     "Python traceback",
-			codeFile: "foo.py",
-			text:     "Traceback (most recent call last):\n  File \"foo.py\", line 12, in <module>\n    print(1/0)\nZeroDivisionError: division by zero",
-			expected: ptrInt32(12),
-		},
-		{
-			name:     "Python syntax error",
-			codeFile: "foo.py",
-			text:     "  File \"foo.py\", line 7\n    def test(\n             ^\nSyntaxError: unexpected EOF while parsing",
-			expected: ptrInt32(7),
-		},
-		{
-			name:     "Go compiler error",
-			codeFile: "foo.go",
-			text:     "foo.go:28:2: undefined: fmt.Printlnn",
-			expected: ptrInt32(28),
-		},
-		{
-			name:     "Generic line fallback",
-			codeFile: "foo.cc",
-			text:     "Runtime error at line 99",
-			expected: ptrInt32(99),
-		},
-		{
-			name:     "Empty output",
-			codeFile: "foo.cc",
-			text:     "",
-			expected: nil,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := ParseErrorLine(tc.codeFile, tc.text)
-			if tc.expected == nil {
-				assert.Nil(t, result)
-			} else {
-				require.NotNil(t, result)
-				assert.Equal(t, *tc.expected, *result)
-			}
-		})
-	}
-}
-
 func TestCalculateStandardVerdict_WithTestDetails(t *testing.T) {
 	vc := NewVerdictCalculator("standard", &gfmt.Problem{})
 
@@ -144,10 +80,6 @@ func TestCalculateStandardVerdict_TruncatesLargeInput(t *testing.T) {
 	require.NotNil(t, verdict.TestDetails.FailedTestDetails)
 	assert.True(t, verdict.TestDetails.FailedTestDetails.IsTruncated)
 	assert.Len(t, verdict.TestDetails.FailedTestDetails.Input, maxTestDetailSize)
-}
-
-func ptrInt32(v int32) *int32 {
-	return &v
 }
 
 func TestVerdictCalculation(t *testing.T) {

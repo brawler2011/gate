@@ -2,34 +2,22 @@
 
 import {useComputedColorScheme} from '@mantine/core';
 import React, {useEffect, useState} from 'react';
-import c from 'react-syntax-highlighter/dist/esm/languages/prism/c';
-import cpp from 'react-syntax-highlighter/dist/esm/languages/prism/cpp';
-import go from 'react-syntax-highlighter/dist/esm/languages/prism/go';
-import java from 'react-syntax-highlighter/dist/esm/languages/prism/java';
-import javascript from 'react-syntax-highlighter/dist/esm/languages/prism/javascript';
-import python from 'react-syntax-highlighter/dist/esm/languages/prism/python';
-import rust from 'react-syntax-highlighter/dist/esm/languages/prism/rust';
 import SyntaxHighlighter from 'react-syntax-highlighter/dist/esm/prism-light';
 import oneDark from 'react-syntax-highlighter/dist/esm/styles/prism/one-dark';
 import oneLight from 'react-syntax-highlighter/dist/esm/styles/prism/one-light';
 
-import type {ReactNode} from "react";
+import {useGrammar} from "@/lib/highlightCode";
 
-SyntaxHighlighter.registerLanguage('c', c);
-SyntaxHighlighter.registerLanguage('cpp', cpp);
-SyntaxHighlighter.registerLanguage('go', go);
-SyntaxHighlighter.registerLanguage('java', java);
-SyntaxHighlighter.registerLanguage('javascript', javascript);
-SyntaxHighlighter.registerLanguage('python', python);
-SyntaxHighlighter.registerLanguage('rust', rust);
+import type {ReactNode} from "react";
 
 interface CodeBlockProps {
     code: string;
-    language: string;
-    highlightLine?: number | null;
+    /** The language configuration's syntax: its Prism grammar, or "" for plain text. */
+    syntax: string;
 }
 
-const CodeBlock = ({code, language, highlightLine}: CodeBlockProps): ReactNode => {
+const CodeBlock = ({code, syntax}: CodeBlockProps): ReactNode => {
+  const grammar = useGrammar(syntax);
   const [theme, setTheme] = useState(oneDark);
   const colorScheme = useComputedColorScheme('dark', {getInitialValueInEffect: true});
 
@@ -39,25 +27,11 @@ const CodeBlock = ({code, language, highlightLine}: CodeBlockProps): ReactNode =
 
   return (
     <SyntaxHighlighter
-      language={language}
+      language={grammar}
       style={theme}
       customStyle={{width: "100%", margin: 0, borderRadius: 'var(--mantine-radius-sm)'}}
       showLineNumbers
       wrapLines
-      lineProps={(lineNumber: number) => {
-        const isHighlighted = highlightLine !== undefined && highlightLine !== null && lineNumber === highlightLine;
-        return isHighlighted
-          ? {
-            style: {
-              backgroundColor: 'rgba(255, 0, 0, 0.18)',
-              display: 'block',
-              borderLeft: '4px solid #fa5252',
-              paddingLeft: '6px',
-              marginLeft: '-10px',
-            },
-          }
-          : {style: {display: 'block'}};
-      }}
     >
       {code.trim()}
     </SyntaxHighlighter>

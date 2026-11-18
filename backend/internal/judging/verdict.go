@@ -3,9 +3,6 @@ package judging
 import (
 	"fmt"
 	"math"
-	"path/filepath"
-	"regexp"
-	"strconv"
 
 	"github.com/brawler2011/gate/backend/pkg/points"
 
@@ -33,46 +30,6 @@ func truncateDetailString(s string) (string, bool) {
 	return s, false
 }
 
-var (
-	cppLineRegex     = regexp.MustCompile(`(?i)(?:foo\.cc|solution\.cpp|\.cpp|\.cc|\.cxx|\.h|\.hpp):(\d+):(?:\d+:)?\s*(?:error|fatal error|runtime error|warning|note):?`)
-	pythonLineRegex  = regexp.MustCompile(`(?i)(?:File\s+["'][^"']*["'],\s+line\s+(\d+)|line\s+(\d+))`)
-	goLineRegex      = regexp.MustCompile(`(?i)(?:foo\.go|\.go|main\.go):(\d+):(?:\d+:)?`)
-	genericLineRegex = regexp.MustCompile(`(?i)(?:line|строка|:)\s*(\d+)`)
-)
-
-// ParseErrorLine finds the source line a compiler or interpreter reports in
-// text; codeFile is the source file name of the language configuration.
-func ParseErrorLine(codeFile string, text string) *int32 {
-	if text == "" {
-		return nil
-	}
-
-	var match []string
-	switch filepath.Ext(codeFile) {
-	case ".py":
-		match = pythonLineRegex.FindStringSubmatch(text)
-	case ".go":
-		match = goLineRegex.FindStringSubmatch(text)
-	default:
-		match = cppLineRegex.FindStringSubmatch(text)
-	}
-
-	if len(match) == 0 {
-		match = genericLineRegex.FindStringSubmatch(text)
-	}
-
-	for i := 1; i < len(match); i++ {
-		if match[i] != "" {
-			if lineNum, err := strconv.ParseInt(match[i], 10, 32); err == nil && lineNum > 0 {
-				res := int32(lineNum)
-				return &res
-			}
-		}
-	}
-
-	return nil
-}
-
 // TestResult represents the result of a single test
 type TestResult struct {
 	TestNumber    int
@@ -87,7 +44,6 @@ type TestResult struct {
 	Answer        string
 	CheckerOutput string
 	IsTruncated   bool
-	ErrorLine     *int32
 }
 
 // FinalVerdict represents the final judging result
@@ -146,7 +102,6 @@ func buildSubmissionTestDetails(results []TestResult) *submissionsmodel.Submissi
 
 	testItems := make([]submissionsmodel.TestDetailItem, 0, len(results))
 	var failedTestDetails *submissionsmodel.FailedTestDetail
-	var errorLine *int32
 
 	for _, result := range results {
 		timeMs := safeInt32(result.Time / 1_000_000)
@@ -177,14 +132,10 @@ func buildSubmissionTestDetails(results []TestResult) *submissionsmodel.Submissi
 				ErrorMessage:  errStr,
 				IsTruncated:   isTruncated,
 			}
-			if result.ErrorLine != nil {
-				errorLine = result.ErrorLine
-			}
 		}
 	}
 
 	return &submissionsmodel.SubmissionTestDetails{
-		ErrorLine:         errorLine,
 		Tests:             testItems,
 		FailedTestDetails: failedTestDetails,
 	}

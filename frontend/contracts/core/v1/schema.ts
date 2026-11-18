@@ -2768,7 +2768,6 @@ export interface components {
          * @description Submission test details data.
          * @example {
          *       "compiler_output": "example",
-         *       "error_line": 12,
          *       "tests": [
          *         {
          *           "test_index": 1,
@@ -2790,11 +2789,6 @@ export interface components {
          */
         SubmissionTestDetailsModel: {
             compiler_output?: string | null;
-            /**
-             * Format: int32
-             * @example 12
-             */
-            error_line?: number | null;
             tests?: components["schemas"]["TestDetailItemModel"][];
             failed_test_details?: components["schemas"]["FailedTestDetailModel"];
         };
@@ -4217,7 +4211,8 @@ export interface components {
          *         "cpp",
          *         "cc",
          *         "cxx"
-         *       ]
+         *       ],
+         *       "syntax": "cpp"
          *     }
          */
         SupportedLanguage: {
@@ -4233,6 +4228,11 @@ export interface components {
             name: string;
             /** @description Source file extensions without the dot; the first names new files, and an extension suggests the first configuration in catalog order that accepts it. */
             extensions: string[];
+            /**
+             * @description Prism grammar to highlight sources with; empty shows them as plain text.
+             * @example cpp
+             */
+            syntax: string;
         };
         /**
          * @description The language catalog in display order.
@@ -4245,7 +4245,8 @@ export interface components {
          *             "cpp",
          *             "cc",
          *             "cxx"
-         *           ]
+         *           ],
+         *           "syntax": "cpp"
          *         }
          *       ]
          *     }

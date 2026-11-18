@@ -414,7 +414,6 @@ func SubmissionTestDetailsDTO(td *submissionsmodel.SubmissionTestDetails) *corev
 
 	return &corev1.SubmissionTestDetailsModel{
 		CompilerOutput:    stringPtrToOptNilString(td.CompilerOutput),
-		ErrorLine:         int32PtrToOptNilInt32(td.ErrorLine),
 		Tests:             tests,
 		FailedTestDetails: failedTestDetails,
 	}

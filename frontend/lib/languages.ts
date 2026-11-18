@@ -36,11 +36,3 @@ export const languageName = (catalog: SupportedLanguage[], id: string | undefine
 /** The configuration a file extension suggests: the first in catalog order accepting it. */
 export const languageForExtension = (catalog: SupportedLanguage[], extension: string): SupportedLanguage | undefined =>
   catalog.find((language) => language.extensions.includes(extension.toLowerCase()));
-
-const SYNTAX: Record<string, string> = {
-  cpp: "cpp", cc: "cpp", cxx: "cpp", c: "c", py: "python", go: "go", java: "java", rs: "rust", js: "javascript",
-};
-
-/** The syntax highlighter grammar of a configuration, from its source extension. */
-export const syntaxOf = (language: SupportedLanguage | undefined): string =>
-  SYNTAX[language?.extensions[0] ?? ""] ?? "text";

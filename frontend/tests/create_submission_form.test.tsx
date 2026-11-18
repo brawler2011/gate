@@ -9,10 +9,10 @@ import {cleanup, fireEvent, renderWithProviders, setupDOMEnvironment, waitFor} f
 
 // Two configurations accept .cpp; detected C++ selects the first allowed one.
 const CATALOG = [
-  {id: "cpp17", name: "C++17 (GCC 15)", extensions: ["cpp", "cc", "cxx"]},
-  {id: "cpp20", name: "C++20 (GCC 15)", extensions: ["cpp", "cc", "cxx"]},
-  {id: "python3", name: "Python 3.14 (CPython)", extensions: ["py"]},
-  {id: "go", name: "Go 1.26", extensions: ["go"]},
+  {id: "cpp17", name: "C++17 (GCC 15)", extensions: ["cpp", "cc", "cxx"], syntax: "cpp"},
+  {id: "cpp20", name: "C++20 (GCC 15)", extensions: ["cpp", "cc", "cxx"], syntax: "cpp"},
+  {id: "python3", name: "Python 3.14 (CPython)", extensions: ["py"], syntax: "python"},
+  {id: "go", name: "Go 1.26", extensions: ["go"], syntax: "go"},
 ];
 const AUTO = "Автоопределение";
 

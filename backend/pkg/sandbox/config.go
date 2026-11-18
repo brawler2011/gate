@@ -22,12 +22,15 @@ type Language struct {
 	Name string `toml:"name" json:"name"`
 	// Extensions are the source file extensions, without the dot, this
 	// configuration accepts; the first is the one a new source file gets.
-	Extensions  []string `toml:"extensions" json:"extensions"`
-	Type        string   `toml:"type" json:"type"`
-	Compile     string   `toml:"compile" json:"compile"`
-	CodeFile    string   `toml:"code_file" json:"code_file"`
-	CompileFile string   `toml:"compile_file" json:"compile_file"`
-	Execute     string   `toml:"execute" json:"execute"`
+	Extensions []string `toml:"extensions" json:"extensions"`
+	// Syntax is the Prism grammar the frontend highlights sources with; ""
+	// shows them as plain text. It is not part of the compiler identity.
+	Syntax      string `toml:"syntax" json:"-"`
+	Type        string `toml:"type" json:"type"`
+	Compile     string `toml:"compile" json:"compile"`
+	CodeFile    string `toml:"code_file" json:"code_file"`
+	CompileFile string `toml:"compile_file" json:"compile_file"`
+	Execute     string `toml:"execute" json:"execute"`
 }
 
 // Config is the language catalog: configurations by identifier, and the

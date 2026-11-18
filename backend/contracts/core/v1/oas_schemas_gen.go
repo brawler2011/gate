@@ -10351,7 +10351,6 @@ func (s *SubmissionSortOrderQuery) UnmarshalText(data []byte) error {
 // Ref: #/components/schemas/SubmissionTestDetailsModel
 type SubmissionTestDetailsModel struct {
 	CompilerOutput    OptNilString             `json:"compiler_output"`
-	ErrorLine         OptNilInt32              `json:"error_line"`
 	Tests             []TestDetailItemModel    `json:"tests"`
 	FailedTestDetails OptFailedTestDetailModel `json:"failed_test_details"`
 }
@@ -10359,11 +10358,6 @@ type SubmissionTestDetailsModel struct {
 // GetCompilerOutput returns the value of CompilerOutput.
 func (s *SubmissionTestDetailsModel) GetCompilerOutput() OptNilString {
 	return s.CompilerOutput
-}
-
-// GetErrorLine returns the value of ErrorLine.
-func (s *SubmissionTestDetailsModel) GetErrorLine() OptNilInt32 {
-	return s.ErrorLine
 }
 
 // GetTests returns the value of Tests.
@@ -10379,11 +10373,6 @@ func (s *SubmissionTestDetailsModel) GetFailedTestDetails() OptFailedTestDetailM
 // SetCompilerOutput sets the value of CompilerOutput.
 func (s *SubmissionTestDetailsModel) SetCompilerOutput(val OptNilString) {
 	s.CompilerOutput = val
-}
-
-// SetErrorLine sets the value of ErrorLine.
-func (s *SubmissionTestDetailsModel) SetErrorLine(val OptNilInt32) {
-	s.ErrorLine = val
 }
 
 // SetTests sets the value of Tests.
@@ -10655,6 +10644,8 @@ type SupportedLanguage struct {
 	// Source file extensions without the dot; the first names new files, and an extension suggests the
 	// first configuration in catalog order that accepts it.
 	Extensions []string `json:"extensions"`
+	// Prism grammar to highlight sources with; empty shows them as plain text.
+	Syntax string `json:"syntax"`
 }
 
 // GetID returns the value of ID.
@@ -10672,6 +10663,11 @@ func (s *SupportedLanguage) GetExtensions() []string {
 	return s.Extensions
 }
 
+// GetSyntax returns the value of Syntax.
+func (s *SupportedLanguage) GetSyntax() string {
+	return s.Syntax
+}
+
 // SetID sets the value of ID.
 func (s *SupportedLanguage) SetID(val string) {
 	s.ID = val
@@ -10685,6 +10681,11 @@ func (s *SupportedLanguage) SetName(val string) {
 // SetExtensions sets the value of Extensions.
 func (s *SupportedLanguage) SetExtensions(val []string) {
 	s.Extensions = val
+}
+
+// SetSyntax sets the value of Syntax.
+func (s *SupportedLanguage) SetSyntax(val string) {
+	s.Syntax = val
 }
 
 // The language catalog in display order.
