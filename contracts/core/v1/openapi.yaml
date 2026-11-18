@@ -3071,7 +3071,7 @@ components:
       required:
       - mode
       - object_id
-      - generator_id
+      - generator
       - args
       - seed
       properties:
@@ -3084,9 +3084,9 @@ components:
           type: string
           format: uuid
           nullable: true
-        generator_id:
+        generator:
           type: string
-          format: uuid
+          description: Name of a generator of the draft.
           nullable: true
         args:
           type: array
@@ -3101,7 +3101,7 @@ components:
       required:
       - mode
       - object_id
-      - solution_id
+      - solution
       properties:
         mode:
           type: string
@@ -3113,9 +3113,9 @@ components:
           type: string
           format: uuid
           nullable: true
-        solution_id:
+        solution:
           type: string
-          format: uuid
+          description: Name of a solution of the draft.
           nullable: true
     ProblemDraftProgram:
       description: A source in a language configuration. The checker, interactor, validators and generators compile with the whole draft library, each file under its name; solutions compile alone.
@@ -3146,19 +3146,16 @@ components:
           type: string
           description: Name of a standard checker from GET /lib, such as wcmp, or empty for the author's own source.
     ProblemDraftNamedProgram:
-      description: A validator, generator or solution; tests and the main solution refer to it by ID.
+      description: A validator, generator or solution; tests and the main solution refer to it by name.
       type: object
       required:
-      - id
       - name
       - language
       - source
       properties:
-        id:
-          type: string
-          format: uuid
         name:
           type: string
+          description: Unique among the programs of its role; the program's package file is the name with the extension of its language.
         language:
           type: string
           description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
@@ -3284,8 +3281,9 @@ components:
     ProblemDraft:
       description: >-
         The editable problem as typed entries without package paths. Programs
-        and tests are referred to by ID and their names are labels; library
-        files are included by their names.
+        are referred to by their names, unique within a role, and library
+        files are included by their names; subtasks and tests are referred to
+        by ID.
       type: object
       required:
       - problem_id
@@ -3301,7 +3299,7 @@ components:
       - validators
       - generators
       - solutions
-      - main_solution_id
+      - main_solution
       - library
       - statements
       - assets
@@ -3355,9 +3353,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProblemDraftNamedProgram'
-        main_solution_id:
+        main_solution:
           type: string
-          format: uuid
+          description: Name of a solution of the draft.
           nullable: true
         library:
           type: array
@@ -3510,7 +3508,7 @@ components:
       properties:
         pointer:
           type: string
-          example: /tests/3/input/generator_id
+          example: /tests/3/input/generator
         message:
           type: string
     CreationResponseModel:

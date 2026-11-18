@@ -92,18 +92,18 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	require.NoError(t, dbfixtures.InsertProblem(ctx, dbPool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: org.ID, OwnerID: &userID, Visibility: "public", Title: "Sum of Two Numbers", ShortName: "sum-problem"}))
 	d, err := drafts.GetDraft(ctx, problemID)
 	require.NoError(t, err)
-	generator, solution, group := uuid.New(), uuid.New(), uuid.New()
+	generator, solution, group := "gen", "main", uuid.New()
 	d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <fstream>\nint main(int n,char**v){\n#ifdef REJECT_ALL\nreturn 1;\n#endif\nlong long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}"}}
-	d.Generators = []problemsmodel.DraftNamedProgram{{ID: generator, Name: "gen", DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
-	d.Solutions = []problemsmodel.DraftNamedProgram{{ID: solution, Name: "main", DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}"}}}
+	d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
+	d.Solutions = []problemsmodel.DraftNamedProgram{{Name: solution, DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}"}}}
 	d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Print a+b."}}
-	d.MainSolutionID = &solution
+	d.MainSolution = &solution
 	d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
 	seed := int64(1)
 	test := func(ordinal int, weight points.Value, a, b string) problemsmodel.DraftTest {
 		return problemsmodel.DraftTest{ID: uuid.New(), Ordinal: ordinal, SubtaskID: group, Points: weight,
-			Input:  problemsmodel.DraftInput{Mode: "generator", GeneratorID: &generator, Args: []string{a, b}, Seed: &seed},
-			Answer: problemsmodel.DraftAnswer{Mode: "generated", SolutionID: &solution}}
+			Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}, Seed: &seed},
+			Answer: problemsmodel.DraftAnswer{Mode: "generated", Solution: &solution}}
 	}
 	d.Tests = []problemsmodel.DraftTest{test(1, 40*points.Unit, "1", "2"), test(2, 60*points.Unit, "3", "2")}
 	saved, err := drafts.SaveDraft(ctx, mutationKey(org.ID, "edit", d), d)
@@ -328,18 +328,18 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 	}
 	draft := func(interactorSource, checkerSource string) func(*problemsmodel.Draft) {
 		return func(d *problemsmodel.Draft) {
-			generator, solution, group := uuid.New(), uuid.New(), uuid.New()
+			generator, solution, group := "gen", "main", uuid.New()
 			d.Type = "interactive"
 			d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: checkerSource}}
 			d.Interactor = &problemsmodel.DraftProgram{Language: "python3", Source: interactorSource}
-			d.Generators = []problemsmodel.DraftNamedProgram{{ID: generator, Name: "gen", DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1])\n"}}}
-			d.Solutions = []problemsmodel.DraftNamedProgram{{ID: solution, Name: "main", DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "print(2 * int(input()), flush=True)\n"}}}
+			d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1])\n"}}}
+			d.Solutions = []problemsmodel.DraftNamedProgram{{Name: solution, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "print(2 * int(input()), flush=True)\n"}}}
 			d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Reply with twice the number."}}
-			d.MainSolutionID = &solution
+			d.MainSolution = &solution
 			d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
 			seed := int64(1)
 			d.Tests = []problemsmodel.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: group, Points: 100 * points.Unit,
-				Input:  problemsmodel.DraftInput{Mode: "generator", GeneratorID: &generator, Args: []string{"5"}, Seed: &seed},
+				Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"5"}, Seed: &seed},
 				Answer: problemsmodel.DraftAnswer{Mode: "interactive"}}}
 		}
 	}
@@ -379,18 +379,18 @@ func TestStandardCheckerE2E(t *testing.T) {
 	h := newJudgeHarness(t)
 	draft := func(standard, solution string) func(*problemsmodel.Draft) {
 		return func(d *problemsmodel.Draft) {
-			generator, main, group := uuid.New(), uuid.New(), uuid.New()
+			generator, main, group := "gen", "main", uuid.New()
 			d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "cpp17"}, Standard: standard}
-			d.Generators = []problemsmodel.DraftNamedProgram{{ID: generator, Name: "gen", DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
-			d.Solutions = []problemsmodel.DraftNamedProgram{{ID: main, Name: "main", DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: solution}}}
+			d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
+			d.Solutions = []problemsmodel.DraftNamedProgram{{Name: main, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: solution}}}
 			d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Compute."}}
-			d.MainSolutionID = &main
+			d.MainSolution = &main
 			d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
 			seed := int64(1)
 			for i, args := range [][]string{{"1", "3"}, {"2", "7"}} {
 				d.Tests = append(d.Tests, problemsmodel.DraftTest{ID: uuid.New(), Ordinal: i + 1, SubtaskID: group, Points: 50 * points.Unit,
-					Input:  problemsmodel.DraftInput{Mode: "generator", GeneratorID: &generator, Args: args, Seed: &seed},
-					Answer: problemsmodel.DraftAnswer{Mode: "generated", SolutionID: &main}})
+					Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: args, Seed: &seed},
+					Answer: problemsmodel.DraftAnswer{Mode: "generated", Solution: &main}})
 			}
 		}
 	}

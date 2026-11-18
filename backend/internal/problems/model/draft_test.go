@@ -12,20 +12,20 @@ import (
 var testQuotas = DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 10, Tests: 10, Components: 10, Subtasks: 10}
 
 func validDraft() Draft {
-	gen, sol, sub, seed := uuid.New(), uuid.New(), uuid.New(), int64(1)
+	gen, sol, sub, seed := "gen", "main", uuid.New(), int64(1)
 	return Draft{ProblemID: uuid.New(), Revision: 1, Title: "A", ShortName: "a", Type: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256,
 		DraftContent: DraftContent{
-			Checker:        &DraftChecker{DraftProgram: DraftProgram{Language: "cpp"}},
-			Generators:     []DraftNamedProgram{{ID: gen, Name: "gen", DraftProgram: DraftProgram{Language: "python"}}},
-			Solutions:      []DraftNamedProgram{{ID: sol, Name: "main", DraftProgram: DraftProgram{Language: "cpp"}}},
-			MainSolutionID: &sol,
-			Library:        []DraftLibraryFile{{Name: "testlib.h"}},
-			Statements:     []DraftStatement{{Language: "en", Legend: "![graph](graph.png)"}},
-			Assets:         []DraftAsset{{Name: "graph.png", ObjectID: uuid.New()}},
-			Subtasks:       []DraftSubtask{{ID: sub, Ordinal: 1, Name: "main", Policy: "complete"}},
+			Checker:      &DraftChecker{DraftProgram: DraftProgram{Language: "cpp"}},
+			Generators:   []DraftNamedProgram{{Name: gen, DraftProgram: DraftProgram{Language: "python"}}},
+			Solutions:    []DraftNamedProgram{{Name: sol, DraftProgram: DraftProgram{Language: "cpp"}}},
+			MainSolution: &sol,
+			Library:      []DraftLibraryFile{{Name: "testlib.h"}},
+			Statements:   []DraftStatement{{Language: "en", Legend: "![graph](graph.png)"}},
+			Assets:       []DraftAsset{{Name: "graph.png", ObjectID: uuid.New()}},
+			Subtasks:     []DraftSubtask{{ID: sub, Ordinal: 1, Name: "main", Policy: "complete"}},
 			Tests: []DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: sub,
-				Input:  DraftInput{Mode: "generator", GeneratorID: &gen, Seed: &seed},
-				Answer: DraftAnswer{Mode: "generated", SolutionID: &sol}}},
+				Input:  DraftInput{Mode: "generator", Generator: &gen, Seed: &seed},
+				Answer: DraftAnswer{Mode: "generated", Solution: &sol}}},
 		}}
 }
 
@@ -45,7 +45,10 @@ func TestValidateLocatesViolations(t *testing.T) {
 		pointer string
 		message string
 	}{
-		"test input from a solution":    {func(d *Draft) { d.Tests[0].Input.GeneratorID = d.MainSolutionID }, "/tests/0/input/generator_id", "generator"},
+		"test input from a solution": {func(d *Draft) { d.Tests[0].Input.Generator = d.MainSolution }, "/tests/0/input/generator", "generator"},
+		"two generators of one name": {func(d *Draft) {
+			d.Generators = append(d.Generators, DraftNamedProgram{Name: "gen", DraftProgram: DraftProgram{Language: "cpp"}})
+		}, "/generators/1/name", "duplicate name \"gen\""},
 		"two library files of one name": {func(d *Draft) {
 			d.Library = append(d.Library, DraftLibraryFile{Name: "testlib.h"})
 		}, "/library/1/name", "duplicate file name \"testlib.h\""},
@@ -59,7 +62,7 @@ func TestValidateLocatesViolations(t *testing.T) {
 			d.Library[0].AutoUpdate, d.Library[0].Content = true, "// patched"
 		}, "/library/0/auto_update", "only an empty system library file"},
 		"second validator": {func(d *Draft) {
-			d.Validators = []DraftNamedProgram{{ID: uuid.New(), Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, {ID: uuid.New(), Name: "b", DraftProgram: DraftProgram{Language: "cpp"}}}
+			d.Validators = []DraftNamedProgram{{Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, {Name: "b", DraftProgram: DraftProgram{Language: "cpp"}}}
 		}, "/validators/1", "at most one validator"},
 		"image of a missing asset": {func(d *Draft) { d.Statements[0].Notes = "See ![tree](tree.png)." }, "/statements/0/notes", "notes section of the en statement shows missing asset \"tree.png\""},
 	} {

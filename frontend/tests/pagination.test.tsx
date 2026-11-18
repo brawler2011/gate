@@ -47,7 +47,7 @@ const history = (page: number) => ({
 const buildableDraft = {
   problem_id: "problem", revision: 7, title: "A", short_name: "a", type: "pass-fail", time_limit_ms: 1000,
   memory_limit_mb: 256, max_score: null,
-  main_solution_id: null, files: {"checkers/check.cpp": ""}, assets: [],
+  main_solution: null, files: {"checkers/check.cpp": ""}, assets: [],
   components: [{id: "checker", role: "checker", path: "checkers/check.cpp", dependencies: {}}],
   subtasks: [{id: "s", ordinal: 1, name: "All", points: 1, policy: "complete", depends_on: []}],
   tests: [{

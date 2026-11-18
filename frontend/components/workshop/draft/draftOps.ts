@@ -77,36 +77,66 @@ export const customizeChecker = (draft: ProblemDraft, source: string, systemFile
   return missing.reduce(addSystemFile, next);
 };
 
+const nameTaken = (role: ListRole, name: string): OpResult => ({
+  error: `${ROLE_LABELS[role]} с именем «${name}» уже есть`,
+});
+
+/** Programs are identified by their names, which are unique within a role. */
 export const addProgram = (
   draft: ProblemDraft,
   role: ListRole,
   name: string,
   language: string,
   source: string,
-): ProblemDraft => {
-  const program: ProblemDraftNamedProgram = {id: newId(), name, language, source};
+): OpResult => {
+  if (programsOf(draft, role).some((p) => p.name === name)) {
+    return nameTaken(role, name);
+  }
+  const program: ProblemDraftNamedProgram = {name, language, source};
   return {
-    ...draft,
-    [LIST_FIELDS[role]]: [...programsOf(draft, role), program],
-    // The first solution becomes the main one.
-    main_solution_id: role === "solution" && !draft.main_solution_id ? program.id : draft.main_solution_id,
+    draft: {
+      ...draft,
+      [LIST_FIELDS[role]]: [...programsOf(draft, role), program],
+      // The first solution becomes the main one.
+      main_solution: role === "solution" && !draft.main_solution ? name : draft.main_solution,
+    },
   };
 };
 
 export const updateProgram = (
   draft: ProblemDraft,
   role: ListRole,
-  id: string,
-  patch: Partial<Omit<ProblemDraftNamedProgram, "id">>,
+  name: string,
+  patch: Partial<Omit<ProblemDraftNamedProgram, "name">>,
 ): ProblemDraft => ({
   ...draft,
-  [LIST_FIELDS[role]]: programsOf(draft, role).map((p) => (p.id === id ? {...p, ...patch} : p)),
+  [LIST_FIELDS[role]]: programsOf(draft, role).map((p) => (p.name === name ? {...p, ...patch} : p)),
 });
 
-export const removeProgram = (draft: ProblemDraft, role: ListRole, id: string): ProblemDraft => ({
+/** Renames a program together with the tests and the main solution that refer to it. */
+export const renameProgram = (draft: ProblemDraft, role: ListRole, from: string, to: string): OpResult => {
+  if (programsOf(draft, role).some((p) => p.name === to)) {
+    return nameTaken(role, to);
+  }
+  const follow = (name: string | null): string | null => (name === from ? to : name);
+  return {
+    draft: {
+      ...draft,
+      [LIST_FIELDS[role]]: programsOf(draft, role).map((p) => (p.name === from ? {...p, name: to} : p)),
+      main_solution: role === "solution" ? follow(draft.main_solution) : draft.main_solution,
+      tests: draft.tests.map((test) => ({
+        ...test,
+        input: role === "generator" ? {...test.input, generator: follow(test.input.generator)} : test.input,
+        answer: role === "solution" ? {...test.answer, solution: follow(test.answer.solution)} : test.answer,
+      })),
+    },
+  };
+};
+
+export const removeProgram = (draft: ProblemDraft, role: ListRole, name: string): ProblemDraft => ({
   ...draft,
-  [LIST_FIELDS[role]]: programsOf(draft, role).filter((p) => p.id !== id),
-  main_solution_id: draft.main_solution_id === id ? null : draft.main_solution_id,
+  [LIST_FIELDS[role]]: programsOf(draft, role).filter((p) => p.name !== name),
+  main_solution: role === "solution" && draft.main_solution === name ? null : draft.main_solution,
 });
 
 /** Library files are identified by their names, which are unique in a draft. */
@@ -231,8 +261,8 @@ export const moveTest = (draft: ProblemDraft, id: string, delta: number): Proble
 
 const newAnswer = (draft: ProblemDraft, mode: "provided" | "generated"): ProblemDraftTest["answer"] =>
   draft.type === "interactive"
-    ? {mode: "interactive", object_id: null, solution_id: null}
-    : {mode, object_id: null, solution_id: mode === "generated" ? draft.main_solution_id : null};
+    ? {mode: "interactive", object_id: null, solution: null}
+    : {mode, object_id: null, solution: mode === "generated" ? draft.main_solution : null};
 
 export const newGeneratedTest = (draft: ProblemDraft, subtaskId: string): ProblemDraftTest => ({
   id: newId(),
@@ -240,7 +270,7 @@ export const newGeneratedTest = (draft: ProblemDraft, subtaskId: string): Proble
   subtask_id: subtaskId,
   sample: false,
   points: 0,
-  input: {mode: "generator", object_id: null, generator_id: draft.generators[0]?.id ?? null, args: [], seed: 1},
+  input: {mode: "generator", object_id: null, generator: draft.generators[0]?.name ?? null, args: [], seed: 1},
   answer: newAnswer(draft, "generated"),
 });
 
@@ -250,7 +280,7 @@ export const newManualTest = (draft: ProblemDraft, subtaskId: string): ProblemDr
   subtask_id: subtaskId,
   sample: false,
   points: 0,
-  input: {mode: "manual", object_id: null, generator_id: null, args: [], seed: null},
+  input: {mode: "manual", object_id: null, generator: null, args: [], seed: null},
   answer: newAnswer(draft, "provided"),
 });
 
@@ -294,7 +324,7 @@ export const describePointer = (draft: ProblemDraft, pointer: string): string =>
       return `Подзадача ${draft.subtasks[at]?.name ?? ""}`.trim();
     case "tests":
       return draft.tests[at] ? `Тест ${draft.tests[at].ordinal}` : "Тесты";
-    case "main_solution_id":
+    case "main_solution":
       return "Главное решение";
     default:
       return "Черновик";

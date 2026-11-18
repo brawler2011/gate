@@ -29,11 +29,11 @@ type GCStore interface {
 	ListObjects(context.Context, string, string) ([]storage.ObjectInfo, error)
 }
 type GC struct {
-	Logger *slog.Logger
-	Repo   GCRepository
-	Store  GCStore
-	Bucket string
-	TempDir          string
+	Logger  *slog.Logger
+	Repo    GCRepository
+	Store   GCStore
+	Bucket  string
+	TempDir string
 	// ObjectRetention is how long stored bytes without an object row are kept.
 	// It must exceed the longest time from reserving an upload to committing
 	// its row, so bytes about to be referenced are never deleted.
@@ -93,6 +93,7 @@ func (g *GC) Collect(ctx context.Context) error {
 	}
 	return g.cleanDirectories(ctx)
 }
+
 // sweepOrphans deletes bytes left without an object row by failed or
 // abandoned uploads and by interrupted deletions. Keys are never reused, and a
 // row is committed only within the upload's fencing deadline, so bytes older

@@ -77,7 +77,7 @@ func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 	require.NotEmpty(t, packages)
 	// PCMS2 records no solution verdicts, so the author picks the main
 	// solution an interactive problem needs in the workshop.
-	buildErrors := map[string]string{"pcms2/interactive-guess": "/main_solution_id"}
+	buildErrors := map[string]string{"pcms2/interactive-guess": "/main_solution"}
 	languages := newImportUseCase(t).BuildOptions.Languages
 	for _, dir := range packages {
 		name := filepath.Base(filepath.Dir(dir)) + "/" + filepath.Base(dir)
@@ -151,9 +151,10 @@ func TestImportKeepsMainSolutionAcrossNameClash(t *testing.T) {
 	plan, err := importDir(t, unpack(t, "polygon-solution-name-clash"), nil)
 	require.NoError(t, err)
 	defer plan.Close()
-	main := plan.draft.Solution(*plan.draft.MainSolutionID)
-	require.Equal(t, "main", main.Name)
+	main := plan.draft.Solution(*plan.draft.MainSolution)
+	require.Equal(t, "main-2", main.Name)
 	require.Equal(t, "int main() {}\n", main.Source)
+	require.Equal(t, "main", plan.draft.Solutions[0].Name)
 }
 
 func TestImportRejectsPathsOutsidePackage(t *testing.T) {

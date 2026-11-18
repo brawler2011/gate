@@ -16,6 +16,7 @@ import {
   isSingleRole,
   programsOf,
   removeProgram,
+  renameProgram,
   ROLE_LABELS,
   setSingleProgram,
   standardChecker,
@@ -284,25 +285,44 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
   const {save, isSaving} = useSaveDraft(problemId);
   const [params, setParams] = useSearchParams();
   const programs = programsOf(draft, role);
-  const selected = programs.find((p) => p.id === params.get("component")) ?? programs[0];
+  // A renamed program keeps its editor, and so its unsaved source, under an
+  // identity no other program can get; others are keyed by their names.
+  const [renamed, setRenamed] = useState<Record<string, string>>({});
+  const editorKey = (name: string): string => renamed[name] ?? `name:${name}`;
+  // While a rename is saved, the URL may still hold the old name.
+  const component = params.get("component");
+  const selected =
+    programs.find((p) => p.name === component) ??
+    programs.find((p) => component !== null && editorKey(p.name) === editorKey(component)) ??
+    programs[0];
 
-  const open = (id: string) => {
+  const open = (name: string) => {
     const next = new URLSearchParams(params);
-    next.set("component", id);
+    next.set("component", name);
     setParams(next, {replace: true});
   };
 
   const create = async (newName: string, language: string): Promise<boolean> => {
-    let createdId: string | undefined;
-    const ok = await save((current) => {
-      const next = addProgram(current, role, newName, language, template(catalog, role, language));
-      createdId = programsOf(next, role).at(-1)?.id;
-      return next;
-    });
-    if (ok && createdId) {
-      setParams(new URLSearchParams({component: createdId}), {replace: true});
+    const ok = await save((current) => addProgram(current, role, newName, language, template(catalog, role, language)));
+    if (ok) {
+      // Never the identity of a program renamed away from this name.
+      setRenamed((current) => ({...current, [newName]: crypto.randomUUID()}));
+      open(newName);
     }
     return ok;
+  };
+
+  const rename = async (from: string, to: string): Promise<void> => {
+    // The saved draft renders before save resolves, so the identity moves first.
+    const previous = renamed;
+    const identity = editorKey(from);
+    setRenamed({...renamed, [to]: identity});
+    if (await save((current) => renameProgram(current, role, from, to))) {
+      // `from` keeps resolving to the renamed program until the URL follows.
+      open(to);
+    } else {
+      setRenamed(previous);
+    }
   };
 
   return (
@@ -317,18 +337,18 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
             )}
             {programs.map((program) => (
               <NavLink
-                key={program.id}
-                active={program.id === selected?.id}
+                key={program.name}
+                active={program.name === selected?.name}
                 label={program.name}
                 description={languageName(catalog, program.language)}
                 rightSection={
-                  role === "solution" && draft.main_solution_id === program.id ? (
+                  role === "solution" && draft.main_solution === program.name ? (
                     <Badge size="xs" variant="light">
                       Главное
                     </Badge>
                   ) : undefined
                 }
-                onClick={() => open(program.id)}
+                onClick={() => open(program.name)}
               />
             ))}
             <NewProgramForm withName saving={isSaving} onCreate={create} />
@@ -338,24 +358,23 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
       <Grid.Col span={{base: 12, md: 8}}>
         {selected ? (
           <ProgramEditor
-            key={selected.id}
+            key={editorKey(selected.name)}
             label={selected.name}
             program={selected}
             saving={isSaving}
-            onChange={(patch) => void save((current) => updateProgram(current, role, selected.id, patch))}
-            onDelete={() => void save((current) => removeProgram(current, role, selected.id))}
+            onChange={(patch) => void save((current) => updateProgram(current, role, selected.name, patch))}
+            onDelete={() => void save((current) => removeProgram(current, role, selected.name))}
           >
             <RenameControl
-              key={`${selected.id}:${selected.name}`}
               name={selected.name}
               saving={isSaving}
-              onRename={(name) => void save((current) => updateProgram(current, role, selected.id, {name}))}
+              onRename={(name) => void rename(selected.name, name)}
             />
-            {role === "solution" && draft.main_solution_id !== selected.id && (
+            {role === "solution" && draft.main_solution !== selected.name && (
               <Button
                 variant="light"
                 loading={isSaving}
-                onClick={() => void save((current) => ({...current, main_solution_id: selected.id}))}
+                onClick={() => void save((current) => ({...current, main_solution: selected.name}))}
               >
                 Сделать главным
               </Button>

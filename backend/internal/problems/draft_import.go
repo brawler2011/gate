@@ -205,24 +205,24 @@ func (c *importConverter) convert(p *spec.Problem) error {
 			return err
 		}
 	}
-	generators := map[string]uuid.UUID{}
+	generators := map[string]string{}
 	for _, g := range p.Generators {
-		gid, err := c.named(&c.draft.Generators, g)
+		name, err := c.named(&c.draft.Generators, g)
 		if err != nil {
 			return err
 		}
-		generators[g.Path] = gid
+		generators[g.Path] = name
 	}
 	for _, s := range p.Solutions {
-		sid, err := c.named(&c.draft.Solutions, s)
+		name, err := c.named(&c.draft.Solutions, s)
 		if err != nil {
 			return err
 		}
 		if s.Path == p.MainSolution {
-			c.draft.MainSolutionID = &sid
+			c.draft.MainSolution = &name
 		}
 	}
-	if p.MainSolution != "" && c.draft.MainSolutionID == nil {
+	if p.MainSolution != "" && c.draft.MainSolution == nil {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "main solution "+p.MainSolution+" not found")
 	}
 	for _, s := range p.Statements {
@@ -406,16 +406,21 @@ func (c *importConverter) language(program spec.Program) (string, error) {
 	return language, nil
 }
 
-// named adds a program of a role a draft holds several of, named after its
-// file without the extension.
-func (c *importConverter) named(list *[]model.DraftNamedProgram, program spec.Program) (uuid.UUID, error) {
+// named adds a program of a role a draft holds several of and returns its
+// name: its file name without the extension, numbered when another program
+// of the role already has it (gen.cpp and gen.py become gen and gen-2).
+func (c *importConverter) named(list *[]model.DraftNamedProgram, program spec.Program) (string, error) {
 	p, err := c.program(program)
 	if err != nil {
-		return uuid.Nil, err
+		return "", err
 	}
-	id := uuid.New()
-	*list = append(*list, model.DraftNamedProgram{ID: id, Name: spec.Stem(program.Name), DraftProgram: *p})
-	return id, nil
+	stem := spec.Stem(program.Name)
+	name := stem
+	for n := 2; slices.ContainsFunc(*list, func(q model.DraftNamedProgram) bool { return q.Name == name }); n++ {
+		name = fmt.Sprintf("%s-%d", stem, n)
+	}
+	*list = append(*list, model.DraftNamedProgram{Name: name, DraftProgram: *p})
+	return name, nil
 }
 
 // addStatement adds the statement sections in one language, converting
@@ -457,7 +462,7 @@ func (c *importConverter) addStatement(s spec.Statement) error {
 	return nil
 }
 
-func (c *importConverter) addGroups(groups []spec.Group, generators map[string]uuid.UUID) error {
+func (c *importConverter) addGroups(groups []spec.Group, generators map[string]string) error {
 	if len(groups) > c.uc.DraftQuotas.Subtasks {
 		return pkg.ErrPayloadTooLarge
 	}
@@ -489,7 +494,7 @@ func (c *importConverter) addGroups(groups []spec.Group, generators map[string]u
 	return nil
 }
 
-func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map[string]uuid.UUID) (model.DraftTest, error) {
+func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map[string]string) (model.DraftTest, error) {
 	if len(c.draft.Tests) >= c.uc.DraftQuotas.Tests {
 		return model.DraftTest{}, pkg.ErrPayloadTooLarge
 	}
@@ -500,7 +505,7 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map
 			return t, pkg.Wrap(pkg.ErrBadInput, nil, "generator "+test.Generator+" not found")
 		}
 		seed := int64(0)
-		t.Input = model.DraftInput{Mode: "generator", GeneratorID: &gen, Args: test.Args, Seed: &seed}
+		t.Input = model.DraftInput{Mode: "generator", Generator: &gen, Args: test.Args, Seed: &seed}
 		if t.Input.Args == nil {
 			t.Input.Args = []string{}
 		}
@@ -521,7 +526,7 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map
 		}
 		t.Answer = model.DraftAnswer{Mode: "provided", ObjectID: &oid}
 	default:
-		t.Answer = model.DraftAnswer{Mode: "generated", SolutionID: c.draft.MainSolutionID}
+		t.Answer = model.DraftAnswer{Mode: "generated", Solution: c.draft.MainSolution}
 	}
 	return t, nil
 }
