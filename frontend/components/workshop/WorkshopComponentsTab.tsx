@@ -340,8 +340,8 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
       <Grid.Col span={{base: 12, md: 8}}>
         {selected ? (
           <ProgramEditor
-            // Keyed by position, so that a rename keeps unsaved edits of the source.
-            key={programs.indexOf(selected)}
+            // A program's editor is its own: another program never inherits its unsaved source.
+            key={selected.name}
             label={selected.name}
             program={selected}
             saving={isSaving}
@@ -349,7 +349,6 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
             onDelete={() => void save((current) => removeProgram(current, role, selected.name))}
           >
             <RenameControl
-              key={selected.name}
               name={selected.name}
               saving={isSaving}
               onRename={(name) => void rename(selected.name, name)}
