@@ -10,7 +10,7 @@ interface MessageSubmissionCreated {
   'problem_id'?: string;
   'problem_title'?: string;
   'position'?: number;
-  'language'?: number;
+  'language'?: string;
   'created_at'?: string;
   'is_new': boolean;
   'previous_state'?: number;

@@ -10,7 +10,7 @@ interface MessageSubmissionTestStarted {
   'problem_id'?: string;
   'problem_title'?: string;
   'position'?: number;
-  'language'?: number;
+  'language'?: string;
   'created_at'?: string;
   'id': string;
   'number': number;

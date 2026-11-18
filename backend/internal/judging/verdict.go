@@ -3,6 +3,7 @@ package judging
 import (
 	"fmt"
 	"math"
+	"path/filepath"
 	"regexp"
 	"strconv"
 
@@ -39,18 +40,18 @@ var (
 	genericLineRegex = regexp.MustCompile(`(?i)(?:line|строка|:)\s*(\d+)`)
 )
 
-func ParseErrorLine(lang submissionsmodel.LanguageName, text string) *int32 {
+// ParseErrorLine finds the source line a compiler or interpreter reports in
+// text; codeFile is the source file name of the language configuration.
+func ParseErrorLine(codeFile string, text string) *int32 {
 	if text == "" {
 		return nil
 	}
 
 	var match []string
-	switch lang {
-	case submissionsmodel.Cpp:
-		match = cppLineRegex.FindStringSubmatch(text)
-	case submissionsmodel.Python:
+	switch filepath.Ext(codeFile) {
+	case ".py":
 		match = pythonLineRegex.FindStringSubmatch(text)
-	case submissionsmodel.Golang:
+	case ".go":
 		match = goLineRegex.FindStringSubmatch(text)
 	default:
 		match = cppLineRegex.FindStringSubmatch(text)

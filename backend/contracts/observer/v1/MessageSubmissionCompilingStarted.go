@@ -18,7 +18,7 @@ type MessageSubmissionCompilingStarted struct {
 	ProblemId            *uuid.UUID             `json:"problem_id,omitempty"`
 	ProblemTitle         *string                `json:"problem_title,omitempty"`
 	Position             *int32                 `json:"position,omitempty"`
-	Language             *int32                 `json:"language,omitempty"`
+	Language             *string                `json:"language,omitempty"`
 	CreatedAt            *time.Time             `json:"created_at,omitempty"`
 	Id                   uuid.UUID              `json:"id" binding:"required"`
 	AdditionalProperties map[string]interface{} `json:"-,omitempty"`

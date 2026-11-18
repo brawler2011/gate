@@ -20,7 +20,7 @@ import (
 
 func cachedPackage() *LoadedPackage {
 	return &LoadedPackage{
-		Format:     &gfmt.GateFormat{Problem: &gfmt.Problem{Programs: map[string]gfmt.Program{"checker": {Source: "checkers/check.cpp", Language: "cpp"}}}},
+		Format:     &gfmt.GateFormat{Problem: &gfmt.Problem{Programs: map[string]gfmt.Program{"checker": {Source: "checkers/check.cpp", Language: "cpp17"}}}},
 		Descriptor: model.PackageDescriptor{ID: uuid.New()},
 	}
 }

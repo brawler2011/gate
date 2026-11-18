@@ -844,7 +844,7 @@ CREATE TABLE submissions (
     problem_id uuid,
     owner_id uuid,
     source varchar(65536) NOT NULL,
-    language integer NOT NULL,
+    language text NOT NULL,
     state integer DEFAULT 1 NOT NULL,
     score numeric(12,2) DEFAULT 0 NOT NULL,
     penalty integer DEFAULT 0 NOT NULL,

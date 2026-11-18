@@ -1384,6 +1384,8 @@ type ContestModel struct {
 	EnableVirtualContests OptBool                          `json:"enable_virtual_contests"`
 	ParticipationMode     OptContestModelParticipationMode `json:"participation_mode"`
 	HideStatements        OptBool                          `json:"hide_statements"`
+	// Language configurations contestants may submit in; empty allows the whole catalog.
+	Languages []string `json:"languages"`
 }
 
 // GetCapabilities returns the value of Capabilities.
@@ -1516,6 +1518,11 @@ func (s *ContestModel) GetHideStatements() OptBool {
 	return s.HideStatements
 }
 
+// GetLanguages returns the value of Languages.
+func (s *ContestModel) GetLanguages() []string {
+	return s.Languages
+}
+
 // SetCapabilities sets the value of Capabilities.
 func (s *ContestModel) SetCapabilities(val []string) {
 	s.Capabilities = val
@@ -1644,6 +1651,11 @@ func (s *ContestModel) SetParticipationMode(val OptContestModelParticipationMode
 // SetHideStatements sets the value of HideStatements.
 func (s *ContestModel) SetHideStatements(val OptBool) {
 	s.HideStatements = val
+}
+
+// SetLanguages sets the value of Languages.
+func (s *ContestModel) SetLanguages(val []string) {
+	s.Languages = val
 }
 
 // Freeze mode status.
@@ -8373,7 +8385,7 @@ func (s *ProblemDraftLibraryFile) SetContent(val string) {
 type ProblemDraftNamedProgram struct {
 	ID   uuid.UUID `json:"id"`
 	Name string    `json:"name"`
-	// Toolchain language key, such as cpp or python.
+	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
 	Language     string      `json:"language"`
 	Source       string      `json:"source"`
 	Dependencies []uuid.UUID `json:"dependencies"`
@@ -8433,7 +8445,7 @@ func (s *ProblemDraftNamedProgram) SetDependencies(val []uuid.UUID) {
 // name.
 // Ref: #/components/schemas/ProblemDraftProgram
 type ProblemDraftProgram struct {
-	// Toolchain language key, such as cpp or python.
+	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
 	Language     string      `json:"language"`
 	Source       string      `json:"source"`
 	Dependencies []uuid.UUID `json:"dependencies"`
@@ -10038,17 +10050,18 @@ func (s *SortByQuery) UnmarshalText(data []byte) error {
 // Submission data.
 // Ref: #/components/schemas/SubmissionModel
 type SubmissionModel struct {
-	Frozen            OptBool                       `json:"frozen"`
-	ID                uuid.UUID                     `json:"id"`
-	UserID            uuid.UUID                     `json:"user_id"`
-	Username          string                        `json:"username"`
-	Submission        OptString                     `json:"submission"`
-	State             OptInt32                      `json:"state"`
-	Score             OptFloat64                    `json:"score"`
-	Penalty           OptInt32                      `json:"penalty"`
-	TimeStat          OptInt32                      `json:"time_stat"`
-	MemoryStat        OptInt32                      `json:"memory_stat"`
-	Language          int32                         `json:"language"`
+	Frozen     OptBool    `json:"frozen"`
+	ID         uuid.UUID  `json:"id"`
+	UserID     uuid.UUID  `json:"user_id"`
+	Username   string     `json:"username"`
+	Submission OptString  `json:"submission"`
+	State      OptInt32   `json:"state"`
+	Score      OptFloat64 `json:"score"`
+	Penalty    OptInt32   `json:"penalty"`
+	TimeStat   OptInt32   `json:"time_stat"`
+	MemoryStat OptInt32   `json:"memory_stat"`
+	// Identifier of the language configuration from GET /languages.
+	Language          string                        `json:"language"`
 	FailedTest        OptNilInt32                   `json:"failed_test"`
 	TestDetails       OptSubmissionTestDetailsModel `json:"test_details"`
 	ProblemID         uuid.UUID                     `json:"problem_id"`
@@ -10114,7 +10127,7 @@ func (s *SubmissionModel) GetMemoryStat() OptInt32 {
 }
 
 // GetLanguage returns the value of Language.
-func (s *SubmissionModel) GetLanguage() int32 {
+func (s *SubmissionModel) GetLanguage() string {
 	return s.Language
 }
 
@@ -10229,7 +10242,7 @@ func (s *SubmissionModel) SetMemoryStat(val OptInt32) {
 }
 
 // SetLanguage sets the value of Language.
-func (s *SubmissionModel) SetLanguage(val int32) {
+func (s *SubmissionModel) SetLanguage(val string) {
 	s.Language = val
 }
 
@@ -10387,17 +10400,18 @@ func (s *SubmissionTestDetailsModel) SetFailedTestDetails(val OptFailedTestDetai
 // Ref: #/components/schemas/SubmissionsListItemModel
 type SubmissionsListItemModel struct {
 	// Revision local to this submission.
-	Revision          int64        `json:"revision"`
-	Frozen            OptBool      `json:"frozen"`
-	ID                uuid.UUID    `json:"id"`
-	UserID            uuid.UUID    `json:"user_id"`
-	Username          string       `json:"username"`
-	State             OptInt32     `json:"state"`
-	Score             OptFloat64   `json:"score"`
-	Penalty           OptInt32     `json:"penalty"`
-	TimeStat          OptInt32     `json:"time_stat"`
-	MemoryStat        OptInt32     `json:"memory_stat"`
-	Language          int32        `json:"language"`
+	Revision   int64      `json:"revision"`
+	Frozen     OptBool    `json:"frozen"`
+	ID         uuid.UUID  `json:"id"`
+	UserID     uuid.UUID  `json:"user_id"`
+	Username   string     `json:"username"`
+	State      OptInt32   `json:"state"`
+	Score      OptFloat64 `json:"score"`
+	Penalty    OptInt32   `json:"penalty"`
+	TimeStat   OptInt32   `json:"time_stat"`
+	MemoryStat OptInt32   `json:"memory_stat"`
+	// Identifier of the language configuration from GET /languages.
+	Language          string       `json:"language"`
 	FailedTest        OptNilInt32  `json:"failed_test"`
 	ProblemID         uuid.UUID    `json:"problem_id"`
 	ProblemTitle      string       `json:"problem_title"`
@@ -10462,7 +10476,7 @@ func (s *SubmissionsListItemModel) GetMemoryStat() OptInt32 {
 }
 
 // GetLanguage returns the value of Language.
-func (s *SubmissionsListItemModel) GetLanguage() int32 {
+func (s *SubmissionsListItemModel) GetLanguage() string {
 	return s.Language
 }
 
@@ -10572,7 +10586,7 @@ func (s *SubmissionsListItemModel) SetMemoryStat(val OptInt32) {
 }
 
 // SetLanguage sets the value of Language.
-func (s *SubmissionsListItemModel) SetLanguage(val int32) {
+func (s *SubmissionsListItemModel) SetLanguage(val string) {
 	s.Language = val
 }
 
@@ -10631,12 +10645,21 @@ func (s *SubmissionsListItemModel) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
-// Supported language data.
+// A language configuration of the catalog: a concrete compiler or interpreter with its options.
 // Ref: #/components/schemas/SupportedLanguage
 type SupportedLanguage struct {
-	Name      string    `json:"name"`
-	Extension string    `json:"extension"`
-	Type      OptString `json:"type"`
+	// Stable identifier that submissions and problem programs record.
+	ID string `json:"id"`
+	// Compiler or interpreter variant and version.
+	Name string `json:"name"`
+	// Source file extensions without the dot; the first names new files, and an extension suggests the
+	// first configuration in catalog order that accepts it.
+	Extensions []string `json:"extensions"`
+}
+
+// GetID returns the value of ID.
+func (s *SupportedLanguage) GetID() string {
+	return s.ID
 }
 
 // GetName returns the value of Name.
@@ -10644,14 +10667,14 @@ func (s *SupportedLanguage) GetName() string {
 	return s.Name
 }
 
-// GetExtension returns the value of Extension.
-func (s *SupportedLanguage) GetExtension() string {
-	return s.Extension
+// GetExtensions returns the value of Extensions.
+func (s *SupportedLanguage) GetExtensions() []string {
+	return s.Extensions
 }
 
-// GetType returns the value of Type.
-func (s *SupportedLanguage) GetType() OptString {
-	return s.Type
+// SetID sets the value of ID.
+func (s *SupportedLanguage) SetID(val string) {
+	s.ID = val
 }
 
 // SetName sets the value of Name.
@@ -10659,17 +10682,12 @@ func (s *SupportedLanguage) SetName(val string) {
 	s.Name = val
 }
 
-// SetExtension sets the value of Extension.
-func (s *SupportedLanguage) SetExtension(val string) {
-	s.Extension = val
+// SetExtensions sets the value of Extensions.
+func (s *SupportedLanguage) SetExtensions(val []string) {
+	s.Extensions = val
 }
 
-// SetType sets the value of Type.
-func (s *SupportedLanguage) SetType(val OptString) {
-	s.Type = val
-}
-
-// Result of supported languages.
+// The language catalog in display order.
 // Ref: #/components/schemas/SupportedLanguagesResponse
 type SupportedLanguagesResponse struct {
 	Languages []SupportedLanguage `json:"languages"`
@@ -11020,6 +11038,9 @@ type UpdateContestRequestModel struct {
 	EnableVirtualContests OptBool                                       `json:"enable_virtual_contests"`
 	ParticipationMode     OptUpdateContestRequestModelParticipationMode `json:"participation_mode"`
 	HideStatements        OptBool                                       `json:"hide_statements"`
+	// Language configurations contestants may submit in; empty allows the whole catalog, omitted preserves
+	// the current list.
+	Languages []string `json:"languages"`
 }
 
 // GetLogin returns the value of Login.
@@ -11112,6 +11133,11 @@ func (s *UpdateContestRequestModel) GetHideStatements() OptBool {
 	return s.HideStatements
 }
 
+// GetLanguages returns the value of Languages.
+func (s *UpdateContestRequestModel) GetLanguages() []string {
+	return s.Languages
+}
+
 // SetLogin sets the value of Login.
 func (s *UpdateContestRequestModel) SetLogin(val OptString) {
 	s.Login = val
@@ -11200,6 +11226,11 @@ func (s *UpdateContestRequestModel) SetParticipationMode(val OptUpdateContestReq
 // SetHideStatements sets the value of HideStatements.
 func (s *UpdateContestRequestModel) SetHideStatements(val OptBool) {
 	s.HideStatements = val
+}
+
+// SetLanguages sets the value of Languages.
+func (s *UpdateContestRequestModel) SetLanguages(val []string) {
+	s.Languages = val
 }
 
 // Freeze mode status; omitted preserves the current mode.

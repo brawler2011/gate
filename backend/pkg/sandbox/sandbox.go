@@ -147,7 +147,7 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 
 	lang, ok := s.config.Langs[langKey]
 	if !ok {
-		return Executable{}, fmt.Errorf("unsupported language: %s", langKey)
+		return Executable{}, fmt.Errorf("%w: %s", ErrUnknownLanguage, langKey)
 	}
 
 	// NOTE: можно как-то общий код чуть повыносить, этот иф по факту просто код дублирует
@@ -331,7 +331,7 @@ func (s *Sandbox) Generate(ctx context.Context, gen Executable, args []string) (
 func (s *Sandbox) Test(ctx context.Context, sol Executable, langKey string, input []byte, timeLimitMs, memoryLimitMb int) (*RunResult, error) {
 	lang, ok := s.config.Langs[langKey]
 	if !ok {
-		return nil, fmt.Errorf("unsupported language: %s", langKey)
+		return nil, fmt.Errorf("%w: %s", ErrUnknownLanguage, langKey)
 	}
 
 	var cmdArgs []string
@@ -452,7 +452,7 @@ func (s *Sandbox) Check(ctx context.Context, checker Executable, input, output, 
 func (s *Sandbox) Interact(ctx context.Context, sol Executable, solLangKey string, interactor Executable, input []byte, timeLimitMs, memoryLimitMb int) (*InteractiveResult, error) {
 	lang, ok := s.config.Langs[solLangKey]
 	if !ok {
-		return nil, fmt.Errorf("unsupported solution language: %s", solLangKey)
+		return nil, fmt.Errorf("%w: %s", ErrUnknownLanguage, solLangKey)
 	}
 
 	var solCmdArgs []string

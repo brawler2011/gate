@@ -84,7 +84,7 @@ func TestIntegrationSandbox(t *testing.T) {
 	// Wait for go-judge gRPC server to be fully ready
 	for i := 0; i < 30; i++ {
 		probeCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-		_, err := sb.Compile(probeCtx, []byte("int main(){return 0;}"), "cpp", nil)
+		_, err := sb.Compile(probeCtx, []byte("int main(){return 0;}"), "cpp17", nil)
 		cancel()
 		if err == nil {
 			break
@@ -489,9 +489,9 @@ func getLanguageKey(filename string) (string, error) {
 	ext := filepath.Ext(filename)
 	switch strings.ToLower(ext) {
 	case ".cpp", ".cc", ".cxx":
-		return "cpp", nil
+		return "cpp17", nil
 	case ".py":
-		return "python", nil
+		return "python3", nil
 	case ".go":
 		return "go", nil
 	case ".java":

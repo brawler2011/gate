@@ -16,15 +16,20 @@
       pkgs = nixpkgs.legacyPackages.${system};
       n2c = nix2container.packages.${system}.nix2container;
 
-      # langs.toml is shared with the backend: each language names its nixpkgs package.
+      # langs.toml is shared with the backend: each configuration names its nixpkgs
+      # package, and configurations may share one (the C++ standards share GCC).
       langs = builtins.fromTOML (builtins.readFile ./langs.toml);
-      # A language may install a trimmed build of its package instead of the package itself.
+      # A package may be installed as a trimmed build instead of the package itself.
       trimmed = {
-        java = jlinkRuntime;
+        ${langs.java.package} = jlinkRuntime;
       };
-      langPackages = builtins.mapAttrs (
-        name: lang: (trimmed.${name} or (pkg: pkg)) pkgs.${lang.package}
-      ) langs;
+      # The language packages by nixpkgs attribute, each once.
+      langPackages = builtins.listToAttrs (
+        map (name: {
+          inherit name;
+          value = (trimmed.${name} or (pkg: pkg)) pkgs.${name};
+        }) (pkgs.lib.unique (map (lang: lang.package) (builtins.attrValues langs)))
+      );
 
       # A Java runtime with the standard API (java.se), javac (jdk.compiler), the
       # non-US locale data standard APIs use (jdk.localedata) and sun.misc.Unsafe
@@ -132,7 +137,7 @@
         ln -s ${source "mount.yaml"} $out/opt/mount.yaml
       '';
 
-      # The base layer (bash, coreutils and glibc), then one layer per language, TeX
+      # The base layer (bash, coreutils and glibc), then one layer per language package, TeX
       # and go-judge, each holding its closure minus the base. These layers do not
       # depend on each other: a store path two of them need is in both (identical
       # files, so the overlay is unaffected), and changing one language changes only
@@ -153,7 +158,7 @@
       layers = [
         base
       ]
-      ++ pkgs.lib.mapAttrsToList (name: pkg: layer ([ pkg ] ++ pkgs.lib.optional (name == "go") goCache)) langPackages
+      ++ pkgs.lib.mapAttrsToList (name: pkg: layer ([ pkg ] ++ pkgs.lib.optional (name == langs.go.package) goCache)) langPackages
       ++ [
         (layer [ tex ])
         (layer [ pkgs.go-judge ])

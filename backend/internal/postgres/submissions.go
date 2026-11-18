@@ -143,7 +143,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 		ContestID: filter.ContestId,
 		OwnerID:   filter.UserId,
 		ProblemID: filter.ProblemId,
-		Language:  languagePtrToInt32Ptr(filter.Language),
+		Language:  filter.Language,
 		State:     statePtrToInt32Ptr(filter.State),
 	})
 	if err != nil {
@@ -156,7 +156,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 		ContestID: filter.ContestId,
 		OwnerID:   filter.UserId,
 		ProblemID: filter.ProblemId,
-		Language:  languagePtrToInt32Ptr(filter.Language),
+		Language:  filter.Language,
 		State:     statePtrToInt32Ptr(filter.State),
 		SortOrder: sortOrder,
 	})
@@ -172,13 +172,6 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 	return submissions, safeInt32(totalCount), nil
 }
 
-func languagePtrToInt32Ptr(l *submissionsmodel.LanguageName) *int32 {
-	if l == nil {
-		return nil
-	}
-	val := int32(*l)
-	return &val
-}
 
 func statePtrToInt32Ptr(s *submissionsmodel.State) *int32 {
 	if s == nil {

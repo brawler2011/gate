@@ -80,7 +80,7 @@ func (f *concurrencyFixture) submissionUC(tx submissions.SubmissionTransactions)
 	return submissions.NewSubmissionsUseCase(postgres.NewSubmissionsRepo(f.pool), postgres.NewContestsRepo(f.pool), postgres.NewProblemsRepo(f.pool), tx, f.permissions)
 }
 func (f *concurrencyFixture) create(tx submissions.SubmissionTransactions, user int) (uuid.UUID, error) {
-	return f.submissionUC(tx).CreateSubmission(f.userContext(user), &submissionsmodel.SubmissionCreation{ContestId: f.contest, ProblemId: f.problem, UserId: f.users[user], Solution: "print(1)", Language: submissionsmodel.Python})
+	return f.submissionUC(tx).CreateSubmission(f.userContext(user), &submissionsmodel.SubmissionCreation{ContestId: f.contest, ProblemId: f.problem, UserId: f.users[user], Solution: "print(1)", Language: "python3"})
 }
 func (f *concurrencyFixture) job(t *testing.T, user, minute int) judgingmodel.Job {
 	t.Helper()

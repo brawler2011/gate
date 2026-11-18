@@ -24,7 +24,7 @@ import (
 
 func testBuildOptions() postgres.ProblemBuildOptions {
 	return postgres.ProblemBuildOptions{
-		Languages:   map[string]sandbox.Language{"cpp": {Type: "compiler"}},
+		Languages:   map[string]sandbox.Language{"cpp17": {Type: "compiler"}},
 		MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute,
 	}
 }

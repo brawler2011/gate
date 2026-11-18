@@ -3,7 +3,8 @@ import {IconBan, IconDots, IconLockOpen, IconRefresh} from "@tabler/icons-react"
 import React, {useEffect, useState, type ReactNode} from "react";
 import {Link} from "react-router-dom";
 
-import {LangString, numberToLetters, ProblemTitle, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
+import {languageName, useLanguages} from "@/lib/languages";
+import {numberToLetters, ProblemTitle, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import {SubmissionDetailsModal} from "./SubmissionDetailsModal";
 import {SubmissionSanctionsModal, type SanctionActionType} from "./SubmissionSanctionsModal";
@@ -95,6 +96,7 @@ const SubmissionRow = ({
   onOpenDetails,
   onOpenSanctionModal,
 }: SubmissionRowProps) => {
+  const languages = useLanguages();
   const [mounted, setMounted] = useState(!isNew);
 
   useEffect(() => {
@@ -147,7 +149,7 @@ const SubmissionRow = ({
             </Link>
           </TableTd>
           <TableTd ta="center">
-            <Text>{LangString(submission.language)}</Text>
+            <Text>{languageName(languages, submission.language)}</Text>
           </TableTd>
           <TableTd ta="center" className={styles.colVerdict}>
             <VerdictCell submission={submission} onOpenDetails={() => onOpenDetails(submission.id)} />

@@ -5,7 +5,8 @@ import React, {useState, type ReactNode} from "react";
 import {Link} from "react-router-dom";
 
 import {CodeBlock} from "@/components/shared/CodeBlock";
-import {LangNameToString, LangString, numberToLetters, ProblemTitle, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
+import {languageName, syntaxOf, useLanguages} from "@/lib/languages";
+import {numberToLetters, ProblemTitle, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import {SubmissionSanctionsModal, type SanctionActionType} from "./SubmissionSanctionsModal";
 
@@ -123,6 +124,7 @@ export const SubmissionDetailsContent = ({
   onRejudge,
   isRejudging,
 }: SubmissionDetailsContentProps): ReactNode => {
+  const languages = useLanguages();
   const [copiedCode, setCopiedCode] = useState(false);
   const [sanctionAction, setSanctionAction] = useState<SanctionActionType | null>(null);
 
@@ -179,7 +181,7 @@ export const SubmissionDetailsContent = ({
               Язык
             </Text>
             <Badge variant="light" color="gray" tt="none">
-              {LangString(submission.language)}
+              {languageName(languages, submission.language)}
             </Badge>
           </Box>
           <Box>
@@ -514,7 +516,7 @@ export const SubmissionDetailsContent = ({
         ) : (
           <CodeBlock
             code={submission.submission}
-            language={LangNameToString(submission.language)}
+            language={syntaxOf(languages.find((language) => language.id === submission.language))}
             highlightLine={errorLine}
           />
         )}

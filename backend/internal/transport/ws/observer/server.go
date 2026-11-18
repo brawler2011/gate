@@ -62,7 +62,7 @@ type SubmissionsFilter struct {
 	ContestId     *uuid.UUID
 	UserId        *uuid.UUID
 	ProblemId     *uuid.UUID
-	Language      *int32
+	Language      *string
 }
 
 func metaMatches(meta *submissionsmodel.SubmissionEventMeta, filter *SubmissionsFilter) bool {
@@ -130,15 +130,10 @@ func parseSubmissionsFilter(r *http.Request) (*SubmissionsFilter, error) {
 		if len(values) != 1 {
 			return nil, fmt.Errorf("invalid language")
 		}
-		value, err := strconv.ParseInt(values[0], 10, 32)
-		if err != nil {
-			return nil, fmt.Errorf("invalid language: %w", err)
+		if values[0] == "" {
+			return nil, fmt.Errorf("invalid language")
 		}
-		lang := int32(value)
-		if err := submissionsmodel.LanguageNameValid(lang); err != nil {
-			return nil, err
-		}
-		filter.Language = &lang
+		filter.Language = &values[0]
 	}
 	return filter, nil
 }

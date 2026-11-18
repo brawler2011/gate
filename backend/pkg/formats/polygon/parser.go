@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -39,23 +40,33 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	}
 	roles := map[string]bool{}
 	if assets.Checker != nil {
-		p.Checker = program(assets.Checker.Source.Path)
+		if p.Checker, err = program(assets.Checker.Source); err != nil {
+			return nil, err
+		}
 		roles[assets.Checker.Source.Path] = true
 	}
 	switch len(assets.Validators) {
 	case 0:
 	case 1:
-		p.Validator = program(assets.Validators[0].Source.Path)
+		if p.Validator, err = program(assets.Validators[0].Source); err != nil {
+			return nil, err
+		}
 		roles[assets.Validators[0].Source.Path] = true
 	default:
 		return nil, fmt.Errorf("package has %d validators; Gate supports one", len(assets.Validators))
 	}
 	if assets.Interactor != nil {
-		p.Interactor = program(assets.Interactor.Source.Path)
+		if p.Interactor, err = program(assets.Interactor.Source); err != nil {
+			return nil, err
+		}
 		roles[assets.Interactor.Source.Path] = true
 	}
 	for _, s := range assets.Solutions {
-		p.Solutions = append(p.Solutions, *program(s.Source.Path))
+		solution, err := program(s.Source)
+		if err != nil {
+			return nil, err
+		}
+		p.Solutions = append(p.Solutions, *solution)
 	}
 	p.MainSolution = mainSolution(assets.Solutions)
 	// Generators are the remaining executables; tests call them by file stem.
@@ -66,7 +77,11 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			if roles[source] || !spec.IsSourceFile(source) {
 				continue
 			}
-			p.Generators = append(p.Generators, *program(source))
+			generator, err := program(e.Source)
+			if err != nil {
+				return nil, err
+			}
+			p.Generators = append(p.Generators, *generator)
 			generators[spec.Stem(source)] = source
 		}
 		// Resources are files programs include, except the statement templates.
@@ -119,8 +134,51 @@ func title(prob Problem) string {
 	return prob.ShortName
 }
 
-func program(source string) *spec.Program {
-	return &spec.Program{File: spec.File{Name: path.Base(source), Path: source}}
+func program(s Source) (*spec.Program, error) {
+	language, err := Language(s.Type)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", s.Path, err)
+	}
+	return &spec.Program{File: spec.File{Name: path.Base(s.Path), Path: s.Path}, Language: language}, nil
+}
+
+var (
+	// gccType is a GNU C++ type of any GCC build, such as cpp.g++17,
+	// cpp.gcc13-64-winlibs-g++20 or cpp.msys2-mingw64-9-g++17; a bare cpp.g++
+	// names no standard.
+	gccType  = regexp.MustCompile(`^cpp\.(?:[a-z0-9]+(?:-[a-z0-9]+)*-)?g\+\+(\d\d)$`)
+	javaType = regexp.MustCompile(`^java\d*$`)
+)
+
+// Language returns the Gate language configuration of a Polygon source type,
+// or "" for a source without a type. Gate runs one compiler version per
+// language, so Polygon's compiler versions and builds of one implementation
+// map to its configuration, but a language standard or another implementation
+// (Clang, MSVC, PyPy) is a different configuration, never substituted: a type
+// Gate has no configuration for is an error.
+func Language(sourceType string) (string, error) {
+	if m := gccType.FindStringSubmatch(sourceType); m != nil {
+		return "cpp" + m[1], nil
+	}
+	switch {
+	case sourceType == "":
+		return "", nil
+	case strings.HasPrefix(sourceType, "c.gcc"):
+		return "c", nil
+	case sourceType == "python.3":
+		return "python3", nil
+	case sourceType == "python.pypy3" || sourceType == "python.pypy3-64":
+		return "pypy3", nil
+	case javaType.MatchString(sourceType):
+		return "java", nil
+	case sourceType == "go":
+		return "go", nil
+	case sourceType == "rust":
+		return "rust", nil
+	case sourceType == "js.node" || sourceType == "javascript.node":
+		return "node", nil
+	}
+	return "", fmt.Errorf("unsupported Polygon source type %q", sourceType)
 }
 
 // mainSolution is the solution tagged main, or else the first accepted one.

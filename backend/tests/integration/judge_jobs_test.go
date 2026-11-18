@@ -56,7 +56,7 @@ func (s *IntegrationTestSuite) newJobSubmission() (uuid.UUID, uuid.UUID, uuid.UU
 	s.Require().NoError(err)
 	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{ContestId: contest, ProblemId: problem, PackageId: pack}))
 	s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: contest, UserId: user.Id, Role: contestsmodel.ContestRoleParticipant}))
-	submission, err := pgstore.NewSubmissionsRepo(s.dbPool).CreateSubmission(s.ctx, &submissionsmodel.SubmissionCreation{ContestId: contest, ProblemId: problem, UserId: user.Id, Language: submissionsmodel.Python, Solution: "print(1)"})
+	submission, err := pgstore.NewSubmissionsRepo(s.dbPool).CreateSubmission(s.ctx, &submissionsmodel.SubmissionCreation{ContestId: contest, ProblemId: problem, UserId: user.Id, Language: "python3", Solution: "print(1)"})
 	s.Require().NoError(err)
 	return submission, contest, problem, user.Id
 }
@@ -213,7 +213,7 @@ func (s *IntegrationTestSuite) TestJudgePackageIsFixedForSubmission() {
 	s.Require().NoError(err)
 	firstHash := s.packageHash(packages, first)
 	s.Require().NoError(s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{ContestId: contest, ProblemId: problem, PackageId: first}))
-	sub, err = pgstore.NewSubmissionsRepo(s.dbPool).CreateSubmission(s.ctx, &submissionsmodel.SubmissionCreation{ContestId: contest, ProblemId: problem, UserId: user, Language: submissionsmodel.Python, Solution: "print(1)"})
+	sub, err = pgstore.NewSubmissionsRepo(s.dbPool).CreateSubmission(s.ctx, &submissionsmodel.SubmissionCreation{ContestId: contest, ProblemId: problem, UserId: user, Language: "python3", Solution: "print(1)"})
 	s.Require().NoError(err)
 	jobs := pgstore.NewJudgeJobs(s.dbPool)
 	initial, err := jobs.ScheduleJob(s.ctx, sub)

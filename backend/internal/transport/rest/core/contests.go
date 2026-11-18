@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -236,6 +237,19 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 	}
 	if req.HideStatements.IsSet() {
 		settingsMap["hide_statements"] = req.HideStatements.Value
+		hasSettingsUpdate = true
+	}
+	if req.Languages != nil {
+		languages := []string{}
+		for _, id := range req.Languages {
+			if _, ok := h.languages.Langs[id]; !ok {
+				return pkg.Wrap(pkg.ErrBadInput, nil, "unknown language configuration "+id)
+			}
+			if !slices.Contains(languages, id) {
+				languages = append(languages, id)
+			}
+		}
+		settingsMap["languages"] = languages
 		hasSettingsUpdate = true
 	}
 
@@ -692,10 +706,9 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 		state = &stateVal
 	}
 
-	var langName *submissionsmodel.LanguageName
+	var langName *string
 	if params.Language.IsSet() {
-		lang := submissionsmodel.LanguageName(params.Language.Value)
-		langName = &lang
+		langName = &params.Language.Value
 	}
 
 	var problemID *uuid.UUID

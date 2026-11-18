@@ -42,6 +42,13 @@ func (s *IntegrationTestSuite) buildPackage(userID, problemID uuid.UUID) uuid.UU
 }
 
 // testBuildOptions are the build settings the HTTP suite and its worker share.
+func testLanguages(t *testing.T) *sandbox.Config {
+	t.Helper()
+	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml")
+	require.NoError(t, err)
+	return cfg
+}
+
 func testBuildOptions(t *testing.T) problemsmodel.BuildOptions {
 	t.Helper()
 	cfg, err := sandbox.LoadConfig("../../../judge/langs.toml")

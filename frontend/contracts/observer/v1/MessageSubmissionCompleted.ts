@@ -10,7 +10,7 @@ interface MessageSubmissionCompleted {
   'problem_id'?: string;
   'problem_title'?: string;
   'position'?: number;
-  'language'?: number;
+  'language'?: string;
   'created_at'?: string;
   'previous_state'?: number;
   'frozen'?: boolean;

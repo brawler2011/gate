@@ -38,32 +38,6 @@ func StatementPath(language, section string) string {
 	return StatementFolder + "/" + language + "/" + section + ".md"
 }
 
-var extensions = map[string]string{"cpp": ".cpp", "python": ".py", "go": ".go", "java": ".java"}
-
-// Extension returns the source file extension of a toolchain language.
-func Extension(language string) string {
-	if ext, ok := extensions[language]; ok {
-		return ext
-	}
-	return "." + language
-}
-
-// Language returns the toolchain language of a source file by its
-// extension, or "" when no language uses it.
-func Language(file string) string {
-	switch strings.ToLower(path.Ext(file)) {
-	case ".cpp", ".cc", ".cxx":
-		return "cpp"
-	case ".py":
-		return "python"
-	case ".go":
-		return "go"
-	case ".java":
-		return "java"
-	}
-	return ""
-}
-
 // FileNames hands out file names unique within a package: a name taken
 // before gets a number before its extension, as in ok-2.cpp.
 type FileNames map[string]bool

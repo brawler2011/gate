@@ -1,0 +1,18 @@
+A Polygon C++14 solution: Gate has no C++14 configuration and does not
+substitute another standard.
+
+-- problem.xml --
+<problem short-name="cpp14">
+  <judging><testset name="tests">
+    <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
+    <input-path-pattern>tests/%02d</input-path-pattern><answer-path-pattern>tests/%02d.a</answer-path-pattern>
+    <tests><test method="manual"/></tests>
+  </testset></judging>
+  <assets><solutions>
+    <solution tag="main"><source path="solutions/main.cpp" type="cpp.g++14"/></solution>
+  </solutions></assets>
+</problem>
+-- solutions/main.cpp --
+int main() {}
+-- tests/01 --
+1

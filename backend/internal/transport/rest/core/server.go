@@ -46,15 +46,16 @@ type Services struct {
 type CoreServer struct {
 	Services
 	secureCookies bool
-	languages     map[string]sandbox.Language
+	languages     *sandbox.Config
 }
 
 func NewCoreServer(services Services, secureCookies bool) *CoreServer {
 	return &CoreServer{Services: services, secureCookies: secureCookies}
 }
 
-// WithLanguages sets the languages reported by GetLanguages.
-func (h *CoreServer) WithLanguages(languages map[string]sandbox.Language) *CoreServer {
+// WithLanguages sets the language catalog: GetLanguages reports it, and
+// submissions and contest settings must name its configurations.
+func (h *CoreServer) WithLanguages(languages *sandbox.Config) *CoreServer {
 	h.languages = languages
 	return h
 }

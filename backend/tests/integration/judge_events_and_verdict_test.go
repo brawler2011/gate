@@ -46,7 +46,7 @@ func TestJudgeProgressPublishing(t *testing.T) {
 		ContestTitle: "Test Contest",
 		ProblemId:    nil,
 		ProblemTitle: "Test Problem",
-		Language:     submissionsmodel.Cpp,
+		Language:     "cpp17",
 	}
 
 	require.NoError(t, publisher.PublishQueued(ctx, submissionID, meta))

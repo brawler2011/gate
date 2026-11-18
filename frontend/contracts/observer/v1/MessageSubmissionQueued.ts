@@ -10,7 +10,7 @@ interface MessageSubmissionQueued {
   'problem_id'?: string;
   'problem_title'?: string;
   'position'?: number;
-  'language'?: number;
+  'language'?: string;
   'created_at'?: string;
   'id': string;
   'additionalProperties'?: Map<string, any>;

@@ -849,22 +849,22 @@ type StoredObject struct {
 }
 
 type Submission struct {
-	ID          uuid.UUID                     `json:"id"`
-	ContestID   *uuid.UUID                    `json:"contest_id"`
-	ProblemID   *uuid.UUID                    `json:"problem_id"`
-	OwnerID     *uuid.UUID                    `json:"owner_id"`
-	Source      string                        `json:"source"`
-	Language    submissionsmodel.LanguageName `json:"language"`
-	State       submissionsmodel.State        `json:"state"`
-	Score       points.Value                  `json:"score"`
-	Penalty     int32                         `json:"penalty"`
-	CreatedAt   time.Time                     `json:"created_at"`
-	UpdatedAt   time.Time                     `json:"updated_at"`
-	TestDetails []byte                        `json:"test_details"`
-	BanReason   *string                       `json:"ban_reason"`
-	Revision    int64                         `json:"revision"`
-	Generation  int64                         `json:"generation"`
-	PackageID   *uuid.UUID                    `json:"package_id"`
+	ID          uuid.UUID              `json:"id"`
+	ContestID   *uuid.UUID             `json:"contest_id"`
+	ProblemID   *uuid.UUID             `json:"problem_id"`
+	OwnerID     *uuid.UUID             `json:"owner_id"`
+	Source      string                 `json:"source"`
+	Language    string                 `json:"language"`
+	State       submissionsmodel.State `json:"state"`
+	Score       points.Value           `json:"score"`
+	Penalty     int32                  `json:"penalty"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
+	TestDetails []byte                 `json:"test_details"`
+	BanReason   *string                `json:"ban_reason"`
+	Revision    int64                  `json:"revision"`
+	Generation  int64                  `json:"generation"`
+	PackageID   *uuid.UUID             `json:"package_id"`
 }
 
 type SubmissionStateHistory struct {

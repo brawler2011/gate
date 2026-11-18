@@ -21,7 +21,6 @@ import (
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats"
-	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/formats/tex"
 	"github.com/brawler2011/gate/backend/pkg/ziputil"
@@ -282,9 +281,16 @@ func (c *importConverter) program(program spec.Program) (*model.DraftProgram, er
 	if c.programs++; c.programs > c.uc.DraftQuotas.Components {
 		return nil, pkg.ErrPayloadTooLarge
 	}
-	language := gfmt.Language(program.Name)
-	if _, ok := c.uc.BuildOptions.Languages[language]; !ok {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "unsupported source language: "+program.Path)
+	// The format names the configuration, or the extension suggests one.
+	language := program.Language
+	if language == "" {
+		language = c.uc.Languages.ForPath(program.Name)
+	}
+	if _, ok := c.uc.Languages.Langs[language]; !ok {
+		if language == "" {
+			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "no language configuration accepts "+program.Path)
+		}
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "unsupported language configuration "+language+" of "+program.Path)
 	}
 	text, err := c.readText(program.Path)
 	if err != nil {

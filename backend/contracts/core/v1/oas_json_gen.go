@@ -3507,9 +3507,19 @@ func (s *ContestModel) encodeFields(e *jx.Encoder) {
 			s.HideStatements.Encode(e)
 		}
 	}
+	{
+		if s.Languages != nil {
+			e.FieldStart("languages")
+			e.ArrStart()
+			for _, elem := range s.Languages {
+				e.Str(elem)
+			}
+			e.ArrEnd()
+		}
+	}
 }
 
-var jsonFieldsNameOfContestModel = [26]string{
+var jsonFieldsNameOfContestModel = [27]string{
 	0:  "capabilities",
 	1:  "id",
 	2:  "login",
@@ -3536,6 +3546,7 @@ var jsonFieldsNameOfContestModel = [26]string{
 	23: "enable_virtual_contests",
 	24: "participation_mode",
 	25: "hide_statements",
+	26: "languages",
 }
 
 // Decode decodes ContestModel from json.
@@ -3845,6 +3856,25 @@ func (s *ContestModel) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"hide_statements\"")
+			}
+		case "languages":
+			if err := func() error {
+				s.Languages = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Languages = append(s.Languages, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"languages\"")
 			}
 		default:
 			return d.Skip()
@@ -20679,7 +20709,7 @@ func (s *SubmissionModel) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("language")
-		e.Int32(s.Language)
+		e.Str(s.Language)
 	}
 	{
 		if s.FailedTest.Set {
@@ -20883,8 +20913,8 @@ func (s *SubmissionModel) Decode(d *jx.Decoder) error {
 		case "language":
 			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
-				v, err := d.Int32()
-				s.Language = int32(v)
+				v, err := d.Str()
+				s.Language = string(v)
 				if err != nil {
 					return err
 				}
@@ -21274,7 +21304,7 @@ func (s *SubmissionsListItemModel) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("language")
-		e.Int32(s.Language)
+		e.Str(s.Language)
 	}
 	{
 		if s.FailedTest.Set {
@@ -21473,8 +21503,8 @@ func (s *SubmissionsListItemModel) Decode(d *jx.Decoder) error {
 		case "language":
 			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
-				v, err := d.Int32()
-				s.Language = int32(v)
+				v, err := d.Str()
+				s.Language = string(v)
 				if err != nil {
 					return err
 				}
@@ -21676,25 +21706,27 @@ func (s *SupportedLanguage) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *SupportedLanguage) encodeFields(e *jx.Encoder) {
 	{
+		e.FieldStart("id")
+		e.Str(s.ID)
+	}
+	{
 		e.FieldStart("name")
 		e.Str(s.Name)
 	}
 	{
-		e.FieldStart("extension")
-		e.Str(s.Extension)
-	}
-	{
-		if s.Type.Set {
-			e.FieldStart("type")
-			s.Type.Encode(e)
+		e.FieldStart("extensions")
+		e.ArrStart()
+		for _, elem := range s.Extensions {
+			e.Str(elem)
 		}
+		e.ArrEnd()
 	}
 }
 
 var jsonFieldsNameOfSupportedLanguage = [3]string{
-	0: "name",
-	1: "extension",
-	2: "type",
+	0: "id",
+	1: "name",
+	2: "extensions",
 }
 
 // Decode decodes SupportedLanguage from json.
@@ -21706,8 +21738,20 @@ func (s *SupportedLanguage) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "name":
+		case "id":
 			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.ID = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "name":
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				v, err := d.Str()
 				s.Name = string(v)
@@ -21718,27 +21762,25 @@ func (s *SupportedLanguage) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"name\"")
 			}
-		case "extension":
-			requiredBitSet[0] |= 1 << 1
+		case "extensions":
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
-				v, err := d.Str()
-				s.Extension = string(v)
-				if err != nil {
+				s.Extensions = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Extensions = append(s.Extensions, elem)
+					return nil
+				}); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"extension\"")
-			}
-		case "type":
-			if err := func() error {
-				s.Type.Reset()
-				if err := s.Type.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"type\"")
+				return errors.Wrap(err, "decode field \"extensions\"")
 			}
 		default:
 			return d.Skip()
@@ -21750,7 +21792,7 @@ func (s *SupportedLanguage) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -22703,9 +22745,19 @@ func (s *UpdateContestRequestModel) encodeFields(e *jx.Encoder) {
 			s.HideStatements.Encode(e)
 		}
 	}
+	{
+		if s.Languages != nil {
+			e.FieldStart("languages")
+			e.ArrStart()
+			for _, elem := range s.Languages {
+				e.Str(elem)
+			}
+			e.ArrEnd()
+		}
+	}
 }
 
-var jsonFieldsNameOfUpdateContestRequestModel = [18]string{
+var jsonFieldsNameOfUpdateContestRequestModel = [19]string{
 	0:  "login",
 	1:  "title",
 	2:  "description",
@@ -22724,6 +22776,7 @@ var jsonFieldsNameOfUpdateContestRequestModel = [18]string{
 	15: "enable_virtual_contests",
 	16: "participation_mode",
 	17: "hide_statements",
+	18: "languages",
 }
 
 // Decode decodes UpdateContestRequestModel from json.
@@ -22913,6 +22966,25 @@ func (s *UpdateContestRequestModel) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"hide_statements\"")
+			}
+		case "languages":
+			if err := func() error {
+				s.Languages = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Languages = append(s.Languages, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"languages\"")
 			}
 		default:
 			return d.Skip()

@@ -59,9 +59,7 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 					main = solution
 				}
 			}
-			languages := map[string]submissionsmodel.LanguageName{"cpp": submissionsmodel.Cpp, "python": submissionsmodel.Python, "go": submissionsmodel.Golang}
-			language, ok := languages[main.Language]
-			s.Require().True(ok, "main solution %q", main.Name)
+			language := main.Language
 			client, files := newGoJudge(s.T())
 			cfg := &sandbox.Config{Langs: testBuildOptions(s.T()).Languages}
 			judge := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
@@ -85,9 +83,9 @@ func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 	s.Require().NoError(err)
 
 	s.Require().False(draft.Checker.Null)
-	s.Require().Equal("cpp", draft.Checker.Value.Language)
+	s.Require().Equal("cpp17", draft.Checker.Value.Language)
 	s.Require().NotEmpty(draft.Checker.Value.Dependencies)
-	draft.Checker.Value.Language = "python"
+	draft.Checker.Value.Language = "python3"
 	draft.Checker.Value.Source = "import sys\nout = open(sys.argv[2]).read().split()\nans = open(sys.argv[3]).read().split()\nsys.exit(0 if out == ans else 1)\n"
 	saved, err := s.client.SaveProblemDraft(ctx, draft, corev1.SaveProblemDraftParams{ID: problem.ID, ExpectedRevision: draft.Revision, IdempotencyKey: uuid.NewString()})
 	s.Require().NoError(err)
@@ -96,7 +94,7 @@ func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 	built := s.loadBuiltPackage(s.buildPackage(admin.Id, problem.ID))
 	program, ok := built.Programs["checker"]
 	s.Require().True(ok, "package has the checker")
-	s.Equal("python", program.Language)
+	s.Equal("python3", program.Language)
 	s.True(strings.HasSuffix(program.Source, ".py"), "checker source follows the language: %s", program.Source)
 	s.Equal(map[string]string{"testlib.h": "lib/testlib.h"}, program.Dependencies)
 }

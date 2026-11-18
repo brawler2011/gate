@@ -72,8 +72,10 @@ func (p *Problem) OrderedSubtaskNames() []string {
 	return names
 }
 
-// Source holds explicit build settings; files, component kinds and languages
-// come from the package layout and file extensions.
+// Source holds explicit build settings of a program; files and component
+// kinds come from the package layout. Language is the Gate language
+// configuration; when absent, the file extension suggests one.
 type Source struct {
+	Language      string            `yaml:"language,omitempty" json:"language,omitempty"`
 	DependencyMap map[string]string `yaml:"dependency_map,omitempty" json:"dependency_map,omitempty"`
 }

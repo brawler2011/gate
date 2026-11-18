@@ -5,12 +5,12 @@ import {useState} from "react";
 import {useSearchParams} from "react-router-dom";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
+import {languageName, useLanguages, type SupportedLanguage} from "@/lib/languages";
 
 import {DraftGate} from "./draft/DraftGate";
 import {
   addProgram,
   isSingleRole,
-  LANGUAGES,
   programsOf,
   removeProgram,
   ROLE_LABELS,
@@ -27,7 +27,13 @@ import {useSaveDraft} from "./draft/useDraft";
 import type {ProblemDraft, ProblemDraftProgram} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
-const LANGUAGE_OPTIONS = LANGUAGES.map((language) => ({value: language, label: language}));
+/** The catalog configurations as select options. */
+const languageOptions = (catalog: SupportedLanguage[]) =>
+  catalog.map((language) => ({value: language.id, label: language.name}));
+
+/** A starter source in the configuration `id` of the catalog. */
+const template = (catalog: SupportedLanguage[], role: ComponentRole, id: string): string =>
+  componentTemplate(role, catalog.find((language) => language.id === id));
 
 type ProgramEditorProps = {
   draft: ProblemDraft;
@@ -42,17 +48,19 @@ type ProgramEditorProps = {
 /** Language, library dependencies and source of one program. */
 const ProgramEditor = (props: ProgramEditorProps): ReactNode => {
   const {draft, label, program, saving, onChange, onDelete, children} = props;
+  const catalog = useLanguages();
   return (
     <SectionPaper>
       <Stack gap="md">
         <Group align="flex-end" wrap="wrap">
           <Select
             label="Язык"
-            data={LANGUAGE_OPTIONS}
+            description="Компилятор или интерпретатор и его версия"
+            data={languageOptions(catalog)}
             value={program.language}
             allowDeselect={false}
             onChange={(value) => value && onChange({language: value})}
-            w={200}
+            w={260}
           />
           {children}
         </Group>
@@ -83,7 +91,9 @@ const NewProgramForm = ({withName, saving, onCreate}: {
   onCreate: (name: string, language: string) => Promise<boolean>;
 }): ReactNode => {
   const [name, setName] = useState("");
-  const [language, setLanguage] = useState("cpp");
+  const catalog = useLanguages();
+  const [chosen, setLanguage] = useState<string | null>(null);
+  const language = chosen ?? catalog[0]?.id ?? null;
   return (
     <>
       {withName && (
@@ -91,16 +101,16 @@ const NewProgramForm = ({withName, saving, onCreate}: {
       )}
       <Select
         label="Язык"
-        data={LANGUAGE_OPTIONS}
+        data={languageOptions(catalog)}
         value={language}
         allowDeselect={false}
-        onChange={(value) => setLanguage(value ?? "cpp")}
+        onChange={setLanguage}
       />
       <Button
         variant="light"
-        disabled={withName && name.trim() === ""}
+        disabled={(withName && name.trim() === "") || !language}
         loading={saving}
-        onClick={() => void onCreate(name.trim(), language).then((ok) => ok && setName(""))}
+        onClick={() => language && void onCreate(name.trim(), language).then((ok) => ok && setName(""))}
       >
         Создать
       </Button>
@@ -112,6 +122,7 @@ type PanelProps<Role> = {draft: ProblemDraft; problemId: string; role: Role};
 
 const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
+  const catalog = useLanguages();
   const program = draft[role];
   if (!program) {
     return (
@@ -127,7 +138,7 @@ const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNod
               save((current) =>
                 setSingleProgram(current, role, {
                   language,
-                  source: componentTemplate(role, language),
+                  source: template(catalog, role, language),
                   dependencies: [],
                 }),
               )
@@ -173,6 +184,7 @@ const RenameControl = ({name, saving, onRename}: {
 };
 
 const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode => {
+  const catalog = useLanguages();
   const {save, isSaving} = useSaveDraft(problemId);
   const [params, setParams] = useSearchParams();
   const programs = programsOf(draft, role);
@@ -187,7 +199,7 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
   const create = async (newName: string, language: string): Promise<boolean> => {
     let createdId: string | undefined;
     const ok = await save((current) => {
-      const next = addProgram(current, role, newName, language, componentTemplate(role, language));
+      const next = addProgram(current, role, newName, language, template(catalog, role, language));
       createdId = programsOf(next, role).at(-1)?.id;
       return next;
     });
@@ -212,7 +224,7 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
                 key={program.id}
                 active={program.id === selected?.id}
                 label={program.name}
-                description={program.language}
+                description={languageName(catalog, program.language)}
                 rightSection={
                   role === "solution" && draft.main_solution_id === program.id ? (
                     <Badge size="xs" variant="light">

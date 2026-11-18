@@ -50,6 +50,9 @@ type File struct {
 // generator or solution.
 type Program struct {
 	File
+	// Language is the Gate language configuration the format names for the
+	// program, or "" when the format names none and the extension suggests it.
+	Language string
 	// Dependencies maps a name the program includes to the Path of a Library
 	// file. Nil makes the whole library available under the file names.
 	Dependencies map[string]string

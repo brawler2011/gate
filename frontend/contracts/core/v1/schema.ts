@@ -1729,7 +1729,7 @@ export interface components {
         };
         /** @description A source compiled with the library files it depends on; each dependency is placed under its library name. */
         ProblemDraftProgram: {
-            /** @description Toolchain language key, such as cpp or python. */
+            /** @description Identifier of the language configuration from GET /languages, such as cpp17 or python3. */
             language: string;
             source: string;
             dependencies: string[];
@@ -1739,7 +1739,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
-            /** @description Toolchain language key, such as cpp or python. */
+            /** @description Identifier of the language configuration from GET /languages, such as cpp17 or python3. */
             language: string;
             source: string;
             dependencies: string[];
@@ -2307,6 +2307,8 @@ export interface components {
             participation_mode: "open" | "by_request" | "invite_only";
             /** @default false */
             hide_statements: boolean;
+            /** @description Language configurations contestants may submit in; empty allows the whole catalog. */
+            languages?: string[];
         };
         /**
          * @description Paginated collection of contests.
@@ -2562,6 +2564,8 @@ export interface components {
             /** @enum {string} */
             participation_mode?: "open" | "by_request" | "invite_only";
             hide_statements?: boolean;
+            /** @description Language configurations contestants may submit in; empty allows the whole catalog, omitted preserves the current list. */
+            languages?: string[];
         };
         /**
          * @description Fields for the create submission request.
@@ -2581,7 +2585,7 @@ export interface components {
          *           "id": "123e4567-e89b-42d3-a456-426614174000",
          *           "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "username": "user123",
-         *           "language": 1,
+         *           "language": "cpp17",
          *           "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *           "problem_title": "Task title",
          *           "position": 1,
@@ -2616,7 +2620,7 @@ export interface components {
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "user123",
-         *       "language": 1,
+         *       "language": "cpp17",
          *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "problem_title": "Task title",
          *       "position": 1,
@@ -2666,10 +2670,10 @@ export interface components {
              */
             memory_stat?: number;
             /**
-             * Format: int32
-             * @example 1
+             * @description Identifier of the language configuration from GET /languages.
+             * @example cpp17
              */
-            language: number;
+            language: string;
             /**
              * Format: int32
              * @example 5
@@ -2800,7 +2804,7 @@ export interface components {
          *       "id": "123e4567-e89b-42d3-a456-426614174000",
          *       "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "username": "user123",
-         *       "language": 1,
+         *       "language": "cpp17",
          *       "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *       "problem_title": "Task title",
          *       "position": 1,
@@ -2847,10 +2851,10 @@ export interface components {
              */
             memory_stat?: number;
             /**
-             * Format: int32
-             * @example 1
+             * @description Identifier of the language configuration from GET /languages.
+             * @example cpp17
              */
-            language: number;
+            language: string;
             /**
              * Format: int32
              * @example 5
@@ -2886,7 +2890,7 @@ export interface components {
          *         "id": "123e4567-e89b-42d3-a456-426614174000",
          *         "user_id": "123e4567-e89b-42d3-a456-426614174000",
          *         "username": "user123",
-         *         "language": 1,
+         *         "language": "cpp17",
          *         "problem_id": "123e4567-e89b-42d3-a456-426614174000",
          *         "problem_title": "Task title",
          *         "position": 1,
@@ -4205,27 +4209,43 @@ export interface components {
             password: string;
         };
         /**
-         * @description Supported language data.
+         * @description A language configuration of the catalog: a concrete compiler or interpreter with its options.
          * @example {
-         *       "name": "cpp",
-         *       "extension": "cpp"
+         *       "id": "cpp17",
+         *       "name": "C++17 (GCC 15)",
+         *       "extensions": [
+         *         "cpp",
+         *         "cc",
+         *         "cxx"
+         *       ]
          *     }
          */
         SupportedLanguage: {
-            /** @example cpp */
+            /**
+             * @description Stable identifier that submissions and problem programs record.
+             * @example cpp17
+             */
+            id: string;
+            /**
+             * @description Compiler or interpreter variant and version.
+             * @example C++17 (GCC 15)
+             */
             name: string;
-            /** @example cpp */
-            extension: string;
-            /** @example compiler */
-            type?: string;
+            /** @description Source file extensions without the dot; the first names new files, and an extension suggests the first configuration in catalog order that accepts it. */
+            extensions: string[];
         };
         /**
-         * @description Result of supported languages.
+         * @description The language catalog in display order.
          * @example {
          *       "languages": [
          *         {
-         *           "name": "cpp",
-         *           "extension": "cpp"
+         *           "id": "cpp17",
+         *           "name": "C++17 (GCC 15)",
+         *           "extensions": [
+         *             "cpp",
+         *             "cc",
+         *             "cxx"
+         *           ]
          *         }
          *       ]
          *     }
@@ -4993,10 +5013,10 @@ export interface components {
          */
         SubmissionSortOrderQuery: "asc" | "desc";
         /**
-         * @description Programming language identifier.
-         * @example 1
+         * @description Identifier of a language configuration from GET /languages.
+         * @example cpp17
          */
-        LanguageQuery: number;
+        LanguageQuery: string;
         /** @description UUID of the submission. */
         SubmissionIDPath: string;
         /** @description UUID of the user. */
@@ -6492,8 +6512,8 @@ export interface operations {
                  */
                 sortOrder?: components["parameters"]["SubmissionSortOrderQuery"];
                 /**
-                 * @description Programming language identifier.
-                 * @example 1
+                 * @description Identifier of a language configuration from GET /languages.
+                 * @example cpp17
                  */
                 language?: components["parameters"]["LanguageQuery"];
             };
@@ -7209,8 +7229,8 @@ export interface operations {
                  */
                 sortOrder?: components["parameters"]["SubmissionSortOrderQuery"];
                 /**
-                 * @description Programming language identifier.
-                 * @example 1
+                 * @description Identifier of a language configuration from GET /languages.
+                 * @example cpp17
                  */
                 language?: components["parameters"]["LanguageQuery"];
             };
@@ -7241,10 +7261,10 @@ export interface operations {
                 /** @description Contest login within the organization. */
                 contest_login: string;
                 /**
-                 * @description Programming language identifier.
-                 * @example 1
+                 * @description Identifier of a language configuration from GET /languages.
+                 * @example cpp17
                  */
-                language: number;
+                language: string;
             };
             header?: never;
             path?: never;

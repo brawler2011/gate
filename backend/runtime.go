@@ -364,7 +364,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 	problemDrafts := d.problemDrafts
 	objectStore := store
 	buildOptions := problemsmodel.BuildOptions{Languages: languages.Langs, Limits: problemPolicy.Limits, MaxAttempts: problemPolicy.Attempts, Duration: problemPolicy.Duration, Lease: problemPolicy.Lease}
-	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, UploadTTL: problemPolicy.UploadTTL, ObjectBytes: int64(problemPolicy.Limits.ObjectBytes), BuildOptions: buildOptions}
+	draftUC := &problems.DraftUseCase{DraftQuotas: problemPolicy.Draft, Organizations: orgsRepo, Templates: packagesRepo, Repo: problemDrafts, Problems: problemsRepo, Permissions: permissionsUC, Store: objectStore, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, UploadTTL: problemPolicy.UploadTTL, ObjectBytes: int64(problemPolicy.Limits.ObjectBytes), BuildOptions: buildOptions, Languages: languages}
 	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: defaultS3ObjectBucket}
 	draftUC.PackageContent = packageContent
 	problemsUC := problems.NewProblemsUseCase(problemsRepo, pgstore.NewProblemTransactions(pool), orgsRepo, permissionsUC, problemDrafts)
@@ -444,7 +444,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 		BlogReads:          blogsRepo,
 		NATS:               natsJS,
 		Capabilities:       access.NewCapabilities(pgstore.NewPolicyFactsRepo(pool)),
-	}, cfg.HTTP.SecureCookies).WithLanguages(languages.Langs)
+	}, cfg.HTTP.SecureCookies).WithLanguages(languages)
 
 	secHandler := middleware.NewSecurityHandler()
 	authzMw := middleware.AuthzMiddleware()

@@ -1290,13 +1290,12 @@ paths:
           schema:
             type: string
         - name: language
-          description: "Programming language identifier."
+          description: "Identifier of a language configuration from GET /languages."
           in: query
           required: true
           schema:
-            type: integer
-            format: int32
-          example: 1
+            type: string
+          example: cpp17
       requestBody:
         description: "Request payload for create submission."
         required: true
@@ -2943,12 +2942,11 @@ components:
       example: asc
     LanguageQuery:
       name: language
-      description: Programming language identifier.
+      description: Identifier of a language configuration from GET /languages.
       in: query
       schema:
-        type: integer
-        format: int32
-      example: 1
+        type: string
+      example: cpp17
     SubmissionIDPath:
       name: submission_id
       description: UUID of the submission.
@@ -3116,7 +3114,7 @@ components:
       properties:
         language:
           type: string
-          description: Toolchain language key, such as cpp or python.
+          description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
         source:
           type: string
         dependencies:
@@ -3141,7 +3139,7 @@ components:
           type: string
         language:
           type: string
-          description: Toolchain language key, such as cpp or python.
+          description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
         source:
           type: string
         dependencies:
@@ -4031,6 +4029,11 @@ components:
         hide_statements:
           type: boolean
           default: false
+        languages:
+          description: Language configurations contestants may submit in; empty allows the whole catalog.
+          type: array
+          items:
+            type: string
     ListContestsResponseModel:
       description: "Paginated collection of contests."
       example:
@@ -4323,6 +4326,11 @@ components:
             - invite_only
         hide_statements:
           type: boolean
+        languages:
+          description: Language configurations contestants may submit in; empty allows the whole catalog, omitted preserves the current list.
+          type: array
+          items:
+            type: string
     CreateSubmissionRequestModel:
       description: "Fields for the create submission request."
       example:
@@ -4341,7 +4349,7 @@ components:
           id: 123e4567-e89b-42d3-a456-426614174000
           user_id: 123e4567-e89b-42d3-a456-426614174000
           username: user123
-          language: 1
+          language: cpp17
           problem_id: 123e4567-e89b-42d3-a456-426614174000
           problem_title: Task title
           position: 1
@@ -4382,7 +4390,7 @@ components:
         id: 123e4567-e89b-42d3-a456-426614174000
         user_id: 123e4567-e89b-42d3-a456-426614174000
         username: user123
-        language: 1
+        language: cpp17
         problem_id: 123e4567-e89b-42d3-a456-426614174000
         problem_title: Task title
         position: 1
@@ -4444,9 +4452,9 @@ components:
           format: int32
           example: 256
         language:
-          type: integer
-          format: int32
-          example: 1
+          description: Identifier of the language configuration from GET /languages.
+          type: string
+          example: cpp17
         failed_test:
           type: integer
           format: int32
@@ -4598,7 +4606,7 @@ components:
         id: 123e4567-e89b-42d3-a456-426614174000
         user_id: 123e4567-e89b-42d3-a456-426614174000
         username: user123
-        language: 1
+        language: cpp17
         problem_id: 123e4567-e89b-42d3-a456-426614174000
         problem_title: Task title
         position: 1
@@ -4657,9 +4665,9 @@ components:
           format: int32
           example: 256
         language:
-          type: integer
-          format: int32
-          example: 1
+          description: Identifier of the language configuration from GET /languages.
+          type: string
+          example: cpp17
         failed_test:
           type: integer
           format: int32
@@ -4704,7 +4712,7 @@ components:
           id: 123e4567-e89b-42d3-a456-426614174000
           user_id: 123e4567-e89b-42d3-a456-426614174000
           username: user123
-          language: 1
+          language: cpp17
           problem_id: 123e4567-e89b-42d3-a456-426614174000
           problem_title: Task title
           position: 1
@@ -6308,30 +6316,37 @@ components:
           format: password
 
     SupportedLanguage:
-      description: "Supported language data."
+      description: "A language configuration of the catalog: a concrete compiler or interpreter with its options."
       example:
-        name: cpp
-        extension: cpp
+        id: cpp17
+        name: C++17 (GCC 15)
+        extensions: [cpp, cc, cxx]
       type: object
       required:
+        - id
         - name
-        - extension
+        - extensions
       properties:
+        id:
+          description: Stable identifier that submissions and problem programs record.
+          type: string
+          example: cpp17
         name:
+          description: Compiler or interpreter variant and version.
           type: string
-          example: cpp
-        extension:
-          type: string
-          example: cpp
-        type:
-          type: string
-          example: compiler
+          example: C++17 (GCC 15)
+        extensions:
+          description: Source file extensions without the dot; the first names new files, and an extension suggests the first configuration in catalog order that accepts it.
+          type: array
+          items:
+            type: string
     SupportedLanguagesResponse:
-      description: "Result of supported languages."
+      description: "The language catalog in display order."
       example:
         languages:
-        - name: cpp
-          extension: cpp
+        - id: cpp17
+          name: C++17 (GCC 15)
+          extensions: [cpp, cc, cxx]
       type: object
       required:
         - languages

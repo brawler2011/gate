@@ -4,7 +4,7 @@ import {useNavigate} from "react-router-dom";
 
 import {CreateSubmissionForm} from "@/components/submissions/CreateSubmissionForm";
 import {api} from "@/lib/api";
-import {LANGUAGE_MAP} from "@/lib/constants";
+import {useContestLanguages} from "@/lib/languages";
 import {numberToLetters} from "@/lib/lib";
 
 import classes from "./SubmitSubmissionClient.module.css";
@@ -20,6 +20,7 @@ type Props = {
 
 export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactNode => {
   const navigate = useNavigate();
+  const languages = useContestLanguages(contest.languages);
   const [selectedProblemId, setSelectedProblemId] = useState<string | null>(
     problems.find((problem) => problem.capabilities.includes("submit"))?.problem_id ?? null,
   );
@@ -37,12 +38,6 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
       return null;
     }
 
-    const languageCode = LANGUAGE_MAP[language];
-    if (!languageCode) {
-      console.error("Invalid language:", language);
-      return null;
-    }
-
     const submissionData = submission.get("submission");
     let submissionContent = "";
     if (submissionData instanceof File) {
@@ -57,7 +52,7 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
           problem_id: selectedProblemId,
           organization_login: contest.organization_login,
           contest_login: contest.login,
-          language: languageCode,
+          language,
         },
       },
       body: {
@@ -108,6 +103,7 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
         }}
       >
         <CreateSubmissionForm
+          languages={languages}
           onSubmit={handleSubmit}
           large
           disabled={isSubmitted || !contest.capabilities.includes("submit") || !problems.some((problem) => problem.problem_id === selectedProblemId && problem.capabilities.includes("submit"))}

@@ -18,14 +18,6 @@ func strPtrIfNotEmpty(v string) *string {
 	return &copy
 }
 
-func int32PtrIfNonZero(v int32) *int32 {
-	if v == 0 {
-		return nil
-	}
-	copy := v
-	return &copy
-}
-
 func int32Ptr(v *int32) *int32 {
 	if v == nil {
 		return nil
@@ -119,7 +111,7 @@ func SubmissionCreatedDTO(e submissionsmodel.SubmissionCreatedEvent) observerv1.
 		Revision:     e.Revision,
 		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
-		Language:     int32PtrIfNonZero(e.Language),
+		Language:     strPtrIfNotEmpty(e.Language),
 		Position:     int32Ptr(e.Position),
 		ProblemId:    e.ProblemId,
 		ProblemTitle: strPtrIfNotEmpty(e.ProblemTitle),
@@ -138,7 +130,7 @@ func SubmissionQueuedDTO(e submissionsmodel.SubmissionQueuedEvent) observerv1.Me
 		Revision:     e.Revision,
 		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
-		Language:     int32PtrIfNonZero(e.Language),
+		Language:     strPtrIfNotEmpty(e.Language),
 		Position:     int32Ptr(e.Position),
 		ProblemId:    e.ProblemId,
 		ProblemTitle: strPtrIfNotEmpty(e.ProblemTitle),
@@ -155,7 +147,7 @@ func SubmissionCompilingStartedDTO(e submissionsmodel.SubmissionCompilingStarted
 		Revision:     e.Revision,
 		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
-		Language:     int32PtrIfNonZero(e.Language),
+		Language:     strPtrIfNotEmpty(e.Language),
 		Position:     int32Ptr(e.Position),
 		ProblemId:    e.ProblemId,
 		ProblemTitle: strPtrIfNotEmpty(e.ProblemTitle),
@@ -172,7 +164,7 @@ func SubmissionTestingStartedDTO(e submissionsmodel.SubmissionTestingStartedEven
 		Revision:     e.Revision,
 		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
-		Language:     int32PtrIfNonZero(e.Language),
+		Language:     strPtrIfNotEmpty(e.Language),
 		Position:     int32Ptr(e.Position),
 		ProblemId:    e.ProblemId,
 		ProblemTitle: strPtrIfNotEmpty(e.ProblemTitle),
@@ -189,7 +181,7 @@ func SubmissionTestStartedDTO(e submissionsmodel.SubmissionTestStartedEvent) obs
 		Revision:     e.Revision,
 		UpdatedAt:    &e.UpdatedAt,
 		Id:           e.Id,
-		Language:     int32PtrIfNonZero(e.Language),
+		Language:     strPtrIfNotEmpty(e.Language),
 		Number:       e.Number,
 		Position:     int32Ptr(e.Position),
 		ProblemId:    e.ProblemId,
@@ -210,7 +202,7 @@ func SubmissionCompletedDTO(e submissionsmodel.SubmissionCompletedEvent) observe
 		ContestTitle:  strPtrIfNotEmpty(e.ContestTitle),
 		CreatedAt:     &e.CreatedAt,
 		Id:            e.Id,
-		Language:      int32PtrIfNonZero(e.Language),
+		Language:      strPtrIfNotEmpty(e.Language),
 		MemoryStat:    &e.MemoryStat,
 		FailedTest:    e.FailedTest,
 		Penalty:       &e.Penalty,

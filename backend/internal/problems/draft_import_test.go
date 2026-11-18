@@ -27,12 +27,23 @@ func newImportUseCase(t *testing.T) *DraftUseCase {
 	return &DraftUseCase{
 		TempDir: t.TempDir(), UploadTTL: 1e10, ObjectBytes: 1 << 30, DraftQuotas: importQuotas,
 		BuildOptions: model.BuildOptions{
-			Limits: model.BuildLimits{DiskBytes: 1 << 30, FileCount: 1000},
-			Languages: map[string]sandbox.Language{
-				"cpp": {}, "python": {}, "go": {}, "java": {},
-			},
+			Limits:    model.BuildLimits{DiskBytes: 1 << 30, FileCount: 1000},
+			Languages: testCatalog.Langs,
 		},
+		Languages: testCatalog,
 	}
+}
+
+// testCatalog has two configurations for .cpp; the extension suggests the first.
+var testCatalog = &sandbox.Config{
+	Order: []string{"cpp17", "cpp20", "python3", "go", "java"},
+	Langs: map[string]sandbox.Language{
+		"cpp17":   {Extensions: []string{"cpp", "cc", "cxx"}},
+		"cpp20":   {Extensions: []string{"cpp", "cc", "cxx"}},
+		"python3": {Extensions: []string{"py"}},
+		"go":      {Extensions: []string{"go"}},
+		"java":    {Extensions: []string{"java"}},
+	},
 }
 
 // Every built-in template must import into a draft that satisfies the draft
@@ -281,7 +292,7 @@ func TestImportRejectsSecondSingletonComponent(t *testing.T) {
 
 func TestImportRejectsUnknownSourceExtension(t *testing.T) {
 	_, err := importAPlusB(t, map[string]string{"solutions/main.rs": "fn main() {}\n"})
-	require.ErrorContains(t, err, "unsupported source language: solutions/main.rs")
+	require.ErrorContains(t, err, "no language configuration accepts solutions/main.rs")
 }
 
 // Statement sections come from olymp.sty commands in a Polygon statement.
@@ -301,4 +312,22 @@ func TestImportSplitsPolygonStatementIntoSections(t *testing.T) {
 func TestImportRejectsUnknownStatementSection(t *testing.T) {
 	_, err := importAPlusB(t, map[string]string{"statements/en/story.md": "x\n"})
 	require.ErrorContains(t, err, "unknown statement section story in en")
+}
+
+func TestImportKeepsPolygonSourceTypes(t *testing.T) {
+	plan, err := importDir(t, unpack(t, "polygon-source-types"), nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	languages := map[string]string{}
+	for _, s := range plan.draft.Solutions {
+		languages[s.Name] = s.Language
+	}
+	require.Equal(t, map[string]string{"main": "cpp20", "old": "cpp17", "plain": "cpp17", "script": "python3"}, languages)
+}
+
+func TestImportRejectsUnsupportedPolygonSourceTypes(t *testing.T) {
+	_, err := importDir(t, unpack(t, "polygon-unsupported-standard"), nil)
+	require.ErrorContains(t, err, "unsupported language configuration cpp14 of solutions/main.cpp")
+	_, err = importDir(t, unpack(t, "polygon-unsupported-type"), nil)
+	require.ErrorContains(t, err, `solutions/main.pas: unsupported Polygon source type "pascal.fpc"`)
 }

@@ -4324,8 +4324,8 @@ type CreateSubmissionParams struct {
 	OrganizationLogin string
 	// Contest login within the organization.
 	ContestLogin string
-	// Programming language identifier.
-	Language int32
+	// Identifier of a language configuration from GET /languages.
+	Language string
 }
 
 func unpackCreateSubmissionParams(packed middleware.Parameters) (params CreateSubmissionParams) {
@@ -4355,7 +4355,7 @@ func unpackCreateSubmissionParams(packed middleware.Parameters) (params CreateSu
 			Name: "language",
 			In:   "query",
 		}
-		params.Language = packed[key].(int32)
+		params.Language = packed[key].(string)
 	}
 	return params
 }
@@ -4485,7 +4485,7 @@ func decodeCreateSubmissionParams(args [0]string, argsEscaped bool, r *http.Requ
 					return err
 				}
 
-				c, err := conv.ToInt32(val)
+				c, err := conv.ToString(val)
 				if err != nil {
 					return err
 				}
@@ -10657,8 +10657,8 @@ type ListContestSubmissionsParams struct {
 	State OptInt32 `json:",omitempty,omitzero"`
 	// Sort direction: asc or desc.
 	SortOrder OptSubmissionSortOrderQuery `json:",omitempty,omitzero"`
-	// Programming language identifier.
-	Language OptInt32 `json:",omitempty,omitzero"`
+	// Identifier of a language configuration from GET /languages.
+	Language OptString `json:",omitempty,omitzero"`
 }
 
 func unpackListContestSubmissionsParams(packed middleware.Parameters) (params ListContestSubmissionsParams) {
@@ -10736,7 +10736,7 @@ func unpackListContestSubmissionsParams(packed middleware.Parameters) (params Li
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.Language = v.(OptInt32)
+			params.Language = v.(OptString)
 		}
 	}
 	return params
@@ -11165,14 +11165,14 @@ func decodeListContestSubmissionsParams(args [2]string, argsEscaped bool, r *htt
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotLanguageVal int32
+				var paramsDotLanguageVal string
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
 						return err
 					}
 
-					c, err := conv.ToInt32(val)
+					c, err := conv.ToString(val)
 					if err != nil {
 						return err
 					}
@@ -14152,8 +14152,8 @@ type ListSubmissionsParams struct {
 	State OptInt32 `json:",omitempty,omitzero"`
 	// Sort direction: asc or desc.
 	SortOrder OptSubmissionSortOrderQuery `json:",omitempty,omitzero"`
-	// Programming language identifier.
-	Language OptInt32 `json:",omitempty,omitzero"`
+	// Identifier of a language configuration from GET /languages.
+	Language OptString `json:",omitempty,omitzero"`
 }
 
 func unpackListSubmissionsParams(packed middleware.Parameters) (params ListSubmissionsParams) {
@@ -14226,7 +14226,7 @@ func unpackListSubmissionsParams(packed middleware.Parameters) (params ListSubmi
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.Language = v.(OptInt32)
+			params.Language = v.(OptString)
 		}
 	}
 	return params
@@ -14606,14 +14606,14 @@ func decodeListSubmissionsParams(args [0]string, argsEscaped bool, r *http.Reque
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotLanguageVal int32
+				var paramsDotLanguageVal string
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
 						return err
 					}
 
-					c, err := conv.ToInt32(val)
+					c, err := conv.ToString(val)
 					if err != nil {
 						return err
 					}

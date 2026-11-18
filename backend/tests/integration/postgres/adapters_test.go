@@ -459,7 +459,7 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 		ProblemId: problemID,
 		UserId:    userID,
 		Solution:  "print('hello world')",
-		Language:  submissionsmodel.Python,
+		Language:  "python3",
 		Penalty:   10,
 	})
 	require.NoError(t, err)
@@ -471,7 +471,7 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 	require.Equal(t, subID, sub.ID)
 	require.Equal(t, submissionsmodel.Saved, sub.State)
 	require.Equal(t, "print('hello world')", sub.Submission)
-	require.Equal(t, submissionsmodel.Python, sub.Language)
+	require.Equal(t, "python3", sub.Language)
 	require.Equal(t, int32(10), sub.Penalty)
 	require.GreaterOrEqual(t, sub.Revision, int64(1))
 
@@ -514,7 +514,7 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 		ProblemId: problemID,
 		UserId:    userID,
 		Solution:  "solution",
-		Language:  submissionsmodel.Python,
+		Language:  "python3",
 	})
 	require.Error(t, err)
 	require.True(t, errors.Is(err, pkg.ErrBadInput), "expected ErrBadInput for invalid contest, got: %v", err)

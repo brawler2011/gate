@@ -238,6 +238,7 @@ func ContestDTO(c contestsmodel.Contest, owner *identitymodel.UserProfile) corev
 		EnableVirtualContests:  enableVirtualContests,
 		ParticipationMode:      participationMode,
 		HideStatements:         hideStatements,
+		Languages:              append([]string{}, settings.Languages...),
 		CreatedBy:              createdBy,
 		CreatedAt:              c.CreatedAt,
 		UpdatedAt:              c.UpdatedAt,

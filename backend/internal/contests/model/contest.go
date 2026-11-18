@@ -2,6 +2,7 @@ package contestsmodel
 
 import (
 	"math"
+	"slices"
 	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -312,6 +313,15 @@ type ContestSettings struct {
 	EnableVirtualContests  *bool  `json:"enable_virtual_contests,omitempty"`
 	ParticipationMode      string `json:"participation_mode,omitempty"`
 	HideStatements         *bool  `json:"hide_statements,omitempty"`
+	// Languages are the language configurations contestants may submit in;
+	// empty allows the whole catalog.
+	Languages []string `json:"languages,omitempty"`
+}
+
+// AllowsLanguage reports whether contestants may submit in the language
+// configuration id. It does not restrict the programs of the problems.
+func (s ContestSettings) AllowsLanguage(id string) bool {
+	return len(s.Languages) == 0 || slices.Contains(s.Languages, id)
 }
 
 func (s ContestSettings) GetHideStatements() bool {
@@ -525,6 +535,17 @@ func MapToContestSettings(m map[string]interface{}) ContestSettings {
 
 	if raw, ok := m["hide_statements"]; ok && raw != nil {
 		s.HideStatements = parseFlexibleBoolPtr(raw)
+	}
+
+	switch raw := m["languages"].(type) {
+	case []string:
+		s.Languages = raw
+	case []interface{}:
+		for _, item := range raw {
+			if id, ok := item.(string); ok {
+				s.Languages = append(s.Languages, id)
+			}
+		}
 	}
 
 	return s
