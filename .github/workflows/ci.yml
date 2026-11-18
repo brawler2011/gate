@@ -153,14 +153,15 @@ jobs:
           nix build --no-link ./judge#default ./judge#default.copyTo
           echo "Judge cache warm-up: $((SECONDS - started)) seconds (ref: $GITHUB_REF)." >> "$GITHUB_STEP_SUMMARY"
 
-      # Pushes the layers as Nix built them (uncompressed, digests known before the
-      # push), so the registry skips existing layers and identical sources give the
-      # same image digest.
+      # Compresses the layers with zstd at a fixed level while pushing. The encoder
+      # is deterministic, so identical sources still give the same image digest; a
+      # judge change re-uploads every layer because compressed digests are known
+      # only after compression.
       - name: Build and push judge image
         if: env.PUSH_IMAGES == 'true' && steps.existing.outputs.found != 'true'
         run: |
           started=$SECONDS
-          nix run ./judge#default.copyTo -- --preserve-digests "docker://$IMAGE"
+          nix run ./judge#default.copyTo -- --dest-compress-format zstd --dest-compress-level 3 "docker://$IMAGE"
           echo "Judge image build and push: $((SECONDS - started)) seconds (ref: $GITHUB_REF)." >> "$GITHUB_STEP_SUMMARY"
         env:
           IMAGE: ${{ steps.tag.outputs.image }}

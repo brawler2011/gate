@@ -64,7 +64,8 @@ The production values fit the current server: 1 vCPU, 2 GB RAM, shared with two
 Docker services. **On one shared vCPU, time verdicts are not reliable.** The
 sandbox shares the core with the rest of the stack, so it is a trial environment,
 not one for real contests. Dedicated judge cores are #216. Disk is also tight: the
-go-judge image is about 5 GB unpacked, and a release that changes the toolchain keeps
+go-judge image takes about 2.2 GB on a node (a 0.55 GB zstd download plus 1.6 GB
+unpacked), and a release that changes the toolchain keeps
 two versions until the kubelet's image garbage collection removes the old one (at 85%
 disk use).
 
