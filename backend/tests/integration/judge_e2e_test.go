@@ -114,11 +114,11 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 
 	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 256 << 20, Processes: 50, Output: 32 << 20, Diagnostic: 4096}
 	compile := aux
-	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 10*time.Second, 20*time.Second, 512<<20, 150
+	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 20*time.Second, 60*time.Second, 512<<20, 150
 	limits := problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux}
 	_, err = drafts.EnqueueBuild(ctx, mutationKey(org.ID, "build", d.Revision), problemID, d.Revision, problemsmodel.BuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: 2 * time.Minute, Lease: time.Minute})
 	require.NoError(t, err)
-	build, err := drafts.ClaimBuild(ctx, time.Minute)
+	build, err := drafts.ClaimBuild(ctx, 5*time.Minute)
 	require.NoError(t, err)
 	work := diskTempDir(t)
 	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
@@ -254,7 +254,7 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 
 	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 256 << 20, Processes: 50, Output: 32 << 20, Diagnostic: 4096}
 	compile := aux
-	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 10*time.Second, 20*time.Second, 512<<20, 150
+	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 20*time.Second, 60*time.Second, 512<<20, 150
 	h.limits = problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux}
 	h.pipeline = builder.Pipeline{Repo: h.drafts, Store: store, Bucket: bucket, TempDir: diskTempDir(t), Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	executor := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
@@ -285,7 +285,7 @@ func (h *judgeHarness) build(t *testing.T, shortName string, edit func(*problems
 	require.NoError(t, err)
 	_, err = h.drafts.EnqueueBuild(ctx, mutationKey(h.orgID, "build", d.Revision), problemID, d.Revision, problemsmodel.BuildOptions{Languages: h.pipeline.Languages.Langs, Limits: h.limits, MaxAttempts: 3, Duration: 2 * time.Minute, Lease: time.Minute})
 	require.NoError(t, err)
-	build, err := h.drafts.ClaimBuild(ctx, time.Minute)
+	build, err := h.drafts.ClaimBuild(ctx, 5*time.Minute)
 	require.NoError(t, err)
 	packageID, err = h.pipeline.Execute(ctx, build)
 	return problemID, packageID, err

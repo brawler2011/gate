@@ -32,7 +32,9 @@ func (s *IntegrationTestSuite) buildPackage(userID, problemID uuid.UUID) uuid.UU
 	s.Require().NoError(err)
 	client, files := newGoJudge(s.T())
 	options := testBuildOptions(s.T())
-	build, err := s.problemDrafts.ClaimBuild(s.ctx, time.Minute)
+	// No heartbeat renews this lease, unlike the worker's, so it covers a whole
+	// build compiling testlib programs while the suite runs in parallel.
+	build, err := s.problemDrafts.ClaimBuild(s.ctx, 5*time.Minute)
 	s.Require().NoError(err)
 	s.Require().Equal(accepted.BuildID, build.ID)
 	pipeline := builder.Pipeline{Repo: s.problemDrafts, Store: s.objectStore, Bucket: s.bucket, TempDir: diskTempDir(s.T()), Client: client, Files: files, Languages: &sandbox.Config{Langs: options.Languages}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
@@ -55,7 +57,7 @@ func testBuildOptions(t *testing.T) problemsmodel.BuildOptions {
 	require.NoError(t, err)
 	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 256 << 20, Processes: 50, Output: 32 << 20, Diagnostic: 4096}
 	compile := aux
-	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 10*time.Second, 20*time.Second, 512<<20, 150
+	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 20*time.Second, 60*time.Second, 512<<20, 150
 	return problemsmodel.BuildOptions{
 		Languages:   cfg.Langs,
 		Limits:      problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 1000, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux},
