@@ -22,17 +22,6 @@ compile = "/usr/bin/gcc -O2 -Wall -std=gnu23 -o ${name} foo.c -lm"
 compile_file = "solution"
 execute = "${dir}/${name}"
 
-[cpp26]
-name = "C++26 (GCC 15)"
-extensions = ["cpp", "cc", "cxx"]
-syntax = "cpp"
-package = "gcc15"
-type = "compiler"
-code_file = "foo.cc"
-compile = "/usr/bin/g++ -O2 -Wall -std=c++26 -o ${name} foo.cc"
-compile_file = "solution"
-execute = "${dir}/${name}"
-
 [cpp23]
 name = "C++23 (GCC 15)"
 extensions = ["cpp", "cc", "cxx"]
