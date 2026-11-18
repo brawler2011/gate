@@ -52,7 +52,7 @@ const buildableDraft = {
   subtasks: [{id: "s", ordinal: 1, name: "All", points: 1, policy: "complete", depends_on: []}],
   tests: [{
     id: "t", ordinal: 1, subtask_id: "s", sample: false, points: 1,
-    input: {mode: "manual", object_id: "in", component_id: null, args: [], seed: null},
+    input: {mode: "manual", object_id: "in", component_id: null, args: []},
     answer: {mode: "provided", object_id: "ans", component_id: null},
   }],
 };

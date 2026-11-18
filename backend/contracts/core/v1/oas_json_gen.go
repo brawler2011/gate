@@ -11569,52 +11569,6 @@ func (s *NilFloat64) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes int64 as json.
-func (o NilInt64) Encode(e *jx.Encoder) {
-	if o.Null {
-		e.Null()
-		return
-	}
-	e.Int64(int64(o.Value))
-}
-
-// Decode decodes int64 from json.
-func (o *NilInt64) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode NilInt64 to nil")
-	}
-	if d.Next() == jx.Null {
-		if err := d.Null(); err != nil {
-			return err
-		}
-
-		var v int64
-		o.Value = v
-		o.Null = true
-		return nil
-	}
-	o.Null = false
-	v, err := d.Int64()
-	if err != nil {
-		return err
-	}
-	o.Value = int64(v)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s NilInt64) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *NilInt64) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes ProblemBuildDiagnostic as json.
 func (o NilProblemBuildDiagnostic) Encode(e *jx.Encoder) {
 	if o.Null {
@@ -16692,18 +16646,13 @@ func (s *ProblemDraftInput) encodeFields(e *jx.Encoder) {
 		}
 		e.ArrEnd()
 	}
-	{
-		e.FieldStart("seed")
-		s.Seed.Encode(e)
-	}
 }
 
-var jsonFieldsNameOfProblemDraftInput = [5]string{
+var jsonFieldsNameOfProblemDraftInput = [4]string{
 	0: "mode",
 	1: "object_id",
 	2: "generator",
 	3: "args",
-	4: "seed",
 }
 
 // Decode decodes ProblemDraftInput from json.
@@ -16765,16 +16714,6 @@ func (s *ProblemDraftInput) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"args\"")
 			}
-		case "seed":
-			requiredBitSet[0] |= 1 << 4
-			if err := func() error {
-				if err := s.Seed.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"seed\"")
-			}
 		default:
 			return d.Skip()
 		}
@@ -16785,7 +16724,7 @@ func (s *ProblemDraftInput) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00011111,
+		0b00001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

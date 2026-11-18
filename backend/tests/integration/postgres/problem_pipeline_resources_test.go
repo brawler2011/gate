@@ -240,9 +240,8 @@ func (h *pipelineHarness) generatorBuild(t *testing.T, script string) {
 		d.Solutions = []model.DraftNamedProgram{named(solution, "python3", "print(1)\n")}
 		d.MainSolution = &solution
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
-		seed := int64(1)
 		d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1,
-			Input:  model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{}, Seed: &seed},
+			Input:  model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{}},
 			Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}}
 	})
 }

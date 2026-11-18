@@ -89,8 +89,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	d.Statements = []model.DraftStatement{{Language: "en", Legend: "A snapshot statement."}}
 	d.MainSolution = &solution
 	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete"}}
-	seed := int64(7)
-	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Sample: true, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"10"}, Seed: &seed}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}}
+	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Sample: true, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"10", "7"}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}}
 	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)

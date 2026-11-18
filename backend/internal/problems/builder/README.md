@@ -34,9 +34,9 @@ the languages of the image it runs on). The main solution is the only selected c
   with `<input> <interactor output> <answer>`, during the build and when judging
   after the interactor accepts, and decides the verdict.
 - Manual inputs reference stored objects in the same organization. Generated
-  inputs reference a generator component, explicit arguments and an optional
-  seed appended as the last argument. The generator executes during the build;
-  the package contains its resulting input.
+  inputs reference a generator component and its arguments, passed as they are.
+  The generator executes during the build; the package contains its resulting
+  input.
 - Test IDs and positive ordinals must be unique. Every test belongs to an existing
   group. Group IDs and positive ordinals are unique, policies are `complete` or
   `each`, and dependencies reference existing groups without duplicates or cycles.
