@@ -3,7 +3,6 @@ package diskcache
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -72,7 +71,7 @@ func TestWaiterRefillsAfterFillerIsCanceled(t *testing.T) {
 		_, err := c.Acquire(ctx, "a", func(ctx context.Context, _ string) error {
 			close(started)
 			<-ctx.Done()
-			return fmt.Errorf("download: %w", ctx.Err())
+			return errors.New("rpc error: code = Canceled")
 		})
 		failed <- err
 	}()
@@ -91,7 +90,7 @@ func TestWaiterRefillsAfterFillerIsCanceled(t *testing.T) {
 		return c.entries["a"].refs == 2
 	}, 5*time.Second, time.Millisecond)
 	cancel()
-	require.ErrorIs(t, <-failed, context.Canceled)
+	require.Error(t, <-failed)
 	require.NoError(t, <-waiter)
 }
 

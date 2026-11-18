@@ -4,7 +4,6 @@ package diskcache
 import (
 	"container/list"
 	"context"
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -26,6 +25,8 @@ type entry struct {
 	key   string
 	ready chan struct{}
 	err   error
+	// abandoned: the filling caller's context ended, so err is not a verdict on the key.
+	abandoned bool
 	size  int64
 	refs  int
 	idle  *list.Element
@@ -79,8 +80,7 @@ func (c *Cache) Acquire(ctx context.Context, key string, fill func(ctx context.C
 			return &Handle{cache: c, entry: e}, nil
 		}
 		c.release(e)
-		// The filling caller's cancellation is not this caller's failure.
-		if !errors.Is(e.err, context.Canceled) && !errors.Is(e.err, context.DeadlineExceeded) {
+		if !e.abandoned {
 			return nil, e.err
 		}
 	}
@@ -92,6 +92,7 @@ func (c *Cache) load(ctx context.Context, e *entry, fill func(ctx context.Contex
 	if err != nil {
 		delete(c.entries, e.key)
 		e.err = err
+		e.abandoned = ctx.Err() != nil
 		close(e.ready)
 		c.mu.Unlock()
 		return nil, err
