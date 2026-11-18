@@ -9,6 +9,14 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+// isForeignKeyViolation reports a reference to a missing row, including an
+// object of another organization (23503), or the deletion of a row that an
+// ON DELETE RESTRICT reference still holds (23001).
+func isForeignKeyViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && (pgErr.Code == pgerrcode.ForeignKeyViolation || pgErr.Code == pgerrcode.RestrictViolation)
+}
+
 func HandlePgErr(err error) error {
 	if err == nil {
 		return nil

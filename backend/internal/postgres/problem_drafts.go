@@ -1,11 +1,9 @@
 package postgres
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"slices"
 	"time"
 
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
@@ -148,27 +146,6 @@ func (r *ProblemDraftsRepo) resolveMutation(ctx context.Context, tx pgx.Tx, k mo
 	return model.MutationResult{}, err
 }
 
-func lockObjects(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) (map[uuid.UUID]sqlc.StoredObject, error) {
-	ids = slices.Clone(ids)
-	slices.SortFunc(ids, func(a, b uuid.UUID) int { return bytes.Compare(a[:], b[:]) })
-	ids = slices.Compact(ids)
-	q := sqlc.New(tx)
-	for _, id := range ids {
-		if _, err := q.LockStoredObject(ctx, id); err != nil {
-			return nil, HandlePgErr(err)
-		}
-	}
-	objects := make(map[uuid.UUID]sqlc.StoredObject, len(ids))
-	for _, id := range ids {
-		o, err := q.ReadStoredObject(ctx, id)
-		if err != nil {
-			return nil, HandlePgErr(err)
-		}
-		objects[id] = o
-	}
-	return objects, nil
-}
-
 func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, k model.MutationKey, draft model.Draft) (model.MutationResult, error) {
 	if err := draft.ComputeScores(); err != nil {
 		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid weights")
@@ -203,28 +180,8 @@ func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, k model.MutationKey, 
 	if org != k.OrganizationID {
 		return model.MutationResult{}, pkg.NoPermission
 	}
-	old, err := readProblemDraft(ctx, q, draft.ProblemID)
-	if err != nil {
-		return model.MutationResult{}, err
-	}
-	ids := append(old.InputObjects(), draft.InputObjects()...)
-	objects, err := lockObjects(ctx, tx, ids)
-	if err != nil {
-		return model.MutationResult{}, err
-	}
-	for _, id := range draft.InputObjects() {
-		o := objects[id]
-		if o.OrganizationID != org || o.State != "available" {
-			return model.MutationResult{}, pkg.ErrConflict
-		}
-	}
 	draft.Revision++
 	if err := writeDraft(ctx, tx, draft); err != nil {
-		return model.MutationResult{}, err
-	}
-	// Every reference change updates the object's unreferenced timestamp under
-	// the same object lock. The query sees committed concurrent reference writers.
-	if err := refreshObjectReferences(ctx, tx, ids); err != nil {
 		return model.MutationResult{}, err
 	}
 	result, err := finishOperation(ctx, tx, k, 200, draft)
@@ -234,6 +191,8 @@ func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, k model.MutationKey, 
 	return r.resolveMutation(ctx, tx, k, result)
 }
 
+// writeDraft replaces the draft. Its object references are foreign keys, so
+// a missing object or one of another organization fails with ErrConflict.
 func writeDraft(ctx context.Context, tx pgx.Tx, d model.Draft) error {
 	q := sqlc.New(tx)
 	if err := q.UpdateProblemDraftRow(ctx, sqlc.UpdateProblemDraftRowParams{
@@ -296,23 +255,20 @@ func writeDraft(ctx context.Context, tx pgx.Tx, d model.Draft) error {
 			InputMode: t.Input.Mode, InputObjectID: t.Input.ObjectID, GeneratorID: t.Input.ComponentID, GeneratorArgs: args, Seed: t.Input.Seed,
 			AnswerMode: t.Answer.Mode, AnswerObjectID: t.Answer.ObjectID, SolutionID: t.Answer.ComponentID,
 		}); err != nil {
-			return fmt.Errorf("insert draft test: %w", err)
+			return objectReferenceErr(err, "insert draft test")
 		}
 	}
 	for _, a := range d.Assets {
 		if err := q.InsertDraftAsset(ctx, sqlc.InsertDraftAssetParams{ProblemID: d.ProblemID, Path: a.Path, ObjectID: a.ObjectID}); err != nil {
-			return fmt.Errorf("insert draft asset: %w", err)
+			return objectReferenceErr(err, "insert draft asset")
 		}
 	}
 	return nil
 }
 
-func refreshObjectReferences(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) error {
-	q := sqlc.New(tx)
-	for _, id := range ids {
-		if err := q.RefreshObjectReferences(ctx, id); err != nil {
-			return fmt.Errorf("refresh object references: %w", err)
-		}
+func objectReferenceErr(err error, action string) error {
+	if isForeignKeyViolation(err) {
+		return pkg.Wrap(pkg.ErrConflict, err, "object is missing or belongs to another organization")
 	}
-	return nil
+	return fmt.Errorf("%s: %w", action, err)
 }

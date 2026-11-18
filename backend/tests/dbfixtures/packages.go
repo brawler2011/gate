@@ -36,12 +36,9 @@ func InsertPackage(ctx context.Context, pool *pgxpool.Pool, problemID, organizat
 	buildID, objectID, packageID := uuid.New(), uuid.New(), uuid.New()
 	sum := sha256.Sum256(packageID[:])
 	hash := hex.EncodeToString(sum[:])
-	if _, err := tx.Exec(ctx, `INSERT INTO stored_objects(id,organization_id,purpose,key,sha256,size,state,upload_deadline)
-VALUES($1::uuid,$2::uuid,'package','objects/'||$2::text||'/'||$1::text,$3,1,'uploading',clock_timestamp()+interval '1 hour')`, objectID, organizationID, hash); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO stored_objects(id,organization_id,purpose,key,sha256,size)
+VALUES($1::uuid,$2::uuid,'package','objects/'||$2::text||'/'||$1::text,$3,1)`, objectID, organizationID, hash); err != nil {
 		return uuid.Nil, fmt.Errorf("object: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `UPDATE stored_objects SET state='available' WHERE id=$1`, objectID); err != nil {
-		return uuid.Nil, fmt.Errorf("publish object: %w", err)
 	}
 	snapshot := fmt.Sprintf(`{"organization_id":%q,"input_objects":[],"draft":{"problem_id":%q,"revision":%d,"title":%q,"short_name":%q,"time_limit_ms":%d,"memory_limit_mb":%d,"tests":[],"assets":[]}}`,
 		organizationID, problemID, revision, title, shortName, timeMs, memoryMb)

@@ -28,7 +28,7 @@ func (r packageAssets) FindPackageAssets(context.Context, uuid.UUID, string) ([]
 
 type assetStore struct{ keys []string }
 
-func (s *assetStore) UploadFile(context.Context, string, string, io.Reader, string) error {
+func (s *assetStore) UploadFileWithSHA256(context.Context, string, string, io.Reader, string, string) error {
 	return nil
 }
 func (s *assetStore) DownloadFile(_ context.Context, _, key string, _ *string) (io.ReadCloser, string, error) {

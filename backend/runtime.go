@@ -232,7 +232,7 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 		return nil, err
 	}
 
-	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, UploadTTL: problemPolicy.UploadTTL, Logger: d.logger}
+	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Logger: d.logger}
 	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll}
 	problemGC := &builder.GC{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, ObjectRetention: problemPolicy.ObjectRetention, BuildRetention: problemPolicy.BuildRetention, PackageRetention: problemPolicy.PackageRetention, Interval: problemPolicy.GCInterval, Logger: d.logger}
 

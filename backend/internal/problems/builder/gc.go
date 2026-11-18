@@ -2,29 +2,26 @@ package builder
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
-	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 )
 
 type GCRepository interface {
-	CloseExpiredUploads(context.Context) error
 	RecoverBuilds(context.Context) error
 	PrunePackages(context.Context, time.Duration) error
 	PruneBuilds(context.Context, time.Duration) error
-	ListGCObjects(context.Context, time.Duration) ([]model.StoredObject, error)
-	BeginObjectDeletion(context.Context, uuid.UUID, time.Duration) (bool, error)
-	CompleteObjectDeletion(context.Context, uuid.UUID) error
-	ObjectByKey(context.Context, string) (model.StoredObject, error)
+	ListUnreferencedObjects(context.Context) ([]model.StoredObject, error)
+	DeleteObject(context.Context, uuid.UUID) (bool, error)
+	ExistingObjectKeys(context.Context, []string) (map[string]bool, error)
 	ActiveBuildAttempt(context.Context, uuid.UUID, uuid.UUID) (bool, error)
 }
 type GCStore interface {
@@ -32,11 +29,14 @@ type GCStore interface {
 	ListObjects(context.Context, string, string) ([]storage.ObjectInfo, error)
 }
 type GC struct {
-	Logger           *slog.Logger
-	Repo             GCRepository
-	Store            GCStore
-	Bucket           string
+	Logger *slog.Logger
+	Repo   GCRepository
+	Store  GCStore
+	Bucket string
 	TempDir          string
+	// ObjectRetention is how long stored bytes without an object row are kept.
+	// It must exceed the longest time from reserving an upload to committing
+	// its row, so bytes about to be referenced are never deleted.
 	ObjectRetention  time.Duration
 	BuildRetention   time.Duration
 	PackageRetention time.Duration
@@ -61,9 +61,6 @@ func (g *GC) Run(ctx context.Context) error {
 	}
 }
 func (g *GC) Collect(ctx context.Context) error {
-	if err := g.Repo.CloseExpiredUploads(ctx); err != nil {
-		return err
-	}
 	if err := g.Repo.RecoverBuilds(ctx); err != nil {
 		return err
 	}
@@ -73,51 +70,65 @@ func (g *GC) Collect(ctx context.Context) error {
 	if err := g.Repo.PruneBuilds(ctx, g.BuildRetention); err != nil {
 		return err
 	}
-	objects, err := g.Repo.ListGCObjects(ctx, g.ObjectRetention)
+	objects, err := g.Repo.ListUnreferencedObjects(ctx)
 	if err != nil {
 		return err
 	}
 	for _, o := range objects {
-		deleting, err := g.Repo.BeginObjectDeletion(ctx, o.ID, g.ObjectRetention)
+		deleted, err := g.Repo.DeleteObject(ctx, o.ID)
 		if err != nil {
 			return err
 		}
-		if !deleting {
+		if !deleted {
 			continue
 		}
-		// Physical deletion follows the committed deleting state. Unknown deletion
-		// results leave that state intact, so a later run retries it.
+		// Without its row the key can never be referenced again; if this fails,
+		// the bytes are an orphan that the sweep below removes.
 		if err := g.Store.DeleteFile(ctx, g.Bucket, o.Key); err != nil {
 			return err
 		}
-		if err := g.Repo.CompleteObjectDeletion(ctx, o.ID); err != nil {
-			return err
-		}
 	}
-	// Tombstones close UUIDs permanently. A late PUT can leave bytes there but
-	// cannot publish a reference; reconciliation removes those bytes again.
+	if err := g.sweepOrphans(ctx); err != nil {
+		return err
+	}
+	return g.cleanDirectories(ctx)
+}
+// sweepOrphans deletes bytes left without an object row by failed or
+// abandoned uploads and by interrupted deletions. Keys are never reused, and a
+// row is committed only within the upload's fencing deadline, so bytes older
+// than ObjectRetention without a row are never referenced again.
+func (g *GC) sweepOrphans(ctx context.Context) error {
+	// Age is judged once, before any row lookup: a key old at the cutoff can
+	// no longer gain a row, so its lookup result stays true however long the
+	// sweep takes. A key that ages during the sweep waits for the next one.
+	cutoff := time.Now().Add(-g.ObjectRetention)
 	listed, err := g.Store.ListObjects(ctx, g.Bucket, "objects/")
 	if err != nil {
 		return err
 	}
+	var keys []string
 	for _, object := range listed {
-		o, err := g.Repo.ObjectByKey(ctx, object.Key)
-		switch {
-		case errors.Is(err, pkg.ErrNotFound):
-			if object.LastModified.IsZero() || time.Since(object.LastModified) < g.ObjectRetention {
-				continue
-			}
-		case err != nil:
-			return err
-		case o.State != "deleted":
-			continue
-		}
-		if err := g.Store.DeleteFile(ctx, g.Bucket, object.Key); err != nil {
-			return err
+		if !object.LastModified.IsZero() && object.LastModified.Before(cutoff) {
+			keys = append(keys, object.Key)
 		}
 	}
-	return g.cleanDirectories(ctx)
+	for batch := range slices.Chunk(keys, 1000) {
+		existing, err := g.Repo.ExistingObjectKeys(ctx, batch)
+		if err != nil {
+			return err
+		}
+		for _, key := range batch {
+			if existing[key] {
+				continue
+			}
+			if err := g.Store.DeleteFile(ctx, g.Bucket, key); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
+
 func (g *GC) cleanDirectories(ctx context.Context) error {
 	entries, err := os.ReadDir(g.TempDir)
 	if err != nil {

@@ -42,8 +42,8 @@ func (l *PackageLoader) LoadPackage(ctx context.Context, id uuid.UUID) (result *
 	if err != nil {
 		return nil, err
 	}
-	if p.Object.State != "available" || p.Object.Size < 0 || p.Object.Size >= int64(l.Limits.DiskBytes) {
-		return nil, fmt.Errorf("package object is unavailable or exceeds disk quota")
+	if p.Object.Size < 0 || p.Object.Size >= int64(l.Limits.DiskBytes) {
+		return nil, fmt.Errorf("package object exceeds disk quota")
 	}
 	root, err := os.MkdirTemp(l.TempDir, "package-")
 	if err != nil {

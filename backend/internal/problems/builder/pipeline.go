@@ -33,8 +33,7 @@ type BuildRepository interface {
 	HeartbeatBuild(context.Context, uuid.UUID, uuid.UUID, time.Duration) error
 	RecoverBuilds(context.Context) error
 	BuildInputObjects(context.Context, uuid.UUID) ([]model.StoredObject, error)
-	RegisterBuildOutput(context.Context, uuid.UUID, uuid.UUID, string, int64, time.Duration) (model.StoredObject, error)
-	PublishBuild(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, []model.Sample) (uuid.UUID, error)
+	PublishBuild(context.Context, uuid.UUID, uuid.UUID, model.StoredObject, []model.Sample) (uuid.UUID, error)
 	FinishBuildAttempt(context.Context, uuid.UUID, uuid.UUID, json.RawMessage, bool) error
 }
 type Pipeline struct {
@@ -46,7 +45,6 @@ type Pipeline struct {
 	Files   *sandbox.FileTransport
 	// Languages are the running judge image's; a build compiles with them.
 	Languages *sandbox.Config
-	UploadTTL time.Duration
 	Logger    *slog.Logger
 }
 type Failure struct {
@@ -152,10 +150,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err != nil {
 		return uuid.Nil, fail("archive", 0, "infrastructure", err)
 	}
-	object, err := p.Repo.RegisterBuildOutput(ctx, b.ID, *b.LeaseToken, digest, size, p.UploadTTL)
-	if err != nil {
-		return uuid.Nil, fail("register", 0, "infrastructure", err)
-	}
+	object := model.NewStoredObject(b.OrganizationID, model.UploadSpec{Purpose: "package", SHA256: digest, Size: size})
 	f, err := os.Open(archivePath)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("open: %w", err)
@@ -164,7 +159,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := p.Store.UploadFileWithSHA256(ctx, p.Bucket, object.Key, io.NewSectionReader(f, 0, size), "application/octet-stream", digest); err != nil {
 		return uuid.Nil, fail("upload", 0, "infrastructure", err)
 	}
-	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object.ID, e.samples)
+	pid, err := p.Repo.PublishBuild(ctx, b.ID, *b.LeaseToken, object, e.samples)
 	if err != nil {
 		return uuid.Nil, fail("publish", 0, "infrastructure", err)
 	}
@@ -208,7 +203,7 @@ func (e *execution) materialize(ctx context.Context) error {
 		return fmt.Errorf("snapshot root mismatch")
 	}
 	for _, o := range objects {
-		if !expected[o.ID] || o.State != "available" || o.OrganizationID != s.OrganizationID || o.Size > int64(s.Limits.ObjectBytes) {
+		if !expected[o.ID] || o.OrganizationID != s.OrganizationID || o.Size > int64(s.Limits.ObjectBytes) {
 			return fmt.Errorf("invalid snapshot object")
 		}
 		r, _, err := e.pipeline.Store.DownloadFile(ctx, e.pipeline.Bucket, o.Key, nil)

@@ -115,7 +115,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, uuid.Nil, b.ID)
 	temp := dbfixtures.DiskTempDir(t)
-	pipeline := builder.Pipeline{Repo: repo, Store: store, Bucket: "objects", TempDir: temp, Client: client, Files: files, Languages: cfg, UploadTTL: time.Minute, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: repo, Store: store, Bucket: "objects", TempDir: temp, Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	pid, err := pipeline.Execute(ctx, b)
 	require.NoError(t, err)
 	published, err := repo.GetBuild(ctx, b.ID)
@@ -127,12 +127,10 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	require.Equal(t, "Initial", title)
 	requireStoredObject(t, ctx, store, "objects", key, size, digest)
 	// The second finalization resolves the original success, never a second Package.
-	again, err := repo.PublishBuild(ctx, b.ID, *b.LeaseToken, uuid.New(), nil)
+	again, err := repo.PublishBuild(ctx, b.ID, *b.LeaseToken, model.NewStoredObject(b.OrganizationID, model.UploadSpec{Purpose: "package", SHA256: digest, Size: size}), nil)
 	require.NoError(t, err)
 	require.Equal(t, pid, again)
-	var outputs int
-	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM problem_build_objects WHERE build_id=$1 AND role='output'`, b.ID).Scan(&outputs))
-	require.Zero(t, outputs)
+	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects o WHERE o.purpose='package' AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)`), "the retry records no second object")
 }
 
 func requireStoredObject(t *testing.T, ctx context.Context, store storage.Storage, bucket, key string, size int64, digest string) {

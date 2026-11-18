@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -11,11 +10,10 @@ import (
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 func mapStoredObject(o sqlc.StoredObject) model.StoredObject {
-	return model.StoredObject{ID: o.ID, OrganizationID: o.OrganizationID, Purpose: o.Purpose, Key: o.Key, SHA256: o.Sha256, Size: o.Size, State: o.State, UploadDeadline: o.UploadDeadline}
+	return model.StoredObject{ID: o.ID, OrganizationID: o.OrganizationID, Purpose: o.Purpose, Key: o.Key, SHA256: o.Sha256, Size: o.Size}
 }
 func (r *ProblemDraftsRepo) BuildInputObjects(ctx context.Context, id uuid.UUID) ([]model.StoredObject, error) {
 	rows, err := sqlc.New(r.pool).ListBuildInputObjects(ctx, id)
@@ -29,70 +27,12 @@ func (r *ProblemDraftsRepo) BuildInputObjects(ctx context.Context, id uuid.UUID)
 	return objects, nil
 }
 
-func (r *ProblemDraftsRepo) RegisterBuildOutput(ctx context.Context, id, token uuid.UUID, digest string, size int64, uploadTTL time.Duration) (model.StoredObject, error) {
-	if uploadTTL <= 0 || size < 0 {
-		return model.StoredObject{}, pkg.ErrBadInput
-	}
-	tx, err := beginReadCommitted(ctx, r.pool)
-	if err != nil {
-		return model.StoredObject{}, err
-	}
-	defer rollback(ctx, tx)
-	q := sqlc.New(tx)
-	b, err := q.LockProblemBuild(ctx, id)
-	if err != nil {
-		return model.StoredObject{}, HandlePgErr(err)
-	}
-	active, err := q.BuildLeaseValid(ctx, sqlc.BuildLeaseValidParams{Token: &token, ID: id})
-	if err != nil {
-		return model.StoredObject{}, fmt.Errorf("check build lease: %w", err)
-	}
-	if !active {
-		return model.StoredObject{}, pkg.ErrConflict
-	}
-	// Resolves registration with a lost commit response without a second UUID.
-	existing, err := q.BuildOutputObjectID(ctx, sqlc.BuildOutputObjectIDParams{BuildID: id, AttemptToken: &token})
-	if err == nil {
-		if _, err := lockObjects(ctx, tx, []uuid.UUID{existing}); err != nil {
-			return model.StoredObject{}, err
-		}
-		o, err := q.ReadStoredObject(ctx, existing)
-		if err != nil {
-			return model.StoredObject{}, fmt.Errorf("read registered output: %w", err)
-		}
-		if o.Sha256 != digest || o.Size != size {
-			return model.StoredObject{}, pkg.ErrConflict
-		}
-		return mapStoredObject(o), nil
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return model.StoredObject{}, fmt.Errorf("read output registration: %w", err)
-	}
-	oid := uuid.New()
-	if err := q.InsertPackageObject(ctx, sqlc.InsertPackageObjectParams{
-		ID: oid, OrganizationID: b.OrganizationID, Key: fmt.Sprintf("objects/%s/%s", b.OrganizationID, oid),
-		Sha256: digest, Size: size, BuildDeadline: b.Deadline, TtlMs: uploadTTL.Milliseconds(),
-	}); err != nil {
-		return model.StoredObject{}, fmt.Errorf("register output object: %w", err)
-	}
-	if err := q.InsertBuildOutput(ctx, sqlc.InsertBuildOutputParams{BuildID: id, ObjectID: oid, AttemptToken: &token}); err != nil {
-		return model.StoredObject{}, fmt.Errorf("hold output object: %w", err)
-	}
-	o, err := q.ReadStoredObject(ctx, oid)
-	if err != nil {
-		return model.StoredObject{}, fmt.Errorf("read output object: %w", err)
-	}
-	if err := commitTx(ctx, tx); err != nil {
-		return model.StoredObject{}, err
-	}
-	return mapStoredObject(o), nil
-}
-
-// PublishBuild is called only after the trusted worker confirmed upload bytes.
-// The single transaction hands ownership from the attempt to Package.
-// Statement samples and asset references are stored with the Package so that
-// statement reads never open its archive.
-func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token, oid uuid.UUID, samples []model.Sample) (uuid.UUID, error) {
+// PublishBuild is called after the worker stored the archive under the
+// object's key with a verified SHA-256. One transaction records the object
+// with the Package that references it, so an attempt that loses its lease
+// leaves only bytes without a row. Statement samples and asset references are
+// stored with the Package so that statement reads never open its archive.
+func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUID, object model.StoredObject, samples []model.Sample) (uuid.UUID, error) {
 	if samples == nil {
 		samples = []model.Sample{}
 	}
@@ -124,48 +64,20 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token, oid uui
 	if !active {
 		return uuid.Nil, pkg.ErrConflict
 	}
-	var snapshot model.BuildSnapshot
-	if err := json.Unmarshal(b.Snapshot, &snapshot); err != nil {
-		return uuid.Nil, fmt.Errorf("decode build snapshot: %w", err)
+	if object.OrganizationID != b.OrganizationID || object.Purpose != "package" {
+		return uuid.Nil, pkg.ErrBadInput
 	}
-	ids := []uuid.UUID{oid}
-	for _, a := range snapshot.Draft.Assets {
-		ids = append(ids, a.ObjectID)
-	}
-	// Inserting the Package bumps the access revision; take it before the
-	// asset objects, which a template clone may lock after it.
-	if err := q.LockAccessRevision(ctx); err != nil {
-		return uuid.Nil, fmt.Errorf("lock access revision: %w", err)
-	}
-	objects, err := lockObjects(ctx, tx, ids)
-	if err != nil {
+	if err := insertObjects(ctx, tx, []model.StoredObject{object}); err != nil {
 		return uuid.Nil, err
-	}
-	o := objects[oid]
-	if o.OrganizationID != b.OrganizationID || o.Purpose != "package" || o.State != "uploading" {
-		return uuid.Nil, pkg.ErrConflict
-	}
-	held, err := q.OutputUploadActive(ctx, sqlc.OutputUploadActiveParams{BuildID: id, ObjectID: oid, Token: &token})
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("check output hold: %w", err)
-	}
-	if !held {
-		return uuid.Nil, pkg.ErrConflict
-	}
-	if err := q.PublishStoredObject(ctx, oid); err != nil {
-		return uuid.Nil, fmt.Errorf("publish package object: %w", err)
 	}
 	pid := uuid.New()
 	if err := q.InsertProblemPackage(ctx, sqlc.InsertProblemPackageParams{
-		ID: pid, ProblemID: b.ProblemID, OrganizationID: b.OrganizationID, BuildID: id, ObjectID: oid, PackageHash: o.Sha256, Revision: b.Revision, Samples: samplesJSON,
+		ID: pid, ProblemID: b.ProblemID, OrganizationID: b.OrganizationID, BuildID: id, ObjectID: object.ID, PackageHash: object.SHA256, Revision: b.Revision, Samples: samplesJSON,
 	}); err != nil {
 		return uuid.Nil, fmt.Errorf("insert package: %w", err)
 	}
 	if err := q.InsertPackageAssets(ctx, sqlc.InsertPackageAssetsParams{PackageID: pid, BuildID: id}); err != nil {
 		return uuid.Nil, fmt.Errorf("insert package assets: %w", err)
-	}
-	if err := q.DeleteBuildOutput(ctx, sqlc.DeleteBuildOutputParams{BuildID: id, ObjectID: oid, AttemptToken: &token}); err != nil {
-		return uuid.Nil, fmt.Errorf("release output hold: %w", err)
 	}
 	if err := q.MarkBuildSucceeded(ctx, sqlc.MarkBuildSucceededParams{ID: id, LeaseToken: &token}); err != nil {
 		return uuid.Nil, fmt.Errorf("finish build: %w", err)
@@ -180,61 +92,6 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token, oid uui
 		return uuid.Nil, err
 	}
 	return pid, nil
-}
-
-// BeginObjectDeletion intentionally uses two statements: a lock waiter must
-// check references using a fresh READ COMMITTED snapshot after the lock arrives.
-func (r *ProblemDraftsRepo) BeginObjectDeletion(ctx context.Context, id uuid.UUID, retention time.Duration) (bool, error) {
-	if retention <= 0 {
-		return false, pkg.ErrBadInput
-	}
-	tx, err := beginReadCommitted(ctx, r.pool)
-	if err != nil {
-		return false, err
-	}
-	defer rollback(ctx, tx)
-	q := sqlc.New(tx)
-	o, err := q.LockStoredObject(ctx, id)
-	if err != nil {
-		return false, HandlePgErr(err)
-	}
-	if o.State == "deleting" {
-		return true, nil
-	}
-	if o.State == "deleted" {
-		return false, nil
-	}
-	eligible, err := q.ObjectDeletionEligible(ctx, sqlc.ObjectDeletionEligibleParams{RetentionMs: retention.Milliseconds(), ID: id})
-	if err != nil {
-		return false, fmt.Errorf("check object references: %w", err)
-	}
-	if !eligible {
-		return false, nil
-	}
-	if err := q.MarkObjectDeleting(ctx, id); err != nil {
-		return false, fmt.Errorf("mark object deleting: %w", err)
-	}
-	return true, commitTx(ctx, tx)
-}
-
-func (r *ProblemDraftsRepo) CompleteObjectDeletion(ctx context.Context, id uuid.UUID) error {
-	tx, err := beginReadCommitted(ctx, r.pool)
-	if err != nil {
-		return err
-	}
-	defer rollback(ctx, tx)
-	q := sqlc.New(tx)
-	if _, err := q.LockStoredObject(ctx, id); err != nil {
-		return HandlePgErr(err)
-	}
-	updated, err := q.MarkObjectDeleted(ctx, id)
-	if err != nil {
-		return fmt.Errorf("mark object deleted: %w", err)
-	}
-	if updated != 1 {
-		return pkg.ErrConflict
-	}
-	return commitTx(ctx, tx)
 }
 
 func (r *ProblemDraftsRepo) GetObject(ctx context.Context, id uuid.UUID) (model.StoredObject, error) {

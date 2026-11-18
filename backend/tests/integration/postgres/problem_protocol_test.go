@@ -4,16 +4,19 @@ package postgres_test
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/brawler2011/gate/backend/internal/postgres"
-	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
+	"github.com/brawler2011/gate/backend/internal/problems/builder"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
@@ -121,195 +124,157 @@ func TestBuildSnapshotInputSetMustMatchReferences(t *testing.T) {
 	require.ErrorContains(t, err, "snapshot input object set mismatch")
 }
 
-// Closing a stale attempt releases only that attempt's output hold and never the snapshot
-// inputs or a newer attempt's hold; a stale worker cannot finish or publish.
-func TestStaleAttemptCannotTouchNewerAttempt(t *testing.T) {
+func packageObject(org uuid.UUID) model.StoredObject {
+	return model.NewStoredObject(org, model.UploadSpec{Purpose: "package", SHA256: strings.Repeat("a", 64), Size: 10})
+}
+
+// A stale worker cannot finish or publish after its attempt was recovered, and its archive
+// never gets a row; the newer attempt publishes, and a retry resolves to the same Package.
+func TestStaleAttemptCannotPublish(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d, _ := buildableFixture(t)
 	enqueue(t, ctx, repo, org, d)
 	first, err := repo.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)
-	firstOutput, err := repo.RegisterBuildOutput(ctx, first.ID, *first.LeaseToken, strings.Repeat("1", 64), 10, time.Minute)
-	require.NoError(t, err)
-
 	expireLease(t, ctx, pool, first.ID)
 	require.NoError(t, repo.RecoverBuilds(ctx))
-	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM problem_build_objects WHERE build_id=$1 AND role='output'`, first.ID),
-		"recovery releases the closed attempt's output hold")
-
 	second, err := repo.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)
 	require.NotEqual(t, *first.LeaseToken, *second.LeaseToken)
-	secondOutput, err := repo.RegisterBuildOutput(ctx, second.ID, *second.LeaseToken, strings.Repeat("2", 64), 10, time.Minute)
-	require.NoError(t, err)
-	require.NotEqual(t, firstOutput.ID, secondOutput.ID, "a new attempt never reuses a closed upload UUID")
 
-	// The stale worker's late calls are all rejected and leave the new attempt untouched.
+	stale := packageObject(org)
 	require.ErrorIs(t, repo.FinishBuildAttempt(ctx, first.ID, *first.LeaseToken, []byte(`{"message":"late"}`), false), pkg.ErrConflict)
-	_, err = repo.PublishBuild(ctx, first.ID, *first.LeaseToken, firstOutput.ID, nil)
+	_, err = repo.PublishBuild(ctx, first.ID, *first.LeaseToken, stale, nil)
 	require.ErrorIs(t, err, pkg.ErrConflict)
-	_, err = repo.RegisterBuildOutput(ctx, first.ID, *first.LeaseToken, strings.Repeat("3", 64), 10, time.Minute)
-	require.ErrorIs(t, err, pkg.ErrConflict)
+	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, stale.ID))
 
-	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_build_objects WHERE build_id=$1 AND role='output' AND attempt_token=$2`, second.ID, *second.LeaseToken))
-	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_build_objects WHERE build_id=$1 AND role='input'`, first.ID))
-	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, first.ID))
+	output := packageObject(org)
+	packageID, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, output, nil)
+	require.NoError(t, err)
+	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_packages WHERE id=$1 AND object_id=$2`, packageID, output.ID))
+	// A retry after a lost commit response resolves to the same Package and records nothing.
+	again, err := repo.PublishBuild(ctx, second.ID, *second.LeaseToken, packageObject(org), nil)
+	require.NoError(t, err)
+	require.Equal(t, packageID, again)
+	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE purpose='package'`))
 }
 
-// Publication moves ownership of the archive from the attempt to the Package in one commit.
-func TestPublishBuildHandsOwnershipToPackageAtomically(t *testing.T) {
+// Every reference is a foreign key: an object row that something references cannot be
+// deleted, by GC or directly, and a reference must point at an object of its own organization.
+func TestObjectReferencesAreForeignKeys(t *testing.T) {
 	t.Parallel()
-	ctx, pool, repo, org, d, _ := buildableFixture(t)
+	ctx, pool, repo, org, d := draftFixture(t)
+	input := insertAvailableObject(t, ctx, pool, org)
+	answer := insertAvailableObject(t, ctx, pool, org)
+	asset := insertAvailableObject(t, ctx, pool, org)
+	packageAsset := insertAvailableObject(t, ctx, pool, org)
+	d = makeBuildableDraft(d, input)
+	d.Tests[0].Answer.ObjectID = &answer
+	d.Assets = []model.DraftAsset{{Path: "assets/a.png", ObjectID: asset}}
+	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	require.NoError(t, err)
+	requireHeld := func(object uuid.UUID, constraint string) {
+		t.Helper()
+		deleted, err := repo.DeleteObject(ctx, object)
+		require.NoError(t, err)
+		require.False(t, deleted)
+		_, err = pool.Exec(ctx, `DELETE FROM stored_objects WHERE id=$1`, object)
+		require.ErrorContains(t, err, constraint)
+	}
+	requireHeld(input, "problem_draft_tests_input_object_id_fkey")
+	requireHeld(answer, "problem_draft_tests_answer_object_id_fkey")
+	requireHeld(asset, "problem_draft_assets_object_id_fkey")
+
+	d, err = repo.GetDraft(ctx, d.ProblemID)
+	require.NoError(t, err)
 	enqueue(t, ctx, repo, org, d)
 	build, err := repo.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)
-	output, err := repo.RegisterBuildOutput(ctx, build.ID, *build.LeaseToken, strings.Repeat("a", 64), 10, time.Minute)
+	output := packageObject(org)
+	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, nil)
 	require.NoError(t, err)
-	require.Equal(t, "uploading", output.State)
+	d, err = repo.GetDraft(ctx, d.ProblemID)
+	require.NoError(t, err)
+	d.Tests, d.Assets = nil, nil
+	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	require.NoError(t, err)
+	requireHeld(input, "problem_build_inputs_object_id_fkey")
+	requireHeld(output.ID, "problem_packages_object_id_fkey")
+	_, err = pool.Exec(ctx, `INSERT INTO problem_package_assets(package_id,organization_id,path,object_id) VALUES($1,$2,'assets/b.png',$3)`, packageID, org, packageAsset)
+	require.NoError(t, err)
+	requireHeld(packageAsset, "problem_package_assets_object_id_fkey")
 
-	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output.ID, nil)
+	other := helperCreateOrg(t, ctx, pool, "other-"+uuid.NewString(), "Other")
+	foreign := insertAvailableObject(t, ctx, pool, other)
+	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
-	var state string
-	var unreferenced *time.Time
-	require.NoError(t, pool.QueryRow(ctx, `SELECT state,unreferenced_at FROM stored_objects WHERE id=$1`, output.ID).Scan(&state, &unreferenced))
-	require.Equal(t, "available", state)
-	require.Nil(t, unreferenced, "the Package holds the object from the moment it is available")
-	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_packages WHERE id=$1 AND object_id=$2 AND build_id=$3`, packageID, output.ID, build.ID))
-	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM problem_build_objects WHERE build_id=$1 AND role='output'`, build.ID))
-	got, err := repo.GetBuild(ctx, build.ID)
-	require.NoError(t, err)
-	require.Equal(t, "succeeded", got.State)
+	d.Assets = []model.DraftAsset{{Path: "assets/f.png", ObjectID: foreign}}
+	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	require.ErrorIs(t, err, pkg.ErrConflict, "a draft cannot reference another organization's object")
+	_, err = pool.Exec(ctx, `INSERT INTO problem_package_assets(package_id,organization_id,path,object_id) VALUES($1,$2,'assets/f.png',$3)`, packageID, org, foreign)
+	require.ErrorContains(t, err, "problem_package_assets_object_id_fkey")
+	_, err = pool.Exec(ctx, `INSERT INTO problem_package_assets(package_id,organization_id,path,object_id) VALUES($1,$2,'assets/f.png',$3)`, packageID, other, foreign)
+	require.ErrorContains(t, err, "problem_package_assets_package_id_fkey", "the reference's organization is its owner's")
 
-	// A retry after a lost commit response resolves to the same Package.
-	again, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output.ID, nil)
-	require.NoError(t, err)
-	require.Equal(t, packageID, again)
-	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, build.ID))
+	// Once the Package and the build are pruned, nothing holds the objects any more.
+	time.Sleep(5 * time.Millisecond)
+	require.NoError(t, repo.PrunePackages(ctx, time.Millisecond))
+	require.NoError(t, repo.PruneBuilds(ctx, time.Millisecond))
+	for _, object := range []uuid.UUID{input, answer, asset, packageAsset, output.ID} {
+		deleted, err := repo.DeleteObject(ctx, object)
+		require.NoError(t, err)
+		require.True(t, deleted)
+	}
 }
 
-func makeUnreferenced(t *testing.T, ctx context.Context, pool *pgxpool.Pool, object uuid.UUID) {
-	t.Helper()
-	_, err := pool.Exec(ctx, `UPDATE stored_objects SET unreferenced_at=clock_timestamp()-interval '1 hour' WHERE id=$1`, object)
-	require.NoError(t, err)
-}
-
-// A collector that is already waiting for the object lock must observe a reference committed
-// while it waited: the reference check is a separate statement after the lock arrives.
-func TestObjectDeletionSeesReferenceCommittedWhileWaitingForLock(t *testing.T) {
+// GC deleting an object and a writer adding the first reference to it serialize on the
+// object row: a reference committed while GC waits makes the deletion fail.
+func TestObjectDeletionWaitsForConcurrentReference(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
 	object := insertAvailableObject(t, ctx, pool, org)
-	makeUnreferenced(t, ctx, pool, object)
 
 	tx, err := pool.Begin(ctx)
 	require.NoError(t, err)
 	defer func() { _ = tx.Rollback(ctx) }()
-	_, err = sqlc.New(tx).LockStoredObject(ctx, object)
+	_, err = tx.Exec(ctx, `INSERT INTO problem_draft_assets(problem_id,organization_id,path,object_id) VALUES($1,$2,'assets/a.png',$3)`, d.ProblemID, org, object)
 	require.NoError(t, err)
 
 	type outcome struct {
-		started bool
+		deleted bool
 		err     error
 	}
 	done := make(chan outcome, 1)
 	go func() {
-		started, err := repo.BeginObjectDeletion(ctx, object, time.Millisecond)
-		done <- outcome{started, err}
+		deleted, err := repo.DeleteObject(ctx, object)
+		done <- outcome{deleted, err}
 	}()
 	select {
 	case <-done:
-		t.Fatal("the collector must wait for the object lock")
+		t.Fatal("the deletion must wait for the referencing transaction")
 	case <-time.After(300 * time.Millisecond):
 	}
-	// The lock holder links the object into the draft, then commits.
-	_, err = tx.Exec(ctx, `INSERT INTO problem_draft_assets(problem_id,path,object_id) VALUES($1,'assets/a.png',$2)`, d.ProblemID, object)
-	require.NoError(t, err)
 	require.NoError(t, tx.Commit(ctx))
 
 	got := <-done
 	require.NoError(t, got.err)
-	require.False(t, got.started, "a reference committed during the wait forbids deletion")
-	var state string
-	require.NoError(t, pool.QueryRow(ctx, `SELECT state FROM stored_objects WHERE id=$1`, object).Scan(&state))
-	require.Equal(t, "available", state)
+	require.False(t, got.deleted, "a reference committed during the wait forbids deletion")
+	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, object))
 }
 
-func TestObjectDeletionProtocolIsOneWay(t *testing.T) {
-	t.Parallel()
-	ctx, pool, repo, org, _ := draftFixture(t)
-	object := insertAvailableObject(t, ctx, pool, org)
-
-	started, err := repo.BeginObjectDeletion(ctx, object, time.Hour)
-	require.NoError(t, err)
-	require.False(t, started, "recently released objects are retained")
-
-	makeUnreferenced(t, ctx, pool, object)
-	started, err = repo.BeginObjectDeletion(ctx, object, time.Millisecond)
-	require.NoError(t, err)
-	require.True(t, started)
-	// Once deleting, no reference can be created and the state cannot return to available.
-	_, err = pool.Exec(ctx, `UPDATE stored_objects SET state='available' WHERE id=$1`, object)
-	require.ErrorContains(t, err, "invalid object transition")
-	started, err = repo.BeginObjectDeletion(ctx, object, time.Millisecond)
-	require.NoError(t, err)
-	require.True(t, started, "a failed physical delete is retried from the deleting state")
-
-	require.NoError(t, repo.CompleteObjectDeletion(ctx, object))
-	require.ErrorIs(t, repo.CompleteObjectDeletion(ctx, object), pkg.ErrConflict)
-	started, err = repo.BeginObjectDeletion(ctx, object, time.Millisecond)
-	require.NoError(t, err)
-	require.False(t, started)
-}
-
-// An upload that missed its deadline can never become a working reference, and its
-// operation is closed so the object becomes collectable.
-func TestExpiredUploadIsNeverPublishedAndBecomesCollectable(t *testing.T) {
-	t.Parallel()
-	ctx, pool, repo, org, d := draftFixture(t)
-	change := model.UploadChange{Part: "asset", AssetPath: "assets/late.png"}
-	key := mutationKey(org, "upload", struct {
-		Revision int64
-		Change   model.UploadChange
-	}{d.Revision, change})
-	reservation, err := repo.ReserveUploads(ctx, key, []model.UploadSpec{{Purpose: "asset", SHA256: strings.Repeat("a", 64), Size: 5}}, 150*time.Millisecond)
-	require.NoError(t, err)
-	require.Len(t, reservation.Objects, 1)
-	object := reservation.Objects[0]
-	require.Equal(t, "uploading", object.State)
-
-	_, err = pool.Exec(ctx, `SELECT pg_sleep(0.3)`)
-	require.NoError(t, err)
-	_, err = repo.FinalizeUploads(ctx, key, d.ProblemID, d.Revision, change)
-	require.Error(t, err, "an expired upload cannot be finalized")
-	var draftAssets int
-	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM problem_draft_assets WHERE problem_id=$1`, d.ProblemID).Scan(&draftAssets))
-	require.Zero(t, draftAssets)
-
-	// Retrying the operation after expiry uses a brand-new UUID, never the closed key.
-	retry, err := repo.ReserveUploads(ctx, key, []model.UploadSpec{{Purpose: "asset", SHA256: strings.Repeat("a", 64), Size: 5}}, time.Minute)
-	require.NoError(t, err)
-	require.NotEqual(t, object.ID, retry.Objects[0].ID)
-	require.NotEqual(t, object.Key, retry.Objects[0].Key)
-
-	started, err := repo.BeginObjectDeletion(ctx, object.ID, time.Millisecond)
-	require.NoError(t, err)
-	require.True(t, started, "the abandoned, expired upload is collectable")
-}
-
-// Concurrent GC and a new reference never delete a working object: whichever side takes the
-// object lock first decides, and the loser observes the outcome.
+// Concurrent GC and a new reference never leave a dangling reference: either the object
+// is deleted and the reference is rejected, or the reference wins and the object stays.
 func TestObjectDeletionRacingWithNewReference(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
 	for attempt := 0; attempt < 10; attempt++ {
 		object := insertAvailableObject(t, ctx, pool, org)
-		makeUnreferenced(t, ctx, pool, object)
 		current, err := repo.GetDraft(ctx, d.ProblemID)
 		require.NoError(t, err)
 		candidate := current
 		candidate.Assets = []model.DraftAsset{{Path: "assets/a.png", ObjectID: object}}
 
-		var deleting bool
+		var deleted bool
 		var deleteErr, linkErr error
 		var wg sync.WaitGroup
 		start := make(chan struct{})
@@ -317,7 +282,7 @@ func TestObjectDeletionRacingWithNewReference(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			<-start
-			deleting, deleteErr = repo.BeginObjectDeletion(ctx, object, time.Millisecond)
+			deleted, deleteErr = repo.DeleteObject(ctx, object)
 		}()
 		go func() {
 			defer wg.Done()
@@ -327,15 +292,12 @@ func TestObjectDeletionRacingWithNewReference(t *testing.T) {
 		close(start)
 		wg.Wait()
 		require.NoError(t, deleteErr)
-		var state string
-		require.NoError(t, pool.QueryRow(ctx, `SELECT state FROM stored_objects WHERE id=$1`, object).Scan(&state))
-		if deleting {
-			require.Error(t, linkErr, "an object being deleted cannot gain a reference")
-			require.Equal(t, "deleting", state)
+		if deleted {
+			require.ErrorIs(t, linkErr, pkg.ErrConflict, "a deleted object cannot gain a reference")
+			require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, object))
 			continue
 		}
 		require.NoError(t, linkErr)
-		require.Equal(t, "available", state)
 		require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_draft_assets WHERE object_id=$1`, object))
 		// Release the reference again so the next round starts from a clean draft.
 		cleared, err := repo.GetDraft(ctx, d.ProblemID)
@@ -344,6 +306,90 @@ func TestObjectDeletionRacingWithNewReference(t *testing.T) {
 		_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", cleared), cleared)
 		require.NoError(t, err)
 	}
+}
+
+// An executor whose operation lease expired cannot finalize, and after a takeover its
+// uploaded bytes never get a row; the new executor finalizes with its own objects.
+func TestUploadFinalizeIsFencedByOperationToken(t *testing.T) {
+	t.Parallel()
+	ctx, pool, repo, org, d := draftFixture(t)
+	change := model.UploadChange{Part: "asset", AssetPath: "assets/a.png"}
+	key := mutationKey(org, "upload", change)
+	replay, err := repo.BeginOperation(ctx, key)
+	require.NoError(t, err)
+	require.Nil(t, replay)
+	spec := model.UploadSpec{Purpose: "asset", SHA256: strings.Repeat("a", 64), Size: 5}
+	stale := model.NewStoredObject(org, spec)
+	_, err = pool.Exec(ctx, `UPDATE request_idempotency SET lease_deadline=clock_timestamp()-interval '1 second' WHERE key=$1`, key.Key)
+	require.NoError(t, err)
+	_, err = repo.FinalizeUploads(ctx, key, d.ProblemID, d.Revision, change, []model.StoredObject{stale})
+	require.ErrorIs(t, err, pkg.ErrConflict, "an expired executor cannot finalize")
+
+	retry := key
+	retry.Token = uuid.New()
+	replay, err = repo.BeginOperation(ctx, retry)
+	require.NoError(t, err)
+	require.Nil(t, replay)
+	_, err = repo.FinalizeUploads(ctx, key, d.ProblemID, d.Revision, change, []model.StoredObject{stale})
+	require.ErrorIs(t, err, pkg.ErrConflict, "a taken-over executor cannot finalize")
+	fresh := model.NewStoredObject(org, spec)
+	result, err := repo.FinalizeUploads(ctx, retry, d.ProblemID, d.Revision, change, []model.StoredObject{fresh})
+	require.NoError(t, err)
+	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, stale.ID))
+	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_draft_assets WHERE object_id=$1`, fresh.ID))
+
+	// A lost response replays the stored result before anything is uploaded again.
+	again := retry
+	again.Token = uuid.New()
+	replay, err = repo.BeginOperation(ctx, again)
+	require.NoError(t, err)
+	require.NotNil(t, replay)
+	require.JSONEq(t, string(result.Body), string(replay.Body))
+}
+
+// sweepStore is an object store listing with controlled modification times.
+type sweepStore struct {
+	objects map[string]time.Time
+	deleted []string
+}
+
+func (s *sweepStore) DeleteFile(_ context.Context, _, key string) error {
+	delete(s.objects, key)
+	s.deleted = append(s.deleted, key)
+	return nil
+}
+
+func (s *sweepStore) ListObjects(context.Context, string, string) ([]storage.ObjectInfo, error) {
+	listed := []storage.ObjectInfo{}
+	for key, modified := range s.objects {
+		listed = append(listed, storage.ObjectInfo{Key: key, LastModified: modified})
+	}
+	return listed, nil
+}
+
+// GC deletes unreferenced object rows with their bytes, and bytes without a row once they
+// are older than the retention; bytes with a row and young bytes stay.
+func TestGCDeletesUnreferencedObjectsAndOrphanedBytes(t *testing.T) {
+	t.Parallel()
+	ctx, pool, repo, org, d := draftFixture(t)
+	referenced := insertAvailableObject(t, ctx, pool, org)
+	unreferenced := insertAvailableObject(t, ctx, pool, org)
+	d.Assets = []model.DraftAsset{{Path: "assets/a.png", ObjectID: referenced}}
+	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	require.NoError(t, err)
+	key := func(id uuid.UUID) string { return "objects/" + org.String() + "/" + id.String() }
+	old, young := time.Now().Add(-2*time.Hour), time.Now()
+	orphanOld, orphanYoung := key(uuid.New()), key(uuid.New())
+	store := &sweepStore{objects: map[string]time.Time{
+		key(referenced): old, key(unreferenced): young, orphanOld: old, orphanYoung: young,
+	}}
+	gc := builder.GC{Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Repo: repo, Store: store, Bucket: "objects", TempDir: t.TempDir(),
+		ObjectRetention: time.Hour, BuildRetention: time.Hour, PackageRetention: time.Hour, Interval: time.Minute}
+	require.NoError(t, gc.Collect(ctx))
+
+	require.ElementsMatch(t, []string{key(unreferenced), orphanOld}, store.deleted)
+	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, referenced))
+	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, unreferenced))
 }
 
 // Retention removes only Packages without consumers: a Package pinned by a contest survives
@@ -356,15 +402,19 @@ func TestPackageRetentionKeepsPinnedPackages(t *testing.T) {
 	unused := f.pack(t, f.problem, time.Now().Add(-2*time.Hour))
 	drafts := postgres.NewProblemDraftsRepo(f.pool, model.DraftQuotas{Files: 10, Tests: 10, Components: 10, Subtasks: 10}, time.Minute)
 
-	var unusedObject uuid.UUID
+	var unusedObject, pinnedObject uuid.UUID
 	require.NoError(t, f.pool.QueryRow(f.ctx, `SELECT object_id FROM problem_packages WHERE id=$1`, unused).Scan(&unusedObject))
+	require.NoError(t, f.pool.QueryRow(f.ctx, `SELECT object_id FROM problem_packages WHERE id=$1`, f.original).Scan(&pinnedObject))
 	require.NoError(t, drafts.PrunePackages(f.ctx, time.Millisecond))
 
 	require.Zero(t, countRows(t, f.ctx, f.pool, `SELECT count(*) FROM problem_packages WHERE id=$1`, unused))
 	require.Equal(t, 1, countRows(t, f.ctx, f.pool, `SELECT count(*) FROM problem_packages WHERE id=$1`, f.original), "pinned package is kept")
-	var releasedAt *time.Time
-	require.NoError(t, f.pool.QueryRow(f.ctx, `SELECT unreferenced_at FROM stored_objects WHERE id=$1`, unusedObject).Scan(&releasedAt))
-	require.NotNil(t, releasedAt, "the archive of the removed Package becomes collectable")
+	deleted, err := drafts.DeleteObject(f.ctx, unusedObject)
+	require.NoError(t, err)
+	require.True(t, deleted, "the archive of the removed Package becomes collectable")
+	deleted, err = drafts.DeleteObject(f.ctx, pinnedObject)
+	require.NoError(t, err)
+	require.False(t, deleted)
 
 	// Even direct SQL cannot remove a pinned Package: the foreign keys restrict it.
 	require.Error(t, func() error {
@@ -373,10 +423,8 @@ func TestPackageRetentionKeepsPinnedPackages(t *testing.T) {
 	}(), "foreign keys forbid deleting a pinned package")
 }
 
-// A Package stores its statement samples and references its statement assets at
-// publication; the assets stay alive with the Package and are released when it is pruned.
 // claimedBuildWithAsset is a claimed build whose draft has one statement asset,
-// with its output registered and ready to publish.
+// with its output object ready to publish.
 func claimedBuildWithAsset(t *testing.T) (context.Context, *pgxpool.Pool, *postgres.ProblemDraftsRepo, uuid.UUID, model.Draft, model.ProblemBuild, model.StoredObject, uuid.UUID) {
 	t.Helper()
 	ctx, pool, repo, org, d, _ := buildableFixture(t)
@@ -389,16 +437,16 @@ func claimedBuildWithAsset(t *testing.T) (context.Context, *pgxpool.Pool, *postg
 	enqueue(t, ctx, repo, org, d)
 	build, err := repo.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)
-	output, err := repo.RegisterBuildOutput(ctx, build.ID, *build.LeaseToken, strings.Repeat("a", 64), 10, time.Minute)
-	require.NoError(t, err)
-	return ctx, pool, repo, org, d, build, output, asset
+	return ctx, pool, repo, org, d, build, packageObject(org), asset
 }
 
+// A Package stores its statement samples and references its statement assets at
+// publication; the assets stay alive with the Package and are released when it is pruned.
 func TestPackageStatementContentLivesWithPackage(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d, build, output, asset := claimedBuildWithAsset(t)
 	samples := []model.Sample{{Input: "1 2\n", Output: "3\n"}}
-	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output.ID, samples)
+	packageID, err := repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output, samples)
 	require.NoError(t, err)
 
 	statement, err := repo.GetPackageStatement(ctx, packageID)
@@ -415,55 +463,16 @@ func TestPackageStatementContentLivesWithPackage(t *testing.T) {
 	require.NoError(t, err)
 	time.Sleep(5 * time.Millisecond)
 	require.NoError(t, repo.PruneBuilds(ctx, time.Millisecond))
-	var unreferenced *time.Time
-	require.NoError(t, pool.QueryRow(ctx, `SELECT unreferenced_at FROM stored_objects WHERE id=$1`, asset).Scan(&unreferenced))
-	require.Nil(t, unreferenced, "the Package references its asset")
-	deleting, err := repo.BeginObjectDeletion(ctx, asset, time.Millisecond)
+	deleted, err := repo.DeleteObject(ctx, asset)
 	require.NoError(t, err)
-	require.False(t, deleting, "an asset of a live Package is not collected")
+	require.False(t, deleted, "an asset of a live Package is not collected")
 	_, err = pool.Exec(ctx, `UPDATE problem_package_assets SET path='assets/other.png' WHERE package_id=$1`, packageID)
 	require.ErrorContains(t, err, "package is immutable")
 
 	require.NoError(t, repo.PrunePackages(ctx, time.Millisecond))
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM problem_package_assets WHERE package_id=$1`, packageID))
 	require.NoError(t, repo.PruneBuilds(ctx, time.Millisecond))
-	require.NoError(t, pool.QueryRow(ctx, `SELECT unreferenced_at FROM stored_objects WHERE id=$1`, asset).Scan(&unreferenced))
-	require.NotNil(t, unreferenced, "the asset of a pruned Package becomes collectable")
-}
-
-// Problem creation from a template bumps the access revision and then locks the
-// template's objects. Publishing and pruning a Package with the same asset take
-// the access revision before that object too, so neither can deadlock with it.
-func TestPackageAssetLocksFollowAccessRevision(t *testing.T) {
-	ctx, pool, repo, _, _, build, output, asset := claimedBuildWithAsset(t)
-	cloneAgainst := func(name string, operation func() error) {
-		t.Helper()
-		tx, err := pool.Begin(ctx)
-		require.NoError(t, err)
-		defer func() { _ = tx.Rollback(ctx) }()
-		_, err = tx.Exec(ctx, `UPDATE access_revision SET revision=revision+1`)
-		require.NoError(t, err)
-		done := make(chan error, 1)
-		go func() { done <- operation() }()
-		require.Eventually(t, func() bool {
-			return countRows(t, ctx, pool, `SELECT count(*) FROM pg_stat_activity WHERE wait_event_type='Lock' AND query LIKE '%FROM access_revision FOR UPDATE%'`) > 0
-		}, 10*time.Second, 10*time.Millisecond, "%s waits for the access revision first", name)
-		_, err = tx.Exec(ctx, `SET LOCAL lock_timeout='5s'`)
-		require.NoError(t, err)
-		_, err = tx.Exec(ctx, `SELECT 1 FROM stored_objects WHERE id=$1 FOR UPDATE`, asset)
-		require.NoError(t, err, "%s does not hold the asset while waiting", name)
-		require.NoError(t, tx.Commit(ctx))
-		require.NoError(t, <-done, name)
-	}
-
-	var packageID uuid.UUID
-	cloneAgainst("publication", func() error {
-		var err error
-		packageID, err = repo.PublishBuild(ctx, build.ID, *build.LeaseToken, output.ID, nil)
-		return err
-	})
-	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_package_assets WHERE package_id=$1 AND object_id=$2`, packageID, asset))
-	time.Sleep(5 * time.Millisecond)
-	cloneAgainst("pruning", func() error { return repo.PrunePackages(ctx, time.Millisecond) })
-	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM problem_packages WHERE id=$1`, packageID))
+	deleted, err = repo.DeleteObject(ctx, asset)
+	require.NoError(t, err)
+	require.True(t, deleted, "the asset of a pruned Package becomes collectable")
 }

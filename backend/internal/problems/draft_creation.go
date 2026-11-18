@@ -17,35 +17,31 @@ import (
 	"github.com/google/uuid"
 )
 
-func (uc *DraftUseCase) uploadImport(ctx context.Context, k model.MutationKey, plan *draftImport) (*model.MutationResult, error) {
-	specs := make([]model.UploadSpec, len(plan.objects))
+// uploadImport begins the operation and uploads the plan's objects, binding
+// them into its draft. A replay returns the stored result and uploads nothing.
+func (uc *DraftUseCase) uploadImport(ctx context.Context, k model.MutationKey, plan *draftImport) (*model.MutationResult, []model.StoredObject, error) {
+	replay, err := uc.Repo.BeginOperation(ctx, k)
+	if err != nil || replay != nil {
+		return replay, nil, err
+	}
+	objects := make([]model.StoredObject, len(plan.objects))
+	ids := make([]uuid.UUID, len(plan.objects))
 	for i, o := range plan.objects {
-		specs[i] = o.spec
-	}
-	reservation, err := uc.Repo.ReserveUploads(ctx, k, specs, uc.UploadTTL)
-	if err != nil {
-		return nil, err
-	}
-	if reservation.Replay != nil {
-		return reservation.Replay, nil
-	}
-	ids := make([]uuid.UUID, len(reservation.Objects))
-	for i, o := range reservation.Objects {
-		ids[i] = o.ID
-		f, err := os.Open(plan.objects[i].path)
+		f, err := os.Open(o.path)
 		if err != nil {
-			return nil, fmt.Errorf("open: %w", err)
+			return nil, nil, fmt.Errorf("open: %w", err)
 		}
-		uploadErr := uc.Store.UploadFile(ctx, uc.Bucket, o.Key, io.NewSectionReader(f, 0, o.Size), "application/octet-stream")
+		object, uploadErr := uc.storeObject(ctx, k.OrganizationID, o.spec, f)
 		closeErr := f.Close()
 		if err := errors.Join(uploadErr, closeErr); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		objects[i], ids[i] = object, object.ID
 	}
 	if err := plan.bind(ids); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return nil, nil
+	return nil, objects, nil
 }
 func (uc *DraftUseCase) Import(ctx context.Context, id uuid.UUID, expected int64, key string, reader io.Reader) (model.MutationResult, error) {
 	p, err := uc.authorize(ctx, id, true)
@@ -91,14 +87,14 @@ func (uc *DraftUseCase) Import(ctx context.Context, id uuid.UUID, expected int64
 	if err != nil {
 		return model.MutationResult{}, err
 	}
-	replay, err := uc.uploadImport(ctx, k, plan)
+	replay, objects, err := uc.uploadImport(ctx, k, plan)
 	if err != nil {
 		return model.MutationResult{}, err
 	}
 	if replay != nil {
 		return *replay, nil
 	}
-	return uc.Repo.FinalizeImport(ctx, k, id, expected, plan.draft)
+	return uc.Repo.FinalizeImport(ctx, k, id, expected, plan.draft, objects)
 }
 func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreateProblemInput) (uuid.UUID, error) {
 	user := accessmodel.UserFromContext(ctx)
@@ -168,8 +164,9 @@ func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreatePr
 	}
 	// A cloned package already owns its input objects in this organization.
 	// Only builtins/imported bytes need new uploads.
+	var objects []model.StoredObject
 	if len(plan.objects) > 0 {
-		replay, err := uc.uploadImport(ctx, k, plan)
+		replay, uploaded, err := uc.uploadImport(ctx, k, plan)
 		if err != nil {
 			return uuid.Nil, err
 		}
@@ -182,8 +179,9 @@ func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreatePr
 			}
 			return result.ID, nil
 		}
+		objects = uploaded
 	}
-	result, err := uc.Repo.FinalizeCreate(ctx, k, user.Id, plan.draft)
+	result, err := uc.Repo.FinalizeCreate(ctx, k, user.Id, plan.draft, objects)
 	if err != nil {
 		return uuid.Nil, err
 	}

@@ -20,9 +20,6 @@ SELECT revision FROM problem_drafts WHERE problem_id=$1 FOR UPDATE;
 INSERT INTO problem_drafts(problem_id,organization_id,title,short_name,type,time_limit_ms,memory_limit_mb)
 SELECT id,organization_id,sqlc.arg(title),sqlc.arg(short_name),'pass-fail',1000,256 FROM problems WHERE id=sqlc.arg(problem_id);
 
--- name: LockStoredObject :one
-SELECT * FROM stored_objects WHERE id=$1 FOR UPDATE;
-
 -- name: ReadStoredObject :one
 SELECT * FROM stored_objects WHERE id=$1;
 

@@ -128,7 +128,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	build, err := drafts.ClaimBuild(ctx, time.Minute)
 	require.NoError(t, err)
 	work := diskTempDir(t)
-	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Languages: cfg, UploadTTL: time.Minute, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	packageID, err := pipeline.Execute(ctx, build)
 	require.NoError(t, err)
 
@@ -263,7 +263,7 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 	compile := aux
 	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 10*time.Second, 20*time.Second, 512<<20, 150
 	h.limits = problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux}
-	h.pipeline = builder.Pipeline{Repo: h.drafts, Store: store, Bucket: bucket, TempDir: diskTempDir(t), Client: client, Files: files, Languages: cfg, UploadTTL: time.Minute, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	h.pipeline = builder.Pipeline{Repo: h.drafts, Store: store, Bucket: bucket, TempDir: diskTempDir(t), Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	executor := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	executor.Programs = &judging.ProgramCache{Root: diskTempDir(t), Compiler: image.Compiler(), Compile: executor.CompileProgram}
 	h.judge = judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), h.submissions,

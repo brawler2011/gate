@@ -2,6 +2,7 @@ package problemsmodel
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
@@ -54,8 +55,13 @@ type StoredObject struct {
 	Key            string    `json:"-"`
 	SHA256         string    `json:"sha256"`
 	Size           int64     `json:"size"`
-	State          string    `json:"-"`
-	UploadDeadline time.Time `json:"-"`
+}
+
+// NewStoredObject names a fresh key for bytes about to be uploaded. Its row is
+// inserted only after the upload, together with the first reference to it.
+func NewStoredObject(org uuid.UUID, spec UploadSpec) StoredObject {
+	id := uuid.New()
+	return StoredObject{ID: id, OrganizationID: org, Purpose: spec.Purpose, Key: fmt.Sprintf("objects/%s/%s", org, id), SHA256: spec.SHA256, Size: spec.Size}
 }
 
 // UploadChange atomically adds/replaces a resource or one test. A manual test
@@ -70,11 +76,6 @@ type UploadSpec struct {
 	Purpose string
 	SHA256  string
 	Size    int64
-}
-
-type UploadReservation struct {
-	Objects []StoredObject
-	Replay  *MutationResult
 }
 
 type PackageDescriptor struct {

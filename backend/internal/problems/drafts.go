@@ -19,20 +19,20 @@ import (
 )
 
 type DraftRepository interface {
-	FinalizeImport(context.Context, model.MutationKey, uuid.UUID, int64, model.Draft) (model.MutationResult, error)
-	FinalizeCreate(context.Context, model.MutationKey, uuid.UUID, model.Draft) (model.MutationResult, error)
+	FinalizeImport(context.Context, model.MutationKey, uuid.UUID, int64, model.Draft, []model.StoredObject) (model.MutationResult, error)
+	FinalizeCreate(context.Context, model.MutationKey, uuid.UUID, model.Draft, []model.StoredObject) (model.MutationResult, error)
 	GetDraft(context.Context, uuid.UUID) (model.Draft, error)
 	SaveDraft(context.Context, model.MutationKey, model.Draft) (model.MutationResult, error)
 	EnqueueBuild(context.Context, model.MutationKey, uuid.UUID, int64, model.BuildOptions) (model.MutationResult, error)
 	GetBuild(context.Context, uuid.UUID) (model.ProblemBuild, error)
 	ListBuilds(context.Context, uuid.UUID) ([]model.ProblemBuild, error)
 	CancelBuild(context.Context, model.MutationKey, uuid.UUID) (model.MutationResult, error)
-	ReserveUploads(context.Context, model.MutationKey, []model.UploadSpec, time.Duration) (model.UploadReservation, error)
-	FinalizeUploads(context.Context, model.MutationKey, uuid.UUID, int64, model.UploadChange) (model.MutationResult, error)
+	BeginOperation(context.Context, model.MutationKey) (*model.MutationResult, error)
+	FinalizeUploads(context.Context, model.MutationKey, uuid.UUID, int64, model.UploadChange, []model.StoredObject) (model.MutationResult, error)
 	GetObject(context.Context, uuid.UUID) (model.StoredObject, error)
 }
 type DraftObjectStore interface {
-	UploadFile(context.Context, string, string, io.Reader, string) error
+	UploadFileWithSHA256(context.Context, string, string, io.Reader, string, string) error
 	DownloadFile(context.Context, string, string, *string) (io.ReadCloser, string, error)
 }
 type DraftUseCase struct {
@@ -234,19 +234,31 @@ func (uc *DraftUseCase) Upload(ctx context.Context, id uuid.UUID, expected int64
 	if err != nil {
 		return model.MutationResult{}, err
 	}
-	reservation, err := uc.Repo.ReserveUploads(ctx, k, specs, uc.UploadTTL)
+	replay, err := uc.Repo.BeginOperation(ctx, k)
 	if err != nil {
 		return model.MutationResult{}, err
 	}
-	if reservation.Replay != nil {
-		return *reservation.Replay, nil
+	if replay != nil {
+		return *replay, nil
 	}
-	for i, object := range reservation.Objects {
-		if err := uc.Store.UploadFile(ctx, uc.Bucket, object.Key, io.NewSectionReader(uploads[i].file, 0, object.Size), "application/octet-stream"); err != nil {
+	objects := make([]model.StoredObject, len(uploads))
+	for i, u := range uploads {
+		objects[i], err = uc.storeObject(ctx, p.OrganizationID, u.spec, u.file)
+		if err != nil {
 			return model.MutationResult{}, err
 		}
 	}
-	return uc.Repo.FinalizeUploads(ctx, k, id, expected, change)
+	return uc.Repo.FinalizeUploads(ctx, k, id, expected, change, objects)
+}
+
+// storeObject uploads bytes to a fresh key; the finalizing transaction inserts
+// the object row with its first reference, so failed uploads leave no row.
+func (uc *DraftUseCase) storeObject(ctx context.Context, org uuid.UUID, spec model.UploadSpec, body io.ReaderAt) (model.StoredObject, error) {
+	object := model.NewStoredObject(org, spec)
+	if err := uc.Store.UploadFileWithSHA256(ctx, uc.Bucket, object.Key, io.NewSectionReader(body, 0, spec.Size), "application/octet-stream", spec.SHA256); err != nil {
+		return model.StoredObject{}, err
+	}
+	return object, nil
 }
 func (uc *DraftUseCase) DownloadObject(ctx context.Context, id, oid uuid.UUID) (io.ReadCloser, string, error) {
 	d, err := uc.GetDraft(ctx, id)
@@ -259,9 +271,6 @@ func (uc *DraftUseCase) DownloadObject(ctx context.Context, id, oid uuid.UUID) (
 	o, err := uc.Repo.GetObject(ctx, oid)
 	if err != nil {
 		return nil, "", err
-	}
-	if o.State != "available" {
-		return nil, "", pkg.ErrConflict
 	}
 	r, _, err := uc.Store.DownloadFile(ctx, uc.Bucket, o.Key, nil)
 	return r, o.SHA256, err

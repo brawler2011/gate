@@ -64,29 +64,6 @@ func (q *Queries) LockProblemDraft(ctx context.Context, problemID uuid.UUID) (in
 	return revision, err
 }
 
-const lockStoredObject = `-- name: LockStoredObject :one
-SELECT id, organization_id, purpose, key, sha256, size, state, upload_deadline, unreferenced_at, created_at, updated_at FROM stored_objects WHERE id=$1 FOR UPDATE
-`
-
-func (q *Queries) LockStoredObject(ctx context.Context, id uuid.UUID) (StoredObject, error) {
-	row := q.db.QueryRow(ctx, lockStoredObject, id)
-	var i StoredObject
-	err := row.Scan(
-		&i.ID,
-		&i.OrganizationID,
-		&i.Purpose,
-		&i.Key,
-		&i.Sha256,
-		&i.Size,
-		&i.State,
-		&i.UploadDeadline,
-		&i.UnreferencedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const nextProblemBuild = `-- name: NextProblemBuild :one
 SELECT id FROM problem_builds WHERE state='queued' ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT 1
 `
@@ -148,7 +125,7 @@ func (q *Queries) ReadProblemDraft(ctx context.Context, problemID uuid.UUID) (in
 }
 
 const readStoredObject = `-- name: ReadStoredObject :one
-SELECT id, organization_id, purpose, key, sha256, size, state, upload_deadline, unreferenced_at, created_at, updated_at FROM stored_objects WHERE id=$1
+SELECT id, organization_id, purpose, key, sha256, size, created_at FROM stored_objects WHERE id=$1
 `
 
 func (q *Queries) ReadStoredObject(ctx context.Context, id uuid.UUID) (StoredObject, error) {
@@ -161,11 +138,7 @@ func (q *Queries) ReadStoredObject(ctx context.Context, id uuid.UUID) (StoredObj
 		&i.Key,
 		&i.Sha256,
 		&i.Size,
-		&i.State,
-		&i.UploadDeadline,
-		&i.UnreferencedAt,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }

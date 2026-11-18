@@ -52,7 +52,9 @@ func (p ProblemPolicy) validate(v *validator) {
 	v.check(p.UploadTTL > 0, "problems.upload_ttl", "must be positive")
 	v.check(p.OperationLease > p.UploadTTL, "problems.operation_lease", "must exceed problems.upload_ttl")
 	v.check(p.GCInterval > 0, "problems.gc_interval", "must be positive")
-	v.check(p.ObjectRetention > 0, "problems.object_retention", "must be positive")
+	// Bytes without a row are deleted after object_retention; a row may be
+	// committed up to an operation lease or a build duration after its upload began.
+	v.check(p.ObjectRetention > p.OperationLease && p.ObjectRetention > p.Duration, "problems.object_retention", "must exceed problems.operation_lease and problems.duration")
 	v.check(p.BuildRetention > 0, "problems.build_retention", "must be positive")
 	v.check(p.PackageRetention > 0, "problems.package_retention", "must be positive")
 	v.check(p.RequestBytes >= p.Draft.TextBytes, "problems.request_bytes", "must be at least problems.draft.text_bytes")

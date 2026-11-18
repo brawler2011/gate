@@ -14,7 +14,7 @@ import (
 // recordingStore fails the test on any object-store access.
 type recordingStore struct{ calls int }
 
-func (s *recordingStore) UploadFile(context.Context, string, string, io.Reader, string) error {
+func (s *recordingStore) UploadFileWithSHA256(context.Context, string, string, io.Reader, string, string) error {
 	s.calls++
 	return nil
 }
