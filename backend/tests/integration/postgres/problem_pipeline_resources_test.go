@@ -233,17 +233,17 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 // generatorBuild saves a draft whose only test is produced by the given generator script.
 func (h *pipelineHarness) generatorBuild(t *testing.T, script string) {
 	t.Helper()
-	generator, solution, subtask := uuid.New(), uuid.New(), uuid.New()
+	generator, solution, subtask := "gen", "main", uuid.New()
 	h.save(t, func(d *model.Draft) {
 		d.Checker = checker("cpp17", acceptEverythingChecker)
-		d.Generators = []model.DraftNamedProgram{named(generator, "gen", "python3", script)}
-		d.Solutions = []model.DraftNamedProgram{named(solution, "main", "python3", "print(1)\n")}
-		d.MainSolutionID = &solution
+		d.Generators = []model.DraftNamedProgram{named(generator, "python3", script)}
+		d.Solutions = []model.DraftNamedProgram{named(solution, "python3", "print(1)\n")}
+		d.MainSolution = &solution
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 		seed := int64(1)
 		d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1,
-			Input:  model.DraftInput{Mode: "generator", GeneratorID: &generator, Args: []string{}, Seed: &seed},
-			Answer: model.DraftAnswer{Mode: "generated", SolutionID: &solution}}}
+			Input:  model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{}, Seed: &seed},
+			Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}}
 	})
 }
 

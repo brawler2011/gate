@@ -3,6 +3,7 @@ import {describe, expect, test} from "bun:test";
 import {
   addProgram,
   addSubtask,
+  newGeneratedTest,
   describePointer,
   emptyStatement,
   formatPoints,
@@ -11,11 +12,13 @@ import {
   removeProgram,
   removeSubtask,
   removeTest,
+  renameProgram,
   setSubtaskDependencies,
   sumPoints,
   upsertTest,
 } from "@/components/workshop/draft/draftOps";
 
+import type {OpResult} from "@/components/workshop/draft/draftOps";
 import type {ProblemDraft} from "@/contracts/core/v1/schema";
 
 const emptyDraft = (): ProblemDraft => ({
@@ -32,7 +35,7 @@ const emptyDraft = (): ProblemDraft => ({
   validators: [],
   generators: [],
   solutions: [],
-  main_solution_id: null,
+  main_solution: null,
   library: [],
   statements: [],
   assets: [],
@@ -40,14 +43,43 @@ const emptyDraft = (): ProblemDraft => ({
   tests: [],
 });
 
+const applied = (result: OpResult): ProblemDraft => {
+  if ("error" in result) {
+    throw new Error(result.error);
+  }
+  return result.draft;
+};
+
 describe("programs", () => {
   test("the first solution becomes the main one, and removing it clears the choice", () => {
-    let draft = addProgram(emptyDraft(), "solution", "ok", "cpp", "");
-    const main = draft.solutions[0].id;
-    draft = addProgram(draft, "solution", "wa", "python", "");
-    expect(draft.main_solution_id).toBe(main);
-    expect(removeProgram(draft, "solution", draft.solutions[1].id).main_solution_id).toBe(main);
-    expect(removeProgram(draft, "solution", main).main_solution_id).toBeNull();
+    let draft = applied(addProgram(emptyDraft(), "solution", "ok", "cpp", ""));
+    draft = applied(addProgram(draft, "solution", "wa", "python", ""));
+    expect(draft.main_solution).toBe("ok");
+    expect(removeProgram(draft, "solution", "wa").main_solution).toBe("ok");
+    expect(removeProgram(draft, "solution", "ok").main_solution).toBeNull();
+  });
+
+  test("renaming a program carries the tests and the main solution that refer to it", () => {
+    let draft = applied(addProgram(emptyDraft(), "generator", "gen", "cpp", ""));
+    draft = applied(addProgram(draft, "solution", "ok", "cpp", ""));
+    draft = applied(addProgram(draft, "solution", "wa", "cpp", ""));
+    draft = addSubtask(draft, "All");
+    draft = upsertTest(draft, newGeneratedTest(draft, draft.subtasks[0].id));
+    draft = upsertTest(draft, {...newGeneratedTest(draft, draft.subtasks[0].id), answer: {mode: "generated", object_id: null, solution: "wa"}});
+
+    draft = applied(renameProgram(draft, "generator", "gen", "random"));
+    draft = applied(renameProgram(draft, "solution", "ok", "main"));
+    expect(draft.main_solution).toBe("main");
+    expect(draft.tests.map((t) => [t.input.generator, t.answer.solution])).toEqual([["random", "main"], ["random", "wa"]]);
+    // A generator and a solution may share a name; a rename never touches the other role.
+    draft = applied(renameProgram(applied(addProgram(draft, "generator", "wa", "cpp", "")), "generator", "wa", "big"));
+    expect(draft.tests[1].answer.solution).toBe("wa");
+  });
+
+  test("a name taken in the role is refused", () => {
+    const draft = applied(addProgram(applied(addProgram(emptyDraft(), "solution", "ok", "cpp", "")), "solution", "wa", "cpp", ""));
+    expect(renameProgram(draft, "solution", "wa", "ok")).toHaveProperty("error");
+    expect(addProgram(draft, "solution", "ok", "python", "")).toHaveProperty("error");
   });
 });
 
@@ -103,7 +135,7 @@ describe("points", () => {
 
 describe("server error pointers", () => {
   test("name the entry an error points at", () => {
-    let draft = addProgram(emptyDraft(), "generator", "gen", "cpp", "");
+    let draft = applied(addProgram(emptyDraft(), "generator", "gen", "cpp", ""));
     draft = addSubtask({...draft, statements: [emptyStatement("ru")]}, "A");
     draft = upsertTest(draft, newManualTest(draft, draft.subtasks[0].id));
     expect(describePointer(draft, "/generators/0/source")).toBe("Генератор gen");

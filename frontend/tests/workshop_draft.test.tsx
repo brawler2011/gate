@@ -19,7 +19,7 @@ const draft = (revision: number, title: string) => ({
   memory_limit_mb: 256, max_score: null,
   checker: null, interactor: null, validators: [], solutions: [], library: [], statements: [],
   generators: [{id: "g1", name: "gen", language: "cpp", source: ""}],
-  main_solution_id: null, subtasks: [], tests: [], assets: [],
+  main_solution: null, subtasks: [], tests: [], assets: [],
 });
 
 type Call = {method: string; url: URL; init?: RequestInit};

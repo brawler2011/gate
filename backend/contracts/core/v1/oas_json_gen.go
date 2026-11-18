@@ -11748,6 +11748,52 @@ func (s *NilProblemDraftProgram) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes string as json.
+func (o NilString) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes string from json.
+func (o *NilString) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilString to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v string
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	v, err := d.Str()
+	if err != nil {
+		return err
+	}
+	o.Value = string(v)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilString) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilString) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes uuid.UUID as json.
 func (o NilUUID) Encode(e *jx.Encoder) {
 	if o.Null {
@@ -15808,8 +15854,8 @@ func (s *ProblemDraft) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
-		e.FieldStart("main_solution_id")
-		s.MainSolutionID.Encode(e)
+		e.FieldStart("main_solution")
+		s.MainSolution.Encode(e)
 	}
 	{
 		e.FieldStart("library")
@@ -15867,7 +15913,7 @@ var jsonFieldsNameOfProblemDraft = [19]string{
 	10: "validators",
 	11: "generators",
 	12: "solutions",
-	13: "main_solution_id",
+	13: "main_solution",
 	14: "library",
 	15: "statements",
 	16: "assets",
@@ -16050,15 +16096,15 @@ func (s *ProblemDraft) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"solutions\"")
 			}
-		case "main_solution_id":
+		case "main_solution":
 			requiredBitSet[1] |= 1 << 5
 			if err := func() error {
-				if err := s.MainSolutionID.Decode(d); err != nil {
+				if err := s.MainSolution.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"main_solution_id\"")
+				return errors.Wrap(err, "decode field \"main_solution\"")
 			}
 		case "library":
 			requiredBitSet[1] |= 1 << 6
@@ -16226,15 +16272,15 @@ func (s *ProblemDraftAnswer) encodeFields(e *jx.Encoder) {
 		s.ObjectID.Encode(e)
 	}
 	{
-		e.FieldStart("solution_id")
-		s.SolutionID.Encode(e)
+		e.FieldStart("solution")
+		s.Solution.Encode(e)
 	}
 }
 
 var jsonFieldsNameOfProblemDraftAnswer = [3]string{
 	0: "mode",
 	1: "object_id",
-	2: "solution_id",
+	2: "solution",
 }
 
 // Decode decodes ProblemDraftAnswer from json.
@@ -16266,15 +16312,15 @@ func (s *ProblemDraftAnswer) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"object_id\"")
 			}
-		case "solution_id":
+		case "solution":
 			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
-				if err := s.SolutionID.Decode(d); err != nil {
+				if err := s.Solution.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"solution_id\"")
+				return errors.Wrap(err, "decode field \"solution\"")
 			}
 		default:
 			return d.Skip()
@@ -16635,8 +16681,8 @@ func (s *ProblemDraftInput) encodeFields(e *jx.Encoder) {
 		s.ObjectID.Encode(e)
 	}
 	{
-		e.FieldStart("generator_id")
-		s.GeneratorID.Encode(e)
+		e.FieldStart("generator")
+		s.Generator.Encode(e)
 	}
 	{
 		e.FieldStart("args")
@@ -16655,7 +16701,7 @@ func (s *ProblemDraftInput) encodeFields(e *jx.Encoder) {
 var jsonFieldsNameOfProblemDraftInput = [5]string{
 	0: "mode",
 	1: "object_id",
-	2: "generator_id",
+	2: "generator",
 	3: "args",
 	4: "seed",
 }
@@ -16689,15 +16735,15 @@ func (s *ProblemDraftInput) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"object_id\"")
 			}
-		case "generator_id":
+		case "generator":
 			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
-				if err := s.GeneratorID.Decode(d); err != nil {
+				if err := s.Generator.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"generator_id\"")
+				return errors.Wrap(err, "decode field \"generator\"")
 			}
 		case "args":
 			requiredBitSet[0] |= 1 << 3
@@ -16965,10 +17011,6 @@ func (s *ProblemDraftNamedProgram) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ProblemDraftNamedProgram) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("id")
-		json.EncodeUUID(e, s.ID)
-	}
-	{
 		e.FieldStart("name")
 		e.Str(s.Name)
 	}
@@ -16982,11 +17024,10 @@ func (s *ProblemDraftNamedProgram) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfProblemDraftNamedProgram = [4]string{
-	0: "id",
-	1: "name",
-	2: "language",
-	3: "source",
+var jsonFieldsNameOfProblemDraftNamedProgram = [3]string{
+	0: "name",
+	1: "language",
+	2: "source",
 }
 
 // Decode decodes ProblemDraftNamedProgram from json.
@@ -16998,20 +17039,8 @@ func (s *ProblemDraftNamedProgram) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "id":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := json.DecodeUUID(d)
-				s.ID = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"id\"")
-			}
 		case "name":
-			requiredBitSet[0] |= 1 << 1
+			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
 				v, err := d.Str()
 				s.Name = string(v)
@@ -17023,7 +17052,7 @@ func (s *ProblemDraftNamedProgram) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"name\"")
 			}
 		case "language":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				v, err := d.Str()
 				s.Language = string(v)
@@ -17035,7 +17064,7 @@ func (s *ProblemDraftNamedProgram) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"language\"")
 			}
 		case "source":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				v, err := d.Str()
 				s.Source = string(v)
@@ -17056,7 +17085,7 @@ func (s *ProblemDraftNamedProgram) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00001111,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

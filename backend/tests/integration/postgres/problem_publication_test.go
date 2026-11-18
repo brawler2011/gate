@@ -135,8 +135,8 @@ func TestPublicationRejectsInconsistentSaves(t *testing.T) {
 		{"missing answer", "provided answer needs content and no solution", func(d *model.Draft) { d.Tests[0].Answer.ObjectID = nil }},
 		{"missing generator", "generator is missing", func(d *model.Draft) {
 			seed := int64(1)
-			id := uuid.New()
-			d.Tests[0].Input = model.DraftInput{Mode: "generator", GeneratorID: &id, Seed: &seed}
+			name := "gen"
+			d.Tests[0].Input = model.DraftInput{Mode: "generator", Generator: &name, Seed: &seed}
 		}},
 		{"duplicate test", "/tests/1/id: ID is missing or not unique", func(d *model.Draft) { d.Tests = append(d.Tests, d.Tests[0]) }},
 	}
@@ -389,10 +389,10 @@ func TestPublicationSupportedTypes(t *testing.T) {
 					d.Tests = append(d.Tests, test)
 				}
 				if kind == "interactive" {
-					solution := uuid.New()
+					solution := "main"
 					d.Interactor = program("python3", "print('hello', flush=True)\n")
-					d.Solutions = append(d.Solutions, named(solution, "main", "python3", "input()\n"))
-					d.MainSolutionID = &solution
+					d.Solutions = append(d.Solutions, named(solution, "python3", "input()\n"))
+					d.MainSolution = &solution
 					for i := range d.Tests {
 						d.Tests[i].Answer = model.DraftAnswer{Mode: "interactive"}
 					}

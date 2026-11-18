@@ -159,19 +159,19 @@ func TestProblemBuildSnapshotAndRecovery(t *testing.T) {
 	require.ErrorIs(t, repo.HeartbeatBuild(ctx, next.ID, *next.LeaseToken, time.Minute), pkg.ErrConflict)
 }
 
-// Renaming programs, library files and assets changes only labels: tests
-// and the object references that keep uploads alive follow IDs.
+// Renaming library files and assets keeps the object references that keep
+// uploads alive; a program is renamed together with the tests that name it.
 func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
 	object := insertAvailableObject(t, ctx, pool, org)
-	generator, subtask := uuid.New(), uuid.New()
+	generator, subtask := "gen", uuid.New()
 	d.Library = []model.DraftLibraryFile{{Name: "testlib.h", Content: "// lib"}}
-	d.Generators = []model.DraftNamedProgram{named(generator, "gen", "cpp17", "int main(){}")}
+	d.Generators = []model.DraftNamedProgram{named(generator, "cpp17", "int main(){}")}
 	d.Assets = []model.DraftAsset{{Name: "pic.png", ObjectID: object}}
 	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete"}}
 	seed := int64(1)
-	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", GeneratorID: &generator, Seed: &seed}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &object}}}
+	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", Generator: &generator, Seed: &seed}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &object}}}
 	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
 	require.NoError(t, err)
 	saved, err := repo.GetDraft(ctx, d.ProblemID)
@@ -179,6 +179,7 @@ func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 
 	saved.Library[0].Name = "testlib-0.9.h"
 	saved.Generators[0].Name = "random"
+	saved.Tests[0].Input.Generator = &saved.Generators[0].Name
 	saved.Assets[0].Name = "graph.png"
 	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", saved), saved)
 	require.NoError(t, err)

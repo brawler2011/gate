@@ -8,7 +8,7 @@ import (
 )
 
 // placedProgram is a draft program at its package path. Key identifies it
-// in the build: the role of a single checker or interactor, else its ID.
+// in the build: programKey of its role and name.
 type placedProgram struct {
 	key     string
 	role    string
@@ -23,17 +23,20 @@ type packageLayout struct {
 	assets   map[string]uuid.UUID
 }
 
+// programKey identifies a program in a build; a single checker or interactor
+// goes by its role alone.
+func programKey(role, name string) string { return role + "/" + name }
+
 // placeDraft decides where each draft entry goes in the built package. Names
-// are labels, so entries whose file names collide are numbered.
-// A program's file gets the first extension of its language configuration.
+// are unique within a folder, so every entry keeps its name. A program's file
+// is its name with the first extension of its language configuration.
 func placeDraft(d model.Draft, languages *sandbox.Config) packageLayout {
 	l := packageLayout{texts: map[string]string{}, assets: map[string]uuid.UUID{}}
-	names := gfmt.FileNames{}
 	for _, f := range d.Library {
-		l.texts[names.Place(gfmt.LibraryFolder, f.Name)] = f.Text()
+		l.texts[gfmt.LibraryFolder+"/"+f.Name] = f.Text()
 	}
 	place := func(key, role, name string, p model.DraftProgram) {
-		path := names.Place(gfmt.RoleFolder(role), name+extension(languages, p.Language))
+		path := gfmt.RoleFolder(role) + "/" + name + extension(languages, p.Language)
 		l.texts[path] = p.Source
 		l.programs = append(l.programs, placedProgram{key: key, role: role, path: path, program: p})
 	}
@@ -48,7 +51,7 @@ func placeDraft(d model.Draft, languages *sandbox.Config) packageLayout {
 		programs []model.DraftNamedProgram
 	}{{"validator", d.Validators}, {"generator", d.Generators}, {"solution", d.Solutions}} {
 		for _, p := range list.programs {
-			place(p.ID.String(), list.role, p.Name, p.DraftProgram)
+			place(programKey(list.role, p.Name), list.role, p.Name, p.DraftProgram)
 		}
 	}
 	for _, s := range d.Statements {
@@ -59,9 +62,19 @@ func placeDraft(d model.Draft, languages *sandbox.Config) packageLayout {
 		}
 	}
 	for _, a := range d.Assets {
-		l.assets[names.Place(gfmt.AssetFolder, a.Name)] = a.ObjectID
+		l.assets[gfmt.AssetFolder+"/"+a.Name] = a.ObjectID
 	}
 	return l
+}
+
+// program returns the program placed under key, or nil.
+func (l packageLayout) program(key string) *placedProgram {
+	for i := range l.programs {
+		if l.programs[i].key == key {
+			return &l.programs[i]
+		}
+	}
+	return nil
 }
 
 // extension returns the source file extension of a language configuration;

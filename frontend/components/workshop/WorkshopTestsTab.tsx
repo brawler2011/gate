@@ -135,7 +135,7 @@ const describeInput = (test: ProblemDraftTest, draft: ProblemDraft, problemId: s
       </Badge>
     );
   }
-  const generator = draft.generators.find((g) => g.id === test.input.generator_id);
+  const generator = draft.generators.find((g) => g.name === test.input.generator);
   return (
     <Text size="sm" ff="monospace">
       {generator?.name ?? "?"} {test.input.args.join(" ")}

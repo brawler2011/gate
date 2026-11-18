@@ -254,8 +254,10 @@ func (e *execution) makeManifest() {
 		}
 		m.Subtasks[g.ID.String()] = gfmt.Subtask{Ordinal: g.Ordinal, Points: g.Points, Policy: g.Policy, Dependencies: deps, Tests: []gfmt.Test{}}
 	}
-	if d.MainSolutionID != nil {
-		m.Solutions["main"] = d.MainSolutionID.String()
+	if d.MainSolution != nil {
+		if p := e.layout.program(programKey("solution", *d.MainSolution)); p != nil {
+			m.Solutions["main"] = filepath.Base(p.path)
+		}
 	}
 	e.manifest = m
 }
@@ -298,17 +300,17 @@ func (e *execution) compile(ctx context.Context) error {
 	d := s.Draft
 	required := map[string]bool{"checker": true, "interactor": true}
 	if v := d.Validator(); v != nil {
-		required[v.ID.String()] = true
+		required[programKey("validator", v.Name)] = true
 	}
-	if d.MainSolutionID != nil {
-		required[d.MainSolutionID.String()] = true
+	if d.MainSolution != nil {
+		required[programKey("solution", *d.MainSolution)] = true
 	}
 	for _, test := range d.Tests {
-		if test.Input.GeneratorID != nil {
-			required[test.Input.GeneratorID.String()] = true
+		if test.Input.Generator != nil {
+			required[programKey("generator", *test.Input.Generator)] = true
 		}
-		if test.Answer.SolutionID != nil {
-			required[test.Answer.SolutionID.String()] = true
+		if test.Answer.Solution != nil {
+			required[programKey("solution", *test.Answer.Solution)] = true
 		}
 	}
 	for _, p := range e.layout.programs {
@@ -363,7 +365,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		inputID = id
 		ids = append(ids, id)
 	} else {
-		gen := e.compiled[test.Input.GeneratorID.String()]
+		gen := e.compiled[programKey("generator", *test.Input.Generator)]
 		args := append(append([]string{}, test.Input.Args...), strconv.FormatInt(*test.Input.Seed, 10))
 		result, err := e.sandbox.RunFiles(ctx, gen.executable, gen.language, "", args, nil, aux)
 		if err != nil {
@@ -380,7 +382,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		}
 	}
 	if validator := s.Draft.Validator(); validator != nil {
-		v := e.compiled[validator.ID.String()]
+		v := e.compiled[programKey("validator", validator.Name)]
 		result, err := e.sandbox.RunFiles(ctx, v.executable, v.language, inputID, nil, nil, aux)
 		if err != nil {
 			return fail("validate", test.Ordinal, "infrastructure", err)
@@ -395,7 +397,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 	if s.Draft.Type == "interactive" {
 		// As in Polygon, the interactor's output on the main solution is the
 		// answer the interactor and the checker later receive.
-		sol := e.compiled[s.Draft.MainSolutionID.String()]
+		sol := e.compiled[programKey("solution", *s.Draft.MainSolution)]
 		intr := e.compiled["interactor"]
 		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, intr.executable, intr.language, inputID, "", e.solutionLimits(), aux)
 		if err != nil {
@@ -420,13 +422,13 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			answerID = id
 			ids = append(ids, id)
 		}
-		solID := test.Answer.SolutionID
+		solution := test.Answer.Solution
 		if test.Answer.Mode == "provided" {
-			solID = s.Draft.MainSolutionID
+			solution = s.Draft.MainSolution
 		}
 		outputID = answerID
-		if solID != nil {
-			sol := e.compiled[solID.String()]
+		if solution != nil {
+			sol := e.compiled[programKey("solution", *solution)]
 			result, err := e.sandbox.RunFiles(ctx, sol.executable, sol.language, inputID, nil, nil, e.solutionLimits())
 			if err != nil {
 				return fail("answer", test.Ordinal, "infrastructure", err)

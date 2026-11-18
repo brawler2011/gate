@@ -1733,8 +1733,8 @@ export interface components {
             mode: "manual" | "generator";
             /** Format: uuid */
             object_id: string | null;
-            /** Format: uuid */
-            generator_id: string | null;
+            /** @description Name of a generator of the draft. */
+            generator: string | null;
             args: string[];
             /** Format: int64 */
             seed: number | null;
@@ -1744,8 +1744,8 @@ export interface components {
             mode: "provided" | "generated" | "interactive";
             /** Format: uuid */
             object_id: string | null;
-            /** Format: uuid */
-            solution_id: string | null;
+            /** @description Name of a solution of the draft. */
+            solution: string | null;
         };
         /** @description A source in a language configuration. The checker, interactor, validators and generators compile with the whole draft library, each file under its name; solutions compile alone. */
         ProblemDraftProgram: {
@@ -1761,10 +1761,9 @@ export interface components {
             /** @description Name of a standard checker from GET /lib, such as wcmp, or empty for the author's own source. */
             standard: string;
         };
-        /** @description A validator, generator or solution; tests and the main solution refer to it by ID. */
+        /** @description A validator, generator or solution; tests and the main solution refer to it by name. */
         ProblemDraftNamedProgram: {
-            /** Format: uuid */
-            id: string;
+            /** @description Unique among the programs of its role; the program's package file is the name with the extension of its language. */
             name: string;
             /** @description Identifier of the language configuration from GET /languages, such as cpp17 or python3. */
             language: string;
@@ -1819,7 +1818,7 @@ export interface components {
             /** Format: uuid */
             object_id: string;
         };
-        /** @description The editable problem as typed entries without package paths. Programs and tests are referred to by ID and their names are labels; library files are included by their names. */
+        /** @description The editable problem as typed entries without package paths. Programs are referred to by their names, unique within a role, and library files are included by their names; subtasks and tests are referred to by ID. */
         ProblemDraft: {
             /** Format: uuid */
             problem_id: string;
@@ -1841,8 +1840,8 @@ export interface components {
             validators: components["schemas"]["ProblemDraftNamedProgram"][];
             generators: components["schemas"]["ProblemDraftNamedProgram"][];
             solutions: components["schemas"]["ProblemDraftNamedProgram"][];
-            /** Format: uuid */
-            main_solution_id: string | null;
+            /** @description Name of a solution of the draft. */
+            main_solution: string | null;
             library: components["schemas"]["ProblemDraftLibraryFile"][];
             statements: components["schemas"]["ProblemDraftStatement"][];
             assets: components["schemas"]["ProblemDraftAsset"][];
@@ -1920,7 +1919,7 @@ export interface components {
         };
         /** @description One invalid value of a request body. */
         FieldError: {
-            /** @example /tests/3/input/generator_id */
+            /** @example /tests/3/input/generator */
             pointer: string;
             message: string;
         };

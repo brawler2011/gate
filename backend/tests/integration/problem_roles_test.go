@@ -59,7 +59,7 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 			}
 			var main corev1.ProblemDraftNamedProgram
 			for _, solution := range draft.Solutions {
-				if id, ok := draft.MainSolutionID.Get(); ok && solution.ID == id {
+				if name, ok := draft.MainSolution.Get(); ok && solution.Name == name {
 					main = solution
 				}
 			}

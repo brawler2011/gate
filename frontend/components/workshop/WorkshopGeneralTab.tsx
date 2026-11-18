@@ -32,7 +32,7 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
   const [type, setType] = useState<ProblemDraft["type"]>(draft.type);
   const [timeLimit, setTimeLimit] = useState<number>(draft.time_limit_ms);
   const [memoryLimit, setMemoryLimit] = useState<number>(draft.memory_limit_mb);
-  const [mainSolution, setMainSolution] = useState(draft.main_solution_id);
+  const [mainSolution, setMainSolution] = useState(draft.main_solution);
 
   const changed =
     title !== draft.title ||
@@ -40,7 +40,7 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
     type !== draft.type ||
     timeLimit !== draft.time_limit_ms ||
     memoryLimit !== draft.memory_limit_mb ||
-    mainSolution !== draft.main_solution_id;
+    mainSolution !== draft.main_solution;
 
   const handleSave = async () => {
     const ok = await save((current) => ({
@@ -50,7 +50,7 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
       type,
       time_limit_ms: timeLimit,
       memory_limit_mb: memoryLimit,
-      main_solution_id: mainSolution,
+      main_solution: mainSolution,
     }));
     if (ok) {
       notifications.show({title: "Сохранено", message: "Черновик обновлён", color: "green"});
@@ -115,7 +115,7 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
               label="Главное решение"
               placeholder="Не выбрано"
               clearable
-              data={draft.solutions.map((s) => ({value: s.id, label: s.name}))}
+              data={draft.solutions.map((s) => ({value: s.name, label: s.name}))}
               value={mainSolution}
               onChange={setMainSolution}
             />

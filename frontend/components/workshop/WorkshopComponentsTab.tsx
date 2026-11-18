@@ -16,6 +16,7 @@ import {
   isSingleRole,
   programsOf,
   removeProgram,
+  renameProgram,
   ROLE_LABELS,
   setSingleProgram,
   standardChecker,
@@ -284,25 +285,26 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
   const {save, isSaving} = useSaveDraft(problemId);
   const [params, setParams] = useSearchParams();
   const programs = programsOf(draft, role);
-  const selected = programs.find((p) => p.id === params.get("component")) ?? programs[0];
+  const selected = programs.find((p) => p.name === params.get("component")) ?? programs[0];
 
-  const open = (id: string) => {
+  const open = (name: string) => {
     const next = new URLSearchParams(params);
-    next.set("component", id);
+    next.set("component", name);
     setParams(next, {replace: true});
   };
 
   const create = async (newName: string, language: string): Promise<boolean> => {
-    let createdId: string | undefined;
-    const ok = await save((current) => {
-      const next = addProgram(current, role, newName, language, template(catalog, role, language));
-      createdId = programsOf(next, role).at(-1)?.id;
-      return next;
-    });
-    if (ok && createdId) {
-      setParams(new URLSearchParams({component: createdId}), {replace: true});
+    const ok = await save((current) => addProgram(current, role, newName, language, template(catalog, role, language)));
+    if (ok) {
+      open(newName);
     }
     return ok;
+  };
+
+  const rename = async (from: string, to: string): Promise<void> => {
+    if (await save((current) => renameProgram(current, role, from, to))) {
+      open(to);
+    }
   };
 
   return (
@@ -317,18 +319,18 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
             )}
             {programs.map((program) => (
               <NavLink
-                key={program.id}
-                active={program.id === selected?.id}
+                key={program.name}
+                active={program.name === selected?.name}
                 label={program.name}
                 description={languageName(catalog, program.language)}
                 rightSection={
-                  role === "solution" && draft.main_solution_id === program.id ? (
+                  role === "solution" && draft.main_solution === program.name ? (
                     <Badge size="xs" variant="light">
                       Главное
                     </Badge>
                   ) : undefined
                 }
-                onClick={() => open(program.id)}
+                onClick={() => open(program.name)}
               />
             ))}
             <NewProgramForm withName saving={isSaving} onCreate={create} />
@@ -338,24 +340,25 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
       <Grid.Col span={{base: 12, md: 8}}>
         {selected ? (
           <ProgramEditor
-            key={selected.id}
+            // Keyed by position, so that a rename keeps unsaved edits of the source.
+            key={programs.indexOf(selected)}
             label={selected.name}
             program={selected}
             saving={isSaving}
-            onChange={(patch) => void save((current) => updateProgram(current, role, selected.id, patch))}
-            onDelete={() => void save((current) => removeProgram(current, role, selected.id))}
+            onChange={(patch) => void save((current) => updateProgram(current, role, selected.name, patch))}
+            onDelete={() => void save((current) => removeProgram(current, role, selected.name))}
           >
             <RenameControl
-              key={`${selected.id}:${selected.name}`}
+              key={selected.name}
               name={selected.name}
               saving={isSaving}
-              onRename={(name) => void save((current) => updateProgram(current, role, selected.id, {name}))}
+              onRename={(name) => void rename(selected.name, name)}
             />
-            {role === "solution" && draft.main_solution_id !== selected.id && (
+            {role === "solution" && draft.main_solution !== selected.name && (
               <Button
                 variant="light"
                 loading={isSaving}
-                onClick={() => void save((current) => ({...current, main_solution_id: selected.id}))}
+                onClick={() => void save((current) => ({...current, main_solution: selected.name}))}
               >
                 Сделать главным
               </Button>

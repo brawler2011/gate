@@ -48,6 +48,7 @@ func (c *PackageContent) OpenImage(ctx context.Context, id uuid.UUID, sha256 str
 	}
 	return nil, "", pkg.ErrNotFound
 }
+
 // statementFromDraft returns the draft statement in language, falling back
 // to English and then to the first language.
 func statementFromDraft(d model.Draft, language string) *model.Statement {

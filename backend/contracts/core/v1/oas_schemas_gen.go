@@ -4760,6 +4760,51 @@ func (o NilProblemDraftProgram) Or(d ProblemDraftProgram) ProblemDraftProgram {
 	return d
 }
 
+// NewNilString returns new NilString with value set to v.
+func NewNilString(v string) NilString {
+	return NilString{
+		Value: v,
+	}
+}
+
+// NilString is nullable string.
+type NilString struct {
+	Value string
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilString) SetTo(v string) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilString) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilString) SetToNull() {
+	o.Null = true
+	var v string
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilString) Get() (v string, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilString) Or(d string) string {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilUUID returns new NilUUID with value set to v.
 func NewNilUUID(v uuid.UUID) NilUUID {
 	return NilUUID{
@@ -7957,8 +8002,9 @@ func (s *ProblemBuildState) UnmarshalText(data []byte) error {
 	}
 }
 
-// The editable problem as typed entries without package paths. Programs and tests are referred to by
-// ID and their names are labels; library files are included by their names.
+// The editable problem as typed entries without package paths. Programs are referred to by their
+// names, unique within a role, and library files are included by their names; subtasks and tests are
+// referred to by ID.
 // Ref: #/components/schemas/ProblemDraft
 type ProblemDraft struct {
 	ProblemID     uuid.UUID              `json:"problem_id"`
@@ -7972,15 +8018,16 @@ type ProblemDraft struct {
 	Checker       NilProblemDraftChecker `json:"checker"`
 	Interactor    NilProblemDraftProgram `json:"interactor"`
 	// At most one validator.
-	Validators     []ProblemDraftNamedProgram `json:"validators"`
-	Generators     []ProblemDraftNamedProgram `json:"generators"`
-	Solutions      []ProblemDraftNamedProgram `json:"solutions"`
-	MainSolutionID NilUUID                    `json:"main_solution_id"`
-	Library        []ProblemDraftLibraryFile  `json:"library"`
-	Statements     []ProblemDraftStatement    `json:"statements"`
-	Assets         []ProblemDraftAsset        `json:"assets"`
-	Subtasks       []ProblemDraftSubtask      `json:"subtasks"`
-	Tests          []ProblemDraftTest         `json:"tests"`
+	Validators []ProblemDraftNamedProgram `json:"validators"`
+	Generators []ProblemDraftNamedProgram `json:"generators"`
+	Solutions  []ProblemDraftNamedProgram `json:"solutions"`
+	// Name of a solution of the draft.
+	MainSolution NilString                 `json:"main_solution"`
+	Library      []ProblemDraftLibraryFile `json:"library"`
+	Statements   []ProblemDraftStatement   `json:"statements"`
+	Assets       []ProblemDraftAsset       `json:"assets"`
+	Subtasks     []ProblemDraftSubtask     `json:"subtasks"`
+	Tests        []ProblemDraftTest        `json:"tests"`
 }
 
 // GetProblemID returns the value of ProblemID.
@@ -8048,9 +8095,9 @@ func (s *ProblemDraft) GetSolutions() []ProblemDraftNamedProgram {
 	return s.Solutions
 }
 
-// GetMainSolutionID returns the value of MainSolutionID.
-func (s *ProblemDraft) GetMainSolutionID() NilUUID {
-	return s.MainSolutionID
+// GetMainSolution returns the value of MainSolution.
+func (s *ProblemDraft) GetMainSolution() NilString {
+	return s.MainSolution
 }
 
 // GetLibrary returns the value of Library.
@@ -8143,9 +8190,9 @@ func (s *ProblemDraft) SetSolutions(val []ProblemDraftNamedProgram) {
 	s.Solutions = val
 }
 
-// SetMainSolutionID sets the value of MainSolutionID.
-func (s *ProblemDraft) SetMainSolutionID(val NilUUID) {
-	s.MainSolutionID = val
+// SetMainSolution sets the value of MainSolution.
+func (s *ProblemDraft) SetMainSolution(val NilString) {
+	s.MainSolution = val
 }
 
 // SetLibrary sets the value of Library.
@@ -8175,9 +8222,10 @@ func (s *ProblemDraft) SetTests(val []ProblemDraftTest) {
 
 // Ref: #/components/schemas/ProblemDraftAnswer
 type ProblemDraftAnswer struct {
-	Mode       ProblemDraftAnswerMode `json:"mode"`
-	ObjectID   NilUUID                `json:"object_id"`
-	SolutionID NilUUID                `json:"solution_id"`
+	Mode     ProblemDraftAnswerMode `json:"mode"`
+	ObjectID NilUUID                `json:"object_id"`
+	// Name of a solution of the draft.
+	Solution NilString `json:"solution"`
 }
 
 // GetMode returns the value of Mode.
@@ -8190,9 +8238,9 @@ func (s *ProblemDraftAnswer) GetObjectID() NilUUID {
 	return s.ObjectID
 }
 
-// GetSolutionID returns the value of SolutionID.
-func (s *ProblemDraftAnswer) GetSolutionID() NilUUID {
-	return s.SolutionID
+// GetSolution returns the value of Solution.
+func (s *ProblemDraftAnswer) GetSolution() NilString {
+	return s.Solution
 }
 
 // SetMode sets the value of Mode.
@@ -8205,9 +8253,9 @@ func (s *ProblemDraftAnswer) SetObjectID(val NilUUID) {
 	s.ObjectID = val
 }
 
-// SetSolutionID sets the value of SolutionID.
-func (s *ProblemDraftAnswer) SetSolutionID(val NilUUID) {
-	s.SolutionID = val
+// SetSolution sets the value of Solution.
+func (s *ProblemDraftAnswer) SetSolution(val NilString) {
+	s.Solution = val
 }
 
 type ProblemDraftAnswerMode string
@@ -8330,11 +8378,12 @@ func (s *ProblemDraftChecker) SetStandard(val string) {
 
 // Ref: #/components/schemas/ProblemDraftInput
 type ProblemDraftInput struct {
-	Mode        ProblemDraftInputMode `json:"mode"`
-	ObjectID    NilUUID               `json:"object_id"`
-	GeneratorID NilUUID               `json:"generator_id"`
-	Args        []string              `json:"args"`
-	Seed        NilInt64              `json:"seed"`
+	Mode     ProblemDraftInputMode `json:"mode"`
+	ObjectID NilUUID               `json:"object_id"`
+	// Name of a generator of the draft.
+	Generator NilString `json:"generator"`
+	Args      []string  `json:"args"`
+	Seed      NilInt64  `json:"seed"`
 }
 
 // GetMode returns the value of Mode.
@@ -8347,9 +8396,9 @@ func (s *ProblemDraftInput) GetObjectID() NilUUID {
 	return s.ObjectID
 }
 
-// GetGeneratorID returns the value of GeneratorID.
-func (s *ProblemDraftInput) GetGeneratorID() NilUUID {
-	return s.GeneratorID
+// GetGenerator returns the value of Generator.
+func (s *ProblemDraftInput) GetGenerator() NilString {
+	return s.Generator
 }
 
 // GetArgs returns the value of Args.
@@ -8372,9 +8421,9 @@ func (s *ProblemDraftInput) SetObjectID(val NilUUID) {
 	s.ObjectID = val
 }
 
-// SetGeneratorID sets the value of GeneratorID.
-func (s *ProblemDraftInput) SetGeneratorID(val NilUUID) {
-	s.GeneratorID = val
+// SetGenerator sets the value of Generator.
+func (s *ProblemDraftInput) SetGenerator(val NilString) {
+	s.Generator = val
 }
 
 // SetArgs sets the value of Args.
@@ -8469,19 +8518,15 @@ func (s *ProblemDraftLibraryFile) SetAutoUpdate(val bool) {
 	s.AutoUpdate = val
 }
 
-// A validator, generator or solution; tests and the main solution refer to it by ID.
+// A validator, generator or solution; tests and the main solution refer to it by name.
 // Ref: #/components/schemas/ProblemDraftNamedProgram
 type ProblemDraftNamedProgram struct {
-	ID   uuid.UUID `json:"id"`
-	Name string    `json:"name"`
+	// Unique among the programs of its role; the program's package file is the name with the extension of
+	// its language.
+	Name string `json:"name"`
 	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
 	Language string `json:"language"`
 	Source   string `json:"source"`
-}
-
-// GetID returns the value of ID.
-func (s *ProblemDraftNamedProgram) GetID() uuid.UUID {
-	return s.ID
 }
 
 // GetName returns the value of Name.
@@ -8497,11 +8542,6 @@ func (s *ProblemDraftNamedProgram) GetLanguage() string {
 // GetSource returns the value of Source.
 func (s *ProblemDraftNamedProgram) GetSource() string {
 	return s.Source
-}
-
-// SetID sets the value of ID.
-func (s *ProblemDraftNamedProgram) SetID(val uuid.UUID) {
-	s.ID = val
 }
 
 // SetName sets the value of Name.

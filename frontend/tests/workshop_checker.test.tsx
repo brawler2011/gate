@@ -20,7 +20,7 @@ const WCMP = "#include \"testlib.h\"\n// wcmp\n";
 const draft: ProblemDraft = {
   problem_id: "problem", revision: 3, title: "A", short_name: "a", type: "pass-fail", time_limit_ms: 1000,
   memory_limit_mb: 256, max_score: null, checker: {language: "cpp20", source: "", standard: "wcmp"}, interactor: null,
-  validators: [], generators: [], solutions: [], main_solution_id: null, statements: [], assets: [], subtasks: [],
+  validators: [], generators: [], solutions: [], main_solution: null, statements: [], assets: [], subtasks: [],
   tests: [], library: [],
 };
 

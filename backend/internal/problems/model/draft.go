@@ -18,7 +18,8 @@ import (
 
 // Draft is the editable problem. It holds typed entries, never package paths:
 // where files go in a package is decided only by build, import and export.
-// Entries that others refer to have IDs; names are editable labels.
+// Programs and library files are identified by their names, unique within a
+// role; subtasks and tests, which have no unique names, by IDs.
 type Draft struct {
 	ProblemID     uuid.UUID     `json:"problem_id"`
 	Revision      int64         `json:"revision"`
@@ -34,17 +35,17 @@ type Draft struct {
 // DraftContent is the part of a draft stored as one document; the fields of
 // Draft outside it are columns that catalog queries read.
 type DraftContent struct {
-	Checker        *DraftChecker       `json:"checker"`
-	Interactor     *DraftProgram       `json:"interactor"`
-	Validators     []DraftNamedProgram `json:"validators"`
-	Generators     []DraftNamedProgram `json:"generators"`
-	Solutions      []DraftNamedProgram `json:"solutions"`
-	MainSolutionID *uuid.UUID          `json:"main_solution_id"`
-	Library        []DraftLibraryFile  `json:"library"`
-	Statements     []DraftStatement    `json:"statements"`
-	Assets         []DraftAsset        `json:"assets"`
-	Subtasks       []DraftSubtask      `json:"subtasks"`
-	Tests          []DraftTest         `json:"tests"`
+	Checker      *DraftChecker       `json:"checker"`
+	Interactor   *DraftProgram       `json:"interactor"`
+	Validators   []DraftNamedProgram `json:"validators"`
+	Generators   []DraftNamedProgram `json:"generators"`
+	Solutions    []DraftNamedProgram `json:"solutions"`
+	MainSolution *string             `json:"main_solution"`
+	Library      []DraftLibraryFile  `json:"library"`
+	Statements   []DraftStatement    `json:"statements"`
+	Assets       []DraftAsset        `json:"assets"`
+	Subtasks     []DraftSubtask      `json:"subtasks"`
+	Tests        []DraftTest         `json:"tests"`
 }
 
 // DraftProgram is a source in a language configuration. The checker,
@@ -73,10 +74,10 @@ func (c *DraftChecker) Text() string {
 	return c.Source
 }
 
-// DraftNamedProgram is a program of a role a draft may hold several of.
+// DraftNamedProgram is a program of a role a draft may hold several of. Its
+// name is unique within the role and is the stem of its package file.
 type DraftNamedProgram struct {
-	ID   uuid.UUID `json:"id"`
-	Name string    `json:"name"`
+	Name string `json:"name"`
 	DraftProgram
 }
 
@@ -135,18 +136,18 @@ type DraftTest struct {
 }
 
 type DraftInput struct {
-	Mode        string     `json:"mode"`
-	ObjectID    *uuid.UUID `json:"object_id"`
-	GeneratorID *uuid.UUID `json:"generator_id"`
-	Args        []string   `json:"args"`
+	Mode      string     `json:"mode"`
+	ObjectID  *uuid.UUID `json:"object_id"`
+	Generator *string    `json:"generator"`
+	Args      []string   `json:"args"`
 	// Seed is appended as one decimal argv element after Args (testlib convention).
 	Seed *int64 `json:"seed"`
 }
 
 type DraftAnswer struct {
-	Mode       string     `json:"mode"`
-	ObjectID   *uuid.UUID `json:"object_id"`
-	SolutionID *uuid.UUID `json:"solution_id"`
+	Mode     string     `json:"mode"`
+	ObjectID *uuid.UUID `json:"object_id"`
+	Solution *string    `json:"solution"`
 }
 
 type BuildSnapshot struct {
@@ -210,20 +211,20 @@ func (d *Draft) Statement(language string) *DraftStatement {
 	return nil
 }
 
-func findProgram(list []DraftNamedProgram, id uuid.UUID) *DraftNamedProgram {
+func findProgram(list []DraftNamedProgram, name string) *DraftNamedProgram {
 	for i := range list {
-		if list[i].ID == id {
+		if list[i].Name == name {
 			return &list[i]
 		}
 	}
 	return nil
 }
 
-// Generator returns the generator with id, or nil.
-func (d *Draft) Generator(id uuid.UUID) *DraftNamedProgram { return findProgram(d.Generators, id) }
+// Generator returns the generator named name, or nil.
+func (d *Draft) Generator(name string) *DraftNamedProgram { return findProgram(d.Generators, name) }
 
-// Solution returns the solution with id, or nil.
-func (d *Draft) Solution(id uuid.UUID) *DraftNamedProgram { return findProgram(d.Solutions, id) }
+// Solution returns the solution named name, or nil.
+func (d *Draft) Solution(name string) *DraftNamedProgram { return findProgram(d.Solutions, name) }
 
 // Validator returns the validator of the draft, or nil.
 func (d *Draft) Validator() *DraftNamedProgram {
@@ -357,8 +358,8 @@ func (d *Draft) ValidateBuild(q DraftQuotas, languages map[string]sandbox.Langua
 	if d.Type == "interactive" && d.Interactor == nil {
 		v.fail("/interactor", "interactor is required")
 	}
-	if d.Type == "interactive" && d.MainSolutionID == nil {
-		v.fail("/main_solution_id", "interactive problem requires a main solution")
+	if d.Type == "interactive" && d.MainSolution == nil {
+		v.fail("/main_solution", "interactive problem requires a main solution")
 	}
 	if strings.TrimSpace(d.Title) == "" {
 		v.fail("/title", "title is required")
@@ -421,14 +422,6 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		}
 		total += int64(len(value))
 	}
-	ids := make(map[uuid.UUID]bool)
-	unique := func(pointer string, id uuid.UUID) {
-		if id == uuid.Nil || ids[id] {
-			v.fail(pointer, "ID is missing or not unique")
-		}
-		ids[id] = true
-	}
-
 	library := make(map[string]bool)
 	for i, f := range d.Library {
 		at := fmt.Sprintf("/library/%d", i)
@@ -456,26 +449,25 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	if d.Interactor != nil {
 		program("/interactor", *d.Interactor)
 	}
-	roles := make(map[uuid.UUID]string)
 	for _, list := range []struct {
 		role     string
 		programs []DraftNamedProgram
 	}{{"validators", d.Validators}, {"generators", d.Generators}, {"solutions", d.Solutions}} {
+		names := make(map[string]bool)
 		for i, p := range list.programs {
 			at := fmt.Sprintf("/%s/%d", list.role, i)
-			unique(at+"/id", p.ID)
-			if !ValidFileName(p.Name) {
-				v.fail(at+"/name", "invalid name %q", p.Name)
+			if !ValidFileName(p.Name) || names[p.Name] {
+				v.fail(at+"/name", "invalid or duplicate name %q", p.Name)
 			}
+			names[p.Name] = true
 			program(at, p.DraftProgram)
-			roles[p.ID] = list.role
 		}
 	}
 	if len(d.Validators) > 1 {
 		v.fail("/validators/1", "a problem has at most one validator")
 	}
-	if d.MainSolutionID != nil && roles[*d.MainSolutionID] != "solutions" {
-		v.fail("/main_solution_id", "main solution is not a solution")
+	if d.MainSolution != nil && d.Solution(*d.MainSolution) == nil {
+		v.fail("/main_solution", "unknown solution %q", *d.MainSolution)
 	}
 
 	languages := make(map[string]bool)
@@ -505,7 +497,7 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	}
 
 	d.validateSubtasks(v)
-	d.validateTests(v, roles)
+	d.validateTests(v)
 }
 
 func (d *Draft) validateSubtasks(v *validation) {
@@ -568,7 +560,7 @@ func (d *Draft) validateSubtasks(v *validation) {
 	}
 }
 
-func (d *Draft) validateTests(v *validation, roles map[uuid.UUID]string) {
+func (d *Draft) validateTests(v *validation) {
 	subtasks := make(map[uuid.UUID]bool)
 	for _, g := range d.Subtasks {
 		subtasks[g.ID] = true
@@ -594,7 +586,7 @@ func (d *Draft) validateTests(v *validation, roles map[uuid.UUID]string) {
 		i := test.Input
 		switch i.Mode {
 		case "manual":
-			if i.ObjectID == nil || *i.ObjectID == uuid.Nil || i.GeneratorID != nil || i.Seed != nil || len(i.Args) != 0 {
+			if i.ObjectID == nil || *i.ObjectID == uuid.Nil || i.Generator != nil || i.Seed != nil || len(i.Args) != 0 {
 				v.fail(at+"/input", "manual input needs content and no generator")
 			}
 		case "generator":
@@ -604,8 +596,8 @@ func (d *Draft) validateTests(v *validation, roles map[uuid.UUID]string) {
 			if i.Seed == nil {
 				v.fail(at+"/input/seed", "generated input needs a seed")
 			}
-			if i.GeneratorID == nil || roles[*i.GeneratorID] != "generators" {
-				v.fail(at+"/input/generator_id", "generator is missing")
+			if i.Generator == nil || d.Generator(*i.Generator) == nil {
+				v.fail(at+"/input/generator", "generator is missing")
 			}
 		default:
 			v.fail(at+"/input/mode", "invalid input mode %q", i.Mode)
@@ -620,7 +612,7 @@ func (d *Draft) validateTests(v *validation, roles map[uuid.UUID]string) {
 		}
 		a := test.Answer
 		if d.Type == "interactive" {
-			if a.Mode != "interactive" || a.ObjectID != nil || a.SolutionID != nil {
+			if a.Mode != "interactive" || a.ObjectID != nil || a.Solution != nil {
 				v.fail(at+"/answer", "interactive test cannot have an ordinary answer")
 			}
 			continue
@@ -630,11 +622,11 @@ func (d *Draft) validateTests(v *validation, roles map[uuid.UUID]string) {
 			if a.ObjectID != nil {
 				v.fail(at+"/answer/object_id", "generated answer cannot have content")
 			}
-			if a.SolutionID == nil || roles[*a.SolutionID] != "solutions" {
-				v.fail(at+"/answer/solution_id", "solution is missing")
+			if a.Solution == nil || d.Solution(*a.Solution) == nil {
+				v.fail(at+"/answer/solution", "solution is missing")
 			}
 		case "provided":
-			if a.ObjectID == nil || *a.ObjectID == uuid.Nil || a.SolutionID != nil {
+			if a.ObjectID == nil || *a.ObjectID == uuid.Nil || a.Solution != nil {
 				v.fail(at+"/answer", "provided answer needs content and no solution")
 			}
 		default:
