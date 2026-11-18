@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -20,6 +21,7 @@ import (
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/formats"
+	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/formats/tex"
 	"github.com/brawler2011/gate/backend/pkg/ziputil"
@@ -99,13 +101,6 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 			return nil, err
 		}
 	}
-	for path, text := range result.draft.Files {
-		if strings.HasPrefix(path, "statements/") {
-			statement := ParseStatementMarkdown(text)
-			statement.Title = ""
-			result.draft.Files[path] = RenderStatementMarkdown(statement)
-		}
-	}
 	if err := result.draft.ComputeScores(); err != nil {
 		return nil, err
 	}
@@ -159,13 +154,14 @@ func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (import
 	return importObject{temporaryID: id, path: path, spec: model.UploadSpec{Purpose: purpose, SHA256: hex.EncodeToString(h.Sum(nil)), Size: n}}, nil
 }
 
-// convertImport places a package read from an author format into the draft
-// layout: each program in its role folder, shared sources in lib/,
-// statements in statements/<language>.md and statement resources in assets/.
+// convertImport turns a package read from an author format into draft
+// entries: programs by role, library files, statement sections and assets.
 // Test inputs, answers and assets become objects.
 func (uc *DraftUseCase) convertImport(result *draftImport, root string, p *spec.Problem, id uuid.UUID, revision int64) error {
-	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}, library: map[string]string{}, names: map[string][]string{}}
-	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb, Files: map[string]string{}, Components: []model.DraftComponent{}, Tests: []model.DraftTest{}, Subtasks: []model.DraftSubtask{}, Assets: []model.DraftAsset{}}
+	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}, library: map[string]uuid.UUID{}}
+	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb,
+		DraftContent: model.DraftContent{Validators: []model.DraftNamedProgram{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftNamedProgram{},
+			Library: []model.DraftLibraryFile{}, Statements: []model.DraftStatement{}, Assets: []model.DraftAsset{}, Tests: []model.DraftTest{}, Subtasks: []model.DraftSubtask{}}}
 	if err := c.convert(p); err != nil {
 		return err
 	}
@@ -182,46 +178,54 @@ type importConverter struct {
 	textTests bool
 	// objects maps a package path to the object holding it.
 	objects map[string]uuid.UUID
-	// library maps the package path of a library file to its draft path, and
-	// names maps each library file name to the draft paths of that name.
-	library map[string]string
-	names   map[string][]string
-	// files and textBytes count the draft as it grows, against DraftQuotas.
+	// library maps the package path of a library file to its entry.
+	library map[string]uuid.UUID
+	// files, programs and textBytes count the draft as it grows, against
+	// DraftQuotas.
 	files     int
+	programs  int
 	textBytes int64
 }
 
 func (c *importConverter) convert(p *spec.Problem) error {
 	for _, f := range p.Library {
-		if err := c.addLibrary(f); err != nil {
+		lid, err := c.libraryFile(f.Name, f.Path)
+		if err != nil {
+			return err
+		}
+		c.library[f.Path] = lid
+	}
+	var err error
+	if p.Checker != nil {
+		if c.draft.Checker, err = c.program(*p.Checker); err != nil {
 			return err
 		}
 	}
-	for _, singleton := range []struct {
-		role    string
-		program *spec.Program
-	}{{"checker", p.Checker}, {"validator", p.Validator}, {"interactor", p.Interactor}} {
-		if singleton.program != nil {
-			if _, err := c.addComponent(singleton.role, *singleton.program); err != nil {
-				return err
-			}
+	if p.Interactor != nil {
+		if c.draft.Interactor, err = c.program(*p.Interactor); err != nil {
+			return err
+		}
+	}
+	if p.Validator != nil {
+		if _, err := c.named(&c.draft.Validators, *p.Validator); err != nil {
+			return err
 		}
 	}
 	generators := map[string]uuid.UUID{}
 	for _, g := range p.Generators {
-		cid, err := c.addComponent("generator", g)
+		gid, err := c.named(&c.draft.Generators, g)
 		if err != nil {
 			return err
 		}
-		generators[g.Path] = cid
+		generators[g.Path] = gid
 	}
 	for _, s := range p.Solutions {
-		cid, err := c.addComponent("solution", s)
+		sid, err := c.named(&c.draft.Solutions, s)
 		if err != nil {
 			return err
 		}
 		if s.Path == p.MainSolution {
-			c.draft.MainSolutionID = &cid
+			c.draft.MainSolutionID = &sid
 		}
 	}
 	if p.MainSolution != "" && c.draft.MainSolutionID == nil {
@@ -233,8 +237,7 @@ func (c *importConverter) convert(p *spec.Problem) error {
 		}
 	}
 	for _, a := range p.Assets {
-		path := model.AssetFolder + "/" + a.Name
-		if !model.ValidDraftPath(path) {
+		if !model.ValidFileName(a.Name) {
 			return pkg.Wrap(pkg.ErrBadInput, nil, "invalid asset name "+a.Name)
 		}
 		if err := c.charge(0); err != nil {
@@ -244,125 +247,126 @@ func (c *importConverter) convert(p *spec.Problem) error {
 		if err != nil {
 			return err
 		}
-		c.draft.Assets = append(c.draft.Assets, model.DraftAsset{Path: path, ObjectID: oid})
+		c.draft.Assets = append(c.draft.Assets, model.DraftAsset{Name: a.Name, ObjectID: oid})
 	}
-	// Components are listed by path, as the workshop shows the folders.
-	slices.SortFunc(c.draft.Components, func(a, b model.DraftComponent) int { return strings.Compare(a.Path, b.Path) })
 	return c.addGroups(p.Groups, generators)
 }
 
-// addLibrary stores a library file in lib/ under its name. Copies with equal
-// text, such as testlib.h in every ICPC program folder, share one file; a
-// different file of the same name gets a numbered one.
-func (c *importConverter) addLibrary(f spec.File) error {
-	text, err := c.readText(f.Path)
-	if err != nil {
-		return err
+// libraryFile returns the library entry named name with the text of the
+// package file at path. Copies with equal name and text, such as testlib.h in
+// every ICPC program folder, share one entry.
+func (c *importConverter) libraryFile(name, path string) (uuid.UUID, error) {
+	if !model.ValidFileName(name) {
+		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid library file name "+name)
 	}
-	for _, path := range c.names[f.Name] {
-		if c.draft.Files[path] == text {
-			c.library[f.Path] = path
-			return nil
-		}
-	}
-	path, err := c.place(model.LibraryFolder, f.Name)
-	if err != nil {
-		return err
-	}
-	if err := c.charge(len(text)); err != nil {
-		return err
-	}
-	c.draft.Files[path] = text
-	c.library[f.Path] = path
-	c.names[f.Name] = append(c.names[f.Name], path)
-	return nil
-}
-
-// place returns a free draft path for name in folder, numbering the name when
-// another file took it.
-func (c *importConverter) place(folder, name string) (string, error) {
-	path := folder + "/" + name
-	ext := filepath.Ext(name)
-	for n := 2; c.taken(path); n++ {
-		path = fmt.Sprintf("%s/%s-%d%s", folder, strings.TrimSuffix(name, ext), n, ext)
-	}
-	if !model.ValidDraftPath(path) {
-		return "", pkg.Wrap(pkg.ErrBadInput, nil, "invalid file name "+name)
-	}
-	return path, nil
-}
-
-func (c *importConverter) taken(path string) bool {
-	_, ok := c.draft.Files[path]
-	return ok
-}
-
-// addComponent places a program in its role folder and attaches its library
-// dependencies.
-func (c *importConverter) addComponent(role string, program spec.Program) (uuid.UUID, error) {
-	if len(c.draft.Components) >= c.uc.DraftQuotas.Components {
-		return uuid.Nil, pkg.ErrPayloadTooLarge
-	}
-	path, err := c.place(model.ComponentFolder(role), program.Name)
+	text, err := c.readText(path)
 	if err != nil {
 		return uuid.Nil, err
 	}
-	if _, ok := c.uc.BuildOptions.Languages[model.LanguageForPath(path)]; !ok {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "unsupported source language: "+path)
+	for _, f := range c.draft.Library {
+		if f.Name == name && f.Content == text {
+			return f.ID, nil
+		}
+	}
+	if err := c.charge(len(text)); err != nil {
+		return uuid.Nil, err
+	}
+	lid := uuid.New()
+	c.draft.Library = append(c.draft.Library, model.DraftLibraryFile{ID: lid, Name: name, Content: text})
+	return lid, nil
+}
+
+// program reads a program source and resolves its library dependencies; a
+// program without explicit dependencies includes the whole library.
+func (c *importConverter) program(program spec.Program) (*model.DraftProgram, error) {
+	if c.programs++; c.programs > c.uc.DraftQuotas.Components {
+		return nil, pkg.ErrPayloadTooLarge
+	}
+	language := gfmt.Language(program.Name)
+	if _, ok := c.uc.BuildOptions.Languages[language]; !ok {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "unsupported source language: "+program.Path)
 	}
 	text, err := c.readText(program.Path)
 	if err != nil {
-		return uuid.Nil, err
+		return nil, err
 	}
 	if err := c.charge(len(text)); err != nil {
-		return uuid.Nil, err
+		return nil, err
 	}
-	deps := map[string]string{}
+	deps := []uuid.UUID{}
 	if program.Dependencies == nil {
-		for name, paths := range c.names {
-			if len(paths) > 1 {
-				return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "different library files named "+name)
+		names := map[string]bool{}
+		for _, f := range c.draft.Library {
+			if names[f.Name] {
+				return nil, pkg.Wrap(pkg.ErrBadInput, nil, "different library files named "+f.Name)
 			}
-			deps[name] = paths[0]
+			names[f.Name] = true
+			deps = append(deps, f.ID)
 		}
 	}
-	for destination, source := range program.Dependencies {
-		lib, ok := c.library[source]
-		if !ok {
-			return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "dependency "+source+" of "+program.Path+" is not a library file")
+	for _, destination := range slices.Sorted(maps.Keys(program.Dependencies)) {
+		source := program.Dependencies[destination]
+		if _, ok := c.library[source]; !ok {
+			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "dependency "+source+" of "+program.Path+" is not a library file")
 		}
-		deps[destination] = lib
+		// A dependency is placed under the name of its library file.
+		lid, err := c.libraryFile(destination, source)
+		if err != nil {
+			return nil, err
+		}
+		deps = append(deps, lid)
 	}
-	c.draft.Files[path] = text
-	cid := uuid.New()
-	c.draft.Components = append(c.draft.Components, model.DraftComponent{ID: cid, Role: role, Path: path, Dependencies: deps})
-	return cid, nil
+	return &model.DraftProgram{Language: language, Source: text, Dependencies: deps}, nil
 }
 
-// addStatement stores a statement as statements/<language>.md, converting
+// named adds a program of a role a draft holds several of, named after its
+// file without the extension.
+func (c *importConverter) named(list *[]model.DraftNamedProgram, program spec.Program) (uuid.UUID, error) {
+	p, err := c.program(program)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	id := uuid.New()
+	*list = append(*list, model.DraftNamedProgram{ID: id, Name: spec.Stem(program.Name), DraftProgram: *p})
+	return id, nil
+}
+
+// addStatement adds the statement sections in one language, converting
 // LaTeX to Markdown.
 func (c *importConverter) addStatement(s spec.Statement) error {
-	path := model.StatementFolder + "/" + s.Language + ".md"
-	if !model.ValidDraftPath(path) || strings.Contains(s.Language, "/") {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid statement language "+s.Language)
-	}
-	if c.taken(path) {
+	if c.draft.Statement(s.Language) != nil {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "several statements in "+s.Language)
 	}
-	text, err := c.readText(s.Path)
-	if err != nil {
-		return err
+	statement := model.DraftStatement{Language: s.Language}
+	sections := map[string]string{}
+	if s.TeX != "" {
+		text, err := c.readText(s.TeX)
+		if err != nil {
+			return err
+		}
+		sections = tex.ToSections(text)
 	}
-	if s.TeX {
-		text = tex.ToMarkdown(text)
+	for name, path := range s.Sections {
+		text, err := c.readText(path)
+		if err != nil {
+			return err
+		}
+		sections[name] = strings.TrimSpace(text)
 	}
-	if len(text) > int(c.uc.DraftQuotas.FileBytes) {
-		return pkg.ErrPayloadTooLarge
+	for name, text := range sections {
+		section := statement.Section(name)
+		if section == nil {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "unknown statement section "+name+" in "+s.Language)
+		}
+		if len(text) > int(c.uc.DraftQuotas.FileBytes) {
+			return pkg.ErrPayloadTooLarge
+		}
+		if err := c.charge(len(text)); err != nil {
+			return err
+		}
+		*section = text
 	}
-	if err := c.charge(len(text)); err != nil {
-		return err
-	}
-	c.draft.Files[path] = text
+	c.draft.Statements = append(c.draft.Statements, statement)
 	return nil
 }
 
@@ -409,7 +413,7 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map
 			return t, pkg.Wrap(pkg.ErrBadInput, nil, "generator "+test.Generator+" not found")
 		}
 		seed := int64(0)
-		t.Input = model.DraftInput{Mode: "generator", ComponentID: &gen, Args: test.Args, Seed: &seed}
+		t.Input = model.DraftInput{Mode: "generator", GeneratorID: &gen, Args: test.Args, Seed: &seed}
 		if t.Input.Args == nil {
 			t.Input.Args = []string{}
 		}
@@ -430,7 +434,7 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map
 		}
 		t.Answer = model.DraftAnswer{Mode: "provided", ObjectID: &oid}
 	default:
-		t.Answer = model.DraftAnswer{Mode: "generated", ComponentID: c.draft.MainSolutionID}
+		t.Answer = model.DraftAnswer{Mode: "generated", SolutionID: c.draft.MainSolutionID}
 	}
 	return t, nil
 }

@@ -7,31 +7,53 @@ import {useSearchParams} from "react-router-dom";
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 
 import {DraftGate} from "./draft/DraftGate";
-import {addLibraryFile, libraryFiles, LIBRARY_FOLDER, removeLibraryFile, setFile} from "./draft/draftOps";
+import {addLibraryFile, removeLibraryFile, updateLibraryFile} from "./draft/draftOps";
 import {SourceEditor} from "./draft/SourceEditor";
 import {useSaveDraft} from "./draft/useDraft";
 
 import type {ProblemDraft} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
+type RenameProps = {name: string; saving: boolean; onRename: (name: string) => void};
+
+const RenameFile = ({name, saving, onRename}: RenameProps): ReactNode => {
+  const [value, setValue] = useState(name);
+  return (
+    <Grid gutter="xs" align="flex-end">
+      <Grid.Col span="auto">
+        <TextInput label="Имя файла" description="Под этим именем программы подключают файл" value={value} onChange={(e) => setValue(e.currentTarget.value)} />
+      </Grid.Col>
+      <Grid.Col span="content">
+        <Button variant="default" disabled={value.trim() === "" || value.trim() === name} loading={saving} onClick={() => onRename(value.trim())}>
+          Переименовать
+        </Button>
+      </Grid.Col>
+    </Grid>
+  );
+};
+
 const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: string}): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
   const [params, setParams] = useSearchParams();
   const [newName, setNewName] = useState("");
-  const files = libraryFiles(draft);
-  const selected = files.find((path) => path === params.get("file")) ?? files[0];
+  const selected = draft.library.find((file) => file.id === params.get("file")) ?? draft.library[0];
 
-  const open = (path: string) => {
+  const open = (id: string) => {
     const next = new URLSearchParams(params);
-    next.set("file", path);
+    next.set("file", id);
     setParams(next, {replace: true});
   };
 
   const handleCreate = async () => {
-    const name = newName.trim();
-    if (await save((current) => addLibraryFile(current, name, ""))) {
+    let createdId = "";
+    const ok = await save((current) => {
+      const result = addLibraryFile(current, newName.trim());
+      createdId = result.id;
+      return result.draft;
+    });
+    if (ok) {
       setNewName("");
-      open(`${LIBRARY_FOLDER}/${name}`);
+      open(createdId);
     }
   };
 
@@ -40,17 +62,17 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
       <Grid.Col span={{base: 12, md: 4}}>
         <SectionPaper title="Библиотека">
           <Stack gap="xs">
-            {files.length === 0 && (
+            {draft.library.length === 0 && (
               <Text size="sm" c="dimmed">
-                Файлов пока нет. Например, добавьте testlib.h и подключите его к компонентам.
+                Файлов пока нет. Например, добавьте testlib.h и подключите его к программам.
               </Text>
             )}
-            {files.map((path) => (
+            {draft.library.map((file) => (
               <NavLink
-                key={path}
-                active={path === selected}
-                label={path.slice(LIBRARY_FOLDER.length + 1)}
-                onClick={() => open(path)}
+                key={file.id}
+                active={file.id === selected?.id}
+                label={file.name}
+                onClick={() => open(file.id)}
               />
             ))}
             <TextInput label="Новый файл" placeholder="testlib.h" value={newName} onChange={(e) => setNewName(e.currentTarget.value)} />
@@ -63,14 +85,22 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
       <Grid.Col span={{base: 12, md: 8}}>
         {selected ? (
           <SectionPaper>
-            <SourceEditor
-              key={`${selected}:${draft.revision}`}
-              path={selected}
-              content={draft.files[selected] ?? ""}
-              saving={isSaving}
-              onSave={(content) => void save((current) => setFile(current, selected, content))}
-              onDelete={() => void save((current) => removeLibraryFile(current, selected))}
-            />
+            <Stack gap="md">
+              <RenameFile
+                key={`${selected.id}:${selected.name}`}
+                name={selected.name}
+                saving={isSaving}
+                onRename={(name) => void save((current) => updateLibraryFile(current, selected.id, {name}))}
+              />
+              <SourceEditor
+                key={selected.id}
+                label={selected.name}
+                content={selected.content}
+                saving={isSaving}
+                onSave={(content) => void save((current) => updateLibraryFile(current, selected.id, {content}))}
+                onDelete={() => void save((current) => removeLibraryFile(current, selected.id))}
+              />
+            </Stack>
           </SectionPaper>
         ) : null}
       </Grid.Col>

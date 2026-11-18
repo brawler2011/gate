@@ -1,19 +1,19 @@
 import type {
   ProblemDraft,
-  ProblemDraftComponent,
+  ProblemDraftLibraryFile,
+  ProblemDraftNamedProgram,
+  ProblemDraftProgram,
+  ProblemDraftStatement,
   ProblemDraftSubtask,
   ProblemDraftTest,
 } from "@/contracts/core/v1/schema";
 
-export type ComponentRole = ProblemDraftComponent["role"];
+/**
+ * Edit operations of the workshop. They only change the draft; the server
+ * validates the result on save and names the offending entry.
+ */
 
-const ROLE_FOLDERS: Record<ComponentRole, string> = {
-  checker: "checkers",
-  validator: "validators",
-  interactor: "interactors",
-  generator: "generators",
-  solution: "solutions",
-};
+export type ComponentRole = "checker" | "validator" | "interactor" | "generator" | "solution";
 
 export const ROLE_LABELS: Record<ComponentRole, string> = {
   checker: "Чекер",
@@ -23,26 +23,19 @@ export const ROLE_LABELS: Record<ComponentRole, string> = {
   solution: "Решение",
 };
 
-export const LIBRARY_FOLDER = "lib";
-export const STATEMENT_FOLDER = "statements";
-export const ASSET_FOLDER = "assets";
+/** Roles the draft holds as a single program field rather than a list. */
+export type SingleRole = "checker" | "interactor";
+export type ListRole = "validator" | "generator" | "solution";
+
+export const isSingleRole = (role: ComponentRole): role is SingleRole => role === "checker" || role === "interactor";
+
+const LIST_FIELDS = {validator: "validators", generator: "generators", solution: "solutions"} as const;
+
+export const LANGUAGES = ["cpp", "python", "go", "java"];
 
 export type OpResult = {draft: ProblemDraft} | {error: string};
 
 const newId = (): string => crypto.randomUUID();
-
-/** Validates a file name or relative path the server accepts. */
-export const isValidPath = (path: string): boolean =>
-  path !== "" &&
-  path.length <= 512 &&
-  !path.startsWith("/") &&
-  !path.endsWith("/") &&
-  !path.includes("//") &&
-  !path.includes("\\") &&
-  !path.split("/").some((part) => part === "." || part === "..") &&
-  path !== "problem.yaml" &&
-  path !== ".gate" &&
-  !path.startsWith(".gate/");
 
 /** Points are exact hundredths; arithmetic runs on integers. */
 export const toHundredths = (points: number): number => Math.round(points * 100);
@@ -52,157 +45,96 @@ export const formatPoints = (points: number): string => points.toFixed(2).replac
 export const sumPoints = (tests: ProblemDraftTest[]): number =>
   fromHundredths(tests.reduce((total, test) => total + toHundredths(test.points), 0));
 
-/** Roles a draft holds at most one component of; the role folder identifies it. */
-export const SINGLETON_ROLES: ReadonlySet<ComponentRole> = new Set(["checker", "validator", "interactor"]);
+export const programsOf = (draft: ProblemDraft, role: ListRole): ProblemDraftNamedProgram[] => draft[LIST_FIELDS[role]];
 
-/** Canonical source extension of each language; the server derives the language from it. */
-export const LANGUAGE_EXTENSIONS: Record<string, string> = {
-  cpp: ".cpp",
-  python: ".py",
-  go: ".go",
-  java: ".java",
-};
-
-const EXTENSION_LANGUAGES: Record<string, string> = {
-  ".cpp": "cpp",
-  ".cc": "cpp",
-  ".cxx": "cpp",
-  ".py": "python",
-  ".go": "go",
-  ".java": "java",
-};
-
-/** Mirrors Go's filepath.Ext: the suffix from the last dot of the file name. */
-const extensionOf = (path: string): string => {
-  const name = path.slice(path.lastIndexOf("/") + 1);
-  const dot = name.lastIndexOf(".");
-  return dot < 0 ? "" : name.slice(dot).toLowerCase();
-};
-
-/** Returns the language of a source file from its extension, or "" when unknown. */
-export const languageForPath = (path: string): string => EXTENSION_LANGUAGES[extensionOf(path)] ?? "";
-
-const roleComponent = (draft: ProblemDraft, role: ComponentRole): ProblemDraftComponent | undefined =>
-  draft.components.find((c) => c.role === role);
-
-/** Adds a component named `stem` plus the extension of `language`. */
-export const addComponent = (
+/** Sets the single checker or interactor; null removes it. */
+export const setSingleProgram = (
   draft: ProblemDraft,
-  role: ComponentRole,
-  stem: string,
-  language: string,
-  source: string,
-): OpResult => {
-  const extension = LANGUAGE_EXTENSIONS[language];
-  if (!extension) {
-    return {error: "Неизвестный язык"};
-  }
-  const path = `${ROLE_FOLDERS[role]}/${stem}${extension}`;
-  if (!isValidPath(path) || stem === "" || stem.includes("/")) {
-    return {error: "Недопустимое имя файла"};
-  }
-  if (SINGLETON_ROLES.has(role) && roleComponent(draft, role)) {
-    return {error: `${ROLE_LABELS[role]} у задачи может быть только один`};
-  }
-  if (path in draft.files || draft.assets.some((asset) => asset.path === path)) {
-    return {error: "Файл с таким именем уже существует"};
-  }
-  const component: ProblemDraftComponent = {id: newId(), role, path, dependencies: {}};
-  return {
-    draft: {
-      ...draft,
-      files: {...draft.files, [path]: source},
-      components: [...draft.components, component],
-      // The first solution becomes the main one.
-      main_solution_id: role === "solution" && !draft.main_solution_id ? component.id : draft.main_solution_id,
-    },
-  };
-};
-
-/** Changes a component's language by renaming its source; ID, dependencies and tests are kept. */
-export const setComponentLanguage = (draft: ProblemDraft, id: string, language: string): OpResult => {
-  const component = draft.components.find((c) => c.id === id);
-  const extension = LANGUAGE_EXTENSIONS[language];
-  if (!component || !extension) {
-    return {error: "Компонент не найден"};
-  }
-  const current = extensionOf(component.path);
-  const path = component.path.slice(0, component.path.length - current.length) + extension;
-  if (path === component.path) {
-    return {draft};
-  }
-  if (path in draft.files || draft.assets.some((asset) => asset.path === path)) {
-    return {error: "Файл с таким именем уже существует"};
-  }
-  const files = {...draft.files, [path]: draft.files[component.path] ?? ""};
-  delete files[component.path];
-  return {
-    draft: {
-      ...draft,
-      files,
-      components: draft.components.map((c) => (c.id === id ? {...c, path} : c)),
-    },
-  };
-};
-
-export const removeComponent = (draft: ProblemDraft, id: string): OpResult => {
-  const component = draft.components.find((c) => c.id === id);
-  if (!component) {
-    return {error: "Компонент не найден"};
-  }
-  const usedByTests = draft.tests.some(
-    (test) => test.input.component_id === id || test.answer.component_id === id,
-  );
-  if (usedByTests) {
-    return {error: "Компонент используется в тестах. Сначала измените эти тесты."};
-  }
-  const files = {...draft.files};
-  delete files[component.path];
-  return {
-    draft: {
-      ...draft,
-      files,
-      components: draft.components.filter((c) => c.id !== id),
-      main_solution_id: draft.main_solution_id === id ? null : draft.main_solution_id,
-    },
-  };
-};
-
-export const setFile = (draft: ProblemDraft, path: string, content: string): ProblemDraft => ({
+  role: SingleRole,
+  program: ProblemDraftProgram | null,
+): ProblemDraft => ({
   ...draft,
-  files: {...draft.files, [path]: content},
+  [role]: program,
 });
 
-export const addLibraryFile = (draft: ProblemDraft, fileName: string, content: string): OpResult => {
-  const path = `${LIBRARY_FOLDER}/${fileName}`;
-  if (!isValidPath(path) || fileName.includes("/")) {
-    return {error: "Недопустимое имя файла"};
-  }
-  if (path in draft.files) {
-    return {error: "Файл с таким именем уже существует"};
-  }
-  return {draft: setFile(draft, path, content)};
+export const addProgram = (
+  draft: ProblemDraft,
+  role: ListRole,
+  name: string,
+  language: string,
+  source: string,
+): ProblemDraft => {
+  const program: ProblemDraftNamedProgram = {id: newId(), name, language, source, dependencies: []};
+  return {
+    ...draft,
+    [LIST_FIELDS[role]]: [...programsOf(draft, role), program],
+    // The first solution becomes the main one.
+    main_solution_id: role === "solution" && !draft.main_solution_id ? program.id : draft.main_solution_id,
+  };
 };
 
-export const removeLibraryFile = (draft: ProblemDraft, path: string): OpResult => {
-  if (draft.components.some((c) => Object.values(c.dependencies ?? {}).includes(path))) {
-    return {error: "Файл подключён как зависимость компонента"};
-  }
-  const files = {...draft.files};
-  delete files[path];
-  return {draft: {...draft, files}};
+export const updateProgram = (
+  draft: ProblemDraft,
+  role: ListRole,
+  id: string,
+  patch: Partial<Omit<ProblemDraftNamedProgram, "id">>,
+): ProblemDraft => ({
+  ...draft,
+  [LIST_FIELDS[role]]: programsOf(draft, role).map((p) => (p.id === id ? {...p, ...patch} : p)),
+});
+
+export const removeProgram = (draft: ProblemDraft, role: ListRole, id: string): ProblemDraft => ({
+  ...draft,
+  [LIST_FIELDS[role]]: programsOf(draft, role).filter((p) => p.id !== id),
+  main_solution_id: draft.main_solution_id === id ? null : draft.main_solution_id,
+});
+
+export const addLibraryFile = (draft: ProblemDraft, name: string): {draft: ProblemDraft; id: string} => {
+  const file: ProblemDraftLibraryFile = {id: newId(), name, content: ""};
+  return {draft: {...draft, library: [...draft.library, file]}, id: file.id};
 };
 
-export const libraryFiles = (draft: ProblemDraft): string[] =>
-  Object.keys(draft.files)
-    .filter((path) => path.startsWith(`${LIBRARY_FOLDER}/`))
-    .sort();
+export const updateLibraryFile = (
+  draft: ProblemDraft,
+  id: string,
+  patch: Partial<Omit<ProblemDraftLibraryFile, "id">>,
+): ProblemDraft => ({...draft, library: draft.library.map((f) => (f.id === id ? {...f, ...patch} : f))});
 
-export const statementLanguages = (draft: ProblemDraft): string[] =>
-  Object.keys(draft.files)
-    .filter((path) => path.startsWith(`${STATEMENT_FOLDER}/`) && path.endsWith(".md"))
-    .map((path) => path.slice(STATEMENT_FOLDER.length + 1, -".md".length))
-    .sort();
+export const removeLibraryFile = (draft: ProblemDraft, id: string): ProblemDraft => ({
+  ...draft,
+  library: draft.library.filter((f) => f.id !== id),
+});
+
+export const STATEMENT_SECTIONS = ["legend", "input", "output", "interaction", "notes", "scoring"] as const;
+export type StatementSection = (typeof STATEMENT_SECTIONS)[number];
+
+export const emptyStatement = (language: string): ProblemDraftStatement => ({
+  language,
+  legend: "",
+  input: "",
+  output: "",
+  notes: "",
+  interaction: "",
+  scoring: "",
+});
+
+/** Replaces the statement of `statement.language`, adding it when missing. */
+export const setStatement = (draft: ProblemDraft, statement: ProblemDraftStatement): ProblemDraft => ({
+  ...draft,
+  statements: draft.statements.some((s) => s.language === statement.language)
+    ? draft.statements.map((s) => (s.language === statement.language ? statement : s))
+    : [...draft.statements, statement],
+});
+
+export const renameAsset = (draft: ProblemDraft, from: string, to: string): ProblemDraft => ({
+  ...draft,
+  assets: draft.assets.map((a) => (a.name === from ? {...a, name: to} : a)),
+});
+
+export const removeAsset = (draft: ProblemDraft, name: string): ProblemDraft => ({
+  ...draft,
+  assets: draft.assets.filter((a) => a.name !== name),
+});
 
 export const addSubtask = (draft: ProblemDraft, name: string): ProblemDraft => {
   const subtask: ProblemDraftSubtask = {
@@ -216,58 +148,18 @@ export const addSubtask = (draft: ProblemDraft, name: string): ProblemDraft => {
   return {...draft, subtasks: [...draft.subtasks, subtask]};
 };
 
-export const removeSubtask = (draft: ProblemDraft, id: string): OpResult => {
-  if (draft.tests.some((test) => test.subtask_id === id)) {
-    return {error: "В подзадаче есть тесты. Сначала перенесите или удалите их."};
-  }
-  return {
-    draft: {
-      ...draft,
-      subtasks: draft.subtasks
-        .filter((s) => s.id !== id)
-        .map((s) => ({...s, depends_on: s.depends_on.filter((dependency) => dependency !== id)})),
-    },
-  };
-};
+/** Removes a subtask and the dependencies other subtasks have on it. */
+export const removeSubtask = (draft: ProblemDraft, id: string): ProblemDraft => ({
+  ...draft,
+  subtasks: draft.subtasks
+    .filter((s) => s.id !== id)
+    .map((s) => ({...s, depends_on: s.depends_on.filter((dependency) => dependency !== id)})),
+});
 
-/** Reports whether making `subtask` depend on `dependency` would create a cycle. */
-const wouldCreateCycle = (
-  subtasks: ProblemDraftSubtask[],
-  subtask: string,
-  dependency: string,
-): boolean => {
-  const edges = new Map(subtasks.map((s) => [s.id, s.depends_on]));
-  const seen = new Set<string>();
-  const stack = [dependency];
-  while (stack.length > 0) {
-    const current = stack.pop() as string;
-    if (current === subtask) {
-      return true;
-    }
-    if (seen.has(current)) {
-      continue;
-    }
-    seen.add(current);
-    stack.push(...(edges.get(current) ?? []));
-  }
-  return false;
-};
-
-export const setSubtaskDependencies = (
-  draft: ProblemDraft,
-  id: string,
-  dependencies: string[],
-): OpResult => {
-  if (dependencies.some((dependency) => dependency === id || wouldCreateCycle(draft.subtasks, id, dependency))) {
-    return {error: "Зависимости подзадач не должны образовывать цикл"};
-  }
-  return {
-    draft: {
-      ...draft,
-      subtasks: draft.subtasks.map((s) => (s.id === id ? {...s, depends_on: dependencies} : s)),
-    },
-  };
-};
+export const setSubtaskDependencies = (draft: ProblemDraft, id: string, dependencies: string[]): ProblemDraft => ({
+  ...draft,
+  subtasks: draft.subtasks.map((s) => (s.id === id ? {...s, depends_on: dependencies} : s)),
+});
 
 const nextOrdinal = (tests: ProblemDraftTest[]): number =>
   tests.reduce((max, test) => Math.max(max, test.ordinal), 0) + 1;
@@ -302,22 +194,19 @@ export const moveTest = (draft: ProblemDraft, id: string, delta: number): Proble
   return {...draft, tests: tests.map((test, index) => ({...test, ordinal: index + 1}))};
 };
 
+const newAnswer = (draft: ProblemDraft, mode: "provided" | "generated"): ProblemDraftTest["answer"] =>
+  draft.type === "interactive"
+    ? {mode: "interactive", object_id: null, solution_id: null}
+    : {mode, object_id: null, solution_id: mode === "generated" ? draft.main_solution_id : null};
+
 export const newGeneratedTest = (draft: ProblemDraft, subtaskId: string): ProblemDraftTest => ({
   id: newId(),
   ordinal: nextOrdinal(draft.tests),
   subtask_id: subtaskId,
   sample: false,
   points: 0,
-  input: {
-    mode: "generator",
-    object_id: null,
-    component_id: draft.components.find((c) => c.role === "generator")?.id ?? null,
-    args: [],
-    seed: 1,
-  },
-  answer: draft.type === "interactive"
-    ? {mode: "interactive", object_id: null, component_id: null}
-    : {mode: "generated", object_id: null, component_id: draft.main_solution_id},
+  input: {mode: "generator", object_id: null, generator_id: draft.generators[0]?.id ?? null, args: [], seed: 1},
+  answer: newAnswer(draft, "generated"),
 });
 
 export const newManualTest = (draft: ProblemDraft, subtaskId: string): ProblemDraftTest => ({
@@ -326,38 +215,53 @@ export const newManualTest = (draft: ProblemDraft, subtaskId: string): ProblemDr
   subtask_id: subtaskId,
   sample: false,
   points: 0,
-  input: {mode: "manual", object_id: null, component_id: null, args: [], seed: null},
-  answer: draft.type === "interactive"
-    ? {mode: "interactive", object_id: null, component_id: null}
-    : {mode: "provided", object_id: null, component_id: null},
+  input: {mode: "manual", object_id: null, generator_id: null, args: [], seed: null},
+  answer: newAnswer(draft, "provided"),
 });
 
-/** Problems with every component the build requires, as reported to the author before building. */
-export const buildProblems = (draft: ProblemDraft): string[] => {
-  const problems: string[] = [];
-  if (draft.type !== "interactive" && !roleComponent(draft, "checker")) {
-    problems.push("Нет чекера");
+const SECTION_LABELS: Record<string, string> = {
+  legend: "легенда",
+  input: "формат входа",
+  output: "формат выхода",
+  notes: "примечания",
+  interaction: "протокол",
+  scoring: "оценивание",
+};
+
+/**
+ * Turns a JSON Pointer the server reported into a label of the draft entry it
+ * points at, for example "Генератор gen" or "Тест 4".
+ */
+export const describePointer = (draft: ProblemDraft, pointer: string): string => {
+  const [field, index, sub] = pointer.split("/").slice(1);
+  const at = Number(index);
+  switch (field) {
+    case "checker":
+    case "interactor":
+      return ROLE_LABELS[field];
+    case "validators":
+    case "generators":
+    case "solutions": {
+      const role = (Object.keys(LIST_FIELDS) as ListRole[]).find((r) => LIST_FIELDS[r] === field) as ListRole;
+      const name = draft[field][at]?.name;
+      return name ? `${ROLE_LABELS[role]} ${name}` : ROLE_LABELS[role];
+    }
+    case "library":
+      return `Библиотека ${draft.library[at]?.name ?? ""}`.trim();
+    case "statements": {
+      const statement = draft.statements[at];
+      const section = sub ? SECTION_LABELS[sub] ?? sub : "";
+      return `Условие ${statement?.language.toUpperCase() ?? ""}${section ? `, ${section}` : ""}`.trim();
+    }
+    case "assets":
+      return `Ресурс ${draft.assets[at]?.name ?? ""}`.trim();
+    case "subtasks":
+      return `Подзадача ${draft.subtasks[at]?.name ?? ""}`.trim();
+    case "tests":
+      return draft.tests[at] ? `Тест ${draft.tests[at].ordinal}` : "Тесты";
+    case "main_solution_id":
+      return "Главное решение";
+    default:
+      return "Черновик";
   }
-  if (draft.type === "interactive" && !roleComponent(draft, "interactor")) {
-    problems.push("Для интерактивной задачи нужен интерактор");
-  }
-  if (draft.type === "interactive" && !draft.main_solution_id) {
-    problems.push("Для интерактивной задачи нужно главное решение");
-  }
-  if (draft.tests.length === 0) {
-    problems.push("Нет ни одного теста");
-  }
-  if (draft.tests.some((t) => t.answer.mode === "generated" && !t.answer.component_id)) {
-    problems.push("Для тестов с генерируемым ответом нужно главное решение");
-  }
-  if (draft.tests.some((t) => t.input.mode === "manual" && !t.input.object_id)) {
-    problems.push("У некоторых ручных тестов не загружен вход");
-  }
-  if (draft.tests.some((t) => t.answer.mode === "provided" && !t.answer.object_id)) {
-    problems.push("У некоторых тестов не загружен ответ");
-  }
-  if (draft.subtasks.length === 0) {
-    problems.push("Нет ни одной подзадачи");
-  }
-  return problems;
 };

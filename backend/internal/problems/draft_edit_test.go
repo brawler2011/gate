@@ -49,7 +49,7 @@ func TestSavingDraftTextNeverTouchesObjectStore(t *testing.T) {
 	uc := &DraftUseCase{Repo: repo, Store: store, Problems: singleProblem{uuid.New()}, Permissions: allowProblemPermissions{}}
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 
-	draft := model.Draft{ProblemID: problem, Revision: 4, Title: "Renamed", Files: map[string]string{"statements/en.md": "New statement"}}
+	draft := model.Draft{ProblemID: problem, Revision: 4, Title: "Renamed", DraftContent: model.DraftContent{Statements: []model.DraftStatement{{Language: "en", Legend: "New statement"}}}}
 	_, err := uc.SaveDraft(ctx, problem, 4, "key-1", draft)
 	require.NoError(t, err)
 	require.Len(t, repo.saved, 1)

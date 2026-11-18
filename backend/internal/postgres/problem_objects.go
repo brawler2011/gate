@@ -144,7 +144,7 @@ func (r *ProblemDraftsRepo) FindPackageAssets(ctx context.Context, id uuid.UUID,
 	}
 	assets := make([]model.PackageAsset, 0, len(rows))
 	for _, row := range rows {
-		assets = append(assets, model.PackageAsset{Path: row.Path, Key: row.Key})
+		assets = append(assets, model.PackageAsset{Name: row.Name, Key: row.Key})
 	}
 	return assets, nil
 }

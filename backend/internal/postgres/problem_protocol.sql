@@ -6,9 +6,7 @@
 -- Only narrows the candidates: the foreign keys decide whether a row can go,
 -- so a reference missing here makes a deletion fail, never succeed.
 SELECT o.id,o.key FROM stored_objects o
-WHERE NOT EXISTS(SELECT 1 FROM problem_draft_tests t WHERE t.input_object_id=o.id)
- AND NOT EXISTS(SELECT 1 FROM problem_draft_tests t WHERE t.answer_object_id=o.id)
- AND NOT EXISTS(SELECT 1 FROM problem_draft_assets a WHERE a.object_id=o.id)
+WHERE NOT EXISTS(SELECT 1 FROM problem_draft_objects d WHERE d.object_id=o.id)
  AND NOT EXISTS(SELECT 1 FROM problem_build_inputs b WHERE b.object_id=o.id)
  AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)
  AND NOT EXISTS(SELECT 1 FROM problem_package_assets a WHERE a.object_id=o.id)
@@ -78,18 +76,18 @@ INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,pa
 VALUES($1,$2,$3,$4,$5,$6,$7,$8);
 
 -- name: InsertPackageAssets :exec
-INSERT INTO problem_package_assets(package_id,organization_id,path,object_id)
-SELECT sqlc.arg(package_id)::uuid,b.organization_id,a->>'path',(a->>'object_id')::uuid
+INSERT INTO problem_package_assets(package_id,organization_id,name,object_id)
+SELECT sqlc.arg(package_id)::uuid,b.organization_id,a->>'name',(a->>'object_id')::uuid
 FROM problem_builds b,jsonb_array_elements(b.snapshot->'draft'->'assets') a WHERE b.id=sqlc.arg(build_id);
 
 -- name: ReadPackageStatement :one
 SELECT p.problem_id,p.samples,b.snapshot,
- COALESCE((SELECT jsonb_object_agg(a.path,o.sha256) FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id WHERE a.package_id=p.id),'{}')::jsonb AS assets
+ COALESCE((SELECT jsonb_object_agg(a.name,o.sha256) FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id WHERE a.package_id=p.id),'{}')::jsonb AS assets
 FROM problem_packages p JOIN problem_builds b ON b.id=p.build_id WHERE p.id=$1;
 
 -- name: ListPackageAssetsBySHA256 :many
-SELECT a.path,o.key FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id
-WHERE a.package_id=$1 AND o.sha256=$2 ORDER BY a.path;
+SELECT a.name,o.key FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id
+WHERE a.package_id=$1 AND o.sha256=$2 ORDER BY a.name;
 
 -- name: MarkBuildSucceeded :exec
 UPDATE problem_builds SET state='succeeded',lease_token=NULL,lease_deadline=NULL,finished_at=clock_timestamp()
@@ -181,39 +179,12 @@ WHERE organization_id=$1 AND operation=$2 AND key=$3 AND fingerprint=$4;
 
 -- name: UpdateProblemDraftRow :exec
 UPDATE problem_drafts SET updated_at=clock_timestamp(),revision=$2,title=$3,short_name=$4,type=$5,time_limit_ms=$6,memory_limit_mb=$7,max_score=$8,
- main_solution_id=$9 WHERE problem_id=$1;
+ content=$9 WHERE problem_id=$1;
 
--- name: DeleteDraftTests :exec
-DELETE FROM problem_draft_tests WHERE problem_id=$1;
--- name: DeleteDraftAssets :exec
-DELETE FROM problem_draft_assets WHERE problem_id=$1;
--- name: DeleteDraftSubtaskDependencies :exec
-DELETE FROM problem_draft_subtask_dependencies WHERE problem_id=$1;
--- name: DeleteDraftSubtasks :exec
-DELETE FROM problem_draft_subtasks WHERE problem_id=$1;
--- name: DeleteDraftComponents :exec
-DELETE FROM problem_draft_components WHERE problem_id=$1;
--- name: DeleteDraftFiles :exec
-DELETE FROM problem_draft_files WHERE problem_id=$1;
+-- name: DeleteDraftObjects :exec
+DELETE FROM problem_draft_objects WHERE problem_id=$1;
 
--- name: InsertDraftFile :exec
-INSERT INTO problem_draft_files(problem_id,path,content)VALUES($1,$2,$3);
-
--- name: InsertDraftComponent :exec
-INSERT INTO problem_draft_components(problem_id,id,role,path,dependencies)
-VALUES(sqlc.arg(problem_id),sqlc.arg(id),sqlc.arg(role),sqlc.arg(path),sqlc.arg(dependencies)::jsonb);
-
--- name: InsertDraftSubtask :exec
-INSERT INTO problem_draft_subtasks(problem_id,id,ordinal,name,points,policy)VALUES($1,$2,$3,$4,$5,$6);
-
--- name: InsertDraftSubtaskDependency :exec
-INSERT INTO problem_draft_subtask_dependencies(problem_id,subtask_id,depends_on)VALUES($1,$2,$3);
-
--- name: InsertDraftTest :exec
-INSERT INTO problem_draft_tests(problem_id,organization_id,id,ordinal,subtask_id,sample,points,input_mode,input_object_id,generator_id,generator_args,seed,answer_mode,answer_object_id,solution_id)
-SELECT $1,organization_id,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14 FROM problem_drafts WHERE problem_id=$1;
-
--- name: InsertDraftAsset :exec
-INSERT INTO problem_draft_assets(problem_id,organization_id,path,object_id)
-SELECT $1,organization_id,$2,$3 FROM problem_drafts WHERE problem_id=$1;
+-- name: InsertDraftObject :exec
+INSERT INTO problem_draft_objects(problem_id,organization_id,object_id)
+SELECT d.problem_id,d.organization_id,sqlc.arg(object_id)::uuid FROM problem_drafts d WHERE d.problem_id=sqlc.arg(problem_id)::uuid;
 

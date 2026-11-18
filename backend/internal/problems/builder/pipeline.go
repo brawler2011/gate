@@ -78,7 +78,7 @@ func processKind(err error) string {
 }
 
 type compilation struct {
-	source     model.DraftComponent
+	language   string
 	executable sandbox.Executable
 }
 type execution struct {
@@ -86,7 +86,8 @@ type execution struct {
 	build    model.ProblemBuild
 	dir      *directory
 	sandbox  *sandbox.Sandbox
-	compiled map[uuid.UUID]compilation
+	layout   packageLayout
+	compiled map[string]compilation
 	manifest *gfmt.Problem
 	samples  []model.Sample
 }
@@ -121,7 +122,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := os.Mkdir(tree, 0700); err != nil {
 		return uuid.Nil, fmt.Errorf("mkdir: %w", err)
 	}
-	e := &execution{pipeline: p, build: b, dir: &directory{root: tree, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, p.Languages), compiled: make(map[uuid.UUID]compilation), samples: []model.Sample{}}
+	e := &execution{pipeline: p, build: b, dir: &directory{root: tree, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, p.Languages), layout: placeDraft(s.Draft), compiled: make(map[string]compilation), samples: []model.Sample{}}
 	defer e.releaseComponents()
 	if err := e.materialize(ctx); err != nil {
 		return uuid.Nil, fail("materialize", 0, "infrastructure", err)
@@ -178,7 +179,7 @@ func objectReferences(d model.Draft, id uuid.UUID) string {
 	}
 	for _, asset := range d.Assets {
 		if asset.ObjectID == id {
-			refs = append(refs, fmt.Sprintf("asset %q", asset.Path))
+			refs = append(refs, fmt.Sprintf("asset %q", asset.Name))
 		}
 	}
 	return fmt.Sprintf("object %s (%s)", id, strings.Join(refs, ", "))
@@ -186,7 +187,7 @@ func objectReferences(d model.Draft, id uuid.UUID) string {
 
 func (e *execution) materialize(ctx context.Context) error {
 	s := e.build.Snapshot
-	for path, text := range s.Draft.Files {
+	for path, text := range e.layout.texts {
 		if err := e.dir.write(path, []byte(text)); err != nil {
 			return err
 		}
@@ -219,12 +220,12 @@ func (e *execution) materialize(ctx context.Context) error {
 			return fmt.Errorf("%s: snapshot object bytes differ from registry", objectReferences(s.Draft, o.ID))
 		}
 	}
-	for _, a := range s.Draft.Assets {
-		f, err := os.Open(filepath.Join(e.dir.root, ".gate/objects/"+a.ObjectID.String()))
+	for path, object := range e.layout.assets {
+		f, err := os.Open(filepath.Join(e.dir.root, ".gate/objects/"+object.String()))
 		if err != nil {
 			return fmt.Errorf("open: %w", err)
 		}
-		_, _, copyErr := e.dir.copy(a.Path, f, int64(s.Limits.ObjectBytes))
+		_, _, copyErr := e.dir.copy(path, f, int64(s.Limits.ObjectBytes))
 		closeErr := f.Close()
 		if err := errors.Join(copyErr, closeErr); err != nil {
 			return err
@@ -288,43 +289,43 @@ func (e *execution) upload(ctx context.Context, path string) (string, error) {
 }
 func (e *execution) compile(ctx context.Context) error {
 	s := e.build.Snapshot
-	required := map[uuid.UUID]bool{}
-	for _, role := range []string{"checker", "validator", "interactor"} {
-		if c := s.Draft.Component(role); c != nil {
-			required[c.ID] = true
+	d := s.Draft
+	required := map[string]bool{"checker": true, "interactor": true}
+	if v := d.Validator(); v != nil {
+		required[v.ID.String()] = true
+	}
+	if d.MainSolutionID != nil {
+		required[d.MainSolutionID.String()] = true
+	}
+	for _, test := range d.Tests {
+		if test.Input.GeneratorID != nil {
+			required[test.Input.GeneratorID.String()] = true
+		}
+		if test.Answer.SolutionID != nil {
+			required[test.Answer.SolutionID.String()] = true
 		}
 	}
-	if s.Draft.MainSolutionID != nil {
-		required[*s.Draft.MainSolutionID] = true
-	}
-	for _, test := range s.Draft.Tests {
-		if test.Input.ComponentID != nil {
-			required[*test.Input.ComponentID] = true
-		}
-		if test.Answer.ComponentID != nil {
-			required[*test.Answer.ComponentID] = true
-		}
-	}
-	for _, c := range s.Draft.Components {
-		if !required[c.ID] {
+	for _, p := range e.layout.programs {
+		if !required[p.key] {
 			continue
 		}
 		// The draft was checked against the languages at enqueue; the image may have changed since.
-		if _, ok := e.pipeline.Languages.Langs[c.Language()]; !ok {
-			return fail("compile", 0, "author", fmt.Errorf("%s: language %q is not available on the judge", c.Path, c.Language()))
+		if _, ok := e.pipeline.Languages.Langs[p.program.Language]; !ok {
+			return fail("compile", 0, "author", fmt.Errorf("%s: language %q is not available on the judge", p.path, p.program.Language))
 		}
 		deps := map[string][]byte{}
-		for destination, path := range c.Dependencies {
-			deps[destination] = []byte(s.Draft.Files[path])
+		for _, id := range p.program.Dependencies {
+			f := d.LibraryFile(id)
+			deps[f.Name] = []byte(f.Content)
 		}
-		executable, err := e.sandbox.CompileWithLimits(ctx, []byte(s.Draft.Files[c.Path]), c.Language(), deps, s.Limits.Compile)
+		executable, err := e.sandbox.CompileWithLimits(ctx, []byte(p.program.Source), p.program.Language, deps, s.Limits.Compile)
 		if err != nil {
-			return fail("compile", 0, processKind(err), fmt.Errorf("%s: %w", c.Path, err))
+			return fail("compile", 0, processKind(err), fmt.Errorf("%s: %w", p.path, err))
 		}
-		e.compiled[c.ID] = compilation{source: c, executable: executable}
+		e.compiled[p.key] = compilation{language: p.program.Language, executable: executable}
 		// The package keeps the judge's programs as sources; each judge compiles them with its own image.
-		if c.Role == "checker" || c.Role == "interactor" {
-			e.manifest.Programs[c.Role] = gfmt.Program{Source: c.Path, Language: c.Language(), Dependencies: c.Dependencies}
+		if p.role == "checker" || p.role == "interactor" {
+			e.manifest.Programs[p.role] = gfmt.Program{Source: p.path, Language: p.program.Language, Dependencies: p.dependencies}
 		}
 	}
 	return nil
@@ -358,9 +359,9 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		inputID = id
 		ids = append(ids, id)
 	} else {
-		gen := e.compiled[*test.Input.ComponentID]
+		gen := e.compiled[test.Input.GeneratorID.String()]
 		args := append(append([]string{}, test.Input.Args...), strconv.FormatInt(*test.Input.Seed, 10))
-		result, err := e.sandbox.RunFiles(ctx, gen.executable, gen.source.Language(), "", args, nil, aux)
+		result, err := e.sandbox.RunFiles(ctx, gen.executable, gen.language, "", args, nil, aux)
 		if err != nil {
 			return fail("generate", test.Ordinal, "infrastructure", err)
 		}
@@ -374,9 +375,9 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			return fail("generate", test.Ordinal, "infrastructure", err)
 		}
 	}
-	if validator := s.Draft.Component("validator"); validator != nil {
-		v := e.compiled[validator.ID]
-		result, err := e.sandbox.RunFiles(ctx, v.executable, v.source.Language(), inputID, nil, nil, aux)
+	if validator := s.Draft.Validator(); validator != nil {
+		v := e.compiled[validator.ID.String()]
+		result, err := e.sandbox.RunFiles(ctx, v.executable, v.language, inputID, nil, nil, aux)
 		if err != nil {
 			return fail("validate", test.Ordinal, "infrastructure", err)
 		}
@@ -390,9 +391,9 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 	if s.Draft.Type == "interactive" {
 		// As in Polygon, the interactor's output on the main solution is the
 		// answer the interactor and the checker later receive.
-		sol := e.compiled[*s.Draft.MainSolutionID]
-		intr := e.compiled[s.Draft.Component("interactor").ID]
-		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.source.Language(), intr.executable, intr.source.Language(), inputID, "", e.solutionLimits(), aux)
+		sol := e.compiled[s.Draft.MainSolutionID.String()]
+		intr := e.compiled["interactor"]
+		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, intr.executable, intr.language, inputID, "", e.solutionLimits(), aux)
 		if err != nil {
 			return fail("interact", test.Ordinal, "infrastructure", err)
 		}
@@ -415,14 +416,14 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			answerID = id
 			ids = append(ids, id)
 		}
-		solID := test.Answer.ComponentID
+		solID := test.Answer.SolutionID
 		if test.Answer.Mode == "provided" {
 			solID = s.Draft.MainSolutionID
 		}
 		outputID = answerID
 		if solID != nil {
-			sol := e.compiled[*solID]
-			result, err := e.sandbox.RunFiles(ctx, sol.executable, sol.source.Language(), inputID, nil, nil, e.solutionLimits())
+			sol := e.compiled[solID.String()]
+			result, err := e.sandbox.RunFiles(ctx, sol.executable, sol.language, inputID, nil, nil, e.solutionLimits())
 			if err != nil {
 				return fail("answer", test.Ordinal, "infrastructure", err)
 			}
@@ -442,9 +443,9 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 	}
 	// An interactive problem's checker is optional; when present it decides
 	// the verdict after the interactor accepts.
-	if c := s.Draft.Component("checker"); c != nil {
-		checker := e.compiled[c.ID]
-		result, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.source.Language(), inputID, outputID, answerID, aux)
+	if s.Draft.Checker != nil {
+		checker := e.compiled["checker"]
+		result, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.language, inputID, outputID, answerID, aux)
 		if err != nil {
 			return fail("check", test.Ordinal, "infrastructure", err)
 		}

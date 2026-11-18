@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"mime"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -36,7 +36,7 @@ func (c *PackageContent) OpenImage(ctx context.Context, id uuid.UUID, sha256 str
 		return nil, "", err
 	}
 	for _, a := range assets {
-		contentType := mime.TypeByExtension(strings.ToLower(filepath.Ext(a.Path)))
+		contentType := mime.TypeByExtension(strings.ToLower(filepath.Ext(a.Name)))
 		if !strings.HasPrefix(contentType, "image/") {
 			continue
 		}
@@ -48,24 +48,25 @@ func (c *PackageContent) OpenImage(ctx context.Context, id uuid.UUID, sha256 str
 	}
 	return nil, "", pkg.ErrNotFound
 }
+// statementFromDraft returns the draft statement in language, falling back
+// to English and then to the first language.
 func statementFromDraft(d model.Draft, language string) *model.Statement {
-	languages := []string{}
-	for path := range d.Files {
-		if strings.HasPrefix(path, "statements/") && strings.HasSuffix(path, ".md") {
-			languages = append(languages, strings.TrimSuffix(strings.TrimPrefix(path, "statements/"), ".md"))
-		}
+	s := d.Statement(language)
+	if s == nil {
+		s = d.Statement("en")
 	}
-	sort.Strings(languages)
-	if _, ok := d.Files["statements/"+language+".md"]; !ok {
-		language = "en"
-		if _, ok := d.Files["statements/en.md"]; !ok && len(languages) > 0 {
-			language = languages[0]
-		}
+	if s == nil && len(d.Statements) > 0 {
+		first := slices.MinFunc(d.Statements, func(a, b model.DraftStatement) int { return strings.Compare(a.Language, b.Language) })
+		s = &first
 	}
-	statement := ParseStatementMarkdown(d.Files["statements/"+language+".md"])
-	statement.Title = d.Title
+	statement := model.Statement{Title: d.Title}
+	if s != nil {
+		statement.Legend, statement.InputFormat, statement.OutputFormat = s.Legend, s.Input, s.Output
+		statement.Notes, statement.Interaction, statement.Scoring = s.Notes, s.Interaction, s.Scoring
+	}
 	return &statement
 }
+
 // ReadStatement returns the package statement in the requested language with
 // the samples and statement asset hashes, or a nil statement when the package
 // is unavailable.

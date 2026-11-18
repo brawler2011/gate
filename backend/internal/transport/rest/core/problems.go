@@ -90,7 +90,7 @@ func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemPar
 	if err != nil {
 		return nil, err
 	}
-	return projectResponse(h, ctx, &corev1.GetProblemResponseModel{Problem: *ProblemDTO(details.Problem, details.Statement, SamplesDTO(details.Samples))})
+	return projectResponse(h, ctx, &corev1.GetProblemResponseModel{Problem: *ProblemDTO(details.Problem)})
 
 }
 

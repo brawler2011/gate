@@ -84,17 +84,6 @@ END;
 $$;
 -- +goose StatementEnd
 
--- +goose StatementBegin
-CREATE FUNCTION valid_draft_path(path text) RETURNS boolean
-    LANGUAGE sql IMMUTABLE
-    AS $_$
-    SELECT path <> '' AND path <> '.' AND path <> 'problem.yaml'
-      AND path <> '.gate' AND path NOT LIKE '.gate/%'
-      AND octet_length(path) <= 512 AND path !~ '(^/|/$|//|(^|/)\.{1,2}(/|$))'
-      AND position(chr(92) in path) = 0;
-$_$;
--- +goose StatementEnd
-
 -- ==========================================================================
 -- Users and authentication
 -- ==========================================================================
@@ -375,7 +364,10 @@ CREATE TABLE problem_drafts (
     time_limit_ms integer NOT NULL,
     memory_limit_mb integer NOT NULL,
     max_score numeric(12,2),
-    main_solution_id uuid,
+    -- Programs, library, statements, assets, subtasks and tests: the draft is
+    -- read and written whole, and the server validates it as one document.
+    content jsonb DEFAULT '{}'::jsonb NOT NULL,
+    CONSTRAINT problem_drafts_content_check CHECK ((jsonb_typeof(content) = 'object'::text)),
     CONSTRAINT problem_drafts_check CHECK (((type = 'scoring'::text) = (max_score IS NOT NULL))),
     CONSTRAINT problem_drafts_max_score_check CHECK ((max_score >= (0)::numeric)),
     CONSTRAINT problem_drafts_memory_limit_mb_check CHECK ((memory_limit_mb > 0)),
@@ -391,104 +383,17 @@ CREATE TABLE problem_drafts (
 );
 CREATE INDEX problem_drafts_title_trgm ON problem_drafts USING gin (title gin_trgm_ops);
 
-CREATE TABLE problem_draft_files (
-    problem_id uuid NOT NULL,
-    path text NOT NULL,
-    content text NOT NULL,
-    CONSTRAINT problem_draft_files_path_check CHECK (valid_draft_path(path)),
-    CONSTRAINT problem_draft_files_pkey PRIMARY KEY (problem_id, path),
-    CONSTRAINT problem_draft_files_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problem_drafts(problem_id) ON DELETE CASCADE
-);
-
-CREATE TABLE problem_draft_components (
-    problem_id uuid NOT NULL,
-    id uuid NOT NULL,
-    role text NOT NULL,
-    path text NOT NULL,
-    dependencies jsonb NOT NULL,
-    CONSTRAINT problem_draft_components_dependencies_check CHECK ((jsonb_typeof(dependencies) = 'object'::text)),
-    CONSTRAINT problem_draft_components_role_check CHECK ((role = ANY (ARRAY['checker'::text, 'validator'::text, 'interactor'::text, 'generator'::text, 'solution'::text]))),
-    CONSTRAINT problem_draft_components_pkey PRIMARY KEY (problem_id, id),
-    CONSTRAINT problem_draft_components_problem_id_id_role_key UNIQUE (problem_id, id, role),
-    CONSTRAINT problem_draft_components_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problem_drafts(problem_id) ON DELETE CASCADE,
-    CONSTRAINT problem_draft_components_problem_id_path_fkey FOREIGN KEY (problem_id, path) REFERENCES problem_draft_files(problem_id, path) DEFERRABLE INITIALLY DEFERRED
-);
--- A draft holds at most one checker, validator and interactor.
-CREATE UNIQUE INDEX problem_draft_components_singleton_role ON problem_draft_components (problem_id, role) WHERE role = ANY (ARRAY['checker'::text, 'validator'::text, 'interactor'::text]);
-
-CREATE TABLE problem_draft_assets (
+-- The stored objects a draft refers to (test bodies and assets), derived from
+-- its content on every write, so that referenced objects are never collected.
+CREATE TABLE problem_draft_objects (
     problem_id uuid NOT NULL,
     organization_id uuid NOT NULL,
-    path text NOT NULL,
     object_id uuid NOT NULL,
-    CONSTRAINT problem_draft_assets_path_check CHECK (valid_draft_path(path)),
-    CONSTRAINT problem_draft_assets_pkey PRIMARY KEY (problem_id, path),
-    CONSTRAINT problem_draft_assets_object_id_fkey FOREIGN KEY (object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT,
-    CONSTRAINT problem_draft_assets_problem_id_fkey FOREIGN KEY (problem_id, organization_id) REFERENCES problem_drafts(problem_id, organization_id) ON DELETE CASCADE
+    CONSTRAINT problem_draft_objects_pkey PRIMARY KEY (problem_id, object_id),
+    CONSTRAINT problem_draft_objects_problem_id_organization_id_fkey FOREIGN KEY (problem_id, organization_id) REFERENCES problem_drafts(problem_id, organization_id) ON DELETE CASCADE,
+    CONSTRAINT problem_draft_objects_object_id_organization_id_fkey FOREIGN KEY (object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT
 );
-CREATE INDEX problem_draft_assets_object ON problem_draft_assets USING btree (object_id);
-
-CREATE TABLE problem_draft_subtasks (
-    problem_id uuid NOT NULL,
-    id uuid NOT NULL,
-    ordinal integer NOT NULL,
-    name text NOT NULL,
-    points numeric(12,2) NOT NULL,
-    policy text NOT NULL,
-    CONSTRAINT problem_draft_subtasks_ordinal_check CHECK ((ordinal > 0)),
-    CONSTRAINT problem_draft_subtasks_points_check CHECK ((points >= (0)::numeric)),
-    CONSTRAINT problem_draft_subtasks_policy_check CHECK ((policy = ANY (ARRAY['complete'::text, 'each'::text]))),
-    CONSTRAINT problem_draft_subtasks_pkey PRIMARY KEY (problem_id, id),
-    CONSTRAINT problem_draft_subtasks_problem_id_ordinal_key UNIQUE (problem_id, ordinal) DEFERRABLE INITIALLY DEFERRED,
-    CONSTRAINT problem_draft_subtasks_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problem_drafts(problem_id) ON DELETE CASCADE
-);
-
-CREATE TABLE problem_draft_subtask_dependencies (
-    problem_id uuid NOT NULL,
-    subtask_id uuid NOT NULL,
-    depends_on uuid NOT NULL,
-    CONSTRAINT problem_draft_subtask_dependencies_check CHECK ((subtask_id <> depends_on)),
-    CONSTRAINT problem_draft_subtask_dependencies_pkey PRIMARY KEY (problem_id, subtask_id, depends_on),
-    CONSTRAINT problem_draft_subtask_dependencies_problem_id_depends_on_fkey FOREIGN KEY (problem_id, depends_on) REFERENCES problem_draft_subtasks(problem_id, id) DEFERRABLE INITIALLY DEFERRED,
-    CONSTRAINT problem_draft_subtask_dependencies_problem_id_subtask_id_fkey FOREIGN KEY (problem_id, subtask_id) REFERENCES problem_draft_subtasks(problem_id, id) ON DELETE CASCADE
-);
-
-CREATE TABLE problem_draft_tests (
-    problem_id uuid NOT NULL,
-    organization_id uuid NOT NULL,
-    id uuid NOT NULL,
-    ordinal integer NOT NULL,
-    subtask_id uuid NOT NULL,
-    sample boolean NOT NULL,
-    points numeric(12,2) NOT NULL,
-    input_mode text NOT NULL,
-    input_object_id uuid,
-    generator_id uuid,
-    generator_args text[] NOT NULL,
-    seed bigint,
-    answer_mode text NOT NULL,
-    answer_object_id uuid,
-    solution_id uuid,
-    CONSTRAINT problem_draft_tests_answer_mode_check CHECK ((answer_mode = ANY (ARRAY['provided'::text, 'generated'::text, 'interactive'::text]))),
-    CONSTRAINT problem_draft_tests_check CHECK ((((input_mode = 'manual'::text) AND (input_object_id IS NOT NULL) AND (generator_id IS NULL) AND (seed IS NULL) AND (cardinality(generator_args) = 0)) OR ((input_mode = 'generator'::text) AND (input_object_id IS NULL) AND (generator_id IS NOT NULL) AND (seed IS NOT NULL)))),
-    CONSTRAINT problem_draft_tests_check1 CHECK ((((answer_mode = 'provided'::text) AND (answer_object_id IS NOT NULL) AND (solution_id IS NULL)) OR ((answer_mode = 'generated'::text) AND (answer_object_id IS NULL) AND (solution_id IS NOT NULL)) OR ((answer_mode = 'interactive'::text) AND (answer_object_id IS NULL) AND (solution_id IS NULL)))),
-    CONSTRAINT problem_draft_tests_input_mode_check CHECK ((input_mode = ANY (ARRAY['manual'::text, 'generator'::text]))),
-    CONSTRAINT problem_draft_tests_ordinal_check CHECK ((ordinal > 0)),
-    CONSTRAINT problem_draft_tests_points_check CHECK ((points >= (0)::numeric)),
-    CONSTRAINT problem_draft_tests_pkey PRIMARY KEY (problem_id, id),
-    CONSTRAINT problem_draft_tests_problem_id_ordinal_key UNIQUE (problem_id, ordinal) DEFERRABLE INITIALLY DEFERRED,
-    CONSTRAINT problem_draft_tests_answer_object_id_fkey FOREIGN KEY (answer_object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT,
-    CONSTRAINT problem_draft_tests_input_object_id_fkey FOREIGN KEY (input_object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT,
-    CONSTRAINT problem_draft_tests_problem_id_fkey FOREIGN KEY (problem_id, organization_id) REFERENCES problem_drafts(problem_id, organization_id) ON DELETE CASCADE,
-    CONSTRAINT problem_draft_tests_problem_id_generator_id_fkey FOREIGN KEY (problem_id, generator_id) REFERENCES problem_draft_components(problem_id, id) DEFERRABLE INITIALLY DEFERRED,
-    CONSTRAINT problem_draft_tests_problem_id_solution_id_fkey FOREIGN KEY (problem_id, solution_id) REFERENCES problem_draft_components(problem_id, id) DEFERRABLE INITIALLY DEFERRED,
-    CONSTRAINT problem_draft_tests_problem_id_subtask_id_fkey FOREIGN KEY (problem_id, subtask_id) REFERENCES problem_draft_subtasks(problem_id, id) DEFERRABLE INITIALLY DEFERRED
-);
-CREATE INDEX problem_draft_tests_answer ON problem_draft_tests USING btree (answer_object_id);
-CREATE INDEX problem_draft_tests_input ON problem_draft_tests USING btree (input_object_id);
-
--- Cyclic references, added once both tables exist.
-ALTER TABLE problem_drafts ADD CONSTRAINT problem_drafts_problem_id_main_solution_id_fkey FOREIGN KEY (problem_id, main_solution_id) REFERENCES problem_draft_components(problem_id, id) DEFERRABLE INITIALLY DEFERRED;
+CREATE INDEX problem_draft_objects_object ON problem_draft_objects USING btree (object_id);
 
 CREATE VIEW problem_catalog AS
  SELECT p.id,
@@ -587,10 +492,9 @@ CREATE INDEX problem_packages_problem_id_idx ON problem_packages USING btree (pr
 CREATE TABLE problem_package_assets (
     package_id uuid NOT NULL,
     organization_id uuid NOT NULL,
-    path text NOT NULL,
+    name text NOT NULL,
     object_id uuid NOT NULL,
-    CONSTRAINT problem_package_assets_path_check CHECK (valid_draft_path(path)),
-    CONSTRAINT problem_package_assets_pkey PRIMARY KEY (package_id, path),
+    CONSTRAINT problem_package_assets_pkey PRIMARY KEY (package_id, name),
     CONSTRAINT problem_package_assets_object_id_fkey FOREIGN KEY (object_id, organization_id) REFERENCES stored_objects(id, organization_id) ON DELETE RESTRICT,
     CONSTRAINT problem_package_assets_package_id_fkey FOREIGN KEY (package_id, organization_id) REFERENCES problem_packages(id, organization_id) ON DELETE CASCADE
 );

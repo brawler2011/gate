@@ -81,19 +81,16 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	services := startPipelineServices(t)
 	store, client, files := services.store, services.client, services.files
 	cfg := &sandbox.Config{Langs: services.langs}
-	checker, generator, solution, validator, subtask := uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()
-	d.Files = map[string]string{
-		"checkers/check.cpp":     "#include <fstream>\nint main(int n,char**v){long long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}",
-		"generators/gen.py":      "import sys\nprint(sys.argv[1], sys.argv[2])\n",
-		"solutions/main.cpp":     "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}",
-		"validators/validate.py": "import sys\na,b=map(int,sys.stdin.read().split())\nassert a>=0 and b>=0\n",
-		"statements/en.md":       "A snapshot statement.",
-	}
-	d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.cpp"}, {ID: generator, Role: "generator", Path: "generators/gen.py"}, {ID: solution, Role: "solution", Path: "solutions/main.cpp"}, {ID: validator, Role: "validator", Path: "validators/validate.py"}}
+	generator, solution, validator, subtask := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	d.Checker = program("cpp", "#include <fstream>\nint main(int n,char**v){long long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}")
+	d.Generators = []model.DraftNamedProgram{named(generator, "gen", "python", "import sys\nprint(sys.argv[1], sys.argv[2])\n")}
+	d.Solutions = []model.DraftNamedProgram{named(solution, "main", "cpp", "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}")}
+	d.Validators = []model.DraftNamedProgram{named(validator, "validate", "python", "import sys\na,b=map(int,sys.stdin.read().split())\nassert a>=0 and b>=0\n")}
+	d.Statements = []model.DraftStatement{{Language: "en", Legend: "A snapshot statement."}}
 	d.MainSolutionID = &solution
 	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete"}}
 	seed := int64(7)
-	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Sample: true, Input: model.DraftInput{Mode: "generator", ComponentID: &generator, Args: []string{"10"}, Seed: &seed}, Answer: model.DraftAnswer{Mode: "generated", ComponentID: &solution}}}
+	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Sample: true, Input: model.DraftInput{Mode: "generator", GeneratorID: &generator, Args: []string{"10"}, Seed: &seed}, Answer: model.DraftAnswer{Mode: "generated", SolutionID: &solution}}}
 	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
@@ -108,7 +105,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	_, err = repo.EnqueueBuild(ctx, mutationKey(org, "build", d.Revision), d.ProblemID, d.Revision, postgres.ProblemBuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute})
 	require.NoError(t, err)
 	d.Title = "Changed after enqueue"
-	d.Files["solutions/main.cpp"] = "invalid later source"
+	d.Solutions[0].Source = "invalid later source"
 	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
 	require.NoError(t, err)
 	b, err := repo.ClaimBuild(ctx, time.Minute)

@@ -3,29 +3,22 @@
 import {ActionIcon, Anchor, Box, Button, FileInput, Group, Select, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Tooltip} from "@mantine/core";
 import {useClipboard} from "@mantine/hooks";
 import {notifications} from "@mantine/notifications";
-import {IconCopy, IconTrash, IconUpload} from "@tabler/icons-react";
+import {IconCopy, IconPencil, IconTrash, IconUpload} from "@tabler/icons-react";
 import {useDeferredValue, useState} from "react";
-import ReactMarkdown from "react-markdown";
-import rehypeKatex from "rehype-katex";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
 
-import "katex/dist/katex.min.css";
-
+import {ProblemStatement} from "@/components/problems/ProblemStatement";
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 
 import {DraftGate} from "./draft/DraftGate";
-import {ASSET_FOLDER, isValidPath, setFile, statementLanguages, STATEMENT_FOLDER} from "./draft/draftOps";
+import {emptyStatement, removeAsset, renameAsset, setStatement, STATEMENT_SECTIONS, type StatementSection} from "./draft/draftOps";
 import {objectUrl, useSaveDraft, useUploadToDraft} from "./draft/useDraft";
 
 import "../problems/Problem.css";
 
-import type {ProblemDraft} from "@/contracts/core/v1/schema";
+import type {ProblemDraft, ProblemDraftStatement} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
-const SECTION_MARKERS = /<!--\s*(title|legend|input|output|notes|interaction|scoring)\s*-->/gi;
-
-const SECTION_TITLES: Record<string, string> = {
+const SECTION_TITLES: Record<StatementSection, string> = {
   legend: "Условие",
   input: "Формат входных данных",
   output: "Формат выходных данных",
@@ -34,61 +27,82 @@ const SECTION_TITLES: Record<string, string> = {
   scoring: "Система оценки",
 };
 
-type Section = {key: string; body: string};
+type StatementProps = {draft: ProblemDraft; problemId: string; statement: ProblemDraftStatement};
 
-/** Splits a statement the same way the server does: text before the first marker is the legend. */
-const splitSections = (markdown: string): Section[] => {
-  const markers = [...markdown.matchAll(SECTION_MARKERS)];
-  if (markers.length === 0) {
-    return [{key: "legend", body: markdown.trim()}];
-  }
-  const sections: Section[] = [{key: "legend", body: markdown.slice(0, markers[0].index).trim()}];
-  markers.forEach((marker, index) => {
-    const end = markers[index + 1]?.index ?? markdown.length;
-    const start = (marker.index ?? 0) + marker[0].length;
-    sections.push({key: marker[1].toLowerCase(), body: markdown.slice(start, end).trim()});
-  });
-  return sections.filter((section) => section.body !== "" && section.key !== "title");
-};
-
-const Preview = ({title, markdown}: {title: string; markdown: string}): ReactNode => {
-  const deferred = useDeferredValue(markdown);
+const Preview = ({draft, problemId, statement}: StatementProps): ReactNode => {
+  const deferred = useDeferredValue(statement);
+  // Sections refer to assets by name, read as participants' statements read them.
+  const assetUrl = (name: string): string | undefined => {
+    const asset = draft.assets.find((a) => a.name === name);
+    return asset && objectUrl(problemId, asset.object_id);
+  };
   return (
     <Stack gap="md" className="problem-statement">
       <Text fw={700} size="xl">
-        {title}
+        {draft.title}
       </Text>
-      {splitSections(deferred).map((section, index) => (
-        <Box key={`${section.key}-${index}`}>
-          {section.key !== "legend" || index > 0 ? (
+      {STATEMENT_SECTIONS.filter((key) => deferred[key].trim() !== "").map((key) => (
+        <Box key={key}>
+          {key !== "legend" && (
             <Text fw={600} mb={4}>
-              {SECTION_TITLES[section.key] ?? section.key}
+              {SECTION_TITLES[key]}
             </Text>
-          ) : null}
-          <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
-            {section.body}
-          </ReactMarkdown>
+          )}
+          <ProblemStatement value={deferred[key]} assetUrl={assetUrl} />
         </Box>
       ))}
     </Stack>
   );
 };
 
-const StatementEditor = ({draft, problemId}: {draft: ProblemDraft; problemId: string}): ReactNode => {
+const StatementForm = ({draft, problemId, statement: stored}: StatementProps): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
-  const languages = statementLanguages(draft);
+  const [statement, setLocal] = useState(stored);
+  const changed = STATEMENT_SECTIONS.some((key) => statement[key] !== stored[key]);
+  const sections = STATEMENT_SECTIONS.filter((key) => key !== "interaction" || draft.type === "interactive" || stored.interaction !== "");
+  return (
+    <Stack gap="md">
+      <SimpleGrid cols={{base: 1, md: 2}} spacing="md">
+        <Stack gap="sm">
+          {sections.map((key) => (
+            <Textarea
+              key={key}
+              label={SECTION_TITLES[key]}
+              value={statement[key]}
+              onChange={(e) => setLocal({...statement, [key]: e.currentTarget.value})}
+              autosize
+              minRows={key === "legend" ? 8 : 3}
+              maxRows={30}
+              styles={{input: {fontFamily: "var(--mantine-font-family-monospace)"}}}
+            />
+          ))}
+        </Stack>
+        <Box>
+          <Text size="sm" fw={500} mb={4}>
+            Предпросмотр
+          </Text>
+          <Preview draft={draft} problemId={problemId} statement={statement} />
+        </Box>
+      </SimpleGrid>
+      <Group justify="flex-end">
+        <Button
+          disabled={!changed}
+          loading={isSaving}
+          onClick={() => void save((current) => setStatement(current, statement))}
+        >
+          Сохранить условие
+        </Button>
+      </Group>
+    </Stack>
+  );
+};
+
+const StatementEditor = ({draft, problemId}: {draft: ProblemDraft; problemId: string}): ReactNode => {
+  const {save} = useSaveDraft(problemId);
+  const languages = draft.statements.map((s) => s.language);
   const [language, setLanguage] = useState<string>(languages[0] ?? "ru");
   const [newLanguage, setNewLanguage] = useState("");
-  const path = `${STATEMENT_FOLDER}/${language}.md`;
-  const stored = draft.files[path] ?? "";
-  const [text, setText] = useState(stored);
-
-  const selectLanguage = (value: string | null) => {
-    if (value) {
-      setLanguage(value);
-      setText(draft.files[`${STATEMENT_FOLDER}/${value}.md`] ?? "");
-    }
-  };
+  const stored = draft.statements.find((s) => s.language === language) ?? emptyStatement(language);
 
   const addLanguage = async () => {
     const code = newLanguage.trim().toLowerCase();
@@ -96,14 +110,11 @@ const StatementEditor = ({draft, problemId}: {draft: ProblemDraft; problemId: st
       notifications.show({title: "Недопустимый код языка", message: "Например: ru или en", color: "red"});
       return;
     }
-    if (languages.includes(code)) {
-      selectLanguage(code);
+    if (!languages.includes(code) && !(await save((current) => setStatement(current, emptyStatement(code))))) {
       return;
     }
-    if (await save((current) => setFile(current, `${STATEMENT_FOLDER}/${code}.md`, ""))) {
-      setNewLanguage("");
-      selectLanguage(code);
-    }
+    setNewLanguage("");
+    setLanguage(code);
   };
 
   const options = [...new Set([...languages, language])].map((value) => ({value, label: value.toUpperCase()}));
@@ -112,42 +123,16 @@ const StatementEditor = ({draft, problemId}: {draft: ProblemDraft; problemId: st
     <SectionPaper title="Условие">
       <Stack gap="md">
         <Group align="flex-end" wrap="wrap">
-          <Select label="Язык" data={options} value={language} allowDeselect={false} onChange={selectLanguage} w={120} />
+          <Select label="Язык" data={options} value={language} allowDeselect={false} onChange={(value) => value && setLanguage(value)} w={120} />
           <TextInput label="Новый язык" placeholder="en" value={newLanguage} onChange={(e) => setNewLanguage(e.currentTarget.value)} w={120} />
           <Button variant="light" disabled={newLanguage.trim() === ""} onClick={() => void addLanguage()}>
             Добавить
           </Button>
         </Group>
         <Text size="xs" c="dimmed">
-          Название задачи берётся из черновика. Разделы отделяются маркерами: {"<!-- input -->"}, {"<!-- output -->"},{" "}
-          {"<!-- notes -->"}, {"<!-- interaction -->"}, {"<!-- scoring -->"}; текст до первого маркера — условие.
+          Название задачи берётся из черновика. Изображения подключаются по имени ресурса: ![](pic.png).
         </Text>
-        <SimpleGrid cols={{base: 1, md: 2}} spacing="md">
-          <Textarea
-            label="Markdown"
-            value={text}
-            onChange={(e) => setText(e.currentTarget.value)}
-            autosize
-            minRows={16}
-            maxRows={40}
-            styles={{input: {fontFamily: "var(--mantine-font-family-monospace)"}}}
-          />
-          <Box>
-            <Text size="sm" fw={500} mb={4}>
-              Предпросмотр
-            </Text>
-            <Preview title={draft.title} markdown={text} />
-          </Box>
-        </SimpleGrid>
-        <Group justify="flex-end">
-          <Button
-            disabled={text === stored}
-            loading={isSaving}
-            onClick={() => void save((current) => setFile(current, path, text))}
-          >
-            Сохранить условие
-          </Button>
-        </Group>
+        <StatementForm key={language} draft={draft} problemId={problemId} statement={stored} />
       </Stack>
     </SectionPaper>
   );
@@ -158,20 +143,25 @@ const AssetsSection = ({draft, problemId}: {draft: ProblemDraft; problemId: stri
   const {upload, isUploading} = useUploadToDraft(problemId);
   const clipboard = useClipboard();
   const [file, setFile] = useState<File | null>(null);
-  const [assetPath, setAssetPath] = useState("");
+  const [assetName, setAssetName] = useState("");
 
   const handleUpload = async () => {
-    const target = `${ASSET_FOLDER}/${assetPath.trim() || file?.name || ""}`;
-    if (!file || !isValidPath(target)) {
-      notifications.show({title: "Недопустимый путь ресурса", message: "Укажите относительный путь, например pic.png", color: "red"});
+    if (!file) {
       return;
     }
     try {
-      await upload({part: "asset", assetPath: target, file});
+      await upload({part: "asset", assetName: assetName.trim() || file.name, file});
       setFile(null);
-      setAssetPath("");
+      setAssetName("");
     } catch {
       // The mutation already reported the failure.
+    }
+  };
+
+  const rename = (name: string) => {
+    const next = window.prompt("Новое имя ресурса", name)?.trim();
+    if (next && next !== name) {
+      void save((current) => renameAsset(current, name, next));
     }
   };
 
@@ -181,10 +171,10 @@ const AssetsSection = ({draft, problemId}: {draft: ProblemDraft; problemId: stri
         <Group align="flex-end" wrap="wrap">
           <FileInput label="Файл" value={file} onChange={setFile} placeholder="Изображение, PDF…" style={{minWidth: 240}} />
           <TextInput
-            label={`Путь в ${ASSET_FOLDER}/`}
+            label="Имя ресурса"
             placeholder={file?.name ?? "pic.png"}
-            value={assetPath}
-            onChange={(e) => setAssetPath(e.currentTarget.value)}
+            value={assetName}
+            onChange={(e) => setAssetName(e.currentTarget.value)}
             style={{minWidth: 240}}
           />
           <Button
@@ -204,30 +194,31 @@ const AssetsSection = ({draft, problemId}: {draft: ProblemDraft; problemId: stri
           <Table withTableBorder>
             <Table.Tbody>
               {draft.assets.map((asset) => (
-                <Table.Tr key={asset.path}>
+                <Table.Tr key={asset.name}>
                   <Table.Td>
                     <Anchor href={objectUrl(problemId, asset.object_id)} target="_blank" rel="noreferrer" size="sm">
-                      {asset.path}
+                      {asset.name}
                     </Anchor>
                   </Table.Td>
-                  <Table.Td w={90}>
+                  <Table.Td w={120}>
                     <Group gap={4} wrap="nowrap">
                       <Tooltip label="Копировать Markdown-ссылку">
-                        <ActionIcon variant="subtle" onClick={() => clipboard.copy(`![](${asset.path})`)}>
+                        <ActionIcon variant="subtle" aria-label={`Копировать ссылку на ${asset.name}`} onClick={() => clipboard.copy(`![](${asset.name})`)}>
                           <IconCopy size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Переименовать">
+                        <ActionIcon variant="subtle" aria-label={`Переименовать ${asset.name}`} disabled={isSaving} onClick={() => rename(asset.name)}>
+                          <IconPencil size={16} />
                         </ActionIcon>
                       </Tooltip>
                       <Tooltip label="Удалить">
                         <ActionIcon
                           variant="subtle"
                           color="red"
+                          aria-label={`Удалить ${asset.name}`}
                           disabled={isSaving}
-                          onClick={() =>
-                            void save((current) => ({
-                              ...current,
-                              assets: current.assets.filter((a) => a.path !== asset.path),
-                            }))
-                          }
+                          onClick={() => void save((current) => removeAsset(current, asset.name))}
                         >
                           <IconTrash size={16} />
                         </ActionIcon>

@@ -1714,7 +1714,7 @@ export interface components {
             /** Format: uuid */
             object_id: string | null;
             /** Format: uuid */
-            component_id: string | null;
+            generator_id: string | null;
             args: string[];
             /** Format: int64 */
             seed: number | null;
@@ -1725,17 +1725,41 @@ export interface components {
             /** Format: uuid */
             object_id: string | null;
             /** Format: uuid */
-            component_id: string | null;
+            solution_id: string | null;
         };
-        ProblemDraftComponent: {
+        /** @description A source compiled with the library files it depends on; each dependency is placed under its library name. */
+        ProblemDraftProgram: {
+            /** @description Toolchain language key, such as cpp or python. */
+            language: string;
+            source: string;
+            dependencies: string[];
+        };
+        /** @description A validator, generator or solution; tests and the main solution refer to it by ID. */
+        ProblemDraftNamedProgram: {
             /** Format: uuid */
             id: string;
-            /** @enum {string} */
-            role: "checker" | "validator" | "interactor" | "generator" | "solution";
-            path: string;
-            dependencies: {
-                [key: string]: string;
-            };
+            name: string;
+            /** @description Toolchain language key, such as cpp or python. */
+            language: string;
+            source: string;
+            dependencies: string[];
+        };
+        /** @description A source file programs include by its name. */
+        ProblemDraftLibraryFile: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            content: string;
+        };
+        /** @description The statement in one language as Markdown sections. */
+        ProblemDraftStatement: {
+            language: string;
+            legend: string;
+            input: string;
+            output: string;
+            notes: string;
+            interaction: string;
+            scoring: string;
         };
         ProblemDraftSubtask: {
             /** Format: uuid */
@@ -1762,11 +1786,13 @@ export interface components {
             input: components["schemas"]["ProblemDraftInput"];
             answer: components["schemas"]["ProblemDraftAnswer"];
         };
+        /** @description A statement resource; sections show it as ![alt](name). */
         ProblemDraftAsset: {
-            path: string;
+            name: string;
             /** Format: uuid */
             object_id: string;
         };
+        /** @description The editable problem as typed entries without package paths. Programs, library files and tests are referred to by ID; names are labels. */
         ProblemDraft: {
             /** Format: uuid */
             problem_id: string;
@@ -1782,15 +1808,19 @@ export interface components {
             memory_limit_mb: number;
             /** Format: double */
             max_score: number | null;
+            checker: components["schemas"]["ProblemDraftProgram"] | null;
+            interactor: components["schemas"]["ProblemDraftProgram"] | null;
+            /** @description At most one validator. */
+            validators: components["schemas"]["ProblemDraftNamedProgram"][];
+            generators: components["schemas"]["ProblemDraftNamedProgram"][];
+            solutions: components["schemas"]["ProblemDraftNamedProgram"][];
             /** Format: uuid */
             main_solution_id: string | null;
-            files: {
-                [key: string]: string;
-            };
-            components: components["schemas"]["ProblemDraftComponent"][];
+            library: components["schemas"]["ProblemDraftLibraryFile"][];
+            statements: components["schemas"]["ProblemDraftStatement"][];
+            assets: components["schemas"]["ProblemDraftAsset"][];
             subtasks: components["schemas"]["ProblemDraftSubtask"][];
             tests: components["schemas"]["ProblemDraftTest"][];
-            assets: components["schemas"]["ProblemDraftAsset"][];
         };
         ProblemPackage: {
             /** Format: uuid */
@@ -1858,6 +1888,14 @@ export interface components {
             message?: string;
             /** @example req-123e4567-e89b-42d3-a456-426614174000 */
             request_id?: string;
+            /** @description Invalid values of the request body, each at an RFC 6901 JSON Pointer into it. */
+            fields?: components["schemas"]["FieldError"][];
+        };
+        /** @description One invalid value of a request body. */
+        FieldError: {
+            /** @example /tests/3/input/generator_id */
+            pointer: string;
+            message: string;
         };
         /**
          * @description Result of creation.
@@ -1948,7 +1986,7 @@ export interface components {
             is_builtin: boolean;
         };
         /**
-         * @description Problem data.
+         * @description Problem catalog data. The statement, samples and assets belong to the draft and to published packages and are read there.
          * @example {
          *       "capabilities": [
          *         "view"
@@ -1961,23 +1999,9 @@ export interface components {
          *       "title": "Test problem",
          *       "time_limit": 1000,
          *       "memory_limit": 256,
-         *       "legend": "example",
-         *       "input_format": "example",
-         *       "output_format": "example",
-         *       "notes": "example",
-         *       "scoring": "example",
          *       "is_template": false,
          *       "created_at": "2026-01-01T12:00:00Z",
-         *       "updated_at": "2026-01-01T12:00:00Z",
-         *       "samples": [
-         *         {
-         *           "input": "1 2",
-         *           "output": "3"
-         *         }
-         *       ],
-         *       "assets": {
-         *         "assets/pic.png": "0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f"
-         *       }
+         *       "updated_at": "2026-01-01T12:00:00Z"
          *     }
          */
         ProblemModel: {
@@ -2004,18 +2028,12 @@ export interface components {
             memory_limit: number;
             /** @example false */
             is_template: boolean;
-            legend: string;
-            input_format: string;
-            output_format: string;
-            notes: string;
-            scoring: string;
             /** @example true */
             is_private?: boolean;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
             updated_at: string;
-            samples: components["schemas"]["ProblemSampleModel"][];
         };
         /**
          * @description Problems list item data.
@@ -2114,7 +2132,7 @@ export interface components {
          *           }
          *         ],
          *         "assets": {
-         *           "assets/pic.png": "0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f"
+         *           "pic.png": "0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f"
          *         }
          *       }
          *     }
@@ -5014,7 +5032,10 @@ export interface components {
 }
 export type ProblemDraftInput = components['schemas']['ProblemDraftInput'];
 export type ProblemDraftAnswer = components['schemas']['ProblemDraftAnswer'];
-export type ProblemDraftComponent = components['schemas']['ProblemDraftComponent'];
+export type ProblemDraftProgram = components['schemas']['ProblemDraftProgram'];
+export type ProblemDraftNamedProgram = components['schemas']['ProblemDraftNamedProgram'];
+export type ProblemDraftLibraryFile = components['schemas']['ProblemDraftLibraryFile'];
+export type ProblemDraftStatement = components['schemas']['ProblemDraftStatement'];
 export type ProblemDraftSubtask = components['schemas']['ProblemDraftSubtask'];
 export type ProblemDraftTest = components['schemas']['ProblemDraftTest'];
 export type ProblemDraftAsset = components['schemas']['ProblemDraftAsset'];
@@ -5024,6 +5045,7 @@ export type ProblemBuild = components['schemas']['ProblemBuild'];
 export type ProblemBuildAccepted = components['schemas']['ProblemBuildAccepted'];
 export type ProblemBuildCancelled = components['schemas']['ProblemBuildCancelled'];
 export type Error = components['schemas']['Error'];
+export type FieldError = components['schemas']['FieldError'];
 export type CreationResponseModel = components['schemas']['CreationResponseModel'];
 export type UpdateUserRequestModel = components['schemas']['UpdateUserRequestModel'];
 export type PaginationModel = components['schemas']['PaginationModel'];
@@ -5383,7 +5405,7 @@ export interface operations {
         requestBody: {
             content: {
                 "multipart/form-data": {
-                    /** @description JSON UploadChange: part (asset/input/answer/pair), asset_path or full test metadata. For pair, file is the input and answer is the answer. */
+                    /** @description JSON UploadChange: part (asset/input/answer/pair), asset_name or full test metadata. For pair, file is the input and answer is the answer. */
                     metadata: string;
                     /** Format: binary */
                     file: string;

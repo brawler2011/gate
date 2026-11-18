@@ -259,7 +259,7 @@ func statements(fsys fs.FS, list []Statement) []spec.Statement {
 	}
 	var result []spec.Statement
 	for _, language := range slices.Sorted(maps.Keys(sources)) {
-		result = append(result, spec.Statement{Language: language, Path: sources[language], TeX: true})
+		result = append(result, spec.Statement{Language: language, TeX: sources[language]})
 	}
 	return result
 }

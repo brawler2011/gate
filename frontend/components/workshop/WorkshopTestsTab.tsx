@@ -135,10 +135,11 @@ const describeInput = (test: ProblemDraftTest, draft: ProblemDraft, problemId: s
       </Badge>
     );
   }
-  const generator = draft.components.find((c) => c.id === test.input.component_id);
+  const generator = draft.generators.find((g) => g.id === test.input.generator_id);
   return (
     <Text size="sm" ff="monospace">
-      {generator?.path.split("/").pop() ?? "?"} {test.input.args.join(" ")} #{test.input.seed}
+      {generator?.name ?? "?"} {test.input.args.join(" ")}
+      {test.input.seed !== null && ` #${test.input.seed}`}
     </Text>
   );
 };

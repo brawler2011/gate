@@ -4,7 +4,7 @@ import {useState} from "react";
 import type {ReactNode} from "react";
 
 type Props = {
-  path: string;
+  label: string;
   content: string;
   disabled?: boolean;
   saving?: boolean;
@@ -12,14 +12,14 @@ type Props = {
   onDelete: () => void;
 };
 
-/** Plain-text editor for one draft file with save and confirmed delete. */
-export const SourceEditor = ({path, content, disabled, saving, onSave, onDelete}: Props): ReactNode => {
+/** Plain-text editor for one draft source with save and confirmed delete. */
+export const SourceEditor = ({label, content, disabled, saving, onSave, onDelete}: Props): ReactNode => {
   const [text, setText] = useState(content);
   const [confirming, setConfirming] = useState(false);
   return (
     <Stack gap="sm">
       <Text ff="monospace" size="sm" fw={600}>
-        {path}
+        {label}
       </Text>
       <Textarea
         value={text}
@@ -40,7 +40,7 @@ export const SourceEditor = ({path, content, disabled, saving, onSave, onDelete}
       </Group>
       <Modal opened={confirming} onClose={() => setConfirming(false)} title="Удалить файл?" centered>
         <Stack>
-          <Text size="sm">Файл {path} будет удалён из черновика.</Text>
+          <Text size="sm">{label} будет удалён из черновика.</Text>
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setConfirming(false)}>
               Отмена

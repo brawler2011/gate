@@ -1,0 +1,1 @@
+In the first example, $a=7$ and $b=8$. Thus, the answer is $a+b=7+8=15$.
