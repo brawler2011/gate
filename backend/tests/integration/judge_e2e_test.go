@@ -120,22 +120,31 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	build, err := drafts.ClaimBuild(ctx, 5*time.Minute)
 	require.NoError(t, err)
 	work := diskTempDir(t)
-	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(diskTempDir(t), client, files, sandbox.Image{Config: cfg}), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	packageID, err := pipeline.Execute(ctx, build)
 	require.NoError(t, err)
 
 	// A judge compiles the package's checker with its own image; digest names that image.
 	cache := diskTempDir(t)
 	newJudge := func(image sandbox.Image) *judging.JudgeUseCase {
-		executor := &judging.PackageJudge{Client: client, Files: files, Languages: image.Config, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
-		executor.Programs = &judging.ProgramCache{Root: cache, Compiler: image.Compiler(), Compile: executor.CompileProgram}
+		executor := &judging.PackageJudge{Client: client, Files: files, Languages: image.Config, Programs: sandbox.NewProgramCache(cache, client, files, image), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 		return judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), submissionsRepo,
 			&judging.PackageLoader{Store: store, Bucket: bucket, TempDir: diskTempDir(t), Packages: drafts, Limits: limits},
 			executor, judgeworker.NewEventPublisher(js))
 	}
 	judgeUC := newJudge(image)
-	checkerEntry := func(image sandbox.Image) string {
-		return filepath.Join(cache, packageID.String(), image.Compiler(), "checker", "entry")
+	// cached lists the compiled programs in the judges' cache.
+	cached := func(t *testing.T) []string {
+		t.Helper()
+		entries, err := os.ReadDir(cache)
+		require.NoError(t, err)
+		names := []string{}
+		for _, e := range entries {
+			if !strings.HasPrefix(e.Name(), ".") {
+				names = append(names, e.Name())
+			}
+		}
+		return names
 	}
 
 	contestID := uuid.New()
@@ -169,13 +178,17 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		assert.EqualValues(t, 1, *sub.FailedTest)
 	})
 	t.Run("CheckerCompiledOncePerImage", func(t *testing.T) {
-		before, err := os.Stat(checkerEntry(image))
-		require.NoError(t, err, "the first submissions compiled the checker into the cache")
+		programs := cached(t)
+		require.Len(t, programs, 1, "the first submissions compiled the checker into the cache")
+		entry := filepath.Join(cache, programs[0], "entry")
+		before, err := os.Stat(entry)
+		require.NoError(t, err)
 		sub := judge(t, problemID, "python3", "print(sum(map(int, input().split())))")
 		assert.Equal(t, submissionsmodel.Accepted, sub.State)
-		after, err := os.Stat(checkerEntry(image))
+		after, err := os.Stat(entry)
 		require.NoError(t, err)
 		assert.True(t, os.SameFile(before, after), "a cached checker is not compiled again")
+		assert.Equal(t, programs, cached(t))
 	})
 	t.Run("ChangedJudgeImageCompilesItsOwnChecker", func(t *testing.T) {
 		// The package carries no binaries: a worker whose image differs, here only in its
@@ -188,8 +201,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		judgeUC = newJudge(changed)
 		sub := judge(t, problemID, "python3", "print(sum(map(int, input().split())))")
 		assert.Equal(t, submissionsmodel.GotWA, sub.State, "the checker compiled with the changed configuration rejects everything")
-		_, err := os.Stat(checkerEntry(changed))
-		require.NoError(t, err)
+		assert.Len(t, cached(t), 2, "each image keeps its own compiled checker")
 		judgeUC = newJudge(image)
 		sub = judge(t, problemID, "python3", "print(sum(map(int, input().split())))")
 		assert.Equal(t, submissionsmodel.Accepted, sub.State)
@@ -255,9 +267,9 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 	compile := aux
 	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 20*time.Second, 60*time.Second, 512<<20, 150
 	h.limits = problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux}
-	h.pipeline = builder.Pipeline{Repo: h.drafts, Store: store, Bucket: bucket, TempDir: diskTempDir(t), Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
-	executor := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
-	executor.Programs = &judging.ProgramCache{Root: diskTempDir(t), Compiler: image.Compiler(), Compile: executor.CompileProgram}
+	programs := sandbox.NewProgramCache(diskTempDir(t), client, files, image)
+	h.pipeline = builder.Pipeline{Repo: h.drafts, Store: store, Bucket: bucket, TempDir: diskTempDir(t), Client: client, Files: files, Languages: cfg, Programs: programs, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	executor := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Programs: programs, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	h.judge = judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), h.submissions,
 		&judging.PackageLoader{Store: store, Bucket: bucket, TempDir: diskTempDir(t), Packages: h.drafts, Limits: h.limits},
 		executor, judgeworker.NewEventPublisher(js))

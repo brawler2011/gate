@@ -37,7 +37,7 @@ func (s *IntegrationTestSuite) buildPackage(userID, problemID uuid.UUID) uuid.UU
 	build, err := s.problemDrafts.ClaimBuild(s.ctx, 5*time.Minute)
 	s.Require().NoError(err)
 	s.Require().Equal(accepted.BuildID, build.ID)
-	pipeline := builder.Pipeline{Repo: s.problemDrafts, Store: s.objectStore, Bucket: s.bucket, TempDir: diskTempDir(s.T()), Client: client, Files: files, Languages: &sandbox.Config{Langs: options.Languages}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: s.problemDrafts, Store: s.objectStore, Bucket: s.bucket, TempDir: diskTempDir(s.T()), Client: client, Files: files, Languages: &sandbox.Config{Langs: options.Languages}, Programs: sandbox.NewProgramCache(diskTempDir(s.T()), client, files, sandbox.Image{Config: &sandbox.Config{Langs: options.Languages}}), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	packageID, err := pipeline.Execute(s.ctx, build)
 	s.Require().NoError(err)
 	return packageID

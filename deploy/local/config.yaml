@@ -35,7 +35,7 @@ problems:
     object_bytes: 512MiB
     test_output_bytes: 512MiB
     compile:
-      # testlib.h takes about 5 s of CPU at -O2 on a fast core.
+      # Problem programs; submissions use compile_cpu from judge/langs.toml.
       cpu: 20s
       wall: 60s
       memory: 512MiB

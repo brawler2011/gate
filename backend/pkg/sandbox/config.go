@@ -7,6 +7,7 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -31,6 +32,19 @@ type Language struct {
 	CodeFile    string `toml:"code_file" json:"code_file"`
 	CompileFile string `toml:"compile_file" json:"compile_file"`
 	Execute     string `toml:"execute" json:"execute"`
+	// CompileCPU limits submission compilation only.
+	CompileCPU time.Duration `toml:"compile_cpu" json:"-"`
+}
+
+const compileWallFactor = 3
+
+// SubmissionCompileLimits returns base with the language's compile time.
+func (c *Config) SubmissionCompileLimits(language string, base FileRunLimits) FileRunLimits {
+	if lang, ok := c.Langs[language]; ok && lang.CompileCPU > 0 {
+		base.CPU = lang.CompileCPU
+		base.Wall = compileWallFactor * lang.CompileCPU
+	}
+	return base
 }
 
 // Config is the language catalog: configurations by identifier, and the
@@ -79,6 +93,9 @@ func ParseConfig(data []byte) (*Config, error) {
 		lang := langs[id]
 		if lang.Name == "" || len(lang.Extensions) == 0 || lang.CodeFile == "" || lang.Execute == "" {
 			return nil, fmt.Errorf("language %q needs name, extensions, code_file and execute", id)
+		}
+		if (lang.Compile != "") != (lang.CompileCPU > 0) {
+			return nil, fmt.Errorf("language %q needs compile_cpu exactly when it has a compile command", id)
 		}
 		for _, ext := range lang.Extensions {
 			if ext == "" || ext != strings.ToLower(ext) || strings.ContainsAny(ext, "./") {

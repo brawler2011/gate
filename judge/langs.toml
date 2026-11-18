@@ -8,6 +8,7 @@
 #             Order defines selection priority; put preferred configurations first.
 # syntax      Prism (refractor) grammar the frontend highlights sources with
 # package     nixpkgs attribute installed into the judge image (see flake.nix)
+# compile_cpu submission compile CPU time (wall: 3x)
 # The other keys tell the backend how to compile and run code in the sandbox,
 # where the runtime's binaries are available under /usr/bin.
 
@@ -19,6 +20,7 @@ package = "gcc15"
 type = "compiler"
 code_file = "foo.c"
 compile = "/usr/bin/gcc -O2 -Wall -std=gnu23 -o ${name} foo.c -lm"
+compile_cpu = "10s"
 compile_file = "solution"
 execute = "${dir}/${name}"
 
@@ -30,6 +32,7 @@ package = "gcc15"
 type = "compiler"
 code_file = "foo.cc"
 compile = "/usr/bin/g++ -O2 -Wall -std=c++23 -o ${name} foo.cc"
+compile_cpu = "10s"
 compile_file = "solution"
 execute = "${dir}/${name}"
 
@@ -41,6 +44,7 @@ package = "gcc15"
 type = "compiler"
 code_file = "foo.cc"
 compile = "/usr/bin/g++ -O2 -Wall -std=c++20 -o ${name} foo.cc"
+compile_cpu = "10s"
 compile_file = "solution"
 execute = "${dir}/${name}"
 
@@ -52,6 +56,7 @@ package = "gcc15"
 type = "compiler"
 code_file = "foo.cc"
 compile = "/usr/bin/g++ -O2 -Wall -std=c++17 -o ${name} foo.cc"
+compile_cpu = "10s"
 compile_file = "solution"
 execute = "${dir}/${name}"
 
@@ -81,6 +86,7 @@ package = "go_1_26"
 type = "compiler"
 code_file = "foo.go"
 compile = "/usr/bin/go build -o ${name} foo.go"
+compile_cpu = "10s"
 compile_file = "solution"
 execute = "${dir}/${name}"
 
@@ -92,6 +98,7 @@ package = "jdk25_headless"
 type = "compiler"
 code_file = "Main.java"
 compile = "/usr/bin/javac Main.java"
+compile_cpu = "10s"
 compile_file = "Main.class"
 execute = "/usr/bin/java -Xmx192m -Xms32m -XX:ActiveProcessorCount=1 -cp ${dir} Main"
 
@@ -103,6 +110,7 @@ package = "rustc"
 type = "compiler"
 code_file = "foo.rs"
 compile = "/usr/bin/rustc -O --edition 2024 -o ${name} foo.rs"
+compile_cpu = "15s"
 compile_file = "solution"
 execute = "${dir}/${name}"
 
