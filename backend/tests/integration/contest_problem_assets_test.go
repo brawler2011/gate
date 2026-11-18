@@ -21,8 +21,6 @@ import (
 	ht "github.com/ogen-go/ogen/http"
 )
 
-// importWithImage replaces the problem draft with the a-plus-b package plus a
-// statement image, marking one generated test as a sample.
 func (s *IntegrationTestSuite) importWithImage(userID, problemID uuid.UUID, image []byte) {
 	s.T().Helper()
 	ctx := withTestUser(s.ctx, userID)
@@ -60,8 +58,7 @@ func (s *IntegrationTestSuite) importWithImage(userID, problemID uuid.UUID, imag
 	s.Require().NoError(err)
 }
 
-// removePackageArchive deletes the archive of a built package from object
-// storage, so any statement read that still opens it fails.
+// Removing the archive exposes any statement read that still depends on it.
 func (s *IntegrationTestSuite) removePackageArchive(packageID uuid.UUID) {
 	s.T().Helper()
 	descriptor, err := s.problemDrafts.GetPackageDescriptor(s.ctx, packageID)
@@ -74,8 +71,7 @@ func sha256Hex(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// Statement images and samples travel from an imported draft through a real
-// build into the package a contest uses, and are served without its archive.
+// Statement images and samples remain readable without the package archive.
 func (s *IntegrationTestSuite) TestContestProblemAssetServesPackageImage() {
 	owner := s.createUser("asset_owner", accessmodel.UserRoleAdmin)
 	org := s.createOrganization("asset-org", "Asset Organization", owner.Id)
@@ -135,8 +131,7 @@ func (s *IntegrationTestSuite) TestContestProblemAssetServesPackageImage() {
 	s.Require().Error(err)
 	s.NotEqual(http.StatusOK, s.getStatusCode(err))
 
-	// Switching to a package with a changed image changes its URL at once, and
-	// the old hash is no longer served for this contest problem.
+	// Switching packages changes the image URL and rejects the previous hash.
 	changed := []byte("\x89PNG\r\n\x1a\nchanged image")
 	s.importWithImage(owner.Id, problemID, changed)
 	next := s.buildPackage(owner.Id, problemID)

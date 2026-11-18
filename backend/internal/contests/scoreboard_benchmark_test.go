@@ -17,8 +17,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Grouped, already-loaded rows isolate Go projection cost from PostgreSQL and
-// from the scanning/sorting behavior of the general correctness-test fixture.
 type benchmarkScoreboardRepo struct {
 	*scoreboardRepo
 	standings []contestsmodel.ContestProblemResult
@@ -68,7 +66,6 @@ func BenchmarkScoreboardProjection(b *testing.B) {
 						}
 					}
 					uc := contests.NewContestsUseCase(r, nil, nil, nil)
-					// Read inside the freeze window; the fixed contest dates are in the past.
 					ctx := accessmodel.WithReadTime(context.Background(), start.Add(90*time.Minute))
 					operation := func() {
 						result, err := uc.ProjectScoreboard(ctx, r.contest.ID, unfrozen)
@@ -103,9 +100,6 @@ func BenchmarkScoreboardProjection(b *testing.B) {
 	}
 }
 
-// Initial fixed budgets come from five local PostgreSQL 18.3 measurements with
-// headroom: 2x maximum time, half minimum throughput, 25% above Go allocations.
-// Columns: maximum ns/op, minimum ops/s, maximum B/op, maximum allocs/op.
 var scoreboardBenchmarkBudgets = map[string]struct{ nanos, ops, bytes, allocs float64 }{
 	"BenchmarkScoreboardProjection/large/Frozen": {3827000, 261.3, 1253312, 5013},
 	"BenchmarkScoreboardProjection/large/Live":   {3740000, 267.45, 3991552, 6288},

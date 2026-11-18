@@ -14,13 +14,10 @@ import (
 )
 
 func (s *IntegrationTestSuite) TestListContests() {
-	// 1. Create User
 	user := s.createUser("testuser_contests", accessmodel.UserRoleUser)
 
-	// 2. Create Organization
 	org := s.createOrganization("test-org", "Test Organization", user.Id)
 
-	// 3. Create Contest
 	contestID := uuid.New()
 	err := s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 		ID:             contestID,
@@ -34,7 +31,6 @@ func (s *IntegrationTestSuite) TestListContests() {
 	})
 	s.Require().NoError(err)
 
-	// 4. Update to Public
 	visibility := contestsmodel.ContestVisibilityPublic
 	err = s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{
 		ID:         contestID,
@@ -42,14 +38,12 @@ func (s *IntegrationTestSuite) TestListContests() {
 	})
 	s.Require().NoError(err)
 
-	// 5. Make Request
 	resp, err := s.client.ListPublicContests(withTestUser(s.ctx, user.Id), corev1.ListPublicContestsParams{
 		Page:     corev1.NewOptInt32(1),
 		PageSize: corev1.NewOptInt32(10),
 	})
 	s.Require().NoError(err)
 
-	// 6. Assert Response
 	s.NotNil(resp)
 	s.Len(resp.Contests, 1)
 	s.Equal(contestID, resp.Contests[0].ID)

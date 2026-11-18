@@ -27,17 +27,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// scopeRow is the shape shared by the generated scope query rows.
 type scopeRow struct {
 	TotalItems int64
 	Resource   []byte
 }
 
-// emptyScopeRow reports the single null resource SQL emits for an empty page,
-// including when the offset exceeds the total.
+// An empty page includes one null SQL row even when the offset exceeds the total.
 func emptyScopeRow(data []byte) bool { return len(data) == 0 || string(data) == "null" }
 
-// scopedIDs decodes a scope page read straight from SQL into resource IDs and the total.
 func scopedIDs(rows []scopeRow) ([]uuid.UUID, int64, error) {
 	ids := make([]uuid.UUID, 0, len(rows))
 	var total int64
@@ -81,9 +78,7 @@ func scopeContests(ctx context.Context, q *sqlc.Queries, params sqlc.ScopeContes
 	return scopedIDs(converted)
 }
 
-// All scopes, details and future capability projections use the same persisted
-// facts. Explicit expectations below also prevent matching bugs in both policies
-// and SQL from making this parity test vacuous.
+// Explicit expectations catch matching policy/SQL bugs that parity alone would miss.
 func TestMetadataPolicySQLParity(t *testing.T) {
 	t.Parallel()
 	pool := getTestPool(t)
@@ -154,7 +149,6 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 			exec(`INSERT INTO contest_members(contest_id,user_id,role) VALUES($1,$2,$3)`, c, users[name].Id, contestRole)
 		}
 	}
-	// Independent team grants cover each problem permission and both contest roles.
 	for name, permission := range map[string]string{"team read": "read", "team write": "write", "team admin": "admin", "foreign team": "admin"} {
 		team := uuid.New()
 		teamOrg := org
@@ -237,8 +231,7 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 			}
 			require.Len(t, wantP, count)
 			require.Len(t, wantC, count)
-			// Use SQL scopes directly for expired identities: public grants must not turn
-			// an expired authenticated actor into a guest. Use cases return 401 instead.
+			// SQL scopes must reject expired identities instead of granting guest access.
 			ps, pt, err := scopeProblems(actorCtx, q, sqlc.ScopeProblemsParams{ViewerID: &u.Id, Now: now, OrganizationID: &org, Descending: true, PageSize: 100})
 			require.NoError(t, err)
 			cs, ct, err := scopeContests(actorCtx, q, sqlc.ScopeContestsParams{ViewerID: &u.Id, Now: now, OrganizationID: &org, PageSize: 100})
@@ -299,8 +292,7 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 			require.ElementsMatch(t, wantP, dashboardP)
 			require.ElementsMatch(t, wantC, dashboardC)
 
-			// Team visibility is not resource visibility (#145), including direct and
-			// other-team grants, duplicate grants, and foreign organization rejection.
+			// Team visibility does not grant resource visibility, even through overlapping grants.
 			tp, total, err := teamsRepo.GetTeamProblems(actorCtx, closed, u.Id, paging.Request{})
 			require.NoError(t, err)
 			require.Len(t, tp, count)
@@ -318,8 +310,7 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 			require.NoError(t, err)
 			require.Empty(t, ec)
 			require.EqualValues(t, count, scopeTotal)
-			// The repositories must drop the null row of a page beyond the end
-			// rather than decode it into an empty resource.
+			// Repositories discard the empty-page sentinel instead of returning an empty resource.
 			beyondEnd := paging.Request{Page: 100, PageSize: 1}
 			tp, total, err = teamsRepo.GetTeamProblems(actorCtx, closed, u.Id, beyondEnd)
 			require.NoError(t, err)
@@ -405,8 +396,7 @@ func TestMetadataPolicySQLParity(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	// Simulate future enum values in the disposable test database. Unknown grants
-	// must deny even public metadata, rather than silently becoming absent grants.
+	// Unknown persisted grants must deny public metadata instead of acting like absent grants.
 	t.Run("unknown roles fail closed", func(t *testing.T) {
 		for _, enum := range []string{"problem_role", "contest_role", "team_role", "organization_role", "problem_permission", "user_role"} {
 			exec("ALTER TYPE " + enum + " ADD VALUE IF NOT EXISTS '__policy_unknown'")

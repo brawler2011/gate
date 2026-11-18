@@ -19,9 +19,7 @@ func checker(testlib string) Program {
 	return Program{Source: []byte("#include \"testlib.h\"\nint main() {}\n"), Language: "cpp17", Deps: map[string][]byte{"testlib.h": []byte(testlib)}}
 }
 
-// Concurrent compilations of one program run once; a changed library file or
-// another compiler compiles again, and a build and a judge sharing the cache
-// get the same entry.
+// Concurrent requests share compilation; compiler or library changes invalidate the shared cache.
 func TestProgramCacheCompilesEachContentOncePerCompiler(t *testing.T) {
 	root := t.TempDir()
 	var compiles atomic.Int32
@@ -70,8 +68,7 @@ func TestProgramCacheCompilesEachContentOncePerCompiler(t *testing.T) {
 	assert.EqualValues(t, 3, compiles.Load())
 }
 
-// Moving bytes between the source and a library file, or renaming a file,
-// changes what compiles, so it must change the entry.
+// Cache identity distinguishes file boundaries and names, even when concatenated bytes match.
 func TestProgramKeySeparatesFields(t *testing.T) {
 	base := Program{Source: []byte("ab"), Language: "cpp17", Deps: map[string][]byte{"x.h": []byte("c")}}
 	keys := map[string]Program{}

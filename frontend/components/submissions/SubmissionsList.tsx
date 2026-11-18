@@ -32,7 +32,6 @@ const VerdictCell = ({submission, onOpenDetails}: VerdictCellProps) => {
     return <Text c="dimmed">Заморожено</Text>;
   }
 
-  // State 1 = Saved (in queue, not yet testing)
   if (state === 1 && !progress) {
     return (
       <div className={styles.queueText}>
@@ -42,7 +41,6 @@ const VerdictCell = ({submission, onOpenDetails}: VerdictCellProps) => {
     );
   }
 
-  // Currently testing (has progress)
   if (progress) {
     const phaseLabels = {
       queued: 'В очереди',
@@ -57,7 +55,6 @@ const VerdictCell = ({submission, onOpenDetails}: VerdictCellProps) => {
     );
   }
 
-  // Final verdict
   const shortVerdict = ShortVerdictString(state, failed_test);
   const fullVerdict = StateString(state, failed_test);
 
@@ -101,7 +98,6 @@ const SubmissionRow = ({
 
   useEffect(() => {
     if (isNew) {
-      // Trigger animation after mount
       const timer = setTimeout(() => setMounted(true), 10);
       return () => clearTimeout(timer);
     }

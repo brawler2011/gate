@@ -17,7 +17,7 @@ type Props = {
   onSubmit: (test: ProblemDraftTest, files: TestFiles) => void;
 };
 
-/** Splits generator arguments on whitespace; the generator receives them as argv without a shell. */
+// Arguments are passed as argv without shell expansion.
 const parseArgs = (text: string): string[] => text.split(/\s+/).filter((part) => part !== "");
 
 export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}: Props): ReactNode => {

@@ -12,14 +12,12 @@ var (
 	ErrNotFound    = errors.New("file not found")
 )
 
-// ObjectInfo holds basic metadata about a stored object.
 type ObjectInfo struct {
 	Key          string
 	Size         int64
 	LastModified time.Time
 }
 
-// Storage defines a unified interface for file operations across S3 and Local FS backends.
 type Storage interface {
 	UploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string) error
 	// DownloadFile returns a reader that the caller must close on success.

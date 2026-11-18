@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-// Testlib exit codes
 const (
 	testlibExitOK     = 0
 	testlibExitWA     = 1
@@ -13,7 +12,6 @@ const (
 	testlibExitPoints = 7
 )
 
-// parseTestlibVerdict maps testlib exit status and output to Status and Score.
 func parseTestlibVerdict(exitStatus int, stdout, stderr string) (Status, *float64) {
 	var status Status
 	var score *float64
@@ -38,7 +36,6 @@ func parseTestlibVerdict(exitStatus int, stdout, stderr string) (Status, *float6
 	return status, score
 }
 
-// parseScore extracts score from checker/interactor output according to testlib API.
 func parseScore(output string) *float64 {
 	trimmed := strings.TrimSpace(output)
 	if trimmed == "" {

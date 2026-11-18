@@ -1,4 +1,4 @@
-# Lefthook 1.13.6 globs: * also matches across directories.
+# Lefthook globs match across directories.
 pre-commit:
   parallel: true
   commands:

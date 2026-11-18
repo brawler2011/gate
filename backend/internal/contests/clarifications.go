@@ -37,7 +37,6 @@ func (uc *ClarificationsUseCase) CreateClarification(ctx context.Context, input 
 			return err
 		}
 
-		// Check if clarifications are allowed
 		settings := contestsmodel.MapToContestSettings(contest.Settings)
 		if settings.AllowClarifications != nil && !*settings.AllowClarifications {
 			return pkg.Wrap(pkg.NoPermission, nil, "clarifications are disabled for this contest")

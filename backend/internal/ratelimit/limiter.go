@@ -22,8 +22,7 @@ var (
 	SubmissionQuotas = []Quota{{60, 5 * time.Minute}, {300, time.Hour}}
 )
 
-// Each key is a sliding log. All windows are checked before adding an event,
-// so rejected requests neither consume quota nor extend the wait.
+// Check all windows before recording an event so rejected requests cannot extend the wait.
 var quotaScript = redis.NewScript(`
 local now = redis.call('TIME')
 local ms = now[1]*1000 + math.floor(now[2]/1000)
@@ -45,8 +44,7 @@ redis.call('PEXPIRE', KEYS[1], retention)
 return 0
 `)
 
-// A cooldown marker replaces the failure log after the sixteenth failure.
-// Rejected attempts do not refresh its TTL; a successful login deletes the key.
+// Rejected attempts do not refresh cooldown; successful login clears it.
 var failureScript = redis.NewScript(`
 if redis.call('ZSCORE', KEYS[1], 'cooldown') then
  return redis.call('PTTL', KEYS[1])
@@ -108,7 +106,7 @@ func (l *Limiter) LoginSuccess(ctx context.Context, identifier string) {
 	}
 	ctx, cancel := context.WithTimeout(ctx, 250*time.Millisecond)
 	defer cancel()
-	// Scripter deliberately keeps the dependency small; deleting through Lua is atomic.
+	// Lua keeps deletion atomic.
 	_, err := l.client.Eval(ctx, `return redis.call('DEL', KEYS[1])`, []string{"rl:fail:login:" + strings.ToLower(identifier)}).Result()
 	if err != nil {
 		slog.Warn("rate limiter unavailable; allowing request", "error", err)

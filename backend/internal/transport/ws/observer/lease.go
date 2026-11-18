@@ -18,9 +18,7 @@ type audienceAuthorizer interface {
 	AuthorizeContestAudience(context.Context, uuid.UUID, uuid.UUID, string, uuid.UUID) error
 }
 
-// admit fixes the audience and security revision before history is selected.
-// Every delivery checks the lease, including replay; idle sessions are checked
-// too. Revision read failure closes subscriptions, just like invalidation loss.
+// Fix audience and revision before selecting history; every delivery and idle check validates the lease.
 func (s *Observer) admit(ctx context.Context, filter *SubmissionsFilter, contestEvents bool) (func() error, error) {
 	signature := func() (string, error) {
 		ctx := m.WithReadTime(ctx, time.Now().UTC())
@@ -96,8 +94,7 @@ func (s *Observer) admit(ctx context.Context, filter *SubmissionsFilter, contest
 				return "", pkg.ErrConflict
 			}
 		}
-		// Session revocation can occur while facts are being loaded without changing
-		// resource revisions. Recheck credentials at the delivery decision boundary.
+		// Recheck credentials at delivery: session revocation need not change resource revisions.
 		currentActor, err := s.sessionActor(ctx)
 		if err != nil {
 			return "", err

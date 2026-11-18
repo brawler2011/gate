@@ -1,13 +1,10 @@
-# Backend configuration for production, mounted by the gate chart (deploy/README.md).
-# Secrets and connection strings come from the environment (the gate-secrets secret).
+# Secrets and connection strings come from gate-secrets.
 http:
   address: :8080
-  # Headless service of the Traefik pods (deploy/k3s/traefik-pods.yaml): only they
-  # may supply forwarded client IPs.
+  # Only Traefik pods may supply forwarded client IPs (deploy/k3s/traefik-pods.yaml).
   trusted_proxy: traefik-pods.kube-system.svc.cluster.local
   secure_cookies: true
 go_judge:
-  # The go-judge sidecar in the worker pod.
   grpc_addr: 127.0.0.1:5051
   http_url: http://127.0.0.1:5050
 storage:
@@ -19,12 +16,11 @@ email:
 inbox:
   retention: 168h
 judge:
-  # Judge image manifest that an init container copies into API pods.
   manifest_dir: /etc/judge
-  # One core: parallel judging would only share it and skew time limits.
+  # Avoid CPU contention that would skew judging time limits.
   workers: 1
 problems:
-  # Pod scratch space on node disk (emptyDir); must not be tmpfs.
+  # Build and judging scratch space must use disk, not tmpfs.
   work_dir: /problem-work
   draft:
     file_bytes: 1MiB
@@ -39,7 +35,6 @@ problems:
     object_bytes: 512MiB
     test_output_bytes: 512MiB
     compile:
-      # Problem programs; submissions use compile_cpu from judge/langs.toml.
       cpu: 20s
       wall: 60s
       memory: 512MiB

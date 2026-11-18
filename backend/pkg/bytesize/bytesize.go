@@ -1,4 +1,3 @@
-// Package bytesize parses human-readable data sizes in YAML configuration.
 package bytesize
 
 import (
@@ -10,9 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Size is a number of bytes. In YAML it is written either as a plain integer
-// or with a binary unit suffix: B, KiB, MiB, GiB, TiB (for example "512MiB").
-// It encodes to JSON as a plain integer.
+// YAML accepts integers or binary units (B, KiB, MiB, GiB, TiB); JSON uses integers.
 type Size int64
 
 const (
@@ -35,8 +32,7 @@ var units = []struct {
 	{"B", B},
 }
 
-// Parse converts "8GiB", "64 KiB" or "1024" to a Size. Decimal units such as
-// "GB" or "G" are rejected so that 10^9 and 2^30 are never confused.
+// Decimal units are rejected to avoid confusing binary and decimal byte counts.
 func Parse(s string) (Size, error) {
 	text := strings.TrimSpace(s)
 	multiplier := B
@@ -72,8 +68,6 @@ func (s *Size) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// Uint64 returns the size for APIs that take unsigned byte counts.
-// A negative size cannot come from Parse and is clamped to zero.
 func (s Size) Uint64() uint64 {
 	if s < 0 {
 		return 0

@@ -1,16 +1,5 @@
-# The language catalog: every compiler and interpreter configuration that
-# submissions and problem programs can select, by its identifier (the table name).
-# Identifiers are stored with submissions and problem components; keep them stable.
-#
-# name        what people see: the compiler or interpreter variant and version
-# extensions  source file extensions; the first names new files, and an extension
-#             suggests the first configuration (in file order) that accepts it
-#             Order defines selection priority; put preferred configurations first.
-# syntax      Prism (refractor) grammar the frontend highlights sources with
-# package     nixpkgs attribute installed into the judge image (see flake.nix)
-# compile_cpu submission compile CPU time (wall: 3x)
-# The other keys tell the backend how to compile and run code in the sandbox,
-# where the runtime's binaries are available under /usr/bin.
+# Identifiers are persisted with submissions and problem components; keep them stable.
+# Catalog order sets extension suggestion priority; put preferred configurations first.
 
 [c]
 name = "C (GCC 15)"

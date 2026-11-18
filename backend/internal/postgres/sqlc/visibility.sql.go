@@ -170,8 +170,7 @@ type ScopeProblemsRow struct {
 	Resource   []byte `json:"resource"`
 }
 
-// Metadata scopes use EXISTS grants so resources occur exactly once.
-// A nullable JSON row is the empty-page sentinel, preserving the total.
+// EXISTS grants prevent duplicate resources; the null empty-page sentinel preserves totals.
 func (q *Queries) ScopeProblems(ctx context.Context, arg ScopeProblemsParams) ([]ScopeProblemsRow, error) {
 	rows, err := q.db.Query(ctx, scopeProblems,
 		arg.Descending,

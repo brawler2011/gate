@@ -13,7 +13,6 @@ import (
 )
 
 const createContestJoinRequest = `-- name: CreateContestJoinRequest :one
-
 INSERT INTO contest_join_requests (
     id,
     contest_id,
@@ -40,9 +39,6 @@ type CreateContestJoinRequestParams struct {
 	Message   *string   `json:"message"`
 }
 
-// ============================================================================
-// Contest Join Requests
-// ============================================================================
 func (q *Queries) CreateContestJoinRequest(ctx context.Context, arg CreateContestJoinRequestParams) (ContestJoinRequest, error) {
 	row := q.db.QueryRow(ctx, createContestJoinRequest,
 		arg.ID,
@@ -65,8 +61,6 @@ func (q *Queries) CreateContestJoinRequest(ctx context.Context, arg CreateContes
 }
 
 const createOrganizationInvitation = `-- name: CreateOrganizationInvitation :one
-
-
 INSERT INTO organization_invitations (
     id,
     organization_id,
@@ -96,10 +90,6 @@ type CreateOrganizationInvitationParams struct {
 	Role           string    `json:"role"`
 }
 
-// Invitations & Join Requests queries
-// ============================================================================
-// Organization Invitations
-// ============================================================================
 func (q *Queries) CreateOrganizationInvitation(ctx context.Context, arg CreateOrganizationInvitationParams) (OrganizationInvitation, error) {
 	row := q.db.QueryRow(ctx, createOrganizationInvitation,
 		arg.ID,
@@ -123,7 +113,6 @@ func (q *Queries) CreateOrganizationInvitation(ctx context.Context, arg CreateOr
 }
 
 const createOrganizationJoinRequest = `-- name: CreateOrganizationJoinRequest :one
-
 INSERT INTO organization_join_requests (
     id,
     organization_id,
@@ -150,9 +139,6 @@ type CreateOrganizationJoinRequestParams struct {
 	Message        *string   `json:"message"`
 }
 
-// ============================================================================
-// Organization Join Requests
-// ============================================================================
 func (q *Queries) CreateOrganizationJoinRequest(ctx context.Context, arg CreateOrganizationJoinRequestParams) (OrganizationJoinRequest, error) {
 	row := q.db.QueryRow(ctx, createOrganizationJoinRequest,
 		arg.ID,

@@ -1,5 +1,3 @@
-// Package datareset applies the database schema and, while Gate has no users, wipes
-// all stored data whenever the schema changes (backend/migrations/README.md).
 package datareset
 
 import (
@@ -16,7 +14,6 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Stores hold all of Gate's data.
 type Stores struct {
 	DB        *sql.DB
 	Redis     *redis.Client
@@ -24,7 +21,6 @@ type Stores struct {
 	JetStream jetstream.JetStream
 }
 
-// Hash identifies a schema by the names and contents of its migrations.
 func Hash(migrations fs.FS) (string, error) {
 	names, err := fs.Glob(migrations, "*.sql")
 	if err != nil {
@@ -45,10 +41,6 @@ func Hash(migrations fs.FS) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// Apply keeps all data when the database already has the schema of migrations.
-// Otherwise it empties every S3 bucket, flushes the Redis database, deletes every
-// JetStream stream, recreates the public schema from migrations and records its hash.
-// It reports whether it reset the data.
 func Apply(ctx context.Context, stores Stores, migrations fs.FS) (bool, error) {
 	want, err := Hash(migrations)
 	if err != nil {
@@ -61,7 +53,7 @@ func Apply(ctx context.Context, stores Stores, migrations fs.FS) (bool, error) {
 	if have == want {
 		return false, nil
 	}
-	// The hash is stored last, so a failed reset is retried by the next run.
+	// Record the hash only after every store has reset successfully.
 	if err := wipe(ctx, stores); err != nil {
 		return false, err
 	}

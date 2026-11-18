@@ -95,7 +95,6 @@ func (h *pipelineHarness) save(t *testing.T, change func(*model.Draft)) {
 	require.NoError(t, err)
 }
 
-// randomFile writes size bytes of incompressible data to a new file.
 func randomFile(t *testing.T, dir string, size int64) string {
 	t.Helper()
 	f, err := os.CreateTemp(dir, "random-")
@@ -134,11 +133,9 @@ func (h *pipelineHarness) enqueueAndClaim(t *testing.T) model.ProblemBuild {
 
 const acceptEverythingChecker = "int main(){return 0;}\n"
 
-// Heap use is bounded by buffers and concurrency, not by the total size of the tests: the
-// build transfers hundreds of megabytes of incompressible data through a small heap.
+// Build heap use stays bounded as test data grows.
 func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
-	// Not parallel: it measures the heap of the whole test process, and Go runs
-	// sequential tests before any parallel one starts.
+	// Run sequentially because the heap measurement covers the entire process.
 	const perFile, tests = 24 << 20, 3
 	h := newPipelineHarness(t, 64<<20, 2<<30)
 	subtask := uuid.New()
@@ -153,8 +150,7 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 			Answer: model.DraftAnswer{Mode: "provided"},
 		}, perFile)
 	}
-	// Execute runs without the worker's heartbeat, so the lease must outlive the whole build.
-	h.options.Lease = 10 * time.Minute
+		h.options.Lease = 10 * time.Minute
 	build := h.enqueueAndClaim(t)
 
 	runtime.GC()
@@ -199,9 +195,7 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 	}
 }
 
-// A build compiles with the languages of the judge image that runs it, not of the one it
-// was enqueued under: an image change in between does not fail it, and a configuration the
-// running image lacks is a system configuration failure, not the author's.
+// Builds use the running judge catalog; missing configurations are system errors.
 func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 1<<20, 64<<20)
@@ -234,7 +228,6 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// generatorBuild saves a draft whose only test is produced by the given generator script.
 func (h *pipelineHarness) generatorBuild(t *testing.T, script string) {
 	t.Helper()
 	generator, solution, subtask := "gen", "main", uuid.New()
@@ -285,8 +278,7 @@ func (h *pipelineHarness) runWorker(t *testing.T) context.CancelFunc {
 	return cancel
 }
 
-// A generator that exceeds the output budget fails the build as an author error with a
-// bounded diagnostic, and nothing is published.
+// Excess generator output fails publication with a bounded author diagnostic.
 func TestPipelineOutputOverflowFailsBuildWithBoundedDiagnostic(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 1<<20, 256<<20)
@@ -311,8 +303,7 @@ func TestPipelineOutputOverflowFailsBuildWithBoundedDiagnostic(t *testing.T) {
 	require.Zero(t, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM stored_objects o WHERE o.purpose='package' AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)`))
 }
 
-// Cancelling a running build frees the single worker slot: a generator that would sleep for
-// minutes is abandoned within a few heartbeats, and the next build completes.
+// Cancelling a build frees the worker slot for the next build.
 func TestPipelineCancelFreesWorkerForNextBuild(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 1<<20, 256<<20)
@@ -324,7 +315,7 @@ func TestPipelineCancelFreesWorkerForNextBuild(t *testing.T) {
 	slow := mustBuildID(t, h)
 	h.runWorker(t)
 	waitBuild(t, h, slow, "running")
-	time.Sleep(2 * time.Second) // let the generator start inside the sandbox
+	time.Sleep(2 * time.Second) // Cancellation must interrupt a running generator.
 
 	_, err = h.repo.CancelBuild(h.ctx, mutationKey(h.org, "cancel", slow), slow)
 	require.NoError(t, err)
@@ -366,7 +357,6 @@ func mustRevision(t *testing.T, h *pipelineHarness) int64 {
 	return d.Revision
 }
 
-// mustBuildID returns the newest build of the problem.
 func mustBuildID(t *testing.T, h *pipelineHarness) uuid.UUID {
 	t.Helper()
 	builds, err := h.repo.ListBuilds(h.ctx, h.draft.ProblemID)

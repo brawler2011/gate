@@ -1,4 +1,3 @@
--- Problem Teams queries (team-based access control)
 
 -- name: AddProblemTeam :exec
 INSERT INTO problem_teams (problem_id, team_id, permission)

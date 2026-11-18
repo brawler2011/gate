@@ -13,7 +13,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 )
 
-// ListTeams handles GET /teams
 func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParams) (*corev1.ListTeamsResponseModel, error) {
 	filter := &organizationsmodel.TeamsFilter{
 		Search:   params.Search.Or(""),
@@ -30,32 +29,26 @@ func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParam
 	return projectResponse(h, ctx, listTeamsDTO(result.Teams, result.Pagination))
 }
 
-// CreateTeam handles POST /teams
 func (h *CoreServer) CreateTeam(ctx context.Context, req *corev1.CreateTeamReq) (*corev1.CreationResponseModel, error) {
 	if req == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
 	}
 
-	// Get current user
-	// Validate request body
 	if err := validateCreateTeamRequest(req.Name, req.OrganizationID); err != nil {
 		return nil, err
 	}
 
-	// Generate slug from name
 	slug := generateLogin(req.Name)
 
-	// Create input
 	input := &organizationsmodel.CreateTeamInput{
 		OrganizationID: req.OrganizationID,
 		Name:           req.Name,
 		Slug:           slug,
 		Description:    "",
-		Privacy:        organizationsmodel.TeamPrivacyClosed, // Default privacy
+		Privacy:        organizationsmodel.TeamPrivacyClosed,
 		ParentTeamID:   nil,
 	}
 
-	// Create team
 	team, err := h.Teams.CreateTeam(ctx, input)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to create team")
@@ -66,10 +59,7 @@ func (h *CoreServer) CreateTeam(ctx context.Context, req *corev1.CreateTeamReq) 
 	}, nil
 }
 
-// GetTeam handles GET /teams/{id}
 func (h *CoreServer) GetTeam(ctx context.Context, params corev1.GetTeamParams) (*corev1.GetTeamResponseModel, error) {
-	// Get current user
-	// Get team
 	team, err := h.Teams.GetTeam(ctx, params.ID)
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to get team")
@@ -80,10 +70,7 @@ func (h *CoreServer) GetTeam(ctx context.Context, params corev1.GetTeamParams) (
 	})
 }
 
-// UpdateTeam handles PATCH /teams/{id}
 func (h *CoreServer) UpdateTeam(ctx context.Context, req *corev1.UpdateTeamRequestModel, params corev1.UpdateTeamParams) error {
-	// Get current user
-	// Validate request body
 	if err := validateUpdateTeamRequest(req); err != nil {
 		return err
 	}
@@ -98,14 +85,12 @@ func (h *CoreServer) UpdateTeam(ctx context.Context, req *corev1.UpdateTeamReque
 		}
 	}
 
-	// Create update input
 	input := &organizationsmodel.UpdateTeamInput{
 		Name:        reqName,
 		Description: reqDesc,
-		Privacy:     nil, // Privacy not exposed in API yet
+		Privacy:     nil, // Privacy is not exposed by this endpoint.
 	}
 
-	// Update team
 	err := h.Teams.UpdateTeam(ctx, params.ID, input)
 	if err != nil {
 		return wrapTeamUCError(err, "failed to update team")
@@ -114,10 +99,7 @@ func (h *CoreServer) UpdateTeam(ctx context.Context, req *corev1.UpdateTeamReque
 	return nil
 }
 
-// DeleteTeam handles DELETE /teams/{id}
 func (h *CoreServer) DeleteTeam(ctx context.Context, params corev1.DeleteTeamParams) error {
-	// Get current user
-	// Delete team
 	err := h.Teams.DeleteTeam(ctx, params.ID)
 	if err != nil {
 		return wrapTeamUCError(err, "failed to delete team")
@@ -126,10 +108,7 @@ func (h *CoreServer) DeleteTeam(ctx context.Context, params corev1.DeleteTeamPar
 	return nil
 }
 
-// ListTeamMembers handles GET /teams/{id}/members
 func (h *CoreServer) ListTeamMembers(ctx context.Context, params corev1.ListTeamMembersParams) (*corev1.ListTeamMembersResponseModel, error) {
-	// Get current user
-	// Get members
 	members, err := h.Teams.ListTeamMembers(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
 		return nil, wrapTeamUCError(err, "failed to list team members")
@@ -138,7 +117,6 @@ func (h *CoreServer) ListTeamMembers(ctx context.Context, params corev1.ListTeam
 	return projectResponse(h, ctx, listTeamMembersDTO(members.Items, members.Pagination))
 }
 
-// AddTeamMember handles POST /teams/{id}/members
 func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMemberParams) error {
 	role := organizationsmodel.TeamRoleMember
 	if params.Role.IsSet() && params.Role.Value != "" {
@@ -159,7 +137,6 @@ func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMem
 	return nil
 }
 
-// UpdateTeamMemberRole handles PATCH /teams/{id}/members
 func (h *CoreServer) UpdateTeamMemberRole(ctx context.Context, params corev1.UpdateTeamMemberRoleParams) error {
 	err := h.Teams.UpdateTeamMemberRole(ctx, params.ID, params.UserID, organizationsmodel.TeamRole(params.Role))
 	if err != nil {
@@ -169,7 +146,6 @@ func (h *CoreServer) UpdateTeamMemberRole(ctx context.Context, params corev1.Upd
 	return nil
 }
 
-// RemoveTeamMember handles DELETE /teams/{id}/members
 func (h *CoreServer) RemoveTeamMember(ctx context.Context, params corev1.RemoveTeamMemberParams) error {
 	err := h.Teams.RemoveTeamMember(ctx, params.ID, params.UserID)
 	if err != nil {
@@ -179,7 +155,6 @@ func (h *CoreServer) RemoveTeamMember(ctx context.Context, params corev1.RemoveT
 	return nil
 }
 
-// ListTeamContests handles GET /teams/{id}/contests
 func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTeamContestsParams) (*corev1.ListContestsResponseModel, error) {
 	contests, err := h.Teams.GetTeamContests(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
@@ -191,7 +166,6 @@ func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTea
 	return projectResponse(h, ctx, ListContestsResponseDTO(contestsList))
 }
 
-// ListTeamProblems handles GET /teams/{id}/problems
 func (h *CoreServer) ListTeamProblems(ctx context.Context, params corev1.ListTeamProblemsParams) (*corev1.ListProblemsResponseModel, error) {
 	problems, err := h.Teams.GetTeamProblems(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
@@ -213,7 +187,5 @@ func wrapTeamUCError(err error, fallbackMsg string) error {
 	if errors.Is(err, pkg.ErrNotFound) {
 		return pkg.Wrap(pkg.ErrNotFound, err, fallbackMsg)
 	}
-	// Adding context must not change the use case error classification.
-	// Unclassified failures still map to HTTP 500 in pkg.ToREST.
 	return pkg.Wrap(nil, err, fallbackMsg)
 }

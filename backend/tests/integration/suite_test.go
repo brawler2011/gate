@@ -81,7 +81,6 @@ type IntegrationTestSuite struct {
 
 	mockNats *mocks.MockPublisher
 
-	// Repositories (for direct DB access in tests)
 	usersRepo         *pgstore.UsersRepo
 	contestsRepo      *pgstore.ContestsRepo
 	organizationsRepo *pgstore.OrganizationsRepo
@@ -106,9 +105,7 @@ func (s *IntegrationTestSuite) getStatusCode(err error) int {
 	return 0
 }
 
-// TestIntegrationSuite runs every Test method of IntegrationTestSuite as a parallel
-// subtest on its own suite instance, database and bucket. testify's suite.Run shares
-// one instance between tests and cannot run them in parallel.
+// Separate suite instances allow parallel tests; testify's suite.Run shares one instance.
 func TestIntegrationSuite(t *testing.T) {
 	typ := reflect.TypeOf(&IntegrationTestSuite{})
 	for i := range typ.NumMethod() {
@@ -144,7 +141,6 @@ func (s *IntegrationTestSuite) initApp() {
 	rateClient := redis.NewClient(&redis.Options{Addr: s.rateRedis.Addr(), MaxRetries: -1})
 	s.T().Cleanup(func() { _ = rateClient.Close() })
 	s.limiter = ratelimit.New(rateClient)
-	// Repositories
 	s.usersRepo = pgstore.NewUsersRepo(s.dbPool)
 	s.contestsRepo = pgstore.NewContestsRepo(s.dbPool)
 	s.organizationsRepo = pgstore.NewOrganizationsRepo(s.dbPool)
@@ -159,14 +155,12 @@ func (s *IntegrationTestSuite) initApp() {
 	authRepo := pgstore.NewAuthRepo(s.dbPool)
 	emailService := &email.LogEmailService{}
 
-	// UseCases
 	usersUC := identity.NewUsersUseCase(s.usersRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService)
 	authUC := identity.NewAuthUseCase(s.usersRepo, authRepo, pgstore.NewIdentityTransactions(s.dbPool), emailService, s.limiter)
 	packagesRepo := pgstore.NewPackagesRepo(s.dbPool)
 	permissionsUC := access.NewMetadataPermissions(access.NewPermissionsUseCase(s.contestsRepo, s.usersRepo, s.problemsRepo, s.teamsRepo, s.organizationsRepo), pgstore.NewPolicyFactsRepo(s.dbPool))
 	quotas := problemsmodel.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 100, Subtasks: 100}
 	problemDrafts := pgstore.NewProblemDraftsRepo(s.dbPool, quotas, time.Minute)
-	// Problem objects live in a real S3-compatible store, as in production.
 	objectStore, bucket := newSeaweedBackedS3Storage(s.T())
 	s.objectStore, s.bucket, s.problemDrafts = objectStore, bucket, problemDrafts
 	packageContent := &problems.PackageContent{Repo: problemDrafts, Store: objectStore, Bucket: bucket}
@@ -193,7 +187,6 @@ func (s *IntegrationTestSuite) initApp() {
 	clarificationsUC := contests.NewClarificationsUseCase(pgstore.NewContestEventsTransactions(s.dbPool), clarificationsRepo, permissionsUC)
 	contestDetails := contests.NewDetailsReader(s.contestsRepo, packageContent, permissionsUC, nil, s.usersRepo)
 
-	// Handler
 	coreServer := handlers.NewCoreServer(handlers.Services{
 		Auth:               authUC,
 		Users:              usersUC,
@@ -221,7 +214,6 @@ func (s *IntegrationTestSuite) initApp() {
 	s.Require().NoError(err)
 	coreServer.WithLanguages(langs)
 
-	// Server setup
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	secHandler := middleware.NewSecurityHandler()
 	authzMw := middleware.AuthzMiddleware()

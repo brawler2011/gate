@@ -69,7 +69,7 @@ func (s *IntegrationTestSuite) TestUpdateContestDates() {
 					return recorder.Code
 				}
 				s.Equal(http.StatusOK, patch(owner.Id, string(raw)))
-				// Refetch the settings data twice: cleared dates must stay unset on reload.
+				// Cleared dates must stay unset across repeated reloads.
 				for range 2 {
 					response, err := s.client.GetContest(withTestUser(s.ctx, owner.Id), corev1.GetContestParams{OrgLogin: org.Login, ContestLogin: login})
 					s.Require().NoError(err)

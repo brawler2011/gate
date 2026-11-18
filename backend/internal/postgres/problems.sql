@@ -1,4 +1,3 @@
--- Problems queries (new schema with Organizations)
 
 -- name: CreateProblem :one
 INSERT INTO problems (id, organization_id, owner_id, visibility)
@@ -23,7 +22,6 @@ WHERE id = $1;
 -- name: DeleteProblem :exec
 DELETE FROM problems WHERE id = $1;
 
--- Problem Members (direct access control)
 
 -- name: AddProblemMember :exec
 INSERT INTO problem_members (problem_id, user_id, role)

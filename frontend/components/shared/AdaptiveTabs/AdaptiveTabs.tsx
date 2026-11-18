@@ -32,7 +32,6 @@ export const AdaptiveTabs = ({
     if (!pathname) {
       return false;
     }
-    // Exact match for base URLs, prefix match for subpaths
     return pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
   };
 

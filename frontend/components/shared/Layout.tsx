@@ -20,7 +20,7 @@ type LayoutProps = {
 
 const Layout = ({
   children,
-  headerConfig = undefined, // Значения по умолчанию
+  headerConfig = undefined,
   footerConfig = {height: 0},
   navbarConfig = undefined,
   asideConfig = undefined,

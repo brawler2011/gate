@@ -30,7 +30,7 @@ export const StatusMessage = ({
         setIsClosing(true);
         setTimeout(() => {
           onClose();
-        }, 300); // Длительность анимации закрытия
+        }, 300);
       }, 1200);
 
       return () => clearTimeout(timer);

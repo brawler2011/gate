@@ -86,7 +86,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		})
 
 		s.Run("Self request passes middleware", func() {
-			// Middleware passes (not 401/403)
 			_, err := s.client.UploadAvatar(withTestUser(s.ctx, targetUser.Id), &corev1.UploadAvatarReq{
 				Avatar: sampleFile,
 			}, corev1.UploadAvatarParams{
@@ -97,7 +96,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 		})
 
 		s.Run("Admin request passes middleware", func() {
-			// Middleware passes (not 401/403)
 			_, err := s.client.UploadAvatar(withTestUser(s.ctx, adminUser.Id), &corev1.UploadAvatarReq{
 				Avatar: sampleFile,
 			}, corev1.UploadAvatarParams{

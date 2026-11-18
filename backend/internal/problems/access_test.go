@@ -22,8 +22,7 @@ func (p failedProblemPermissions) HasProblemPermission(context.Context, uuid.UUI
 func TestProblemReadsAndDraftOperationsAuthorizeBeforeAnyDependency(t *testing.T) {
 	for _, failure := range []error{nil, pkg.ErrNotFound, pkg.ErrInternal} {
 		permissions := failedProblemPermissions{failure}
-		// No repository, transaction or object storage dependency is available:
-		// every operation must be rejected by authorization alone.
+		// Authorization must reject every operation without reaching its dependencies.
 		reader := &ProblemsUseCase{permissions: permissions}
 		packages := &PackageUseCase{Permissions: permissions}
 		drafts := &DraftUseCase{Permissions: permissions}

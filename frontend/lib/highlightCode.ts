@@ -3,7 +3,6 @@ import {refractor, type Syntax} from 'refractor/core';
 
 import type {Root, Element, Text} from 'hast';
 
-/** Registers the grammar named syntax; false when refractor has no such grammar. */
 const loadGrammar = async (syntax: string): Promise<boolean> => {
   if (refractor.registered(syntax)) {
     return true;
@@ -11,20 +10,12 @@ const loadGrammar = async (syntax: string): Promise<boolean> => {
   if (!/^[a-z0-9-]+$/.test(syntax)) {
     return false;
   }
-  // Vite turns this into a chunk per grammar refractor ships, loaded the first
-  // time a language configuration's syntax names it.
-  // A failed load (a stale chunk, the network, an unknown grammar) rejects, so
-  // the query retries it instead of caching plain text.
+  // Let failed imports reject so the query retries instead of caching plain text.
   const grammar = await import(`../../node_modules/refractor/lang/${syntax}.js`) as {default: Syntax};
   refractor.register(grammar.default);
   return true;
 };
 
-/**
- * The grammar to highlight a language configuration's sources with: its syntax
- * once the grammar has loaded, "text" (no highlighting) until then or when the
- * grammar is unknown. Both refractor and react-syntax-highlighter see it.
- */
 export const useGrammar = (syntax: string | undefined): string => {
   const {data} = useQuery({
     queryKey: ['grammar', syntax],
@@ -37,20 +28,12 @@ export const useGrammar = (syntax: string | undefined): string => {
 
 type HastNode = Element | Text;
 
-/**
- * Wrap identifiers in text with variable span
- */
 const wrapIdentifiers = (text: string): string =>
   text.replace(/([a-zA-Z_][a-zA-Z0-9_]*)/g, '<span class="token variable">$1</span>');
 
-/**
- * Convert hast AST to HTML string
- * @param isTopLevel - whether this is a top-level text node (not inside a token span)
- */
 const hastToHtml = (node: HastNode | Root, isTopLevel: boolean = true): string => {
   if (node.type === 'text') {
     const escaped = escapeHtml((node as Text).value);
-    // Only wrap identifiers in top-level text nodes
     if (isTopLevel) {
       return wrapIdentifiers(escaped);
     }
@@ -71,7 +54,6 @@ const hastToHtml = (node: HastNode | Root, isTopLevel: boolean = true): string =
       attrs = ` class="${className.join(' ')}"`;
     }
 
-    // Children inside a span are not top-level
     const children = element.children
       .map((child) => hastToHtml(child as HastNode, false))
       .join('');
@@ -82,9 +64,6 @@ const hastToHtml = (node: HastNode | Root, isTopLevel: boolean = true): string =
   return '';
 };
 
-/**
- * Escape HTML special characters
- */
 const escapeHtml = (str: string): string => {
   return str
     .replace(/&/g, '&amp;')
@@ -94,10 +73,6 @@ const escapeHtml = (str: string): string => {
     .replace(/'/g, '&#039;');
 };
 
-/**
- * Highlight code with a registered grammar (see useGrammar) and return HTML;
- * any other grammar leaves the code as plain text.
- */
 export const highlightCode = (code: string, grammar: string): string => {
   if (!refractor.registered(grammar)) {
     return escapeHtml(code);

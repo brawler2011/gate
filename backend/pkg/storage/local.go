@@ -10,23 +10,19 @@ import (
 	"time"
 )
 
-// LocalStorage implements the Storage interface for local filesystem storage.
 type LocalStorage struct {
 	basePath string
 }
 
-// NewLocalStorage creates a new local filesystem storage provider
 func NewLocalStorage(basePath string) *LocalStorage {
 	return &LocalStorage{
 		basePath: basePath,
 	}
 }
 
-// UploadFile writes reader content to a file at <basePath>/<bucket>/<key>
 func (s *LocalStorage) UploadFile(ctx context.Context, bucket, key string, reader io.Reader, contentType string) error {
 	destPath := filepath.Join(s.basePath, bucket, filepath.Clean(key))
 
-	// If it is a directory placeholder, create the directory and return
 	if contentType == "application/x-directory" || strings.HasSuffix(key, "/") {
 		if err := os.MkdirAll(destPath, 0755); err != nil {
 			return fmt.Errorf("failed to create directory for local storage: %w", err)
@@ -34,7 +30,6 @@ func (s *LocalStorage) UploadFile(ctx context.Context, bucket, key string, reade
 		return nil
 	}
 
-	// Ensure parent directory exists
 	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 		return fmt.Errorf("failed to create directory for local storage: %w", err)
 	}
@@ -61,9 +56,7 @@ func (s *LocalStorage) UploadFile(ctx context.Context, bucket, key string, reade
 	return nil
 }
 
-// DownloadFile opens the file at <basePath>/<bucket>/<key>.
-// Generates a weak ETag using file size and modification time.
-// If ifNoneMatch matches, returns ErrNotModified.
+// Local ETags are weak because they use size and modification time, not content.
 func (s *LocalStorage) DownloadFile(ctx context.Context, bucket, key string, ifNoneMatch *string) (io.ReadCloser, string, error) {
 	srcPath := filepath.Join(s.basePath, bucket, filepath.Clean(key))
 
@@ -75,7 +68,6 @@ func (s *LocalStorage) DownloadFile(ctx context.Context, bucket, key string, ifN
 		return nil, "", fmt.Errorf("failed to stat local file: %w", err)
 	}
 
-	// Generate weak ETag format: "size-modtime"
 	etag := fmt.Sprintf(`W/"%x-%x"`, info.Size(), info.ModTime().UnixNano())
 
 	if ifNoneMatch != nil && *ifNoneMatch == etag {
@@ -90,7 +82,6 @@ func (s *LocalStorage) DownloadFile(ctx context.Context, bucket, key string, ifN
 	return file, etag, nil
 }
 
-// DeleteFile deletes the file at <basePath>/<bucket>/<key>
 func (s *LocalStorage) DeleteFile(ctx context.Context, bucket, key string) error {
 	targetPath := filepath.Join(s.basePath, bucket, filepath.Clean(key))
 
@@ -98,7 +89,6 @@ func (s *LocalStorage) DeleteFile(ctx context.Context, bucket, key string) error
 		return fmt.Errorf("failed to delete local file: %w", removeErr)
 	}
 
-	// Clean up empty parent directories recursively
 	bucketDir := filepath.Join(s.basePath, bucket)
 	removeEmptyParents(filepath.Dir(targetPath), bucketDir, s.basePath)
 
@@ -114,7 +104,6 @@ func removeEmptyParents(dir, bucketDir, basePath string) {
 	}
 }
 
-// ListObjects lists all files with metadata in the bucket subdirectory matching prefix recursively
 func (s *LocalStorage) ListObjects(ctx context.Context, bucket, prefix string) ([]ObjectInfo, error) {
 	bucketDir := filepath.Join(s.basePath, bucket)
 
@@ -143,7 +132,7 @@ func (s *LocalStorage) ListObjects(ctx context.Context, bucket, prefix string) (
 			return fmt.Errorf("failed to get relative path: %w", err)
 		}
 
-		// Normalize paths to forward slashes for unified key representation
+		// Object keys use forward slashes on every platform.
 		key := filepath.ToSlash(rel)
 		if strings.HasPrefix(key, prefix) {
 			size := int64(0)
@@ -164,7 +153,6 @@ func (s *LocalStorage) ListObjects(ctx context.Context, bucket, prefix string) (
 	return objects, nil
 }
 
-// ListFiles lists all files in the bucket subdirectory matching prefix recursively
 func (s *LocalStorage) ListFiles(ctx context.Context, bucket, prefix string) ([]string, error) {
 	objects, err := s.ListObjects(ctx, bucket, prefix)
 	if err != nil {
@@ -179,14 +167,11 @@ func (s *LocalStorage) ListFiles(ctx context.Context, bucket, prefix string) ([]
 	return keys, nil
 }
 
-// GetPresignedURL returns a direct HTTP URL to download/view the file via the file serving endpoint
 func (s *LocalStorage) GetPresignedURL(ctx context.Context, bucket, key string, expiration time.Duration) (string, error) {
-	// Normalize the key to forward slashes just in case
 	urlKey := filepath.ToSlash(filepath.Clean(key))
 	return fmt.Sprintf("/api/files/%s/%s", bucket, urlKey), nil
 }
 
-// EnsureBucket ensures the bucket directory exists
 func (s *LocalStorage) EnsureBucket(ctx context.Context, bucket string) error {
 	bucketDir := filepath.Join(s.basePath, bucket)
 	if err := os.MkdirAll(bucketDir, 0755); err != nil {

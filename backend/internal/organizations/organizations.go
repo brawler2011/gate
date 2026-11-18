@@ -59,13 +59,11 @@ func (uc *OrganizationsUseCase) CreateOrganization(ctx context.Context, input *o
 			return pkg.NoPermission
 		}
 
-		// Create organization
 		org, err = tx.CreateOrganization(ctx, input)
 		if err != nil {
 			return fmt.Errorf("create organization: %w", err)
 		}
 
-		// Add creator as owner
 		err = tx.AddMember(ctx, org.ID, creatorID, organizationsmodel.OrgRoleOwner)
 		if err != nil {
 			return fmt.Errorf("add creator as owner: %w", err)
@@ -91,7 +89,6 @@ func (uc *OrganizationsUseCase) GetOrganizationByLogin(ctx context.Context, logi
 		return nil, err
 	}
 
-	// Check permissions
 	hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, user.Id, accessmodel.ActionViewOrganization)
 	if err != nil {
 		return nil, fmt.Errorf("check permissions: %w", err)
@@ -117,13 +114,11 @@ func (uc *OrganizationsUseCase) ListOrganizations(ctx context.Context, filter *o
 		return nil, err
 	}
 	filter = &normalized
-	// List all organizations
 	orgs, total, err := uc.repo.ListOrganizations(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 
-	// Filter based on user access
 	accessibleOrgs := make([]organizationsmodel.Organization, 0, len(orgs))
 	for _, org := range orgs {
 		hasAccess, err := uc.permissionsUC.HasOrganizationPermission(ctx, org.ID, user.Id, accessmodel.ActionViewOrganization)
@@ -260,14 +255,12 @@ func (uc *OrganizationsUseCase) BatchCreateUsers(
 		return nil, pkg.Wrap(pkg.NoPermission, nil, "access denied")
 	}
 
-	// Calculate expiration date if ttl_days > 0
 	var expiresAt *time.Time
 	if input.TTLDays != nil && *input.TTLDays > 0 {
 		t := time.Now().Add(time.Duration(*input.TTLDays) * 24 * time.Hour)
 		expiresAt = &t
 	}
 
-	// Find existing usernames matching prefix to determine padding & index
 	existingUsernames, err := uc.usersRepo.ListExistingUsernamesByPrefix(ctx, prefix)
 	if err != nil {
 		return nil, fmt.Errorf("list existing usernames: %w", err)
@@ -323,7 +316,6 @@ func (uc *OrganizationsUseCase) BatchCreateUsers(
 		})
 	}
 
-	// Save all users and org members in a transaction
 	err = uc.withinOrganization(ctx, org.ID, accessmodel.ActionManageOrganization, func(tx OrganizationTxStore) error {
 
 		for _, pu := range pendingUsers {
@@ -383,7 +375,6 @@ func (uc *OrganizationsUseCase) InviteMember(
 	var invitation *organizationsmodel.OrganizationInvitation
 	var pendingNotifications []notificationsmodel.Notification
 	err = uc.withinOrganization(ctx, org.ID, requiredOrgMemberAction(role), func(tx OrganizationTxStore) error {
-		// Verify target user exists
 		_, err := tx.GetUserById(ctx, targetUserID)
 		if err != nil {
 			return pkg.Wrap(pkg.ErrNotFound, err, "user not found")
@@ -394,7 +385,6 @@ func (uc *OrganizationsUseCase) InviteMember(
 			return fmt.Errorf("get inviter user: %w", err)
 		}
 
-		// Check if already a member
 		_, err = tx.GetMember(ctx, org.ID, targetUserID)
 		if err == nil {
 			return pkg.Wrap(pkg.ErrConflict, nil, "пользователь уже является участником организации")
@@ -404,7 +394,6 @@ func (uc *OrganizationsUseCase) InviteMember(
 			return err
 		}
 
-		// Check if there is already a pending invitation
 		pending, err := tx.GetPendingInvitation(ctx, org.ID, targetUserID)
 		if err != nil {
 			return fmt.Errorf("get pending invitation: %w", err)
@@ -568,7 +557,6 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 			return err
 		}
 
-		// Check if already a member
 		_, err = tx.GetMember(ctx, org.ID, userID)
 		if err == nil {
 			return pkg.Wrap(pkg.ErrConflict, nil, "вы уже состоите в этой организации")
@@ -583,7 +571,6 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 		}
 
 		if org.JoinPolicy == organizationsmodel.OrgJoinPolicyOpen {
-			// Immediately add member
 			if err := tx.AddMember(ctx, org.ID, userID, organizationsmodel.OrgRoleMember); err != nil {
 				return fmt.Errorf("add member: %w", err)
 			}
@@ -591,7 +578,6 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 			return nil
 		}
 
-		// By Request
 		pending, err := tx.GetPendingJoinRequest(ctx, org.ID, userID)
 		if err != nil {
 			return fmt.Errorf("get pending request: %w", err)

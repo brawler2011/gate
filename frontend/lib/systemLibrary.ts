@@ -17,8 +17,6 @@ const useLibrary = <T,>(select: (library: SystemLibrary) => T): T | undefined =>
 const files = (library: SystemLibrary) => library.files;
 const checkers = (library: SystemLibrary) => library.checkers;
 
-/** The system library files that auto-updated draft library files build with; undefined until loaded. */
 export const useSystemLibrary = (): SystemLibraryFile[] | undefined => useLibrary(files);
 
-/** The testlib standard checkers a draft can use; undefined until loaded. */
 export const useStandardCheckers = (): SystemChecker[] | undefined => useLibrary(checkers);

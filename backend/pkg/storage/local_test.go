@@ -65,7 +65,6 @@ func TestLocalStorageOperations(t *testing.T) {
 	assert.Equal(t, testContent, downloadedContent)
 	assert.NotEmpty(t, etag)
 
-	// Test ErrNotModified
 	_, _, err = localStorage.DownloadFile(ctx, bucket, testKey, &etag)
 	require.ErrorIs(t, err, ErrNotModified)
 

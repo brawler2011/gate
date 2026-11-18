@@ -8,9 +8,6 @@ import (
 
 var _ corev1.Handler = (*CoreServer)(nil)
 
-// Services lists the application services the REST handlers call. Each field
-// is the use case or read store that owns the operation; there is no facade in
-// between.
 type Services struct {
 	Auth      AuthUC
 	Users     UsersUC
@@ -53,8 +50,6 @@ func NewCoreServer(services Services, secureCookies bool) *CoreServer {
 	return &CoreServer{Services: services, secureCookies: secureCookies}
 }
 
-// WithLanguages sets the language catalog: GetLanguages reports it, and
-// submissions and contest settings must name its configurations.
 func (h *CoreServer) WithLanguages(languages *sandbox.Config) *CoreServer {
 	h.languages = languages
 	return h

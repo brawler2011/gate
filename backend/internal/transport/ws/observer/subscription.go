@@ -29,8 +29,7 @@ type websocketConnection interface {
 	Close() error
 }
 
-// The queue is never closed: broadcast may race with connection cleanup.
-// done and closeOnce coordinate all sources of disconnection instead.
+// Never close the queue: broadcast can race with connection cleanup.
 type subscription struct {
 	id           uuid.UUID
 	conn         websocketConnection
@@ -40,8 +39,7 @@ type subscription struct {
 	queueMu      sync.Mutex
 	verify       func() error
 	onInvalidate func(error)
-	// detach removes the subscription from its hub. It must not be called while
-	// holding the hub lock and must tolerate repeated calls.
+	// Detach must tolerate repeated calls and run outside the hub lock.
 	detach func()
 }
 
@@ -55,19 +53,14 @@ func newSubscription(conn websocketConnection) *subscription {
 	return s
 }
 
-// unregister detaches the subscription before the client can observe its end,
-// so a client that saw the close frame and reconnected is never matched with
-// its previous, still registered subscription.
+// Unregister before sending a close frame so reconnects cannot match a previous subscription.
 func (s *subscription) unregister() {
 	if s.detach != nil {
 		s.detach()
 	}
 }
 
-// unregisteringConnection unregisters the subscription before every close frame
-// the observer writes. Close frames written by the websocket library itself
-// (close echoes, oversized messages, protocol errors) bypass it; those
-// subscriptions are unregistered by close once the read pump fails.
+// Library-written close frames bypass the wrapper; read-pump failure unregisters them.
 type unregisteringConnection struct {
 	websocketConnection
 	sub *subscription
@@ -115,7 +108,7 @@ func (s *subscription) close(reason string, err error) {
 	})
 }
 
-// Call while holding the hub lock so history cannot be evicted by broadcast.
+// Hold the hub lock through history capture and live-queue registration to avoid missed events.
 func snapshotHistory(ring *RingBuffer[*WrappedEvent], since uint64, replay bool) ([]*WrappedEvent, error) {
 	barrier := ring.MaxSeq()
 	if !replay || barrier == 0 {

@@ -14,7 +14,6 @@ import (
 )
 
 const addProblemMember = `-- name: AddProblemMember :exec
-
 INSERT INTO problem_members (problem_id, user_id, role)
 VALUES ($1, $2, $3)
 `
@@ -25,7 +24,6 @@ type AddProblemMemberParams struct {
 	Role      problemsmodel.ProblemRole `json:"role"`
 }
 
-// Problem Members (direct access control)
 func (q *Queries) AddProblemMember(ctx context.Context, arg AddProblemMemberParams) error {
 	_, err := q.db.Exec(ctx, addProblemMember, arg.ProblemID, arg.UserID, arg.Role)
 	return err
@@ -46,7 +44,6 @@ func (q *Queries) CountProblemMembers(ctx context.Context, problemID uuid.UUID) 
 }
 
 const createProblem = `-- name: CreateProblem :one
-
 INSERT INTO problems (id, organization_id, owner_id, visibility)
 VALUES ($1, $2, $3, $4)
 RETURNING id, organization_id, owner_id, visibility, created_at, updated_at, is_template
@@ -59,7 +56,6 @@ type CreateProblemParams struct {
 	Visibility     string     `json:"visibility"`
 }
 
-// Problems queries (new schema with Organizations)
 func (q *Queries) CreateProblem(ctx context.Context, arg CreateProblemParams) (Problem, error) {
 	row := q.db.QueryRow(ctx, createProblem,
 		arg.ID,

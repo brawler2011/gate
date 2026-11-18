@@ -138,8 +138,7 @@ func (h *Hub) releaseScoreboard(contestID *uuid.UUID) {
 	}
 }
 
-// A finish invalidates the running lease even without new judge events. Publish
-// one shared final snapshot before closing that lease; reconnect refreshes REST.
+// Contest finish invalidates the lease; publish the shared final snapshot before closing it.
 type finalSnapshot struct {
 	configuration string
 	payload       []byte

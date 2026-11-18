@@ -11,10 +11,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/points"
 )
 
-// OpenBuiltPackage is the shared Builder/Judge contract for published GFMT v2.
-// Import parsers may read author formats; published packages contain no recipe
-// requiring generators, and only their checker or interactor is compiled, by the
-// judge with its own image.
+// Published packages must contain materialized inputs and answers, not generator recipes.
 func OpenBuiltPackage(dir string) (*GateFormat, error) {
 	g, err := OpenPackage(dir)
 	if err != nil {

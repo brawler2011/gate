@@ -11,7 +11,7 @@ import (
 type State = int32
 
 const (
-	Saved State = 1 // saved to db
+	Saved State = 1
 
 	GotCE State = 101 // compilation error
 	GotTL State = 102 // time limit exceeded
@@ -21,9 +21,9 @@ const (
 	GotWA State = 106 // wrong answer
 	GotIE State = 107 // internal error
 
-	Accepted State = 200 // accepted
+	Accepted State = 200
 
-	Disqualified State = 300 // disqualified / blocked
+	Disqualified State = 300
 )
 
 type TestDetailItem struct {

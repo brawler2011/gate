@@ -21,11 +21,9 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
   const queryClient = useQueryClient();
   const [user, setUser] = useState<UserModel>(initialUser);
 
-  // Role form
   const [role, setRole] = useState<string>(user.role);
   const [roleLoading, setRoleLoading] = useState(false);
 
-  // Email form
   const [emailLoading, setEmailLoading] = useState(false);
   const emailForm = useForm({
     initialValues: {
@@ -37,7 +35,6 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
     },
   });
 
-  // Direct Password form
   const [setPasswordLoading, setSetPasswordLoading] = useState(false);
   const passwordForm = useForm({
     initialValues: {
@@ -48,9 +45,7 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
     },
   });
 
-  // Reset email loading
   const [resetEmailLoading, setResetEmailLoading] = useState(false);
-  // Resend verification loading
   const [resendVerificationLoading, setResendVerificationLoading] = useState(false);
 
   const handleUpdateRole = async () => {
@@ -303,7 +298,6 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
           </Text>
         </div>
 
-        {/* 1. Overview */}
         <Paper withBorder radius="md" p="xl">
           <Stack gap="md">
             <Group justify="space-between" align="center">
@@ -371,7 +365,6 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
           </Stack>
         </Paper>
 
-        {/* 2. Role Management */}
         <Paper withBorder radius="md" p="xl">
           <Stack gap="md">
             <Group gap="sm">
@@ -412,7 +405,6 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
           </Stack>
         </Paper>
 
-        {/* 3. Email Management */}
         <Paper withBorder radius="md" p="xl">
           <Stack gap="md">
             <Group gap="sm">
@@ -458,7 +450,6 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
           </Stack>
         </Paper>
 
-        {/* 4. Password Management */}
         <Paper withBorder radius="md" p="xl">
           <Stack gap="md">
             <Group gap="sm">
@@ -522,7 +513,6 @@ export const AdminUserEditContent = ({user: initialUser}: Props): ReactNode => {
           </Stack>
         </Paper>
 
-        {/* 5. Verification Management (if unverified) */}
         {!user.is_email_verified && user.email && (
           <Paper withBorder radius="md" p="xl" style={{borderColor: "var(--mantine-color-orange-5)"}}>
             <Stack gap="md">

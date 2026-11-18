@@ -40,8 +40,7 @@ func (p singleProblem) GetProblemById(_ context.Context, id uuid.UUID) (model.Pr
 	return model.Problem{ID: id, OrganizationID: p.org}, nil
 }
 
-// Editing metadata or text is a database-only operation: it never reads test bodies from the
-// object store and never rebuilds an archive.
+// Editing metadata or text must not access object storage or rebuild archives.
 func TestSavingDraftTextNeverTouchesObjectStore(t *testing.T) {
 	store := &recordingStore{}
 	repo := &savingRepo{}
@@ -63,8 +62,7 @@ func (allowProblemPermissions) HasProblemPermission(context.Context, uuid.UUID, 
 	return true, nil
 }
 
-// The revision the client read must match the draft it sends, otherwise the request is
-// rejected before reaching the database.
+// A mismatched draft revision must be rejected before database access.
 func TestSavingDraftRejectsMismatchedRevision(t *testing.T) {
 	repo := &savingRepo{}
 	problem := uuid.New()

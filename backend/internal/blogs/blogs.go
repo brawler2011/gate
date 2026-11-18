@@ -21,7 +21,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// BlogsUseCase handles blog post business logic
 type BlogsUseCase struct {
 	transactions Transactions
 	storage      storage.Storage
@@ -46,7 +45,6 @@ func (p PostImage) Etag() string {
 	return p.etag
 }
 
-// NewBlogsUseCase creates a new BlogsUseCase
 func NewBlogsUseCase(
 	transactions Transactions,
 	storage storage.Storage,
@@ -59,7 +57,6 @@ func NewBlogsUseCase(
 	}
 }
 
-// CreatePost creates a new blog post with an image
 func (uc *BlogsUseCase) CreatePost(
 	ctx context.Context,
 	title, text, description string,
@@ -69,7 +66,6 @@ func (uc *BlogsUseCase) CreatePost(
 	if err := accessmodel.RequireAdmin(ctx); err != nil {
 		return uuid.Nil, err
 	}
-	// Validate and process image
 	imageKey, err := uc.uploadImage(ctx, imageReader, filename)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to upload image: %w", err)
@@ -85,7 +81,6 @@ func (uc *BlogsUseCase) CreatePost(
 	})
 
 	if err != nil {
-		// Clean up uploaded image on failure
 		uc.deleteImage(ctx, imageKey)
 		return uuid.Nil, fmt.Errorf("failed to create post: %w", err)
 	}
@@ -93,7 +88,6 @@ func (uc *BlogsUseCase) CreatePost(
 	return postID, nil
 }
 
-// UpdatePost updates an existing post
 func (uc *BlogsUseCase) UpdatePost(
 	ctx context.Context,
 	id uuid.UUID,
@@ -107,7 +101,6 @@ func (uc *BlogsUseCase) UpdatePost(
 
 	var newImageKey *string
 	if imageReader != nil {
-		// Upload new image
 		imageKey, err := uc.uploadImage(ctx, imageReader, filename)
 		if err != nil {
 			return fmt.Errorf("failed to upload image: %w", err)
@@ -129,14 +122,12 @@ func (uc *BlogsUseCase) UpdatePost(
 	})
 
 	if err != nil {
-		// Clean up new image on failure
 		if newImageKey != nil {
 			uc.deleteImage(ctx, *newImageKey)
 		}
 		return fmt.Errorf("failed to update post: %w", err)
 	}
 
-	// Delete old image if new one was uploaded
 	if newImageKey != nil && oldImageKey != "" {
 		uc.deleteImage(ctx, oldImageKey)
 	}
@@ -144,7 +135,6 @@ func (uc *BlogsUseCase) UpdatePost(
 	return nil
 }
 
-// DeletePost deletes a post and its associated image
 func (uc *BlogsUseCase) DeletePost(ctx context.Context, id uuid.UUID) error {
 	if err := accessmodel.RequireAdmin(ctx); err != nil {
 		return err
@@ -171,7 +161,6 @@ func (uc *BlogsUseCase) DeletePost(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// GetPostImage retrieves a post image from storage
 func (uc *BlogsUseCase) GetPostImage(ctx context.Context, imageKey string, ifNoneMatch *string) (PostImage, error) {
 	body, etag, err := uc.storage.DownloadFile(ctx, uc.imageBucket, imageKey, ifNoneMatch)
 	if err != nil {
@@ -185,9 +174,7 @@ func (uc *BlogsUseCase) GetPostImage(ctx context.Context, imageKey string, ifNon
 	}, nil
 }
 
-// uploadImage validates, processes, and uploads an image to S3
 func (uc *BlogsUseCase) uploadImage(ctx context.Context, imageReader io.Reader, filename string) (string, error) {
-	// Validate file extension
 	ext := strings.ToLower(filepath.Ext(filename))
 	allowedExts := map[string]bool{
 		".jpg":  true,
@@ -200,24 +187,20 @@ func (uc *BlogsUseCase) uploadImage(ctx context.Context, imageReader io.Reader, 
 		return "", pkg.Wrap(pkg.ErrBadInput, nil, "invalid image file extension")
 	}
 
-	// Decode image
 	img, _, err := image.Decode(imageReader)
 	if err != nil {
 		return "", pkg.Wrap(pkg.ErrBadInput, err, "failed to decode image")
 	}
 
-	// Encode to PNG
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
 		return "", fmt.Errorf("failed to encode image to PNG: %w", err)
 	}
 
-	// Generate unique key: {timestamp}-{uuid}.png
 	timestamp := time.Now().Unix()
 	randomID := uuid.New().String()[:8]
 	key := fmt.Sprintf("%d-%s.png", timestamp, randomID)
 
-	// Upload to S3
 	err = uc.storage.UploadFile(ctx, uc.imageBucket, key, &buf, "image/png")
 	if err != nil {
 		return "", fmt.Errorf("failed to upload to S3: %w", err)

@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	sessionHardLifetime = 7 * 24 * time.Hour // 7 days
-	sessionSoftLifetime = 40 * time.Minute   // 40 minutes
+	sessionHardLifetime = 7 * 24 * time.Hour
+	sessionSoftLifetime = 40 * time.Minute
 
 	verificationTokenTTL  = 24 * time.Hour
 	passwordResetTokenTTL = 1 * time.Hour
@@ -203,7 +203,6 @@ func (uc *AuthUseCase) Register(ctx context.Context, username, emailAddr, passwo
 		return accessmodel.User{}, err
 	}
 
-	// Send verification email
 	if err := uc.emailService.SendVerificationEmail(ctx, emailAddr, username, token); err != nil {
 		slog.Error("failed to send verification email", "error", err, "email", emailAddr)
 	}
@@ -242,8 +241,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrBadInput, errors.New("email not verified"), "email not verified")
 	}
 
-	// Verify credentials even during cooldown so a valid login can clear it.
-	// The semaphore bounds CPU work independently of Redis availability.
+	// Valid credentials clear cooldown; bound bcrypt work independently of Redis availability.
 	select {
 	case uc.bcryptSlots <- struct{}{}:
 	case <-ctx.Done():
@@ -290,7 +288,7 @@ func (uc *AuthUseCase) Authenticate(ctx context.Context, sessionID uuid.UUID) (a
 	return uc.authenticate(ctx, sessionID, true)
 }
 
-// ValidateSession checks an observer lease without extending an idle session.
+// Observer lease validation must not extend an idle session.
 func (uc *AuthUseCase) ValidateSession(ctx context.Context, sessionID uuid.UUID) (accessmodel.User, error) {
 	return uc.authenticate(ctx, sessionID, false)
 }
@@ -303,7 +301,6 @@ func (uc *AuthUseCase) authenticate(ctx context.Context, sessionID uuid.UUID, to
 		return accessmodel.User{}, fmt.Errorf("get session: %w", err)
 	}
 
-	// 1. Hard lifetime check: expires 7 days after creation
 	hardExpiry := session.CreatedAt.Add(sessionHardLifetime)
 	if time.Now().After(hardExpiry) {
 		if touch {
@@ -312,7 +309,6 @@ func (uc *AuthUseCase) authenticate(ctx context.Context, sessionID uuid.UUID, to
 		return accessmodel.User{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "session expired (hard limit)")
 	}
 
-	// 2. Soft lifetime check: expires if user was inactive for 40 minutes (session.ExpiresAt is the soft expiry)
 	if session.IsExpired() {
 		if touch {
 			_ = uc.authRepo.DeleteSession(ctx, sessionID)
@@ -321,7 +317,6 @@ func (uc *AuthUseCase) authenticate(ctx context.Context, sessionID uuid.UUID, to
 	}
 
 	if touch {
-		// Update session expiry in database (sliding session)
 		newExpiry := time.Now().Add(sessionSoftLifetime)
 		if newExpiry.After(hardExpiry) {
 			newExpiry = hardExpiry

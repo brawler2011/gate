@@ -7,9 +7,8 @@ vars:
     frontend/contracts
     backend/internal/postgres/sqlc
     backend/tests/mocks
-  # JUDGE_IMAGE names the go-judge image built from the current judge/ sources.
   DOCKER_COMPOSE: JUDGE_IMAGE="$(go run ./tools/judgeimage)" docker compose --env-file deploy/local/.env -f deploy/local/docker-compose.yml
-  # The local k3s cluster; commands name its context so they never touch another cluster.
+  # Name the context explicitly to avoid touching another cluster.
   K3D_KUBECTL: kubectl --context k3d-gate
   K3D_HELM: helm --kube-context k3d-gate
 
@@ -79,7 +78,7 @@ tasks:
   judge:build:
     desc: Build the go-judge image from judge/flake.nix into the local Docker daemon without a local Nix install
     cmds:
-      # The volume keeps the Nix store between builds; it is named after the Nix image it was seeded from.
+      # Keep the Nix store between builds; the volume must match its seed image.
       - >-
         docker run --rm -v gate-judge-nix-2.35.6:/nix -v ./judge:/src:ro -w /src
         -v /var/run/docker.sock:/var/run/docker.sock nixos/nix:2.35.6
@@ -209,10 +208,10 @@ tasks:
         rm -rf backend/pkg/syslib/testlib/checkers
         mkdir backend/pkg/syslib/testlib/checkers
         cp "$tmp"/checkers/*.cpp backend/pkg/syslib/testlib/checkers/
-        # Upstream checkers have CRLF line endings; authors edit copies of them.
+        # Normalize upstream CRLF because authors edit copies of these checkers.
         sed -i 's/\r$//' backend/pkg/syslib/testlib/checkers/*.cpp
         git -C "$tmp" rev-parse HEAD > backend/pkg/syslib/testlib/COMMIT
-        # Git blob IDs of every upstream testlib.h up to the commit; an imported copy equal to one becomes auto-updated.
+        # Recognize imported upstream copies by blob ID so they can auto-update.
         for c in $(git -C "$tmp" log --format=%H HEAD -- testlib.h); do
           git -C "$tmp" rev-parse -q --verify "${c}:testlib.h" || true
         done | sort -u > backend/pkg/syslib/testlib/upstream.txt

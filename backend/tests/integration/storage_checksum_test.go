@@ -17,8 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Probe the actual server independently of our upload implementation: accepting
-// the header without enforcing it would make publication's integrity check void.
+// The S3 server must enforce checksums, not merely accept the header.
 func TestSeaweedUploadChecksumEnforcement(t *testing.T) {
 	ctx := context.Background()
 	store, bucket := newSeaweedBackedS3Storage(t)

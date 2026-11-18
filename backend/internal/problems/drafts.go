@@ -52,7 +52,6 @@ type DraftUseCase struct {
 	UploadTTL    time.Duration
 	ObjectBytes  int64
 	BuildOptions model.BuildOptions
-	// Languages is the language catalog; imports select from it.
 	Languages *sandbox.Config
 }
 
@@ -254,8 +253,6 @@ func (uc *DraftUseCase) Upload(ctx context.Context, id uuid.UUID, expected int64
 	return uc.Repo.FinalizeUploads(ctx, k, id, expected, change, objects)
 }
 
-// storeObject uploads bytes to a fresh key; the finalizing transaction inserts
-// the object row with its first reference, so failed uploads leave no row.
 func (uc *DraftUseCase) storeObject(ctx context.Context, org uuid.UUID, spec model.UploadSpec, body io.ReaderAt) (model.StoredObject, error) {
 	object := model.NewStoredObject(org, spec)
 	if err := uc.Store.UploadFileWithSHA256(ctx, uc.Bucket, object.Key, io.NewSectionReader(body, 0, spec.Size), "application/octet-stream", spec.SHA256); err != nil {

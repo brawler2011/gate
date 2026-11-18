@@ -26,7 +26,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// pipelineServices are the real S3-compatible store and sandbox the pipeline runs against.
 type pipelineServices struct {
 	store  *storage.S3Storage
 	client *sandbox.Client

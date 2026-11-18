@@ -1,9 +1,5 @@
--- The schema. Edit it in place; a change resets all data on the next deploy (README.md).
 -- +goose Up
 
--- ==========================================================================
--- Extensions, types and utility functions
--- ==========================================================================
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
@@ -84,9 +80,6 @@ END;
 $$;
 -- +goose StatementEnd
 
--- ==========================================================================
--- Users and authentication
--- ==========================================================================
 
 CREATE TABLE users (
     id uuid NOT NULL,
@@ -139,9 +132,6 @@ CREATE INDEX auth_tokens_user_id_type_idx ON auth_tokens USING btree (user_id, t
 
 CREATE TRIGGER on_users_update BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION updated_at_update();
 
--- ==========================================================================
--- Organizations
--- ==========================================================================
 
 CREATE TABLE organizations (
     id uuid DEFAULT uuidv7() NOT NULL,
@@ -209,9 +199,6 @@ CREATE INDEX org_join_requests_user_idx ON organization_join_requests USING btre
 
 CREATE TRIGGER on_organizations_update BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION updated_at_update();
 
--- ==========================================================================
--- Teams
--- ==========================================================================
 
 CREATE TABLE teams (
     id uuid DEFAULT uuidv7() NOT NULL,
@@ -249,9 +236,6 @@ CREATE INDEX team_members_user_id_idx ON team_members USING btree (user_id);
 
 CREATE TRIGGER on_teams_update BEFORE UPDATE ON teams FOR EACH ROW EXECUTE FUNCTION updated_at_update();
 
--- ==========================================================================
--- Stored objects and idempotent requests
--- ==========================================================================
 
 CREATE TABLE stored_objects (
     id uuid NOT NULL,
@@ -289,8 +273,7 @@ CREATE TABLE request_idempotency (
     CONSTRAINT request_idempotency_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE RESTRICT
 );
 
--- A row exists only once its bytes were uploaded and verified, and it is
--- inserted together with its first reference. Rows are deleted, never changed.
+-- Publish verified bytes with their first reference; object rows are immutable.
 -- +goose StatementBegin
 CREATE FUNCTION guard_stored_object() RETURNS trigger
     LANGUAGE plpgsql
@@ -301,9 +284,6 @@ $$;
 
 CREATE TRIGGER stored_object_guard BEFORE UPDATE ON stored_objects FOR EACH ROW EXECUTE FUNCTION guard_stored_object();
 
--- ==========================================================================
--- Problems
--- ==========================================================================
 
 CREATE TABLE problems (
     id uuid DEFAULT uuidv7() NOT NULL,
@@ -349,9 +329,6 @@ CREATE INDEX problem_teams_team_id_idx ON problem_teams USING btree (team_id);
 
 CREATE TRIGGER on_problems_update BEFORE UPDATE ON problems FOR EACH ROW EXECUTE FUNCTION updated_at_update();
 
--- ==========================================================================
--- Problem drafts
--- ==========================================================================
 
 CREATE TABLE problem_drafts (
     problem_id uuid NOT NULL,
@@ -364,8 +341,7 @@ CREATE TABLE problem_drafts (
     time_limit_ms integer NOT NULL,
     memory_limit_mb integer NOT NULL,
     max_score numeric(12,2),
-    -- Programs, library, statements, assets, subtasks and tests: the draft is
-    -- read and written whole, and the server validates it as one document.
+    -- The draft is validated and written as one document.
     content jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT problem_drafts_content_check CHECK ((jsonb_typeof(content) = 'object'::text)),
     CONSTRAINT problem_drafts_check CHECK (((type = 'scoring'::text) = (max_score IS NOT NULL))),
@@ -383,8 +359,7 @@ CREATE TABLE problem_drafts (
 );
 CREATE INDEX problem_drafts_title_trgm ON problem_drafts USING gin (title gin_trgm_ops);
 
--- The stored objects a draft refers to (test bodies and assets), derived from
--- its content on every write, so that referenced objects are never collected.
+-- Derived references keep every object in the draft alive.
 CREATE TABLE problem_draft_objects (
     problem_id uuid NOT NULL,
     organization_id uuid NOT NULL,
@@ -410,9 +385,6 @@ CREATE VIEW problem_catalog AS
    FROM (problems p
      JOIN problem_drafts d ON ((d.problem_id = p.id)));
 
--- ==========================================================================
--- Problem builds and packages
--- ==========================================================================
 
 CREATE TABLE problem_builds (
     id uuid NOT NULL,
@@ -445,7 +417,7 @@ CREATE TABLE problem_builds (
 CREATE INDEX problem_builds_queue ON problem_builds USING btree (created_at, id) WHERE (state = 'queued'::text);
 CREATE INDEX problem_builds_recovery ON problem_builds USING btree (lease_deadline) WHERE (state = 'running'::text);
 
--- Objects a build snapshot reads; they live as long as the build.
+-- Snapshot inputs stay alive for the lifetime of the build.
 CREATE TABLE problem_build_inputs (
     build_id uuid NOT NULL,
     organization_id uuid NOT NULL,
@@ -489,8 +461,7 @@ CREATE INDEX problem_packages_organization_id_idx ON problem_packages USING btre
 CREATE INDEX problem_packages_package_hash_idx ON problem_packages USING btree (package_hash);
 CREATE INDEX problem_packages_problem_id_idx ON problem_packages USING btree (problem_id);
 
--- Statement assets of a package reference the draft's stored objects, so
--- serving an image never opens the package archive.
+-- Asset references let statement reads avoid opening the package archive.
 CREATE TABLE problem_package_assets (
     package_id uuid NOT NULL,
     organization_id uuid NOT NULL,
@@ -609,7 +580,7 @@ BEGIN
     NEW.short_name=b.snapshot->'draft'->>'short_name';
     NEW.time_limit_ms=(b.snapshot->'draft'->>'time_limit_ms')::integer;
     NEW.memory_limit_mb=(b.snapshot->'draft'->>'memory_limit_mb')::integer;
-    -- Statement reads use this copy and never decode the build snapshot.
+    -- Statement reads use this copy instead of decoding the build snapshot.
     NEW.statements=CASE WHEN jsonb_typeof(b.snapshot->'draft'->'statements')='array'
         THEN b.snapshot->'draft'->'statements' ELSE '[]'::jsonb END;
     RETURN NEW;
@@ -627,9 +598,6 @@ CREATE TRIGGER package_asset_immutable BEFORE UPDATE ON problem_package_assets F
 CREATE TRIGGER package_metadata BEFORE INSERT ON problem_packages FOR EACH ROW EXECUTE FUNCTION capture_package_metadata();
 CREATE CONSTRAINT TRIGGER package_publication AFTER INSERT ON problem_packages DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_build_publication();
 
--- ==========================================================================
--- Contests
--- ==========================================================================
 
 CREATE TABLE contests (
     id uuid DEFAULT uuidv7() NOT NULL,
@@ -839,9 +807,6 @@ CREATE TRIGGER manual_freeze_changed BEFORE INSERT OR UPDATE OF settings ON cont
 CREATE TRIGGER on_contests_update BEFORE UPDATE ON contests FOR EACH ROW EXECUTE FUNCTION updated_at_update();
 CREATE TRIGGER max_problems_on_contest_check BEFORE INSERT ON contest_problems FOR EACH ROW EXECUTE FUNCTION check_max_problems_on_contest();
 
--- ==========================================================================
--- Submissions and judging
--- ==========================================================================
 
 CREATE TABLE submissions (
     id uuid DEFAULT uuidv7() NOT NULL,
@@ -931,7 +896,6 @@ DECLARE
     v_contest_start TIMESTAMPTZ;
     v_contest_end TIMESTAMPTZ;
 BEGIN
-    -- Get contest settings and times
     SELECT 
         start_time,
         end_time,
@@ -962,10 +926,9 @@ BEGIN
             s.score,
             s.penalty,
             s.created_at,
-            -- Apply freeze: hide results after freeze_time for non-realtime
             CASE 
                 WHEN v_freeze_time IS NOT NULL AND s.created_at >= v_freeze_time 
-                THEN NULL  -- Frozen state
+                THEN NULL
                 ELSE s.state
             END as visible_state,
             CASE 
@@ -986,11 +949,8 @@ BEGIN
             rs.owner_id,
             rs.problem_id,
             COUNT(*) as attempts,
-            -- Count frozen attempts (submissions after freeze)
             COUNT(*) FILTER (WHERE rs.visible_state IS NULL) as frozen_attempts,
-            -- First accepted submission time
             MIN(CASE WHEN rs.visible_state = 3 THEN rs.created_at END) as first_ac_time,
-            -- Calculate penalty: sum of penalties for wrong attempts before AC
             COALESCE(SUM(
                 CASE 
                     WHEN rs.visible_state = 3 THEN 0
@@ -1000,9 +960,7 @@ BEGIN
                     ELSE 0
                 END
             ), 0) as problem_penalty,
-            -- Problem is solved if any visible submission is accepted
             BOOL_OR(rs.visible_state = 3) as solved,
-            -- Best score among visible submissions
             MAX(rs.visible_score) as best_score
         FROM ranked_submissions rs
         GROUP BY rs.owner_id, rs.problem_id
@@ -1057,9 +1015,6 @@ END;
 $$;
 -- +goose StatementEnd
 
--- ==========================================================================
--- Messaging: outbox, inbox and event aggregates
--- ==========================================================================
 
 CREATE TABLE outbox_events (
     id uuid DEFAULT uuidv7() NOT NULL,
@@ -1099,9 +1054,6 @@ CREATE TABLE event_aggregates (
     CONSTRAINT event_aggregates_pkey PRIMARY KEY (aggregate_id)
 );
 
--- ==========================================================================
--- Notifications and posts
--- ==========================================================================
 
 CREATE TABLE notifications (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -1136,9 +1088,7 @@ CREATE INDEX idx_posts_created_at ON posts USING btree (created_at DESC);
 
 CREATE TRIGGER posts_updated_at_trigger BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION updated_at_update();
 
--- ==========================================================================
--- Access revision: any change to access-relevant tables bumps one counter
--- ==========================================================================
+-- Access changes invalidate cached authorization through one revision counter.
 
 CREATE TABLE access_revision (
     singleton boolean DEFAULT true NOT NULL,

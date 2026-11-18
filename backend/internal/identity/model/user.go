@@ -207,7 +207,6 @@ type ClaimedAccountItem struct {
 	ExpiresAt *time.Time
 }
 
-// UserProfile contains public account fields selected by profile readers.
 type UserProfile struct {
 	Id              uuid.UUID
 	Username        string

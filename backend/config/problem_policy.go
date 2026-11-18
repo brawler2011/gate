@@ -8,9 +8,8 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 )
 
-// ProblemPolicy holds the budgets, limits and retention of problem drafts, builds and packages.
 type ProblemPolicy struct {
-	// WorkDir is scratch space for builds and judging; it must be on a real disk, not tmpfs.
+	// Builds and judging require scratch space on a real disk, not tmpfs.
 	WorkDir          string            `yaml:"work_dir"`
 	Draft            model.DraftQuotas `yaml:"draft"`
 	Limits           model.BuildLimits `yaml:"limits"`
@@ -52,8 +51,7 @@ func (p ProblemPolicy) validate(v *validator) {
 	v.check(p.UploadTTL > 0, "problems.upload_ttl", "must be positive")
 	v.check(p.OperationLease > p.UploadTTL, "problems.operation_lease", "must exceed problems.upload_ttl")
 	v.check(p.GCInterval > 0, "problems.gc_interval", "must be positive")
-	// Bytes without a row are deleted after object_retention; a row may be
-	// committed up to an operation lease or a build duration after its upload began.
+	// Object retention must outlast uploads that can still commit under an operation lease or build deadline.
 	v.check(p.ObjectRetention > p.OperationLease && p.ObjectRetention > p.Duration, "problems.object_retention", "must exceed problems.operation_lease and problems.duration")
 	v.check(p.BuildRetention > 0, "problems.build_retention", "must be positive")
 	v.check(p.PackageRetention > 0, "problems.package_retention", "must be positive")

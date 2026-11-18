@@ -1,9 +1,3 @@
-/**
- * VS Code Dark+ theme for code editor
- * Based on prism-vsc-dark-plus but adapted for react-simple-code-editor
- */
-
-/* Base token styles - these apply to all .token elements */
 .token.comment,
 .token.prolog {
     color: #6a9955;
@@ -38,7 +32,6 @@
     color: #ce9178;
 }
 
-/* Builtin functions like int, sum, input, print, len, range - yellow like functions */
 .token.builtin {
     color: #dcdcaa;
 }
@@ -55,13 +48,11 @@
     color: #569CD6;
 }
 
-/* Control flow keywords like if, for, while, return */
 .token.keyword.control-flow,
 .token.keyword-control-flow {
     color: #c586c0;
 }
 
-/* Import/export keywords */
 .token.keyword.module,
 .token.keyword-module {
     color: #c586c0;
@@ -84,13 +75,11 @@
     font-style: italic;
 }
 
-/* Class names */
 .token.class-name,
 .token.maybe-class-name {
     color: #4ec9b0;
 }
 
-/* Variables and parameters - light blue like VS Code */
 .token.variable,
 .token.parameter,
 .token.property-access {
@@ -109,23 +98,19 @@
     color: #569cd6;
 }
 
-/* Namespace */
 .token.namespace {
     color: #4ec9b0;
     opacity: 0.7;
 }
 
-/* Escape sequences */
 .token.escape {
     color: #d7ba7d;
 }
 
-/* Attributes */
 .token.attr-value {
     color: #ce9178;
 }
 
-/* Python specific */
 .token.decorator,
 .token.annotation {
     color: #dcdcaa;
@@ -135,7 +120,6 @@
     color: #ce9178;
 }
 
-/* C/C++ specific */
 .token.directive,
 .token.directive-hash {
     color: #c586c0;
@@ -145,12 +129,10 @@
     color: #569cd6;
 }
 
-/* Go specific */
 .token.package {
     color: #c586c0;
 }
 
-/* Function definition names */
 .token.function-definition {
     color: #dcdcaa;
 }

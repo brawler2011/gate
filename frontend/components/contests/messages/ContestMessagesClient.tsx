@@ -35,12 +35,10 @@ export const ContestMessagesClient = ({
 }: ContestMessagesClientProps): ReactNode => {
   const [activeTab, setActiveTab] = useState<string | null>("announcements");
 
-  // Modals
   const [createAnnOpened, setCreateAnnOpened] = useState(false);
   const [askClarOpened, setAskClarOpened] = useState(false);
   const [answeringClar, setAnsweringClar] = useState<ContestClarificationModel | null>(null);
 
-  // Filters for clarifications
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [problemFilter, setProblemFilter] = useState<string>("");
 
@@ -401,12 +399,10 @@ export const ContestMessagesClient = ({
           )}
         </Tabs.List>
 
-        {/* Announcements Tab */}
         <Tabs.Panel value="announcements">
           {renderAnnouncementsContent()}
         </Tabs.Panel>
 
-        {/* Clarifications Tab */}
         {user?.id && (
           <Tabs.Panel value="clarifications">
             {isModerator && (
@@ -452,7 +448,6 @@ export const ContestMessagesClient = ({
         )}
       </Tabs>
 
-      {/* Modals */}
       <CreateAnnouncementModal
         opened={createAnnOpened}
         onClose={() => setCreateAnnOpened(false)}

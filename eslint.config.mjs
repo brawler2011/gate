@@ -22,7 +22,6 @@ const eslintConfig = [
   {
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
-      // Тернарники, переменные и сравнения
       "curly": ["error", "all"],
       "brace-style": ["error", "1tbs", { "allowSingleLine": false }],
       "no-nested-ternary": "error",
@@ -44,12 +43,10 @@ const eslintConfig = [
         },
       ],
 
-      // Форматирование и отступы (2 пробела)
       "indent": ["error", 2, { SwitchCase: 1 }],
       "no-mixed-spaces-and-tabs": "error",
       "no-multiple-empty-lines": ["error", { max: 1, maxEOF: 0, maxBOF: 0 }],
 
-      // Сортировка и отступы импортов
       "import/order": [
         "error",
         {
@@ -60,14 +57,11 @@ const eslintConfig = [
       ],
       "import/newline-after-import": ["error", { count: 1 }],
 
-      // Пробелы вокруг фигурных скобок {}
       "object-curly-spacing": ["error", "never"],
 
-      // Стрелочные функции вместо function (разрешены генераторы function*)
       "func-style": ["error", "expression", { allowArrowFunctions: true }],
       "prefer-arrow-callback": "error",
 
-      // Компоненты React & JSX
       "react/function-component-definition": [
         "error",
         {
@@ -79,7 +73,6 @@ const eslintConfig = [
       "react/jsx-boolean-value": ["error", "never"],
       "react/jsx-curly-brace-presence": ["error", { props: "never", children: "never" }],
 
-      // TypeScript & Hooks
       "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unused-vars": [
@@ -97,7 +90,6 @@ const eslintConfig = [
       "react-hooks/exhaustive-deps": "warn",
       "react-hooks/set-state-in-effect": "off",
 
-      // Prefer explicitly typed arrow components
       "no-restricted-syntax": [
         "error",
         {

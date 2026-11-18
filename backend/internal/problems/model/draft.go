@@ -16,10 +16,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Draft is the editable problem. It holds typed entries, never package paths:
-// where files go in a package is decided only by build, import and export.
-// Programs and library files are identified by their names, unique within a
-// role; subtasks and tests, which have no unique names, by IDs.
+// Draft holds typed entries; package paths are assigned only during build, import and export.
 type Draft struct {
 	ProblemID     uuid.UUID     `json:"problem_id"`
 	Revision      int64         `json:"revision"`
@@ -32,8 +29,7 @@ type Draft struct {
 	DraftContent
 }
 
-// DraftContent is the part of a draft stored as one document; the fields of
-// Draft outside it are columns that catalog queries read.
+// DraftContent is stored as one document; catalog-query fields remain separate columns.
 type DraftContent struct {
 	Checker      *DraftChecker       `json:"checker"`
 	Interactor   *DraftProgram       `json:"interactor"`
@@ -48,25 +44,18 @@ type DraftContent struct {
 	Tests        []DraftTest         `json:"tests"`
 }
 
-// DraftProgram is a source in a language configuration. The checker,
-// interactor, validators and generators compile with the whole library, each
-// file under its name; solutions compile alone.
 type DraftProgram struct {
 	Language string `json:"language"`
 	Source   string `json:"source"`
 }
 
-// DraftChecker is the checker: the author's source, or a testlib standard
-// checker by name with an empty source, which every build takes at the
-// current system version and compiles in the C++ configuration Language.
+// DraftChecker uses the current system source when Standard names a checker and Source is empty.
 type DraftChecker struct {
 	DraftProgram
 	Standard string `json:"standard"`
 }
 
-// Text returns the source a build compiles and packages for the checker. A
-// standard checker carries the system testlib.h, so that the built package
-// does not depend on the testlib.h of the library.
+// Text bundles standard checkers with system testlib, independently of the draft library.
 func (c *DraftChecker) Text() string {
 	if checker, ok := syslib.LookupChecker(c.Standard); ok {
 		return checker.Standalone()
@@ -74,24 +63,19 @@ func (c *DraftChecker) Text() string {
 	return c.Source
 }
 
-// DraftNamedProgram is a program of a role a draft may hold several of. Its
-// name is unique within the role and is the stem of its package file.
+// DraftNamedProgram names are unique within a role and become package file stems.
 type DraftNamedProgram struct {
 	Name string `json:"name"`
 	DraftProgram
 }
 
-// DraftLibraryFile is a source file judge programs include by its name;
-// names are unique in a draft. An
-// auto-updated file stores no content: it is the system library file of its
-// name, whose current text every build takes.
+// DraftLibraryFile stores no content when AutoUpdate selects the current system library.
 type DraftLibraryFile struct {
 	Name       string `json:"name"`
 	Content    string `json:"content"`
 	AutoUpdate bool   `json:"auto_update"`
 }
 
-// Text returns the text a build compiles and packages for the file.
 func (f *DraftLibraryFile) Text() string {
 	if system, ok := syslib.Lookup(f.Name); ok && f.AutoUpdate {
 		return system.Content
@@ -99,7 +83,6 @@ func (f *DraftLibraryFile) Text() string {
 	return f.Content
 }
 
-// DraftStatement is the statement in one language as Markdown sections.
 type DraftStatement struct {
 	Language    string `json:"language"`
 	Legend      string `json:"legend"`
@@ -110,7 +93,6 @@ type DraftStatement struct {
 	Scoring     string `json:"scoring"`
 }
 
-// DraftAsset is a statement resource; sections refer to it by name.
 type DraftAsset struct {
 	Name     string    `json:"name"`
 	ObjectID uuid.UUID `json:"object_id"`
@@ -139,8 +121,7 @@ type DraftInput struct {
 	Mode      string     `json:"mode"`
 	ObjectID  *uuid.UUID `json:"object_id"`
 	Generator *string    `json:"generator"`
-	// Args are the generator's whole argv after its name, as in Polygon;
-	// testlib derives its random seed from them.
+	// Args include the full generator argv after its name; testlib derives its random seed from them.
 	Args []string `json:"args"`
 }
 
@@ -167,9 +148,7 @@ type BuildLimits struct {
 	Auxiliary       sandbox.FileRunLimits `json:"auxiliary" yaml:"auxiliary"`
 }
 
-// DraftQuotas bound a draft: Files counts library files and assets,
-// Components counts programs, FileBytes bounds each text and TextBytes all
-// of them together.
+// DraftQuotas counts library files and assets as Files, and programs as Components.
 type DraftQuotas struct {
 	FileBytes  bytesize.Size `yaml:"file_bytes"`
 	TextBytes  bytesize.Size `yaml:"text_bytes"`
@@ -179,10 +158,8 @@ type DraftQuotas struct {
 	Subtasks   int           `yaml:"subtasks"`
 }
 
-// StatementSections names the sections of a statement in display order.
 var StatementSections = []string{"legend", "input", "output", "notes", "interaction", "scoring"}
 
-// Section returns the text of a statement section by its name.
 func (s *DraftStatement) Section(name string) *string {
 	switch name {
 	case "legend":
@@ -201,7 +178,6 @@ func (s *DraftStatement) Section(name string) *string {
 	return nil
 }
 
-// Statement returns the statement in language, or nil.
 func (d *Draft) Statement(language string) *DraftStatement {
 	for i := range d.Statements {
 		if d.Statements[i].Language == language {
@@ -220,13 +196,10 @@ func findProgram(list []DraftNamedProgram, name string) *DraftNamedProgram {
 	return nil
 }
 
-// Generator returns the generator named name, or nil.
 func (d *Draft) Generator(name string) *DraftNamedProgram { return findProgram(d.Generators, name) }
 
-// Solution returns the solution named name, or nil.
 func (d *Draft) Solution(name string) *DraftNamedProgram { return findProgram(d.Solutions, name) }
 
-// Validator returns the validator of the draft, or nil.
 func (d *Draft) Validator() *DraftNamedProgram {
 	if len(d.Validators) == 0 {
 		return nil
@@ -234,8 +207,7 @@ func (d *Draft) Validator() *DraftNamedProgram {
 	return &d.Validators[0]
 }
 
-// Normalize replaces absent lists with empty ones, so that a draft always
-// has every list of the contract.
+// Normalize keeps absent lists from serializing as null in the contract.
 func (d *Draft) Normalize() {
 	empty := func(list *[]DraftNamedProgram) {
 		if *list == nil {
@@ -272,8 +244,6 @@ func (d *Draft) Normalize() {
 	}
 }
 
-// ValidFileName reports whether name can name one file in a package and in
-// the sandbox: one path element of printable UTF-8.
 func ValidFileName(name string) bool {
 	if name == "" || name == "." || name == ".." || len(name) > 255 || !utf8.ValidString(name) || strings.ContainsAny(name, `/\`) {
 		return false
@@ -309,7 +279,6 @@ func (d *Draft) InputObjects() []uuid.UUID {
 
 const maxFieldErrors = 50
 
-// validation collects the violations of a draft, each at a JSON Pointer.
 type validation struct{ errs pkg.FieldErrors }
 
 func (v *validation) fail(pointer, format string, args ...any) {
@@ -325,11 +294,8 @@ func (v *validation) err() error {
 	return v.errs
 }
 
-// Validate checks a draft for saving: it permits incomplete selections, but
-// never dangling or conflicting references. Image references are checked
-// only in the statement sections that differ from previous, so an asset can
-// be renamed in one save and its references fixed in the next; a nil
-// previous checks every section. The error is pkg.FieldErrors.
+// Validate allows incomplete drafts and checks images only in changed sections, allowing staged asset renames.
+// A nil previous checks all sections; violations return pkg.FieldErrors.
 func (d *Draft) Validate(q DraftQuotas, previous *Draft) error {
 	v := &validation{}
 	d.validate(v, q)
@@ -337,9 +303,7 @@ func (d *Draft) Validate(q DraftQuotas, previous *Draft) error {
 	return v.err()
 }
 
-// ValidateBuild checks that a draft can be built with a toolchain of
-// languages: Validate with every image reference, plus the programs and tests
-// a build requires.
+// ValidateBuild requires complete selections and checks all image references, including unchanged sections.
 func (d *Draft) ValidateBuild(q DraftQuotas, languages map[string]sandbox.Language) error {
 	v := &validation{}
 	d.validate(v, q)
@@ -632,7 +596,6 @@ func (d *Draft) validateTests(v *validation) {
 	}
 }
 
-// eachProgram calls f with every program and its JSON Pointer.
 func (d *Draft) eachProgram(f func(at string, p DraftProgram)) {
 	if d.Checker != nil {
 		f("/checker", d.Checker.DraftProgram)
@@ -650,8 +613,6 @@ func (d *Draft) eachProgram(f func(at string, p DraftProgram)) {
 	}
 }
 
-// validateImages reports image references to assets the draft does not have
-// in the statement sections that differ from previous.
 func (d *Draft) validateImages(v *validation, previous *Draft) {
 	assets := make(map[string]bool, len(d.Assets))
 	for _, a := range d.Assets {
@@ -677,8 +638,7 @@ func (d *Draft) validateImages(v *validation, previous *Draft) {
 	}
 }
 
-// ComputeScores derives summaries from explicit per-test weights. It never
-// divides a group score across tests or normalizes authored points to 100.
+// ComputeScores preserves authored test weights without rescaling group totals.
 func (d *Draft) ComputeScores() error {
 	sums := make(map[uuid.UUID]points.Value)
 	var total points.Value

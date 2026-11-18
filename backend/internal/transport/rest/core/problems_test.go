@@ -78,7 +78,6 @@ func TestListProblems_HTTPProbeDescending(t *testing.T) {
 	handler, err := corev1.NewServer(server, middleware.NewSecurityHandler())
 	require.NoError(t, err)
 
-	// 1. GET /problems without descending parameter -> defaults to descending = true
 	req1 := httptest.NewRequest(http.MethodGet, "/problems", nil)
 	rec1 := httptest.NewRecorder()
 	handler.ServeHTTP(rec1, req1)
@@ -87,7 +86,6 @@ func TestListProblems_HTTPProbeDescending(t *testing.T) {
 	require.NotNil(t, stub.lastFilter.Descending)
 	assert.True(t, *stub.lastFilter.Descending)
 
-	// 2. GET /problems?descending=true -> descending = true
 	req2 := httptest.NewRequest(http.MethodGet, "/problems?descending=true", nil)
 	rec2 := httptest.NewRecorder()
 	handler.ServeHTTP(rec2, req2)
@@ -96,7 +94,6 @@ func TestListProblems_HTTPProbeDescending(t *testing.T) {
 	require.NotNil(t, stub.lastFilter.Descending)
 	assert.True(t, *stub.lastFilter.Descending)
 
-	// 3. GET /problems?descending=false -> descending = false
 	req3 := httptest.NewRequest(http.MethodGet, "/problems?descending=false", nil)
 	rec3 := httptest.NewRecorder()
 	handler.ServeHTTP(rec3, req3)

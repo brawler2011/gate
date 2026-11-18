@@ -68,9 +68,7 @@ export const SubmitSubmissionClient = ({contest, problems, user}: Props): ReactN
     const result = response?.id ? 1 : null;
 
     if (result) {
-      // Mark as submitted to disable form
       setIsSubmitted(true);
-      // Redirect to "Мои посылки" page after successful submission
       navigate(
         `/${contest.organization_login}/${contest.login}/mysubmissions?order=desc&userId=${user?.id}`,
       );

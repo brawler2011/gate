@@ -396,7 +396,6 @@ type ListSubmissionsRow struct {
 	CreatedAt         time.Time              `json:"created_at"`
 }
 
-// Submission listing
 func (q *Queries) ListSubmissions(ctx context.Context, arg ListSubmissionsParams) ([]ListSubmissionsRow, error) {
 	rows, err := q.db.Query(ctx, listSubmissions,
 		arg.ContestID,

@@ -1,4 +1,3 @@
--- Contests queries (new schema with Organizations)
 
 -- name: CreateContest :one
 INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, description, settings, start_time, end_time)
@@ -42,7 +41,6 @@ WHERE id = $1;
 -- name: DeleteContest :exec
 DELETE FROM contests WHERE id = $1;
 
--- Contest Members (direct access control)
 
 -- name: AddContestMember :exec
 INSERT INTO contest_members (contest_id, user_id, role)
@@ -85,7 +83,6 @@ VALUES ($1, $2, $3)
 ON CONFLICT (contest_id, user_id) DO NOTHING;
 
 
--- Contest Problems (linking to packages)
 
 -- name: AddContestProblem :exec
 INSERT INTO contest_problems (contest_id, problem_id, package_id, ordinal)
@@ -122,7 +119,6 @@ WHERE contest_id = $1 AND problem_id = $2;
 DELETE FROM contest_problems
 WHERE contest_id = $1 AND problem_id = $2;
 
--- Access check helpers
 
 
 
@@ -176,7 +172,6 @@ AND c.visibility IN ('public', 'private') AND (c.visibility = 'public' OR EXISTS
 ORDER BY COALESCE(sub.last_sub_time, '1970-01-01 00:00:00+00'::timestamptz) DESC, c.created_at DESC, c.id DESC
 LIMIT sqlc.arg('page_size')::int;
 
--- Contest Standings (Scoreboard)
 
 -- name: UpsertContestProblemResult :exec
 INSERT INTO contest_problem_results (contest_id, user_id, problem_id, solved, failed_attempts, first_ac_time, time_minutes)
@@ -231,7 +226,6 @@ FROM submissions s
 WHERE s.contest_id = sqlc.arg('contest_id')::uuid AND s.owner_id = sqlc.arg('owner_id')::uuid AND s.problem_id IS NOT NULL
 ORDER BY s.problem_id, s.created_at ASC;
 
--- Contest User Problem Blocks
 -- name: CreateContestUserProblemBlock :exec
 INSERT INTO contest_user_problem_blocks (contest_id, user_id, problem_id, reason, created_by)
 VALUES ($1, $2, $3, $4, $5)

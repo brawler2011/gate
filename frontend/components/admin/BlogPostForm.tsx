@@ -35,7 +35,6 @@ export const BlogPostForm = ({
   const isEditing = !!post;
 
   const handleSubmit = async () => {
-    // Validate
     const newErrors: { title?: string } = {};
     if (!title.trim()) {
       newErrors.title = "Заголовок обязателен";
@@ -70,7 +69,6 @@ export const BlogPostForm = ({
     onClose();
   };
 
-  // Reset form when modal opens with new data
   useEffect(() => {
     if (opened) {
       setTitle(post?.title || "");

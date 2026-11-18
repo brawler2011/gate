@@ -11,8 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// sweepRepo has no rows; looking keys up takes long enough for a young key to
-// cross the retention, as a slow or suspended collector would.
+// Slow lookups let young objects cross retention during a sweep.
 type sweepRepo struct {
 	lookupDelay time.Duration
 	looked      [][]string
@@ -52,8 +51,7 @@ func TestSweepJudgesAgeBeforeLookingUpRows(t *testing.T) {
 	now := time.Now()
 	store := &sweepStore{objects: []storage.ObjectInfo{
 		{Key: "objects/old", LastModified: now.Add(-2 * retention)},
-		// Young when listed, but past the retention once the lookup returns: its
-		// writer may commit a row after the lookup, so it must survive this sweep.
+		// Objects young at the cutoff must survive even if lookups cross their retention deadline.
 		{Key: "objects/young", LastModified: now.Add(-retention + 50*time.Millisecond)},
 	}}
 	repo := &sweepRepo{lookupDelay: 100 * time.Millisecond}

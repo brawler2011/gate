@@ -11,17 +11,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// BlogsRepo implements the BlogsRepo interface
 type BlogsRepo struct {
 	queries *sqlc.Queries
 }
 
-// NewBlogsRepo creates a new BlogsRepo
 func NewBlogsRepo(pool *pgxpool.Pool) *BlogsRepo {
 	return &BlogsRepo{queries: sqlc.New(pool)}
 }
 
-// CreatePost creates a new blog post
 func (r *BlogsRepo) CreatePost(ctx context.Context, params blogsmodel.CreatePostParams) (uuid.UUID, error) {
 	id, err := r.queries.CreatePost(ctx, sqlc.CreatePostParams{
 		Title:       params.Title,
@@ -39,7 +36,6 @@ func (r *BlogsRepo) CreatePost(ctx context.Context, params blogsmodel.CreatePost
 	return id, nil
 }
 
-// GetPostByID retrieves a post by its ID
 func (r *BlogsRepo) GetPostByID(ctx context.Context, id uuid.UUID) (*blogsmodel.Post, error) {
 	row, err := r.queries.GetPostByID(ctx, id)
 
@@ -51,15 +47,12 @@ func (r *BlogsRepo) GetPostByID(ctx context.Context, id uuid.UUID) (*blogsmodel.
 	return &post, nil
 }
 
-// ListPosts retrieves a paginated list of posts
 func (r *BlogsRepo) ListPosts(ctx context.Context, params blogsmodel.ListPostsParams) ([]blogsmodel.Post, int, error) {
-	// Get total count
 	totalCount, err := r.queries.CountPosts(ctx)
 	if err != nil {
 		return nil, 0, HandlePgErr(err)
 	}
 
-	// Build query based on sort order
 	offset := (params.Page - 1) * params.PageSize
 	var rows []sqlc.Post
 	if params.SortOrder == "asc" {
@@ -84,7 +77,6 @@ func (r *BlogsRepo) ListPosts(ctx context.Context, params blogsmodel.ListPostsPa
 	return posts, int(totalCount), nil
 }
 
-// UpdatePost updates an existing post
 func (r *BlogsRepo) UpdatePost(ctx context.Context, params blogsmodel.UpdatePostParams) error {
 	affected, err := r.queries.UpdatePost(ctx, sqlc.UpdatePostParams{
 		ID:          params.ID,
@@ -105,7 +97,6 @@ func (r *BlogsRepo) UpdatePost(ctx context.Context, params blogsmodel.UpdatePost
 	return nil
 }
 
-// DeletePost deletes a post by its ID
 func (r *BlogsRepo) DeletePost(ctx context.Context, id uuid.UUID) error {
 	affected, err := r.queries.DeletePost(ctx, id)
 	if err != nil {

@@ -9,8 +9,7 @@ import (
 	"github.com/brawler2011/gate/backend/internal/ratelimit"
 )
 
-// RateLimit runs after UsersMiddleware, so quotas follow authenticated users
-// across connections. Forwarded client IPs are accepted only from the configured proxy.
+// Run after UsersMiddleware so authenticated quotas follow users across connections.
 func RateLimit(limiter *ratelimit.Limiter, trustedProxy string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -2,7 +2,6 @@ package pcms2
 
 import "encoding/xml"
 
-// Problem represents the XML problem representation in PCMS2 format.
 type Problem struct {
 	XMLName    xml.Name    `xml:"problem"`
 	ID         string      `xml:"id,attr"`
@@ -12,20 +11,17 @@ type Problem struct {
 	Judging    Judging     `xml:"judging"`
 }
 
-// Name represents a problem name in a specific language.
 type Name struct {
 	Language string `xml:"language,attr"`
 	Value    string `xml:"value,attr"`
 }
 
-// Statement represents a statement document reference.
 type Statement struct {
 	Language string `xml:"language,attr"`
 	Type     string `xml:"type,attr"`
 	File     string `xml:"file,attr"`
 }
 
-// Judging holds limits, run verifier, and testsets.
 type Judging struct {
 	InputFile  string    `xml:"input-file"`
 	OutputFile string    `xml:"output-file"`
@@ -33,7 +29,6 @@ type Judging struct {
 	Testsets   []Testset `xml:"testset"`
 }
 
-// Run describes the execution verifier.
 type Run struct {
 	Verifier   Verifier    `xml:"verifier"`
 	Interactor *Interactor `xml:"interactor"`
@@ -48,18 +43,15 @@ type InteractorBinary struct {
 	Executable string `xml:"executable,attr"`
 }
 
-// Verifier describes the problem checker configuration.
 type Verifier struct {
 	Type   string         `xml:"type,attr"`
 	Binary VerifierBinary `xml:"binary"`
 }
 
-// VerifierBinary holds the checker executable path.
 type VerifierBinary struct {
 	Executable string `xml:"executable,attr"`
 }
 
-// Testset defines resource limits and test specifications.
 type Testset struct {
 	Name              string `xml:"name,attr"`
 	TimeLimit         int    `xml:"time-limit"`
@@ -70,7 +62,6 @@ type Testset struct {
 	Tests             []Test `xml:"tests>test"`
 }
 
-// Test represents a single test configuration.
 type Test struct {
 	Index   int     `xml:"index,attr"`
 	Input   string  `xml:"input,attr"`

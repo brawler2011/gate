@@ -2,7 +2,6 @@
 
 import {useCallback, useEffect, useState} from "react";
 
-// Callers keep domain-specific API calls and error presentation.
 export const useEntityCollection = <T,>(
   load: () => Promise<T[] | undefined>,
   initiallyLoading = true

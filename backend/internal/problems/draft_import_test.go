@@ -47,8 +47,7 @@ var testCatalog = &sandbox.Config{
 	},
 }
 
-// Every built-in template must import into a draft that satisfies the draft
-// invariants, because new problems are created from them.
+// Built-in templates must import into valid drafts for new problems.
 func TestBuiltinTemplatesImportIntoValidDrafts(t *testing.T) {
 	uc := newImportUseCase(t)
 	for _, template := range templates.ListBuiltinTemplates() {
@@ -68,15 +67,12 @@ func TestBuiltinTemplatesImportIntoValidDrafts(t *testing.T) {
 	}
 }
 
-// Every author package in pkg/testdata must import into a draft that build
-// validation accepts: programs sit in their role folders with the library
-// attached, and tests reference existing generators and objects.
+// Author fixtures must import into buildable drafts with valid program and object references.
 func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 	packages, err := filepath.Glob("../../pkg/testdata/*/*")
 	require.NoError(t, err)
 	require.NotEmpty(t, packages)
-	// PCMS2 records no solution verdicts, so the author picks the main
-	// solution an interactive problem needs in the workshop.
+	// PCMS2 lacks solution verdicts, so interactive imports need an explicit main solution.
 	buildErrors := map[string]string{"pcms2/interactive-guess": "/main_solution"}
 	languages := newImportUseCase(t).BuildOptions.Languages
 	for _, dir := range packages {
@@ -105,8 +101,7 @@ func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 	}
 }
 
-// Polygon packages made on Windows keep well-formed tests with CRLF line
-// endings, which testlib rejects on Linux; the importer stores them with LF.
+// Polygon CRLF tests must import with LF so testlib accepts them on Linux.
 func TestImportConvertsWellFormedPolygonTestsToLF(t *testing.T) {
 	plan, err := importDir(t, "../../pkg/testdata/polygon/a-plus-b", nil)
 	require.NoError(t, err)
@@ -126,8 +121,7 @@ func TestImportConvertsWellFormedPolygonTestsToLF(t *testing.T) {
 	t.Fatal("input object not found")
 }
 
-// Polygon records a checker chosen from its list as std::<name>.cpp; Gate
-// refers to its own copy, and imports the source of one it does not have.
+// Known Polygon standard checkers use system references; unknown ones import their source.
 func TestImportMapsPolygonStandardChecker(t *testing.T) {
 	const pkgDir = "../../pkg/testdata/polygon/a-plus-b"
 	plan, err := importDir(t, pkgDir, nil)
@@ -191,8 +185,7 @@ func TestImportChargesStatements(t *testing.T) {
 	require.ErrorIs(t, err, pkg.ErrPayloadTooLarge)
 }
 
-// Draft quotas apply while the draft is built: a manifest naming one source
-// as many solutions is rejected before its copies add up.
+// Repeated source references must exhaust draft quotas before their copies accumulate.
 func TestImportEnforcesQuotasWhileConverting(t *testing.T) {
 	solutions := ""
 	for range importQuotas.Components + 1 {
@@ -215,7 +208,6 @@ func TestImportRejectsDifferentLibraryFilesOfOneName(t *testing.T) {
 	require.ErrorContains(t, err, "different files named helper.h: output_validators/check/helper.h, input_validators/validate/helper.h")
 }
 
-// libraryFile returns the library file of d named name, or nil.
 func libraryFile(d model.Draft, name string) *model.DraftLibraryFile {
 	for i := range d.Library {
 		if d.Library[i].Name == name {
@@ -225,8 +217,7 @@ func libraryFile(d model.Draft, name string) *model.DraftLibraryFile {
 	return nil
 }
 
-// A package testlib.h equal to an upstream version becomes the auto-updated
-// one; a modified copy stays the author's.
+// Upstream testlib copies become auto-updated references; modified copies retain their text.
 func TestImportRecognizesUpstreamTestlib(t *testing.T) {
 	const pkgDir = "../../pkg/testdata/polygon/subtasks-groups"
 	plan, err := importDir(t, pkgDir, nil)
@@ -244,9 +235,7 @@ func TestImportRecognizesUpstreamTestlib(t *testing.T) {
 	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", Content: patched}}, plan.draft.Library)
 }
 
-// Different upstream versions of testlib.h that no generator includes are
-// one auto-updated file: checkers and validators take the current version
-// anyway.
+// Unused upstream testlib variants must merge into one auto-updated library file.
 func TestImportMergesUpstreamTestlibVersions(t *testing.T) {
 	old, err := os.ReadFile("../../pkg/testdata/polygon/max-subarray/files/testlib.h")
 	require.NoError(t, err)
@@ -267,9 +256,7 @@ func TestImportMergesUpstreamTestlibVersions(t *testing.T) {
 	require.ErrorContains(t, err, "different files named testlib.h")
 }
 
-// rnd differs between testlib versions, so a package with generators keeps
-// its testlib.h unless it is the current system one; turning auto-update on
-// is the author's choice.
+// Generator imports retain bundled testlib to preserve random seeds unless it matches the system copy.
 func TestImportKeepsGeneratorTestlib(t *testing.T) {
 	const pkgDir = "../../pkg/testdata/polygon/max-subarray"
 	plan, err := importDir(t, pkgDir, nil)
@@ -286,8 +273,7 @@ func TestImportKeepsGeneratorTestlib(t *testing.T) {
 	require.True(t, plan.draft.Library[0].AutoUpdate)
 }
 
-// Builtin templates and gfmt packages name the system testlib.h instead of
-// carrying a copy.
+// Templates and GFMT packages must reference system testlib without copying it.
 func TestImportSystemLibrary(t *testing.T) {
 	plan, err := importAPlusB(t, nil)
 	require.NoError(t, err)
@@ -298,8 +284,7 @@ func TestImportSystemLibrary(t *testing.T) {
 	require.ErrorContains(t, err, "system library file")
 }
 
-// CRLF conversion streams: a CRLF split across reads is still converted, and
-// a lone CR is kept.
+// Streaming conversion must handle split CRLF pairs and preserve lone CR bytes.
 func TestCopyLF(t *testing.T) {
 	for _, tc := range []struct {
 		in, out   string
@@ -317,13 +302,10 @@ func TestCopyLF(t *testing.T) {
 	}
 }
 
-// importAPlusB imports the gfmt a-plus-b package with extra files added.
 func importAPlusB(t *testing.T, extra map[string]string) (*draftImport, error) {
 	return importDir(t, "../../pkg/testdata/gfmt/a-plus-b", extra)
 }
 
-// unpack writes the package of testdata/<name>.txtar into a temporary
-// directory. The comment of each archive describes its case.
 func unpack(t *testing.T, name string) string {
 	t.Helper()
 	archive, err := txtar.ParseFile(filepath.Join("testdata", name+".txtar"))
@@ -335,7 +317,6 @@ func unpack(t *testing.T, name string) string {
 	return dir
 }
 
-// importDir imports the package in source with extra files added.
 func importDir(t *testing.T, source string, extra map[string]string) (*draftImport, error) {
 	dir := t.TempDir()
 	require.NoError(t, os.CopyFS(dir, os.DirFS(source)))

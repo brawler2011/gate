@@ -4,7 +4,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// UpdateFileRequest represents a request to update a file
 type UpdateFileRequest struct {
 	// Revision is set for read/patch/write operations, such as statement PATCH.
 	Revision  string
@@ -13,13 +12,11 @@ type UpdateFileRequest struct {
 	Content   []byte
 }
 
-// CompileComponentRequest represents a request to compile a component
 type CompileComponentRequest struct {
 	ProblemID     uuid.UUID
-	ComponentType string // "checker", "validator", "generator", "interactor"
+	ComponentType string
 }
 
-// CompileResult represents the result of a compilation
 type CompileResult struct {
 	Success      bool
 	FileID       string
@@ -28,7 +25,6 @@ type CompileResult struct {
 	CompileError string
 }
 
-// GenerateTestsRequest represents a request to generate tests
 type GenerateTestsRequest struct {
 	ProblemID     uuid.UUID
 	GeneratorName string
@@ -36,7 +32,6 @@ type GenerateTestsRequest struct {
 	Arguments     [][]string // args for each test
 }
 
-// ValidationReport contains validation results for tests
 type ValidationReport struct {
 	TotalTests   int
 	ValidTests   int
@@ -44,7 +39,6 @@ type ValidationReport struct {
 	Results      []TestValidationResult
 }
 
-// TestValidationResult represents validation result for a single test
 type TestValidationResult struct {
 	TestNumber int
 	Valid      bool
@@ -52,14 +46,12 @@ type TestValidationResult struct {
 	Error      string
 }
 
-// TestSolutionRequest represents a request to test a solution
 type TestSolutionRequest struct {
 	ProblemID    uuid.UUID
 	SolutionPath string
 	TestNumbers  []int // nil = all tests
 }
 
-// TestReport contains test results
 type TestReport struct {
 	TotalTests  int
 	PassedTests int
@@ -67,7 +59,6 @@ type TestReport struct {
 	Results     []TestResult
 }
 
-// TestResult represents result for a single test
 type TestResult struct {
 	TestNumber int
 	Verdict    string

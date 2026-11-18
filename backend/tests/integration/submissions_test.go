@@ -22,10 +22,8 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 
 	problemOrg := s.createOrganization("admin-submissions-org", "Admin Submissions Organization", admin.Id)
 
-	// Create organization for contest
 	contestOrg := s.createOrganization("contest-org", "Contest Organization", admin.Id)
 
-	// 1. Create Problem
 	problemTitle := "Submission Problem"
 	probResp, err := s.client.CreateProblem(withTestUser(s.ctx, admin.Id), corev1.CreateProblemParams{IdempotencyKey: uuid.NewString(),
 		Title:          problemTitle,
@@ -36,10 +34,8 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	s.Require().NotNil(probResp)
 	problemID := probResp.ID
 
-	// Create a dummy problem package (required for contest_problems foreign key)
 	packageID := s.createDummyProblemPackage(problemID, problemOrg.ID)
 
-	// 2. Create Contest
 	contestID := uuid.New()
 	err = s.contestsRepo.CreateContest(s.ctx, &contestsmodel.CreateContestParams{
 		ID:             contestID,
@@ -53,7 +49,6 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	})
 	s.Require().NoError(err)
 
-	// Update contest to be active (started and not finished)
 	startTime := time.Now().Add(-1 * time.Hour)
 	endTime := time.Now().Add(1 * time.Hour)
 	err = s.contestsRepo.UpdateContest(s.ctx, contestsmodel.ContestUpdateInput{
@@ -65,7 +60,6 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	})
 	s.Require().NoError(err)
 
-	// Add problem to contest
 	err = s.contestsRepo.CreateContestProblem(s.ctx, contestsmodel.ContestProblemCreation{
 		ContestId: contestID,
 		ProblemId: problemID,
@@ -73,7 +67,6 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 	})
 	s.Require().NoError(err)
 
-	// Add user to contest
 	err = s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{
 		ContestId: contestID,
 		UserId:    user.Id,
@@ -83,7 +76,6 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 
 	var submissionID uuid.UUID
 
-	// 3. Create Submission
 	s.Run("CreateSubmission", func() {
 		resp, err := s.client.CreateSubmission(withTestUser(s.ctx, user.Id), &corev1.CreateSubmissionRequestModel{
 			Submission: "print('hello')",
@@ -109,8 +101,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 		}
 	})
 
-	// Organizers restrict the configurations contestants may submit in; the
-	// backend enforces the list and only accepts catalog identifiers.
+	// Submissions accept only catalog configurations allowed by the contest.
 	s.Run("ContestLanguageRestriction", func() {
 		admin := withTestUser(s.ctx, admin.Id)
 		contest := corev1.UpdateContestParams{OrgLogin: contestOrg.Login, ContestLogin: "submission-contest"}
@@ -131,12 +122,11 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 		s.Equal(http.StatusBadRequest, s.getStatusCode(submit("cpp14")))
 		s.Require().NoError(submit("cpp17"))
 
-		// An empty list allows the whole catalog again.
+		// An empty language list allows the whole catalog.
 		s.Require().NoError(s.client.UpdateContest(admin, &corev1.UpdateContestRequestModel{Languages: []string{}}, contest))
 		s.Require().NoError(submit("python3"))
 	})
 
-	// 4. Get Submission
 	s.Run("GetSubmission", func() {
 		resp, err := s.client.GetSubmission(withTestUser(s.ctx, user.Id), corev1.GetSubmissionParams{
 			SubmissionID: submissionID,
@@ -146,7 +136,6 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 		s.Equal(submissionID, resp.Submission.ID)
 	})
 
-	// 5. List Submissions
 	s.Run("ListSubmissions", func() {
 		resp, err := s.client.ListSubmissions(withTestUser(s.ctx, admin.Id), corev1.ListSubmissionsParams{
 			Page:     corev1.NewOptInt32(1),

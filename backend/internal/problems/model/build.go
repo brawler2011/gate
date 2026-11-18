@@ -10,7 +10,6 @@ import (
 )
 
 type BuildOptions struct {
-	// Languages are those of the judge image, which builds with its own config.
 	Languages   map[string]sandbox.Language
 	Limits      BuildLimits
 	MaxAttempts int
@@ -57,15 +56,13 @@ type StoredObject struct {
 	Size           int64     `json:"size"`
 }
 
-// NewStoredObject names a fresh key for bytes about to be uploaded. Its row is
-// inserted only after the upload, together with the first reference to it.
+// NewStoredObject reserves a key; insert its row only after upload, atomically with its first reference.
 func NewStoredObject(org uuid.UUID, spec UploadSpec) StoredObject {
 	id := uuid.New()
 	return StoredObject{ID: id, OrganizationID: org, Purpose: spec.Purpose, Key: fmt.Sprintf("objects/%s/%s", org, id), SHA256: spec.SHA256, Size: spec.Size}
 }
 
-// UploadChange atomically adds/replaces a resource or one test. A manual test
-// with a provided answer can upload both bodies in the same revision change.
+// UploadChange can replace both manual test bodies in one revision change.
 type UploadChange struct {
 	AssetName string     `json:"asset_name,omitempty"`
 	Test      *DraftTest `json:"test,omitempty"`

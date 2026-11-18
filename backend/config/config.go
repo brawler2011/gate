@@ -1,6 +1,3 @@
-// Package config loads the backend configuration: non-secret settings from a
-// versioned YAML file per environment, secrets and connection strings from the
-// environment.
 package config
 
 import (
@@ -28,7 +25,7 @@ type Config struct {
 
 type HTTP struct {
 	Address string `yaml:"address"`
-	// TrustedProxy may supply forwarded client IPs; empty means direct clients only.
+	// Empty trusts only directly connected clients.
 	TrustedProxy  string `yaml:"trusted_proxy"`
 	SecureCookies bool   `yaml:"secure_cookies"`
 }
@@ -48,7 +45,6 @@ const (
 )
 
 type Email struct {
-	// Provider is "resend" to deliver mail or "log" to only log it.
 	Provider   string `yaml:"provider"`
 	From       string `yaml:"from"`
 	AppBaseURL string `yaml:"app_base_url"`
@@ -60,24 +56,18 @@ type Inbox struct {
 
 type Judge struct {
 	Workers int `yaml:"workers"`
-	// ManifestDir holds a copy of the judge image manifest; an API instance, which
-	// has no sandbox, reads the judge's languages (langs.toml) from it.
+	// API instances read judge languages here because they have no sandbox.
 	ManifestDir string `yaml:"manifest_dir"`
 }
 
-// Mode selects what a backend instance runs.
 type Mode string
 
 const (
-	// ModeAll runs the API and the workers in one process, for local development.
 	ModeAll Mode = "all"
-	// ModeAPI serves HTTP and WebSocket and publishes work; it runs no sandbox.
 	ModeAPI Mode = "api"
-	// ModeWorker judges submissions, builds problem packages and compiles booklets.
 	ModeWorker Mode = "worker"
 )
 
-// ParseMode accepts "all", "api" or "worker".
 func ParseMode(s string) (Mode, error) {
 	switch m := Mode(s); m {
 	case ModeAll, ModeAPI, ModeWorker:
@@ -87,13 +77,11 @@ func ParseMode(s string) (Mode, error) {
 	}
 }
 
-// API reports whether the instance serves the API.
 func (m Mode) API() bool { return m != ModeWorker }
 
-// Worker reports whether the instance runs the sandbox workers.
 func (m Mode) Worker() bool { return m != ModeAPI }
 
-// Secrets are read only from the environment.
+// Secrets come only from the environment.
 type Secrets struct {
 	PostgresDSN  string `env:"POSTGRES_DSN"`
 	RedisURL     string `env:"REDIS_URL"`
@@ -103,8 +91,6 @@ type Secrets struct {
 	ResendAPIKey string `env:"RESEND_API_KEY"`
 }
 
-// Load reads the YAML file at path, rejecting unknown fields, then the secrets
-// from the environment, and validates the result for mode.
 func Load(path string, mode Mode) (Config, error) {
 	var cfg Config
 	f, err := os.Open(path)
@@ -126,8 +112,7 @@ func Load(path string, mode Mode) (Config, error) {
 	return cfg, nil
 }
 
-// Validate reports every invalid setting, each prefixed with its YAML path or
-// environment variable. Settings that mode does not use are not checked.
+// Settings unused by the selected mode are not validated.
 func (c Config) Validate(mode Mode) error {
 	var v validator
 	v.required("http.address", c.HTTP.Address)

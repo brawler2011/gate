@@ -19,7 +19,6 @@ const PYTHON: Record<ComponentRole, string> = {
   solution: "a, b = map(int, input().split())\nprint(a + b)\n",
 };
 
-/** Returns a starter source for a new component by its source extension; other languages start empty. */
 export const componentTemplate = (role: ComponentRole, language: SupportedLanguage | undefined): string => {
   switch (language?.extensions[0]) {
     case "cpp":

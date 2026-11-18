@@ -77,8 +77,7 @@ func TestValidateLocatesViolations(t *testing.T) {
 	}
 }
 
-// Renaming an asset breaks the sections that show it; the save is accepted
-// so that the next save can fix them, while a build is not.
+// Asset renames may save with stale image references, but builds must reject them.
 func TestRenamedAssetBlocksBuildUntilStatementFollows(t *testing.T) {
 	saved := validDraft()
 	renamed := saved

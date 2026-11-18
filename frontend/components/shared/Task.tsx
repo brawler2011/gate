@@ -79,7 +79,6 @@ const Task = ({
           paddingRight: "var(--mantine-spacing-md)",
         }}
       >
-        {/* Left Sidebar - скрыт на мобилках */}
         <Box style={{width: CONTEST_SIDEBAR_LEFT_WIDTH}} visibleFrom="sm">
           <Paper
             shadow="sm"
@@ -136,7 +135,6 @@ const Task = ({
           </Paper>
         </Box>
 
-        {/* Main Content */}
         <Box style={{flex: 1}}>
           <Container size="lg" px={0} mx={0} style={{maxWidth: "100%"}}>
             <Box pt="md">
@@ -156,7 +154,6 @@ const Task = ({
           </Container>
         </Box>
 
-        {/* Right Sidebar - скрыт на мобилках и для неавторизованных пользователей */}
         {user && (
           <Box
             visibleFrom="sm"

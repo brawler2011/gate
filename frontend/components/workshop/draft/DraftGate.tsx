@@ -10,7 +10,6 @@ type Props = {
   children: (draft: ProblemDraft) => ReactNode;
 };
 
-/** Renders a workshop tab once the draft is loaded. */
 export const DraftGate = ({problemId, children}: Props): ReactNode => {
   const {data, isPending, error, refetch} = useProblemDraft(problemId);
   if (isPending) {

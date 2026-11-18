@@ -95,14 +95,12 @@ func ToREST(err error) int {
 	return http.StatusInternalServerError
 }
 
-// FieldError is one invalid value of a request body; Pointer is an RFC 6901
-// JSON Pointer into that body.
+// Pointer is an RFC 6901 JSON Pointer into the request body.
 type FieldError struct {
 	Pointer string `json:"pointer"`
 	Message string `json:"message"`
 }
 
-// FieldErrors reports the invalid values of a request body. It is bad input.
 type FieldErrors []FieldError
 
 func (e FieldErrors) Error() string {

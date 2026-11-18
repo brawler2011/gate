@@ -23,8 +23,7 @@ func (fakeCompiler) CompilePDF(_ context.Context, tex string) ([]byte, error) {
 	return []byte("%PDF " + tex), nil
 }
 
-// TestBookletCompiledOnWorker sends booklets from an API instance, which has no
-// sandbox, to a worker over NATS.
+// API instances delegate booklet compilation to workers over NATS.
 func TestBookletCompiledOnWorker(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

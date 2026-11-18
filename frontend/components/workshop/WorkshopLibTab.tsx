@@ -47,7 +47,6 @@ type SystemFileProps = {
   onDelete: () => void;
 };
 
-/** An auto-updated file: the system text, read-only until auto-update is turned off. */
 const SystemFile = ({file, saving, onStop, onDelete}: SystemFileProps): ReactNode => {
   const system = useSystemLibrary()?.find((s) => s.name === file.name);
   return (
@@ -79,7 +78,6 @@ const SystemFile = ({file, saving, onStop, onDelete}: SystemFileProps): ReactNod
 
 type StartProps = {name: string; version: string; saving: boolean; onStart: () => void};
 
-/** Turns a copy of a system library file back into the auto-updated one, after confirmation. */
 const StartAutoUpdate = ({name, version, saving, onStart}: StartProps): ReactNode => {
   const [confirming, setConfirming] = useState(false);
   return (

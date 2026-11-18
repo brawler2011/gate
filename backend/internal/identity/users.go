@@ -54,7 +54,7 @@ func (u *UsersUseCase) CreateUser(ctx context.Context, input identitymodel.Creat
 		Email:           input.Email,
 		AvatarUrl:       input.AvatarUrl,
 		ExpiresAt:       input.ExpiresAt,
-		IsEmailVerified: true, // Created by admin or system, verified by default
+		IsEmailVerified: true,
 	}
 
 	err = withinAccount(ctx, u.txManager, uuid.Nil, true, func(store IdentityTxStore) error {
@@ -95,22 +95,18 @@ func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller accessmode
 		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrBadInput, err, "temporary user not found")
 	}
 
-	// Must be a temporary user
 	if !tempUser.IsTemporary() {
 		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrBadInput, nil, "target account is not a temporary account")
 	}
 
-	// Must not be claimed already
 	if tempUser.IsClaimed() {
 		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrConflict, nil, "temporary account has already been claimed")
 	}
 
-	// Cannot claim oneself
 	if tempUser.Id == caller.Id {
 		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrBadInput, nil, "cannot claim own account")
 	}
 
-	// Verify temporary user password
 	err = bcrypt.CompareHashAndPassword([]byte(tempUser.PasswordHash), []byte(input.Password))
 	if err != nil {
 		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrUnauthenticated, err, "invalid credentials for temporary account")
@@ -146,7 +142,6 @@ func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller accessmode
 			return err
 		}
 
-		// Find contests of tempUser and grant access to caller
 		memberships, err := tx.ListUserContestMemberships(ctx, tempUser.Id)
 		if err != nil {
 			return err
@@ -255,7 +250,6 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 		})
 	}
 
-	// With confirmation
 
 	token, tokenHash, err := generateSecureToken()
 	if err != nil {

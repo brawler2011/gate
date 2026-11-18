@@ -19,8 +19,7 @@ func TestUnavailable(t *testing.T) {
 	assert.False(t, unavailable(errors.New("invalid identity.json")))
 }
 
-// Compiled programs are reused only by a judge with the same image and language
-// configuration; a changed compiler flag must not reuse old binaries.
+// Changing compiler flags invalidates binaries even when the image digest stays the same.
 func TestImageCompilerCoversLanguageConfig(t *testing.T) {
 	image := func(digest, compile string) Image {
 		return Image{Identity: Identity{Digest: digest}, Config: &Config{Langs: map[string]Language{"cpp": {Compile: compile}, "python": {}}}}

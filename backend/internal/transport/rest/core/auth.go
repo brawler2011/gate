@@ -93,7 +93,6 @@ func (h *CoreServer) ResetPassword(ctx context.Context, req *corev1.ResetPasswor
 	return nil
 }
 
-// ConfirmEmailChange implements corev1.Handler
 func (h *CoreServer) ConfirmEmailChange(ctx context.Context, req *corev1.ConfirmEmailChangeRequestModel) error {
 	err := h.Auth.ConfirmEmailChange(ctx, req.Token)
 	if err != nil {

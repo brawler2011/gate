@@ -1,4 +1,3 @@
--- Notifications queries
 
 -- name: CreateNotification :one
 INSERT INTO notifications (

@@ -197,7 +197,6 @@ func (s *IntegrationTestSuite) TestInboxRetentionPrunesExpiredReceiptsAndPreserv
 	recentID1 := uuid.New()
 	recentID2 := uuid.New()
 
-	// Insert expired receipts (older than 7 days)
 	_, err := s.dbPool.Exec(s.ctx, `
 		INSERT INTO inbox_receipts (consumer_name, event_id, processed_at)
 		VALUES
@@ -206,7 +205,6 @@ func (s *IntegrationTestSuite) TestInboxRetentionPrunesExpiredReceiptsAndPreserv
 	`, expiredID1, expiredID2)
 	s.Require().NoError(err)
 
-	// Insert recent receipts (within 7 days)
 	_, err = s.dbPool.Exec(s.ctx, `
 		INSERT INTO inbox_receipts (consumer_name, event_id, processed_at)
 		VALUES
@@ -219,7 +217,6 @@ func (s *IntegrationTestSuite) TestInboxRetentionPrunesExpiredReceiptsAndPreserv
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM inbox_receipts").Scan(&totalBefore))
 	s.Equal(4, totalBefore)
 
-	// Prune receipts older than 7 days
 	retentionWindow := 7 * 24 * time.Hour
 	pruner := inbox.NewPruner(inboxRepo, retentionWindow, time.Hour)
 	deleted, err := pruner.Prune(s.ctx)
@@ -230,22 +227,20 @@ func (s *IntegrationTestSuite) TestInboxRetentionPrunesExpiredReceiptsAndPreserv
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM inbox_receipts").Scan(&totalAfter))
 	s.Equal(2, totalAfter)
 
-	// Check expired receipts were deleted
 	var countExpired int
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM inbox_receipts WHERE event_id IN ($1, $2)", expiredID1, expiredID2).Scan(&countExpired))
 	s.Zero(countExpired)
 
-	// Check recent receipts still exist
 	var countRecent int
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT count(*) FROM inbox_receipts WHERE event_id IN ($1, $2)", recentID1, recentID2).Scan(&countRecent))
 	s.Equal(2, countRecent)
 
-	// Idempotency: second prune deletes 0 rows
+	// Pruning receipts is idempotent.
 	deletedSecond, err := pruner.Prune(s.ctx)
 	s.Require().NoError(err)
 	s.Equal(int64(0), deletedSecond)
 
-	// Deduplication continues to work for recent receipts
+	// Pruning preserves deduplication for unexpired receipts.
 	calls := 0
 	effect := func(writer eventdata.Writer) error { calls++; return nil }
 	s.Require().NoError(inboxRepo.Within(s.ctx, "consumer-a", recentID1, effect))
@@ -261,28 +256,25 @@ func (s *IntegrationTestSuite) TestOutboxDispatchTimeoutDoesNotCauseDuplicateSto
 		Payload:     submissionsmodel.SubmissionCreatedEvent{Id: aggregate},
 	}))
 
-	// Pick with a short timeout of 1 second
 	picked, err := repo.PickEvents(s.ctx, 1, 1)
 	s.Require().NoError(err)
 	s.Require().Len(picked, 1)
 	event := picked[0]
 
-	// Simulate dispatch taking longer than the 1s timeout
 	time.Sleep(1100 * time.Millisecond)
 
-	// Verify that deadline has expired
 	var expired bool
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT deadline_at < now() FROM outbox_events WHERE id=$1", event.Id).Scan(&expired))
 	s.True(expired, "deadline should be expired")
 
-	// Even though deadline expired, no other worker claimed it, so MarkAsCompleted must succeed
+	// An expired outbox lease can complete if no other worker claimed it.
 	s.Require().NoError(repo.MarkAsCompleted(s.ctx, event.Id, event.LeaseToken), "must not reject completion and cause duplicate storm")
 
 	var status string
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT status FROM outbox_events WHERE id=$1", event.Id).Scan(&status))
 	s.Equal("completed", status)
 
-	// Subsequent PickEvents must NOT pick this event again
+	// A completed event cannot be claimed again.
 	again, err := repo.PickEvents(s.ctx, 10, 30)
 	s.Require().NoError(err)
 	s.Empty(again, "completed event must not be picked again")
@@ -297,7 +289,6 @@ func (s *IntegrationTestSuite) TestOutboxWorkerHeartbeatRenewsLongDispatch() {
 		Payload:     map[string]string{"foo": "bar"},
 	}))
 
-	// Pick event with 1 second timeout
 	picked, err := repo.PickEvents(s.ctx, 1, 1)
 	s.Require().NoError(err)
 	s.Require().Len(picked, 1)
@@ -305,13 +296,11 @@ func (s *IntegrationTestSuite) TestOutboxWorkerHeartbeatRenewsLongDispatch() {
 
 	initialDeadline := *event.DeadlineAt
 
-	// Renew lease
 	s.Require().NoError(repo.RenewLease(s.ctx, event.Id, event.LeaseToken, 10))
 
 	var newDeadline time.Time
 	s.Require().NoError(s.dbPool.QueryRow(s.ctx, "SELECT deadline_at FROM outbox_events WHERE id=$1", event.Id).Scan(&newDeadline))
 	s.True(newDeadline.After(initialDeadline), "deadline must be extended")
 
-	// Complete successfully
 	s.Require().NoError(repo.MarkAsCompleted(s.ctx, event.Id, event.LeaseToken))
 }

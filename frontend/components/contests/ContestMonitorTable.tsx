@@ -227,7 +227,6 @@ export const ContestMonitorTable = ({
               );
             })}
 
-            {/* Bottom summary rows */}
             <Table.Tr>
               <Table.Td />
               <Table.Td>

@@ -15,8 +15,6 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
-// consumerInactiveThreshold is how long NATS keeps the consumer of a stopped
-// instance before deleting it.
 const consumerInactiveThreshold = time.Minute
 
 type StreamSubscriber struct {
@@ -29,9 +27,7 @@ type StreamSubscriber struct {
 	cancel     context.CancelFunc
 }
 
-// NewStreamSubscriber delivers every new message of the stream to this instance.
-// Each instance gets its own consumer, because subscribers feed in-memory state
-// (the WebSocket hubs) that every backend replica must keep up to date.
+// Each replica needs its own consumer to keep its in-memory WebSocket state current.
 func NewStreamSubscriber(
 	ctx context.Context,
 	js jetstream.JetStream,
@@ -102,10 +98,7 @@ func (s *StreamSubscriber) Start(ctx context.Context) error {
 	}
 }
 
-// handleConsumeError stops consuming once the consumer no longer exists. NATS
-// deletes it after consumerInactiveThreshold without a connected client, and the
-// client then only reports errors; stopping makes Start fail, so the instance
-// restarts with a new consumer instead of silently missing events.
+// Stop on consumer deletion so the instance restarts instead of silently missing events.
 func (s *StreamSubscriber) handleConsumeError(consumeCtx jetstream.ConsumeContext, err error) {
 	s.logger.Warn("consume error", "error", err)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

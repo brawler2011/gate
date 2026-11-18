@@ -30,7 +30,6 @@ func (q *Queries) CountNotificationsByUserID(ctx context.Context, arg CountNotif
 }
 
 const createNotification = `-- name: CreateNotification :one
-
 INSERT INTO notifications (
     id,
     user_id,
@@ -65,7 +64,6 @@ type CreateNotificationParams struct {
 	IsRead bool      `json:"is_read"`
 }
 
-// Notifications queries
 func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error) {
 	row := q.db.QueryRow(ctx, createNotification,
 		arg.ID,

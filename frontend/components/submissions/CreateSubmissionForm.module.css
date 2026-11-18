@@ -92,17 +92,17 @@
     right: var(--mantine-spacing-xs);
 }
 
+/* stylelint-disable block-no-empty -- Preserve Mantine Button classNames hooks. */
 .pinFileLabel {
-    /* Used for Mantine Button classNames */
 }
 
 .pinFileSection {
-    /* Used for Mantine Button classNames */
 }
 
 .pinFileRoot {
-    /* Used for Mantine Button classNames */
 }
+
+/* stylelint-enable block-no-empty */
 
 .languageSelectInput {
     transition: background-color 0.15s ease;
@@ -115,7 +115,6 @@
     );
 }
 
-/* Large variant for submit page */
 .codeLarge .input {
     min-height: 500px;
     height: 500px;

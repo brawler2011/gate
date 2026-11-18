@@ -67,14 +67,12 @@ const (
 	ActionListContestMembers            ContestAction = "list_contest_members"
 )
 
-// ProblemPermissions represents calculated permissions for a problem
 type ProblemPermissions struct {
 	ViewProblem  bool
 	EditProblem  bool
 	AdminProblem bool
 }
 
-// ContestPermissions represents calculated permissions for a contest
 type ContestPermissions struct {
 	GetContest             bool
 	UpdateContest          bool
@@ -89,5 +87,4 @@ type ContestPermissions struct {
 	CreateSubmission       bool
 }
 
-// ActionViewContest names the metadata read gate; retained API action is an alias.
 const ActionViewContest ContestAction = ActionGetContest

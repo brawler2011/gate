@@ -1,10 +1,7 @@
--- Statements of the object, upload, build and idempotency protocols.
--- Locks are taken by the caller in the documented order; lock-then-recheck
--- statements are deliberately separate queries so each sees a fresh snapshot.
+-- Lock-then-recheck queries use separate statements so each sees a fresh snapshot.
 
 -- name: ListUnreferencedObjects :many
--- Only narrows the candidates: the foreign keys decide whether a row can go,
--- so a reference missing here makes a deletion fail, never succeed.
+-- Foreign keys arbitrate deletion; this query only narrows candidates.
 SELECT o.id,o.key FROM stored_objects o
 WHERE NOT EXISTS(SELECT 1 FROM problem_draft_objects d WHERE d.object_id=o.id)
  AND NOT EXISTS(SELECT 1 FROM problem_build_inputs b WHERE b.object_id=o.id)

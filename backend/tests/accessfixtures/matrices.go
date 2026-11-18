@@ -1,6 +1,4 @@
-// Package accessfixtures contains the access-policy action expectations shared by
-// in-memory policies and future SQL visibility parity tests. A 1 permits access;
-// a 0 denies it. D rows test only the gate; concrete changes have separate tests.
+// 1 permits access; 0 denies it. D rows test only the gate, not the mutation.
 package accessfixtures
 
 import m "github.com/brawler2011/gate/backend/internal/access/model"
@@ -50,8 +48,7 @@ var Problem = []Row[m.ProblemAction]{
 }
 
 // Contest columns: guest, outsider, participant, moderator, owner.
-// Conditions are all true; own-submission rows use the actual actor as owner.
-// Private contest, invitation-only participation.
+// Conditions are true; private, invitation-only contest; own-submission rows use the actor as owner.
 var Contest = []Row[m.ContestAction]{
 	{m.ActionGetContest, "00111"},
 	{m.ActionGetContestProblem, "00111"},

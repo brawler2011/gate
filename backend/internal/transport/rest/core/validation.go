@@ -133,7 +133,7 @@ func validateUpdateContestRequest(params *corev1.UpdateContestRequestModel) erro
 }
 
 const (
-	maxSolutionSize int64 = 10 * 1024 * 1024 // 10 MB
+	maxSolutionSize int64 = 10 * 1024 * 1024
 )
 
 var (

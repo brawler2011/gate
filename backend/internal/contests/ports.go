@@ -13,7 +13,7 @@ import (
 
 type ContestsRepo interface {
 	ResolveContestProblemPackage(context.Context, uuid.UUID, uuid.UUID, bool) (access.PackageContext, error)
-	// Scoreboard histories group rows by user and problem, chronologically within each group.
+	// History rows group by user and problem, chronologically within each group.
 	GetContestScoreboardSubmissions(context.Context, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
 	GetUserScoreboardSubmissions(context.Context, uuid.UUID, uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error)
 	GetSubmissionsForScoreboard(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) ([]contestsmodel.SubmissionForScoreboard, error)

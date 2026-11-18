@@ -35,7 +35,6 @@ func (h *CoreServer) CreateContestAnnouncement(ctx context.Context, req *corev1.
 		return nil, err
 	}
 
-	// FIXME: create OptUUID struct instead of using pointer
 	var problemID *uuid.UUID
 	if req.ProblemID.IsSet() {
 		problemID = &req.ProblemID.Value

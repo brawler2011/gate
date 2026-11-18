@@ -198,7 +198,6 @@ func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, su
 			}
 		}
 
-		// Read again after acquiring the shared scoring lock.
 		sub, err = tx.GetSubmission(ctx, submissionID)
 		if err != nil {
 			return err

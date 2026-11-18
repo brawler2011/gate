@@ -24,7 +24,6 @@ export const getMyContestRole = async (orgLogin: string, contestLogin: string): 
     },
   );
   if (error || !response) {
-    // User is not a participant or not authenticated
     return null;
   }
 

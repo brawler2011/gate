@@ -6,8 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// delegation checks both ends: checking only the requested role permits removing
-// an owner by demotion. Self changes use leave/transfer, never an ACL bypass.
+// Check both roles to prevent owner removal by demotion; self changes require leave/transfer.
 func delegation(in m.PolicyInput, target m.User, actor, old, next, owner int) error {
 	if target.Id == uuid.Nil || target.Id == in.Actor.Id || old < 0 || next < 0 || (old == 0 && next == 0) {
 		return pkg.NoPermission
@@ -84,8 +83,7 @@ func RequireGrantContestRole(in m.PolicyInput, c m.ContestContext, change m.Role
 	return checkOwnerChange(in, change.Target, old == 3, next == 3, change.BeforeOwners, change.AfterOwners)
 }
 
-// Resource-team ACLs require resource administration and the same organization;
-// editing a team never authorizes editing its resource links.
+// Team-resource links require resource administration within the same organization.
 func RequireGrantProblemTeam(in m.PolicyInput, c m.ProblemContext, teamOrganizationID uuid.UUID, old, next m.ProblemTeamRole) error {
 	if err := RequireProblem(in, c, m.ActionManageProblemMembers); err != nil {
 		return err
@@ -159,9 +157,7 @@ func ownerIDs(in m.PolicyInput, state m.OwnerState) (map[uuid.UUID]struct{}, err
 	return ids, nil
 }
 
-// RequireOwnerState is also the in-memory invariant for lifecycle and bulk
-// mutations. Repositories must check the final owner set in a short serializable
-// mutation transaction; this function performs no I/O and takes no locks.
+// Repositories must enforce the final owner set in a serializable transaction; this precheck takes no locks.
 func RequireOwnerState(in m.PolicyInput, state m.OwnerState) error {
 	if err := validateInput(in); err != nil {
 		return err
@@ -199,8 +195,7 @@ func checkOwnerChange(in m.PolicyInput, target m.User, wasOwner, becomesOwner bo
 			return pkg.ErrConflict
 		}
 	}
-	// A primary owner cannot disappear without assigning its replacement. Do not
-	// silently drop the primary-owner representation during a grant change.
+	// Removing a primary owner requires assigning a replacement.
 	if before.PrimaryID != uuid.Nil && after.PrimaryID == uuid.Nil {
 		return pkg.ErrConflict
 	}
@@ -213,9 +208,7 @@ func RequireLeaveOrganization(in m.PolicyInput, c m.OrganizationContext, before,
 	return checkOwnerChange(in, in.Actor, c.Role == m.OrganizationOwner, false, before, after)
 }
 
-// PlanOwnerTransfer constructs the entire atomic transition. Scope wrappers
-// establish real ownership first. removeID may identify an explicit owner to
-// remove after adding the recipient; nil retains all previous owners.
+// Ownership must be established first; nil removeID retains all previous owners.
 func planOwnerTransfer(in m.PolicyInput, before m.OwnerState, target m.User, removeID uuid.UUID) (m.OwnerState, error) {
 	ids, err := ownerIDs(in, before)
 	if err != nil {

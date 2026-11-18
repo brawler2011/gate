@@ -27,9 +27,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// TestDataResetOnSchemaChange checks that the same schema keeps every store's data and
-// a changed schema wipes it all. A reset empties every bucket, so the test has its own
-// SeaweedFS rather than the shared one.
+// A reset empties every bucket, so this test needs its own SeaweedFS.
 func TestDataResetOnSchemaChange(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -42,7 +40,6 @@ func TestDataResetOnSchemaChange(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, reset, "an empty database has no schema hash")
 
-	// Data in every store.
 	_, err = stores.DB.ExecContext(ctx, "CREATE TABLE reset_marker (x int)")
 	require.NoError(t, err)
 	_, err = stores.DB.ExecContext(ctx, "INSERT INTO reset_marker VALUES (1)")
@@ -90,7 +87,6 @@ func TestDataResetOnSchemaChange(t *testing.T) {
 	require.ErrorIs(t, err, jetstream.ErrStreamNotFound)
 }
 
-// changedMigrations returns a copy of migrations with a comment appended to each file.
 func changedMigrations(t *testing.T, migrations fs.FS) fs.FS {
 	t.Helper()
 	names, err := fs.Glob(migrations, "*.sql")
@@ -137,8 +133,6 @@ func newResetStores(t *testing.T, ctx context.Context) datareset.Stores {
 	return datareset.Stores{DB: db, Redis: redisClient, S3: store, JetStream: js}
 }
 
-// startResetContainer starts a container owned by the calling test and returns its
-// address for port.
 func startResetContainer(t *testing.T, ctx context.Context, request testcontainers.ContainerRequest, port nat.Port) string {
 	t.Helper()
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: request, Started: true})

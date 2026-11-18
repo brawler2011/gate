@@ -1,16 +1,10 @@
 # Schema
 
-Gate has no users yet, so data is disposable. The schema is one editable file,
-`20261112000000_init.sql`: change it in place, and do not add migrations.
+Edit `20261112000000_init.sql` in place; do not add migrations.
 
-`backend --migrate` (the Helm migrate Job before every deploy, `task be:migrate`
-locally) hashes this directory and compares the hash with the one stored in the
-database:
+`backend --migrate` (the Helm migrate Job or local `task be:migrate`) compares the
+migration hash with the database. An unchanged hash preserves data. A changed or
+missing hash empties all S3 buckets, flushes Redis, deletes JetStream streams and
+recreates the PostgreSQL `public` schema. Startup recreates streams and buckets.
 
-- same hash: nothing happens, data is kept;
-- different or no hash: every S3 bucket is emptied, the Redis database flushed, the
-  JetStream streams deleted, and the `public` schema dropped and created from scratch.
-  The backend recreates streams and buckets on startup.
-
-When Gate gets real users, freeze this file as the baseline and go back to
-rollback-safe migrations (expand/contract, see #212).
+Replace this reset policy with rollback-safe migrations before retaining user data.

@@ -86,7 +86,6 @@ func TestCommunicationReadsEnforceVisibility(t *testing.T) {
 	}
 }
 
-// communicationReader exposes the announcement and clarification reads together.
 type communicationReader struct {
 	*AnnouncementsUseCase
 	*ClarificationsUseCase
@@ -151,7 +150,7 @@ func TestCommunicationPagination(t *testing.T) {
 					reads := &communicationReads{}
 					reader := newCommunicationReader(reads, communicationPermissions{view: true, manage: method == "moderator clarifications"})
 					if tc.err != nil {
-						// Invalid pagination must fail before permission or storage access.
+						// Invalid pagination fails before permission or storage access.
 						reader = newCommunicationReader(nil, nil)
 					}
 					var err error

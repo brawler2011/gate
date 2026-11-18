@@ -14,7 +14,7 @@ export const UsersRoleFilter = (): ReactNode => {
   const currentRole = searchParams.get("role") || "";
 
   const handleChange = (value: string | null) => {
-    // Игнорируем null (клик на уже выбранную опцию)
+
     if (value === null) {
       return;
     }
@@ -25,7 +25,7 @@ export const UsersRoleFilter = (): ReactNode => {
     } else {
       params.delete("role");
     }
-    params.delete("page"); // Reset to first page on filter change
+    params.delete("page");
 
     const query = params.toString();
     navigate(`/admin/users${query ? `?${query}` : ""}`);

@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// ProblemPermission defines team-level permissions for problems
 type ProblemPermission string
 
 const (
@@ -15,7 +14,6 @@ const (
 	ProblemPermissionRead  ProblemPermission = "read"
 )
 
-// ProblemTeam represents team-based access to a problem
 type ProblemTeam struct {
 	ProblemID  uuid.UUID
 	TeamID     uuid.UUID

@@ -45,7 +45,6 @@ export const ParticipantsSection = ({
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  // Requests state
   const [requests, setRequests] = useState<corev1.ContestJoinRequestModel[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
@@ -71,7 +70,6 @@ export const ParticipantsSection = ({
 
   const pageSize = 10;
 
-  // Load participants
   const loadParticipants = useCallback(async () => {
     setLoading(true);
     const {data: response, error} = await api.GET(
@@ -94,7 +92,6 @@ export const ParticipantsSection = ({
     setTotalPages(response.pagination.total_pages);
   }, [orgLogin, contestLogin, page]);
 
-  // Load requests
   const loadRequests = useCallback(async () => {
     setLoadingRequests(true);
     const {data} = await api.GET(
@@ -114,7 +111,6 @@ export const ParticipantsSection = ({
     loadRequests();
   }, [loadParticipants, loadRequests]);
 
-  // Search for users
   useEffect(() => {
     const searchUsersAsync = async () => {
       if (!debouncedQuery || debouncedQuery.length < 2) {
@@ -480,7 +476,6 @@ export const ParticipantsSection = ({
           <ContestTeamsManagement orgLogin={orgLogin} contestLogin={contestLogin} contestId={contestId} orgId={orgId} />
         </Tabs.Panel>
 
-        {/* Contest Join Requests Panel */}
         <Tabs.Panel value="requests" pt="md">
           <Stack gap="md">
             {loadingRequests && (

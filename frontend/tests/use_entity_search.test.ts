@@ -118,7 +118,6 @@ describe("useEntitySearch Hook test", () => {
       })
     );
 
-    // Trigger first search
     await act(async () => {
       result.current.setSearchQuery("first");
     });
@@ -126,7 +125,6 @@ describe("useEntitySearch Hook test", () => {
       await new Promise((r) => setTimeout(r, 20));
     });
 
-    // Trigger second search while first is still in-flight
     await act(async () => {
       result.current.setSearchQuery("second");
     });
@@ -134,7 +132,6 @@ describe("useEntitySearch Hook test", () => {
       await new Promise((r) => setTimeout(r, 20));
     });
 
-    // Resolve second (latest) search first
     await act(async () => {
       resolveSecond([{id: "second", name: "Result for second"}]);
       await new Promise((r) => setTimeout(r, 10));
@@ -143,13 +140,11 @@ describe("useEntitySearch Hook test", () => {
     expect(result.current.results.length).toBe(1);
     expect(result.current.results[0].value).toBe("second");
 
-    // Resolve first (older) search afterwards
     await act(async () => {
       resolveFirst([{id: "first", name: "Result for first"}]);
       await new Promise((r) => setTimeout(r, 10));
     });
 
-    // Results must NOT be overwritten by the stale first response
     expect(result.current.results.length).toBe(1);
     expect(result.current.results[0].value).toBe("second");
     expect(result.current.results[0].label).toBe("Result for second");
@@ -179,7 +174,6 @@ describe("useEntitySearch Hook test", () => {
 
     expect(result.current.results.length).toBe(1);
 
-    // Shorten query below minQueryLength
     await act(async () => {
       result.current.setSearchQuery("Al");
     });

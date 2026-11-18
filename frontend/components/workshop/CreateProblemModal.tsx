@@ -105,8 +105,7 @@ export const CreateProblemModal = ({
   const orgData = orgs.map((o) => ({value: o.id, label: o.name}));
   const selectedTemplate = templateList.find((t) => t.id === templateId);
 
-  // A retry of the same request (for example after a lost response) reuses its
-  // idempotency key; changing any field is a different request with a new key.
+  // Reuse the key on retries after a lost response; changed fields require a new key.
   const attempt = useRef<{signature: string; key: string} | null>(null);
   const idempotencyKeyFor = (signature: string): string => {
     if (attempt.current?.signature !== signature) {

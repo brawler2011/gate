@@ -6,7 +6,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 )
 
-// Validate checks pagination bounds without applying defaults.
 func Validate(page, size int32) error {
 	if page < 1 || size < 1 || size > 100 {
 		return pkg.ErrBadInput
@@ -14,7 +13,6 @@ func Validate(page, size int32) error {
 	return nil
 }
 
-// Normalize applies defaults to zero values and validates the resulting pagination.
 func Normalize(page, size, defaultSize int32) (int32, int32, error) {
 	if page == 0 {
 		page = 1
@@ -25,7 +23,7 @@ func Normalize(page, size, defaultSize int32) (int32, int32, error) {
 	return page, size, Validate(page, size)
 }
 
-// Request identifies a one-based page. Normalize before calculating the offset.
+// Pages are one-based; normalize before calculating the offset.
 type Request struct {
 	Page     int32
 	PageSize int32

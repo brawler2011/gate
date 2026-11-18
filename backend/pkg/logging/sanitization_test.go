@@ -149,36 +149,29 @@ func TestSanitization_SanitizeHTTPHeaders(t *testing.T) {
 }
 
 func TestSanitization_RedactSensitiveSlogAttrs(t *testing.T) {
-	// Top-level sensitive attr
 	attrPass := slog.String("password", "plain_password")
 	redactedPass := logging.RedactSensitiveSlogAttrs(nil, attrPass)
 	assert.Equal(t, logging.RedactedValue, redactedPass.Value.String())
 
-	// Top-level session_id
 	attrSession := slog.String("session_id", "sess-12345")
 	redactedSession := logging.RedactSensitiveSlogAttrs(nil, attrSession)
 	assert.Equal(t, logging.RedactedValue, redactedSession.Value.String())
 
-	// Non-sensitive attr
 	attrUser := slog.String("user_id", "usr-999")
 	keptUser := logging.RedactSensitiveSlogAttrs(nil, attrUser)
 	assert.Equal(t, "usr-999", keptUser.Value.String())
 
-	// String with Bearer token on non-sensitive key
 	attrBearer := slog.String("custom_header", "Bearer secret-payload")
 	redactedBearer := logging.RedactSensitiveSlogAttrs(nil, attrBearer)
 	assert.Equal(t, "Bearer "+logging.RedactedValue, redactedBearer.Value.String())
 
-	// Top-level auth_header (starts with sensitive prefix auth_)
 	attrAuthHeader := slog.String("auth_header", "some-auth-value")
 	redactedAuthHeader := logging.RedactSensitiveSlogAttrs(nil, attrAuthHeader)
 	assert.Equal(t, logging.RedactedValue, redactedAuthHeader.Value.String())
 
-	// Empty key attr
 	emptyAttr := slog.Attr{}
 	assert.Equal(t, emptyAttr, logging.RedactSensitiveSlogAttrs(nil, emptyAttr))
 
-	// Nested group
 	groupAttr := slog.Group("details",
 		slog.String("email", "user@example.com"),
 		slog.String("token", "secret_token_val"),
@@ -228,5 +221,3 @@ func TestSanitization_SanitizingHandler(t *testing.T) {
 	assert.Equal(t, logging.RedactedValue, metaMap["session_id"])
 	assert.Equal(t, "u-1", metaMap["user_id"])
 }
-
-// --- NATS Carrier Adapter Tests ---

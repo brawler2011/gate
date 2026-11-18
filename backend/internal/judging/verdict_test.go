@@ -61,7 +61,7 @@ func TestCalculateStandardVerdict_WithTestDetails(t *testing.T) {
 func TestCalculateStandardVerdict_TruncatesLargeInput(t *testing.T) {
 	vc := NewVerdictCalculator("standard", &gfmt.Problem{})
 
-	largeInput := strings.Repeat("A", 200*1024) // 200 KB
+	largeInput := strings.Repeat("A", 200*1024)
 	results := []TestResult{
 		{
 			TestNumber: 1,
@@ -94,7 +94,7 @@ func TestVerdictCalculation(t *testing.T) {
 		verdict := calculator.Calculate(results)
 		assert.Equal(t, submissionsmodel.Accepted, verdict.State)
 		assert.Equal(t, 100*points.Unit, verdict.Score)
-		assert.Equal(t, int32(2), verdict.MaxTime) // 2ms
+		assert.Equal(t, int32(2), verdict.MaxTime)
 	})
 
 	t.Run("StandardVerdict_WrongAnswer", func(t *testing.T) {
@@ -147,8 +147,7 @@ func TestVerdictCalculation(t *testing.T) {
 		assert.Equal(t, submissionsmodel.GotWA, verdict.State)
 		require.NotNil(t, verdict.FailedTest)
 		assert.Equal(t, 2, *verdict.FailedTest)
-		// Only the passed test of "each" group1 counts; group2 is blocked by the
-		// failed dependency even though its own tests passed.
+		// A failed dependency blocks group points even when that group's own tests pass.
 		assert.Equal(t, points.Value(3333), verdict.Score)
 
 		verdict = calculator.Calculate([]TestResult{
@@ -182,8 +181,6 @@ func testProblem() *gfmt.Problem {
 	}
 }
 
-// testProblemWithGroups: group1 awards each passed test; group2 awards its
-// weights only when complete and only if group1 is fully passed.
 func testProblemWithGroups() *gfmt.Problem {
 	return &gfmt.Problem{
 		Type: "scoring",

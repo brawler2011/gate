@@ -22,7 +22,7 @@ type directory struct {
 	maxFiles  int
 }
 
-// errBudgetExceeded marks a deterministic overrun of the build budgets: retrying the same snapshot fails the same way.
+// Budget overruns are deterministic; retrying the same snapshot cannot help.
 var errBudgetExceeded = errors.New("build disk quota exceeded")
 
 type quotaWriter struct {
@@ -101,8 +101,7 @@ func (d *directory) write(path string, data []byte) error {
 	return nil
 }
 
-// archive writes in lexical order with fixed metadata, and hashes only a
-// successfully closed ZIP. Archive bytes share the whole-build disk budget.
+// Hash only a successfully closed ZIP; its bytes count against the build disk budget.
 func (d *directory) archive(ctx context.Context, path string) (digest string, size int64, err error) {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
 	if err != nil {

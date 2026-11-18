@@ -11,7 +11,6 @@ import (
 )
 
 func (h *CoreServer) ListContestClarifications(ctx context.Context, params corev1.ListContestClarificationsParams) (*corev1.ListContestClarificationsResponseModel, error) {
-	// FIXME: в middleware уже должно быть
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
 		return nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
@@ -51,7 +50,6 @@ func (h *CoreServer) CreateContestClarification(ctx context.Context, req *corev1
 		return nil, err
 	}
 
-	// FIXME: OptUUID
 	var problemID *uuid.UUID
 	if req.ProblemID.IsSet() {
 		problemID = &req.ProblemID.Value

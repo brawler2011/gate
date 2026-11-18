@@ -94,7 +94,6 @@ export const NotificationsClient = (): ReactNode => {
     }
   };
 
-  // Org Invitation Actions
   const handleAcceptOrgInvitation = async (notif: NotificationModel) => {
     const data = notif.data as Record<string, unknown> | undefined;
     const invitationId = data?.invitation_id as string | undefined;
@@ -153,7 +152,6 @@ export const NotificationsClient = (): ReactNode => {
     fetchNotifications();
   };
 
-  // Org Join Request Actions
   const handleApproveOrgJoinRequest = async (notif: NotificationModel) => {
     const data = notif.data as Record<string, unknown> | undefined;
     const requestId = data?.request_id as string | undefined;
@@ -221,7 +219,6 @@ export const NotificationsClient = (): ReactNode => {
     fetchNotifications();
   };
 
-  // Contest Join Request Actions
   const handleApproveContestJoinRequest = async (notif: NotificationModel) => {
     const data = notif.data as Record<string, unknown> | undefined;
     const requestId = data?.request_id as string | undefined;
@@ -429,7 +426,6 @@ export const NotificationsClient = (): ReactNode => {
                           {notif.body}
                         </Text>
 
-                        {/* Interactive Buttons */}
                         <Group gap="xs" mt="xs" wrap="wrap">
                           {hasOrgInviteAction && (
                             <>

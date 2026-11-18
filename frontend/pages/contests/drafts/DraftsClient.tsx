@@ -182,7 +182,6 @@ export const DraftsClient = ({
       )}
 
       <Grid gutter="lg">
-        {/* Left column: Editor */}
         <Grid.Col span={{base: 12, md: 7}}>
           <Paper withBorder p="md" radius="md" shadow="xs">
             <Stack gap="md">
@@ -219,7 +218,6 @@ export const DraftsClient = ({
           </Paper>
         </Grid.Col>
 
-        {/* Right column: Saved drafts */}
         <Grid.Col span={{base: 12, md: 5}}>
           <Paper withBorder p="md" radius="md" shadow="xs" style={{minHeight: 400}}>
             <Stack gap="sm">

@@ -53,7 +53,6 @@ export const AdminDashboardContent = (): ReactNode => {
   return (
     <Container size="xl" py="md">
       <Stack gap="lg">
-        {/* Quick Section Navigation Grid */}
         <div>
           <Title order={4} mb="md">
             Разделы управления

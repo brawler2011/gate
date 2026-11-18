@@ -1,5 +1,3 @@
-// Package dbfixtures inserts valid problem-package graphs for integration tests
-// that need a pinned Package but do not exercise the build pipeline.
 package dbfixtures
 
 import (
@@ -15,10 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// InsertPackage publishes a minimal successful Build and its Package for the
-// problem in one transaction, honouring the database publication invariants.
-// It creates the problem's draft when it does not exist yet. created is the
-// package creation time; a zero value means now.
+// A zero creation time uses the current time; publication bypasses the build pipeline.
 func InsertPackage(ctx context.Context, pool *pgxpool.Pool, problemID, organizationID uuid.UUID, created time.Time) (uuid.UUID, error) {
 	tx, err := pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
@@ -32,7 +27,6 @@ func InsertPackage(ctx context.Context, pool *pgxpool.Pool, problemID, organizat
 		Scan(&revision, &title, &shortName, &timeMs, &memoryMb); err != nil {
 		return uuid.Nil, fmt.Errorf("read draft: %w", err)
 	}
-	// Builds are unique per problem revision only by id, so every package gets its own build.
 	buildID, objectID, packageID := uuid.New(), uuid.New(), uuid.New()
 	sum := sha256.Sum256(packageID[:])
 	hash := hex.EncodeToString(sum[:])
@@ -63,12 +57,11 @@ VALUES($1,$2,$3,$4,$5::jsonb,'running',$6,clock_timestamp()+interval '1 hour',1,
 	return packageID, nil
 }
 
-// Execer is satisfied by pgx pools and transactions.
 type Execer interface {
 	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
 }
 
-// ProblemSpec describes a problem row and its draft. Zero Visibility means private.
+// Zero Visibility means private.
 type ProblemSpec struct {
 	ID, OrganizationID uuid.UUID
 	OwnerID            *uuid.UUID
@@ -77,7 +70,6 @@ type ProblemSpec struct {
 	CreatedAt          time.Time
 }
 
-// InsertProblem creates the problem identity row and its pass-fail draft, like problem creation does.
 func InsertProblem(ctx context.Context, db Execer, spec ProblemSpec) error {
 	if spec.Visibility == "" {
 		spec.Visibility = "private"

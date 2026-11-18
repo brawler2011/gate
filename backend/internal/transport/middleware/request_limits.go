@@ -6,8 +6,7 @@ import (
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 )
 
-// RequestLimits bounds reads before ogen decodes JSON or parses multipart forms.
-// It must run after the session/user middleware and before the generated server.
+// Run after session/user middleware and before the generated server decodes request bodies.
 func RequestLimits(server *corev1.Server, bodyLimit func(string) int64, onError corev1.ErrorHandler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route, ok := server.FindPath(r.Method, r.URL)

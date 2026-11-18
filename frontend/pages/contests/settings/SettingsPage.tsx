@@ -27,7 +27,6 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
   return {slug, contestLogin, section, response};
 }) satisfies LoaderFunction;
 
-// Constants for sections
 const SECTIONS = {
   SETTINGS: "settings",
   PROBLEMS: "problems",
@@ -36,7 +35,6 @@ const SECTIONS = {
 
 type Section = (typeof SECTIONS)[keyof typeof SECTIONS];
 
-// Navigation configuration
 const NAV_SECTIONS = [
   {
     key: SECTIONS.SETTINGS,

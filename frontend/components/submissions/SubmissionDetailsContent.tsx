@@ -152,7 +152,6 @@ export const SubmissionDetailsContent = ({
 
   return (
     <Stack gap="lg" w="100%">
-      {/* Overview Card */}
       <Card withBorder radius="md" p="md" bg="var(--mantine-color-body)">
         <SimpleGrid cols={{base: 2, sm: 4}} spacing="md">
           <Box>
@@ -297,7 +296,6 @@ export const SubmissionDetailsContent = ({
         )}
       </Card>
 
-      {/* Ban reason alert if disqualified */}
       {submission.ban_reason && (
         <Alert
           icon={<IconAlertTriangle size={18} />}
@@ -310,7 +308,6 @@ export const SubmissionDetailsContent = ({
         </Alert>
       )}
 
-      {/* Compiler output / Compilation error */}
       {compilerOutput && (
         <Card withBorder radius="md" p="md" style={{borderColor: "var(--mantine-color-red-6)"}}>
           <Group justify="space-between" mb="xs">
@@ -349,7 +346,6 @@ export const SubmissionDetailsContent = ({
         </Card>
       )}
 
-      {/* Failed Test Details Box */}
       {failedDetails && (
         <Card withBorder radius="md" p="md" bg="var(--mantine-color-body)">
           <Group justify="space-between" mb="sm">
@@ -414,7 +410,6 @@ export const SubmissionDetailsContent = ({
         </Card>
       )}
 
-      {/* Test Protocol Table */}
       {tests && tests.length > 0 && (
         <Card withBorder radius="md" p="md" bg="var(--mantine-color-body)">
           <Group justify="space-between" mb="sm">
@@ -464,7 +459,6 @@ export const SubmissionDetailsContent = ({
         </Card>
       )}
 
-      {/* If test details are not available */}
       {!testDetails && (
         <Alert
           icon={<IconInfoCircle size={16} />}
@@ -476,7 +470,6 @@ export const SubmissionDetailsContent = ({
         </Alert>
       )}
 
-      {/* Solution Code */}
       <Card withBorder radius="md" p="md" bg="var(--mantine-color-body)">
         <Group justify="space-between" align="center" mb="sm">
           <Group gap="xs">

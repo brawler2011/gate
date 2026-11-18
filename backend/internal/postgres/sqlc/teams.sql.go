@@ -14,7 +14,6 @@ import (
 )
 
 const addTeamMember = `-- name: AddTeamMember :exec
-
 INSERT INTO team_members (team_id, user_id, role)
 VALUES ($1, $2, $3)
 `
@@ -25,7 +24,6 @@ type AddTeamMemberParams struct {
 	Role   organizationsmodel.TeamRole `json:"role"`
 }
 
-// Team Members
 func (q *Queries) AddTeamMember(ctx context.Context, arg AddTeamMemberParams) error {
 	_, err := q.db.Exec(ctx, addTeamMember, arg.TeamID, arg.UserID, arg.Role)
 	return err
@@ -46,7 +44,6 @@ func (q *Queries) CountTeamMembers(ctx context.Context, teamID uuid.UUID) (int64
 }
 
 const createTeam = `-- name: CreateTeam :one
-
 INSERT INTO teams (id, organization_id, name, slug, description, privacy, parent_team_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id, organization_id, name, slug, description, privacy, parent_team_id, created_at, updated_at
@@ -62,7 +59,6 @@ type CreateTeamParams struct {
 	ParentTeamID   *uuid.UUID `json:"parent_team_id"`
 }
 
-// Teams queries
 func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error) {
 	row := q.db.QueryRow(ctx, createTeam,
 		arg.ID,

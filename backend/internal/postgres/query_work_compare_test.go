@@ -8,11 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// queryWork is the database work of one operation. Planner choices can change
-// the page and plan-node counts even for the same data and PostgreSQL version.
+// Planner choices can change page and node counts for identical data and PostgreSQL versions.
 type queryWork struct {
-	// Statements and Transactions count what the code sends; BEGIN, COMMIT and
-	// ROLLBACK are transaction control, not statements.
+	// Transaction control counts separately from statements.
 	Statements   int64 `json:"statements"`
 	Transactions int64 `json:"transactions"`
 	// Pages is shared hit + read: their split depends on the cache, the sum does not.
@@ -38,14 +36,11 @@ func (w queryWork) metrics() []struct {
 	}
 }
 
-// queryWorkTolerance is the allowed increase above a recorded upper budget.
-// Lower measurements always pass: a cheaper plan is not a regression.
+// Cheaper plans pass; tolerances limit only increases above the recorded budget.
 const queryWorkTolerance = 0.03
 
 const queryWorkUpdate = "task be:querywork:update"
 
-// compareQueryWork returns one message per metric above the budget and per
-// scenario present on one side only.
 func compareQueryWork(golden, actual map[string]queryWork, tolerance float64) []string {
 	var problems []string
 	names := make([]string, 0, len(golden)+len(actual))
@@ -87,9 +82,7 @@ func compareQueryWork(golden, actual map[string]queryWork, tolerance float64) []
 	return problems
 }
 
-// updateQueryWorkBudgets preserves previously observed plans' ceilings. Recording
-// a cheaper plan must not make the next run of a valid older plan fail.
-// Scenarios no longer measured are removed; tighten budgets explicitly by hand.
+// Recording a cheaper plan must preserve ceilings for previously valid plans; tighten budgets manually.
 func updateQueryWorkBudgets(budgets, actual map[string]queryWork) map[string]queryWork {
 	updated := make(map[string]queryWork, len(actual))
 	for name, measured := range actual {

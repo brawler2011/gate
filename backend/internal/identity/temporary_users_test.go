@@ -111,7 +111,6 @@ func TestBatchCreateOrganizationUsers_Success(t *testing.T) {
 	usersRepo.users[adminUser.Id] = adminUser
 	f.usersUC.users[adminUser.Id] = adminUser
 
-	// Add admin to org as owner
 	f.orgs.members[f.orgID.String()+":"+adminUser.Id.String()] = organizationsmodel.OrganizationMember{
 		OrganizationID: f.orgID,
 		UserID:         adminUser.Id,
@@ -132,7 +131,6 @@ func TestBatchCreateOrganizationUsers_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, res.Users, 10)
 
-	// Verify sequential names prefix_01 to prefix_10
 	assert.Equal(t, "olymp2026_01", res.Users[0].Username)
 	assert.Equal(t, "olymp2026_10", res.Users[9].Username)
 
@@ -141,7 +139,6 @@ func TestBatchCreateOrganizationUsers_Success(t *testing.T) {
 		assert.NotNil(t, u.ExpiresAt)
 		assert.True(t, u.ExpiresAt.After(time.Now()))
 
-		// Check member was created in repo
 		createdUser, err := usersRepo.GetUserByUsername(ctx, u.Username)
 		require.NoError(t, err)
 		assert.Equal(t, u.Username, createdUser.Username)
@@ -166,7 +163,6 @@ func TestBatchCreateOrganizationUsers_CollisionHandling(t *testing.T) {
 		Role:           organizationsmodel.OrgRoleOwner,
 	}
 
-	// Pre-create olymp2026_01
 	_ = usersRepo.CreateUser(ctx, identitymodel.CreateUserParams{
 		Id:           uuid.New(),
 		Username:     "olymp2026_01",
@@ -186,7 +182,7 @@ func TestBatchCreateOrganizationUsers_CollisionHandling(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, res.Users, 2)
 
-	// Since 01 exists, it should generate 02 and 03
+	// Temporary usernames skip existing suffixes.
 	assert.Equal(t, "olymp2026_02", res.Users[0].Username)
 	assert.Equal(t, "olymp2026_03", res.Users[1].Username)
 }
@@ -197,7 +193,6 @@ func TestClaimTemporaryUser_Success(t *testing.T) {
 	contestsRepo := newMockContestsRepo()
 	usersUC := NewUsersUseCase(usersRepo, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: usersRepo, ContestsRepo: contestsRepo}}, nil)
 
-	// Permanent user
 	permUser := accessmodel.User{
 		Id:       uuid.New(),
 		Username: "alice_permanent",
@@ -206,7 +201,6 @@ func TestClaimTemporaryUser_Success(t *testing.T) {
 	usersRepo.users[permUser.Id] = permUser
 	usersRepo.usersByName[permUser.Username] = permUser
 
-	// Temporary user with password
 	tempPassword := "SecretPass123"
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(tempPassword), bcrypt.DefaultCost)
 	expiresAt := time.Now().Add(24 * time.Hour)
@@ -220,7 +214,6 @@ func TestClaimTemporaryUser_Success(t *testing.T) {
 		ExpiresAt:    &expiresAt,
 	})
 
-	// Temporary user was member of a contest
 	contestID := uuid.New()
 	contestsRepo.members[contestID.String()+":"+tempUserID.String()] = contestsmodel.ContestMember{
 		ContestID: contestID,
@@ -228,7 +221,6 @@ func TestClaimTemporaryUser_Success(t *testing.T) {
 		Role:      contestsmodel.ContestRoleParticipant,
 	}
 
-	// Claim temporary user
 	res, err := usersUC.ClaimTemporaryUser(accessmodel.WithUser(ctx, permUser), permUser, identitymodel.ClaimTemporaryUserInput{
 		Username: "temp_olymp_01",
 		Password: tempPassword,
@@ -237,13 +229,12 @@ func TestClaimTemporaryUser_Success(t *testing.T) {
 	assert.Equal(t, tempUserID, res.ClaimedUserID)
 	assert.Equal(t, "temp_olymp_01", res.ClaimedUsername)
 
-	// Verify temporary user is now marked claimed
 	updatedTemp, err := usersRepo.GetUserById(ctx, tempUserID)
 	require.NoError(t, err)
 	assert.True(t, updatedTemp.IsClaimed())
 	assert.Equal(t, permUser.Id, *updatedTemp.ClaimedByUserID)
 
-	// Verify cannot claim twice
+	// A temporary account cannot be claimed twice.
 	_, err = usersUC.ClaimTemporaryUser(accessmodel.WithUser(ctx, permUser), permUser, identitymodel.ClaimTemporaryUserInput{
 		Username: "temp_olymp_01",
 		Password: tempPassword,
@@ -263,7 +254,7 @@ func TestClaimTemporaryUser_Rejections(t *testing.T) {
 	usersRepo.users[permUser.Id] = permUser
 	usersRepo.usersByName[permUser.Username] = permUser
 
-	// 1. Permanent account cannot be claimed as temporary
+	// Permanent accounts cannot be claimed as temporary.
 	permanentOther := accessmodel.User{Id: uuid.New(), Username: "bob_perm", Role: accessmodel.UserRoleUser, PasswordHash: "x"}
 	usersRepo.users[permanentOther.Id] = permanentOther
 	usersRepo.usersByName[permanentOther.Username] = permanentOther
@@ -275,7 +266,7 @@ func TestClaimTemporaryUser_Rejections(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not a temporary account")
 
-	// 2. Wrong password
+	// Claiming requires the temporary account password.
 	expiresAt := time.Now().Add(24 * time.Hour)
 	tempUser := accessmodel.User{
 		Id:           uuid.New(),
@@ -317,7 +308,7 @@ func TestAuth_ExpiredAccount(t *testing.T) {
 	usersRepo.users[expiredUser.Id] = expiredUser
 	usersRepo.usersByName[expiredUser.Username] = expiredUser
 
-	// Login should fail with account expired
+	// Expired temporary accounts cannot log in.
 	_, _, err := authUC.Login(ctx, "expired_user", password)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "account has expired")

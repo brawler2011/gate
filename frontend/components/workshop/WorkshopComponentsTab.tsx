@@ -32,11 +32,9 @@ import {useSaveDraft} from "./draft/useDraft";
 import type {ProblemDraft, ProblemDraftChecker, ProblemDraftProgram} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
-/** The catalog configurations as select options. */
 const languageOptions = (catalog: SupportedLanguage[]) =>
   catalog.map((language) => ({value: language.id, label: language.name}));
 
-/** A starter source in the configuration `id` of the catalog. */
 const template = (catalog: SupportedLanguage[], role: ComponentRole, id: string): string =>
   componentTemplate(role, catalog.find((language) => language.id === id));
 
@@ -49,7 +47,6 @@ type ProgramEditorProps = {
   children?: ReactNode;
 };
 
-/** Language and source of one program. */
 const ProgramEditor = (props: ProgramEditorProps): ReactNode => {
   const {label, program, saving, onChange, onDelete, children} = props;
   const catalog = useLanguages();
@@ -113,10 +110,8 @@ const NewProgramForm = ({withName, saving, onCreate}: {
   );
 };
 
-/** The C++ configurations of the catalog, which standard checkers compile in. */
 const cppLanguages = (catalog: SupportedLanguage[]) => catalog.filter((language) => language.extensions.includes("cpp"));
 
-/** A select of the standard checkers by name and description. */
 type StandardCheckerSelectProps = {value: string | null; onChange: (name: string) => void};
 
 const StandardCheckerSelect = ({value, onChange}: StandardCheckerSelectProps): ReactNode => {
@@ -159,7 +154,6 @@ type StandardCheckerProps = {
   onDelete: () => void;
 };
 
-/** A standard checker: its current source, read-only until the author makes a copy. */
 const StandardChecker = ({checker, saving, onChange, onCustomize, onDelete}: StandardCheckerProps): ReactNode => {
   const catalog = useLanguages();
   const standard = useStandardCheckers()?.find((s) => s.name === checker.standard);
@@ -285,8 +279,7 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
   const {save, isSaving} = useSaveDraft(problemId);
   const [params, setParams] = useSearchParams();
   const programs = programsOf(draft, role);
-  // A renamed program keeps its editor, and so its unsaved source, under an
-  // identity no other program can get; others are keyed by their names.
+  // Keep editor identity across renames to preserve unsaved source.
   const [renamed, setRenamed] = useState<Record<string, string>>({});
   const editorKey = (name: string): string => renamed[name] ?? `name:${name}`;
   // While a rename is saved, the URL may still hold the old name.

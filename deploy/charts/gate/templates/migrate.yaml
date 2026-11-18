@@ -1,9 +1,4 @@
-# Runs before any app resource changes. It applies the schema and, when the schema
-# changed, resets all data (backend/migrations/README.md). A failed run fails the
-# release, and with --rollback-on-failure nothing of the new release starts.
-#
-# The Job reads the backend config (the S3 endpoint). Hooks run before the release's
-# own resources exist, so the config comes from a hook ConfigMap of its own.
+# Hooks precede release resources, so migrations need a separate config ConfigMap.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -28,7 +23,6 @@ spec:
   activeDeadlineSeconds: 600
   template:
     spec:
-      # Services are found by DNS; their env variables (e.g. S3_PORT) would clash with app settings.
       enableServiceLinks: false
       securityContext:
         {{- include "gate.podSecurity" . | nindent 8 }}

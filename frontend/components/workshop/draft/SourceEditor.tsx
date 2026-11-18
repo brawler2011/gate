@@ -12,7 +12,6 @@ type Props = {
   onDelete: () => void;
 };
 
-/** Plain-text editor for one draft source with save and confirmed delete. */
 export const SourceEditor = ({label, content, disabled, saving, onSave, onDelete}: Props): ReactNode => {
   const [text, setText] = useState(content);
   const [confirming, setConfirming] = useState(false);

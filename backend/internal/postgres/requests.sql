@@ -1,8 +1,4 @@
--- Invitations & Join Requests queries
 
--- ============================================================================
--- Organization Invitations
--- ============================================================================
 
 -- name: CreateOrganizationInvitation :one
 INSERT INTO organization_invitations (
@@ -61,9 +57,6 @@ UPDATE organization_invitations
 SET status = $2, updated_at = NOW()
 WHERE id = $1 AND status = 'pending';
 
--- ============================================================================
--- Organization Join Requests
--- ============================================================================
 
 -- name: CreateOrganizationJoinRequest :one
 INSERT INTO organization_join_requests (
@@ -118,9 +111,6 @@ UPDATE organization_join_requests
 SET status = $2, reviewed_by = $3, updated_at = NOW()
 WHERE id = $1 AND status = 'pending';
 
--- ============================================================================
--- Contest Join Requests
--- ============================================================================
 
 -- name: CreateContestJoinRequest :one
 INSERT INTO contest_join_requests (

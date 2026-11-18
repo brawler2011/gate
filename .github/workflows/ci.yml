@@ -2,10 +2,10 @@ name: CI
 
 on:
   workflow_dispatch:
-  # Populate default-branch caches that new PRs can restore.
+  # Warm default-branch caches for new PRs.
   push:
     branches: [main]
-  # Every PR, including PRs stacked on other PR branches.
+  # Include PRs targeting other PR branches.
   pull_request:
 
 concurrency:
@@ -16,7 +16,6 @@ permissions:
   contents: read
 
 env:
-  # Images are pushed only from this repository; PRs from forks cannot write to GHCR.
   PUSH_IMAGES: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
 jobs:
@@ -69,10 +68,7 @@ jobs:
       - name: Run unit tests
         run: task be:test
 
-  # Images are built once per content and pushed under immutable tags, so deploy
-  # promotes exactly what CI tested. The judge image is named by tools/judgeimage
-  # (content hash of judge/), the backend tag is the git tree of the whole checkout
-  # (unchanged by a squash merge of an up-to-date PR).
+  # Use content tags so deploy promotes the exact images CI tested.
   judge-image:
     name: Judge Image
     runs-on: ubuntu-latest
@@ -104,8 +100,7 @@ jobs:
       - name: Check for an existing image
         id: existing
         if: env.PUSH_IMAGES == 'true'
-        # Only a single image manifest counts: tags pushed with attestations are
-        # indexes with another digest per build, so they are rebuilt and replaced.
+        # Attestation indexes change digest on rebuild; accept only plain manifests.
         run: |
           media="$(docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' 2> /dev/null | jq -r .mediaType || true)"
           case "$media" in
@@ -118,19 +113,12 @@ jobs:
         env:
           IMAGE: ${{ steps.tag.outputs.image }}
 
-      # Forks cannot push; their integration job builds the image instead.
+      # Forks cannot push, so integration tests build their image locally.
       - name: Install Nix
         if: env.PUSH_IMAGES == 'true' && (steps.existing.outputs.found != 'true' || github.ref == 'refs/heads/main')
         uses: cachix/install-nix-action@v31
 
-      # Nix store cache for judge image builds. Runs that build the image
-      # use it to rebuild only what changed in judge/.
-      # - Key: judge-nix-store-<hash of judge/>. On a miss, the newest cache with
-      #   that prefix is restored (a PR sees its own caches and main's).
-      # - main keeps a cache for the current judge/, so new PRs start warm. It
-      #   builds but never re-pushes an existing image (see "Warm main Nix cache").
-      # - After successful runs, older caches with this prefix on the same ref are
-      #   deleted; that needs actions: write on this job.
+      # Restore earlier Nix stores to reuse unchanged toolchains.
       - name: Cache Nix store
         id: nix-cache
         if: env.PUSH_IMAGES == 'true' && (steps.existing.outputs.found != 'true' || github.ref == 'refs/heads/main')
@@ -144,8 +132,7 @@ jobs:
           purge-created: 0
           purge-primary-key: never
 
-      # Realise the image and push tool for main's cache without replacing the
-      # tested tag deploy may be promoting concurrently.
+      # Warm main's cache without replacing a tested tag during a concurrent deploy.
       - name: Warm main Nix cache
         if: env.PUSH_IMAGES == 'true' && github.ref == 'refs/heads/main' && steps.existing.outputs.found == 'true' && steps.nix-cache.outputs.hit-primary-key != 'true'
         run: |
@@ -153,10 +140,7 @@ jobs:
           nix build --no-link ./judge#default ./judge#default.copyTo
           echo "Judge cache warm-up: $((SECONDS - started)) seconds (ref: $GITHUB_REF)." >> "$GITHUB_STEP_SUMMARY"
 
-      # Compresses the layers with zstd at a fixed level while pushing. The encoder
-      # is deterministic, so identical sources still give the same image digest; a
-      # judge change re-uploads every layer because compressed digests are known
-      # only after compression.
+      # Fixed compression keeps digests reproducible; changed images still recompress every layer.
       - name: Build and push judge image
         if: env.PUSH_IMAGES == 'true' && steps.existing.outputs.found != 'true'
         run: |
@@ -191,8 +175,6 @@ jobs:
       - name: Check for an existing image
         id: existing
         if: env.PUSH_IMAGES == 'true'
-        # Only a single image manifest counts: tags pushed with attestations are
-        # indexes with another digest per build, so they are rebuilt and replaced.
         run: |
           media="$(docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' 2> /dev/null | jq -r .mediaType || true)"
           case "$media" in
@@ -217,7 +199,6 @@ jobs:
           file: Dockerfile
           tags: ${{ steps.tag.outputs.image }}
           push: ${{ env.PUSH_IMAGES == 'true' }}
-          # One plain manifest per tag: rebuilding identical sources keeps the digest.
           provenance: false
           cache-from: type=gha,scope=backend
           cache-to: type=gha,scope=backend,mode=max
@@ -249,8 +230,6 @@ jobs:
       - name: Run integration tests
         run: task be:test:integration
 
-      # Gates PRs on the database work per operation (statements, pages, plan
-      # shape) recorded in backend/internal/postgres/testdata/query_work.json.
       - name: Check query work
         run: task be:querywork
 

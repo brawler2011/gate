@@ -141,19 +141,17 @@ func TestGetContestByOrgLoginAndContestLogin_CacheMissAndHit(t *testing.T) {
 	}
 	repo.putContest(sampleContest)
 
-	// 1. First call: Cache miss, queries repo
 	res1, err := uc.GetContestByOrgLoginAndContestLogin(ctx, "codeforces", "round-999")
 	require.NoError(t, err)
 	require.Equal(t, contestID, res1.ID)
 	require.Equal(t, int64(1), atomic.LoadInt64(&repo.callCount))
 
-	// 2. Second call: Cache hit, returned from RAM without querying repo
 	res2, err := uc.GetContestByOrgLoginAndContestLogin(ctx, "codeforces", "round-999")
 	require.NoError(t, err)
 	require.Equal(t, contestID, res2.ID)
 	require.Equal(t, int64(1), atomic.LoadInt64(&repo.callCount), "repo call count must remain 1 on cache hit")
 
-	// 3. Normalized key check: Case insensitivity (casing variants hit same cache key)
+	// Casing variants share the same cache key.
 	testCases := []struct {
 		org   string
 		login string
@@ -174,12 +172,11 @@ func TestGetContestByOrgLoginAndContestLogin_CacheMissAndHit(t *testing.T) {
 func TestGetContestByOrgLoginAndContestLogin_RepoErrorNotCached(t *testing.T) {
 	uc, repo, ctx := setupCacheTestFixture()
 
-	// Cache miss on non-existent contest
 	_, err := uc.GetContestByOrgLoginAndContestLogin(ctx, "unknown-org", "unknown-contest")
 	require.ErrorIs(t, err, pkg.ErrNotFound)
 	require.Equal(t, int64(1), atomic.LoadInt64(&repo.callCount))
 
-	// Second call should also query repo, not cache the negative result
+	// Missing contests are not cached.
 	_, err = uc.GetContestByOrgLoginAndContestLogin(ctx, "unknown-org", "unknown-contest")
 	require.ErrorIs(t, err, pkg.ErrNotFound)
 	require.Equal(t, int64(2), atomic.LoadInt64(&repo.callCount))
@@ -197,13 +194,11 @@ func TestUpdateContest_InvalidatesOldKeyWhenLoginChanges(t *testing.T) {
 	}
 	repo.putContest(contest)
 
-	// Populate cache
 	got, err := uc.GetContestByOrgLoginAndContestLogin(ctx, "acm-icpc", "semifinal-2026")
 	require.NoError(t, err)
 	require.Equal(t, contestID, got.ID)
 	require.Equal(t, int64(1), atomic.LoadInt64(&repo.callCount))
 
-	// Update contest login: old key "acm-icpc/semifinal-2026" -> new key "acm-icpc/finals-2026"
 	newLogin := "finals-2026"
 	newTitle := "Finals 2026"
 	err = uc.UpdateContest(ctx, contestsmodel.ContestUpdateInput{
@@ -213,19 +208,17 @@ func TestUpdateContest_InvalidatesOldKeyWhenLoginChanges(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Old key must be invalidated from cache: next call queries repo and gets NotFound
+	// Changing a login invalidates the previous cache key.
 	_, err = uc.GetContestByOrgLoginAndContestLogin(ctx, "acm-icpc", "semifinal-2026")
 	require.ErrorIs(t, err, pkg.ErrNotFound)
 	require.Equal(t, int64(2), atomic.LoadInt64(&repo.callCount), "should have queried repo after old key invalidated")
 
-	// New key must query repo and populate cache
 	gotNew, err := uc.GetContestByOrgLoginAndContestLogin(ctx, "acm-icpc", "finals-2026")
 	require.NoError(t, err)
 	require.Equal(t, contestID, gotNew.ID)
 	require.Equal(t, "finals-2026", gotNew.Login)
 	require.Equal(t, int64(3), atomic.LoadInt64(&repo.callCount))
 
-	// Subsequent request to new key hits cache
 	gotCached, err := uc.GetContestByOrgLoginAndContestLogin(ctx, "acm-icpc", "finals-2026")
 	require.NoError(t, err)
 	require.Equal(t, contestID, gotCached.ID)
@@ -244,17 +237,15 @@ func TestDeleteContest_InvalidatesCache(t *testing.T) {
 	}
 	repo.putContest(contest)
 
-	// Populate cache
 	got, err := uc.GetContestByOrgLoginAndContestLogin(ctx, "yandex", "cup-2026")
 	require.NoError(t, err)
 	require.Equal(t, contestID, got.ID)
 	require.Equal(t, int64(1), atomic.LoadInt64(&repo.callCount))
 
-	// Delete contest
 	err = uc.DeleteContest(ctx, contestID)
 	require.NoError(t, err)
 
-	// Cache must be invalidated: next call queries repo again and gets NotFound
+	// Deleting a contest invalidates its cache entry.
 	_, err = uc.GetContestByOrgLoginAndContestLogin(ctx, "yandex", "cup-2026")
 	require.ErrorIs(t, err, pkg.ErrNotFound)
 	require.Equal(t, int64(2), atomic.LoadInt64(&repo.callCount), "should have queried repo after delete invalidation")
@@ -275,18 +266,16 @@ func TestContestCache_TTLExpiration(t *testing.T) {
 		Title:             "Tinkoff Generation",
 	})
 
-	// 1. Initial lookup -> miss, caches entry
 	_, err := uc.GetContestByOrgLoginAndContestLogin(ctx, "tinkoff", "generation")
 	require.NoError(t, err)
 	require.Equal(t, int64(1), atomic.LoadInt64(&repo.callCount))
 
-	// 2. Advance time within TTL (1 minute) -> hit
 	now = now.Add(1 * time.Minute)
 	_, err = uc.GetContestByOrgLoginAndContestLogin(ctx, "tinkoff", "generation")
 	require.NoError(t, err)
 	require.Equal(t, int64(1), atomic.LoadInt64(&repo.callCount))
 
-	// 3. Advance time past TTL (3 minutes total) -> expired, queries repo
+	// Entries expire after the cache TTL.
 	now = now.Add(2 * time.Minute)
 	_, err = uc.GetContestByOrgLoginAndContestLogin(ctx, "tinkoff", "generation")
 	require.NoError(t, err)
@@ -296,7 +285,6 @@ func TestContestCache_TTLExpiration(t *testing.T) {
 func TestContestCache_ConcurrencyAndThreadSafety(t *testing.T) {
 	uc, repo, ctx := setupCacheTestFixture()
 
-	// Seed multiple contests
 	const numContests = 10
 	var contestIDs []uuid.UUID
 	for i := 0; i < numContests; i++ {
@@ -326,21 +314,18 @@ func TestContestCache_ConcurrencyAndThreadSafety(t *testing.T) {
 
 				switch it % 5 {
 				case 0, 1, 2:
-					// Read operations (with varied casing)
 					org := "org"
 					if it%2 == 0 {
 						org = "ORG"
 					}
 					_, _ = uc.GetContestByOrgLoginAndContestLogin(ctx, org, strings.ToUpper(contestLogin))
 				case 3:
-					// Update operation
 					newTitle := fmt.Sprintf("Updated %d by %d", idx, goroutineID)
 					_ = uc.UpdateContest(ctx, contestsmodel.ContestUpdateInput{
 						ID:    contestIDs[idx],
 						Title: &newTitle,
 					})
 				case 4:
-					// Direct cache get/delete operations
 					_, _ = uc.cache.Get("org", contestLogin)
 				}
 			}

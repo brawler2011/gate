@@ -17,15 +17,12 @@ import type CodeEditor from "react-simple-code-editor";
 
 import "./vsc-dark-plus.css";
 
-// Dynamic import to avoid hydration mismatch (autoCapitalize="off" vs "none")
 type CodeEditorProps = React.ComponentProps<typeof CodeEditor>;
 
 const TypedEditor = Editor as React.ComponentType<CodeEditorProps>;
 
 type Props = {
-  /** Configurations the contestant may choose, in catalog order. */
   languages: SupportedLanguage[];
-  /** Receives the source and the identifier of the chosen configuration. */
   onSubmit: (submission: FormData, language: string) => Promise<number | null>;
   problemSelect?: React.ReactNode;
   large?: boolean;
@@ -189,11 +186,9 @@ const CreateSubmissionForm = ({
       const end = target.selectionEnd;
       const value = form.values.code;
 
-      // Insert tab character at cursor position
       const newValue = value.substring(0, start) + "\t" + value.substring(end);
       setCode(newValue);
 
-      // Set cursor position after the inserted tab
       setTimeout(() => {
         target.selectionStart = target.selectionEnd = start + 1;
       }, 0);

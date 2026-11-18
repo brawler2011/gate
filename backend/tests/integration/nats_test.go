@@ -15,16 +15,14 @@ import (
 
 const natsPort = "4222/tcp"
 
-// newNATSConn starts a server owned by this test. JetStream is optional so core
-// NATS tests do not accidentally depend on it being enabled.
+// JetStream is optional so core NATS tests cannot accidentally depend on it.
 func newNATSConn(t *testing.T, enableJetStream bool) *nats.Conn {
 	t.Helper()
 	ctx := context.Background()
 	request := testcontainers.ContainerRequest{
 		Image:        "nats:2.10-alpine",
 		ExposedPorts: []string{natsPort},
-		// A TCP connection alone does not establish NATS readiness. Wait for
-		// server initialization as well as access through Docker's mapped port.
+		// Wait for NATS initialization as well as TCP readiness on the mapped port.
 		WaitingFor: wait.ForAll(wait.ForLog("Server is ready"), wait.ForListeningPort(natsPort)),
 	}
 	if enableJetStream {

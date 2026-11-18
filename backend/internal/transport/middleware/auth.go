@@ -20,7 +20,6 @@ const authenticationErrorKey contextKey = "authentication_error"
 
 const sessionCookieName = "session_id"
 
-// AuthMiddleware checks for a valid session cookie and retrieves the session
 func AuthMiddleware(authUC AuthUC) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +83,6 @@ func (s *SecurityHandler) HandleCookieAuth(ctx context.Context, operationName co
 	return ctx, nil
 }
 
-// AuthenticationError distinguishes an anonymous caller from failed credentials.
 // Public observers must not downgrade invalid or expired sessions to guests.
 func AuthenticationError(ctx context.Context) error {
 	err, _ := ctx.Value(authenticationErrorKey).(error)

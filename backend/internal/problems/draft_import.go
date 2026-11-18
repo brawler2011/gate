@@ -69,7 +69,6 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	if err != nil {
 		return nil, err
 	}
-	// A published v2 package preserves its complete original author snapshot.
 	if info, statErr := os.Stat(filepath.Join(packageRoot, ".gate/snapshot.json")); statErr == nil {
 		if info.Size() > 16*1024*1024 {
 			return nil, pkg.ErrPayloadTooLarge
@@ -154,9 +153,6 @@ func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (import
 	return importObject{temporaryID: id, path: path, spec: model.UploadSpec{Purpose: purpose, SHA256: hex.EncodeToString(h.Sum(nil)), Size: n}}, nil
 }
 
-// convertImport turns a package read from an author format into draft
-// entries: programs by role, library files, statement sections and assets.
-// Test inputs, answers and assets become objects.
 func (uc *DraftUseCase) convertImport(result *draftImport, root string, p *spec.Problem, id uuid.UUID, revision int64) error {
 	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}}
 	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb,
@@ -174,12 +170,8 @@ type importConverter struct {
 	result *draftImport
 	root   string
 	draft  model.Draft
-	// textTests converts CRLF line endings of test files to LF.
 	textTests bool
-	// objects maps a package path to the object holding it.
 	objects map[string]uuid.UUID
-	// files, programs and textBytes count the draft as it grows, against
-	// DraftQuotas.
 	files     int
 	programs  int
 	textBytes int64
@@ -246,13 +238,8 @@ func (c *importConverter) convert(p *spec.Problem) error {
 	return c.addGroups(p.Groups, generators)
 }
 
-// addLibrary adds the library files the judge programs of p include. A
-// draft has one file of each name, so different texts under one name are
-// rejected, except upstream versions of a system library file that no
-// generator includes: they become the auto-updated file, since checkers and
-// validators take its current version anyway. A generator keeps the text of
-// its package, since rnd differs between testlib versions, unless the text is
-// the current system one.
+// Generators retain bundled testlib to preserve random seeds; other upstream copies may auto-update.
+// Conflicting library texts are rejected unless all can use the system copy.
 func (c *importConverter) addLibrary(p *spec.Problem) error {
 	paths := map[string]spec.File{}
 	for _, f := range p.Library {
@@ -271,8 +258,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			texts[name] = nil
 		}
 		generated[name] = generated[name] || generator
-		// Each distinct text is charged as it is read, so a package cannot
-		// hold more text in memory than the draft quotas allow.
+		// Charge text before retaining it so imports cannot exceed draft memory quotas.
 		if f.System {
 			if !system[name] {
 				system[name] = true
@@ -352,9 +338,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 	return nil
 }
 
-// checker reads the checker; a standard checker Gate has becomes a reference
-// to it, and any other one, such as a standard checker unknown to Gate, is
-// imported from its source.
+// Known standard checkers use system references; unknown ones retain their source.
 func (c *importConverter) checker(program spec.Program) (*model.DraftChecker, error) {
 	if _, ok := syslib.LookupChecker(program.Standard); ok {
 		language, err := c.language(program)
@@ -370,7 +354,6 @@ func (c *importConverter) checker(program spec.Program) (*model.DraftChecker, er
 	return &model.DraftChecker{DraftProgram: *p}, nil
 }
 
-// program reads a program source.
 func (c *importConverter) program(program spec.Program) (*model.DraftProgram, error) {
 	language, err := c.language(program)
 	if err != nil {
@@ -386,13 +369,10 @@ func (c *importConverter) program(program spec.Program) (*model.DraftProgram, er
 	return &model.DraftProgram{Language: language, Source: text}, nil
 }
 
-// language counts a program against the quota and returns its language
-// configuration.
 func (c *importConverter) language(program spec.Program) (string, error) {
 	if c.programs++; c.programs > c.uc.DraftQuotas.Components {
 		return "", pkg.ErrPayloadTooLarge
 	}
-	// The format names the configuration, or the extension suggests one.
 	language := program.Language
 	if language == "" {
 		language = c.uc.Languages.ForPath(program.Name)
@@ -406,9 +386,7 @@ func (c *importConverter) language(program spec.Program) (string, error) {
 	return language, nil
 }
 
-// named adds a program of a role a draft holds several of and returns its
-// name: its file name without the extension, numbered when another program
-// of the role already has it (gen.cpp and gen.py become gen and gen-2).
+// Disambiguate duplicate program stems within a role, including across languages.
 func (c *importConverter) named(list *[]model.DraftNamedProgram, program spec.Program) (string, error) {
 	p, err := c.program(program)
 	if err != nil {
@@ -423,8 +401,6 @@ func (c *importConverter) named(list *[]model.DraftNamedProgram, program spec.Pr
 	return name, nil
 }
 
-// addStatement adds the statement sections in one language, converting
-// LaTeX to Markdown.
 func (c *importConverter) addStatement(s spec.Statement) error {
 	if c.draft.Statement(s.Language) != nil {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "several statements in "+s.Language)
@@ -530,7 +506,7 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map
 	return t, nil
 }
 
-// readText reads a text file of the package; the caller charges what it keeps.
+// The caller charges retained text against draft quotas.
 func (c *importConverter) readText(path string) (string, error) {
 	full, err := c.file(path)
 	if err != nil {
@@ -553,8 +529,7 @@ func (c *importConverter) readText(path string) (string, error) {
 	return string(data), nil
 }
 
-// charge counts a draft file of n text bytes against the draft quotas as the
-// draft grows, so a manifest naming one file many times cannot inflate it.
+// Charge every draft entry, even when several entries reference the same source file.
 func (c *importConverter) charge(n int) error {
 	c.files++
 	c.textBytes += int64(n)
@@ -564,7 +539,6 @@ func (c *importConverter) charge(n int) error {
 	return nil
 }
 
-// object stores a package file as an object, once per path.
 func (c *importConverter) object(path, purpose string) (uuid.UUID, error) {
 	if oid, ok := c.objects[path]; ok {
 		return oid, nil
@@ -588,8 +562,7 @@ func (c *importConverter) object(path, purpose string) (uuid.UUID, error) {
 	return oid, nil
 }
 
-// toLF returns a copy of the text file at full with LF line endings, or full
-// itself when it has no CRLF. It streams, so test size does not bound memory.
+// Stream CRLF conversion so test size does not bound memory usage.
 func (c *importConverter) toLF(full string) (string, error) {
 	src, err := os.Open(full)
 	if err != nil {
@@ -618,8 +591,6 @@ func (c *importConverter) toLF(full string) (string, error) {
 	return dst.Name(), nil
 }
 
-// copyLF copies src to dst with each CRLF replaced by LF and reports whether
-// it replaced any.
 func copyLF(dst io.Writer, src io.Reader) (bool, error) {
 	crlf, lf := []byte("\r\n"), []byte("\n")
 	buf := make([]byte, 64<<10)
@@ -659,7 +630,6 @@ func copyLF(dst io.Writer, src io.Reader) (bool, error) {
 	}
 }
 
-// file resolves a package path to a regular file inside the package.
 func (c *importConverter) file(path string) (string, error) {
 	if !fs.ValidPath(path) || path == "." {
 		return "", pkg.Wrap(pkg.ErrBadInput, nil, "invalid package path "+path)

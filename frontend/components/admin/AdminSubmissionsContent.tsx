@@ -40,7 +40,6 @@ export const AdminSubmissionsContent = ({
   const [rejudgingId, setRejudgingId] = useState<string | null>(null);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
 
-  // Filter input states
   const [selectedState, setSelectedState] = useState<string>(state || "all");
   const [selectedLanguage, setSelectedLanguage] = useState<string>(language || "all");
   const [contestFilter, setContestFilter] = useState<string>(contestId || "");
@@ -49,7 +48,7 @@ export const AdminSubmissionsContent = ({
 
   const updateFilters = (updates: Record<string, string | undefined>) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.delete("page"); // Reset page on filter change
+    params.delete("page");
 
     Object.entries(updates).forEach(([key, val]) => {
       if (!val || val === "all") {
@@ -71,7 +70,6 @@ export const AdminSubmissionsContent = ({
     navigate(pathname);
   };
 
-  // Fetch submissions
   const {data, error, isLoading, refetch: mutate} = useQuery({
     queryKey: ["admin-submissions", page, state, language, contestId, problemId, userId],
     queryFn: () =>
@@ -171,7 +169,6 @@ export const AdminSubmissionsContent = ({
   return (
     <Container size="xl" py="md">
       <Stack gap="md">
-        {/* Filters Bar */}
         <Group wrap="wrap" align="flex-end" gap="sm">
           <Select
             label="Вердикт"

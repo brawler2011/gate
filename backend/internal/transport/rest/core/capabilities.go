@@ -16,8 +16,7 @@ type capabilitySlot struct {
 	value   *[]string
 }
 
-// projectResponse binds typed DTO fields to one batch policy projection. No
-// transport rule infers privileges from a role, creator ID or visibility.
+// Transport projections must not infer privileges from roles, creators or visibility.
 func projectResponse[T any](h *CoreServer, ctx context.Context, response *T, parent ...uuid.UUID) (*T, error) {
 	slots := capabilitySlots(response, parent...)
 	requests := make([]access.CapabilityRequest, len(slots))
@@ -27,7 +26,7 @@ func projectResponse[T any](h *CoreServer, ctx context.Context, response *T, par
 	}
 	if h.Capabilities == nil {
 		return response, nil
-	} // Standalone transport fixtures.
+	} // Tests without policy services use precomputed fixture capabilities.
 	values, err := h.Capabilities.Project(ctx, requests)
 	if err != nil {
 		return nil, err

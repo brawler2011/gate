@@ -25,7 +25,6 @@ interface StatusCellProps {
 const StatusCell = ({submission, onOpenDetails}: StatusCellProps) => {
   const {state, progress, failed_test} = submission;
 
-  // State 1 = Saved (in queue, not yet testing)
   if (state === 1 && !progress) {
     return (
       <div className={styles.queueStatus}>
@@ -35,7 +34,6 @@ const StatusCell = ({submission, onOpenDetails}: StatusCellProps) => {
     );
   }
 
-  // Currently testing (has progress)
   if (progress) {
     const phaseLabels = {
       queued: "В очереди",
@@ -51,7 +49,6 @@ const StatusCell = ({submission, onOpenDetails}: StatusCellProps) => {
     );
   }
 
-  // Final verdict
   const shortVerdict = ShortVerdictString(state, failed_test);
   const fullVerdict = StateString(state, failed_test);
 

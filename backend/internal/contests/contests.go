@@ -100,7 +100,6 @@ func (uc *ContestsUseCase) CreateContest(
 			return pkg.Wrap(err, nil, "can't create contest")
 		}
 
-		// If an owner ID was provided, add them as a contest member with owner role
 		if c.OwnerID != nil {
 			err = tx.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{
 				ContestId: params.ID,
@@ -703,7 +702,6 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 			return fmt.Errorf("update join request status: %w", err)
 		}
 
-		// Add member to contest
 		err = tx.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{
 			ContestId: contest.ID,
 			UserId:    req.UserID,
@@ -896,8 +894,6 @@ func (uc *ContestsUseCase) GetContestScoreboardUser(ctx context.Context, contest
 	return response, nil
 }
 
-// Histories are ordered by user, problem and creation time by the repository.
-// Process contiguous groups without copying the submission history.
 func scoreboardResults(contest contestsmodel.Contest, problems []contestsmodel.ContestProblem, users map[uuid.UUID]string, frozen bool, subs []contestsmodel.ScoreboardSubmission) map[uuid.UUID][]contestsmodel.ContestProblemResult {
 	ordinals := make(map[uuid.UUID]int, len(problems))
 	for i, problem := range problems {
@@ -1042,8 +1038,7 @@ func calculateScoreboardProblem[T any](rules scoreboardRules, userID, problemID 
 	return contestsmodel.ContestProblemResult{}, false
 }
 
-// ApplySubmissionResult requires the transaction to hold the submission tuple
-// lock before any mutation and until the standings update commits.
+// Hold the submission tuple lock through mutation and standings commit.
 func ApplySubmissionResult(ctx context.Context, store ScoreboardStore, submission *submissionsmodel.Submission) error {
 	if submission == nil || submission.ContestID == nil || submission.CreatedBy == nil || submission.ProblemID == nil {
 		return nil

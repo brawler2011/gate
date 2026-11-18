@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// OrganizationRole defines roles within an organization
 type OrganizationRole string
 
 const (
@@ -16,7 +15,6 @@ const (
 	OrgRoleMember OrganizationRole = "member"
 )
 
-// OrganizationJoinPolicy defines how users can join an organization
 type OrganizationJoinPolicy string
 
 const (
@@ -36,7 +34,6 @@ const (
 	RequestStatusCanceled RequestStatus = "canceled"
 )
 
-// Organization represents a school, university, or company
 type Organization struct {
 	ID          uuid.UUID
 	Login       string
@@ -48,7 +45,6 @@ type Organization struct {
 	UpdatedAt   time.Time
 }
 
-// OrganizationMember represents a user's membership in an organization
 type OrganizationMember struct {
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
@@ -58,7 +54,6 @@ type OrganizationMember struct {
 	CreatedAt      time.Time
 }
 
-// OrganizationInvitation represents an invite sent from an org admin to a user
 type OrganizationInvitation struct {
 	ID                    uuid.UUID
 	OrganizationID        uuid.UUID
@@ -76,7 +71,6 @@ type OrganizationInvitation struct {
 	UpdatedAt             time.Time
 }
 
-// OrganizationJoinRequest represents a request submitted by a user to join an org
 type OrganizationJoinRequest struct {
 	ID                uuid.UUID
 	OrganizationID    uuid.UUID
@@ -93,7 +87,6 @@ type OrganizationJoinRequest struct {
 	UpdatedAt         time.Time
 }
 
-// CreateOrganizationInput is the input for creating an organization
 type CreateOrganizationInput struct {
 	Login       string
 	Name        string
@@ -102,7 +95,6 @@ type CreateOrganizationInput struct {
 	JoinPolicy  OrganizationJoinPolicy
 }
 
-// UpdateOrganizationInput is the input for updating an organization
 type UpdateOrganizationInput struct {
 	Login       *string
 	Name        *string
@@ -111,27 +103,23 @@ type UpdateOrganizationInput struct {
 	JoinPolicy  *OrganizationJoinPolicy
 }
 
-// OrganizationFilter is used for filtering organizations
 type OrganizationFilter struct {
 	Search   string
 	Page     int32
 	PageSize int32
 }
 
-// OrganizationList is the paginated list of organizations
 type OrganizationList struct {
 	Organizations []Organization
 	Pagination    paging.Pagination
 }
 
-// AddOrganizationMemberInput is the input for adding a member to an organization
 type AddOrganizationMemberInput struct {
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
 	Role           OrganizationRole
 }
 
-// CreateOrganizationInvitationInput is the input for inviting a user
 type CreateOrganizationInvitationInput struct {
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID
@@ -139,7 +127,6 @@ type CreateOrganizationInvitationInput struct {
 	Role           OrganizationRole
 }
 
-// CreateOrganizationJoinRequestInput is the input for requesting to join an org
 type CreateOrganizationJoinRequestInput struct {
 	OrganizationID uuid.UUID
 	UserID         uuid.UUID

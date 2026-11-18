@@ -1,33 +1,25 @@
-# Release tag of both images (release-<commit>, see .github/workflows/deploy.yml).
 imageTag: ""
 imagePullSecrets: []
 
-# Secret written by deploy/secrets.sh; shared with gate-infra.
 secretName: gate-secrets
 
-# Image and config of the API and worker pods, and of the migration Job.
 backend:
   image: ghcr.io/brawler2011/gate-backend
-  # Contents of /etc/gate/config.yaml, the environment's deploy/<env>/config.yaml
-  # passed with --set-file. Connection strings and secrets come from env.
+  # Pass the environment config with --set-file backend.config=deploy/<env>/config.yaml.
   config: ""
 
-# HTTP and WebSocket (templates/api.yaml).
 api:
   replicas: 1
   resources:
     requests: {cpu: 250m, memory: 256Mi}
     limits: {memory: 2Gi}
 
-# Judging, problem builds and booklets (templates/worker.yaml). Each pod runs
-# judge.workers judgements at a time.
 worker:
   replicas: 1
   resources:
     requests: {cpu: 250m, memory: 256Mi}
     limits: {memory: 2Gi}
 
-# Sidecar of every worker pod (templates/worker.yaml).
 goJudge:
   image: ghcr.io/brawler2011/gate-go-judge
   resources:
@@ -35,13 +27,9 @@ goJudge:
     limits: {memory: 4Gi}
 
 ingress:
-  # Set per environment.
   host: ""
-  # Traefik entry point and ACME resolver (deploy/k3s/traefik-config.yaml). An empty
-  # resolver serves Traefik's default certificate.
+  # An empty resolver uses Traefik's default certificate.
   entryPoint: websecure
   certResolver: letsencrypt
 
-# AppArmor profile of every pod; empty omits the field from pod securityContext.
-# The go-judge sidecar always runs unconfined (templates/worker.yaml in the gate chart).
 appArmorProfile: {}

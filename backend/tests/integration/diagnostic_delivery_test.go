@@ -36,9 +36,7 @@ func (j diagnosticJudge) JudgeSubmission(ctx context.Context, reference judgingm
 	return nil
 }
 
-// checkDiagnosticDelivery follows a real HTTP-created event through PostgreSQL,
-// the production outbox worker, JetStream and the production judge worker.
-// Only the expensive sandbox judging usecase is replaced at the worker boundary.
+// Exercise delivery through HTTP, outbox and JetStream, replacing only sandbox judging.
 func (s *IntegrationTestSuite) checkDiagnosticDelivery(submissionID, adminID uuid.UUID, orgLogin string) {
 	requestID := s.transport.lastResponse.Header.Get(requestid.Header)
 	s.Require().True(requestid.Valid(requestID))

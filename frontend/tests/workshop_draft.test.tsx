@@ -38,7 +38,6 @@ const mockApi = (handler: (call: Call) => Response) => {
   return calls;
 };
 
-// A minimal consumer of the production hooks: shows the cached draft and saves a new title on click.
 const Editor = () => {
   const {data} = useProblemDraft("problem");
   const {save} = useSaveDraft("problem");

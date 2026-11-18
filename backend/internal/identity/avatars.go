@@ -56,7 +56,6 @@ func (a AvatarImage) Etag() string {
 	return a.etag
 }
 
-// UploadAvatar uploads a user's avatar to storage and updates the user record
 func (uc *AvatarsUseCase) UploadAvatar(
 	ctx context.Context,
 	username string,
@@ -73,7 +72,6 @@ func (uc *AvatarsUseCase) UploadAvatar(
 		return uuid.Nil, err
 	}
 
-	// Validate file extension
 	ext := strings.ToLower(filepath.Ext(filename))
 	allowedExts := map[string]bool{
 		".jpg":  true,
@@ -86,23 +84,19 @@ func (uc *AvatarsUseCase) UploadAvatar(
 		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid avatar file extension")
 	}
 
-	// Decode image to validate content and normalize supported formats to PNG
 	img, _, err := image.Decode(fileReader)
 	if err != nil {
 		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to decode avatar image")
 	}
 
-	// Encode to PNG
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
 		return uuid.Nil, fmt.Errorf("failed to encode avatar to PNG: %w", err)
 	}
 
-	// Generate unique image ID
 	imgID := uuid.New()
 	key := imgID.String()
 
-	// Upload normalized PNG to storage
 	err = uc.storage.UploadFile(ctx, uc.avatarBucket, key, &buf, "image/png")
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to upload avatar: %w", err)
@@ -119,7 +113,6 @@ func (uc *AvatarsUseCase) UploadAvatar(
 	})
 
 	if err != nil {
-		// Try to clean up uploaded file
 		uc.deleteAvatarFile(ctx, key)
 		return uuid.Nil, fmt.Errorf("failed to update user avatar: %w", err)
 	}
@@ -130,7 +123,6 @@ func (uc *AvatarsUseCase) UploadAvatar(
 	return imgID, nil
 }
 
-// DeleteAvatar deletes a user's avatar from storage and updates the user record
 func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, username string) error {
 	user, err := uc.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
@@ -162,7 +154,6 @@ func (uc *AvatarsUseCase) DeleteAvatar(ctx context.Context, username string) err
 	return nil
 }
 
-// GetAvatar retrieves a user's avatar from storage
 func (uc *AvatarsUseCase) GetAvatar(ctx context.Context, username string, ifNoneMatch *string) (AvatarImage, error) {
 	user, err := uc.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
@@ -172,7 +163,7 @@ func (uc *AvatarsUseCase) GetAvatar(ctx context.Context, username string, ifNone
 		return AvatarImage{}, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	// FIXME: invariant: null eq ""
+	// Missing avatar keys use an empty string.
 	if user.AvatarUrl == nil || *user.AvatarUrl == "" {
 		return AvatarImage{}, storage.ErrNotFound
 	}

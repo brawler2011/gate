@@ -15,8 +15,7 @@ func rateLimitClientIP(r *http.Request, trustedProxy string) string {
 	if err != nil {
 		peer = r.RemoteAddr
 	}
-	// Traefik appends its client's address. Only the final value is trusted,
-	// so a caller-supplied prefix cannot choose or evade the quota key.
+	// Trust only the final forwarded address appended by Traefik to prevent quota-key spoofing.
 	forwarded := r.Header.Values("X-Forwarded-For")
 	if trustedProxy == "" || len(forwarded) == 0 {
 		return peer
@@ -39,8 +38,7 @@ func rateLimitClientIP(r *http.Request, trustedProxy string) string {
 		}
 		return peer
 	}
-	// Resolve the explicitly configured proxy name, rather than trusting a whole
-	// private subnet. Resolve per request so a recreated Docker proxy can change IP.
+	// Resolve the configured proxy per request so Docker IP changes do not require a restart.
 	ctx, cancel := context.WithTimeout(r.Context(), 250*time.Millisecond)
 	defer cancel()
 	proxies, err := net.DefaultResolver.LookupNetIP(ctx, "ip", trustedProxy)

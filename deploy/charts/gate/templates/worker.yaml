@@ -1,6 +1,3 @@
-# Judges submissions, builds problem packages and compiles booklets. Scales with
-# judging load, independently of the API (templates/api.yaml). Serves only
-# /health, for its probes.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -9,8 +6,6 @@ spec:
   replicas: {{ .Values.worker.replicas }}
   selector:
     matchLabels: {app.kubernetes.io/name: worker}
-  # A new pod must be ready before an old one stops. The old one returns its
-  # running judgements to the queue, and the new one judges them again.
   strategy:
     type: RollingUpdate
     rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
@@ -20,7 +15,6 @@ spec:
       annotations:
         checksum/config: {{ .Values.backend.config | sha256sum }}
     spec:
-      # Services are found by DNS; their env variables (e.g. S3_PORT) would clash with app settings.
       enableServiceLinks: false
       securityContext:
         {{- include "gate.podSecurity" . | nindent 8 }}
@@ -28,23 +22,18 @@ spec:
       imagePullSecrets: {{- toYaml . | nindent 8 }}
       {{- end }}
       terminationGracePeriodSeconds: 40
-      # go-judge runs next to the worker, which uploads files to it over HTTP and
-      # runs them over gRPC; both must reach the same sandbox. As a native sidecar it
-      # starts before the worker and stops after it.
+      # HTTP uploads and gRPC runs must reach the same sandbox.
       initContainers:
         - name: go-judge
           image: {{ .Values.goJudge.image }}:{{ include "gate.tag" . }}
           restartPolicy: Always
-          # Loopback only: nothing outside the pod may run code in the sandbox.
+          # Only this pod may access sandbox execution.
           args: [-enable-grpc, -grpc-addr=127.0.0.1:5051, -http-addr=127.0.0.1:5050, -dir=/data]
-          # The sandbox creates namespaces and cgroups for every run.
-          # Privileged and unconfined: the sandbox mounts filesystems and filters each run
-          # itself. The pod's AppArmor profile would otherwise apply here too, and a
-          # Localhost profile denies the mounts.
+          # Sandbox mounts require privileged mode and must bypass the pod's AppArmor profile.
           securityContext: {privileged: true, seccompProfile: {type: Unconfined}, appArmorProfile: {type: Unconfined}}
           resources: {{- toYaml .Values.goJudge.resources | nindent 12 }}
           volumeMounts:
-            # File store on disk: large inputs and answers are not kept in sandbox memory.
+            # Keep large inputs and answers out of sandbox memory.
             - {name: judge-data, mountPath: /data}
       containers:
         - name: backend

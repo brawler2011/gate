@@ -14,19 +14,14 @@ func TestGetTestInputAndOutput(t *testing.T) {
 	testsDir := filepath.Join(tempDir, "tests")
 	require.NoError(t, os.MkdirAll(testsDir, 0755))
 
-	// Create test files
-	// Test 01: has .in and .out
 	require.NoError(t, os.WriteFile(filepath.Join(testsDir, "01.in"), []byte("1 2\n"), 0600))
 	require.NoError(t, os.WriteFile(filepath.Join(testsDir, "01.out"), []byte("3\n"), 0600))
 
-	// Test 02: has .in and .ans
 	require.NoError(t, os.WriteFile(filepath.Join(testsDir, "02.in"), []byte("3 4\n"), 0600))
 	require.NoError(t, os.WriteFile(filepath.Join(testsDir, "02.ans"), []byte("7\n"), 0600))
 
-	// Test 03: has only .in (no answer file)
 	require.NoError(t, os.WriteFile(filepath.Join(testsDir, "03.in"), []byte("5 6\n"), 0600))
 
-	// Test 04: has .in and .a
 	require.NoError(t, os.WriteFile(filepath.Join(testsDir, "04.in"), []byte("10 20\n"), 0600))
 	require.NoError(t, os.WriteFile(filepath.Join(testsDir, "04.a"), []byte("30\n"), 0600))
 

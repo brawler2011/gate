@@ -12,9 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// BeginOperation reserves an idempotent operation whose bytes are uploaded
-// before it is finalized. It returns the stored result of a finished
-// operation, so a replay uploads nothing.
+// A completed operation replays its stored result before any upload.
 func (r *ProblemDraftsRepo) BeginOperation(ctx context.Context, k model.MutationKey) (*model.MutationResult, error) {
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
@@ -28,8 +26,7 @@ func (r *ProblemDraftsRepo) BeginOperation(ctx context.Context, k model.Mutation
 	return nil, commitTx(ctx, tx)
 }
 
-// insertObjects records uploaded objects. The caller references them in the
-// same transaction, so a row never exists without a reference or its bytes.
+// Insert objects with their first references in the same transaction.
 func insertObjects(ctx context.Context, tx pgx.Tx, objects []model.StoredObject) error {
 	q := sqlc.New(tx)
 	for _, o := range objects {
@@ -114,8 +111,7 @@ func applyUploadChange(d *model.Draft, change model.UploadChange, ids []uuid.UUI
 	return nil
 }
 
-// FinalizeUploads applies an upload change whose bytes the caller has stored
-// under the objects' keys with a verified SHA-256.
+// The caller must store uploads with verified SHA-256 values before finalization.
 func (r *ProblemDraftsRepo) FinalizeUploads(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, change model.UploadChange, objects []model.StoredObject) (model.MutationResult, error) {
 	return r.finalizeUploadDraft(ctx, k, id, expected, objects, func(d *model.Draft) error { return applyUploadChange(d, change, objectIDs(objects)) })
 }
@@ -136,8 +132,7 @@ func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.Mut
 	}
 	defer rollback(ctx, tx)
 	q := sqlc.New(tx)
-	// Finalization never takes over an expired operation. A new executor must
-	// begin explicitly, and the previous executor loses its fencing token.
+	// Finalization cannot take over expired operations; a new executor must begin explicitly.
 	operation, err := q.LockOperationForFinalize(ctx, sqlc.LockOperationForFinalizeParams{OrganizationID: k.OrganizationID, Operation: k.Operation, Key: k.Key})
 	if err != nil {
 		return model.MutationResult{}, HandlePgErr(err)

@@ -1,10 +1,4 @@
-// Package syslib is the catalog of system library files: sources Gate
-// vendors from upstream projects and provides to problem programs, so that a
-// draft can include one at its current version (auto-update) instead of
-// carrying a copy. Each project lives in its own folder with its license,
-// the upstream commit (COMMIT) and the Git blob IDs of every upstream version
-// of its file (upstream.txt). Testlib also brings its standard checkers
-// (checkers/). Update testlib with `task testlib:update -- <commit>`.
+// Package syslib provides vendored library sources and standard checkers to problem programs.
 package syslib
 
 import (
@@ -20,13 +14,11 @@ import (
 //go:embed testlib
 var vendored embed.FS
 
-// File is a system library file.
 type File struct {
 	Name string
-	// Extensions are the source extensions of programs that include it.
+	// Extensions select which programs can include the file.
 	Extensions []string
 	Version    string
-	// Commit is the upstream commit the text comes from.
 	Commit   string
 	Content  string
 	upstream map[string]bool
@@ -54,16 +46,12 @@ func load(dir, name string, extensions []string, version string) File {
 	return f
 }
 
-// Checker is a testlib standard checker, such as wcmp.
 type Checker struct {
 	Name        string
 	Description string
-	// Content is the upstream source; it includes testlib.h.
 	Content string
 }
 
-// checkerDescriptions describes every vendored standard checker; a checker
-// a testlib update adds needs a description here.
 var checkerDescriptions = map[string]string{
 	"acmp":       "Одно вещественное число, абсолютная погрешность 1.5e-6",
 	"caseicmp":   "Одно целое число в каждом тесте вида «Case N: …»",
@@ -113,10 +101,8 @@ func loadCheckers() []Checker {
 
 const testlibInclude = "#include \"testlib.h\"\n"
 
-// Checkers returns the standard checkers by name.
 func Checkers() []Checker { return checkers }
 
-// LookupChecker returns the standard checker named name.
 func LookupChecker(name string) (*Checker, bool) {
 	for i := range checkers {
 		if checkers[i].Name == name {
@@ -126,18 +112,14 @@ func LookupChecker(name string) (*Checker, bool) {
 	return nil, false
 }
 
-// Standalone returns the checker source with the system testlib.h in place of
-// its include, so that it builds with the system version whatever testlib.h
-// the problem library holds.
+// Inline system testlib.h so a draft copy cannot change a standard checker.
 func (c *Checker) Standalone() string {
 	testlib, _ := Lookup("testlib.h")
 	return strings.Replace(c.Content, testlibInclude, testlib.Content+"\n", 1)
 }
 
-// Files returns the catalog.
 func Files() []File { return catalog }
 
-// Lookup returns the system library file named name.
 func Lookup(name string) (*File, bool) {
 	for i := range catalog {
 		if catalog[i].Name == name {
@@ -147,13 +129,10 @@ func Lookup(name string) (*File, bool) {
 	return nil, false
 }
 
-// IsUpstream reports whether text is the file as some upstream commit has
-// it, also when its line endings were converted to CRLF.
 func (f *File) IsUpstream(text string) bool {
 	return f.upstream[blobID(text)] || f.upstream[blobID(strings.ReplaceAll(text, "\r\n", "\n"))]
 }
 
-// blobID is the Git object ID of text stored as a blob.
 func blobID(text string) string {
 	h := sha1.New() //nolint:gosec // see the import
 	_, _ = fmt.Fprintf(h, "blob %d\x00", len(text))

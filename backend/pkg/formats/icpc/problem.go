@@ -1,6 +1,5 @@
 package icpc
 
-// Problem represents the ICPC problem.yaml specification.
 type Problem struct {
 	Type   string  `yaml:"type"` // "pass-fail" or "scoring"
 	Name   string  `yaml:"name"`
@@ -8,12 +7,10 @@ type Problem struct {
 	Source string  `yaml:"source"`
 	Rights string  `yaml:"rights"`
 	Limits *Limits `yaml:"limits"`
-	// Validation is "default" or "custom" followed by optional "score" and
-	// "interactive" flags.
+	// Validation accepts default or custom followed by optional score and interactive flags.
 	Validation string `yaml:"validation"`
 }
 
-// Limits defines the resource limits for a problem.
 type Limits struct {
 	TimeMultiplier   float64 `yaml:"time_multiplier"`
 	Time             float64 `yaml:"time"`   // in seconds

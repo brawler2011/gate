@@ -86,7 +86,6 @@ func GetBuiltinTemplateZip(id string) ([]byte, error) {
 			return fmt.Errorf("failed to read embedded file %s: %w", path, err)
 		}
 
-		// Normalize zip path separators to forward slash
 		cleanPath := strings.ReplaceAll(path, "\\", "/")
 		w, err := zipWriter.Create(cleanPath)
 		if err != nil {

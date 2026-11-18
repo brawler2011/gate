@@ -38,9 +38,7 @@ func draftContract[T any](source any) (*T, error) {
 	}
 	return &value, nil
 }
-// draftModel converts a contract draft into the model, whose JSON is the
-// contract by design. A contract field the model lacks is an error, never
-// silently dropped.
+// Reject contract fields absent from the draft model instead of silently dropping them.
 func draftModel(source *corev1.ProblemDraft) (*model.Draft, error) {
 	data, err := json.Marshal(source)
 	if err != nil {

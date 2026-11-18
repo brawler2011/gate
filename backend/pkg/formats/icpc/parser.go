@@ -1,8 +1,4 @@
-// Package icpc reads problem packages in the legacy ICPC problem package
-// format (https://icpc.io/problem-package-format/spec/legacy.html).
-//
-// Gate runs checkers, validators and interactors with the testlib protocol,
-// so a package imports as written only when its programs use testlib.
+// Package icpc reads legacy ICPC packages; checker, validator and interactor programs must use testlib.
 package icpc
 
 import (
@@ -18,8 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Read reads the ICPC package in fsys. Tests are the .in files of data/sample
-// and data/secret; each subdirectory of data/secret is a test group.
+// Each data/secret subdirectory becomes a test group.
 func Read(fsys fs.FS) (*spec.Problem, error) {
 	data, err := spec.ReadFile(fsys, "problem.yaml")
 	if err != nil {
@@ -32,9 +27,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if prob == nil {
 		return nil, fmt.Errorf("problem.yaml must contain a mapping")
 	}
-	// The ICPC grader aggregates group scores (sum, min, max, avg, stopping at
-	// the first rejection by default), which Gate's per-test points cannot
-	// express; importing such a package would silently change its scores.
+	// ICPC group aggregation cannot be represented by per-test points without changing scores.
 	if prob.Type == "scoring" {
 		return nil, fmt.Errorf("ICPC scoring problems are not supported")
 	}
@@ -95,9 +88,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	return p, nil
 }
 
-// programs lists the programs in folder: each source file directly in it, and
-// each subdirectory, whose single source file is the program. A program
-// includes the headers next to it.
+// A program is one source file with its adjacent headers, optionally in its own directory.
 func programs(fsys fs.FS, folder string) ([]spec.Program, []spec.File, error) {
 	entries, err := fs.ReadDir(fsys, folder)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -131,7 +122,6 @@ func programs(fsys fs.FS, folder string) ([]spec.Program, []spec.File, error) {
 	return result, library, nil
 }
 
-// split separates the source files and headers among entries of dir.
 func split(dir string, entries []fs.DirEntry) ([]string, []spec.File) {
 	var sources []string
 	var headers []spec.File
@@ -155,8 +145,6 @@ func program(source string, headers []spec.File) spec.Program {
 	return spec.Program{File: spec.File{Name: path.Base(source), Path: source}, Dependencies: deps}
 }
 
-// submissions lists the solutions of every verdict directory; the first
-// accepted one is the main solution.
 func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error)) ([]spec.Program, string, error) {
 	verdicts, err := fs.ReadDir(fsys, "submissions")
 	if errors.Is(err, fs.ErrNotExist) {
@@ -183,8 +171,6 @@ func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error)) ([]sp
 	return result, main, nil
 }
 
-// groups reads data/sample and data/secret. Every directory holding tests,
-// at any depth, is a group named by its path under data/.
 func groups(fsys fs.FS) ([]spec.Group, error) {
 	var result []spec.Group
 	for _, top := range []string{"sample", "secret"} {
@@ -209,7 +195,6 @@ func groups(fsys fs.FS) ([]spec.Group, error) {
 	return result, nil
 }
 
-// testFiles lists the .in files directly in dir with their .ans answers.
 func testFiles(fsys fs.FS, dir string, sample bool) ([]spec.Test, error) {
 	entries, err := fs.ReadDir(fsys, dir)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -233,8 +218,6 @@ func testFiles(fsys fs.FS, dir string, sample bool) ([]spec.Test, error) {
 	return tests, nil
 }
 
-// statements lists problem_statement/problem.<language>.tex; problem.tex is
-// the English statement.
 func statements(fsys fs.FS) []spec.Statement {
 	entries, _ := fs.ReadDir(fsys, "problem_statement")
 	var result []spec.Statement

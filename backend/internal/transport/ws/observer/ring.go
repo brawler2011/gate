@@ -43,9 +43,7 @@ func (b *RingBuffer[T]) index(seq uint64) int {
 	return int(idx)
 }
 
-// Push expects monotonically increasing seq.
-//
-// If seq is less than or equal to maxSeq, returns ErrEventOutOfOrder.
+// Push requires strictly increasing sequence numbers.
 func (b *RingBuffer[T]) Push(item T, seq uint64) error {
 	if seq == 0 {
 		return errors.New("sequence number cannot be zero")
@@ -75,10 +73,7 @@ func (b *RingBuffer[T]) Push(item T, seq uint64) error {
 	return nil
 }
 
-// GetRange returns items with seq in (since, to] if to != 0,
-// otherwise (since, maxSeq].
-//
-// If requested start is older than minSeq, returns ErrHistoryLost.
+// Ranges exclude since and include to; zero to means maxSeq. Evicted starts return ErrHistoryLost.
 func (b *RingBuffer[T]) GetRange(since, to uint64) ([]T, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -87,7 +82,6 @@ func (b *RingBuffer[T]) GetRange(since, to uint64) ([]T, error) {
 		return nil, ErrBufferEmpty
 	}
 
-	// No new items
 	if since >= b.maxSeq {
 		return nil, nil
 	}
@@ -98,7 +92,6 @@ func (b *RingBuffer[T]) GetRange(since, to uint64) ([]T, error) {
 
 	start := since + 1
 
-	// requested range start is too old
 	if start < b.minSeq {
 		return nil, ErrHistoryLost
 	}
@@ -108,7 +101,6 @@ func (b *RingBuffer[T]) GetRange(since, to uint64) ([]T, error) {
 		end = to
 	}
 
-	// Well, range is empty
 	if end < start {
 		return nil, nil
 	}

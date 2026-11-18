@@ -1,9 +1,5 @@
 name: Deploy Template
 
-# Promotes images that PR CI already built and tested, then deploys them to k3s with
-# Helm; it runs no tests and builds nothing. A new environment needs
-# deploy/<environment>/ (gate.yaml, gate-infra.yaml), a GitHub environment with the
-# secrets in deploy/README.md, and a caller workflow.
 on:
   workflow_call:
     inputs:
@@ -35,7 +31,7 @@ jobs:
           ref: ${{ inputs.release }}
           fetch-depth: 0
 
-      # Only merged code is deployed, also when a run is started by hand.
+      # Manual deploys must also use merged code.
       - name: Require a commit on main
         run: git merge-base --is-ancestor HEAD origin/main
 
@@ -52,9 +48,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # CI names images by their sources (see ci.yml). The release tag names the
-      # commit; a release that already has it is reused. If CI images were cleaned
-      # up (unreleased for 30 days), run CI on main and deploy again.
+      # If CI images were cleaned up, rerun CI on main before deploying.
       - name: Tag tested images as the release
         id: release
         run: |
@@ -64,7 +58,6 @@ jobs:
           backend="ghcr.io/brawler2011/gate-backend:$(git rev-parse 'HEAD^{tree}')"
           judge="$(go run ./tools/judgeimage)"
           digest() { docker buildx imagetools inspect "$1" --format '{{json .Manifest}}' | jq -r .digest; }
-          # promote <tested image>: tags that exact manifest as the release of this commit.
           promote() {
             release="${1%:*}:$tag"
             if ! tested="$(digest "$1" 2> /dev/null)"; then
@@ -75,7 +68,7 @@ jobs:
               echo "::error::$1 was not built by CI for commit $commit; deploy builds nothing."
               exit 1
             fi
-            # Copy the manifest as is; the default would wrap it in a new index.
+            # Preserve the tested manifest; the default wraps it in a new index.
             docker buildx imagetools create --prefer-index=false --tag "$release" "$1"
             if [ "$(digest "$release")" != "$tested" ]; then
               echo "::error::$release does not have the tested digest $tested."
@@ -109,8 +102,7 @@ jobs:
           version: "2026.10.25"
           install_args: helm kubectl jq
 
-      # The API listens only on the server; an SSH tunnel reaches it without opening
-      # a port. HostKeyAlias pins the server key whatever form SSH_HOST takes.
+      # Tunnel to the private API; HostKeyAlias pins the key regardless of SSH_HOST syntax.
       - name: Connect to the cluster
         env:
           SSH_KEY: ${{ secrets.SSH_KEY }}
@@ -129,8 +121,6 @@ jobs:
           printf '%s' "$KUBECONFIG_CONTENT" > "$KUBECONFIG"
           kubectl version
 
-      # Cluster bootstrap (Traefik, trusted proxy) and the secrets both charts read.
-      # See deploy/README.md for what each secret holds.
       - name: Apply cluster configuration and secrets
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
@@ -150,9 +140,6 @@ jobs:
           --namespace "$NAMESPACE" -f deploy/${{ inputs.environment }}/gate-infra.yaml
           --wait --timeout 10m
 
-      # Migrations run first as a hook; if they or the new pods fail, Helm restores
-      # the previous release and the job fails. The previous pods serve throughout.
-      # The timeout covers pulling the multi-GB judge image on a small server.
       - name: Deploy the release
         run: >-
           helm upgrade --install gate deploy/charts/gate
@@ -161,8 +148,6 @@ jobs:
           --set imageTag=${{ needs.promote.outputs.tag }}
           --rollback-on-failure --timeout 20m
 
-      # The cluster checks readiness from inside; this catches routing, certificate
-      # and DNS problems that only show from outside.
       - name: Check the public endpoint
         run: |
           host="$(helm --namespace "$NAMESPACE" get values gate -o json | jq -r .ingress.host)"

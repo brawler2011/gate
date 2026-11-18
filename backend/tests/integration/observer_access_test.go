@@ -139,8 +139,7 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 				s.Require().NoError(response.Body.Close())
 				defer conn.Close()
 				s.Require().NoError(conn.SetReadDeadline(time.Now().Add(3 * time.Second)))
-				// JSON decoding into a non-nil map retains absent keys from the previous
-				// manager frame; each assertion must examine only this frame's fields.
+				// Decoding into a fresh map prevents absent fields from surviving a previous frame.
 				replayMsg.Payload = nil
 				s.Require().NoError(conn.ReadJSON(&replayMsg))
 				s.Contains(replayMsg.Payload, "scoreboard")

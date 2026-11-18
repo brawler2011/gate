@@ -19,12 +19,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The benchmarks keep fsync on because they measure writes. Commits do not wait
-// for the WAL flush: fsync latency on a laptop is bimodal (~1 or ~10 ms) and
-// says nothing about the code under test.
+// Disable synchronous commit to keep host WAL flush latency out of write benchmarks.
 var databaseCommand = []string{"postgres", "-c", "synchronous_commit=off"}
 
-// Every leaf owns its schema, including migration history.
 func benchmarkPool(b *testing.B) *pgxpool.Pool {
 	b.Helper()
 	ctx := context.Background()
@@ -33,7 +30,6 @@ func benchmarkPool(b *testing.B) *pgxpool.Pool {
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	require.NoError(b, err)
 	b.Cleanup(pool.Close)
-	// Establish all pool connections before timing, including concurrent scenarios.
 	func() {
 		var conns []*pgxpool.Conn
 		defer func() {
@@ -53,8 +49,7 @@ func benchmarkPool(b *testing.B) *pgxpool.Pool {
 	return pool
 }
 
-// Fixed work avoids Go's duration calibration growing write datasets unpredictably.
-// Callers must use -benchtime=100x (the task command supplies it).
+// Fixed -benchtime=100x prevents calibration from growing write datasets unpredictably.
 func benchmarkWork(b *testing.B, workers int, operation func(int) error) {
 	b.Helper()
 	require.LessOrEqual(b, b.N, 100, "use -benchtime=100x or fewer iterations")
@@ -108,7 +103,6 @@ func BenchmarkOutbox(b *testing.B) {
 					seedOutbox(b, pool, size.rows)
 					repo := NewOutboxRepo(pool)
 					ctx := context.Background()
-					// Warm the production pick/complete path; restore leases/status afterwards.
 					warm, err := repo.PickEvents(ctx, 1, 300)
 					require.NoError(b, err)
 					require.Len(b, warm, 1)
@@ -183,7 +177,6 @@ func BenchmarkSubmissions(b *testing.B) {
 					require.NoError(b, err)
 					require.Len(b, list, 50)
 					require.EqualValues(b, size.rows, count)
-					// Warm writes on an isolated transaction so measured data/revision stay unchanged.
 					tx, err := pool.Begin(ctx)
 					require.NoError(b, err)
 					creation := submissionsmodel.SubmissionCreation{ContestId: f.contest, ProblemId: f.problem, UserId: f.user, Solution: strings.Repeat("print(1)\n", 32), Language: "python3"}
@@ -308,10 +301,6 @@ func BenchmarkScoreboardQueries(b *testing.B) {
 	}
 }
 
-// Budgets come from five local PostgreSQL 18.3 measurements with headroom: 2x
-// maximum time, half minimum throughput, 25% above Go allocations. The time and
-// throughput budgets of writes were re-measured with synchronous_commit=off.
-// Columns: maximum ns/op, minimum ops/s, maximum B/op, maximum allocs/op.
 var databaseBenchmarkBudgets = map[string]struct{ nanos, ops, bytes, allocs float64 }{
 	"BenchmarkOutbox/large/MarkAsCompleted":              {11719176, 85.35, 1664, 54},
 	"BenchmarkOutbox/large/PickEvents":                   {1927474, 519.00, 4160, 87},

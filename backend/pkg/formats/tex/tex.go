@@ -1,5 +1,3 @@
-// Package tex converts LaTeX problem statements of Polygon, PCMS2 and ICPC
-// packages into Gate statement Markdown.
 package tex
 
 import (
@@ -7,7 +5,6 @@ import (
 	"strings"
 )
 
-// LanguageCode maps a language name such as "russian" to its two-letter code.
 func LanguageCode(lang string) string {
 	switch strings.ToLower(lang) {
 	case "english":
@@ -22,9 +19,7 @@ func LanguageCode(lang string) string {
 	}
 }
 
-// sectionCommands start statement sections: olymp.sty commands and the
-// \section* headings of ICPC statements. At one position the first wins, so
-// \examples is not also read as \example.
+// First matching section command wins so \examples is not also read as \example.
 var sectionCommands = []struct{ section, command string }{
 	{"input", "\\inputfile"}, {"input", "\\section*{input}"},
 	{"output", "\\outputfile"}, {"output", "\\section*{output}"},
@@ -33,10 +28,6 @@ var sectionCommands = []struct{ section, command string }{
 	{"notes", "\\notes"}, {"notes", "\\note"}, {"notes", "\\section*{notes}"},
 }
 
-// ToSections converts a problem statement into Markdown statement sections
-// by name (legend, input, output, interaction, notes), leaving out empty
-// ones: an olymp.sty problem environment (Polygon, PCMS2) or an ICPC
-// problem.tex body.
 func ToSections(texContent string) map[string]string {
 	content := body(texContent)
 	type marker struct {
@@ -89,7 +80,6 @@ func ToSections(texContent string) map[string]string {
 		s = strings.ReplaceAll(s, "``", "\"")
 		s = strings.ReplaceAll(s, "''", "\"")
 
-		// Clean quotes inside \item or text
 		s = strings.ReplaceAll(s, "\">\"", "`>`")
 		s = strings.ReplaceAll(s, "\"<\"", "`<`")
 		s = strings.ReplaceAll(s, "\"=\"", "`=`")
@@ -106,8 +96,6 @@ func ToSections(texContent string) map[string]string {
 	return result
 }
 
-// body returns the statement text: the problem environment without its five
-// header arguments, or else the whole document without \problemname.
 func body(texContent string) string {
 	start := strings.Index(texContent, "\\begin{problem}")
 	if start == -1 {
@@ -124,7 +112,6 @@ func body(texContent string) string {
 		}
 	}
 	content := texContent[start+len("\\begin{problem}"):]
-	// Skip {title}{input}{output}{time}{memory}.
 	for range 5 {
 		open := strings.Index(content, "{")
 		if open == -1 {
@@ -142,8 +129,6 @@ func body(texContent string) string {
 	return content
 }
 
-// closingBrace returns the index of the brace closing the group that starts
-// at from, just after its opening brace, or -1.
 func closingBrace(s string, from int) int {
 	depth := 1
 	for i := from; i < len(s); i++ {

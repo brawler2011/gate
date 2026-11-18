@@ -15,7 +15,6 @@ import (
 )
 
 const addContestMember = `-- name: AddContestMember :exec
-
 INSERT INTO contest_members (contest_id, user_id, role)
 VALUES ($1, $2, $3)
 `
@@ -26,7 +25,6 @@ type AddContestMemberParams struct {
 	Role      contestsmodel.ContestRole `json:"role"`
 }
 
-// Contest Members (direct access control)
 func (q *Queries) AddContestMember(ctx context.Context, arg AddContestMemberParams) error {
 	_, err := q.db.Exec(ctx, addContestMember, arg.ContestID, arg.UserID, arg.Role)
 	return err
@@ -50,7 +48,6 @@ func (q *Queries) AddContestMemberIfNotExists(ctx context.Context, arg AddContes
 }
 
 const addContestProblem = `-- name: AddContestProblem :exec
-
 INSERT INTO contest_problems (contest_id, problem_id, package_id, ordinal)
 VALUES ($1, $2, $3, (SELECT COALESCE(MAX(ordinal), 0) + 1 FROM contest_problems WHERE contest_id = $1))
 ON CONFLICT (contest_id, problem_id) DO UPDATE SET package_id = EXCLUDED.package_id
@@ -62,7 +59,6 @@ type AddContestProblemParams struct {
 	PackageID uuid.UUID `json:"package_id"`
 }
 
-// Contest Problems (linking to packages)
 func (q *Queries) AddContestProblem(ctx context.Context, arg AddContestProblemParams) error {
 	_, err := q.db.Exec(ctx, addContestProblem, arg.ContestID, arg.ProblemID, arg.PackageID)
 	return err
@@ -80,7 +76,6 @@ func (q *Queries) CountContestMembers(ctx context.Context, contestID uuid.UUID) 
 }
 
 const createContest = `-- name: CreateContest :one
-
 INSERT INTO contests (id, organization_id, owner_id, visibility, title, login, description, settings, start_time, end_time)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING id, organization_id, owner_id, visibility, title, login, description, settings, start_time, end_time, created_at, updated_at
@@ -99,7 +94,6 @@ type CreateContestParams struct {
 	EndTime        *time.Time                      `json:"end_time"`
 }
 
-// Contests queries (new schema with Organizations)
 func (q *Queries) CreateContest(ctx context.Context, arg CreateContestParams) (Contest, error) {
 	row := q.db.QueryRow(ctx, createContest,
 		arg.ID,
@@ -149,7 +143,6 @@ type CreateContestUserProblemBlockParams struct {
 	CreatedBy *uuid.UUID `json:"created_by"`
 }
 
-// Contest User Problem Blocks
 func (q *Queries) CreateContestUserProblemBlock(ctx context.Context, arg CreateContestUserProblemBlockParams) error {
 	_, err := q.db.Exec(ctx, createContestUserProblemBlock,
 		arg.ContestID,
@@ -840,9 +833,6 @@ func (q *Queries) ListContestUserProblemBlocks(ctx context.Context, arg ListCont
 }
 
 const listDashboardContests = `-- name: ListDashboardContests :many
-
-
-
 WITH actor AS (
   SELECT u.id, u.role FROM users u
   WHERE u.id = $2::uuid
@@ -914,7 +904,6 @@ type ListDashboardContestsRow struct {
 	LastSubTime      interface{} `json:"last_sub_time"`
 }
 
-// Access check helpers
 func (q *Queries) ListDashboardContests(ctx context.Context, arg ListDashboardContestsParams) ([]ListDashboardContestsRow, error) {
 	rows, err := q.db.Query(ctx, listDashboardContests,
 		arg.UserID,
@@ -1109,7 +1098,6 @@ func (q *Queries) UpdateContestProblemPackage(ctx context.Context, arg UpdateCon
 }
 
 const upsertContestProblemResult = `-- name: UpsertContestProblemResult :exec
-
 INSERT INTO contest_problem_results (contest_id, user_id, problem_id, solved, failed_attempts, first_ac_time, time_minutes)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT (contest_id, user_id, problem_id)
@@ -1131,7 +1119,6 @@ type UpsertContestProblemResultParams struct {
 	TimeMinutes    *int32     `json:"time_minutes"`
 }
 
-// Contest Standings (Scoreboard)
 func (q *Queries) UpsertContestProblemResult(ctx context.Context, arg UpsertContestProblemResultParams) error {
 	_, err := q.db.Exec(ctx, upsertContestProblemResult,
 		arg.ContestID,

@@ -14,10 +14,7 @@ type DraftError = Error & {status?: number; info?: {fields?: FieldError[]}};
 
 const isConflict = (error: unknown): boolean => (error as DraftError | undefined)?.status === 409;
 
-/**
- * Describes a failed request; invalid draft entries are named by the draft the
- * request was made against, so the author sees which entry to fix.
- */
+// Resolve error pointers against the draft sent with the request.
 export const errorMessage = (error: unknown, draft?: ProblemDraft): string => {
   const fields = (error as DraftError | undefined)?.info?.fields;
   if (draft && fields && fields.length > 0) {
@@ -30,8 +27,7 @@ export const useProblemDraft = (problemId: string): UseQueryResult<ProblemDraft,
   useQuery({
     queryKey: draftKey(problemId),
     queryFn: () => unwrap(api.GET("/problems/{id}/draft", {params: {path: {id: problemId}}})),
-    // The draft is only replaced by a mutation result or an explicit reload,
-    // never silently under an author who is typing.
+    // Avoid background refreshes overwriting edits while the author types.
     staleTime: Infinity,
   });
 
@@ -47,11 +43,6 @@ const reportError = (title: string, error: unknown, draft?: ProblemDraft): void 
   notifications.show({title, message: errorMessage(error, draft), color: "red", style: {whiteSpace: "pre-line"}});
 };
 
-/**
- * Applies `change` to the latest known draft and stores it with optimistic
- * locking on its revision. Every call is a new user action with its own
- * idempotency key.
- */
 type DraftChange = (draft: ProblemDraft) => ProblemDraft | OpResult;
 
 type SaveDraft = {save: (change: DraftChange) => Promise<boolean>; isSaving: boolean};

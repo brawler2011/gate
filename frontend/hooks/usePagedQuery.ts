@@ -7,7 +7,6 @@ import type {UseQueryResult} from "@tanstack/react-query";
 
 type PagedQuery<T> = UseQueryResult<T, ApiError> & {page: number; setPage: (page: number) => void};
 
-// Reset on entity changes and keep the page valid when a mutation removes its last item.
 export const usePagedQuery = <T extends {pagination: PaginationModel}>(
   key: readonly unknown[],
   fetchPage: (page: number, pageSize: number) => Promise<T>,

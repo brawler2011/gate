@@ -273,8 +273,7 @@ func TestScoreboardContestAndFreezeBoundaries(t *testing.T) {
 	for i, state := range []submissionsmodel.State{submissionsmodel.GotWA, submissionsmodel.GotTL, submissionsmodel.GotML, submissionsmodel.GotRE, submissionsmodel.GotPE} {
 		f.submit(t, "alice", 1, state, time.Duration(i+1)*5*time.Minute)
 	}
-	// B remains unsolved at the cutoff; CE is hidden, Saved is ignored,
-	// submissions at the end boundary are outside the official window.
+	// At the cutoff, CE is hidden, Saved is ignored, and the contest end is exclusive.
 	for _, sub := range []struct {
 		state submissionsmodel.State
 		at    time.Duration

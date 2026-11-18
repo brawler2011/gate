@@ -1,6 +1,4 @@
-// Package booklet compiles contest booklets on judge workers: API instances have
-// no sandbox, so they send the LaTeX source over NATS request-reply and a worker
-// answers with the PDF.
+// Package booklet delegates compilation to workers because API instances have no sandbox.
 package booklet
 
 import (
@@ -15,25 +13,21 @@ import (
 
 const (
 	subject = "booklets.compile"
-	// All workers share one queue group, so each request reaches one of them.
+	// A shared queue group sends each compilation request to one worker.
 	queue = "booklet_compilers"
-	// errorHeader marks a reply whose body is a worker's compile error, not a PDF.
+	// Error replies carry compile diagnostics instead of PDF bytes.
 	errorHeader = "Gate-Booklet-Error"
-	// maxErrorBytes keeps an error reply, which may hold a LaTeX log, well within
-	// the NATS payload limit.
+	// Bound LaTeX logs to keep error replies within the NATS payload limit.
 	maxErrorBytes = 64 << 10
 )
 
-// RequestTimeout covers the sandbox limit of a booklet compilation
-// (pkg/sandbox) plus the transfer.
+// Allow the sandbox compilation limit plus transfer time.
 const RequestTimeout = 90 * time.Second
 
-// Compiler compiles a LaTeX booklet into a PDF.
 type Compiler interface {
 	CompilePDF(ctx context.Context, texSource string) ([]byte, error)
 }
 
-// Client asks a worker to compile a booklet.
 type Client struct {
 	conn *nats.Conn
 }
@@ -42,7 +36,6 @@ func NewClient(conn *nats.Conn) *Client {
 	return &Client{conn: conn}
 }
 
-// CompilePDF sends the source to a worker and waits for its PDF.
 func (c *Client) CompilePDF(ctx context.Context, texSource string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, RequestTimeout)
 	defer cancel()
@@ -59,7 +52,6 @@ func (c *Client) CompilePDF(ctx context.Context, texSource string) ([]byte, erro
 	return reply.Data, nil
 }
 
-// Responder compiles the booklets that clients request.
 type Responder struct {
 	conn     *nats.Conn
 	compiler Compiler
@@ -70,7 +62,6 @@ func NewResponder(conn *nats.Conn, compiler Compiler) *Responder {
 	return &Responder{conn: conn, compiler: compiler, logger: slog.Default().With("component", "booklet_responder")}
 }
 
-// Run answers requests one at a time until ctx ends.
 func (r *Responder) Run(ctx context.Context) error {
 	sub, err := r.conn.QueueSubscribeSync(subject, queue)
 	if err != nil {

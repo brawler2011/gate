@@ -14,8 +14,7 @@ import (
 	"strings"
 )
 
-// FileTransport uses go-judge's disk file store. FileAdd/FileGet in its gRPC
-// API are unary messages and must not be used for test bodies or executables.
+// FileTransport avoids unary gRPC FileAdd/FileGet, which buffer entire test bodies and executables.
 type FileTransport struct {
 	base string
 	http *http.Client
@@ -32,8 +31,7 @@ func NewFileTransport(base string, client *http.Client) (*FileTransport, error) 
 	return &FileTransport{base: strings.TrimRight(base, "/"), http: client}, nil
 }
 
-// Upload sends exactly the regular file's current size with bounded buffers.
-// The caller owns the file; its offset is not changed.
+// Upload leaves the caller-owned file's offset unchanged.
 func (t *FileTransport) Upload(ctx context.Context, file *os.File, limit int64) (string, error) {
 	stat, err := file.Stat()
 	if err != nil {
@@ -82,9 +80,7 @@ func validFileID(id string) bool {
 	return id != "" && id != "." && id != ".." && !strings.ContainsAny(id, "/\\\x00")
 }
 
-// Download copies at most limit bytes to a caller-owned destination. On quota
-// failure the caller must discard the incomplete destination.
-// ErrQuotaExceeded reports content larger than the caller-supplied limit; retrying cannot help.
+// Download leaves an incomplete destination on quota failure; the caller must discard it.
 var ErrQuotaExceeded = errors.New("sandbox file exceeds quota")
 
 func (t *FileTransport) Download(ctx context.Context, id string, dst io.Writer, limit int64) (int64, error) {

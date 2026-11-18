@@ -80,7 +80,6 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	juryID := uuid.New()
 	probID := uuid.New()
 
-	// 1. Participant asks a question
 	clar, err := uc.CreateClarification(accessmodel.WithUser(ctx, accessmodel.User{Id: participantID, Role: accessmodel.UserRoleUser}), &contestsmodel.CreateContestClarificationInput{
 		ContestID: contestID,
 		ProblemID: &probID,
@@ -93,7 +92,6 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	assert.Len(t, outboxRepo.events, 1)
 	assert.Equal(t, eventdata.OutboxEventContestClarificationCreated, outboxRepo.events[0].EventType)
 
-	// 4. Jury answers and publishes as announcement
 	answered, err := uc.AnswerClarification(accessmodel.WithUser(ctx, accessmodel.User{Id: juryID, Role: accessmodel.UserRoleUser}), &contestsmodel.AnswerContestClarificationInput{
 		ClarificationID:       clar.ID,
 		ContestID:             contestID,
@@ -108,7 +106,6 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	require.NotNil(t, answered.AnsweredBy)
 	assert.Equal(t, juryID, *answered.AnsweredBy, "the answerer comes from the caller context")
 
-	// Verify events: 1 (created) + 1 (answered) + 1 (announcement created) = 3 events
 	assert.Len(t, outboxRepo.events, 3)
 	assert.Equal(t, eventdata.OutboxEventContestClarificationAnswered, outboxRepo.events[1].EventType)
 	assert.Equal(t, eventdata.OutboxEventContestAnnouncementCreated, outboxRepo.events[2].EventType)
@@ -117,7 +114,6 @@ func TestClarificationsUseCase_Flow(t *testing.T) {
 	assert.Equal(t, juryID, answeredEvent.AnsweredBy)
 	assert.Equal(t, participantID, answeredEvent.UserID)
 
-	// Verify announcement was created in annRepo
 	require.Len(t, annRepo.announcements, 1)
 	for _, announcement := range annRepo.announcements {
 		assert.Equal(t, contestID, announcement.ContestID)

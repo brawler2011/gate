@@ -1,6 +1,3 @@
-/**
- * Converts a number to alphabetic letters (1 -> A, 2 -> B, etc.)
- */
 export const numberToLetters = (num?: number | null): string => {
   if (!num || num <= 0) {
     return "?";
@@ -18,10 +15,6 @@ export const numberToLetters = (num?: number | null): string => {
   return result;
 };
 
-/**
- * Converts alphabetic letters to a 1-based number (A -> 1, B -> 2, ..., Z -> 26, AA -> 27, etc.)
- * Strictly validates that input contains only uppercase English letters.
- */
 export const lettersToNumber = (str?: string | null): number => {
   if (!str) {
     return 0;
@@ -40,52 +33,44 @@ export const lettersToNumber = (str?: string | null): number => {
   return result;
 };
 
-/**
- * Get color for submission state
- */
 export const StateColor = (state?: number | string): string => {
   const stateNum = typeof state === "string" ? parseInt(state) : state;
   
   switch (stateNum) {
     case 1:
-      return "blue"; // Saved to DB
+      return "blue";
     case 101:
-      return "orange"; // Compilation Error
+      return "orange";
     case 102:
-      return "red"; // Time Limit Exceeded
+      return "red";
     case 103:
-      return "red"; // Memory Limit Exceeded
+      return "red";
     case 104:
-      return "red"; // Runtime Error
+      return "red";
     case 105:
-      return "red"; // Presentation Error
+      return "red";
     case 106:
-      return "red"; // Wrong Answer
+      return "red";
     case 107:
-      return "purple"; // Internal Error
+      return "purple";
     case 200:
-      return "green"; // Accepted
+      return "green";
     case 300:
-      return "red"; // Disqualified
+      return "red";
     default:
       return "gray";
   }
 };
 
-/**
- * Get string representation of submission state
- * @param state - submission state code
- * @param failedTest - optional test number where submission failed (1-indexed)
- */
 export const StateString = (state?: number | string, failedTest?: number | null): string => {
   const stateNum = typeof state === "string" ? parseInt(state) : state;
   
   let baseString: string;
   switch (stateNum) {
     case 1:
-      return "Тестируется"; // No test number for "testing" state
+      return "Тестируется";
     case 101:
-      return "Ошибка компиляции"; // Compilation error - no specific test
+      return "Ошибка компиляции";
     case 102:
       baseString = "Превышено время исполнения";
       break;
@@ -105,14 +90,13 @@ export const StateString = (state?: number | string, failedTest?: number | null)
       baseString = "Ошибка тестирующей системы";
       break;
     case 200:
-      return "Принято"; // Accepted - no failed test
+      return "Принято";
     case 300:
       return "Дисквалифицировано";
     default:
       return "Неизвестно";
   }
   
-  // Add test number if available (for error states that happen on specific tests)
   if (failedTest !== null && failedTest !== undefined && failedTest > 0) {
     return `${baseString} на тесте ${failedTest}`;
   }
@@ -120,9 +104,6 @@ export const StateString = (state?: number | string, failedTest?: number | null)
   return baseString;
 };
 
-/**
- * Short Codeforces-style verdict representation (e.g., WA5, TLE50, AC, CE, RE, DQ)
- */
 export const ShortVerdictString = (state?: number | string, failedTest?: number | null): string => {
   const stateNum = typeof state === "string" ? parseInt(state) : state;
   const testSuffix = failedTest !== null && failedTest !== undefined && failedTest > 0 ? `${failedTest}` : "";
@@ -153,9 +134,6 @@ export const ShortVerdictString = (state?: number | string, failedTest?: number 
   }
 };
 
-/**
- * Format ISO timestamp to readable format
- */
 export const TimeBeautify = (timestamp?: string): string => {
   if (!timestamp) {
     return "—";
@@ -175,11 +153,6 @@ export const TimeBeautify = (timestamp?: string): string => {
   }
 };
 
-/**
- * Formats an ISO date string to "dd.MM.yyyy" format
- * @param isoDate - ISO date string (e.g., "2025-01-18")
- * @returns Formatted date string (e.g., "18.01.2025")
- */
 export const formatDate = (isoDate: string | undefined): string => {
   if (!isoDate) {
     return "—";
@@ -188,12 +161,11 @@ export const formatDate = (isoDate: string | undefined): string => {
   try {
     const date = new Date(isoDate);
     
-    // Check for Invalid Date
     if (isNaN(date.getTime())) {
       return "—";
     }
     
-    // Use UTC methods to avoid timezone issues
+    // Preserve the calendar date across client time zones.
     const day = String(date.getUTCDate()).padStart(2, '0');
     const month = String(date.getUTCMonth() + 1).padStart(2, '0');
     const year = date.getUTCFullYear();
@@ -203,26 +175,11 @@ export const formatDate = (isoDate: string | undefined): string => {
   }
 };
 
-/**
- * Format problem title with position letter
- */
 export const ProblemTitle = (position?: number, title?: string): string => {
   const letter = numberToLetters(position);
   return title ? `${letter}. ${title}` : letter;
 };
 
-/**
-  * Parses page number.
-  *
-  * @param value Raw page number
-  * @returns Valid page number (`>=1`) or `null`
-  *
-  * @example 
-  * parsePage(undefined) // 1 (default)
-  * parsePage("3") // 3
-  * parsePage("abcd") // null
-  * parsePage("-5") // null
-  */
 export const parsePage = (value: unknown): number | null => {
   if (value === undefined) {
     return 1;

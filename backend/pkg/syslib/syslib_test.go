@@ -7,8 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Imported copies are matched against upstream history by Git blob ID, so a
-// hashing mistake would silently stop recognizing every upstream copy.
+// Git blob hashing must recognize imported upstream library copies.
 func TestIsUpstream(t *testing.T) {
 	for _, f := range Files() {
 		require.True(t, f.IsUpstream(f.Content), f.Name)

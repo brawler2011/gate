@@ -19,7 +19,6 @@ metadata:
 spec:
   rateLimit: {average: 200, burst: 400, period: 1s}
 ---
-# Scanner paths are refused at the edge: no client is allowed.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -43,7 +42,6 @@ spec:
       kind: Rule
       middlewares: [{name: security-headers}, {name: deny-all}]
       services: [{name: api, port: 8080}]
-    # The SPA, /ws and /health.
     - match: Host(`{{ $host }}`)
       kind: Rule
       middlewares: [{name: security-headers}]

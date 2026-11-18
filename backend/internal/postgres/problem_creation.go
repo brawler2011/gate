@@ -10,8 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// FinalizeCreate creates the problem from a draft whose uploaded objects the
-// caller has stored; a template clone references its package's objects.
 func (r *ProblemDraftsRepo) FinalizeCreate(ctx context.Context, k model.MutationKey, user uuid.UUID, draft model.Draft, objects []model.StoredObject) (model.MutationResult, error) {
 	if err := draft.ComputeScores(); err != nil {
 		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid weights")

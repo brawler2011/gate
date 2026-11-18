@@ -96,7 +96,7 @@ func (s *IntegrationTestSuite) TestRateLimitedEmail() {
 				}
 			}
 			s.rateRedis.SetTime(now.Add(20 * time.Minute))
-			s.requireRateLimited(send()) // 20/hour
+			s.requireRateLimited(send())
 			s.rateRedis.SetTime(now.Add(time.Hour))
 			for batch := 0; batch < 4; batch++ {
 				s.rateRedis.SetTime(now.Add(time.Hour + time.Duration(batch)*5*time.Minute))
@@ -112,7 +112,7 @@ func (s *IntegrationTestSuite) TestRateLimitedEmail() {
 				}
 			}
 			s.rateRedis.SetTime(now.Add(3 * time.Hour))
-			s.requireRateLimited(send()) // 50/day
+			s.requireRateLimited(send())
 			s.rateRedis.SetTime(now.Add(24 * time.Hour))
 			s.Require().NoError(send())
 			s.rateRedis.SetTime(time.Now())
@@ -123,8 +123,7 @@ func (s *IntegrationTestSuite) TestRateLimitedEmail() {
 func (s *IntegrationTestSuite) TestRateLimitedSubmissions() {
 	user := s.createUser("limited_submitter", accessmodel.UserRoleUser)
 	other := s.createUser("other_submitter", accessmodel.UserRoleUser)
-	// A nonexistent problem reaches the real handler and returns 404 within quota;
-	// once exhausted, middleware must return 429 before the handler runs.
+	// Exhausted quotas return 429 before a missing problem can reach the handler.
 	send := func(id uuid.UUID) *httptest.ResponseRecorder {
 		r := httptest.NewRequest(http.MethodPost, "/submissions?problem_id="+uuid.NewString()+"&organization_login=missing&contest_login=missing&language=python3", strings.NewReader(`{"submission":"print(1)"}`))
 		r.Header.Set("Content-Type", "application/json")
@@ -148,7 +147,7 @@ func (s *IntegrationTestSuite) TestRateLimitedSubmissions() {
 		s.Equal("Too Many Requests", body["error"])
 	}
 	s.rateRedis.SetTime(now.Add(25 * time.Minute))
-	s.Equal(http.StatusTooManyRequests, send(user.Id).Code) // 300/hour
+	s.Equal(http.StatusTooManyRequests, send(user.Id).Code)
 	s.Equal(http.StatusNotFound, send(other.Id).Code)
 	s.rateRedis.SetTime(now.Add(time.Hour))
 	s.Equal(http.StatusNotFound, send(user.Id).Code)
