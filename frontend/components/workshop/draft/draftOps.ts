@@ -270,7 +270,7 @@ export const newGeneratedTest = (draft: ProblemDraft, subtaskId: string): Proble
   subtask_id: subtaskId,
   sample: false,
   points: 0,
-  input: {mode: "generator", object_id: null, generator: draft.generators[0]?.name ?? null, args: [], seed: 1},
+  input: {mode: "generator", object_id: null, generator: draft.generators[0]?.name ?? null, args: [], seed: null},
   answer: newAnswer(draft, "generated"),
 });
 

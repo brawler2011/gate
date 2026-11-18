@@ -1736,7 +1736,10 @@ export interface components {
             /** @description Name of a generator of the draft. */
             generator: string | null;
             args: string[];
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Appended as the last generator argument when set; without it the generator gets exactly args.
+             */
             seed: number | null;
         };
         ProblemDraftAnswer: {

@@ -288,8 +288,8 @@ func convertTest(fsys fs.FS, testset Testset, number int, t Test, generators map
 		return spec.Test{}, err
 	}
 	test := spec.Test{Points: weight, Sample: t.Sample}
-	// Gate appends a seed to generator arguments, so a generated input differs
-	// from the one Polygon answered; the main solution answers it instead.
+	// The generator runs with exactly the test's arguments, as in Polygon; the
+	// main solution answers the generated input.
 	if t.Method == "generated" {
 		argv, err := spec.ParseCommand(t.Cmd)
 		if err != nil {

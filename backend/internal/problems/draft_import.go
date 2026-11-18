@@ -504,8 +504,7 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map
 		if !ok {
 			return t, pkg.Wrap(pkg.ErrBadInput, nil, "generator "+test.Generator+" not found")
 		}
-		seed := int64(0)
-		t.Input = model.DraftInput{Mode: "generator", Generator: &gen, Args: test.Args, Seed: &seed}
+		t.Input = model.DraftInput{Mode: "generator", Generator: &gen, Args: test.Args}
 		if t.Input.Args == nil {
 			t.Input.Args = []string{}
 		}
