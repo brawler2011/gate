@@ -42,7 +42,7 @@ const (
 	dummyPipeCollectorSize = 1024
 
 	// Compile limits for compilers
-	compilerCompileCpuTimeLimit = 10 * time.Second
+	compilerCompileCpuTimeLimit = 20 * time.Second
 	compilerCompileMemoryLimit  = 512 * 1024 * 1024
 	compilerCompileProcLimit    = 150
 
