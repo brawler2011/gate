@@ -93,12 +93,12 @@ tasks:
       - go test -v -timeout 15m -tags=integration {{.CLI_ARGS | default "./backend/tests/integration/..."}}
 
   be:querywork:
-    desc: Check the database work of PostgreSQL scenarios against backend/internal/postgres/testdata/query_work.json
+    desc: Check PostgreSQL query work against upper budgets in backend/internal/postgres/testdata/query_work.json
     cmds:
       - go test -v -count=1 -tags=integration -run='^TestQueryWork$' ./backend/internal/postgres
 
   be:querywork:update:
-    desc: Rewrite backend/internal/postgres/testdata/query_work.json with the measured database work
+    desc: Raise PostgreSQL query-work budgets to include measurements; edit query_work.json explicitly to tighten
     cmds:
       - go test -count=1 -tags=integration -run='^TestQueryWork$' ./backend/internal/postgres -update
 

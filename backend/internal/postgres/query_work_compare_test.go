@@ -2,15 +2,14 @@ package postgres
 
 import (
 	"fmt"
-	"math"
 	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-// queryWork is the database work of one operation. Every field is deterministic
-// for a fixed seed, schema and PostgreSQL version, unlike time.
+// queryWork is the database work of one operation. Planner choices can change
+// the page and plan-node counts even for the same data and PostgreSQL version.
 type queryWork struct {
 	// Statements and Transactions count what the code sends; BEGIN, COMMIT and
 	// ROLLBACK are transaction control, not statements.
@@ -39,14 +38,13 @@ func (w queryWork) metrics() []struct {
 	}
 }
 
-// queryWorkTolerance is the relative change of a metric that still matches the
-// golden value, in either direction. Larger regressions fail; larger improvements
-// fail too, so the golden file never keeps slack that hides a later regression.
+// queryWorkTolerance is the allowed increase above a recorded upper budget.
+// Lower measurements always pass: a cheaper plan is not a regression.
 const queryWorkTolerance = 0.03
 
 const queryWorkUpdate = "task be:querywork:update"
 
-// compareQueryWork returns one message per metric outside the tolerance and per
+// compareQueryWork returns one message per metric above the budget and per
 // scenario present on one side only.
 func compareQueryWork(golden, actual map[string]queryWork, tolerance float64) []string {
 	var problems []string
@@ -65,33 +63,46 @@ func compareQueryWork(golden, actual map[string]queryWork, tolerance float64) []
 		got, measured := actual[name]
 		switch {
 		case !inGolden:
-			problems = append(problems, fmt.Sprintf("%s: no golden values; record them with `%s`", name, queryWorkUpdate))
+			problems = append(problems, fmt.Sprintf("%s: no budget; record it with `%s`", name, queryWorkUpdate))
 			continue
 		case !measured:
-			problems = append(problems, fmt.Sprintf("%s: golden values for a scenario that no longer runs; remove them with `%s`", name, queryWorkUpdate))
+			problems = append(problems, fmt.Sprintf("%s: budget for a scenario that no longer runs; remove it with `%s`", name, queryWorkUpdate))
 			continue
 		}
 		gotMetrics := got.metrics()
 		for i, metric := range want.metrics() {
 			g, a := metric.value, gotMetrics[i].value
 			diff := float64(a - g)
-			if math.Abs(diff) <= tolerance*float64(g) {
+			if diff <= tolerance*float64(g) {
 				continue
 			}
 			change := "+Inf%"
 			if g != 0 {
 				change = fmt.Sprintf("%+.1f%%", 100*diff/float64(g))
 			}
-			if diff > 0 {
-				problems = append(problems, fmt.Sprintf("%s: %s regressed: golden %d, actual %d (%s, tolerance ±%g%%); if the extra work is intended, update the golden file with `%s`",
-					name, metric.name, g, a, change, 100*tolerance, queryWorkUpdate))
-			} else {
-				problems = append(problems, fmt.Sprintf("%s: %s improved: golden %d, actual %d (%s, tolerance ±%g%%); the golden file is stale, lower it with `%s`",
-					name, metric.name, g, a, change, 100*tolerance, queryWorkUpdate))
-			}
+			problems = append(problems, fmt.Sprintf("%s: %s regressed: budget %d, actual %d (%s, tolerance +%g%%); if the extra work is intended, raise the budget with `%s`",
+				name, metric.name, g, a, change, 100*tolerance, queryWorkUpdate))
 		}
 	}
 	return problems
+}
+
+// updateQueryWorkBudgets preserves previously observed plans' ceilings. Recording
+// a cheaper plan must not make the next run of a valid older plan fail.
+// Scenarios no longer measured are removed; tighten budgets explicitly by hand.
+func updateQueryWorkBudgets(budgets, actual map[string]queryWork) map[string]queryWork {
+	updated := make(map[string]queryWork, len(actual))
+	for name, measured := range actual {
+		previous := budgets[name]
+		updated[name] = queryWork{
+			Statements:   max(previous.Statements, measured.Statements),
+			Transactions: max(previous.Transactions, measured.Transactions),
+			Pages:        max(previous.Pages, measured.Pages),
+			Sorts:        max(previous.Sorts, measured.Sorts),
+			SeqScans:     max(previous.SeqScans, measured.SeqScans),
+		}
+	}
+	return updated
 }
 
 func TestCompareQueryWork(t *testing.T) {
@@ -110,17 +121,16 @@ func TestCompareQueryWork(t *testing.T) {
 		{"within tolerance above", with(func(w *queryWork) { w.Pages = 1030 }), nil},
 		{"within tolerance below", with(func(w *queryWork) { w.Pages = 970 }), nil},
 		{"regression by 30%", with(func(w *queryWork) { w.Pages = 1300 }),
-			[]string{"Submissions/large/Latest: pages regressed: golden 1000, actual 1300 (+30.0%", "task be:querywork:update"}},
-		{"improvement beyond tolerance", with(func(w *queryWork) { w.Pages = 700 }),
-			[]string{"Submissions/large/Latest: pages improved: golden 1000, actual 700 (-30.0%", "stale", "task be:querywork:update"}},
+			[]string{"Submissions/large/Latest: pages regressed: budget 1000, actual 1300 (+30.0%", "task be:querywork:update"}},
+		{"improvement beyond tolerance", with(func(w *queryWork) { w.Pages = 700 }), nil},
 		{"new sort node", with(func(w *queryWork) { w.Sorts = 1 }),
-			[]string{"sorts regressed: golden 0, actual 1 (+Inf%"}},
+			[]string{"sorts regressed: budget 0, actual 1 (+Inf%"}},
 		{"extra statement", with(func(w *queryWork) { w.Statements = 3 }),
-			[]string{"statements regressed: golden 2, actual 3 (+50.0%"}},
+			[]string{"statements regressed: budget 2, actual 3 (+50.0%"}},
 		{"new scenario", map[string]queryWork{"Submissions/large/Latest": golden["Submissions/large/Latest"], "New": {}},
-			[]string{"New: no golden values"}},
+			[]string{"New: no budget"}},
 		{"removed scenario", map[string]queryWork{},
-			[]string{"Submissions/large/Latest: golden values for a scenario that no longer runs"}},
+			[]string{"Submissions/large/Latest: budget for a scenario that no longer runs"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			problems := compareQueryWork(golden, tc.actual, queryWorkTolerance)
@@ -134,4 +144,32 @@ func TestCompareQueryWork(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestQueryWorkAllowsCheaperPlan(t *testing.T) {
+	budgets := map[string]queryWork{
+		"Submissions/small/Latest": {Statements: 2, Transactions: 1, Pages: 195, SeqScans: 1},
+	}
+	cheaper := map[string]queryWork{
+		"Submissions/small/Latest": {Statements: 2, Transactions: 1, Pages: 138},
+	}
+	require.Empty(t, compareQueryWork(budgets, cheaper, queryWorkTolerance))
+	updated := updateQueryWorkBudgets(budgets, cheaper)
+	require.Empty(t, compareQueryWork(updated, budgets, queryWorkTolerance), "recording the cheaper plan must still allow the original plan")
+}
+
+func TestUpdateQueryWorkBudgets(t *testing.T) {
+	budgets := map[string]queryWork{
+		"existing": {Statements: 2, Transactions: 1, Pages: 195, Sorts: 1, SeqScans: 1},
+		"removed":  {Pages: 100},
+	}
+	actual := map[string]queryWork{
+		"existing": {Statements: 3, Pages: 210},
+		"new":      {Statements: 1, Pages: 10},
+	}
+	updated := updateQueryWorkBudgets(budgets, actual)
+	require.Equal(t, map[string]queryWork{
+		"existing": {Statements: 3, Transactions: 1, Pages: 210, Sorts: 1, SeqScans: 1},
+		"new":      actual["new"],
+	}, updated)
 }
