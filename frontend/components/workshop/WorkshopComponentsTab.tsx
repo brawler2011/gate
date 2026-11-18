@@ -6,6 +6,7 @@ import {useSearchParams} from "react-router-dom";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {languageName, useLanguages, type SupportedLanguage} from "@/lib/languages";
+import {useSystemLibrary} from "@/lib/systemLibrary";
 
 import {DraftGate} from "./draft/DraftGate";
 import {
@@ -15,6 +16,7 @@ import {
   removeProgram,
   ROLE_LABELS,
   setSingleProgram,
+  systemDependencies,
   updateProgram,
   type ComponentRole,
   type ListRole,
@@ -67,7 +69,7 @@ const ProgramEditor = (props: ProgramEditorProps): ReactNode => {
         <MultiSelect
           label="Подключаемые файлы"
           description="Файлы из библиотеки, доступные программе при сборке под своим именем"
-          data={draft.library.map((file) => ({value: file.id, label: file.name}))}
+          data={draft.library.map((file) => ({value: file.id, label: file.auto_update ? `${file.name} (автообновление)` : file.name}))}
           value={program.dependencies}
           onChange={(dependencies) => onChange({dependencies})}
           searchable
@@ -123,6 +125,7 @@ type PanelProps<Role> = {draft: ProblemDraft; problemId: string; role: Role};
 const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
   const catalog = useLanguages();
+  const system = useSystemLibrary();
   const program = draft[role];
   if (!program) {
     return (
@@ -135,13 +138,11 @@ const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNod
             withName={false}
             saving={isSaving}
             onCreate={(_, language) =>
-              save((current) =>
-                setSingleProgram(current, role, {
-                  language,
-                  source: template(catalog, role, language),
-                  dependencies: [],
-                }),
-              )
+              save((current) => {
+                const source = template(catalog, role, language);
+                const dependencies = systemDependencies(current, system, catalog.find((l) => l.id === language));
+                return setSingleProgram(current, role, {language, source, dependencies});
+              })
             }
           />
         </Stack>
@@ -185,6 +186,7 @@ const RenameControl = ({name, saving, onRename}: {
 
 const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode => {
   const catalog = useLanguages();
+  const system = useSystemLibrary();
   const {save, isSaving} = useSaveDraft(problemId);
   const [params, setParams] = useSearchParams();
   const programs = programsOf(draft, role);
@@ -199,7 +201,8 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
   const create = async (newName: string, language: string): Promise<boolean> => {
     let createdId: string | undefined;
     const ok = await save((current) => {
-      const next = addProgram(current, role, newName, language, template(catalog, role, language));
+      const dependencies = systemDependencies(current, system, catalog.find((l) => l.id === language));
+      const next = addProgram(current, role, newName, language, template(catalog, role, language), dependencies);
       createdId = programsOf(next, role).at(-1)?.id;
       return next;
     });

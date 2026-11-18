@@ -221,6 +221,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SupportedLanguagesResponse"
+  /lib:
+    get:
+      tags: [system]
+      operationId: GetSystemLibrary
+      summary: Get the system library files
+      description: The files auto-updated library files of problem drafts build with, such as testlib.h.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemLibrary"
   /problems:
     get:
       summary: "List problems"
@@ -3154,6 +3167,7 @@ components:
       - id
       - name
       - content
+      - auto_update
       properties:
         id:
           type: string
@@ -3162,6 +3176,10 @@ components:
           type: string
         content:
           type: string
+          description: Empty for an auto-updated file.
+        auto_update:
+          type: boolean
+          description: The file is the system library file of its name from GET /lib, whose current text every build takes. Only an empty file named after a system library file can be auto-updated.
     ProblemDraftStatement:
       description: The statement in one language as Markdown sections.
       type: object
@@ -6340,6 +6358,45 @@ components:
           description: Prism grammar to highlight sources with; empty shows them as plain text.
           type: string
           example: cpp
+    SystemLibrary:
+      description: "The system library files a draft can include at their current version."
+      type: object
+      required:
+        - files
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemLibraryFile"
+    SystemLibraryFile:
+      description: "A system library file and the upstream commit it is vendored from."
+      example:
+        name: testlib.h
+        extensions: [cpp]
+        version: 0.9.51
+        commit: b0f7477019d79ba900a57c1cda30f262065c01f6
+        content: "#ifndef _TESTLIB_H_"
+      type: object
+      required:
+        - name
+        - extensions
+        - version
+        - commit
+        - content
+      properties:
+        name:
+          type: string
+        extensions:
+          description: Source extensions of the programs that include the file.
+          type: array
+          items:
+            type: string
+        version:
+          type: string
+        commit:
+          type: string
+        content:
+          type: string
     SupportedLanguagesResponse:
       description: "The language catalog in display order."
       example:

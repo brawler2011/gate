@@ -12,6 +12,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/google/uuid"
 )
 
@@ -61,11 +62,22 @@ type DraftNamedProgram struct {
 	DraftProgram
 }
 
-// DraftLibraryFile is a source file programs include by its name.
+// DraftLibraryFile is a source file programs include by its name. An
+// auto-updated file stores no content: it is the system library file of its
+// name, whose current text every build takes.
 type DraftLibraryFile struct {
-	ID      uuid.UUID `json:"id"`
-	Name    string    `json:"name"`
-	Content string    `json:"content"`
+	ID         uuid.UUID `json:"id"`
+	Name       string    `json:"name"`
+	Content    string    `json:"content"`
+	AutoUpdate bool      `json:"auto_update"`
+}
+
+// Text returns the text a build compiles and packages for the file.
+func (f *DraftLibraryFile) Text() string {
+	if system, ok := syslib.Lookup(f.Name); ok && f.AutoUpdate {
+		return system.Content
+	}
+	return f.Content
 }
 
 // DraftStatement is the statement in one language as Markdown sections.
@@ -428,6 +440,9 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 			v.fail(at+"/name", "invalid file name %q", f.Name)
 		}
 		text(at+"/content", f.Content)
+		if _, ok := syslib.Lookup(f.Name); f.AutoUpdate && (!ok || f.Content != "") {
+			v.fail(at+"/auto_update", "only an empty system library file can be auto-updated")
+		}
 		library[f.ID] = f.Name
 	}
 	program := func(at string, p DraftProgram) {

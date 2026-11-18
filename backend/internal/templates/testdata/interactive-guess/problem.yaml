@@ -6,6 +6,9 @@ limits:
   time_ms: 2000
   memory_mb: 256
 
+system_library:
+  - testlib.h
+
 subtasks:
   samples:
     points: 0

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
+	"github.com/brawler2011/gate/backend/pkg/syslib"
 )
 
 func (h *CoreServer) GetLanguages(ctx context.Context) (*corev1.SupportedLanguagesResponse, error) {
@@ -13,4 +14,12 @@ func (h *CoreServer) GetLanguages(ctx context.Context) (*corev1.SupportedLanguag
 		items = append(items, corev1.SupportedLanguage{ID: id, Name: l.Name, Extensions: l.Extensions, Syntax: l.Syntax})
 	}
 	return &corev1.SupportedLanguagesResponse{Languages: items}, nil
+}
+
+func (h *CoreServer) GetSystemLibrary(ctx context.Context) (*corev1.SystemLibrary, error) {
+	files := []corev1.SystemLibraryFile{}
+	for _, f := range syslib.Files() {
+		files = append(files, corev1.SystemLibraryFile{Name: f.Name, Extensions: f.Extensions, Version: f.Version, Commit: f.Commit, Content: f.Content})
+	}
+	return &corev1.SystemLibrary{Files: files}, nil
 }

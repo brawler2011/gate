@@ -23,6 +23,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/formats"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/formats/tex"
+	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/brawler2011/gate/backend/pkg/ziputil"
 	"github.com/google/uuid"
 )
@@ -157,7 +158,7 @@ func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (import
 // entries: programs by role, library files, statement sections and assets.
 // Test inputs, answers and assets become objects.
 func (uc *DraftUseCase) convertImport(result *draftImport, root string, p *spec.Problem, id uuid.UUID, revision int64) error {
-	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}, library: map[string]uuid.UUID{}}
+	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}, library: map[string]spec.File{}}
 	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb,
 		DraftContent: model.DraftContent{Validators: []model.DraftNamedProgram{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftNamedProgram{},
 			Library: []model.DraftLibraryFile{}, Statements: []model.DraftStatement{}, Assets: []model.DraftAsset{}, Tests: []model.DraftTest{}, Subtasks: []model.DraftSubtask{}}}
@@ -177,8 +178,10 @@ type importConverter struct {
 	textTests bool
 	// objects maps a package path to the object holding it.
 	objects map[string]uuid.UUID
-	// library maps the package path of a library file to its entry.
-	library map[string]uuid.UUID
+	// libraryFiles are the library files of the package, and library maps
+	// each by its path.
+	libraryFiles []spec.File
+	library      map[string]spec.File
 	// files, programs and textBytes count the draft as it grows, against
 	// DraftQuotas.
 	files     int
@@ -188,38 +191,40 @@ type importConverter struct {
 
 func (c *importConverter) convert(p *spec.Problem) error {
 	for _, f := range p.Library {
-		lid, err := c.libraryFile(f.Name, f.Path)
-		if err != nil {
+		if _, err := c.libraryFile(f, false); err != nil {
 			return err
 		}
-		c.library[f.Path] = lid
+		c.library[f.Path] = f
 	}
+	c.libraryFiles = p.Library
 	var err error
 	if p.Checker != nil {
-		if c.draft.Checker, err = c.program(*p.Checker); err != nil {
+		if c.draft.Checker, err = c.program(*p.Checker, false); err != nil {
 			return err
 		}
 	}
 	if p.Interactor != nil {
-		if c.draft.Interactor, err = c.program(*p.Interactor); err != nil {
+		if c.draft.Interactor, err = c.program(*p.Interactor, false); err != nil {
 			return err
 		}
 	}
 	if p.Validator != nil {
-		if _, err := c.named(&c.draft.Validators, *p.Validator); err != nil {
+		if _, err := c.named(&c.draft.Validators, *p.Validator, false); err != nil {
 			return err
 		}
 	}
 	generators := map[string]uuid.UUID{}
 	for _, g := range p.Generators {
-		gid, err := c.named(&c.draft.Generators, g)
+		// rnd differs between testlib versions, so a generator keeps the
+		// library of its package and its tests stay those of the package.
+		gid, err := c.named(&c.draft.Generators, g, true)
 		if err != nil {
 			return err
 		}
 		generators[g.Path] = gid
 	}
 	for _, s := range p.Solutions {
-		sid, err := c.named(&c.draft.Solutions, s)
+		sid, err := c.named(&c.draft.Solutions, s, false)
 		if err != nil {
 			return err
 		}
@@ -251,33 +256,47 @@ func (c *importConverter) convert(p *spec.Problem) error {
 	return c.addGroups(p.Groups, generators)
 }
 
-// libraryFile returns the library entry named name with the text of the
-// package file at path. Copies with equal name and text, such as testlib.h in
-// every ICPC program folder, share one entry.
-func (c *importConverter) libraryFile(name, path string) (uuid.UUID, error) {
-	if !model.ValidFileName(name) {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid library file name "+name)
+// libraryFile returns the library entry for the package file f. Copies with
+// equal name and text, such as testlib.h in every ICPC program folder, share
+// one entry. A system file, and unless keep is set a copy of a system library
+// file equal to an upstream version, becomes the auto-updated file.
+func (c *importConverter) libraryFile(f spec.File, keep bool) (uuid.UUID, error) {
+	if !model.ValidFileName(f.Name) {
+		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid library file name "+f.Name)
 	}
-	text, err := c.readText(path)
-	if err != nil {
-		return uuid.Nil, err
+	system, known := syslib.Lookup(f.Name)
+	if f.System && !known {
+		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "unknown system library file "+f.Name)
 	}
-	for _, f := range c.draft.Library {
-		if f.Name == name && f.Content == text {
-			return f.ID, nil
+	text := ""
+	if !f.System {
+		var err error
+		if text, err = c.readText(f.Path); err != nil {
+			return uuid.Nil, err
+		}
+	}
+	auto := f.System || !keep && known && system.IsUpstream(text)
+	if auto {
+		text = ""
+	}
+	for _, e := range c.draft.Library {
+		if e.Name == f.Name && e.Content == text && e.AutoUpdate == auto {
+			return e.ID, nil
 		}
 	}
 	if err := c.charge(len(text)); err != nil {
 		return uuid.Nil, err
 	}
 	lid := uuid.New()
-	c.draft.Library = append(c.draft.Library, model.DraftLibraryFile{ID: lid, Name: name, Content: text})
+	c.draft.Library = append(c.draft.Library, model.DraftLibraryFile{ID: lid, Name: f.Name, Content: text, AutoUpdate: auto})
 	return lid, nil
 }
 
 // program reads a program source and resolves its library dependencies; a
-// program without explicit dependencies includes the whole library.
-func (c *importConverter) program(program spec.Program) (*model.DraftProgram, error) {
+// program without explicit dependencies includes the whole library. keep
+// keeps package copies of system library files even when they equal an
+// upstream version.
+func (c *importConverter) program(program spec.Program, keep bool) (*model.DraftProgram, error) {
 	if c.programs++; c.programs > c.uc.DraftQuotas.Components {
 		return nil, pkg.ErrPayloadTooLarge
 	}
@@ -301,22 +320,30 @@ func (c *importConverter) program(program spec.Program) (*model.DraftProgram, er
 	}
 	deps := []uuid.UUID{}
 	if program.Dependencies == nil {
-		names := map[string]bool{}
-		for _, f := range c.draft.Library {
-			if names[f.Name] {
-				return nil, pkg.Wrap(pkg.ErrBadInput, nil, "different library files named "+f.Name)
+		names := map[string]uuid.UUID{}
+		for _, f := range c.libraryFiles {
+			lid, err := c.libraryFile(f, keep)
+			if err != nil {
+				return nil, err
 			}
-			names[f.Name] = true
-			deps = append(deps, f.ID)
+			if previous, ok := names[f.Name]; ok {
+				if previous != lid {
+					return nil, pkg.Wrap(pkg.ErrBadInput, nil, "different library files named "+f.Name)
+				}
+				continue
+			}
+			names[f.Name] = lid
+			deps = append(deps, lid)
 		}
 	}
 	for _, destination := range slices.Sorted(maps.Keys(program.Dependencies)) {
 		source := program.Dependencies[destination]
-		if _, ok := c.library[source]; !ok {
+		f, ok := c.library[source]
+		if !ok {
 			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "dependency "+source+" of "+program.Path+" is not a library file")
 		}
 		// A dependency is placed under the name of its library file.
-		lid, err := c.libraryFile(destination, source)
+		lid, err := c.libraryFile(spec.File{Name: destination, Path: source, System: f.System}, keep)
 		if err != nil {
 			return nil, err
 		}
@@ -327,8 +354,8 @@ func (c *importConverter) program(program spec.Program) (*model.DraftProgram, er
 
 // named adds a program of a role a draft holds several of, named after its
 // file without the extension.
-func (c *importConverter) named(list *[]model.DraftNamedProgram, program spec.Program) (uuid.UUID, error) {
-	p, err := c.program(program)
+func (c *importConverter) named(list *[]model.DraftNamedProgram, program spec.Program, keep bool) (uuid.UUID, error) {
+	p, err := c.program(program, keep)
 	if err != nil {
 		return uuid.Nil, err
 	}

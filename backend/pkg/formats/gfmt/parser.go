@@ -63,6 +63,13 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read package: %w", err)
 	}
+	for _, name := range manifest.SystemLibrary {
+		rel := LibraryFolder + "/" + name
+		if name == "" || strings.Contains(name, "/") || files[rel] {
+			return nil, fmt.Errorf("system library file %q is invalid or also in %s/", name, LibraryFolder)
+		}
+		p.Library = append(p.Library, spec.File{Name: name, Path: rel, System: true})
+	}
 	for _, language := range slices.Sorted(maps.Keys(statements)) {
 		p.Statements = append(p.Statements, *statements[language])
 	}

@@ -318,7 +318,7 @@ func (e *execution) compile(ctx context.Context) error {
 		deps := map[string][]byte{}
 		for _, id := range p.program.Dependencies {
 			f := d.LibraryFile(id)
-			deps[f.Name] = []byte(f.Content)
+			deps[f.Name] = []byte(f.Text())
 		}
 		executable, err := e.sandbox.CompileWithLimits(ctx, []byte(p.program.Source), p.program.Language, deps, s.Limits.Compile)
 		if err != nil {

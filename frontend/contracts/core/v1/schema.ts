@@ -141,6 +141,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/lib": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the system library files
+         * @description The files auto-updated library files of problem drafts build with, such as testlib.h.
+         */
+        get: operations["GetSystemLibrary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/problems": {
         parameters: {
             query?: never;
@@ -1749,7 +1769,10 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** @description Empty for an auto-updated file. */
             content: string;
+            /** @description The file is the system library file of its name from GET /lib, whose current text every build takes. Only an empty file named after a system library file can be auto-updated. */
+            auto_update: boolean;
         };
         /** @description The statement in one language as Markdown sections. */
         ProblemDraftStatement: {
@@ -4234,6 +4257,30 @@ export interface components {
              */
             syntax: string;
         };
+        /** @description The system library files a draft can include at their current version. */
+        SystemLibrary: {
+            files: components["schemas"]["SystemLibraryFile"][];
+        };
+        /**
+         * @description A system library file and the upstream commit it is vendored from.
+         * @example {
+         *       "name": "testlib.h",
+         *       "extensions": [
+         *         "cpp"
+         *       ],
+         *       "version": "0.9.51",
+         *       "commit": "b0f7477019d79ba900a57c1cda30f262065c01f6",
+         *       "content": "#ifndef _TESTLIB_H_"
+         *     }
+         */
+        SystemLibraryFile: {
+            name: string;
+            /** @description Source extensions of the programs that include the file. */
+            extensions: string[];
+            version: string;
+            commit: string;
+            content: string;
+        };
         /**
          * @description The language catalog in display order.
          * @example {
@@ -5160,6 +5207,8 @@ export type ConfirmEmailChangeRequestModel = components['schemas']['ConfirmEmail
 export type AdminChangeEmailRequestModel = components['schemas']['AdminChangeEmailRequestModel'];
 export type AdminSetPasswordRequestModel = components['schemas']['AdminSetPasswordRequestModel'];
 export type SupportedLanguage = components['schemas']['SupportedLanguage'];
+export type SystemLibrary = components['schemas']['SystemLibrary'];
+export type SystemLibraryFile = components['schemas']['SystemLibraryFile'];
 export type SupportedLanguagesResponse = components['schemas']['SupportedLanguagesResponse'];
 export type CreateContestDraftRequestModel = components['schemas']['CreateContestDraftRequestModel'];
 export type ContestDraftModel = components['schemas']['ContestDraftModel'];
@@ -5488,6 +5537,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SupportedLanguagesResponse"];
+                };
+            };
+        };
+    };
+    GetSystemLibrary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemLibrary"];
                 };
             };
         };

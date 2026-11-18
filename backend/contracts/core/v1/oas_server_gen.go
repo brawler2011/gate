@@ -453,6 +453,12 @@ type Handler interface {
 	//
 	// GET /submissions/{submission_id}
 	GetSubmission(ctx context.Context, params GetSubmissionParams) (*GetSubmissionResponseModel, error)
+	// GetSystemLibrary implements GetSystemLibrary operation.
+	//
+	// The files auto-updated library files of problem drafts build with, such as testlib.h.
+	//
+	// GET /lib
+	GetSystemLibrary(ctx context.Context) (*SystemLibrary, error)
 	// GetTeam implements GetTeam operation.
 	//
 	// Get team by ID.

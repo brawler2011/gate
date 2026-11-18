@@ -58,6 +58,9 @@ func TestValidateLocatesViolations(t *testing.T) {
 			d.Subtasks = append(d.Subtasks, DraftSubtask{ID: other, Ordinal: 2, Policy: "each", DependsOn: []uuid.UUID{d.Subtasks[0].ID}})
 			d.Subtasks[0].DependsOn = []uuid.UUID{other}
 		}, "/subtasks/1/depends_on/0", "cycle"},
+		"auto-updated file with own text": {func(d *Draft) {
+			d.Library[0].AutoUpdate, d.Library[0].Content = true, "// patched"
+		}, "/library/0/auto_update", "only an empty system library file"},
 		"second validator": {func(d *Draft) {
 			d.Validators = []DraftNamedProgram{{ID: uuid.New(), Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, {ID: uuid.New(), Name: "b", DraftProgram: DraftProgram{Language: "cpp"}}}
 		}, "/validators/1", "at most one validator"},

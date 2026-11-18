@@ -214,6 +214,64 @@ func TestImportKeepsProgramHeadersApart(t *testing.T) {
 	require.NotEqual(t, checker.ID, validator.ID)
 }
 
+// libraryOf returns the library files program p depends on, by name.
+func libraryOf(d model.Draft, p model.DraftProgram) map[string]model.DraftLibraryFile {
+	files := map[string]model.DraftLibraryFile{}
+	for _, id := range p.Dependencies {
+		files[d.LibraryFile(id).Name] = *d.LibraryFile(id)
+	}
+	return files
+}
+
+// A package testlib.h equal to an upstream version becomes the auto-updated
+// one; a modified copy stays the author's.
+func TestImportRecognizesUpstreamTestlib(t *testing.T) {
+	plan, err := importDir(t, "../../pkg/testdata/polygon/a-plus-b", nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	require.True(t, libraryOf(plan.draft, *plan.draft.Checker)["testlib.h"].AutoUpdate)
+	require.NoError(t, plan.draft.Validate(importQuotas, nil))
+
+	original, err := os.ReadFile("../../pkg/testdata/polygon/a-plus-b/files/testlib.h")
+	require.NoError(t, err)
+	patched := string(original) + "// patched\n"
+	plan, err = importDir(t, "../../pkg/testdata/polygon/a-plus-b", map[string]string{"files/testlib.h": patched})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, model.DraftLibraryFile{ID: plan.draft.Checker.Dependencies[0], Name: "testlib.h", Content: patched},
+		libraryOf(plan.draft, *plan.draft.Checker)["testlib.h"])
+}
+
+// rnd differs between testlib versions, so an imported generator keeps the
+// package testlib.h while the checker and validator take the system one.
+func TestImportKeepsGeneratorTestlib(t *testing.T) {
+	plan, err := importDir(t, "../../pkg/testdata/polygon/max-subarray", nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	d := plan.draft
+	original, err := os.ReadFile("../../pkg/testdata/polygon/max-subarray/files/testlib.h")
+	require.NoError(t, err)
+	generator := libraryOf(d, d.Generators[0].DraftProgram)["testlib.h"]
+	require.False(t, generator.AutoUpdate)
+	require.Equal(t, string(original), generator.Content)
+	require.True(t, libraryOf(d, *d.Checker)["testlib.h"].AutoUpdate)
+	require.True(t, libraryOf(d, d.Validators[0].DraftProgram)["testlib.h"].AutoUpdate)
+	require.NoError(t, d.Validate(importQuotas, nil))
+}
+
+// Builtin templates and gfmt packages name the system testlib.h instead of
+// carrying a copy.
+func TestImportSystemLibrary(t *testing.T) {
+	plan, err := importAPlusB(t, nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, []model.DraftLibraryFile{{ID: plan.draft.Library[0].ID, Name: "testlib.h", AutoUpdate: true}}, plan.draft.Library)
+	require.True(t, libraryOf(plan.draft, plan.draft.Generators[0].DraftProgram)["testlib.h"].AutoUpdate)
+
+	_, err = importAPlusB(t, map[string]string{"lib/testlib.h": "// copy\n"})
+	require.ErrorContains(t, err, "system library file")
+}
+
 // CRLF conversion streams: a CRLF split across reads is still converted, and
 // a lone CR is kept.
 func TestCopyLF(t *testing.T) {

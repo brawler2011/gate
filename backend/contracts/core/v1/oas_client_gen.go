@@ -467,6 +467,12 @@ type Invoker interface {
 	//
 	// GET /submissions/{submission_id}
 	GetSubmission(ctx context.Context, params GetSubmissionParams) (*GetSubmissionResponseModel, error)
+	// GetSystemLibrary invokes GetSystemLibrary operation.
+	//
+	// The files auto-updated library files of problem drafts build with, such as testlib.h.
+	//
+	// GET /lib
+	GetSystemLibrary(ctx context.Context) (*SystemLibrary, error)
 	// GetTeam invokes GetTeam operation.
 	//
 	// Get team by ID.
@@ -6807,6 +6813,49 @@ func (c *Client) sendGetSubmission(ctx context.Context, params GetSubmissionPara
 	}()
 
 	result, err := decodeGetSubmissionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetSystemLibrary invokes GetSystemLibrary operation.
+//
+// The files auto-updated library files of problem drafts build with, such as testlib.h.
+//
+// GET /lib
+func (c *Client) GetSystemLibrary(ctx context.Context) (*SystemLibrary, error) {
+	res, err := c.sendGetSystemLibrary(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetSystemLibrary(ctx context.Context) (res *SystemLibrary, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/lib"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeGetSystemLibraryResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

@@ -1,8 +1,10 @@
 import {describe, expect, test} from "bun:test";
 
 import {
+  addLibraryFile,
   addProgram,
   addSubtask,
+  addSystemFile,
   describePointer,
   emptyStatement,
   formatPoints,
@@ -13,6 +15,7 @@ import {
   removeTest,
   setSubtaskDependencies,
   sumPoints,
+  systemDependencies,
   upsertTest,
 } from "@/components/workshop/draft/draftOps";
 
@@ -48,6 +51,19 @@ describe("programs", () => {
     expect(draft.main_solution_id).toBe(main);
     expect(removeProgram(draft, "solution", draft.solutions[1].id).main_solution_id).toBe(main);
     expect(removeProgram(draft, "solution", main).main_solution_id).toBeNull();
+  });
+});
+
+describe("system library", () => {
+  test("a new program depends on the auto-updated files the system library provides for its language", () => {
+    const system = [{name: "testlib.h", extensions: ["cpp"], version: "1", commit: "c", content: ""}];
+    const {draft, id} = addSystemFile(emptyDraft(), "testlib.h");
+    const cpp = {id: "cpp17", name: "C++17", extensions: ["cpp", "cc"], syntax: "cpp"};
+    const python = {id: "python3", name: "Python 3", extensions: ["py"], syntax: "python"};
+    expect(systemDependencies(draft, system, cpp)).toEqual([id]);
+    expect(systemDependencies(draft, system, python)).toEqual([]);
+    // An ordinary copy is the author's choice, not attached automatically.
+    expect(systemDependencies(addLibraryFile(emptyDraft(), "testlib.h").draft, system, cpp)).toEqual([]);
   });
 });
 

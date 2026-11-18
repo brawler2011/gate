@@ -99,6 +99,7 @@ func buildEndpointPolicies() map[string]endpointPolicy {
 		"GetUser":            policy(Public),
 		"GetUserAvatar":      policy(Public),
 		"GetLanguages":       policy(Public),
+		"GetSystemLibrary":   policy(Public),
 		"Register":           policy(Public),
 		"Login":              policy(Public),
 		"Logout":             policy(Public),

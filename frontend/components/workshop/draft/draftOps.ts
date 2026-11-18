@@ -6,6 +6,8 @@ import type {
   ProblemDraftStatement,
   ProblemDraftSubtask,
   ProblemDraftTest,
+  SupportedLanguage,
+  SystemLibraryFile,
 } from "@/contracts/core/v1/schema";
 
 /**
@@ -61,8 +63,9 @@ export const addProgram = (
   name: string,
   language: string,
   source: string,
+  dependencies: string[] = [],
 ): ProblemDraft => {
-  const program: ProblemDraftNamedProgram = {id: newId(), name, language, source, dependencies: []};
+  const program: ProblemDraftNamedProgram = {id: newId(), name, language, source, dependencies};
   return {
     ...draft,
     [LIST_FIELDS[role]]: [...programsOf(draft, role), program],
@@ -88,9 +91,30 @@ export const removeProgram = (draft: ProblemDraft, role: ListRole, id: string): 
 });
 
 export const addLibraryFile = (draft: ProblemDraft, name: string): {draft: ProblemDraft; id: string} => {
-  const file: ProblemDraftLibraryFile = {id: newId(), name, content: ""};
+  const file: ProblemDraftLibraryFile = {id: newId(), name, content: "", auto_update: false};
   return {draft: {...draft, library: [...draft.library, file]}, id: file.id};
 };
+
+/** Adds the system library file `name`, which every build takes at its current version. */
+export const addSystemFile = (draft: ProblemDraft, name: string): {draft: ProblemDraft; id: string} => {
+  const file: ProblemDraftLibraryFile = {id: newId(), name, content: "", auto_update: true};
+  return {draft: {...draft, library: [...draft.library, file]}, id: file.id};
+};
+
+/** Turns an auto-updated file into an editable copy of the system text. */
+export const stopAutoUpdate = (draft: ProblemDraft, id: string, systemText: string): ProblemDraft =>
+  updateLibraryFile(draft, id, {content: systemText, auto_update: false});
+
+/** A new program depends on the auto-updated files of the draft that the system library provides for its language. */
+export const systemDependencies = (
+  draft: ProblemDraft,
+  system: SystemLibraryFile[],
+  language: SupportedLanguage | undefined,
+): string[] =>
+  draft.library
+    .filter((f) => f.auto_update && system.some((s) =>
+      s.name === f.name && s.extensions.some((extension) => language?.extensions.includes(extension))))
+    .map((f) => f.id);
 
 export const updateLibraryFile = (
   draft: ProblemDraft,

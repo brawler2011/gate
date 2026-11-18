@@ -20,6 +20,9 @@ type Problem struct {
 	Limits        Limits             `yaml:"limits" json:"limits"`
 	Subtasks      map[string]Subtask `yaml:"subtasks" json:"subtasks"`
 	Solutions     map[string]string  `yaml:"solutions" json:"solutions"`
+	// SystemLibrary names library files Gate provides, such as testlib.h; the
+	// package has no copy, and programs include them like files of lib/.
+	SystemLibrary []string `yaml:"system_library,omitempty" json:"system_library,omitempty"`
 }
 
 // Program is a source file of a built package that the judge compiles with its

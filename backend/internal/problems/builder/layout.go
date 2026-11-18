@@ -34,7 +34,7 @@ func placeDraft(d model.Draft, languages *sandbox.Config) packageLayout {
 	library := map[uuid.UUID]string{}
 	for _, f := range d.Library {
 		library[f.ID] = names.Place(gfmt.LibraryFolder, f.Name)
-		l.texts[library[f.ID]] = f.Content
+		l.texts[library[f.ID]] = f.Text()
 	}
 	place := func(key, role, name string, p model.DraftProgram) {
 		path := names.Place(gfmt.RoleFolder(role), name+extension(languages, p.Language))
