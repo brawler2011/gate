@@ -4580,51 +4580,6 @@ func (o NilFloat64) Or(d float64) float64 {
 	return d
 }
 
-// NewNilInt64 returns new NilInt64 with value set to v.
-func NewNilInt64(v int64) NilInt64 {
-	return NilInt64{
-		Value: v,
-	}
-}
-
-// NilInt64 is nullable int64.
-type NilInt64 struct {
-	Value int64
-	Null  bool
-}
-
-// SetTo sets value to v.
-func (o *NilInt64) SetTo(v int64) {
-	o.Null = false
-	o.Value = v
-}
-
-// IsNull returns true if value is Null.
-func (o NilInt64) IsNull() bool { return o.Null }
-
-// SetToNull sets value to null.
-func (o *NilInt64) SetToNull() {
-	o.Null = true
-	var v int64
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o NilInt64) Get() (v int64, ok bool) {
-	if o.Null {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o NilInt64) Or(d int64) int64 {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewNilProblemBuildDiagnostic returns new NilProblemBuildDiagnostic with value set to v.
 func NewNilProblemBuildDiagnostic(v ProblemBuildDiagnostic) NilProblemBuildDiagnostic {
 	return NilProblemBuildDiagnostic{
@@ -8383,8 +8338,6 @@ type ProblemDraftInput struct {
 	// Name of a generator of the draft.
 	Generator NilString `json:"generator"`
 	Args      []string  `json:"args"`
-	// Appended as the last generator argument when set; without it the generator gets exactly args.
-	Seed NilInt64 `json:"seed"`
 }
 
 // GetMode returns the value of Mode.
@@ -8407,11 +8360,6 @@ func (s *ProblemDraftInput) GetArgs() []string {
 	return s.Args
 }
 
-// GetSeed returns the value of Seed.
-func (s *ProblemDraftInput) GetSeed() NilInt64 {
-	return s.Seed
-}
-
 // SetMode sets the value of Mode.
 func (s *ProblemDraftInput) SetMode(val ProblemDraftInputMode) {
 	s.Mode = val
@@ -8430,11 +8378,6 @@ func (s *ProblemDraftInput) SetGenerator(val NilString) {
 // SetArgs sets the value of Args.
 func (s *ProblemDraftInput) SetArgs(val []string) {
 	s.Args = val
-}
-
-// SetSeed sets the value of Seed.
-func (s *ProblemDraftInput) SetSeed(val NilInt64) {
-	s.Seed = val
 }
 
 type ProblemDraftInputMode string

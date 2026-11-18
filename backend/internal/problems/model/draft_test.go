@@ -12,7 +12,7 @@ import (
 var testQuotas = DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 10, Tests: 10, Components: 10, Subtasks: 10}
 
 func validDraft() Draft {
-	gen, sol, sub, seed := "gen", "main", uuid.New(), int64(1)
+	gen, sol, sub := "gen", "main", uuid.New()
 	return Draft{ProblemID: uuid.New(), Revision: 1, Title: "A", ShortName: "a", Type: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256,
 		DraftContent: DraftContent{
 			Checker:      &DraftChecker{DraftProgram: DraftProgram{Language: "cpp"}},
@@ -24,7 +24,7 @@ func validDraft() Draft {
 			Assets:       []DraftAsset{{Name: "graph.png", ObjectID: uuid.New()}},
 			Subtasks:     []DraftSubtask{{ID: sub, Ordinal: 1, Name: "main", Policy: "complete"}},
 			Tests: []DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: sub,
-				Input:  DraftInput{Mode: "generator", Generator: &gen, Seed: &seed},
+				Input:  DraftInput{Mode: "generator", Generator: &gen, Args: []string{"1"}},
 				Answer: DraftAnswer{Mode: "generated", Solution: &sol}}},
 		}}
 }

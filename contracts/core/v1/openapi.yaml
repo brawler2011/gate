@@ -3073,7 +3073,6 @@ components:
       - object_id
       - generator
       - args
-      - seed
       properties:
         mode:
           type: string
@@ -3092,11 +3091,6 @@ components:
           type: array
           items:
             type: string
-        seed:
-          description: Appended as the last generator argument when set; without it the generator gets exactly args.
-          type: integer
-          format: int64
-          nullable: true
     ProblemDraftAnswer:
       type: object
       required:

@@ -99,10 +99,9 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Print a+b."}}
 	d.MainSolution = &solution
 	d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
-	seed := int64(1)
 	test := func(ordinal int, weight points.Value, a, b string) problemsmodel.DraftTest {
 		return problemsmodel.DraftTest{ID: uuid.New(), Ordinal: ordinal, SubtaskID: group, Points: weight,
-			Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}, Seed: &seed},
+			Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}},
 			Answer: problemsmodel.DraftAnswer{Mode: "generated", Solution: &solution}}
 	}
 	d.Tests = []problemsmodel.DraftTest{test(1, 40*points.Unit, "1", "2"), test(2, 60*points.Unit, "3", "2")}
@@ -337,9 +336,8 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 			d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Reply with twice the number."}}
 			d.MainSolution = &solution
 			d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
-			seed := int64(1)
 			d.Tests = []problemsmodel.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: group, Points: 100 * points.Unit,
-				Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"5"}, Seed: &seed},
+				Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: []string{"5"}},
 				Answer: problemsmodel.DraftAnswer{Mode: "interactive"}}}
 		}
 	}
@@ -386,10 +384,9 @@ func TestStandardCheckerE2E(t *testing.T) {
 			d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Compute."}}
 			d.MainSolution = &main
 			d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
-			seed := int64(1)
 			for i, args := range [][]string{{"1", "3"}, {"2", "7"}} {
 				d.Tests = append(d.Tests, problemsmodel.DraftTest{ID: uuid.New(), Ordinal: i + 1, SubtaskID: group, Points: 50 * points.Unit,
-					Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: args, Seed: &seed},
+					Input:  problemsmodel.DraftInput{Mode: "generator", Generator: &generator, Args: args},
 					Answer: problemsmodel.DraftAnswer{Mode: "generated", Solution: &main}})
 			}
 		}

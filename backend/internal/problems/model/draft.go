@@ -139,11 +139,9 @@ type DraftInput struct {
 	Mode      string     `json:"mode"`
 	ObjectID  *uuid.UUID `json:"object_id"`
 	Generator *string    `json:"generator"`
-	Args      []string   `json:"args"`
-	// Seed, when set, is appended as one decimal argv element after Args.
-	// Without it the generator runs with exactly Args, as in Polygon, where
-	// testlib derives its random seed from the arguments.
-	Seed *int64 `json:"seed"`
+	// Args are the generator's whole argv after its name, as in Polygon;
+	// testlib derives its random seed from them.
+	Args []string `json:"args"`
 }
 
 type DraftAnswer struct {
@@ -588,7 +586,7 @@ func (d *Draft) validateTests(v *validation) {
 		i := test.Input
 		switch i.Mode {
 		case "manual":
-			if i.ObjectID == nil || *i.ObjectID == uuid.Nil || i.Generator != nil || i.Seed != nil || len(i.Args) != 0 {
+			if i.ObjectID == nil || *i.ObjectID == uuid.Nil || i.Generator != nil || len(i.Args) != 0 {
 				v.fail(at+"/input", "manual input needs content and no generator")
 			}
 		case "generator":

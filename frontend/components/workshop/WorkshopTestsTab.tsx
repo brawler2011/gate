@@ -138,9 +138,7 @@ const describeInput = (test: ProblemDraftTest, draft: ProblemDraft, problemId: s
   const generator = draft.generators.find((g) => g.name === test.input.generator);
   return (
     <Text size="sm" ff="monospace">
-      {generator?.name ?? "?"} {test.input.args.join(" ")}
-      {test.input.seed !== null && ` #${test.input.seed}`}
-    </Text>
+      {generator?.name ?? "?"} {test.input.args.join(" ")}    </Text>
   );
 };
 

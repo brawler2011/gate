@@ -27,7 +27,6 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
   const [inputMode, setInputMode] = useState<"manual" | "generator">(test.input.mode);
   const [generator, setGenerator] = useState(test.input.generator);
   const [args, setArgs] = useState(test.input.args.join(" "));
-  const [seed, setSeed] = useState<number | null>(test.input.seed);
   const [answerMode, setAnswerMode] = useState(test.answer.mode);
   const [solution, setSolution] = useState(test.answer.solution ?? draft.main_solution);
   const [inputFile, setInputFile] = useState<File | null>(null);
@@ -61,8 +60,8 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
       points: toHundredths(points) / 100,
       input:
         inputMode === "manual"
-          ? {mode: "manual", object_id: test.input.object_id, generator: null, args: [], seed: null}
-          : {mode: "generator", object_id: null, generator, args: parseArgs(args), seed},
+          ? {mode: "manual", object_id: test.input.object_id, generator: null, args: []}
+          : {mode: "generator", object_id: null, generator, args: parseArgs(args)},
       answer: buildAnswer(),
     };
     onSubmit(next, {
@@ -116,15 +115,7 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
           ) : (
             <>
               <Select label="Генератор" data={programOptions(draft.generators)} value={generator} onChange={setGenerator} placeholder="Не выбран" />
-              <TextInput label="Аргументы" description="Передаются генератору как argv, разделитель — пробел" value={args} onChange={(e) => setArgs(e.currentTarget.value)} />
-              <NumberInput
-                label="Seed"
-                description="Необязательно; если задан, передаётся последним аргументом"
-                value={seed ?? ""}
-                onChange={(value) => setSeed(typeof value === "number" ? value : null)}
-                allowDecimal={false}
-              />
-            </>
+              <TextInput label="Аргументы" description="Передаются генератору как argv, разделитель — пробел" value={args} onChange={(e) => setArgs(e.currentTarget.value)} />            </>
           )}
         </Stack>
 

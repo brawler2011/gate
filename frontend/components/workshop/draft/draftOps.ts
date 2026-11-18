@@ -270,7 +270,7 @@ export const newGeneratedTest = (draft: ProblemDraft, subtaskId: string): Proble
   subtask_id: subtaskId,
   sample: false,
   points: 0,
-  input: {mode: "generator", object_id: null, generator: draft.generators[0]?.name ?? null, args: [], seed: null},
+  input: {mode: "generator", object_id: null, generator: draft.generators[0]?.name ?? null, args: []},
   answer: newAnswer(draft, "generated"),
 });
 
@@ -280,7 +280,7 @@ export const newManualTest = (draft: ProblemDraft, subtaskId: string): ProblemDr
   subtask_id: subtaskId,
   sample: false,
   points: 0,
-  input: {mode: "manual", object_id: null, generator: null, args: [], seed: null},
+  input: {mode: "manual", object_id: null, generator: null, args: []},
   answer: newAnswer(draft, "provided"),
 });
 
