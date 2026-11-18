@@ -7912,8 +7912,8 @@ func (s *ProblemBuildState) UnmarshalText(data []byte) error {
 	}
 }
 
-// The editable problem as typed entries without package paths. Programs, library files and tests are
-// referred to by ID; names are labels.
+// The editable problem as typed entries without package paths. Programs and tests are referred to by
+// ID and their names are labels; library files are included by their names.
 // Ref: #/components/schemas/ProblemDraft
 type ProblemDraft struct {
 	ProblemID     uuid.UUID              `json:"problem_id"`
@@ -8342,21 +8342,15 @@ func (s *ProblemDraftInputMode) UnmarshalText(data []byte) error {
 	}
 }
 
-// A source file judge programs include by its name; names are unique in a draft.
+// A source file judge programs include by its name; names are unique in a draft and identify the file.
 // Ref: #/components/schemas/ProblemDraftLibraryFile
 type ProblemDraftLibraryFile struct {
-	ID   uuid.UUID `json:"id"`
-	Name string    `json:"name"`
+	Name string `json:"name"`
 	// Empty for an auto-updated file.
 	Content string `json:"content"`
 	// The file is the system library file of its name from GET /lib, whose current text every build takes.
 	// Only an empty file named after a system library file can be auto-updated.
 	AutoUpdate bool `json:"auto_update"`
-}
-
-// GetID returns the value of ID.
-func (s *ProblemDraftLibraryFile) GetID() uuid.UUID {
-	return s.ID
 }
 
 // GetName returns the value of Name.
@@ -8372,11 +8366,6 @@ func (s *ProblemDraftLibraryFile) GetContent() string {
 // GetAutoUpdate returns the value of AutoUpdate.
 func (s *ProblemDraftLibraryFile) GetAutoUpdate() bool {
 	return s.AutoUpdate
-}
-
-// SetID sets the value of ID.
-func (s *ProblemDraftLibraryFile) SetID(val uuid.UUID) {
-	s.ID = val
 }
 
 // SetName sets the value of Name.

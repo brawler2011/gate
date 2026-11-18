@@ -74,24 +74,25 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
   const {save, isSaving} = useSaveDraft(problemId);
   const [params, setParams] = useSearchParams();
   const [newName, setNewName] = useState("");
-  const selected = draft.library.find((file) => file.id === params.get("file")) ?? draft.library[0];
+  const selected = draft.library.find((file) => file.name === params.get("file")) ?? draft.library[0];
 
-  const open = (id: string) => {
+  const open = (name: string) => {
     const next = new URLSearchParams(params);
-    next.set("file", id);
+    next.set("file", name);
     setParams(next, {replace: true});
   };
 
   const handleCreate = async () => {
-    let createdId = "";
-    const ok = await save((current) => {
-      const result = addLibraryFile(current, newName.trim());
-      createdId = result.id;
-      return result.draft;
-    });
-    if (ok) {
+    const name = newName.trim();
+    if (await save((current) => addLibraryFile(current, name))) {
       setNewName("");
-      open(createdId);
+      open(name);
+    }
+  };
+
+  const handleRename = async (from: string, to: string) => {
+    if (await save((current) => updateLibraryFile(current, from, {name: to}))) {
+      open(to);
     }
   };
 
@@ -99,14 +100,8 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
   const missing = system.filter((s) => !draft.library.some((file) => file.auto_update && file.name === s.name));
 
   const handleAddSystem = async (name: string) => {
-    let createdId = "";
-    const ok = await save((current) => {
-      const result = addSystemFile(current, name);
-      createdId = result.id;
-      return result.draft;
-    });
-    if (ok) {
-      open(createdId);
+    if (await save((current) => addSystemFile(current, name))) {
+      open(name);
     }
   };
 
@@ -123,11 +118,11 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
             )}
             {draft.library.map((file) => (
               <NavLink
-                key={file.id}
-                active={file.id === selected?.id}
+                key={file.name}
+                active={file.name === selected?.name}
                 label={file.name}
                 description={file.auto_update ? "автообновление" : undefined}
-                onClick={() => open(file.id)}
+                onClick={() => open(file.name)}
               />
             ))}
             {missing.length > 0 && (
@@ -157,11 +152,11 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
         {selected?.auto_update && (
           <SectionPaper>
             <SystemFile
-              key={selected.id}
+              key={selected.name}
               file={selected}
               saving={isSaving}
-              onStop={(text) => void save((current) => stopAutoUpdate(current, selected.id, text))}
-              onDelete={() => void save((current) => removeLibraryFile(current, selected.id))}
+              onStop={(text) => void save((current) => stopAutoUpdate(current, selected.name, text))}
+              onDelete={() => void save((current) => removeLibraryFile(current, selected.name))}
             />
           </SectionPaper>
         )}
@@ -169,18 +164,18 @@ const LibraryPanel = ({draft, problemId}: {draft: ProblemDraft; problemId: strin
           <SectionPaper>
             <Stack gap="md">
               <RenameFile
-                key={`${selected.id}:${selected.name}`}
+                key={selected.name}
                 name={selected.name}
                 saving={isSaving}
-                onRename={(name) => void save((current) => updateLibraryFile(current, selected.id, {name}))}
+                onRename={(name) => void handleRename(selected.name, name)}
               />
               <SourceEditor
-                key={selected.id}
+                key={selected.name}
                 label={selected.name}
                 content={selected.content}
                 saving={isSaving}
-                onSave={(content) => void save((current) => updateLibraryFile(current, selected.id, {content}))}
-                onDelete={() => void save((current) => removeLibraryFile(current, selected.id))}
+                onSave={(content) => void save((current) => updateLibraryFile(current, selected.name, {content}))}
+                onDelete={() => void save((current) => removeLibraryFile(current, selected.name))}
               />
             </Stack>
           </SectionPaper>

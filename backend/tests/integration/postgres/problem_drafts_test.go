@@ -165,8 +165,8 @@ func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
 	object := insertAvailableObject(t, ctx, pool, org)
-	lib, generator, subtask := uuid.New(), uuid.New(), uuid.New()
-	d.Library = []model.DraftLibraryFile{{ID: lib, Name: "testlib.h", Content: "// lib"}}
+	generator, subtask := uuid.New(), uuid.New()
+	d.Library = []model.DraftLibraryFile{{Name: "testlib.h", Content: "// lib"}}
 	d.Generators = []model.DraftNamedProgram{named(generator, "gen", "cpp17", "int main(){}")}
 	d.Assets = []model.DraftAsset{{Name: "pic.png", ObjectID: object}}
 	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete"}}

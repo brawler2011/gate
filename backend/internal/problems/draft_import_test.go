@@ -153,7 +153,7 @@ func TestImportChargesSharedLibraryOnce(t *testing.T) {
 	plan, err := importDir(t, t.TempDir(), files)
 	require.NoError(t, err)
 	defer plan.Close()
-	require.Equal(t, []model.DraftLibraryFile{{ID: plan.draft.Library[0].ID, Name: "testlib.h", Content: header}}, plan.draft.Library)
+	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", Content: header}}, plan.draft.Library)
 }
 
 // Many statements naming one large file are charged as they are converted.
@@ -210,7 +210,7 @@ func TestImportRecognizesUpstreamTestlib(t *testing.T) {
 	plan, err := importDir(t, pkgDir, nil)
 	require.NoError(t, err)
 	defer plan.Close()
-	require.Equal(t, []model.DraftLibraryFile{{ID: plan.draft.Library[0].ID, Name: "testlib.h", AutoUpdate: true}}, plan.draft.Library)
+	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", AutoUpdate: true}}, plan.draft.Library)
 	require.NoError(t, plan.draft.Validate(importQuotas, nil))
 
 	original, err := os.ReadFile(pkgDir + "/files/testlib.h")
@@ -219,7 +219,7 @@ func TestImportRecognizesUpstreamTestlib(t *testing.T) {
 	plan, err = importDir(t, pkgDir, map[string]string{"files/testlib.h": patched})
 	require.NoError(t, err)
 	defer plan.Close()
-	require.Equal(t, []model.DraftLibraryFile{{ID: plan.draft.Library[0].ID, Name: "testlib.h", Content: patched}}, plan.draft.Library)
+	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", Content: patched}}, plan.draft.Library)
 }
 
 // rnd differs between testlib versions, so a package with generators keeps
@@ -232,7 +232,7 @@ func TestImportKeepsGeneratorTestlib(t *testing.T) {
 	defer plan.Close()
 	original, err := os.ReadFile(pkgDir + "/files/testlib.h")
 	require.NoError(t, err)
-	require.Equal(t, []model.DraftLibraryFile{{ID: plan.draft.Library[0].ID, Name: "testlib.h", Content: string(original)}}, plan.draft.Library)
+	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", Content: string(original)}}, plan.draft.Library)
 
 	system, _ := syslib.Lookup("testlib.h")
 	plan, err = importDir(t, pkgDir, map[string]string{"files/testlib.h": system.Content})
@@ -247,7 +247,7 @@ func TestImportSystemLibrary(t *testing.T) {
 	plan, err := importAPlusB(t, nil)
 	require.NoError(t, err)
 	defer plan.Close()
-	require.Equal(t, []model.DraftLibraryFile{{ID: plan.draft.Library[0].ID, Name: "testlib.h", AutoUpdate: true}}, plan.draft.Library)
+	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", AutoUpdate: true}}, plan.draft.Library)
 
 	_, err = importAPlusB(t, map[string]string{"lib/testlib.h": "// copy\n"})
 	require.ErrorContains(t, err, "system library file")

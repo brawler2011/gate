@@ -1762,10 +1762,8 @@ export interface components {
             language: string;
             source: string;
         };
-        /** @description A source file judge programs include by its name; names are unique in a draft. */
+        /** @description A source file judge programs include by its name; names are unique in a draft and identify the file. */
         ProblemDraftLibraryFile: {
-            /** Format: uuid */
-            id: string;
             name: string;
             /** @description Empty for an auto-updated file. */
             content: string;
@@ -1813,7 +1811,7 @@ export interface components {
             /** Format: uuid */
             object_id: string;
         };
-        /** @description The editable problem as typed entries without package paths. Programs, library files and tests are referred to by ID; names are labels. */
+        /** @description The editable problem as typed entries without package paths. Programs and tests are referred to by ID and their names are labels; library files are included by their names. */
         ProblemDraft: {
             /** Format: uuid */
             problem_id: string;

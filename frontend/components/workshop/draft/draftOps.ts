@@ -87,30 +87,31 @@ export const removeProgram = (draft: ProblemDraft, role: ListRole, id: string): 
   main_solution_id: draft.main_solution_id === id ? null : draft.main_solution_id,
 });
 
-export const addLibraryFile = (draft: ProblemDraft, name: string): {draft: ProblemDraft; id: string} => {
-  const file: ProblemDraftLibraryFile = {id: newId(), name, content: "", auto_update: false};
-  return {draft: {...draft, library: [...draft.library, file]}, id: file.id};
-};
+/** Library files are identified by their names, which are unique in a draft. */
+export const addLibraryFile = (draft: ProblemDraft, name: string): ProblemDraft => ({
+  ...draft,
+  library: [...draft.library, {name, content: "", auto_update: false}],
+});
 
 /** Adds the system library file `name`, which every build takes at its current version. */
-export const addSystemFile = (draft: ProblemDraft, name: string): {draft: ProblemDraft; id: string} => {
-  const file: ProblemDraftLibraryFile = {id: newId(), name, content: "", auto_update: true};
-  return {draft: {...draft, library: [...draft.library, file]}, id: file.id};
-};
+export const addSystemFile = (draft: ProblemDraft, name: string): ProblemDraft => ({
+  ...draft,
+  library: [...draft.library, {name, content: "", auto_update: true}],
+});
 
 /** Turns an auto-updated file into an editable copy of the system text. */
-export const stopAutoUpdate = (draft: ProblemDraft, id: string, systemText: string): ProblemDraft =>
-  updateLibraryFile(draft, id, {content: systemText, auto_update: false});
+export const stopAutoUpdate = (draft: ProblemDraft, name: string, systemText: string): ProblemDraft =>
+  updateLibraryFile(draft, name, {content: systemText, auto_update: false});
 
 export const updateLibraryFile = (
   draft: ProblemDraft,
-  id: string,
-  patch: Partial<Omit<ProblemDraftLibraryFile, "id">>,
-): ProblemDraft => ({...draft, library: draft.library.map((f) => (f.id === id ? {...f, ...patch} : f))});
+  name: string,
+  patch: Partial<ProblemDraftLibraryFile>,
+): ProblemDraft => ({...draft, library: draft.library.map((f) => (f.name === name ? {...f, ...patch} : f))});
 
-export const removeLibraryFile = (draft: ProblemDraft, id: string): ProblemDraft => ({
+export const removeLibraryFile = (draft: ProblemDraft, name: string): ProblemDraft => ({
   ...draft,
-  library: draft.library.filter((f) => f.id !== id),
+  library: draft.library.filter((f) => f.name !== name),
 });
 
 export const STATEMENT_SECTIONS = ["legend", "input", "output", "interaction", "notes", "scoring"] as const;

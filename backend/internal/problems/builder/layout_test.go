@@ -14,7 +14,7 @@ import (
 // the system text the package must carry; solutions compile alone.
 func TestPlaceDraftSharesLibraryWithJudgePrograms(t *testing.T) {
 	d := model.Draft{DraftContent: model.DraftContent{
-		Library:   []model.DraftLibraryFile{{ID: uuid.New(), Name: "testlib.h", AutoUpdate: true}, {ID: uuid.New(), Name: "graph.h", Content: "// graph\n"}},
+		Library:   []model.DraftLibraryFile{{Name: "testlib.h", AutoUpdate: true}, {Name: "graph.h", Content: "// graph\n"}},
 		Checker:   &model.DraftProgram{Language: "cpp17"},
 		Solutions: []model.DraftNamedProgram{{ID: uuid.New(), Name: "main", DraftProgram: model.DraftProgram{Language: "cpp17"}}},
 	}}

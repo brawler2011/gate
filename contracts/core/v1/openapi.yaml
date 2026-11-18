@@ -3149,17 +3149,13 @@ components:
         source:
           type: string
     ProblemDraftLibraryFile:
-      description: A source file judge programs include by its name; names are unique in a draft.
+      description: A source file judge programs include by its name; names are unique in a draft and identify the file.
       type: object
       required:
-      - id
       - name
       - content
       - auto_update
       properties:
-        id:
-          type: string
-          format: uuid
         name:
           type: string
         content:

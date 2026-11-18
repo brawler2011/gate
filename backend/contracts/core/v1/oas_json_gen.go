@@ -16661,10 +16661,6 @@ func (s *ProblemDraftLibraryFile) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ProblemDraftLibraryFile) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("id")
-		json.EncodeUUID(e, s.ID)
-	}
-	{
 		e.FieldStart("name")
 		e.Str(s.Name)
 	}
@@ -16678,11 +16674,10 @@ func (s *ProblemDraftLibraryFile) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfProblemDraftLibraryFile = [4]string{
-	0: "id",
-	1: "name",
-	2: "content",
-	3: "auto_update",
+var jsonFieldsNameOfProblemDraftLibraryFile = [3]string{
+	0: "name",
+	1: "content",
+	2: "auto_update",
 }
 
 // Decode decodes ProblemDraftLibraryFile from json.
@@ -16694,20 +16689,8 @@ func (s *ProblemDraftLibraryFile) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "id":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := json.DecodeUUID(d)
-				s.ID = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"id\"")
-			}
 		case "name":
-			requiredBitSet[0] |= 1 << 1
+			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
 				v, err := d.Str()
 				s.Name = string(v)
@@ -16719,7 +16702,7 @@ func (s *ProblemDraftLibraryFile) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"name\"")
 			}
 		case "content":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				v, err := d.Str()
 				s.Content = string(v)
@@ -16731,7 +16714,7 @@ func (s *ProblemDraftLibraryFile) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"content\"")
 			}
 		case "auto_update":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				v, err := d.Bool()
 				s.AutoUpdate = bool(v)
@@ -16752,7 +16735,7 @@ func (s *ProblemDraftLibraryFile) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00001111,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

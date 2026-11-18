@@ -316,7 +316,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 	}
 	for _, name := range order {
 		list := texts[name]
-		file := model.DraftLibraryFile{ID: uuid.New(), Name: name}
+		file := model.DraftLibraryFile{Name: name}
 		current, known := syslib.Lookup(name)
 		upstream := known && len(list) > 0
 		for _, text := range list {

@@ -67,10 +67,9 @@ type DraftNamedProgram struct {
 // auto-updated file stores no content: it is the system library file of its
 // name, whose current text every build takes.
 type DraftLibraryFile struct {
-	ID         uuid.UUID `json:"id"`
-	Name       string    `json:"name"`
-	Content    string    `json:"content"`
-	AutoUpdate bool      `json:"auto_update"`
+	Name       string `json:"name"`
+	Content    string `json:"content"`
+	AutoUpdate bool   `json:"auto_update"`
 }
 
 // Text returns the text a build compiles and packages for the file.
@@ -412,7 +411,6 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	library := make(map[string]bool)
 	for i, f := range d.Library {
 		at := fmt.Sprintf("/library/%d", i)
-		unique(at+"/id", f.ID)
 		if !ValidFileName(f.Name) || library[f.Name] {
 			v.fail(at+"/name", "invalid or duplicate file name %q", f.Name)
 		}

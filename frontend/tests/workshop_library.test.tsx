@@ -21,7 +21,7 @@ const draft: ProblemDraft = {
   problem_id: "problem", revision: 3, title: "A", short_name: "a", type: "pass-fail", time_limit_ms: 1000,
   memory_limit_mb: 256, max_score: null, checker: null, interactor: null, validators: [], generators: [],
   solutions: [], main_solution_id: null, statements: [], assets: [], subtasks: [], tests: [],
-  library: [{id: "lib", name: "testlib.h", content: "", auto_update: true}],
+  library: [{name: "testlib.h", content: "", auto_update: true}],
 };
 
 describe("workshop library", () => {
@@ -50,7 +50,7 @@ describe("workshop library", () => {
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
     fireEvent.click(button);
     await waitFor(() => expect(puts).toHaveLength(1));
-    expect(puts[0].library).toEqual([{id: "lib", name: "testlib.h", content: SYSTEM, auto_update: false}]);
+    expect(puts[0].library).toEqual([{name: "testlib.h", content: SYSTEM, auto_update: false}]);
     // The copy is an ordinary file the author edits.
     await waitFor(() => expect(view.getByRole("button", {name: "Сохранить"})).toBeTruthy());
   });

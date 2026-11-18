@@ -122,7 +122,7 @@ func TestPublicationRejectsInconsistentSaves(t *testing.T) {
 		change        func(*model.Draft)
 	}{
 		{"library name taken", "duplicate file name", func(d *model.Draft) {
-			d.Library = []model.DraftLibraryFile{{ID: uuid.New(), Name: "a.h"}, {ID: uuid.New(), Name: "a.h"}}
+			d.Library = []model.DraftLibraryFile{{Name: "a.h"}, {Name: "a.h"}}
 		}},
 		{"unknown group", "/tests/0/subtask_id: unknown subtask", func(d *model.Draft) { d.Tests[0].SubtaskID = uuid.New() }},
 		{"unknown dependency", "unknown subtask", func(d *model.Draft) { d.Subtasks[0].DependsOn = []uuid.UUID{uuid.New()} }},
