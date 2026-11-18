@@ -33,6 +33,10 @@ export const useContestLanguages = (allowed: string[] | undefined): SupportedLan
 export const languageName = (catalog: SupportedLanguage[], id: string | undefined): string =>
   catalog.find((language) => language.id === id)?.name ?? id ?? "";
 
-/** The configuration a file extension suggests: the first in catalog order accepting it. */
-export const languageForExtension = (catalog: SupportedLanguage[], extension: string): SupportedLanguage | undefined =>
-  catalog.find((language) => language.extensions.includes(extension.toLowerCase()));
+/** Prefer the saved matching configuration, then the first match in catalog order. */
+export const languageForExtension = (
+  catalog: SupportedLanguage[], extension: string, preferred?: string,
+): SupportedLanguage | undefined => {
+  const matches = catalog.filter((language) => language.extensions.includes(extension.toLowerCase()));
+  return matches.find((language) => language.id === preferred) ?? matches[0];
+};

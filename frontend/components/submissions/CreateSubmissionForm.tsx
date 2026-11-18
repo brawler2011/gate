@@ -2,11 +2,11 @@
 
 import {ActionIcon, Button, Center, Group, Select, Stack, Text} from "@mantine/core";
 import {useForm} from "@mantine/form";
+import {useLocalStorage} from "@mantine/hooks";
 import {IconPaperclip, IconTrash} from "@tabler/icons-react";
 import React, {useRef, useState, useTransition, type ReactNode} from "react";
 import Editor from "react-simple-code-editor";
 
-import {detectSubmissionLanguage} from "@/lib/detectSubmissionLanguage";
 import {highlightCode, useGrammar} from "@/lib/highlightCode";
 import {languageForExtension, type SupportedLanguage} from "@/lib/languages";
 import {APP_COLORS} from "@/lib/theme/colors";
@@ -21,8 +21,6 @@ import "./vsc-dark-plus.css";
 type CodeEditorProps = React.ComponentProps<typeof CodeEditor>;
 
 const TypedEditor = Editor as React.ComponentType<CodeEditorProps>;
-
-const AUTO = "auto";
 
 type Props = {
   /** Configurations the contestant may choose, in catalog order. */
@@ -41,7 +39,13 @@ const CreateSubmissionForm = ({
   large = false,
   disabled = false,
 }: Props): ReactNode => {
-  const [automaticLanguage, setAutomaticLanguage] = useState(true);
+  const [savedLanguage, setSavedLanguage] = useLocalStorage<string>({
+    key: "submission-language",
+    defaultValue: "",
+    getInitialValueInEffect: false,
+    sync: false,
+  });
+  const selected = languages.find((language) => language.id === savedLanguage) ?? languages[0];
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -54,68 +58,49 @@ const CreateSubmissionForm = ({
   const form = useForm({
     initialValues: {
       code: "",
-      language: AUTO,
     },
     validate: {
       code: (value) => (!value && !file ? "Code or file is required" : null),
-      language: (value) =>
-        languages.some((language) => language.id === value)
-          ? null : "Не удалось определить язык. Выберите его вручную.",
     },
   });
-  const options = [
-    {value: AUTO, label: "Автоопределение"},
-    ...languages.map((language) => ({value: language.id, label: language.name})),
-  ];
-  const selected = languages.find((language) => language.id === form.values.language);
+  const options = languages.map((language) => ({value: language.id, label: language.name}));
   const grammar = useGrammar(selected?.syntax);
-  const selectWidth = `${(options.find((option) => option.value === form.values.language)?.label.length ?? 6) + 6}ch`;
+  const selectWidth = `${(selected?.name.length ?? 6) + 6}ch`;
   const accept = [...new Set(languages.flatMap((language) => language.extensions)), "txt"].map((extension) => "." + extension);
 
-  const {setFieldValue} = form;
   React.useEffect(() => {
-    if (!automaticLanguage) {
-      return;
+    if (selected && selected.id !== savedLanguage) {
+      setSavedLanguage(selected.id);
     }
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      try {
-        const source = file ? await file.slice(0, 32768).text() : form.values.code;
-        if (!cancelled) {
-          // The detected language suggests the first allowed configuration for its extension.
-          const extension = detectSubmissionLanguage(source);
-          setFieldValue("language", (extension && languageForExtension(languages, extension)?.id) || AUTO);
-        }
-      } catch {
-        if (!cancelled) {
-          setFieldValue("language", AUTO);
-        }
-      }
-    }, 200);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [automaticLanguage, file, form.values.code, form.values.language, languages, setFieldValue]);
+  }, [selected, savedLanguage, setSavedLanguage]);
 
   const setCode = (code: string) => {
     form.setFieldValue("code", code);
-    if (automaticLanguage) {
-      form.setFieldValue("language", AUTO);
-    }
   };
 
   const selectLanguage = (language: string | null) => {
     if (language) {
-      setAutomaticLanguage(language === AUTO);
-      form.setFieldValue("language", language);
+      setSavedLanguage(language);
     }
+  };
+
+  const attachFile = (file: File) => {
+    const extension = file.name.includes(".") ? file.name.split(".").pop()! : "";
+    const language = languageForExtension(languages, extension, savedLanguage) ?? selected;
+    if (language) {
+      setSavedLanguage(language.id);
+    }
+    setFile(file);
+    setCode("");
   };
 
   const [isPending, startTransition] = useTransition();
 
   const onSubmitHandler = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!selected) {
+      return;
+    }
     form.onSubmit((values) => {
       startTransition(async () => {
         try {
@@ -125,10 +110,9 @@ const CreateSubmissionForm = ({
           } else {
             formData.append("submission", values.code);
           }
-          const data = await onSubmit(formData, values.language);
+          const data = await onSubmit(formData, selected.id);
           if (data) {
             form.reset();
-            setAutomaticLanguage(true);
             setFile(null);
             if (fileInputRef.current) {
               fileInputRef.current.value = "";
@@ -147,8 +131,7 @@ const CreateSubmissionForm = ({
     }
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
-      setFile(selectedFile);
-      setCode("");
+      attachFile(selectedFile);
     }
   };
 
@@ -168,9 +151,8 @@ const CreateSubmissionForm = ({
     }
 
     const droppedFile = event.dataTransfer.files[0];
-    if (droppedFile && accept.some((extension) => droppedFile.name.toLowerCase().endsWith(extension))) {
-      setFile(droppedFile);
-      setCode("");
+    if (droppedFile) {
+      attachFile(droppedFile);
     }
   };
 
@@ -236,8 +218,8 @@ const CreateSubmissionForm = ({
                 allowDeselect={false}
                 variant="subtle"
                 classNames={{input: classes.languageSelectInput}}
-                {...form.getInputProps("language")}
-                onOptionSubmit={selectLanguage}
+                value={selected?.id ?? null}
+                onChange={selectLanguage}
                 style={{width: selectWidth}}
                 disabled={disabled}
               />
@@ -251,8 +233,8 @@ const CreateSubmissionForm = ({
                 allowDeselect={false}
                 variant="subtle"
                 classNames={{input: classes.languageSelectInput}}
-                {...form.getInputProps("language")}
-                onOptionSubmit={selectLanguage}
+                value={selected?.id ?? null}
+                onChange={selectLanguage}
                 style={{width: selectWidth}}
                 disabled={disabled}
               />
@@ -336,7 +318,7 @@ const CreateSubmissionForm = ({
         <Button
           type="submit"
           loading={isPending}
-          disabled={disabled}
+          disabled={disabled || !selected}
           color={APP_COLORS.submissions}
         >
           Отправить решение

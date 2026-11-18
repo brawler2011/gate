@@ -15,7 +15,7 @@ for (const prop of Object.getOwnPropertyNames(win)) {
   if (['undefined', 'NaN', 'Infinity'].includes(prop) || prop.startsWith('_')) {
     continue;
   }
-  if (!(prop in globalThis) || ['window', 'document', 'navigator', 'location'].includes(prop)) {
+  if (!(prop in globalThis) || ['window', 'document', 'navigator', 'location', 'CustomEvent'].includes(prop)) {
     try {
       const value = (win as unknown as Record<string, unknown>)[prop];
       Object.defineProperty(globalThis, prop, {
