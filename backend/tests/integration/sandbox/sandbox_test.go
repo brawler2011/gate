@@ -14,6 +14,7 @@ import (
 
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/brawler2011/gate/backend/tests/judgeimage"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -127,6 +128,14 @@ func TestIntegrationSandbox(t *testing.T) {
 							deps[f.Name()] = content
 						}
 					}
+				}
+
+				for _, name := range pkg.Problem.SystemLibrary {
+					system, ok := syslib.Lookup(name)
+					if !ok {
+						t.Fatalf("unknown system library file %s", name)
+					}
+					deps[name] = []byte(system.Content)
 				}
 
 				// Compile checker if it exists

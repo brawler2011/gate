@@ -12,14 +12,14 @@ import (
 var testQuotas = DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 10, Tests: 10, Components: 10, Subtasks: 10}
 
 func validDraft() Draft {
-	lib, gen, sol, sub, seed := uuid.New(), uuid.New(), uuid.New(), uuid.New(), int64(1)
+	gen, sol, sub, seed := uuid.New(), uuid.New(), uuid.New(), int64(1)
 	return Draft{ProblemID: uuid.New(), Revision: 1, Title: "A", ShortName: "a", Type: "pass-fail", TimeLimitMs: 1000, MemoryLimitMb: 256,
 		DraftContent: DraftContent{
-			Checker:        &DraftProgram{Language: "cpp", Dependencies: []uuid.UUID{lib}},
+			Checker:        &DraftProgram{Language: "cpp"},
 			Generators:     []DraftNamedProgram{{ID: gen, Name: "gen", DraftProgram: DraftProgram{Language: "python"}}},
-			Solutions:      []DraftNamedProgram{{ID: sol, Name: "main", DraftProgram: DraftProgram{Language: "cpp", Dependencies: []uuid.UUID{lib}}}},
+			Solutions:      []DraftNamedProgram{{ID: sol, Name: "main", DraftProgram: DraftProgram{Language: "cpp"}}},
 			MainSolutionID: &sol,
-			Library:        []DraftLibraryFile{{ID: lib, Name: "testlib.h"}},
+			Library:        []DraftLibraryFile{{Name: "testlib.h"}},
 			Statements:     []DraftStatement{{Language: "en", Legend: "![graph](graph.png)"}},
 			Assets:         []DraftAsset{{Name: "graph.png", ObjectID: uuid.New()}},
 			Subtasks:       []DraftSubtask{{ID: sub, Ordinal: 1, Name: "main", Policy: "complete"}},
@@ -46,18 +46,18 @@ func TestValidateLocatesViolations(t *testing.T) {
 		message string
 	}{
 		"test input from a solution":    {func(d *Draft) { d.Tests[0].Input.GeneratorID = d.MainSolutionID }, "/tests/0/input/generator_id", "generator"},
-		"dependency on no library file": {func(d *Draft) { d.Checker.Dependencies = []uuid.UUID{uuid.New()} }, "/checker/dependencies/0", "not a library file"},
-		"two dependencies of one name": {func(d *Draft) {
-			other := uuid.New()
-			d.Library = append(d.Library, DraftLibraryFile{ID: other, Name: "testlib.h"})
-			d.Solutions[0].Dependencies = append(d.Solutions[0].Dependencies, other)
-		}, "/solutions/0/dependencies/1", "named \"testlib.h\""},
-		"library name with a folder": {func(d *Draft) { d.Library[0].Name = "lib/testlib.h" }, "/library/0/name", "invalid file name"},
+		"two library files of one name": {func(d *Draft) {
+			d.Library = append(d.Library, DraftLibraryFile{Name: "testlib.h"})
+		}, "/library/1/name", "duplicate file name \"testlib.h\""},
+		"library name with a folder": {func(d *Draft) { d.Library[0].Name = "lib/testlib.h" }, "/library/0/name", "invalid or duplicate file name"},
 		"subtask cycle": {func(d *Draft) {
 			other := uuid.New()
 			d.Subtasks = append(d.Subtasks, DraftSubtask{ID: other, Ordinal: 2, Policy: "each", DependsOn: []uuid.UUID{d.Subtasks[0].ID}})
 			d.Subtasks[0].DependsOn = []uuid.UUID{other}
 		}, "/subtasks/1/depends_on/0", "cycle"},
+		"auto-updated file with own text": {func(d *Draft) {
+			d.Library[0].AutoUpdate, d.Library[0].Content = true, "// patched"
+		}, "/library/0/auto_update", "only an empty system library file"},
 		"second validator": {func(d *Draft) {
 			d.Validators = []DraftNamedProgram{{ID: uuid.New(), Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, {ID: uuid.New(), Name: "b", DraftProgram: DraftProgram{Language: "cpp"}}}
 		}, "/validators/1", "at most one validator"},

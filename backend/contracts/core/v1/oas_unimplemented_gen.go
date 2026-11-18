@@ -680,6 +680,15 @@ func (UnimplementedHandler) GetSubmission(ctx context.Context, params GetSubmiss
 	return r, ht.ErrNotImplemented
 }
 
+// GetSystemLibrary implements GetSystemLibrary operation.
+//
+// The files auto-updated library files of problem drafts build with, such as testlib.h.
+//
+// GET /lib
+func (UnimplementedHandler) GetSystemLibrary(ctx context.Context) (r *SystemLibrary, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetTeam implements GetTeam operation.
 //
 // Get team by ID.

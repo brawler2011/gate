@@ -23,6 +23,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/formats"
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"github.com/brawler2011/gate/backend/pkg/formats/tex"
+	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/brawler2011/gate/backend/pkg/ziputil"
 	"github.com/google/uuid"
 )
@@ -157,7 +158,7 @@ func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (import
 // entries: programs by role, library files, statement sections and assets.
 // Test inputs, answers and assets become objects.
 func (uc *DraftUseCase) convertImport(result *draftImport, root string, p *spec.Problem, id uuid.UUID, revision int64) error {
-	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}, library: map[string]uuid.UUID{}}
+	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}}
 	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb,
 		DraftContent: model.DraftContent{Validators: []model.DraftNamedProgram{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftNamedProgram{},
 			Library: []model.DraftLibraryFile{}, Statements: []model.DraftStatement{}, Assets: []model.DraftAsset{}, Tests: []model.DraftTest{}, Subtasks: []model.DraftSubtask{}}}
@@ -177,8 +178,6 @@ type importConverter struct {
 	textTests bool
 	// objects maps a package path to the object holding it.
 	objects map[string]uuid.UUID
-	// library maps the package path of a library file to its entry.
-	library map[string]uuid.UUID
 	// files, programs and textBytes count the draft as it grows, against
 	// DraftQuotas.
 	files     int
@@ -187,12 +186,8 @@ type importConverter struct {
 }
 
 func (c *importConverter) convert(p *spec.Problem) error {
-	for _, f := range p.Library {
-		lid, err := c.libraryFile(f.Name, f.Path)
-		if err != nil {
-			return err
-		}
-		c.library[f.Path] = lid
+	if err := c.addLibrary(p); err != nil {
+		return err
 	}
 	var err error
 	if p.Checker != nil {
@@ -251,32 +246,113 @@ func (c *importConverter) convert(p *spec.Problem) error {
 	return c.addGroups(p.Groups, generators)
 }
 
-// libraryFile returns the library entry named name with the text of the
-// package file at path. Copies with equal name and text, such as testlib.h in
-// every ICPC program folder, share one entry.
-func (c *importConverter) libraryFile(name, path string) (uuid.UUID, error) {
-	if !model.ValidFileName(name) {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid library file name "+name)
+// addLibrary adds the library files the judge programs of p include. A
+// draft has one file of each name, so different texts under one name are
+// rejected, except upstream versions of a system library file that no
+// generator includes: they become the auto-updated file, since checkers and
+// validators take its current version anyway. A generator keeps the text of
+// its package, since rnd differs between testlib versions, unless the text is
+// the current system one.
+func (c *importConverter) addLibrary(p *spec.Problem) error {
+	paths := map[string]spec.File{}
+	for _, f := range p.Library {
+		paths[f.Path] = f
 	}
-	text, err := c.readText(path)
-	if err != nil {
-		return uuid.Nil, err
+	var order []string
+	texts, system, generated := map[string][]string{}, map[string]bool{}, map[string]bool{}
+	// sources holds a package path of each distinct text, for errors.
+	sources := map[string][]string{}
+	add := func(name string, f spec.File, generator bool) error {
+		if !model.ValidFileName(name) {
+			return pkg.Wrap(pkg.ErrBadInput, nil, "invalid library file name "+name)
+		}
+		if _, ok := texts[name]; !ok && !system[name] {
+			order = append(order, name)
+			texts[name] = nil
+		}
+		generated[name] = generated[name] || generator
+		// Each distinct text is charged as it is read, so a package cannot
+		// hold more text in memory than the draft quotas allow.
+		if f.System {
+			if !system[name] {
+				system[name] = true
+				return c.charge(0)
+			}
+			return nil
+		}
+		text, err := c.readText(f.Path)
+		if err != nil {
+			return err
+		}
+		if !slices.Contains(texts[name], text) {
+			if err := c.charge(len(text)); err != nil {
+				return err
+			}
+			texts[name] = append(texts[name], text)
+			sources[name] = append(sources[name], f.Path)
+		}
+		return nil
 	}
-	for _, f := range c.draft.Library {
-		if f.Name == name && f.Content == text {
-			return f.ID, nil
+	judge := func(program *spec.Program, generator bool) error {
+		if program == nil {
+			return nil
+		}
+		if program.Dependencies == nil {
+			for _, f := range p.Library {
+				if err := add(f.Name, f, generator); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		for _, name := range slices.Sorted(maps.Keys(program.Dependencies)) {
+			f, ok := paths[program.Dependencies[name]]
+			if !ok {
+				return pkg.Wrap(pkg.ErrBadInput, nil, "dependency "+program.Dependencies[name]+" of "+program.Path+" is not a library file")
+			}
+			if err := add(name, f, generator); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	for _, program := range []*spec.Program{p.Checker, p.Interactor, p.Validator} {
+		if err := judge(program, false); err != nil {
+			return err
 		}
 	}
-	if err := c.charge(len(text)); err != nil {
-		return uuid.Nil, err
+	for i := range p.Generators {
+		if err := judge(&p.Generators[i], true); err != nil {
+			return err
+		}
 	}
-	lid := uuid.New()
-	c.draft.Library = append(c.draft.Library, model.DraftLibraryFile{ID: lid, Name: name, Content: text})
-	return lid, nil
+	for _, name := range order {
+		list := texts[name]
+		file := model.DraftLibraryFile{Name: name}
+		current, known := syslib.Lookup(name)
+		upstream := known && len(list) > 0
+		for _, text := range list {
+			upstream = upstream && current.IsUpstream(text)
+		}
+		switch {
+		case system[name] && !known:
+			return pkg.Wrap(pkg.ErrBadInput, nil, "unknown system library file "+name)
+		case system[name] && len(list) > 0:
+			return pkg.Wrap(pkg.ErrBadInput, nil, "the package has its own "+name+" and names the system one")
+		case system[name], upstream && !generated[name], upstream && len(list) == 1 && list[0] == current.Content:
+			file.AutoUpdate = true
+		case len(list) == 1:
+			file.Content = list[0]
+		default:
+			return pkg.Wrap(pkg.ErrBadInput, nil, "programs include different files named "+name+": "+strings.Join(sources[name], ", ")+
+				"; a problem has one library file of each name, so rename one of them")
+		}
+		c.draft.Library = append(c.draft.Library, file)
+	}
+	return nil
 }
 
-// program reads a program source and resolves its library dependencies; a
-// program without explicit dependencies includes the whole library.
+// program reads a program source.
 func (c *importConverter) program(program spec.Program) (*model.DraftProgram, error) {
 	if c.programs++; c.programs > c.uc.DraftQuotas.Components {
 		return nil, pkg.ErrPayloadTooLarge
@@ -299,30 +375,7 @@ func (c *importConverter) program(program spec.Program) (*model.DraftProgram, er
 	if err := c.charge(len(text)); err != nil {
 		return nil, err
 	}
-	deps := []uuid.UUID{}
-	if program.Dependencies == nil {
-		names := map[string]bool{}
-		for _, f := range c.draft.Library {
-			if names[f.Name] {
-				return nil, pkg.Wrap(pkg.ErrBadInput, nil, "different library files named "+f.Name)
-			}
-			names[f.Name] = true
-			deps = append(deps, f.ID)
-		}
-	}
-	for _, destination := range slices.Sorted(maps.Keys(program.Dependencies)) {
-		source := program.Dependencies[destination]
-		if _, ok := c.library[source]; !ok {
-			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "dependency "+source+" of "+program.Path+" is not a library file")
-		}
-		// A dependency is placed under the name of its library file.
-		lid, err := c.libraryFile(destination, source)
-		if err != nil {
-			return nil, err
-		}
-		deps = append(deps, lid)
-	}
-	return &model.DraftProgram{Language: language, Source: text, Dependencies: deps}, nil
+	return &model.DraftProgram{Language: language, Source: text}, nil
 }
 
 // named adds a program of a role a draft holds several of, named after its

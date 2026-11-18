@@ -106,7 +106,7 @@ describe("server error pointers", () => {
     let draft = addProgram(emptyDraft(), "generator", "gen", "cpp", "");
     draft = addSubtask({...draft, statements: [emptyStatement("ru")]}, "A");
     draft = upsertTest(draft, newManualTest(draft, draft.subtasks[0].id));
-    expect(describePointer(draft, "/generators/0/dependencies/1")).toBe("Генератор gen");
+    expect(describePointer(draft, "/generators/0/source")).toBe("Генератор gen");
     expect(describePointer(draft, "/checker/language")).toBe("Чекер");
     expect(describePointer(draft, "/statements/0/legend")).toBe("Условие RU, легенда");
     expect(describePointer(draft, "/tests/0/input/object_id")).toBe("Тест 1");

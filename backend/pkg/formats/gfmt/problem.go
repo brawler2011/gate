@@ -20,14 +20,16 @@ type Problem struct {
 	Limits        Limits             `yaml:"limits" json:"limits"`
 	Subtasks      map[string]Subtask `yaml:"subtasks" json:"subtasks"`
 	Solutions     map[string]string  `yaml:"solutions" json:"solutions"`
+	// SystemLibrary names library files Gate provides, such as testlib.h; the
+	// package has no copy, and programs include them like files of lib/.
+	SystemLibrary []string `yaml:"system_library,omitempty" json:"system_library,omitempty"`
 }
 
 // Program is a source file of a built package that the judge compiles with its
-// own image. Dependencies map a file name in the compile directory to a package path.
+// own image, together with every file of lib/ under its name.
 type Program struct {
-	Source       string            `yaml:"source" json:"source"`
-	Language     string            `yaml:"language" json:"language"`
-	Dependencies map[string]string `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
+	Source   string `yaml:"source" json:"source"`
+	Language string `yaml:"language" json:"language"`
 }
 
 // Limits defines the resource limits for a problem.

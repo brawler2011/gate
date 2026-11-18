@@ -159,16 +159,15 @@ func TestProblemBuildSnapshotAndRecovery(t *testing.T) {
 	require.ErrorIs(t, repo.HeartbeatBuild(ctx, next.ID, *next.LeaseToken, time.Minute), pkg.ErrConflict)
 }
 
-// Renaming programs, library files and assets changes only labels: tests,
-// dependencies and the object references that keep uploads alive follow IDs.
+// Renaming programs, library files and assets changes only labels: tests
+// and the object references that keep uploads alive follow IDs.
 func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
 	object := insertAvailableObject(t, ctx, pool, org)
-	lib, generator, subtask := uuid.New(), uuid.New(), uuid.New()
-	d.Library = []model.DraftLibraryFile{{ID: lib, Name: "testlib.h", Content: "// lib"}}
+	generator, subtask := uuid.New(), uuid.New()
+	d.Library = []model.DraftLibraryFile{{Name: "testlib.h", Content: "// lib"}}
 	d.Generators = []model.DraftNamedProgram{named(generator, "gen", "cpp17", "int main(){}")}
-	d.Generators[0].Dependencies = []uuid.UUID{lib}
 	d.Assets = []model.DraftAsset{{Name: "pic.png", ObjectID: object}}
 	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete"}}
 	seed := int64(1)
@@ -186,7 +185,7 @@ func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 	renamed, err := repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
 	require.Equal(t, "random", renamed.Generators[0].Name)
-	require.Equal(t, []uuid.UUID{lib}, renamed.Generators[0].Dependencies)
+	require.Equal(t, "testlib-0.9.h", renamed.Library[0].Name)
 	require.Equal(t, saved.Tests, renamed.Tests)
 	require.Equal(t, []model.DraftAsset{{Name: "graph.png", ObjectID: object}}, renamed.Assets)
 

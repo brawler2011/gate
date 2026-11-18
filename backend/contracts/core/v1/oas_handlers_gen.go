@@ -6775,6 +6775,71 @@ func (s *Server) handleGetSubmissionRequest(args [1]string, argsEscaped bool, w 
 	}
 }
 
+// handleGetSystemLibraryRequest handles GetSystemLibrary operation.
+//
+// The files auto-updated library files of problem drafts build with, such as testlib.h.
+//
+// GET /lib
+func (s *Server) handleGetSystemLibraryRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err error
+	)
+
+	var rawBody []byte
+
+	var response *SystemLibrary
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetSystemLibraryOperation,
+			OperationSummary: "Get the system library files",
+			OperationID:      "GetSystemLibrary",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params:           middleware.Parameters{},
+			Raw:              r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = struct{}
+			Response = *SystemLibrary
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetSystemLibrary(ctx)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetSystemLibrary(ctx)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeGetSystemLibraryResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleGetTeamRequest handles GetTeam operation.
 //
 // Get team by ID.

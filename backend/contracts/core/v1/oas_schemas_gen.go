@@ -7912,8 +7912,8 @@ func (s *ProblemBuildState) UnmarshalText(data []byte) error {
 	}
 }
 
-// The editable problem as typed entries without package paths. Programs, library files and tests are
-// referred to by ID; names are labels.
+// The editable problem as typed entries without package paths. Programs and tests are referred to by
+// ID and their names are labels; library files are included by their names.
 // Ref: #/components/schemas/ProblemDraft
 type ProblemDraft struct {
 	ProblemID     uuid.UUID              `json:"problem_id"`
@@ -8342,17 +8342,15 @@ func (s *ProblemDraftInputMode) UnmarshalText(data []byte) error {
 	}
 }
 
-// A source file programs include by its name.
+// A source file judge programs include by its name; names are unique in a draft and identify the file.
 // Ref: #/components/schemas/ProblemDraftLibraryFile
 type ProblemDraftLibraryFile struct {
-	ID      uuid.UUID `json:"id"`
-	Name    string    `json:"name"`
-	Content string    `json:"content"`
-}
-
-// GetID returns the value of ID.
-func (s *ProblemDraftLibraryFile) GetID() uuid.UUID {
-	return s.ID
+	Name string `json:"name"`
+	// Empty for an auto-updated file.
+	Content string `json:"content"`
+	// The file is the system library file of its name from GET /lib, whose current text every build takes.
+	// Only an empty file named after a system library file can be auto-updated.
+	AutoUpdate bool `json:"auto_update"`
 }
 
 // GetName returns the value of Name.
@@ -8365,9 +8363,9 @@ func (s *ProblemDraftLibraryFile) GetContent() string {
 	return s.Content
 }
 
-// SetID sets the value of ID.
-func (s *ProblemDraftLibraryFile) SetID(val uuid.UUID) {
-	s.ID = val
+// GetAutoUpdate returns the value of AutoUpdate.
+func (s *ProblemDraftLibraryFile) GetAutoUpdate() bool {
+	return s.AutoUpdate
 }
 
 // SetName sets the value of Name.
@@ -8380,15 +8378,19 @@ func (s *ProblemDraftLibraryFile) SetContent(val string) {
 	s.Content = val
 }
 
+// SetAutoUpdate sets the value of AutoUpdate.
+func (s *ProblemDraftLibraryFile) SetAutoUpdate(val bool) {
+	s.AutoUpdate = val
+}
+
 // A validator, generator or solution; tests and the main solution refer to it by ID.
 // Ref: #/components/schemas/ProblemDraftNamedProgram
 type ProblemDraftNamedProgram struct {
 	ID   uuid.UUID `json:"id"`
 	Name string    `json:"name"`
 	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
-	Language     string      `json:"language"`
-	Source       string      `json:"source"`
-	Dependencies []uuid.UUID `json:"dependencies"`
+	Language string `json:"language"`
+	Source   string `json:"source"`
 }
 
 // GetID returns the value of ID.
@@ -8411,11 +8413,6 @@ func (s *ProblemDraftNamedProgram) GetSource() string {
 	return s.Source
 }
 
-// GetDependencies returns the value of Dependencies.
-func (s *ProblemDraftNamedProgram) GetDependencies() []uuid.UUID {
-	return s.Dependencies
-}
-
 // SetID sets the value of ID.
 func (s *ProblemDraftNamedProgram) SetID(val uuid.UUID) {
 	s.ID = val
@@ -8436,19 +8433,13 @@ func (s *ProblemDraftNamedProgram) SetSource(val string) {
 	s.Source = val
 }
 
-// SetDependencies sets the value of Dependencies.
-func (s *ProblemDraftNamedProgram) SetDependencies(val []uuid.UUID) {
-	s.Dependencies = val
-}
-
-// A source compiled with the library files it depends on; each dependency is placed under its library
-// name.
+// A source in a language configuration. The checker, interactor, validators and generators compile
+// with the whole draft library, each file under its name; solutions compile alone.
 // Ref: #/components/schemas/ProblemDraftProgram
 type ProblemDraftProgram struct {
 	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
-	Language     string      `json:"language"`
-	Source       string      `json:"source"`
-	Dependencies []uuid.UUID `json:"dependencies"`
+	Language string `json:"language"`
+	Source   string `json:"source"`
 }
 
 // GetLanguage returns the value of Language.
@@ -8461,11 +8452,6 @@ func (s *ProblemDraftProgram) GetSource() string {
 	return s.Source
 }
 
-// GetDependencies returns the value of Dependencies.
-func (s *ProblemDraftProgram) GetDependencies() []uuid.UUID {
-	return s.Dependencies
-}
-
 // SetLanguage sets the value of Language.
 func (s *ProblemDraftProgram) SetLanguage(val string) {
 	s.Language = val
@@ -8474,11 +8460,6 @@ func (s *ProblemDraftProgram) SetLanguage(val string) {
 // SetSource sets the value of Source.
 func (s *ProblemDraftProgram) SetSource(val string) {
 	s.Source = val
-}
-
-// SetDependencies sets the value of Dependencies.
-func (s *ProblemDraftProgram) SetDependencies(val []uuid.UUID) {
-	s.Dependencies = val
 }
 
 // The statement in one language as Markdown sections.
@@ -10702,6 +10683,83 @@ func (s *SupportedLanguagesResponse) GetLanguages() []SupportedLanguage {
 // SetLanguages sets the value of Languages.
 func (s *SupportedLanguagesResponse) SetLanguages(val []SupportedLanguage) {
 	s.Languages = val
+}
+
+// The system library files a draft can include at their current version.
+// Ref: #/components/schemas/SystemLibrary
+type SystemLibrary struct {
+	Files []SystemLibraryFile `json:"files"`
+}
+
+// GetFiles returns the value of Files.
+func (s *SystemLibrary) GetFiles() []SystemLibraryFile {
+	return s.Files
+}
+
+// SetFiles sets the value of Files.
+func (s *SystemLibrary) SetFiles(val []SystemLibraryFile) {
+	s.Files = val
+}
+
+// A system library file and the upstream commit it is vendored from.
+// Ref: #/components/schemas/SystemLibraryFile
+type SystemLibraryFile struct {
+	Name string `json:"name"`
+	// Source extensions of the programs that include the file.
+	Extensions []string `json:"extensions"`
+	Version    string   `json:"version"`
+	Commit     string   `json:"commit"`
+	Content    string   `json:"content"`
+}
+
+// GetName returns the value of Name.
+func (s *SystemLibraryFile) GetName() string {
+	return s.Name
+}
+
+// GetExtensions returns the value of Extensions.
+func (s *SystemLibraryFile) GetExtensions() []string {
+	return s.Extensions
+}
+
+// GetVersion returns the value of Version.
+func (s *SystemLibraryFile) GetVersion() string {
+	return s.Version
+}
+
+// GetCommit returns the value of Commit.
+func (s *SystemLibraryFile) GetCommit() string {
+	return s.Commit
+}
+
+// GetContent returns the value of Content.
+func (s *SystemLibraryFile) GetContent() string {
+	return s.Content
+}
+
+// SetName sets the value of Name.
+func (s *SystemLibraryFile) SetName(val string) {
+	s.Name = val
+}
+
+// SetExtensions sets the value of Extensions.
+func (s *SystemLibraryFile) SetExtensions(val []string) {
+	s.Extensions = val
+}
+
+// SetVersion sets the value of Version.
+func (s *SystemLibraryFile) SetVersion(val string) {
+	s.Version = val
+}
+
+// SetCommit sets the value of Commit.
+func (s *SystemLibraryFile) SetCommit(val string) {
+	s.Commit = val
+}
+
+// SetContent sets the value of Content.
+func (s *SystemLibraryFile) SetContent(val string) {
+	s.Content = val
 }
 
 // Team member data.

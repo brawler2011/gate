@@ -71,8 +71,8 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 	}
 }
 
-// Changing the checker language keeps its dependencies; the build compiles it
-// in the new language and the package file follows the language.
+// Changing the checker language keeps the component; the build compiles it
+// in the new language with the library, and the package file follows the language.
 func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 	admin := s.createUser("admin_rename", accessmodel.UserRoleAdmin)
 	org := s.createOrganization("rename-org", "Rename Organization", admin.Id)
@@ -84,7 +84,6 @@ func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 
 	s.Require().False(draft.Checker.Null)
 	s.Require().NotEqual("python3", draft.Checker.Value.Language)
-	s.Require().NotEmpty(draft.Checker.Value.Dependencies)
 	draft.Checker.Value.Language = "python3"
 	draft.Checker.Value.Source = "import sys\nout = open(sys.argv[2]).read().split()\nans = open(sys.argv[3]).read().split()\nsys.exit(0 if out == ans else 1)\n"
 	saved, err := s.client.SaveProblemDraft(ctx, draft, corev1.SaveProblemDraftParams{ID: problem.ID, ExpectedRevision: draft.Revision, IdempotencyKey: uuid.NewString()})
@@ -96,5 +95,4 @@ func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 	s.Require().True(ok, "package has the checker")
 	s.Equal("python3", program.Language)
 	s.True(strings.HasSuffix(program.Source, ".py"), "checker source follows the language: %s", program.Source)
-	s.Equal(map[string]string{"testlib.h": "lib/testlib.h"}, program.Dependencies)
 }

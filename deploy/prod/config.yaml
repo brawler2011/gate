@@ -39,8 +39,9 @@ problems:
     object_bytes: 512MiB
     test_output_bytes: 512MiB
     compile:
-      cpu: 10s
-      wall: 30s
+      # testlib.h takes about 5 s of CPU at -O2 on a fast core.
+      cpu: 20s
+      wall: 60s
       memory: 512MiB
       processes: 150
       output: 64MiB

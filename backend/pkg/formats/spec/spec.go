@@ -44,6 +44,9 @@ type Problem struct {
 type File struct {
 	Name string
 	Path string
+	// System marks a library file the package names without carrying it:
+	// Gate provides its text. Path still identifies it in Dependencies.
+	System bool
 }
 
 // Program is a source file compiled into a checker, validator, interactor,

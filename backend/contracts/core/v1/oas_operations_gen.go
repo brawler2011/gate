@@ -80,6 +80,7 @@ const (
 	GetProblemDraftOperation                OperationName = "GetProblemDraft"
 	GetProblemDraftObjectOperation          OperationName = "GetProblemDraftObject"
 	GetSubmissionOperation                  OperationName = "GetSubmission"
+	GetSystemLibraryOperation               OperationName = "GetSystemLibrary"
 	GetTeamOperation                        OperationName = "GetTeam"
 	GetUnreadNotificationsCountOperation    OperationName = "GetUnreadNotificationsCount"
 	GetUserOperation                        OperationName = "GetUser"

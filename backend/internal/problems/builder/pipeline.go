@@ -315,10 +315,12 @@ func (e *execution) compile(ctx context.Context) error {
 		if !required[p.key] {
 			continue
 		}
+		// Judge programs compile with the whole library; solutions alone.
 		deps := map[string][]byte{}
-		for _, id := range p.program.Dependencies {
-			f := d.LibraryFile(id)
-			deps[f.Name] = []byte(f.Content)
+		if p.role != "solution" {
+			for i := range d.Library {
+				deps[d.Library[i].Name] = []byte(d.Library[i].Text())
+			}
 		}
 		executable, err := e.sandbox.CompileWithLimits(ctx, []byte(p.program.Source), p.program.Language, deps, s.Limits.Compile)
 		if err != nil {
@@ -327,7 +329,7 @@ func (e *execution) compile(ctx context.Context) error {
 		e.compiled[p.key] = compilation{language: p.program.Language, executable: executable}
 		// The package keeps the judge's programs as sources; each judge compiles them with its own image.
 		if p.role == "checker" || p.role == "interactor" {
-			e.manifest.Programs[p.role] = gfmt.Program{Source: p.path, Language: p.program.Language, Dependencies: p.dependencies}
+			e.manifest.Programs[p.role] = gfmt.Program{Source: p.path, Language: p.program.Language}
 		}
 	}
 	return nil

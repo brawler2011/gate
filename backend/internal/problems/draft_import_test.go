@@ -16,6 +16,7 @@ import (
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/txtar"
@@ -99,22 +100,7 @@ func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 				require.NotEmpty(t, s.Output, s.Language)
 			}
 			// Every testdata checker, validator, interactor and generator uses testlib.
-			programs := []model.DraftProgram{}
-			for _, p := range []*model.DraftProgram{d.Checker, d.Interactor} {
-				if p != nil {
-					programs = append(programs, *p)
-				}
-			}
-			for _, p := range append(d.Validators, d.Generators...) {
-				programs = append(programs, p.DraftProgram)
-			}
-			for _, p := range programs {
-				names := []string{}
-				for _, id := range p.Dependencies {
-					names = append(names, d.LibraryFile(id).Name)
-				}
-				require.Contains(t, names, "testlib.h")
-			}
+			require.NotNil(t, libraryFile(d, "testlib.h"))
 		})
 	}
 }
@@ -167,7 +153,7 @@ func TestImportChargesSharedLibraryOnce(t *testing.T) {
 	plan, err := importDir(t, t.TempDir(), files)
 	require.NoError(t, err)
 	defer plan.Close()
-	require.Equal(t, []model.DraftLibraryFile{{ID: plan.draft.Library[0].ID, Name: "testlib.h", Content: header}}, plan.draft.Library)
+	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", Content: header}}, plan.draft.Library)
 }
 
 // Many statements naming one large file are charged as they are converted.
@@ -201,17 +187,93 @@ func TestImportEnforcesQuotasWhileConverting(t *testing.T) {
 	require.ErrorIs(t, err, pkg.ErrPayloadTooLarge)
 }
 
-func TestImportKeepsProgramHeadersApart(t *testing.T) {
-	plan, err := importDir(t, unpack(t, "icpc-program-headers"), nil)
+// A draft has one library file of each name, and judge programs share it.
+func TestImportRejectsDifferentLibraryFilesOfOneName(t *testing.T) {
+	_, err := importDir(t, unpack(t, "icpc-program-headers"), nil)
+	require.ErrorContains(t, err, "different files named helper.h: output_validators/check/helper.h, input_validators/validate/helper.h")
+}
+
+// libraryFile returns the library file of d named name, or nil.
+func libraryFile(d model.Draft, name string) *model.DraftLibraryFile {
+	for i := range d.Library {
+		if d.Library[i].Name == name {
+			return &d.Library[i]
+		}
+	}
+	return nil
+}
+
+// A package testlib.h equal to an upstream version becomes the auto-updated
+// one; a modified copy stays the author's.
+func TestImportRecognizesUpstreamTestlib(t *testing.T) {
+	const pkgDir = "../../pkg/testdata/polygon/subtasks-groups"
+	plan, err := importDir(t, pkgDir, nil)
 	require.NoError(t, err)
 	defer plan.Close()
-	d := plan.draft
-	require.NoError(t, d.Validate(importQuotas, nil))
-	checker, validator := d.LibraryFile(d.Checker.Dependencies[0]), d.LibraryFile(d.Validator().Dependencies[0])
-	require.Equal(t, "helper.h", checker.Name)
-	require.Equal(t, "helper.h", validator.Name)
-	require.Equal(t, "// B\n", validator.Content)
-	require.NotEqual(t, checker.ID, validator.ID)
+	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", AutoUpdate: true}}, plan.draft.Library)
+	require.NoError(t, plan.draft.Validate(importQuotas, nil))
+
+	original, err := os.ReadFile(pkgDir + "/files/testlib.h")
+	require.NoError(t, err)
+	patched := string(original) + "// patched\n"
+	plan, err = importDir(t, pkgDir, map[string]string{"files/testlib.h": patched})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", Content: patched}}, plan.draft.Library)
+}
+
+// Different upstream versions of testlib.h that no generator includes are
+// one auto-updated file: checkers and validators take the current version
+// anyway.
+func TestImportMergesUpstreamTestlibVersions(t *testing.T) {
+	old, err := os.ReadFile("../../pkg/testdata/polygon/max-subarray/files/testlib.h")
+	require.NoError(t, err)
+	system, _ := syslib.Lookup("testlib.h")
+	require.NotEqual(t, system.Content, string(old))
+	files := map[string]string{
+		"problem.yaml": "name: Versions\nvalidation: custom\n", "data/secret/1.in": "1\n", "data/secret/1.ans": "1\n",
+		"output_validators/check/check.cpp": "int main() {}\n", "output_validators/check/testlib.h": string(old),
+		"input_validators/validate/validate.cpp": "int main() {}\n", "input_validators/validate/testlib.h": system.Content,
+	}
+	plan, err := importDir(t, t.TempDir(), files)
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", AutoUpdate: true}}, plan.draft.Library)
+
+	files["input_validators/validate/testlib.h"] = system.Content + "// patched\n"
+	_, err = importDir(t, t.TempDir(), files)
+	require.ErrorContains(t, err, "different files named testlib.h")
+}
+
+// rnd differs between testlib versions, so a package with generators keeps
+// its testlib.h unless it is the current system one; turning auto-update on
+// is the author's choice.
+func TestImportKeepsGeneratorTestlib(t *testing.T) {
+	const pkgDir = "../../pkg/testdata/polygon/max-subarray"
+	plan, err := importDir(t, pkgDir, nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	original, err := os.ReadFile(pkgDir + "/files/testlib.h")
+	require.NoError(t, err)
+	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", Content: string(original)}}, plan.draft.Library)
+
+	system, _ := syslib.Lookup("testlib.h")
+	plan, err = importDir(t, pkgDir, map[string]string{"files/testlib.h": system.Content})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.True(t, plan.draft.Library[0].AutoUpdate)
+}
+
+// Builtin templates and gfmt packages name the system testlib.h instead of
+// carrying a copy.
+func TestImportSystemLibrary(t *testing.T) {
+	plan, err := importAPlusB(t, nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", AutoUpdate: true}}, plan.draft.Library)
+
+	_, err = importAPlusB(t, map[string]string{"lib/testlib.h": "// copy\n"})
+	require.ErrorContains(t, err, "system library file")
 }
 
 // CRLF conversion streams: a CRLF split across reads is still converted, and

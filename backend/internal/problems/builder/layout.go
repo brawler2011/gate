@@ -14,8 +14,6 @@ type placedProgram struct {
 	role    string
 	path    string
 	program model.DraftProgram
-	// dependencies maps each include name to the package path of its file.
-	dependencies map[string]string
 }
 
 // packageLayout is a draft placed in the Gate package layout.
@@ -31,19 +29,13 @@ type packageLayout struct {
 func placeDraft(d model.Draft, languages *sandbox.Config) packageLayout {
 	l := packageLayout{texts: map[string]string{}, assets: map[string]uuid.UUID{}}
 	names := gfmt.FileNames{}
-	library := map[uuid.UUID]string{}
 	for _, f := range d.Library {
-		library[f.ID] = names.Place(gfmt.LibraryFolder, f.Name)
-		l.texts[library[f.ID]] = f.Content
+		l.texts[names.Place(gfmt.LibraryFolder, f.Name)] = f.Text()
 	}
 	place := func(key, role, name string, p model.DraftProgram) {
 		path := names.Place(gfmt.RoleFolder(role), name+extension(languages, p.Language))
-		deps := map[string]string{}
-		for _, id := range p.Dependencies {
-			deps[d.LibraryFile(id).Name] = library[id]
-		}
 		l.texts[path] = p.Source
-		l.programs = append(l.programs, placedProgram{key: key, role: role, path: path, program: p, dependencies: deps})
+		l.programs = append(l.programs, placedProgram{key: key, role: role, path: path, program: p})
 	}
 	if d.Checker != nil {
 		place("checker", "checker", "check", *d.Checker)
