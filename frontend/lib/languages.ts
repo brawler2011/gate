@@ -37,7 +37,9 @@ export const languageName = (catalog: SupportedLanguage[], id: string | undefine
 export const languageForExtension = (catalog: SupportedLanguage[], extension: string): SupportedLanguage | undefined =>
   catalog.find((language) => language.extensions.includes(extension.toLowerCase()));
 
-const SYNTAX: Record<string, string> = {cpp: "cpp", cc: "cpp", cxx: "cpp", c: "c", py: "python", go: "go"};
+const SYNTAX: Record<string, string> = {
+  cpp: "cpp", cc: "cpp", cxx: "cpp", c: "c", py: "python", go: "go", java: "java", rs: "rust", js: "javascript",
+};
 
 /** The syntax highlighter grammar of a configuration, from its source extension. */
 export const syntaxOf = (language: SupportedLanguage | undefined): string =>

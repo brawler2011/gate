@@ -2,7 +2,10 @@ import c from 'refractor/c';
 import {refractor} from 'refractor/core';
 import cpp from 'refractor/cpp';
 import go from 'refractor/go';
+import java from 'refractor/java';
+import javascript from 'refractor/javascript';
 import python from 'refractor/python';
+import rust from 'refractor/rust';
 
 import type {Root, Element, Text} from 'hast';
 
@@ -11,6 +14,9 @@ refractor.register(python);
 refractor.register(cpp);
 refractor.register(go);
 refractor.register(c);
+refractor.register(java);
+refractor.register(javascript);
+refractor.register(rust);
 
 type HastNode = Element | Text;
 
@@ -97,6 +103,9 @@ const mapLanguage = (language: string): string => {
     'golang': 'go',
     'go': 'go',
     'c': 'c',
+    'java': 'java',
+    'javascript': 'javascript',
+    'rust': 'rust',
   };
   return languageMap[language.toLowerCase()] || 'c';
 };
