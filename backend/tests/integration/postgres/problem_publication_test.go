@@ -135,7 +135,7 @@ func TestPublicationRejectsInconsistentSaves(t *testing.T) {
 		{"missing answer", "provided answer needs content and no solution", func(d *model.Draft) { d.Tests[0].Answer.ObjectID = nil }},
 		{"missing generator", "generator is missing", func(d *model.Draft) {
 			name := "gen"
-			d.Tests[0].Input = model.DraftInput{Mode: "generator", Generator: &name, Args: []string{"1"}}
+			d.Tests[0].Input = model.DraftInput{Mode: "generator", Generator: &name}
 		}},
 		{"duplicate test", "/tests/1/id: ID is missing or not unique", func(d *model.Draft) { d.Tests = append(d.Tests, d.Tests[0]) }},
 	}
