@@ -98,24 +98,30 @@ func (g *GC) Collect(ctx context.Context) error {
 // row is committed only within the upload's fencing deadline, so bytes older
 // than ObjectRetention without a row are never referenced again.
 func (g *GC) sweepOrphans(ctx context.Context) error {
+	// Age is judged once, before any row lookup: a key old at the cutoff can
+	// no longer gain a row, so its lookup result stays true however long the
+	// sweep takes. A key that ages during the sweep waits for the next one.
+	cutoff := time.Now().Add(-g.ObjectRetention)
 	listed, err := g.Store.ListObjects(ctx, g.Bucket, "objects/")
 	if err != nil {
 		return err
 	}
-	for batch := range slices.Chunk(listed, 1000) {
-		keys := make([]string, len(batch))
-		for i, object := range batch {
-			keys[i] = object.Key
+	var keys []string
+	for _, object := range listed {
+		if !object.LastModified.IsZero() && object.LastModified.Before(cutoff) {
+			keys = append(keys, object.Key)
 		}
-		existing, err := g.Repo.ExistingObjectKeys(ctx, keys)
+	}
+	for batch := range slices.Chunk(keys, 1000) {
+		existing, err := g.Repo.ExistingObjectKeys(ctx, batch)
 		if err != nil {
 			return err
 		}
-		for _, object := range batch {
-			if existing[object.Key] || object.LastModified.IsZero() || time.Since(object.LastModified) < g.ObjectRetention {
+		for _, key := range batch {
+			if existing[key] {
 				continue
 			}
-			if err := g.Store.DeleteFile(ctx, g.Bucket, object.Key); err != nil {
+			if err := g.Store.DeleteFile(ctx, g.Bucket, key); err != nil {
 				return err
 			}
 		}
