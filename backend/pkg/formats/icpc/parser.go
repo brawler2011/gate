@@ -250,7 +250,7 @@ func statements(fsys fs.FS) []spec.Statement {
 			continue
 		}
 		seen[language] = true
-		result = append(result, spec.Statement{Language: language, Path: path.Join("problem_statement", e.Name()), TeX: true})
+		result = append(result, spec.Statement{Language: language, TeX: path.Join("problem_statement", e.Name())})
 	}
 	return result
 }

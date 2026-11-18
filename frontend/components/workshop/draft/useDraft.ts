@@ -4,14 +4,27 @@ import {useCallback} from "react";
 
 import {api, unwrap} from "@/lib/api";
 
-import type {OpResult} from "./draftOps";
-import type {ProblemDraft, ProblemDraftTest} from "@/contracts/core/v1/schema";
+import {describePointer, type OpResult} from "./draftOps";
+
+import type {FieldError, ProblemDraft, ProblemDraftTest} from "@/contracts/core/v1/schema";
 
 export const draftKey = (problemId: string): readonly ["problem-draft", string] => ["problem-draft", problemId];
 
-type DraftConflictError = Error & {status?: number};
+type DraftError = Error & {status?: number; info?: {fields?: FieldError[]}};
 
-const isConflict = (error: unknown): boolean => (error as DraftConflictError | undefined)?.status === 409;
+const isConflict = (error: unknown): boolean => (error as DraftError | undefined)?.status === 409;
+
+/**
+ * Describes a failed request; invalid draft entries are named by the draft the
+ * request was made against, so the author sees which entry to fix.
+ */
+export const errorMessage = (error: unknown, draft?: ProblemDraft): string => {
+  const fields = (error as DraftError | undefined)?.info?.fields;
+  if (draft && fields && fields.length > 0) {
+    return fields.map((field) => `${describePointer(draft, field.pointer)}: ${field.message}`).join("\n");
+  }
+  return error instanceof Error ? error.message : "Неизвестная ошибка";
+};
 
 export const useProblemDraft = (problemId: string): UseQueryResult<ProblemDraft, Error> =>
   useQuery({
@@ -22,7 +35,7 @@ export const useProblemDraft = (problemId: string): UseQueryResult<ProblemDraft,
     staleTime: Infinity,
   });
 
-const reportError = (title: string, error: unknown): void => {
+const reportError = (title: string, error: unknown, draft?: ProblemDraft): void => {
   if (isConflict(error)) {
     notifications.show({
       title: "Черновик изменён в другом месте",
@@ -31,7 +44,7 @@ const reportError = (title: string, error: unknown): void => {
     });
     return;
   }
-  notifications.show({title, message: error instanceof Error ? error.message : "Неизвестная ошибка", color: "red"});
+  notifications.show({title, message: errorMessage(error, draft), color: "red", style: {whiteSpace: "pre-line"}});
 };
 
 /**
@@ -60,8 +73,8 @@ export const useSaveDraft = (problemId: string): SaveDraft => {
     onSuccess: (saved) => {
       queryClient.setQueryData(draftKey(problemId), saved);
     },
-    onError: (error) => {
-      reportError("Не удалось сохранить черновик", error);
+    onError: (error, sent) => {
+      reportError("Не удалось сохранить черновик", error, sent);
       if (isConflict(error)) {
         void queryClient.invalidateQueries({queryKey: draftKey(problemId)});
       }
@@ -94,7 +107,7 @@ export const useSaveDraft = (problemId: string): SaveDraft => {
 };
 
 export type UploadRequest =
-  | {part: "asset"; assetPath: string; file: Blob}
+  | {part: "asset"; assetName: string; file: Blob}
   | {part: "input" | "answer"; test: ProblemDraftTest; file: Blob}
   | {part: "pair"; test: ProblemDraftTest; file: Blob; answer: Blob};
 
@@ -110,7 +123,7 @@ export const useUploadToDraft = (
       }
       const metadata =
         request.part === "asset"
-          ? {part: request.part, asset_path: request.assetPath}
+          ? {part: request.part, asset_name: request.assetName}
           : {part: request.part, test: request.test};
       const body = new FormData();
       body.append("metadata", JSON.stringify(metadata));
@@ -133,7 +146,7 @@ export const useUploadToDraft = (
       queryClient.setQueryData(draftKey(problemId), saved);
     },
     onError: (error) => {
-      reportError("Не удалось загрузить файл", error);
+      reportError("Не удалось загрузить файл", error, queryClient.getQueryData<ProblemDraft>(draftKey(problemId)));
       if (isConflict(error)) {
         void queryClient.invalidateQueries({queryKey: draftKey(problemId)});
       }

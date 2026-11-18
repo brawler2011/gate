@@ -9,7 +9,7 @@ import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {api, unwrap} from "@/lib/api";
 
 import {DraftGate} from "./draft/DraftGate";
-import {formatPoints, ROLE_LABELS, type ComponentRole} from "./draft/draftOps";
+import {formatPoints} from "./draft/draftOps";
 import {useSaveDraft} from "./draft/useDraft";
 
 import type {ProblemDraft} from "@/contracts/core/v1/schema";
@@ -24,24 +24,6 @@ const PROBLEM_TYPE_OPTIONS = [
 type Props = {
   problemId: string;
 };
-
-type ComponentSelectProps = {
-  draft: ProblemDraft;
-  role: ComponentRole;
-  value: string | null;
-  onChange: (value: string | null) => void;
-};
-
-const ComponentSelect = ({draft, role, value, onChange}: ComponentSelectProps): ReactNode => (
-  <Select
-    label={ROLE_LABELS[role]}
-    placeholder="Не используется"
-    clearable
-    data={draft.components.filter((c) => c.role === role).map((c) => ({value: c.id, label: c.path}))}
-    value={value}
-    onChange={onChange}
-  />
-);
 
 const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string}): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
@@ -129,12 +111,19 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
         <Divider label="Компоненты сборки" labelPosition="left" />
         <Grid gutter="md">
           <Grid.Col span={{base: 12, sm: 6}}>
-            <ComponentSelect draft={draft} role="solution" value={mainSolution} onChange={setMainSolution} />
+            <Select
+              label="Главное решение"
+              placeholder="Не выбрано"
+              clearable
+              data={draft.solutions.map((s) => ({value: s.id, label: s.name}))}
+              value={mainSolution}
+              onChange={setMainSolution}
+            />
           </Grid.Col>
         </Grid>
         <Text size="xs" c="dimmed">
-          Главное решение формирует ответы для тестов в режиме «генерируется». Чекер, валидатор и
-          интерактор у задачи единственные и задаются файлом на своей вкладке.
+          Главное решение формирует ответы для тестов в режиме «генерируется». Чекер и интерактор у
+          задачи единственные и задаются на своих вкладках.
         </Text>
 
         <Group justify="flex-end">

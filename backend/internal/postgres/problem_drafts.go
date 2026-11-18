@@ -25,27 +25,17 @@ func NewProblemDraftsRepo(pool *pgxpool.Pool, quotas model.DraftQuotas, operatio
 }
 
 func readProblemDraft(ctx context.Context, q *sqlc.Queries, id uuid.UUID) (model.Draft, error) {
-	value, err := q.ReadProblemDraft(ctx, id)
+	row, err := q.ReadProblemDraft(ctx, id)
 	if err != nil {
 		return model.Draft{}, HandlePgErr(err)
 	}
-	var data []byte
-	switch v := value.(type) {
-	case []byte:
-		data = v
-	case string:
-		data = []byte(v)
-	default:
-		data, err = json.Marshal(value)
+	d := model.Draft{ProblemID: row.ProblemID, Revision: row.Revision, Title: row.Title, ShortName: row.ShortName, Type: row.Type,
+		TimeLimitMs: int(row.TimeLimitMs), MemoryLimitMb: int(row.MemoryLimitMb), MaxScore: row.MaxScore}
+	if err := json.Unmarshal(row.Content, &d.DraftContent); err != nil {
+		return d, fmt.Errorf("decode draft content: %w", err)
 	}
-	if err != nil {
-		return model.Draft{}, fmt.Errorf("marshal: %w", err)
-	}
-	var draft model.Draft
-	if err := json.Unmarshal(data, &draft); err != nil {
-		return draft, fmt.Errorf("decode draft: %w", err)
-	}
-	return draft, nil
+	d.Normalize()
+	return d, nil
 }
 
 func (r *ProblemDraftsRepo) GetDraft(ctx context.Context, id uuid.UUID) (model.Draft, error) {
@@ -150,9 +140,6 @@ func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, k model.MutationKey, 
 	if err := draft.ComputeScores(); err != nil {
 		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid weights")
 	}
-	if err := draft.Validate(r.quotas, false); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid draft")
-	}
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
 		return model.MutationResult{}, err
@@ -180,6 +167,13 @@ func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, k model.MutationKey, 
 	if org != k.OrganizationID {
 		return model.MutationResult{}, pkg.NoPermission
 	}
+	old, err := readProblemDraft(ctx, q, draft.ProblemID)
+	if err != nil {
+		return model.MutationResult{}, err
+	}
+	if err := draft.Validate(r.quotas, &old); err != nil {
+		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid draft")
+	}
 	draft.Revision++
 	if err := writeDraft(ctx, tx, draft); err != nil {
 		return model.MutationResult{}, err
@@ -194,73 +188,27 @@ func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, k model.MutationKey, 
 // writeDraft replaces the draft. Its object references are foreign keys, so
 // a missing object or one of another organization fails with ErrConflict.
 func writeDraft(ctx context.Context, tx pgx.Tx, d model.Draft) error {
+	d.Normalize()
+	content, err := json.Marshal(d.DraftContent)
+	if err != nil {
+		return fmt.Errorf("encode draft content: %w", err)
+	}
 	q := sqlc.New(tx)
 	if err := q.UpdateProblemDraftRow(ctx, sqlc.UpdateProblemDraftRowParams{
 		ProblemID: d.ProblemID, Revision: d.Revision, Title: d.Title, ShortName: d.ShortName, Type: d.Type,
 		TimeLimitMs: int32(d.TimeLimitMs), MemoryLimitMb: int32(d.MemoryLimitMb), MaxScore: d.MaxScore, //nolint:gosec // validated against quotas
-		MainSolutionID: d.MainSolutionID,
+		Content: content,
 	}); err != nil {
 		return fmt.Errorf("update draft: %w", err)
 	}
-	// Children are replaced wholesale; revision locking makes the replacement atomic.
-	for _, clear := range []func(context.Context, uuid.UUID) error{
-		q.DeleteDraftTests, q.DeleteDraftAssets, q.DeleteDraftSubtaskDependencies,
-		q.DeleteDraftSubtasks, q.DeleteDraftComponents, q.DeleteDraftFiles,
-	} {
-		if err := clear(ctx, d.ProblemID); err != nil {
-			return fmt.Errorf("clear draft children: %w", err)
-		}
+	// The object references are derived from the content; revision locking
+	// makes their replacement atomic.
+	if err := q.DeleteDraftObjects(ctx, d.ProblemID); err != nil {
+		return fmt.Errorf("clear draft objects: %w", err)
 	}
-	for path, content := range d.Files {
-		if err := q.InsertDraftFile(ctx, sqlc.InsertDraftFileParams{ProblemID: d.ProblemID, Path: path, Content: content}); err != nil {
-			return fmt.Errorf("insert draft file: %w", err)
-		}
-	}
-	for _, c := range d.Components {
-		deps := c.Dependencies
-		if deps == nil {
-			deps = map[string]string{}
-		}
-		encoded, err := json.Marshal(deps)
-		if err != nil {
-			return fmt.Errorf("encode component dependencies: %w", err)
-		}
-		if err := q.InsertDraftComponent(ctx, sqlc.InsertDraftComponentParams{
-			ProblemID: d.ProblemID, ID: c.ID, Role: c.Role, Path: c.Path, Dependencies: encoded,
-		}); err != nil {
-			return fmt.Errorf("insert draft component: %w", err)
-		}
-	}
-	for _, g := range d.Subtasks {
-		if err := q.InsertDraftSubtask(ctx, sqlc.InsertDraftSubtaskParams{
-			ProblemID: d.ProblemID, ID: g.ID, Ordinal: int32(g.Ordinal), Name: g.Name, Points: g.Points, Policy: g.Policy, //nolint:gosec // bounded by quotas
-		}); err != nil {
-			return fmt.Errorf("insert draft subtask: %w", err)
-		}
-	}
-	for _, g := range d.Subtasks {
-		for _, dep := range g.DependsOn {
-			if err := q.InsertDraftSubtaskDependency(ctx, sqlc.InsertDraftSubtaskDependencyParams{ProblemID: d.ProblemID, SubtaskID: g.ID, DependsOn: dep}); err != nil {
-				return fmt.Errorf("insert subtask dependency: %w", err)
-			}
-		}
-	}
-	for _, t := range d.Tests {
-		args := t.Input.Args
-		if args == nil {
-			args = []string{}
-		}
-		if err := q.InsertDraftTest(ctx, sqlc.InsertDraftTestParams{
-			ProblemID: d.ProblemID, ID: t.ID, Ordinal: int32(t.Ordinal), SubtaskID: t.SubtaskID, Sample: t.Sample, Points: t.Points, //nolint:gosec // bounded by quotas
-			InputMode: t.Input.Mode, InputObjectID: t.Input.ObjectID, GeneratorID: t.Input.ComponentID, GeneratorArgs: args, Seed: t.Input.Seed,
-			AnswerMode: t.Answer.Mode, AnswerObjectID: t.Answer.ObjectID, SolutionID: t.Answer.ComponentID,
-		}); err != nil {
-			return objectReferenceErr(err, "insert draft test")
-		}
-	}
-	for _, a := range d.Assets {
-		if err := q.InsertDraftAsset(ctx, sqlc.InsertDraftAssetParams{ProblemID: d.ProblemID, Path: a.Path, ObjectID: a.ObjectID}); err != nil {
-			return objectReferenceErr(err, "insert draft asset")
+	for _, oid := range d.InputObjects() {
+		if err := q.InsertDraftObject(ctx, sqlc.InsertDraftObjectParams{ProblemID: d.ProblemID, ObjectID: oid}); err != nil {
+			return objectReferenceErr(err, "insert draft object")
 		}
 	}
 	return nil

@@ -177,7 +177,7 @@ paths:
                 metadata:
                   type: string
                   maxLength: 65536
-                  description: 'JSON UploadChange: part (asset/input/answer/pair), asset_path
+                  description: 'JSON UploadChange: part (asset/input/answer/pair), asset_name
                     or full test metadata. For pair, file is the input and answer is
                     the answer.'
                 file:
@@ -3060,7 +3060,7 @@ components:
       required:
       - mode
       - object_id
-      - component_id
+      - generator_id
       - args
       - seed
       properties:
@@ -3073,7 +3073,7 @@ components:
           type: string
           format: uuid
           nullable: true
-        component_id:
+        generator_id:
           type: string
           format: uuid
           nullable: true
@@ -3090,7 +3090,7 @@ components:
       required:
       - mode
       - object_id
-      - component_id
+      - solution_id
       properties:
         mode:
           type: string
@@ -3102,35 +3102,94 @@ components:
           type: string
           format: uuid
           nullable: true
-        component_id:
+        solution_id:
           type: string
           format: uuid
           nullable: true
-    ProblemDraftComponent:
+    ProblemDraftProgram:
+      description: A source compiled with the library files it depends on; each dependency is placed under its library name.
+      type: object
+      required:
+      - language
+      - source
+      - dependencies
+      properties:
+        language:
+          type: string
+          description: Toolchain language key, such as cpp or python.
+        source:
+          type: string
+        dependencies:
+          type: array
+          items:
+            type: string
+            format: uuid
+    ProblemDraftNamedProgram:
+      description: A validator, generator or solution; tests and the main solution refer to it by ID.
       type: object
       required:
       - id
-      - role
-      - path
+      - name
+      - language
+      - source
       - dependencies
       properties:
         id:
           type: string
           format: uuid
-        role:
+        name:
           type: string
-          enum:
-          - checker
-          - validator
-          - interactor
-          - generator
-          - solution
-        path:
+        language:
+          type: string
+          description: Toolchain language key, such as cpp or python.
+        source:
           type: string
         dependencies:
-          type: object
-          additionalProperties:
+          type: array
+          items:
             type: string
+            format: uuid
+    ProblemDraftLibraryFile:
+      description: A source file programs include by its name.
+      type: object
+      required:
+      - id
+      - name
+      - content
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        content:
+          type: string
+    ProblemDraftStatement:
+      description: The statement in one language as Markdown sections.
+      type: object
+      required:
+      - language
+      - legend
+      - input
+      - output
+      - notes
+      - interaction
+      - scoring
+      properties:
+        language:
+          type: string
+        legend:
+          type: string
+        input:
+          type: string
+        output:
+          type: string
+        notes:
+          type: string
+        interaction:
+          type: string
+        scoring:
+          type: string
     ProblemDraftSubtask:
       type: object
       required:
@@ -3195,17 +3254,21 @@ components:
         answer:
           $ref: '#/components/schemas/ProblemDraftAnswer'
     ProblemDraftAsset:
+      description: A statement resource; sections show it as ![alt](name).
       type: object
       required:
-      - path
+      - name
       - object_id
       properties:
-        path:
+        name:
           type: string
         object_id:
           type: string
           format: uuid
     ProblemDraft:
+      description: >-
+        The editable problem as typed entries without package paths. Programs,
+        library files and tests are referred to by ID; names are labels.
       type: object
       required:
       - problem_id
@@ -3216,12 +3279,17 @@ components:
       - time_limit_ms
       - memory_limit_mb
       - max_score
+      - checker
+      - interactor
+      - validators
+      - generators
+      - solutions
       - main_solution_id
-      - files
-      - components
+      - library
+      - statements
+      - assets
       - subtasks
       - tests
-      - assets
       properties:
         problem_id:
           type: string
@@ -3249,18 +3317,43 @@ components:
           type: number
           format: double
           nullable: true
+        checker:
+          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/ProblemDraftProgram'
+        interactor:
+          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/ProblemDraftProgram'
+        validators:
+          type: array
+          description: At most one validator.
+          items:
+            $ref: '#/components/schemas/ProblemDraftNamedProgram'
+        generators:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemDraftNamedProgram'
+        solutions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemDraftNamedProgram'
         main_solution_id:
           type: string
           format: uuid
           nullable: true
-        files:
-          type: object
-          additionalProperties:
-            type: string
-        components:
+        library:
           type: array
           items:
-            $ref: '#/components/schemas/ProblemDraftComponent'
+            $ref: '#/components/schemas/ProblemDraftLibraryFile'
+        statements:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemDraftStatement'
+        assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemDraftAsset'
         subtasks:
           type: array
           items:
@@ -3269,10 +3362,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProblemDraftTest'
-        assets:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProblemDraftAsset'
     ProblemPackage:
       type: object
       required: [id, problem_id, build_id, revision, package_hash, created_at]
@@ -3392,6 +3481,21 @@ components:
         request_id:
           example: req-123e4567-e89b-42d3-a456-426614174000
           type: string
+        fields:
+          description: Invalid values of the request body, each at an RFC 6901 JSON Pointer into it.
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldError"
+    FieldError:
+      description: "One invalid value of a request body."
+      type: object
+      required: [pointer, message]
+      properties:
+        pointer:
+          type: string
+          example: /tests/3/input/generator_id
+        message:
+          type: string
     CreationResponseModel:
       description: "Result of creation."
       example:
@@ -3498,7 +3602,9 @@ components:
         is_builtin:
           type: boolean
     ProblemModel:
-      description: "Problem data."
+      description: >-
+        Problem catalog data. The statement, samples and assets belong to the
+        draft and to published packages and are read there.
       example:
         capabilities: [view]
         id: 123e4567-e89b-42d3-a456-426614174000
@@ -3509,19 +3615,9 @@ components:
         title: Test problem
         time_limit: 1000
         memory_limit: 256
-        legend: example
-        input_format: example
-        output_format: example
-        notes: example
-        scoring: example
         is_template: false
         created_at: '2026-01-01T12:00:00Z'
         updated_at: '2026-01-01T12:00:00Z'
-        samples:
-        - input: 1 2
-          output: '3'
-        assets:
-          assets/pic.png: 0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f
       type: object
       required:
         - capabilities
@@ -3533,15 +3629,9 @@ components:
         - title
         - time_limit
         - memory_limit
-        - legend
-        - input_format
-        - output_format
-        - notes
-        - scoring
         - is_template
         - created_at
         - updated_at
-        - samples
       properties:
         capabilities:
           type: array
@@ -3576,16 +3666,6 @@ components:
         is_template:
           type: boolean
           example: false
-        legend:
-          type: string
-        input_format:
-          type: string
-        output_format:
-          type: string
-        notes:
-          type: string
-        scoring:
-          type: string
         is_private:
           type: boolean
           example: true
@@ -3595,10 +3675,6 @@ components:
         updated_at:
           type: string
           format: date-time
-        samples:
-          type: array
-          items:
-            $ref: "#/components/schemas/ProblemSampleModel"
     ProblemsListItemModel:
       description: "Problems list item data."
       example:
@@ -3712,7 +3788,7 @@ components:
           - input: 1 2
             output: '3'
           assets:
-            assets/pic.png: 0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f
+            pic.png: 0a2b0c1f6b1e5a1e2d5c9f3c2f1d1e2b4a6c8e0f2a4c6e8f0a2c4e6f8a0c2e4f
       type: object
       required:
         - problem

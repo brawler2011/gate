@@ -3,13 +3,13 @@
 import {Alert, Anchor, Badge, Box, Button, Code, Group, List, Loader, Pagination, Stack, Table, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import {useState} from "react";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {usePagedQuery} from "@/hooks/usePagedQuery";
 import {api, unwrap} from "@/lib/api";
 
-import {buildProblems} from "./draft/draftOps";
-import {useProblemDraft} from "./draft/useDraft";
+import {errorMessage, useProblemDraft} from "./draft/useDraft";
 
 import type {ProblemBuild} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
@@ -58,7 +58,8 @@ const DiagnosticView = ({diagnostic}: {diagnostic: ProblemBuild["diagnostic"]}):
 export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
   const queryClient = useQueryClient();
   const draft = useProblemDraft(problemId);
-  const problems = draft.data ? buildProblems(draft.data) : [];
+  // Problems the server found in the draft at the last build attempt.
+  const [problems, setProblems] = useState<string[]>([]);
 
   const builds = useQuery({
     queryKey: ["problem-builds", problemId],
@@ -90,10 +91,15 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
       );
     },
     onSuccess: (accepted) => {
+      setProblems([]);
       notifications.show({title: "Сборка поставлена в очередь", message: `Ревизия черновика ${accepted.revision}`, color: "green"});
       refresh();
     },
     onError: (error: Error & {status?: number}) => {
+      if (error.status === 400 && draft.data) {
+        setProblems(errorMessage(error, draft.data).split("\n"));
+        return;
+      }
       notifications.show({
         title: error.status === 409 ? "Черновик изменился" : "Не удалось запустить сборку",
         message: error.status === 409 ? "Перезагрузите страницу и повторите." : error.message,
@@ -140,7 +146,7 @@ export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
             <Group>
               <Button
                 loading={build.isPending}
-                disabled={!draft.data || problems.length > 0 || hasActive}
+                disabled={!draft.data || hasActive}
                 onClick={() => build.mutate()}
               >
                 Собрать пакет

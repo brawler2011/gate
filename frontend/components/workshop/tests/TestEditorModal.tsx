@@ -25,17 +25,16 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
   const [sample, setSample] = useState(test.sample);
   const [points, setPoints] = useState<number>(test.points);
   const [inputMode, setInputMode] = useState<"manual" | "generator">(test.input.mode);
-  const [generatorId, setGeneratorId] = useState(test.input.component_id);
+  const [generatorId, setGeneratorId] = useState(test.input.generator_id);
   const [args, setArgs] = useState(test.input.args.join(" "));
   const [seed, setSeed] = useState<number>(test.input.seed ?? 1);
   const [answerMode, setAnswerMode] = useState(test.answer.mode);
-  const [solutionId, setSolutionId] = useState(test.answer.component_id ?? draft.main_solution_id);
+  const [solutionId, setSolutionId] = useState(test.answer.solution_id ?? draft.main_solution_id);
   const [inputFile, setInputFile] = useState<File | null>(null);
   const [answerFile, setAnswerFile] = useState<File | null>(null);
 
   const interactive = draft.type === "interactive";
-  const componentOptions = (role: "generator" | "solution") =>
-    draft.components.filter((c) => c.role === role).map((c) => ({value: c.id, label: c.path}));
+  const programOptions = (programs: ProblemDraft["generators"]) => programs.map((p) => ({value: p.id, label: p.name}));
 
   const needsInputFile = inputMode === "manual" && !test.input.object_id && !inputFile;
   const needsAnswerFile = !interactive && answerMode === "provided" && !test.answer.object_id && !answerFile;
@@ -46,12 +45,12 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
 
   const buildAnswer = (): ProblemDraftTest["answer"] => {
     if (interactive) {
-      return {mode: "interactive", object_id: null, component_id: null};
+      return {mode: "interactive", object_id: null, solution_id: null};
     }
     if (answerMode === "provided") {
-      return {mode: "provided", object_id: test.answer.object_id, component_id: null};
+      return {mode: "provided", object_id: test.answer.object_id, solution_id: null};
     }
-    return {mode: "generated", object_id: null, component_id: solutionId};
+    return {mode: "generated", object_id: null, solution_id: solutionId};
   };
 
   const submit = () => {
@@ -62,8 +61,8 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
       points: toHundredths(points) / 100,
       input:
         inputMode === "manual"
-          ? {mode: "manual", object_id: test.input.object_id, component_id: null, args: [], seed: null}
-          : {mode: "generator", object_id: null, component_id: generatorId, args: parseArgs(args), seed},
+          ? {mode: "manual", object_id: test.input.object_id, generator_id: null, args: [], seed: null}
+          : {mode: "generator", object_id: null, generator_id: generatorId, args: parseArgs(args), seed},
       answer: buildAnswer(),
     };
     onSubmit(next, {
@@ -116,7 +115,7 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
             />
           ) : (
             <>
-              <Select label="Генератор" data={componentOptions("generator")} value={generatorId} onChange={setGeneratorId} placeholder="Не выбран" />
+              <Select label="Генератор" data={programOptions(draft.generators)} value={generatorId} onChange={setGeneratorId} placeholder="Не выбран" />
               <TextInput label="Аргументы" description="Передаются генератору как argv, разделитель — пробел" value={args} onChange={(e) => setArgs(e.currentTarget.value)} />
               <NumberInput label="Seed" value={seed} onChange={(value) => setSeed(typeof value === "number" ? value : seed)} allowDecimal={false} />
             </>
@@ -149,7 +148,7 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
                   clearable
                 />
               ) : (
-                <Select label="Решение" data={componentOptions("solution")} value={solutionId} onChange={setSolutionId} placeholder="Не выбрано" />
+                <Select label="Решение" data={programOptions(draft.solutions)} value={solutionId} onChange={setSolutionId} placeholder="Не выбрано" />
               )}
             </>
           )}

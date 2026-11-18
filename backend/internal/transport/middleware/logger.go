@@ -24,6 +24,8 @@ type errorResponse struct {
 	Err       string `json:"error"`
 	Msg       string `json:"message"`
 	RequestID string `json:"request_id,omitempty"`
+	// Fields locate invalid values of the request body.
+	Fields pkg.FieldErrors `json:"fields,omitempty"`
 }
 
 // RequestLoggerMiddleware preserves the writer's optional interfaces for streaming and upgrades.
@@ -134,6 +136,11 @@ func ResponseErrorHandler(logger *slog.Logger) func(ctx context.Context, w http.
 			}
 			resp.Err = http.StatusText(statusCode)
 			resp.Msg = err.Error()
+		}
+
+		var fields pkg.FieldErrors
+		if errors.As(err, &fields) {
+			resp.Fields = fields
 		}
 
 		logAttrs := []any{

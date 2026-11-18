@@ -42,10 +42,8 @@ func mutationKey(org uuid.UUID, op string, body any) model.MutationKey {
 	return model.MutationKey{OrganizationID: org, Operation: op, Key: uuid.NewString(), Fingerprint: hex.EncodeToString(hash[:]), Token: uuid.New()}
 }
 func makeBuildableDraft(d model.Draft, oid uuid.UUID) model.Draft {
-	c := uuid.New()
 	g := uuid.New()
-	d.Files = map[string]string{"checkers/check.cpp": "int main(){return 0;}"}
-	d.Components = []model.DraftComponent{{ID: c, Role: "checker", Path: "checkers/check.cpp"}}
+	d.Checker = program("cpp", "int main(){return 0;}")
 	d.Subtasks = []model.DraftSubtask{{ID: g, Ordinal: 1, Name: "All", Policy: "complete"}}
 	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: g, Input: model.DraftInput{Mode: "manual", ObjectID: &oid}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &oid}}}
 	return d
@@ -61,7 +59,7 @@ func insertAvailableObject(t *testing.T, ctx context.Context, pool *pgxpool.Pool
 func TestProblemDraftConcurrentEditsAndReplay(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
-	d.Files = map[string]string{"statements/en.md": "Original"}
+	d.Statements = []model.DraftStatement{{Language: "en", Legend: "Original"}}
 	var wg sync.WaitGroup
 	wg.Add(2)
 	errs := make(chan error, 2)
@@ -159,4 +157,43 @@ func TestProblemBuildSnapshotAndRecovery(t *testing.T) {
 	_, err = repo.CancelBuild(ctx, mutationKey(org, "cancel", b.ID), b.ID)
 	require.NoError(t, err)
 	require.ErrorIs(t, repo.HeartbeatBuild(ctx, next.ID, *next.LeaseToken, time.Minute), pkg.ErrConflict)
+}
+
+// Renaming programs, library files and assets changes only labels: tests,
+// dependencies and the object references that keep uploads alive follow IDs.
+func TestProblemDraftRenamesKeepReferences(t *testing.T) {
+	t.Parallel()
+	ctx, pool, repo, org, d := draftFixture(t)
+	object := insertAvailableObject(t, ctx, pool, org)
+	lib, generator, subtask := uuid.New(), uuid.New(), uuid.New()
+	d.Library = []model.DraftLibraryFile{{ID: lib, Name: "testlib.h", Content: "// lib"}}
+	d.Generators = []model.DraftNamedProgram{named(generator, "gen", "cpp", "int main(){}")}
+	d.Generators[0].Dependencies = []uuid.UUID{lib}
+	d.Assets = []model.DraftAsset{{Name: "pic.png", ObjectID: object}}
+	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete"}}
+	seed := int64(1)
+	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", GeneratorID: &generator, Seed: &seed}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &object}}}
+	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
+	require.NoError(t, err)
+	saved, err := repo.GetDraft(ctx, d.ProblemID)
+	require.NoError(t, err)
+
+	saved.Library[0].Name = "testlib-0.9.h"
+	saved.Generators[0].Name = "random"
+	saved.Assets[0].Name = "graph.png"
+	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", saved), saved)
+	require.NoError(t, err)
+	renamed, err := repo.GetDraft(ctx, d.ProblemID)
+	require.NoError(t, err)
+	require.Equal(t, "random", renamed.Generators[0].Name)
+	require.Equal(t, []uuid.UUID{lib}, renamed.Generators[0].Dependencies)
+	require.Equal(t, saved.Tests, renamed.Tests)
+	require.Equal(t, []model.DraftAsset{{Name: "graph.png", ObjectID: object}}, renamed.Assets)
+
+	// The object stays referenced while the test still uses it.
+	renamed.Assets = nil
+	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", renamed), renamed)
+	require.NoError(t, err)
+	_, err = pool.Exec(ctx, `DELETE FROM stored_objects WHERE id=$1`, object)
+	require.Error(t, err, "a draft reference keeps the object")
 }

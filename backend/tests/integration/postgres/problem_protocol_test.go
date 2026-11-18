@@ -170,7 +170,7 @@ func TestObjectReferencesAreForeignKeys(t *testing.T) {
 	packageAsset := insertAvailableObject(t, ctx, pool, org)
 	d = makeBuildableDraft(d, input)
 	d.Tests[0].Answer.ObjectID = &answer
-	d.Assets = []model.DraftAsset{{Path: "assets/a.png", ObjectID: asset}}
+	d.Assets = []model.DraftAsset{{Name: "a.png", ObjectID: asset}}
 	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
 	require.NoError(t, err)
 	requireHeld := func(object uuid.UUID, constraint string) {
@@ -181,9 +181,9 @@ func TestObjectReferencesAreForeignKeys(t *testing.T) {
 		_, err = pool.Exec(ctx, `DELETE FROM stored_objects WHERE id=$1`, object)
 		require.ErrorContains(t, err, constraint)
 	}
-	requireHeld(input, "problem_draft_tests_input_object_id_fkey")
-	requireHeld(answer, "problem_draft_tests_answer_object_id_fkey")
-	requireHeld(asset, "problem_draft_assets_object_id_fkey")
+	for _, object := range []uuid.UUID{input, answer, asset} {
+		requireHeld(object, "problem_draft_objects_object_id_organization_id_fkey")
+	}
 
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
@@ -200,7 +200,7 @@ func TestObjectReferencesAreForeignKeys(t *testing.T) {
 	require.NoError(t, err)
 	requireHeld(input, "problem_build_inputs_object_id_fkey")
 	requireHeld(output.ID, "problem_packages_object_id_fkey")
-	_, err = pool.Exec(ctx, `INSERT INTO problem_package_assets(package_id,organization_id,path,object_id) VALUES($1,$2,'assets/b.png',$3)`, packageID, org, packageAsset)
+	_, err = pool.Exec(ctx, `INSERT INTO problem_package_assets(package_id,organization_id,name,object_id) VALUES($1,$2,'b.png',$3)`, packageID, org, packageAsset)
 	require.NoError(t, err)
 	requireHeld(packageAsset, "problem_package_assets_object_id_fkey")
 
@@ -208,12 +208,12 @@ func TestObjectReferencesAreForeignKeys(t *testing.T) {
 	foreign := insertAvailableObject(t, ctx, pool, other)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
-	d.Assets = []model.DraftAsset{{Path: "assets/f.png", ObjectID: foreign}}
+	d.Assets = []model.DraftAsset{{Name: "f.png", ObjectID: foreign}}
 	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
 	require.ErrorIs(t, err, pkg.ErrConflict, "a draft cannot reference another organization's object")
-	_, err = pool.Exec(ctx, `INSERT INTO problem_package_assets(package_id,organization_id,path,object_id) VALUES($1,$2,'assets/f.png',$3)`, packageID, org, foreign)
+	_, err = pool.Exec(ctx, `INSERT INTO problem_package_assets(package_id,organization_id,name,object_id) VALUES($1,$2,'f.png',$3)`, packageID, org, foreign)
 	require.ErrorContains(t, err, "problem_package_assets_object_id_fkey")
-	_, err = pool.Exec(ctx, `INSERT INTO problem_package_assets(package_id,organization_id,path,object_id) VALUES($1,$2,'assets/f.png',$3)`, packageID, other, foreign)
+	_, err = pool.Exec(ctx, `INSERT INTO problem_package_assets(package_id,organization_id,name,object_id) VALUES($1,$2,'f.png',$3)`, packageID, other, foreign)
 	require.ErrorContains(t, err, "problem_package_assets_package_id_fkey", "the reference's organization is its owner's")
 
 	// Once the Package and the build are pruned, nothing holds the objects any more.
@@ -237,7 +237,7 @@ func TestObjectDeletionWaitsForConcurrentReference(t *testing.T) {
 	tx, err := pool.Begin(ctx)
 	require.NoError(t, err)
 	defer func() { _ = tx.Rollback(ctx) }()
-	_, err = tx.Exec(ctx, `INSERT INTO problem_draft_assets(problem_id,organization_id,path,object_id) VALUES($1,$2,'assets/a.png',$3)`, d.ProblemID, org, object)
+	_, err = tx.Exec(ctx, `INSERT INTO problem_draft_objects(problem_id,organization_id,object_id) VALUES($1,$2,$3)`, d.ProblemID, org, object)
 	require.NoError(t, err)
 
 	type outcome struct {
@@ -272,7 +272,7 @@ func TestObjectDeletionRacingWithNewReference(t *testing.T) {
 		current, err := repo.GetDraft(ctx, d.ProblemID)
 		require.NoError(t, err)
 		candidate := current
-		candidate.Assets = []model.DraftAsset{{Path: "assets/a.png", ObjectID: object}}
+		candidate.Assets = []model.DraftAsset{{Name: "a.png", ObjectID: object}}
 
 		var deleted bool
 		var deleteErr, linkErr error
@@ -298,7 +298,7 @@ func TestObjectDeletionRacingWithNewReference(t *testing.T) {
 			continue
 		}
 		require.NoError(t, linkErr)
-		require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_draft_assets WHERE object_id=$1`, object))
+		require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_draft_objects WHERE object_id=$1`, object))
 		// Release the reference again so the next round starts from a clean draft.
 		cleared, err := repo.GetDraft(ctx, d.ProblemID)
 		require.NoError(t, err)
@@ -313,7 +313,7 @@ func TestObjectDeletionRacingWithNewReference(t *testing.T) {
 func TestUploadFinalizeIsFencedByOperationToken(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
-	change := model.UploadChange{Part: "asset", AssetPath: "assets/a.png"}
+	change := model.UploadChange{Part: "asset", AssetName: "a.png"}
 	key := mutationKey(org, "upload", change)
 	replay, err := repo.BeginOperation(ctx, key)
 	require.NoError(t, err)
@@ -336,7 +336,7 @@ func TestUploadFinalizeIsFencedByOperationToken(t *testing.T) {
 	result, err := repo.FinalizeUploads(ctx, retry, d.ProblemID, d.Revision, change, []model.StoredObject{fresh})
 	require.NoError(t, err)
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, stale.ID))
-	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_draft_assets WHERE object_id=$1`, fresh.ID))
+	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_draft_objects WHERE object_id=$1`, fresh.ID))
 
 	// A lost response replays the stored result before anything is uploaded again.
 	again := retry
@@ -374,7 +374,7 @@ func TestGCDeletesUnreferencedObjectsAndOrphanedBytes(t *testing.T) {
 	ctx, pool, repo, org, d := draftFixture(t)
 	referenced := insertAvailableObject(t, ctx, pool, org)
 	unreferenced := insertAvailableObject(t, ctx, pool, org)
-	d.Assets = []model.DraftAsset{{Path: "assets/a.png", ObjectID: referenced}}
+	d.Assets = []model.DraftAsset{{Name: "a.png", ObjectID: referenced}}
 	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
 	require.NoError(t, err)
 	key := func(id uuid.UUID) string { return "objects/" + org.String() + "/" + id.String() }
@@ -429,7 +429,7 @@ func claimedBuildWithAsset(t *testing.T) (context.Context, *pgxpool.Pool, *postg
 	t.Helper()
 	ctx, pool, repo, org, d, _ := buildableFixture(t)
 	asset := insertAvailableObject(t, ctx, pool, org)
-	d.Assets = []model.DraftAsset{{Path: "assets/pic.png", ObjectID: asset}}
+	d.Assets = []model.DraftAsset{{Name: "pic.png", ObjectID: asset}}
 	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
@@ -452,10 +452,10 @@ func TestPackageStatementContentLivesWithPackage(t *testing.T) {
 	statement, err := repo.GetPackageStatement(ctx, packageID)
 	require.NoError(t, err)
 	require.Equal(t, samples, statement.Samples)
-	require.Equal(t, map[string]string{"assets/pic.png": strings.Repeat("0", 64)}, statement.Assets)
+	require.Equal(t, map[string]string{"pic.png": strings.Repeat("0", 64)}, statement.Assets)
 	found, err := repo.FindPackageAssets(ctx, packageID, strings.Repeat("0", 64))
 	require.NoError(t, err)
-	require.Equal(t, []model.PackageAsset{{Path: "assets/pic.png", Key: "objects/" + org.String() + "/" + asset.String()}}, found)
+	require.Equal(t, []model.PackageAsset{{Name: "pic.png", Key: "objects/" + org.String() + "/" + asset.String()}}, found)
 
 	// The draft drops the asset; the Package keeps it.
 	d.Assets = nil
@@ -466,7 +466,7 @@ func TestPackageStatementContentLivesWithPackage(t *testing.T) {
 	deleted, err := repo.DeleteObject(ctx, asset)
 	require.NoError(t, err)
 	require.False(t, deleted, "an asset of a live Package is not collected")
-	_, err = pool.Exec(ctx, `UPDATE problem_package_assets SET path='assets/other.png' WHERE package_id=$1`, packageID)
+	_, err = pool.Exec(ctx, `UPDATE problem_package_assets SET name='other.png' WHERE package_id=$1`, packageID)
 	require.ErrorContains(t, err, "package is immutable")
 
 	require.NoError(t, repo.PrunePackages(ctx, time.Millisecond))

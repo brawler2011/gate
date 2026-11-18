@@ -37,15 +37,15 @@ func (s *assetStore) DownloadFile(_ context.Context, _, key string, _ *string) (
 }
 
 func TestPackageContentServesOnlyImages(t *testing.T) {
-	for _, path := range []string{"assets/notes.txt", "assets/page.html", "assets/noext"} {
+	for _, path := range []string{"notes.txt", "page.html", "noext"} {
 		store := &assetStore{}
-		content := &PackageContent{Repo: packageAssets{assets: []model.PackageAsset{{Path: path, Key: "k"}}}, Store: store}
+		content := &PackageContent{Repo: packageAssets{assets: []model.PackageAsset{{Name: path, Key: "k"}}}, Store: store}
 		_, _, err := content.OpenImage(context.Background(), uuid.New(), "hash")
 		require.ErrorIs(t, err, pkg.ErrNotFound, path)
 		require.Empty(t, store.keys, path)
 	}
 	store := &assetStore{}
-	content := &PackageContent{Repo: packageAssets{assets: []model.PackageAsset{{Path: "assets/a.txt", Key: "text"}, {Path: "assets/Diagram.SVG", Key: "svg"}}}, Store: store}
+	content := &PackageContent{Repo: packageAssets{assets: []model.PackageAsset{{Name: "a.txt", Key: "text"}, {Name: "Diagram.SVG", Key: "svg"}}}, Store: store}
 	file, contentType, err := content.OpenImage(context.Background(), uuid.New(), "hash")
 	require.NoError(t, err)
 	require.NoError(t, file.Close())

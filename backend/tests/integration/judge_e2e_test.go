@@ -92,25 +92,18 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	require.NoError(t, dbfixtures.InsertProblem(ctx, dbPool, dbfixtures.ProblemSpec{ID: problemID, OrganizationID: org.ID, OwnerID: &userID, Visibility: "public", Title: "Sum of Two Numbers", ShortName: "sum-problem"}))
 	d, err := drafts.GetDraft(ctx, problemID)
 	require.NoError(t, err)
-	checker, generator, solution, group := uuid.New(), uuid.New(), uuid.New(), uuid.New()
-	d.Files = map[string]string{
-		"checkers/check.cpp": "#include <fstream>\nint main(int n,char**v){\n#ifdef REJECT_ALL\nreturn 1;\n#endif\nlong long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}",
-		"generators/gen.py":  "import sys\nprint(sys.argv[1], sys.argv[2])\n",
-		"solutions/main.cpp": "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}",
-		"statements/en.md":   "Print a+b.",
-	}
-	d.Components = []problemsmodel.DraftComponent{
-		{ID: checker, Role: "checker", Path: "checkers/check.cpp"},
-		{ID: generator, Role: "generator", Path: "generators/gen.py"},
-		{ID: solution, Role: "solution", Path: "solutions/main.cpp"},
-	}
+	generator, solution, group := uuid.New(), uuid.New(), uuid.New()
+	d.Checker = &problemsmodel.DraftProgram{Language: "cpp", Source: "#include <fstream>\nint main(int n,char**v){\n#ifdef REJECT_ALL\nreturn 1;\n#endif\nlong long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}"}
+	d.Generators = []problemsmodel.DraftNamedProgram{{ID: generator, Name: "gen", DraftProgram: problemsmodel.DraftProgram{Language: "python", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
+	d.Solutions = []problemsmodel.DraftNamedProgram{{ID: solution, Name: "main", DraftProgram: problemsmodel.DraftProgram{Language: "cpp", Source: "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}"}}}
+	d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Print a+b."}}
 	d.MainSolutionID = &solution
 	d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
 	seed := int64(1)
 	test := func(ordinal int, weight points.Value, a, b string) problemsmodel.DraftTest {
 		return problemsmodel.DraftTest{ID: uuid.New(), Ordinal: ordinal, SubtaskID: group, Points: weight,
-			Input:  problemsmodel.DraftInput{Mode: "generator", ComponentID: &generator, Args: []string{a, b}, Seed: &seed},
-			Answer: problemsmodel.DraftAnswer{Mode: "generated", ComponentID: &solution}}
+			Input:  problemsmodel.DraftInput{Mode: "generator", GeneratorID: &generator, Args: []string{a, b}, Seed: &seed},
+			Answer: problemsmodel.DraftAnswer{Mode: "generated", SolutionID: &solution}}
 	}
 	d.Tests = []problemsmodel.DraftTest{test(1, 40*points.Unit, "1", "2"), test(2, 60*points.Unit, "3", "2")}
 	saved, err := drafts.SaveDraft(ctx, mutationKey(org.ID, "edit", d), d)
@@ -335,26 +328,18 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 	}
 	draft := func(interactorSource, checkerSource string) func(*problemsmodel.Draft) {
 		return func(d *problemsmodel.Draft) {
-			checker, intr, generator, solution, group := uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()
+			generator, solution, group := uuid.New(), uuid.New(), uuid.New()
 			d.Type = "interactive"
-			d.Files = map[string]string{
-				"checkers/check.py":       checkerSource,
-				"interactors/interact.py": interactorSource,
-				"generators/gen.py":       "import sys\nprint(sys.argv[1])\n",
-				"solutions/main.py":       "print(2 * int(input()), flush=True)\n",
-				"statements/en.md":        "Reply with twice the number.",
-			}
-			d.Components = []problemsmodel.DraftComponent{
-				{ID: checker, Role: "checker", Path: "checkers/check.py"},
-				{ID: intr, Role: "interactor", Path: "interactors/interact.py"},
-				{ID: generator, Role: "generator", Path: "generators/gen.py"},
-				{ID: solution, Role: "solution", Path: "solutions/main.py"},
-			}
+			d.Checker = &problemsmodel.DraftProgram{Language: "python", Source: checkerSource}
+			d.Interactor = &problemsmodel.DraftProgram{Language: "python", Source: interactorSource}
+			d.Generators = []problemsmodel.DraftNamedProgram{{ID: generator, Name: "gen", DraftProgram: problemsmodel.DraftProgram{Language: "python", Source: "import sys\nprint(sys.argv[1])\n"}}}
+			d.Solutions = []problemsmodel.DraftNamedProgram{{ID: solution, Name: "main", DraftProgram: problemsmodel.DraftProgram{Language: "python", Source: "print(2 * int(input()), flush=True)\n"}}}
+			d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Reply with twice the number."}}
 			d.MainSolutionID = &solution
 			d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
 			seed := int64(1)
 			d.Tests = []problemsmodel.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: group, Points: 100 * points.Unit,
-				Input:  problemsmodel.DraftInput{Mode: "generator", ComponentID: &generator, Args: []string{"5"}, Seed: &seed},
+				Input:  problemsmodel.DraftInput{Mode: "generator", GeneratorID: &generator, Args: []string{"5"}, Seed: &seed},
 				Answer: problemsmodel.DraftAnswer{Mode: "interactive"}}}
 		}
 	}
