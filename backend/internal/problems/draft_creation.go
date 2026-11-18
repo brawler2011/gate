@@ -94,7 +94,7 @@ func (uc *DraftUseCase) Import(ctx context.Context, id uuid.UUID, expected int64
 	if replay != nil {
 		return *replay, nil
 	}
-	return uc.Repo.FinalizeImport(ctx, k, id, expected, plan.draft, objects)
+	return uc.Repo.FinalizeImport(ctx, k, id, expected, plan.draft, objects, plan.convertedFiles)
 }
 func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreateProblemInput) (uuid.UUID, error) {
 	user := accessmodel.UserFromContext(ctx)

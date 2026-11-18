@@ -61,6 +61,8 @@ type Program struct {
 // Statement is the statement in one language: one LaTeX file in olymp.sty
 // or ICPC style (TeX), or Markdown files per section (Sections).
 type Statement struct {
+	// Charset is the declared text encoding, or empty when unspecified.
+	Charset  string
 	Language string
 	// TeX is the path of a LaTeX statement; its sections are found in it.
 	TeX string

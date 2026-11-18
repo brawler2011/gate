@@ -17,11 +17,11 @@ type PackagesReader interface {
 }
 
 // ImportProblem handles POST /problems/{id}/import.
-func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProblemReq, params corev1.ImportProblemParams) (*corev1.ProblemDraft, error) {
+func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProblemReq, params corev1.ImportProblemParams) (*corev1.ProblemImportResult, error) {
 	if req == nil || req.Package.File == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "expected 'package' field")
 	}
-	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.Import(ctx, params.ID, params.ExpectedRevision, params.IdempotencyKey, req.Package.File))
+	return draftResult[corev1.ProblemImportResult](h.ProblemDrafts.Import(ctx, params.ID, params.ExpectedRevision, params.IdempotencyKey, req.Package.File))
 }
 
 // ListProblemPackages handles GET /problems/{id}/packages.

@@ -2756,6 +2756,40 @@ func (s ProblemDraftType) Validate() error {
 	}
 }
 
+func (s *ProblemImportResult) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Draft.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "draft",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.ConvertedFiles == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "converted_files",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *ProblemMemberModel) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer

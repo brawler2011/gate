@@ -8803,6 +8803,33 @@ func (s *ProblemDraftType) UnmarshalText(data []byte) error {
 	}
 }
 
+// Ref: #/components/schemas/ProblemImportResult
+type ProblemImportResult struct {
+	Draft ProblemDraft `json:"draft"`
+	// Package paths converted to UTF-8; source string literal bytes may have changed.
+	ConvertedFiles []string `json:"converted_files"`
+}
+
+// GetDraft returns the value of Draft.
+func (s *ProblemImportResult) GetDraft() ProblemDraft {
+	return s.Draft
+}
+
+// GetConvertedFiles returns the value of ConvertedFiles.
+func (s *ProblemImportResult) GetConvertedFiles() []string {
+	return s.ConvertedFiles
+}
+
+// SetDraft sets the value of Draft.
+func (s *ProblemImportResult) SetDraft(val ProblemDraft) {
+	s.Draft = val
+}
+
+// SetConvertedFiles sets the value of ConvertedFiles.
+func (s *ProblemImportResult) SetConvertedFiles(val []string) {
+	s.ConvertedFiles = val
+}
+
 // Problem member data.
 // Ref: #/components/schemas/ProblemMemberModel
 type ProblemMemberModel struct {

@@ -19,6 +19,7 @@ type Props = {
 export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
   const queryClient = useQueryClient();
   const [packageFile, setPackageFile] = useState<File | null>(null);
+  const [convertedFiles, setConvertedFiles] = useState<string[]>([]);
   const [isImporting, startImport] = useTransition();
 
   const handleImport = () => {
@@ -59,7 +60,8 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
         color: "green",
       });
       setPackageFile(null);
-      queryClient.setQueryData(draftKey(problemId), data);
+      setConvertedFiles(data.converted_files);
+      queryClient.setQueryData(draftKey(problemId), data.draft);
       void queryClient.invalidateQueries({queryKey: ["problem", problemId]});
     });
   };
@@ -81,6 +83,13 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
             >
               Импорт заменит весь черновик этой задачи. Ранее собранные пакеты не изменятся.
             </Alert>
+
+            {convertedFiles.length > 0 && (
+              <Alert color="yellow" title="Файлы преобразованы в UTF-8">
+                <Text size="sm">Байты строковых литералов в исходниках могли измениться.</Text>
+                {convertedFiles.map((path) => <Text size="sm" key={path}>{path}</Text>)}
+              </Alert>
+            )}
 
             <Group align="flex-end" wrap="wrap">
               <FileInput

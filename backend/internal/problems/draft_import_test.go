@@ -18,6 +18,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/encoding/charmap"
 	"golang.org/x/tools/txtar"
 )
 
@@ -330,4 +331,93 @@ func TestImportRejectsUnsupportedPolygonSourceTypes(t *testing.T) {
 	require.ErrorContains(t, err, "unsupported language configuration cpp14 of solutions/main.cpp")
 	_, err = importDir(t, unpack(t, "polygon-unsupported-type"), nil)
 	require.ErrorContains(t, err, `solutions/main.pas: unsupported Polygon source type "pascal.fpc"`)
+}
+
+func TestImportDecodesPolygonStatement(t *testing.T) {
+	for _, tc := range []struct {
+		charset  string
+		encoding *charmap.Charmap
+	}{
+		{"windows-1251", charmap.Windows1251},
+		{"KOI8-R", charmap.KOI8R},
+		{"", charmap.Windows1251},
+	} {
+		t.Run(tc.charset, func(t *testing.T) {
+			text := `\begin{problem}{Сумма}{}{}{}{}Привет, мир!\end{problem}`
+			encoded, err := tc.encoding.NewEncoder().String(text)
+			require.NoError(t, err)
+			plan, err := importDir(t, t.TempDir(), map[string]string{
+				"statement.tex": encoded,
+				"problem.xml":   `<problem short-name="sum"><statements><statement language="russian" type="application/x-tex" path="statement.tex" charset="` + tc.charset + `"/></statements><judging><testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit></testset></judging></problem>`,
+			})
+			require.NoError(t, err)
+			defer plan.Close()
+			require.Contains(t, plan.draft.Statement("ru").Legend, "Привет, мир!")
+			require.Equal(t, []string{"statement.tex"}, plan.convertedFiles)
+		})
+	}
+}
+
+func TestImportDecodesPCMS2SourcesAndKeepsTestBytes(t *testing.T) {
+	source := "// Проверка ответа\nint main() {}\n"
+	encoded, err := charmap.Windows1251.NewEncoder().String(source)
+	require.NoError(t, err)
+	raw := "\xff\xe0\x00\r\n"
+	plan, err := importDir(t, "../../pkg/testdata/pcms2/a-plus-b", map[string]string{
+		"check.cpp": encoded, "tests/01": raw, "tests/01.a": raw,
+		"helper.h": encoded,
+	})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, source, plan.draft.Checker.Source)
+	require.Equal(t, []string{"check.cpp", "helper.h"}, plan.convertedFiles)
+	var header *model.DraftLibraryFile
+	for _, f := range plan.draft.Library {
+		if f.Name == "helper.h" {
+			header = &f
+		}
+	}
+	require.NotNil(t, header)
+	require.Equal(t, source, header.Content)
+	require.NoError(t, plan.draft.ValidateBuild(importQuotas, newImportUseCase(t).BuildOptions.Languages))
+	for _, id := range []uuid.UUID{*plan.draft.Tests[0].Input.ObjectID, *plan.draft.Tests[0].Answer.ObjectID} {
+		found := false
+		for _, object := range plan.objects {
+			if object.temporaryID == id {
+				data, err := os.ReadFile(object.path)
+				require.NoError(t, err)
+				require.Equal(t, raw, string(data))
+				found = true
+			}
+		}
+		require.True(t, found)
+	}
+}
+
+func TestImportKeepsUTF8Text(t *testing.T) {
+	source := "// Привет\nint main() {}\n"
+	plan, err := importAPlusB(t, map[string]string{"solutions/ok.cpp": source})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, source, plan.draft.Solution(*plan.draft.MainSolutionID).Source)
+	require.Empty(t, plan.convertedFiles)
+}
+
+func TestImportRejectsOversizedDecodedText(t *testing.T) {
+	// Each windows-1251 letter grows from one byte to two in UTF-8.
+	_, err := importAPlusB(t, map[string]string{"solutions/main.cpp": strings.Repeat("\xef", int(importQuotas.FileBytes)/2+1)})
+	require.ErrorIs(t, err, pkg.ErrPayloadTooLarge)
+}
+
+func TestImportRejectsInvalidDeclaredCharset(t *testing.T) {
+	for _, charset := range []string{"unknown-charset", "UTF-8"} {
+		t.Run(charset, func(t *testing.T) {
+			_, err := importDir(t, t.TempDir(), map[string]string{
+				"statement.tex": "\xff",
+				"problem.xml":   `<problem><statements><statement language="russian" type="application/x-tex" path="statement.tex" charset="` + charset + `"/></statements><judging><testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit></testset></judging></problem>`,
+			})
+			require.ErrorIs(t, err, pkg.ErrBadInput)
+			require.ErrorContains(t, err, "statement.tex")
+		})
+	}
 }

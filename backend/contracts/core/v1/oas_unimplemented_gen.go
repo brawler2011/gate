@@ -721,7 +721,7 @@ func (UnimplementedHandler) GetUserAvatar(ctx context.Context, params GetUserAva
 // Replace the draft with the contents of a problem archive.
 //
 // POST /problems/{id}/import
-func (UnimplementedHandler) ImportProblem(ctx context.Context, req *ImportProblemReq, params ImportProblemParams) (r *ProblemDraft, _ error) {
+func (UnimplementedHandler) ImportProblem(ctx context.Context, req *ImportProblemReq, params ImportProblemParams) (r *ProblemImportResult, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

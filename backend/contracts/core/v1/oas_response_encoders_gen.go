@@ -1147,7 +1147,7 @@ func encodeGetUserAvatarResponse(response GetUserAvatarRes, w http.ResponseWrite
 	}
 }
 
-func encodeImportProblemResponse(response *ProblemDraft, w http.ResponseWriter) error {
+func encodeImportProblemResponse(response *ProblemImportResult, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 

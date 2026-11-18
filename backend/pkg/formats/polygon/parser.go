@@ -316,7 +316,7 @@ func statements(list []Statement) []spec.Statement {
 		language := tex.LanguageCode(s.Language)
 		if s.Type == "application/x-tex" && !seen[language] {
 			seen[language] = true
-			result = append(result, spec.Statement{Language: language, TeX: s.Path})
+			result = append(result, spec.Statement{Language: language, TeX: s.Path, Charset: s.Charset})
 		}
 	}
 	return result

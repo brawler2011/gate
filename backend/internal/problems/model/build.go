@@ -26,6 +26,12 @@ type MutationKey struct {
 	Token          uuid.UUID
 }
 
+// ImportResult reports text files whose bytes changed during charset conversion.
+type ImportResult struct {
+	Draft          Draft    `json:"draft"`
+	ConvertedFiles []string `json:"converted_files"`
+}
+
 type MutationResult struct {
 	Status int
 	Body   json.RawMessage

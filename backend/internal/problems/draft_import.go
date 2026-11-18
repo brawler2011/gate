@@ -25,6 +25,9 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/formats/tex"
 	"github.com/brawler2011/gate/backend/pkg/ziputil"
 	"github.com/google/uuid"
+	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/ianaindex"
+	"golang.org/x/text/encoding/unicode"
 )
 
 type importObject struct {
@@ -33,9 +36,10 @@ type importObject struct {
 	spec        model.UploadSpec
 }
 type draftImport struct {
-	draft   model.Draft
-	objects []importObject
-	root    string
+	draft          model.Draft
+	objects        []importObject
+	root           string
+	convertedFiles []string
 }
 
 func (i *draftImport) Close() { _ = os.RemoveAll(i.root) }
@@ -44,7 +48,7 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	if err != nil {
 		return nil, fmt.Errorf("mkdirtemp: %w", err)
 	}
-	result := &draftImport{root: root}
+	result := &draftImport{root: root, convertedFiles: []string{}}
 	complete := false
 	defer func() {
 		if !complete {
@@ -103,6 +107,7 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	if err := result.draft.ComputeScores(); err != nil {
 		return nil, err
 	}
+	slices.Sort(result.convertedFiles)
 	complete = true
 	return result, nil
 }
@@ -258,7 +263,7 @@ func (c *importConverter) libraryFile(name, path string) (uuid.UUID, error) {
 	if !model.ValidFileName(name) {
 		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid library file name "+name)
 	}
-	text, err := c.readText(path)
+	text, err := c.readText(path, "")
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -292,7 +297,7 @@ func (c *importConverter) program(program spec.Program) (*model.DraftProgram, er
 		}
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "unsupported language configuration "+language+" of "+program.Path)
 	}
-	text, err := c.readText(program.Path)
+	text, err := c.readText(program.Path, "")
 	if err != nil {
 		return nil, err
 	}
@@ -346,14 +351,14 @@ func (c *importConverter) addStatement(s spec.Statement) error {
 	statement := model.DraftStatement{Language: s.Language}
 	sections := map[string]string{}
 	if s.TeX != "" {
-		text, err := c.readText(s.TeX)
+		text, err := c.readText(s.TeX, s.Charset)
 		if err != nil {
 			return err
 		}
 		sections = tex.ToSections(text)
 	}
 	for name, path := range s.Sections {
-		text, err := c.readText(path)
+		text, err := c.readText(path, s.Charset)
 		if err != nil {
 			return err
 		}
@@ -446,7 +451,7 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map
 }
 
 // readText reads a text file of the package; the caller charges what it keeps.
-func (c *importConverter) readText(path string) (string, error) {
+func (c *importConverter) readText(path, charset string) (string, error) {
 	full, err := c.file(path)
 	if err != nil {
 		return "", err
@@ -462,10 +467,32 @@ func (c *importConverter) readText(path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("readfile: %w", err)
 	}
-	if !utf8.Valid(data) {
-		return "", pkg.Wrap(pkg.ErrBadInput, nil, "text must be UTF-8: "+path)
+	charset = strings.TrimSpace(charset)
+	if charset == "" && utf8.Valid(data) {
+		return string(data), nil
 	}
-	return string(data), nil
+	encoding := charmap.Windows1251.NewDecoder()
+	if charset != "" {
+		enc, err := ianaindex.IANA.Encoding(charset)
+		if err != nil || enc == nil {
+			return "", pkg.Wrap(pkg.ErrBadInput, err, "unsupported charset "+charset+" of "+path)
+		}
+		if enc == unicode.UTF8 && !utf8.Valid(data) {
+			return "", pkg.Wrap(pkg.ErrBadInput, nil, "invalid UTF-8: "+path)
+		}
+		encoding = enc.NewDecoder()
+	}
+	decoded, err := encoding.Bytes(data)
+	if err != nil {
+		return "", pkg.Wrap(pkg.ErrBadInput, err, "decode text "+path)
+	}
+	if len(decoded) > int(c.uc.DraftQuotas.FileBytes) {
+		return "", pkg.ErrPayloadTooLarge
+	}
+	if !bytes.Equal(data, decoded) && !slices.Contains(c.result.convertedFiles, path) {
+		c.result.convertedFiles = append(c.result.convertedFiles, path)
+	}
+	return string(decoded), nil
 }
 
 // charge counts a draft file of n text bytes against the draft quotas as the
