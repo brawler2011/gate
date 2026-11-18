@@ -222,6 +222,29 @@ func TestImportRecognizesUpstreamTestlib(t *testing.T) {
 	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", Content: patched}}, plan.draft.Library)
 }
 
+// Different upstream versions of testlib.h that no generator includes are
+// one auto-updated file: checkers and validators take the current version
+// anyway.
+func TestImportMergesUpstreamTestlibVersions(t *testing.T) {
+	old, err := os.ReadFile("../../pkg/testdata/polygon/max-subarray/files/testlib.h")
+	require.NoError(t, err)
+	system, _ := syslib.Lookup("testlib.h")
+	require.NotEqual(t, system.Content, string(old))
+	files := map[string]string{
+		"problem.yaml": "name: Versions\nvalidation: custom\n", "data/secret/1.in": "1\n", "data/secret/1.ans": "1\n",
+		"output_validators/check/check.cpp": "int main() {}\n", "output_validators/check/testlib.h": string(old),
+		"input_validators/validate/validate.cpp": "int main() {}\n", "input_validators/validate/testlib.h": system.Content,
+	}
+	plan, err := importDir(t, t.TempDir(), files)
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, []model.DraftLibraryFile{{Name: "testlib.h", AutoUpdate: true}}, plan.draft.Library)
+
+	files["input_validators/validate/testlib.h"] = system.Content + "// patched\n"
+	_, err = importDir(t, t.TempDir(), files)
+	require.ErrorContains(t, err, "different files named testlib.h")
+}
+
 // rnd differs between testlib versions, so a package with generators keeps
 // its testlib.h unless it is the current system one; turning auto-update on
 // is the author's choice.

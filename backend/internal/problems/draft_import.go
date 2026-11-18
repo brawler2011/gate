@@ -248,8 +248,9 @@ func (c *importConverter) convert(p *spec.Problem) error {
 
 // addLibrary adds the library files the judge programs of p include. A
 // draft has one file of each name, so different texts under one name are
-// rejected, except versions of a system library file that no generator
-// includes: they become the auto-updated file. A generator keeps the text of
+// rejected, except upstream versions of a system library file that no
+// generator includes: they become the auto-updated file, since checkers and
+// validators take its current version anyway. A generator keeps the text of
 // its package, since rnd differs between testlib versions, unless the text is
 // the current system one.
 func (c *importConverter) addLibrary(p *spec.Problem) error {
