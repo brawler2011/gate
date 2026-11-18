@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/brawler2011/gate/backend/pkg/diskcache"
 	"golang.org/x/sys/unix"
 )
 
@@ -25,4 +26,13 @@ func DiskTempDir(t testing.TB) string {
 	}
 	t.Fatal("no disk-backed temporary directory available")
 	return ""
+}
+
+func DiskCache(t testing.TB) *diskcache.Cache {
+	t.Helper()
+	cache, err := diskcache.Open(DiskTempDir(t), 1<<30)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cache
 }

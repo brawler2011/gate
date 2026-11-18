@@ -15,7 +15,7 @@ import (
 	"slices"
 	"time"
 
-	"golang.org/x/sync/singleflight"
+	"github.com/brawler2011/gate/backend/pkg/diskcache"
 )
 
 type Program struct {
@@ -48,48 +48,24 @@ func (p Program) key(compiler string) string {
 // CompileFunc compiles p into dir as "entry" and "deps/<name>".
 type CompileFunc func(ctx context.Context, p Program, limits FileRunLimits, dir string) error
 
-// ProgramCache publishes entries by atomic rename, so every visible entry is complete.
 type ProgramCache struct {
-	Root     string
+	Cache    *diskcache.Cache
 	Compiler string // Image.Compiler()
 	Compile  CompileFunc
-	group    singleflight.Group
 }
 
-func NewProgramCache(root string, client *Client, files *FileTransport, image Image) *ProgramCache {
+func NewProgramCache(cache *diskcache.Cache, client *Client, files *FileTransport, image Image) *ProgramCache {
 	sb := NewSandbox(client, image.Config)
-	return &ProgramCache{Root: root, Compiler: image.Compiler(), Compile: func(ctx context.Context, p Program, limits FileRunLimits, dir string) error {
+	return &ProgramCache{Cache: cache, Compiler: image.Compiler(), Compile: func(ctx context.Context, p Program, limits FileRunLimits, dir string) error {
 		return sb.CompileTo(ctx, files, p, limits, dir)
 	}}
 }
 
-// Get reuses compiled programs regardless of the requested limits.
-func (c *ProgramCache) Get(ctx context.Context, p Program, limits FileRunLimits) (string, error) {
-	dir := filepath.Join(c.Root, p.key(c.Compiler))
-	_, err, _ := c.group.Do(dir, func() (any, error) {
-		if _, err := os.Stat(dir); err == nil {
-			return nil, nil
-		} else if !errors.Is(err, fs.ErrNotExist) {
-			return nil, fmt.Errorf("stat: %w", err)
-		}
-		if err := os.MkdirAll(c.Root, 0o700); err != nil {
-			return nil, fmt.Errorf("mkdir: %w", err)
-		}
-		tmp, err := os.MkdirTemp(c.Root, ".tmp-")
-		if err != nil {
-			return nil, fmt.Errorf("mkdirtemp: %w", err)
-		}
-		if err := c.Compile(ctx, p, limits, tmp); err != nil {
-			_ = os.RemoveAll(tmp)
-			return nil, err
-		}
-		if err := os.Rename(tmp, dir); err != nil {
-			_ = os.RemoveAll(tmp)
-			return nil, fmt.Errorf("rename: %w", err)
-		}
-		return nil, nil
+// Get reuses compiled programs regardless of the requested limits; the caller releases the handle.
+func (c *ProgramCache) Get(ctx context.Context, p Program, limits FileRunLimits) (*diskcache.Handle, error) {
+	return c.Cache.Acquire(ctx, "program-"+p.key(c.Compiler), func(ctx context.Context, dir string) error { //nolint:wrapcheck // compilation errors keep their kind for the caller
+		return c.Compile(ctx, p, limits, dir)
 	})
-	return dir, err //nolint:wrapcheck // compilation errors keep their kind for the caller
 }
 
 func (s *Sandbox) CompileTo(ctx context.Context, files *FileTransport, p Program, limits FileRunLimits, dir string) error {

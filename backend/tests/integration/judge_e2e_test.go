@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -28,8 +29,10 @@ import (
 	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/diskcache"
 	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
+	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/brawler2011/gate/backend/tests/dbfixtures"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -117,22 +120,26 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	build, err := drafts.ClaimBuild(ctx, 5*time.Minute)
 	require.NoError(t, err)
 	work := diskTempDir(t)
-	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(diskTempDir(t), client, files, sandbox.Image{Config: cfg}), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	pipeline := builder.Pipeline{Repo: drafts, Store: store, Bucket: bucket, TempDir: work, Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(diskCache(t), client, files, sandbox.Image{Config: cfg}), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	packageID, err := pipeline.Execute(ctx, build)
 	require.NoError(t, err)
 
 	// The checker cache is keyed by the judge image digest.
-	cache := diskTempDir(t)
+	cacheDir := diskTempDir(t)
+	cache, err := diskcache.Open(cacheDir, 1<<30)
+	require.NoError(t, err)
+	packages := diskCache(t)
+	reads := &countingStorage{Storage: store, reads: map[string]int{}}
 	newJudge := func(image sandbox.Image) *judging.JudgeUseCase {
 		executor := &judging.PackageJudge{Client: client, Files: files, Languages: image.Config, Programs: sandbox.NewProgramCache(cache, client, files, image), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 		return judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), submissionsRepo,
-			&judging.PackageLoader{Store: store, Bucket: bucket, TempDir: diskTempDir(t), Packages: drafts, Limits: limits},
+			&judging.PackageLoader{Store: reads, Bucket: bucket, Cache: packages, Packages: drafts, Limits: limits},
 			executor, judgeworker.NewEventPublisher(js))
 	}
 	judgeUC := newJudge(image)
 	cached := func(t *testing.T) []string {
 		t.Helper()
-		entries, err := os.ReadDir(cache)
+		entries, err := os.ReadDir(cacheDir)
 		require.NoError(t, err)
 		names := []string{}
 		for _, e := range entries {
@@ -176,7 +183,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	t.Run("CheckerCompiledOncePerImage", func(t *testing.T) {
 		programs := cached(t)
 		require.Len(t, programs, 1, "the first submissions compiled the checker into the cache")
-		entry := filepath.Join(cache, programs[0], "entry")
+		entry := filepath.Join(cacheDir, programs[0], "entry")
 		before, err := os.Stat(entry)
 		require.NoError(t, err)
 		sub := judge(t, problemID, "python3", "print(sum(map(int, input().split())))")
@@ -201,6 +208,11 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		sub = judge(t, problemID, "python3", "print(sum(map(int, input().split())))")
 		assert.Equal(t, submissionsmodel.Accepted, sub.State)
 	})
+	t.Run("PackageDownloadedOnce", func(t *testing.T) {
+		descriptor, err := drafts.GetPackageDescriptor(ctx, packageID)
+		require.NoError(t, err)
+		assert.Equal(t, 1, reads.count(descriptor.Object.Key), "later jobs judge from the cached package")
+	})
 	t.Run("UnreadablePackageIsInternalError", func(t *testing.T) {
 		// A Package whose archive object was never uploaded cannot be loaded.
 		brokenProblem := uuid.New()
@@ -211,6 +223,25 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		sub := judge(t, brokenProblem, "python3", "print(1)")
 		assert.Equal(t, submissionsmodel.GotIE, sub.State)
 	})
+}
+
+type countingStorage struct {
+	storage.Storage
+	mu    sync.Mutex
+	reads map[string]int
+}
+
+func (s *countingStorage) DownloadFile(ctx context.Context, bucket, key string, ifNoneMatch *string) (io.ReadCloser, string, error) {
+	s.mu.Lock()
+	s.reads[key]++
+	s.mu.Unlock()
+	return s.Storage.DownloadFile(ctx, bucket, key, ifNoneMatch)
+}
+
+func (s *countingStorage) count(key string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.reads[key]
 }
 
 type judgeHarness struct {
@@ -259,11 +290,11 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 	compile := aux
 	compile.CPU, compile.Wall, compile.Memory, compile.Processes = 20*time.Second, 60*time.Second, 512<<20, 150
 	h.limits = problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux}
-	programs := sandbox.NewProgramCache(diskTempDir(t), client, files, image)
+	programs := sandbox.NewProgramCache(diskCache(t), client, files, image)
 	h.pipeline = builder.Pipeline{Repo: h.drafts, Store: store, Bucket: bucket, TempDir: diskTempDir(t), Client: client, Files: files, Languages: cfg, Programs: programs, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	executor := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Programs: programs, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	h.judge = judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), h.submissions,
-		&judging.PackageLoader{Store: store, Bucket: bucket, TempDir: diskTempDir(t), Packages: h.drafts, Limits: h.limits},
+		&judging.PackageLoader{Store: store, Bucket: bucket, Cache: diskCache(t), Packages: h.drafts, Limits: h.limits},
 		executor, judgeworker.NewEventPublisher(js))
 
 	start, end := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)

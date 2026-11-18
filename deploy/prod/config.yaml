@@ -22,6 +22,7 @@ judge:
 problems:
   # Build and judging scratch space must use disk, not tmpfs.
   work_dir: /problem-work
+  cache_bytes: 6GiB
   draft:
     file_bytes: 1MiB
     text_bytes: 8MiB
