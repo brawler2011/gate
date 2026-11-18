@@ -61,9 +61,21 @@ export const customChecker = (language: string, source: string): ProblemDraftChe
 /** A standard checker: each build takes its current version. */
 export const standardChecker = (name: string, language: string): ProblemDraftChecker => ({language, source: "", standard: name});
 
-/** Turns a standard checker into the author's copy of its current source. */
-export const customizeChecker = (draft: ProblemDraft, source: string): ProblemDraft =>
-  draft.checker ? {...draft, checker: customChecker(draft.checker.language, source)} : draft;
+/**
+ * Turns a standard checker into the author's copy of its current source. A
+ * standard checker builds with the system files it includes, so those the
+ * library lacks are added auto-updated.
+ */
+export const customizeChecker = (draft: ProblemDraft, source: string, systemFiles: string[]): ProblemDraft => {
+  if (!draft.checker) {
+    return draft;
+  }
+  const missing = systemFiles.filter(
+    (name) => source.includes(`#include "${name}"`) && !draft.library.some((file) => file.name === name),
+  );
+  const next = {...draft, checker: customChecker(draft.checker.language, source)};
+  return missing.reduce(addSystemFile, next);
+};
 
 export const addProgram = (
   draft: ProblemDraft,

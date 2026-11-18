@@ -30,7 +30,8 @@ const mockApi = (stored: ProblemDraft): ProblemDraft[] => {
     (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input), "http://localhost");
       if (url.pathname === "/api/lib") {
-        return Promise.resolve(Response.json({files: [], checkers: [{name: "wcmp", description: "Слова", content: WCMP}]}));
+        const testlib = {name: "testlib.h", extensions: ["cpp"], version: "0.9.51", commit: "c", content: "// testlib\n"};
+        return Promise.resolve(Response.json({files: [testlib], checkers: [{name: "wcmp", description: "Слова", content: WCMP}]}));
       }
       if (url.pathname === "/api/languages") {
         return Promise.resolve(Response.json({languages: [{id: "cpp20", name: "C++20", extensions: ["cpp"], syntax: "cpp"}]}));
@@ -49,7 +50,7 @@ const mockApi = (stored: ProblemDraft): ProblemDraft[] => {
 };
 
 describe("workshop checker", () => {
-  it("making a copy of a standard checker saves its source as the author's checker", async () => {
+  it("making a copy of a standard checker saves its source and the testlib.h it builds with", async () => {
     const puts = mockApi(draft);
     const view = renderWithProviders(<WorkshopComponentsTab problemId="problem" role="checker" />);
     const button = await view.findByRole("button", {name: "Сделать редактируемую копию"});
@@ -57,6 +58,8 @@ describe("workshop checker", () => {
     fireEvent.click(button);
     await waitFor(() => expect(puts).toHaveLength(1));
     expect(puts[0].checker).toEqual({language: "cpp20", source: WCMP, standard: ""});
+    // The draft had no testlib.h: the standard checker brought the system one.
+    expect(puts[0].library).toEqual([{name: "testlib.h", content: "", auto_update: true}]);
     // The copy is an ordinary checker the author edits.
     await waitFor(() => expect(view.getByRole("button", {name: "Сохранить"})).toBeTruthy());
   });

@@ -6,7 +6,7 @@ import {useSearchParams} from "react-router-dom";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {languageName, useLanguages, type SupportedLanguage} from "@/lib/languages";
-import {useStandardCheckers} from "@/lib/systemLibrary";
+import {useStandardCheckers, useSystemLibrary} from "@/lib/systemLibrary";
 
 import {DraftGate} from "./draft/DraftGate";
 import {
@@ -202,6 +202,7 @@ type PanelProps<Role> = {draft: ProblemDraft; problemId: string; role: Role};
 const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
   const catalog = useLanguages();
+  const systemFiles = useSystemLibrary()?.map((file) => file.name) ?? [];
   const program = draft[role];
   if (!program) {
     return (
@@ -239,7 +240,7 @@ const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNod
         checker={checker}
         saving={isSaving}
         onChange={(patch) => void save((current) => setSingleProgram(current, "checker", {...(current.checker ?? checker), ...patch}))}
-        onCustomize={(source) => void save((current) => customizeChecker(current, source))}
+        onCustomize={(source) => void save((current) => customizeChecker(current, source, systemFiles))}
         onDelete={() => void save((current) => setSingleProgram(current, "checker", null))}
       />
     );
