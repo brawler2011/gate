@@ -462,7 +462,6 @@ public class Main {
 			"cpp17":   cppSum,
 			"cpp20":   cppSum,
 			"cpp23":   cppSum,
-			"cpp26":   cppSum,
 			"python3": pythonSum,
 			"pypy3":   pythonSum,
 			"java":    "import java.util.Scanner;\npublic class Main { public static void main(String[] args) { Scanner s = new Scanner(System.in); System.out.println(s.nextLong() + s.nextLong()); } }",
