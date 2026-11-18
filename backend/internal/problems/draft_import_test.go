@@ -126,6 +126,27 @@ func TestImportConvertsWellFormedPolygonTestsToLF(t *testing.T) {
 	t.Fatal("input object not found")
 }
 
+// Polygon records a checker chosen from its list as std::<name>.cpp; Gate
+// refers to its own copy, and imports the source of one it does not have.
+func TestImportMapsPolygonStandardChecker(t *testing.T) {
+	const pkgDir = "../../pkg/testdata/polygon/a-plus-b"
+	plan, err := importDir(t, pkgDir, nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17"}, Standard: "hcmp"}, plan.draft.Checker)
+	require.NoError(t, plan.draft.Validate(importQuotas, nil))
+
+	manifest, err := os.ReadFile(pkgDir + "/problem.xml")
+	require.NoError(t, err)
+	source, err := os.ReadFile(pkgDir + "/files/check.cpp")
+	require.NoError(t, err)
+	unknown := strings.Replace(string(manifest), `name="std::hcmp.cpp"`, `name="std::nosuch.cpp"`, 1)
+	plan, err = importDir(t, pkgDir, map[string]string{"problem.xml": unknown})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17", Source: string(source)}}, plan.draft.Checker)
+}
+
 func TestImportKeepsMainSolutionAcrossNameClash(t *testing.T) {
 	plan, err := importDir(t, unpack(t, "polygon-solution-name-clash"), nil)
 	require.NoError(t, err)

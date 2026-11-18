@@ -196,7 +196,7 @@ tasks:
         fi
 
   testlib:update:
-    desc: "Vendor testlib.h of an upstream commit into backend/pkg/syslib/testlib: task testlib:update -- <commit>"
+    desc: "Vendor testlib.h and its standard checkers of an upstream commit into backend/pkg/syslib/testlib: task testlib:update -- <commit>"
     requires:
       vars: [CLI_ARGS]
     cmds:
@@ -206,6 +206,11 @@ tasks:
         git clone -q https://github.com/MikeMirzayanov/testlib "$tmp"
         git -C "$tmp" checkout -q --detach "{{.CLI_ARGS}}"
         cp "$tmp/testlib.h" "$tmp/LICENSE" backend/pkg/syslib/testlib/
+        rm -rf backend/pkg/syslib/testlib/checkers
+        mkdir backend/pkg/syslib/testlib/checkers
+        cp "$tmp"/checkers/*.cpp backend/pkg/syslib/testlib/checkers/
+        # Upstream checkers have CRLF line endings; authors edit copies of them.
+        sed -i 's/\r$//' backend/pkg/syslib/testlib/checkers/*.cpp
         git -C "$tmp" rev-parse HEAD > backend/pkg/syslib/testlib/COMMIT
         # Git blob IDs of every upstream testlib.h up to the commit; an imported copy equal to one becomes auto-updated.
         for c in $(git -C "$tmp" log --format=%H HEAD -- testlib.h); do

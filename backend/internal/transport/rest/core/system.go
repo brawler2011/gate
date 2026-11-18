@@ -21,5 +21,9 @@ func (h *CoreServer) GetSystemLibrary(ctx context.Context) (*corev1.SystemLibrar
 	for _, f := range syslib.Files() {
 		files = append(files, corev1.SystemLibraryFile{Name: f.Name, Extensions: f.Extensions, Version: f.Version, Commit: f.Commit, Content: f.Content})
 	}
-	return &corev1.SystemLibrary{Files: files}, nil
+	checkers := []corev1.SystemChecker{}
+	for _, c := range syslib.Checkers() {
+		checkers = append(checkers, corev1.SystemChecker{Name: c.Name, Description: c.Description, Content: c.Content})
+	}
+	return &corev1.SystemLibrary{Files: files, Checkers: checkers}, nil
 }

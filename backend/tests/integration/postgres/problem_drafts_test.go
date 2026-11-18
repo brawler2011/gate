@@ -43,7 +43,7 @@ func mutationKey(org uuid.UUID, op string, body any) model.MutationKey {
 }
 func makeBuildableDraft(d model.Draft, oid uuid.UUID) model.Draft {
 	g := uuid.New()
-	d.Checker = program("cpp17", "int main(){return 0;}")
+	d.Checker = checker("cpp17", "int main(){return 0;}")
 	d.Subtasks = []model.DraftSubtask{{ID: g, Ordinal: 1, Name: "All", Policy: "complete"}}
 	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: g, Input: model.DraftInput{Mode: "manual", ObjectID: &oid}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &oid}}}
 	return d

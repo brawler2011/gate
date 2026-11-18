@@ -93,7 +93,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	d, err := drafts.GetDraft(ctx, problemID)
 	require.NoError(t, err)
 	generator, solution, group := uuid.New(), uuid.New(), uuid.New()
-	d.Checker = &problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <fstream>\nint main(int n,char**v){\n#ifdef REJECT_ALL\nreturn 1;\n#endif\nlong long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}"}
+	d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <fstream>\nint main(int n,char**v){\n#ifdef REJECT_ALL\nreturn 1;\n#endif\nlong long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}"}}
 	d.Generators = []problemsmodel.DraftNamedProgram{{ID: generator, Name: "gen", DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
 	d.Solutions = []problemsmodel.DraftNamedProgram{{ID: solution, Name: "main", DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}"}}}
 	d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Print a+b."}}
@@ -330,7 +330,7 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 		return func(d *problemsmodel.Draft) {
 			generator, solution, group := uuid.New(), uuid.New(), uuid.New()
 			d.Type = "interactive"
-			d.Checker = &problemsmodel.DraftProgram{Language: "python3", Source: checkerSource}
+			d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: checkerSource}}
 			d.Interactor = &problemsmodel.DraftProgram{Language: "python3", Source: interactorSource}
 			d.Generators = []problemsmodel.DraftNamedProgram{{ID: generator, Name: "gen", DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1])\n"}}}
 			d.Solutions = []problemsmodel.DraftNamedProgram{{ID: solution, Name: "main", DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "print(2 * int(input()), flush=True)\n"}}}
@@ -367,6 +367,49 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 		require.ErrorAs(t, err, &failure)
 		assert.Equal(t, "check", failure.Stage)
 	})
+}
+
+// A standard checker is built from Gate's copy with the system testlib.h, so
+// the draft needs no testlib.h of its own.
+func TestStandardCheckerE2E(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E test in short mode")
+	}
+	t.Parallel()
+	h := newJudgeHarness(t)
+	draft := func(standard, solution string) func(*problemsmodel.Draft) {
+		return func(d *problemsmodel.Draft) {
+			generator, main, group := uuid.New(), uuid.New(), uuid.New()
+			d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "cpp17"}, Standard: standard}
+			d.Generators = []problemsmodel.DraftNamedProgram{{ID: generator, Name: "gen", DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
+			d.Solutions = []problemsmodel.DraftNamedProgram{{ID: main, Name: "main", DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: solution}}}
+			d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Compute."}}
+			d.MainSolutionID = &main
+			d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
+			seed := int64(1)
+			for i, args := range [][]string{{"1", "3"}, {"2", "7"}} {
+				d.Tests = append(d.Tests, problemsmodel.DraftTest{ID: uuid.New(), Ordinal: i + 1, SubtaskID: group, Points: 50 * points.Unit,
+					Input:  problemsmodel.DraftInput{Mode: "generator", GeneratorID: &generator, Args: args, Seed: &seed},
+					Answer: problemsmodel.DraftAnswer{Mode: "generated", SolutionID: &main}})
+			}
+		}
+	}
+	const read = "a, b = map(int, input().split())\n"
+	cases := []struct {
+		standard, solution, accepted, wrong string
+	}{
+		// wcmp compares tokens and ignores whitespace.
+		{"wcmp", read + "print(a, b)", read + "print(' ', a, '\\n\\n', b)", read + "print(b, a)"},
+		// rcmp6 accepts an absolute or relative error of 1e-6.
+		{"rcmp6", read + "print('%.10f' % (a / b))", read + "print('%.7f' % (a / b))", read + "print('%.4f' % (a / b + 1e-4))"},
+	}
+	for _, c := range cases {
+		problemID := h.publish(t, c.standard, draft(c.standard, c.solution))
+		t.Run(c.standard, func(t *testing.T) {
+			assert.Equal(t, submissionsmodel.Accepted, h.submit(t, problemID, "python3", c.accepted).State)
+			assert.Equal(t, submissionsmodel.GotWA, h.submit(t, problemID, "python3", c.wrong).State)
+		})
+	}
 }
 
 func mutationKey(org uuid.UUID, operation string, body any) problemsmodel.MutationKey {

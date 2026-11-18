@@ -34,7 +34,7 @@ type Draft struct {
 // DraftContent is the part of a draft stored as one document; the fields of
 // Draft outside it are columns that catalog queries read.
 type DraftContent struct {
-	Checker        *DraftProgram       `json:"checker"`
+	Checker        *DraftChecker       `json:"checker"`
 	Interactor     *DraftProgram       `json:"interactor"`
 	Validators     []DraftNamedProgram `json:"validators"`
 	Generators     []DraftNamedProgram `json:"generators"`
@@ -53,6 +53,24 @@ type DraftContent struct {
 type DraftProgram struct {
 	Language string `json:"language"`
 	Source   string `json:"source"`
+}
+
+// DraftChecker is the checker: the author's source, or a testlib standard
+// checker by name with an empty source, which every build takes at the
+// current system version and compiles in the C++ configuration Language.
+type DraftChecker struct {
+	DraftProgram
+	Standard string `json:"standard"`
+}
+
+// Text returns the source a build compiles and packages for the checker. A
+// standard checker carries the system testlib.h, so that the built package
+// does not depend on the testlib.h of the library.
+func (c *DraftChecker) Text() string {
+	if checker, ok := syslib.LookupChecker(c.Standard); ok {
+		return checker.Standalone()
+	}
+	return c.Source
 }
 
 // DraftNamedProgram is a program of a role a draft may hold several of.
@@ -330,6 +348,9 @@ func (d *Draft) ValidateBuild(q DraftQuotas, languages map[string]sandbox.Langua
 			v.fail(at+"/language", "language %q is unavailable in the toolchain", p.Language)
 		}
 	})
+	if d.Checker != nil && d.Checker.Standard != "" && !slices.Contains(languages[d.Checker.Language].Extensions, "cpp") {
+		v.fail("/checker/language", "a standard checker compiles as C++")
+	}
 	if d.Type != "interactive" && d.Checker == nil {
 		v.fail("/checker", "checker is required")
 	}
@@ -427,7 +448,10 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		text(at+"/source", p.Source)
 	}
 	if d.Checker != nil {
-		program("/checker", *d.Checker)
+		program("/checker", d.Checker.DraftProgram)
+		if _, ok := syslib.LookupChecker(d.Checker.Standard); d.Checker.Standard != "" && (!ok || d.Checker.Source != "") {
+			v.fail("/checker/standard", "unknown standard checker %q or a standard checker with a source", d.Checker.Standard)
+		}
 	}
 	if d.Interactor != nil {
 		program("/interactor", *d.Interactor)
@@ -622,7 +646,7 @@ func (d *Draft) validateTests(v *validation, roles map[uuid.UUID]string) {
 // eachProgram calls f with every program and its JSON Pointer.
 func (d *Draft) eachProgram(f func(at string, p DraftProgram)) {
 	if d.Checker != nil {
-		f("/checker", *d.Checker)
+		f("/checker", d.Checker.DraftProgram)
 	}
 	if d.Interactor != nil {
 		f("/interactor", *d.Interactor)

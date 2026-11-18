@@ -1,8 +1,8 @@
 import type {
   ProblemDraft,
+  ProblemDraftChecker,
   ProblemDraftLibraryFile,
   ProblemDraftNamedProgram,
-  ProblemDraftProgram,
   ProblemDraftStatement,
   ProblemDraftSubtask,
   ProblemDraftTest,
@@ -46,14 +46,24 @@ export const sumPoints = (tests: ProblemDraftTest[]): number =>
 export const programsOf = (draft: ProblemDraft, role: ListRole): ProblemDraftNamedProgram[] => draft[LIST_FIELDS[role]];
 
 /** Sets the single checker or interactor; null removes it. */
-export const setSingleProgram = (
+export const setSingleProgram = <Role extends SingleRole>(
   draft: ProblemDraft,
-  role: SingleRole,
-  program: ProblemDraftProgram | null,
+  role: Role,
+  program: ProblemDraft[Role],
 ): ProblemDraft => ({
-  ...draft,
-  [role]: program,
-});
+    ...draft,
+    [role]: program,
+  });
+
+/** A checker in the author's source. */
+export const customChecker = (language: string, source: string): ProblemDraftChecker => ({language, source, standard: ""});
+
+/** A standard checker: each build takes its current version. */
+export const standardChecker = (name: string, language: string): ProblemDraftChecker => ({language, source: "", standard: name});
+
+/** Turns a standard checker into the author's copy of its current source. */
+export const customizeChecker = (draft: ProblemDraft, source: string): ProblemDraft =>
+  draft.checker ? {...draft, checker: customChecker(draft.checker.language, source)} : draft;
 
 export const addProgram = (
   draft: ProblemDraft,

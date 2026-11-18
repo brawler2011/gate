@@ -1753,6 +1753,14 @@ export interface components {
             language: string;
             source: string;
         };
+        /** @description The checker. A standard checker (standard is set) has an empty source; every build takes its current version from GET /lib with the system testlib.h, compiled in the C++ configuration language. */
+        ProblemDraftChecker: {
+            /** @description Identifier of the language configuration from GET /languages, such as cpp17 or python3. */
+            language: string;
+            source: string;
+            /** @description Name of a standard checker from GET /lib, such as wcmp, or empty for the author's own source. */
+            standard: string;
+        };
         /** @description A validator, generator or solution; tests and the main solution refer to it by ID. */
         ProblemDraftNamedProgram: {
             /** Format: uuid */
@@ -1827,7 +1835,7 @@ export interface components {
             memory_limit_mb: number;
             /** Format: double */
             max_score: number | null;
-            checker: components["schemas"]["ProblemDraftProgram"] | null;
+            checker: components["schemas"]["ProblemDraftChecker"] | null;
             interactor: components["schemas"]["ProblemDraftProgram"] | null;
             /** @description At most one validator. */
             validators: components["schemas"]["ProblemDraftNamedProgram"][];
@@ -4253,9 +4261,23 @@ export interface components {
              */
             syntax: string;
         };
-        /** @description The system library files a draft can include at their current version. */
+        /** @description The system library files a draft can include at their current version, and the standard checkers it can use. */
         SystemLibrary: {
             files: components["schemas"]["SystemLibraryFile"][];
+            checkers: components["schemas"]["SystemChecker"][];
+        };
+        /**
+         * @description A testlib standard checker, vendored with testlib.h.
+         * @example {
+         *       "name": "wcmp",
+         *       "description": "Последовательность слов (токенов)",
+         *       "content": "#include \"testlib.h\""
+         *     }
+         */
+        SystemChecker: {
+            name: string;
+            description: string;
+            content: string;
         };
         /**
          * @description A system library file and the upstream commit it is vendored from.
@@ -5097,6 +5119,7 @@ export interface components {
 export type ProblemDraftInput = components['schemas']['ProblemDraftInput'];
 export type ProblemDraftAnswer = components['schemas']['ProblemDraftAnswer'];
 export type ProblemDraftProgram = components['schemas']['ProblemDraftProgram'];
+export type ProblemDraftChecker = components['schemas']['ProblemDraftChecker'];
 export type ProblemDraftNamedProgram = components['schemas']['ProblemDraftNamedProgram'];
 export type ProblemDraftLibraryFile = components['schemas']['ProblemDraftLibraryFile'];
 export type ProblemDraftStatement = components['schemas']['ProblemDraftStatement'];
@@ -5204,6 +5227,7 @@ export type AdminChangeEmailRequestModel = components['schemas']['AdminChangeEma
 export type AdminSetPasswordRequestModel = components['schemas']['AdminSetPasswordRequestModel'];
 export type SupportedLanguage = components['schemas']['SupportedLanguage'];
 export type SystemLibrary = components['schemas']['SystemLibrary'];
+export type SystemChecker = components['schemas']['SystemChecker'];
 export type SystemLibraryFile = components['schemas']['SystemLibraryFile'];
 export type SupportedLanguagesResponse = components['schemas']['SupportedLanguagesResponse'];
 export type CreateContestDraftRequestModel = components['schemas']['CreateContestDraftRequestModel'];

@@ -2,14 +2,23 @@ import {useQuery} from "@tanstack/react-query";
 
 import {api, unwrap} from "@/lib/api";
 
-import type {SystemLibraryFile} from "@/contracts/core/v1/schema";
+import type {SystemChecker, SystemLibrary, SystemLibraryFile} from "@/contracts/core/v1/schema";
 
-export type {SystemLibraryFile};
+export type {SystemChecker, SystemLibraryFile};
 
-/** The system library files that auto-updated draft library files build with; undefined until loaded. */
-export const useSystemLibrary = (): SystemLibraryFile[] | undefined =>
+const useLibrary = <T,>(select: (library: SystemLibrary) => T): T | undefined =>
   useQuery({
     queryKey: ["system-library"],
-    queryFn: async () => (await unwrap(api.GET("/lib"))).files,
+    queryFn: async () => unwrap(api.GET("/lib")),
     staleTime: Infinity,
+    select,
   }).data;
+
+const files = (library: SystemLibrary) => library.files;
+const checkers = (library: SystemLibrary) => library.checkers;
+
+/** The system library files that auto-updated draft library files build with; undefined until loaded. */
+export const useSystemLibrary = (): SystemLibraryFile[] | undefined => useLibrary(files);
+
+/** The testlib standard checkers a draft can use; undefined until loaded. */
+export const useStandardCheckers = (): SystemChecker[] | undefined => useLibrary(checkers);
