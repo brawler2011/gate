@@ -137,8 +137,8 @@ WHERE (
     OR s.problem_id = sqlc.narg('problem_id')::uuid
   )
   AND (
-    sqlc.narg('language')::integer IS NULL
-    OR s.language = sqlc.narg('language')::integer
+    sqlc.narg('language')::text IS NULL
+    OR s.language = sqlc.narg('language')::text
   )
   AND (
     sqlc.narg('state')::integer IS NULL
@@ -170,8 +170,8 @@ WHERE (
     OR s.problem_id = sqlc.narg('problem_id')::uuid
   )
   AND (
-    sqlc.narg('language')::integer IS NULL
-    OR s.language = sqlc.narg('language')::integer
+    sqlc.narg('language')::text IS NULL
+    OR s.language = sqlc.narg('language')::text
   )
   AND (
     sqlc.narg('state')::integer IS NULL

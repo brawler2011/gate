@@ -3,6 +3,7 @@ package builder
 import (
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
 )
 
@@ -26,7 +27,8 @@ type packageLayout struct {
 
 // placeDraft decides where each draft entry goes in the built package. Names
 // are labels, so entries whose file names collide are numbered.
-func placeDraft(d model.Draft) packageLayout {
+// A program's file gets the first extension of its language configuration.
+func placeDraft(d model.Draft, languages *sandbox.Config) packageLayout {
 	l := packageLayout{texts: map[string]string{}, assets: map[string]uuid.UUID{}}
 	names := gfmt.FileNames{}
 	library := map[uuid.UUID]string{}
@@ -35,7 +37,7 @@ func placeDraft(d model.Draft) packageLayout {
 		l.texts[library[f.ID]] = f.Content
 	}
 	place := func(key, role, name string, p model.DraftProgram) {
-		path := names.Place(gfmt.RoleFolder(role), name+gfmt.Extension(p.Language))
+		path := names.Place(gfmt.RoleFolder(role), name+extension(languages, p.Language))
 		deps := map[string]string{}
 		for _, id := range p.Dependencies {
 			deps[d.LibraryFile(id).Name] = library[id]
@@ -68,4 +70,13 @@ func placeDraft(d model.Draft) packageLayout {
 		l.assets[names.Place(gfmt.AssetFolder, a.Name)] = a.ObjectID
 	}
 	return l
+}
+
+// extension returns the source file extension of a language configuration;
+// one the catalog lacks keeps its identifier, and compiling it fails later.
+func extension(languages *sandbox.Config, language string) string {
+	if lang, ok := languages.Langs[language]; ok {
+		return "." + lang.Extensions[0]
+	}
+	return "." + language
 }

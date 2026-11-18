@@ -1,4 +1,5 @@
 import type {ComponentRole} from "./draftOps";
+import type {SupportedLanguage} from "@/contracts/core/v1/schema";
 
 const TESTLIB = '#include "testlib.h"\n\n';
 
@@ -18,13 +19,14 @@ const PYTHON: Record<ComponentRole, string> = {
   solution: "a, b = map(int, input().split())\nprint(a + b)\n",
 };
 
-/** Returns a starter source for a new component; unknown languages start empty. */
-export const componentTemplate = (role: ComponentRole, language: string): string => {
-  if (language === "cpp") {
-    return CPP[role];
+/** Returns a starter source for a new component by its source extension; other languages start empty. */
+export const componentTemplate = (role: ComponentRole, language: SupportedLanguage | undefined): string => {
+  switch (language?.extensions[0]) {
+    case "cpp":
+      return CPP[role];
+    case "py":
+      return PYTHON[role];
+    default:
+      return "";
   }
-  if (language === "python") {
-    return PYTHON[role];
-  }
-  return "";
 };

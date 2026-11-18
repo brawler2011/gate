@@ -193,7 +193,7 @@ func TestProblemBlockDisqualifiesExistingAndFutureSubmissions(t *testing.T) {
 			require.EqualValues(t, 30, item.TotalPenalty)
 		}
 	}
-	creation := &submissionsmodel.SubmissionCreation{ContestId: contest, UserId: user, ProblemId: problem, Solution: "int main(){}", Language: submissionsmodel.Cpp}
+	creation := &submissionsmodel.SubmissionCreation{ContestId: contest, UserId: user, ProblemId: problem, Solution: "int main(){}", Language: "cpp17"}
 	blockedID, err := uc.CreateSubmission(ctx, creation)
 	require.NoError(t, err)
 	blocked, err := uc.GetSubmission(ctx, blockedID)

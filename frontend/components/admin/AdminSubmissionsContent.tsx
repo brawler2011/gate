@@ -8,7 +8,8 @@ import {useLocation, useNavigate, useSearchParams, Link} from "react-router-dom"
 import {RoutePagination} from '@/components/shared/Pagination';
 import {SubmissionDetailsModal} from '@/components/submissions';
 import {api, unwrap} from "@/lib/api";
-import {LangString, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
+import {languageName, useLanguages} from "@/lib/languages";
+import {ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import classes from "./AdminPage.module.css";
 
@@ -32,6 +33,7 @@ export const AdminSubmissionsContent = ({
   problemId,
   userId,
 }: AdminSubmissionsContentProps): ReactNode => {
+  const catalog = useLanguages();
   const navigate = useNavigate();
   const {pathname} = useLocation();
   const [searchParams] = useSearchParams();
@@ -82,7 +84,7 @@ export const AdminSubmissionsContent = ({
               contestId: contestId || undefined,
               problemId: problemId || undefined,
               state: state ? Number(state) : undefined,
-              language: language ? Number(language) : undefined,
+              language: language || undefined,
             },
           },
         }),
@@ -204,12 +206,9 @@ export const AdminSubmissionsContent = ({
             }}
             data={[
               {value: "all", label: "Все языки"},
-              {value: "cpp", label: "C++"},
-              {value: "python", label: "Python"},
-              {value: "go", label: "Go"},
-              {value: "java", label: "Java"},
+              ...catalog.map((option) => ({value: option.id, label: option.name})),
             ]}
-            style={{width: 140}}
+            style={{width: 200}}
           />
 
           <TextInput
@@ -367,7 +366,7 @@ export const AdminSubmissionsContent = ({
                       </Table.Td>
                       <Table.Td>
                         <Badge variant="light" color="gray" tt="none">
-                          {LangString(submission.language)}
+                          {languageName(catalog, submission.language)}
                         </Badge>
                       </Table.Td>
                       <Table.Td>

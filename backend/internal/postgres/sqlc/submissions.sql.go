@@ -91,8 +91,8 @@ WHERE (
     OR s.problem_id = $3::uuid
   )
   AND (
-    $4::integer IS NULL
-    OR s.language = $4::integer
+    $4::text IS NULL
+    OR s.language = $4::text
   )
   AND (
     $5::integer IS NULL
@@ -104,7 +104,7 @@ type CountSubmissionsParams struct {
 	ContestID *uuid.UUID `json:"contest_id"`
 	OwnerID   *uuid.UUID `json:"owner_id"`
 	ProblemID *uuid.UUID `json:"problem_id"`
-	Language  *int32     `json:"language"`
+	Language  *string    `json:"language"`
 	State     *int32     `json:"state"`
 }
 
@@ -150,14 +150,14 @@ RETURNING id
 `
 
 type CreateSubmissionParams struct {
-	ContestID uuid.UUID                     `json:"contest_id"`
-	ProblemID uuid.UUID                     `json:"problem_id"`
-	OwnerID   uuid.UUID                     `json:"owner_id"`
-	Source    string                        `json:"source"`
-	Language  submissionsmodel.LanguageName `json:"language"`
-	Penalty   int32                         `json:"penalty"`
-	State     *int32                        `json:"state"`
-	BanReason *string                       `json:"ban_reason"`
+	ContestID uuid.UUID `json:"contest_id"`
+	ProblemID uuid.UUID `json:"problem_id"`
+	OwnerID   uuid.UUID `json:"owner_id"`
+	Source    string    `json:"source"`
+	Language  string    `json:"language"`
+	Penalty   int32     `json:"penalty"`
+	State     *int32    `json:"state"`
+	BanReason *string   `json:"ban_reason"`
 }
 
 func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionParams) (uuid.UUID, error) {
@@ -225,7 +225,7 @@ type GetSubmissionRow struct {
 	Penalty           int32                            `json:"penalty"`
 	TimeStat          int32                            `json:"time_stat"`
 	MemoryStat        int32                            `json:"memory_stat"`
-	Language          submissionsmodel.LanguageName    `json:"language"`
+	Language          string                           `json:"language"`
 	FailedTest        int32                            `json:"failed_test"`
 	TestDetails       []byte                           `json:"test_details"`
 	BanReason         *string                          `json:"ban_reason"`
@@ -341,8 +341,8 @@ WHERE (
     OR s.problem_id = $3::uuid
   )
   AND (
-    $4::integer IS NULL
-    OR s.language = $4::integer
+    $4::text IS NULL
+    OR s.language = $4::text
   )
   AND (
     $5::integer IS NULL
@@ -363,7 +363,7 @@ type ListSubmissionsParams struct {
 	ContestID *uuid.UUID `json:"contest_id"`
 	OwnerID   *uuid.UUID `json:"owner_id"`
 	ProblemID *uuid.UUID `json:"problem_id"`
-	Language  *int32     `json:"language"`
+	Language  *string    `json:"language"`
 	State     *int32     `json:"state"`
 	SortOrder *int32     `json:"sort_order"`
 	Offset    int32      `json:"offset"`
@@ -371,29 +371,29 @@ type ListSubmissionsParams struct {
 }
 
 type ListSubmissionsRow struct {
-	ID                uuid.UUID                     `json:"id"`
-	OwnerID           *uuid.UUID                    `json:"owner_id"`
-	Username          *string                       `json:"username"`
-	State             submissionsmodel.State        `json:"state"`
-	Score             points.Value                  `json:"score"`
-	Penalty           int32                         `json:"penalty"`
-	TimeStat          int32                         `json:"time_stat"`
-	MemoryStat        int32                         `json:"memory_stat"`
-	Language          submissionsmodel.LanguageName `json:"language"`
-	FailedTest        int32                         `json:"failed_test"`
-	BanReason         *string                       `json:"ban_reason"`
-	ProblemID         *uuid.UUID                    `json:"problem_id"`
-	ProblemTitle      *string                       `json:"problem_title"`
-	ProblemShortName  *string                       `json:"problem_short_name"`
-	ProblemOrdinal    *int32                        `json:"problem_ordinal"`
-	ContestID         *uuid.UUID                    `json:"contest_id"`
-	ContestTitle      *string                       `json:"contest_title"`
-	ContestLogin      *string                       `json:"contest_login"`
-	OrganizationLogin string                        `json:"organization_login"`
-	UpdatedAt         time.Time                     `json:"updated_at"`
-	Revision          int64                         `json:"revision"`
-	Generation        int64                         `json:"generation"`
-	CreatedAt         time.Time                     `json:"created_at"`
+	ID                uuid.UUID              `json:"id"`
+	OwnerID           *uuid.UUID             `json:"owner_id"`
+	Username          *string                `json:"username"`
+	State             submissionsmodel.State `json:"state"`
+	Score             points.Value           `json:"score"`
+	Penalty           int32                  `json:"penalty"`
+	TimeStat          int32                  `json:"time_stat"`
+	MemoryStat        int32                  `json:"memory_stat"`
+	Language          string                 `json:"language"`
+	FailedTest        int32                  `json:"failed_test"`
+	BanReason         *string                `json:"ban_reason"`
+	ProblemID         *uuid.UUID             `json:"problem_id"`
+	ProblemTitle      *string                `json:"problem_title"`
+	ProblemShortName  *string                `json:"problem_short_name"`
+	ProblemOrdinal    *int32                 `json:"problem_ordinal"`
+	ContestID         *uuid.UUID             `json:"contest_id"`
+	ContestTitle      *string                `json:"contest_title"`
+	ContestLogin      *string                `json:"contest_login"`
+	OrganizationLogin string                 `json:"organization_login"`
+	UpdatedAt         time.Time              `json:"updated_at"`
+	Revision          int64                  `json:"revision"`
+	Generation        int64                  `json:"generation"`
+	CreatedAt         time.Time              `json:"created_at"`
 }
 
 // Submission listing

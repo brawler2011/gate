@@ -20,6 +20,7 @@ value or use `Or(default)` when mapping a patch.
 | User `username`, `email`, `role` | Preserve | HTTP 400 | Replace if valid; empty username/email fail validation | REST maps `IsSet()` to a pointer in `UpdateUserInput`; nil becomes SQL NULL and `COALESCE` preserves the column |
 | Contest `description` | Preserve | HTTP 400 | Replace, including `""` | Pointer plus `COALESCE` |
 | Contest `enable_drafts` | Preserve | HTTP 400 | Store `true` or `false` | Present key in `Settings` patch map; merged into JSONB |
+| Contest `languages` | Preserve | HTTP 400 | Store the deduplicated catalog identifiers; `[]` allows the whole catalog; an unknown identifier is HTTP 400 | Non-nil slice becomes a present key in `Settings` patch map; merged into JSONB |
 | Contest `freeze_duration_minutes` | Preserve key | Delete key | Store nonnegative integer, including `0` | Null becomes a present map key with nil value, marshals as JSON null; JSONB merge then `jsonb_strip_nulls` removes it |
 | Contest `start_time`, `end_time` | Preserve | Clear to SQL NULL | Replace timestamp | Pointer plus independent `StartTimeSet` / `EndTimeSet`; SQL `CASE WHEN ..._set THEN ... ELSE ... END` |
 | Contest `freeze_status` | Preserve | HTTP 400 | Store `auto`, `frozen`, or `unfrozen` | Present key in the settings patch; no update-time default |

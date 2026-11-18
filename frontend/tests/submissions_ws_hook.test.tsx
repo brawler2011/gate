@@ -20,7 +20,7 @@ import type {ReactNode} from 'react';
 
 const submission = (id = 'initial'): SubmissionsListItemModel => ({
   id, revision: 1, user_id: 'user', username: 'Alice', contest_id: 'contest', contest_login: 'round', contest_title: 'Round',
-  problem_id: 'problem', problem_title: 'A+B', position: 1, language: 20, state: 200,
+  problem_id: 'problem', problem_title: 'A+B', position: 1, language: 'cpp17', state: 200,
   created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
 });
 const data = (...rows: SubmissionsListItemModel[]): ListSubmissionsResponseModel => ({
@@ -85,11 +85,11 @@ describe('Query-owned submission lists', () => {
 
   it('passes the full selection to HTTP and scopes the single stream to its contest', async () => {
     renderHook(useSubmissions, {initialProps: {...selection(), userId: 'user', problemId: 'problem',
-      state: 200, language: 20, page: 3, sortOrder: 'asc'}, wrapper: Wrapper});
+      state: 200, language: 'cpp17', page: 3, sortOrder: 'asc'}, wrapper: Wrapper});
     const socket = await open();
     const request = new URL(String(fetch.mock.calls.at(-1)![0]), 'http://localhost');
     expect(Object.fromEntries(request.searchParams)).toEqual({
-      userId: 'user', problemId: 'problem', state: '200', language: '20', page: '3', pageSize: '2', sortOrder: 'asc',
+      userId: 'user', problemId: 'problem', state: '200', language: 'cpp17', page: '3', pageSize: '2', sortOrder: 'asc',
     });
     expect(socket.url).toBe('ws://localhost/ws/submissions?contestId=contest');
     expect(TestWebSocket.instances).toHaveLength(1);
@@ -99,7 +99,7 @@ describe('Query-owned submission lists', () => {
     const {result, rerender} = view();
     const socket = await open();
     fetch.mockImplementation(Object.assign(async () => Response.json(data(submission('page-2'))), {preconnect: () => {}}));
-    rerender({...selection(), page: 2, sortOrder: 'asc', language: 42, state: 0});
+    rerender({...selection(), page: 2, sortOrder: 'asc', language: 'go', state: 0});
     await act(flushMicrotasks);
     expect(result.current.submissions.map(s => s.id)).toEqual(['page-2']);
     expect(String(fetch.mock.calls.at(-1)![0])).toContain('state=0');
@@ -243,9 +243,9 @@ describe('Query-owned submission lists', () => {
 
   it('has one cache entry for each complete selection', async () => {
     const base = selection(); view(); await open();
-    await client.fetchQuery(submissionsQueryOptions({...base, language: 42}));
+    await client.fetchQuery(submissionsQueryOptions({...base, language: 'go'}));
     expect(client.getQueryData(submissionsQueryOptions(base).queryKey)).toBeTruthy();
-    expect(client.getQueryData(submissionsQueryOptions({...base, language: 42}).queryKey)).toBeTruthy();
+    expect(client.getQueryData(submissionsQueryOptions({...base, language: 'go'}).queryKey)).toBeTruthy();
     expect(client.getQueryCache().getAll()).toHaveLength(2);
   });
   it('coalesces a burst in a fixed 100 ms window and keeps immediate highlights', async () => {
@@ -332,7 +332,7 @@ describe('Query-owned submission lists', () => {
 
   it('marks inactive lists stale without fetching them', async () => {
     view(); const socket = await open();
-    const options = submissionsQueryOptions({...selection(), language: 42});
+    const options = submissionsQueryOptions({...selection(), language: 'go'});
     client.setQueryDefaults(options.queryKey, {gcTime: Infinity});
     await client.fetchQuery({...options, staleTime: Infinity});
     const calls = fetch.mock.calls.length;

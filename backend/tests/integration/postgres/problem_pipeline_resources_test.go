@@ -73,6 +73,7 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 		DraftQuotas: model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10},
 		Repo:        repo, Problems: fixedProblem{org}, Permissions: allowAll{}, Store: services.store, Bucket: "objects",
 		TempDir: work, UploadTTL: 5 * time.Minute, ObjectBytes: objectBytes, BuildOptions: options,
+		Languages: &sandbox.Config{Langs: services.langs},
 	}
 	return &pipelineHarness{ctx: accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}),
 		pool: pool, repo: repo, org: org, draft: d, services: services, work: work, limits: limits, options: options, uploads: uploads}
@@ -140,7 +141,7 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 	h := newPipelineHarness(t, 64<<20, 2<<30)
 	subtask := uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Checker = program("cpp", acceptEverythingChecker)
+		d.Checker = program("cpp17", acceptEverythingChecker)
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 	})
 	for i := 1; i <= tests; i++ {
@@ -197,33 +198,33 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 }
 
 // A build compiles with the languages of the judge image that runs it, not of the one it
-// was enqueued under: an image change in between does not fail it, and a language the
-// running image lacks is the author's build failure.
+// was enqueued under: an image change in between does not fail it, and a configuration the
+// running image lacks is a system configuration failure, not the author's.
 func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 1<<20, 64<<20)
 	subtask := uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Checker = program("cpp", "#ifndef NEW_IMAGE\n#error compiled with the enqueue-time languages\n#endif\n"+acceptEverythingChecker)
+		d.Checker = program("cpp17", "#ifndef NEW_IMAGE\n#error compiled with the enqueue-time languages\n#endif\n"+acceptEverythingChecker)
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 	})
 	h.uploadPair(t, model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 100, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}, 16)
 
 	without := maps.Clone(h.options.Languages)
-	delete(without, "cpp")
+	delete(without, "cpp17")
 	pipeline := h.pipeline()
 	pipeline.Languages = &sandbox.Config{Langs: without}
 	_, err := pipeline.Execute(h.ctx, h.enqueueAndClaim(t))
 	var failure *builder.Failure
 	require.ErrorAs(t, err, &failure)
 	require.Equal(t, "compile", failure.Stage)
-	require.Equal(t, "author", failure.Kind)
+	require.Equal(t, "configuration", failure.Kind)
 	require.Contains(t, failure.Message, "checkers/check.cpp")
 
 	changed := maps.Clone(h.options.Languages)
-	cpp := changed["cpp"]
+	cpp := changed["cpp17"]
 	cpp.Compile = strings.Replace(cpp.Compile, "g++ ", "g++ -DNEW_IMAGE ", 1)
-	changed["cpp"] = cpp
+	changed["cpp17"] = cpp
 	pipeline.Languages = &sandbox.Config{Langs: changed}
 	_, err = pipeline.Execute(h.ctx, h.enqueueAndClaim(t))
 	require.NoError(t, err)
@@ -234,9 +235,9 @@ func (h *pipelineHarness) generatorBuild(t *testing.T, script string) {
 	t.Helper()
 	generator, solution, subtask := uuid.New(), uuid.New(), uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Checker = program("cpp", acceptEverythingChecker)
-		d.Generators = []model.DraftNamedProgram{named(generator, "gen", "python", script)}
-		d.Solutions = []model.DraftNamedProgram{named(solution, "main", "python", "print(1)\n")}
+		d.Checker = program("cpp17", acceptEverythingChecker)
+		d.Generators = []model.DraftNamedProgram{named(generator, "gen", "python3", script)}
+		d.Solutions = []model.DraftNamedProgram{named(solution, "main", "python3", "print(1)\n")}
 		d.MainSolutionID = &solution
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 		seed := int64(1)
@@ -377,7 +378,7 @@ func TestPipelineDiskQuotaRejectsOversizedSnapshot(t *testing.T) {
 	h := newPipelineHarness(t, 16<<20, 4<<20)
 	subtask := uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Checker = program("cpp", acceptEverythingChecker)
+		d.Checker = program("cpp17", acceptEverythingChecker)
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 	})
 	h.uploadPair(t, model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}, 3<<20)

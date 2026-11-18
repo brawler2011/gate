@@ -8,6 +8,7 @@ import Editor from "react-simple-code-editor";
 
 import {detectSubmissionLanguage} from "@/lib/detectSubmissionLanguage";
 import {highlightCode} from "@/lib/highlightCode";
+import {languageForExtension, syntaxOf, type SupportedLanguage} from "@/lib/languages";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import classes from "./CreateSubmissionForm.module.css";
@@ -21,9 +22,12 @@ type CodeEditorProps = React.ComponentProps<typeof CodeEditor>;
 
 const TypedEditor = Editor as React.ComponentType<CodeEditorProps>;
 
-const languages = ["auto", "python", "cpp", "golang"];
+const AUTO = "auto";
 
 type Props = {
+  /** Configurations the contestant may choose, in catalog order. */
+  languages: SupportedLanguage[];
+  /** Receives the source and the identifier of the chosen configuration. */
   onSubmit: (submission: FormData, language: string) => Promise<number | null>;
   problemSelect?: React.ReactNode;
   large?: boolean;
@@ -31,6 +35,7 @@ type Props = {
 };
 
 const CreateSubmissionForm = ({
+  languages,
   onSubmit,
   problemSelect,
   large = false,
@@ -49,15 +54,22 @@ const CreateSubmissionForm = ({
   const form = useForm({
     initialValues: {
       code: "",
-      language: languages[0],
+      language: AUTO,
     },
     validate: {
       code: (value) => (!value && !file ? "Code or file is required" : null),
       language: (value) =>
-        languages.includes(value) && value !== "auto"
+        languages.some((language) => language.id === value)
           ? null : "Не удалось определить язык. Выберите его вручную.",
     },
   });
+  const options = [
+    {value: AUTO, label: "Автоопределение"},
+    ...languages.map((language) => ({value: language.id, label: language.name})),
+  ];
+  const selected = languages.find((language) => language.id === form.values.language);
+  const selectWidth = `${(options.find((option) => option.value === form.values.language)?.label.length ?? 6) + 6}ch`;
+  const accept = [...new Set(languages.flatMap((language) => language.extensions)), "txt"].map((extension) => "." + extension);
 
   const {setFieldValue} = form;
   React.useEffect(() => {
@@ -69,11 +81,13 @@ const CreateSubmissionForm = ({
       try {
         const source = file ? await file.slice(0, 32768).text() : form.values.code;
         if (!cancelled) {
-          setFieldValue("language", detectSubmissionLanguage(source) ?? "auto");
+          // The detected language suggests the first allowed configuration for its extension.
+          const extension = detectSubmissionLanguage(source);
+          setFieldValue("language", (extension && languageForExtension(languages, extension)?.id) || AUTO);
         }
       } catch {
         if (!cancelled) {
-          setFieldValue("language", "auto");
+          setFieldValue("language", AUTO);
         }
       }
     }, 200);
@@ -81,18 +95,18 @@ const CreateSubmissionForm = ({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [automaticLanguage, file, form.values.code, form.values.language, setFieldValue]);
+  }, [automaticLanguage, file, form.values.code, form.values.language, languages, setFieldValue]);
 
   const setCode = (code: string) => {
     form.setFieldValue("code", code);
     if (automaticLanguage) {
-      form.setFieldValue("language", "auto");
+      form.setFieldValue("language", AUTO);
     }
   };
 
   const selectLanguage = (language: string | null) => {
     if (language) {
-      setAutomaticLanguage(language === "auto");
+      setAutomaticLanguage(language === AUTO);
       form.setFieldValue("language", language);
     }
   };
@@ -153,7 +167,7 @@ const CreateSubmissionForm = ({
     }
 
     const droppedFile = event.dataTransfer.files[0];
-    if (droppedFile && /\.(py|cpp|go|txt)$/i.test(droppedFile.name)) {
+    if (droppedFile && accept.some((extension) => droppedFile.name.toLowerCase().endsWith(extension))) {
       setFile(droppedFile);
       setCode("");
     }
@@ -216,16 +230,14 @@ const CreateSubmissionForm = ({
           <div style={{flex: 1}}>
             {problemSelect || (
               <Select
-                data={languages}
+                data={options}
                 aria-label="Язык программирования"
                 allowDeselect={false}
                 variant="subtle"
                 classNames={{input: classes.languageSelectInput}}
                 {...form.getInputProps("language")}
                 onOptionSubmit={selectLanguage}
-                style={{
-                  width: `${(form.values.language?.length || 6) + 6}ch`,
-                }}
+                style={{width: selectWidth}}
                 disabled={disabled}
               />
             )}
@@ -233,16 +245,14 @@ const CreateSubmissionForm = ({
           <div style={{flex: 1, display: "flex", justifyContent: "center"}}>
             {problemSelect && (
               <Select
-                data={languages}
+                data={options}
                 aria-label="Язык программирования"
                 allowDeselect={false}
                 variant="subtle"
                 classNames={{input: classes.languageSelectInput}}
                 {...form.getInputProps("language")}
                 onOptionSubmit={selectLanguage}
-                style={{
-                  width: `${(form.values.language?.length || 6) + 6}ch`,
-                }}
+                style={{width: selectWidth}}
                 disabled={disabled}
               />
             )}
@@ -265,7 +275,7 @@ const CreateSubmissionForm = ({
                 hidden
                 ref={fileInputRef}
                 onChange={handleFileSelect}
-                accept=".py,.cpp,.go,.txt"
+                accept={accept.join(",")}
                 disabled={disabled}
               />
             </Button>
@@ -280,7 +290,7 @@ const CreateSubmissionForm = ({
                   Перетащите файл или текст сюда
                 </Text>
                 <Text c="dimmed" size="sm" ta="center">
-                  Поддерживаются .py, .cpp, .go или обычный текст
+                  Поддерживаются {accept.join(", ")}
                 </Text>
               </Stack>
             </Center>
@@ -308,7 +318,7 @@ const CreateSubmissionForm = ({
                   value={form.values.code}
                   onValueChange={setCode}
                   highlight={(code: string) =>
-                    highlightCode(code, form.values.language)
+                    highlightCode(code, syntaxOf(selected))
                   }
                   padding={10}
                   placeholder="Введите ваше решение здесь, перетащите файл или текст..."

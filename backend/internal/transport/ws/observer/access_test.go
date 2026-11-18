@@ -160,7 +160,7 @@ func (f *wsFixture) publish(t *testing.T, eventType string, event any) {
 }
 
 func (f *wsFixture) meta(author uuid.UUID) submissionsmodel.SubmissionEventMeta {
-	return submissionsmodel.SubmissionEventMeta{UserId: &author, ContestId: &f.stub.contest.ID, ProblemId: ptrUUID(uuid.New()), CreatedAt: time.Now(), Language: submissionsmodel.Cpp}
+	return submissionsmodel.SubmissionEventMeta{UserId: &author, ContestId: &f.stub.contest.ID, ProblemId: ptrUUID(uuid.New()), CreatedAt: time.Now(), Language: "cpp17"}
 }
 
 func ptrUUID(v uuid.UUID) *uuid.UUID { return &v }

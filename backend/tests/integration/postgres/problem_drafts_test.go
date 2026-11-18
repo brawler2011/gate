@@ -43,7 +43,7 @@ func mutationKey(org uuid.UUID, op string, body any) model.MutationKey {
 }
 func makeBuildableDraft(d model.Draft, oid uuid.UUID) model.Draft {
 	g := uuid.New()
-	d.Checker = program("cpp", "int main(){return 0;}")
+	d.Checker = program("cpp17", "int main(){return 0;}")
 	d.Subtasks = []model.DraftSubtask{{ID: g, Ordinal: 1, Name: "All", Policy: "complete"}}
 	d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: g, Input: model.DraftInput{Mode: "manual", ObjectID: &oid}, Answer: model.DraftAnswer{Mode: "provided", ObjectID: &oid}}}
 	return d
@@ -116,7 +116,7 @@ func TestProblemBuildSnapshotAndRecovery(t *testing.T) {
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
 	require.NoError(t, err)
-	options := postgres.ProblemBuildOptions{Languages: map[string]sandbox.Language{"cpp": {Type: "compiler"}}, MaxAttempts: 3, Duration: time.Minute, Lease: time.Second}
+	options := postgres.ProblemBuildOptions{Languages: map[string]sandbox.Language{"cpp17": {Type: "compiler"}}, MaxAttempts: 3, Duration: time.Minute, Lease: time.Second}
 	key := mutationKey(org, "build", d.Revision)
 	result, err := repo.EnqueueBuild(ctx, key, d.ProblemID, d.Revision, options)
 	require.NoError(t, err)
@@ -167,7 +167,7 @@ func TestProblemDraftRenamesKeepReferences(t *testing.T) {
 	object := insertAvailableObject(t, ctx, pool, org)
 	lib, generator, subtask := uuid.New(), uuid.New(), uuid.New()
 	d.Library = []model.DraftLibraryFile{{ID: lib, Name: "testlib.h", Content: "// lib"}}
-	d.Generators = []model.DraftNamedProgram{named(generator, "gen", "cpp", "int main(){}")}
+	d.Generators = []model.DraftNamedProgram{named(generator, "gen", "cpp17", "int main(){}")}
 	d.Generators[0].Dependencies = []uuid.UUID{lib}
 	d.Assets = []model.DraftAsset{{Name: "pic.png", ObjectID: object}}
 	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "complete"}}

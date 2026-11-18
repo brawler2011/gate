@@ -5,26 +5,8 @@ import (
 	"time"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
-	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 )
-
-type LanguageName = int32
-
-const (
-	Golang LanguageName = 10
-	Cpp    LanguageName = 20
-	Python LanguageName = 30
-)
-
-func LanguageNameValid(n LanguageName) error {
-	switch n {
-	case Golang, Cpp, Python:
-		return nil
-	default:
-		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid language")
-	}
-}
 
 type State = int32
 
@@ -85,7 +67,7 @@ type SubmissionCreation struct {
 	ProblemId uuid.UUID
 	ContestId uuid.UUID
 	UserId    uuid.UUID
-	Language  LanguageName
+	Language  string
 	Penalty   int32
 	State     *State
 	BanReason *string
@@ -97,7 +79,7 @@ type SubmissionsFilter struct {
 	ContestId *uuid.UUID
 	UserId    *uuid.UUID
 	ProblemId *uuid.UUID
-	Language  *LanguageName
+	Language  *string
 	State     *State
 	Order     *int32
 }
@@ -118,7 +100,7 @@ type SubmissionListItem struct {
 	Penalty           int32        `json:"penalty"`
 	TimeStat          int32        `json:"time_stat"`
 	MemoryStat        int32        `json:"memory_stat"`
-	Language          int32        `json:"language"`
+	Language          string       `json:"language"`
 	FailedTest        *int32       `json:"failed_test,omitempty"`
 	BanReason         *string      `json:"ban_reason,omitempty"`
 	ProblemID         uuid.UUID    `json:"problem_id"`
@@ -146,7 +128,7 @@ type Submission struct {
 	Penalty           int32                  `json:"penalty"`
 	TimeStat          int32                  `json:"time_stat"`
 	MemoryStat        int32                  `json:"memory_stat"`
-	Language          LanguageName           `json:"language"`
+	Language          string                 `json:"language"`
 	FailedTest        *int32                 `json:"failed_test,omitempty"`
 	TestDetails       *SubmissionTestDetails `json:"test_details,omitempty"`
 	BanReason         *string                `json:"ban_reason,omitempty"`
@@ -191,7 +173,7 @@ type SubmissionEventMeta struct {
 	ProblemTitle string     `json:"problem_title"`
 	Position     *int32     `json:"position"`
 
-	Language LanguageName `json:"language,omitempty"`
+	Language string `json:"language,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 }

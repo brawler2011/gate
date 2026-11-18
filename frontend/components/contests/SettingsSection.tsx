@@ -1,4 +1,4 @@
-import {Button, Stack, TextInput, NumberInput, Badge, Combobox, useCombobox, InputBase, Input, Text, Divider, Switch, Group} from "@mantine/core";
+import {Button, Stack, TextInput, NumberInput, Badge, Combobox, useCombobox, InputBase, Input, MultiSelect, Text, Divider, Switch, Group} from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {notifications} from "@mantine/notifications";
 import {useQueryClient} from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import {useRevalidator, useNavigate} from "react-router-dom";
 import {DownloadStatementsButton} from "@/components/contests/DownloadStatementsButton";
 import {StatusMessage} from "@/components/shared/StatusMessage";
 import {api} from "@/lib/api";
+import {useLanguages} from "@/lib/languages";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import type * as corev1 from "@/contracts/core/v1/schema";
@@ -116,6 +117,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
   const revalidator = useRevalidator();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const catalog = useLanguages();
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error";
     message: string;
@@ -139,6 +141,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
     enable_upsolving: boolean;
     enable_virtual_contests: boolean;
     hide_statements: boolean;
+    languages: string[];
   }>({
     initialValues: {
       login: contest.login || "",
@@ -150,6 +153,7 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
       enable_upsolving: contest.enable_upsolving ?? true,
       enable_virtual_contests: contest.enable_virtual_contests ?? false,
       hide_statements: contest.hide_statements ?? false,
+      languages: contest.languages ?? [],
       monitor_scope: contest.monitor_scope,
       submissions_list_scope: contest.submissions_list_scope,
       submissions_review_scope: contest.submissions_review_scope,
@@ -324,6 +328,17 @@ export const SettingsSection = ({contest}: SettingsSectionProps): ReactNode => {
             onChange={(value) => form.setFieldValue("participation_mode", value as corev1.UpdateContestRequestModel["participation_mode"])}
             options={PARTICIPATION_MODE_OPTIONS}
             description="В открытом контесте любой авторизованный пользователь может отправлять решения"
+          />
+
+          <MultiSelect
+            label="Языки"
+            description="Конфигурации, в которых участники могут отправлять решения; пусто — все. Программы задач не ограничиваются"
+            placeholder={form.values.languages.length === 0 ? "Все языки" : undefined}
+            data={catalog.map((language) => ({value: language.id, label: language.name}))}
+            value={form.values.languages}
+            onChange={(value) => form.setFieldValue("languages", value)}
+            clearable
+            searchable
           />
 
           <Group justify="space-between" mt="xs">

@@ -3914,7 +3914,7 @@ func (c *Client) sendCreateSubmission(ctx context.Context, request *CreateSubmis
 		}
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.Int32ToString(params.Language))
+			return e.EncodeValue(conv.StringToString(params.Language))
 		}); err != nil {
 			return res, errors.Wrap(err, "encode query")
 		}
@@ -8120,7 +8120,7 @@ func (c *Client) sendListContestSubmissions(ctx context.Context, params ListCont
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Language.Get(); ok {
-				return e.EncodeValue(conv.Int32ToString(val))
+				return e.EncodeValue(conv.StringToString(val))
 			}
 			return nil
 		}); err != nil {
@@ -9737,7 +9737,7 @@ func (c *Client) sendListSubmissions(ctx context.Context, params ListSubmissions
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Language.Get(); ok {
-				return e.EncodeValue(conv.Int32ToString(val))
+				return e.EncodeValue(conv.StringToString(val))
 			}
 			return nil
 		}); err != nil {

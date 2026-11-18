@@ -70,6 +70,12 @@ func fail(stage string, test int, kind string, err error) error {
 	return &Failure{Stage: stage, Test: test, Kind: kind, Message: text, Truncated: truncated, cause: err}
 }
 func processKind(err error) string {
+	// The draft was checked against the catalog at enqueue: a configuration
+	// the worker's catalog lacks means the API and worker disagree, a system
+	// configuration error no retry fixes.
+	if errors.Is(err, sandbox.ErrUnknownLanguage) {
+		return "configuration"
+	}
 	switch status.Code(err) {
 	case codes.Unavailable, codes.DeadlineExceeded, codes.Canceled, codes.ResourceExhausted:
 		return "infrastructure"
@@ -122,7 +128,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := os.Mkdir(tree, 0700); err != nil {
 		return uuid.Nil, fmt.Errorf("mkdir: %w", err)
 	}
-	e := &execution{pipeline: p, build: b, dir: &directory{root: tree, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, p.Languages), layout: placeDraft(s.Draft), compiled: make(map[string]compilation), samples: []model.Sample{}}
+	e := &execution{pipeline: p, build: b, dir: &directory{root: tree, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, p.Languages), layout: placeDraft(s.Draft, p.Languages), compiled: make(map[string]compilation), samples: []model.Sample{}}
 	defer e.releaseComponents()
 	if err := e.materialize(ctx); err != nil {
 		return uuid.Nil, fail("materialize", 0, "infrastructure", err)
@@ -308,10 +314,6 @@ func (e *execution) compile(ctx context.Context) error {
 	for _, p := range e.layout.programs {
 		if !required[p.key] {
 			continue
-		}
-		// The draft was checked against the languages at enqueue; the image may have changed since.
-		if _, ok := e.pipeline.Languages.Langs[p.program.Language]; !ok {
-			return fail("compile", 0, "author", fmt.Errorf("%s: language %q is not available on the judge", p.path, p.program.Language))
 		}
 		deps := map[string][]byte{}
 		for _, id := range p.program.Dependencies {

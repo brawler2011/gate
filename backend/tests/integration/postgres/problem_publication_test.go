@@ -74,7 +74,7 @@ func publicationHarness(t *testing.T) *pipelineHarness {
 	h.options.Lease = time.Minute
 	group := uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Checker = program("python", "import sys\nassert open(sys.argv[2]).read() == open(sys.argv[3]).read()\n")
+		d.Checker = program("python3", "import sys\nassert open(sys.argv[2]).read() == open(sys.argv[3]).read()\n")
 		d.Statements = []model.DraftStatement{{Language: "en", Legend: "Original statement"}}
 		d.Subtasks = []model.DraftSubtask{{ID: group, Ordinal: 1, Policy: "each"}}
 	})
@@ -388,8 +388,8 @@ func TestPublicationSupportedTypes(t *testing.T) {
 				}
 				if kind == "interactive" {
 					solution := uuid.New()
-					d.Interactor = program("python", "print('hello', flush=True)\n")
-					d.Solutions = append(d.Solutions, named(solution, "main", "python", "input()\n"))
+					d.Interactor = program("python3", "print('hello', flush=True)\n")
+					d.Solutions = append(d.Solutions, named(solution, "main", "python3", "input()\n"))
 					d.MainSolutionID = &solution
 					for i := range d.Tests {
 						d.Tests[i].Answer = model.DraftAnswer{Mode: "interactive"}

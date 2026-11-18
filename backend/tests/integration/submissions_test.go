@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"net/http"
 	"time"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
@@ -90,7 +91,7 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 			ProblemID:         problemID,
 			OrganizationLogin: contestOrg.Login,
 			ContestLogin:      "submission-contest",
-			Language:          30, // Python
+			Language:          "python3",
 		})
 		s.Require().NoError(err)
 		s.Require().NotNil(resp)
@@ -102,10 +103,37 @@ func (s *IntegrationTestSuite) TestSubmissions() {
 				Submission: "print('hello')",
 			}, corev1.CreateSubmissionParams{
 				ProblemID: problemID, OrganizationLogin: contestOrg.Login,
-				ContestLogin: "submission-contest", Language: 30,
+				ContestLogin: "submission-contest", Language: "python3",
 			})
 			s.Require().NoError(err)
 		}
+	})
+
+	// Organizers restrict the configurations contestants may submit in; the
+	// backend enforces the list and only accepts catalog identifiers.
+	s.Run("ContestLanguageRestriction", func() {
+		admin := withTestUser(s.ctx, admin.Id)
+		contest := corev1.UpdateContestParams{OrgLogin: contestOrg.Login, ContestLogin: "submission-contest"}
+		err := s.client.UpdateContest(admin, &corev1.UpdateContestRequestModel{Languages: []string{"cpp14"}}, contest)
+		s.Equal(http.StatusBadRequest, s.getStatusCode(err))
+		s.Require().NoError(s.client.UpdateContest(admin, &corev1.UpdateContestRequestModel{Languages: []string{"cpp17"}}, contest))
+		got, err := s.client.GetContest(admin, corev1.GetContestParams{OrgLogin: contestOrg.Login, ContestLogin: "submission-contest"})
+		s.Require().NoError(err)
+		s.Equal([]string{"cpp17"}, got.Contest.Languages)
+
+		submit := func(language string) error {
+			_, err := s.client.CreateSubmission(withTestUser(s.ctx, user.Id), &corev1.CreateSubmissionRequestModel{Submission: "int main() {}"}, corev1.CreateSubmissionParams{
+				ProblemID: problemID, OrganizationLogin: contestOrg.Login, ContestLogin: "submission-contest", Language: language,
+			})
+			return err
+		}
+		s.Equal(http.StatusBadRequest, s.getStatusCode(submit("python3")))
+		s.Equal(http.StatusBadRequest, s.getStatusCode(submit("cpp14")))
+		s.Require().NoError(submit("cpp17"))
+
+		// An empty list allows the whole catalog again.
+		s.Require().NoError(s.client.UpdateContest(admin, &corev1.UpdateContestRequestModel{Languages: []string{}}, contest))
+		s.Require().NoError(submit("python3"))
 	})
 
 	// 4. Get Submission

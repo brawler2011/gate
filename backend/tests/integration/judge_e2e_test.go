@@ -93,9 +93,9 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	d, err := drafts.GetDraft(ctx, problemID)
 	require.NoError(t, err)
 	generator, solution, group := uuid.New(), uuid.New(), uuid.New()
-	d.Checker = &problemsmodel.DraftProgram{Language: "cpp", Source: "#include <fstream>\nint main(int n,char**v){\n#ifdef REJECT_ALL\nreturn 1;\n#endif\nlong long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}"}
-	d.Generators = []problemsmodel.DraftNamedProgram{{ID: generator, Name: "gen", DraftProgram: problemsmodel.DraftProgram{Language: "python", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
-	d.Solutions = []problemsmodel.DraftNamedProgram{{ID: solution, Name: "main", DraftProgram: problemsmodel.DraftProgram{Language: "cpp", Source: "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}"}}}
+	d.Checker = &problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <fstream>\nint main(int n,char**v){\n#ifdef REJECT_ALL\nreturn 1;\n#endif\nlong long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}"}
+	d.Generators = []problemsmodel.DraftNamedProgram{{ID: generator, Name: "gen", DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
+	d.Solutions = []problemsmodel.DraftNamedProgram{{ID: solution, Name: "main", DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}"}}}
 	d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Print a+b."}}
 	d.MainSolutionID = &solution
 	d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
@@ -145,7 +145,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	require.NoError(t, contestsRepo.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{ContestId: contestID, ProblemId: problemID, PackageId: packageID}))
 	require.NoError(t, contestsRepo.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: contestID, UserId: userID, Role: contestsmodel.ContestRoleParticipant}))
 
-	judge := func(t *testing.T, problem uuid.UUID, language submissionsmodel.LanguageName, source string) submissionsmodel.Submission {
+	judge := func(t *testing.T, problem uuid.UUID, language string, source string) submissionsmodel.Submission {
 		t.Helper()
 		id, err := submissionsRepo.CreateSubmission(ctx, &submissionsmodel.SubmissionCreation{Solution: source, ProblemId: problem, ContestId: contestID, UserId: userID, Language: language})
 		require.NoError(t, err)
@@ -158,12 +158,12 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	}
 
 	t.Run("CorrectSolutionScoresEveryWeight", func(t *testing.T) {
-		sub := judge(t, problemID, submissionsmodel.Python, "print(sum(map(int, input().split())))")
+		sub := judge(t, problemID, "python3", "print(sum(map(int, input().split())))")
 		assert.Equal(t, submissionsmodel.Accepted, sub.State)
 		assert.Equal(t, 100*points.Unit, sub.Score)
 	})
 	t.Run("WrongSolutionIsRejected", func(t *testing.T) {
-		sub := judge(t, problemID, submissionsmodel.Python, "print(42)")
+		sub := judge(t, problemID, "python3", "print(42)")
 		assert.Equal(t, submissionsmodel.GotWA, sub.State)
 		assert.Equal(t, points.Value(0), sub.Score)
 		require.NotNil(t, sub.FailedTest)
@@ -172,7 +172,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	t.Run("CheckerCompiledOncePerImage", func(t *testing.T) {
 		before, err := os.Stat(checkerEntry(image))
 		require.NoError(t, err, "the first submissions compiled the checker into the cache")
-		sub := judge(t, problemID, submissionsmodel.Python, "print(sum(map(int, input().split())))")
+		sub := judge(t, problemID, "python3", "print(sum(map(int, input().split())))")
 		assert.Equal(t, submissionsmodel.Accepted, sub.State)
 		after, err := os.Stat(checkerEntry(image))
 		require.NoError(t, err)
@@ -182,17 +182,17 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		// The package carries no binaries: a worker whose image differs, here only in its
 		// language configuration, compiles the checker itself instead of reusing the cached one.
 		langs := maps.Clone(image.Config.Langs)
-		cpp := langs["cpp"]
+		cpp := langs["cpp17"]
 		cpp.Compile = strings.Replace(cpp.Compile, "g++ ", "g++ -DREJECT_ALL ", 1)
-		langs["cpp"] = cpp
+		langs["cpp17"] = cpp
 		changed := sandbox.Image{Identity: image.Identity, Config: &sandbox.Config{Langs: langs}}
 		judgeUC = newJudge(changed)
-		sub := judge(t, problemID, submissionsmodel.Python, "print(sum(map(int, input().split())))")
+		sub := judge(t, problemID, "python3", "print(sum(map(int, input().split())))")
 		assert.Equal(t, submissionsmodel.GotWA, sub.State, "the checker compiled with the changed configuration rejects everything")
 		_, err := os.Stat(checkerEntry(changed))
 		require.NoError(t, err)
 		judgeUC = newJudge(image)
-		sub = judge(t, problemID, submissionsmodel.Python, "print(sum(map(int, input().split())))")
+		sub = judge(t, problemID, "python3", "print(sum(map(int, input().split())))")
 		assert.Equal(t, submissionsmodel.Accepted, sub.State)
 	})
 	t.Run("UnreadablePackageIsInternalError", func(t *testing.T) {
@@ -202,7 +202,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 		brokenPackage, err := dbfixtures.InsertPackage(ctx, dbPool, brokenProblem, org.ID, time.Time{})
 		require.NoError(t, err)
 		require.NoError(t, contestsRepo.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{ContestId: contestID, ProblemId: brokenProblem, PackageId: brokenPackage}))
-		sub := judge(t, brokenProblem, submissionsmodel.Python, "print(1)")
+		sub := judge(t, brokenProblem, "python3", "print(1)")
 		assert.Equal(t, submissionsmodel.GotIE, sub.State)
 	})
 }
@@ -300,7 +300,7 @@ func (h *judgeHarness) publish(t *testing.T, shortName string, edit func(*proble
 	return problemID
 }
 
-func (h *judgeHarness) submit(t *testing.T, problem uuid.UUID, language submissionsmodel.LanguageName, source string) submissionsmodel.Submission {
+func (h *judgeHarness) submit(t *testing.T, problem uuid.UUID, language string, source string) submissionsmodel.Submission {
 	t.Helper()
 	id, err := h.submissions.CreateSubmission(h.ctx, &submissionsmodel.SubmissionCreation{Solution: source, ProblemId: problem, ContestId: h.contestID, UserId: h.userID, Language: language})
 	require.NoError(t, err)
@@ -330,10 +330,10 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 		return func(d *problemsmodel.Draft) {
 			generator, solution, group := uuid.New(), uuid.New(), uuid.New()
 			d.Type = "interactive"
-			d.Checker = &problemsmodel.DraftProgram{Language: "python", Source: checkerSource}
-			d.Interactor = &problemsmodel.DraftProgram{Language: "python", Source: interactorSource}
-			d.Generators = []problemsmodel.DraftNamedProgram{{ID: generator, Name: "gen", DraftProgram: problemsmodel.DraftProgram{Language: "python", Source: "import sys\nprint(sys.argv[1])\n"}}}
-			d.Solutions = []problemsmodel.DraftNamedProgram{{ID: solution, Name: "main", DraftProgram: problemsmodel.DraftProgram{Language: "python", Source: "print(2 * int(input()), flush=True)\n"}}}
+			d.Checker = &problemsmodel.DraftProgram{Language: "python3", Source: checkerSource}
+			d.Interactor = &problemsmodel.DraftProgram{Language: "python3", Source: interactorSource}
+			d.Generators = []problemsmodel.DraftNamedProgram{{ID: generator, Name: "gen", DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1])\n"}}}
+			d.Solutions = []problemsmodel.DraftNamedProgram{{ID: solution, Name: "main", DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "print(2 * int(input()), flush=True)\n"}}}
 			d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Reply with twice the number."}}
 			d.MainSolutionID = &solution
 			d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
@@ -357,8 +357,8 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 	}
 	for name, problemID := range cases {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, submissionsmodel.Accepted, h.submit(t, problemID, submissionsmodel.Python, correct).State)
-			assert.Equal(t, submissionsmodel.GotWA, h.submit(t, problemID, submissionsmodel.Python, wrong).State)
+			assert.Equal(t, submissionsmodel.Accepted, h.submit(t, problemID, "python3", correct).State)
+			assert.Equal(t, submissionsmodel.GotWA, h.submit(t, problemID, "python3", wrong).State)
 		})
 	}
 	t.Run("CheckerRejectingMainSolutionFailsBuild", func(t *testing.T) {

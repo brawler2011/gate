@@ -24,21 +24,23 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSub
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid solution size")
 	}
 
-	langName := submissionsmodel.LanguageName(params.Language)
-	if err := submissionsmodel.LanguageNameValid(langName); err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid language")
+	if _, ok := h.languages.Langs[params.Language]; !ok {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "unknown language configuration")
 	}
 
 	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrganizationLogin, params.ContestLogin)
 	if err != nil {
 		return nil, err
 	}
+	if !contest.TypedSettings().AllowsLanguage(params.Language) {
+		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "language configuration is not allowed in this contest")
+	}
 
 	solutionCreation := &submissionsmodel.SubmissionCreation{
 		UserId:    user.Id,
 		ProblemId: params.ProblemID,
 		ContestId: contest.ID,
-		Language:  langName,
+		Language:  params.Language,
 		Solution:  req.Submission,
 		Penalty:   20,
 	}
@@ -105,10 +107,9 @@ func (h *CoreServer) ListSubmissions(ctx context.Context, params corev1.ListSubm
 }
 
 func ListSolutionsParamsDTO(params corev1.ListSubmissionsParams) submissionsmodel.SubmissionsFilter {
-	var langName *submissionsmodel.LanguageName = nil
+	var langName *string
 	if params.Language.IsSet() {
-		t := submissionsmodel.LanguageName(params.Language.Value)
-		langName = &t
+		langName = &params.Language.Value
 	}
 
 	var state *submissionsmodel.State = nil

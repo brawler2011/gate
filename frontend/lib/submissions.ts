@@ -7,7 +7,7 @@ export interface SubmissionsSelection {
   userId?: string;
   problemId?: string;
   state?: number;
-  language?: number;
+  language?: string;
   page: number;
   pageSize: number;
   sortOrder: 'asc' | 'desc';

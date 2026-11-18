@@ -37,7 +37,7 @@ func (s *Sandbox) fileCommand(executable Executable, language, inputID string, a
 	}
 	lang, ok := s.config.Langs[language]
 	if !ok {
-		return nil, fmt.Errorf("unsupported language: %s", language)
+		return nil, fmt.Errorf("%w: %s", ErrUnknownLanguage, language)
 	}
 	name := lang.CodeFile
 	if lang.Type == "compiler" {

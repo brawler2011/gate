@@ -1,0 +1,28 @@
+Polygon names each program's configuration in source.type: a GCC build with
+a standard selects that standard, whatever the extension suggests; a source
+without a type gets the configuration its extension suggests.
+
+-- problem.xml --
+<problem short-name="types">
+  <judging><testset name="tests">
+    <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
+    <input-path-pattern>tests/%02d</input-path-pattern><answer-path-pattern>tests/%02d.a</answer-path-pattern>
+    <tests><test method="manual"/></tests>
+  </testset></judging>
+  <assets><solutions>
+    <solution tag="main"><source path="solutions/main.cpp" type="cpp.gcc13-64-winlibs-g++20"/></solution>
+    <solution tag="accepted"><source path="solutions/old.cpp" type="cpp.g++17"/></solution>
+    <solution tag="accepted"><source path="solutions/plain.cpp"/></solution>
+    <solution tag="accepted"><source path="solutions/script.py" type="python.3"/></solution>
+  </solutions></assets>
+</problem>
+-- solutions/main.cpp --
+int main() {}
+-- solutions/old.cpp --
+int main() {}
+-- solutions/plain.cpp --
+int main() {}
+-- solutions/script.py --
+print()
+-- tests/01 --
+1

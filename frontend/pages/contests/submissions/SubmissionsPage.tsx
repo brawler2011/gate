@@ -27,7 +27,7 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     problemId?: string;
     state?: number;
     sortOrder: "asc" | "desc";
-    language?: number;
+    language?: string;
   } = {
     page,
     pageSize: PAGE_SIZE,
@@ -47,7 +47,7 @@ export const loader = (async ({params: routeParams, request}: LoaderFunctionArgs
     parsedParams.sortOrder = queryParams.order;
   }
   if (queryParams.language) {
-    parsedParams.language = Number(queryParams.language);
+    parsedParams.language = queryParams.language;
   }
 
   const [contestData] = await Promise.all([

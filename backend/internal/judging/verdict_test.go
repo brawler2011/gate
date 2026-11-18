@@ -14,49 +14,49 @@ import (
 func TestParseErrorLine(t *testing.T) {
 	tests := []struct {
 		name     string
-		lang     submissionsmodel.LanguageName
+		codeFile string
 		text     string
 		expected *int32
 	}{
 		{
 			name:     "C++ gcc error",
-			lang:     submissionsmodel.Cpp,
+			codeFile: "foo.cc",
 			text:     "foo.cc:15:23: error: expected ';' before '}' token",
 			expected: ptrInt32(15),
 		},
 		{
 			name:     "C++ clang error",
-			lang:     submissionsmodel.Cpp,
+			codeFile: "foo.cc",
 			text:     "solution.cpp:42:5: fatal error: 'iostream' file not found",
 			expected: ptrInt32(42),
 		},
 		{
 			name:     "Python traceback",
-			lang:     submissionsmodel.Python,
+			codeFile: "foo.py",
 			text:     "Traceback (most recent call last):\n  File \"foo.py\", line 12, in <module>\n    print(1/0)\nZeroDivisionError: division by zero",
 			expected: ptrInt32(12),
 		},
 		{
 			name:     "Python syntax error",
-			lang:     submissionsmodel.Python,
+			codeFile: "foo.py",
 			text:     "  File \"foo.py\", line 7\n    def test(\n             ^\nSyntaxError: unexpected EOF while parsing",
 			expected: ptrInt32(7),
 		},
 		{
 			name:     "Go compiler error",
-			lang:     submissionsmodel.Golang,
+			codeFile: "foo.go",
 			text:     "foo.go:28:2: undefined: fmt.Printlnn",
 			expected: ptrInt32(28),
 		},
 		{
 			name:     "Generic line fallback",
-			lang:     submissionsmodel.Cpp,
+			codeFile: "foo.cc",
 			text:     "Runtime error at line 99",
 			expected: ptrInt32(99),
 		},
 		{
 			name:     "Empty output",
-			lang:     submissionsmodel.Cpp,
+			codeFile: "foo.cc",
 			text:     "",
 			expected: nil,
 		},
@@ -64,7 +64,7 @@ func TestParseErrorLine(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := ParseErrorLine(tc.lang, tc.text)
+			result := ParseErrorLine(tc.codeFile, tc.text)
 			if tc.expected == nil {
 				assert.Nil(t, result)
 			} else {

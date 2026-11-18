@@ -42,7 +42,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			if err != nil {
 				return fmt.Errorf("%s: %w", rel, err)
 			}
-			programs[folder] = append(programs[folder], spec.Program{File: spec.File{Name: name, Path: rel}, Dependencies: deps})
+			programs[folder] = append(programs[folder], spec.Program{File: spec.File{Name: name, Path: rel}, Language: manifest.Sources[rel].Language, Dependencies: deps})
 		case folder == LibraryFolder && name != "" && !strings.Contains(name, "/"):
 			p.Library = append(p.Library, spec.File{Name: name, Path: rel})
 		case folder == AssetFolder && name != "" && !strings.Contains(name, "/"):

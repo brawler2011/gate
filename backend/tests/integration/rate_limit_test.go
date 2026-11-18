@@ -126,7 +126,7 @@ func (s *IntegrationTestSuite) TestRateLimitedSubmissions() {
 	// A nonexistent problem reaches the real handler and returns 404 within quota;
 	// once exhausted, middleware must return 429 before the handler runs.
 	send := func(id uuid.UUID) *httptest.ResponseRecorder {
-		r := httptest.NewRequest(http.MethodPost, "/submissions?problem_id="+uuid.NewString()+"&organization_login=missing&contest_login=missing&language=30", strings.NewReader(`{"submission":"print(1)"}`))
+		r := httptest.NewRequest(http.MethodPost, "/submissions?problem_id="+uuid.NewString()+"&organization_login=missing&contest_login=missing&language=python3", strings.NewReader(`{"submission":"print(1)"}`))
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("X-Test-User-ID", id.String())
 		rr := httptest.NewRecorder()

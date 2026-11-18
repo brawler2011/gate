@@ -204,40 +204,6 @@ export const formatDate = (isoDate: string | undefined): string => {
 };
 
 /**
- * Convert language code to display string
- * Language mapping: golang = 10, cpp = 20, python = 30
- */
-export const LangString = (language?: number): string => {
-  switch (language) {
-    case 10:
-      return "Go";
-    case 20:
-      return "C++";
-    case 30:
-      return "Python";
-    default:
-      return "Unknown";
-  }
-};
-
-/**
- * Convert language code to syntax highlighter language name
- * Language mapping: golang = 10, cpp = 20, python = 30
- */
-export const LangNameToString = (language?: number): string => {
-  switch (language) {
-    case 10:
-      return "go";
-    case 20:
-      return "cpp";
-    case 30:
-      return "python";
-    default:
-      return "text";
-  }
-};
-
-/**
  * Format problem title with position letter
  */
 export const ProblemTitle = (position?: number, title?: string): string => {

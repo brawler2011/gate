@@ -42,8 +42,7 @@ channels:
               type: string
               format: uuid
             language:
-              type: integer
-              format: int32
+              type: string
         bindingVersion: 0.1.0
     servers:
       - $ref: "#/servers/observer"
@@ -146,8 +145,7 @@ components:
           type: integer
           format: int32
         language:
-          type: integer
-          format: int32
+          type: string
         created_at:
           type: string
           format: date-time

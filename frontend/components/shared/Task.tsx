@@ -6,7 +6,8 @@ import {Problem} from "@/components/problems/Problem";
 import {CreateSubmissionForm} from "@/components/submissions/CreateSubmissionForm";
 import {RecentSubmissionsTable} from "@/components/submissions/RecentSubmissionsTable";
 import {api} from "@/lib/api";
-import {CONTEST_SIDEBAR_LEFT_WIDTH, CONTEST_SIDEBAR_RIGHT_WIDTH, LANGUAGE_MAP} from "@/lib/constants";
+import {CONTEST_SIDEBAR_LEFT_WIDTH, CONTEST_SIDEBAR_RIGHT_WIDTH} from "@/lib/constants";
+import {useContestLanguages} from "@/lib/languages";
 import {numberToLetters} from "@/lib/lib";
 
 import type {ContestModel, ContestProblemListItemModel, ContestProblemModel, SubmissionsListItemModel, UserModel} from "@/contracts/core/v1/schema";
@@ -30,16 +31,11 @@ const Task = ({
   user,
   isManager,
 }: PageProps): ReactNode => {
+  const languages = useContestLanguages(contest.languages);
   const onSubmit = async (
     submission: FormData,
     language: string,
   ): Promise<number | null> => {
-    const languageCode = LANGUAGE_MAP[language];
-    if (!languageCode) {
-      console.error("Invalid language:", language);
-      return null;
-    }
-
     const submissionData = submission.get("submission");
     let submissionContent = "";
     if (submissionData instanceof File) {
@@ -54,7 +50,7 @@ const Task = ({
           problem_id: problemId,
           organization_login: contest.organization_login,
           contest_login: contest.login,
-          language: languageCode,
+          language,
         },
       },
       body: {
@@ -175,7 +171,7 @@ const Task = ({
                 bg="var(--mantine-color-gray-light)"
                 style={{width: "100%"}}
               >
-                <CreateSubmissionForm onSubmit={onSubmit} disabled={!task.capabilities.includes("submit")} />
+                <CreateSubmissionForm languages={languages} onSubmit={onSubmit} disabled={!task.capabilities.includes("submit")} />
               </Paper>
 
               <RecentSubmissionsTable

@@ -31,8 +31,6 @@ export const isSingleRole = (role: ComponentRole): role is SingleRole => role ==
 
 const LIST_FIELDS = {validator: "validators", generator: "generators", solution: "solutions"} as const;
 
-export const LANGUAGES = ["cpp", "python", "go", "java"];
-
 export type OpResult = {draft: ProblemDraft} | {error: string};
 
 const newId = (): string => crypto.randomUUID();

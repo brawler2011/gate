@@ -15,6 +15,7 @@ import (
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
 )
 
@@ -51,6 +52,8 @@ type DraftUseCase struct {
 	UploadTTL    time.Duration
 	ObjectBytes  int64
 	BuildOptions model.BuildOptions
+	// Languages is the language catalog; imports select from it.
+	Languages *sandbox.Config
 }
 
 func (uc *DraftUseCase) authorize(ctx context.Context, id uuid.UUID, edit bool) (model.Problem, error) {

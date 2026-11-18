@@ -168,20 +168,21 @@ func (j *PackageJudge) releaseExecutable(executable sandbox.Executable) {
 	}
 }
 
-func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submissionID uuid.UUID, source string, language submissionsmodel.LanguageName, progress Progress, meta submissionsmodel.SubmissionEventMeta) (*FinalVerdict, error) {
+func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submissionID uuid.UUID, source string, lang string, progress Progress, meta submissionsmodel.SubmissionEventMeta) (*FinalVerdict, error) {
 	s := pkg.Descriptor.Snapshot
 	sb := sandbox.NewSandbox(j.Client, j.Languages)
-	lang := convertLanguage(language)
 	sol, err := sb.CompileWithLimits(ctx, []byte(source), lang, nil, s.Limits.Compile)
 	if err != nil {
-		if IsTemporary(err) {
+		// The API accepted a configuration this worker's catalog lacks: a
+		// system configuration error, not the contestant's compilation error.
+		if IsTemporary(err) || errors.Is(err, sandbox.ErrUnknownLanguage) {
 			return nil, err
 		}
 		output := err.Error()
 		if len(output) > maxTestDetailSize {
 			output = output[:maxTestDetailSize]
 		}
-		return &FinalVerdict{State: submissionsmodel.GotCE, Message: output, TestDetails: &submissionsmodel.SubmissionTestDetails{CompilerOutput: &output, ErrorLine: ParseErrorLine(language, output)}}, nil
+		return &FinalVerdict{State: submissionsmodel.GotCE, Message: output, TestDetails: &submissionsmodel.SubmissionTestDetails{CompilerOutput: &output, ErrorLine: ParseErrorLine(j.Languages.Langs[lang].CodeFile, output)}}, nil
 	}
 	defer j.releaseExecutable(sol)
 	// An interactive problem may also have a checker, which decides after the
@@ -298,7 +299,7 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 		if err != nil {
 			return result, err
 		}
-		result.ErrorLine = ParseErrorLine(0, result.Message)
+		result.ErrorLine = ParseErrorLine(j.Languages.Langs[lang].CodeFile, result.Message)
 	}
 	return result, nil
 }
@@ -334,14 +335,3 @@ type FlatTest struct {
 	Test        gfmt.Test
 }
 
-func convertLanguage(language submissionsmodel.LanguageName) string {
-	switch language {
-	case submissionsmodel.Cpp:
-		return "cpp"
-	case submissionsmodel.Python:
-		return "python"
-	case submissionsmodel.Golang:
-		return "go"
-	}
-	return ""
-}

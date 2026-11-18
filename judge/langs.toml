@@ -1,10 +1,17 @@
-# Languages available to submissions and problem packages.
+# The language catalog: every compiler and interpreter configuration that
+# submissions and problem programs can select, by its identifier (the table name).
+# Identifiers are stored with submissions and problem components; keep them stable.
 #
-# package  nixpkgs attribute installed into the judge image (see flake.nix)
+# name        what people see: the compiler or interpreter variant and version
+# extensions  source file extensions; the first names new files, and an extension
+#             suggests the first configuration (in file order) that accepts it
+# package     nixpkgs attribute installed into the judge image (see flake.nix)
 # The other keys tell the backend how to compile and run code in the sandbox,
 # where the runtime's binaries are available under /usr/bin.
 
-[cpp]
+[cpp17]
+name = "C++17 (GCC 15)"
+extensions = ["cpp", "cc", "cxx"]
 package = "gcc15"
 type = "compiler"
 code_file = "foo.cc"
@@ -12,13 +19,47 @@ compile = "/usr/bin/g++ -O2 -Wall -std=c++17 -o ${name} foo.cc"
 compile_file = "solution"
 execute = "${dir}/${name}"
 
-[python]
+[cpp20]
+name = "C++20 (GCC 15)"
+extensions = ["cpp", "cc", "cxx"]
+package = "gcc15"
+type = "compiler"
+code_file = "foo.cc"
+compile = "/usr/bin/g++ -O2 -Wall -std=c++20 -o ${name} foo.cc"
+compile_file = "solution"
+execute = "${dir}/${name}"
+
+[cpp23]
+name = "C++23 (GCC 15)"
+extensions = ["cpp", "cc", "cxx"]
+package = "gcc15"
+type = "compiler"
+code_file = "foo.cc"
+compile = "/usr/bin/g++ -O2 -Wall -std=c++23 -o ${name} foo.cc"
+compile_file = "solution"
+execute = "${dir}/${name}"
+
+[cpp26]
+name = "C++26 (GCC 15)"
+extensions = ["cpp", "cc", "cxx"]
+package = "gcc15"
+type = "compiler"
+code_file = "foo.cc"
+compile = "/usr/bin/g++ -O2 -Wall -std=c++26 -o ${name} foo.cc"
+compile_file = "solution"
+execute = "${dir}/${name}"
+
+[python3]
+name = "Python 3.14 (CPython)"
+extensions = ["py"]
 package = "python314"
 type = "interpreter"
 code_file = "foo.py"
 execute = "/usr/bin/python3 ${dir}/foo.py"
 
 [go]
+name = "Go 1.26"
+extensions = ["go"]
 package = "go_1_26"
 type = "compiler"
 code_file = "foo.go"
@@ -27,6 +68,8 @@ compile_file = "solution"
 execute = "${dir}/${name}"
 
 [java]
+name = "Java 25 (OpenJDK)"
+extensions = ["java"]
 package = "jdk25_headless"
 type = "compiler"
 code_file = "Main.java"

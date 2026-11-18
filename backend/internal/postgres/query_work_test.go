@@ -148,7 +148,7 @@ func workScenarios(pool *pgxpool.Pool, f submissionBenchFixture) []workScenario 
 	outbox := NewOutboxRepo(pool)
 	submissions := NewSubmissionsRepo(pool)
 	contests := NewContestsRepo(pool)
-	creation := submissionsmodel.SubmissionCreation{ContestId: f.contest, ProblemId: f.problem, UserId: f.user, Solution: strings.Repeat("print(1)\n", 32), Language: submissionsmodel.Python}
+	creation := submissionsmodel.SubmissionCreation{ContestId: f.contest, ProblemId: f.problem, UserId: f.user, Solution: strings.Repeat("print(1)\n", 32), Language: "python3"}
 	order := int32(-1)
 	filter := submissionsmodel.SubmissionsFilter{ContestId: &f.contest, Page: 1, PageSize: 50, Order: &order}
 	// The second event of the first aggregate: its first version is completed.
