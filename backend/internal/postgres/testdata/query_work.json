@@ -86,7 +86,7 @@
   "Submissions/small/Create": {
     "statements": 1,
     "transactions": 0,
-    "pages": 46,
+    "pages": 45,
     "sorts": 0,
     "seq_scans": 0
   },
@@ -100,9 +100,9 @@
   "Submissions/small/Latest": {
     "statements": 2,
     "transactions": 1,
-    "pages": 138,
+    "pages": 195,
     "sorts": 0,
-    "seq_scans": 0
+    "seq_scans": 1
   },
   "Submissions/small/UpdateRevision": {
     "statements": 1,

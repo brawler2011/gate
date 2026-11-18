@@ -6,11 +6,11 @@ package integration
 import (
 	"io"
 	"log/slog"
+	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/judging"
-	problemsmodel "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
@@ -45,34 +45,36 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 			draft, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: problem.ID})
 			s.Require().NoError(err)
 			pkg := s.loadPackage(s.buildPackage(admin.Id, problem.ID))
-			var main string
-			for _, c := range draft.Components {
-				if id, ok := draft.MainSolutionID.Get(); ok && c.ID == id {
-					main = c.Path
-				}
-				if c.Role != corev1.ProblemDraftComponentRoleChecker && c.Role != corev1.ProblemDraftComponentRoleInteractor {
+			for role, program := range map[string]corev1.NilProblemDraftProgram{"checker": draft.Checker, "interactor": draft.Interactor} {
+				if program.Null {
 					continue
 				}
-				program, ok := pkg.Format.Problem.Programs[string(c.Role)]
-				s.Require().True(ok, "%s missing from package", c.Role)
-				s.Equal(gfmt.Program{Source: c.Path, Language: problemsmodel.LanguageForPath(c.Path), Dependencies: map[string]string(c.Dependencies)}, program)
+				built, ok := pkg.Format.Problem.Programs[role]
+				s.Require().True(ok, "%s missing from package", role)
+				s.Equal(program.Value.Language, built.Language)
+			}
+			var main corev1.ProblemDraftNamedProgram
+			for _, solution := range draft.Solutions {
+				if id, ok := draft.MainSolutionID.Get(); ok && solution.ID == id {
+					main = solution
+				}
 			}
 			languages := map[string]submissionsmodel.LanguageName{"cpp": submissionsmodel.Cpp, "python": submissionsmodel.Python, "go": submissionsmodel.Golang}
-			language, ok := languages[problemsmodel.LanguageForPath(main)]
-			s.Require().True(ok, "main solution %q", main)
+			language, ok := languages[main.Language]
+			s.Require().True(ok, "main solution %q", main.Name)
 			client, files := newGoJudge(s.T())
 			cfg := &sandbox.Config{Langs: testBuildOptions(s.T()).Languages}
 			judge := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 			judge.Programs = &judging.ProgramCache{Root: diskTempDir(s.T()), Compiler: "test", Compile: judge.CompileProgram}
-			verdict, err := judge.Judge(s.ctx, pkg, uuid.New(), draft.Files[main], language, silentJudgeProgress{}, submissionsmodel.SubmissionEventMeta{})
+			verdict, err := judge.Judge(s.ctx, pkg, uuid.New(), main.Source, language, silentJudgeProgress{}, submissionsmodel.SubmissionEventMeta{})
 			s.Require().NoError(err)
 			s.Equal(submissionsmodel.Accepted, verdict.State, "%+v", verdict)
 		})
 	}
 }
 
-// Changing the checker language renames its file; the build compiles it in the
-// new language under the same component ID and dependencies.
+// Changing the checker language keeps its dependencies; the build compiles it
+// in the new language and the package file follows the language.
 func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 	admin := s.createUser("admin_rename", accessmodel.UserRoleAdmin)
 	org := s.createOrganization("rename-org", "Rename Organization", admin.Id)
@@ -82,23 +84,19 @@ func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 	draft, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: problem.ID})
 	s.Require().NoError(err)
 
-	index := -1
-	for i, c := range draft.Components {
-		if c.Role == corev1.ProblemDraftComponentRoleChecker {
-			index = i
-		}
-	}
-	s.Require().NotEqual(-1, index)
-	checker := draft.Components[index]
-	s.Require().Equal("checkers/checker.cpp", checker.Path)
-	s.Require().NotEmpty(checker.Dependencies)
-	delete(draft.Files, checker.Path)
-	draft.Files["checkers/checker.py"] = "import sys\nout = open(sys.argv[2]).read().split()\nans = open(sys.argv[3]).read().split()\nsys.exit(0 if out == ans else 1)\n"
-	draft.Components[index].Path = "checkers/checker.py"
+	s.Require().False(draft.Checker.Null)
+	s.Require().Equal("cpp", draft.Checker.Value.Language)
+	s.Require().NotEmpty(draft.Checker.Value.Dependencies)
+	draft.Checker.Value.Language = "python"
+	draft.Checker.Value.Source = "import sys\nout = open(sys.argv[2]).read().split()\nans = open(sys.argv[3]).read().split()\nsys.exit(0 if out == ans else 1)\n"
 	saved, err := s.client.SaveProblemDraft(ctx, draft, corev1.SaveProblemDraftParams{ID: problem.ID, ExpectedRevision: draft.Revision, IdempotencyKey: uuid.NewString()})
 	s.Require().NoError(err)
 	s.Require().Equal(draft.Tests, saved.Tests)
 
 	built := s.loadBuiltPackage(s.buildPackage(admin.Id, problem.ID))
-	s.Equal(gfmt.Program{Source: "checkers/checker.py", Language: "python", Dependencies: map[string]string(checker.Dependencies)}, built.Programs["checker"])
+	program, ok := built.Programs["checker"]
+	s.Require().True(ok, "package has the checker")
+	s.Equal("python", program.Language)
+	s.True(strings.HasSuffix(program.Source, ".py"), "checker source follows the language: %s", program.Source)
+	s.Equal(map[string]string{"testlib.h": "lib/testlib.h"}, program.Dependencies)
 }

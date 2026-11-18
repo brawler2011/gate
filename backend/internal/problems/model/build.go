@@ -67,7 +67,7 @@ func NewStoredObject(org uuid.UUID, spec UploadSpec) StoredObject {
 // UploadChange atomically adds/replaces a resource or one test. A manual test
 // with a provided answer can upload both bodies in the same revision change.
 type UploadChange struct {
-	AssetPath string     `json:"asset_path,omitempty"`
+	AssetName string     `json:"asset_name,omitempty"`
 	Test      *DraftTest `json:"test,omitempty"`
 	Part      string     `json:"part"` // asset, input, answer, pair
 }

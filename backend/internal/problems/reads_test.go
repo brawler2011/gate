@@ -45,7 +45,7 @@ type templateManifests struct{ id uuid.UUID }
 
 func (r *templateManifests) GetDraft(_ context.Context, id uuid.UUID) (problemsmodel.Draft, error) {
 	r.id = id
-	return problemsmodel.Draft{Type: "interactive", Files: map[string]string{"statements/en.md": "Template description"}}, nil
+	return problemsmodel.Draft{Type: "interactive", DraftContent: problemsmodel.DraftContent{Statements: []problemsmodel.DraftStatement{{Language: "en", Legend: "Template description"}}}}, nil
 }
 
 func TestProblemReadsBindViewerAndPagination(t *testing.T) {

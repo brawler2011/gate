@@ -198,12 +198,12 @@ type PackageStatement struct {
 	ProblemID uuid.UUID
 	Draft     Draft
 	Samples   []Sample
-	// Assets maps each statement asset path to its content SHA-256.
+	// Assets maps each statement asset name to its content SHA-256.
 	Assets map[string]string
 }
 
 // StatementContent is a package statement in one language with its samples
-// and statement asset hashes by path.
+// and statement asset hashes by name.
 type StatementContent struct {
 	Statement *Statement
 	Samples   []Sample
@@ -212,7 +212,7 @@ type StatementContent struct {
 
 // PackageAsset is a statement asset stored as its own object.
 type PackageAsset struct {
-	Path string
+	Name string
 	Key  string
 }
 type ProblemDetails struct {

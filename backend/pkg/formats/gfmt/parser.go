@@ -3,6 +3,7 @@ package gfmt
 import (
 	"fmt"
 	"io/fs"
+	"maps"
 	"path"
 	"slices"
 	"strings"
@@ -10,10 +11,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/formats/spec"
 	"gopkg.in/yaml.v3"
 )
-
-// Folders of an author gfmt package. Each program lives in its role folder;
-// tests/ holds the files problem.yaml refers to.
-var programFolders = []string{"checkers", "validators", "interactors", "generators", "solutions"}
 
 // Read reads an author gfmt package: problem.yaml and the files of its folders.
 func Read(fsys fs.FS) (*spec.Problem, error) {
@@ -30,6 +27,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	}
 	p := &spec.Problem{Title: manifest.Title, Type: manifest.Type, TimeLimitMs: manifest.Limits.TimeMs, MemoryLimitMb: manifest.Limits.MemoryMb}
 	programs := map[string][]spec.Program{}
+	statements := map[string]*spec.Statement{}
 	files := map[string]bool{}
 	err = fs.WalkDir(fsys, ".", func(rel string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
@@ -38,19 +36,25 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		files[rel] = true
 		folder, name, _ := strings.Cut(rel, "/")
 		switch {
-		case rel == "problem.yaml" || folder == "tests":
-		case slices.Contains(programFolders, folder) && name != "":
+		case rel == "problem.yaml" || folder == TestFolder:
+		case folderRole(folder) != "" && name != "" && !strings.Contains(name, "/"):
 			deps, err := dependencies(manifest.Sources[rel])
 			if err != nil {
 				return fmt.Errorf("%s: %w", rel, err)
 			}
 			programs[folder] = append(programs[folder], spec.Program{File: spec.File{Name: name, Path: rel}, Dependencies: deps})
-		case folder == "lib" && name != "":
+		case folder == LibraryFolder && name != "" && !strings.Contains(name, "/"):
 			p.Library = append(p.Library, spec.File{Name: name, Path: rel})
-		case folder == "assets" && name != "":
+		case folder == AssetFolder && name != "" && !strings.Contains(name, "/"):
 			p.Assets = append(p.Assets, spec.File{Name: name, Path: rel})
-		case folder == "statements" && path.Ext(name) == ".md" && !strings.Contains(name, "/"):
-			p.Statements = append(p.Statements, spec.Statement{Language: strings.TrimSuffix(name, ".md"), Path: rel})
+		case folder == StatementFolder && strings.Count(name, "/") == 1 && path.Ext(name) == ".md":
+			language, file, _ := strings.Cut(name, "/")
+			s := statements[language]
+			if s == nil {
+				s = &spec.Statement{Language: language, Sections: map[string]string{}}
+				statements[language] = s
+			}
+			s.Sections[strings.TrimSuffix(file, ".md")] = rel
 		default:
 			return fmt.Errorf("unexpected file %s", rel)
 		}
@@ -58,6 +62,9 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("read package: %w", err)
+	}
+	for _, language := range slices.Sorted(maps.Keys(statements)) {
+		p.Statements = append(p.Statements, *statements[language])
 	}
 	singleton := func(folder, role string) (*spec.Program, error) {
 		switch list := programs[folder]; len(list) {
@@ -69,16 +76,16 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			return nil, fmt.Errorf("more than one %s in %s/", role, folder)
 		}
 	}
-	if p.Checker, err = singleton("checkers", "checker"); err != nil {
+	if p.Checker, err = singleton(RoleFolder("checker"), "checker"); err != nil {
 		return nil, err
 	}
-	if p.Validator, err = singleton("validators", "validator"); err != nil {
+	if p.Validator, err = singleton(RoleFolder("validator"), "validator"); err != nil {
 		return nil, err
 	}
-	if p.Interactor, err = singleton("interactors", "interactor"); err != nil {
+	if p.Interactor, err = singleton(RoleFolder("interactor"), "interactor"); err != nil {
 		return nil, err
 	}
-	p.Generators, p.Solutions = programs["generators"], programs["solutions"]
+	p.Generators, p.Solutions = programs[RoleFolder("generator")], programs[RoleFolder("solution")]
 	p.MainSolution = mainSolution(manifest.Solutions, p.Solutions)
 	// Tests name generators by file stem, so the stem must identify one file.
 	generators := map[string]string{}
@@ -102,7 +109,7 @@ func dependencies(s Source) (map[string]string, error) {
 		return nil, nil
 	}
 	for _, source := range s.DependencyMap {
-		if !strings.HasPrefix(source, "lib/") {
+		if !strings.HasPrefix(source, LibraryFolder+"/") {
 			return nil, fmt.Errorf("dependency %s is outside lib/", source)
 		}
 	}
@@ -112,7 +119,7 @@ func dependencies(s Source) (map[string]string, error) {
 // mainSolution is solutions.main, or else the first solution expected to pass.
 func mainSolution(verdicts map[string]string, solutions []spec.Program) string {
 	if main := verdicts["main"]; main != "" {
-		return "solutions/" + main
+		return RoleFolder("solution") + "/" + main
 	}
 	for _, s := range solutions {
 		if verdicts[s.Name] == "OK" {
@@ -175,7 +182,7 @@ func groups(manifest *Problem, generators map[string]string, files map[string]bo
 func convertTest(t Test, generators map[string]string, files map[string]bool) (spec.Test, error) {
 	test := spec.Test{Points: t.Points}
 	if t.Manual != "" {
-		test.Input = "tests/" + t.Manual
+		test.Input = TestFolder + "/" + t.Manual
 	} else {
 		argv, err := spec.ParseCommand(t.Generate)
 		if err != nil {
@@ -189,11 +196,11 @@ func convertTest(t Test, generators map[string]string, files map[string]bool) (s
 	}
 	switch {
 	case t.Answer != "":
-		test.Answer = "tests/" + t.Answer
+		test.Answer = TestFolder + "/" + t.Answer
 	case t.Manual != "":
 		for _, candidate := range TestOutputNames(t.Manual) {
-			if files["tests/"+candidate] {
-				test.Answer = "tests/" + candidate
+			if files[TestFolder+"/"+candidate] {
+				test.Answer = TestFolder + "/" + candidate
 				break
 			}
 		}

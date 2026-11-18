@@ -8,183 +8,256 @@ import {SectionPaper} from "@/components/workshop/SectionPaper";
 
 import {DraftGate} from "./draft/DraftGate";
 import {
-  addComponent,
-  LANGUAGE_EXTENSIONS,
-  languageForPath,
-  LIBRARY_FOLDER,
-  libraryFiles,
-  removeComponent,
+  addProgram,
+  isSingleRole,
+  LANGUAGES,
+  programsOf,
+  removeProgram,
   ROLE_LABELS,
-  setComponentLanguage,
-  setFile,
-  SINGLETON_ROLES,
+  setSingleProgram,
+  updateProgram,
   type ComponentRole,
+  type ListRole,
+  type SingleRole,
 } from "./draft/draftOps";
 import {SourceEditor} from "./draft/SourceEditor";
 import {componentTemplate} from "./draft/templates";
 import {useSaveDraft} from "./draft/useDraft";
 
-import type {ProblemDraft, ProblemDraftComponent} from "@/contracts/core/v1/schema";
+import type {ProblemDraft, ProblemDraftProgram} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
-const libraryName = (path: string): string => path.slice(LIBRARY_FOLDER.length + 1);
+const LANGUAGE_OPTIONS = LANGUAGES.map((language) => ({value: language, label: language}));
 
-const LANGUAGE_OPTIONS = Object.entries(LANGUAGE_EXTENSIONS).map(([language, extension]) => ({
-  value: language,
-  label: `${language} (${extension})`,
-}));
-
-type PanelProps = {
+type ProgramEditorProps = {
   draft: ProblemDraft;
-  problemId: string;
-  role: ComponentRole;
+  label: string;
+  program: ProblemDraftProgram;
+  saving: boolean;
+  onChange: (patch: Partial<ProblemDraftProgram>) => void;
+  onDelete: () => void;
+  children?: ReactNode;
 };
 
-const ComponentsPanel = ({draft, problemId, role}: PanelProps): ReactNode => {
+/** Language, library dependencies and source of one program. */
+const ProgramEditor = (props: ProgramEditorProps): ReactNode => {
+  const {draft, label, program, saving, onChange, onDelete, children} = props;
+  return (
+    <SectionPaper>
+      <Stack gap="md">
+        <Group align="flex-end" wrap="wrap">
+          <Select
+            label="Язык"
+            data={LANGUAGE_OPTIONS}
+            value={program.language}
+            allowDeselect={false}
+            onChange={(value) => value && onChange({language: value})}
+            w={200}
+          />
+          {children}
+        </Group>
+        <MultiSelect
+          label="Подключаемые файлы"
+          description="Файлы из библиотеки, доступные программе при сборке под своим именем"
+          data={draft.library.map((file) => ({value: file.id, label: file.name}))}
+          value={program.dependencies}
+          onChange={(dependencies) => onChange({dependencies})}
+          searchable
+          placeholder={draft.library.length === 0 ? "Библиотека пуста" : "Не подключено"}
+        />
+        <SourceEditor
+          label={label}
+          content={program.source}
+          saving={saving}
+          onSave={(source) => onChange({source})}
+          onDelete={onDelete}
+        />
+      </Stack>
+    </SectionPaper>
+  );
+};
+
+const NewProgramForm = ({withName, saving, onCreate}: {
+  withName: boolean;
+  saving: boolean;
+  onCreate: (name: string, language: string) => Promise<boolean>;
+}): ReactNode => {
+  const [name, setName] = useState("");
+  const [language, setLanguage] = useState("cpp");
+  return (
+    <>
+      {withName && (
+        <TextInput label="Новая программа" placeholder="main" value={name} onChange={(e) => setName(e.currentTarget.value)} />
+      )}
+      <Select
+        label="Язык"
+        data={LANGUAGE_OPTIONS}
+        value={language}
+        allowDeselect={false}
+        onChange={(value) => setLanguage(value ?? "cpp")}
+      />
+      <Button
+        variant="light"
+        disabled={withName && name.trim() === ""}
+        loading={saving}
+        onClick={() => void onCreate(name.trim(), language).then((ok) => ok && setName(""))}
+      >
+        Создать
+      </Button>
+    </>
+  );
+};
+
+type PanelProps<Role> = {draft: ProblemDraft; problemId: string; role: Role};
+
+const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNode => {
+  const {save, isSaving} = useSaveDraft(problemId);
+  const program = draft[role];
+  if (!program) {
+    return (
+      <SectionPaper title={ROLE_LABELS[role]}>
+        <Stack gap="xs" maw={320}>
+          <Text size="sm" c="dimmed">
+            {ROLE_LABELS[role]} ещё не создан.
+          </Text>
+          <NewProgramForm
+            withName={false}
+            saving={isSaving}
+            onCreate={(_, language) =>
+              save((current) =>
+                setSingleProgram(current, role, {
+                  language,
+                  source: componentTemplate(role, language),
+                  dependencies: [],
+                }),
+              )
+            }
+          />
+        </Stack>
+      </SectionPaper>
+    );
+  }
+  return (
+    <ProgramEditor
+      draft={draft}
+      label={ROLE_LABELS[role]}
+      program={program}
+      saving={isSaving}
+      onChange={(patch) =>
+        void save((current) => setSingleProgram(current, role, {...(current[role] ?? program), ...patch}))
+      }
+      onDelete={() => void save((current) => setSingleProgram(current, role, null))}
+    />
+  );
+};
+
+const RenameControl = ({name, saving, onRename}: {
+  name: string;
+  saving: boolean;
+  onRename: (name: string) => void;
+}): ReactNode => {
+  const [value, setValue] = useState(name);
+  return (
+    <>
+      <TextInput label="Название" value={value} onChange={(e) => setValue(e.currentTarget.value)} w={200} />
+      <Button
+        variant="default"
+        disabled={value.trim() === "" || value.trim() === name}
+        loading={saving}
+        onClick={() => onRename(value.trim())}
+      >
+        Переименовать
+      </Button>
+    </>
+  );
+};
+
+const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
   const [params, setParams] = useSearchParams();
-  const [newName, setNewName] = useState("");
-  const [newLanguage, setNewLanguage] = useState<string>("cpp");
+  const programs = programsOf(draft, role);
+  const selected = programs.find((p) => p.id === params.get("component")) ?? programs[0];
 
-  const components = draft.components.filter((c) => c.role === role);
-  const selected = components.find((c) => c.id === params.get("component")) ?? components[0];
-  const canCreate = !SINGLETON_ROLES.has(role) || components.length === 0;
-  const libs = libraryFiles(draft);
-
-  const open = (component: ProblemDraftComponent) => {
+  const open = (id: string) => {
     const next = new URLSearchParams(params);
-    next.set("component", component.id);
+    next.set("component", id);
     setParams(next, {replace: true});
   };
 
-  const handleCreate = async () => {
-    const name = newName.trim();
+  const create = async (newName: string, language: string): Promise<boolean> => {
     let createdId: string | undefined;
     const ok = await save((current) => {
-      const result = addComponent(current, role, name, newLanguage, componentTemplate(role, newLanguage));
-      if ("draft" in result) {
-        createdId = result.draft.components.at(-1)?.id;
-      }
-      return result;
+      const next = addProgram(current, role, newName, language, componentTemplate(role, language));
+      createdId = programsOf(next, role).at(-1)?.id;
+      return next;
     });
-    if (ok) {
-      setNewName("");
-      if (createdId) {
-        setParams(new URLSearchParams({component: createdId}), {replace: true});
-      }
+    if (ok && createdId) {
+      setParams(new URLSearchParams({component: createdId}), {replace: true});
     }
+    return ok;
   };
-
-  const updateComponent = (id: string, patch: Partial<ProblemDraftComponent>) =>
-    save((current) => ({...current, components: current.components.map((c) => (c.id === id ? {...c, ...patch} : c))}));
 
   return (
     <Grid gutter="lg">
       <Grid.Col span={{base: 12, md: 4}}>
         <SectionPaper title={ROLE_LABELS[role]}>
           <Stack gap="xs">
-            {components.length === 0 && (
+            {programs.length === 0 && (
               <Text size="sm" c="dimmed">
-                Файлов пока нет.
+                Программ пока нет.
               </Text>
             )}
-            {components.map((component) => (
+            {programs.map((program) => (
               <NavLink
-                key={component.id}
-                active={component.id === selected?.id}
-                label={component.path.split("/").pop()}
-                description={languageForPath(component.path)}
+                key={program.id}
+                active={program.id === selected?.id}
+                label={program.name}
+                description={program.language}
                 rightSection={
-                  role === "solution" && draft.main_solution_id === component.id ? (
+                  role === "solution" && draft.main_solution_id === program.id ? (
                     <Badge size="xs" variant="light">
                       Главное
                     </Badge>
                   ) : undefined
                 }
-                onClick={() => open(component)}
+                onClick={() => open(program.id)}
               />
             ))}
-            {canCreate ? (
-              <>
-                <TextInput
-                  label="Новый файл"
-                  description="Имя без расширения; расширение задаёт язык"
-                  placeholder="main"
-                  value={newName}
-                  onChange={(e) => setNewName(e.currentTarget.value)}
-                />
-                <Select
-                  label="Язык"
-                  data={LANGUAGE_OPTIONS}
-                  value={newLanguage}
-                  allowDeselect={false}
-                  onChange={(value) => setNewLanguage(value ?? "cpp")}
-                />
-                <Button variant="light" disabled={newName.trim() === ""} loading={isSaving} onClick={() => void handleCreate()}>
-                  Создать
-                </Button>
-              </>
-            ) : (
-              <Text size="xs" c="dimmed">
-                У задачи может быть только один файл этой роли.
-              </Text>
-            )}
+            <NewProgramForm withName saving={isSaving} onCreate={create} />
           </Stack>
         </SectionPaper>
       </Grid.Col>
       <Grid.Col span={{base: 12, md: 8}}>
         {selected ? (
-          <SectionPaper>
-            <Stack gap="md">
-              <Group align="flex-end" wrap="wrap">
-                <Select
-                  label="Язык"
-                  description="Меняет расширение файла"
-                  data={LANGUAGE_OPTIONS}
-                  value={languageForPath(selected.path) || null}
-                  allowDeselect={false}
-                  onChange={(value) =>
-                    value && void save((current) => setComponentLanguage(current, selected.id, value))
-                  }
-                  w={200}
-                />
-                {role === "solution" && draft.main_solution_id !== selected.id && (
-                  <Button
-                    variant="light"
-                    loading={isSaving}
-                    onClick={() => void save((current) => ({...current, main_solution_id: selected.id}))}
-                  >
-                    Сделать главным
-                  </Button>
-                )}
-              </Group>
-              <MultiSelect
-                label="Подключаемые файлы"
-                description="Файлы из библиотеки, доступные компоненту при сборке под своим именем"
-                data={libs.map((path) => ({value: path, label: libraryName(path)}))}
-                value={Object.values(selected.dependencies ?? {})}
-                onChange={(paths) =>
-                  void updateComponent(selected.id, {
-                    dependencies: Object.fromEntries(paths.map((path) => [libraryName(path), path])),
-                  })
-                }
-                searchable
-                placeholder={libs.length === 0 ? "Библиотека пуста" : "Не подключено"}
-              />
-              <SourceEditor
-                key={`${selected.id}:${draft.revision}`}
-                path={selected.path}
-                content={draft.files[selected.path] ?? ""}
-                saving={isSaving}
-                onSave={(content) => void save((current) => setFile(current, selected.path, content))}
-                onDelete={() => void save((current) => removeComponent(current, selected.id))}
-              />
-            </Stack>
-          </SectionPaper>
+          <ProgramEditor
+            key={selected.id}
+            draft={draft}
+            label={selected.name}
+            program={selected}
+            saving={isSaving}
+            onChange={(patch) => void save((current) => updateProgram(current, role, selected.id, patch))}
+            onDelete={() => void save((current) => removeProgram(current, role, selected.id))}
+          >
+            <RenameControl
+              key={`${selected.id}:${selected.name}`}
+              name={selected.name}
+              saving={isSaving}
+              onRename={(name) => void save((current) => updateProgram(current, role, selected.id, {name}))}
+            />
+            {role === "solution" && draft.main_solution_id !== selected.id && (
+              <Button
+                variant="light"
+                loading={isSaving}
+                onClick={() => void save((current) => ({...current, main_solution_id: selected.id}))}
+              >
+                Сделать главным
+              </Button>
+            )}
+          </ProgramEditor>
         ) : (
           <SectionPaper>
             <Text size="sm" c="dimmed">
-              Создайте файл, чтобы начать.
+              Создайте программу, чтобы начать.
             </Text>
           </SectionPaper>
         )}
@@ -202,7 +275,13 @@ export const WorkshopComponentsTab = ({problemId, role}: Props): ReactNode => (
   <Box p="lg">
     <Stack gap="lg" maw={1200} mx="auto">
       <DraftGate problemId={problemId}>
-        {(draft) => <ComponentsPanel draft={draft} problemId={problemId} role={role} />}
+        {(draft) =>
+          isSingleRole(role) ? (
+            <SinglePanel draft={draft} problemId={problemId} role={role} />
+          ) : (
+            <ListPanel draft={draft} problemId={problemId} role={role} />
+          )
+        }
       </DraftGate>
     </Stack>
   </Box>

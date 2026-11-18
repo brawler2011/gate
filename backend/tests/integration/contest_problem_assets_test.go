@@ -109,7 +109,7 @@ func (s *IntegrationTestSuite) TestContestProblemAssetServesPackageImage() {
 	}
 
 	got := problem()
-	s.Equal(corev1.ContestProblemModelAssets{"assets/pic.png": sha256Hex(image)}, got.Assets)
+	s.Equal(corev1.ContestProblemModelAssets{"pic.png": sha256Hex(image)}, got.Assets)
 	s.Len(got.Samples, 4, "three manual samples and one generated")
 	s.Contains(got.Samples, corev1.ProblemSampleModel{Input: "10 20\n", Output: "30\n"}, "generated sample input")
 	s.Contains(got.Samples, corev1.ProblemSampleModel{Input: "7 8\n", Output: "15\n"}, "manual sample input")
@@ -142,7 +142,7 @@ func (s *IntegrationTestSuite) TestContestProblemAssetServesPackageImage() {
 	next := s.buildPackage(owner.Id, problemID)
 	s.removePackageArchive(next)
 	s.Require().NoError(s.contestsRepo.UpdateContestProblemPackage(s.ctx, contestID, problemID, next))
-	s.Equal(corev1.ContestProblemModelAssets{"assets/pic.png": sha256Hex(changed)}, problem().Assets)
+	s.Equal(corev1.ContestProblemModelAssets{"pic.png": sha256Hex(changed)}, problem().Assets)
 	resp, err = s.client.GetContestProblemAsset(ctx, params(sha256Hex(changed)))
 	s.Require().NoError(err)
 	body, err = io.ReadAll(resp.Response.Data)

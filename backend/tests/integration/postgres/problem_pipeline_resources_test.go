@@ -138,10 +138,9 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 	// sequential tests before any parallel one starts.
 	const perFile, tests = 24 << 20, 3
 	h := newPipelineHarness(t, 64<<20, 2<<30)
-	checker, subtask := uuid.New(), uuid.New()
+	subtask := uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Files = map[string]string{"checkers/check.cpp": acceptEverythingChecker}
-		d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.cpp"}}
+		d.Checker = program("cpp", acceptEverythingChecker)
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 	})
 	for i := 1; i <= tests; i++ {
@@ -203,10 +202,9 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 1<<20, 64<<20)
-	checker, subtask := uuid.New(), uuid.New()
+	subtask := uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Files = map[string]string{"checkers/check.cpp": "#ifndef NEW_IMAGE\n#error compiled with the enqueue-time languages\n#endif\n" + acceptEverythingChecker}
-		d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.cpp"}}
+		d.Checker = program("cpp", "#ifndef NEW_IMAGE\n#error compiled with the enqueue-time languages\n#endif\n"+acceptEverythingChecker)
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 	})
 	h.uploadPair(t, model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 100, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}, 16)
@@ -234,20 +232,17 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 // generatorBuild saves a draft whose only test is produced by the given generator script.
 func (h *pipelineHarness) generatorBuild(t *testing.T, script string) {
 	t.Helper()
-	checker, generator, solution, subtask := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	generator, solution, subtask := uuid.New(), uuid.New(), uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Files = map[string]string{"checkers/check.cpp": acceptEverythingChecker, "generators/gen.py": script, "solutions/main.py": "print(1)\n"}
-		d.Components = []model.DraftComponent{
-			{ID: checker, Role: "checker", Path: "checkers/check.cpp"},
-			{ID: generator, Role: "generator", Path: "generators/gen.py"},
-			{ID: solution, Role: "solution", Path: "solutions/main.py"},
-		}
+		d.Checker = program("cpp", acceptEverythingChecker)
+		d.Generators = []model.DraftNamedProgram{named(generator, "gen", "python", script)}
+		d.Solutions = []model.DraftNamedProgram{named(solution, "main", "python", "print(1)\n")}
 		d.MainSolutionID = &solution
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 		seed := int64(1)
 		d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1,
-			Input:  model.DraftInput{Mode: "generator", ComponentID: &generator, Args: []string{}, Seed: &seed},
-			Answer: model.DraftAnswer{Mode: "generated", ComponentID: &solution}}}
+			Input:  model.DraftInput{Mode: "generator", GeneratorID: &generator, Args: []string{}, Seed: &seed},
+			Answer: model.DraftAnswer{Mode: "generated", SolutionID: &solution}}}
 	})
 }
 
@@ -380,10 +375,9 @@ func mustBuildID(t *testing.T, h *pipelineHarness) uuid.UUID {
 func TestPipelineDiskQuotaRejectsOversizedSnapshot(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 16<<20, 4<<20)
-	checker, subtask := uuid.New(), uuid.New()
+	subtask := uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Files = map[string]string{"checkers/check.cpp": acceptEverythingChecker}
-		d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.cpp"}}
+		d.Checker = program("cpp", acceptEverythingChecker)
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 	})
 	h.uploadPair(t, model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1, Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}, 3<<20)

@@ -16,7 +16,7 @@ func (r *ProblemDraftsRepo) FinalizeCreate(ctx context.Context, k model.Mutation
 	if err := draft.ComputeScores(); err != nil {
 		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid weights")
 	}
-	if err := draft.Validate(r.quotas, false); err != nil {
+	if err := draft.Validate(r.quotas, nil); err != nil {
 		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid template")
 	}
 	tx, err := beginReadCommitted(ctx, r.pool)

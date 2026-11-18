@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -58,13 +59,13 @@ func applyUploadChange(d *model.Draft, change model.UploadChange, ids []uuid.UUI
 		return pkg.ErrBadInput
 	}
 	if change.Part == "asset" {
-		if change.Test != nil || !model.ValidDraftPath(change.AssetPath) {
+		if change.Test != nil || !model.ValidFileName(change.AssetName) {
 			return pkg.ErrBadInput
 		}
-		asset := model.DraftAsset{Path: change.AssetPath, ObjectID: ids[0]}
+		asset := model.DraftAsset{Name: change.AssetName, ObjectID: ids[0]}
 		found := false
 		for i, a := range d.Assets {
-			if a.Path == asset.Path {
+			if a.Name == asset.Name {
 				d.Assets[i] = asset
 				found = true
 				break
@@ -75,7 +76,7 @@ func applyUploadChange(d *model.Draft, change model.UploadChange, ids []uuid.UUI
 		}
 		return nil
 	}
-	if change.Test == nil || change.AssetPath != "" {
+	if change.Test == nil || change.AssetName != "" {
 		return pkg.ErrBadInput
 	}
 	test := *change.Test
@@ -168,13 +169,15 @@ func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.Mut
 	if org != k.OrganizationID {
 		return model.MutationResult{}, pkg.NoPermission
 	}
+	before := draft
+	before.Statements = slices.Clone(draft.Statements)
 	if err := apply(&draft); err != nil {
 		return model.MutationResult{}, err
 	}
 	if err := draft.ComputeScores(); err != nil {
 		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid weights")
 	}
-	if err := draft.Validate(r.quotas, false); err != nil {
+	if err := draft.Validate(r.quotas, &before); err != nil {
 		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid upload change")
 	}
 	if err := insertObjects(ctx, tx, objects); err != nil {

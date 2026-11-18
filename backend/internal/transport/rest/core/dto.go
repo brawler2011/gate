@@ -308,50 +308,23 @@ func ListProblemsResponseDTO(problemsList *problemsmodel.ProblemsList) *corev1.L
 	return &resp
 }
 
-func ProblemDTO(p problemsmodel.Problem, statement *problemsmodel.Statement, samples []corev1.ProblemSampleModel) *corev1.ProblemModel {
-	title := strings.TrimSpace(p.Title)
-	if statement != nil {
-		statementTitle := strings.TrimSpace(statement.Title)
-		if statementTitle != "" {
-			title = statementTitle
-		}
-	}
-
+func ProblemDTO(p problemsmodel.Problem) *corev1.ProblemModel {
 	createdBy := uuid.Nil
 	if p.OwnerID != nil {
 		createdBy = *p.OwnerID
 	}
-
-	legend := statementField(statement, func(s problemsmodel.Statement) string { return s.Legend })
-	inputFormat := statementField(statement, func(s problemsmodel.Statement) string { return s.InputFormat })
-	outputFormat := statementField(statement, func(s problemsmodel.Statement) string { return s.OutputFormat })
-	notes := statementField(statement, func(s problemsmodel.Statement) string { return s.Notes })
-	scoring := statementField(statement, func(s problemsmodel.Statement) string { return s.Scoring })
-
-	if samples == nil {
-		samples = []corev1.ProblemSampleModel{}
-	}
-
 	return &corev1.ProblemModel{Capabilities: []string{},
 		ID:                p.ID,
 		OrganizationID:    p.OrganizationID,
 		OrganizationLogin: p.OrganizationLogin,
-		Title:             title,
+		Title:             strings.TrimSpace(p.Title),
 		Visibility:        p.Visibility,
 		CreatedBy:         createdBy,
 		TimeLimit:         safeInt32(p.TimeLimitMs),
 		MemoryLimit:       safeInt32(p.MemoryLimitMb),
-
-		Legend:       legend,
-		InputFormat:  inputFormat,
-		OutputFormat: outputFormat,
-		Notes:        notes,
-		Scoring:      scoring,
-
-		IsTemplate: p.IsTemplate,
-		CreatedAt:  p.CreatedAt,
-		UpdatedAt:  p.UpdatedAt,
-		Samples:    samples,
+		IsTemplate:        p.IsTemplate,
+		CreatedAt:         p.CreatedAt,
+		UpdatedAt:         p.UpdatedAt,
 	}
 }
 

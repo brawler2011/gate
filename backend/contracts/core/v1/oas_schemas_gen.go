@@ -3050,6 +3050,8 @@ type Error struct {
 	Error     OptString `json:"error"`
 	Message   OptString `json:"message"`
 	RequestID OptString `json:"request_id"`
+	// Invalid values of the request body, each at an RFC 6901 JSON Pointer into it.
+	Fields []FieldError `json:"fields"`
 }
 
 // GetError returns the value of Error.
@@ -3067,6 +3069,11 @@ func (s *Error) GetRequestID() OptString {
 	return s.RequestID
 }
 
+// GetFields returns the value of Fields.
+func (s *Error) GetFields() []FieldError {
+	return s.Fields
+}
+
 // SetError sets the value of Error.
 func (s *Error) SetError(val OptString) {
 	s.Error = val
@@ -3080,6 +3087,11 @@ func (s *Error) SetMessage(val OptString) {
 // SetRequestID sets the value of RequestID.
 func (s *Error) SetRequestID(val OptString) {
 	s.RequestID = val
+}
+
+// SetFields sets the value of Fields.
+func (s *Error) SetFields(val []FieldError) {
+	s.Fields = val
 }
 
 // Failed test detail data.
@@ -3162,6 +3174,33 @@ func (s *FailedTestDetailModel) SetErrorMessage(val string) {
 // SetIsTruncated sets the value of IsTruncated.
 func (s *FailedTestDetailModel) SetIsTruncated(val bool) {
 	s.IsTruncated = val
+}
+
+// One invalid value of a request body.
+// Ref: #/components/schemas/FieldError
+type FieldError struct {
+	Pointer string `json:"pointer"`
+	Message string `json:"message"`
+}
+
+// GetPointer returns the value of Pointer.
+func (s *FieldError) GetPointer() string {
+	return s.Pointer
+}
+
+// GetMessage returns the value of Message.
+func (s *FieldError) GetMessage() string {
+	return s.Message
+}
+
+// SetPointer sets the value of Pointer.
+func (s *FieldError) SetPointer(val string) {
+	s.Pointer = val
+}
+
+// SetMessage sets the value of Message.
+func (s *FieldError) SetMessage(val string) {
+	s.Message = val
 }
 
 // ForgotPasswordOK is response for ForgotPassword operation.
@@ -4613,6 +4652,51 @@ func (o NilProblemBuildDiagnostic) Get() (v ProblemBuildDiagnostic, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o NilProblemBuildDiagnostic) Or(d ProblemBuildDiagnostic) ProblemBuildDiagnostic {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilProblemDraftProgram returns new NilProblemDraftProgram with value set to v.
+func NewNilProblemDraftProgram(v ProblemDraftProgram) NilProblemDraftProgram {
+	return NilProblemDraftProgram{
+		Value: v,
+	}
+}
+
+// NilProblemDraftProgram is nullable ProblemDraftProgram.
+type NilProblemDraftProgram struct {
+	Value ProblemDraftProgram
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilProblemDraftProgram) SetTo(v ProblemDraftProgram) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilProblemDraftProgram) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilProblemDraftProgram) SetToNull() {
+	o.Null = true
+	var v ProblemDraftProgram
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilProblemDraftProgram) Get() (v ProblemDraftProgram, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilProblemDraftProgram) Or(d ProblemDraftProgram) ProblemDraftProgram {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -7816,22 +7900,30 @@ func (s *ProblemBuildState) UnmarshalText(data []byte) error {
 	}
 }
 
+// The editable problem as typed entries without package paths. Programs, library files and tests are
+// referred to by ID; names are labels.
 // Ref: #/components/schemas/ProblemDraft
 type ProblemDraft struct {
-	ProblemID      uuid.UUID               `json:"problem_id"`
-	Revision       int64                   `json:"revision"`
-	Title          string                  `json:"title"`
-	ShortName      string                  `json:"short_name"`
-	Type           ProblemDraftType        `json:"type"`
-	TimeLimitMs    int64                   `json:"time_limit_ms"`
-	MemoryLimitMB  int64                   `json:"memory_limit_mb"`
-	MaxScore       NilFloat64              `json:"max_score"`
-	MainSolutionID NilUUID                 `json:"main_solution_id"`
-	Files          ProblemDraftFiles       `json:"files"`
-	Components     []ProblemDraftComponent `json:"components"`
-	Subtasks       []ProblemDraftSubtask   `json:"subtasks"`
-	Tests          []ProblemDraftTest      `json:"tests"`
-	Assets         []ProblemDraftAsset     `json:"assets"`
+	ProblemID     uuid.UUID              `json:"problem_id"`
+	Revision      int64                  `json:"revision"`
+	Title         string                 `json:"title"`
+	ShortName     string                 `json:"short_name"`
+	Type          ProblemDraftType       `json:"type"`
+	TimeLimitMs   int64                  `json:"time_limit_ms"`
+	MemoryLimitMB int64                  `json:"memory_limit_mb"`
+	MaxScore      NilFloat64             `json:"max_score"`
+	Checker       NilProblemDraftProgram `json:"checker"`
+	Interactor    NilProblemDraftProgram `json:"interactor"`
+	// At most one validator.
+	Validators     []ProblemDraftNamedProgram `json:"validators"`
+	Generators     []ProblemDraftNamedProgram `json:"generators"`
+	Solutions      []ProblemDraftNamedProgram `json:"solutions"`
+	MainSolutionID NilUUID                    `json:"main_solution_id"`
+	Library        []ProblemDraftLibraryFile  `json:"library"`
+	Statements     []ProblemDraftStatement    `json:"statements"`
+	Assets         []ProblemDraftAsset        `json:"assets"`
+	Subtasks       []ProblemDraftSubtask      `json:"subtasks"`
+	Tests          []ProblemDraftTest         `json:"tests"`
 }
 
 // GetProblemID returns the value of ProblemID.
@@ -7874,19 +7966,49 @@ func (s *ProblemDraft) GetMaxScore() NilFloat64 {
 	return s.MaxScore
 }
 
+// GetChecker returns the value of Checker.
+func (s *ProblemDraft) GetChecker() NilProblemDraftProgram {
+	return s.Checker
+}
+
+// GetInteractor returns the value of Interactor.
+func (s *ProblemDraft) GetInteractor() NilProblemDraftProgram {
+	return s.Interactor
+}
+
+// GetValidators returns the value of Validators.
+func (s *ProblemDraft) GetValidators() []ProblemDraftNamedProgram {
+	return s.Validators
+}
+
+// GetGenerators returns the value of Generators.
+func (s *ProblemDraft) GetGenerators() []ProblemDraftNamedProgram {
+	return s.Generators
+}
+
+// GetSolutions returns the value of Solutions.
+func (s *ProblemDraft) GetSolutions() []ProblemDraftNamedProgram {
+	return s.Solutions
+}
+
 // GetMainSolutionID returns the value of MainSolutionID.
 func (s *ProblemDraft) GetMainSolutionID() NilUUID {
 	return s.MainSolutionID
 }
 
-// GetFiles returns the value of Files.
-func (s *ProblemDraft) GetFiles() ProblemDraftFiles {
-	return s.Files
+// GetLibrary returns the value of Library.
+func (s *ProblemDraft) GetLibrary() []ProblemDraftLibraryFile {
+	return s.Library
 }
 
-// GetComponents returns the value of Components.
-func (s *ProblemDraft) GetComponents() []ProblemDraftComponent {
-	return s.Components
+// GetStatements returns the value of Statements.
+func (s *ProblemDraft) GetStatements() []ProblemDraftStatement {
+	return s.Statements
+}
+
+// GetAssets returns the value of Assets.
+func (s *ProblemDraft) GetAssets() []ProblemDraftAsset {
+	return s.Assets
 }
 
 // GetSubtasks returns the value of Subtasks.
@@ -7897,11 +8019,6 @@ func (s *ProblemDraft) GetSubtasks() []ProblemDraftSubtask {
 // GetTests returns the value of Tests.
 func (s *ProblemDraft) GetTests() []ProblemDraftTest {
 	return s.Tests
-}
-
-// GetAssets returns the value of Assets.
-func (s *ProblemDraft) GetAssets() []ProblemDraftAsset {
-	return s.Assets
 }
 
 // SetProblemID sets the value of ProblemID.
@@ -7944,19 +8061,49 @@ func (s *ProblemDraft) SetMaxScore(val NilFloat64) {
 	s.MaxScore = val
 }
 
+// SetChecker sets the value of Checker.
+func (s *ProblemDraft) SetChecker(val NilProblemDraftProgram) {
+	s.Checker = val
+}
+
+// SetInteractor sets the value of Interactor.
+func (s *ProblemDraft) SetInteractor(val NilProblemDraftProgram) {
+	s.Interactor = val
+}
+
+// SetValidators sets the value of Validators.
+func (s *ProblemDraft) SetValidators(val []ProblemDraftNamedProgram) {
+	s.Validators = val
+}
+
+// SetGenerators sets the value of Generators.
+func (s *ProblemDraft) SetGenerators(val []ProblemDraftNamedProgram) {
+	s.Generators = val
+}
+
+// SetSolutions sets the value of Solutions.
+func (s *ProblemDraft) SetSolutions(val []ProblemDraftNamedProgram) {
+	s.Solutions = val
+}
+
 // SetMainSolutionID sets the value of MainSolutionID.
 func (s *ProblemDraft) SetMainSolutionID(val NilUUID) {
 	s.MainSolutionID = val
 }
 
-// SetFiles sets the value of Files.
-func (s *ProblemDraft) SetFiles(val ProblemDraftFiles) {
-	s.Files = val
+// SetLibrary sets the value of Library.
+func (s *ProblemDraft) SetLibrary(val []ProblemDraftLibraryFile) {
+	s.Library = val
 }
 
-// SetComponents sets the value of Components.
-func (s *ProblemDraft) SetComponents(val []ProblemDraftComponent) {
-	s.Components = val
+// SetStatements sets the value of Statements.
+func (s *ProblemDraft) SetStatements(val []ProblemDraftStatement) {
+	s.Statements = val
+}
+
+// SetAssets sets the value of Assets.
+func (s *ProblemDraft) SetAssets(val []ProblemDraftAsset) {
+	s.Assets = val
 }
 
 // SetSubtasks sets the value of Subtasks.
@@ -7969,16 +8116,11 @@ func (s *ProblemDraft) SetTests(val []ProblemDraftTest) {
 	s.Tests = val
 }
 
-// SetAssets sets the value of Assets.
-func (s *ProblemDraft) SetAssets(val []ProblemDraftAsset) {
-	s.Assets = val
-}
-
 // Ref: #/components/schemas/ProblemDraftAnswer
 type ProblemDraftAnswer struct {
-	Mode        ProblemDraftAnswerMode `json:"mode"`
-	ObjectID    NilUUID                `json:"object_id"`
-	ComponentID NilUUID                `json:"component_id"`
+	Mode       ProblemDraftAnswerMode `json:"mode"`
+	ObjectID   NilUUID                `json:"object_id"`
+	SolutionID NilUUID                `json:"solution_id"`
 }
 
 // GetMode returns the value of Mode.
@@ -7991,9 +8133,9 @@ func (s *ProblemDraftAnswer) GetObjectID() NilUUID {
 	return s.ObjectID
 }
 
-// GetComponentID returns the value of ComponentID.
-func (s *ProblemDraftAnswer) GetComponentID() NilUUID {
-	return s.ComponentID
+// GetSolutionID returns the value of SolutionID.
+func (s *ProblemDraftAnswer) GetSolutionID() NilUUID {
+	return s.SolutionID
 }
 
 // SetMode sets the value of Mode.
@@ -8006,9 +8148,9 @@ func (s *ProblemDraftAnswer) SetObjectID(val NilUUID) {
 	s.ObjectID = val
 }
 
-// SetComponentID sets the value of ComponentID.
-func (s *ProblemDraftAnswer) SetComponentID(val NilUUID) {
-	s.ComponentID = val
+// SetSolutionID sets the value of SolutionID.
+func (s *ProblemDraftAnswer) SetSolutionID(val NilUUID) {
+	s.SolutionID = val
 }
 
 type ProblemDraftAnswerMode string
@@ -8059,15 +8201,18 @@ func (s *ProblemDraftAnswerMode) UnmarshalText(data []byte) error {
 	}
 }
 
+// A statement resource; sections show it as [alt].
+//
+// [alt]: name
 // Ref: #/components/schemas/ProblemDraftAsset
 type ProblemDraftAsset struct {
-	Path     string    `json:"path"`
+	Name     string    `json:"name"`
 	ObjectID uuid.UUID `json:"object_id"`
 }
 
-// GetPath returns the value of Path.
-func (s *ProblemDraftAsset) GetPath() string {
-	return s.Path
+// GetName returns the value of Name.
+func (s *ProblemDraftAsset) GetName() string {
+	return s.Name
 }
 
 // GetObjectID returns the value of ObjectID.
@@ -8075,9 +8220,9 @@ func (s *ProblemDraftAsset) GetObjectID() uuid.UUID {
 	return s.ObjectID
 }
 
-// SetPath sets the value of Path.
-func (s *ProblemDraftAsset) SetPath(val string) {
-	s.Path = val
+// SetName sets the value of Name.
+func (s *ProblemDraftAsset) SetName(val string) {
+	s.Name = val
 }
 
 // SetObjectID sets the value of ObjectID.
@@ -8085,143 +8230,11 @@ func (s *ProblemDraftAsset) SetObjectID(val uuid.UUID) {
 	s.ObjectID = val
 }
 
-// Ref: #/components/schemas/ProblemDraftComponent
-type ProblemDraftComponent struct {
-	ID           uuid.UUID                         `json:"id"`
-	Role         ProblemDraftComponentRole         `json:"role"`
-	Path         string                            `json:"path"`
-	Dependencies ProblemDraftComponentDependencies `json:"dependencies"`
-}
-
-// GetID returns the value of ID.
-func (s *ProblemDraftComponent) GetID() uuid.UUID {
-	return s.ID
-}
-
-// GetRole returns the value of Role.
-func (s *ProblemDraftComponent) GetRole() ProblemDraftComponentRole {
-	return s.Role
-}
-
-// GetPath returns the value of Path.
-func (s *ProblemDraftComponent) GetPath() string {
-	return s.Path
-}
-
-// GetDependencies returns the value of Dependencies.
-func (s *ProblemDraftComponent) GetDependencies() ProblemDraftComponentDependencies {
-	return s.Dependencies
-}
-
-// SetID sets the value of ID.
-func (s *ProblemDraftComponent) SetID(val uuid.UUID) {
-	s.ID = val
-}
-
-// SetRole sets the value of Role.
-func (s *ProblemDraftComponent) SetRole(val ProblemDraftComponentRole) {
-	s.Role = val
-}
-
-// SetPath sets the value of Path.
-func (s *ProblemDraftComponent) SetPath(val string) {
-	s.Path = val
-}
-
-// SetDependencies sets the value of Dependencies.
-func (s *ProblemDraftComponent) SetDependencies(val ProblemDraftComponentDependencies) {
-	s.Dependencies = val
-}
-
-type ProblemDraftComponentDependencies map[string]string
-
-func (s *ProblemDraftComponentDependencies) init() ProblemDraftComponentDependencies {
-	m := *s
-	if m == nil {
-		m = map[string]string{}
-		*s = m
-	}
-	return m
-}
-
-type ProblemDraftComponentRole string
-
-const (
-	ProblemDraftComponentRoleChecker    ProblemDraftComponentRole = "checker"
-	ProblemDraftComponentRoleValidator  ProblemDraftComponentRole = "validator"
-	ProblemDraftComponentRoleInteractor ProblemDraftComponentRole = "interactor"
-	ProblemDraftComponentRoleGenerator  ProblemDraftComponentRole = "generator"
-	ProblemDraftComponentRoleSolution   ProblemDraftComponentRole = "solution"
-)
-
-// AllValues returns all ProblemDraftComponentRole values.
-func (ProblemDraftComponentRole) AllValues() []ProblemDraftComponentRole {
-	return []ProblemDraftComponentRole{
-		ProblemDraftComponentRoleChecker,
-		ProblemDraftComponentRoleValidator,
-		ProblemDraftComponentRoleInteractor,
-		ProblemDraftComponentRoleGenerator,
-		ProblemDraftComponentRoleSolution,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ProblemDraftComponentRole) MarshalText() ([]byte, error) {
-	switch s {
-	case ProblemDraftComponentRoleChecker:
-		return []byte(s), nil
-	case ProblemDraftComponentRoleValidator:
-		return []byte(s), nil
-	case ProblemDraftComponentRoleInteractor:
-		return []byte(s), nil
-	case ProblemDraftComponentRoleGenerator:
-		return []byte(s), nil
-	case ProblemDraftComponentRoleSolution:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ProblemDraftComponentRole) UnmarshalText(data []byte) error {
-	switch ProblemDraftComponentRole(data) {
-	case ProblemDraftComponentRoleChecker:
-		*s = ProblemDraftComponentRoleChecker
-		return nil
-	case ProblemDraftComponentRoleValidator:
-		*s = ProblemDraftComponentRoleValidator
-		return nil
-	case ProblemDraftComponentRoleInteractor:
-		*s = ProblemDraftComponentRoleInteractor
-		return nil
-	case ProblemDraftComponentRoleGenerator:
-		*s = ProblemDraftComponentRoleGenerator
-		return nil
-	case ProblemDraftComponentRoleSolution:
-		*s = ProblemDraftComponentRoleSolution
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
-type ProblemDraftFiles map[string]string
-
-func (s *ProblemDraftFiles) init() ProblemDraftFiles {
-	m := *s
-	if m == nil {
-		m = map[string]string{}
-		*s = m
-	}
-	return m
-}
-
 // Ref: #/components/schemas/ProblemDraftInput
 type ProblemDraftInput struct {
 	Mode        ProblemDraftInputMode `json:"mode"`
 	ObjectID    NilUUID               `json:"object_id"`
-	ComponentID NilUUID               `json:"component_id"`
+	GeneratorID NilUUID               `json:"generator_id"`
 	Args        []string              `json:"args"`
 	Seed        NilInt64              `json:"seed"`
 }
@@ -8236,9 +8249,9 @@ func (s *ProblemDraftInput) GetObjectID() NilUUID {
 	return s.ObjectID
 }
 
-// GetComponentID returns the value of ComponentID.
-func (s *ProblemDraftInput) GetComponentID() NilUUID {
-	return s.ComponentID
+// GetGeneratorID returns the value of GeneratorID.
+func (s *ProblemDraftInput) GetGeneratorID() NilUUID {
+	return s.GeneratorID
 }
 
 // GetArgs returns the value of Args.
@@ -8261,9 +8274,9 @@ func (s *ProblemDraftInput) SetObjectID(val NilUUID) {
 	s.ObjectID = val
 }
 
-// SetComponentID sets the value of ComponentID.
-func (s *ProblemDraftInput) SetComponentID(val NilUUID) {
-	s.ComponentID = val
+// SetGeneratorID sets the value of GeneratorID.
+func (s *ProblemDraftInput) SetGeneratorID(val NilUUID) {
+	s.GeneratorID = val
 }
 
 // SetArgs sets the value of Args.
@@ -8315,6 +8328,227 @@ func (s *ProblemDraftInputMode) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// A source file programs include by its name.
+// Ref: #/components/schemas/ProblemDraftLibraryFile
+type ProblemDraftLibraryFile struct {
+	ID      uuid.UUID `json:"id"`
+	Name    string    `json:"name"`
+	Content string    `json:"content"`
+}
+
+// GetID returns the value of ID.
+func (s *ProblemDraftLibraryFile) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *ProblemDraftLibraryFile) GetName() string {
+	return s.Name
+}
+
+// GetContent returns the value of Content.
+func (s *ProblemDraftLibraryFile) GetContent() string {
+	return s.Content
+}
+
+// SetID sets the value of ID.
+func (s *ProblemDraftLibraryFile) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *ProblemDraftLibraryFile) SetName(val string) {
+	s.Name = val
+}
+
+// SetContent sets the value of Content.
+func (s *ProblemDraftLibraryFile) SetContent(val string) {
+	s.Content = val
+}
+
+// A validator, generator or solution; tests and the main solution refer to it by ID.
+// Ref: #/components/schemas/ProblemDraftNamedProgram
+type ProblemDraftNamedProgram struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	// Toolchain language key, such as cpp or python.
+	Language     string      `json:"language"`
+	Source       string      `json:"source"`
+	Dependencies []uuid.UUID `json:"dependencies"`
+}
+
+// GetID returns the value of ID.
+func (s *ProblemDraftNamedProgram) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *ProblemDraftNamedProgram) GetName() string {
+	return s.Name
+}
+
+// GetLanguage returns the value of Language.
+func (s *ProblemDraftNamedProgram) GetLanguage() string {
+	return s.Language
+}
+
+// GetSource returns the value of Source.
+func (s *ProblemDraftNamedProgram) GetSource() string {
+	return s.Source
+}
+
+// GetDependencies returns the value of Dependencies.
+func (s *ProblemDraftNamedProgram) GetDependencies() []uuid.UUID {
+	return s.Dependencies
+}
+
+// SetID sets the value of ID.
+func (s *ProblemDraftNamedProgram) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *ProblemDraftNamedProgram) SetName(val string) {
+	s.Name = val
+}
+
+// SetLanguage sets the value of Language.
+func (s *ProblemDraftNamedProgram) SetLanguage(val string) {
+	s.Language = val
+}
+
+// SetSource sets the value of Source.
+func (s *ProblemDraftNamedProgram) SetSource(val string) {
+	s.Source = val
+}
+
+// SetDependencies sets the value of Dependencies.
+func (s *ProblemDraftNamedProgram) SetDependencies(val []uuid.UUID) {
+	s.Dependencies = val
+}
+
+// A source compiled with the library files it depends on; each dependency is placed under its library
+// name.
+// Ref: #/components/schemas/ProblemDraftProgram
+type ProblemDraftProgram struct {
+	// Toolchain language key, such as cpp or python.
+	Language     string      `json:"language"`
+	Source       string      `json:"source"`
+	Dependencies []uuid.UUID `json:"dependencies"`
+}
+
+// GetLanguage returns the value of Language.
+func (s *ProblemDraftProgram) GetLanguage() string {
+	return s.Language
+}
+
+// GetSource returns the value of Source.
+func (s *ProblemDraftProgram) GetSource() string {
+	return s.Source
+}
+
+// GetDependencies returns the value of Dependencies.
+func (s *ProblemDraftProgram) GetDependencies() []uuid.UUID {
+	return s.Dependencies
+}
+
+// SetLanguage sets the value of Language.
+func (s *ProblemDraftProgram) SetLanguage(val string) {
+	s.Language = val
+}
+
+// SetSource sets the value of Source.
+func (s *ProblemDraftProgram) SetSource(val string) {
+	s.Source = val
+}
+
+// SetDependencies sets the value of Dependencies.
+func (s *ProblemDraftProgram) SetDependencies(val []uuid.UUID) {
+	s.Dependencies = val
+}
+
+// The statement in one language as Markdown sections.
+// Ref: #/components/schemas/ProblemDraftStatement
+type ProblemDraftStatement struct {
+	Language    string `json:"language"`
+	Legend      string `json:"legend"`
+	Input       string `json:"input"`
+	Output      string `json:"output"`
+	Notes       string `json:"notes"`
+	Interaction string `json:"interaction"`
+	Scoring     string `json:"scoring"`
+}
+
+// GetLanguage returns the value of Language.
+func (s *ProblemDraftStatement) GetLanguage() string {
+	return s.Language
+}
+
+// GetLegend returns the value of Legend.
+func (s *ProblemDraftStatement) GetLegend() string {
+	return s.Legend
+}
+
+// GetInput returns the value of Input.
+func (s *ProblemDraftStatement) GetInput() string {
+	return s.Input
+}
+
+// GetOutput returns the value of Output.
+func (s *ProblemDraftStatement) GetOutput() string {
+	return s.Output
+}
+
+// GetNotes returns the value of Notes.
+func (s *ProblemDraftStatement) GetNotes() string {
+	return s.Notes
+}
+
+// GetInteraction returns the value of Interaction.
+func (s *ProblemDraftStatement) GetInteraction() string {
+	return s.Interaction
+}
+
+// GetScoring returns the value of Scoring.
+func (s *ProblemDraftStatement) GetScoring() string {
+	return s.Scoring
+}
+
+// SetLanguage sets the value of Language.
+func (s *ProblemDraftStatement) SetLanguage(val string) {
+	s.Language = val
+}
+
+// SetLegend sets the value of Legend.
+func (s *ProblemDraftStatement) SetLegend(val string) {
+	s.Legend = val
+}
+
+// SetInput sets the value of Input.
+func (s *ProblemDraftStatement) SetInput(val string) {
+	s.Input = val
+}
+
+// SetOutput sets the value of Output.
+func (s *ProblemDraftStatement) SetOutput(val string) {
+	s.Output = val
+}
+
+// SetNotes sets the value of Notes.
+func (s *ProblemDraftStatement) SetNotes(val string) {
+	s.Notes = val
+}
+
+// SetInteraction sets the value of Interaction.
+func (s *ProblemDraftStatement) SetInteraction(val string) {
+	s.Interaction = val
+}
+
+// SetScoring sets the value of Scoring.
+func (s *ProblemDraftStatement) SetScoring(val string) {
+	s.Scoring = val
 }
 
 // Ref: #/components/schemas/ProblemDraftSubtask
@@ -8676,28 +8910,23 @@ func (s *ProblemMemberModelRole) UnmarshalText(data []byte) error {
 	}
 }
 
-// Problem data.
+// Problem catalog data. The statement, samples and assets belong to the draft and to published
+// packages and are read there.
 // Ref: #/components/schemas/ProblemModel
 type ProblemModel struct {
-	Capabilities      []string             `json:"capabilities"`
-	ID                uuid.UUID            `json:"id"`
-	OrganizationID    uuid.UUID            `json:"organization_id"`
-	OrganizationLogin string               `json:"organization_login"`
-	CreatedBy         uuid.UUID            `json:"created_by"`
-	Visibility        string               `json:"visibility"`
-	Title             string               `json:"title"`
-	TimeLimit         int32                `json:"time_limit"`
-	MemoryLimit       int32                `json:"memory_limit"`
-	IsTemplate        bool                 `json:"is_template"`
-	Legend            string               `json:"legend"`
-	InputFormat       string               `json:"input_format"`
-	OutputFormat      string               `json:"output_format"`
-	Notes             string               `json:"notes"`
-	Scoring           string               `json:"scoring"`
-	IsPrivate         OptBool              `json:"is_private"`
-	CreatedAt         time.Time            `json:"created_at"`
-	UpdatedAt         time.Time            `json:"updated_at"`
-	Samples           []ProblemSampleModel `json:"samples"`
+	Capabilities      []string  `json:"capabilities"`
+	ID                uuid.UUID `json:"id"`
+	OrganizationID    uuid.UUID `json:"organization_id"`
+	OrganizationLogin string    `json:"organization_login"`
+	CreatedBy         uuid.UUID `json:"created_by"`
+	Visibility        string    `json:"visibility"`
+	Title             string    `json:"title"`
+	TimeLimit         int32     `json:"time_limit"`
+	MemoryLimit       int32     `json:"memory_limit"`
+	IsTemplate        bool      `json:"is_template"`
+	IsPrivate         OptBool   `json:"is_private"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 // GetCapabilities returns the value of Capabilities.
@@ -8750,31 +8979,6 @@ func (s *ProblemModel) GetIsTemplate() bool {
 	return s.IsTemplate
 }
 
-// GetLegend returns the value of Legend.
-func (s *ProblemModel) GetLegend() string {
-	return s.Legend
-}
-
-// GetInputFormat returns the value of InputFormat.
-func (s *ProblemModel) GetInputFormat() string {
-	return s.InputFormat
-}
-
-// GetOutputFormat returns the value of OutputFormat.
-func (s *ProblemModel) GetOutputFormat() string {
-	return s.OutputFormat
-}
-
-// GetNotes returns the value of Notes.
-func (s *ProblemModel) GetNotes() string {
-	return s.Notes
-}
-
-// GetScoring returns the value of Scoring.
-func (s *ProblemModel) GetScoring() string {
-	return s.Scoring
-}
-
 // GetIsPrivate returns the value of IsPrivate.
 func (s *ProblemModel) GetIsPrivate() OptBool {
 	return s.IsPrivate
@@ -8788,11 +8992,6 @@ func (s *ProblemModel) GetCreatedAt() time.Time {
 // GetUpdatedAt returns the value of UpdatedAt.
 func (s *ProblemModel) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
-}
-
-// GetSamples returns the value of Samples.
-func (s *ProblemModel) GetSamples() []ProblemSampleModel {
-	return s.Samples
 }
 
 // SetCapabilities sets the value of Capabilities.
@@ -8845,31 +9044,6 @@ func (s *ProblemModel) SetIsTemplate(val bool) {
 	s.IsTemplate = val
 }
 
-// SetLegend sets the value of Legend.
-func (s *ProblemModel) SetLegend(val string) {
-	s.Legend = val
-}
-
-// SetInputFormat sets the value of InputFormat.
-func (s *ProblemModel) SetInputFormat(val string) {
-	s.InputFormat = val
-}
-
-// SetOutputFormat sets the value of OutputFormat.
-func (s *ProblemModel) SetOutputFormat(val string) {
-	s.OutputFormat = val
-}
-
-// SetNotes sets the value of Notes.
-func (s *ProblemModel) SetNotes(val string) {
-	s.Notes = val
-}
-
-// SetScoring sets the value of Scoring.
-func (s *ProblemModel) SetScoring(val string) {
-	s.Scoring = val
-}
-
 // SetIsPrivate sets the value of IsPrivate.
 func (s *ProblemModel) SetIsPrivate(val OptBool) {
 	s.IsPrivate = val
@@ -8883,11 +9057,6 @@ func (s *ProblemModel) SetCreatedAt(val time.Time) {
 // SetUpdatedAt sets the value of UpdatedAt.
 func (s *ProblemModel) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
-}
-
-// SetSamples sets the value of Samples.
-func (s *ProblemModel) SetSamples(val []ProblemSampleModel) {
-	s.Samples = val
 }
 
 // Ref: #/components/schemas/ProblemPackage
@@ -11415,7 +11584,7 @@ func (s *UploadAvatarReq) SetAvatar(val ht.MultipartFile) {
 }
 
 type UploadProblemDraftReq struct {
-	// JSON UploadChange: part (asset/input/answer/pair), asset_path or full test metadata. For pair, file
+	// JSON UploadChange: part (asset/input/answer/pair), asset_name or full test metadata. For pair, file
 	// is the input and answer is the answer.
 	Metadata string           `json:"metadata"`
 	File     ht.MultipartFile `json:"file"`

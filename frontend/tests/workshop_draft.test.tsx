@@ -1,5 +1,6 @@
 import "./setup-dom";
 
+import {notifications} from "@mantine/notifications";
 import {afterEach, describe, expect, it, spyOn} from "bun:test";
 import React from "react";
 
@@ -16,7 +17,9 @@ afterEach(() => {
 const draft = (revision: number, title: string) => ({
   problem_id: "problem", revision, title, short_name: "a", type: "pass-fail", time_limit_ms: 1000,
   memory_limit_mb: 256, max_score: null,
-  main_solution_id: null, files: {}, components: [], subtasks: [], tests: [], assets: [],
+  checker: null, interactor: null, validators: [], solutions: [], library: [], statements: [],
+  generators: [{id: "g1", name: "gen", language: "cpp", source: "", dependencies: []}],
+  main_solution_id: null, subtasks: [], tests: [], assets: [],
 });
 
 type Call = {method: string; url: URL; init?: RequestInit};
@@ -75,5 +78,20 @@ describe("workshop draft editing", () => {
     fireEvent.click(view.getByRole("button", {name: "save"}));
     await waitFor(() => expect(view.getByTestId("title").textContent).toBe("Changed elsewhere"));
     expect(calls.filter((c) => c.method === "PUT")).toHaveLength(1);
+  });
+
+  it("names the draft entry the server rejected", async () => {
+    const shown = spyOn(notifications, "show").mockReturnValue("test");
+    mockApi(({method}) =>
+      method === "PUT"
+        ? Response.json({message: "invalid draft", fields: [{pointer: "/generators/0/dependencies/0", message: "unknown library file"}]}, {status: 400})
+        : Response.json(draft(3, "Original")),
+    );
+    const view = renderWithProviders(<Editor />);
+    await waitFor(() => expect(view.getByTestId("title").textContent).toBe("Original"));
+    fireEvent.click(view.getByRole("button", {name: "save"}));
+    await waitFor(() => expect(shown).toHaveBeenCalled());
+    expect(shown.mock.calls[0][0].message).toBe("Генератор gen: unknown library file");
+    shown.mockRestore();
   });
 });

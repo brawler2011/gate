@@ -51,13 +51,8 @@ func (r *ProblemDraftsRepo) EnqueueBuild(ctx context.Context, k model.MutationKe
 	if err != nil {
 		return model.MutationResult{}, err
 	}
-	if err := draft.Validate(r.quotas, true); err != nil {
+	if err := draft.ValidateBuild(r.quotas, options.Languages); err != nil {
 		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "draft cannot be built")
-	}
-	for _, c := range draft.Components {
-		if _, ok := options.Languages[c.Language()]; !ok {
-			return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, nil, "component language is unavailable on the judge: "+c.Path)
-		}
 	}
 	snapshot := model.BuildSnapshot{OrganizationID: org, Draft: draft, Limits: options.Limits, InputObjects: draft.InputObjects()}
 	data, err := json.Marshal(snapshot)

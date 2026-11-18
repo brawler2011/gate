@@ -773,61 +773,13 @@ type ProblemDraft struct {
 	TimeLimitMs    int32         `json:"time_limit_ms"`
 	MemoryLimitMb  int32         `json:"memory_limit_mb"`
 	MaxScore       *points.Value `json:"max_score"`
-	MainSolutionID *uuid.UUID    `json:"main_solution_id"`
+	Content        []byte        `json:"content"`
 }
 
-type ProblemDraftAsset struct {
+type ProblemDraftObject struct {
 	ProblemID      uuid.UUID `json:"problem_id"`
 	OrganizationID uuid.UUID `json:"organization_id"`
-	Path           string    `json:"path"`
 	ObjectID       uuid.UUID `json:"object_id"`
-}
-
-type ProblemDraftComponent struct {
-	ProblemID    uuid.UUID `json:"problem_id"`
-	ID           uuid.UUID `json:"id"`
-	Role         string    `json:"role"`
-	Path         string    `json:"path"`
-	Dependencies []byte    `json:"dependencies"`
-}
-
-type ProblemDraftFile struct {
-	ProblemID uuid.UUID `json:"problem_id"`
-	Path      string    `json:"path"`
-	Content   string    `json:"content"`
-}
-
-type ProblemDraftSubtask struct {
-	ProblemID uuid.UUID    `json:"problem_id"`
-	ID        uuid.UUID    `json:"id"`
-	Ordinal   int32        `json:"ordinal"`
-	Name      string       `json:"name"`
-	Points    points.Value `json:"points"`
-	Policy    string       `json:"policy"`
-}
-
-type ProblemDraftSubtaskDependency struct {
-	ProblemID uuid.UUID `json:"problem_id"`
-	SubtaskID uuid.UUID `json:"subtask_id"`
-	DependsOn uuid.UUID `json:"depends_on"`
-}
-
-type ProblemDraftTest struct {
-	ProblemID      uuid.UUID    `json:"problem_id"`
-	OrganizationID uuid.UUID    `json:"organization_id"`
-	ID             uuid.UUID    `json:"id"`
-	Ordinal        int32        `json:"ordinal"`
-	SubtaskID      uuid.UUID    `json:"subtask_id"`
-	Sample         bool         `json:"sample"`
-	Points         points.Value `json:"points"`
-	InputMode      string       `json:"input_mode"`
-	InputObjectID  *uuid.UUID   `json:"input_object_id"`
-	GeneratorID    *uuid.UUID   `json:"generator_id"`
-	GeneratorArgs  []string     `json:"generator_args"`
-	Seed           *int64       `json:"seed"`
-	AnswerMode     string       `json:"answer_mode"`
-	AnswerObjectID *uuid.UUID   `json:"answer_object_id"`
-	SolutionID     *uuid.UUID   `json:"solution_id"`
 }
 
 type ProblemMember struct {
@@ -856,7 +808,7 @@ type ProblemPackage struct {
 type ProblemPackageAsset struct {
 	PackageID      uuid.UUID `json:"package_id"`
 	OrganizationID uuid.UUID `json:"organization_id"`
-	Path           string    `json:"path"`
+	Name           string    `json:"name"`
 	ObjectID       uuid.UUID `json:"object_id"`
 }
 

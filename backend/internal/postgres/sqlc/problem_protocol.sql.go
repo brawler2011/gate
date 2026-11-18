@@ -106,57 +106,12 @@ func (q *Queries) CancelBuildRow(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const deleteDraftAssets = `-- name: DeleteDraftAssets :exec
-DELETE FROM problem_draft_assets WHERE problem_id=$1
+const deleteDraftObjects = `-- name: DeleteDraftObjects :exec
+DELETE FROM problem_draft_objects WHERE problem_id=$1
 `
 
-func (q *Queries) DeleteDraftAssets(ctx context.Context, problemID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteDraftAssets, problemID)
-	return err
-}
-
-const deleteDraftComponents = `-- name: DeleteDraftComponents :exec
-DELETE FROM problem_draft_components WHERE problem_id=$1
-`
-
-func (q *Queries) DeleteDraftComponents(ctx context.Context, problemID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteDraftComponents, problemID)
-	return err
-}
-
-const deleteDraftFiles = `-- name: DeleteDraftFiles :exec
-DELETE FROM problem_draft_files WHERE problem_id=$1
-`
-
-func (q *Queries) DeleteDraftFiles(ctx context.Context, problemID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteDraftFiles, problemID)
-	return err
-}
-
-const deleteDraftSubtaskDependencies = `-- name: DeleteDraftSubtaskDependencies :exec
-DELETE FROM problem_draft_subtask_dependencies WHERE problem_id=$1
-`
-
-func (q *Queries) DeleteDraftSubtaskDependencies(ctx context.Context, problemID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteDraftSubtaskDependencies, problemID)
-	return err
-}
-
-const deleteDraftSubtasks = `-- name: DeleteDraftSubtasks :exec
-DELETE FROM problem_draft_subtasks WHERE problem_id=$1
-`
-
-func (q *Queries) DeleteDraftSubtasks(ctx context.Context, problemID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteDraftSubtasks, problemID)
-	return err
-}
-
-const deleteDraftTests = `-- name: DeleteDraftTests :exec
-DELETE FROM problem_draft_tests WHERE problem_id=$1
-`
-
-func (q *Queries) DeleteDraftTests(ctx context.Context, problemID uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteDraftTests, problemID)
+func (q *Queries) DeleteDraftObjects(ctx context.Context, problemID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteDraftObjects, problemID)
 	return err
 }
 
@@ -265,146 +220,24 @@ func (q *Queries) InsertBuildInput(ctx context.Context, arg InsertBuildInputPara
 	return err
 }
 
-const insertDraftAsset = `-- name: InsertDraftAsset :exec
-INSERT INTO problem_draft_assets(problem_id,organization_id,path,object_id)
-SELECT $1,organization_id,$2,$3 FROM problem_drafts WHERE problem_id=$1
+const insertDraftObject = `-- name: InsertDraftObject :exec
+INSERT INTO problem_draft_objects(problem_id,organization_id,object_id)
+SELECT d.problem_id,d.organization_id,$1::uuid FROM problem_drafts d WHERE d.problem_id=$2::uuid
 `
 
-type InsertDraftAssetParams struct {
-	ProblemID uuid.UUID `json:"problem_id"`
-	Path      string    `json:"path"`
+type InsertDraftObjectParams struct {
 	ObjectID  uuid.UUID `json:"object_id"`
-}
-
-func (q *Queries) InsertDraftAsset(ctx context.Context, arg InsertDraftAssetParams) error {
-	_, err := q.db.Exec(ctx, insertDraftAsset, arg.ProblemID, arg.Path, arg.ObjectID)
-	return err
-}
-
-const insertDraftComponent = `-- name: InsertDraftComponent :exec
-INSERT INTO problem_draft_components(problem_id,id,role,path,dependencies)
-VALUES($1,$2,$3,$4,$5::jsonb)
-`
-
-type InsertDraftComponentParams struct {
-	ProblemID    uuid.UUID `json:"problem_id"`
-	ID           uuid.UUID `json:"id"`
-	Role         string    `json:"role"`
-	Path         string    `json:"path"`
-	Dependencies []byte    `json:"dependencies"`
-}
-
-func (q *Queries) InsertDraftComponent(ctx context.Context, arg InsertDraftComponentParams) error {
-	_, err := q.db.Exec(ctx, insertDraftComponent,
-		arg.ProblemID,
-		arg.ID,
-		arg.Role,
-		arg.Path,
-		arg.Dependencies,
-	)
-	return err
-}
-
-const insertDraftFile = `-- name: InsertDraftFile :exec
-INSERT INTO problem_draft_files(problem_id,path,content)VALUES($1,$2,$3)
-`
-
-type InsertDraftFileParams struct {
 	ProblemID uuid.UUID `json:"problem_id"`
-	Path      string    `json:"path"`
-	Content   string    `json:"content"`
 }
 
-func (q *Queries) InsertDraftFile(ctx context.Context, arg InsertDraftFileParams) error {
-	_, err := q.db.Exec(ctx, insertDraftFile, arg.ProblemID, arg.Path, arg.Content)
-	return err
-}
-
-const insertDraftSubtask = `-- name: InsertDraftSubtask :exec
-INSERT INTO problem_draft_subtasks(problem_id,id,ordinal,name,points,policy)VALUES($1,$2,$3,$4,$5,$6)
-`
-
-type InsertDraftSubtaskParams struct {
-	ProblemID uuid.UUID    `json:"problem_id"`
-	ID        uuid.UUID    `json:"id"`
-	Ordinal   int32        `json:"ordinal"`
-	Name      string       `json:"name"`
-	Points    points.Value `json:"points"`
-	Policy    string       `json:"policy"`
-}
-
-func (q *Queries) InsertDraftSubtask(ctx context.Context, arg InsertDraftSubtaskParams) error {
-	_, err := q.db.Exec(ctx, insertDraftSubtask,
-		arg.ProblemID,
-		arg.ID,
-		arg.Ordinal,
-		arg.Name,
-		arg.Points,
-		arg.Policy,
-	)
-	return err
-}
-
-const insertDraftSubtaskDependency = `-- name: InsertDraftSubtaskDependency :exec
-INSERT INTO problem_draft_subtask_dependencies(problem_id,subtask_id,depends_on)VALUES($1,$2,$3)
-`
-
-type InsertDraftSubtaskDependencyParams struct {
-	ProblemID uuid.UUID `json:"problem_id"`
-	SubtaskID uuid.UUID `json:"subtask_id"`
-	DependsOn uuid.UUID `json:"depends_on"`
-}
-
-func (q *Queries) InsertDraftSubtaskDependency(ctx context.Context, arg InsertDraftSubtaskDependencyParams) error {
-	_, err := q.db.Exec(ctx, insertDraftSubtaskDependency, arg.ProblemID, arg.SubtaskID, arg.DependsOn)
-	return err
-}
-
-const insertDraftTest = `-- name: InsertDraftTest :exec
-INSERT INTO problem_draft_tests(problem_id,organization_id,id,ordinal,subtask_id,sample,points,input_mode,input_object_id,generator_id,generator_args,seed,answer_mode,answer_object_id,solution_id)
-SELECT $1,organization_id,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14 FROM problem_drafts WHERE problem_id=$1
-`
-
-type InsertDraftTestParams struct {
-	ProblemID      uuid.UUID    `json:"problem_id"`
-	ID             uuid.UUID    `json:"id"`
-	Ordinal        int32        `json:"ordinal"`
-	SubtaskID      uuid.UUID    `json:"subtask_id"`
-	Sample         bool         `json:"sample"`
-	Points         points.Value `json:"points"`
-	InputMode      string       `json:"input_mode"`
-	InputObjectID  *uuid.UUID   `json:"input_object_id"`
-	GeneratorID    *uuid.UUID   `json:"generator_id"`
-	GeneratorArgs  []string     `json:"generator_args"`
-	Seed           *int64       `json:"seed"`
-	AnswerMode     string       `json:"answer_mode"`
-	AnswerObjectID *uuid.UUID   `json:"answer_object_id"`
-	SolutionID     *uuid.UUID   `json:"solution_id"`
-}
-
-func (q *Queries) InsertDraftTest(ctx context.Context, arg InsertDraftTestParams) error {
-	_, err := q.db.Exec(ctx, insertDraftTest,
-		arg.ProblemID,
-		arg.ID,
-		arg.Ordinal,
-		arg.SubtaskID,
-		arg.Sample,
-		arg.Points,
-		arg.InputMode,
-		arg.InputObjectID,
-		arg.GeneratorID,
-		arg.GeneratorArgs,
-		arg.Seed,
-		arg.AnswerMode,
-		arg.AnswerObjectID,
-		arg.SolutionID,
-	)
+func (q *Queries) InsertDraftObject(ctx context.Context, arg InsertDraftObjectParams) error {
+	_, err := q.db.Exec(ctx, insertDraftObject, arg.ObjectID, arg.ProblemID)
 	return err
 }
 
 const insertPackageAssets = `-- name: InsertPackageAssets :exec
-INSERT INTO problem_package_assets(package_id,organization_id,path,object_id)
-SELECT $1::uuid,b.organization_id,a->>'path',(a->>'object_id')::uuid
+INSERT INTO problem_package_assets(package_id,organization_id,name,object_id)
+SELECT $1::uuid,b.organization_id,a->>'name',(a->>'object_id')::uuid
 FROM problem_builds b,jsonb_array_elements(b.snapshot->'draft'->'assets') a WHERE b.id=$2
 `
 
@@ -562,8 +395,8 @@ func (q *Queries) ListBuildInputObjects(ctx context.Context, buildID uuid.UUID) 
 }
 
 const listPackageAssetsBySHA256 = `-- name: ListPackageAssetsBySHA256 :many
-SELECT a.path,o.key FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id
-WHERE a.package_id=$1 AND o.sha256=$2 ORDER BY a.path
+SELECT a.name,o.key FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id
+WHERE a.package_id=$1 AND o.sha256=$2 ORDER BY a.name
 `
 
 type ListPackageAssetsBySHA256Params struct {
@@ -572,7 +405,7 @@ type ListPackageAssetsBySHA256Params struct {
 }
 
 type ListPackageAssetsBySHA256Row struct {
-	Path string `json:"path"`
+	Name string `json:"name"`
 	Key  string `json:"key"`
 }
 
@@ -585,7 +418,7 @@ func (q *Queries) ListPackageAssetsBySHA256(ctx context.Context, arg ListPackage
 	items := []ListPackageAssetsBySHA256Row{}
 	for rows.Next() {
 		var i ListPackageAssetsBySHA256Row
-		if err := rows.Scan(&i.Path, &i.Key); err != nil {
+		if err := rows.Scan(&i.Name, &i.Key); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -697,9 +530,7 @@ func (q *Queries) ListStoredObjectKeys(ctx context.Context, keys []string) ([]st
 const listUnreferencedObjects = `-- name: ListUnreferencedObjects :many
 
 SELECT o.id,o.key FROM stored_objects o
-WHERE NOT EXISTS(SELECT 1 FROM problem_draft_tests t WHERE t.input_object_id=o.id)
- AND NOT EXISTS(SELECT 1 FROM problem_draft_tests t WHERE t.answer_object_id=o.id)
- AND NOT EXISTS(SELECT 1 FROM problem_draft_assets a WHERE a.object_id=o.id)
+WHERE NOT EXISTS(SELECT 1 FROM problem_draft_objects d WHERE d.object_id=o.id)
  AND NOT EXISTS(SELECT 1 FROM problem_build_inputs b WHERE b.object_id=o.id)
  AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)
  AND NOT EXISTS(SELECT 1 FROM problem_package_assets a WHERE a.object_id=o.id)
@@ -941,7 +772,7 @@ func (q *Queries) ReadPackageDescriptor(ctx context.Context, id uuid.UUID) (Read
 
 const readPackageStatement = `-- name: ReadPackageStatement :one
 SELECT p.problem_id,p.samples,b.snapshot,
- COALESCE((SELECT jsonb_object_agg(a.path,o.sha256) FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id WHERE a.package_id=p.id),'{}')::jsonb AS assets
+ COALESCE((SELECT jsonb_object_agg(a.name,o.sha256) FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id WHERE a.package_id=p.id),'{}')::jsonb AS assets
 FROM problem_packages p JOIN problem_builds b ON b.id=p.build_id WHERE p.id=$1
 `
 
@@ -1073,19 +904,19 @@ func (q *Queries) TakeOverOperation(ctx context.Context, arg TakeOverOperationPa
 
 const updateProblemDraftRow = `-- name: UpdateProblemDraftRow :exec
 UPDATE problem_drafts SET updated_at=clock_timestamp(),revision=$2,title=$3,short_name=$4,type=$5,time_limit_ms=$6,memory_limit_mb=$7,max_score=$8,
- main_solution_id=$9 WHERE problem_id=$1
+ content=$9 WHERE problem_id=$1
 `
 
 type UpdateProblemDraftRowParams struct {
-	ProblemID      uuid.UUID     `json:"problem_id"`
-	Revision       int64         `json:"revision"`
-	Title          string        `json:"title"`
-	ShortName      string        `json:"short_name"`
-	Type           string        `json:"type"`
-	TimeLimitMs    int32         `json:"time_limit_ms"`
-	MemoryLimitMb  int32         `json:"memory_limit_mb"`
-	MaxScore       *points.Value `json:"max_score"`
-	MainSolutionID *uuid.UUID    `json:"main_solution_id"`
+	ProblemID     uuid.UUID     `json:"problem_id"`
+	Revision      int64         `json:"revision"`
+	Title         string        `json:"title"`
+	ShortName     string        `json:"short_name"`
+	Type          string        `json:"type"`
+	TimeLimitMs   int32         `json:"time_limit_ms"`
+	MemoryLimitMb int32         `json:"memory_limit_mb"`
+	MaxScore      *points.Value `json:"max_score"`
+	Content       []byte        `json:"content"`
 }
 
 func (q *Queries) UpdateProblemDraftRow(ctx context.Context, arg UpdateProblemDraftRowParams) error {
@@ -1098,7 +929,7 @@ func (q *Queries) UpdateProblemDraftRow(ctx context.Context, arg UpdateProblemDr
 		arg.TimeLimitMs,
 		arg.MemoryLimitMb,
 		arg.MaxScore,
-		arg.MainSolutionID,
+		arg.Content,
 	)
 	return err
 }

@@ -49,9 +49,9 @@ func TestBuiltinTemplatesImportIntoValidDrafts(t *testing.T) {
 			require.NoError(t, err)
 			defer plan.Close()
 			plan.draft.ProblemID, plan.draft.Revision = problem, 1
-			require.NoError(t, plan.draft.Validate(importQuotas, true))
+			require.NoError(t, plan.draft.ValidateBuild(importQuotas, uc.BuildOptions.Languages))
 			require.NotEmpty(t, plan.draft.Tests)
-			require.NotEmpty(t, plan.draft.Components)
+			require.NotEmpty(t, plan.draft.Solutions)
 		})
 	}
 }
@@ -65,7 +65,8 @@ func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 	require.NotEmpty(t, packages)
 	// PCMS2 records no solution verdicts, so the author picks the main
 	// solution an interactive problem needs in the workshop.
-	buildErrors := map[string]string{"pcms2/interactive-guess": "solution is required"}
+	buildErrors := map[string]string{"pcms2/interactive-guess": "/main_solution_id"}
+	languages := newImportUseCase(t).BuildOptions.Languages
 	for _, dir := range packages {
 		name := filepath.Base(filepath.Dir(dir)) + "/" + filepath.Base(dir)
 		t.Run(name, func(t *testing.T) {
@@ -73,22 +74,35 @@ func TestAuthorPackagesImportIntoBuildableDrafts(t *testing.T) {
 			require.NoError(t, err)
 			defer plan.Close()
 			d := plan.draft
-			require.NoError(t, d.Validate(importQuotas, false))
+			require.NoError(t, d.Validate(importQuotas, nil))
 			if want, ok := buildErrors[name]; ok {
-				require.EqualError(t, d.Validate(importQuotas, true), want)
+				var fields pkg.FieldErrors
+				require.ErrorAs(t, d.ValidateBuild(importQuotas, languages), &fields)
+				require.Equal(t, want, fields[0].Pointer)
 				return
 			}
-			require.NoError(t, d.Validate(importQuotas, true))
-			for path, text := range d.Files {
-				if strings.HasPrefix(path, "statements/") {
-					require.Contains(t, text, "<!-- output -->", path)
-				}
+			require.NoError(t, d.ValidateBuild(importQuotas, languages))
+			require.NotEmpty(t, d.Statements)
+			for _, s := range d.Statements {
+				require.NotEmpty(t, s.Legend, s.Language)
+				require.NotEmpty(t, s.Output, s.Language)
 			}
 			// Every testdata checker, validator, interactor and generator uses testlib.
-			for _, c := range d.Components {
-				if c.Role != "solution" {
-					require.Contains(t, c.Dependencies, "testlib.h", c.Path)
+			programs := []model.DraftProgram{}
+			for _, p := range []*model.DraftProgram{d.Checker, d.Interactor} {
+				if p != nil {
+					programs = append(programs, *p)
 				}
+			}
+			for _, p := range append(d.Validators, d.Generators...) {
+				programs = append(programs, p.DraftProgram)
+			}
+			for _, p := range programs {
+				names := []string{}
+				for _, id := range p.Dependencies {
+					names = append(names, d.LibraryFile(id).Name)
+				}
+				require.Contains(t, names, "testlib.h")
 			}
 		})
 	}
@@ -119,14 +133,9 @@ func TestImportKeepsMainSolutionAcrossNameClash(t *testing.T) {
 	plan, err := importDir(t, unpack(t, "polygon-solution-name-clash"), nil)
 	require.NoError(t, err)
 	defer plan.Close()
-	var main model.DraftComponent
-	for _, c := range plan.draft.Components {
-		if c.ID == *plan.draft.MainSolutionID {
-			main = c
-		}
-	}
-	require.Equal(t, "solutions/main-2.cpp", main.Path)
-	require.Equal(t, "int main() {}\n", plan.draft.Files[main.Path])
+	main := plan.draft.Solution(*plan.draft.MainSolutionID)
+	require.Equal(t, "main", main.Name)
+	require.Equal(t, "int main() {}\n", main.Source)
 }
 
 func TestImportRejectsPathsOutsidePackage(t *testing.T) {
@@ -147,8 +156,7 @@ func TestImportChargesSharedLibraryOnce(t *testing.T) {
 	plan, err := importDir(t, t.TempDir(), files)
 	require.NoError(t, err)
 	defer plan.Close()
-	require.Equal(t, header, plan.draft.Files["lib/testlib.h"])
-	require.NotContains(t, plan.draft.Files, "lib/testlib-2.h")
+	require.Equal(t, []model.DraftLibraryFile{{ID: plan.draft.Library[0].ID, Name: "testlib.h", Content: header}}, plan.draft.Library)
 }
 
 // Many statements naming one large file are charged as they are converted.
@@ -186,10 +194,13 @@ func TestImportKeepsProgramHeadersApart(t *testing.T) {
 	plan, err := importDir(t, unpack(t, "icpc-program-headers"), nil)
 	require.NoError(t, err)
 	defer plan.Close()
-	require.NoError(t, plan.draft.Validate(importQuotas, true))
-	require.Equal(t, map[string]string{"helper.h": "lib/helper.h"}, plan.draft.Component("checker").Dependencies)
-	require.Equal(t, map[string]string{"helper.h": "lib/helper-2.h"}, plan.draft.Component("validator").Dependencies)
-	require.Equal(t, "// B\n", plan.draft.Files["lib/helper-2.h"])
+	d := plan.draft
+	require.NoError(t, d.Validate(importQuotas, nil))
+	checker, validator := d.LibraryFile(d.Checker.Dependencies[0]), d.LibraryFile(d.Validator().Dependencies[0])
+	require.Equal(t, "helper.h", checker.Name)
+	require.Equal(t, "helper.h", validator.Name)
+	require.Equal(t, "// B\n", validator.Content)
+	require.NotEqual(t, checker.ID, validator.ID)
 }
 
 // CRLF conversion streams: a CRLF split across reads is still converted, and
@@ -255,7 +266,7 @@ func TestImportKeepsDraftLayout(t *testing.T) {
 	require.NoError(t, err)
 	defer plan.Close()
 	require.Len(t, plan.draft.Assets, 1)
-	require.Equal(t, "assets/pic.png", plan.draft.Assets[0].Path)
+	require.Equal(t, "pic.png", plan.draft.Assets[0].Name)
 
 	_, err = importAPlusB(t, map[string]string{"pic.png": "png"})
 	require.ErrorContains(t, err, "unexpected file pic.png")
@@ -271,4 +282,23 @@ func TestImportRejectsSecondSingletonComponent(t *testing.T) {
 func TestImportRejectsUnknownSourceExtension(t *testing.T) {
 	_, err := importAPlusB(t, map[string]string{"solutions/main.rs": "fn main() {}\n"})
 	require.ErrorContains(t, err, "unsupported source language: solutions/main.rs")
+}
+
+// Statement sections come from olymp.sty commands in a Polygon statement.
+func TestImportSplitsPolygonStatementIntoSections(t *testing.T) {
+	plan, err := importDir(t, "../../pkg/testdata/polygon/a-plus-b", nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	s := plan.draft.Statement("en")
+	require.NotNil(t, s)
+	require.Contains(t, s.Legend, "$a$")
+	for name, section := range map[string]string{"input": s.Input, "output": s.Output, "notes": s.Notes} {
+		require.NotEmpty(t, section, name)
+		require.NotContains(t, section, "file", name)
+	}
+}
+
+func TestImportRejectsUnknownStatementSection(t *testing.T) {
+	_, err := importAPlusB(t, map[string]string{"statements/en/story.md": "x\n"})
+	require.ErrorContains(t, err, "unknown statement section story in en")
 }

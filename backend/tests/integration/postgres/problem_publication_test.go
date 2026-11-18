@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -73,10 +72,10 @@ func publicationHarness(t *testing.T) *pipelineHarness {
 	t.Helper()
 	h := newPipelineHarness(t, 4<<20, 256<<20)
 	h.options.Lease = time.Minute
-	checker, group := uuid.New(), uuid.New()
+	group := uuid.New()
 	h.save(t, func(d *model.Draft) {
-		d.Files = map[string]string{"checkers/check.py": "import sys\nassert open(sys.argv[2]).read() == open(sys.argv[3]).read()\n", "statements/en.md": "Original statement"}
-		d.Components = []model.DraftComponent{{ID: checker, Role: "checker", Path: "checkers/check.py"}}
+		d.Checker = program("python", "import sys\nassert open(sys.argv[2]).read() == open(sys.argv[3]).read()\n")
+		d.Statements = []model.DraftStatement{{Language: "en", Legend: "Original statement"}}
 		d.Subtasks = []model.DraftSubtask{{ID: group, Ordinal: 1, Policy: "each"}}
 	})
 	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
@@ -122,23 +121,22 @@ func TestPublicationRejectsInconsistentSaves(t *testing.T) {
 		name, message string
 		change        func(*model.Draft)
 	}{
-		{"missing source", "missing component source", func(d *model.Draft) { delete(d.Files, "checkers/check.py") }},
-		{"missing dependency", "missing or duplicate dependency", func(d *model.Draft) { d.Components[0].Dependencies = map[string]string{"helper.py": "missing.py"} }},
-		{"unknown group", "invalid test identity, order or subtask", func(d *model.Draft) { d.Tests[0].SubtaskID = uuid.New() }},
-		{"unknown dependency", "unknown subtask dependency", func(d *model.Draft) { d.Subtasks[0].DependsOn = []uuid.UUID{uuid.New()} }},
-		{"dependency cycle", "subtask dependency cycle", func(d *model.Draft) { d.Subtasks[0].DependsOn = []uuid.UUID{d.Subtasks[0].ID} }},
-		{"duplicate dependency", "duplicate subtask dependency", func(d *model.Draft) {
+		{"missing dependency", "/checker/dependencies/0: dependency is not a library file", func(d *model.Draft) { d.Checker.Dependencies = []uuid.UUID{uuid.New()} }},
+		{"unknown group", "/tests/0/subtask_id: unknown subtask", func(d *model.Draft) { d.Tests[0].SubtaskID = uuid.New() }},
+		{"unknown dependency", "unknown subtask", func(d *model.Draft) { d.Subtasks[0].DependsOn = []uuid.UUID{uuid.New()} }},
+		{"dependency cycle", "subtask dependencies form a cycle", func(d *model.Draft) { d.Subtasks[0].DependsOn = []uuid.UUID{d.Subtasks[0].ID} }},
+		{"duplicate dependency", "duplicate dependency", func(d *model.Draft) {
 			g := uuid.New()
 			d.Subtasks = append(d.Subtasks, model.DraftSubtask{ID: g, Ordinal: 2, Policy: "each"})
 			d.Subtasks[0].DependsOn = []uuid.UUID{g, g}
 		}},
-		{"missing answer", "invalid provided answer", func(d *model.Draft) { d.Tests[0].Answer.ObjectID = nil }},
-		{"missing generator", "invalid generator selection", func(d *model.Draft) {
+		{"missing answer", "provided answer needs content and no solution", func(d *model.Draft) { d.Tests[0].Answer.ObjectID = nil }},
+		{"missing generator", "generator is missing", func(d *model.Draft) {
 			seed := int64(1)
 			id := uuid.New()
-			d.Tests[0].Input = model.DraftInput{Mode: "generator", ComponentID: &id, Seed: &seed}
+			d.Tests[0].Input = model.DraftInput{Mode: "generator", GeneratorID: &id, Seed: &seed}
 		}},
-		{"duplicate test", "invalid test identity, order or subtask", func(d *model.Draft) { d.Tests = append(d.Tests, d.Tests[0]) }},
+		{"duplicate test", "/tests/1/id: ID is missing or not unique", func(d *model.Draft) { d.Tests = append(d.Tests, d.Tests[0]) }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -249,7 +247,7 @@ func TestPublicationUploadVerificationAndRetry(t *testing.T) {
 			// Change the author revision before a fresh worker attempt retries the build.
 			h.save(t, func(d *model.Draft) {
 				d.Title = "Later revision " + fault
-				d.Files["statements/en.md"] = "Later statement"
+				d.Statements[0].Legend = "Later statement"
 			})
 			require.NoError(t, h.repo.FinishBuildAttempt(h.ctx, b.ID, *b.LeaseToken, json.RawMessage(`{"message":"retry storage fault"}`), true))
 			next, err := h.repo.ClaimBuild(h.ctx, time.Minute)
@@ -272,7 +270,7 @@ func TestPublicationUploadVerificationAndRetry(t *testing.T) {
 			files, manifest, snapshot := publishedFiles(t, h, pid)
 			require.Equal(t, b.Snapshot, snapshot)
 			require.Equal(t, b.Snapshot.Draft.Title, manifest.Title)
-			require.Equal(t, b.Snapshot.Draft.Files["statements/en.md"], string(files["statements/en.md"]))
+			require.Equal(t, b.Snapshot.Draft.Statements[0].Legend+"\n", string(files["statements/en/legend.md"]))
 		})
 	}
 }
@@ -310,7 +308,7 @@ func TestPublicationConcurrentEdits(t *testing.T) {
 	}
 	h.save(t, func(d *model.Draft) {
 		d.Title = "Concurrent title"
-		d.Files["statements/en.md"] = "Concurrent statement"
+		d.Statements[0].Legend = "Concurrent statement"
 		d.Tests[0].Sample = true
 		d.Tests[0].Ordinal = 7
 	})
@@ -326,7 +324,7 @@ func TestPublicationConcurrentEdits(t *testing.T) {
 	files, manifest, snapshot := publishedFiles(t, h, r.id)
 	require.Equal(t, b.Snapshot, snapshot)
 	require.Equal(t, b.Snapshot.Draft.Title, manifest.Title)
-	require.Equal(t, "Original statement", string(files["statements/en.md"]))
+	require.Equal(t, "Original statement\n", string(files["statements/en/legend.md"]))
 	test := manifest.Subtasks[b.Snapshot.Draft.Subtasks[0].ID.String()].Tests[0]
 	require.Equal(t, 1, test.Ordinal)
 	require.False(t, test.Sample)
@@ -389,10 +387,9 @@ func TestPublicationSupportedTypes(t *testing.T) {
 					d.Tests = append(d.Tests, test)
 				}
 				if kind == "interactive" {
-					interactor, solution := uuid.New(), uuid.New()
-					d.Files["interactors/main.py"] = "print('hello', flush=True)\n"
-					d.Files["solutions/main.py"] = "input()\n"
-					d.Components = append(d.Components, model.DraftComponent{ID: interactor, Role: "interactor", Path: "interactors/main.py"}, model.DraftComponent{ID: solution, Role: "solution", Path: "solutions/main.py"})
+					solution := uuid.New()
+					d.Interactor = program("python", "print('hello', flush=True)\n")
+					d.Solutions = append(d.Solutions, named(solution, "main", "python", "input()\n"))
 					d.MainSolutionID = &solution
 					for i := range d.Tests {
 						d.Tests[i].Answer = model.DraftAnswer{Mode: "interactive"}
@@ -462,11 +459,8 @@ func TestPublicationRejectsIncompleteDrafts(t *testing.T) {
 		name, message string
 		change        func(*model.Draft)
 	}{
-		{"no checker", "checker is required", func(d *model.Draft) {
-			delete(d.Files, d.Component("checker").Path)
-			d.Components = slices.DeleteFunc(d.Components, func(c model.DraftComponent) bool { return c.Role == "checker" })
-		}},
-		{"no tests", "build requires title and tests", func(d *model.Draft) { d.Tests = nil }},
+		{"no checker", "checker is required", func(d *model.Draft) { d.Checker = nil }},
+		{"no tests", "at least one test is required", func(d *model.Draft) { d.Tests = nil }},
 		{"interactive without interactor", "interactor is required", func(d *model.Draft) {
 			d.Type = "interactive"
 			for i := range d.Tests {
@@ -511,17 +505,10 @@ func TestPublicationReimportsSnapshot(t *testing.T) {
 	imported, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)
 	require.Greater(t, imported.Revision, current.Revision)
-	require.NoError(t, imported.Validate(h.uploads.DraftQuotas, true))
-	// Import normalizes statement markdown; every other file is preserved byte for byte.
-	require.Len(t, imported.Files, len(published.Draft.Files))
-	for path, text := range published.Draft.Files {
-		if strings.HasPrefix(path, "statements/") {
-			require.Contains(t, imported.Files[path], text)
-		} else {
-			require.Equal(t, text, imported.Files[path])
-		}
-	}
-	require.Equal(t, published.Draft.Components, imported.Components)
+	require.NoError(t, imported.ValidateBuild(h.uploads.DraftQuotas, h.options.Languages))
+	require.Equal(t, published.Draft.Checker, imported.Checker)
+	require.Equal(t, published.Draft.Library, imported.Library)
+	require.Equal(t, published.Draft.Statements, imported.Statements)
 	require.Equal(t, published.Draft.Subtasks, imported.Subtasks)
 	require.Len(t, imported.Tests, 1)
 

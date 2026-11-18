@@ -33,9 +33,11 @@ var sectionCommands = []struct{ section, command string }{
 	{"notes", "\\notes"}, {"notes", "\\note"}, {"notes", "\\section*{notes}"},
 }
 
-// ToMarkdown converts a problem statement into statement Markdown: an
-// olymp.sty problem environment (Polygon, PCMS2) or an ICPC problem.tex body.
-func ToMarkdown(texContent string) string {
+// ToSections converts a problem statement into Markdown statement sections
+// by name (legend, input, output, interaction, notes), leaving out empty
+// ones: an olymp.sty problem environment (Polygon, PCMS2) or an ICPC
+// problem.tex body.
+func ToSections(texContent string) map[string]string {
 	content := body(texContent)
 	type marker struct {
 		section    string
@@ -95,32 +97,13 @@ func ToMarkdown(texContent string) string {
 		return strings.TrimSpace(s)
 	}
 
-	legend = cleanLatex(legend)
-	input = cleanLatex(input)
-	output = cleanLatex(output)
-	interaction = cleanLatex(interaction)
-	notes = cleanLatex(notes)
-
-	var parts []string
-	// In GFMT format, even if legend is empty, it starts with the delimiter
-	parts = append(parts, "<!--legend -->")
-	if legend != "" {
-		parts[0] = parts[0] + "\n\n" + legend
+	result := map[string]string{}
+	for name, text := range map[string]string{"legend": legend, "input": input, "output": output, "interaction": interaction, "notes": notes} {
+		if text = cleanLatex(text); text != "" {
+			result[name] = text
+		}
 	}
-	if input != "" {
-		parts = append(parts, "<!-- input -->\n\n"+input)
-	}
-	if output != "" {
-		parts = append(parts, "<!-- output -->\n\n"+output)
-	}
-	if interaction != "" {
-		parts = append(parts, "<!-- interaction -->\n\n"+interaction)
-	}
-	if notes != "" {
-		parts = append(parts, "<!-- notes -->\n\n"+notes)
-	}
-
-	return strings.Join(parts, "\n\n") + "\n"
+	return result
 }
 
 // body returns the statement text: the problem environment without its five

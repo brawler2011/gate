@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -37,6 +38,22 @@ func draftContract[T any](source any) (*T, error) {
 	}
 	return &value, nil
 }
+// draftModel converts a contract draft into the model, whose JSON is the
+// contract by design. A contract field the model lacks is an error, never
+// silently dropped.
+func draftModel(source *corev1.ProblemDraft) (*model.Draft, error) {
+	data, err := json.Marshal(source)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	var d model.Draft
+	if err := decoder.Decode(&d); err != nil {
+		return nil, fmt.Errorf("decode draft: %w", err)
+	}
+	return &d, nil
+}
 func draftResult[T any](result model.MutationResult, err error) (*T, error) {
 	if err != nil {
 		return nil, err
@@ -58,7 +75,7 @@ func (h *CoreServer) SaveProblemDraft(ctx context.Context, req *corev1.ProblemDr
 	if req == nil {
 		return nil, pkg.ErrBadInput
 	}
-	d, err := draftContract[model.Draft](req)
+	d, err := draftModel(req)
 	if err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid draft")
 	}
