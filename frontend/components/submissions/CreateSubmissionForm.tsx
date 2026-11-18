@@ -7,8 +7,8 @@ import React, {useRef, useState, useTransition, type ReactNode} from "react";
 import Editor from "react-simple-code-editor";
 
 import {detectSubmissionLanguage} from "@/lib/detectSubmissionLanguage";
-import {highlightCode} from "@/lib/highlightCode";
-import {languageForExtension, syntaxOf, type SupportedLanguage} from "@/lib/languages";
+import {highlightCode, useGrammar} from "@/lib/highlightCode";
+import {languageForExtension, type SupportedLanguage} from "@/lib/languages";
 import {APP_COLORS} from "@/lib/theme/colors";
 
 import classes from "./CreateSubmissionForm.module.css";
@@ -68,6 +68,7 @@ const CreateSubmissionForm = ({
     ...languages.map((language) => ({value: language.id, label: language.name})),
   ];
   const selected = languages.find((language) => language.id === form.values.language);
+  const grammar = useGrammar(selected?.syntax);
   const selectWidth = `${(options.find((option) => option.value === form.values.language)?.label.length ?? 6) + 6}ch`;
   const accept = [...new Set(languages.flatMap((language) => language.extensions)), "txt"].map((extension) => "." + extension);
 
@@ -318,7 +319,7 @@ const CreateSubmissionForm = ({
                   value={form.values.code}
                   onValueChange={setCode}
                   highlight={(code: string) =>
-                    highlightCode(code, syntaxOf(selected))
+                    highlightCode(code, grammar)
                   }
                   padding={10}
                   placeholder="Введите ваше решение здесь, перетащите файл или текст..."

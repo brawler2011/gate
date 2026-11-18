@@ -3,7 +3,6 @@ package judging
 import (
 	"fmt"
 	"math"
-	"path/filepath"
 	"regexp"
 	"strconv"
 
@@ -33,28 +32,19 @@ func truncateDetailString(s string) (string, bool) {
 	return s, false
 }
 
-var (
-	cppLineRegex     = regexp.MustCompile(`(?i)(?:foo\.cc|solution\.cpp|\.cpp|\.cc|\.cxx|\.h|\.hpp):(\d+):(?:\d+:)?\s*(?:error|fatal error|runtime error|warning|note):?`)
-	pythonLineRegex  = regexp.MustCompile(`(?i)(?:File\s+["'][^"']*["'],\s+line\s+(\d+)|line\s+(\d+))`)
-	goLineRegex      = regexp.MustCompile(`(?i)(?:foo\.go|\.go|main\.go):(\d+):(?:\d+:)?`)
-	genericLineRegex = regexp.MustCompile(`(?i)(?:line|строка|:)\s*(\d+)`)
-)
+var genericLineRegex = regexp.MustCompile(`(?i)(?:line|строка|:)\s*(\d+)`)
 
 // ParseErrorLine finds the source line a compiler or interpreter reports in
-// text; codeFile is the source file name of the language configuration.
-func ParseErrorLine(codeFile string, text string) *int32 {
+// text; pattern is the error_line expression of the language configuration,
+// and a generic pattern applies when it is empty or does not match.
+func ParseErrorLine(pattern string, text string) *int32 {
 	if text == "" {
 		return nil
 	}
 
 	var match []string
-	switch filepath.Ext(codeFile) {
-	case ".py":
-		match = pythonLineRegex.FindStringSubmatch(text)
-	case ".go":
-		match = goLineRegex.FindStringSubmatch(text)
-	default:
-		match = cppLineRegex.FindStringSubmatch(text)
+	if re, err := regexp.Compile(pattern); pattern != "" && err == nil {
+		match = re.FindStringSubmatch(text)
 	}
 
 	if len(match) == 0 {

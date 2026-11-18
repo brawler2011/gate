@@ -4217,7 +4217,8 @@ export interface components {
          *         "cpp",
          *         "cc",
          *         "cxx"
-         *       ]
+         *       ],
+         *       "syntax": "cpp"
          *     }
          */
         SupportedLanguage: {
@@ -4233,6 +4234,11 @@ export interface components {
             name: string;
             /** @description Source file extensions without the dot; the first names new files, and an extension suggests the first configuration in catalog order that accepts it. */
             extensions: string[];
+            /**
+             * @description Prism grammar to highlight sources with; empty shows them as plain text.
+             * @example cpp
+             */
+            syntax: string;
         };
         /**
          * @description The language catalog in display order.
@@ -4245,7 +4251,8 @@ export interface components {
          *             "cpp",
          *             "cc",
          *             "cxx"
-         *           ]
+         *           ],
+         *           "syntax": "cpp"
          *         }
          *       ]
          *     }

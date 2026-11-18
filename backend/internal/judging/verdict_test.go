@@ -7,64 +7,39 @@ import (
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/points"
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+// The catalog's error_line patterns against real compiler and runtime output.
 func TestParseErrorLine(t *testing.T) {
+	catalog, err := sandbox.LoadConfig("../../../judge/langs.toml")
+	require.NoError(t, err)
 	tests := []struct {
 		name     string
-		codeFile string
+		language string
 		text     string
 		expected *int32
 	}{
-		{
-			name:     "C++ gcc error",
-			codeFile: "foo.cc",
-			text:     "foo.cc:15:23: error: expected ';' before '}' token",
-			expected: ptrInt32(15),
-		},
-		{
-			name:     "C++ clang error",
-			codeFile: "foo.cc",
-			text:     "solution.cpp:42:5: fatal error: 'iostream' file not found",
-			expected: ptrInt32(42),
-		},
-		{
-			name:     "Python traceback",
-			codeFile: "foo.py",
-			text:     "Traceback (most recent call last):\n  File \"foo.py\", line 12, in <module>\n    print(1/0)\nZeroDivisionError: division by zero",
-			expected: ptrInt32(12),
-		},
-		{
-			name:     "Python syntax error",
-			codeFile: "foo.py",
-			text:     "  File \"foo.py\", line 7\n    def test(\n             ^\nSyntaxError: unexpected EOF while parsing",
-			expected: ptrInt32(7),
-		},
-		{
-			name:     "Go compiler error",
-			codeFile: "foo.go",
-			text:     "foo.go:28:2: undefined: fmt.Printlnn",
-			expected: ptrInt32(28),
-		},
-		{
-			name:     "Generic line fallback",
-			codeFile: "foo.cc",
-			text:     "Runtime error at line 99",
-			expected: ptrInt32(99),
-		},
-		{
-			name:     "Empty output",
-			codeFile: "foo.cc",
-			text:     "",
-			expected: nil,
-		},
+		{"C gcc error", "c", "foo.c: In function 'main':\nfoo.c:4:5: error: expected ';' before 'return'", ptrInt32(4)},
+		{"C++ gcc error", "cpp17", "foo.cc: In function 'int main()':\nfoo.cc:15:23: error: expected ';' before '}' token", ptrInt32(15)},
+		{"Python traceback", "python3", "Traceback (most recent call last):\n  File \"/w/foo.py\", line 12, in <module>\n    print(1/0)\nZeroDivisionError: division by zero", ptrInt32(12)},
+		{"PyPy syntax error", "pypy3", "  File \"foo.py\", line 7\n    def test(\n             ^\nSyntaxError: unexpected EOF while parsing", ptrInt32(7)},
+		{"Go compiler error", "go", "# command-line-arguments\n./foo.go:28:2: undefined: fmt.Printlnn", ptrInt32(28)},
+		{"Java compiler error", "java", "Main.java:5: error: ';' expected\n        int x = 1\n                 ^\n1 error", ptrInt32(5)},
+		{"Java exception", "java", "Exception in thread \"main\" java.lang.ArithmeticException: / by zero\n\tat Main.main(Main.java:9)", ptrInt32(9)},
+		{"Rust compiler error", "rust", "error[E0425]: cannot find value `y` in this scope\n --> foo.rs:3:13\n  |\n3 |     let x = y;", ptrInt32(3)},
+		{"Node.js exception", "node", "/w/foo.js:6\n    throw new Error('boom');\n    ^\n\nError: boom\n    at Object.<anonymous> (/w/foo.js:6:11)", ptrInt32(6)},
+		{"Generic line fallback", "cpp17", "Runtime error at line 99", ptrInt32(99)},
+		{"Empty output", "cpp17", "", nil},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := ParseErrorLine(tc.codeFile, tc.text)
+			lang, ok := catalog.Langs[tc.language]
+			require.True(t, ok)
+			result := ParseErrorLine(lang.ErrorLine, tc.text)
 			if tc.expected == nil {
 				assert.Nil(t, result)
 			} else {

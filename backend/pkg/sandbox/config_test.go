@@ -61,6 +61,18 @@ execute = "/usr/bin/python3 foo.py"
 	require.ErrorContains(t, err, `invalid extension ".py"`)
 }
 
+func TestLoadConfigRejectsErrorLineWithoutLineGroup(t *testing.T) {
+	_, err := LoadConfig(writeLangs(t, `
+[go]
+name = "Go"
+extensions = ["go"]
+error_line = 'foo\.go:\d+'
+code_file = "foo.go"
+execute = "run"
+`))
+	require.ErrorContains(t, err, `language "go" needs error_line`)
+}
+
 func TestLoadConfigRepositoryLangs(t *testing.T) {
 	cfg, err := LoadConfig("../../../judge/langs.toml")
 	require.NoError(t, err)

@@ -5,7 +5,7 @@ import React, {useState, type ReactNode} from "react";
 import {Link} from "react-router-dom";
 
 import {CodeBlock} from "@/components/shared/CodeBlock";
-import {languageName, syntaxOf, useLanguages} from "@/lib/languages";
+import {languageName, useLanguages} from "@/lib/languages";
 import {numberToLetters, ProblemTitle, ShortVerdictString, StateColor, StateString, TimeBeautify} from "@/lib/lib";
 
 import {SubmissionSanctionsModal, type SanctionActionType} from "./SubmissionSanctionsModal";
@@ -516,7 +516,7 @@ export const SubmissionDetailsContent = ({
         ) : (
           <CodeBlock
             code={submission.submission}
-            language={syntaxOf(languages.find((language) => language.id === submission.language))}
+            syntax={languages.find((language) => language.id === submission.language)?.syntax ?? ""}
             highlightLine={errorLine}
           />
         )}
