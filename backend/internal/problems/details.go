@@ -16,6 +16,5 @@ func (uc *ProblemsUseCase) GetProblemDetails(ctx context.Context, id uuid.UUID) 
 	if err != nil {
 		return nil, err
 	}
-	// The statement belongs to the draft and to published packages.
 	return &problemsmodel.ProblemDetails{Problem: problem}, nil
 }

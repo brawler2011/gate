@@ -11,8 +11,6 @@ import (
 	pb "github.com/criyle/go-judge/pb"
 )
 
-// FileRunLimits apply to one command. Large streams go to the disk file store;
-// only bounded diagnostics are returned in the unary Exec response.
 type FileRunLimits struct {
 	CPU        time.Duration `yaml:"cpu" json:"cpu"`
 	Wall       time.Duration `yaml:"wall" json:"wall"`
@@ -60,8 +58,7 @@ func (s *Sandbox) fileCommand(executable Executable, language, inputID string, a
 		}
 		stdin = newCachedFile(inputID)
 	}
-	// A pipe keeps disk page-cache charges for large outputs in the trusted
-	// transport, rather than charging them as contestant process memory.
+	// The pipe charges output page-cache memory to the trusted transport instead of the contestant.
 	stdout := pb.Request_File_builder{Pipe: pb.Request_PipeCollector_builder{Name: "stdout", Max: int64(limits.Output), Pipe: true}.Build()}.Build()
 	files := []*pb.Request_File{stdin, stdout, newPipeCollector("stderr", int64(limits.Diagnostic))}
 	for _, id := range extraIDs {
@@ -81,9 +78,8 @@ func (s *Sandbox) fileCommand(executable Executable, language, inputID string, a
 	return cmd, nil
 }
 
-// RunFiles passes input and extra files as file descriptors, avoiding copies of
-// large test bodies into the sandbox's tmpfs. argv may refer to /dev/fd/3 etc.
-// The returned output ID belongs to the caller, including on a failed command.
+// RunFiles exposes extra files as /dev/fd/3 onward without copying them into tmpfs.
+// The caller owns the returned output ID even when the command fails.
 func (s *Sandbox) RunFiles(ctx context.Context, executable Executable, language, inputID string, args, extraIDs []string, limits FileRunLimits) (*FileRunResult, error) {
 	cmd, err := s.fileCommand(executable, language, inputID, args, extraIDs, limits)
 	if err != nil {
@@ -107,8 +103,6 @@ func (s *Sandbox) RunFiles(ctx context.Context, executable Executable, language,
 	}, nil
 }
 
-// CheckFiles runs testlib against regular descriptors; large inputs and answers
-// never need to be copied into the sandbox working directory.
 func (s *Sandbox) CheckFiles(ctx context.Context, executable Executable, language, input, output, answer string, limits FileRunLimits) (*CheckerResult, error) {
 	limits.Output = limits.Diagnostic
 	cmd, err := s.fileCommand(executable, language, "", []string{"/dev/fd/3", "/dev/fd/4", "/dev/fd/5"}, []string{input, output, answer}, limits)
@@ -132,13 +126,10 @@ func (s *Sandbox) CheckFiles(ctx context.Context, executable Executable, languag
 	return &CheckerResult{Status: status, ExitStatus: int(r.GetExitStatus()), Message: string(r.GetFiles()["stderr"]), Score: score}, nil
 }
 
-// interactorOutput is the file the interactor writes in its working directory.
 const interactorOutput = "output.txt"
 
-// InteractFiles connects the solution to a testlib interactor run as
-// "interactor <input> <output> [<answer>]"; answerID may be empty. The
-// interactor's output file, which a checker reads as the contestant output,
-// is returned as OutputID and belongs to the caller, including on failure.
+// InteractFiles allows an empty answerID; OutputID is the interactor's file for the checker.
+// The caller owns OutputID even on failure.
 func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, solutionLanguage string, interactor Executable, interactorLanguage, inputID, answerID string, solutionLimits, interactorLimits FileRunLimits) (*InteractiveResult, error) {
 	sol, err := s.fileCommand(solution, solutionLanguage, "", nil, nil, solutionLimits)
 	if err != nil {

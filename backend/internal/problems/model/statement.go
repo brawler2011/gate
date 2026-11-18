@@ -13,10 +13,7 @@ import (
 
 var urlScheme = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
 
-// ImageReferences returns the asset names the images of a Markdown section
-// show, read as the statement renderer reads them: with Markdown escapes and
-// character references resolved, without "./", #options and percent-encoding.
-// Absolute and rooted URLs are not assets.
+// ImageReferences resolves escapes and encoding as the renderer does; absolute and rooted URLs are excluded.
 func ImageReferences(markdown string) []string {
 	if !strings.Contains(markdown, "![") {
 		return nil

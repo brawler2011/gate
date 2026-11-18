@@ -15,8 +15,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// PackageContent reads the statement-facing content of built packages. It is
-// stored at publication, so no read here opens a package archive.
 type PackageContent struct {
 	Repo interface {
 		GetPackageDescriptor(context.Context, uuid.UUID) (model.PackageDescriptor, error)
@@ -27,9 +25,7 @@ type PackageContent struct {
 	Bucket string
 }
 
-// OpenImage opens a statement image of the package by its content hash and
-// returns it with its content type. Only statement assets are reachable, never
-// tests or executables.
+// OpenImage exposes only statement assets, never tests or executables.
 func (c *PackageContent) OpenImage(ctx context.Context, id uuid.UUID, sha256 string) (io.ReadCloser, string, error) {
 	assets, err := c.Repo.FindPackageAssets(ctx, id, sha256)
 	if err != nil {
@@ -49,14 +45,11 @@ func (c *PackageContent) OpenImage(ctx context.Context, id uuid.UUID, sha256 str
 	return nil, "", pkg.ErrNotFound
 }
 
-// statementFromDraft returns the draft statement in language, falling back
-// to English and then to the first language.
 func statementFromDraft(d model.Draft, language string) *model.Statement {
 	return selectStatement(d.Title, d.Statements, language)
 }
 
-// selectStatement returns the statement in language, falling back to English
-// and then to the first language in alphabetical order.
+// Missing languages fall back to English, then alphabetical order.
 func selectStatement(title string, statements []model.DraftStatement, language string) *model.Statement {
 	find := func(language string) *model.DraftStatement {
 		i := slices.IndexFunc(statements, func(s model.DraftStatement) bool { return s.Language == language })
@@ -81,9 +74,7 @@ func selectStatement(title string, statements []model.DraftStatement, language s
 	return &statement
 }
 
-// ReadStatement returns the package statement in the requested language with
-// the samples and statement asset hashes, or a nil statement when the package
-// is unavailable.
+// ReadStatement leaves Statement nil when the package is unavailable.
 func (c *PackageContent) ReadStatement(ctx context.Context, problemID, packageID uuid.UUID, language string) model.StatementContent {
 	p, err := c.Repo.GetPackageStatement(ctx, packageID)
 	if err != nil || p.ProblemID != problemID {

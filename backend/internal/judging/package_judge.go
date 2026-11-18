@@ -22,7 +22,6 @@ import (
 type PackageJudge struct {
 	Client *sandbox.Client
 	Files  *sandbox.FileTransport
-	// Languages are the running judge image's; submissions and package programs compile with them.
 	Languages *sandbox.Config
 	Programs  *sandbox.ProgramCache
 	Logger    *slog.Logger
@@ -47,7 +46,6 @@ func (j *PackageJudge) upload(ctx context.Context, root, path string, limit int6
 	return j.Files.Upload(ctx, f, limit)
 }
 
-// program uploads the compiled checker or interactor to the sandbox.
 func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, source gfmt.Program) (sandbox.Executable, error) {
 	read := func(path string) ([]byte, error) {
 		data, err := os.ReadFile(filepath.Join(pkg.Format.Path, path))
@@ -60,7 +58,6 @@ func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, source g
 	if err != nil {
 		return sandbox.Executable{}, err
 	}
-	// A judge program compiles with the whole package library.
 	deps := map[string][]byte{}
 	library, err := os.ReadDir(filepath.Join(pkg.Format.Path, gfmt.LibraryFolder))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -79,14 +76,11 @@ func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, source g
 	return j.Files.UploadCompiled(ctx, dir, int64(limits.Output)) //nolint:wrapcheck // already describes the upload
 }
 
-// roleProgram is a package program uploaded to the sandbox for one submission.
 type roleProgram struct {
 	executable sandbox.Executable
 	language   string
 }
 
-// roleProgram uploads the compiled program of role, or returns nil when the
-// package has none.
 func (j *PackageJudge) roleProgram(ctx context.Context, pkg *LoadedPackage, role string) (*roleProgram, error) {
 	source, ok := pkg.Format.Problem.Programs[role]
 	if !ok {
@@ -116,8 +110,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 	sb := sandbox.NewSandbox(j.Client, j.Languages)
 	sol, err := sb.CompileWithLimits(ctx, []byte(source), lang, nil, j.Languages.SubmissionCompileLimits(lang, s.Limits.Compile))
 	if err != nil {
-		// The API accepted a configuration this worker's catalog lacks: a
-		// system configuration error, not the contestant's compilation error.
+		// A missing worker language is a system configuration error, not a contestant compilation error.
 		if IsTemporary(err) || errors.Is(err, sandbox.ErrUnknownLanguage) {
 			return nil, err
 		}
@@ -128,8 +121,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 		return &FinalVerdict{State: submissionsmodel.GotCE, Message: output, TestDetails: &submissionsmodel.SubmissionTestDetails{CompilerOutput: &output}}, nil
 	}
 	defer j.releaseExecutable(sol)
-	// An interactive problem may also have a checker, which decides after the
-	// interactor accepts; any other problem has only a checker.
+	// An optional checker decides the verdict after the interactor accepts.
 	checker, err := j.roleProgram(ctx, pkg, "checker")
 	defer j.releaseRoleProgram(checker)
 	if err != nil {
@@ -258,8 +250,7 @@ func packagePreview(root, path string) (string, error) {
 	return string(data), err
 }
 
-// The manifest explicitly owns global test order; filesystem names and group
-// iteration order do not determine test numbering or sample scoring.
+// Manifest order controls test numbering and sample scoring independently of filesystem or group order.
 func collectFlatTests(prob *gfmt.Problem) []FlatTest {
 	result := []FlatTest{}
 	for name, group := range prob.Subtasks {

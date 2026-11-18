@@ -9,8 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// An auto-updated library file stores no text; the package must carry the
-// system text, or the judge cannot compile the checker.
+// Auto-updated library references must materialize system text for the judge.
 func TestPlaceDraftPackagesSystemLibraryText(t *testing.T) {
 	d := model.Draft{DraftContent: model.DraftContent{
 		Library: []model.DraftLibraryFile{{Name: "testlib.h", AutoUpdate: true}, {Name: "graph.h", Content: "// graph\n"}},

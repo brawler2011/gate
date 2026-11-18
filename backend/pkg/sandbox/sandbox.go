@@ -32,41 +32,32 @@ func safeDuration(v uint64) time.Duration {
 	return time.Duration(v)
 }
 
-// Status represents the result status of a run or evaluation.
 type Status string
 
 const (
-	// Default size for pipe collectors (10 MB)
 	defaultPipeCollectorSize = 10 * 1024 * 1024
-	// Small size for dummy command pipe collectors (1 KB)
 	dummyPipeCollectorSize = 1024
 
-	// Compile limits for compilers
 	compilerCompileCpuTimeLimit = 20 * time.Second
 	compilerCompileMemoryLimit  = 512 * 1024 * 1024
 	compilerCompileProcLimit    = 150
 
-	// Generator execution limits
 	generatorCpuTimeLimit = 5 * time.Second
 	generatorMemoryLimit  = 256 * 1024 * 1024
 	generatorProcLimit    = 50
 
-	// Checker execution limits
 	checkerCpuTimeLimit = 5 * time.Second
 	checkerMemoryLimit  = 512 * 1024 * 1024
 	checkerProcLimit    = 50
 
-	// Interactor execution limits
 	interactorCpuTimeLimit   = 5 * time.Second
 	interactorClockTimeLimit = 10 * time.Second
 	interactorMemoryLimit    = 512 * 1024 * 1024
 	interactorProcLimit      = 50
 
-	// Solution execution limits defaults
 	solutionProcLimit           = 50
 	solutionClockTimeMultiplier = 2
 
-	// Booklet LaTeX compilation limits
 	bookletCompileCpuTimeLimit   = 30 * time.Second
 	bookletCompileClockTimeLimit = 60 * time.Second
 	bookletCompileMemoryLimit    = 512 * 1024 * 1024
@@ -86,7 +77,6 @@ const (
 	StatusPoints Status = "POINTS"
 )
 
-// RunResult represents the result of executing a program.
 type RunResult struct {
 	Status     Status
 	ExitStatus int
@@ -96,7 +86,6 @@ type RunResult struct {
 	Stderr     []byte
 }
 
-// CheckerResult represents the evaluation of a solution output by a checker.
 type CheckerResult struct {
 	Status     Status
 	ExitStatus int
@@ -104,29 +93,25 @@ type CheckerResult struct {
 	Score      *float64
 }
 
-// InteractiveResult represents the outcome of an interactive solution execution.
 type InteractiveResult struct {
 	Status           Status
 	SolutionResult   RunResult
 	InteractorResult RunResult
-	OutputID         string // interactor output in the file store, set only by InteractFiles
+	OutputID         string // set only by InteractFiles
 	Message          string
 	Score            *float64
 }
 
-// Executable represents a compiled program or cached script with its dependencies in the sandbox.
 type Executable struct {
-	PrimaryFileID string            // ID основного исполняемого файла или скрипта
-	Dependencies  map[string]string // Карта зависимостей: "имя_файла -> fileID"
+	PrimaryFileID string
+	Dependencies  map[string]string // filename -> sandbox file ID
 }
 
-// Sandbox wraps the Client and Config for easy execution.
 type Sandbox struct {
 	client *Client
 	config *Config
 }
 
-// NewSandbox creates a high-level wrapper.
 func NewSandbox(client *Client, config *Config) *Sandbox {
 	return &Sandbox{
 		client: client,
@@ -134,8 +119,7 @@ func NewSandbox(client *Client, config *Config) *Sandbox {
 	}
 }
 
-// Compile compiles the source code using the configured compiler and returns the Executable descriptor.
-// For interpreted languages, it caches the source code and all its dependencies.
+// Compile caches interpreted sources and their dependencies without invoking a compiler.
 func (s *Sandbox) Compile(ctx context.Context, sourceCode []byte, langKey string, dependencies map[string][]byte) (Executable, error) {
 	return s.CompileWithLimits(ctx, sourceCode, langKey, dependencies, FileRunLimits{CPU: compilerCompileCpuTimeLimit, Wall: 2 * compilerCompileCpuTimeLimit, Memory: compilerCompileMemoryLimit, Processes: compilerCompileProcLimit, Output: 64 * 1024 * 1024, Diagnostic: 64 * 1024})
 }
@@ -150,7 +134,6 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 		return Executable{}, fmt.Errorf("%w: %s", ErrUnknownLanguage, langKey)
 	}
 
-	// NOTE: можно как-то общий код чуть повыносить, этот иф по факту просто код дублирует
 	if lang.Type == "interpreter" || lang.Compile == "" {
 		copyIn := make(map[string]*pb.Request_File)
 		copyIn[lang.CodeFile] = newMemoryFile(sourceCode)
@@ -165,7 +148,6 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 			copyOutCached = append(copyOutCached, pb.Request_CmdCopyOutFile_builder{Name: depName}.Build())
 		}
 
-		// Cache the script directly using a dummy command
 		cmd := pb.Request_CmdType_builder{
 			Args: []string{"/bin/true"},
 			Files: []*pb.Request_File{
@@ -225,8 +207,6 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 		outputName = "solution"
 	}
 
-	// Prepare compile command args
-	// e.g. /usr/bin/g++ -O2 -Wall -std=c++17 -o ${name} foo.cc
 	compileCmd := strings.ReplaceAll(lang.Compile, "${name}", outputName)
 	compileCmdArgs := strings.Fields(compileCmd)
 
@@ -283,7 +263,6 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 	}, nil
 }
 
-// Generate executes the compiled generator with the given arguments and returns stdout.
 func (s *Sandbox) Generate(ctx context.Context, gen Executable, args []string) ([]byte, error) {
 	copyIn := map[string]*pb.Request_File{
 		"generator": newCachedFile(gen.PrimaryFileID),
@@ -327,7 +306,6 @@ func (s *Sandbox) Generate(ctx context.Context, gen Executable, args []string) (
 	return res.GetFiles()["stdout"], nil
 }
 
-// Test executes the solution with the given input and limits, returning the result.
 func (s *Sandbox) Test(ctx context.Context, sol Executable, langKey string, input []byte, timeLimitMs, memoryLimitMb int) (*RunResult, error) {
 	lang, ok := s.config.Langs[langKey]
 	if !ok {
@@ -396,7 +374,6 @@ func (s *Sandbox) Test(ctx context.Context, sol Executable, langKey string, inpu
 	}, nil
 }
 
-// Check runs a checker program with args input.txt output.txt answer.txt and returns checker verdict/message.
 func (s *Sandbox) Check(ctx context.Context, checker Executable, input, output, answer []byte) (*CheckerResult, error) {
 	copyIn := map[string]*pb.Request_File{
 		"checker":    newCachedFile(checker.PrimaryFileID),
@@ -448,7 +425,6 @@ func (s *Sandbox) Check(ctx context.Context, checker Executable, input, output, 
 	}, nil
 }
 
-// Interact runs the solution and interactor together, connected via bidirectional pipes.
 func (s *Sandbox) Interact(ctx context.Context, sol Executable, solLangKey string, interactor Executable, input []byte, timeLimitMs, memoryLimitMb int) (*InteractiveResult, error) {
 	lang, ok := s.config.Langs[solLangKey]
 	if !ok {
@@ -520,7 +496,6 @@ func (s *Sandbox) Interact(ctx context.Context, sol Executable, solLangKey strin
 	}.Build()
 
 	pipeMappings := []*pb.Request_PipeMap{
-		// Solution stdout (Command 0, FD 1) -> Interactor stdin (Command 1, FD 0)
 		pb.Request_PipeMap_builder{
 			In: pb.Request_PipeMap_PipeIndex_builder{
 				Index: 0,
@@ -532,7 +507,6 @@ func (s *Sandbox) Interact(ctx context.Context, sol Executable, solLangKey strin
 			}.Build(),
 			Max: defaultPipeCollectorSize,
 		}.Build(),
-		// Interactor stdout (Command 1, FD 1) -> Solution stdin (Command 0, FD 0)
 		pb.Request_PipeMap_builder{
 			In: pb.Request_PipeMap_PipeIndex_builder{
 				Index: 1,
@@ -567,7 +541,7 @@ func (s *Sandbox) Interact(ctx context.Context, sol Executable, solLangKey strin
 		ExitStatus: int(solRes.GetExitStatus()),
 		Time:       safeDuration(solRes.GetTime()),
 		Memory:     safeInt64(solRes.GetMemory()),
-		Stderr:     solRes.GetFiles()["stdout"], // stderr was redirected to stdout key
+		Stderr:     solRes.GetFiles()["stdout"],
 	}
 
 	intRun := RunResult{
@@ -578,18 +552,17 @@ func (s *Sandbox) Interact(ctx context.Context, sol Executable, solLangKey strin
 		Stderr:     intRes.GetFiles()["stdout"],
 	}
 
-	// Interactor exit code determines correctness
 	var status Status
 	var score *float64
 	if intRes.GetStatus() != pb.Response_Result_Accepted && intRes.GetStatus() != pb.Response_Result_NonZeroExitStatus {
 		status = StatusFail
 	} else {
 		logContent := string(intRes.GetFiles()["log.txt"])
-		stderrContent := string(intRes.GetFiles()["stdout"]) // interactor stderr is redirected to stdout key
+		stderrContent := string(intRes.GetFiles()["stdout"])
 		status, score = parseTestlibVerdict(int(intRes.GetExitStatus()), stderrContent, logContent)
 	}
 
-	// If interactor was OK/POINTS but solution timed out/crashed, solution status takes precedence
+	// A solution failure overrides an accepting interactor verdict.
 	if (status == StatusOK || status == StatusPoints) && solRes.GetStatus() != pb.Response_Result_Accepted {
 		status = solRun.Status
 	}
@@ -598,7 +571,7 @@ func (s *Sandbox) Interact(ctx context.Context, sol Executable, solLangKey strin
 		Status:           status,
 		SolutionResult:   solRun,
 		InteractorResult: intRun,
-		Message:          strings.TrimSpace(string(intRes.GetFiles()["stdout"])), // interactor writes feedback/errors to stderr
+		Message:          strings.TrimSpace(string(intRes.GetFiles()["stdout"])),
 		Score:            score,
 	}, nil
 }
@@ -628,7 +601,6 @@ func statusToString(status pb.Response_Result_StatusType) Status {
 	}
 }
 
-// CompilePDF compiles a LaTeX booklet source into a PDF using pdflatex in go-judge sandbox.
 func (s *Sandbox) CompilePDF(ctx context.Context, texSource string) ([]byte, error) {
 	copyIn := map[string]*pb.Request_File{
 		"booklet.tex": newMemoryFile([]byte(texSource)),

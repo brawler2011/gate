@@ -42,7 +42,6 @@ type Pipeline struct {
 	TempDir string
 	Client  *sandbox.Client
 	Files   *sandbox.FileTransport
-	// Languages are the running judge image's; a build compiles with them.
 	Languages *sandbox.Config
 	Programs  *sandbox.ProgramCache
 	Logger    *slog.Logger
@@ -70,9 +69,7 @@ func fail(stage string, test int, kind string, err error) error {
 	return &Failure{Stage: stage, Test: test, Kind: kind, Message: text, Truncated: truncated, cause: err}
 }
 func processKind(err error) string {
-	// The draft was checked against the catalog at enqueue: a configuration
-	// the worker's catalog lacks means the API and worker disagree, a system
-	// configuration error no retry fixes.
+	// A missing language means API/worker catalog disagreement; retrying cannot fix it.
 	if errors.Is(err, sandbox.ErrUnknownLanguage) {
 		return "configuration"
 	}
@@ -333,7 +330,6 @@ func (e *execution) compile(ctx context.Context) error {
 			return fail("compile", 0, "infrastructure", fmt.Errorf("%s: %w", p.path, err))
 		}
 		e.compiled[p.key] = compilation{language: p.program.Language, executable: executable}
-		// The package keeps the judge's programs as sources; each judge compiles them with its own image.
 		if p.role == "checker" || p.role == "interactor" {
 			e.manifest.Programs[p.role] = gfmt.Program{Source: p.path, Language: p.program.Language}
 		}
@@ -398,8 +394,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 	answerPath := ""
 	var outputID, answerID string
 	if s.Draft.Type == "interactive" {
-		// As in Polygon, the interactor's output on the main solution is the
-		// answer the interactor and the checker later receive.
+		// The main solution's interactor output becomes the answer for later judging.
 		sol := e.compiled[programKey("solution", *s.Draft.MainSolution)]
 		intr := e.compiled["interactor"]
 		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, intr.executable, intr.language, inputID, "", e.solutionLimits(), aux)
@@ -450,8 +445,6 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			}
 		}
 	}
-	// An interactive problem's checker is optional; when present it decides
-	// the verdict after the interactor accepts.
 	if s.Draft.Checker != nil {
 		checker := e.compiled["checker"]
 		result, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.language, inputID, outputID, answerID, aux)
@@ -477,11 +470,9 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 	return nil
 }
 
-// maxSampleBytes bounds each sample file shown in a statement.
 const maxSampleBytes = 128 * 1024
 
-// addSample records a sample test for the statement, which is stored with the
-// Package because generated inputs exist only after the build.
+// Generated samples become available only after materialization.
 func (e *execution) addSample(inputPath, answerPath string) error {
 	input, err := e.readSample(inputPath)
 	if err != nil {

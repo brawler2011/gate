@@ -68,8 +68,7 @@ func TestLoadConfigRepositoryLangs(t *testing.T) {
 	require.Len(t, cfg.Order, len(cfg.Langs))
 }
 
-// Configurations sharing an extension: the catalog order, not the
-// identifiers, decides which one the extension suggests.
+// Extension suggestions follow catalog order rather than identifier order.
 func TestForPathSuggestsFirstConfigurationInCatalogOrder(t *testing.T) {
 	cfg, err := LoadConfig(writeLangs(t, `
 [cpp20]
@@ -92,8 +91,7 @@ execute = "run"
 	require.Empty(t, cfg.ForPath("solutions/Makefile"))
 }
 
-// A submission compiles with its configuration's own time; the problem's
-// compile limits, sized for testlib programs, bound only the rest.
+// Submission compilation uses language limits independently of problem-program limits.
 func TestSubmissionCompileLimitsUseLanguageTime(t *testing.T) {
 	cfg, err := LoadConfig(writeLangs(t, `
 [cpp17]

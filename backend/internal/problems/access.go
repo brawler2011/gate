@@ -25,7 +25,6 @@ func withinProblem(ctx context.Context, transactions ProblemTransactions, id uui
 	})
 }
 
-// authorizeProblem checks access through pool-backed readers, without a write transaction.
 func authorizeProblem(ctx context.Context, permissions ProblemPermissions, id uuid.UUID, action accessmodel.ProblemAction) error {
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() && action != accessmodel.ActionViewProblem {

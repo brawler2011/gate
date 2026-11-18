@@ -12,33 +12,25 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// ErrUnknownLanguage means a language configuration identifier is not in the
-// catalog the sandbox runs with.
 var ErrUnknownLanguage = errors.New("unknown language configuration")
 
-// Language is one configuration of the catalog: a concrete compiler or
-// interpreter with its options, selected by its identifier.
 type Language struct {
-	// Name identifies the compiler or interpreter variant and version for people.
 	Name string `toml:"name" json:"name"`
-	// Extensions are the source file extensions, without the dot, this
-	// configuration accepts; the first is the one a new source file gets.
+	// Extensions omit the dot; the first is used for new source files.
 	Extensions []string `toml:"extensions" json:"extensions"`
-	// Syntax is the Prism grammar the frontend highlights sources with; ""
-	// shows them as plain text. It is not part of the compiler identity.
+	// Syntax selects a Prism grammar; empty means plain text and does not affect compiler identity.
 	Syntax      string `toml:"syntax" json:"-"`
 	Type        string `toml:"type" json:"type"`
 	Compile     string `toml:"compile" json:"compile"`
 	CodeFile    string `toml:"code_file" json:"code_file"`
 	CompileFile string `toml:"compile_file" json:"compile_file"`
 	Execute     string `toml:"execute" json:"execute"`
-	// CompileCPU limits submission compilation only.
+	// CompileCPU limits submissions; problem programs use problems.limits.compile.
 	CompileCPU time.Duration `toml:"compile_cpu" json:"-"`
 }
 
 const compileWallFactor = 3
 
-// SubmissionCompileLimits returns base with the language's compile time.
 func (c *Config) SubmissionCompileLimits(language string, base FileRunLimits) FileRunLimits {
 	if lang, ok := c.Langs[language]; ok && lang.CompileCPU > 0 {
 		base.CPU = lang.CompileCPU
@@ -47,17 +39,12 @@ func (c *Config) SubmissionCompileLimits(language string, base FileRunLimits) Fi
 	return base
 }
 
-// Config is the language catalog: configurations by identifier, and the
-// identifiers in catalog order.
 type Config struct {
 	Langs map[string]Language
-	// Order lists the identifiers as the catalog file does. People see the
-	// configurations in this order, and a file extension suggests the first
-	// configuration that accepts it.
+	// Order preserves the catalog display order.
 	Order []string
 }
 
-// LoadConfig reads the language catalog from a file (judge/langs.toml).
 func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -66,8 +53,7 @@ func LoadConfig(path string) (*Config, error) {
 	return ParseConfig(data)
 }
 
-// ParseConfig parses the language catalog.
-// Each configuration's "package" key is consumed by the judge image build and ignored here.
+// ParseConfig ignores "package", which only the judge image build consumes.
 func ParseConfig(data []byte) (*Config, error) {
 	var langs map[string]Language
 	meta, err := toml.Decode(string(data), &langs)
@@ -106,8 +92,6 @@ func ParseConfig(data []byte) (*Config, error) {
 	return cfg, nil
 }
 
-// ForPath returns the configuration a source file's extension suggests: the
-// first in catalog order that accepts it, or "" when none does.
 func (c *Config) ForPath(file string) string {
 	ext := strings.ToLower(strings.TrimPrefix(path.Ext(file), "."))
 	for _, id := range c.Order {

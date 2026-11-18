@@ -34,9 +34,7 @@ type GC struct {
 	Store   GCStore
 	Bucket  string
 	TempDir string
-	// ObjectRetention is how long stored bytes without an object row are kept.
-	// It must exceed the longest time from reserving an upload to committing
-	// its row, so bytes about to be referenced are never deleted.
+	// ObjectRetention must exceed every upload lease and build deadline to protect pending references.
 	ObjectRetention  time.Duration
 	BuildRetention   time.Duration
 	PackageRetention time.Duration
@@ -82,8 +80,7 @@ func (g *GC) Collect(ctx context.Context) error {
 		if !deleted {
 			continue
 		}
-		// Without its row the key can never be referenced again; if this fails,
-		// the bytes are an orphan that the sweep below removes.
+		// Failed byte deletion leaves an orphan for the next sweep.
 		if err := g.Store.DeleteFile(ctx, g.Bucket, o.Key); err != nil {
 			return err
 		}
@@ -94,14 +91,9 @@ func (g *GC) Collect(ctx context.Context) error {
 	return g.cleanDirectories(ctx)
 }
 
-// sweepOrphans deletes bytes left without an object row by failed or
-// abandoned uploads and by interrupted deletions. Keys are never reused, and a
-// row is committed only within the upload's fencing deadline, so bytes older
-// than ObjectRetention without a row are never referenced again.
+// Keys are never reused, so expired unregistered bytes cannot gain a reference.
 func (g *GC) sweepOrphans(ctx context.Context) error {
-	// Age is judged once, before any row lookup: a key old at the cutoff can
-	// no longer gain a row, so its lookup result stays true however long the
-	// sweep takes. A key that ages during the sweep waits for the next one.
+	// Freeze the cutoff before lookups; keys aging during the sweep may still gain a row.
 	cutoff := time.Now().Add(-g.ObjectRetention)
 	listed, err := g.Store.ListObjects(ctx, g.Bucket, "objects/")
 	if err != nil {

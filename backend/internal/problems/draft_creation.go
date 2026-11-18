@@ -17,8 +17,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// uploadImport begins the operation and uploads the plan's objects, binding
-// them into its draft. A replay returns the stored result and uploads nothing.
+// Idempotent replays return the stored result without uploading objects again.
 func (uc *DraftUseCase) uploadImport(ctx context.Context, k model.MutationKey, plan *draftImport) (*model.MutationResult, []model.StoredObject, error) {
 	replay, err := uc.Repo.BeginOperation(ctx, k)
 	if err != nil || replay != nil {
@@ -63,8 +62,7 @@ func (uc *DraftUseCase) Import(ctx context.Context, id uuid.UUID, expected int64
 	if strings.TrimSpace(plan.draft.Title) == "" {
 		plan.draft.Title = current.Title
 	}
-	// Fingerprint exact uploaded archive bytes, including metadata and source.
-	// The archive spool is the only root-level body file in this isolated import.
+	// The isolated import has only one root-level body file: the original archive spool.
 	files, err := os.ReadDir(plan.root)
 	if err != nil {
 		return model.MutationResult{}, fmt.Errorf("readdir: %w", err)
@@ -162,8 +160,7 @@ func (uc *DraftUseCase) CreateProblem(ctx context.Context, input *model.CreatePr
 	if err != nil {
 		return uuid.Nil, err
 	}
-	// A cloned package already owns its input objects in this organization.
-	// Only builtins/imported bytes need new uploads.
+	// Clones reuse same-organization objects; only imported bytes need uploading.
 	var objects []model.StoredObject
 	if len(plan.objects) > 0 {
 		replay, uploaded, err := uc.uploadImport(ctx, k, plan)

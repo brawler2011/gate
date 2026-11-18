@@ -7,8 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// placedProgram is a draft program at its package path. Key identifies it
-// in the build: programKey of its role and name.
 type placedProgram struct {
 	key     string
 	role    string
@@ -16,20 +14,14 @@ type placedProgram struct {
 	program model.DraftProgram
 }
 
-// packageLayout is a draft placed in the Gate package layout.
 type packageLayout struct {
 	texts    map[string]string
 	programs []placedProgram
 	assets   map[string]uuid.UUID
 }
 
-// programKey identifies a program in a build; a single checker or interactor
-// goes by its role alone.
 func programKey(role, name string) string { return role + "/" + name }
 
-// placeDraft decides where each draft entry goes in the built package. Names
-// are unique within a folder, so every entry keeps its name. A program's file
-// is its name with the first extension of its language configuration.
 func placeDraft(d model.Draft, languages *sandbox.Config) packageLayout {
 	l := packageLayout{texts: map[string]string{}, assets: map[string]uuid.UUID{}}
 	for _, f := range d.Library {
@@ -67,7 +59,6 @@ func placeDraft(d model.Draft, languages *sandbox.Config) packageLayout {
 	return l
 }
 
-// program returns the program placed under key, or nil.
 func (l packageLayout) program(key string) *placedProgram {
 	for i := range l.programs {
 		if l.programs[i].key == key {
@@ -77,8 +68,7 @@ func (l packageLayout) program(key string) *placedProgram {
 	return nil
 }
 
-// extension returns the source file extension of a language configuration;
-// one the catalog lacks keeps its identifier, and compiling it fails later.
+// Unknown languages retain their identifiers and fail at compilation.
 func extension(languages *sandbox.Config, language string) string {
 	if lang, ok := languages.Langs[language]; ok {
 		return "." + lang.Extensions[0]

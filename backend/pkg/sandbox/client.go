@@ -9,17 +9,15 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// Client wraps the gRPC connection and proto client for go-judge.
 type Client struct {
 	conn       *grpc.ClientConn
 	grpcClient pb.ExecutorClient
 }
 
-// NewClient establishes a new gRPC connection to go-judge at the given address.
 func NewClient(addr string) (*Client, error) {
 	conn, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(100*1024*1024)), // 100MB
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(100*1024*1024)),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to go-judge gRPC server: %w", err)
@@ -31,7 +29,6 @@ func NewClient(addr string) (*Client, error) {
 	}, nil
 }
 
-// Close terminates the gRPC connection.
 func (c *Client) Close() error {
 	if c.conn != nil {
 		if err := c.conn.Close(); err != nil {
@@ -41,7 +38,6 @@ func (c *Client) Close() error {
 	return nil
 }
 
-// Exec sends an execution request to go-judge.
 func (c *Client) Exec(ctx context.Context, req *pb.Request) (*pb.Response, error) {
 	if c.grpcClient == nil {
 		return nil, fmt.Errorf("gRPC client is not initialized")
@@ -54,7 +50,6 @@ func (c *Client) Exec(ctx context.Context, req *pb.Request) (*pb.Response, error
 	return resp, nil
 }
 
-// Helper constructors for go-judge Request_File fields.
 
 func newMemoryFile(content []byte) *pb.Request_File {
 	return pb.Request_File_builder{

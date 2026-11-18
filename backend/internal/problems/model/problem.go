@@ -12,9 +12,9 @@ type ProblemManifest struct {
 	// Revision identifies the file package read by the caller; it is not persisted metadata.
 	Revision    string    `json:"-"`
 	LastUpdated time.Time `json:"last_updated"`
-	ProblemType string    `json:"problem_type"` // "pass-fail", "scoring", etc
+	ProblemType string    `json:"problem_type"`
 
-	MaxScore      *points.Value  `json:"max_score"` // null для pass-fail задач
+	MaxScore      *points.Value  `json:"max_score"` // nil for pass-fail problems
 	FilesMetadata []FileMetadata `json:"meta_files"`
 
 	TimeLimitMs   int `json:"time_limit_ms"`
@@ -35,14 +35,14 @@ type Statement struct {
 }
 
 type Dependency struct {
-	Filename string `json:"filename"` // "testlib.h"
-	Version  string `json:"version"`  // "0.9.41"
+	Filename string `json:"filename"`
+	Version  string `json:"version"`
 }
 
 type FileMetadata struct {
-	Type         string       `json:"type"` // "checker", "validator", "generator", "interactor"
+	Type         string       `json:"type"`
 	Filename     string       `json:"filename"`
-	Compiler     string       `json:"compiler"` // "cpp17", "python3", etc
+	Compiler     string       `json:"compiler"`
 	BinarySha256 *string      `json:"binary_sha256"`
 	Dependencies []Dependency `json:"dependencies"`
 }
@@ -56,16 +56,16 @@ type TestGroup struct {
 	Ordinal      int          `json:"ordinal"`
 	Name         string       `json:"name"`
 	Points       points.Value `json:"points"`
-	PointsPolicy string       `json:"points_policy"` // "complete-group", "each-test"
-	DependsOn    []int        `json:"depends_on"`    // номера групп или null
-	Tests        [2]int       `json:"tests"`         // диапазон [start, end]
+	PointsPolicy string       `json:"points_policy"`
+	DependsOn    []int        `json:"depends_on"`
+	Tests        [2]int       `json:"tests"`         // range [start, end]
 }
 
 type TestCase struct {
 	Filename  string  `json:"filename"` // input name relative to tests/; empty for generated tests
 	Ordinal   int     `json:"ordinal"`
-	Method    string  `json:"method"`    // "manual" или "generated"
-	Generator *string `json:"generator"` // "gen_border 1 2 3" или null
+	Method    string  `json:"method"`
+	Generator *string `json:"generator"` // generator name followed by arguments
 	IsSample  bool    `json:"is_sample"`
 }
 
@@ -83,7 +83,6 @@ const (
 	ProblemVisibilityUnlisted = "unlisted"
 )
 
-// ProblemRole defines roles for direct problem access
 type ProblemRole string
 
 const (
@@ -92,7 +91,6 @@ const (
 	ProblemRoleViewer    ProblemRole = "viewer"
 )
 
-// Problem - новая модель задачи (метаданные в БД, контент в SeaweedFS)
 type Problem struct {
 	ID                uuid.UUID
 	OrganizationID    uuid.UUID
@@ -108,7 +106,6 @@ type Problem struct {
 	UpdatedAt         time.Time
 }
 
-// ProblemMember represents a user's direct membership to a problem
 type ProblemMember struct {
 	ProblemID uuid.UUID
 	UserID    uuid.UUID
@@ -118,7 +115,6 @@ type ProblemMember struct {
 	CreatedAt time.Time
 }
 
-// ProblemPackage represents a compiled, immutable version of a problem
 type ProblemPackage struct {
 	ID             uuid.UUID
 	ProblemID      uuid.UUID
@@ -192,8 +188,6 @@ type Sample struct {
 	Output string `json:"output"`
 }
 
-// PackageStatement is the statement-facing content of a built package. It is
-// stored at publication, so reading it never opens the package archive.
 type PackageStatement struct {
 	ProblemID  uuid.UUID
 	Title      string
@@ -203,15 +197,12 @@ type PackageStatement struct {
 	Assets map[string]string
 }
 
-// StatementContent is a package statement in one language with its samples
-// and statement asset hashes by name.
 type StatementContent struct {
 	Statement *Statement
 	Samples   []Sample
 	Assets    map[string]string
 }
 
-// PackageAsset is a statement asset stored as its own object.
 type PackageAsset struct {
 	Name string
 	Key  string

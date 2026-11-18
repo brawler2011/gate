@@ -30,7 +30,6 @@ func truncateDetailString(s string) (string, bool) {
 	return s, false
 }
 
-// TestResult represents the result of a single test
 type TestResult struct {
 	TestNumber    int
 	Verdict       string
@@ -46,24 +45,21 @@ type TestResult struct {
 	IsTruncated   bool
 }
 
-// FinalVerdict represents the final judging result
 type FinalVerdict struct {
 	State       submissionsmodel.State
 	Score       points.Value
 	MaxTime     int32 // milliseconds
 	MaxMemory   int32 // megabytes
 	Message     string
-	FailedTest  *int // test number where it failed (for fail-fast)
+	FailedTest  *int // first failing test in fail-fast mode
 	TestDetails *submissionsmodel.SubmissionTestDetails
 }
 
-// VerdictCalculator calculates final verdict from test results
 type VerdictCalculator struct {
 	problemType string
 	problem     *gfmt.Problem
 }
 
-// NewVerdictCalculator creates a new verdict calculator
 func NewVerdictCalculator(problemType string, problem *gfmt.Problem) *VerdictCalculator {
 	return &VerdictCalculator{
 		problemType: problemType,
@@ -71,7 +67,6 @@ func NewVerdictCalculator(problemType string, problem *gfmt.Problem) *VerdictCal
 	}
 }
 
-// MapSandboxVerdict maps go-judge verdict to submission state
 func MapSandboxVerdict(verdict string) submissionsmodel.State {
 	switch verdict {
 	case "OK", "AC", "Accepted":
@@ -141,7 +136,6 @@ func buildSubmissionTestDetails(results []TestResult) *submissionsmodel.Submissi
 	}
 }
 
-// CalculateStandardVerdict calculates verdict for standard (pass-fail) problems
 func (vc *VerdictCalculator) CalculateStandardVerdict(results []TestResult) *FinalVerdict {
 	var maxTime int64
 	var maxMemory int64
@@ -159,8 +153,8 @@ func (vc *VerdictCalculator) CalculateStandardVerdict(results []TestResult) *Fin
 			return &FinalVerdict{
 				State:       MapSandboxVerdict(result.Verdict),
 				Score:       0,
-				MaxTime:     safeInt32(maxTime / 1_000_000),     // convert ns to ms
-				MaxMemory:   safeInt32(maxMemory / 1024 / 1024), // convert bytes to MB
+				MaxTime:     safeInt32(maxTime / 1_000_000),
+				MaxMemory:   safeInt32(maxMemory / 1024 / 1024),
 				Message:     fmt.Sprintf("Failed on test %d: %s", result.TestNumber, result.Message),
 				FailedTest:  &testNum,
 				TestDetails: buildSubmissionTestDetails(results),
@@ -178,8 +172,7 @@ func (vc *VerdictCalculator) CalculateStandardVerdict(results []TestResult) *Fin
 	}
 }
 
-// CalculateScoringVerdict uses explicit test weights and complete dependency
-// groups. No group score is divided by test count or rescaled to a percentage.
+// CalculateScoringVerdict awards authored weights only when group dependencies are fully passed.
 func (vc *VerdictCalculator) CalculateScoringVerdict(results []TestResult) *FinalVerdict {
 	byTest := make(map[int]TestResult, len(results))
 	var maxTime, maxMemory int64
@@ -267,7 +260,6 @@ func (vc *VerdictCalculator) CalculateInteractiveVerdict(results []TestResult) *
 	return vc.CalculateStandardVerdict(results)
 }
 
-// Calculate determines final verdict based on problem type
 func (vc *VerdictCalculator) Calculate(results []TestResult) *FinalVerdict {
 	switch vc.problemType {
 	case "scoring":
@@ -279,8 +271,6 @@ func (vc *VerdictCalculator) Calculate(results []TestResult) *FinalVerdict {
 	}
 }
 
-// maxScore is the sum of every explicit test weight: the score of a fully
-// accepted solution.
 func (vc *VerdictCalculator) maxScore() points.Value {
 	var total points.Value
 	for _, group := range vc.problem.Subtasks {

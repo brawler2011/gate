@@ -23,30 +23,25 @@ const manifestFileLimit = 1 << 20
 
 var digestPattern = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 
-// Identity identifies the running judge image.
 type Identity struct {
 	Digest       string `json:"digest"`
 	Architecture string `json:"architecture"`
 	ABI          string `json:"abi"`
 }
 
-// Image describes the running judge image: its toolchain identity and languages.
 type Image struct {
 	Identity Identity
 	Config   *Config
 }
 
-// Compiler identifies what compiles programs on this image: its digest and its
-// language configuration, which can change without changing the digest.
+// Compiler includes language configuration because compiler flags can change without a new image digest.
 func (i Image) Compiler() string {
 	langs, _ := json.Marshal(i.Config.Langs) // string fields only; map keys are sorted
 	sum := sha256.Sum256(append([]byte(i.Identity.Digest+"\n"), langs...))
 	return hex.EncodeToString(sum[:])
 }
 
-// ReadImage reads the manifest the judge image was built with. It waits while
-// go-judge is unreachable (still starting) until ctx ends; any other error, such
-// as a missing or invalid manifest, fails at once.
+// ReadImage retries unreachable go-judge until ctx ends; invalid or missing manifests fail immediately.
 func ReadImage(ctx context.Context, client *Client) (Image, error) {
 	for {
 		image, err := readImage(ctx, client)
@@ -65,7 +60,6 @@ func ReadImage(ctx context.Context, client *Client) (Image, error) {
 	}
 }
 
-// unavailable reports whether err means go-judge could not be reached.
 func unavailable(err error) bool {
 	var s interface{ GRPCStatus() *status.Status }
 	return errors.As(err, &s) && s.GRPCStatus().Code() == codes.Unavailable
@@ -98,7 +92,6 @@ func parseImage(read func(name string) ([]byte, error)) (Image, error) {
 	return Image{Identity: identity, Config: cfg}, nil
 }
 
-// readFile returns a small file from the sandbox filesystem.
 func (c *Client) readFile(ctx context.Context, path string) ([]byte, error) {
 	cmd := pb.Request_CmdType_builder{
 		Args: []string{"/bin/cat", path},
