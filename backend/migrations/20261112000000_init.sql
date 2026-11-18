@@ -470,9 +470,11 @@ CREATE TABLE problem_packages (
     object_id uuid NOT NULL,
     revision bigint NOT NULL,
     samples jsonb NOT NULL,
+    statements jsonb NOT NULL,
     CONSTRAINT problem_packages_package_hash_check CHECK ((length((package_hash)::text) = 64)),
     CONSTRAINT problem_packages_revision_check CHECK ((revision > 0)),
     CONSTRAINT problem_packages_samples_check CHECK ((jsonb_typeof(samples) = 'array'::text)),
+    CONSTRAINT problem_packages_statements_check CHECK ((jsonb_typeof(statements) = 'array'::text)),
     CONSTRAINT problem_packages_build_id_key UNIQUE (build_id),
     CONSTRAINT problem_packages_id_organization_id_key UNIQUE (id, organization_id),
     CONSTRAINT problem_packages_pkey PRIMARY KEY (id),
@@ -607,6 +609,9 @@ BEGIN
     NEW.short_name=b.snapshot->'draft'->>'short_name';
     NEW.time_limit_ms=(b.snapshot->'draft'->>'time_limit_ms')::integer;
     NEW.memory_limit_mb=(b.snapshot->'draft'->>'memory_limit_mb')::integer;
+    -- Statement reads use this copy and never decode the build snapshot.
+    NEW.statements=CASE WHEN jsonb_typeof(b.snapshot->'draft'->'statements')='array'
+        THEN b.snapshot->'draft'->'statements' ELSE '[]'::jsonb END;
     RETURN NEW;
 END;
 $$;

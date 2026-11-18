@@ -803,6 +803,7 @@ type ProblemPackage struct {
 	ObjectID       uuid.UUID `json:"object_id"`
 	Revision       int64     `json:"revision"`
 	Samples        []byte    `json:"samples"`
+	Statements     []byte    `json:"statements"`
 }
 
 type ProblemPackageAsset struct {

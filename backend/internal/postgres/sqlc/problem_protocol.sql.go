@@ -771,16 +771,17 @@ func (q *Queries) ReadPackageDescriptor(ctx context.Context, id uuid.UUID) (Read
 }
 
 const readPackageStatement = `-- name: ReadPackageStatement :one
-SELECT p.problem_id,p.samples,b.snapshot,
+SELECT p.problem_id,p.title,p.samples,p.statements,
  COALESCE((SELECT jsonb_object_agg(a.name,o.sha256) FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id WHERE a.package_id=p.id),'{}')::jsonb AS assets
-FROM problem_packages p JOIN problem_builds b ON b.id=p.build_id WHERE p.id=$1
+FROM problem_packages p WHERE p.id=$1
 `
 
 type ReadPackageStatementRow struct {
-	ProblemID uuid.UUID `json:"problem_id"`
-	Samples   []byte    `json:"samples"`
-	Snapshot  []byte    `json:"snapshot"`
-	Assets    []byte    `json:"assets"`
+	ProblemID  uuid.UUID `json:"problem_id"`
+	Title      string    `json:"title"`
+	Samples    []byte    `json:"samples"`
+	Statements []byte    `json:"statements"`
+	Assets     []byte    `json:"assets"`
 }
 
 func (q *Queries) ReadPackageStatement(ctx context.Context, id uuid.UUID) (ReadPackageStatementRow, error) {
@@ -788,8 +789,9 @@ func (q *Queries) ReadPackageStatement(ctx context.Context, id uuid.UUID) (ReadP
 	var i ReadPackageStatementRow
 	err := row.Scan(
 		&i.ProblemID,
+		&i.Title,
 		&i.Samples,
-		&i.Snapshot,
+		&i.Statements,
 		&i.Assets,
 	)
 	return i, err
