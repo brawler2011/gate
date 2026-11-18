@@ -260,6 +260,8 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 	}
 	var order []string
 	texts, system, generated := map[string][]string{}, map[string]bool{}, map[string]bool{}
+	// sources holds a package path of each distinct text, for errors.
+	sources := map[string][]string{}
 	add := func(name string, f spec.File, generator bool) error {
 		if !model.ValidFileName(name) {
 			return pkg.Wrap(pkg.ErrBadInput, nil, "invalid library file name "+name)
@@ -287,6 +289,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 				return err
 			}
 			texts[name] = append(texts[name], text)
+			sources[name] = append(sources[name], f.Path)
 		}
 		return nil
 	}
@@ -341,7 +344,8 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 		case len(list) == 1:
 			file.Content = list[0]
 		default:
-			return pkg.Wrap(pkg.ErrBadInput, nil, "programs include different files named "+name)
+			return pkg.Wrap(pkg.ErrBadInput, nil, "programs include different files named "+name+": "+strings.Join(sources[name], ", ")+
+				"; a problem has one library file of each name, so rename one of them")
 		}
 		c.draft.Library = append(c.draft.Library, file)
 	}

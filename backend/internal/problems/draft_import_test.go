@@ -190,7 +190,7 @@ func TestImportEnforcesQuotasWhileConverting(t *testing.T) {
 // A draft has one library file of each name, and judge programs share it.
 func TestImportRejectsDifferentLibraryFilesOfOneName(t *testing.T) {
 	_, err := importDir(t, unpack(t, "icpc-program-headers"), nil)
-	require.ErrorContains(t, err, "different files named helper.h")
+	require.ErrorContains(t, err, "different files named helper.h: output_validators/check/helper.h, input_validators/validate/helper.h")
 }
 
 // libraryFile returns the library file of d named name, or nil.
