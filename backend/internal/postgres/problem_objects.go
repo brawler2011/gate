@@ -120,12 +120,10 @@ func (r *ProblemDraftsRepo) GetPackageStatement(ctx context.Context, id uuid.UUI
 	if err != nil {
 		return model.PackageStatement{}, HandlePgErr(err)
 	}
-	p := model.PackageStatement{ProblemID: row.ProblemID}
-	var snapshot model.BuildSnapshot
-	if err := json.Unmarshal(row.Snapshot, &snapshot); err != nil {
-		return p, fmt.Errorf("decode package snapshot: %w", err)
+	p := model.PackageStatement{ProblemID: row.ProblemID, Title: row.Title}
+	if err := json.Unmarshal(row.Statements, &p.Statements); err != nil {
+		return p, fmt.Errorf("decode package statements: %w", err)
 	}
-	p.Draft = snapshot.Draft
 	if err := json.Unmarshal(row.Samples, &p.Samples); err != nil {
 		return p, fmt.Errorf("decode package samples: %w", err)
 	}

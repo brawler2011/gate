@@ -430,6 +430,7 @@ func claimedBuildWithAsset(t *testing.T) (context.Context, *pgxpool.Pool, *postg
 	ctx, pool, repo, org, d, _ := buildableFixture(t)
 	asset := insertAvailableObject(t, ctx, pool, org)
 	d.Assets = []model.DraftAsset{{Name: "pic.png", ObjectID: asset}}
+	d.Statements = []model.DraftStatement{{Language: "ru", Legend: "Сложите числа"}}
 	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
 	require.NoError(t, err)
 	d, err = repo.GetDraft(ctx, d.ProblemID)
@@ -452,15 +453,21 @@ func TestPackageStatementContentLivesWithPackage(t *testing.T) {
 	statement, err := repo.GetPackageStatement(ctx, packageID)
 	require.NoError(t, err)
 	require.Equal(t, samples, statement.Samples)
+	require.Equal(t, d.Title, statement.Title)
+	require.Equal(t, d.Statements, statement.Statements)
 	require.Equal(t, map[string]string{"pic.png": strings.Repeat("0", 64)}, statement.Assets)
 	found, err := repo.FindPackageAssets(ctx, packageID, strings.Repeat("0", 64))
 	require.NoError(t, err)
 	require.Equal(t, []model.PackageAsset{{Name: "pic.png", Key: "objects/" + org.String() + "/" + asset.String()}}, found)
 
-	// The draft drops the asset; the Package keeps it.
+	// The draft drops the asset and changes its statement; the Package keeps both.
 	d.Assets = nil
+	d.Statements = []model.DraftStatement{{Language: "ru", Legend: "changed"}}
 	_, err = repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
 	require.NoError(t, err)
+	statement, err = repo.GetPackageStatement(ctx, packageID)
+	require.NoError(t, err)
+	require.Equal(t, "Сложите числа", statement.Statements[0].Legend)
 	time.Sleep(5 * time.Millisecond)
 	require.NoError(t, repo.PruneBuilds(ctx, time.Millisecond))
 	deleted, err := repo.DeleteObject(ctx, asset)

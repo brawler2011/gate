@@ -51,15 +51,28 @@ func (c *PackageContent) OpenImage(ctx context.Context, id uuid.UUID, sha256 str
 // statementFromDraft returns the draft statement in language, falling back
 // to English and then to the first language.
 func statementFromDraft(d model.Draft, language string) *model.Statement {
-	s := d.Statement(language)
-	if s == nil {
-		s = d.Statement("en")
+	return selectStatement(d.Title, d.Statements, language)
+}
+
+// selectStatement returns the statement in language, falling back to English
+// and then to the first language in alphabetical order.
+func selectStatement(title string, statements []model.DraftStatement, language string) *model.Statement {
+	find := func(language string) *model.DraftStatement {
+		i := slices.IndexFunc(statements, func(s model.DraftStatement) bool { return s.Language == language })
+		if i < 0 {
+			return nil
+		}
+		return &statements[i]
 	}
-	if s == nil && len(d.Statements) > 0 {
-		first := slices.MinFunc(d.Statements, func(a, b model.DraftStatement) int { return strings.Compare(a.Language, b.Language) })
+	s := find(language)
+	if s == nil {
+		s = find("en")
+	}
+	if s == nil && len(statements) > 0 {
+		first := slices.MinFunc(statements, func(a, b model.DraftStatement) int { return strings.Compare(a.Language, b.Language) })
 		s = &first
 	}
-	statement := model.Statement{Title: d.Title}
+	statement := model.Statement{Title: title}
 	if s != nil {
 		statement.Legend, statement.InputFormat, statement.OutputFormat = s.Legend, s.Input, s.Output
 		statement.Notes, statement.Interaction, statement.Scoring = s.Notes, s.Interaction, s.Scoring
@@ -78,5 +91,5 @@ func (c *PackageContent) ReadStatement(ctx context.Context, problemID, packageID
 		}
 		return model.StatementContent{Samples: []model.Sample{}, Assets: map[string]string{}}
 	}
-	return model.StatementContent{Statement: statementFromDraft(p.Draft, language), Samples: p.Samples, Assets: p.Assets}
+	return model.StatementContent{Statement: selectStatement(p.Title, p.Statements, language), Samples: p.Samples, Assets: p.Assets}
 }

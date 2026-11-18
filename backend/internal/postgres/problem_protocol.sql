@@ -81,9 +81,9 @@ SELECT sqlc.arg(package_id)::uuid,b.organization_id,a->>'name',(a->>'object_id')
 FROM problem_builds b,jsonb_array_elements(b.snapshot->'draft'->'assets') a WHERE b.id=sqlc.arg(build_id);
 
 -- name: ReadPackageStatement :one
-SELECT p.problem_id,p.samples,b.snapshot,
+SELECT p.problem_id,p.title,p.samples,p.statements,
  COALESCE((SELECT jsonb_object_agg(a.name,o.sha256) FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id WHERE a.package_id=p.id),'{}')::jsonb AS assets
-FROM problem_packages p JOIN problem_builds b ON b.id=p.build_id WHERE p.id=$1;
+FROM problem_packages p WHERE p.id=$1;
 
 -- name: ListPackageAssetsBySHA256 :many
 SELECT a.name,o.key FROM problem_package_assets a JOIN stored_objects o ON o.id=a.object_id

@@ -52,3 +52,32 @@ func TestPackageContentServesOnlyImages(t *testing.T) {
 	require.Equal(t, "image/svg+xml", contentType)
 	require.Equal(t, []string{"svg"}, store.keys)
 }
+
+type storedStatement struct{ p model.PackageStatement }
+
+func (s storedStatement) GetPackageDescriptor(context.Context, uuid.UUID) (model.PackageDescriptor, error) {
+	return model.PackageDescriptor{}, pkg.ErrNotFound
+}
+func (s storedStatement) GetPackageStatement(context.Context, uuid.UUID) (model.PackageStatement, error) {
+	return s.p, nil
+}
+func (storedStatement) FindPackageAssets(context.Context, uuid.UUID, string) ([]model.PackageAsset, error) {
+	return nil, nil
+}
+
+func TestReadStatementFallsBackToEnglishThenFirstLanguage(t *testing.T) {
+	problemID := uuid.New()
+	read := func(language string, statements ...model.DraftStatement) string {
+		content := &PackageContent{Repo: storedStatement{p: model.PackageStatement{ProblemID: problemID, Title: "Sum", Statements: statements}}}
+		s := content.ReadStatement(context.Background(), problemID, uuid.New(), language).Statement
+		require.Equal(t, "Sum", s.Title)
+		return s.Legend
+	}
+	ru := model.DraftStatement{Language: "ru", Legend: "ru"}
+	en := model.DraftStatement{Language: "en", Legend: "en"}
+	de := model.DraftStatement{Language: "de", Legend: "de"}
+	require.Equal(t, "ru", read("ru", en, ru))
+	require.Equal(t, "en", read("fr", ru, en, de))
+	require.Equal(t, "de", read("fr", ru, de))
+	require.Empty(t, read("ru"))
+}

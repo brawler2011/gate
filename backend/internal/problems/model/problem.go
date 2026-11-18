@@ -195,9 +195,10 @@ type Sample struct {
 // PackageStatement is the statement-facing content of a built package. It is
 // stored at publication, so reading it never opens the package archive.
 type PackageStatement struct {
-	ProblemID uuid.UUID
-	Draft     Draft
-	Samples   []Sample
+	ProblemID  uuid.UUID
+	Title      string
+	Statements []DraftStatement
+	Samples    []Sample
 	// Assets maps each statement asset name to its content SHA-256.
 	Assets map[string]string
 }
