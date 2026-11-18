@@ -55,12 +55,8 @@ before archiving. Missing or changed input objects fail materialization with the
 object UUID and affected test input/answer or asset path.
 
 A package holds no binaries and does not depend on a judge image. The judge
-compiles the checker and interactor with its own image on first use. Builds and
-the judge of a worker share compiled programs in `<work_dir>/programs/<key>`
-(`sandbox.ProgramCache`), keyed by the source, language, library files and the
-compiler (the image digest together with its language configuration): a rebuild
-does not recompile unchanged programs, and the judge reuses what the build
-compiled. Verdicts are reproducible against the current image only.
+compiles the checker and interactor with its own image; builds and the judge
+share compiled programs (`sandbox.ProgramCache`). Verdicts are reproducible against the current image only.
 
 ## Version and failure boundaries
 

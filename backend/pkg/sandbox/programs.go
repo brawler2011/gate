@@ -18,15 +18,13 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-// Program is a source to compile: its language configuration and the files it
-// compiles with, by name.
+// Program is a source to compile with its dependency files.
 type Program struct {
 	Source   []byte
 	Language string
 	Deps     map[string][]byte
 }
 
-// key identifies what compiling p on compiler produces.
 func (p Program) key(compiler string) string {
 	h := sha256.New()
 	field := func(h hash.Hash, b []byte) {
@@ -48,29 +46,19 @@ func (p Program) key(compiler string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// CompileFunc compiles p within limits and writes the result into dir: the
-// primary file as "entry" and each dependency under "deps/".
+// CompileFunc compiles p into dir as "entry" and "deps/<name>".
 type CompileFunc func(ctx context.Context, p Program, limits FileRunLimits, dir string) error
 
-// ProgramCache keeps the programs this worker's judge image compiled on local
-// disk, by content: the source, the language, the files it compiles with and
-// the compiler. Problem builds and the judge share it, so an unchanged checker
-// is not recompiled on rebuild, and the judge reuses what the build compiled.
-//
-// An entry is <Root>/<key>. It is compiled in a temporary directory next to it
-// and renamed into place, so a present entry is always complete; a crash leaves
-// only a temporary directory, which is never read. Entries are never
-// invalidated; the cache lives on pod scratch space and starts empty with the pod.
+// ProgramCache keeps compiled programs on local disk by content. Builds and
+// the judge share it. Entries are renamed into place, so a present one is complete.
 type ProgramCache struct {
-	Root string
-	// Compiler identifies the judge image and its language configuration (Image.Compiler).
-	Compiler string
+	Root     string
+	Compiler string // Image.Compiler()
 	Compile  CompileFunc
 	group    singleflight.Group
 }
 
-// NewProgramCache returns a cache in root that compiles with image in the
-// sandbox client runs and downloads the results through files.
+// NewProgramCache returns a cache in root that compiles with image.
 func NewProgramCache(root string, client *Client, files *FileTransport, image Image) *ProgramCache {
 	sb := NewSandbox(client, image.Config)
 	return &ProgramCache{Root: root, Compiler: image.Compiler(), Compile: func(ctx context.Context, p Program, limits FileRunLimits, dir string) error {
@@ -78,9 +66,8 @@ func NewProgramCache(root string, client *Client, files *FileTransport, image Im
 	}}
 }
 
-// Get returns the directory holding p compiled, compiling it within limits
-// unless it is cached. Limits are not part of the key: they decide only
-// whether a compilation succeeds.
+// Get returns the directory of p compiled, compiling it on a miss.
+// Limits are not part of the key.
 func (c *ProgramCache) Get(ctx context.Context, p Program, limits FileRunLimits) (string, error) {
 	dir := filepath.Join(c.Root, p.key(c.Compiler))
 	_, err, _ := c.group.Do(dir, func() (any, error) {
@@ -109,8 +96,7 @@ func (c *ProgramCache) Get(ctx context.Context, p Program, limits FileRunLimits)
 	return dir, err //nolint:wrapcheck // compilation errors keep their kind for the caller
 }
 
-// CompileTo compiles p within limits and downloads the result into dir in the
-// ProgramCache layout.
+// CompileTo compiles p and downloads the result into dir.
 func (s *Sandbox) CompileTo(ctx context.Context, files *FileTransport, p Program, limits FileRunLimits, dir string) error {
 	executable, err := s.CompileWithLimits(ctx, p.Source, p.Language, p.Deps, limits)
 	if err != nil {
@@ -143,8 +129,7 @@ func (s *Sandbox) CompileTo(ctx context.Context, files *FileTransport, p Program
 	return nil
 }
 
-// UploadCompiled uploads a compiled program from dir (the ProgramCache layout)
-// to the sandbox. The caller releases the returned files.
+// UploadCompiled uploads a compiled program from dir; the caller releases it.
 func (t *FileTransport) UploadCompiled(ctx context.Context, dir string, limit int64) (Executable, error) {
 	upload := func(path string) (string, error) {
 		f, err := os.Open(path)
@@ -185,8 +170,7 @@ func (t *FileTransport) UploadCompiled(ctx context.Context, dir string, limit in
 	return executable, nil
 }
 
-// release deletes the sandbox files of executable, logging failures: a file
-// left behind only takes space in the sandbox file store.
+// release deletes the sandbox files of executable.
 func (t *FileTransport) release(executable Executable) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

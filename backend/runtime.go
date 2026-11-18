@@ -232,7 +232,6 @@ func workerServices(d sharedDeps, sandboxClient *sandbox.Client, judgeImage sand
 		return nil, err
 	}
 
-	// Builds and the judge share compiled programs, so the judge reuses what a build compiled.
 	programs := sandbox.NewProgramCache(filepath.Join(problemPolicy.WorkDir, "programs"), sandboxClient, fileTransport, judgeImage)
 	pipeline := &builder.Pipeline{Repo: d.problemDrafts, Store: d.store, Bucket: defaultS3ObjectBucket, TempDir: problemPolicy.WorkDir, Client: sandboxClient, Files: fileTransport, Languages: judgeImage.Config, Programs: programs, Logger: d.logger}
 	buildWorker := &builder.Worker{Pipeline: pipeline, Parallelism: problemPolicy.Parallelism, Lease: problemPolicy.Lease, Poll: problemPolicy.Poll}

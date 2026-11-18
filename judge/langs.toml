@@ -8,9 +8,7 @@
 #             Order defines selection priority; put preferred configurations first.
 # syntax      Prism (refractor) grammar the frontend highlights sources with
 # package     nixpkgs attribute installed into the judge image (see flake.nix)
-# compile_cpu CPU time a submission may take to compile (wall time: 3x); set
-#             from compile times measured on the production VPS (#324), with
-#             a margin of about 4x over a heavy typical submission
+# compile_cpu submission compile CPU time (wall: 3x)
 # The other keys tell the backend how to compile and run code in the sandbox,
 # where the runtime's binaries are available under /usr/bin.
 

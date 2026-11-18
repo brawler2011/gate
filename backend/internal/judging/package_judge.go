@@ -24,9 +24,8 @@ type PackageJudge struct {
 	Files  *sandbox.FileTransport
 	// Languages are the running judge image's; submissions and package programs compile with them.
 	Languages *sandbox.Config
-	// Programs is shared with problem builds, so the judge reuses what a build compiled.
-	Programs *sandbox.ProgramCache
-	Logger   *slog.Logger
+	Programs  *sandbox.ProgramCache
+	Logger    *slog.Logger
 }
 
 func (j *PackageJudge) release(id string) {
@@ -48,8 +47,7 @@ func (j *PackageJudge) upload(ctx context.Context, root, path string, limit int6
 	return j.Files.Upload(ctx, f, limit)
 }
 
-// program uploads the checker or interactor of the package, compiled with
-// this judge's image, to the sandbox.
+// program uploads the compiled checker or interactor to the sandbox.
 func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, source gfmt.Program) (sandbox.Executable, error) {
 	read := func(path string) ([]byte, error) {
 		data, err := os.ReadFile(filepath.Join(pkg.Format.Path, path))

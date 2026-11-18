@@ -216,7 +216,6 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	delete(without, "cpp17")
 	pipeline := h.pipeline()
 	pipeline.Languages = &sandbox.Config{Langs: without}
-	// The worker's cache compiles with the same running image.
 	pipeline.Programs = sandbox.NewProgramCache(dbfixtures.DiskTempDir(t), h.services.client, h.services.files, sandbox.Image{Config: pipeline.Languages})
 	_, err := pipeline.Execute(h.ctx, h.enqueueAndClaim(t))
 	var failure *builder.Failure
@@ -230,7 +229,6 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	cpp.Compile = strings.Replace(cpp.Compile, "g++ ", "g++ -DNEW_IMAGE ", 1)
 	changed["cpp17"] = cpp
 	pipeline.Languages = &sandbox.Config{Langs: changed}
-	// The worker's cache compiles with the same running image.
 	pipeline.Programs = sandbox.NewProgramCache(dbfixtures.DiskTempDir(t), h.services.client, h.services.files, sandbox.Image{Config: pipeline.Languages})
 	_, err = pipeline.Execute(h.ctx, h.enqueueAndClaim(t))
 	require.NoError(t, err)

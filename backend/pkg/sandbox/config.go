@@ -32,19 +32,13 @@ type Language struct {
 	CodeFile    string `toml:"code_file" json:"code_file"`
 	CompileFile string `toml:"compile_file" json:"compile_file"`
 	Execute     string `toml:"execute" json:"execute"`
-	// CompileCPU is the CPU time a submission may take to compile; a
-	// configuration with a compile command needs it. Programs of a problem
-	// compile with the problem limits instead (problems.limits.compile).
+	// CompileCPU limits submission compilation only.
 	CompileCPU time.Duration `toml:"compile_cpu" json:"-"`
 }
 
-// compileWallFactor bounds a submission's compilation in wall-clock time as a
-// multiple of its CPU time: a busy single core stretches wall time.
 const compileWallFactor = 3
 
-// SubmissionCompileLimits returns the limits a submission in language compiles
-// with: base, with the configuration's own compile time. An unknown language
-// keeps base; compiling fails on it anyway.
+// SubmissionCompileLimits returns base with the language's compile time.
 func (c *Config) SubmissionCompileLimits(language string, base FileRunLimits) FileRunLimits {
 	if lang, ok := c.Langs[language]; ok && lang.CompileCPU > 0 {
 		base.CPU = lang.CompileCPU

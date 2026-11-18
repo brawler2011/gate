@@ -44,9 +44,8 @@ type Pipeline struct {
 	Files   *sandbox.FileTransport
 	// Languages are the running judge image's; a build compiles with them.
 	Languages *sandbox.Config
-	// Programs is shared with the judge, which then reuses what a build compiled.
-	Programs *sandbox.ProgramCache
-	Logger   *slog.Logger
+	Programs  *sandbox.ProgramCache
+	Logger    *slog.Logger
 }
 type Failure struct {
 	Stage     string `json:"stage"`
