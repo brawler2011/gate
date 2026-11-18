@@ -455,6 +455,43 @@ public class Main {
 		}
 	})
 
+	// Every catalog configuration compiles and runs a program in the image.
+	t.Run("catalog configurations", func(t *testing.T) {
+		sources := map[string]string{
+			"c":       "#include <stdio.h>\n#include <math.h>\nint main(void){long long a,b;scanf(\"%lld %lld\",&a,&b);printf(\"%lld\\n\",a+b+(long long)sqrt(0.0));}",
+			"cpp17":   cppSum,
+			"cpp20":   cppSum,
+			"cpp23":   cppSum,
+			"cpp26":   cppSum,
+			"python3": pythonSum,
+			"pypy3":   pythonSum,
+			"java":    "import java.util.Scanner;\npublic class Main { public static void main(String[] args) { Scanner s = new Scanner(System.in); System.out.println(s.nextLong() + s.nextLong()); } }",
+			"go":      "package main\nimport \"fmt\"\nfunc main() { var a, b int64; fmt.Scan(&a, &b); fmt.Println(a + b) }",
+			"rust":    "use std::io::Read;\nfn main() { let mut s = String::new(); std::io::stdin().read_to_string(&mut s).unwrap(); let n: i64 = s.split_whitespace().map(|x| x.parse::<i64>().unwrap()).sum(); println!(\"{n}\"); }",
+			"node":    "const [a, b] = require(\"fs\").readFileSync(0, \"utf8\").trim().split(/\\s+/).map(BigInt);\nconsole.log((a + b).toString());",
+		}
+		for _, id := range cfg.Order {
+			t.Run(id, func(t *testing.T) {
+				t.Parallel()
+				source, ok := sources[id]
+				if !ok {
+					t.Fatalf("no test program for configuration %q", id)
+				}
+				executable, err := sb.Compile(ctx, []byte(source), id, nil)
+				if err != nil {
+					t.Fatalf("failed to compile: %v", err)
+				}
+				result, err := sb.Test(ctx, executable, id, []byte("2000000000 3000000000\n"), 5000, 256)
+				if err != nil {
+					t.Fatalf("failed to run: %v", err)
+				}
+				if result.Status != sandbox.StatusOK || strings.TrimSpace(string(result.Stdout)) != "5000000000" {
+					t.Fatalf("got %s with output %q (stderr %q)", result.Status, result.Stdout, result.Stderr)
+				}
+			})
+		}
+	})
+
 	t.Run("compile latex booklet", func(t *testing.T) {
 		// Uncompressed PDF objects keep the font dictionaries readable below.
 		texSource := `\pdfobjcompresslevel=0 \pdfcompresslevel=0
@@ -484,6 +521,11 @@ Test legend. Условие задачи на русском языке.
 		}
 	})
 }
+
+const (
+	cppSum    = "#include <iostream>\nint main() { long long a, b; std::cin >> a >> b; std::cout << a + b << std::endl; }"
+	pythonSum = "print(sum(map(int, input().split())))"
+)
 
 func getLanguageKey(filename string) (string, error) {
 	ext := filepath.Ext(filename)
