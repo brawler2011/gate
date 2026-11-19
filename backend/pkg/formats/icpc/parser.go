@@ -64,15 +64,8 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			p.Checker = &output[0]
 		}
 	}
-	input, err := collect("input_validators")
-	if err != nil {
+	if p.Validators, err = collect("input_validators"); err != nil {
 		return nil, err
-	}
-	if len(input) > 1 {
-		return nil, fmt.Errorf("package has %d input validators; Gate supports one", len(input))
-	}
-	if len(input) == 1 {
-		p.Validator = &input[0]
 	}
 	if p.Generators, err = collect("generators"); err != nil {
 		return nil, err

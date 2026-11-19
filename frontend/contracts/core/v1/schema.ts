@@ -1787,6 +1787,16 @@ export interface components {
             language: string;
             source: string;
         };
+        /** @description A validator; the build fails when it rejects a test input. testlib validators receive --group with the subtask name. */
+        ProblemDraftValidator: {
+            /** @description Unique among the validators; the program's package file is the name with the extension of its language. */
+            name: string;
+            /** @description Identifier of the language configuration from GET /languages, such as cpp17 or python3. */
+            language: string;
+            source: string;
+            /** @description IDs of the subtasks whose tests the validator checks; empty checks every test. */
+            subtasks: string[];
+        };
         /** @description A source file judge programs include by its name; names are unique in a draft and identify the file. */
         ProblemDraftLibraryFile: {
             name: string;
@@ -1854,8 +1864,7 @@ export interface components {
             max_score: number | null;
             checker: components["schemas"]["ProblemDraftChecker"] | null;
             interactor: components["schemas"]["ProblemDraftProgram"] | null;
-            /** @description At most one validator. */
-            validators: components["schemas"]["ProblemDraftNamedProgram"][];
+            validators: components["schemas"]["ProblemDraftValidator"][];
             generators: components["schemas"]["ProblemDraftNamedProgram"][];
             solutions: components["schemas"]["ProblemDraftNamedProgram"][];
             /** @description Name of a solution of the draft. */
@@ -5138,6 +5147,7 @@ export type ProblemDraftAnswer = components['schemas']['ProblemDraftAnswer'];
 export type ProblemDraftProgram = components['schemas']['ProblemDraftProgram'];
 export type ProblemDraftChecker = components['schemas']['ProblemDraftChecker'];
 export type ProblemDraftNamedProgram = components['schemas']['ProblemDraftNamedProgram'];
+export type ProblemDraftValidator = components['schemas']['ProblemDraftValidator'];
 export type ProblemDraftLibraryFile = components['schemas']['ProblemDraftLibraryFile'];
 export type ProblemDraftStatement = components['schemas']['ProblemDraftStatement'];
 export type ProblemDraftSubtask = components['schemas']['ProblemDraftSubtask'];

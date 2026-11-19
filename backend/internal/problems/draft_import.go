@@ -157,7 +157,7 @@ func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (import
 func (uc *DraftUseCase) convertImport(result *draftImport, root string, p *spec.Problem, id uuid.UUID, revision int64) error {
 	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}}
 	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb,
-		DraftContent: model.DraftContent{Validators: []model.DraftNamedProgram{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftNamedProgram{},
+		DraftContent: model.DraftContent{Validators: []model.DraftValidator{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftNamedProgram{},
 			Library: []model.DraftLibraryFile{}, Statements: []model.DraftStatement{}, Assets: []model.DraftAsset{}, Tests: []model.DraftTest{}, Subtasks: []model.DraftSubtask{}}}
 	if err := c.convert(p); err != nil {
 		return err
@@ -193,10 +193,12 @@ func (c *importConverter) convert(p *spec.Problem) error {
 			return err
 		}
 	}
-	if p.Validator != nil {
-		if _, err := c.named(&c.draft.Validators, *p.Validator); err != nil {
+	for _, v := range p.Validators {
+		programs := c.draft.ValidatorPrograms()
+		if _, err := c.named(&programs, v); err != nil {
 			return err
 		}
+		c.draft.Validators = append(c.draft.Validators, model.DraftValidator{DraftNamedProgram: programs[len(programs)-1], Subtasks: []uuid.UUID{}})
 	}
 	generators := map[string]string{}
 	for _, g := range p.Generators {
@@ -238,7 +240,27 @@ func (c *importConverter) convert(p *spec.Problem) error {
 		}
 		c.draft.Assets = append(c.draft.Assets, model.DraftAsset{Name: a.Name, ObjectID: oid})
 	}
-	return c.addGroups(p.Groups, generators, solutions)
+	if err := c.addGroups(p.Groups, generators, solutions); err != nil {
+		return err
+	}
+	return c.scopeValidators(p.Validators)
+}
+
+func (c *importConverter) scopeValidators(validators []spec.Program) error {
+	ids := map[string]uuid.UUID{}
+	for _, s := range c.draft.Subtasks {
+		ids[s.Name] = s.ID
+	}
+	for i, v := range validators {
+		for _, group := range v.Groups {
+			id, ok := ids[group]
+			if !ok {
+				return pkg.Wrap(pkg.ErrBadInput, nil, "validator "+v.Path+" checks unknown test group "+group)
+			}
+			c.draft.Validators[i].Subtasks = append(c.draft.Validators[i].Subtasks, id)
+		}
+	}
+	return nil
 }
 
 // Generators retain bundled testlib to preserve random seeds; other upstream copies may auto-update.
@@ -307,8 +329,13 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 		}
 		return nil
 	}
-	for _, program := range []*spec.Program{p.Checker, p.Interactor, p.Validator} {
+	for _, program := range []*spec.Program{p.Checker, p.Interactor} {
 		if err := judge(program, false); err != nil {
+			return err
+		}
+	}
+	for i := range p.Validators {
+		if err := judge(&p.Validators[i], false); err != nil {
 			return err
 		}
 	}
@@ -318,7 +345,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 		}
 	}
 	// Without judge programs nothing selects library files, so keep them all for a later checker.
-	if p.Checker == nil && p.Interactor == nil && p.Validator == nil && len(p.Generators) == 0 {
+	if p.Checker == nil && p.Interactor == nil && len(p.Validators) == 0 && len(p.Generators) == 0 {
 		for _, f := range p.Library {
 			if err := add(f.Name, f, false); err != nil {
 				return err

@@ -41,7 +41,7 @@ func placeDraft(d model.Draft, languages *sandbox.Config) packageLayout {
 	for _, list := range []struct {
 		role     string
 		programs []model.DraftNamedProgram
-	}{{"validator", d.Validators}, {"generator", d.Generators}, {"solution", d.Solutions}} {
+	}{{"validator", d.ValidatorPrograms()}, {"generator", d.Generators}, {"solution", d.Solutions}} {
 		for _, p := range list.programs {
 			place(programKey(list.role, p.Name), list.role, p.Name, p.DraftProgram)
 		}

@@ -7976,20 +7976,19 @@ func (s *ProblemBuildState) UnmarshalText(data []byte) error {
 // referred to by ID.
 // Ref: #/components/schemas/ProblemDraft
 type ProblemDraft struct {
-	ProblemID     uuid.UUID              `json:"problem_id"`
-	Revision      int64                  `json:"revision"`
-	Title         string                 `json:"title"`
-	ShortName     string                 `json:"short_name"`
-	Type          ProblemDraftType       `json:"type"`
-	TimeLimitMs   int64                  `json:"time_limit_ms"`
-	MemoryLimitMB int64                  `json:"memory_limit_mb"`
-	MaxScore      NilFloat64             `json:"max_score"`
-	Checker       NilProblemDraftChecker `json:"checker"`
-	Interactor    NilProblemDraftProgram `json:"interactor"`
-	// At most one validator.
-	Validators []ProblemDraftNamedProgram `json:"validators"`
-	Generators []ProblemDraftNamedProgram `json:"generators"`
-	Solutions  []ProblemDraftNamedProgram `json:"solutions"`
+	ProblemID     uuid.UUID                  `json:"problem_id"`
+	Revision      int64                      `json:"revision"`
+	Title         string                     `json:"title"`
+	ShortName     string                     `json:"short_name"`
+	Type          ProblemDraftType           `json:"type"`
+	TimeLimitMs   int64                      `json:"time_limit_ms"`
+	MemoryLimitMB int64                      `json:"memory_limit_mb"`
+	MaxScore      NilFloat64                 `json:"max_score"`
+	Checker       NilProblemDraftChecker     `json:"checker"`
+	Interactor    NilProblemDraftProgram     `json:"interactor"`
+	Validators    []ProblemDraftValidator    `json:"validators"`
+	Generators    []ProblemDraftNamedProgram `json:"generators"`
+	Solutions     []ProblemDraftNamedProgram `json:"solutions"`
 	// Name of a solution of the draft.
 	MainSolution NilString                 `json:"main_solution"`
 	Library      []ProblemDraftLibraryFile `json:"library"`
@@ -8050,7 +8049,7 @@ func (s *ProblemDraft) GetInteractor() NilProblemDraftProgram {
 }
 
 // GetValidators returns the value of Validators.
-func (s *ProblemDraft) GetValidators() []ProblemDraftNamedProgram {
+func (s *ProblemDraft) GetValidators() []ProblemDraftValidator {
 	return s.Validators
 }
 
@@ -8145,7 +8144,7 @@ func (s *ProblemDraft) SetInteractor(val NilProblemDraftProgram) {
 }
 
 // SetValidators sets the value of Validators.
-func (s *ProblemDraft) SetValidators(val []ProblemDraftNamedProgram) {
+func (s *ProblemDraft) SetValidators(val []ProblemDraftValidator) {
 	s.Validators = val
 }
 
@@ -8866,6 +8865,60 @@ func (s *ProblemDraftType) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// A validator; the build fails when it rejects a test input. testlib validators receive --group with
+// the subtask name.
+// Ref: #/components/schemas/ProblemDraftValidator
+type ProblemDraftValidator struct {
+	// Unique among the validators; the program's package file is the name with the extension of its
+	// language.
+	Name string `json:"name"`
+	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
+	Language string `json:"language"`
+	Source   string `json:"source"`
+	// IDs of the subtasks whose tests the validator checks; empty checks every test.
+	Subtasks []uuid.UUID `json:"subtasks"`
+}
+
+// GetName returns the value of Name.
+func (s *ProblemDraftValidator) GetName() string {
+	return s.Name
+}
+
+// GetLanguage returns the value of Language.
+func (s *ProblemDraftValidator) GetLanguage() string {
+	return s.Language
+}
+
+// GetSource returns the value of Source.
+func (s *ProblemDraftValidator) GetSource() string {
+	return s.Source
+}
+
+// GetSubtasks returns the value of Subtasks.
+func (s *ProblemDraftValidator) GetSubtasks() []uuid.UUID {
+	return s.Subtasks
+}
+
+// SetName sets the value of Name.
+func (s *ProblemDraftValidator) SetName(val string) {
+	s.Name = val
+}
+
+// SetLanguage sets the value of Language.
+func (s *ProblemDraftValidator) SetLanguage(val string) {
+	s.Language = val
+}
+
+// SetSource sets the value of Source.
+func (s *ProblemDraftValidator) SetSource(val string) {
+	s.Source = val
+}
+
+// SetSubtasks sets the value of Subtasks.
+func (s *ProblemDraftValidator) SetSubtasks(val []uuid.UUID) {
+	s.Subtasks = val
 }
 
 // Problem member data.

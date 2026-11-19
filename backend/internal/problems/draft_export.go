@@ -141,11 +141,21 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 			return nil, err
 		}
 	}
+	subtasks := subtaskNames(d)
+	for _, v := range d.Validators {
+		source := gfmt.Source{}
+		for _, id := range v.Subtasks {
+			source.Groups = append(source.Groups, subtasks[id])
+		}
+		if _, err := program("validator", v.Name, v.DraftProgram, source); err != nil {
+			return nil, err
+		}
+	}
 	solutions := map[string]string{}
 	for _, list := range []struct {
 		role     string
 		programs []model.DraftNamedProgram
-	}{{"validator", d.Validators}, {"generator", d.Generators}, {"solution", d.Solutions}} {
+	}{{"generator", d.Generators}, {"solution", d.Solutions}} {
 		for _, p := range list.programs {
 			file, err := program(list.role, p.Name, p.DraftProgram, gfmt.Source{})
 			if err != nil {
@@ -183,7 +193,7 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 			return nil, err
 		}
 	}
-	if err := writeTests(w, &m, d, solutions, open); err != nil {
+	if err := writeTests(w, &m, d, subtasks, solutions, open); err != nil {
 		return nil, err
 	}
 	manifest, err := yaml.Marshal(m)
@@ -203,7 +213,7 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 }
 
 // Subtask names are map keys in gfmt, so empty and repeated draft names get their ordinal appended.
-func writeTests(w *archiveWriter, m *gfmt.Problem, d model.Draft, solutions map[string]string, open func(uuid.UUID) (io.ReadCloser, error)) error {
+func subtaskNames(d model.Draft) map[uuid.UUID]string {
 	names, taken := map[uuid.UUID]string{}, map[string]bool{}
 	for _, s := range d.Subtasks {
 		base := cmp.Or(s.Name, "subtask")
@@ -213,7 +223,13 @@ func writeTests(w *archiveWriter, m *gfmt.Problem, d model.Draft, solutions map[
 		}
 		taken[name] = true
 		names[s.ID] = name
-		m.Subtasks[name] = gfmt.Subtask{Ordinal: s.Ordinal, Points: s.Points, Policy: s.Policy, Tests: []gfmt.Test{}}
+	}
+	return names
+}
+
+func writeTests(w *archiveWriter, m *gfmt.Problem, d model.Draft, names map[uuid.UUID]string, solutions map[string]string, open func(uuid.UUID) (io.ReadCloser, error)) error {
+	for _, s := range d.Subtasks {
+		m.Subtasks[names[s.ID]] = gfmt.Subtask{Ordinal: s.Ordinal, Points: s.Points, Policy: s.Policy, Tests: []gfmt.Test{}}
 	}
 	for _, s := range d.Subtasks {
 		subtask := m.Subtasks[names[s.ID]]

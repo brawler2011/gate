@@ -14,6 +14,7 @@ import {
   removeTest,
   renameProgram,
   setSubtaskDependencies,
+  setValidatorSubtasks,
   sumPoints,
   upsertTest,
 } from "@/components/workshop/draft/draftOps";
@@ -108,11 +109,14 @@ describe("subtasks and tests", () => {
     expect(moveTest(draft, second, 1)).toBe(draft);
   });
 
-  test("deleting a subtask drops dependencies on it", () => {
+  test("deleting a subtask drops dependencies and validator scopes on it", () => {
     let draft = addSubtask(addSubtask(emptyDraft(), "A"), "B");
     const [a, b] = draft.subtasks.map((s) => s.id);
     draft = setSubtaskDependencies(draft, b, [a]);
-    expect(removeSubtask(draft, a).subtasks).toEqual([{...draft.subtasks[1], depends_on: []}]);
+    draft = setValidatorSubtasks(applied(addProgram(draft, "validator", "v", "cpp", "")), "v", [a, b]);
+    const removed = removeSubtask(draft, a);
+    expect(removed.subtasks).toEqual([{...draft.subtasks[1], depends_on: []}]);
+    expect(removed.validators[0].subtasks).toEqual([b]);
   });
 });
 

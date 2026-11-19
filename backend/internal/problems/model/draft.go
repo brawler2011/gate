@@ -33,7 +33,7 @@ type Draft struct {
 type DraftContent struct {
 	Checker      *DraftChecker       `json:"checker"`
 	Interactor   *DraftProgram       `json:"interactor"`
-	Validators   []DraftNamedProgram `json:"validators"`
+	Validators   []DraftValidator    `json:"validators"`
 	Generators   []DraftNamedProgram `json:"generators"`
 	Solutions    []DraftNamedProgram `json:"solutions"`
 	MainSolution *string             `json:"main_solution"`
@@ -67,6 +67,16 @@ func (c *DraftChecker) Text() string {
 type DraftNamedProgram struct {
 	Name string `json:"name"`
 	DraftProgram
+}
+
+// DraftValidator checks the tests of the listed subtasks, or every test when the list is empty.
+type DraftValidator struct {
+	DraftNamedProgram
+	Subtasks []uuid.UUID `json:"subtasks"`
+}
+
+func (v *DraftValidator) Applies(subtask uuid.UUID) bool {
+	return len(v.Subtasks) == 0 || slices.Contains(v.Subtasks, subtask)
 }
 
 // DraftLibraryFile stores no content when AutoUpdate selects the current system library.
@@ -210,11 +220,21 @@ func (d *Draft) Generator(name string) *DraftNamedProgram { return findProgram(d
 
 func (d *Draft) Solution(name string) *DraftNamedProgram { return findProgram(d.Solutions, name) }
 
-func (d *Draft) Validator() *DraftNamedProgram {
-	if len(d.Validators) == 0 {
-		return nil
+func (d *Draft) Subtask(id uuid.UUID) *DraftSubtask {
+	for i := range d.Subtasks {
+		if d.Subtasks[i].ID == id {
+			return &d.Subtasks[i]
+		}
 	}
-	return &d.Validators[0]
+	return nil
+}
+
+func (d *Draft) ValidatorPrograms() []DraftNamedProgram {
+	programs := make([]DraftNamedProgram, len(d.Validators))
+	for i := range d.Validators {
+		programs[i] = d.Validators[i].DraftNamedProgram
+	}
+	return programs
 }
 
 // Normalize keeps absent lists from serializing as null in the contract.
@@ -224,7 +244,14 @@ func (d *Draft) Normalize() {
 			*list = []DraftNamedProgram{}
 		}
 	}
-	empty(&d.Validators)
+	if d.Validators == nil {
+		d.Validators = []DraftValidator{}
+	}
+	for i := range d.Validators {
+		if d.Validators[i].Subtasks == nil {
+			d.Validators[i].Subtasks = []uuid.UUID{}
+		}
+	}
 	empty(&d.Generators)
 	empty(&d.Solutions)
 	if d.Library == nil {
@@ -426,7 +453,7 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	for _, list := range []struct {
 		role     string
 		programs []DraftNamedProgram
-	}{{"validators", d.Validators}, {"generators", d.Generators}, {"solutions", d.Solutions}} {
+	}{{"validators", d.ValidatorPrograms()}, {"generators", d.Generators}, {"solutions", d.Solutions}} {
 		names := make(map[string]bool)
 		for i, p := range list.programs {
 			at := fmt.Sprintf("/%s/%d", list.role, i)
@@ -437,8 +464,14 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 			program(at, p.DraftProgram)
 		}
 	}
-	if len(d.Validators) > 1 {
-		v.fail("/validators/1", "a problem has at most one validator")
+	for i, validator := range d.Validators {
+		seen := make(map[uuid.UUID]bool)
+		for j, id := range validator.Subtasks {
+			if d.Subtask(id) == nil || seen[id] {
+				v.fail(fmt.Sprintf("/validators/%d/subtasks/%d", i, j), "unknown or duplicate subtask")
+			}
+			seen[id] = true
+		}
 	}
 	if d.MainSolution != nil && d.Solution(*d.MainSolution) == nil {
 		v.fail("/main_solution", "unknown solution %q", *d.MainSolution)
@@ -616,7 +649,7 @@ func (d *Draft) eachProgram(f func(at string, p DraftProgram)) {
 	for _, list := range []struct {
 		role     string
 		programs []DraftNamedProgram
-	}{{"validators", d.Validators}, {"generators", d.Generators}, {"solutions", d.Solutions}} {
+	}{{"validators", d.ValidatorPrograms()}, {"generators", d.Generators}, {"solutions", d.Solutions}} {
 		for i, p := range list.programs {
 			f(fmt.Sprintf("/%s/%d", list.role, i), p.DraftProgram)
 		}

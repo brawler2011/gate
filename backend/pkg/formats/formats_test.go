@@ -13,8 +13,8 @@ import (
 )
 
 type summary struct {
-	Type, Checker, Validator, Interactor, Main string
-	Generators, Library, Statements            []string
+	Type, Checker, Interactor, Main             string
+	Validators, Generators, Library, Statements []string
 	// Groups lists "name/policy/tests/samples/points".
 	Groups []string
 }
@@ -27,7 +27,10 @@ func summarize(p *spec.Problem) summary {
 		}
 		return program.Name
 	}
-	s.Checker, s.Validator, s.Interactor = name(p.Checker), name(p.Validator), name(p.Interactor)
+	s.Checker, s.Interactor = name(p.Checker), name(p.Interactor)
+	for _, v := range p.Validators {
+		s.Validators = append(s.Validators, v.Name)
+	}
 	for _, g := range p.Generators {
 		s.Generators = append(s.Generators, g.Name)
 	}
@@ -56,22 +59,22 @@ func TestReadTestdataPackages(t *testing.T) {
 	testlib := []string{"testlib.h"}
 	icpcLib := []string{"testlib.h", "testlib.h", "testlib.h"}
 	cases := map[string]summary{
-		"gfmt/a-plus-b": {Type: "pass-fail", Checker: "checker.cpp", Validator: "validator.cpp", Main: "solutions/ok.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
+		"gfmt/a-plus-b": {Type: "pass-fail", Checker: "checker.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/ok.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"samples/complete/3.00/3.00/0.00", "secret/each/6.00/0.00/0.00"}},
 		"gfmt/interactive-guess": {Type: "interactive", Checker: "checker.cpp", Interactor: "interactor.cpp", Main: "solutions/ok.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"samples/complete/1.00/1.00/0.00", "secret/each/1.00/0.00/0.00"}},
-		"polygon/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validator: "v.cpp", Main: "solutions/solution_mm.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
+		"polygon/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validators: []string{"v.cpp"}, Main: "solutions/solution_mm.cpp", Generators: []string{"echo.cpp"}, Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"tests/each/12.00/3.00/0.00"}},
-		"polygon/interactive-guess": {Type: "interactive", Checker: "check.cpp", Validator: "validator.cpp", Interactor: "interactor.cpp", Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
+		"polygon/interactive-guess": {Type: "interactive", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Interactor: "interactor.cpp", Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"tests/each/2.00/0.00/0.00"}},
-		"polygon/max-subarray": {Type: "pass-fail", Checker: "check.cpp", Validator: "validator.cpp", Main: "solutions/accepted.cpp", Generators: []string{"generator.cpp"}, Library: testlib, Statements: []string{"en"},
+		"polygon/max-subarray": {Type: "pass-fail", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/accepted.cpp", Generators: []string{"generator.cpp"}, Library: testlib, Statements: []string{"en"},
 			Groups: []string{"tests/each/4.00/2.00/0.00"}},
-		"polygon/subtasks-groups": {Type: "scoring", Checker: "check.cpp", Validator: "validator.cpp", Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
+		"polygon/subtasks-groups": {Type: "scoring", Checker: "check.cpp", Validators: []string{"validator.cpp"}, Main: "solutions/accepted.cpp", Library: testlib, Statements: []string{"en"},
 			Groups: []string{"1/complete/1.00/1.00/40.00", "2/complete/1.00/0.00/60.00"}},
-		"icpc/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validator: "v.cpp", Main: "submissions/accepted/accepted.cpp", Generators: []string{"echo.cpp"}, Library: icpcLib, Statements: []string{"en", "ru"},
+		"icpc/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Validators: []string{"v.cpp"}, Main: "submissions/accepted/accepted.cpp", Generators: []string{"echo.cpp"}, Library: icpcLib, Statements: []string{"en", "ru"},
 			Groups: []string{"sample/each/3.00/3.00/0.00", "secret/each/9.00/0.00/0.00"}},
 		// An interactive input is what the interactor reads, so none is published.
-		"icpc/interactive-guess": {Type: "interactive", Validator: "validator.cpp", Interactor: "interactor.cpp", Main: "submissions/accepted/accepted.cpp", Library: []string{"testlib.h", "testlib.h"}, Statements: []string{"en"},
+		"icpc/interactive-guess": {Type: "interactive", Validators: []string{"validator.cpp"}, Interactor: "interactor.cpp", Main: "submissions/accepted/accepted.cpp", Library: []string{"testlib.h", "testlib.h"}, Statements: []string{"en"},
 			Groups: []string{"sample/each/1.00/0.00/0.00", "secret/each/1.00/0.00/0.00"}},
 		"pcms2/a-plus-b": {Type: "pass-fail", Checker: "check.cpp", Library: testlib, Statements: []string{"en", "ru"},
 			Groups: []string{"tests/each/12.00/3.00/0.00"}},

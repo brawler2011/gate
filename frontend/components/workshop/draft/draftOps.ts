@@ -78,7 +78,7 @@ export const addProgram = (
   if (programsOf(draft, role).some((p) => p.name === name)) {
     return nameTaken(role, name);
   }
-  const program: ProblemDraftNamedProgram = {name, language, source};
+  const program = role === "validator" ? {name, language, source, subtasks: []} : {name, language, source};
   return {
     draft: {
       ...draft,
@@ -192,8 +192,14 @@ export const addSubtask = (draft: ProblemDraft, name: string): ProblemDraft => {
   return {...draft, subtasks: [...draft.subtasks, subtask]};
 };
 
+export const setValidatorSubtasks = (draft: ProblemDraft, name: string, subtasks: string[]): ProblemDraft => ({
+  ...draft,
+  validators: draft.validators.map((v) => (v.name === name ? {...v, subtasks} : v)),
+});
+
 export const removeSubtask = (draft: ProblemDraft, id: string): ProblemDraft => ({
   ...draft,
+  validators: draft.validators.map((v) => ({...v, subtasks: v.subtasks.filter((subtask) => subtask !== id)})),
   subtasks: draft.subtasks
     .filter((s) => s.id !== id)
     .map((s) => ({...s, depends_on: s.depends_on.filter((dependency) => dependency !== id)})),

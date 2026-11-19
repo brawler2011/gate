@@ -60,6 +60,8 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	d.Library = append(d.Library, model.DraftLibraryFile{Name: "util.h", Content: "#pragma once\n"})
 	d.Checker = &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17"}, Standard: "wcmp"}
 	d.Generators = append(d.Generators, model.DraftNamedProgram{Name: "gen", DraftProgram: model.DraftProgram{Language: "python3", Source: "print(1)\n"}})
+	d.Validators = append(d.Validators, model.DraftValidator{DraftNamedProgram: model.DraftNamedProgram{Name: "second", DraftProgram: model.DraftProgram{Language: "python3", Source: "pass\n"}},
+		Subtasks: []uuid.UUID{d.Subtasks[1].ID}})
 	gen, other := "gen", d.Solutions[1].Name
 	// Both subtasks are named samples, which gfmt otherwise treats as the sample group.
 	d.Subtasks[0].Name, d.Subtasks[1].Name = "samples", "samples"
@@ -213,7 +215,16 @@ func normalized(i *draftImport) model.Draft {
 		}
 	}
 	// Re-import lists programs in file name order.
-	for _, list := range []*[]model.DraftNamedProgram{&d.Validators, &d.Generators, &d.Solutions} {
+	d.Validators = slices.SortedFunc(slices.Values(d.Validators), func(a, b model.DraftValidator) int { return strings.Compare(a.Name, b.Name) })
+	for n := range d.Validators {
+		v := &d.Validators[n]
+		ids := make([]uuid.UUID, len(v.Subtasks))
+		for k, id := range v.Subtasks {
+			ids[k] = subtasks[id]
+		}
+		v.Subtasks = ids
+	}
+	for _, list := range []*[]model.DraftNamedProgram{&d.Generators, &d.Solutions} {
 		*list = slices.SortedFunc(slices.Values(*list), func(a, b model.DraftNamedProgram) int { return strings.Compare(a.Name, b.Name) })
 	}
 	d.Assets = append([]model.DraftAsset(nil), d.Assets...)
