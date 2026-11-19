@@ -163,7 +163,6 @@
           workingDir = "/opt";
           exposedPorts = {
             "5050/tcp" = { };
-            "5051/tcp" = { };
           };
         };
       };

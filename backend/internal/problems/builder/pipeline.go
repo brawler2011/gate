@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,8 +19,6 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/google/uuid"
 	"golang.org/x/sys/unix"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"gopkg.in/yaml.v3"
 )
 
@@ -73,8 +72,8 @@ func processKind(err error) string {
 	if errors.Is(err, sandbox.ErrUnknownLanguage) {
 		return "configuration"
 	}
-	switch status.Code(err) {
-	case codes.Unavailable, codes.DeadlineExceeded, codes.Canceled, codes.ResourceExhausted:
+	var network net.Error
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, sandbox.ErrUnavailable) || errors.As(err, &network) {
 		return "infrastructure"
 	}
 	return "author"

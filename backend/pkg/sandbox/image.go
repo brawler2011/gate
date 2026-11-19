@@ -5,15 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
 	"time"
-
-	pb "github.com/criyle/go-judge/pb"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // manifestDir is where the judge image mounts its manifest inside the sandbox (judge/mount.yaml).
@@ -60,11 +55,6 @@ func ReadImage(ctx context.Context, client *Client) (Image, error) {
 	}
 }
 
-func unavailable(err error) bool {
-	var s interface{ GRPCStatus() *status.Status }
-	return errors.As(err, &s) && s.GRPCStatus().Code() == codes.Unavailable
-}
-
 func readImage(ctx context.Context, client *Client) (Image, error) {
 	return parseImage(func(name string) ([]byte, error) { return client.readFile(ctx, manifestDir+"/"+name) })
 }
@@ -93,28 +83,20 @@ func parseImage(read func(name string) ([]byte, error)) (Image, error) {
 }
 
 func (c *Client) readFile(ctx context.Context, path string) ([]byte, error) {
-	cmd := pb.Request_CmdType_builder{
-		Args: []string{"/bin/cat", path},
-		Files: []*pb.Request_File{
-			newMemoryFile(nil),
-			newPipeCollector("stdout", manifestFileLimit),
-			newPipeCollector("stderr", 4096),
-		},
-		CpuTimeLimit: safeUint64(time.Second.Nanoseconds()),
-		MemoryLimit:  64 << 20,
-		ProcLimit:    1,
-		Env:          []string{"PATH=/usr/bin:/bin"},
-	}.Build()
-	resp, err := c.Exec(ctx, pb.Request_builder{Cmd: []*pb.Request_CmdType{cmd}}.Build())
+	results, err := c.run(ctx, request{Cmd: []cmd{{
+		Args:        []string{"/bin/cat", path},
+		Files:       []*cmdFile{memoryFile(""), collector("stdout", manifestFileLimit, false), collector("stderr", 4096, false)},
+		CPULimit:    safeUint64(time.Second.Nanoseconds()),
+		MemoryLimit: 64 << 20,
+		ProcLimit:   1,
+		Env:         []string{"PATH=/usr/bin:/bin"},
+	}}})
 	if err != nil {
 		return nil, err
 	}
-	if len(resp.GetResults()) != 1 {
-		return nil, fmt.Errorf("read %s: expected one result", path)
+	res := results[0]
+	if res.Status != resultAccepted {
+		return nil, fmt.Errorf("read %s: status=%v exit=%d stderr=%s", path, res.Status, res.ExitStatus, res.Files["stderr"])
 	}
-	res := resp.GetResults()[0]
-	if res.GetStatus() != pb.Response_Result_Accepted {
-		return nil, fmt.Errorf("read %s: status=%v exit=%d stderr=%s", path, res.GetStatus(), res.GetExitStatus(), res.GetFiles()["stderr"])
-	}
-	return res.GetFiles()["stdout"], nil
+	return []byte(res.Files["stdout"]), nil
 }

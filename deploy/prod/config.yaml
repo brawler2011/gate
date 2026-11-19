@@ -5,7 +5,6 @@ http:
   trusted_proxy: traefik-pods.kube-system.svc.cluster.local
   secure_cookies: true
 go_judge:
-  grpc_addr: 127.0.0.1:5051
   http_url: http://127.0.0.1:5050
   work_dir: /problem-work
 storage:
