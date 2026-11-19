@@ -16,6 +16,7 @@ import {
   removeSubtask,
   removeTest,
   setSubtaskDependencies,
+  subtaskLabel,
   sumPoints,
   upsertTest,
 } from "./draft/draftOps";
@@ -62,7 +63,13 @@ const SubtasksSection = ({draft, problemId}: PanelProps): ReactNode => {
                     <TextInput
                       size="xs"
                       defaultValue={subtask.name}
-                      onBlur={(e) => e.currentTarget.value.trim() !== subtask.name && e.currentTarget.value.trim() !== "" && void update(subtask.id, {name: e.currentTarget.value.trim()})}
+                      placeholder={`${subtaskLabel(subtask)}, без группы`}
+                      onBlur={(e) => {
+                        const name = e.currentTarget.value.trim();
+                        if (name !== subtask.name) {
+                          void update(subtask.id, {name});
+                        }
+                      }}
                     />
                   </Table.Td>
                   <Table.Td>
@@ -82,7 +89,7 @@ const SubtasksSection = ({draft, problemId}: PanelProps): ReactNode => {
                       size="xs"
                       data={draft.subtasks
                         .filter((s) => s.id !== subtask.id)
-                        .map((s) => ({value: s.id, label: s.name}))}
+                        .map((s) => ({value: s.id, label: subtaskLabel(s)}))}
                       value={subtask.depends_on}
                       placeholder="—"
                       onChange={(ids) => void save((current) => setSubtaskDependencies(current, subtask.id, ids))}
@@ -164,7 +171,7 @@ const TestsSection = ({draft, problemId}: PanelProps): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
   const {upload, isUploading} = useUploadToDraft(problemId);
   const [editing, setEditing] = useState<{test: ProblemDraftTest; isNew: boolean} | null>(null);
-  const subtaskNames = new Map(draft.subtasks.map((s) => [s.id, s.name]));
+  const subtaskNames = new Map(draft.subtasks.map((s) => [s.id, subtaskLabel(s)]));
 
   const create = (kind: "manual" | "generator") => {
     const subtask = draft.subtasks.at(-1);

@@ -210,9 +210,6 @@ func groups(fsys fs.FS, testset Testset, generators map[string]string) ([]spec.G
 			return nil, err
 		}
 		name := t.Group
-		if name == "" {
-			name = "tests"
-		}
 		n, ok := index[name]
 		if !ok {
 			n = len(result)

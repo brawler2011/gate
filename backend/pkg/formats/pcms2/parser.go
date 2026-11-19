@@ -216,7 +216,7 @@ func groups(fsys fs.FS, testset Testset, samples int) ([]spec.Group, error) {
 		}
 		name, policy := t.Group, "complete"
 		if name == "" {
-			name, policy = "tests", "each"
+			policy = "each"
 		}
 		n, ok := index[name]
 		if !ok {

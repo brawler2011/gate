@@ -212,14 +212,13 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 	return w, nil
 }
 
-// Subtask names are map keys in gfmt, so empty and repeated draft names get their ordinal appended.
+// Subtask names are map keys in gfmt, so repeated draft names get their ordinal appended.
 func subtaskNames(d model.Draft) map[uuid.UUID]string {
 	names, taken := map[uuid.UUID]string{}, map[string]bool{}
 	for _, s := range d.Subtasks {
-		base := cmp.Or(s.Name, "subtask")
 		name := s.Name
-		for n := s.Ordinal; name == "" || taken[name]; n++ {
-			name = base + "-" + strconv.Itoa(n)
+		for n := s.Ordinal; taken[name]; n++ {
+			name = cmp.Or(s.Name, "subtask") + "-" + strconv.Itoa(n)
 		}
 		taken[name] = true
 		names[s.ID] = name

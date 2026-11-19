@@ -1,7 +1,7 @@
 import {Button, Checkbox, FileInput, Group, Modal, NumberInput, Select, SegmentedControl, Stack, Text, TextInput} from "@mantine/core";
 import {useState} from "react";
 
-import {toHundredths} from "../draft/draftOps";
+import {subtaskLabel, toHundredths} from "../draft/draftOps";
 
 import type {ProblemDraft, ProblemDraftTest} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
@@ -76,7 +76,7 @@ export const TestEditorModal = ({draft, test, isNew, saving, onClose, onSubmit}:
         <Group grow align="flex-start">
           <Select
             label="Подзадача"
-            data={draft.subtasks.map((s) => ({value: s.id, label: s.name}))}
+            data={draft.subtasks.map((s) => ({value: s.id, label: subtaskLabel(s)}))}
             value={subtaskId}
             allowDeselect={false}
             onChange={(value) => value && setSubtaskId(value)}

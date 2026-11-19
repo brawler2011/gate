@@ -126,7 +126,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 }
 
 
-// Every validator that applies to a test checks it; a group validator sees only its group, with --group.
+// Every validator that applies to a test checks it; a group validator sees only its group; an unnamed subtask passes no --group.
 func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 	t.Parallel()
 	ctx, _, repo, org, d := draftFixture(t)
@@ -137,11 +137,11 @@ func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 	d.Generators = []model.DraftNamedProgram{named(generator, "python3", "import sys\nprint(sys.argv[1], sys.argv[2])\n")}
 	d.Solutions = []model.DraftNamedProgram{named(solution, "python3", "print(sum(map(int, input().split())))\n")}
 	d.Validators = []model.DraftValidator{
-		{DraftNamedProgram: named("nonneg", "python3", "a, b = map(int, input().split())\nassert a >= 0 and b >= 0\n")},
+		{DraftNamedProgram: named("nonneg", "python3", "import sys\nassert sys.argv[1:] in ([], ['--group', 'small']), sys.argv\na, b = map(int, input().split())\nassert a >= 0 and b >= 0\n")},
 		{DraftNamedProgram: named("small", "python3", "import sys\nassert sys.argv[1:] == ['--group', 'small'], sys.argv\nassert max(map(int, input().split())) < 10\n"), Subtasks: []uuid.UUID{small}},
 	}
 	d.MainSolution = &solution
-	d.Subtasks = []model.DraftSubtask{{ID: small, Ordinal: 1, Name: "small", Policy: "complete"}, {ID: large, Ordinal: 2, Name: "large", Policy: "complete"}}
+	d.Subtasks = []model.DraftSubtask{{ID: small, Ordinal: 1, Name: "small", Policy: "complete"}, {ID: large, Ordinal: 2, Policy: "complete"}}
 	test := func(ordinal int, subtask uuid.UUID, a, b string) model.DraftTest {
 		return model.DraftTest{ID: uuid.New(), Ordinal: ordinal, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}
 	}

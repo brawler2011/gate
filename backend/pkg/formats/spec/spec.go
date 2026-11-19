@@ -61,6 +61,7 @@ type Statement struct {
 }
 
 type Group struct {
+	// Empty for ungrouped tests.
 	Name      string
 	Policy    string // "complete" or "each"
 	DependsOn []string

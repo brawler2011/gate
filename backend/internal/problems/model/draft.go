@@ -111,6 +111,7 @@ type DraftAsset struct {
 type DraftSubtask struct {
 	ID        uuid.UUID    `json:"id"`
 	Ordinal   int          `json:"ordinal"`
+	// Validators get --group with a non-empty name, as Polygon passes it only for grouped tests.
 	Name      string       `json:"name"`
 	Points    points.Value `json:"points"`
 	Policy    string       `json:"policy"`

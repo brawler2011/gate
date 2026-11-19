@@ -21,6 +21,7 @@ import {
   setSingleProgram,
   setValidatorSubtasks,
   standardChecker,
+  subtaskLabel,
   updateProgram,
   type ComponentRole,
   type ListRole,
@@ -368,7 +369,7 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
               <MultiSelect
                 label="Подзадачи"
                 description="Пусто — проверяет все тесты"
-                data={draft.subtasks.map((s) => ({value: s.id, label: s.name || `Подзадача ${s.ordinal}`}))}
+                data={draft.subtasks.map((s) => ({value: s.id, label: subtaskLabel(s)}))}
                 value={draft.validators.find((v) => v.name === selected.name)?.subtasks ?? []}
                 onChange={(subtasks) => void save((current) => setValidatorSubtasks(current, selected.name, subtasks))}
                 clearable

@@ -180,6 +180,8 @@ export const removeAsset = (draft: ProblemDraft, name: string): ProblemDraft => 
   assets: draft.assets.filter((a) => a.name !== name),
 });
 
+export const subtaskLabel = (subtask: ProblemDraftSubtask): string => subtask.name || `Подзадача ${subtask.ordinal}`;
+
 export const addSubtask = (draft: ProblemDraft, name: string): ProblemDraft => {
   const subtask: ProblemDraftSubtask = {
     id: newId(),
@@ -303,7 +305,7 @@ export const describePointer = (draft: ProblemDraft, pointer: string): string =>
     case "assets":
       return `Ресурс ${draft.assets[at]?.name ?? ""}`.trim();
     case "subtasks":
-      return `Подзадача ${draft.subtasks[at]?.name ?? ""}`.trim();
+      return `Подзадача ${draft.subtasks[at]?.name || (draft.subtasks[at]?.ordinal ?? "")}`.trim();
     case "tests":
       return draft.tests[at] ? `Тест ${draft.tests[at].ordinal}` : "Тесты";
     case "main_solution":

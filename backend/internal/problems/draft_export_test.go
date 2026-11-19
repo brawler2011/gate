@@ -81,6 +81,15 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	require.Equal(t, normalized(plan), normalized(again))
 }
 
+// Ungrouped Polygon tests stay in an unnamed subtask, so validators get no --group after a round trip.
+func TestExportRoundTripKeepsUngroupedSubtaskUnnamed(t *testing.T) {
+	plan, err := importDir(t, "../../pkg/testdata/polygon/a-plus-b", nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Empty(t, plan.draft.Subtasks[0].Name)
+	require.Empty(t, exportAndImport(t, plan).draft.Subtasks[0].Name)
+}
+
 // Library files survive even when no judge program selects them yet.
 func TestExportRoundTripKeepsLibraryWithoutJudgePrograms(t *testing.T) {
 	plan, err := importDir(t, "../../pkg/testdata/gfmt/subtasks-groups", nil)
