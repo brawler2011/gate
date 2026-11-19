@@ -178,6 +178,16 @@ func (s *DraftStatement) Section(name string) *string {
 	return nil
 }
 
+// TrimStatements applies the import's trimming on save, so an exported draft imports back unchanged.
+func (d *Draft) TrimStatements() {
+	for i := range d.Statements {
+		for _, name := range StatementSections {
+			section := d.Statements[i].Section(name)
+			*section = strings.TrimSpace(*section)
+		}
+	}
+}
+
 func (d *Draft) Statement(language string) *DraftStatement {
 	for i := range d.Statements {
 		if d.Statements[i].Language == language {

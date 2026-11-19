@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -86,6 +87,21 @@ func TestExportRoundTripKeepsLibraryWithoutJudgePrograms(t *testing.T) {
 	plan.draft.Checker, plan.draft.Validators = nil, nil
 	plan.draft.Library = append(plan.draft.Library, model.DraftLibraryFile{Name: "util.h", Content: "#pragma once\n"})
 	require.NoError(t, plan.draft.Validate(importQuotas, nil))
+	require.Equal(t, normalized(plan), normalized(exportAndImport(t, plan)))
+}
+
+// A saved draft round-trips although the editor sent sections with edge whitespace.
+func TestExportRoundTripKeepsSavedStatements(t *testing.T) {
+	plan, err := importDir(t, "../../pkg/testdata/gfmt/a-plus-b", nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	repo := &savingRepo{}
+	uc := &DraftUseCase{Repo: repo, Problems: singleProblem{uuid.New()}, Permissions: allowProblemPermissions{}}
+	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
+	plan.draft.Statements[0].Legend = "    indented code\n\nText\n"
+	_, err = uc.SaveDraft(ctx, plan.draft.ProblemID, plan.draft.Revision, "key", plan.draft)
+	require.NoError(t, err)
+	plan.draft = repo.saved[0]
 	require.Equal(t, normalized(plan), normalized(exportAndImport(t, plan)))
 }
 
