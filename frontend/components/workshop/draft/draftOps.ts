@@ -78,7 +78,7 @@ export const addProgram = (
   if (programsOf(draft, role).some((p) => p.name === name)) {
     return nameTaken(role, name);
   }
-  const program: ProblemDraftNamedProgram = {name, language, source};
+  const program = role === "validator" ? {name, language, source, subtasks: []} : {name, language, source};
   return {
     draft: {
       ...draft,
@@ -180,6 +180,8 @@ export const removeAsset = (draft: ProblemDraft, name: string): ProblemDraft => 
   assets: draft.assets.filter((a) => a.name !== name),
 });
 
+export const subtaskLabel = (subtask: ProblemDraftSubtask): string => subtask.name || `Подзадача ${subtask.ordinal}`;
+
 export const addSubtask = (draft: ProblemDraft, name: string): ProblemDraft => {
   const subtask: ProblemDraftSubtask = {
     id: newId(),
@@ -192,8 +194,18 @@ export const addSubtask = (draft: ProblemDraft, name: string): ProblemDraft => {
   return {...draft, subtasks: [...draft.subtasks, subtask]};
 };
 
+export const setValidatorSubtasks = (draft: ProblemDraft, name: string, subtasks: string[]): ProblemDraft => ({
+  ...draft,
+  validators: draft.validators.map((v) => (v.name === name ? {...v, subtasks} : v)),
+});
+
 export const removeSubtask = (draft: ProblemDraft, id: string): ProblemDraft => ({
   ...draft,
+  // An emptied scope would mean every test, so keep it for the server to reject instead.
+  validators: draft.validators.map((v) => {
+    const subtasks = v.subtasks.filter((subtask) => subtask !== id);
+    return subtasks.length > 0 ? {...v, subtasks} : v;
+  }),
   subtasks: draft.subtasks
     .filter((s) => s.id !== id)
     .map((s) => ({...s, depends_on: s.depends_on.filter((dependency) => dependency !== id)})),
@@ -293,7 +305,7 @@ export const describePointer = (draft: ProblemDraft, pointer: string): string =>
     case "assets":
       return `Ресурс ${draft.assets[at]?.name ?? ""}`.trim();
     case "subtasks":
-      return `Подзадача ${draft.subtasks[at]?.name ?? ""}`.trim();
+      return `Подзадача ${draft.subtasks[at]?.name || (draft.subtasks[at]?.ordinal ?? "")}`.trim();
     case "tests":
       return draft.tests[at] ? `Тест ${draft.tests[at].ordinal}` : "Тесты";
     case "main_solution":

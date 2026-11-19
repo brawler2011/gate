@@ -1,6 +1,6 @@
 "use client";
 
-import {Badge, Box, Button, Code, Grid, Group, NavLink, ScrollArea, Select, Stack, Text, TextInput} from "@mantine/core";
+import {Badge, Box, Button, Code, Grid, Group, MultiSelect, NavLink, ScrollArea, Select, Stack, Text, TextInput} from "@mantine/core";
 import {useState} from "react";
 import {useSearchParams} from "react-router-dom";
 
@@ -19,7 +19,9 @@ import {
   renameProgram,
   ROLE_LABELS,
   setSingleProgram,
+  setValidatorSubtasks,
   standardChecker,
+  subtaskLabel,
   updateProgram,
   type ComponentRole,
   type ListRole,
@@ -363,6 +365,17 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
               saving={isSaving}
               onRename={(name) => void rename(selected.name, name)}
             />
+            {role === "validator" && (
+              <MultiSelect
+                label="Подзадачи"
+                description="Пусто — проверяет все тесты"
+                data={draft.subtasks.map((s) => ({value: s.id, label: subtaskLabel(s)}))}
+                value={draft.validators.find((v) => v.name === selected.name)?.subtasks ?? []}
+                onChange={(subtasks) => void save((current) => setValidatorSubtasks(current, selected.name, subtasks))}
+                clearable
+                w={320}
+              />
+            )}
             {role === "solution" && draft.main_solution !== selected.name && (
               <Button
                 variant="light"

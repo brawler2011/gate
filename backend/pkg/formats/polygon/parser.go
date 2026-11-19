@@ -47,15 +47,13 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		}
 		roles[assets.Checker.Source.Path] = true
 	}
-	switch len(assets.Validators) {
-	case 0:
-	case 1:
-		if p.Validator, err = program(assets.Validators[0].Source); err != nil {
+	for _, v := range assets.Validators {
+		validator, err := program(v.Source)
+		if err != nil {
 			return nil, err
 		}
-		roles[assets.Validators[0].Source.Path] = true
-	default:
-		return nil, fmt.Errorf("package has %d validators; Gate supports one", len(assets.Validators))
+		p.Validators = append(p.Validators, *validator)
+		roles[v.Source.Path] = true
 	}
 	if assets.Interactor != nil {
 		if p.Interactor, err = program(assets.Interactor.Source); err != nil {
@@ -212,9 +210,6 @@ func groups(fsys fs.FS, testset Testset, generators map[string]string) ([]spec.G
 			return nil, err
 		}
 		name := t.Group
-		if name == "" {
-			name = "tests"
-		}
 		n, ok := index[name]
 		if !ok {
 			n = len(result)

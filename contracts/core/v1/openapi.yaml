@@ -3173,6 +3173,29 @@ components:
           description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
         source:
           type: string
+    ProblemDraftValidator:
+      description: A validator; the build fails when it rejects a test input. testlib validators receive --group with the subtask name.
+      type: object
+      required:
+      - name
+      - language
+      - source
+      - subtasks
+      properties:
+        name:
+          type: string
+          description: Unique among the validators; the program's package file is the name with the extension of its language.
+        language:
+          type: string
+          description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
+        source:
+          type: string
+        subtasks:
+          type: array
+          description: IDs of the subtasks whose tests the validator checks; empty checks every test.
+          items:
+            type: string
+            format: uuid
     ProblemDraftLibraryFile:
       description: A source file judge programs include by its name; names are unique in a draft and identify the file.
       type: object
@@ -3354,9 +3377,8 @@ components:
           - $ref: '#/components/schemas/ProblemDraftProgram'
         validators:
           type: array
-          description: At most one validator.
           items:
-            $ref: '#/components/schemas/ProblemDraftNamedProgram'
+            $ref: '#/components/schemas/ProblemDraftValidator'
         generators:
           type: array
           items:

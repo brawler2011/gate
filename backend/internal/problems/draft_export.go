@@ -2,14 +2,12 @@ package problems
 
 import (
 	"archive/zip"
-	"cmp"
 	"context"
 	"fmt"
 	"io"
 	"os"
 	"path"
 	"slices"
-	"strconv"
 	"strings"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -141,11 +139,20 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 			return nil, err
 		}
 	}
+	for _, v := range d.Validators {
+		source := gfmt.Source{}
+		for _, id := range v.Subtasks {
+			source.Groups = append(source.Groups, d.Subtask(id).Name)
+		}
+		if _, err := program("validator", v.Name, v.DraftProgram, source); err != nil {
+			return nil, err
+		}
+	}
 	solutions := map[string]string{}
 	for _, list := range []struct {
 		role     string
 		programs []model.DraftNamedProgram
-	}{{"validator", d.Validators}, {"generator", d.Generators}, {"solution", d.Solutions}} {
+	}{{"generator", d.Generators}, {"solution", d.Solutions}} {
 		for _, p := range list.programs {
 			file, err := program(list.role, p.Name, p.DraftProgram, gfmt.Source{})
 			if err != nil {
@@ -202,18 +209,11 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 	return w, nil
 }
 
-// Subtask names are map keys in gfmt, so empty and repeated draft names get their ordinal appended.
 func writeTests(w *archiveWriter, m *gfmt.Problem, d model.Draft, solutions map[string]string, open func(uuid.UUID) (io.ReadCloser, error)) error {
-	names, taken := map[uuid.UUID]string{}, map[string]bool{}
+	names := map[uuid.UUID]string{}
 	for _, s := range d.Subtasks {
-		base := cmp.Or(s.Name, "subtask")
-		name := s.Name
-		for n := s.Ordinal; name == "" || taken[name]; n++ {
-			name = base + "-" + strconv.Itoa(n)
-		}
-		taken[name] = true
-		names[s.ID] = name
-		m.Subtasks[name] = gfmt.Subtask{Ordinal: s.Ordinal, Points: s.Points, Policy: s.Policy, Tests: []gfmt.Test{}}
+		names[s.ID] = s.Name
+		m.Subtasks[s.Name] = gfmt.Subtask{Ordinal: s.Ordinal, Points: s.Points, Policy: s.Policy, Tests: []gfmt.Test{}}
 	}
 	for _, s := range d.Subtasks {
 		subtask := m.Subtasks[names[s.ID]]

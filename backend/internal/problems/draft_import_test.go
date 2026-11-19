@@ -351,8 +351,41 @@ func TestImportKeepsDraftLayout(t *testing.T) {
 func TestImportRejectsSecondSingletonComponent(t *testing.T) {
 	_, err := importAPlusB(t, map[string]string{"checkers/other.cpp": "int main() {}\n"})
 	require.ErrorContains(t, err, "more than one checker in checkers/")
-	_, err = importAPlusB(t, map[string]string{"validators/other.py": "\n"})
-	require.ErrorContains(t, err, "more than one validator in validators/")
+}
+
+func TestImportKeepsSeveralValidators(t *testing.T) {
+	read := func(path string) string {
+		data, err := os.ReadFile(path)
+		require.NoError(t, err)
+		return string(data)
+	}
+	validators := func(plan *draftImport, err error) map[string][]string {
+		require.NoError(t, err)
+		defer plan.Close()
+		require.NoError(t, plan.draft.Validate(importQuotas, nil))
+		result := map[string][]string{}
+		for _, v := range plan.draft.Validators {
+			result[v.Name] = []string{}
+			for _, id := range v.Subtasks {
+				result[v.Name] = append(result[v.Name], plan.draft.Subtask(id).Name)
+			}
+		}
+		return result
+	}
+
+	gfmt := read("../../pkg/testdata/gfmt/a-plus-b/problem.yaml") + "\nsources:\n  validators/secret.py:\n    groups: [secret]\n"
+	require.Equal(t, map[string][]string{"validator": {}, "secret": {"secret"}},
+		validators(importAPlusB(t, map[string]string{"problem.yaml": gfmt, "validators/secret.py": "\n"})))
+	_, err := importAPlusB(t, map[string]string{"problem.yaml": strings.Replace(gfmt, "[secret]", "[hidden]", 1), "validators/secret.py": "\n"})
+	require.ErrorContains(t, err, "validator validators/secret.py checks unknown test group hidden")
+
+	const polygonDir = "../../pkg/testdata/polygon/a-plus-b"
+	xml := strings.Replace(read(polygonDir+"/problem.xml"), "</validators>", `<validator><source path="files/v2.cpp" type="cpp.g++17"/></validator></validators>`, 1)
+	require.Equal(t, map[string][]string{"v": {}, "v2": {}},
+		validators(importDir(t, polygonDir, map[string]string{"problem.xml": xml, "files/v2.cpp": "int main() {}\n"})))
+
+	require.Equal(t, map[string][]string{"v": {}, "v2": {}},
+		validators(importDir(t, "../../pkg/testdata/icpc/a-plus-b", map[string]string{"input_validators/v2.cpp": "int main() {}\n"})))
 }
 
 func TestImportRejectsUnknownSourceExtension(t *testing.T) {

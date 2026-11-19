@@ -17,7 +17,7 @@ type Problem struct {
 	TimeLimitMs   int
 	MemoryLimitMb int
 	Checker       *Program
-	Validator     *Program
+	Validators    []Program
 	Interactor    *Program
 	// Tests identify generators by path.
 	Generators []Program
@@ -49,6 +49,8 @@ type Program struct {
 	Dependencies map[string]string
 	// Standard checker sources remain in the package even when identified by testlib name.
 	Standard string
+	// Groups limits a validator to the tests of these groups; empty means every test.
+	Groups []string
 }
 
 // Statements contain either one LaTeX file or Markdown files per section.
@@ -59,6 +61,7 @@ type Statement struct {
 }
 
 type Group struct {
+	// Empty for ungrouped tests.
 	Name      string
 	Policy    string // "complete" or "each"
 	DependsOn []string

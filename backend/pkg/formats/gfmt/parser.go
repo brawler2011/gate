@@ -42,7 +42,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 				return fmt.Errorf("%s: %w", rel, err)
 			}
 			source := manifest.Sources[rel]
-			programs[folder] = append(programs[folder], spec.Program{File: spec.File{Name: name, Path: rel}, Language: source.Language, Dependencies: deps, Standard: source.Standard})
+			programs[folder] = append(programs[folder], spec.Program{File: spec.File{Name: name, Path: rel}, Language: source.Language, Dependencies: deps, Standard: source.Standard, Groups: source.Groups})
 		case folder == LibraryFolder && name != "" && !strings.Contains(name, "/"):
 			auto := manifest.Sources[rel].AutoUpdate
 			p.Library = append(p.Library, spec.File{Name: name, Path: rel, System: auto != nil && *auto, Pinned: auto != nil && !*auto})
@@ -87,13 +87,10 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if p.Checker, err = singleton(RoleFolder("checker"), "checker"); err != nil {
 		return nil, err
 	}
-	if p.Validator, err = singleton(RoleFolder("validator"), "validator"); err != nil {
-		return nil, err
-	}
 	if p.Interactor, err = singleton(RoleFolder("interactor"), "interactor"); err != nil {
 		return nil, err
 	}
-	p.Generators, p.Solutions = programs[RoleFolder("generator")], programs[RoleFolder("solution")]
+	p.Validators, p.Generators, p.Solutions = programs[RoleFolder("validator")], programs[RoleFolder("generator")], programs[RoleFolder("solution")]
 	p.MainSolution = mainSolution(manifest.Solutions, p.Solutions)
 	// Generator stems must be unique because tests refer to them without extensions.
 	generators := map[string]string{}

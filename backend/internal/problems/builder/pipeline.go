@@ -295,7 +295,7 @@ func (e *execution) compile(ctx context.Context) error {
 	s := e.build.Snapshot
 	d := s.Draft
 	required := map[string]bool{"checker": true, "interactor": true}
-	if v := d.Validator(); v != nil {
+	for _, v := range d.Validators {
 		required[programKey("validator", v.Name)] = true
 	}
 	if d.MainSolution != nil {
@@ -380,15 +380,22 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			return fail("generate", test.Ordinal, "infrastructure", err)
 		}
 	}
-	if validator := s.Draft.Validator(); validator != nil {
+	var args []string
+	if g := s.Draft.Subtask(test.SubtaskID); g != nil && g.Name != "" {
+		args = []string{"--group", g.Name}
+	}
+	for _, validator := range s.Draft.Validators {
+		if !validator.Applies(test.SubtaskID) {
+			continue
+		}
 		v := e.compiled[programKey("validator", validator.Name)]
-		result, err := e.sandbox.RunFiles(ctx, v.executable, v.language, sandbox.FileID(inputID), nil, nil, aux)
+		result, err := e.sandbox.RunFiles(ctx, v.executable, v.language, sandbox.FileID(inputID), args, nil, aux)
 		if err != nil {
-			return fail("validate", test.Ordinal, "infrastructure", err)
+			return fail("validate", test.Ordinal, "infrastructure", fmt.Errorf("validator %s: %w", validator.Name, err))
 		}
 		ids = append(ids, result.OutputID)
 		if result.Status != sandbox.StatusOK || result.ExitStatus != 0 {
-			return fail("validate", test.Ordinal, string(result.Status), fmt.Errorf("exit %d: %s", result.ExitStatus, result.Stderr))
+			return fail("validate", test.Ordinal, string(result.Status), fmt.Errorf("validator %s: exit %d: %s", validator.Name, result.ExitStatus, result.Stderr))
 		}
 	}
 	answerPath := ""

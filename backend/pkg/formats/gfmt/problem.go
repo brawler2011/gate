@@ -97,4 +97,6 @@ type Source struct {
 	Standard string `yaml:"standard,omitempty" json:"standard,omitempty"`
 	// AutoUpdate on a system library file: true replaces its text with the current system file.
 	AutoUpdate *bool `yaml:"auto_update,omitempty" json:"auto_update,omitempty"`
+	// Groups names the subtasks a validator checks; empty means every test.
+	Groups []string `yaml:"groups,omitempty" json:"groups,omitempty"`
 }

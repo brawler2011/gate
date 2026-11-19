@@ -61,9 +61,13 @@ func TestValidateLocatesViolations(t *testing.T) {
 		"auto-updated file with own text": {func(d *Draft) {
 			d.Library[0].AutoUpdate, d.Library[0].Content = true, "// patched"
 		}, "/library/0/auto_update", "only an empty system library file"},
-		"second validator": {func(d *Draft) {
-			d.Validators = []DraftNamedProgram{{Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, {Name: "b", DraftProgram: DraftProgram{Language: "cpp"}}}
-		}, "/validators/1", "at most one validator"},
+		"two unnamed subtasks": {func(d *Draft) {
+			d.Subtasks[0].Name = ""
+			d.Subtasks = append(d.Subtasks, DraftSubtask{ID: uuid.New(), Ordinal: 2, Policy: "each"})
+		}, "/subtasks/1/name", "duplicate subtask name"},
+		"validator of an unknown subtask": {func(d *Draft) {
+			d.Validators = []DraftValidator{{DraftNamedProgram: DraftNamedProgram{Name: "a", DraftProgram: DraftProgram{Language: "cpp"}}, Subtasks: []uuid.UUID{uuid.New()}}}
+		}, "/validators/0/subtasks/0", "unknown or duplicate subtask"},
 		"image of a missing asset": {func(d *Draft) { d.Statements[0].Notes = "See ![tree](tree.png)." }, "/statements/0/notes", "notes section of the en statement shows missing asset \"tree.png\""},
 	} {
 		t.Run(name, func(t *testing.T) {

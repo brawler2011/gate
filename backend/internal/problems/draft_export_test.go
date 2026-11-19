@@ -60,9 +60,11 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	d.Library = append(d.Library, model.DraftLibraryFile{Name: "util.h", Content: "#pragma once\n"})
 	d.Checker = &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17"}, Standard: "wcmp"}
 	d.Generators = append(d.Generators, model.DraftNamedProgram{Name: "gen", DraftProgram: model.DraftProgram{Language: "python3", Source: "print(1)\n"}})
+	d.Validators = append(d.Validators, model.DraftValidator{DraftNamedProgram: model.DraftNamedProgram{Name: "second", DraftProgram: model.DraftProgram{Language: "python3", Source: "pass\n"}},
+		Subtasks: []uuid.UUID{d.Subtasks[1].ID}})
 	gen, other := "gen", d.Solutions[1].Name
-	// Both subtasks are named samples, which gfmt otherwise treats as the sample group.
-	d.Subtasks[0].Name, d.Subtasks[1].Name = "samples", "samples"
+	// gfmt otherwise treats a subtask named samples as the sample group.
+	d.Subtasks[0].Name, d.Subtasks[1].Name = "samples", ""
 	d.Subtasks[0].DependsOn = []uuid.UUID{d.Subtasks[1].ID}
 	d.Tests = append(d.Tests, model.DraftTest{ID: uuid.New(), Ordinal: 3, SubtaskID: d.Subtasks[0].ID, Points: 5, Sample: true,
 		Input:  model.DraftInput{Mode: "generator", Generator: &gen, Args: []string{"", "it's", "a b", "$x", "-n=1"}},
@@ -73,10 +75,16 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	require.NoError(t, d.ComputeScores())
 	require.NoError(t, d.Validate(importQuotas, nil))
 
-	again := exportAndImport(t, plan)
-	require.Equal(t, "samples-2", again.draft.Subtasks[1].Name)
-	again.draft.Subtasks[1].Name = "samples"
-	require.Equal(t, normalized(plan), normalized(again))
+	require.Equal(t, normalized(plan), normalized(exportAndImport(t, plan)))
+}
+
+// Ungrouped Polygon tests stay in an unnamed subtask, so validators get no --group after a round trip.
+func TestExportRoundTripKeepsUngroupedSubtaskUnnamed(t *testing.T) {
+	plan, err := importDir(t, "../../pkg/testdata/polygon/a-plus-b", nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Empty(t, plan.draft.Subtasks[0].Name)
+	require.Empty(t, exportAndImport(t, plan).draft.Subtasks[0].Name)
 }
 
 // Library files survive even when no judge program selects them yet.
@@ -213,7 +221,16 @@ func normalized(i *draftImport) model.Draft {
 		}
 	}
 	// Re-import lists programs in file name order.
-	for _, list := range []*[]model.DraftNamedProgram{&d.Validators, &d.Generators, &d.Solutions} {
+	d.Validators = slices.SortedFunc(slices.Values(d.Validators), func(a, b model.DraftValidator) int { return strings.Compare(a.Name, b.Name) })
+	for n := range d.Validators {
+		v := &d.Validators[n]
+		ids := make([]uuid.UUID, len(v.Subtasks))
+		for k, id := range v.Subtasks {
+			ids[k] = subtasks[id]
+		}
+		v.Subtasks = ids
+	}
+	for _, list := range []*[]model.DraftNamedProgram{&d.Generators, &d.Solutions} {
 		*list = slices.SortedFunc(slices.Values(*list), func(a, b model.DraftNamedProgram) int { return strings.Compare(a.Name, b.Name) })
 	}
 	d.Assets = append([]model.DraftAsset(nil), d.Assets...)
