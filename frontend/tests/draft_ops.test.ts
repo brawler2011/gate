@@ -117,6 +117,7 @@ describe("subtasks and tests", () => {
     const removed = removeSubtask(draft, a);
     expect(removed.subtasks).toEqual([{...draft.subtasks[1], depends_on: []}]);
     expect(removed.validators[0].subtasks).toEqual([b]);
+    expect(removeSubtask(removed, b).validators[0].subtasks).toEqual([b]);
   });
 });
 

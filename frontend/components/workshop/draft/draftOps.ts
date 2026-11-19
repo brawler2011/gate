@@ -199,7 +199,11 @@ export const setValidatorSubtasks = (draft: ProblemDraft, name: string, subtasks
 
 export const removeSubtask = (draft: ProblemDraft, id: string): ProblemDraft => ({
   ...draft,
-  validators: draft.validators.map((v) => ({...v, subtasks: v.subtasks.filter((subtask) => subtask !== id)})),
+  // An emptied scope would mean every test, so keep it for the server to reject instead.
+  validators: draft.validators.map((v) => {
+    const subtasks = v.subtasks.filter((subtask) => subtask !== id);
+    return subtasks.length > 0 ? {...v, subtasks} : v;
+  }),
   subtasks: draft.subtasks
     .filter((s) => s.id !== id)
     .map((s) => ({...s, depends_on: s.depends_on.filter((dependency) => dependency !== id)})),
