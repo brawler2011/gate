@@ -32,7 +32,7 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	req := testcontainers.ContainerRequest{
 		Image:        image,
 		ExposedPorts: []string{"5050/tcp", "5051/tcp"}, Privileged: true,
-		Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-file-store", "-parallelism=1", "-output-limit=256m"},
+		Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-file-store", "-parallelism=1", "-output-limit=256m", "-no-fallback"},
 		WaitingFor: wait.ForHTTP("/version").WithPort("5050/tcp"),
 	}
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: req, Started: true})

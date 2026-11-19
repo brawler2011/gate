@@ -35,9 +35,10 @@ func TestIntegrationSandbox(t *testing.T) {
 	req := testcontainers.ContainerRequest{
 		Image:        image,
 		ExposedPorts: []string{"5051/tcp"},
-		WaitingFor:   wait.ForListeningPort("5051/tcp"),
-		Privileged:   true,
-		Cmd:          []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051"},
+		// The internal check execs into the container, and that process can block go-judge's cgroup setup.
+		WaitingFor: wait.ForListeningPort("5051/tcp").SkipInternalCheck(),
+		Privileged: true,
+		Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-no-fallback"},
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
