@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"net"
+
+	"github.com/brawler2011/gate/backend/pkg/sandbox"
 )
 
 func IsTemporary(err error) bool {
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, sandbox.ErrUnavailable) {
 		return true
 	}
 	var network net.Error

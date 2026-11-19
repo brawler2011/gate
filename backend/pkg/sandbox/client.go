@@ -14,6 +14,9 @@ import (
 	"unicode/utf8"
 )
 
+// ErrUnavailable marks a run that failed in transport, so retrying may succeed.
+var ErrUnavailable = errors.New("go-judge unavailable")
+
 // Client runs commands through go-judge's HTTP API.
 type Client struct{ endpoint }
 
@@ -130,6 +133,10 @@ func (c *Client) run(ctx context.Context, req request) ([]result, error) {
 	}
 	var results []result
 	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
+		// go-judge sends the status before the body, so a crash mid-run truncates a 200 response.
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+			return nil, fmt.Errorf("%w: truncated response: %w", ErrUnavailable, err)
+		}
 		return nil, fmt.Errorf("decode sandbox response: %w", err)
 	}
 	if len(results) != len(req.Cmd) {
@@ -158,5 +165,5 @@ func (c *Client) release(ids ...string) {
 
 func unavailable(err error) bool {
 	var n net.Error
-	return errors.As(err, &n)
+	return errors.Is(err, ErrUnavailable) || errors.As(err, &n)
 }

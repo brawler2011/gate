@@ -73,7 +73,7 @@ func processKind(err error) string {
 		return "configuration"
 	}
 	var network net.Error
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.As(err, &network) {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, sandbox.ErrUnavailable) || errors.As(err, &network) {
 		return "infrastructure"
 	}
 	return "author"
