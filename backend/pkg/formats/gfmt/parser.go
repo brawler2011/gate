@@ -41,9 +41,11 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			if err != nil {
 				return fmt.Errorf("%s: %w", rel, err)
 			}
-			programs[folder] = append(programs[folder], spec.Program{File: spec.File{Name: name, Path: rel}, Language: manifest.Sources[rel].Language, Dependencies: deps})
+			source := manifest.Sources[rel]
+			programs[folder] = append(programs[folder], spec.Program{File: spec.File{Name: name, Path: rel}, Language: source.Language, Dependencies: deps, Standard: source.Standard})
 		case folder == LibraryFolder && name != "" && !strings.Contains(name, "/"):
-			p.Library = append(p.Library, spec.File{Name: name, Path: rel})
+			auto := manifest.Sources[rel].AutoUpdate
+			p.Library = append(p.Library, spec.File{Name: name, Path: rel, System: auto != nil && *auto, Pinned: auto != nil && !*auto})
 		case folder == AssetFolder && name != "" && !strings.Contains(name, "/"):
 			p.Assets = append(p.Assets, spec.File{Name: name, Path: rel})
 		case folder == StatementFolder && strings.Count(name, "/") == 1 && path.Ext(name) == ".md":
@@ -142,13 +144,15 @@ func groups(manifest *Problem, generators map[string]string, files map[string]bo
 		}
 		return "generator:" + t.Generate
 	}
+	// Ordinals mark an exported draft, whose subtask named samples is an ordinary one.
+	legacy := !manifest.hasOrdinals()
 	samples, scored := map[string]bool{}, map[string]bool{}
 	for name, subtask := range manifest.Subtasks {
 		for _, t := range subtask.Tests {
-			if t.Sample || name == "samples" {
+			if legacy && name == "samples" {
 				samples[key(t)] = true
 			}
-			if name != "samples" {
+			if legacy && name != "samples" {
 				scored[key(t)] = true
 			}
 		}
@@ -166,7 +170,7 @@ func groups(manifest *Problem, generators map[string]string, files map[string]bo
 			if err != nil {
 				return nil, err
 			}
-			test.Sample = samples[key(t)]
+			test.Sample = t.Sample || samples[key(t)]
 			group.Tests = append(group.Tests, test)
 		}
 		if name == "samples" && len(subtask.Tests) > 0 && len(group.Tests) == 0 {
@@ -184,7 +188,7 @@ func groups(manifest *Problem, generators map[string]string, files map[string]bo
 }
 
 func convertTest(t Test, generators map[string]string, files map[string]bool) (spec.Test, error) {
-	test := spec.Test{Points: t.Points}
+	test := spec.Test{Points: t.Points, Ordinal: t.Ordinal}
 	if t.Manual != "" {
 		test.Input = TestFolder + "/" + t.Manual
 	} else {
@@ -199,6 +203,10 @@ func convertTest(t Test, generators map[string]string, files map[string]bool) (s
 		test.Generator, test.Args = name, argv[1:]
 	}
 	switch {
+	case t.Answer != "" && t.Solution != "":
+		return test, fmt.Errorf("test has both an answer and a solution")
+	case t.Solution != "":
+		test.AnswerSolution = RoleFolder("solution") + "/" + t.Solution
 	case t.Answer != "":
 		test.Answer = TestFolder + "/" + t.Answer
 	case t.Manual != "":

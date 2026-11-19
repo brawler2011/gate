@@ -178,6 +178,16 @@ func (s *DraftStatement) Section(name string) *string {
 	return nil
 }
 
+// TrimStatements drops trailing whitespace, as the import does, so an exported draft imports back unchanged.
+func (d *Draft) TrimStatements() {
+	for i := range d.Statements {
+		for _, name := range StatementSections {
+			section := d.Statements[i].Section(name)
+			*section = strings.TrimRightFunc(*section, unicode.IsSpace)
+		}
+	}
+}
+
 func (d *Draft) Statement(language string) *DraftStatement {
 	for i := range d.Statements {
 		if d.Statements[i].Language == language {

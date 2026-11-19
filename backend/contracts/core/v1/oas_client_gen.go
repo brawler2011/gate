@@ -340,6 +340,12 @@ type Invoker interface {
 	//
 	// GET /problems/{id}/packages/{packageId}/download
 	DownloadProblemPackage(ctx context.Context, params DownloadProblemPackageParams) (DownloadProblemPackageOK, error)
+	// ExportProblemDraft invokes ExportProblemDraft operation.
+	//
+	// The archive imports back through ImportProblem.
+	//
+	// GET /problems/{id}/draft/export
+	ExportProblemDraft(ctx context.Context, params ExportProblemDraftParams) (ExportProblemDraftOK, error)
 	// ForgotPassword invokes ForgotPassword operation.
 	//
 	// Forgot password.
@@ -5309,6 +5315,68 @@ func (c *Client) sendDownloadProblemPackage(ctx context.Context, params Download
 	}()
 
 	result, err := decodeDownloadProblemPackageResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ExportProblemDraft invokes ExportProblemDraft operation.
+//
+// The archive imports back through ImportProblem.
+//
+// GET /problems/{id}/draft/export
+func (c *Client) ExportProblemDraft(ctx context.Context, params ExportProblemDraftParams) (ExportProblemDraftOK, error) {
+	res, err := c.sendExportProblemDraft(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendExportProblemDraft(ctx context.Context, params ExportProblemDraftParams) (res ExportProblemDraftOK, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/problems/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/draft/export"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeExportProblemDraftResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

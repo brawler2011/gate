@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -166,12 +167,12 @@ func (uc *DraftUseCase) convertImport(result *draftImport, root string, p *spec.
 }
 
 type importConverter struct {
-	uc     *DraftUseCase
-	result *draftImport
-	root   string
-	draft  model.Draft
+	uc        *DraftUseCase
+	result    *draftImport
+	root      string
+	draft     model.Draft
 	textTests bool
-	objects map[string]uuid.UUID
+	objects   map[string]uuid.UUID
 	files     int
 	programs  int
 	textBytes int64
@@ -205,11 +206,13 @@ func (c *importConverter) convert(p *spec.Problem) error {
 		}
 		generators[g.Path] = name
 	}
+	solutions := map[string]string{}
 	for _, s := range p.Solutions {
 		name, err := c.named(&c.draft.Solutions, s)
 		if err != nil {
 			return err
 		}
+		solutions[s.Path] = name
 		if s.Path == p.MainSolution {
 			c.draft.MainSolution = &name
 		}
@@ -235,7 +238,7 @@ func (c *importConverter) convert(p *spec.Problem) error {
 		}
 		c.draft.Assets = append(c.draft.Assets, model.DraftAsset{Name: a.Name, ObjectID: oid})
 	}
-	return c.addGroups(p.Groups, generators)
+	return c.addGroups(p.Groups, generators, solutions)
 }
 
 // Generators retain bundled testlib to preserve random seeds; other upstream copies may auto-update.
@@ -247,6 +250,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 	}
 	var order []string
 	texts, system, generated := map[string][]string{}, map[string]bool{}, map[string]bool{}
+	pinned := map[string]bool{}
 	// sources holds a package path of each distinct text, for errors.
 	sources := map[string][]string{}
 	add := func(name string, f spec.File, generator bool) error {
@@ -258,6 +262,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			texts[name] = nil
 		}
 		generated[name] = generated[name] || generator
+		pinned[name] = pinned[name] || f.Pinned
 		// Charge text before retaining it so imports cannot exceed draft memory quotas.
 		if f.System {
 			if !system[name] {
@@ -312,6 +317,14 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			return err
 		}
 	}
+	// Without judge programs nothing selects library files, so keep them all for a later checker.
+	if p.Checker == nil && p.Interactor == nil && p.Validator == nil && len(p.Generators) == 0 {
+		for _, f := range p.Library {
+			if err := add(f.Name, f, false); err != nil {
+				return err
+			}
+		}
+	}
 	for _, name := range order {
 		list := texts[name]
 		file := model.DraftLibraryFile{Name: name}
@@ -321,6 +334,8 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			upstream = upstream && current.IsUpstream(text)
 		}
 		switch {
+		case pinned[name] && len(list) == 1:
+			file.Content = list[0]
 		case system[name] && !known:
 			return pkg.Wrap(pkg.ErrBadInput, nil, "unknown system library file "+name)
 		case system[name] && len(list) > 0:
@@ -419,7 +434,8 @@ func (c *importConverter) addStatement(s spec.Statement) error {
 		if err != nil {
 			return err
 		}
-		sections[name] = strings.TrimSpace(text)
+		// Leading whitespace can start an indented code block, so only the end is trimmed.
+		sections[name] = strings.TrimRightFunc(text, unicode.IsSpace)
 	}
 	for name, text := range sections {
 		section := statement.Section(name)
@@ -438,7 +454,7 @@ func (c *importConverter) addStatement(s spec.Statement) error {
 	return nil
 }
 
-func (c *importConverter) addGroups(groups []spec.Group, generators map[string]string) error {
+func (c *importConverter) addGroups(groups []spec.Group, generators, solutions map[string]string) error {
 	if len(groups) > c.uc.DraftQuotas.Subtasks {
 		return pkg.ErrPayloadTooLarge
 	}
@@ -449,6 +465,7 @@ func (c *importConverter) addGroups(groups []spec.Group, generators map[string]s
 		}
 		ids[g.Name] = uuid.New()
 	}
+	var ordinals []int
 	for _, g := range groups {
 		subtask := model.DraftSubtask{ID: ids[g.Name], Ordinal: len(c.draft.Subtasks) + 1, Name: g.Name, Policy: g.Policy, DependsOn: []uuid.UUID{}}
 		for _, dep := range g.DependsOn {
@@ -459,18 +476,32 @@ func (c *importConverter) addGroups(groups []spec.Group, generators map[string]s
 			subtask.DependsOn = append(subtask.DependsOn, did)
 		}
 		for _, test := range g.Tests {
-			t, err := c.test(test, subtask.ID, generators)
+			t, err := c.test(test, subtask.ID, generators, solutions)
 			if err != nil {
 				return err
 			}
 			c.draft.Tests = append(c.draft.Tests, t)
+			ordinals = append(ordinals, test.Ordinal)
 		}
 		c.draft.Subtasks = append(c.draft.Subtasks, subtask)
+	}
+	if !slices.Contains(ordinals, 0) {
+		order := make([]int, len(ordinals))
+		for i := range order {
+			order[i] = i
+		}
+		slices.SortStableFunc(order, func(a, b int) int { return ordinals[a] - ordinals[b] })
+		tests := make([]model.DraftTest, len(order))
+		for i, j := range order {
+			tests[i] = c.draft.Tests[j]
+			tests[i].Ordinal = i + 1
+		}
+		c.draft.Tests = tests
 	}
 	return nil
 }
 
-func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map[string]string) (model.DraftTest, error) {
+func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators, solutions map[string]string) (model.DraftTest, error) {
 	if len(c.draft.Tests) >= c.uc.DraftQuotas.Tests {
 		return model.DraftTest{}, pkg.ErrPayloadTooLarge
 	}
@@ -500,6 +531,12 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators map
 			return t, err
 		}
 		t.Answer = model.DraftAnswer{Mode: "provided", ObjectID: &oid}
+	case test.AnswerSolution != "":
+		name, ok := solutions[test.AnswerSolution]
+		if !ok {
+			return t, pkg.Wrap(pkg.ErrBadInput, nil, "solution "+test.AnswerSolution+" not found")
+		}
+		t.Answer = model.DraftAnswer{Mode: "generated", Solution: &name}
 	default:
 		t.Answer = model.DraftAnswer{Mode: "generated", Solution: c.draft.MainSolution}
 	}

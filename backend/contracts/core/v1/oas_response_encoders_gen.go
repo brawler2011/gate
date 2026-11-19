@@ -580,6 +580,21 @@ func encodeDownloadProblemPackageResponse(response DownloadProblemPackageOK, w h
 	return nil
 }
 
+func encodeExportProblemDraftResponse(response ExportProblemDraftOK, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/zip")
+	w.WriteHeader(200)
+
+	writer := w
+	if closer, ok := response.Data.(io.Closer); ok {
+		defer closer.Close()
+	}
+	if _, err := io.Copy(writer, response); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
 func encodeForgotPasswordResponse(response *ForgotPasswordOK, w http.ResponseWriter) error {
 	w.WriteHeader(200)
 

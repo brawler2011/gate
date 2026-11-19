@@ -3106,6 +3106,20 @@ func (s *Error) SetFields(val []FieldError) {
 	s.Fields = val
 }
 
+type ExportProblemDraftOK struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s ExportProblemDraftOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
 // Failed test detail data.
 // Ref: #/components/schemas/FailedTestDetailModel
 type FailedTestDetailModel struct {

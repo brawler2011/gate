@@ -1,6 +1,6 @@
 import {Alert, Box, Button, FileInput, Group, Stack, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {IconInfoCircle, IconUpload} from "@tabler/icons-react";
+import {IconDownload, IconInfoCircle, IconUpload} from "@tabler/icons-react";
 import {useQueryClient} from "@tanstack/react-query";
 import {useState, useTransition} from "react";
 
@@ -100,6 +100,23 @@ export const WorkshopImportTab = ({problemId}: Props): ReactNode => {
                 Импортировать
               </Button>
             </Group>
+          </Stack>
+        </SectionPaper>
+
+        <SectionPaper title="Экспорт черновика">
+          <Stack gap="sm" align="flex-start">
+            <Text size="sm" c="dimmed">
+              Скачайте текущий черновик как native-пакет Gate: его можно импортировать обратно в эту или другую задачу.
+            </Text>
+            <Button
+              component="a"
+              href={`/api/problems/${problemId}/draft/export`}
+              download={`problem-${problemId}.zip`}
+              variant="light"
+              leftSection={<IconDownload size={16} />}
+            >
+              Скачать черновик
+            </Button>
           </Stack>
         </SectionPaper>
       </Stack>
