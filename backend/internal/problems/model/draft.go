@@ -511,6 +511,7 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 func (d *Draft) validateSubtasks(v *validation) {
 	index := make(map[uuid.UUID]int)
 	orders := make(map[int]bool)
+	names := make(map[string]bool)
 	totalPoints := points.Value(0)
 	for i, g := range d.Subtasks {
 		at := fmt.Sprintf("/subtasks/%d", i)
@@ -520,6 +521,11 @@ func (d *Draft) validateSubtasks(v *validation) {
 		if g.Ordinal <= 0 || orders[g.Ordinal] {
 			v.fail(at+"/ordinal", "ordinal must be positive and unique")
 		}
+		// Names are gfmt subtask keys and validator --group values, so an export keeps them exact.
+		if names[g.Name] {
+			v.fail(at+"/name", "duplicate subtask name %q", g.Name)
+		}
+		names[g.Name] = true
 		if g.Points < 0 {
 			v.fail(at+"/points", "points must not be negative")
 		}

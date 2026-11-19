@@ -128,7 +128,7 @@ func TestPublicationRejectsInconsistentSaves(t *testing.T) {
 		{"dependency cycle", "subtask dependencies form a cycle", func(d *model.Draft) { d.Subtasks[0].DependsOn = []uuid.UUID{d.Subtasks[0].ID} }},
 		{"duplicate dependency", "duplicate dependency", func(d *model.Draft) {
 			g := uuid.New()
-			d.Subtasks = append(d.Subtasks, model.DraftSubtask{ID: g, Ordinal: 2, Policy: "each"})
+			d.Subtasks = append(d.Subtasks, model.DraftSubtask{ID: g, Ordinal: 2, Name: "second", Policy: "each"})
 			d.Subtasks[0].DependsOn = []uuid.UUID{g, g}
 		}},
 		{"missing answer", "provided answer needs content and no solution", func(d *model.Draft) { d.Tests[0].Answer.ObjectID = nil }},
@@ -375,7 +375,7 @@ func TestPublicationSupportedTypes(t *testing.T) {
 				if kind == "scoring" {
 					// Publication preserves subtask dependencies and authored test membership.
 					g := uuid.New()
-					d.Subtasks = append(d.Subtasks, model.DraftSubtask{ID: g, Ordinal: 2, Policy: "complete", DependsOn: []uuid.UUID{d.Subtasks[0].ID}})
+					d.Subtasks = append(d.Subtasks, model.DraftSubtask{ID: g, Ordinal: 2, Name: "second", Policy: "complete", DependsOn: []uuid.UUID{d.Subtasks[0].ID}})
 					test := d.Tests[0]
 					test.ID = uuid.New()
 					test.Ordinal = 2

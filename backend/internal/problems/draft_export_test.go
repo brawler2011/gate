@@ -63,8 +63,8 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	d.Validators = append(d.Validators, model.DraftValidator{DraftNamedProgram: model.DraftNamedProgram{Name: "second", DraftProgram: model.DraftProgram{Language: "python3", Source: "pass\n"}},
 		Subtasks: []uuid.UUID{d.Subtasks[1].ID}})
 	gen, other := "gen", d.Solutions[1].Name
-	// Both subtasks are named samples, which gfmt otherwise treats as the sample group.
-	d.Subtasks[0].Name, d.Subtasks[1].Name = "samples", "samples"
+	// gfmt otherwise treats a subtask named samples as the sample group.
+	d.Subtasks[0].Name, d.Subtasks[1].Name = "samples", ""
 	d.Subtasks[0].DependsOn = []uuid.UUID{d.Subtasks[1].ID}
 	d.Tests = append(d.Tests, model.DraftTest{ID: uuid.New(), Ordinal: 3, SubtaskID: d.Subtasks[0].ID, Points: 5, Sample: true,
 		Input:  model.DraftInput{Mode: "generator", Generator: &gen, Args: []string{"", "it's", "a b", "$x", "-n=1"}},
@@ -75,10 +75,7 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	require.NoError(t, d.ComputeScores())
 	require.NoError(t, d.Validate(importQuotas, nil))
 
-	again := exportAndImport(t, plan)
-	require.Equal(t, "samples-2", again.draft.Subtasks[1].Name)
-	again.draft.Subtasks[1].Name = "samples"
-	require.Equal(t, normalized(plan), normalized(again))
+	require.Equal(t, normalized(plan), normalized(exportAndImport(t, plan)))
 }
 
 // Ungrouped Polygon tests stay in an unnamed subtask, so validators get no --group after a round trip.

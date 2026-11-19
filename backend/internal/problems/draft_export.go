@@ -2,14 +2,12 @@ package problems
 
 import (
 	"archive/zip"
-	"cmp"
 	"context"
 	"fmt"
 	"io"
 	"os"
 	"path"
 	"slices"
-	"strconv"
 	"strings"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -141,11 +139,10 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 			return nil, err
 		}
 	}
-	subtasks := subtaskNames(d)
 	for _, v := range d.Validators {
 		source := gfmt.Source{}
 		for _, id := range v.Subtasks {
-			source.Groups = append(source.Groups, subtasks[id])
+			source.Groups = append(source.Groups, d.Subtask(id).Name)
 		}
 		if _, err := program("validator", v.Name, v.DraftProgram, source); err != nil {
 			return nil, err
@@ -193,7 +190,7 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 			return nil, err
 		}
 	}
-	if err := writeTests(w, &m, d, subtasks, solutions, open); err != nil {
+	if err := writeTests(w, &m, d, solutions, open); err != nil {
 		return nil, err
 	}
 	manifest, err := yaml.Marshal(m)
@@ -212,23 +209,11 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 	return w, nil
 }
 
-// Subtask names are map keys in gfmt, so repeated draft names get their ordinal appended.
-func subtaskNames(d model.Draft) map[uuid.UUID]string {
-	names, taken := map[uuid.UUID]string{}, map[string]bool{}
+func writeTests(w *archiveWriter, m *gfmt.Problem, d model.Draft, solutions map[string]string, open func(uuid.UUID) (io.ReadCloser, error)) error {
+	names := map[uuid.UUID]string{}
 	for _, s := range d.Subtasks {
-		name := s.Name
-		for n := s.Ordinal; taken[name]; n++ {
-			name = cmp.Or(s.Name, "subtask") + "-" + strconv.Itoa(n)
-		}
-		taken[name] = true
-		names[s.ID] = name
-	}
-	return names
-}
-
-func writeTests(w *archiveWriter, m *gfmt.Problem, d model.Draft, names map[uuid.UUID]string, solutions map[string]string, open func(uuid.UUID) (io.ReadCloser, error)) error {
-	for _, s := range d.Subtasks {
-		m.Subtasks[names[s.ID]] = gfmt.Subtask{Ordinal: s.Ordinal, Points: s.Points, Policy: s.Policy, Tests: []gfmt.Test{}}
+		names[s.ID] = s.Name
+		m.Subtasks[s.Name] = gfmt.Subtask{Ordinal: s.Ordinal, Points: s.Points, Policy: s.Policy, Tests: []gfmt.Test{}}
 	}
 	for _, s := range d.Subtasks {
 		subtask := m.Subtasks[names[s.ID]]
