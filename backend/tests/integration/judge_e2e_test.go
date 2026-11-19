@@ -128,10 +128,10 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	cacheDir := diskTempDir(t)
 	cache, err := diskcache.Open(cacheDir, 1<<30)
 	require.NoError(t, err)
-	packages := diskCache(t)
+	packages, workDir := judgeCache(t)
 	reads := &countingStorage{Storage: store, reads: map[string]int{}}
 	newJudge := func(image sandbox.Image) *judging.JudgeUseCase {
-		executor := &judging.PackageJudge{Client: client, Files: files, Languages: image.Config, Programs: sandbox.NewProgramCache(cache, client, files, image), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		executor := &judging.PackageJudge{Client: client, Files: files, Languages: image.Config, Programs: sandbox.NewProgramCache(cache, client, files, image), WorkDir: workDir, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 		return judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), submissionsRepo,
 			&judging.PackageLoader{Store: reads, Bucket: bucket, Cache: packages, Packages: drafts, Limits: limits},
 			executor, judgeworker.NewEventPublisher(js))
@@ -292,9 +292,10 @@ func newJudgeHarness(t *testing.T) *judgeHarness {
 	h.limits = problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux}
 	programs := sandbox.NewProgramCache(diskCache(t), client, files, image)
 	h.pipeline = builder.Pipeline{Repo: h.drafts, Store: store, Bucket: bucket, TempDir: diskTempDir(t), Client: client, Files: files, Languages: cfg, Programs: programs, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
-	executor := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Programs: programs, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	packages, workDir := judgeCache(t)
+	executor := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Programs: programs, WorkDir: workDir, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	h.judge = judging.NewJudgeUseCase(pgstore.NewJudgeJobs(dbPool), pgstore.NewJudgeTransactions(dbPool), h.submissions,
-		&judging.PackageLoader{Store: store, Bucket: bucket, Cache: diskCache(t), Packages: h.drafts, Limits: h.limits},
+		&judging.PackageLoader{Store: store, Bucket: bucket, Cache: packages, Packages: h.drafts, Limits: h.limits},
 		executor, judgeworker.NewEventPublisher(js))
 
 	start, end := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)

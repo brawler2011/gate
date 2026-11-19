@@ -24,7 +24,9 @@ type PackageJudge struct {
 	Files  *sandbox.FileTransport
 	Languages *sandbox.Config
 	Programs  *sandbox.ProgramCache
-	Logger    *slog.Logger
+	// Packages are read by go-judge from the worker's disk cache.
+	WorkDir sandbox.SharedDir
+	Logger  *slog.Logger
 }
 
 func (j *PackageJudge) release(id string) {
@@ -36,14 +38,6 @@ func (j *PackageJudge) release(id string) {
 	if err := j.Files.Delete(ctx, id); err != nil {
 		j.Logger.WarnContext(ctx, "release judge sandbox file", "error", err)
 	}
-}
-func (j *PackageJudge) upload(ctx context.Context, root, path string, limit int64) (string, error) {
-	f, err := os.Open(filepath.Join(root, path))
-	if err != nil {
-		return "", fmt.Errorf("open: %w", err)
-	}
-	defer f.Close()
-	return j.Files.Upload(ctx, f, limit)
 }
 
 func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, source gfmt.Program) (sandbox.Executable, error) {
@@ -172,16 +166,14 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 	limits.Wall = 2 * limits.CPU
 	limits.Memory = bytesize.Size(s.Draft.MemoryLimitMb) * bytesize.MiB
 	limits.Output = s.Limits.TestOutputBytes
-	input, err := j.upload(ctx, pkg.Format.Path, test.Test.Manual, int64(s.Limits.ObjectBytes))
+	input, err := j.WorkDir.File(filepath.Join(pkg.Format.Path, test.Test.Manual))
 	if err != nil {
-		return TestResult{}, err
+		return TestResult{}, err //nolint:wrapcheck // names the path
 	}
-	defer j.release(input)
-	answer, err := j.upload(ctx, pkg.Format.Path, test.Test.Answer, int64(s.Limits.ObjectBytes))
+	answer, err := j.WorkDir.File(filepath.Join(pkg.Format.Path, test.Test.Answer))
 	if err != nil {
-		return TestResult{}, err
+		return TestResult{}, err //nolint:wrapcheck // names the path
 	}
-	defer j.release(answer)
 	result := TestResult{TestNumber: test.TestIndex}
 	var output string
 	if interactor != nil {
@@ -209,7 +201,7 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 		result.Memory = r.Memory
 	}
 	if checker != nil && result.Verdict == string(sandbox.StatusOK) {
-		check, err := sb.CheckFiles(ctx, checker.executable, checker.language, input, output, answer, s.Limits.Auxiliary)
+		check, err := sb.CheckFiles(ctx, checker.executable, checker.language, input, sandbox.FileID(output), answer, s.Limits.Auxiliary)
 		if err != nil {
 			return result, err
 		}

@@ -94,7 +94,7 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	for range 3 {
 		id, err := transport.Upload(ctx, f, size)
 		require.NoError(t, err)
-		result, err := sb.RunFiles(ctx, program, "cpp17", id, nil, nil, limits)
+		result, err := sb.RunFiles(ctx, program, "cpp17", sandbox.FileID(id), nil, nil, limits)
 		require.NoError(t, err)
 		require.Equal(t, sandbox.StatusOK, result.Status, "%s", result.Stderr)
 		require.NotEmpty(t, result.OutputID)
@@ -116,7 +116,7 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, transport.Delete(context.Background(), inputID)) }()
 	limits.Output = 1024
-	r, err := sb.RunFiles(ctx, program, "cpp17", inputID, nil, nil, limits)
+	r, err := sb.RunFiles(ctx, program, "cpp17", sandbox.FileID(inputID), nil, nil, limits)
 	require.NoError(t, err)
 	require.Equal(t, sandbox.StatusOLE, r.Status)
 	if r.OutputID != "" {
@@ -124,6 +124,6 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	}
 	cancelled, stopRun := context.WithCancel(ctx)
 	stopRun()
-	_, err = sb.RunFiles(cancelled, program, "cpp17", inputID, nil, nil, limits)
+	_, err = sb.RunFiles(cancelled, program, "cpp17", sandbox.FileID(inputID), nil, nil, limits)
 	require.Error(t, err)
 }

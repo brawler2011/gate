@@ -367,7 +367,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		ids = append(ids, id)
 	} else {
 		gen := e.compiled[programKey("generator", *test.Input.Generator)]
-		result, err := e.sandbox.RunFiles(ctx, gen.executable, gen.language, "", test.Input.Args, nil, aux)
+		result, err := e.sandbox.RunFiles(ctx, gen.executable, gen.language, sandbox.File{}, test.Input.Args, nil, aux)
 		if err != nil {
 			return fail("generate", test.Ordinal, "infrastructure", err)
 		}
@@ -383,7 +383,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 	}
 	if validator := s.Draft.Validator(); validator != nil {
 		v := e.compiled[programKey("validator", validator.Name)]
-		result, err := e.sandbox.RunFiles(ctx, v.executable, v.language, inputID, nil, nil, aux)
+		result, err := e.sandbox.RunFiles(ctx, v.executable, v.language, sandbox.FileID(inputID), nil, nil, aux)
 		if err != nil {
 			return fail("validate", test.Ordinal, "infrastructure", err)
 		}
@@ -398,7 +398,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		// The main solution's interactor output becomes the answer for later judging.
 		sol := e.compiled[programKey("solution", *s.Draft.MainSolution)]
 		intr := e.compiled["interactor"]
-		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, intr.executable, intr.language, inputID, "", e.solutionLimits(), aux)
+		result, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, intr.executable, intr.language, sandbox.FileID(inputID), sandbox.File{}, e.solutionLimits(), aux)
 		if err != nil {
 			return fail("interact", test.Ordinal, "infrastructure", err)
 		}
@@ -428,7 +428,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		outputID = answerID
 		if solution != nil {
 			sol := e.compiled[programKey("solution", *solution)]
-			result, err := e.sandbox.RunFiles(ctx, sol.executable, sol.language, inputID, nil, nil, e.solutionLimits())
+			result, err := e.sandbox.RunFiles(ctx, sol.executable, sol.language, sandbox.FileID(inputID), nil, nil, e.solutionLimits())
 			if err != nil {
 				return fail("answer", test.Ordinal, "infrastructure", err)
 			}
@@ -448,7 +448,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 	}
 	if s.Draft.Checker != nil {
 		checker := e.compiled["checker"]
-		result, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.language, inputID, outputID, answerID, aux)
+		result, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.language, sandbox.FileID(inputID), sandbox.FileID(outputID), sandbox.FileID(answerID), aux)
 		if err != nil {
 			return fail("check", test.Ordinal, "infrastructure", err)
 		}

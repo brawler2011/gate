@@ -6,6 +6,7 @@ http:
 go_judge:
   grpc_addr: localhost:5051
   http_url: http://localhost:5050
+  work_dir: /problem-work
 storage:
   s3_endpoint: http://localhost:8333
 email:

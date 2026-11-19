@@ -21,9 +21,11 @@ import (
 
 	"github.com/brawler2011/gate/backend/pkg"
 
+	"github.com/brawler2011/gate/backend/pkg/diskcache"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 	"github.com/brawler2011/gate/backend/tests/judgeimage"
+	"github.com/docker/docker/api/types/container"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -45,12 +47,15 @@ type sharedContainers struct {
 	postgres   string // Empty until the shared container starts.
 	s3Endpoint string
 	judge      *goJudge
+	judgeDir   string // host side of judgeMount
 }
 
 const (
 	postgresPort = "5432/tcp"
 	templateDatabase = "gate_template"
 )
+
+const judgeMount = "/shared"
 
 type goJudge struct {
 	client *sandbox.Client
@@ -61,6 +66,9 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	if shared.judge != nil {
 		_ = shared.judge.client.Close()
+	}
+	if shared.judgeDir != "" {
+		_ = os.RemoveAll(shared.judgeDir)
 	}
 	for _, c := range shared.containers {
 		if err := terminate(c); err != nil {
@@ -184,10 +192,17 @@ func newGoJudge(t *testing.T) (*sandbox.Client, *sandbox.FileTransport) {
 	if shared.judge == nil {
 		image, err := judgeimage.Ref()
 		require.NoError(t, err)
+		dir, err := os.MkdirTemp("", "gate-judge-")
+		require.NoError(t, err)
+		shared.judgeDir = dir
 		request := testcontainers.ContainerRequest{
 			Image:        image,
-			ExposedPorts: []string{goJudgeHTTPPort, goJudgeGRPCPort}, Privileged: true,
-			Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", "-parallelism=2"},
+			ExposedPorts: []string{goJudgeHTTPPort, goJudgeGRPCPort},
+			HostConfigModifier: func(hc *container.HostConfig) {
+				hc.Privileged = true
+				hc.Binds = append(hc.Binds, dir+":"+judgeMount+":ro")
+			},
+			Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", "-parallelism=2", "-src-prefix=" + judgeMount},
 			WaitingFor: wait.ForHTTP("/version").WithPort(goJudgeHTTPPort).WithStartupTimeout(e2eSandboxTimout)}
 		c, err := startShared(ctx, "go-judge", request)
 		require.NoError(t, err)
@@ -207,4 +222,19 @@ func newGoJudge(t *testing.T) (*sandbox.Client, *sandbox.FileTransport) {
 		shared.judge = &goJudge{client: client, files: files}
 	}
 	return shared.judge.client, shared.judge.files
+}
+
+// judgeCache is a package cache that the shared go-judge reads by path.
+func judgeCache(t *testing.T) (*diskcache.Cache, sandbox.SharedDir) {
+	t.Helper()
+	newGoJudge(t)
+	sharedMu.Lock()
+	root := shared.judgeDir
+	sharedMu.Unlock()
+	dir, err := os.MkdirTemp(root, "cache-")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	cache, err := diskcache.Open(dir, 1<<30)
+	require.NoError(t, err)
+	return cache, sandbox.SharedDir{Local: root, Sandbox: judgeMount}
 }
