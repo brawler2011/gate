@@ -37,8 +37,8 @@ type File struct {
 	Path string
 	// Gate supplies system library contents; Path still identifies the dependency.
 	System bool
-	// Nil lets the import decide from the file text whether a system library file auto-updates.
-	AutoUpdate *bool
+	// Pinned keeps the file's text even when it is an upstream copy of a system file.
+	Pinned bool
 }
 
 type Program struct {

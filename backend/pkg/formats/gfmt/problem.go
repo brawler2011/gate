@@ -58,17 +58,24 @@ type Test struct {
 	Sample   bool   `yaml:"sample,omitempty" json:"sample,omitempty"`
 }
 
+func (p *Problem) hasOrdinals() bool {
+	for _, s := range p.Subtasks {
+		if s.Ordinal <= 0 {
+			return false
+		}
+	}
+	return len(p.Subtasks) > 0
+}
+
 // Order by ordinals when every subtask has one; otherwise samples come first, then names in order.
 func (p *Problem) OrderedSubtaskNames() []string {
 	names := make([]string, 0, len(p.Subtasks))
-	ordinals := true
-	for name, s := range p.Subtasks {
-		ordinals = ordinals && s.Ordinal > 0
+	for name := range p.Subtasks {
 		if name != "samples" {
 			names = append(names, name)
 		}
 	}
-	if ordinals {
+	if p.hasOrdinals() {
 		names = slices.Collect(maps.Keys(p.Subtasks))
 		slices.SortFunc(names, func(a, b string) int {
 			return cmp.Or(cmp.Compare(p.Subtasks[a].Ordinal, p.Subtasks[b].Ordinal), strings.Compare(a, b))

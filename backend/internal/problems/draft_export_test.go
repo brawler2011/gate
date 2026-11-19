@@ -52,7 +52,6 @@ func TestExportRoundTrip(t *testing.T) {
 
 // Every draft field survives the round trip, including ones no fixture sets.
 func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
-	uc := newImportUseCase(t)
 	plan, err := importDir(t, "../../pkg/testdata/gfmt/subtasks-groups", nil)
 	require.NoError(t, err)
 	defer plan.Close()
@@ -61,49 +60,83 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	d.Checker = &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17"}, Standard: "wcmp"}
 	d.Generators = append(d.Generators, model.DraftNamedProgram{Name: "gen", DraftProgram: model.DraftProgram{Language: "python3", Source: "print(1)\n"}})
 	gen, other := "gen", d.Solutions[1].Name
-	// Interleave subtasks, give the second subtask the first name, and use arguments that need quoting.
-	d.Subtasks[1].Name = d.Subtasks[0].Name
+	// Both subtasks are named samples, which gfmt otherwise treats as the sample group.
+	d.Subtasks[0].Name, d.Subtasks[1].Name = "samples", "samples"
 	d.Subtasks[0].DependsOn = []uuid.UUID{d.Subtasks[1].ID}
 	d.Tests = append(d.Tests, model.DraftTest{ID: uuid.New(), Ordinal: 3, SubtaskID: d.Subtasks[0].ID, Points: 5, Sample: true,
 		Input:  model.DraftInput{Mode: "generator", Generator: &gen, Args: []string{"", "it's", "a b", "$x", "-n=1"}},
 		Answer: model.DraftAnswer{Mode: "generated", Solution: &other}})
+	// Interleave the subtasks' tests.
 	d.Tests[0].Ordinal, d.Tests[1].Ordinal = 2, 1
 	d.Tests[0], d.Tests[1] = d.Tests[1], d.Tests[0]
 	require.NoError(t, d.ComputeScores())
 	require.NoError(t, d.Validate(importQuotas, nil))
 
-	var exported bytes.Buffer
-	_, err = writeDraftArchive(&exported, *d, uc.Languages, plan.open)
-	require.NoError(t, err)
-	again, err := uc.parseImport(context.Background(), &exported, uuid.New(), 1)
-	require.NoError(t, err)
-	defer again.Close()
-	// The export renames repeated subtask names, since gfmt keys subtasks by name.
-	require.Equal(t, d.Subtasks[0].Name+"-2", again.draft.Subtasks[1].Name)
-	again.draft.Subtasks[1].Name = d.Subtasks[1].Name
+	again := exportAndImport(t, plan)
+	require.Equal(t, "samples-2", again.draft.Subtasks[1].Name)
+	again.draft.Subtasks[1].Name = "samples"
 	require.Equal(t, normalized(plan), normalized(again))
 }
 
-// An archive the import would reject for size is not exported.
+// Library files survive even when no judge program selects them yet.
+func TestExportRoundTripKeepsLibraryWithoutJudgePrograms(t *testing.T) {
+	plan, err := importDir(t, "../../pkg/testdata/gfmt/subtasks-groups", nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	plan.draft.Checker, plan.draft.Validators = nil, nil
+	plan.draft.Library = append(plan.draft.Library, model.DraftLibraryFile{Name: "util.h", Content: "#pragma once\n"})
+	require.NoError(t, plan.draft.Validate(importQuotas, nil))
+	require.Equal(t, normalized(plan), normalized(exportAndImport(t, plan)))
+}
+
+func exportAndImport(t *testing.T, plan *draftImport) *draftImport {
+	t.Helper()
+	uc := newImportUseCase(t)
+	var exported bytes.Buffer
+	_, err := writeDraftArchive(&exported, plan.draft, uc.Languages, plan.open)
+	require.NoError(t, err)
+	again, err := uc.parseImport(context.Background(), &exported, uuid.New(), 1)
+	require.NoError(t, err)
+	t.Cleanup(again.Close)
+	return again
+}
+
+// The export accepts exactly the archives the import can extract.
 func TestExportRespectsImportLimits(t *testing.T) {
 	plan, err := importDir(t, "../../pkg/testdata/gfmt/a-plus-b", nil)
 	require.NoError(t, err)
 	defer plan.Close()
-	export := func(uc *DraftUseCase) error {
+	export := func(uc *DraftUseCase) (*os.File, error) {
 		f, err := os.CreateTemp(t.TempDir(), "export-")
 		require.NoError(t, err)
-		defer f.Close()
+		t.Cleanup(func() { _ = f.Close() })
 		w, err := writeDraftArchive(f, plan.draft, uc.Languages, plan.open)
 		require.NoError(t, err)
-		return uc.checkExport(f, w)
+		return f, uc.checkExport(f, w)
 	}
 	uc := newImportUseCase(t)
-	require.NoError(t, export(uc))
-	uc.BuildOptions.Limits.FileCount = 3
-	require.ErrorIs(t, export(uc), pkg.ErrPayloadTooLarge)
+	f, err := export(uc)
+	require.NoError(t, err)
+	archive, err := os.ReadFile(f.Name())
+	require.NoError(t, err)
+	// Find the smallest file count the import accepts.
+	for uc.BuildOptions.Limits.FileCount = 1; ; uc.BuildOptions.Limits.FileCount++ {
+		again, err := uc.parseImport(context.Background(), bytes.NewReader(archive), uuid.New(), 1)
+		if err == nil {
+			again.Close()
+			break
+		}
+	}
+	_, err = export(uc)
+	require.NoError(t, err)
+	uc.BuildOptions.Limits.FileCount--
+	_, err = export(uc)
+	require.ErrorIs(t, err, pkg.ErrPayloadTooLarge)
+
 	uc = newImportUseCase(t)
 	uc.BuildOptions.Limits.DiskBytes = 1024
-	require.ErrorIs(t, export(uc), pkg.ErrPayloadTooLarge)
+	_, err = export(uc)
+	require.ErrorIs(t, err, pkg.ErrPayloadTooLarge)
 }
 
 func zipDir(t *testing.T, dir string) []byte {

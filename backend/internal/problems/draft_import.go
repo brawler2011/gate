@@ -249,7 +249,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 	}
 	var order []string
 	texts, system, generated := map[string][]string{}, map[string]bool{}, map[string]bool{}
-	explicit := map[string]*bool{}
+	pinned := map[string]bool{}
 	// sources holds a package path of each distinct text, for errors.
 	sources := map[string][]string{}
 	add := func(name string, f spec.File, generator bool) error {
@@ -261,9 +261,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			texts[name] = nil
 		}
 		generated[name] = generated[name] || generator
-		if f.AutoUpdate != nil {
-			explicit[name] = f.AutoUpdate
-		}
+		pinned[name] = pinned[name] || f.Pinned
 		// Charge text before retaining it so imports cannot exceed draft memory quotas.
 		if f.System {
 			if !system[name] {
@@ -318,6 +316,14 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			return err
 		}
 	}
+	// Without judge programs nothing selects library files, so keep them all for a later checker.
+	if p.Checker == nil && p.Interactor == nil && p.Validator == nil && len(p.Generators) == 0 {
+		for _, f := range p.Library {
+			if err := add(f.Name, f, false); err != nil {
+				return err
+			}
+		}
+	}
 	for _, name := range order {
 		list := texts[name]
 		file := model.DraftLibraryFile{Name: name}
@@ -327,11 +333,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			upstream = upstream && current.IsUpstream(text)
 		}
 		switch {
-		case explicit[name] != nil && *explicit[name] && !known:
-			return pkg.Wrap(pkg.ErrBadInput, nil, name+" is not a system library file and cannot auto-update")
-		case explicit[name] != nil && *explicit[name]:
-			file.AutoUpdate = true
-		case explicit[name] != nil && len(list) == 1:
+		case pinned[name] && len(list) == 1:
 			file.Content = list[0]
 		case system[name] && !known:
 			return pkg.Wrap(pkg.ErrBadInput, nil, "unknown system library file "+name)

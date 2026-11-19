@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"slices"
 	"strconv"
 	"strings"
@@ -68,8 +69,10 @@ func (uc *DraftUseCase) checkExport(f *os.File, w *archiveWriter) error {
 	return nil
 }
 
+// files counts directories too, as the import extraction does.
 type archiveWriter struct {
 	z     *zip.Writer
+	dirs  map[string]bool
 	files int
 	bytes int64
 }
@@ -85,6 +88,10 @@ func (w *archiveWriter) add(name string, r io.Reader) error {
 	}
 	w.files++
 	w.bytes += n
+	for dir := path.Dir(name); dir != "." && !w.dirs[dir]; dir = path.Dir(dir) {
+		w.dirs[dir] = true
+		w.files++
+	}
 	return nil
 }
 
@@ -102,7 +109,7 @@ func (w *archiveWriter) object(name string, oid uuid.UUID, open func(uuid.UUID) 
 }
 
 func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, open func(uuid.UUID) (io.ReadCloser, error)) (*archiveWriter, error) {
-	w := &archiveWriter{z: zip.NewWriter(dst)}
+	w := &archiveWriter{z: zip.NewWriter(dst), dirs: map[string]bool{}}
 	m := gfmt.Problem{FormatVersion: "1.0", Title: d.Title, Type: d.Type, Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb},
 		Sources: map[string]gfmt.Source{}, Subtasks: map[string]gfmt.Subtask{}, Solutions: map[string]string{}}
 	fileName := func(name, language string) string {
@@ -182,6 +189,9 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 	manifest, err := yaml.Marshal(m)
 	if err != nil {
 		return nil, fmt.Errorf("marshal problem.yaml: %w", err)
+	}
+	if len(manifest) > spec.MaxMetadataBytes {
+		return nil, pkg.ErrPayloadTooLarge
 	}
 	if err := w.text("problem.yaml", string(manifest)); err != nil {
 		return nil, err

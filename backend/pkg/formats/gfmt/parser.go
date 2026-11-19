@@ -44,7 +44,8 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 			source := manifest.Sources[rel]
 			programs[folder] = append(programs[folder], spec.Program{File: spec.File{Name: name, Path: rel}, Language: source.Language, Dependencies: deps, Standard: source.Standard})
 		case folder == LibraryFolder && name != "" && !strings.Contains(name, "/"):
-			p.Library = append(p.Library, spec.File{Name: name, Path: rel, AutoUpdate: manifest.Sources[rel].AutoUpdate})
+			auto := manifest.Sources[rel].AutoUpdate
+			p.Library = append(p.Library, spec.File{Name: name, Path: rel, System: auto != nil && *auto, Pinned: auto != nil && !*auto})
 		case folder == AssetFolder && name != "" && !strings.Contains(name, "/"):
 			p.Assets = append(p.Assets, spec.File{Name: name, Path: rel})
 		case folder == StatementFolder && strings.Count(name, "/") == 1 && path.Ext(name) == ".md":
@@ -143,13 +144,15 @@ func groups(manifest *Problem, generators map[string]string, files map[string]bo
 		}
 		return "generator:" + t.Generate
 	}
+	// Ordinals mark an exported draft, whose subtask named samples is an ordinary one.
+	legacy := !manifest.hasOrdinals()
 	samples, scored := map[string]bool{}, map[string]bool{}
 	for name, subtask := range manifest.Subtasks {
 		for _, t := range subtask.Tests {
-			if name == "samples" {
+			if legacy && name == "samples" {
 				samples[key(t)] = true
 			}
-			if name != "samples" {
+			if legacy && name != "samples" {
 				scored[key(t)] = true
 			}
 		}

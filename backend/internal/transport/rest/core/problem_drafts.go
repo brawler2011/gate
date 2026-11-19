@@ -39,6 +39,7 @@ func draftContract[T any](source any) (*T, error) {
 	}
 	return &value, nil
 }
+
 // Reject contract fields absent from the draft model instead of silently dropping them.
 func draftModel(source *corev1.ProblemDraft) (*model.Draft, error) {
 	data, err := json.Marshal(source)
