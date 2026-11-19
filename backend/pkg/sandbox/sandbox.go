@@ -1,14 +1,15 @@
 package sandbox
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/brawler2011/gate/backend/pkg/booklet"
-	pb "github.com/criyle/go-judge/pb"
 )
 
 func safeUint64[T ~int | ~int64](v T) uint64 {
@@ -42,26 +43,11 @@ const (
 	compilerCompileMemoryLimit  = 512 * 1024 * 1024
 	compilerCompileProcLimit    = 150
 
-	generatorCpuTimeLimit = 5 * time.Second
-	generatorMemoryLimit  = 256 * 1024 * 1024
-	generatorProcLimit    = 50
-
-	checkerCpuTimeLimit = 5 * time.Second
-	checkerMemoryLimit  = 512 * 1024 * 1024
-	checkerProcLimit    = 50
-
-	interactorCpuTimeLimit   = 5 * time.Second
-	interactorClockTimeLimit = 10 * time.Second
-	interactorMemoryLimit    = 512 * 1024 * 1024
-	interactorProcLimit      = 50
-
-	solutionProcLimit           = 50
-	solutionClockTimeMultiplier = 2
-
 	bookletCompileCpuTimeLimit   = 30 * time.Second
 	bookletCompileClockTimeLimit = 60 * time.Second
 	bookletCompileMemoryLimit    = 512 * 1024 * 1024
 	bookletCompileProcLimit      = 100
+	bookletPDFLimit              = 64 * 1024 * 1024
 )
 
 const (
@@ -124,6 +110,19 @@ func (s *Sandbox) Compile(ctx context.Context, sourceCode []byte, langKey string
 	return s.CompileWithLimits(ctx, sourceCode, langKey, dependencies, FileRunLimits{CPU: compilerCompileCpuTimeLimit, Wall: 2 * compilerCompileCpuTimeLimit, Memory: compilerCompileMemoryLimit, Processes: compilerCompileProcLimit, Output: 64 * 1024 * 1024, Diagnostic: 64 * 1024})
 }
 
+// inline sends text in the JSON request; other bytes would be mangled there, so they go through the file store.
+func (s *Sandbox) inline(ctx context.Context, data []byte, uploaded *[]string) (cmdFile, error) {
+	if utf8.Valid(data) {
+		return *memoryFile(string(data)), nil
+	}
+	id, err := s.client.upload(ctx, data)
+	if err != nil {
+		return cmdFile{}, err
+	}
+	*uploaded = append(*uploaded, id)
+	return *cachedFile(id), nil
+}
+
 func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, langKey string, dependencies map[string][]byte, limits FileRunLimits) (Executable, error) {
 	if limits.CPU <= 0 || limits.Wall <= 0 || limits.Memory == 0 || limits.Processes == 0 || limits.Output <= 0 || limits.Diagnostic <= 0 || limits.Diagnostic > 64*1024 {
 		return Executable{}, fmt.Errorf("invalid compilation limits")
@@ -134,62 +133,53 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 		return Executable{}, fmt.Errorf("%w: %s", ErrUnknownLanguage, langKey)
 	}
 
+	var uploaded []string
+	defer func() { s.client.release(uploaded...) }()
+	copyIn := make(map[string]cmdFile)
+	var err error
+	if copyIn[lang.CodeFile], err = s.inline(ctx, sourceCode, &uploaded); err != nil {
+		return Executable{}, err
+	}
+	for depName, depContent := range dependencies {
+		if copyIn[depName], err = s.inline(ctx, depContent, &uploaded); err != nil {
+			return Executable{}, err
+		}
+	}
+
 	if lang.Type == "interpreter" || lang.Compile == "" {
-		copyIn := make(map[string]*pb.Request_File)
-		copyIn[lang.CodeFile] = newMemoryFile(sourceCode)
-		for depName, depContent := range dependencies {
-			copyIn[depName] = newMemoryFile(depContent)
-		}
-
-		copyOutCached := []*pb.Request_CmdCopyOutFile{
-			pb.Request_CmdCopyOutFile_builder{Name: lang.CodeFile}.Build(),
-		}
+		copyOutCached := []string{lang.CodeFile}
 		for depName := range dependencies {
-			copyOutCached = append(copyOutCached, pb.Request_CmdCopyOutFile_builder{Name: depName}.Build())
+			copyOutCached = append(copyOutCached, depName)
 		}
-
-		cmd := pb.Request_CmdType_builder{
-			Args: []string{"/bin/true"},
-			Files: []*pb.Request_File{
-				newMemoryFile([]byte("")),
-				newPipeCollector("stdout", dummyPipeCollectorSize),
-				newPipeCollector("stderr", dummyPipeCollectorSize),
-			},
-			CopyIn:         copyIn,
-			CopyOutCached:  copyOutCached,
-			ClockTimeLimit: uint64(limits.Wall),
-			CopyOutMax:     uint64(limits.Output),
-			CpuTimeLimit:   uint64(limits.CPU),
-			MemoryLimit:    limits.Memory.Uint64(),
-			ProcLimit:      limits.Processes,
-			Env:            []string{"PATH=/usr/bin:/bin", "GOCACHE=/var/cache/go", "CGO_ENABLED=0", "HOME=/tmp"},
-		}.Build()
-
-		req := pb.Request_builder{
-			Cmd: []*pb.Request_CmdType{cmd},
-		}.Build()
-
-		resp, err := s.client.Exec(ctx, req)
+		results, err := s.client.run(ctx, request{Cmd: []cmd{{
+			Args:          []string{"/bin/true"},
+			Files:         []*cmdFile{memoryFile(""), collector("stdout", dummyPipeCollectorSize, false), collector("stderr", dummyPipeCollectorSize, false)},
+			CopyIn:        copyIn,
+			CopyOutCached: copyOutCached,
+			ClockLimit:    uint64(limits.Wall),
+			CopyOutMax:    uint64(limits.Output),
+			CPULimit:      uint64(limits.CPU),
+			MemoryLimit:   limits.Memory.Uint64(),
+			ProcLimit:     limits.Processes,
+			Env:           []string{"PATH=/usr/bin:/bin", "GOCACHE=/var/cache/go", "CGO_ENABLED=0", "HOME=/tmp"},
+		}}})
 		if err != nil {
 			return Executable{}, fmt.Errorf("failed to cache script: %w", err)
 		}
-		if len(resp.GetResults()) == 0 {
-			return Executable{}, fmt.Errorf("no results returned during caching")
-		}
-		res := resp.GetResults()[0]
-		if res.GetStatus() != pb.Response_Result_Accepted {
+		res := results[0]
+		if res.Status != resultAccepted {
 			return Executable{}, fmt.Errorf("caching dummy execution failed: status=%v, exitStatus=%v, stderr=%s",
-				res.GetStatus(), res.GetExitStatus(), string(res.GetFiles()["stderr"]))
+				res.Status, res.ExitStatus, res.Files["stderr"])
 		}
 
-		fileID, ok := res.GetFileIDs()[lang.CodeFile]
+		fileID, ok := res.FileIDs[lang.CodeFile]
 		if !ok {
 			return Executable{}, fmt.Errorf("fileID not found for cached script %s", lang.CodeFile)
 		}
 
 		cachedDeps := make(map[string]string)
 		for depName := range dependencies {
-			depFileID, ok := res.GetFileIDs()[depName]
+			depFileID, ok := res.FileIDs[depName]
 			if !ok {
 				return Executable{}, fmt.Errorf("fileID not found for dependency %s", depName)
 			}
@@ -208,52 +198,29 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 	}
 
 	compileCmd := strings.ReplaceAll(lang.Compile, "${name}", outputName)
-	compileCmdArgs := strings.Fields(compileCmd)
-
-	copyIn := make(map[string]*pb.Request_File)
-	copyIn[lang.CodeFile] = newMemoryFile(sourceCode)
-	for depName, depContent := range dependencies {
-		copyIn[depName] = newMemoryFile(depContent)
-	}
-
-	cmd := pb.Request_CmdType_builder{
-		Args: compileCmdArgs,
-		Files: []*pb.Request_File{
-			newMemoryFile([]byte("")),
-			newPipeCollector("stdout", int64(limits.Diagnostic)),
-			newPipeCollector("stderr", int64(limits.Diagnostic)),
-		},
-		CopyIn: copyIn,
-		CopyOutCached: []*pb.Request_CmdCopyOutFile{
-			pb.Request_CmdCopyOutFile_builder{Name: outputName}.Build(),
-		},
-		ClockTimeLimit: uint64(limits.Wall),
-		CopyOutMax:     uint64(limits.Output),
-		CpuTimeLimit:   uint64(limits.CPU),
-		MemoryLimit:    limits.Memory.Uint64(),
-		ProcLimit:      limits.Processes,
-		Env:            []string{"PATH=/usr/bin:/bin", "GOCACHE=/var/cache/go", "CGO_ENABLED=0", "HOME=/tmp"},
-	}.Build()
-
-	req := pb.Request_builder{
-		Cmd: []*pb.Request_CmdType{cmd},
-	}.Build()
-
-	resp, err := s.client.Exec(ctx, req)
+	results, err := s.client.run(ctx, request{Cmd: []cmd{{
+		Args:          strings.Fields(compileCmd),
+		Files:         []*cmdFile{memoryFile(""), collector("stdout", int64(limits.Diagnostic), false), collector("stderr", int64(limits.Diagnostic), false)},
+		CopyIn:        copyIn,
+		CopyOutCached: []string{outputName},
+		ClockLimit:    uint64(limits.Wall),
+		CopyOutMax:    uint64(limits.Output),
+		CPULimit:      uint64(limits.CPU),
+		MemoryLimit:   limits.Memory.Uint64(),
+		ProcLimit:     limits.Processes,
+		Env:           []string{"PATH=/usr/bin:/bin", "GOCACHE=/var/cache/go", "CGO_ENABLED=0", "HOME=/tmp"},
+	}}})
 	if err != nil {
 		return Executable{}, fmt.Errorf("compilation failed to dispatch: %w", err)
 	}
-	if len(resp.GetResults()) == 0 {
-		return Executable{}, fmt.Errorf("compilation returned no results")
-	}
 
-	res := resp.GetResults()[0]
-	if res.GetStatus() != pb.Response_Result_Accepted {
+	res := results[0]
+	if res.Status != resultAccepted {
 		return Executable{}, fmt.Errorf("compilation failed:\nstatus: %v\nexit code: %d\nstdout: %s\nstderr: %s",
-			res.GetStatus(), res.GetExitStatus(), string(res.GetFiles()["stdout"]), string(res.GetFiles()["stderr"]))
+			res.Status, res.ExitStatus, res.Files["stdout"], res.Files["stderr"])
 	}
 
-	fileID, ok := res.GetFileIDs()[outputName]
+	fileID, ok := res.FileIDs[outputName]
 	if !ok {
 		return Executable{}, fmt.Errorf("fileID not found in compilation results for %s", outputName)
 	}
@@ -263,395 +230,60 @@ func (s *Sandbox) CompileWithLimits(ctx context.Context, sourceCode []byte, lang
 	}, nil
 }
 
-func (s *Sandbox) Generate(ctx context.Context, gen Executable, args []string) ([]byte, error) {
-	copyIn := map[string]*pb.Request_File{
-		"generator": newCachedFile(gen.PrimaryFileID),
-	}
-	for depName, depFileID := range gen.Dependencies {
-		copyIn[depName] = newCachedFile(depFileID)
-	}
-
-	cmd := pb.Request_CmdType_builder{
-		Args: append([]string{"./generator"}, args...),
-		Files: []*pb.Request_File{
-			newMemoryFile([]byte("")),
-			newPipeCollector("stdout", defaultPipeCollectorSize),
-			newPipeCollector("stderr", defaultPipeCollectorSize),
-		},
-		CopyIn:       copyIn,
-		CpuTimeLimit: safeUint64(generatorCpuTimeLimit.Nanoseconds()),
-		MemoryLimit:  generatorMemoryLimit,
-		ProcLimit:    generatorProcLimit,
-		Env:          []string{"PATH=/usr/bin:/bin"},
-	}.Build()
-
-	req := pb.Request_builder{
-		Cmd: []*pb.Request_CmdType{cmd},
-	}.Build()
-
-	resp, err := s.client.Exec(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("generator failed to dispatch: %w", err)
-	}
-	if len(resp.GetResults()) == 0 {
-		return nil, fmt.Errorf("generator returned no results")
-	}
-
-	res := resp.GetResults()[0]
-	if res.GetStatus() != pb.Response_Result_Accepted {
-		return nil, fmt.Errorf("generator execution failed: status=%v, exitStatus=%v, stderr=%s",
-			res.GetStatus(), res.GetExitStatus(), string(res.GetFiles()["stderr"]))
-	}
-
-	return res.GetFiles()["stdout"], nil
-}
-
-func (s *Sandbox) Test(ctx context.Context, sol Executable, langKey string, input []byte, timeLimitMs, memoryLimitMb int) (*RunResult, error) {
-	lang, ok := s.config.Langs[langKey]
-	if !ok {
-		return nil, fmt.Errorf("%w: %s", ErrUnknownLanguage, langKey)
-	}
-
-	var cmdArgs []string
-	copyIn := make(map[string]*pb.Request_File)
-
-	if lang.Type == "compiler" {
-		outputName := lang.CompileFile
-		if outputName == "" {
-			outputName = "solution"
-		}
-		copyIn[outputName] = newCachedFile(sol.PrimaryFileID)
-		execTemplate := strings.ReplaceAll(lang.Execute, "${name}", outputName)
-		execTemplate = strings.ReplaceAll(execTemplate, "${dir}", ".")
-		cmdArgs = strings.Fields(execTemplate)
-	} else {
-		copyIn[lang.CodeFile] = newCachedFile(sol.PrimaryFileID)
-		execTemplate := strings.ReplaceAll(lang.Execute, "${dir}", ".")
-		cmdArgs = strings.Fields(execTemplate)
-	}
-
-	for depName, depFileID := range sol.Dependencies {
-		copyIn[depName] = newCachedFile(depFileID)
-	}
-
-	cmd := pb.Request_CmdType_builder{
-		Args: cmdArgs,
-		Files: []*pb.Request_File{
-			newMemoryFile(input),
-			newPipeCollector("stdout", defaultPipeCollectorSize),
-			newPipeCollector("stderr", defaultPipeCollectorSize),
-		},
-		CopyIn:         copyIn,
-		CpuTimeLimit:   safeUint64(timeLimitMs) * safeUint64(time.Millisecond),
-		ClockTimeLimit: safeUint64(timeLimitMs) * safeUint64(time.Millisecond) * solutionClockTimeMultiplier,
-		MemoryLimit:    safeUint64(memoryLimitMb) * 1024 * 1024,
-		ProcLimit:      solutionProcLimit,
-		Env:            []string{"PATH=/usr/bin:/bin"},
-	}.Build()
-
-	req := pb.Request_builder{
-		Cmd: []*pb.Request_CmdType{cmd},
-	}.Build()
-
-	resp, err := s.client.Exec(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("solution failed to dispatch: %w", err)
-	}
-	if len(resp.GetResults()) == 0 {
-		return nil, fmt.Errorf("solution returned no results")
-	}
-
-	res := resp.GetResults()[0]
-	statusStr := statusToString(res.GetStatus())
-
-	return &RunResult{
-		Status:     statusStr,
-		ExitStatus: int(res.GetExitStatus()),
-		Time:       safeDuration(res.GetTime()),
-		Memory:     safeInt64(res.GetMemory()),
-		Stdout:     res.GetFiles()["stdout"],
-		Stderr:     res.GetFiles()["stderr"],
-	}, nil
-}
-
-func (s *Sandbox) Check(ctx context.Context, checker Executable, input, output, answer []byte) (*CheckerResult, error) {
-	copyIn := map[string]*pb.Request_File{
-		"checker":    newCachedFile(checker.PrimaryFileID),
-		"input.txt":  newMemoryFile(input),
-		"output.txt": newMemoryFile(output),
-		"answer.txt": newMemoryFile(answer),
-	}
-	for depName, depFileID := range checker.Dependencies {
-		copyIn[depName] = newCachedFile(depFileID)
-	}
-
-	cmd := pb.Request_CmdType_builder{
-		Args: []string{"./checker", "input.txt", "output.txt", "answer.txt"},
-		Files: []*pb.Request_File{
-			newMemoryFile([]byte("")),
-			newPipeCollector("stdout", defaultPipeCollectorSize),
-			newPipeCollector("stderr", defaultPipeCollectorSize),
-		},
-		CopyIn:       copyIn,
-		CpuTimeLimit: safeUint64(checkerCpuTimeLimit.Nanoseconds()),
-		MemoryLimit:  checkerMemoryLimit,
-		ProcLimit:    checkerProcLimit,
-		Env:          []string{"PATH=/usr/bin:/bin"},
-	}.Build()
-
-	req := pb.Request_builder{
-		Cmd: []*pb.Request_CmdType{cmd},
-	}.Build()
-
-	resp, err := s.client.Exec(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("checker failed to dispatch: %w", err)
-	}
-	if len(resp.GetResults()) == 0 {
-		return nil, fmt.Errorf("checker returned no results")
-	}
-
-	res := resp.GetResults()[0]
-	stderr := strings.TrimSpace(string(res.GetFiles()["stderr"]))
-	stdout := strings.TrimSpace(string(res.GetFiles()["stdout"]))
-
-	status, score := parseTestlibVerdict(int(res.GetExitStatus()), stdout, stderr)
-
-	return &CheckerResult{
-		Status:     status,
-		ExitStatus: int(res.GetExitStatus()),
-		Message:    stderr,
-		Score:      score,
-	}, nil
-}
-
-func (s *Sandbox) Interact(ctx context.Context, sol Executable, solLangKey string, interactor Executable, input []byte, timeLimitMs, memoryLimitMb int) (*InteractiveResult, error) {
-	lang, ok := s.config.Langs[solLangKey]
-	if !ok {
-		return nil, fmt.Errorf("%w: %s", ErrUnknownLanguage, solLangKey)
-	}
-
-	var solCmdArgs []string
-	solCopyIn := make(map[string]*pb.Request_File)
-
-	if lang.Type == "compiler" {
-		outputName := lang.CompileFile
-		if outputName == "" {
-			outputName = "solution"
-		}
-		solCopyIn[outputName] = newCachedFile(sol.PrimaryFileID)
-		execTemplate := strings.ReplaceAll(lang.Execute, "${name}", outputName)
-		execTemplate = strings.ReplaceAll(execTemplate, "${dir}", ".")
-		solCmdArgs = strings.Fields(execTemplate)
-	} else {
-		solCopyIn[lang.CodeFile] = newCachedFile(sol.PrimaryFileID)
-		execTemplate := strings.ReplaceAll(lang.Execute, "${dir}", ".")
-		solCmdArgs = strings.Fields(execTemplate)
-	}
-
-	for depName, depFileID := range sol.Dependencies {
-		solCopyIn[depName] = newCachedFile(depFileID)
-	}
-
-	solCmd := pb.Request_CmdType_builder{
-		Args: solCmdArgs,
-		Files: []*pb.Request_File{
-			nil, // pipe stdin
-			nil, // pipe stdout
-			newPipeCollector("stdout", defaultPipeCollectorSize), // redirect stderr to stdout collector key
-		},
-		CopyIn:         solCopyIn,
-		CpuTimeLimit:   safeUint64(timeLimitMs) * safeUint64(time.Millisecond),
-		ClockTimeLimit: safeUint64(timeLimitMs) * safeUint64(time.Millisecond) * solutionClockTimeMultiplier,
-		MemoryLimit:    safeUint64(memoryLimitMb) * 1024 * 1024,
-		ProcLimit:      solutionProcLimit,
-		Env:            []string{"PATH=/usr/bin:/bin"},
-	}.Build()
-
-	interactorCopyIn := map[string]*pb.Request_File{
-		"interactor": newCachedFile(interactor.PrimaryFileID),
-		"input.txt":  newMemoryFile(input),
-		"answer.txt": newMemoryFile([]byte{}),
-	}
-	for depName, depFileID := range interactor.Dependencies {
-		interactorCopyIn[depName] = newCachedFile(depFileID)
-	}
-
-	interactorCmd := pb.Request_CmdType_builder{
-		Args: []string{"./interactor", "input.txt", "log.txt", "answer.txt"},
-		Files: []*pb.Request_File{
-			nil, // pipe stdin
-			nil, // pipe stdout
-			newPipeCollector("stdout", defaultPipeCollectorSize),
-		},
-		CopyIn:         interactorCopyIn,
-		CpuTimeLimit:   safeUint64(interactorCpuTimeLimit.Nanoseconds()),
-		ClockTimeLimit: safeUint64(interactorClockTimeLimit.Nanoseconds()),
-		MemoryLimit:    interactorMemoryLimit,
-		ProcLimit:      interactorProcLimit,
-		Env:            []string{"PATH=/usr/bin:/bin"},
-		CopyOut: []*pb.Request_CmdCopyOutFile{
-			pb.Request_CmdCopyOutFile_builder{Name: "log.txt"}.Build(),
-		},
-	}.Build()
-
-	pipeMappings := []*pb.Request_PipeMap{
-		pb.Request_PipeMap_builder{
-			In: pb.Request_PipeMap_PipeIndex_builder{
-				Index: 0,
-				Fd:    1,
-			}.Build(),
-			Out: pb.Request_PipeMap_PipeIndex_builder{
-				Index: 1,
-				Fd:    0,
-			}.Build(),
-			Max: defaultPipeCollectorSize,
-		}.Build(),
-		pb.Request_PipeMap_builder{
-			In: pb.Request_PipeMap_PipeIndex_builder{
-				Index: 1,
-				Fd:    1,
-			}.Build(),
-			Out: pb.Request_PipeMap_PipeIndex_builder{
-				Index: 0,
-				Fd:    0,
-			}.Build(),
-			Max: defaultPipeCollectorSize,
-		}.Build(),
-	}
-
-	req := pb.Request_builder{
-		Cmd:         []*pb.Request_CmdType{solCmd, interactorCmd},
-		PipeMapping: pipeMappings,
-	}.Build()
-
-	resp, err := s.client.Exec(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("interactive exec failed to dispatch: %w", err)
-	}
-	if len(resp.GetResults()) < 2 {
-		return nil, fmt.Errorf("interactive exec expected at least 2 results, got %d", len(resp.GetResults()))
-	}
-
-	solRes := resp.GetResults()[0]
-	intRes := resp.GetResults()[1]
-
-	solRun := RunResult{
-		Status:     statusToString(solRes.GetStatus()),
-		ExitStatus: int(solRes.GetExitStatus()),
-		Time:       safeDuration(solRes.GetTime()),
-		Memory:     safeInt64(solRes.GetMemory()),
-		Stderr:     solRes.GetFiles()["stdout"],
-	}
-
-	intRun := RunResult{
-		Status:     statusToString(intRes.GetStatus()),
-		ExitStatus: int(intRes.GetExitStatus()),
-		Time:       safeDuration(intRes.GetTime()),
-		Memory:     safeInt64(intRes.GetMemory()),
-		Stderr:     intRes.GetFiles()["stdout"],
-	}
-
-	var status Status
-	var score *float64
-	if intRes.GetStatus() != pb.Response_Result_Accepted && intRes.GetStatus() != pb.Response_Result_NonZeroExitStatus {
-		status = StatusFail
-	} else {
-		logContent := string(intRes.GetFiles()["log.txt"])
-		stderrContent := string(intRes.GetFiles()["stdout"])
-		status, score = parseTestlibVerdict(int(intRes.GetExitStatus()), stderrContent, logContent)
-	}
-
-	// A solution failure overrides an accepting interactor verdict.
-	if (status == StatusOK || status == StatusPoints) && solRes.GetStatus() != pb.Response_Result_Accepted {
-		status = solRun.Status
-	}
-
-	return &InteractiveResult{
-		Status:           status,
-		SolutionResult:   solRun,
-		InteractorResult: intRun,
-		Message:          strings.TrimSpace(string(intRes.GetFiles()["stdout"])),
-		Score:            score,
-	}, nil
-}
-
-func statusToString(status pb.Response_Result_StatusType) Status {
+func statusToString(status string) Status {
 	switch status {
-	case pb.Response_Result_Accepted:
+	case resultAccepted:
 		return StatusOK
-	case pb.Response_Result_MemoryLimitExceeded:
+	case resultMemoryLimit:
 		return StatusMLE
-	case pb.Response_Result_TimeLimitExceeded:
+	case resultTimeLimit:
 		return StatusTLE
-	case pb.Response_Result_OutputLimitExceeded:
+	case resultOutputLimit:
 		return StatusOLE
-	case pb.Response_Result_FileError:
-		return StatusFail
-	case pb.Response_Result_NonZeroExitStatus:
+	case resultNonzeroExit, resultSignalled:
 		return StatusRE
-	case pb.Response_Result_Signalled:
-		return StatusRE
-	case pb.Response_Result_DangerousSyscall:
-		return StatusFail
-	case pb.Response_Result_InternalError:
-		return StatusFail
 	default:
 		return StatusFail
 	}
 }
 
 func (s *Sandbox) CompilePDF(ctx context.Context, texSource string) ([]byte, error) {
-	copyIn := map[string]*pb.Request_File{
-		"booklet.tex": newMemoryFile([]byte(texSource)),
-		"olymp.sty":   newMemoryFile(booklet.OlympSty),
-	}
-
-	cmd := pb.Request_CmdType_builder{
-		Args: []string{"/bin/sh", "-c", "pdflatex -interaction=nonstopmode -halt-on-error booklet.tex && pdflatex -interaction=nonstopmode -halt-on-error booklet.tex"},
-		Files: []*pb.Request_File{
-			newMemoryFile([]byte("")),
-			newPipeCollector("stdout", defaultPipeCollectorSize),
-			newPipeCollector("stderr", defaultPipeCollectorSize),
-		},
-		CopyIn: copyIn,
-		CopyOut: []*pb.Request_CmdCopyOutFile{
-			pb.Request_CmdCopyOutFile_builder{Name: "booklet.pdf"}.Build(),
-			pb.Request_CmdCopyOutFile_builder{Name: "booklet.log"}.Build(),
-		},
-		CpuTimeLimit:   safeUint64(bookletCompileCpuTimeLimit.Nanoseconds()),
-		ClockTimeLimit: safeUint64(bookletCompileClockTimeLimit.Nanoseconds()),
-		MemoryLimit:    bookletCompileMemoryLimit,
-		ProcLimit:      bookletCompileProcLimit,
-		Env:            []string{"PATH=/usr/bin:/bin", "HOME=/tmp", "TEXMFVAR=/tmp/texmf-var", "TEXMFCONFIG=/tmp/texmf-config"},
-	}.Build()
-
-	req := pb.Request_builder{
-		Cmd: []*pb.Request_CmdType{cmd},
-	}.Build()
-
-	resp, err := s.client.Exec(ctx, req)
+	results, err := s.client.run(ctx, request{Cmd: []cmd{{
+		Args:          []string{"/bin/sh", "-c", "pdflatex -interaction=nonstopmode -halt-on-error booklet.tex && pdflatex -interaction=nonstopmode -halt-on-error booklet.tex"},
+		Files:         []*cmdFile{memoryFile(""), collector("stdout", defaultPipeCollectorSize, false), collector("stderr", defaultPipeCollectorSize, false)},
+		CopyIn:        map[string]cmdFile{"booklet.tex": *memoryFile(texSource), "olymp.sty": *memoryFile(string(booklet.OlympSty))},
+		CopyOut:       []string{"booklet.log"},
+		CopyOutCached: []string{"booklet.pdf"},
+		CPULimit:      safeUint64(bookletCompileCpuTimeLimit.Nanoseconds()),
+		ClockLimit:    safeUint64(bookletCompileClockTimeLimit.Nanoseconds()),
+		MemoryLimit:   bookletCompileMemoryLimit,
+		ProcLimit:     bookletCompileProcLimit,
+		Env:           []string{"PATH=/usr/bin:/bin", "HOME=/tmp", "TEXMFVAR=/tmp/texmf-var", "TEXMFCONFIG=/tmp/texmf-config"},
+	}}})
 	if err != nil {
 		return nil, fmt.Errorf("LaTeX compilation failed to dispatch: %w", err)
 	}
-	if len(resp.GetResults()) == 0 {
-		return nil, fmt.Errorf("LaTeX compilation returned no results")
-	}
 
-	res := resp.GetResults()[0]
-	if res.GetStatus() != pb.Response_Result_Accepted {
-		logSnippet := string(res.GetFiles()["booklet.log"])
+	res := results[0]
+	pdfID := res.FileIDs["booklet.pdf"]
+	defer s.client.release(pdfID)
+	if res.Status != resultAccepted {
+		logSnippet := res.Files["booklet.log"]
 		if len(logSnippet) > 4000 {
 			logSnippet = logSnippet[len(logSnippet)-4000:]
 		}
 		return nil, fmt.Errorf("LaTeX compilation error: status=%v, exitStatus=%v\nOutput:\n%s\nLog:\n%s",
-			res.GetStatus(), res.GetExitStatus(), string(res.GetFiles()["stdout"]), logSnippet)
+			res.Status, res.ExitStatus, res.Files["stdout"], logSnippet)
 	}
-
-	pdfBytes, ok := res.GetFiles()["booklet.pdf"]
-	if !ok || len(pdfBytes) == 0 {
+	if pdfID == "" {
 		return nil, fmt.Errorf("LaTeX compilation succeeded but booklet.pdf was not produced")
 	}
-
-	return pdfBytes, nil
+	var pdf bytes.Buffer
+	if _, err := s.client.get(ctx, pdfID, &pdf, bookletPDFLimit); err != nil {
+		return nil, fmt.Errorf("download booklet.pdf: %w", err)
+	}
+	if pdf.Len() == 0 {
+		return nil, fmt.Errorf("LaTeX compilation succeeded but booklet.pdf is empty")
+	}
+	return pdf.Bytes(), nil
 }

@@ -168,12 +168,10 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 	var services []appService
 	var languages *sandbox.Config
 	if mode.Worker() {
-		sandboxClient, err := sandbox.NewClient(cfg.GoJudge.GRPCAddr)
+		sandboxClient, err := sandbox.NewClient(cfg.GoJudge.HTTPURL, &http.Client{})
 		if err != nil {
 			return fmt.Errorf("initialize sandbox client: %w", err)
 		}
-		defer sandboxClient.Close()
-		logger.Info("successfully initialized sandbox client", slog.String("addr", cfg.GoJudge.GRPCAddr))
 
 		imageCtx, cancelImage := context.WithTimeout(context.Background(), time.Minute)
 		judgeImage, err := sandbox.ReadImage(imageCtx, sandboxClient)

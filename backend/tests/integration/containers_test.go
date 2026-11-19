@@ -64,9 +64,6 @@ type goJudge struct {
 
 func TestMain(m *testing.M) {
 	code := m.Run()
-	if shared.judge != nil {
-		_ = shared.judge.client.Close()
-	}
 	if shared.judgeDir != "" {
 		_ = os.RemoveAll(shared.judgeDir)
 	}
@@ -197,12 +194,12 @@ func newGoJudge(t *testing.T) (*sandbox.Client, *sandbox.FileTransport) {
 		shared.judgeDir = dir
 		request := testcontainers.ContainerRequest{
 			Image:        image,
-			ExposedPorts: []string{goJudgeHTTPPort, goJudgeGRPCPort},
+			ExposedPorts: []string{goJudgeHTTPPort},
 			HostConfigModifier: func(hc *container.HostConfig) {
 				hc.Privileged = true
 				hc.Binds = append(hc.Binds, dir+":"+judgeMount+":ro")
 			},
-			Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", "-parallelism=2", "-src-prefix=" + judgeMount, "-no-fallback"},
+			Cmd:        []string{"-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", "-parallelism=2", "-src-prefix=" + judgeMount, "-no-fallback"},
 			WaitingFor: wait.ForHTTP("/version").WithPort(goJudgeHTTPPort).WithStartupTimeout(e2eSandboxTimout)}
 		c, err := startShared(ctx, "go-judge", request)
 		require.NoError(t, err)
@@ -210,14 +207,10 @@ func newGoJudge(t *testing.T) (*sandbox.Client, *sandbox.FileTransport) {
 		require.NoError(t, err)
 		httpPort, err := c.MappedPort(ctx, goJudgeHTTPPort)
 		require.NoError(t, err)
-		grpcPort, err := c.MappedPort(ctx, goJudgeGRPCPort)
+		base := "http://" + host + ":" + httpPort.Port()
+		client, err := sandbox.NewClient(base, &http.Client{})
 		require.NoError(t, err)
-		client, err := sandbox.NewClient(host + ":" + grpcPort.Port())
-		require.NoError(t, err)
-		files, err := sandbox.NewFileTransport("http://"+host+":"+httpPort.Port(), &http.Client{Timeout: time.Minute})
-		if err != nil {
-			_ = client.Close()
-		}
+		files, err := sandbox.NewFileTransport(base, &http.Client{Timeout: time.Minute})
 		require.NoError(t, err)
 		shared.judge = &goJudge{client: client, files: files}
 	}

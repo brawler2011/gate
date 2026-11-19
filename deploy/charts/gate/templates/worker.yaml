@@ -22,13 +22,13 @@ spec:
       imagePullSecrets: {{- toYaml . | nindent 8 }}
       {{- end }}
       terminationGracePeriodSeconds: 40
-      # HTTP uploads and gRPC runs must reach the same sandbox.
+      # Uploads and runs must reach the same go-judge file store.
       initContainers:
         - name: go-judge
           image: {{ .Values.goJudge.image }}:{{ include "gate.tag" . }}
           restartPolicy: Always
           # Only this pod may access sandbox execution.
-          args: [-enable-grpc, -grpc-addr=127.0.0.1:5051, -http-addr=127.0.0.1:5050, -dir=/data, -src-prefix=/problem-work/cache, -no-fallback]
+          args: [-http-addr=127.0.0.1:5050, -dir=/data, -src-prefix=/problem-work/cache, -no-fallback]
           # Sandbox mounts require privileged mode and must bypass the pod's AppArmor profile.
           securityContext: {privileged: true, seccompProfile: {type: Unconfined}, appArmorProfile: {type: Unconfined}}
           resources: {{- toYaml .Values.goJudge.resources | nindent 12 }}

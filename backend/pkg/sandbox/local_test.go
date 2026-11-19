@@ -13,7 +13,7 @@ func TestSharedDirFile(t *testing.T) {
 	require.NoError(t, err)
 	r, err := f.request()
 	require.NoError(t, err)
-	assert.Equal(t, "/work/cache/package-1/tree/tests/01", r.GetLocal().GetSrc())
+	assert.Equal(t, "/work/cache/package-1/tree/tests/01", *r.Src)
 
 	for _, path := range []string{"data/work/../secret", "data/other", "/etc/passwd"} {
 		_, err := d.File(path)

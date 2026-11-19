@@ -45,7 +45,6 @@ import (
 const (
 	seaweedS3Port    = "8333/tcp"
 	goJudgeHTTPPort  = "5050/tcp"
-	goJudgeGRPCPort  = "5051/tcp"
 	e2eSandboxTimout = 90 * time.Second
 )
 

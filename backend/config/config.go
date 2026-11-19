@@ -32,7 +32,6 @@ type HTTP struct {
 }
 
 type GoJudge struct {
-	GRPCAddr string `yaml:"grpc_addr"`
 	HTTPURL  string `yaml:"http_url"`
 	// Where go-judge sees problems.work_dir; it reads test files from there by path.
 	WorkDir string `yaml:"work_dir"`
@@ -120,7 +119,6 @@ func (c Config) Validate(mode Mode) error {
 	var v validator
 	v.required("http.address", c.HTTP.Address)
 	if mode.Worker() {
-		v.required("go_judge.grpc_addr", c.GoJudge.GRPCAddr)
 		v.url("go_judge.http_url", c.GoJudge.HTTPURL)
 		v.check(filepath.IsAbs(c.GoJudge.WorkDir), "go_judge.work_dir", "must be an absolute path")
 		v.check(c.Judge.Workers >= 1, "judge.workers", "must be at least 1")

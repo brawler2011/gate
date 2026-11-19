@@ -92,11 +92,11 @@ func TestUnknownFieldIsRejected(t *testing.T) {
 
 func TestModeChecksOnlyItsSettings(t *testing.T) {
 	setSecrets(t)
-	noSandbox := func(s string) string { return strings.Replace(s, "grpc_addr: 127.0.0.1:5051", "grpc_addr: ''", 1) }
+	noSandbox := func(s string) string { return strings.Replace(s, "http_url: http://127.0.0.1:5050", "http_url: ''", 1) }
 	require.NoError(t, loadModifiedAs(t, ModeAPI, noSandbox))
 	err := loadModifiedAs(t, ModeWorker, noSandbox)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "go_judge.grpc_addr:")
+	assert.Contains(t, err.Error(), "go_judge.http_url:")
 
 	noManifest := func(s string) string { return strings.Replace(s, "manifest_dir: /etc/judge", "manifest_dir: ''", 1) }
 	require.NoError(t, loadModifiedAs(t, ModeWorker, noManifest))

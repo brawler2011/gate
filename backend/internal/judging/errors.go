@@ -4,9 +4,6 @@ import (
 	"context"
 	"errors"
 	"net"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func IsTemporary(err error) bool {
@@ -18,12 +15,5 @@ func IsTemporary(err error) bool {
 		return true
 	}
 	var response interface{ HTTPStatusCode() int }
-	if errors.As(err, &response) && (response.HTTPStatusCode() >= 500 || response.HTTPStatusCode() == 429) {
-		return true
-	}
-	switch status.Code(err) {
-	case codes.Unavailable, codes.DeadlineExceeded, codes.Canceled, codes.ResourceExhausted:
-		return true
-	}
-	return false
+	return errors.As(err, &response) && (response.HTTPStatusCode() >= 500 || response.HTTPStatusCode() == 429)
 }

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
-	pb "github.com/criyle/go-judge/pb"
 )
 
 type FileRunLimits struct {
@@ -29,7 +28,7 @@ type FileRunResult struct {
 	Stderr     []byte
 }
 
-func (s *Sandbox) fileCommand(executable Executable, language string, input File, args []string, extras []File, limits FileRunLimits) (*pb.Request_CmdType, error) {
+func (s *Sandbox) fileCommand(executable Executable, language string, input File, args []string, extras []File, limits FileRunLimits) (*cmd, error) {
 	if limits.CPU <= 0 || limits.Wall <= 0 || limits.Memory == 0 || limits.Processes == 0 || limits.Output <= 0 || limits.Diagnostic <= 0 || limits.Diagnostic > 64*1024 {
 		return nil, fmt.Errorf("invalid sandbox file execution limits")
 	}
@@ -44,14 +43,14 @@ func (s *Sandbox) fileCommand(executable Executable, language string, input File
 	if !fs.ValidPath(name) || !validFileID(executable.PrimaryFileID) {
 		return nil, fmt.Errorf("invalid executable")
 	}
-	copyIn := map[string]*pb.Request_File{name: newCachedFile(executable.PrimaryFileID)}
+	copyIn := map[string]cmdFile{name: *cachedFile(executable.PrimaryFileID)}
 	for path, id := range executable.Dependencies {
 		if !fs.ValidPath(path) || path == name || !validFileID(id) {
 			return nil, fmt.Errorf("invalid executable dependency")
 		}
-		copyIn[path] = newCachedFile(id)
+		copyIn[path] = *cachedFile(id)
 	}
-	stdin := newMemoryFile(nil)
+	stdin := memoryFile("")
 	if input != (File{}) {
 		var err error
 		if stdin, err = input.request(); err != nil {
@@ -59,8 +58,7 @@ func (s *Sandbox) fileCommand(executable Executable, language string, input File
 		}
 	}
 	// The pipe charges output page-cache memory to the trusted transport instead of the contestant.
-	stdout := pb.Request_File_builder{Pipe: pb.Request_PipeCollector_builder{Name: "stdout", Max: int64(limits.Output), Pipe: true}.Build()}.Build()
-	files := []*pb.Request_File{stdin, stdout, newPipeCollector("stderr", int64(limits.Diagnostic))}
+	files := []*cmdFile{stdin, collector("stdout", int64(limits.Output), true), collector("stderr", int64(limits.Diagnostic), false)}
 	for _, f := range extras {
 		r, err := f.request()
 		if err != nil {
@@ -70,61 +68,54 @@ func (s *Sandbox) fileCommand(executable Executable, language string, input File
 	}
 	argv := strings.Fields(strings.NewReplacer("${name}", name, "${dir}", ".").Replace(lang.Execute))
 	argv = append(argv, args...)
-	cmd := pb.Request_CmdType_builder{
+	return &cmd{
 		Args: argv, Env: []string{"PATH=/usr/bin:/bin"}, Files: files, CopyIn: copyIn,
-		CopyOutCached: []*pb.Request_CmdCopyOutFile{pb.Request_CmdCopyOutFile_builder{Name: "stdout"}.Build()},
-		CpuTimeLimit:  uint64(limits.CPU), ClockTimeLimit: uint64(limits.Wall), MemoryLimit: limits.Memory.Uint64(), ProcLimit: limits.Processes,
+		CopyOutCached: []string{"stdout"},
+		CPULimit:      uint64(limits.CPU), ClockLimit: uint64(limits.Wall), MemoryLimit: limits.Memory.Uint64(), ProcLimit: limits.Processes,
 		CopyOutMax: uint64(limits.Output),
-	}.Build()
-	return cmd, nil
+	}, nil
 }
 
 // RunFiles exposes extra files as /dev/fd/3 onward without copying them into tmpfs.
 // The caller owns the returned output ID even when the command fails.
 func (s *Sandbox) RunFiles(ctx context.Context, executable Executable, language string, input File, args []string, extras []File, limits FileRunLimits) (*FileRunResult, error) {
-	cmd, err := s.fileCommand(executable, language, input, args, extras, limits)
+	c, err := s.fileCommand(executable, language, input, args, extras, limits)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := s.client.Exec(ctx, pb.Request_builder{Cmd: []*pb.Request_CmdType{cmd}}.Build())
+	results, err := s.client.run(ctx, request{Cmd: []cmd{*c}})
 	if err != nil {
 		return nil, fmt.Errorf("execute sandbox files: %w", err)
 	}
-	if len(resp.GetResults()) != 1 {
-		return nil, fmt.Errorf("sandbox returned unexpected number of results")
-	}
-	r := resp.GetResults()[0]
-	status := statusToString(r.GetStatus())
-	if status == StatusOK && r.GetExitStatus() != 0 {
+	r := results[0]
+	status := statusToString(r.Status)
+	if status == StatusOK && r.ExitStatus != 0 {
 		status = StatusRE
 	}
 	return &FileRunResult{
-		Status: status, ExitStatus: int(r.GetExitStatus()), Time: safeDuration(r.GetTime()), Memory: safeInt64(r.GetMemory()),
-		OutputID: r.GetFileIDs()["stdout"], Stderr: r.GetFiles()["stderr"],
+		Status: status, ExitStatus: r.ExitStatus, Time: safeDuration(r.Time), Memory: safeInt64(r.Memory),
+		OutputID: r.FileIDs["stdout"], Stderr: []byte(r.Files["stderr"]),
 	}, nil
 }
 
 func (s *Sandbox) CheckFiles(ctx context.Context, executable Executable, language string, input, output, answer File, limits FileRunLimits) (*CheckerResult, error) {
 	limits.Output = limits.Diagnostic
-	cmd, err := s.fileCommand(executable, language, File{}, []string{"/dev/fd/3", "/dev/fd/4", "/dev/fd/5"}, []File{input, output, answer}, limits)
+	c, err := s.fileCommand(executable, language, File{}, []string{"/dev/fd/3", "/dev/fd/4", "/dev/fd/5"}, []File{input, output, answer}, limits)
 	if err != nil {
 		return nil, err
 	}
-	cmd.SetCopyOutCached(nil)
-	resp, err := s.client.Exec(ctx, pb.Request_builder{Cmd: []*pb.Request_CmdType{cmd}}.Build())
+	c.CopyOutCached = nil
+	results, err := s.client.run(ctx, request{Cmd: []cmd{*c}})
 	if err != nil {
 		return nil, fmt.Errorf("checker file execution: %w", err)
 	}
-	if len(resp.GetResults()) != 1 {
-		return nil, fmt.Errorf("checker execution requires one result")
-	}
-	r := resp.GetResults()[0]
-	status, score := parseTestlibVerdict(int(r.GetExitStatus()), string(r.GetFiles()["stdout"]), string(r.GetFiles()["stderr"]))
-	if r.GetStatus() != pb.Response_Result_Accepted && r.GetStatus() != pb.Response_Result_NonZeroExitStatus {
+	r := results[0]
+	status, score := parseTestlibVerdict(r.ExitStatus, r.Files["stdout"], r.Files["stderr"])
+	if r.Status != resultAccepted && r.Status != resultNonzeroExit {
 		status = StatusFail
 		score = nil
 	}
-	return &CheckerResult{Status: status, ExitStatus: int(r.GetExitStatus()), Message: string(r.GetFiles()["stderr"]), Score: score}, nil
+	return &CheckerResult{Status: status, ExitStatus: r.ExitStatus, Message: r.Files["stderr"], Score: score}, nil
 }
 
 const interactorOutput = "output.txt"
@@ -144,41 +135,34 @@ func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, soluti
 	if err != nil {
 		return nil, err
 	}
-	for _, cmd := range []*pb.Request_CmdType{sol, intr} {
-		files := cmd.GetFiles()
-		files[0] = nil
-		files[1] = nil
-		cmd.SetFiles(files)
-		cmd.SetCopyOutCached(nil)
+	for _, c := range []*cmd{sol, intr} {
+		c.Files[0] = nil
+		c.Files[1] = nil
+		c.CopyOutCached = nil
 	}
 	// An interactor that writes no output still yields an empty one.
-	copyIn := intr.GetCopyIn()
-	copyIn[interactorOutput] = newMemoryFile(nil)
-	intr.SetCopyIn(copyIn)
-	intr.SetCopyOutCached([]*pb.Request_CmdCopyOutFile{pb.Request_CmdCopyOutFile_builder{Name: interactorOutput}.Build()})
-	pipes := []*pb.Request_PipeMap{
-		pb.Request_PipeMap_builder{In: pb.Request_PipeMap_PipeIndex_builder{Index: 0, Fd: 1}.Build(), Out: pb.Request_PipeMap_PipeIndex_builder{Index: 1, Fd: 0}.Build(), Proxy: true, Max: uint64(solutionLimits.Output)}.Build(),   //nolint:gosec // limits are validated non-negative by the caller
-		pb.Request_PipeMap_builder{In: pb.Request_PipeMap_PipeIndex_builder{Index: 1, Fd: 1}.Build(), Out: pb.Request_PipeMap_PipeIndex_builder{Index: 0, Fd: 0}.Build(), Proxy: true, Max: uint64(interactorLimits.Output)}.Build(), //nolint:gosec // limits are validated non-negative by the caller
+	intr.CopyIn[interactorOutput] = *memoryFile("")
+	intr.CopyOutCached = []string{interactorOutput}
+	pipes := []pipeMap{
+		{In: pipeIndex{Index: 0, Fd: 1}, Out: pipeIndex{Index: 1, Fd: 0}, Proxy: true, Max: int64(solutionLimits.Output)},
+		{In: pipeIndex{Index: 1, Fd: 1}, Out: pipeIndex{Index: 0, Fd: 0}, Proxy: true, Max: int64(interactorLimits.Output)},
 	}
-	resp, err := s.client.Exec(ctx, pb.Request_builder{Cmd: []*pb.Request_CmdType{sol, intr}, PipeMapping: pipes}.Build())
+	results, err := s.client.run(ctx, request{Cmd: []cmd{*sol, *intr}, PipeMapping: pipes})
 	if err != nil {
 		return nil, fmt.Errorf("interactive file execution: %w", err)
 	}
-	if len(resp.GetResults()) != 2 {
-		return nil, fmt.Errorf("interactive execution requires two results")
-	}
-	a, b := resp.GetResults()[0], resp.GetResults()[1]
-	outputID := b.GetFileIDs()[interactorOutput]
-	status, score := parseTestlibVerdict(int(b.GetExitStatus()), "", string(b.GetFiles()["stderr"]))
-	if b.GetStatus() != pb.Response_Result_Accepted && b.GetStatus() != pb.Response_Result_NonZeroExitStatus {
+	a, b := results[0], results[1]
+	outputID := b.FileIDs[interactorOutput]
+	status, score := parseTestlibVerdict(b.ExitStatus, "", b.Files["stderr"])
+	if b.Status != resultAccepted && b.Status != resultNonzeroExit {
 		status = StatusFail
 		score = nil
 	}
-	if (status == StatusOK || status == StatusPoints) && a.GetStatus() != pb.Response_Result_Accepted {
-		status = statusToString(a.GetStatus())
+	if (status == StatusOK || status == StatusPoints) && a.Status != resultAccepted {
+		status = statusToString(a.Status)
 		score = nil
 	}
-	return &InteractiveResult{Status: status, Score: score, Message: string(b.GetFiles()["stderr"]), OutputID: outputID,
-		SolutionResult:   RunResult{Status: statusToString(a.GetStatus()), ExitStatus: int(a.GetExitStatus()), Time: safeDuration(a.GetTime()), Memory: safeInt64(a.GetMemory()), Stderr: a.GetFiles()["stderr"]},
-		InteractorResult: RunResult{Status: statusToString(b.GetStatus()), ExitStatus: int(b.GetExitStatus()), Time: safeDuration(b.GetTime()), Memory: safeInt64(b.GetMemory()), Stderr: b.GetFiles()["stderr"]}}, nil
+	return &InteractiveResult{Status: status, Score: score, Message: b.Files["stderr"], OutputID: outputID,
+		SolutionResult:   RunResult{Status: statusToString(a.Status), ExitStatus: a.ExitStatus, Time: safeDuration(a.Time), Memory: safeInt64(a.Memory), Stderr: []byte(a.Files["stderr"])},
+		InteractorResult: RunResult{Status: statusToString(b.Status), ExitStatus: b.ExitStatus, Time: safeDuration(b.Time), Memory: safeInt64(b.Memory), Stderr: []byte(b.Files["stderr"])}}, nil
 }

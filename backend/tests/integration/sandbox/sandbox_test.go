@@ -3,8 +3,10 @@
 package sandbox_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/syslib"
@@ -34,11 +37,10 @@ func TestIntegrationSandbox(t *testing.T) {
 	}
 	req := testcontainers.ContainerRequest{
 		Image:        image,
-		ExposedPorts: []string{"5051/tcp"},
-		// The internal check execs into the container, and that process can block go-judge's cgroup setup.
-		WaitingFor: wait.ForListeningPort("5051/tcp").SkipInternalCheck(),
-		Privileged: true,
-		Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-no-fallback"},
+		ExposedPorts: []string{"5050/tcp"},
+		WaitingFor:   wait.ForHTTP("/version").WithPort("5050/tcp"),
+		Privileged:   true,
+		Cmd:          []string{"-http-addr=0.0.0.0:5050", "-no-fallback"},
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -59,19 +61,20 @@ func TestIntegrationSandbox(t *testing.T) {
 		t.Fatalf("Failed to get container host: %v", err)
 	}
 
-	port, err := container.MappedPort(ctx, "5051")
+	port, err := container.MappedPort(ctx, "5050")
 	if err != nil {
 		t.Fatalf("Failed to get container mapped port: %v", err)
 	}
 
-	grpcAddr := fmt.Sprintf("%s:%s", ip, port.Port())
-	t.Logf("go-judge container started at gRPC address: %s", grpcAddr)
-
-	client, err := sandbox.NewClient(grpcAddr)
+	base := fmt.Sprintf("http://%s:%s", ip, port.Port())
+	client, err := sandbox.NewClient(base, &http.Client{})
 	if err != nil {
 		t.Fatalf("Failed to create sandbox client: %v", err)
 	}
-	defer client.Close()
+	files, err := sandbox.NewFileTransport(base, &http.Client{Timeout: time.Minute})
+	if err != nil {
+		t.Fatalf("Failed to create sandbox file transport: %v", err)
+	}
 
 	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml")
 	if err != nil {
@@ -79,6 +82,7 @@ func TestIntegrationSandbox(t *testing.T) {
 	}
 
 	sb := sandbox.NewSandbox(client, cfg)
+	r := runner{sb: sb, files: files}
 
 	for i := 0; i < 30; i++ {
 		probeCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
@@ -133,7 +137,7 @@ func TestIntegrationSandbox(t *testing.T) {
 					deps[name] = []byte(system.Content)
 				}
 
-				var checker sandbox.Executable
+				var checker program
 				checkersDir := filepath.Join(pkgPath, "checkers")
 				if checkerFiles, err := os.ReadDir(checkersDir); err == nil && len(checkerFiles) > 0 {
 					for _, f := range checkerFiles {
@@ -150,13 +154,13 @@ func TestIntegrationSandbox(t *testing.T) {
 							if err != nil {
 								t.Fatalf("failed to compile checker %s: %v", f.Name(), err)
 							}
-							checker = exe
+							checker = program{exe, langKey}
 							break
 						}
 					}
 				}
 
-				var interactor sandbox.Executable
+				var interactor program
 				interactorsDir := filepath.Join(pkgPath, "interactors")
 				if interactorFiles, err := os.ReadDir(interactorsDir); err == nil && len(interactorFiles) > 0 {
 					for _, f := range interactorFiles {
@@ -173,13 +177,13 @@ func TestIntegrationSandbox(t *testing.T) {
 							if err != nil {
 								t.Fatalf("failed to compile interactor %s: %v", f.Name(), err)
 							}
-							interactor = exe
+							interactor = program{exe, langKey}
 							break
 						}
 					}
 				}
 
-				generators := make(map[string]sandbox.Executable)
+				generators := make(map[string]program)
 				generatorsDir := filepath.Join(pkgPath, "generators")
 				if genFiles, err := os.ReadDir(generatorsDir); err == nil {
 					for _, f := range genFiles {
@@ -197,7 +201,7 @@ func TestIntegrationSandbox(t *testing.T) {
 								t.Fatalf("failed to compile generator %s: %v", f.Name(), err)
 							}
 							nameWithoutExt := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
-							generators[nameWithoutExt] = exe
+							generators[nameWithoutExt] = program{exe, langKey}
 						}
 					}
 				}
@@ -244,11 +248,15 @@ func TestIntegrationSandbox(t *testing.T) {
 					}
 					genName := parts[0]
 					args := parts[1:]
-					genID, ok := generators[genName]
+					gen, ok := generators[genName]
 					if !ok {
 						return nil, fmt.Errorf("generator not found: %s", genName)
 					}
-					return sb.Generate(ctx, genID, args)
+					res, stdout := r.run(t, gen, sandbox.File{}, args, auxLimits)
+					if res.Status != sandbox.StatusOK {
+						return nil, fmt.Errorf("generator %s: %s: %s", genName, res.Status, res.Stderr)
+					}
+					return stdout, nil
 				}
 
 				solutionsDir := filepath.Join(pkgPath, "solutions")
@@ -297,7 +305,7 @@ func TestIntegrationSandbox(t *testing.T) {
 				if err != nil {
 					t.Fatalf("failed to read reference solution %s: %v", referenceSol.Filename, err)
 				}
-				refSolID, err := sb.Compile(ctx, refCode, referenceSol.Lang, nil)
+				refExe, err := sb.Compile(ctx, refCode, referenceSol.Lang, nil)
 				if err != nil {
 					t.Fatalf("failed to compile reference solution %s: %v", referenceSol.Filename, err)
 				}
@@ -323,15 +331,12 @@ func TestIntegrationSandbox(t *testing.T) {
 						if memLimit <= 0 {
 							memLimit = 256
 						}
-						solResult, err := sb.Test(ctx, refSolID, referenceSol.Lang, input, timeLimit, memLimit)
-						if err != nil {
-							t.Fatalf("failed to run reference solution on test %s: %v", tc.Name, err)
-						}
+						solResult, stdout := r.run(t, program{refExe, referenceSol.Lang}, r.upload(t, input), nil, solutionLimits(timeLimit, memLimit))
 						if solResult.Status != sandbox.StatusOK {
 							t.Fatalf("reference solution did not return OK on test %s: status=%s, stderr=%s",
 								tc.Name, solResult.Status, string(solResult.Stderr))
 						}
-						answer = solResult.Stdout
+						answer = stdout
 					}
 					testCasesData = append(testCasesData, TestCaseData{
 						TC:     tc,
@@ -348,7 +353,7 @@ func TestIntegrationSandbox(t *testing.T) {
 							t.Fatalf("failed to read solution %s: %v", sol.Filename, err)
 						}
 
-						solID, err := sb.Compile(ctx, solCode, sol.Lang, nil)
+						solExe, err := sb.Compile(ctx, solCode, sol.Lang, nil)
 						if sol.Expected == "CE" {
 							if err == nil {
 								t.Errorf("expected compilation error for %s, but compiled successfully", sol.Filename)
@@ -373,10 +378,11 @@ func TestIntegrationSandbox(t *testing.T) {
 							}
 
 							if pkg.Problem.Type == "interactive" {
-								interactRes, err := sb.Interact(ctx, solID, sol.Lang, interactor, tcd.Input, timeLimit, memLimit)
+								interactRes, err := sb.InteractFiles(ctx, solExe, sol.Lang, interactor.exe, interactor.lang, r.upload(t, tcd.Input), sandbox.File{}, solutionLimits(timeLimit, memLimit), auxLimits)
 								if err != nil {
 									t.Fatalf("interact failed: %v", err)
 								}
+								r.release(interactRes.OutputID)
 								if interactRes.Status != sandbox.StatusOK {
 									finalStatus = interactRes.Status
 									lastStderr = interactRes.SolutionResult.Stderr
@@ -384,17 +390,14 @@ func TestIntegrationSandbox(t *testing.T) {
 									break
 								}
 							} else {
-								runRes, err := sb.Test(ctx, solID, sol.Lang, tcd.Input, timeLimit, memLimit)
-								if err != nil {
-									t.Fatalf("solution execution failed: %v", err)
-								}
+								runRes, stdout := r.run(t, program{solExe, sol.Lang}, r.upload(t, tcd.Input), nil, solutionLimits(timeLimit, memLimit))
 								if runRes.Status != sandbox.StatusOK {
 									finalStatus = runRes.Status
 									lastStderr = runRes.Stderr
 									lastExitStatus = runRes.ExitStatus
 									break
 								}
-								checkRes, err := sb.Check(ctx, checker, tcd.Input, runRes.Stdout, tcd.Answer)
+								checkRes, err := sb.CheckFiles(ctx, checker.exe, checker.lang, r.upload(t, tcd.Input), r.upload(t, stdout), r.upload(t, tcd.Answer), auxLimits)
 								if err != nil {
 									t.Fatalf("checker failed: %v", err)
 								}
@@ -441,12 +444,9 @@ public class Main {
 		if err != nil {
 			t.Fatalf("failed to compile: %v", err)
 		}
-		result, err := sb.Test(ctx, executable, "java", nil, 5000, 256)
-		if err != nil {
-			t.Fatalf("failed to run: %v", err)
-		}
-		if result.Status != sandbox.StatusOK || strings.TrimSpace(string(result.Stdout)) != "2.5" {
-			t.Fatalf("got %s with output %q (stderr %q)", result.Status, result.Stdout, result.Stderr)
+		result, stdout := r.run(t, program{executable, "java"}, sandbox.File{}, nil, solutionLimits(5000, 256))
+		if result.Status != sandbox.StatusOK || strings.TrimSpace(string(stdout)) != "2.5" {
+			t.Fatalf("got %s with output %q (stderr %q)", result.Status, stdout, result.Stderr)
 		}
 	})
 
@@ -475,14 +475,24 @@ public class Main {
 				if err != nil {
 					t.Fatalf("failed to compile: %v", err)
 				}
-				result, err := sb.Test(ctx, executable, id, []byte("2000000000 3000000000\n"), 5000, 256)
-				if err != nil {
-					t.Fatalf("failed to run: %v", err)
-				}
-				if result.Status != sandbox.StatusOK || strings.TrimSpace(string(result.Stdout)) != "5000000000" {
-					t.Fatalf("got %s with output %q (stderr %q)", result.Status, result.Stdout, result.Stderr)
+				result, stdout := r.run(t, program{executable, id}, r.upload(t, []byte("2000000000 3000000000\n")), nil, solutionLimits(5000, 256))
+				if result.Status != sandbox.StatusOK || strings.TrimSpace(string(stdout)) != "5000000000" {
+					t.Fatalf("got %s with output %q (stderr %q)", result.Status, stdout, result.Stderr)
 				}
 			})
+		}
+	})
+
+	// JSON would turn these bytes into U+FFFD, so the source must travel through the file store.
+	t.Run("non-UTF-8 source", func(t *testing.T) {
+		cp1251 := "\xcf\xf0\xe8\xe2\xe5\xf2"
+		executable, err := sb.Compile(ctx, []byte("#include <cstdio>\nint main(){fputs(\""+cp1251+"\", stdout);}"), "cpp17", nil)
+		if err != nil {
+			t.Fatalf("failed to compile: %v", err)
+		}
+		result, stdout := r.run(t, program{executable, "cpp17"}, sandbox.File{}, nil, solutionLimits(5000, 256))
+		if result.Status != sandbox.StatusOK || string(stdout) != cp1251 {
+			t.Fatalf("got %s with output %q (stderr %q)", result.Status, stdout, result.Stderr)
 		}
 	})
 
@@ -513,6 +523,64 @@ Test legend. Условие задачи на русском языке.
 			t.Fatal("booklet uses bitmap Type 3 fonts")
 		}
 	})
+}
+
+type program struct {
+	exe  sandbox.Executable
+	lang string
+}
+
+var auxLimits = sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 512 * bytesize.MiB, Processes: 50, Output: 10 * bytesize.MiB, Diagnostic: 64 * 1024}
+
+func solutionLimits(timeMs, memoryMb int) sandbox.FileRunLimits {
+	cpu := time.Duration(timeMs) * time.Millisecond
+	return sandbox.FileRunLimits{CPU: cpu, Wall: 2 * cpu, Memory: bytesize.Size(memoryMb) * bytesize.MiB, Processes: 50, Output: 10 * bytesize.MiB, Diagnostic: 64 * 1024}
+}
+
+// runner feeds in-memory test data through the file store, as judging does with package files.
+type runner struct {
+	sb    *sandbox.Sandbox
+	files *sandbox.FileTransport
+}
+
+func (r runner) upload(t *testing.T, data []byte) sandbox.File {
+	t.Helper()
+	f, err := os.CreateTemp(t.TempDir(), "input")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if _, err := f.Write(data); err != nil {
+		t.Fatal(err)
+	}
+	id, err := r.files.Upload(context.Background(), f, 1<<30)
+	if err != nil {
+		t.Fatalf("upload: %v", err)
+	}
+	t.Cleanup(func() { r.release(id) })
+	return sandbox.FileID(id)
+}
+
+func (r runner) release(id string) {
+	if id != "" {
+		_ = r.files.Delete(context.Background(), id)
+	}
+}
+
+func (r runner) run(t *testing.T, p program, input sandbox.File, args []string, limits sandbox.FileRunLimits) (*sandbox.FileRunResult, []byte) {
+	t.Helper()
+	res, err := r.sb.RunFiles(context.Background(), p.exe, p.lang, input, args, nil, limits)
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	defer r.release(res.OutputID)
+	var stdout bytes.Buffer
+	if res.OutputID != "" {
+		if _, err := r.files.Download(context.Background(), res.OutputID, &stdout, int64(limits.Output)); err != nil {
+			t.Fatalf("download output: %v", err)
+		}
+	}
+	return res, stdout.Bytes()
 }
 
 const (

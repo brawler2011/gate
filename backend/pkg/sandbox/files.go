@@ -14,21 +14,31 @@ import (
 	"strings"
 )
 
-// FileTransport avoids unary gRPC FileAdd/FileGet, which buffer entire test bodies and executables.
-type FileTransport struct {
+type endpoint struct {
 	base string
 	http *http.Client
 }
 
-func NewFileTransport(base string, client *http.Client) (*FileTransport, error) {
+func newEndpoint(base string, client *http.Client) (endpoint, error) {
 	u, err := url.Parse(base)
 	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.RawQuery != "" || u.Fragment != "" || u.User != nil {
-		return nil, fmt.Errorf("invalid sandbox file endpoint")
+		return endpoint{}, fmt.Errorf("invalid sandbox endpoint")
 	}
 	if client == nil {
-		return nil, fmt.Errorf("sandbox file HTTP client is required")
+		return endpoint{}, fmt.Errorf("sandbox HTTP client is required")
 	}
-	return &FileTransport{base: strings.TrimRight(base, "/"), http: client}, nil
+	return endpoint{base: strings.TrimRight(base, "/"), http: client}, nil
+}
+
+// FileTransport streams test bodies and executables to and from go-judge's file store.
+type FileTransport struct{ endpoint }
+
+func NewFileTransport(base string, client *http.Client) (*FileTransport, error) {
+	e, err := newEndpoint(base, client)
+	if err != nil {
+		return nil, err
+	}
+	return &FileTransport{e}, nil
 }
 
 // Upload leaves the caller-owned file's offset unchanged.
@@ -40,6 +50,10 @@ func (t *FileTransport) Upload(ctx context.Context, file *os.File, limit int64) 
 	if !stat.Mode().IsRegular() || limit <= 0 || stat.Size() > limit {
 		return "", fmt.Errorf("sandbox upload must be a regular file within quota")
 	}
+	return t.post(ctx, io.NewSectionReader(file, 0, stat.Size()), stat.Size())
+}
+
+func (e endpoint) post(ctx context.Context, content io.Reader, size int64) (string, error) {
 	var header bytes.Buffer
 	m := multipart.NewWriter(&header)
 	if _, err := m.CreateFormFile("file", "blob"); err != nil {
@@ -51,14 +65,14 @@ func (t *FileTransport) Upload(ctx context.Context, file *os.File, limit int64) 
 		return "", fmt.Errorf("close sandbox multipart: %w", err)
 	}
 	suffix := bytes.Clone(header.Bytes())
-	body := io.MultiReader(bytes.NewReader(prefix), io.NewSectionReader(file, 0, stat.Size()), bytes.NewReader(suffix))
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, t.base+"/file", body)
+	body := io.MultiReader(bytes.NewReader(prefix), content, bytes.NewReader(suffix))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.base+"/file", body)
 	if err != nil {
 		return "", fmt.Errorf("create sandbox upload: %w", err)
 	}
 	req.Header.Set("Content-Type", m.FormDataContentType())
-	req.ContentLength = int64(len(prefix)) + stat.Size() + int64(len(suffix))
-	resp, err := t.http.Do(req)
+	req.ContentLength = int64(len(prefix)) + size + int64(len(suffix))
+	resp, err := e.http.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("upload sandbox file: %w", err)
 	}
@@ -84,14 +98,18 @@ func validFileID(id string) bool {
 var ErrQuotaExceeded = errors.New("sandbox file exceeds quota")
 
 func (t *FileTransport) Download(ctx context.Context, id string, dst io.Writer, limit int64) (int64, error) {
+	return t.get(ctx, id, dst, limit)
+}
+
+func (e endpoint) get(ctx context.Context, id string, dst io.Writer, limit int64) (int64, error) {
 	if !validFileID(id) || limit <= 0 {
 		return 0, fmt.Errorf("invalid sandbox download ID or quota")
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, t.base+"/file/"+url.PathEscape(id), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, e.base+"/file/"+url.PathEscape(id), nil)
 	if err != nil {
 		return 0, fmt.Errorf("create sandbox download: %w", err)
 	}
-	resp, err := t.http.Do(req)
+	resp, err := e.http.Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("download sandbox file: %w", err)
 	}
@@ -116,15 +134,17 @@ func (t *FileTransport) Download(ctx context.Context, id string, dst io.Writer, 
 	return n, nil
 }
 
-func (t *FileTransport) Delete(ctx context.Context, id string) error {
+func (t *FileTransport) Delete(ctx context.Context, id string) error { return t.delete(ctx, id) }
+
+func (e endpoint) delete(ctx context.Context, id string) error {
 	if !validFileID(id) {
 		return fmt.Errorf("invalid sandbox file ID")
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, t.base+"/file/"+url.PathEscape(id), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, e.base+"/file/"+url.PathEscape(id), nil)
 	if err != nil {
 		return fmt.Errorf("create sandbox deletion: %w", err)
 	}
-	resp, err := t.http.Do(req)
+	resp, err := e.http.Do(req)
 	if err != nil {
 		return fmt.Errorf("delete sandbox file: %w", err)
 	}

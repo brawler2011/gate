@@ -4,7 +4,6 @@ http:
   trusted_proxy: ""
   secure_cookies: false
 go_judge:
-  grpc_addr: localhost:5051
   http_url: http://localhost:5050
   work_dir: /problem-work
 storage:

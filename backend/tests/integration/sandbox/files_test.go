@@ -31,8 +31,8 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	require.NoError(t, err)
 	req := testcontainers.ContainerRequest{
 		Image:        image,
-		ExposedPorts: []string{"5050/tcp", "5051/tcp"}, Privileged: true,
-		Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-file-store", "-parallelism=1", "-output-limit=256m", "-no-fallback"},
+		ExposedPorts: []string{"5050/tcp"}, Privileged: true,
+		Cmd:        []string{"-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-file-store", "-parallelism=1", "-output-limit=256m", "-no-fallback"},
 		WaitingFor: wait.ForHTTP("/version").WithPort("5050/tcp"),
 	}
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: req, Started: true})
@@ -42,13 +42,11 @@ func TestIntegrationSandboxFiles(t *testing.T) {
 	require.NoError(t, err)
 	httpPort, err := c.MappedPort(ctx, "5050/tcp")
 	require.NoError(t, err)
-	grpcPort, err := c.MappedPort(ctx, "5051/tcp")
+	base := fmt.Sprintf("http://%s:%s", host, httpPort.Port())
+	transport, err := sandbox.NewFileTransport(base, &http.Client{Timeout: time.Minute})
 	require.NoError(t, err)
-	transport, err := sandbox.NewFileTransport(fmt.Sprintf("http://%s:%s", host, httpPort.Port()), &http.Client{Timeout: time.Minute})
+	client, err := sandbox.NewClient(base, &http.Client{})
 	require.NoError(t, err)
-	client, err := sandbox.NewClient(host + ":" + grpcPort.Port())
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, client.Close()) })
 	cfg, err := sandbox.LoadConfig("../../../../judge/langs.toml")
 	require.NoError(t, err)
 	sb := sandbox.NewSandbox(client, cfg)
