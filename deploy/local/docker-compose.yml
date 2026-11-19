@@ -85,7 +85,7 @@ services:
       - "-src-prefix=/problem-work/cache"
       - "-no-fallback"
     ports:
-      - "5051:5051"
+      - "127.0.0.1:5051:5051"
       - "127.0.0.1:5050:5050"
     privileged: true
     volumes:
