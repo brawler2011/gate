@@ -82,12 +82,14 @@ services:
       - "-grpc-addr=0.0.0.0:5051"
       - "-http-addr=0.0.0.0:5050"
       - "-dir=/data"
+      - "-src-prefix=/problem-work/cache"
     ports:
       - "5051:5051"
       - "127.0.0.1:5050:5050"
     privileged: true
     volumes:
       - ./go-judge-data:/data
+      - ../../backend/data/problem-work:/problem-work:ro
     networks:
       - gate-local
 

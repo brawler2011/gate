@@ -24,7 +24,8 @@ func (s *IntegrationTestSuite) loadBuiltPackage(id uuid.UUID) *gfmt.Problem {
 
 func (s *IntegrationTestSuite) loadPackage(id uuid.UUID) *judging.LoadedPackage {
 	s.T().Helper()
-	loader := &judging.PackageLoader{Store: s.objectStore, Bucket: s.bucket, Cache: diskCache(s.T()), Packages: s.problemDrafts, Limits: testBuildOptions(s.T()).Limits}
+	cache, _ := judgeCache(s.T())
+	loader := &judging.PackageLoader{Store: s.objectStore, Bucket: s.bucket, Cache: cache, Packages: s.problemDrafts, Limits: testBuildOptions(s.T()).Limits}
 	pkg, err := loader.LoadPackage(s.ctx, id)
 	s.Require().NoError(err)
 	s.T().Cleanup(pkg.Release)
@@ -64,7 +65,7 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 			language := main.Language
 			client, files := newGoJudge(s.T())
 			cfg := &sandbox.Config{Langs: testBuildOptions(s.T()).Languages}
-			judge := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(diskCache(s.T()), client, files, sandbox.Image{Config: cfg}), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+			judge := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(diskCache(s.T()), client, files, sandbox.Image{Config: cfg}), WorkDir: sandbox.SharedDir{Local: shared.judgeDir, Sandbox: judgeMount}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 			verdict, err := judge.Judge(s.ctx, pkg, uuid.New(), main.Source, language, silentJudgeProgress{}, submissionsmodel.SubmissionEventMeta{})
 			s.Require().NoError(err)
 			s.Equal(submissionsmodel.Accepted, verdict.State, "%+v", verdict)

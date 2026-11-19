@@ -242,6 +242,8 @@ tasks:
     desc: Start local Docker containers in background
     deps: [judge:image]
     cmds:
+      # Docker would create the go-judge bind mount owned by root, leaving it unwritable for the backend.
+      - mkdir -p backend/data/problem-work
       - "{{.DOCKER_COMPOSE}} up -d {{.CLI_ARGS}}"
 
   docker:down:

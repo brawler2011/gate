@@ -109,7 +109,8 @@ func ExtractZipLimited(r *zip.Reader, destDir string, maxBytes int64, maxEntries
 		if entries >= maxEntries {
 			return fmt.Errorf("ZIP inode quota exceeded")
 		}
-		file, err := os.OpenFile(filepath.Join(destDir, filepath.FromSlash(name)), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		// The sandbox user reopens judged test files through /dev/fd, which checks file permissions; private directories still hide them.
+		file, err := os.OpenFile(filepath.Join(destDir, filepath.FromSlash(name)), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
 		if err != nil {
 			return fmt.Errorf("openfile: %w", err)
 		}

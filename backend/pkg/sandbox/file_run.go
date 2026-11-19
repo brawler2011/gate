@@ -29,7 +29,7 @@ type FileRunResult struct {
 	Stderr     []byte
 }
 
-func (s *Sandbox) fileCommand(executable Executable, language, inputID string, args, extraIDs []string, limits FileRunLimits) (*pb.Request_CmdType, error) {
+func (s *Sandbox) fileCommand(executable Executable, language string, input File, args []string, extras []File, limits FileRunLimits) (*pb.Request_CmdType, error) {
 	if limits.CPU <= 0 || limits.Wall <= 0 || limits.Memory == 0 || limits.Processes == 0 || limits.Output <= 0 || limits.Diagnostic <= 0 || limits.Diagnostic > 64*1024 {
 		return nil, fmt.Errorf("invalid sandbox file execution limits")
 	}
@@ -52,20 +52,21 @@ func (s *Sandbox) fileCommand(executable Executable, language, inputID string, a
 		copyIn[path] = newCachedFile(id)
 	}
 	stdin := newMemoryFile(nil)
-	if inputID != "" {
-		if !validFileID(inputID) {
-			return nil, fmt.Errorf("invalid input file ID")
+	if input != (File{}) {
+		var err error
+		if stdin, err = input.request(); err != nil {
+			return nil, err
 		}
-		stdin = newCachedFile(inputID)
 	}
 	// The pipe charges output page-cache memory to the trusted transport instead of the contestant.
 	stdout := pb.Request_File_builder{Pipe: pb.Request_PipeCollector_builder{Name: "stdout", Max: int64(limits.Output), Pipe: true}.Build()}.Build()
 	files := []*pb.Request_File{stdin, stdout, newPipeCollector("stderr", int64(limits.Diagnostic))}
-	for _, id := range extraIDs {
-		if !validFileID(id) {
-			return nil, fmt.Errorf("invalid extra file ID")
+	for _, f := range extras {
+		r, err := f.request()
+		if err != nil {
+			return nil, err
 		}
-		files = append(files, newCachedFile(id))
+		files = append(files, r)
 	}
 	argv := strings.Fields(strings.NewReplacer("${name}", name, "${dir}", ".").Replace(lang.Execute))
 	argv = append(argv, args...)
@@ -80,8 +81,8 @@ func (s *Sandbox) fileCommand(executable Executable, language, inputID string, a
 
 // RunFiles exposes extra files as /dev/fd/3 onward without copying them into tmpfs.
 // The caller owns the returned output ID even when the command fails.
-func (s *Sandbox) RunFiles(ctx context.Context, executable Executable, language, inputID string, args, extraIDs []string, limits FileRunLimits) (*FileRunResult, error) {
-	cmd, err := s.fileCommand(executable, language, inputID, args, extraIDs, limits)
+func (s *Sandbox) RunFiles(ctx context.Context, executable Executable, language string, input File, args []string, extras []File, limits FileRunLimits) (*FileRunResult, error) {
+	cmd, err := s.fileCommand(executable, language, input, args, extras, limits)
 	if err != nil {
 		return nil, err
 	}
@@ -103,9 +104,9 @@ func (s *Sandbox) RunFiles(ctx context.Context, executable Executable, language,
 	}, nil
 }
 
-func (s *Sandbox) CheckFiles(ctx context.Context, executable Executable, language, input, output, answer string, limits FileRunLimits) (*CheckerResult, error) {
+func (s *Sandbox) CheckFiles(ctx context.Context, executable Executable, language string, input, output, answer File, limits FileRunLimits) (*CheckerResult, error) {
 	limits.Output = limits.Diagnostic
-	cmd, err := s.fileCommand(executable, language, "", []string{"/dev/fd/3", "/dev/fd/4", "/dev/fd/5"}, []string{input, output, answer}, limits)
+	cmd, err := s.fileCommand(executable, language, File{}, []string{"/dev/fd/3", "/dev/fd/4", "/dev/fd/5"}, []File{input, output, answer}, limits)
 	if err != nil {
 		return nil, err
 	}
@@ -128,18 +129,18 @@ func (s *Sandbox) CheckFiles(ctx context.Context, executable Executable, languag
 
 const interactorOutput = "output.txt"
 
-// InteractFiles allows an empty answerID; OutputID is the interactor's file for the checker.
+// InteractFiles allows a zero answer; OutputID is the interactor's file for the checker.
 // The caller owns OutputID even on failure.
-func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, solutionLanguage string, interactor Executable, interactorLanguage, inputID, answerID string, solutionLimits, interactorLimits FileRunLimits) (*InteractiveResult, error) {
-	sol, err := s.fileCommand(solution, solutionLanguage, "", nil, nil, solutionLimits)
+func (s *Sandbox) InteractFiles(ctx context.Context, solution Executable, solutionLanguage string, interactor Executable, interactorLanguage string, input, answer File, solutionLimits, interactorLimits FileRunLimits) (*InteractiveResult, error) {
+	sol, err := s.fileCommand(solution, solutionLanguage, File{}, nil, nil, solutionLimits)
 	if err != nil {
 		return nil, err
 	}
-	args, extra := []string{"/dev/fd/3", interactorOutput}, []string{inputID}
-	if answerID != "" {
-		args, extra = append(args, "/dev/fd/4"), append(extra, answerID)
+	args, extra := []string{"/dev/fd/3", interactorOutput}, []File{input}
+	if answer != (File{}) {
+		args, extra = append(args, "/dev/fd/4"), append(extra, answer)
 	}
-	intr, err := s.fileCommand(interactor, interactorLanguage, "", args, extra, interactorLimits)
+	intr, err := s.fileCommand(interactor, interactorLanguage, File{}, args, extra, interactorLimits)
 	if err != nil {
 		return nil, err
 	}
