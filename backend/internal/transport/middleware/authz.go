@@ -227,6 +227,7 @@ func buildEndpointPolicies() map[string]endpointPolicy {
 		"CancelProblemBuild":     authenticatedPolicy(),
 		"UploadProblemDraft":     authenticatedPolicy(),
 		"GetProblemDraftObject":  authenticatedPolicy(),
+		"ExportProblemDraft":     authenticatedPolicy(),
 		"GetProblem":             policy(Public),
 		"UpdateProblem":          authenticatedPolicy(),
 		"DeleteProblem":          authenticatedPolicy(),

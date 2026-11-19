@@ -1369,6 +1369,31 @@ func decodeDownloadProblemPackageResponse(resp *http.Response) (res DownloadProb
 	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
+func decodeExportProblemDraftResponse(resp *http.Response) (res ExportProblemDraftOK, _ error) {
+	switch resp.StatusCode {
+	case 200:
+		// Code 200.
+		ct, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+		if err != nil {
+			return res, errors.Wrap(err, "parse media type")
+		}
+		switch {
+		case ct == "application/zip":
+			reader := resp.Body
+			b, err := io.ReadAll(reader)
+			if err != nil {
+				return res, err
+			}
+
+			response := ExportProblemDraftOK{Data: bytes.NewReader(b)}
+			return response, nil
+		default:
+			return res, validate.InvalidContentType(ct)
+		}
+	}
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
+}
+
 func decodeForgotPasswordResponse(resp *http.Response) (res *ForgotPasswordOK, _ error) {
 	switch resp.StatusCode {
 	case 200:

@@ -5022,6 +5022,90 @@ func (s *Server) handleDownloadProblemPackageRequest(args [2]string, argsEscaped
 	}
 }
 
+// handleExportProblemDraftRequest handles ExportProblemDraft operation.
+//
+// The archive imports back through ImportProblem.
+//
+// GET /problems/{id}/draft/export
+func (s *Server) handleExportProblemDraftRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ExportProblemDraftOperation,
+			ID:   "ExportProblemDraft",
+		}
+	)
+	params, err := decodeExportProblemDraftParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response ExportProblemDraftOK
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ExportProblemDraftOperation,
+			OperationSummary: "Download the draft as a Gate author package",
+			OperationID:      "ExportProblemDraft",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ExportProblemDraftParams
+			Response = ExportProblemDraftOK
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackExportProblemDraftParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ExportProblemDraft(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ExportProblemDraft(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeExportProblemDraftResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleForgotPasswordRequest handles ForgotPassword operation.
 //
 // Forgot password.

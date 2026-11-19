@@ -209,6 +209,23 @@ paths:
               schema:
                 type: string
                 format: binary
+  /problems/{id}/draft/export:
+    get:
+      tags:
+      - problems
+      operationId: ExportProblemDraft
+      summary: Download the draft as a Gate author package
+      description: The archive imports back through ImportProblem.
+      parameters:
+      - $ref: '#/components/parameters/ProblemIDPath'
+      responses:
+        '200':
+          description: Draft archive
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
   /languages:
     get:
       tags: [system]

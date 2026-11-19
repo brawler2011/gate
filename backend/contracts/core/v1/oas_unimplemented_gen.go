@@ -490,6 +490,15 @@ func (UnimplementedHandler) DownloadProblemPackage(ctx context.Context, params D
 	return r, ht.ErrNotImplemented
 }
 
+// ExportProblemDraft implements ExportProblemDraft operation.
+//
+// The archive imports back through ImportProblem.
+//
+// GET /problems/{id}/draft/export
+func (UnimplementedHandler) ExportProblemDraft(ctx context.Context, params ExportProblemDraftParams) (r ExportProblemDraftOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ForgotPassword implements ForgotPassword operation.
 //
 // Forgot password.

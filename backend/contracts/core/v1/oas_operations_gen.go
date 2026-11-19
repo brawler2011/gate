@@ -59,6 +59,7 @@ const (
 	DeleteTeamOperation                     OperationName = "DeleteTeam"
 	DownloadContestStatementsPdfOperation   OperationName = "DownloadContestStatementsPdf"
 	DownloadProblemPackageOperation         OperationName = "DownloadProblemPackage"
+	ExportProblemDraftOperation             OperationName = "ExportProblemDraft"
 	ForgotPasswordOperation                 OperationName = "ForgotPassword"
 	GetContestOperation                     OperationName = "GetContest"
 	GetContestProblemOperation              OperationName = "GetContestProblem"

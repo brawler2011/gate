@@ -25,6 +25,7 @@ type ProblemDraftUC interface {
 	Upload(context.Context, uuid.UUID, int64, string, model.UploadChange, io.Reader, io.Reader) (model.MutationResult, error)
 	Import(context.Context, uuid.UUID, int64, string, io.Reader) (model.MutationResult, error)
 	DownloadObject(context.Context, uuid.UUID, uuid.UUID) (io.ReadCloser, string, error)
+	Export(context.Context, uuid.UUID) (io.ReadCloser, error)
 }
 
 func draftContract[T any](source any) (*T, error) {
@@ -122,6 +123,14 @@ func (h *CoreServer) UploadProblemDraft(ctx context.Context, req *corev1.UploadP
 	}
 	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.Upload(ctx, p.ID, p.ExpectedRevision, p.IdempotencyKey, change, req.File.File, answer))
 }
+func (h *CoreServer) ExportProblemDraft(ctx context.Context, p corev1.ExportProblemDraftParams) (corev1.ExportProblemDraftOK, error) {
+	reader, err := h.ProblemDrafts.Export(ctx, p.ID)
+	if err != nil {
+		return corev1.ExportProblemDraftOK{}, err
+	}
+	return corev1.ExportProblemDraftOK{Data: reader}, nil
+}
+
 func (h *CoreServer) GetProblemDraftObject(ctx context.Context, p corev1.GetProblemDraftObjectParams) (corev1.GetProblemDraftObjectOK, error) {
 	reader, _, err := h.ProblemDrafts.DownloadObject(ctx, p.ID, p.ObjectId)
 	if err != nil {

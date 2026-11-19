@@ -1,9 +1,14 @@
 package gfmt
 
 import (
-	"github.com/brawler2011/gate/backend/pkg/points"
+	"cmp"
+	"maps"
+	"slices"
 	"sort"
+	"strings"
 	"time"
+
+	"github.com/brawler2011/gate/backend/pkg/points"
 )
 
 type Problem struct {
@@ -48,16 +53,27 @@ type Test struct {
 	AnswerMode string       `yaml:"answer_mode,omitempty" json:"answer_mode,omitempty"`
 	Manual     string       `yaml:"manual,omitempty" json:"manual,omitempty"`
 	Generate   string       `yaml:"generate,omitempty" json:"generate,omitempty"`
-	Sample     bool         `yaml:"sample,omitempty" json:"sample,omitempty"`
+	// Solution names the solutions/ file whose output is the answer.
+	Solution string `yaml:"solution,omitempty" json:"solution,omitempty"`
+	Sample   bool   `yaml:"sample,omitempty" json:"sample,omitempty"`
 }
 
-// Number samples before named groups, preserving manifest order rather than file order.
+// Order by ordinals when every subtask has one; otherwise samples come first, then names in order.
 func (p *Problem) OrderedSubtaskNames() []string {
 	names := make([]string, 0, len(p.Subtasks))
-	for name := range p.Subtasks {
+	ordinals := true
+	for name, s := range p.Subtasks {
+		ordinals = ordinals && s.Ordinal > 0
 		if name != "samples" {
 			names = append(names, name)
 		}
+	}
+	if ordinals {
+		names = slices.Collect(maps.Keys(p.Subtasks))
+		slices.SortFunc(names, func(a, b string) int {
+			return cmp.Or(cmp.Compare(p.Subtasks[a].Ordinal, p.Subtasks[b].Ordinal), strings.Compare(a, b))
+		})
+		return names
 	}
 	sort.Strings(names)
 	if _, ok := p.Subtasks["samples"]; ok {
@@ -70,4 +86,8 @@ func (p *Problem) OrderedSubtaskNames() []string {
 type Source struct {
 	Language      string            `yaml:"language,omitempty" json:"language,omitempty"`
 	DependencyMap map[string]string `yaml:"dependency_map,omitempty" json:"dependency_map,omitempty"`
+	// Standard names a system checker that replaces this checker file on import.
+	Standard string `yaml:"standard,omitempty" json:"standard,omitempty"`
+	// AutoUpdate on a system library file: true replaces its text with the current system file.
+	AutoUpdate *bool `yaml:"auto_update,omitempty" json:"auto_update,omitempty"`
 }

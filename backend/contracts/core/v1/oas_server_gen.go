@@ -326,6 +326,12 @@ type Handler interface {
 	//
 	// GET /problems/{id}/packages/{packageId}/download
 	DownloadProblemPackage(ctx context.Context, params DownloadProblemPackageParams) (DownloadProblemPackageOK, error)
+	// ExportProblemDraft implements ExportProblemDraft operation.
+	//
+	// The archive imports back through ImportProblem.
+	//
+	// GET /problems/{id}/draft/export
+	ExportProblemDraft(ctx context.Context, params ExportProblemDraftParams) (ExportProblemDraftOK, error)
 	// ForgotPassword implements ForgotPassword operation.
 	//
 	// Forgot password.
