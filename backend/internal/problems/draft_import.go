@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
@@ -433,7 +434,8 @@ func (c *importConverter) addStatement(s spec.Statement) error {
 		if err != nil {
 			return err
 		}
-		sections[name] = strings.TrimSpace(text)
+		// Leading whitespace can start an indented code block, so only the end is trimmed.
+		sections[name] = strings.TrimRightFunc(text, unicode.IsSpace)
 	}
 	for name, text := range sections {
 		section := statement.Section(name)

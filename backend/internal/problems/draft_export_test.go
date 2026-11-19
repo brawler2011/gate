@@ -102,6 +102,7 @@ func TestExportRoundTripKeepsSavedStatements(t *testing.T) {
 	_, err = uc.SaveDraft(ctx, plan.draft.ProblemID, plan.draft.Revision, "key", plan.draft)
 	require.NoError(t, err)
 	plan.draft = repo.saved[0]
+	require.Equal(t, "    indented code\n\nText", plan.draft.Statements[0].Legend)
 	require.Equal(t, normalized(plan), normalized(exportAndImport(t, plan)))
 }
 
