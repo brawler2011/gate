@@ -28,7 +28,7 @@ spec:
           image: {{ .Values.goJudge.image }}:{{ include "gate.tag" . }}
           restartPolicy: Always
           # Only this pod may access sandbox execution.
-          args: [-enable-grpc, -grpc-addr=127.0.0.1:5051, -http-addr=127.0.0.1:5050, -dir=/data, -src-prefix=/problem-work/cache]
+          args: [-enable-grpc, -grpc-addr=127.0.0.1:5051, -http-addr=127.0.0.1:5050, -dir=/data, -src-prefix=/problem-work/cache, -no-fallback]
           # Sandbox mounts require privileged mode and must bypass the pod's AppArmor profile.
           securityContext: {privileged: true, seccompProfile: {type: Unconfined}, appArmorProfile: {type: Unconfined}}
           resources: {{- toYaml .Values.goJudge.resources | nindent 12 }}

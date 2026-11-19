@@ -83,6 +83,7 @@ services:
       - "-http-addr=0.0.0.0:5050"
       - "-dir=/data"
       - "-src-prefix=/problem-work/cache"
+      - "-no-fallback"
     ports:
       - "5051:5051"
       - "127.0.0.1:5050:5050"

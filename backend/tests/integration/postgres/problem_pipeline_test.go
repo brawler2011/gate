@@ -53,7 +53,7 @@ func startPipelineServices(t *testing.T) pipelineServices {
 	request := testcontainers.ContainerRequest{
 		Image:        image,
 		ExposedPorts: []string{"5050/tcp", "5051/tcp"}, Privileged: true,
-		Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", "-parallelism=1"},
+		Cmd:        []string{"-enable-grpc", "-grpc-addr=0.0.0.0:5051", "-http-addr=0.0.0.0:5050", "-dir=/tmp/gate-files", "-parallelism=1", "-no-fallback"},
 		WaitingFor: wait.ForHTTP("/version").WithPort("5050/tcp")}
 	judge, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: request, Started: true})
 	require.NoError(t, err)
