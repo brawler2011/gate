@@ -274,12 +274,17 @@ const SolutionExpectation = ({draft, name, result, revision, onChange}: Expectat
           <NumberInput
             label="Ожидаемые баллы"
             description="Пусто — любые"
-            value={solution.points ?? ""}
+            key={name}
+            defaultValue={solution.points ?? ""}
             min={0}
             decimalScale={2}
-            onChange={(value) =>
-              onChange((current) => setSolutionExpectation(current, name, {points: typeof value === "number" ? value : null}))
-            }
+            onBlur={(e) => {
+              const text = e.currentTarget.value.replace(",", ".").trim();
+              const points = text === "" ? null : Math.round(Number(text) * 100) / 100;
+              if ((points === null || Number.isFinite(points)) && points !== solution.points) {
+                onChange((current) => setSolutionExpectation(current, name, {points}));
+              }
+            }}
             w={160}
           />
         )}
