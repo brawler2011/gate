@@ -181,6 +181,6 @@ func (uc *AvatarsUseCase) GetAvatar(ctx context.Context, username string, ifNone
 
 func (uc *AvatarsUseCase) deleteAvatarFile(ctx context.Context, key string) {
 	if err := uc.storage.DeleteFile(ctx, uc.avatarBucket, key); err != nil {
-		slog.Warn("failed to delete avatar file", "key", key, "error", err)
+		slog.WarnContext(ctx, "failed to delete avatar file", "key", key, "error", err)
 	}
 }

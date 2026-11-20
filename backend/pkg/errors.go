@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -112,6 +113,18 @@ func OnNotFound(err error, code *Error, message string) error {
 		return Wrap(code, err, message)
 	}
 	return err
+}
+
+// WithCause adds why ctx was cancelled to an error the cancellation caused.
+func WithCause(ctx context.Context, err error) error {
+	if err == nil || ctx.Err() == nil {
+		return err
+	}
+	cause := context.Cause(ctx)
+	if cause == nil || errors.Is(err, cause) {
+		return err
+	}
+	return errors.Join(err, cause)
 }
 
 // Codes lists every code the API can return.

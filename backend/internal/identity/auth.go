@@ -204,7 +204,7 @@ func (uc *AuthUseCase) Register(ctx context.Context, username, emailAddr, passwo
 	}
 
 	if err := uc.emailService.SendVerificationEmail(ctx, emailAddr, username, token); err != nil {
-		slog.Error("failed to send verification email", "error", err, "email", emailAddr)
+		slog.ErrorContext(ctx, "failed to send verification email", "error", err, "email", emailAddr)
 	}
 
 	user, err := uc.usersRepo.GetUserById(ctx, targetUserID)
@@ -304,14 +304,14 @@ func (uc *AuthUseCase) authenticate(ctx context.Context, sessionID uuid.UUID, to
 	hardExpiry := session.CreatedAt.Add(sessionHardLifetime)
 	if time.Now().After(hardExpiry) {
 		if touch {
-			_ = uc.authRepo.DeleteSession(ctx, sessionID)
+			uc.deleteExpiredSession(ctx, sessionID)
 		}
 		return accessmodel.User{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "session expired (hard limit)")
 	}
 
 	if session.IsExpired() {
 		if touch {
-			_ = uc.authRepo.DeleteSession(ctx, sessionID)
+			uc.deleteExpiredSession(ctx, sessionID)
 		}
 		return accessmodel.User{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "session expired (soft limit)")
 	}
@@ -323,7 +323,7 @@ func (uc *AuthUseCase) authenticate(ctx context.Context, sessionID uuid.UUID, to
 		}
 		err = uc.authRepo.UpdateSessionExpiry(ctx, sessionID, newExpiry)
 		if err != nil {
-			slog.Debug("failed to update session expiry", "error", err)
+			slog.WarnContext(ctx, "extend session", "error", err)
 		}
 	}
 
@@ -575,8 +575,12 @@ func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID,
 		return pkg.Wrap(pkg.ErrInvalid, err, "incorrect password")
 	}
 
-	if existing, err := uc.usersRepo.GetUserByUsernameOrEmail(ctx, newEmail); err == nil && existing.Id != userID {
+	existing, err := uc.usersRepo.GetUserByUsernameOrEmail(ctx, newEmail)
+	switch {
+	case err == nil && existing.Id != userID:
 		return pkg.Wrap(pkg.ErrEmailTaken, nil, "email is taken")
+	case err != nil && !errors.Is(err, pkg.ErrNotFound):
+		return err
 	}
 
 	token, tokenHash, err := generateSecureToken()
@@ -612,12 +616,12 @@ func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID,
 	}
 
 	if err := uc.emailService.SendEmailChangeVerification(ctx, newEmail, user.Username, token); err != nil {
-		slog.Error("failed to send email change verification", "error", err, "email", newEmail)
+		slog.ErrorContext(ctx, "failed to send email change verification", "error", err, "email", newEmail)
 	}
 
 	if user.Email != nil && *user.Email != "" {
 		if err := uc.emailService.SendEmailChangeAlert(ctx, *user.Email, user.Username, newEmail); err != nil {
-			slog.Error("failed to send email change alert", "error", err, "old_email", *user.Email)
+			slog.ErrorContext(ctx, "failed to send email change alert", "error", err, "old_email", *user.Email)
 		}
 	}
 
@@ -676,4 +680,11 @@ func replaceAuthTokenWithin(ctx context.Context, store IdentityTxStore, params i
 		return err
 	}
 	return store.CreateAuthToken(ctx, params)
+}
+
+// An expired session is rejected either way; a failed delete only leaves a dead row behind.
+func (uc *AuthUseCase) deleteExpiredSession(ctx context.Context, sessionID uuid.UUID) {
+	if err := uc.authRepo.DeleteSession(ctx, sessionID); err != nil {
+		slog.WarnContext(ctx, "delete expired session", "error", err)
+	}
 }

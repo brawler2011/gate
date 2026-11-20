@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -15,15 +16,12 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func subscriptionError(w http.ResponseWriter, err error) {
-	code := http.StatusInternalServerError
-	if errors.Is(err, pkg.ErrForbidden) || errors.Is(err, pkg.ErrNotFound) {
-		code = http.StatusForbidden
+// subscriptionError answers a rejected upgrade like any API error; a hidden resource reads as forbidden.
+func subscriptionError(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, pkg.ErrNotFound) {
+		err = pkg.Wrap(pkg.ErrForbidden, err, "")
 	}
-	if errors.Is(err, pkg.ErrUnauthenticated) {
-		code = http.StatusUnauthorized
-	}
-	http.Error(w, http.StatusText(code), code)
+	middleware.ResponseErrorHandler(slog.Default())(r.Context(), w, r, err)
 }
 
 func (s *Observer) sessionActor(ctx context.Context) (accessmodel.User, error) {
@@ -80,8 +78,12 @@ func submissionAccess(user accessmodel.User, permissions *accessmodel.ContestPer
 
 func closeVerification(conn eventConnection, err error) error {
 	code := websocket.CloseInternalServerErr
-	if errors.Is(err, pkg.ErrForbidden) || errors.Is(err, pkg.ErrNotFound) || errors.Is(err, pkg.ErrUnauthenticated) {
+	switch {
+	case errors.Is(err, pkg.ErrForbidden) || errors.Is(err, pkg.ErrNotFound) || errors.Is(err, pkg.ErrUnauthenticated):
 		code = websocket.ClosePolicyViolation
+	case errors.Is(err, pkg.ErrConflict):
+		// Access or topic configuration changed under the subscription; resubscribing resolves it.
+		code = websocket.CloseTryAgainLater
 	}
 	_ = conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, http.StatusText(pkg.HTTPStatus(pkg.CodeOf(err)))), time.Now().Add(timeToClose))
 	return err

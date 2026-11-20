@@ -130,9 +130,11 @@ func (uc *ContestsUseCase) UpdateContest(ctx context.Context, c contestsmodel.Co
 
 	err := uc.withinContest(ctx, c.ID, accessmodel.ActionUpdateContest, func(tx CommandTxStore) error {
 		if oldContest.ID == uuid.Nil {
-			if existing, err := tx.GetContest(ctx, c.ID); err == nil {
-				oldContest = existing
+			existing, err := tx.GetContest(ctx, c.ID)
+			if err != nil {
+				return err
 			}
+			oldContest = existing
 		}
 		return tx.UpdateContest(ctx, c)
 	})
@@ -160,9 +162,11 @@ func (uc *ContestsUseCase) DeleteContest(ctx context.Context, id uuid.UUID) erro
 
 	err := uc.withinContest(ctx, id, accessmodel.ActionDeleteContest, func(tx CommandTxStore) error {
 		if oldContest.ID == uuid.Nil {
-			if existing, err := tx.GetContest(ctx, id); err == nil {
-				oldContest = existing
+			existing, err := tx.GetContest(ctx, id)
+			if err != nil {
+				return err
 			}
+			oldContest = existing
 		}
 		return tx.DeleteContest(ctx, id)
 	})

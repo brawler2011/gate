@@ -32,7 +32,7 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 		return nil, err
 	}
 
-	slog.Info("contest draft created", "draft_id", draftID, "user_id", user.Id, "contest_id", contest.ID)
+	slog.InfoContext(ctx, "contest draft created", "draft_id", draftID, "user_id", user.Id, "contest_id", contest.ID)
 
 	return &corev1.CreationResponseModel{ID: draftID}, nil
 }
@@ -70,7 +70,7 @@ func (h *CoreServer) DeleteContestDraft(ctx context.Context, params corev1.Delet
 		return err
 	}
 
-	slog.Info("contest draft deleted", "draft_id", params.DraftID, "user_id", user.Id, "contest_id", contest.ID)
+	slog.InfoContext(ctx, "contest draft deleted", "draft_id", params.DraftID, "user_id", user.Id, "contest_id", contest.ID)
 
 	return nil
 }

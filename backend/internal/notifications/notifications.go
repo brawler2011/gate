@@ -54,7 +54,7 @@ func (uc *NotificationsUseCase) SendEmail(ctx context.Context, n notificationsmo
 		role, _ := n.Data["role"].(string)
 		inviter, _ := n.Data["inviter_username"].(string)
 		if err := uc.emailService.SendOrgInvitationEmail(ctx, userEmail, username, orgName, orgLogin, role, inviter); err != nil {
-			slog.Error("failed to send org invitation email", "error", err, "user_id", targetUserID)
+			slog.ErrorContext(ctx, "failed to send org invitation email", "error", err, "user_id", targetUserID)
 		}
 
 	case notificationsmodel.NotificationTypeOrgJoinRequest:
@@ -62,21 +62,21 @@ func (uc *NotificationsUseCase) SendEmail(ctx context.Context, n notificationsmo
 		orgLogin, _ := n.Data["organization_login"].(string)
 		applicant, _ := n.Data["applicant_username"].(string)
 		if err := uc.emailService.SendOrgJoinRequestEmail(ctx, userEmail, username, applicant, orgName, orgLogin); err != nil {
-			slog.Error("failed to send org join request email", "error", err, "user_id", targetUserID)
+			slog.ErrorContext(ctx, "failed to send org join request email", "error", err, "user_id", targetUserID)
 		}
 
 	case notificationsmodel.NotificationTypeOrgJoinApproved:
 		orgName, _ := n.Data["organization_name"].(string)
 		orgLogin, _ := n.Data["organization_login"].(string)
 		if err := uc.emailService.SendOrgJoinRequestResolvedEmail(ctx, userEmail, username, orgName, orgLogin, true); err != nil {
-			slog.Error("failed to send org join approved email", "error", err, "user_id", targetUserID)
+			slog.ErrorContext(ctx, "failed to send org join approved email", "error", err, "user_id", targetUserID)
 		}
 
 	case notificationsmodel.NotificationTypeOrgJoinRejected:
 		orgName, _ := n.Data["organization_name"].(string)
 		orgLogin, _ := n.Data["organization_login"].(string)
 		if err := uc.emailService.SendOrgJoinRequestResolvedEmail(ctx, userEmail, username, orgName, orgLogin, false); err != nil {
-			slog.Error("failed to send org join rejected email", "error", err, "user_id", targetUserID)
+			slog.ErrorContext(ctx, "failed to send org join rejected email", "error", err, "user_id", targetUserID)
 		}
 
 	case notificationsmodel.NotificationTypeContestJoinRequest:
@@ -85,7 +85,7 @@ func (uc *NotificationsUseCase) SendEmail(ctx context.Context, n notificationsmo
 		contestLogin, _ := n.Data["contest_login"].(string)
 		applicant, _ := n.Data["applicant_username"].(string)
 		if err := uc.emailService.SendContestJoinRequestEmail(ctx, userEmail, username, applicant, contestTitle, orgLogin, contestLogin); err != nil {
-			slog.Error("failed to send contest join request email", "error", err, "user_id", targetUserID)
+			slog.ErrorContext(ctx, "failed to send contest join request email", "error", err, "user_id", targetUserID)
 		}
 
 	case notificationsmodel.NotificationTypeContestJoinApproved:
@@ -93,7 +93,7 @@ func (uc *NotificationsUseCase) SendEmail(ctx context.Context, n notificationsmo
 		orgLogin, _ := n.Data["organization_login"].(string)
 		contestLogin, _ := n.Data["contest_login"].(string)
 		if err := uc.emailService.SendContestJoinRequestResolvedEmail(ctx, userEmail, username, contestTitle, orgLogin, contestLogin, true); err != nil {
-			slog.Error("failed to send contest join approved email", "error", err, "user_id", targetUserID)
+			slog.ErrorContext(ctx, "failed to send contest join approved email", "error", err, "user_id", targetUserID)
 		}
 
 	case notificationsmodel.NotificationTypeContestJoinRejected:
@@ -101,7 +101,7 @@ func (uc *NotificationsUseCase) SendEmail(ctx context.Context, n notificationsmo
 		orgLogin, _ := n.Data["organization_login"].(string)
 		contestLogin, _ := n.Data["contest_login"].(string)
 		if err := uc.emailService.SendContestJoinRequestResolvedEmail(ctx, userEmail, username, contestTitle, orgLogin, contestLogin, false); err != nil {
-			slog.Error("failed to send contest join rejected email", "error", err, "user_id", targetUserID)
+			slog.ErrorContext(ctx, "failed to send contest join rejected email", "error", err, "user_id", targetUserID)
 		}
 	}
 }

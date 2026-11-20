@@ -3,6 +3,7 @@ package identity
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -243,8 +244,12 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 		return pkg.OnNotFound(err, pkg.ErrInvalid, "user not found")
 	}
 
-	if existing, err := u.usersRepo.GetUserByUsernameOrEmail(ctx, newEmail); err == nil && existing.Id != user.Id {
+	existing, err := u.usersRepo.GetUserByUsernameOrEmail(ctx, newEmail)
+	switch {
+	case err == nil && existing.Id != user.Id:
 		return pkg.Wrap(pkg.ErrEmailTaken, nil, "email is taken")
+	case err != nil && !errors.Is(err, pkg.ErrNotFound):
+		return err
 	}
 
 	if !withConfirmation {
@@ -252,7 +257,6 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 			return store.UpdateUserEmail(ctx, user.Id, newEmail, true)
 		})
 	}
-
 
 	token, tokenHash, err := generateSecureToken()
 	if err != nil {
@@ -277,12 +281,12 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 	}
 
 	if err := u.emailService.SendEmailChangeVerification(ctx, newEmail, user.Username, token); err != nil {
-		slog.Error("failed to send email change verification", "error", err, "email", newEmail)
+		slog.ErrorContext(ctx, "failed to send email change verification", "error", err, "email", newEmail)
 	}
 
 	if user.Email != nil && *user.Email != "" {
 		if err := u.emailService.SendEmailChangeAlert(ctx, *user.Email, user.Username, newEmail); err != nil {
-			slog.Error("failed to send email change alert", "error", err, "old_email", *user.Email)
+			slog.ErrorContext(ctx, "failed to send email change alert", "error", err, "old_email", *user.Email)
 		}
 	}
 

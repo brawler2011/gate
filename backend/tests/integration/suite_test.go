@@ -237,8 +237,8 @@ func (s *IntegrationTestSuite) initApp() {
 		}
 		return "unmatched"
 	})(
-		middleware.AuthMiddleware(authUC)(
-			middleware.UsersMiddleware(s.usersRepo)(
+		middleware.AuthMiddleware(authUC, middleware.ResponseErrorHandler(logger))(
+			middleware.UsersMiddleware(s.usersRepo, middleware.ResponseErrorHandler(logger))(
 				s.testMiddleware(
 					middleware.RateLimit(s.limiter, "192.0.2.254", middleware.ResponseErrorHandler(logger))(server),
 				),

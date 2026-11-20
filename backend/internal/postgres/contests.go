@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -70,7 +71,7 @@ func (r *ContestsRepo) GetContest(ctx context.Context, id uuid.UUID) (contestsmo
 	if err != nil {
 		return contestsmodel.Contest{}, dbError("get contest", err)
 	}
-	return mapGetContestByIDRow(contest), nil
+	return mapGetContestByIDRow(contest)
 }
 
 func (r *ContestsRepo) GetContestByLogin(ctx context.Context, orgID uuid.UUID, login string) (contestsmodel.Contest, error) {
@@ -81,7 +82,7 @@ func (r *ContestsRepo) GetContestByLogin(ctx context.Context, orgID uuid.UUID, l
 	if err != nil {
 		return contestsmodel.Contest{}, dbError("get contest by login", err)
 	}
-	return mapGetContestByLoginRow(contest), nil
+	return mapGetContestByLoginRow(contest)
 }
 
 func (r *ContestsRepo) GetContestByOrgLoginAndContestLogin(ctx context.Context, orgLogin, contestLogin string) (contestsmodel.Contest, error) {
@@ -92,7 +93,7 @@ func (r *ContestsRepo) GetContestByOrgLoginAndContestLogin(ctx context.Context, 
 	if err != nil {
 		return contestsmodel.Contest{}, dbError("get contest by org login and contest login", err)
 	}
-	return mapGetContestByOrgLoginAndContestLoginRow(contest), nil
+	return mapGetContestByOrgLoginAndContestLoginRow(contest)
 }
 
 func (r *ContestsRepo) UpdateContest(ctx context.Context, c contestsmodel.ContestUpdateInput) error {
@@ -493,11 +494,13 @@ func mapContestFields(
 	endTime *time.Time,
 	createdAt time.Time,
 	updatedAt time.Time,
-) contestsmodel.Contest {
+) (contestsmodel.Contest, error) {
 	var settings map[string]interface{}
 
 	if len(settingsBytes) > 0 {
-		_ = json.Unmarshal(settingsBytes, &settings)
+		if err := json.Unmarshal(settingsBytes, &settings); err != nil {
+			return contestsmodel.Contest{}, fmt.Errorf("decode settings of contest %s: %w", id, err)
+		}
 	}
 
 	return contestsmodel.Contest{
@@ -514,18 +517,18 @@ func mapContestFields(
 		EndTime:           endTime,
 		CreatedAt:         createdAt,
 		UpdatedAt:         updatedAt,
-	}
+	}, nil
 }
 
-func mapGetContestByIDRow(c sqlc.GetContestByIDRow) contestsmodel.Contest {
+func mapGetContestByIDRow(c sqlc.GetContestByIDRow) (contestsmodel.Contest, error) {
 	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 
-func mapGetContestByLoginRow(c sqlc.GetContestByLoginRow) contestsmodel.Contest {
+func mapGetContestByLoginRow(c sqlc.GetContestByLoginRow) (contestsmodel.Contest, error) {
 	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 
-func mapGetContestByOrgLoginAndContestLoginRow(c sqlc.GetContestByOrgLoginAndContestLoginRow) contestsmodel.Contest {
+func mapGetContestByOrgLoginAndContestLoginRow(c sqlc.GetContestByOrgLoginAndContestLoginRow) (contestsmodel.Contest, error) {
 	return mapContestFields(c.ID, c.OrganizationID, c.OrgLogin, c.OwnerID, string(c.Visibility), c.Title, c.Login, c.Description, c.Settings, c.StartTime, c.EndTime, c.CreatedAt, c.UpdatedAt)
 }
 

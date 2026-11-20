@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -20,7 +22,8 @@ const authenticationErrorKey contextKey = "authentication_error"
 
 const sessionCookieName = "session_id"
 
-func AuthMiddleware(authUC AuthUC) func(http.Handler) http.Handler {
+// onError answers infrastructure failures; an invalid session only leaves the request unauthenticated.
+func AuthMiddleware(authUC AuthUC, onError corev1.ErrorHandler) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Capabilities and other authenticated projections must never enter shared caches.
@@ -31,14 +34,13 @@ func AuthMiddleware(authUC AuthUC) func(http.Handler) http.Handler {
 
 			cookie, err := r.Cookie(sessionCookieName)
 			if err != nil || cookie.Value == "" {
-				slog.Debug("no session cookie found, skipping auth middleware")
 				next.ServeHTTP(w, r)
 				return
 			}
 
 			sessionID, err := uuid.Parse(cookie.Value)
 			if err != nil {
-				slog.Error("session cookie found, but failed to parse UUID", "operation", "parse_session_cookie")
+				slog.WarnContext(ctx, "malformed session cookie")
 				r = r.WithContext(context.WithValue(ctx, authenticationErrorKey, pkg.ErrUnauthenticated))
 				next.ServeHTTP(w, r)
 				return
@@ -46,7 +48,10 @@ func AuthMiddleware(authUC AuthUC) func(http.Handler) http.Handler {
 
 			user, err := authUC.Authenticate(ctx, sessionID)
 			if err != nil {
-				slog.Debug("failed to authenticate session", "error", err)
+				if !errors.Is(err, pkg.ErrUnauthenticated) {
+					onError(ctx, w, r, fmt.Errorf("authenticate session: %w", err))
+					return
+				}
 				r = r.WithContext(context.WithValue(ctx, authenticationErrorKey, err))
 				next.ServeHTTP(w, r)
 				return

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -77,7 +78,7 @@ func newWSFixture(t *testing.T) *wsFixture {
 	t.Helper()
 	stub := &accessStub{user: accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}, contest: contestsmodel.Contest{ID: uuid.New(), OrganizationID: uuid.New(), Visibility: "public"}, permissions: accessmodel.ContestPermissions{GetContest: true, ListOwnSubmissions: true}}
 	f := &wsFixture{stub: stub, hub: NewHub(100, stub, nil), contests: NewContestsHub(100), session: uuid.New()}
-	observer := NewObserver(f.hub, f.contests, middleware.AuthMiddleware(stub), stub, stub, stub)
+	observer := NewObserver(f.hub, f.contests, middleware.AuthMiddleware(stub, middleware.ResponseErrorHandler(slog.Default())), stub, stub, stub)
 	f.server = httptest.NewServer(observer.Handler())
 	t.Cleanup(f.server.Close)
 	return f
@@ -304,7 +305,7 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	f.publish(t, submissionsmodel.SubmissionEventTestStarted, &submissionsmodel.SubmissionTestStartedEvent{SubmissionEventMeta: meta, Id: id, Number: 7})
 	require.InDelta(t, float64(7), readPayload(t, conn)["number"], 0)
 	f.stub.change(func() { f.stub.permissions = accessmodel.ContestPermissions{GetMonitor: true} })
-	requireClose(t, conn, 1011)
+	requireClose(t, conn, websocket.CloseTryAgainLater)
 	f.requireUnsubscribed(t)
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
 	f.waitSubscribed(t)
@@ -313,7 +314,7 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	f.stub.change(func() {
 		f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": contestsmodel.FreezeStatusUnfrozen}
 	})
-	requireClose(t, conn, 1011)
+	requireClose(t, conn, websocket.CloseTryAgainLater)
 	f.requireUnsubscribed(t)
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
 	f.waitSubscribed(t)
@@ -326,7 +327,7 @@ func TestSourceDetailsAndModeratorDemotion(t *testing.T) {
 	require.InDelta(t, float64(200), readPayload(t, conn)["state"], 0)
 	// A participant can reconnect to the own projection without review permission.
 	f.stub.change(func() { f.stub.permissions.ListOwnSubmissions = true })
-	requireClose(t, conn, 1011)
+	requireClose(t, conn, websocket.CloseTryAgainLater)
 	f.requireUnsubscribed(t)
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())
 	f.waitSubscribed(t)
@@ -344,7 +345,7 @@ func TestClarificationsUseCurrentManagePermission(t *testing.T) {
 	conn := f.connect(t, f.path("contests"))
 	require.Equal(t, "private", readPayload(t, conn)["question"])
 	f.stub.change(func() { f.stub.permissions.ManageContest = false; f.stub.permissions.ListOwnSubmissions = true })
-	requireClose(t, conn, 1011)
+	requireClose(t, conn, websocket.CloseTryAgainLater)
 	f.requireUnsubscribed(t)
 	conn = f.connect(t, "/ws/contests?contestId="+f.stub.contest.ID.String())
 	f.waitContestSubscribed(t)
@@ -499,7 +500,7 @@ func TestIdleRevisionInvalidation(t *testing.T) {
 		t.Run(fmt.Sprint(failure), func(t *testing.T) {
 			f := newWSFixture(t)
 			r := &revisionStub{value: 1}
-			server := httptest.NewServer(NewObserver(f.hub, f.contests, middleware.AuthMiddleware(f.stub), f.stub, f.stub, f.stub, r).Handler())
+			server := httptest.NewServer(NewObserver(f.hub, f.contests, middleware.AuthMiddleware(f.stub, middleware.ResponseErrorHandler(slog.Default())), f.stub, f.stub, f.stub, r).Handler())
 			defer server.Close()
 			conn, resp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+f.path("submissions"), http.Header{"Cookie": {"session_id=" + f.session.String()}})
 			require.NoError(t, err)
@@ -512,7 +513,11 @@ func TestIdleRevisionInvalidation(t *testing.T) {
 				r.value++
 			}
 			r.mu.Unlock()
-			requireClose(t, conn, 1011)
+			expected := websocket.CloseTryAgainLater
+			if failure {
+				expected = websocket.CloseInternalServerErr
+			}
+			requireClose(t, conn, expected)
 		})
 	}
 }
@@ -526,7 +531,7 @@ func TestReplayRejectsFormerLiveProjectionAfterFreeze(t *testing.T) {
 		f.stub.contest.Settings = map[string]any{"monitor_scope": "public", "submissions_list_scope": "public", "freeze_status": "frozen"}
 	})
 	conn := f.connect(t, f.path("submissions"))
-	requireClose(t, conn, 1011)
+	requireClose(t, conn, websocket.CloseTryAgainLater)
 	f.requireUnsubscribed(t)
 	// A fresh subscription receives only the newly projected, masked payload.
 	conn = f.connect(t, "/ws/submissions?contestId="+f.stub.contest.ID.String())

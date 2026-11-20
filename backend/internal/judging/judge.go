@@ -31,7 +31,7 @@ func NewJudgeUseCase(jobs Jobs, transactions JudgeTransactions, submissionsRepo 
 	return &JudgeUseCase{jobs: jobs, transactions: transactions, submissionsRepo: submissionsRepo, packageLoader: loader, executor: executor, eventPublisher: eventPublisher, logger: slog.Default().With("component", "judge_usecase")}
 }
 
-func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmodel.JobRef) error {
+func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmodel.JobRef) (err error) {
 	if reference.ID == uuid.Nil || reference.SubmissionID == uuid.Nil || reference.Generation < 1 {
 		return pkg.ErrInvalid
 	}
@@ -43,8 +43,9 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmo
 	if job.ID == uuid.Nil {
 		return nil
 	}
-	leaseCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	leaseCtx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	defer func() { err = pkg.WithCause(leaseCtx, err) }()
 	stopped := make(chan struct{})
 	done := make(chan struct{})
 	go func() {
@@ -59,7 +60,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmo
 				return
 			case <-ticker.C:
 				if err := uc.jobs.Renew(leaseCtx, job); err != nil {
-					cancel()
+					cancel(fmt.Errorf("renew judge job lease: %w", err))
 					return
 				}
 			}

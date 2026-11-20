@@ -73,7 +73,7 @@ func assertSessionCookie(t *testing.T, header, value string, maxAge int, secure 
 
 func authenticatedCookieContext(identity *cookieIdentityStub, sessionID uuid.UUID) context.Context {
 	var ctx context.Context
-	handler := middleware.AuthMiddleware(identity)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+	handler := middleware.AuthMiddleware(identity, middleware.ResponseErrorHandler(slog.Default()))(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		ctx = r.Context()
 	}))
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -210,7 +210,7 @@ func TestAuthHTTPCookies(t *testing.T) {
 						req.AddCookie(&http.Cookie{Name: "session_id", Value: uuid.NewString()})
 					}
 					rr := httptest.NewRecorder()
-					middleware.AuthMiddleware(identity)(server).ServeHTTP(rr, req)
+					middleware.AuthMiddleware(identity, middleware.ResponseErrorHandler(slog.Default()))(server).ServeHTTP(rr, req)
 					status := http.StatusOK
 					if operation.failure {
 						status = http.StatusBadRequest

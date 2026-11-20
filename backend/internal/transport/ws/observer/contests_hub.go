@@ -53,7 +53,7 @@ func NewContestsHub(ringSize int) *ContestsHub {
 func (h *ContestsHub) Handle(ctx context.Context, eventType string, payload []byte) error {
 	seq, ok := ctx.Value(eventdata.MessageStreamSequenceKey).(uint64)
 	if !ok {
-		slog.Error("missing message_stream_sequence in contest hub")
+		slog.ErrorContext(ctx, "missing message_stream_sequence in contest hub")
 		return nil
 	}
 
@@ -70,22 +70,22 @@ func (h *ContestsHub) Handle(ctx context.Context, eventType string, payload []by
 	case contestsmodel.ContestEventClarificationAnswered:
 		event, err = parseEvent[contestsmodel.ContestClarificationAnsweredEvent](payload)
 	default:
-		slog.Warn("unknown contest event type in hub", "type", eventType)
+		slog.WarnContext(ctx, "unknown contest event type in hub", "type", eventType)
 		return nil
 	}
 
 	if err != nil {
-		slog.Error("failed to unmarshal contest event", "type", eventType, "error", err)
+		slog.ErrorContext(ctx, "failed to unmarshal contest event", "type", eventType, "error", err)
 		return nil
 	}
 
 	clientPayload, err := ContestEnvelopeDTO(eventType, event)
 	if err != nil {
-		slog.Error("failed to marshal contest client payload", "type", eventType, "error", err)
+		slog.ErrorContext(ctx, "failed to marshal contest client payload", "type", eventType, "error", err)
 		return nil
 	}
 	if len(clientPayload) == 0 {
-		slog.Warn("empty contest client payload", "type", eventType)
+		slog.WarnContext(ctx, "empty contest client payload", "type", eventType)
 		return nil
 	}
 

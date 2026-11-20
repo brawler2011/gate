@@ -87,7 +87,7 @@ func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) erro
 	}
 	seq, ok := ctx.Value(eventdata.MessageStreamSequenceKey).(uint64)
 	if !ok {
-		slog.Error("missing message_stream_sequence")
+		slog.ErrorContext(ctx, "missing message_stream_sequence")
 		return nil
 	}
 
@@ -108,22 +108,22 @@ func (h *Hub) Handle(ctx context.Context, eventType string, payload []byte) erro
 	case submissionsmodel.SubmissionEventCompleted:
 		event, err = parseEvent[submissionsmodel.SubmissionCompletedEvent](payload)
 	default:
-		slog.Warn("unknown event type", "type", eventType)
+		slog.WarnContext(ctx, "unknown event type", "type", eventType)
 		return nil
 	}
 
 	if err != nil {
-		slog.Error("failed to unmarshal event", "type", eventType, "error", err)
+		slog.ErrorContext(ctx, "failed to unmarshal event", "type", eventType, "error", err)
 		return nil
 	}
 
 	clientPayload, err := SubmissionsEnvelopeDTO(eventType, event)
 	if err != nil {
-		slog.Error("failed to marshal client payload", "type", eventType, "error", err)
+		slog.ErrorContext(ctx, "failed to marshal client payload", "type", eventType, "error", err)
 		return nil
 	}
 	if len(clientPayload) == 0 {
-		slog.Warn("empty client payload", "type", eventType)
+		slog.WarnContext(ctx, "empty client payload", "type", eventType)
 		return nil
 	}
 

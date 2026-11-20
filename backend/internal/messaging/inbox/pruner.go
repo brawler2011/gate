@@ -26,7 +26,9 @@ func (p *Pruner) Prune(ctx context.Context) (int64, error) {
 	cutoff := time.Now().Add(-p.retentionWindow)
 	deleted, err := p.repo.PruneReceipts(ctx, cutoff)
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to prune expired inbox receipts", "operation", "inbox_prune", "error", err)
+		if ctx.Err() == nil {
+			slog.ErrorContext(ctx, "failed to prune expired inbox receipts", "operation", "inbox_prune", "error", err)
+		}
 		return 0, err
 	}
 	if deleted > 0 {
