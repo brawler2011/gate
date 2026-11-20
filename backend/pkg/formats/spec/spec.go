@@ -77,6 +77,8 @@ type ValidatorTest struct {
 // Statements contain either one LaTeX file or Markdown files per section.
 type Statement struct {
 	Language string
+	// Empty uses the problem title.
+	Title string
 	// Charset names the encoding of the statement files; empty means detect.
 	Charset  string
 	TeX      string
@@ -121,6 +123,15 @@ func ReadFile(fsys fs.FS, name string) ([]byte, error) {
 		return nil, fmt.Errorf("%s is larger than %d bytes", name, MaxMetadataBytes)
 	}
 	return data, nil
+}
+
+// Titles of languages without a statement are dropped.
+func (p *Problem) SetStatementTitle(language, title string) {
+	for i := range p.Statements {
+		if p.Statements[i].Language == language && title != p.Title {
+			p.Statements[i].Title = title
+		}
+	}
 }
 
 // Interactive inputs are private interactor data and must not become public samples.

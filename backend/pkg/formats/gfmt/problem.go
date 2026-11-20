@@ -19,9 +19,11 @@ type Problem struct {
 	Sources       map[string]Source  `yaml:"sources,omitempty" json:"sources,omitempty"`
 	FormatVersion string             `yaml:"format_version" json:"format_version"`
 	Title         string             `yaml:"title" json:"title"`
-	Type          string             `yaml:"type" json:"type"` // "pass-fail", "interactive", "scoring"
-	Limits        Limits             `yaml:"limits" json:"limits"`
-	Subtasks      map[string]Subtask `yaml:"subtasks" json:"subtasks"`
+	// Titles by statement language override Title for that statement.
+	Titles   map[string]string  `yaml:"titles,omitempty" json:"titles,omitempty"`
+	Type     string             `yaml:"type" json:"type"` // "pass-fail", "interactive", "scoring"
+	Limits   Limits             `yaml:"limits" json:"limits"`
+	Subtasks map[string]Subtask `yaml:"subtasks" json:"subtasks"`
 	// Empty names keep standard input and output.
 	InputFile  string `yaml:"input_file,omitempty" json:"input_file,omitempty"`
 	OutputFile string `yaml:"output_file,omitempty" json:"output_file,omitempty"`

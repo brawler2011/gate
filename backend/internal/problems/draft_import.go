@@ -494,7 +494,7 @@ func (c *importConverter) addStatement(s spec.Statement) error {
 	if c.draft.Statement(s.Language) != nil {
 		return pkg.Wrap(pkg.ErrBadInput, nil, "several statements in "+s.Language)
 	}
-	statement := model.DraftStatement{Language: s.Language}
+	statement := model.DraftStatement{Language: s.Language, Title: strings.TrimSpace(s.Title)}
 	sections := map[string]string{}
 	if s.TeX != "" {
 		text, err := c.readText(s.TeX, s.Charset)

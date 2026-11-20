@@ -197,6 +197,12 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 		}
 	}
 	for _, s := range d.Statements {
+		if s.Title != "" {
+			if m.Titles == nil {
+				m.Titles = map[string]string{}
+			}
+			m.Titles[s.Language] = s.Title
+		}
 		for _, section := range model.StatementSections {
 			// Legend is always written so that a statement with empty sections survives.
 			if text := *s.Section(section); text != "" || section == "legend" {

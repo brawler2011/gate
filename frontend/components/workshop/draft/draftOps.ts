@@ -204,6 +204,7 @@ export type StatementSection = (typeof STATEMENT_SECTIONS)[number];
 
 export const emptyStatement = (language: string): ProblemDraftStatement => ({
   language,
+  title: "",
   legend: "",
   input: "",
   output: "",

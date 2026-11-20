@@ -72,6 +72,12 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		}
 		p.Library = append(p.Library, spec.File{Name: name, Path: rel, System: true})
 	}
+	for language, title := range manifest.Titles {
+		if statements[language] == nil {
+			return nil, fmt.Errorf("title in %s has no statement", language)
+		}
+		statements[language].Title = title
+	}
 	for _, language := range slices.Sorted(maps.Keys(statements)) {
 		p.Statements = append(p.Statements, *statements[language])
 	}

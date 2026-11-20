@@ -115,6 +115,9 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		}
 	}
 	p.Statements = statements(prob.Statements)
+	for _, name := range prob.Names {
+		p.SetStatementTitle(tex.LanguageCode(name.Language), name.Value)
+	}
 	return p, nil
 }
 

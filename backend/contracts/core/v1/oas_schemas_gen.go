@@ -9005,7 +9005,9 @@ func (s *ProblemDraftSolution) SetPoints(val NilFloat64) {
 // The statement in one language as Markdown sections.
 // Ref: #/components/schemas/ProblemDraftStatement
 type ProblemDraftStatement struct {
-	Language    string `json:"language"`
+	Language string `json:"language"`
+	// Shown with this statement instead of the problem title; empty shows the problem title.
+	Title       string `json:"title"`
 	Legend      string `json:"legend"`
 	Input       string `json:"input"`
 	Output      string `json:"output"`
@@ -9017,6 +9019,11 @@ type ProblemDraftStatement struct {
 // GetLanguage returns the value of Language.
 func (s *ProblemDraftStatement) GetLanguage() string {
 	return s.Language
+}
+
+// GetTitle returns the value of Title.
+func (s *ProblemDraftStatement) GetTitle() string {
+	return s.Title
 }
 
 // GetLegend returns the value of Legend.
@@ -9052,6 +9059,11 @@ func (s *ProblemDraftStatement) GetScoring() string {
 // SetLanguage sets the value of Language.
 func (s *ProblemDraftStatement) SetLanguage(val string) {
 	s.Language = val
+}
+
+// SetTitle sets the value of Title.
+func (s *ProblemDraftStatement) SetTitle(val string) {
+	s.Title = val
 }
 
 // SetLegend sets the value of Legend.

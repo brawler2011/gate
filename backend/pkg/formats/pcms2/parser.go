@@ -57,6 +57,9 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	p.Type = problemType(run, p.Groups)
 	p.KeepInteractiveInputsPrivate()
 	p.Statements = statements(fsys, prob.Statements)
+	for _, name := range prob.Names {
+		p.SetStatementTitle(tex.LanguageCode(name.Language), name.Value)
+	}
 	return p, nil
 }
 
