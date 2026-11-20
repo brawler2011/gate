@@ -124,11 +124,23 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 		return file, w.text(path, p.Source)
 	}
 	if c := d.Checker; c != nil {
+		source := gfmt.Source{}
+		for i, t := range c.Tests {
+			test := gfmt.ProgramTest{Input: fmt.Sprintf("checker/%02d", i+1), Verdict: t.Verdict, Points: t.Points}
+			test.Output, test.Answer = test.Input+".o", test.Input+".a"
+			for name, oid := range map[string]uuid.UUID{test.Input: t.Input, test.Output: t.Output, test.Answer: t.Answer} {
+				if err := w.object(gfmt.TestFolder+"/"+name, oid, open); err != nil {
+					return nil, err
+				}
+			}
+			source.Tests = append(source.Tests, test)
+		}
 		var err error
 		if standard, ok := syslib.LookupChecker(c.Standard); ok {
-			_, err = program("checker", c.Standard, model.DraftProgram{Language: c.Language, Source: standard.Content}, gfmt.Source{Standard: c.Standard})
+			source.Standard = c.Standard
+			_, err = program("checker", c.Standard, model.DraftProgram{Language: c.Language, Source: standard.Content}, source)
 		} else {
-			_, err = program("checker", "checker", c.DraftProgram, gfmt.Source{})
+			_, err = program("checker", "checker", c.DraftProgram, source)
 		}
 		if err != nil {
 			return nil, err
@@ -143,6 +155,13 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 		source := gfmt.Source{}
 		for _, id := range v.Subtasks {
 			source.Groups = append(source.Groups, d.Subtask(id).Name)
+		}
+		for i, t := range v.Tests {
+			test := gfmt.ProgramTest{Input: fmt.Sprintf("validators/%s/%02d", v.Name, i+1), Verdict: map[bool]string{true: "valid", false: "invalid"}[t.Valid], Group: t.Group}
+			if err := w.object(gfmt.TestFolder+"/"+test.Input, t.Input, open); err != nil {
+				return nil, err
+			}
+			source.Tests = append(source.Tests, test)
 		}
 		if _, err := program("validator", v.Name, v.DraftProgram, source); err != nil {
 			return nil, err

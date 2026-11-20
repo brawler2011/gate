@@ -121,13 +121,39 @@ func TestImportConvertsWellFormedPolygonTestsToLF(t *testing.T) {
 	t.Fatal("input object not found")
 }
 
+// Polygon checker and validator tests import with their files and expected verdicts.
+func TestImportKeepsPolygonCheckerAndValidatorTests(t *testing.T) {
+	plan, err := importDir(t, "../../pkg/testdata/polygon/a-plus-b", nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	files := map[uuid.UUID]string{}
+	for _, o := range plan.objects {
+		data, err := os.ReadFile(o.path)
+		require.NoError(t, err)
+		files[o.temporaryID] = string(data)
+	}
+	checker := []string{}
+	for _, test := range plan.draft.Checker.Tests {
+		checker = append(checker, test.Verdict+" "+strings.TrimSpace(files[test.Output]))
+	}
+	require.Equal(t, []string{"OK 3", "WA 4", "PE three"}, checker)
+	validator := []string{}
+	for _, test := range plan.draft.Validators[0].Tests {
+		require.False(t, test.Valid)
+		validator = append(validator, files[test.Input])
+	}
+	// Well-formed Polygon tests lose CRLF, as problem tests do.
+	require.Equal(t, []string{"101 0\n", "1\n1\n"}, validator)
+}
+
 // Known Polygon standard checkers use system references; unknown ones import their source.
 func TestImportMapsPolygonStandardChecker(t *testing.T) {
 	const pkgDir = "../../pkg/testdata/polygon/a-plus-b"
 	plan, err := importDir(t, pkgDir, nil)
 	require.NoError(t, err)
 	defer plan.Close()
-	require.Equal(t, &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17"}, Standard: "hcmp"}, plan.draft.Checker)
+	require.Equal(t, model.DraftProgram{Language: "cpp17"}, plan.draft.Checker.DraftProgram)
+	require.Equal(t, "hcmp", plan.draft.Checker.Standard)
 	require.NoError(t, plan.draft.Validate(importQuotas, nil))
 
 	manifest, err := os.ReadFile(pkgDir + "/problem.xml")
@@ -138,9 +164,9 @@ func TestImportMapsPolygonStandardChecker(t *testing.T) {
 	plan, err = importDir(t, pkgDir, map[string]string{"problem.xml": unknown})
 	require.NoError(t, err)
 	defer plan.Close()
-	require.Equal(t, &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17", Source: string(source)}}, plan.draft.Checker)
+	require.Equal(t, model.DraftProgram{Language: "cpp17", Source: string(source)}, plan.draft.Checker.DraftProgram)
+	require.Empty(t, plan.draft.Checker.Standard)
 }
-
 
 // Polygon tags and gfmt verdicts become expected verdicts; do-not-run and unlisted solutions do not run.
 func TestImportKeepsExpectedVerdicts(t *testing.T) {

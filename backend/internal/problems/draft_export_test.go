@@ -59,10 +59,15 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	defer plan.Close()
 	d := &plan.draft
 	d.Library = append(d.Library, model.DraftLibraryFile{Name: "util.h", Content: "#pragma once\n"})
-	d.Checker = &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17"}, Standard: "wcmp"}
+	object := *d.Tests[0].Input.ObjectID
+	half := points.Value(50)
+	d.Checker = &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17"}, Standard: "wcmp", Tests: []model.DraftCheckerTest{
+		{ID: uuid.New(), Input: object, Output: object, Answer: object, Verdict: "OK"},
+		{ID: uuid.New(), Input: object, Output: object, Answer: object, Verdict: "POINTS", Points: &half},
+	}}
 	d.Generators = append(d.Generators, model.DraftNamedProgram{Name: "gen", DraftProgram: model.DraftProgram{Language: "python3", Source: "print(1)\n"}})
 	d.Validators = append(d.Validators, model.DraftValidator{DraftNamedProgram: model.DraftNamedProgram{Name: "second", DraftProgram: model.DraftProgram{Language: "python3", Source: "pass\n"}},
-		Subtasks: []uuid.UUID{d.Subtasks[1].ID}})
+		Subtasks: []uuid.UUID{d.Subtasks[1].ID}, Tests: []model.DraftValidatorTest{{ID: uuid.New(), Input: object, Valid: true, Group: "a b"}, {ID: uuid.New(), Input: object}}})
 	gen, other := "gen", d.Solutions[1].Name
 	partial := points.Value(5)
 	d.Solutions[0].Verdicts = []string{"TLE", "OK"}
@@ -190,6 +195,14 @@ func (i *draftImport) open(oid uuid.UUID) (io.ReadCloser, error) {
 	return nil, os.ErrNotExist
 }
 
+func clonePointer[T any](p *T) *T {
+	if p == nil {
+		return nil
+	}
+	v := *p
+	return &v
+}
+
 // normalized replaces identifiers with ordinals and object IDs with content hashes.
 func normalized(i *draftImport) model.Draft {
 	d := i.draft
@@ -216,15 +229,26 @@ func normalized(i *draftImport) model.Draft {
 	for n := range d.Tests {
 		t := &d.Tests[n]
 		t.ID, t.SubtaskID = uuid.Nil, subtasks[t.SubtaskID]
-		if t.Input.ObjectID != nil {
-			h := hashes[*t.Input.ObjectID]
-			t.Input.ObjectID = &h
+		t.Input.ObjectID, t.Answer.ObjectID = clonePointer(t.Input.ObjectID), clonePointer(t.Answer.ObjectID)
+	}
+	d.Assets = slices.Clone(d.Assets)
+	if d.Checker != nil {
+		checker := *d.Checker
+		checker.Tests = slices.Clone(checker.Tests)
+		for n := range checker.Tests {
+			checker.Tests[n].ID = uuid.Nil
 		}
-		if t.Answer.ObjectID != nil {
-			h := hashes[*t.Answer.ObjectID]
-			t.Answer.ObjectID = &h
+		d.Checker = &checker
+	}
+	d.Validators = slices.Clone(d.Validators)
+	for n := range d.Validators {
+		d.Validators[n].Tests = slices.Clone(d.Validators[n].Tests)
+		for k := range d.Validators[n].Tests {
+			d.Validators[n].Tests[k].ID = uuid.Nil
 		}
 	}
+	d.EachObject(func(_ string, id *uuid.UUID) { *id = hashes[*id] })
+	d.Normalize()
 	// Re-import lists programs in file name order.
 	d.Validators = slices.SortedFunc(slices.Values(d.Validators), func(a, b model.DraftValidator) int { return strings.Compare(a.Name, b.Name) })
 	for n := range d.Validators {

@@ -2995,9 +2995,9 @@ func (s *Server) decodeUploadProblemDraftRequest(r *http.Request) (
 		}
 		{
 			if err := func() error {
-				files, ok := r.MultipartForm.File["file"]
+				files, ok := r.MultipartForm.File["asset"]
 				if !ok || len(files) < 1 {
-					return validate.ErrFieldRequired
+					return nil
 				}
 				fh := files[0]
 
@@ -3006,15 +3006,63 @@ func (s *Server) decodeUploadProblemDraftRequest(r *http.Request) (
 					return errors.Wrap(err, "open")
 				}
 				closers = append(closers, f.Close)
-				request.File = ht.MultipartFile{
+				request.Asset.SetTo(ht.MultipartFile{
 					Name:   fh.Filename,
 					File:   f,
 					Size:   fh.Size,
 					Header: fh.Header,
-				}
+				})
 				return nil
 			}(); err != nil {
-				return req, rawBody, close, errors.Wrap(err, "decode \"file\"")
+				return req, rawBody, close, errors.Wrap(err, "decode \"asset\"")
+			}
+		}
+		{
+			if err := func() error {
+				files, ok := r.MultipartForm.File["input"]
+				if !ok || len(files) < 1 {
+					return nil
+				}
+				fh := files[0]
+
+				f, err := fh.Open()
+				if err != nil {
+					return errors.Wrap(err, "open")
+				}
+				closers = append(closers, f.Close)
+				request.Input.SetTo(ht.MultipartFile{
+					Name:   fh.Filename,
+					File:   f,
+					Size:   fh.Size,
+					Header: fh.Header,
+				})
+				return nil
+			}(); err != nil {
+				return req, rawBody, close, errors.Wrap(err, "decode \"input\"")
+			}
+		}
+		{
+			if err := func() error {
+				files, ok := r.MultipartForm.File["output"]
+				if !ok || len(files) < 1 {
+					return nil
+				}
+				fh := files[0]
+
+				f, err := fh.Open()
+				if err != nil {
+					return errors.Wrap(err, "open")
+				}
+				closers = append(closers, f.Close)
+				request.Output.SetTo(ht.MultipartFile{
+					Name:   fh.Filename,
+					File:   f,
+					Size:   fh.Size,
+					Header: fh.Header,
+				})
+				return nil
+			}(); err != nil {
+				return req, rawBody, close, errors.Wrap(err, "decode \"output\"")
 			}
 		}
 		{

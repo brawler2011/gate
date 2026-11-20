@@ -895,7 +895,7 @@ type Invoker interface {
 	UploadAvatar(ctx context.Context, request *UploadAvatarReq, params UploadAvatarParams) (*UploadAvatarOK, error)
 	// UploadProblemDraft invokes UploadProblemDraft operation.
 	//
-	// Upload immutable test bodies or a resource.
+	// Upload immutable test files or a statement resource.
 	//
 	// POST /problems/{id}/draft/uploads
 	UploadProblemDraft(ctx context.Context, request *UploadProblemDraftReq, params UploadProblemDraftParams) (*ProblemDraft, error)
@@ -13301,7 +13301,7 @@ func (c *Client) sendUploadAvatar(ctx context.Context, request *UploadAvatarReq,
 
 // UploadProblemDraft invokes UploadProblemDraft operation.
 //
-// Upload immutable test bodies or a resource.
+// Upload immutable test files or a statement resource.
 //
 // POST /problems/{id}/draft/uploads
 func (c *Client) UploadProblemDraft(ctx context.Context, request *UploadProblemDraftReq, params UploadProblemDraftParams) (*ProblemDraft, error) {

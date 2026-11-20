@@ -6,7 +6,13 @@ import {api, unwrap} from "@/lib/api";
 
 import {describePointer, type OpResult} from "./draftOps";
 
-import type {FieldError, ProblemDraft, ProblemDraftTest} from "@/contracts/core/v1/schema";
+import type {
+  FieldError,
+  ProblemDraft,
+  ProblemDraftCheckerTest,
+  ProblemDraftTest,
+  ProblemDraftValidatorTest,
+} from "@/contracts/core/v1/schema";
 
 export const draftKey = (problemId: string): readonly ["problem-draft", string] => ["problem-draft", problemId];
 
@@ -97,10 +103,17 @@ export const useSaveDraft = (problemId: string): SaveDraft => {
   return {save, isSaving: mutation.isPending};
 };
 
-export type UploadRequest =
-  | {part: "asset"; assetName: string; file: Blob}
-  | {part: "input" | "answer"; test: ProblemDraftTest; file: Blob}
-  | {part: "pair"; test: ProblemDraftTest; file: Blob; answer: Blob};
+export type UploadSlot = "asset" | "input" | "output" | "answer";
+
+// The change names one entry; files fill its slots and keep the entry's other object IDs.
+export type UploadRequest = {
+  change:
+    | {asset_name: string}
+    | {test: ProblemDraftTest}
+    | {checker_test: ProblemDraftCheckerTest}
+    | {validator: string; validator_test: ProblemDraftValidatorTest};
+  files: Partial<Record<UploadSlot, Blob>>;
+};
 
 export const useUploadToDraft = (
   problemId: string,
@@ -112,15 +125,12 @@ export const useUploadToDraft = (
       if (!current) {
         throw new Error("Черновик ещё не загружен");
       }
-      const metadata =
-        request.part === "asset"
-          ? {part: request.part, asset_name: request.assetName}
-          : {part: request.part, test: request.test};
       const body = new FormData();
-      body.append("metadata", JSON.stringify(metadata));
-      body.append("file", request.file);
-      if (request.part === "pair") {
-        body.append("answer", request.answer);
+      body.append("metadata", JSON.stringify(request.change));
+      for (const [slot, file] of Object.entries(request.files)) {
+        if (file) {
+          body.append(slot, file);
+        }
       }
       return unwrap(
         api.POST("/problems/{id}/draft/uploads", {
@@ -129,7 +139,7 @@ export const useUploadToDraft = (
             query: {expected_revision: current.revision},
             header: {"Idempotency-Key": crypto.randomUUID()},
           },
-          body: body as unknown as {metadata: string; file: string; answer?: string},
+          body: body as unknown as {metadata: string},
         }),
       );
     },

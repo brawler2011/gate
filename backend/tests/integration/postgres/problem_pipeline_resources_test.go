@@ -115,7 +115,7 @@ func (h *pipelineHarness) uploadPair(t *testing.T, test model.DraftTest, size in
 	defer answer.Close()
 	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)
-	_, err = h.uploads.Upload(h.ctx, h.draft.ProblemID, current.Revision, uuid.NewString(), model.UploadChange{Part: "pair", Test: &test}, in, answer)
+	_, err = h.uploads.Upload(h.ctx, h.draft.ProblemID, current.Revision, uuid.NewString(), model.UploadChange{Test: &test}, map[string]io.Reader{"input": in, "answer": answer})
 	require.NoError(t, err)
 }
 

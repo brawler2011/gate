@@ -4,6 +4,7 @@ import {Badge, Box, Button, Code, Grid, Group, MultiSelect, NavLink, NumberInput
 import {useState} from "react";
 import {useSearchParams} from "react-router-dom";
 
+import {CheckerTests, ValidatorTests} from "@/components/workshop/ProgramTests";
 import {SectionPaper} from "@/components/workshop/SectionPaper";
 import {useProblemBuilds} from "@/components/workshop/WorkshopPackagesTab";
 import {languageName, useLanguages, type SupportedLanguage} from "@/lib/languages";
@@ -337,25 +338,31 @@ const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNod
   const checker = role === "checker" ? draft.checker : null;
   if (checker?.standard) {
     return (
-      <StandardChecker
-        checker={checker}
-        saving={isSaving}
-        onChange={(patch) => void save((current) => setSingleProgram(current, "checker", {...(current.checker ?? checker), ...patch}))}
-        onCustomize={(source) => void save((current) => customizeChecker(current, source, systemFiles))}
-        onDelete={() => void save((current) => setSingleProgram(current, "checker", null))}
-      />
+      <Stack gap="lg">
+        <StandardChecker
+          checker={checker}
+          saving={isSaving}
+          onChange={(patch) => void save((current) => setSingleProgram(current, "checker", {...(current.checker ?? checker), ...patch}))}
+          onCustomize={(source) => void save((current) => customizeChecker(current, source, systemFiles))}
+          onDelete={() => void save((current) => setSingleProgram(current, "checker", null))}
+        />
+        <CheckerTests draft={draft} problemId={problemId} />
+      </Stack>
     );
   }
   return (
-    <ProgramEditor
-      label={ROLE_LABELS[role]}
-      program={program}
-      saving={isSaving}
-      onChange={(patch) =>
-        void save((current) => setSingleProgram(current, role, {...(current[role] ?? program), ...patch}))
-      }
-      onDelete={() => void save((current) => setSingleProgram(current, role, null))}
-    />
+    <Stack gap="lg">
+      <ProgramEditor
+        label={ROLE_LABELS[role]}
+        program={program}
+        saving={isSaving}
+        onChange={(patch) =>
+          void save((current) => setSingleProgram(current, role, {...(current[role] ?? program), ...patch}))
+        }
+        onDelete={() => void save((current) => setSingleProgram(current, role, null))}
+      />
+      {checker && <CheckerTests draft={draft} problemId={problemId} />}
+    </Stack>
   );
 };
 
@@ -465,50 +472,57 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
       </Grid.Col>
       <Grid.Col span={{base: 12, md: 8}}>
         {selected ? (
-          <ProgramEditor
-            key={editorKey(selected.name)}
-            label={selected.name}
-            program={selected}
-            saving={isSaving}
-            onChange={(patch) => void save((current) => updateProgram(current, role, selected.name, patch))}
-            onDelete={() => void save((current) => removeProgram(current, role, selected.name))}
-          >
-            <RenameControl
-              name={selected.name}
+          <Stack gap="lg">
+            <ProgramEditor
+              key={editorKey(selected.name)}
+              label={selected.name}
+              program={selected}
               saving={isSaving}
-              onRename={(name) => void rename(selected.name, name)}
-            />
-            {role === "validator" && (
-              <MultiSelect
-                label="Подзадачи"
-                description="Пусто — проверяет все тесты"
-                data={draft.subtasks.map((s) => ({value: s.id, label: subtaskLabel(s)}))}
-                value={draft.validators.find((v) => v.name === selected.name)?.subtasks ?? []}
-                onChange={(subtasks) => void save((current) => setValidatorSubtasks(current, selected.name, subtasks))}
-                clearable
-                w={320}
-              />
-            )}
-            {role === "solution" && (
-              <SolutionExpectation
-                key={selected.name}
-                draft={draft}
+              onChange={(patch) => void save((current) => updateProgram(current, role, selected.name, patch))}
+              onDelete={() => void save((current) => removeProgram(current, role, selected.name))}
+            >
+              <RenameControl
                 name={selected.name}
-                result={resultOf(selected.name)}
-                revision={results?.revision}
-                onChange={(change) => void save(change)}
+                saving={isSaving}
+                onRename={(name) => void rename(selected.name, name)}
               />
+              {role === "validator" && (
+                <MultiSelect
+                  label="Подзадачи"
+                  description="Пусто — проверяет все тесты"
+                  data={draft.subtasks.map((s) => ({value: s.id, label: subtaskLabel(s)}))}
+                  value={draft.validators.find((v) => v.name === selected.name)?.subtasks ?? []}
+                  onChange={(subtasks) =>
+                    void save((current) => setValidatorSubtasks(current, selected.name, subtasks))
+                  }
+                  clearable
+                  w={320}
+                />
+              )}
+              {role === "solution" && (
+                <SolutionExpectation
+                  key={selected.name}
+                  draft={draft}
+                  name={selected.name}
+                  result={resultOf(selected.name)}
+                  revision={results?.revision}
+                  onChange={(change) => void save(change)}
+                />
+              )}
+              {role === "solution" && draft.main_solution !== selected.name && (
+                <Button
+                  variant="light"
+                  loading={isSaving}
+                  onClick={() => void save((current) => ({...current, main_solution: selected.name}))}
+                >
+                  Сделать главным
+                </Button>
+              )}
+            </ProgramEditor>
+            {role === "validator" && (
+              <ValidatorTests key={editorKey(selected.name)} draft={draft} problemId={problemId} name={selected.name} />
             )}
-            {role === "solution" && draft.main_solution !== selected.name && (
-              <Button
-                variant="light"
-                loading={isSaving}
-                onClick={() => void save((current) => ({...current, main_solution: selected.name}))}
-              >
-                Сделать главным
-              </Button>
-            )}
-          </ProgramEditor>
+          </Stack>
         ) : (
           <SectionPaper>
             <Text size="sm" c="dimmed">

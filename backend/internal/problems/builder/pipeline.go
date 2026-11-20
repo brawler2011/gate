@@ -35,6 +35,7 @@ type BuildRepository interface {
 	PublishBuild(context.Context, uuid.UUID, uuid.UUID, model.StoredObject, []model.Sample) (uuid.UUID, error)
 	FinishBuildAttempt(context.Context, uuid.UUID, uuid.UUID, json.RawMessage, bool) error
 	RecordBuildSolutions(context.Context, uuid.UUID, uuid.UUID, []model.SolutionResult) error
+	RecordBuildProgramTests(context.Context, uuid.UUID, uuid.UUID, []model.ProgramTestResult) error
 }
 type Pipeline struct {
 	Repo      BuildRepository
@@ -139,6 +140,9 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := e.compile(ctx); err != nil {
 		return uuid.Nil, err
 	}
+	if err := e.checkPrograms(ctx); err != nil {
+		return uuid.Nil, err
+	}
 	for _, test := range s.Draft.Tests {
 		if err := e.test(ctx, test); err != nil {
 			return uuid.Nil, err
@@ -180,19 +184,11 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 
 func objectReferences(d model.Draft, id uuid.UUID) string {
 	refs := []string{}
-	for _, test := range d.Tests {
-		if test.Input.ObjectID != nil && *test.Input.ObjectID == id {
-			refs = append(refs, fmt.Sprintf("test %d input", test.Ordinal))
+	d.EachObject(func(ref string, oid *uuid.UUID) {
+		if *oid == id {
+			refs = append(refs, ref)
 		}
-		if test.Answer.ObjectID != nil && *test.Answer.ObjectID == id {
-			refs = append(refs, fmt.Sprintf("test %d answer", test.Ordinal))
-		}
-	}
-	for _, asset := range d.Assets {
-		if asset.ObjectID == id {
-			refs = append(refs, fmt.Sprintf("asset %q", asset.Name))
-		}
-	}
+	})
 	return fmt.Sprintf("object %s (%s)", id, strings.Join(refs, ", "))
 }
 
@@ -571,6 +567,89 @@ func (e *execution) checkSolutions(ctx context.Context) error {
 	}
 	if len(mismatches) > 0 {
 		return fail("solutions", 0, "author", errors.New(strings.Join(mismatches, "\n")))
+	}
+	return nil
+}
+
+// checkPrograms runs checker and validator tests, records what they got and fails the build on a mismatch.
+func (e *execution) checkPrograms(ctx context.Context) error {
+	d := e.build.Snapshot.Draft
+	aux := e.build.Snapshot.Limits.Auxiliary
+	uploaded := map[uuid.UUID]string{}
+	defer func() {
+		for _, id := range uploaded {
+			e.release(id)
+		}
+	}()
+	file := func(oid uuid.UUID) (sandbox.File, error) {
+		if id, ok := uploaded[oid]; ok {
+			return sandbox.FileID(id), nil
+		}
+		id, err := e.upload(ctx, ".gate/objects/"+oid.String())
+		if err != nil {
+			return sandbox.File{}, err
+		}
+		uploaded[oid] = id
+		return sandbox.FileID(id), nil
+	}
+	results := []model.ProgramTestResult{}
+	mismatches := []string{}
+	if d.Checker != nil {
+		checker := e.compiled["checker"]
+		for i := range d.Checker.Tests {
+			t := &d.Checker.Tests[i]
+			var files [3]sandbox.File
+			for j, oid := range []uuid.UUID{t.Input, t.Output, t.Answer} {
+				f, err := file(oid)
+				if err != nil {
+					return fail("program-tests", 0, "infrastructure", fmt.Errorf("checker test %d: %w", i+1, err))
+				}
+				files[j] = f
+			}
+			r, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.language, files[0], files[1], files[2], aux)
+			if err != nil {
+				return fail("program-tests", 0, "infrastructure", fmt.Errorf("checker test %d: %w", i+1, err))
+			}
+			result := t.Check(string(r.Status), r.Score)
+			if result.Mismatch != "" {
+				mismatches = append(mismatches, fmt.Sprintf("checker test %d: %s", i+1, result.Mismatch))
+			}
+			results = append(results, result)
+		}
+	}
+	for _, v := range d.Validators {
+		validator := e.compiled[programKey("validator", v.Name)]
+		for i := range v.Tests {
+			t := &v.Tests[i]
+			input, err := file(t.Input)
+			if err != nil {
+				return fail("program-tests", 0, "infrastructure", fmt.Errorf("validator %s test %d: %w", v.Name, i+1, err))
+			}
+			var args []string
+			if t.Group != "" {
+				args = []string{"--group", t.Group}
+			}
+			r, err := e.sandbox.RunFiles(ctx, validator.executable, validator.language, input, args, nil, aux)
+			if err != nil {
+				return fail("program-tests", 0, "infrastructure", fmt.Errorf("validator %s test %d: %w", v.Name, i+1, err))
+			}
+			e.release(r.OutputID)
+			// A validator rejects with a non-zero exit; running out of limits is no answer.
+			if r.Status != sandbox.StatusOK && r.Status != sandbox.StatusRE {
+				return fail("program-tests", 0, string(r.Status), fmt.Errorf("validator %s test %d: %s", v.Name, i+1, r.Stderr))
+			}
+			result := t.Check(r.Status == sandbox.StatusOK)
+			if result.Mismatch != "" {
+				mismatches = append(mismatches, fmt.Sprintf("validator %s test %d: %s", v.Name, i+1, result.Mismatch))
+			}
+			results = append(results, result)
+		}
+	}
+	if err := e.pipeline.Repo.RecordBuildProgramTests(ctx, e.build.ID, *e.build.LeaseToken, results); err != nil {
+		return fail("program-tests", 0, "infrastructure", err)
+	}
+	if len(mismatches) > 0 {
+		return fail("program-tests", 0, "author", errors.New(strings.Join(mismatches, "\n")))
 	}
 	return nil
 }

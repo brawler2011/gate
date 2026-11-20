@@ -187,6 +187,9 @@ func (c *importConverter) convert(p *spec.Problem) error {
 		if c.draft.Checker, err = c.checker(*p.Checker); err != nil {
 			return err
 		}
+		if c.draft.Checker.Tests, err = c.checkerTests(p.Checker.CheckerTests); err != nil {
+			return err
+		}
 	}
 	if p.Interactor != nil {
 		if c.draft.Interactor, err = c.program(*p.Interactor); err != nil {
@@ -198,7 +201,11 @@ func (c *importConverter) convert(p *spec.Problem) error {
 		if _, err := c.named(&programs, v); err != nil {
 			return err
 		}
-		c.draft.Validators = append(c.draft.Validators, model.DraftValidator{DraftNamedProgram: programs[len(programs)-1], Subtasks: []uuid.UUID{}})
+		tests, err := c.validatorTests(v.ValidatorTests)
+		if err != nil {
+			return err
+		}
+		c.draft.Validators = append(c.draft.Validators, model.DraftValidator{DraftNamedProgram: programs[len(programs)-1], Subtasks: []uuid.UUID{}, Tests: tests})
 	}
 	generators := map[string]string{}
 	for _, g := range p.Generators {
@@ -250,6 +257,37 @@ func (c *importConverter) convert(p *spec.Problem) error {
 		return err
 	}
 	return c.scopeValidators(p.Validators)
+}
+
+func (c *importConverter) checkerTests(tests []spec.CheckerTest) ([]model.DraftCheckerTest, error) {
+	result := []model.DraftCheckerTest{}
+	for _, t := range tests {
+		test := model.DraftCheckerTest{ID: uuid.New(), Verdict: t.Verdict, Points: t.Points}
+		for _, f := range []struct {
+			path string
+			id   *uuid.UUID
+		}{{t.Input, &test.Input}, {t.Output, &test.Output}, {t.Answer, &test.Answer}} {
+			oid, err := c.object(f.path, "checker-test")
+			if err != nil {
+				return nil, err
+			}
+			*f.id = oid
+		}
+		result = append(result, test)
+	}
+	return result, nil
+}
+
+func (c *importConverter) validatorTests(tests []spec.ValidatorTest) ([]model.DraftValidatorTest, error) {
+	result := []model.DraftValidatorTest{}
+	for _, t := range tests {
+		oid, err := c.object(t.Input, "validator-test")
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, model.DraftValidatorTest{ID: uuid.New(), Input: oid, Valid: t.Valid, Group: t.Group})
+	}
+	return result, nil
 }
 
 func (c *importConverter) scopeValidators(validators []spec.Program) error {
@@ -720,29 +758,14 @@ func (i *draftImport) bind(ids []uuid.UUID) error {
 	for n, o := range i.objects {
 		replace[o.temporaryID] = ids[n]
 	}
-	for n := range i.draft.Tests {
-		t := &i.draft.Tests[n]
-		if t.Input.ObjectID != nil {
-			id, ok := replace[*t.Input.ObjectID]
-			if !ok {
-				return pkg.ErrBadInput
-			}
-			t.Input.ObjectID = &id
-		}
-		if t.Answer.ObjectID != nil {
-			id, ok := replace[*t.Answer.ObjectID]
-			if !ok {
-				return pkg.ErrBadInput
-			}
-			t.Answer.ObjectID = &id
-		}
-	}
-	for n := range i.draft.Assets {
-		id, ok := replace[i.draft.Assets[n].ObjectID]
-		if !ok {
-			return pkg.ErrBadInput
-		}
-		i.draft.Assets[n].ObjectID = id
+	missing := false
+	i.draft.EachObject(func(_ string, oid *uuid.UUID) {
+		id, ok := replace[*oid]
+		missing = missing || !ok
+		*oid = id
+	})
+	if missing {
+		return pkg.ErrBadInput
 	}
 	return nil
 }

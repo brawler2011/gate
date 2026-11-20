@@ -881,7 +881,7 @@ type Handler interface {
 	UploadAvatar(ctx context.Context, req *UploadAvatarReq, params UploadAvatarParams) (*UploadAvatarOK, error)
 	// UploadProblemDraft implements UploadProblemDraft operation.
 	//
-	// Upload immutable test bodies or a resource.
+	// Upload immutable test files or a statement resource.
 	//
 	// POST /problems/{id}/draft/uploads
 	UploadProblemDraft(ctx context.Context, req *UploadProblemDraftReq, params UploadProblemDraftParams) (*ProblemDraft, error)

@@ -13351,7 +13351,7 @@ func (s *Server) handleUploadAvatarRequest(args [1]string, argsEscaped bool, w h
 
 // handleUploadProblemDraftRequest handles UploadProblemDraft operation.
 //
-// Upload immutable test bodies or a resource.
+// Upload immutable test files or a statement resource.
 //
 // POST /problems/{id}/draft/uploads
 func (s *Server) handleUploadProblemDraftRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -13399,7 +13399,7 @@ func (s *Server) handleUploadProblemDraftRequest(args [1]string, argsEscaped boo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    UploadProblemDraftOperation,
-			OperationSummary: "Upload immutable test bodies or a resource",
+			OperationSummary: "Upload immutable test files or a statement resource",
 			OperationID:      "UploadProblemDraft",
 			Body:             request,
 			RawBody:          rawBody,

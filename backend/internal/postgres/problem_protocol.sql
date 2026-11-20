@@ -133,6 +133,10 @@ UPDATE problem_builds SET state=CASE WHEN sqlc.arg(retry)::boolean AND attempt<m
 UPDATE problem_builds SET solutions=sqlc.arg(solutions)::jsonb
 WHERE id=sqlc.arg(id) AND state='running' AND lease_token=sqlc.arg(token) AND lease_deadline>clock_timestamp();
 
+-- name: RecordBuildProgramTests :execrows
+UPDATE problem_builds SET program_tests=sqlc.arg(program_tests)::jsonb
+WHERE id=sqlc.arg(id) AND state='running' AND lease_token=sqlc.arg(token) AND lease_deadline>clock_timestamp();
+
 -- name: ListRecoverableBuildIDs :many
 SELECT id FROM problem_builds WHERE state='running' AND (lease_deadline<=clock_timestamp() OR deadline<=clock_timestamp())
 ORDER BY id LIMIT 100;

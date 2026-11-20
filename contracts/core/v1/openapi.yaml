@@ -151,7 +151,7 @@ paths:
       tags:
       - problems
       operationId: UploadProblemDraft
-      summary: Upload immutable test bodies or a resource
+      summary: Upload immutable test files or a statement resource
       parameters:
       - $ref: '#/components/parameters/ProblemIDPath'
       - $ref: '#/components/parameters/ExpectedRevisionQuery'
@@ -172,15 +172,24 @@ paths:
               type: object
               required:
               - metadata
-              - file
               properties:
                 metadata:
                   type: string
                   maxLength: 65536
-                  description: 'JSON UploadChange: part (asset/input/answer/pair), asset_name
-                    or full test metadata. For pair, file is the input and answer is
-                    the answer.'
-                file:
+                  description: 'JSON with exactly one entry to add or replace: asset_name,
+                    test, checker_test, or validator (a name) with validator_test. The
+                    files fill its slots and must include at least one: asset for an
+                    asset; input and answer for a test (input only when manual, answer
+                    only when provided); input, output and answer for a checker test;
+                    input for a validator test. Slots without a file keep the entry''s
+                    object IDs.'
+                asset:
+                  type: string
+                  format: binary
+                input:
+                  type: string
+                  format: binary
+                output:
                   type: string
                   format: binary
                 answer:
@@ -3148,6 +3157,7 @@ components:
       - language
       - source
       - standard
+      - tests
       properties:
         language:
           type: string
@@ -3157,6 +3167,92 @@ components:
         standard:
           type: string
           description: Name of a standard checker from GET /lib, such as wcmp, or empty for the author's own source.
+        tests:
+          type: array
+          description: Run by every build after compiling the checker; a test whose verdict or points differ fails the build.
+          items:
+            $ref: '#/components/schemas/ProblemDraftCheckerTest'
+    ProblemDraftCheckerTest:
+      type: object
+      required:
+      - id
+      - input
+      - output
+      - answer
+      - verdict
+      - points
+      properties:
+        id:
+          type: string
+          format: uuid
+        input:
+          type: string
+          format: uuid
+          description: Stored object IDs of the files, uploaded through /draft/uploads.
+        output:
+          type: string
+          format: uuid
+          description: The contestant output to check.
+        answer:
+          type: string
+          format: uuid
+        verdict:
+          type: string
+          enum:
+          - OK
+          - WA
+          - PE
+          - FAIL
+          - POINTS
+        points:
+          type: number
+          format: double
+          nullable: true
+          description: Points the checker must give with the POINTS verdict; null accepts any.
+    ProblemDraftValidatorTest:
+      type: object
+      required:
+      - id
+      - input
+      - valid
+      - group
+      properties:
+        id:
+          type: string
+          format: uuid
+        input:
+          type: string
+          format: uuid
+          description: Stored object ID of the input, uploaded through /draft/uploads.
+        valid:
+          type: boolean
+          description: Whether the validator must accept the input.
+        group:
+          type: string
+          description: Passed to the validator as --group unless empty.
+    ProblemBuildProgramTest:
+      description: What a build saw on a checker or validator test.
+      type: object
+      required:
+      - id
+      - verdict
+      - points
+      - mismatch
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID of the checker or validator test.
+        verdict:
+          type: string
+          description: The checker verdict, or valid or invalid for a validator.
+        points:
+          type: number
+          format: double
+          nullable: true
+        mismatch:
+          type: string
+          description: How the result misses the expectation; empty when it matches.
     ProblemDraftNamedProgram:
       description: A generator; tests refer to it by name.
       type: object
@@ -3253,6 +3349,7 @@ components:
       - language
       - source
       - subtasks
+      - tests
       properties:
         name:
           type: string
@@ -3268,6 +3365,11 @@ components:
           items:
             type: string
             format: uuid
+        tests:
+          type: array
+          description: Run by every build after compiling the validator; a test it judges differently fails the build.
+          items:
+            $ref: '#/components/schemas/ProblemDraftValidatorTest'
     ProblemDraftLibraryFile:
       description: A source file judge programs include by its name; names are unique in a draft and identify the file.
       type: object
@@ -3520,6 +3622,7 @@ components:
       - finished_at
       - diagnostic
       - solutions
+      - program_tests
       properties:
         id:
           type: string
@@ -3567,6 +3670,12 @@ components:
           description: Results of the solutions that run, once every test is built.
           items:
             $ref: '#/components/schemas/ProblemBuildSolution'
+        program_tests:
+          type: array
+          nullable: true
+          description: Results of the checker and validator tests, once their programs compile.
+          items:
+            $ref: '#/components/schemas/ProblemBuildProgramTest'
     ProblemBuildAccepted:
       type: object
       required:

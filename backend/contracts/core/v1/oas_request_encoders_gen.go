@@ -692,8 +692,20 @@ func encodeUploadProblemDraftRequest(
 		}
 	}
 	body, boundary := ht.CreateMultipartBody(func(w *multipart.Writer) error {
-		if err := request.File.WriteMultipart("file", w); err != nil {
-			return errors.Wrap(err, "write \"file\"")
+		if val, ok := request.Asset.Get(); ok {
+			if err := val.WriteMultipart("asset", w); err != nil {
+				return errors.Wrap(err, "write \"asset\"")
+			}
+		}
+		if val, ok := request.Input.Get(); ok {
+			if err := val.WriteMultipart("input", w); err != nil {
+				return errors.Wrap(err, "write \"input\"")
+			}
+		}
+		if val, ok := request.Output.Get(); ok {
+			if err := val.WriteMultipart("output", w); err != nil {
+				return errors.Wrap(err, "write \"output\"")
+			}
 		}
 		if val, ok := request.Answer.Get(); ok {
 			if err := val.WriteMultipart("answer", w); err != nil {

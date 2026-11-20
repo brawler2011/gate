@@ -91,6 +91,13 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		return nil, err
 	}
 	p.Validators, p.Generators, p.Solutions = programs[RoleFolder("validator")], programs[RoleFolder("generator")], programs[RoleFolder("solution")]
+	for folder, list := range programs {
+		for i := range list {
+			if err := programTests(&list[i], folder, manifest.Sources[list[i].Path].Tests); err != nil {
+				return nil, err
+			}
+		}
+	}
 	for i := range p.Solutions {
 		expected := manifest.Solutions[p.Solutions[i].Name]
 		p.Solutions[i].Verdicts, p.Solutions[i].Points = expected.Verdicts, expected.Points
@@ -109,6 +116,23 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		return nil, err
 	}
 	return p, nil
+}
+
+func programTests(program *spec.Program, folder string, tests []ProgramTest) error {
+	for i, t := range tests {
+		input := TestFolder + "/" + t.Input
+		switch {
+		case t.Input == "":
+			return fmt.Errorf("%s: test %d has no input", program.Path, i+1)
+		case folder == RoleFolder("checker") && t.Output != "" && t.Answer != "" && t.Group == "":
+			program.CheckerTests = append(program.CheckerTests, spec.CheckerTest{Input: input, Output: TestFolder + "/" + t.Output, Answer: TestFolder + "/" + t.Answer, Verdict: t.Verdict, Points: t.Points})
+		case folder == RoleFolder("validator") && (t.Verdict == "valid" || t.Verdict == "invalid") && t.Output == "" && t.Answer == "" && t.Points == nil:
+			program.ValidatorTests = append(program.ValidatorTests, spec.ValidatorTest{Input: input, Valid: t.Verdict == "valid", Group: t.Group})
+		default:
+			return fmt.Errorf("%s: test %d is no checker test with output and answer or validator test with a valid or invalid verdict", program.Path, i+1)
+		}
+	}
+	return nil
 }
 
 // Programs without explicit dependencies include the whole library.

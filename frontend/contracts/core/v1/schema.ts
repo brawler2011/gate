@@ -99,7 +99,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload immutable test bodies or a resource */
+        /** Upload immutable test files or a statement resource */
         post: operations["UploadProblemDraft"];
         delete?: never;
         options?: never;
@@ -1778,6 +1778,58 @@ export interface components {
             source: string;
             /** @description Name of a standard checker from GET /lib, such as wcmp, or empty for the author's own source. */
             standard: string;
+            /** @description Run by every build after compiling the checker; a test whose verdict or points differ fails the build. */
+            tests: components["schemas"]["ProblemDraftCheckerTest"][];
+        };
+        ProblemDraftCheckerTest: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Stored object IDs of the files, uploaded through /draft/uploads.
+             */
+            input: string;
+            /**
+             * Format: uuid
+             * @description The contestant output to check.
+             */
+            output: string;
+            /** Format: uuid */
+            answer: string;
+            /** @enum {string} */
+            verdict: "OK" | "WA" | "PE" | "FAIL" | "POINTS";
+            /**
+             * Format: double
+             * @description Points the checker must give with the POINTS verdict; null accepts any.
+             */
+            points: number | null;
+        };
+        ProblemDraftValidatorTest: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Stored object ID of the input, uploaded through /draft/uploads.
+             */
+            input: string;
+            /** @description Whether the validator must accept the input. */
+            valid: boolean;
+            /** @description Passed to the validator as --group unless empty. */
+            group: string;
+        };
+        /** @description What a build saw on a checker or validator test. */
+        ProblemBuildProgramTest: {
+            /**
+             * Format: uuid
+             * @description ID of the checker or validator test.
+             */
+            id: string;
+            /** @description The checker verdict, or valid or invalid for a validator. */
+            verdict: string;
+            /** Format: double */
+            points: number | null;
+            /** @description How the result misses the expectation; empty when it matches. */
+            mismatch: string;
         };
         /** @description A generator; tests refer to it by name. */
         ProblemDraftNamedProgram: {
@@ -1832,6 +1884,8 @@ export interface components {
             source: string;
             /** @description IDs of the subtasks whose tests the validator checks; empty checks every test. */
             subtasks: string[];
+            /** @description Run by every build after compiling the validator; a test it judges differently fails the build. */
+            tests: components["schemas"]["ProblemDraftValidatorTest"][];
         };
         /** @description A source file judge programs include by its name; names are unique in a draft and identify the file. */
         ProblemDraftLibraryFile: {
@@ -1951,6 +2005,8 @@ export interface components {
             } | null;
             /** @description Results of the solutions that run, once every test is built. */
             solutions: components["schemas"]["ProblemBuildSolution"][] | null;
+            /** @description Results of the checker and validator tests, once their programs compile. */
+            program_tests: components["schemas"]["ProblemBuildProgramTest"][] | null;
         };
         ProblemBuildAccepted: {
             /** Format: uuid */
@@ -5184,6 +5240,9 @@ export type ProblemDraftInput = components['schemas']['ProblemDraftInput'];
 export type ProblemDraftAnswer = components['schemas']['ProblemDraftAnswer'];
 export type ProblemDraftProgram = components['schemas']['ProblemDraftProgram'];
 export type ProblemDraftChecker = components['schemas']['ProblemDraftChecker'];
+export type ProblemDraftCheckerTest = components['schemas']['ProblemDraftCheckerTest'];
+export type ProblemDraftValidatorTest = components['schemas']['ProblemDraftValidatorTest'];
+export type ProblemBuildProgramTest = components['schemas']['ProblemBuildProgramTest'];
 export type ProblemDraftNamedProgram = components['schemas']['ProblemDraftNamedProgram'];
 export type ProblemDraftSolution = components['schemas']['ProblemDraftSolution'];
 export type ProblemSolutionVerdict = components['schemas']['ProblemSolutionVerdict'];
@@ -5563,10 +5622,14 @@ export interface operations {
         requestBody: {
             content: {
                 "multipart/form-data": {
-                    /** @description JSON UploadChange: part (asset/input/answer/pair), asset_name or full test metadata. For pair, file is the input and answer is the answer. */
+                    /** @description JSON with exactly one entry to add or replace: asset_name, test, checker_test, or validator (a name) with validator_test. The files fill its slots and must include at least one: asset for an asset; input and answer for a test (input only when manual, answer only when provided); input, output and answer for a checker test; input for a validator test. Slots without a file keep the entry's object IDs. */
                     metadata: string;
                     /** Format: binary */
-                    file: string;
+                    asset?: string;
+                    /** Format: binary */
+                    input?: string;
+                    /** Format: binary */
+                    output?: string;
                     /** Format: binary */
                     answer?: string;
                 };

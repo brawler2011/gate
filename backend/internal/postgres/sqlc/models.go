@@ -739,6 +739,7 @@ type ProblemBuild struct {
 	Deadline       time.Time  `json:"deadline"`
 	Diagnostic     []byte     `json:"diagnostic"`
 	Solutions      []byte     `json:"solutions"`
+	ProgramTests   []byte     `json:"program_tests"`
 	CreatedAt      time.Time  `json:"created_at"`
 	FinishedAt     *time.Time `json:"finished_at"`
 }

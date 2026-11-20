@@ -7747,6 +7747,8 @@ type ProblemBuild struct {
 	Diagnostic     NilProblemBuildDiagnostic `json:"diagnostic"`
 	// Results of the solutions that run, once every test is built.
 	Solutions []ProblemBuildSolution `json:"solutions"`
+	// Results of the checker and validator tests, once their programs compile.
+	ProgramTests []ProblemBuildProgramTest `json:"program_tests"`
 }
 
 // GetID returns the value of ID.
@@ -7809,6 +7811,11 @@ func (s *ProblemBuild) GetSolutions() []ProblemBuildSolution {
 	return s.Solutions
 }
 
+// GetProgramTests returns the value of ProgramTests.
+func (s *ProblemBuild) GetProgramTests() []ProblemBuildProgramTest {
+	return s.ProgramTests
+}
+
 // SetID sets the value of ID.
 func (s *ProblemBuild) SetID(val uuid.UUID) {
 	s.ID = val
@@ -7867,6 +7874,11 @@ func (s *ProblemBuild) SetDiagnostic(val NilProblemBuildDiagnostic) {
 // SetSolutions sets the value of Solutions.
 func (s *ProblemBuild) SetSolutions(val []ProblemBuildSolution) {
 	s.Solutions = val
+}
+
+// SetProgramTests sets the value of ProgramTests.
+func (s *ProblemBuild) SetProgramTests(val []ProblemBuildProgramTest) {
+	s.ProgramTests = val
 }
 
 // Ref: #/components/schemas/ProblemBuildAccepted
@@ -7964,6 +7976,58 @@ func (s *ProblemBuildDiagnostic) init() ProblemBuildDiagnostic {
 		*s = m
 	}
 	return m
+}
+
+// What a build saw on a checker or validator test.
+// Ref: #/components/schemas/ProblemBuildProgramTest
+type ProblemBuildProgramTest struct {
+	// ID of the checker or validator test.
+	ID uuid.UUID `json:"id"`
+	// The checker verdict, or valid or invalid for a validator.
+	Verdict string     `json:"verdict"`
+	Points  NilFloat64 `json:"points"`
+	// How the result misses the expectation; empty when it matches.
+	Mismatch string `json:"mismatch"`
+}
+
+// GetID returns the value of ID.
+func (s *ProblemBuildProgramTest) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetVerdict returns the value of Verdict.
+func (s *ProblemBuildProgramTest) GetVerdict() string {
+	return s.Verdict
+}
+
+// GetPoints returns the value of Points.
+func (s *ProblemBuildProgramTest) GetPoints() NilFloat64 {
+	return s.Points
+}
+
+// GetMismatch returns the value of Mismatch.
+func (s *ProblemBuildProgramTest) GetMismatch() string {
+	return s.Mismatch
+}
+
+// SetID sets the value of ID.
+func (s *ProblemBuildProgramTest) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetVerdict sets the value of Verdict.
+func (s *ProblemBuildProgramTest) SetVerdict(val string) {
+	s.Verdict = val
+}
+
+// SetPoints sets the value of Points.
+func (s *ProblemBuildProgramTest) SetPoints(val NilFloat64) {
+	s.Points = val
+}
+
+// SetMismatch sets the value of Mismatch.
+func (s *ProblemBuildProgramTest) SetMismatch(val string) {
+	s.Mismatch = val
 }
 
 // What a build saw of a solution.
@@ -8443,6 +8507,9 @@ type ProblemDraftChecker struct {
 	Source   string `json:"source"`
 	// Name of a standard checker from GET /lib, such as wcmp, or empty for the author's own source.
 	Standard string `json:"standard"`
+	// Run by every build after compiling the checker; a test whose verdict or points differ fails the
+	// build.
+	Tests []ProblemDraftCheckerTest `json:"tests"`
 }
 
 // GetLanguage returns the value of Language.
@@ -8460,6 +8527,11 @@ func (s *ProblemDraftChecker) GetStandard() string {
 	return s.Standard
 }
 
+// GetTests returns the value of Tests.
+func (s *ProblemDraftChecker) GetTests() []ProblemDraftCheckerTest {
+	return s.Tests
+}
+
 // SetLanguage sets the value of Language.
 func (s *ProblemDraftChecker) SetLanguage(val string) {
 	s.Language = val
@@ -8473,6 +8545,146 @@ func (s *ProblemDraftChecker) SetSource(val string) {
 // SetStandard sets the value of Standard.
 func (s *ProblemDraftChecker) SetStandard(val string) {
 	s.Standard = val
+}
+
+// SetTests sets the value of Tests.
+func (s *ProblemDraftChecker) SetTests(val []ProblemDraftCheckerTest) {
+	s.Tests = val
+}
+
+// Ref: #/components/schemas/ProblemDraftCheckerTest
+type ProblemDraftCheckerTest struct {
+	ID uuid.UUID `json:"id"`
+	// Stored object IDs of the files, uploaded through /draft/uploads.
+	Input uuid.UUID `json:"input"`
+	// The contestant output to check.
+	Output  uuid.UUID                      `json:"output"`
+	Answer  uuid.UUID                      `json:"answer"`
+	Verdict ProblemDraftCheckerTestVerdict `json:"verdict"`
+	// Points the checker must give with the POINTS verdict; null accepts any.
+	Points NilFloat64 `json:"points"`
+}
+
+// GetID returns the value of ID.
+func (s *ProblemDraftCheckerTest) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetInput returns the value of Input.
+func (s *ProblemDraftCheckerTest) GetInput() uuid.UUID {
+	return s.Input
+}
+
+// GetOutput returns the value of Output.
+func (s *ProblemDraftCheckerTest) GetOutput() uuid.UUID {
+	return s.Output
+}
+
+// GetAnswer returns the value of Answer.
+func (s *ProblemDraftCheckerTest) GetAnswer() uuid.UUID {
+	return s.Answer
+}
+
+// GetVerdict returns the value of Verdict.
+func (s *ProblemDraftCheckerTest) GetVerdict() ProblemDraftCheckerTestVerdict {
+	return s.Verdict
+}
+
+// GetPoints returns the value of Points.
+func (s *ProblemDraftCheckerTest) GetPoints() NilFloat64 {
+	return s.Points
+}
+
+// SetID sets the value of ID.
+func (s *ProblemDraftCheckerTest) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetInput sets the value of Input.
+func (s *ProblemDraftCheckerTest) SetInput(val uuid.UUID) {
+	s.Input = val
+}
+
+// SetOutput sets the value of Output.
+func (s *ProblemDraftCheckerTest) SetOutput(val uuid.UUID) {
+	s.Output = val
+}
+
+// SetAnswer sets the value of Answer.
+func (s *ProblemDraftCheckerTest) SetAnswer(val uuid.UUID) {
+	s.Answer = val
+}
+
+// SetVerdict sets the value of Verdict.
+func (s *ProblemDraftCheckerTest) SetVerdict(val ProblemDraftCheckerTestVerdict) {
+	s.Verdict = val
+}
+
+// SetPoints sets the value of Points.
+func (s *ProblemDraftCheckerTest) SetPoints(val NilFloat64) {
+	s.Points = val
+}
+
+type ProblemDraftCheckerTestVerdict string
+
+const (
+	ProblemDraftCheckerTestVerdictOK     ProblemDraftCheckerTestVerdict = "OK"
+	ProblemDraftCheckerTestVerdictWA     ProblemDraftCheckerTestVerdict = "WA"
+	ProblemDraftCheckerTestVerdictPE     ProblemDraftCheckerTestVerdict = "PE"
+	ProblemDraftCheckerTestVerdictFAIL   ProblemDraftCheckerTestVerdict = "FAIL"
+	ProblemDraftCheckerTestVerdictPOINTS ProblemDraftCheckerTestVerdict = "POINTS"
+)
+
+// AllValues returns all ProblemDraftCheckerTestVerdict values.
+func (ProblemDraftCheckerTestVerdict) AllValues() []ProblemDraftCheckerTestVerdict {
+	return []ProblemDraftCheckerTestVerdict{
+		ProblemDraftCheckerTestVerdictOK,
+		ProblemDraftCheckerTestVerdictWA,
+		ProblemDraftCheckerTestVerdictPE,
+		ProblemDraftCheckerTestVerdictFAIL,
+		ProblemDraftCheckerTestVerdictPOINTS,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemDraftCheckerTestVerdict) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemDraftCheckerTestVerdictOK:
+		return []byte(s), nil
+	case ProblemDraftCheckerTestVerdictWA:
+		return []byte(s), nil
+	case ProblemDraftCheckerTestVerdictPE:
+		return []byte(s), nil
+	case ProblemDraftCheckerTestVerdictFAIL:
+		return []byte(s), nil
+	case ProblemDraftCheckerTestVerdictPOINTS:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemDraftCheckerTestVerdict) UnmarshalText(data []byte) error {
+	switch ProblemDraftCheckerTestVerdict(data) {
+	case ProblemDraftCheckerTestVerdictOK:
+		*s = ProblemDraftCheckerTestVerdictOK
+		return nil
+	case ProblemDraftCheckerTestVerdictWA:
+		*s = ProblemDraftCheckerTestVerdictWA
+		return nil
+	case ProblemDraftCheckerTestVerdictPE:
+		*s = ProblemDraftCheckerTestVerdictPE
+		return nil
+	case ProblemDraftCheckerTestVerdictFAIL:
+		*s = ProblemDraftCheckerTestVerdictFAIL
+		return nil
+	case ProblemDraftCheckerTestVerdictPOINTS:
+		*s = ProblemDraftCheckerTestVerdictPOINTS
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Ref: #/components/schemas/ProblemDraftInput
@@ -9076,6 +9288,8 @@ type ProblemDraftValidator struct {
 	Source   string `json:"source"`
 	// IDs of the subtasks whose tests the validator checks; empty checks every test.
 	Subtasks []uuid.UUID `json:"subtasks"`
+	// Run by every build after compiling the validator; a test it judges differently fails the build.
+	Tests []ProblemDraftValidatorTest `json:"tests"`
 }
 
 // GetName returns the value of Name.
@@ -9098,6 +9312,11 @@ func (s *ProblemDraftValidator) GetSubtasks() []uuid.UUID {
 	return s.Subtasks
 }
 
+// GetTests returns the value of Tests.
+func (s *ProblemDraftValidator) GetTests() []ProblemDraftValidatorTest {
+	return s.Tests
+}
+
 // SetName sets the value of Name.
 func (s *ProblemDraftValidator) SetName(val string) {
 	s.Name = val
@@ -9116,6 +9335,62 @@ func (s *ProblemDraftValidator) SetSource(val string) {
 // SetSubtasks sets the value of Subtasks.
 func (s *ProblemDraftValidator) SetSubtasks(val []uuid.UUID) {
 	s.Subtasks = val
+}
+
+// SetTests sets the value of Tests.
+func (s *ProblemDraftValidator) SetTests(val []ProblemDraftValidatorTest) {
+	s.Tests = val
+}
+
+// Ref: #/components/schemas/ProblemDraftValidatorTest
+type ProblemDraftValidatorTest struct {
+	ID uuid.UUID `json:"id"`
+	// Stored object ID of the input, uploaded through /draft/uploads.
+	Input uuid.UUID `json:"input"`
+	// Whether the validator must accept the input.
+	Valid bool `json:"valid"`
+	// Passed to the validator as --group unless empty.
+	Group string `json:"group"`
+}
+
+// GetID returns the value of ID.
+func (s *ProblemDraftValidatorTest) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetInput returns the value of Input.
+func (s *ProblemDraftValidatorTest) GetInput() uuid.UUID {
+	return s.Input
+}
+
+// GetValid returns the value of Valid.
+func (s *ProblemDraftValidatorTest) GetValid() bool {
+	return s.Valid
+}
+
+// GetGroup returns the value of Group.
+func (s *ProblemDraftValidatorTest) GetGroup() string {
+	return s.Group
+}
+
+// SetID sets the value of ID.
+func (s *ProblemDraftValidatorTest) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetInput sets the value of Input.
+func (s *ProblemDraftValidatorTest) SetInput(val uuid.UUID) {
+	s.Input = val
+}
+
+// SetValid sets the value of Valid.
+func (s *ProblemDraftValidatorTest) SetValid(val bool) {
+	s.Valid = val
+}
+
+// SetGroup sets the value of Group.
+func (s *ProblemDraftValidatorTest) SetGroup(val string) {
+	s.Group = val
 }
 
 // Problem member data.
@@ -12156,10 +12431,15 @@ func (s *UploadAvatarReq) SetAvatar(val ht.MultipartFile) {
 }
 
 type UploadProblemDraftReq struct {
-	// JSON UploadChange: part (asset/input/answer/pair), asset_name or full test metadata. For pair, file
-	// is the input and answer is the answer.
+	// JSON with exactly one entry to add or replace: asset_name, test, checker_test, or validator (a name)
+	// with validator_test. The files fill its slots and must include at least one: asset for an asset;
+	// input and answer for a test (input only when manual, answer only when provided); input, output and
+	// answer for a checker test; input for a validator test. Slots without a file keep the entry's object
+	// IDs.
 	Metadata string           `json:"metadata"`
-	File     ht.MultipartFile `json:"file"`
+	Asset    OptMultipartFile `json:"asset"`
+	Input    OptMultipartFile `json:"input"`
+	Output   OptMultipartFile `json:"output"`
 	Answer   OptMultipartFile `json:"answer"`
 }
 
@@ -12168,9 +12448,19 @@ func (s *UploadProblemDraftReq) GetMetadata() string {
 	return s.Metadata
 }
 
-// GetFile returns the value of File.
-func (s *UploadProblemDraftReq) GetFile() ht.MultipartFile {
-	return s.File
+// GetAsset returns the value of Asset.
+func (s *UploadProblemDraftReq) GetAsset() OptMultipartFile {
+	return s.Asset
+}
+
+// GetInput returns the value of Input.
+func (s *UploadProblemDraftReq) GetInput() OptMultipartFile {
+	return s.Input
+}
+
+// GetOutput returns the value of Output.
+func (s *UploadProblemDraftReq) GetOutput() OptMultipartFile {
+	return s.Output
 }
 
 // GetAnswer returns the value of Answer.
@@ -12183,9 +12473,19 @@ func (s *UploadProblemDraftReq) SetMetadata(val string) {
 	s.Metadata = val
 }
 
-// SetFile sets the value of File.
-func (s *UploadProblemDraftReq) SetFile(val ht.MultipartFile) {
-	s.File = val
+// SetAsset sets the value of Asset.
+func (s *UploadProblemDraftReq) SetAsset(val OptMultipartFile) {
+	s.Asset = val
+}
+
+// SetInput sets the value of Input.
+func (s *UploadProblemDraftReq) SetInput(val OptMultipartFile) {
+	s.Input = val
+}
+
+// SetOutput sets the value of Output.
+func (s *UploadProblemDraftReq) SetOutput(val OptMultipartFile) {
+	s.Output = val
 }
 
 // SetAnswer sets the value of Answer.

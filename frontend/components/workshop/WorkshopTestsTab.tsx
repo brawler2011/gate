@@ -182,16 +182,13 @@ const TestsSection = ({draft, problemId}: PanelProps): ReactNode => {
   };
 
   const submit = async (test: ProblemDraftTest, files: TestFiles) => {
-    let ok: boolean;
-    if (files.input && files.answer) {
-      ok = await upload({part: "pair", test, file: files.input, answer: files.answer}).then(() => true, () => false);
-    } else if (files.input) {
-      ok = await upload({part: "input", test, file: files.input}).then(() => true, () => false);
-    } else if (files.answer) {
-      ok = await upload({part: "answer", test, file: files.answer}).then(() => true, () => false);
-    } else {
-      ok = await save((current) => upsertTest(current, test));
-    }
+    const ok =
+      files.input || files.answer
+        ? await upload({
+          change: {test},
+          files: {input: files.input ?? undefined, answer: files.answer ?? undefined},
+        }).then(() => true, () => false)
+        : await save((current) => upsertTest(current, test));
     if (ok) {
       setEditing(null);
     }

@@ -1321,7 +1321,7 @@ func (UnimplementedHandler) UploadAvatar(ctx context.Context, req *UploadAvatarR
 
 // UploadProblemDraft implements UploadProblemDraft operation.
 //
-// Upload immutable test bodies or a resource.
+// Upload immutable test files or a statement resource.
 //
 // POST /problems/{id}/draft/uploads
 func (UnimplementedHandler) UploadProblemDraft(ctx context.Context, req *UploadProblemDraftReq, params UploadProblemDraftParams) (r *ProblemDraft, _ error) {

@@ -246,7 +246,7 @@ CREATE TABLE stored_objects (
     size bigint NOT NULL,
     created_at timestamptz DEFAULT clock_timestamp() NOT NULL,
     CONSTRAINT stored_objects_check CHECK ((key = ((('objects/'::text || (organization_id)::text) || '/'::text) || (id)::text))),
-    CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'asset'::text, 'package'::text]))),
+    CONSTRAINT stored_objects_purpose_check CHECK ((purpose = ANY (ARRAY['test-input'::text, 'test-answer'::text, 'checker-test'::text, 'validator-test'::text, 'asset'::text, 'package'::text]))),
     CONSTRAINT stored_objects_sha256_check CHECK ((sha256 ~ '^[0-9a-f]{64}$'::text)),
     CONSTRAINT stored_objects_size_check CHECK ((size >= 0)),
     CONSTRAINT stored_objects_id_organization_id_key UNIQUE (id, organization_id),
@@ -401,6 +401,8 @@ CREATE TABLE problem_builds (
     diagnostic jsonb,
     -- What each solution that runs got; written before the build passes or fails on them.
     solutions jsonb,
+    -- What each checker and validator test got, written like solutions.
+    program_tests jsonb,
     created_at timestamptz DEFAULT clock_timestamp() NOT NULL,
     finished_at timestamptz,
     CONSTRAINT problem_builds_attempt_check CHECK ((attempt >= 0)),
@@ -411,6 +413,7 @@ CREATE TABLE problem_builds (
     CONSTRAINT problem_builds_revision_check CHECK ((revision > 0)),
     CONSTRAINT problem_builds_snapshot_check CHECK ((jsonb_typeof(snapshot) = 'object'::text)),
     CONSTRAINT problem_builds_solutions_check CHECK ((jsonb_typeof(solutions) = 'array'::text)),
+    CONSTRAINT problem_builds_program_tests_check CHECK ((jsonb_typeof(program_tests) = 'array'::text)),
     CONSTRAINT problem_builds_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'running'::text, 'succeeded'::text, 'failed'::text, 'cancelled'::text]))),
     CONSTRAINT problem_builds_id_problem_id_organization_id_key UNIQUE (id, problem_id, organization_id),
     CONSTRAINT problem_builds_id_organization_id_key UNIQUE (id, organization_id),
@@ -533,6 +536,10 @@ BEGIN
       SELECT v FROM jsonb_path_query(snap,'$.draft.tests[*].input.object_id') e(v)
       UNION ALL SELECT v FROM jsonb_path_query(snap,'$.draft.tests[*].answer.object_id') e(v)
       UNION ALL SELECT v FROM jsonb_path_query(snap,'$.draft.assets[*].object_id') e(v)
+      UNION ALL SELECT v FROM jsonb_path_query(snap,'$.draft.checker.tests[*].input') e(v)
+      UNION ALL SELECT v FROM jsonb_path_query(snap,'$.draft.checker.tests[*].output') e(v)
+      UNION ALL SELECT v FROM jsonb_path_query(snap,'$.draft.checker.tests[*].answer') e(v)
+      UNION ALL SELECT v FROM jsonb_path_query(snap,'$.draft.validators[*].tests[*].input') e(v)
     ) refs WHERE v<>'null'::jsonb;
     IF actual<>declared OR actual<>embedded THEN RAISE EXCEPTION 'snapshot input object set mismatch'; END IF;
     IF (snap->'draft'->>'revision')::bigint<>(SELECT revision FROM problem_builds WHERE id=bid)

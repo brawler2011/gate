@@ -88,6 +88,11 @@ func mapProblemBuild(b sqlc.ProblemBuild) (model.ProblemBuild, error) {
 			return result, fmt.Errorf("decode build solutions: %w", err)
 		}
 	}
+	if b.ProgramTests != nil {
+		if err := json.Unmarshal(b.ProgramTests, &result.ProgramTests); err != nil {
+			return result, fmt.Errorf("decode build program tests: %w", err)
+		}
+	}
 	return result, nil
 }
 
@@ -201,6 +206,21 @@ func (r *ProblemDraftsRepo) RecordBuildSolutions(ctx context.Context, id, token 
 	updated, err := sqlc.New(r.pool).RecordBuildSolutions(ctx, sqlc.RecordBuildSolutionsParams{Solutions: data, ID: id, Token: &token})
 	if err != nil {
 		return fmt.Errorf("record build solutions: %w", err)
+	}
+	if updated != 1 {
+		return pkg.ErrConflict
+	}
+	return nil
+}
+
+func (r *ProblemDraftsRepo) RecordBuildProgramTests(ctx context.Context, id, token uuid.UUID, results []model.ProgramTestResult) error {
+	data, err := json.Marshal(results)
+	if err != nil {
+		return fmt.Errorf("encode build program tests: %w", err)
+	}
+	updated, err := sqlc.New(r.pool).RecordBuildProgramTests(ctx, sqlc.RecordBuildProgramTestsParams{ProgramTests: data, ID: id, Token: &token})
+	if err != nil {
+		return fmt.Errorf("record build program tests: %w", err)
 	}
 	if updated != 1 {
 		return pkg.ErrConflict

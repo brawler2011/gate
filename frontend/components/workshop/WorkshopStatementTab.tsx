@@ -150,7 +150,7 @@ const AssetsSection = ({draft, problemId}: {draft: ProblemDraft; problemId: stri
       return;
     }
     try {
-      await upload({part: "asset", assetName: assetName.trim() || file.name, file});
+      await upload({change: {asset_name: assetName.trim() || file.name}, files: {asset: file}});
       setFile(null);
       setAssetName("");
     } catch {
