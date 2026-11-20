@@ -44,7 +44,12 @@ type Stats struct {
 
 // Fits reports whether the import accepts an archive of this size and content.
 func (s Stats) Fits(size int64, limits model.BuildLimits) bool {
-	return size <= int64(limits.ObjectBytes) && s.Files <= limits.FileCount && s.Bytes <= int64(limits.DiskBytes)-size
+	return size <= int64(limits.ObjectBytes) && s.Extracts(size, limits)
+}
+
+// Extracts reports whether the archive unpacks within the budgets judges and imports extract it with.
+func (s Stats) Extracts(size int64, limits model.BuildLimits) bool {
+	return s.Files <= limits.FileCount && s.Bytes <= int64(limits.DiskBytes)-size
 }
 
 func ProgramPath(languages *sandbox.Config, role, name, language string) string {
