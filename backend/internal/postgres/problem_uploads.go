@@ -40,7 +40,6 @@ func insertObjects(ctx context.Context, tx pgx.Tx, objects []model.StoredObject)
 	return nil
 }
 
-// upsert replaces the entry with the same key or appends it.
 func upsert[T any, K comparable](list *[]T, entry T, key func(T) K) {
 	for i := range *list {
 		if key((*list)[i]) == key(entry) {

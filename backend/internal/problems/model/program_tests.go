@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// CheckerVerdicts are the verdicts a checker test can expect.
 var CheckerVerdicts = []string{"OK", "WA", "PE", "FAIL", "POINTS"}
 
 // DraftCheckerTest expects the checker to judge Output against Answer for Input with Verdict, and Points when set.
@@ -44,6 +43,10 @@ type ProgramTestResult struct {
 func (t *DraftCheckerTest) Check(verdict string, score *float64) ProgramTestResult {
 	result := ProgramTestResult{ID: t.ID, Verdict: verdict}
 	if score != nil {
+		if !(*score >= 0 && *score*100 <= float64(points.Max)) {
+			result.Mismatch = fmt.Sprintf("checker printed invalid points %g", *score)
+			return result
+		}
 		value := points.Value(math.Round(*score * 100))
 		result.Points = &value
 	}

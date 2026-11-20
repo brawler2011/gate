@@ -571,7 +571,6 @@ func (e *execution) checkSolutions(ctx context.Context) error {
 	return nil
 }
 
-// checkPrograms runs checker and validator tests, records what they got and fails the build on a mismatch.
 func (e *execution) checkPrograms(ctx context.Context) error {
 	d := e.build.Snapshot.Draft
 	aux := e.build.Snapshot.Limits.Auxiliary

@@ -23,6 +23,7 @@ func TestCheckerTestCheck(t *testing.T) {
 		{"points match", "POINTS", &half, "POINTS", new(0.5), ""},
 		{"points differ", "POINTS", &half, "POINTS", &quarter, "0.25 points, expected 0.50 points"},
 		{"no points printed", "POINTS", &half, "POINTS", nil, "no points, expected 0.50 points"},
+		{"negative points", "WA", nil, "POINTS", new(-0.1), "checker printed invalid points -0.1"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			test := DraftCheckerTest{Verdict: c.verdict, Points: c.points}
