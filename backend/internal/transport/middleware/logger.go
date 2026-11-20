@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -21,11 +22,22 @@ import (
 )
 
 type errorResponse struct {
-	Err       string `json:"error"`
-	Msg       string `json:"message"`
-	RequestID string `json:"request_id,omitempty"`
-	Fields pkg.FieldErrors `json:"fields,omitempty"`
+	Err       string          `json:"error"`
+	Msg       string          `json:"message"`
+	RequestID string          `json:"request_id,omitempty"`
+	Fields    pkg.FieldErrors `json:"fields,omitempty"`
 }
+
+// nginx's code for a client that closed the connection before the response.
+const statusClientClosedRequest = 499
+
+// requestLog lets the error handler attach its error to the request's single log line.
+type requestLog struct {
+	err     error
+	written bool
+}
+
+type requestLogKey struct{}
 
 // RequestLoggerMiddleware preserves the writer's optional interfaces for streaming and upgrades.
 func RequestLoggerMiddleware(logger *slog.Logger, route func(*http.Request) string) func(http.Handler) http.Handler {
@@ -37,93 +49,108 @@ func RequestLoggerMiddleware(logger *slog.Logger, route func(*http.Request) stri
 				id = uuid.NewString()
 			}
 			w.Header().Set(requestid.Header, id)
-			ctx := requestid.With(r.Context(), id)
+			state := &requestLog{}
+			ctx := context.WithValue(requestid.With(r.Context(), id), requestLogKey{}, state)
 			r = r.WithContext(ctx)
 			status := http.StatusOK
-			written := false
 			sw := httpsnoop.Wrap(w, httpsnoop.Hooks{
 				WriteHeader: func(next httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
 					return func(code int) {
-						if !written && (code == 101 || code >= 200) {
+						if !state.written && (code == 101 || code >= 200) {
 							status = code
-							written = true
+							state.written = true
 						}
 						next(code)
 					}
 				},
 				Write: func(next httpsnoop.WriteFunc) httpsnoop.WriteFunc {
-					return func(p []byte) (int, error) { written = true; return next(p) }
+					return func(p []byte) (int, error) { state.written = true; return next(p) }
 				},
 				ReadFrom: func(next httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
-					return func(r io.Reader) (int64, error) { written = true; return next(r) }
+					return func(r io.Reader) (int64, error) { state.written = true; return next(r) }
 				},
 				Flush: func(next httpsnoop.FlushFunc) httpsnoop.FlushFunc {
-					return func() { written = true; next() }
+					return func() { state.written = true; next() }
 				},
 				Hijack: func(next httpsnoop.HijackFunc) httpsnoop.HijackFunc {
 					return func() (net.Conn, *bufio.ReadWriter, error) {
 						conn, rw, err := next()
 						if err == nil {
 							status = http.StatusSwitchingProtocols
-							written = true
+							state.written = true
 						}
 						return conn, rw, err
 					}
 				},
 			})
-			completed := false
 			defer func() {
-				if !completed && !written {
-					status = http.StatusInternalServerError
+				attrs := []slog.Attr{
+					slog.String("event", "http_request_completed"),
+					slog.String("method", r.Method),
+					slog.String("route", route(r)),
 				}
-				level := slog.LevelInfo
-				if status >= 500 {
-					level = slog.LevelError
-				} else if status >= 400 {
-					level = slog.LevelWarn
+				recovered := recover()
+				recoveredErr, _ := recovered.(error)
+				abort := errors.Is(recoveredErr, http.ErrAbortHandler)
+				if recovered != nil {
+					attrs = append(attrs, slog.String("panic", fmt.Sprint(recovered)), slog.String("stack", string(debug.Stack())))
+					if !state.written && !abort {
+						writeError(ctx, logger, sw, http.StatusInternalServerError, internalMessage, id, nil)
+					}
 				}
-				logger.Log(ctx, level, "http_request_completed", "event", "http_request_completed",
-					"request_id", id, "method", r.Method, "route", route(r), "status", status, "duration_ms", time.Since(start).Milliseconds())
+				if state.err != nil {
+					attrs = append(attrs, slog.String("error", state.err.Error()))
+				}
+				attrs = append(attrs, slog.Int("status", status), slog.Int64("duration_ms", time.Since(start).Milliseconds()))
+				logger.LogAttrs(ctx, statusLevel(status), "http_request_completed", attrs...)
+				if abort {
+					panic(recovered)
+				}
 			}()
 			next.ServeHTTP(sw, r)
-			completed = true
-
 		})
 	}
 }
+
+func statusLevel(status int) slog.Level {
+	switch {
+	case status == statusClientClosedRequest:
+		return slog.LevelInfo
+	case status >= 500:
+		return slog.LevelError
+	case status >= 400:
+		return slog.LevelWarn
+	}
+	return slog.LevelInfo
+}
+
+const internalMessage = "internal server error"
 
 func ResponseErrorHandler(logger *slog.Logger) func(ctx context.Context, w http.ResponseWriter, r *http.Request, err error) {
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, err error) {
 		if ctx == nil {
 			ctx = r.Context()
 		}
-		requestID := requestid.Get(ctx)
-
-		statusCode := http.StatusInternalServerError
-		resp := errorResponse{
-			Err:       http.StatusText(statusCode),
-			Msg:       "",
-			RequestID: requestID,
-		}
+		var statusCode int
+		msg := ""
 
 		var cErr *pkg.CustomError
 		var sizeErr *http.MaxBytesError
 		var rateErr *pkg.RateLimitError
 		switch {
+		case errors.Is(err, context.Canceled) && r.Context().Err() != nil:
+			statusCode = statusClientClosedRequest
 		case errors.As(err, &rateErr):
 			statusCode = http.StatusTooManyRequests
-			resp.Err = http.StatusText(statusCode)
-			resp.Msg = rateErr.Error()
+			msg = rateErr.Error()
 			seconds := max(1, int64((rateErr.RetryAfter+time.Second-1)/time.Second))
 			w.Header().Set("Retry-After", strconv.FormatInt(seconds, 10))
 		case errors.As(err, &sizeErr):
 			statusCode = http.StatusRequestEntityTooLarge
-			resp.Err = http.StatusText(statusCode)
-			resp.Msg = "request body exceeds maximum allowed size"
+			msg = "request body exceeds maximum allowed size"
 		case errors.As(err, &cErr):
 			statusCode = pkg.ToREST(err)
-			resp.Err = http.StatusText(statusCode)
-			resp.Msg = cErr.Message
+			msg = cErr.Message
 		default:
 			statusCode = pkg.ToREST(err)
 			if statusCode == http.StatusInternalServerError {
@@ -131,35 +158,38 @@ func ResponseErrorHandler(logger *slog.Logger) func(ctx context.Context, w http.
 					statusCode = code
 				}
 			}
-			resp.Err = http.StatusText(statusCode)
-			resp.Msg = err.Error()
+			msg = err.Error()
+		}
+		if statusCode >= 500 {
+			msg = internalMessage
+		}
+
+		state, _ := ctx.Value(requestLogKey{}).(*requestLog)
+		if state == nil {
+			logger.LogAttrs(ctx, statusLevel(statusCode), "http_request_error", slog.Int("status", statusCode), slog.String("error", err.Error()))
+		} else {
+			state.err = err
+			if state.written {
+				return
+			}
 		}
 
 		var fields pkg.FieldErrors
-		if errors.As(err, &fields) {
-			resp.Fields = fields
+		if !errors.As(err, &fields) {
+			fields = nil
 		}
+		writeError(ctx, logger, w, statusCode, msg, requestid.Get(ctx), fields)
+	}
+}
 
-		logAttrs := []any{
-			slog.String("request_id", requestID),
-			slog.String("operation", "http_response"),
-			slog.Int("status", statusCode),
-			slog.String("error_type", fmt.Sprintf("%T", err)),
-		}
-
-		logLevel := slog.LevelError
-		if statusCode < 500 {
-			logLevel = slog.LevelWarn
-		}
-		if statusCode == http.StatusNotFound {
-			logLevel = slog.LevelInfo
-		}
-		logger.Log(ctx, logLevel, "http_request_error", logAttrs...)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			logger.ErrorContext(ctx, "Failed to encode error response", "error", err)
-		}
+func writeError(ctx context.Context, logger *slog.Logger, w http.ResponseWriter, status int, msg, requestID string, fields pkg.FieldErrors) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if status == statusClientClosedRequest {
+		return
+	}
+	resp := errorResponse{Err: http.StatusText(status), Msg: msg, RequestID: requestID, Fields: fields}
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		logger.ErrorContext(ctx, "failed to encode error response", "error", err)
 	}
 }

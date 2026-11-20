@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -140,9 +141,9 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 
 	var event submissionsmodel.SubmissionCreatedEvent
 	if err := json.Unmarshal(msg.Data(), &event); err != nil {
-		logger.Error("failed to unmarshal event", "operation", "decode_submission", "error_type", fmt.Sprintf("%T", err))
+		logger.Error("failed to unmarshal event", "operation", "decode_submission", "error", err)
 		if err := msg.Term(); err != nil {
-			logger.Error("failed to terminate message", "operation", "nats_term", "error_type", fmt.Sprintf("%T", err))
+			logger.Error("failed to terminate message", "operation", "nats_term", "error", err)
 		}
 		return
 	}
@@ -150,12 +151,12 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 	if event.Id == uuid.Nil || event.Generation < 1 || event.JobID == uuid.Nil {
 		if event.Id != uuid.Nil && event.Generation > 0 && event.JobID == uuid.Nil && event.State == submissionsmodel.Disqualified {
 			if err := msg.Ack(); err != nil {
-				logger.Error("failed to ack blocked submission event", "error_type", fmt.Sprintf("%T", err))
+				logger.Error("failed to ack blocked submission event", "error", err)
 			}
 		} else {
 			logger.Error("invalid judge job reference", "operation", "decode_submission")
 			if err := msg.Term(); err != nil {
-				logger.Error("failed to terminate invalid job event", "error_type", fmt.Sprintf("%T", err))
+				logger.Error("failed to terminate invalid job event", "error", err)
 			}
 		}
 		return
@@ -185,11 +186,11 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 			errorKind = "lease_lost"
 		}
 		logger.Error("submission_judging_failed", "error_kind", errorKind, "event", "submission_judging_failed", "operation", "judge_submission",
-			"error_type", fmt.Sprintf("%T", err),
+			"error", err,
 			"duration_ms", duration.Milliseconds(),
 		)
 		if ackErr := msg.NakWithDelay(5 * time.Second); ackErr != nil {
-			logger.Error("failed to retry judging message", "operation", "nats_nak", "error_type", fmt.Sprintf("%T", ackErr))
+			logger.Error("failed to retry judging message", "operation", "nats_nak", "error", ackErr)
 		}
 		return
 	}
@@ -199,7 +200,7 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 	)
 
 	if err := msg.Ack(); err != nil {
-		logger.Error("failed to ack message", "operation", "nats_ack", "error_type", fmt.Sprintf("%T", err))
+		logger.Error("failed to ack message", "operation", "nats_ack", "error", err)
 	}
 }
 
@@ -217,8 +218,8 @@ func (w *JudgeWorker) Stop() {
 
 func (w *JudgeWorker) runJudge(ctx context.Context, msg jetstream.Msg, reference judgingmodel.JobRef) (resultErr error) {
 	defer func() {
-		if recover() != nil {
-			resultErr = fmt.Errorf("judging handler panicked")
+		if r := recover(); r != nil {
+			resultErr = fmt.Errorf("judging handler panicked: %v\n%s", r, debug.Stack())
 		}
 	}()
 	runCtx, cancel := context.WithCancel(ctx)

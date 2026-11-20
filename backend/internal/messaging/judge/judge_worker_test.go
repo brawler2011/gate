@@ -67,7 +67,7 @@ func TestJudgeMessageDiagnosticsAndAcknowledgement(t *testing.T) {
 						header.Set(requestid.Header, "bad secret")
 						header.Set(queuecontext.EventIDHeader, "secret")
 					}
-					msg := &testMessage{header: header, data: data, ackErr: errors.New("ack-secret")}
+					msg := &testMessage{header: header, data: data, ackErr: errors.New("ack-failed")}
 					var buf bytes.Buffer
 					uc := judgeFunc(func(ctx context.Context, got judgingmodel.JobRef) error {
 						require.Equal(t, id, got.SubmissionID)
@@ -182,5 +182,6 @@ func TestJudgePanicRetriesWithoutAcknowledgement(t *testing.T) {
 	require.NotPanics(t, func() { (&JudgeWorker{judgeUC: uc}).handleMessage(context.Background(), message, logging.New(&logs)) })
 	require.Equal(t, 1, message.nak)
 	require.Zero(t, message.ack)
-	require.NotContains(t, logs.String(), "secret")
+	require.Contains(t, logs.String(), "judging handler panicked: secret")
+	require.Contains(t, logs.String(), "judge_worker_test.go")
 }

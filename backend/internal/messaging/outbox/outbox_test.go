@@ -62,7 +62,7 @@ func (p *publishCapture) PublishMsg(ctx context.Context, msg *nats.Msg, _ ...jet
 	require.Equal(p.t, p.event.Payload, msg.Data)
 	p.msg = msg
 	if p.fail {
-		return nil, errors.New("publish-secret")
+		return nil, errors.New("publish-failed")
 	}
 	return &jetstream.PubAck{}, nil
 }
@@ -82,7 +82,7 @@ func TestOutboxPublisherDiagnosticHeadersAndFailure(t *testing.T) {
 				event := eventdata.OutboxEvent{Id: uuid.New(), AggregateID: submissionID, CreatedAt: time.Now().Add(-time.Second), EventType: eventdata.OutboxEventSubmissionCreated, Payload: payload, Headers: map[string]string{requestid.Header: id}}
 				repo := &outboxRepository{}
 				if markFail {
-					repo.markErr = errors.New("mark-secret")
+					repo.markErr = errors.New("mark-failed")
 				}
 				capture := &publishCapture{t: t, repo: repo, event: event, fail: fail}
 				worker := NewOutboxWorker(eventDispatcher{pubsub.NewSubmissionCreatedPublisher(capture)}, repo)
@@ -100,6 +100,12 @@ func TestOutboxPublisherDiagnosticHeadersAndFailure(t *testing.T) {
 				}
 				require.Empty(t, capture.msg.Header.Get("traceparent"))
 				require.NotContains(t, buf.String(), "secret")
+				if markFail {
+					require.Contains(t, buf.String(), `"error":"mark-failed"`)
+				}
+				if fail {
+					require.Contains(t, buf.String(), "publish-failed")
+				}
 				if fail {
 					require.Equal(t, 1, repo.failed)
 					require.Zero(t, repo.completed)
