@@ -14,13 +14,13 @@ subtasks:
     points: 40
     policy: "complete"
     tests:
-      - manual: "01.in"
+      - input: "01.in"
 
   odd_subtask:
     points: 60
     policy: "complete"
     tests:
-      - manual: "02.in"
+      - input: "02.in"
 
 solutions:
   ok.cpp: "OK"

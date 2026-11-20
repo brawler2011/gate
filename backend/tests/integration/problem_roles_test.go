@@ -69,9 +69,9 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 				languages["interactor"] = interactor.Language
 			}
 			for role, language := range languages {
-				built, ok := pkg.Format.Problem.Programs[role]
+				_, builtLanguage, ok := pkg.Format.Problem.Program(role)
 				s.Require().True(ok, "%s missing from package", role)
-				s.Equal(language, built.Language)
+				s.Equal(language, builtLanguage)
 			}
 			var main corev1.ProblemDraftSolution
 			for _, solution := range draft.Solutions {
@@ -82,7 +82,7 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 			language := main.Language
 			client, files := newGoJudge(s.T())
 			cfg := &sandbox.Config{Langs: testBuildOptions(s.T()).Languages}
-			judge := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(diskCache(s.T()), client, files, sandbox.Image{Config: cfg}), WorkDir: sandbox.SharedDir{Local: shared.judgeDir, Sandbox: judgeMount}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+			judge := &judging.PackageJudge{Client: client, Files: files, Languages: cfg, Programs: sandbox.NewProgramCache(diskCache(s.T()), client, files, sandbox.Image{Config: cfg}), Limits: testBuildOptions(s.T()).Limits, WorkDir: sandbox.SharedDir{Local: shared.judgeDir, Sandbox: judgeMount}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 			verdict, err := judge.Judge(s.ctx, pkg, uuid.New(), main.Source, language, silentJudgeProgress{}, submissionsmodel.SubmissionEventMeta{})
 			s.Require().NoError(err)
 			s.Equal(submissionsmodel.Accepted, verdict.State, "%+v", verdict)
@@ -109,8 +109,8 @@ func (s *IntegrationTestSuite) TestCheckerLanguageChangeKeepsComponent() {
 	s.Require().Equal(draft.Tests, saved.Tests)
 
 	built := s.loadBuiltPackage(s.buildPackage(admin.Id, problem.ID))
-	program, ok := built.Programs["checker"]
+	path, language, ok := built.Program("checker")
 	s.Require().True(ok, "package has the checker")
-	s.Equal("python3", program.Language)
-	s.True(strings.HasSuffix(program.Source, ".py"), "checker source follows the language: %s", program.Source)
+	s.Equal("python3", language)
+	s.True(strings.HasSuffix(path, ".py"), "checker source follows the language: %s", path)
 }

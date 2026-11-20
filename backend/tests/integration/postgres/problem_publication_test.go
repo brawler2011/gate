@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -86,7 +87,7 @@ func publicationHarness(t *testing.T) *pipelineHarness {
 	return h
 }
 
-func publishedFiles(t *testing.T, h *pipelineHarness, id uuid.UUID) (map[string][]byte, *gfmt.Problem, model.BuildSnapshot) {
+func publishedFiles(t *testing.T, h *pipelineHarness, id uuid.UUID) (map[string][]byte, *gfmt.Problem) {
 	t.Helper()
 	desc, err := h.repo.GetPackageDescriptor(h.ctx, id)
 	require.NoError(t, err)
@@ -107,11 +108,22 @@ func publishedFiles(t *testing.T, h *pipelineHarness, id uuid.UUID) (map[string]
 	}
 	var manifest gfmt.Problem
 	require.NoError(t, yaml.Unmarshal(files["problem.yaml"], &manifest))
-	var snapshot model.BuildSnapshot
-	require.NoError(t, json.Unmarshal(files[".gate/snapshot.json"], &snapshot))
-	require.Equal(t, desc.Snapshot, snapshot)
 	requireStoredObject(t, h.ctx, h.services.store, "objects", desc.Object.Key, desc.Object.Size, desc.Object.SHA256)
-	return files, &manifest, snapshot
+	return files, &manifest
+}
+
+// builtTest finds a test by ordinal; its files are under tests/.
+func builtTest(t *testing.T, manifest *gfmt.Problem, ordinal int) gfmt.Test {
+	t.Helper()
+	for _, s := range manifest.Subtasks {
+		for _, test := range s.Tests {
+			if test.Ordinal == ordinal {
+				return test
+			}
+		}
+	}
+	t.Fatalf("package has no test %d", ordinal)
+	return gfmt.Test{}
 }
 
 func TestPublicationRejectsInconsistentSaves(t *testing.T) {
@@ -156,11 +168,10 @@ func TestPublicationRejectsInconsistentSaves(t *testing.T) {
 	b := h.enqueueAndClaim(t)
 	pid, err := h.pipeline().Execute(h.ctx, b)
 	require.NoError(t, err)
-	files, manifest, snapshot := publishedFiles(t, h, pid)
-	require.Equal(t, b.Snapshot, snapshot)
-	test := manifest.Subtasks[snapshot.Draft.Subtasks[0].ID.String()].Tests[0]
-	require.Equal(t, "original input\n", string(files[test.Manual]))
-	require.Equal(t, "original answer\n", string(files[test.Answer]))
+	files, manifest := publishedFiles(t, h, pid)
+	test := builtTest(t, manifest, 1)
+	require.Equal(t, "original input\n", string(files["tests/"+test.Input]))
+	require.Equal(t, "original answer\n", string(files["tests/"+test.Answer]))
 }
 
 func TestPublicationMissingAndCorruptedObjects(t *testing.T) {
@@ -266,10 +277,9 @@ func TestPublicationUploadVerificationAndRetry(t *testing.T) {
 			}
 			pid, err := retryPipeline.Execute(h.ctx, next)
 			require.NoError(t, err)
-			files, manifest, snapshot := publishedFiles(t, h, pid)
-			require.Equal(t, b.Snapshot, snapshot)
+			files, manifest := publishedFiles(t, h, pid)
 			require.Equal(t, b.Snapshot.Draft.Title, manifest.Title)
-			require.Equal(t, b.Snapshot.Draft.Statements[0].Legend+"\n", string(files["statements/en/legend.md"]))
+			require.Equal(t, b.Snapshot.Draft.Statements[0].Legend, string(files["statements/en/legend.md"]))
 		})
 	}
 }
@@ -319,15 +329,13 @@ func TestPublicationConcurrentEdits(t *testing.T) {
 	r := <-done
 	done <- r
 	require.NoError(t, r.err)
-	files, manifest, snapshot := publishedFiles(t, h, r.id)
-	require.Equal(t, b.Snapshot, snapshot)
+	files, manifest := publishedFiles(t, h, r.id)
 	require.Equal(t, b.Snapshot.Draft.Title, manifest.Title)
-	require.Equal(t, "Original statement\n", string(files["statements/en/legend.md"]))
-	test := manifest.Subtasks[b.Snapshot.Draft.Subtasks[0].ID.String()].Tests[0]
-	require.Equal(t, 1, test.Ordinal)
+	require.Equal(t, "Original statement", string(files["statements/en/legend.md"]))
+	test := builtTest(t, manifest, 1)
 	require.False(t, test.Sample)
-	require.Equal(t, "original input\n", string(files[test.Manual]))
-	require.Equal(t, "original answer\n", string(files[test.Answer]))
+	require.Equal(t, "original input\n", string(files["tests/"+test.Input]))
+	require.Equal(t, "original answer\n", string(files["tests/"+test.Answer]))
 	desc, err := h.repo.GetPackageDescriptor(h.ctx, r.id)
 	require.NoError(t, err)
 	var revision int64
@@ -361,8 +369,7 @@ func TestPublicationCommitFailure(t *testing.T) {
 	})
 	pid, err := h.pipeline().Execute(h.ctx, b)
 	require.NoError(t, err)
-	_, _, snapshot := publishedFiles(t, h, pid)
-	require.Equal(t, b.Snapshot, snapshot)
+	publishedFiles(t, h, pid)
 	require.Equal(t, 1, countRows(t, h.ctx, h.pool, `SELECT count(*) FROM problem_packages WHERE build_id=$1`, b.ID))
 }
 
@@ -395,23 +402,22 @@ func TestPublicationSupportedTypes(t *testing.T) {
 			b := h.enqueueAndClaim(t)
 			pid, err := h.pipeline().Execute(h.ctx, b)
 			require.NoError(t, err)
-			files, manifest, snapshot := publishedFiles(t, h, pid)
+			files, manifest := publishedFiles(t, h, pid)
 			require.Equal(t, kind, manifest.Type)
-			require.Equal(t, b.Snapshot, snapshot)
-			for _, g := range snapshot.Draft.Subtasks {
-				built := manifest.Subtasks[g.ID.String()]
+			d := b.Snapshot.Draft
+			for _, g := range d.Subtasks {
+				built := manifest.Subtasks[g.Name]
 				require.Equal(t, g.Points, built.Points)
 				require.Len(t, built.Dependencies, len(g.DependsOn))
 				for i, dep := range g.DependsOn {
-					require.Equal(t, dep.String(), built.Dependencies[i])
+					require.Equal(t, d.Subtask(dep).Name, built.Dependencies[i])
 				}
 				for _, test := range built.Tests {
-					require.Equal(t, "original input\n", string(files[test.Manual]))
+					require.Equal(t, "original input\n", string(files["tests/"+test.Input]))
 					if kind == "interactive" {
-						require.Equal(t, "interactive", test.AnswerMode)
-						require.Contains(t, files, test.Answer, "the interactor's output on the main solution is the answer")
+						require.Contains(t, files, "tests/"+test.Answer, "the interactor's output on the main solution is the answer")
 					} else {
-						require.Equal(t, "original answer\n", string(files[test.Answer]))
+						require.Equal(t, "original answer\n", string(files["tests/"+test.Answer]))
 					}
 				}
 			}
@@ -440,11 +446,11 @@ func TestPublicationPartialPairUpload(t *testing.T) {
 	b := h.enqueueAndClaim(t)
 	pid, err := h.pipeline().Execute(h.ctx, b)
 	require.NoError(t, err)
-	files, manifest, snapshot := publishedFiles(t, h, pid)
-	require.Equal(t, before, snapshot.Draft)
-	test := manifest.Subtasks[before.Subtasks[0].ID.String()].Tests[0]
-	require.Equal(t, "original input\n", string(files[test.Manual]))
-	require.Equal(t, "original answer\n", string(files[test.Answer]))
+	require.Equal(t, before, b.Snapshot.Draft)
+	files, manifest := publishedFiles(t, h, pid)
+	test := builtTest(t, manifest, 1)
+	require.Equal(t, "original input\n", string(files["tests/"+test.Input]))
+	require.Equal(t, "original answer\n", string(files["tests/"+test.Answer]))
 }
 
 func TestPublicationRejectsIncompleteDrafts(t *testing.T) {
@@ -476,13 +482,14 @@ func TestPublicationRejectsIncompleteDrafts(t *testing.T) {
 	}
 }
 
-// A published snapshot re-imports into a draft that builds equivalent content.
-func TestPublicationReimportsSnapshot(t *testing.T) {
+// A published package re-imports into a draft that builds equivalent content.
+func TestPublicationReimportsPackage(t *testing.T) {
 	h := publicationHarness(t)
 	b := h.enqueueAndClaim(t)
 	pid, err := h.pipeline().Execute(h.ctx, b)
 	require.NoError(t, err)
-	files, _, published := publishedFiles(t, h, pid)
+	files, _ := publishedFiles(t, h, pid)
+	published := b.Snapshot
 	var archive bytes.Buffer
 	w := zip.NewWriter(&archive)
 	for name, data := range files {
@@ -504,15 +511,23 @@ func TestPublicationReimportsSnapshot(t *testing.T) {
 	require.Equal(t, published.Draft.Checker, imported.Checker)
 	require.Equal(t, published.Draft.Library, imported.Library)
 	require.Equal(t, published.Draft.Statements, imported.Statements)
-	require.Equal(t, published.Draft.Subtasks, imported.Subtasks)
+	// An import names subtasks anew.
+	withoutIDs := func(subtasks []model.DraftSubtask) []model.DraftSubtask {
+		result := slices.Clone(subtasks)
+		for i := range result {
+			result[i].ID = uuid.Nil
+		}
+		return result
+	}
+	require.Equal(t, withoutIDs(published.Draft.Subtasks), withoutIDs(imported.Subtasks))
 	require.Len(t, imported.Tests, 1)
 
 	rebuilt := h.enqueueAndClaim(t)
 	require.Equal(t, imported.Revision, rebuilt.Revision)
 	pid, err = h.pipeline().Execute(h.ctx, rebuilt)
 	require.NoError(t, err)
-	files, manifest, snapshot := publishedFiles(t, h, pid)
-	test := manifest.Subtasks[snapshot.Draft.Subtasks[0].ID.String()].Tests[0]
-	require.Equal(t, "original input\n", string(files[test.Manual]))
-	require.Equal(t, "original answer\n", string(files[test.Answer]))
+	files, manifest := publishedFiles(t, h, pid)
+	test := builtTest(t, manifest, 1)
+	require.Equal(t, "original input\n", string(files["tests/"+test.Input]))
+	require.Equal(t, "original answer\n", string(files["tests/"+test.Answer]))
 }

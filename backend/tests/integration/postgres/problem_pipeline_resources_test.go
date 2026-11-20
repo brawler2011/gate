@@ -73,7 +73,7 @@ func newPipelineHarness(t *testing.T, objectBytes, diskBytes int64) *pipelineHar
 	uploads := &problems.DraftUseCase{
 		DraftQuotas: model.DraftQuotas{FileBytes: 1 << 20, TextBytes: 4 << 20, Files: 100, Tests: 100, Components: 10, Subtasks: 10},
 		Repo:        repo, Problems: fixedProblem{org}, Permissions: allowAll{}, Store: services.store, Bucket: "objects",
-		TempDir: work, UploadTTL: 5 * time.Minute, ObjectBytes: objectBytes, BuildOptions: options,
+		TempDir: work, UploadTTL: 5 * time.Minute, BuildOptions: options,
 		Languages: &sandbox.Config{Langs: services.langs},
 	}
 	return &pipelineHarness{ctx: accessmodel.WithUser(ctx, accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}),
@@ -216,7 +216,7 @@ func TestPipelineBuildsWithRunningImageLanguages(t *testing.T) {
 	require.ErrorAs(t, err, &failure)
 	require.Equal(t, "compile", failure.Stage)
 	require.Equal(t, "configuration", failure.Kind)
-	require.Contains(t, failure.Message, "checkers/check.cpp")
+	require.Contains(t, failure.Message, "checkers/checker")
 
 	changed := maps.Clone(h.options.Languages)
 	cpp := changed["cpp17"]

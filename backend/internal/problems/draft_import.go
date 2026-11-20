@@ -6,7 +6,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -71,36 +70,12 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	if err != nil {
 		return nil, err
 	}
-	if info, statErr := os.Stat(filepath.Join(packageRoot, ".gate/snapshot.json")); statErr == nil {
-		if info.Size() > 16*1024*1024 {
-			return nil, pkg.ErrPayloadTooLarge
-		}
-		data, err := os.ReadFile(filepath.Join(packageRoot, ".gate/snapshot.json"))
-		if err != nil {
-			return nil, fmt.Errorf("readfile: %w", err)
-		}
-		var snapshot model.BuildSnapshot
-		if err := json.Unmarshal(data, &snapshot); err != nil {
-			return nil, fmt.Errorf("unmarshal: %w", err)
-		}
-		result.draft = snapshot.Draft
-		result.draft.ProblemID = id
-		result.draft.Revision = revision
-		for _, oid := range snapshot.Draft.InputObjects() {
-			o, err := uc.importObject(filepath.Join(packageRoot, ".gate/objects/"+oid.String()), "asset", oid)
-			if err != nil {
-				return nil, err
-			}
-			result.objects = append(result.objects, o)
-		}
-	} else {
-		problem, err := formats.Read(packageRoot)
-		if err != nil {
-			return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid author package")
-		}
-		if err := uc.convertImport(result, packageRoot, problem, id, revision); err != nil {
-			return nil, err
-		}
+	problem, err := formats.Read(packageRoot)
+	if err != nil {
+		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid author package")
+	}
+	if err := uc.convertImport(result, packageRoot, problem, id, revision); err != nil {
+		return nil, err
 	}
 	if err := result.draft.ComputeScores(); err != nil {
 		return nil, err
@@ -144,7 +119,7 @@ func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (import
 	if err != nil {
 		return importObject{}, fmt.Errorf("stat: %w", err)
 	}
-	if !info.Mode().IsRegular() || info.Size() > uc.ObjectBytes {
+	if !info.Mode().IsRegular() || info.Size() > int64(uc.BuildOptions.Limits.ObjectBytes) {
 		return importObject{}, pkg.ErrPayloadTooLarge
 	}
 	h := sha256.New()

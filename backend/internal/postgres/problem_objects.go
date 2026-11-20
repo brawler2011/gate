@@ -29,13 +29,19 @@ func (r *ProblemDraftsRepo) BuildInputObjects(ctx context.Context, id uuid.UUID)
 
 // The caller must store the archive with a verified SHA-256 before publication.
 // Publish object and package together so losing a lease leaves only unreferenced bytes.
-func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUID, object model.StoredObject, samples []model.Sample) (uuid.UUID, error) {
-	if samples == nil {
-		samples = []model.Sample{}
+func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUID, object model.StoredObject, index model.PackageIndex) (uuid.UUID, error) {
+	encode := func(v any) []byte {
+		data, _ := json.Marshal(v)
+		return data
 	}
-	samplesJSON, err := json.Marshal(samples)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("marshal samples: %w", err)
+	if index.Samples == nil {
+		index.Samples = []model.Sample{}
+	}
+	if index.Statements == nil {
+		index.Statements = []model.DraftStatement{}
+	}
+	if index.Assets == nil {
+		index.Assets = []model.DraftAsset{}
 	}
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
@@ -69,11 +75,13 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 	}
 	pid := uuid.New()
 	if err := q.InsertProblemPackage(ctx, sqlc.InsertProblemPackageParams{
-		ID: pid, ProblemID: b.ProblemID, OrganizationID: b.OrganizationID, BuildID: id, ObjectID: object.ID, PackageHash: object.SHA256, Revision: b.Revision, Samples: samplesJSON,
+		ID: pid, ProblemID: b.ProblemID, OrganizationID: b.OrganizationID, BuildID: id, ObjectID: object.ID, PackageHash: object.SHA256, Revision: b.Revision,
+		Title: index.Title, ShortName: index.ShortName, Type: index.Type, TimeLimitMs: safeInt32(index.TimeLimitMs), MemoryLimitMb: safeInt32(index.MemoryLimitMb),
+		InputFile: index.InputFile, OutputFile: index.OutputFile, Statements: encode(index.Statements), Samples: encode(index.Samples),
 	}); err != nil {
 		return uuid.Nil, fmt.Errorf("insert package: %w", err)
 	}
-	if err := q.InsertPackageAssets(ctx, sqlc.InsertPackageAssetsParams{PackageID: pid, BuildID: id}); err != nil {
+	if err := q.InsertPackageAssets(ctx, sqlc.InsertPackageAssetsParams{PackageID: pid, OrganizationID: b.OrganizationID, Assets: encode(index.Assets)}); err != nil {
 		return uuid.Nil, fmt.Errorf("insert package assets: %w", err)
 	}
 	if err := q.MarkBuildSucceeded(ctx, sqlc.MarkBuildSucceededParams{ID: id, LeaseToken: &token}); err != nil {
@@ -104,10 +112,7 @@ func (r *ProblemDraftsRepo) GetPackageDescriptor(ctx context.Context, id uuid.UU
 	if err != nil {
 		return model.PackageDescriptor{}, HandlePgErr(err)
 	}
-	p := model.PackageDescriptor{ID: row.ID, BuildID: row.BuildID, ProblemID: row.ProblemID}
-	if err := json.Unmarshal(row.Snapshot, &p.Snapshot); err != nil {
-		return p, fmt.Errorf("decode package snapshot: %w", err)
-	}
+	p := model.PackageDescriptor{ID: row.ID, ProblemID: row.ProblemID}
 	p.Object, err = r.GetObject(ctx, row.ObjectID)
 	return p, err
 }

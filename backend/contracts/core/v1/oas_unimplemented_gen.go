@@ -483,7 +483,8 @@ func (UnimplementedHandler) DownloadContestStatementsPdf(ctx context.Context, pa
 
 // DownloadProblemPackage implements DownloadProblemPackage operation.
 //
-// Download a built problem package archive.
+// A gfmt package with every test's input and answer as files. Importing it gives the draft it was
+// built from.
 //
 // GET /problems/{id}/packages/{packageId}/download
 func (UnimplementedHandler) DownloadProblemPackage(ctx context.Context, params DownloadProblemPackageParams) (r DownloadProblemPackageOK, _ error) {

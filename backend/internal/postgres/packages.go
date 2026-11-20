@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
@@ -35,7 +37,9 @@ func (r *PackagesRepo) ListPackages(ctx context.Context, problemID uuid.UUID, re
 	}
 	result := make([]problemsmodel.ProblemPackage, len(rows))
 	for i, row := range rows {
-		result[i] = mapPackage(row)
+		if result[i], err = mapPackage(row); err != nil {
+			return nil, 0, err
+		}
 	}
 	count, err := r.queries.CountProblemPackages(ctx, problemID)
 	if err != nil {
@@ -49,7 +53,7 @@ func (r *PackagesRepo) GetReadyPackage(ctx context.Context, problemID uuid.UUID)
 	if err != nil {
 		return problemsmodel.ProblemPackage{}, HandlePgErr(err)
 	}
-	return mapPackage(row), nil
+	return mapPackage(row)
 }
 
 func (r *PackagesRepo) GetPackageByID(ctx context.Context, id uuid.UUID) (problemsmodel.ProblemPackage, error) {
@@ -57,9 +61,14 @@ func (r *PackagesRepo) GetPackageByID(ctx context.Context, id uuid.UUID) (proble
 	if err != nil {
 		return problemsmodel.ProblemPackage{}, HandlePgErr(err)
 	}
-	return mapPackage(row), nil
+	return mapPackage(row)
 }
 
-func mapPackage(p sqlc.ProblemPackage) problemsmodel.ProblemPackage {
-	return problemsmodel.ProblemPackage{ID: p.ID, ProblemID: p.ProblemID, OrganizationID: p.OrganizationID, BuildID: p.BuildID, ObjectID: p.ObjectID, Revision: p.Revision, PackageHash: p.PackageHash, CreatedAt: p.CreatedAt}
+func mapPackage(p sqlc.ProblemPackage) (problemsmodel.ProblemPackage, error) {
+	result := problemsmodel.ProblemPackage{ID: p.ID, ProblemID: p.ProblemID, OrganizationID: p.OrganizationID, BuildID: p.BuildID, ObjectID: p.ObjectID, Revision: p.Revision,
+		PackageHash: p.PackageHash, CreatedAt: p.CreatedAt, Title: p.Title, Type: p.Type}
+	if err := json.Unmarshal(p.Statements, &result.Statements); err != nil {
+		return result, fmt.Errorf("decode package statements: %w", err)
+	}
+	return result, nil
 }

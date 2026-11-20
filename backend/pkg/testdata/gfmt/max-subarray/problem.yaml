@@ -14,8 +14,8 @@ subtasks:
     points: 0
     policy: "complete"
     tests:
-      - manual: "01.in"
-      - manual: "02.in"
+      - input: "01.in"
+      - input: "02.in"
 
   secret:
     points: 100

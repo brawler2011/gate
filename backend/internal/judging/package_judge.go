@@ -12,6 +12,7 @@ import (
 	"sort"
 	"time"
 
+	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
@@ -20,10 +21,12 @@ import (
 )
 
 type PackageJudge struct {
-	Client *sandbox.Client
-	Files  *sandbox.FileTransport
+	Client    *sandbox.Client
+	Files     *sandbox.FileTransport
 	Languages *sandbox.Config
 	Programs  *sandbox.ProgramCache
+	// System limits apply to every package, whenever it was built.
+	Limits model.BuildLimits
 	// Packages are read by go-judge from the worker's disk cache.
 	WorkDir sandbox.SharedDir
 	Logger  *slog.Logger
@@ -40,7 +43,7 @@ func (j *PackageJudge) release(id string) {
 	}
 }
 
-func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, source gfmt.Program) (sandbox.Executable, error) {
+func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, path, language string) (sandbox.Executable, error) {
 	read := func(path string) ([]byte, error) {
 		data, err := os.ReadFile(filepath.Join(pkg.Format.Path, path))
 		if err != nil {
@@ -48,7 +51,7 @@ func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, source g
 		}
 		return data, nil
 	}
-	text, err := read(source.Source)
+	text, err := read(path)
 	if err != nil {
 		return sandbox.Executable{}, err
 	}
@@ -62,10 +65,10 @@ func (j *PackageJudge) program(ctx context.Context, pkg *LoadedPackage, source g
 			return sandbox.Executable{}, err
 		}
 	}
-	limits := pkg.Descriptor.Snapshot.Limits.Compile
-	compiled, err := j.Programs.Get(ctx, sandbox.Program{Source: text, Language: source.Language, Deps: deps}, limits)
+	limits := j.Limits.Compile
+	compiled, err := j.Programs.Get(ctx, sandbox.Program{Source: text, Language: language, Deps: deps}, limits)
 	if err != nil {
-		return sandbox.Executable{}, fmt.Errorf("compile %s: %w", source.Source, err)
+		return sandbox.Executable{}, fmt.Errorf("compile %s: %w", path, err)
 	}
 	defer compiled.Release()
 	return j.Files.UploadCompiled(ctx, compiled.Dir(), int64(limits.Output)) //nolint:wrapcheck // already describes the upload
@@ -77,15 +80,15 @@ type roleProgram struct {
 }
 
 func (j *PackageJudge) roleProgram(ctx context.Context, pkg *LoadedPackage, role string) (*roleProgram, error) {
-	source, ok := pkg.Format.Problem.Programs[role]
+	path, language, ok := pkg.Format.Problem.Program(role)
 	if !ok {
 		return nil, nil
 	}
-	executable, err := j.program(ctx, pkg, source)
+	executable, err := j.program(ctx, pkg, path, language)
 	if err != nil {
 		return nil, err
 	}
-	return &roleProgram{executable: executable, language: source.Language}, nil
+	return &roleProgram{executable: executable, language: language}, nil
 }
 func (j *PackageJudge) releaseRoleProgram(p *roleProgram) {
 	if p != nil {
@@ -101,9 +104,9 @@ func (j *PackageJudge) releaseExecutable(executable sandbox.Executable) {
 }
 
 func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submissionID uuid.UUID, source string, lang string, progress Progress, meta submissionsmodel.SubmissionEventMeta) (*FinalVerdict, error) {
-	s := pkg.Descriptor.Snapshot
+	p := pkg.Format.Problem
 	sb := sandbox.NewSandbox(j.Client, j.Languages)
-	sol, err := sb.CompileWithLimits(ctx, []byte(source), lang, nil, j.Languages.SubmissionCompileLimits(lang, s.Limits.Compile))
+	sol, err := sb.CompileWithLimits(ctx, []byte(source), lang, nil, j.Languages.SubmissionCompileLimits(lang, j.Limits.Compile))
 	if err != nil {
 		// A missing worker language is a system configuration error, not a contestant compilation error.
 		if IsTemporary(err) || errors.Is(err, sandbox.ErrUnknownLanguage) {
@@ -123,7 +126,7 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 		return nil, err
 	}
 	var interactor *roleProgram
-	if s.Draft.Type == "interactive" {
+	if p.Type == "interactive" {
 		interactor, err = j.roleProgram(ctx, pkg, "interactor")
 		defer j.releaseRoleProgram(interactor)
 		if err != nil {
@@ -153,31 +156,32 @@ func (j *PackageJudge) Judge(ctx context.Context, pkg *LoadedPackage, submission
 			hasFailureDetails = true
 		}
 		results = append(results, result)
-		if result.Verdict != "OK" && s.Draft.Type != "scoring" {
+		if result.Verdict != "OK" && p.Type != "scoring" {
 			break
 		}
 	}
-	return NewVerdictCalculator(s.Draft.Type, pkg.Format.Problem).Calculate(results), nil
+	return NewVerdictCalculator(p.Type, p).Calculate(results), nil
 }
 func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *LoadedPackage, sol sandbox.Executable, lang string, checker, interactor *roleProgram, test FlatTest, details bool) (TestResult, error) {
-	s := pkg.Descriptor.Snapshot
-	limits := s.Limits.Auxiliary
-	limits.CPU = time.Duration(s.Draft.TimeLimitMs) * time.Millisecond
+	p := pkg.Format.Problem
+	limits := j.Limits.Auxiliary
+	limits.CPU = time.Duration(p.Limits.TimeMs) * time.Millisecond
 	limits.Wall = 2 * limits.CPU
-	limits.Memory = bytesize.Size(s.Draft.MemoryLimitMb) * bytesize.MiB
-	limits.Output = s.Limits.TestOutputBytes
-	input, err := j.WorkDir.File(filepath.Join(pkg.Format.Path, test.Test.Manual))
+	limits.Memory = bytesize.Size(p.Limits.MemoryMb) * bytesize.MiB
+	limits.Output = j.Limits.TestOutputBytes
+	inputPath, answerPath := gfmt.TestFolder+"/"+test.Test.Input, gfmt.TestFolder+"/"+test.Test.Answer
+	input, err := j.WorkDir.File(filepath.Join(pkg.Format.Path, inputPath))
 	if err != nil {
 		return TestResult{}, err //nolint:wrapcheck // names the path
 	}
-	answer, err := j.WorkDir.File(filepath.Join(pkg.Format.Path, test.Test.Answer))
+	answer, err := j.WorkDir.File(filepath.Join(pkg.Format.Path, answerPath))
 	if err != nil {
 		return TestResult{}, err //nolint:wrapcheck // names the path
 	}
 	result := TestResult{TestNumber: test.TestIndex}
 	var output string
 	if interactor != nil {
-		r, err := sb.InteractFiles(ctx, sol, lang, interactor.executable, interactor.language, input, answer, limits, s.Limits.Auxiliary)
+		r, err := sb.InteractFiles(ctx, sol, lang, interactor.executable, interactor.language, input, answer, limits, j.Limits.Auxiliary)
 		if err != nil {
 			return result, err
 		}
@@ -189,7 +193,7 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 		result.Memory = r.SolutionResult.Memory
 		result.Score = r.Score
 	} else {
-		r, err := sb.RunSolution(ctx, sol, lang, input, s.Draft.Streams(), limits)
+		r, err := sb.RunSolution(ctx, sol, lang, input, sandbox.Streams{Input: p.InputFile, Output: p.OutputFile}, limits)
 		if err != nil {
 			return result, err
 		}
@@ -201,7 +205,7 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 		result.Memory = r.Memory
 	}
 	if checker != nil && result.Verdict == string(sandbox.StatusOK) {
-		check, err := sb.CheckFiles(ctx, checker.executable, checker.language, input, sandbox.FileID(output), answer, s.Limits.Auxiliary)
+		check, err := sb.CheckFiles(ctx, checker.executable, checker.language, input, sandbox.FileID(output), answer, j.Limits.Auxiliary)
 		if err != nil {
 			return result, err
 		}
@@ -218,12 +222,12 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 			}
 			result.Output = string(preview)
 			result.IsTruncated = truncated
-			result.Answer, err = packagePreview(pkg.Format.Path, test.Test.Answer)
+			result.Answer, err = packagePreview(pkg.Format.Path, answerPath)
 			if err != nil {
 				return result, err
 			}
 		}
-		result.Input, err = packagePreview(pkg.Format.Path, test.Test.Manual)
+		result.Input, err = packagePreview(pkg.Format.Path, inputPath)
 		if err != nil {
 			return result, err
 		}

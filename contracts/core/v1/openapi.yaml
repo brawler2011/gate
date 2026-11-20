@@ -1822,6 +1822,7 @@ paths:
       tags: [problems]
       operationId: DownloadProblemPackage
       summary: Download a built problem package archive
+      description: A gfmt package with every test's input and answer as files. Importing it gives the draft it was built from.
       parameters:
         - $ref: '#/components/parameters/ProblemIDPath'
         - name: packageId

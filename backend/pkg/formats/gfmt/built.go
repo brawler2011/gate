@@ -9,31 +9,34 @@ import (
 	"strings"
 
 	"github.com/brawler2011/gate/backend/pkg/points"
+	"gopkg.in/yaml.v3"
 )
 
-// Published packages must contain materialized inputs and answers, not generator recipes.
-func OpenBuiltPackage(dir string) (*GateFormat, error) {
-	g, err := OpenPackage(dir)
+// Built is a package the judge can run: every test has its input and answer as files.
+type Built struct {
+	Path    string
+	Problem *Problem
+}
+
+// OpenBuilt reads an extracted package, rejecting links out of it.
+func OpenBuilt(dir string) (*Built, error) {
+	data, err := os.ReadFile(filepath.Join(dir, "problem.yaml"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read problem.yaml: %w", err)
 	}
-	p := g.Problem
-	if p.FormatVersion != "2" {
-		return nil, fmt.Errorf("invalid built package format version")
+	var p *Problem
+	if err := yaml.Unmarshal(data, &p); err != nil {
+		return nil, fmt.Errorf("parse problem.yaml: %w", err)
 	}
-	if p.Type != "pass-fail" && p.Type != "scoring" && p.Type != "interactive" {
-		return nil, fmt.Errorf("invalid package type")
-	}
-	if p.Limits.TimeMs <= 0 || p.Limits.MemoryMb <= 0 || len(p.Subtasks) == 0 {
-		return nil, fmt.Errorf("invalid package limits or subtasks")
+	if p == nil {
+		return nil, fmt.Errorf("problem.yaml must contain a mapping")
 	}
 	regular := func(path string) error {
 		if !fs.ValidPath(path) || path == "." || strings.ContainsAny(path, "\\\x00") {
 			return fmt.Errorf("invalid package path %q", path)
 		}
-		parts := strings.Split(path, "/")
 		prefix := dir
-		for _, part := range parts {
+		for _, part := range strings.Split(path, "/") {
 			prefix = filepath.Join(prefix, part)
 			info, err := os.Lstat(prefix)
 			if err != nil {
@@ -43,25 +46,10 @@ func OpenBuiltPackage(dir string) (*GateFormat, error) {
 				return fmt.Errorf("package symlink %q", path)
 			}
 		}
-		info, err := os.Stat(prefix)
-		if err != nil {
-			return fmt.Errorf("stat: %w", err)
-		}
-		if !info.Mode().IsRegular() {
-			return fmt.Errorf("package path is not regular: %q", path)
+		if info, err := os.Stat(prefix); err != nil || !info.Mode().IsRegular() {
+			return fmt.Errorf("package path is not a regular file: %q", path)
 		}
 		return nil
-	}
-	for role, c := range p.Programs {
-		if role != "checker" && role != "interactor" {
-			return nil, fmt.Errorf("invalid program role %q", role)
-		}
-		if c.Language == "" {
-			return nil, fmt.Errorf("program %s has no language", role)
-		}
-		if err := regular(c.Source); err != nil {
-			return nil, err
-		}
 	}
 	library, err := os.ReadDir(filepath.Join(dir, LibraryFolder))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -72,50 +60,87 @@ func OpenBuiltPackage(dir string) (*GateFormat, error) {
 			return nil, err
 		}
 	}
+	if err := p.CheckBuilt(regular); err != nil {
+		return nil, err
+	}
+	return &Built{Path: dir, Problem: p}, nil
+}
+
+// Program finds the source of a checker or interactor and its language.
+func (p *Problem) Program(role string) (path, language string, ok bool) {
+	for path, source := range p.Sources {
+		if strings.HasPrefix(path, RoleFolder(role)+"/") {
+			return path, source.Language, true
+		}
+	}
+	return "", "", false
+}
+
+// CheckBuilt checks what the judge relies on; regular checks that a package path is a file.
+func (p *Problem) CheckBuilt(regular func(string) error) error {
+	if p.FormatVersion != FormatVersion {
+		return fmt.Errorf("unsupported package format version %q", p.FormatVersion)
+	}
+	if p.Type != "pass-fail" && p.Type != "scoring" && p.Type != "interactive" {
+		return fmt.Errorf("invalid package type")
+	}
+	if p.Limits.TimeMs <= 0 || p.Limits.MemoryMb <= 0 || len(p.Subtasks) == 0 {
+		return fmt.Errorf("invalid package limits or subtasks")
+	}
+	roles := map[string]int{}
+	for path, source := range p.Sources {
+		role := folderRole(strings.SplitN(path, "/", 2)[0])
+		if role != "checker" && role != "interactor" {
+			continue
+		}
+		roles[role]++
+		if source.Language == "" {
+			return fmt.Errorf("%s has no language", path)
+		}
+		if err := regular(path); err != nil {
+			return err
+		}
+	}
 	for role, required := range map[string]bool{"checker": p.Type != "interactive", "interactor": p.Type == "interactive"} {
-		if _, ok := p.Programs[role]; required && !ok {
-			return nil, fmt.Errorf("built package needs a %s", role)
+		if roles[role] > 1 || required && roles[role] == 0 {
+			return fmt.Errorf("package needs exactly one %s", role)
 		}
 	}
 	ordinals := map[int]bool{}
-	groups := map[int]bool{}
-	totalPoints := points.Value(0)
-	for name, s := range p.Subtasks {
-		if name == "" || s.Ordinal <= 0 || groups[s.Ordinal] || s.Points < 0 || (s.Policy != "complete" && s.Policy != "each") {
-			return nil, fmt.Errorf("invalid package subtask")
+	total := points.Value(0)
+	for _, s := range p.Subtasks {
+		if s.Policy != "complete" && s.Policy != "each" || s.Points < 0 {
+			return fmt.Errorf("invalid package subtask")
 		}
-		groups[s.Ordinal] = true
-		totalPoints += s.Points
-		for _, test := range s.Tests {
-			if test.Ordinal <= 0 || ordinals[test.Ordinal] || test.Generate != "" {
-				return nil, fmt.Errorf("invalid materialized test order or recipe")
+		total += s.Points
+		for _, t := range s.Tests {
+			if t.Ordinal <= 0 || ordinals[t.Ordinal] {
+				return fmt.Errorf("invalid test ordinal %d", t.Ordinal)
 			}
-			ordinals[test.Ordinal] = true
-			if err := regular(test.Manual); err != nil {
-				return nil, err
-			}
-			interactive := test.AnswerMode == "interactive"
-			if interactive != (p.Type == "interactive") || !interactive && test.AnswerMode != "generated" && test.AnswerMode != "provided" {
-				return nil, fmt.Errorf("invalid answer mode")
-			}
-			if err := regular(test.Answer); err != nil {
-				return nil, err
+			ordinals[t.Ordinal] = true
+			for _, name := range []string{t.Input, t.Answer} {
+				if name == "" {
+					return fmt.Errorf("test %d has no input or answer file", t.Ordinal)
+				}
+				if err := regular(TestFolder + "/" + name); err != nil {
+					return err
+				}
 			}
 		}
 	}
 	if len(ordinals) == 0 {
-		return nil, fmt.Errorf("package has no tests")
+		return fmt.Errorf("package has no tests")
 	}
-	if p.Type == "scoring" && (p.MaxScore == nil || *p.MaxScore != totalPoints) {
-		return nil, fmt.Errorf("invalid package max score")
+	if p.Type == "scoring" && (p.MaxScore == nil || *p.MaxScore != total) {
+		return fmt.Errorf("invalid package max score")
 	}
 	state := map[string]int{}
 	var visit func(string) error
 	visit = func(name string) error {
-		if state[name] == 1 {
+		switch state[name] {
+		case 1:
 			return fmt.Errorf("package dependency cycle")
-		}
-		if state[name] == 2 {
+		case 2:
 			return nil
 		}
 		s, ok := p.Subtasks[name]
@@ -133,8 +158,8 @@ func OpenBuiltPackage(dir string) (*GateFormat, error) {
 	}
 	for name := range p.Subtasks {
 		if err := visit(name); err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return g, nil
+	return nil
 }

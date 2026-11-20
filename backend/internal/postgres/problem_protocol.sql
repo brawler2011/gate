@@ -69,13 +69,14 @@ SELECT p.id FROM problem_packages p JOIN problem_builds b ON b.id=p.build_id WHE
 SELECT id FROM problem_packages WHERE build_id=$1;
 
 -- name: InsertProblemPackage :exec
-INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision,samples)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8);
+INSERT INTO problem_packages(id,problem_id,organization_id,build_id,object_id,package_hash,revision,
+ title,short_name,type,time_limit_ms,memory_limit_mb,input_file,output_file,statements,samples)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16);
 
 -- name: InsertPackageAssets :exec
 INSERT INTO problem_package_assets(package_id,organization_id,name,object_id)
-SELECT sqlc.arg(package_id)::uuid,b.organization_id,a->>'name',(a->>'object_id')::uuid
-FROM problem_builds b,jsonb_array_elements(b.snapshot->'draft'->'assets') a WHERE b.id=sqlc.arg(build_id);
+SELECT sqlc.arg(package_id)::uuid,sqlc.arg(organization_id)::uuid,a.name,a.object_id
+FROM jsonb_to_recordset(sqlc.arg(assets)::jsonb) a(name text,object_id uuid);
 
 -- name: ReadPackageStatement :one
 SELECT p.problem_id,p.title,p.samples,p.statements,
@@ -91,8 +92,7 @@ UPDATE problem_builds SET state='succeeded',lease_token=NULL,lease_deadline=NULL
 WHERE id=$1 AND state='running' AND lease_token=$2 AND lease_deadline>clock_timestamp();
 
 -- name: ReadPackageDescriptor :one
-SELECT p.id,p.build_id,p.problem_id,p.object_id,b.snapshot
-FROM problem_packages p JOIN problem_builds b ON b.id=p.build_id WHERE p.id=$1;
+SELECT id,problem_id,object_id FROM problem_packages WHERE id=$1;
 
 -- name: LockOperationForFinalize :one
 SELECT token,fingerprint,result,http_status FROM request_idempotency

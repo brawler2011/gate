@@ -14,12 +14,12 @@ type ProblemsUseCase struct {
 	permissions   ProblemPermissions
 	repo          ProblemsRepo
 	organizations OrganizationsRepo
-	drafts        DraftsRepo
+	templates     TemplatePackages
 	transactions  ProblemTransactions
 }
 
-func NewProblemsUseCase(repo ProblemsRepo, transactions ProblemTransactions, organizations OrganizationsRepo, permissions ProblemPermissions, drafts DraftsRepo) *ProblemsUseCase {
-	return &ProblemsUseCase{repo: repo, transactions: transactions, organizations: organizations, permissions: permissions, drafts: drafts}
+func NewProblemsUseCase(repo ProblemsRepo, transactions ProblemTransactions, organizations OrganizationsRepo, permissions ProblemPermissions, templates TemplatePackages) *ProblemsUseCase {
+	return &ProblemsUseCase{repo: repo, transactions: transactions, organizations: organizations, permissions: permissions, templates: templates}
 }
 func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, problem *problemsmodel.ProblemUpdate) error {
 	return withinProblem(ctx, uc.transactions, id, accessmodel.ActionEditProblem, func(tx ProblemTxStore) error {

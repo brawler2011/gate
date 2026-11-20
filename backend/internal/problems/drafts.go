@@ -50,7 +50,6 @@ type DraftUseCase struct {
 	Bucket       string
 	TempDir      string
 	UploadTTL    time.Duration
-	ObjectBytes  int64
 	BuildOptions model.BuildOptions
 	Languages    *sandbox.Config
 }
@@ -168,7 +167,7 @@ type spooledUpload struct {
 }
 
 func (uc *DraftUseCase) spool(ctx context.Context, dir, purpose string, reader io.Reader) (spooledUpload, error) {
-	if reader == nil || uc.ObjectBytes <= 0 {
+	if reader == nil || int64(uc.BuildOptions.Limits.ObjectBytes) <= 0 {
 		return spooledUpload{}, pkg.ErrBadInput
 	}
 	f, err := os.CreateTemp(dir, "body-")
@@ -176,12 +175,12 @@ func (uc *DraftUseCase) spool(ctx context.Context, dir, purpose string, reader i
 		return spooledUpload{}, fmt.Errorf("createtemp: %w", err)
 	}
 	h := sha256.New()
-	n, err := io.Copy(io.MultiWriter(f, h), io.LimitReader(contextReader{ctx, reader}, uc.ObjectBytes+1))
+	n, err := io.Copy(io.MultiWriter(f, h), io.LimitReader(contextReader{ctx, reader}, int64(uc.BuildOptions.Limits.ObjectBytes)+1))
 	if err != nil {
 		_ = f.Close()
 		return spooledUpload{}, fmt.Errorf("copy: %w", err)
 	}
-	if n > uc.ObjectBytes {
+	if n > int64(uc.BuildOptions.Limits.ObjectBytes) {
 		_ = f.Close()
 		return spooledUpload{}, pkg.ErrPayloadTooLarge
 	}

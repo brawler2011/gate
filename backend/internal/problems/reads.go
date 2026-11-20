@@ -2,6 +2,7 @@ package problems
 
 import (
 	"context"
+	"errors"
 
 	"github.com/brawler2011/gate/backend/internal/access"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -110,16 +111,15 @@ func (uc *ProblemsUseCase) ListTemplates(ctx context.Context, orgID uuid.UUID) (
 	}
 	for _, p := range list.Problems {
 		template := Template{ID: p.ID.String(), Title: p.Title, Description: "Пользовательский шаблон организации", ProblemType: "pass-fail"}
-		manifest, err := uc.drafts.GetDraft(ctx, p.ID)
-		if err != nil {
+		// New problems copy the template's latest package, so the list shows that package too.
+		ready, err := uc.templates.GetReadyPackage(ctx, p.ID)
+		if err != nil && !errors.Is(err, pkg.ErrNotFound) {
 			return nil, err
 		}
-		{
-			if manifest.Type != "" {
-				template.ProblemType = manifest.Type
-			}
-			if statementFromDraft(manifest, "").Legend != "" {
-				template.Description = statementFromDraft(manifest, "").Legend
+		if err == nil {
+			template.Title, template.ProblemType = ready.Title, ready.Type
+			if legend := selectStatement(ready.Title, ready.Statements, "").Legend; legend != "" {
+				template.Description = legend
 			}
 		}
 		result = append(result, template)

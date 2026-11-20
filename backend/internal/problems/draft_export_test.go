@@ -14,10 +14,13 @@ import (
 	"testing"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	"github.com/brawler2011/gate/backend/internal/problems/archive"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
 	"github.com/brawler2011/gate/backend/pkg/points"
+	"github.com/brawler2011/gate/backend/pkg/ziputil"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -41,13 +44,58 @@ func TestExportRoundTrip(t *testing.T) {
 			first, err := uc.parseImport(context.Background(), bytes.NewReader(data), uuid.New(), 1)
 			require.NoError(t, err)
 			defer first.Close()
-			var exported bytes.Buffer
-			_, err = writeDraftArchive(&exported, first.draft, uc.Languages, first.open)
-			require.NoError(t, err)
-			second, err := uc.parseImport(context.Background(), &exported, uuid.New(), 1)
+			second, err := uc.parseImport(context.Background(), bytes.NewReader(writeArchive(t, first, nil)), uuid.New(), 1)
 			require.NoError(t, err)
 			defer second.Close()
 			require.Equal(t, normalized(first), normalized(second))
+		})
+	}
+}
+
+// A built package passes the judge's check and imports back as the draft, generated tests included.
+func TestBuiltPackageImportsBackAsDraft(t *testing.T) {
+	packages, err := filepath.Glob("../../pkg/testdata/*/*")
+	require.NoError(t, err)
+	for _, dir := range packages {
+		name := filepath.Base(filepath.Dir(dir)) + "/" + filepath.Base(dir)
+		if name == "pcms2/interactive-guess" {
+			continue // no interactor, so it cannot be built
+		}
+		t.Run(name, func(t *testing.T) {
+			plan, err := importDir(t, dir, nil)
+			require.NoError(t, err)
+			defer plan.Close()
+			files := t.TempDir()
+			built := map[uuid.UUID]archive.BuiltTest{}
+			// Builds keep manual inputs and provided answers as they are and produce the rest.
+			materialize := func(path string, object *uuid.UUID, produced string) {
+				data := []byte(produced)
+				if object != nil {
+					r, err := plan.open(*object)
+					require.NoError(t, err)
+					data, err = io.ReadAll(r)
+					require.NoError(t, err)
+					require.NoError(t, r.Close())
+				}
+				require.NoError(t, os.WriteFile(path, data, 0o600))
+			}
+			for _, test := range plan.draft.Tests {
+				local := archive.BuiltTest{Input: filepath.Join(files, test.ID.String()+".in"), Answer: filepath.Join(files, test.ID.String()+".ans")}
+				materialize(local.Input, test.Input.ObjectID, "generated input\n")
+				materialize(local.Answer, test.Answer.ObjectID, "generated answer\n")
+				built[test.ID] = local
+			}
+			data := writeArchive(t, plan, built)
+			z, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+			require.NoError(t, err)
+			tree := t.TempDir()
+			require.NoError(t, ziputil.ExtractZipLimited(z, tree, 1<<30, 10000))
+			_, err = gfmt.OpenBuilt(tree)
+			require.NoError(t, err)
+			again, err := newImportUseCase(t).parseImport(context.Background(), bytes.NewReader(data), uuid.New(), 1)
+			require.NoError(t, err)
+			defer again.Close()
+			require.Equal(t, normalized(plan), normalized(again))
 		})
 	}
 }
@@ -125,13 +173,19 @@ func TestExportRoundTripKeepsSavedStatements(t *testing.T) {
 	require.Equal(t, normalized(plan), normalized(exportAndImport(t, plan)))
 }
 
+func writeArchive(t *testing.T, plan *draftImport, built map[uuid.UUID]archive.BuiltTest) []byte {
+	t.Helper()
+	p, err := archive.Layout(plan.draft, newImportUseCase(t).Languages, built)
+	require.NoError(t, err)
+	var out bytes.Buffer
+	_, err = p.Write(&out, plan.open)
+	require.NoError(t, err)
+	return out.Bytes()
+}
+
 func exportAndImport(t *testing.T, plan *draftImport) *draftImport {
 	t.Helper()
-	uc := newImportUseCase(t)
-	var exported bytes.Buffer
-	_, err := writeDraftArchive(&exported, plan.draft, uc.Languages, plan.open)
-	require.NoError(t, err)
-	again, err := uc.parseImport(context.Background(), &exported, uuid.New(), 1)
+	again, err := newImportUseCase(t).parseImport(context.Background(), bytes.NewReader(writeArchive(t, plan, nil)), uuid.New(), 1)
 	require.NoError(t, err)
 	t.Cleanup(again.Close)
 	return again
@@ -146,9 +200,7 @@ func TestExportRespectsImportLimits(t *testing.T) {
 		f, err := os.CreateTemp(t.TempDir(), "export-")
 		require.NoError(t, err)
 		t.Cleanup(func() { _ = f.Close() })
-		w, err := writeDraftArchive(f, plan.draft, uc.Languages, plan.open)
-		require.NoError(t, err)
-		return f, uc.checkExport(f, w)
+		return f, writeExport(f, plan.draft, uc.Languages, uc.BuildOptions.Limits, plan.open)
 	}
 	uc := newImportUseCase(t)
 	f, err := export(uc)

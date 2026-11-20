@@ -100,8 +100,21 @@ type UploadSpec struct {
 
 type PackageDescriptor struct {
 	ID        uuid.UUID
-	BuildID   uuid.UUID
 	ProblemID uuid.UUID
 	Object    StoredObject
-	Snapshot  BuildSnapshot
+}
+
+// PackageIndex is written once at publication so reads need not open the package archive.
+type PackageIndex struct {
+	Title, ShortName, Type     string
+	TimeLimitMs, MemoryLimitMb int
+	InputFile, OutputFile      string
+	Statements                 []DraftStatement
+	Samples                    []Sample
+	Assets                     []DraftAsset
+}
+
+func NewPackageIndex(d Draft, samples []Sample) PackageIndex {
+	return PackageIndex{Title: d.Title, ShortName: d.ShortName, Type: d.Type, TimeLimitMs: d.TimeLimitMs, MemoryLimitMb: d.MemoryLimitMb,
+		InputFile: d.InputFile, OutputFile: d.OutputFile, Statements: d.Statements, Samples: samples, Assets: d.Assets}
 }

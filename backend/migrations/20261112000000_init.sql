@@ -440,12 +440,14 @@ CREATE TABLE problem_packages (
     organization_id uuid NOT NULL,
     package_hash varchar(64) NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
-    title text DEFAULT ''::text NOT NULL,
-    short_name text DEFAULT ''::text NOT NULL,
-    time_limit_ms integer DEFAULT 1000 NOT NULL,
-    memory_limit_mb integer DEFAULT 256 NOT NULL,
-    input_file text DEFAULT ''::text NOT NULL,
-    output_file text DEFAULT ''::text NOT NULL,
+    -- The index below is written once at publication so reads need not open the archive.
+    title text NOT NULL,
+    short_name text NOT NULL,
+    type text NOT NULL,
+    time_limit_ms integer NOT NULL,
+    memory_limit_mb integer NOT NULL,
+    input_file text NOT NULL,
+    output_file text NOT NULL,
     build_id uuid NOT NULL,
     object_id uuid NOT NULL,
     revision bigint NOT NULL,
@@ -455,6 +457,7 @@ CREATE TABLE problem_packages (
     CONSTRAINT problem_packages_revision_check CHECK ((revision > 0)),
     CONSTRAINT problem_packages_samples_check CHECK ((jsonb_typeof(samples) = 'array'::text)),
     CONSTRAINT problem_packages_statements_check CHECK ((jsonb_typeof(statements) = 'array'::text)),
+    CONSTRAINT problem_packages_type_check CHECK ((type = ANY (ARRAY['pass-fail'::text, 'scoring'::text, 'interactive'::text]))),
     CONSTRAINT problem_packages_build_id_key UNIQUE (build_id),
     CONSTRAINT problem_packages_id_organization_id_key UNIQUE (id, organization_id),
     CONSTRAINT problem_packages_pkey PRIMARY KEY (id),
@@ -469,7 +472,6 @@ CREATE INDEX problem_packages_organization_id_idx ON problem_packages USING btre
 CREATE INDEX problem_packages_package_hash_idx ON problem_packages USING btree (package_hash);
 CREATE INDEX problem_packages_problem_id_idx ON problem_packages USING btree (problem_id);
 
--- Asset references let statement reads avoid opening the package archive.
 CREATE TABLE problem_package_assets (
     package_id uuid NOT NULL,
     organization_id uuid NOT NULL,
@@ -576,7 +578,7 @@ $$;
 -- +goose StatementEnd
 
 -- +goose StatementBegin
-CREATE FUNCTION capture_package_metadata() RETURNS trigger
+CREATE FUNCTION check_package_build() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 DECLARE b problem_builds; o stored_objects;
@@ -588,15 +590,6 @@ BEGIN
        OR b.organization_id<>NEW.organization_id OR o.organization_id<>NEW.organization_id
        OR o.purpose<>'package' OR o.sha256<>NEW.package_hash THEN RAISE EXCEPTION 'invalid package publication'; END IF;
     NEW.revision=b.revision;
-    NEW.title=b.snapshot->'draft'->>'title';
-    NEW.short_name=b.snapshot->'draft'->>'short_name';
-    NEW.time_limit_ms=(b.snapshot->'draft'->>'time_limit_ms')::integer;
-    NEW.memory_limit_mb=(b.snapshot->'draft'->>'memory_limit_mb')::integer;
-    NEW.input_file=COALESCE(b.snapshot->'draft'->>'input_file','');
-    NEW.output_file=COALESCE(b.snapshot->'draft'->>'output_file','');
-    -- Statement reads use this copy instead of decoding the build snapshot.
-    NEW.statements=CASE WHEN jsonb_typeof(b.snapshot->'draft'->'statements')='array'
-        THEN b.snapshot->'draft'->'statements' ELSE '[]'::jsonb END;
     RETURN NEW;
 END;
 $$;
@@ -609,7 +602,7 @@ CREATE TRIGGER problem_build_input_guard BEFORE DELETE OR UPDATE ON problem_buil
 CREATE CONSTRAINT TRIGGER problem_build_inputs_refs AFTER INSERT OR DELETE OR UPDATE ON problem_build_inputs DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_build_inputs();
 CREATE TRIGGER package_immutable BEFORE UPDATE ON problem_packages FOR EACH ROW EXECUTE FUNCTION guard_package_immutable();
 CREATE TRIGGER package_asset_immutable BEFORE UPDATE ON problem_package_assets FOR EACH ROW EXECUTE FUNCTION guard_package_immutable();
-CREATE TRIGGER package_metadata BEFORE INSERT ON problem_packages FOR EACH ROW EXECUTE FUNCTION capture_package_metadata();
+CREATE TRIGGER package_build BEFORE INSERT ON problem_packages FOR EACH ROW EXECUTE FUNCTION check_package_build();
 CREATE CONSTRAINT TRIGGER package_publication AFTER INSERT ON problem_packages DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_build_publication();
 
 

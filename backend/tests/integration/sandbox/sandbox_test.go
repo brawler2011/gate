@@ -19,6 +19,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/sandbox"
 	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/brawler2011/gate/backend/tests/judgeimage"
+	"gopkg.in/yaml.v3"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -162,7 +163,7 @@ func TestIntegrationSandbox(t *testing.T) {
 
 			t.Run(pkgName, func(t *testing.T) {
 				t.Parallel()
-				pkg, err := gfmt.OpenPackage(pkgPath)
+				pkg, err := openAuthorPackage(pkgPath)
 				if err != nil {
 					t.Fatalf("failed to open package %s: %v", pkgName, err)
 				}
@@ -260,7 +261,7 @@ func TestIntegrationSandbox(t *testing.T) {
 
 				type TestCase struct {
 					Name     string
-					Manual   string
+					Input    string
 					Generate string
 				}
 				var testCases []TestCase
@@ -284,15 +285,15 @@ func TestIntegrationSandbox(t *testing.T) {
 						name := fmt.Sprintf("%s_%d", subtaskKey, idx+1)
 						testCases = append(testCases, TestCase{
 							Name:     name,
-							Manual:   tc.Manual,
+							Input:    tc.Input,
 							Generate: tc.Generate,
 						})
 					}
 				}
 
 				getInput := func(tc TestCase) ([]byte, error) {
-					if tc.Manual != "" {
-						return pkg.GetTestInput(tc.Manual)
+					if tc.Generate == "" {
+						return pkg.testInput(tc.Input)
 					}
 					parts := strings.Fields(tc.Generate)
 					if len(parts) == 0 {
@@ -353,7 +354,7 @@ func TestIntegrationSandbox(t *testing.T) {
 					t.Fatalf("No reference OK solution found in %s", pkgPath)
 				}
 
-				refCode, err := pkg.GetSolution(referenceSol.Filename)
+				refCode, err := pkg.solution(referenceSol.Filename)
 				if err != nil {
 					t.Fatalf("failed to read reference solution %s: %v", referenceSol.Filename, err)
 				}
@@ -400,7 +401,7 @@ func TestIntegrationSandbox(t *testing.T) {
 				for _, sol := range solutions {
 					t.Run(sol.Filename, func(t *testing.T) {
 						t.Parallel()
-						solCode, err := pkg.GetSolution(sol.Filename)
+						solCode, err := pkg.solution(sol.Filename)
 						if err != nil {
 							t.Fatalf("failed to read solution %s: %v", sol.Filename, err)
 						}
@@ -686,4 +687,34 @@ func expectedVerdict(filename string) (string, bool) {
 		return "OLE", true
 	}
 	return "", false
+}
+
+type authorPackage struct {
+	Path    string
+	Problem *gfmt.Problem
+}
+
+func openAuthorPackage(dir string) (*authorPackage, error) {
+	data, err := os.ReadFile(filepath.Join(dir, "problem.yaml"))
+	if err != nil {
+		return nil, err
+	}
+	var p gfmt.Problem
+	if err := yaml.Unmarshal(data, &p); err != nil {
+		return nil, err
+	}
+	return &authorPackage{Path: dir, Problem: &p}, nil
+}
+
+func (p *authorPackage) testInput(name string) ([]byte, error) {
+	for _, candidate := range gfmt.TestInputNames(name) {
+		if data, err := os.ReadFile(filepath.Join(p.Path, gfmt.TestFolder, candidate)); err == nil {
+			return data, nil
+		}
+	}
+	return nil, fmt.Errorf("test input file not found for %s", name)
+}
+
+func (p *authorPackage) solution(name string) ([]byte, error) {
+	return os.ReadFile(filepath.Join(p.Path, gfmt.RoleFolder("solution"), name))
 }

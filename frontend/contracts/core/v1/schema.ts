@@ -1173,7 +1173,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Download a built problem package archive */
+        /**
+         * Download a built problem package archive
+         * @description A gfmt package with every test's input and answer as files. Importing it gives the draft it was built from.
+         */
         get: operations["DownloadProblemPackage"];
         put?: never;
         post?: never;
