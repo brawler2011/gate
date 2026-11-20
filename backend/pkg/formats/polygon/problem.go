@@ -108,15 +108,30 @@ type Interactor struct {
 }
 
 type Checker struct {
-	Name   string `xml:"name,attr"`
-	Type   string `xml:"type,attr"`
-	Source Source `xml:"source"`
-	Binary Binary `xml:"binary"`
+	Name    string         `xml:"name,attr"`
+	Type    string         `xml:"type,attr"`
+	Source  Source         `xml:"source"`
+	Binary  Binary         `xml:"binary"`
+	Testset ProgramTestset `xml:"testset"`
 }
 
 type Validator struct {
-	Source Source `xml:"source"`
-	Binary Binary `xml:"binary"`
+	Source  Source         `xml:"source"`
+	Binary  Binary         `xml:"binary"`
+	Testset ProgramTestset `xml:"testset"`
+}
+
+// ProgramTestset holds checker tests (input, output, answer) or validator tests (input only).
+type ProgramTestset struct {
+	InputPathPattern  string        `xml:"input-path-pattern"`
+	OutputPathPattern string        `xml:"output-path-pattern"`
+	AnswerPathPattern string        `xml:"answer-path-pattern"`
+	Tests             []ProgramTest `xml:"tests>test"`
+}
+
+type ProgramTest struct {
+	Verdict string `xml:"verdict,attr"`
+	Group   string `xml:"group,attr"`
 }
 
 type Solution struct {

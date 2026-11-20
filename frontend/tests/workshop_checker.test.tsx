@@ -7,7 +7,7 @@ import {WorkshopComponentsTab} from "@/components/workshop/WorkshopComponentsTab
 
 import {cleanup, fireEvent, renderWithProviders, waitFor} from "./test-utils";
 
-import type {ProblemDraft} from "@/contracts/core/v1/schema";
+import type {ProblemBuild, ProblemDraft} from "@/contracts/core/v1/schema";
 
 let restore: (() => void) | undefined;
 afterEach(() => {
@@ -17,14 +17,19 @@ afterEach(() => {
 
 const WCMP = "#include \"testlib.h\"\n// wcmp\n";
 
+const checkerTest = (id: string, verdict: "OK" | "WA") =>
+  ({id, input: `${id}-in`, output: `${id}-out`, answer: `${id}-ans`, verdict, points: null});
+const checkerTests = [checkerTest("t1", "OK"), checkerTest("t2", "WA")];
+
 const draft: ProblemDraft = {
   problem_id: "problem", revision: 3, title: "A", short_name: "a", type: "pass-fail", time_limit_ms: 1000,
-  memory_limit_mb: 256, max_score: null, checker: {language: "cpp20", source: "", standard: "wcmp"}, interactor: null,
+  memory_limit_mb: 256, max_score: null, checker: {language: "cpp20", source: "", standard: "wcmp", tests: checkerTests},
+  interactor: null,
   validators: [], generators: [], solutions: [], main_solution: null, statements: [], assets: [], subtasks: [],
   tests: [], library: [],
 };
 
-const mockApi = (stored: ProblemDraft): ProblemDraft[] => {
+const mockApi = (stored: ProblemDraft, builds: ProblemBuild[] = []): ProblemDraft[] => {
   const puts: ProblemDraft[] = [];
   const fetch = spyOn(globalThis, "fetch").mockImplementation(Object.assign(
     (input: RequestInfo | URL, init?: RequestInit) => {
@@ -35,6 +40,9 @@ const mockApi = (stored: ProblemDraft): ProblemDraft[] => {
       }
       if (url.pathname === "/api/languages") {
         return Promise.resolve(Response.json({languages: [{id: "cpp20", name: "C++20", extensions: ["cpp"], syntax: "cpp"}]}));
+      }
+      if (url.pathname === "/api/problems/problem/builds") {
+        return Promise.resolve(Response.json(builds));
       }
       if (init?.method === "PUT") {
         const saved = JSON.parse(String(init.body)) as ProblemDraft;
@@ -57,10 +65,32 @@ describe("workshop checker", () => {
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
     fireEvent.click(button);
     await waitFor(() => expect(puts).toHaveLength(1));
-    expect(puts[0].checker).toEqual({language: "cpp20", source: WCMP, standard: ""});
+    expect(puts[0].checker).toEqual({language: "cpp20", source: WCMP, standard: "", tests: checkerTests});
     // Customizing a standard checker supplies its missing system includes.
     expect(puts[0].library).toEqual([{name: "testlib.h", content: "", auto_update: true}]);
     // The copy is an ordinary checker the author edits.
     await waitFor(() => expect(view.getByRole("button", {name: "Сохранить"})).toBeTruthy());
+  });
+
+  it("shows each checker test with the result of the newest build that ran it", async () => {
+    // The newest build failed before running checker tests, so the one before it holds the results.
+    const build = (revision: number, programTests: ProblemBuild["program_tests"]): ProblemBuild => ({
+      id: `build-${revision}`, problem_id: "problem", organization_id: "org", revision, state: "failed", attempt: 1,
+      max_attempts: 3, deadline: "2026-11-20T00:00:00Z", created_at: "2026-11-20T00:00:00Z",
+      finished_at: "2026-11-20T00:00:00Z", diagnostic: null, solutions: null, program_tests: programTests,
+    });
+    mockApi(draft, [
+      build(3, null),
+      build(2, [
+        {id: "t1", verdict: "OK", points: null, mismatch: ""},
+        {id: "t2", verdict: "PE", points: null, mismatch: "PE, expected WA"},
+      ]),
+    ]);
+    const view = renderWithProviders(<WorkshopComponentsTab problemId="problem" role="checker" />);
+    await waitFor(() => expect(view.getByText(/Результаты — сборка ревизии 2/)).toBeTruthy());
+    const rows = Array.from(view.container.querySelectorAll("tbody tr"));
+    expect(rows.map((row) => row.querySelector(".mantine-Badge-label")?.textContent)).toEqual(["OK", "PE"]);
+    expect(rows.map((row) => row.querySelector("input")?.value)).toEqual(["OK — принято", "WA — неправильный ответ"]);
+    expect(rows[1].querySelector("a")?.getAttribute("href")).toBe("/api/problems/problem/draft/objects/t2-in");
   });
 });

@@ -25,7 +25,7 @@ const draft: ProblemDraft = {
 
 const build = (revision: number, solutions: ProblemBuild["solutions"]): ProblemBuild => ({
   id: `build-${revision}`, problem_id: "problem", organization_id: "org", revision, state: "failed", attempt: 1, max_attempts: 3,
-  deadline: "2026-11-20T00:00:00Z", created_at: "2026-11-20T00:00:00Z", finished_at: "2026-11-20T00:00:00Z", diagnostic: null, solutions,
+  deadline: "2026-11-20T00:00:00Z", created_at: "2026-11-20T00:00:00Z", finished_at: "2026-11-20T00:00:00Z", diagnostic: null, solutions, program_tests: null,
 });
 
 describe("workshop solutions", () => {

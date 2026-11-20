@@ -303,7 +303,7 @@ func TestObjectDeletionRacingWithNewReference(t *testing.T) {
 func TestUploadFinalizeIsFencedByOperationToken(t *testing.T) {
 	t.Parallel()
 	ctx, pool, repo, org, d := draftFixture(t)
-	change := model.UploadChange{Part: "asset", AssetName: "a.png"}
+	change := model.UploadChange{AssetName: "a.png"}
 	key := mutationKey(org, "upload", change)
 	replay, err := repo.BeginOperation(ctx, key)
 	require.NoError(t, err)
@@ -312,7 +312,7 @@ func TestUploadFinalizeIsFencedByOperationToken(t *testing.T) {
 	stale := model.NewStoredObject(org, spec)
 	_, err = pool.Exec(ctx, `UPDATE request_idempotency SET lease_deadline=clock_timestamp()-interval '1 second' WHERE key=$1`, key.Key)
 	require.NoError(t, err)
-	_, err = repo.FinalizeUploads(ctx, key, d.ProblemID, d.Revision, change, []model.StoredObject{stale})
+	_, err = repo.FinalizeUploads(ctx, key, d.ProblemID, d.Revision, change, map[string]model.StoredObject{"asset": stale})
 	require.ErrorIs(t, err, pkg.ErrConflict, "an expired executor cannot finalize")
 
 	retry := key
@@ -320,10 +320,10 @@ func TestUploadFinalizeIsFencedByOperationToken(t *testing.T) {
 	replay, err = repo.BeginOperation(ctx, retry)
 	require.NoError(t, err)
 	require.Nil(t, replay)
-	_, err = repo.FinalizeUploads(ctx, key, d.ProblemID, d.Revision, change, []model.StoredObject{stale})
+	_, err = repo.FinalizeUploads(ctx, key, d.ProblemID, d.Revision, change, map[string]model.StoredObject{"asset": stale})
 	require.ErrorIs(t, err, pkg.ErrConflict, "a taken-over executor cannot finalize")
 	fresh := model.NewStoredObject(org, spec)
-	result, err := repo.FinalizeUploads(ctx, retry, d.ProblemID, d.Revision, change, []model.StoredObject{fresh})
+	result, err := repo.FinalizeUploads(ctx, retry, d.ProblemID, d.Revision, change, map[string]model.StoredObject{"asset": fresh})
 	require.NoError(t, err)
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects WHERE id=$1`, stale.ID))
 	require.Equal(t, 1, countRows(t, ctx, pool, `SELECT count(*) FROM problem_draft_objects WHERE object_id=$1`, fresh.ID))

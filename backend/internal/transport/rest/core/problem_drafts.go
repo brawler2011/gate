@@ -22,7 +22,7 @@ type ProblemDraftUC interface {
 	GetBuild(context.Context, uuid.UUID, uuid.UUID) (model.ProblemBuild, error)
 	ListBuilds(context.Context, uuid.UUID) ([]model.ProblemBuild, error)
 	CancelBuild(context.Context, uuid.UUID, uuid.UUID, string) (model.MutationResult, error)
-	Upload(context.Context, uuid.UUID, int64, string, model.UploadChange, io.Reader, io.Reader) (model.MutationResult, error)
+	Upload(context.Context, uuid.UUID, int64, string, model.UploadChange, map[string]io.Reader) (model.MutationResult, error)
 	Import(context.Context, uuid.UUID, int64, string, io.Reader) (model.MutationResult, error)
 	DownloadObject(context.Context, uuid.UUID, uuid.UUID) (io.ReadCloser, string, error)
 	Export(context.Context, uuid.UUID) (io.ReadCloser, error)
@@ -109,7 +109,7 @@ func (h *CoreServer) CancelProblemBuild(ctx context.Context, p corev1.CancelProb
 	return draftResult[corev1.ProblemBuildCancelled](h.ProblemDrafts.CancelBuild(ctx, p.ID, p.BuildId, p.IdempotencyKey))
 }
 func (h *CoreServer) UploadProblemDraft(ctx context.Context, req *corev1.UploadProblemDraftReq, p corev1.UploadProblemDraftParams) (*corev1.ProblemDraft, error) {
-	if req == nil || req.File.File == nil {
+	if req == nil {
 		return nil, pkg.ErrBadInput
 	}
 	var change model.UploadChange
@@ -118,11 +118,13 @@ func (h *CoreServer) UploadProblemDraft(ctx context.Context, req *corev1.UploadP
 	if err := decoder.Decode(&change); err != nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid upload metadata")
 	}
-	var answer io.Reader
-	if req.Answer.IsSet() {
-		answer = req.Answer.Value.File
+	files := map[string]io.Reader{}
+	for slot, file := range map[string]corev1.OptMultipartFile{"asset": req.Asset, "input": req.Input, "output": req.Output, "answer": req.Answer} {
+		if file.IsSet() {
+			files[slot] = file.Value.File
+		}
 	}
-	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.Upload(ctx, p.ID, p.ExpectedRevision, p.IdempotencyKey, change, req.File.File, answer))
+	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.Upload(ctx, p.ID, p.ExpectedRevision, p.IdempotencyKey, change, files))
 }
 func (h *CoreServer) ExportProblemDraft(ctx context.Context, p corev1.ExportProblemDraftParams) (corev1.ExportProblemDraftOK, error) {
 	reader, err := h.ProblemDrafts.Export(ctx, p.ID)

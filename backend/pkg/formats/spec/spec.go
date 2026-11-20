@@ -54,7 +54,22 @@ type Program struct {
 	// Verdicts a solution may get on a test; empty keeps it out of the build (see problemsmodel.DraftSolution).
 	Verdicts []string
 	// Points is the score a solution of a scoring problem is expected to get.
-	Points *points.Value
+	Points         *points.Value
+	CheckerTests   []CheckerTest
+	ValidatorTests []ValidatorTest
+}
+
+// CheckerTest expects a problemsmodel.CheckerVerdicts verdict for Output.
+type CheckerTest struct {
+	Input, Output, Answer string
+	Verdict               string
+	Points                *points.Value
+}
+
+type ValidatorTest struct {
+	Input string
+	Valid bool
+	Group string
 }
 
 // Statements contain either one LaTeX file or Markdown files per section.

@@ -794,6 +794,25 @@ func (q *Queries) ReadPackageStatement(ctx context.Context, id uuid.UUID) (ReadP
 	return i, err
 }
 
+const recordBuildProgramTests = `-- name: RecordBuildProgramTests :execrows
+UPDATE problem_builds SET program_tests=$1::jsonb
+WHERE id=$2 AND state='running' AND lease_token=$3 AND lease_deadline>clock_timestamp()
+`
+
+type RecordBuildProgramTestsParams struct {
+	ProgramTests []byte     `json:"program_tests"`
+	ID           uuid.UUID  `json:"id"`
+	Token        *uuid.UUID `json:"token"`
+}
+
+func (q *Queries) RecordBuildProgramTests(ctx context.Context, arg RecordBuildProgramTestsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, recordBuildProgramTests, arg.ProgramTests, arg.ID, arg.Token)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const recordBuildSolutions = `-- name: RecordBuildSolutions :execrows
 UPDATE problem_builds SET solutions=$1::jsonb
 WHERE id=$2 AND state='running' AND lease_token=$3 AND lease_deadline>clock_timestamp()

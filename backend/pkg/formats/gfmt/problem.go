@@ -100,5 +100,16 @@ type Source struct {
 	// AutoUpdate on a system library file: true replaces its text with the current system file.
 	AutoUpdate *bool `yaml:"auto_update,omitempty" json:"auto_update,omitempty"`
 	// Groups names the subtasks a validator checks; empty means every test.
-	Groups []string `yaml:"groups,omitempty" json:"groups,omitempty"`
+	Groups []string      `yaml:"groups,omitempty" json:"groups,omitempty"`
+	Tests  []ProgramTest `yaml:"tests,omitempty" json:"tests,omitempty"`
+}
+
+// ProgramTest of a checker has an output and an answer; a validator test's verdict is valid or invalid. Files are under tests/.
+type ProgramTest struct {
+	Input   string        `yaml:"input" json:"input"`
+	Output  string        `yaml:"output,omitempty" json:"output,omitempty"`
+	Answer  string        `yaml:"answer,omitempty" json:"answer,omitempty"`
+	Verdict string        `yaml:"verdict" json:"verdict"`
+	Points  *points.Value `yaml:"points,omitempty" json:"points,omitempty"`
+	Group   string        `yaml:"group,omitempty" json:"group,omitempty"`
 }

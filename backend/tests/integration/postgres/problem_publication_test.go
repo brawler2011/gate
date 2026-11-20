@@ -81,7 +81,7 @@ func publicationHarness(t *testing.T) *pipelineHarness {
 	require.NoError(t, err)
 	test := model.DraftTest{ID: uuid.New(), Ordinal: 1, SubtaskID: group, Points: 100,
 		Input: model.DraftInput{Mode: "manual"}, Answer: model.DraftAnswer{Mode: "provided"}}
-	_, err = h.uploads.Upload(h.ctx, current.ProblemID, current.Revision, uuid.NewString(), model.UploadChange{Part: "pair", Test: &test}, strings.NewReader("original input\n"), strings.NewReader("original answer\n"))
+	_, err = h.uploads.Upload(h.ctx, current.ProblemID, current.Revision, uuid.NewString(), model.UploadChange{Test: &test}, map[string]io.Reader{"input": strings.NewReader("original input\n"), "answer": strings.NewReader("original answer\n")})
 	require.NoError(t, err)
 	return h
 }
@@ -313,7 +313,7 @@ func TestPublicationConcurrentEdits(t *testing.T) {
 	})
 	current, err := h.repo.GetDraft(h.ctx, h.draft.ProblemID)
 	require.NoError(t, err)
-	_, err = h.uploads.Upload(h.ctx, current.ProblemID, current.Revision, uuid.NewString(), model.UploadChange{Part: "pair", Test: &current.Tests[0]}, strings.NewReader("later input\n"), strings.NewReader("later answer\n"))
+	_, err = h.uploads.Upload(h.ctx, current.ProblemID, current.Revision, uuid.NewString(), model.UploadChange{Test: &current.Tests[0]}, map[string]io.Reader{"input": strings.NewReader("later input\n"), "answer": strings.NewReader("later answer\n")})
 	require.NoError(t, err)
 	release <- struct{}{}
 	r := <-done
@@ -432,7 +432,7 @@ func TestPublicationPartialPairUpload(t *testing.T) {
 		}
 		return nil
 	}}
-	_, err = uploads.Upload(h.ctx, before.ProblemID, before.Revision, uuid.NewString(), model.UploadChange{Part: "pair", Test: &before.Tests[0]}, strings.NewReader("replacement input\n"), strings.NewReader("replacement answer\n"))
+	_, err = uploads.Upload(h.ctx, before.ProblemID, before.Revision, uuid.NewString(), model.UploadChange{Test: &before.Tests[0]}, map[string]io.Reader{"input": strings.NewReader("replacement input\n"), "answer": strings.NewReader("replacement answer\n")})
 	require.ErrorContains(t, err, "injected answer upload failure")
 	after, err := h.repo.GetDraft(h.ctx, before.ProblemID)
 	require.NoError(t, err)

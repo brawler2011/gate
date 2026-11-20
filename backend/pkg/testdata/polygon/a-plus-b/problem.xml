@@ -59,11 +59,15 @@
             <binary path="check.exe" type="exe.win32"/>
             <copy path="check.cpp"/>
             <testset>
-                <test-count>0</test-count>
+                <test-count>3</test-count>
                 <input-path-pattern>files/tests/checker-tests/%02d</input-path-pattern>
                 <output-path-pattern>files/tests/checker-tests/%02d.o</output-path-pattern>
                 <answer-path-pattern>files/tests/checker-tests/%02d.a</answer-path-pattern>
-                <tests/>
+                <tests>
+                    <test verdict="ok"/>
+                    <test verdict="wrong-answer"/>
+                    <test verdict="presentation-error"/>
+                </tests>
             </testset>
         </checker>
         <validators>

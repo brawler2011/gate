@@ -1,12 +1,14 @@
 import type {
   ProblemDraft,
   ProblemDraftChecker,
+  ProblemDraftCheckerTest,
   ProblemDraftLibraryFile,
   ProblemDraftNamedProgram,
   ProblemDraftSolution,
   ProblemDraftStatement,
   ProblemDraftSubtask,
   ProblemDraftTest,
+  ProblemDraftValidatorTest,
 } from "@/contracts/core/v1/schema";
 
 export type ComponentRole = "checker" | "validator" | "interactor" | "generator" | "solution";
@@ -49,9 +51,9 @@ export const setSingleProgram = <Role extends SingleRole>(
     [role]: program,
   });
 
-export const customChecker = (language: string, source: string): ProblemDraftChecker => ({language, source, standard: ""});
+export const customChecker = (language: string, source: string): ProblemDraftChecker => ({language, source, standard: "", tests: []});
 
-export const standardChecker = (name: string, language: string): ProblemDraftChecker => ({language, source: "", standard: name});
+export const standardChecker = (name: string, language: string): ProblemDraftChecker => ({language, source: "", standard: name, tests: []});
 
 // Preserve system includes when converting a standard checker to editable source.
 export const customizeChecker = (draft: ProblemDraft, source: string, systemFiles: string[]): ProblemDraft => {
@@ -61,7 +63,7 @@ export const customizeChecker = (draft: ProblemDraft, source: string, systemFile
   const missing = systemFiles.filter(
     (name) => source.includes(`#include "${name}"`) && !draft.library.some((file) => file.name === name),
   );
-  const next = {...draft, checker: customChecker(draft.checker.language, source)};
+  const next = {...draft, checker: {...customChecker(draft.checker.language, source), tests: draft.checker.tests}};
   return missing.reduce(addSystemFile, next);
 };
 
@@ -79,7 +81,7 @@ export const addProgram = (
   if (programsOf(draft, role).some((p) => p.name === name)) {
     return nameTaken(role, name);
   }
-  const extra = {validator: {subtasks: []}, solution: {verdicts: ["OK"], points: null}, generator: {}}[role];
+  const extra = {validator: {subtasks: [], tests: []}, solution: {verdicts: ["OK"], points: null}, generator: {}}[role];
   const program = {name, language, source, ...extra};
   return {
     draft: {
@@ -127,6 +129,42 @@ export const setSolutionExpectation = (
   ...draft,
   solutions: draft.solutions.map((s) => (s.name === name ? {...s, ...patch} : s)),
 });
+
+const mapCheckerTests = (
+  draft: ProblemDraft,
+  change: (tests: ProblemDraftCheckerTest[]) => ProblemDraftCheckerTest[],
+): ProblemDraft =>
+  draft.checker ? {...draft, checker: {...draft.checker, tests: change(draft.checker.tests)}} : draft;
+
+export const updateCheckerTest = (
+  draft: ProblemDraft,
+  id: string,
+  patch: Partial<ProblemDraftCheckerTest>,
+): ProblemDraft =>
+  mapCheckerTests(draft, (tests) => tests.map((t) => (t.id === id ? {...t, ...patch} : t)));
+
+export const removeCheckerTest = (draft: ProblemDraft, id: string): ProblemDraft =>
+  mapCheckerTests(draft, (tests) => tests.filter((t) => t.id !== id));
+
+const mapValidatorTests = (
+  draft: ProblemDraft,
+  validator: string,
+  change: (tests: ProblemDraftValidatorTest[]) => ProblemDraftValidatorTest[],
+): ProblemDraft => ({
+  ...draft,
+  validators: draft.validators.map((v) => (v.name === validator ? {...v, tests: change(v.tests)} : v)),
+});
+
+export const updateValidatorTest = (
+  draft: ProblemDraft,
+  validator: string,
+  id: string,
+  patch: Partial<ProblemDraftValidatorTest>,
+): ProblemDraft =>
+  mapValidatorTests(draft, validator, (tests) => tests.map((t) => (t.id === id ? {...t, ...patch} : t)));
+
+export const removeValidatorTest = (draft: ProblemDraft, validator: string, id: string): ProblemDraft =>
+  mapValidatorTests(draft, validator, (tests) => tests.filter((t) => t.id !== id));
 
 export const removeProgram = (draft: ProblemDraft, role: ListRole, name: string): ProblemDraft => ({
   ...draft,

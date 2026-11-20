@@ -6743,7 +6743,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 												switch method {
 												case "POST":
 													r.name = UploadProblemDraftOperation
-													r.summary = "Upload immutable test bodies or a resource"
+													r.summary = "Upload immutable test files or a statement resource"
 													r.operationID = "UploadProblemDraft"
 													r.operationGroup = ""
 													r.pathPattern = "/problems/{id}/draft/uploads"

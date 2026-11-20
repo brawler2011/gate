@@ -29,7 +29,7 @@ type DraftRepository interface {
 	ListBuilds(context.Context, uuid.UUID) ([]model.ProblemBuild, error)
 	CancelBuild(context.Context, model.MutationKey, uuid.UUID) (model.MutationResult, error)
 	BeginOperation(context.Context, model.MutationKey) (*model.MutationResult, error)
-	FinalizeUploads(context.Context, model.MutationKey, uuid.UUID, int64, model.UploadChange, []model.StoredObject) (model.MutationResult, error)
+	FinalizeUploads(context.Context, model.MutationKey, uuid.UUID, int64, model.UploadChange, map[string]model.StoredObject) (model.MutationResult, error)
 	GetObject(context.Context, uuid.UUID) (model.StoredObject, error)
 }
 type DraftObjectStore interface {
@@ -52,7 +52,7 @@ type DraftUseCase struct {
 	UploadTTL    time.Duration
 	ObjectBytes  int64
 	BuildOptions model.BuildOptions
-	Languages *sandbox.Config
+	Languages    *sandbox.Config
 }
 
 func (uc *DraftUseCase) authorize(ctx context.Context, id uuid.UUID, edit bool) (model.Problem, error) {
@@ -187,7 +187,9 @@ func (uc *DraftUseCase) spool(ctx context.Context, dir, purpose string, reader i
 	}
 	return spooledUpload{file: f, spec: model.UploadSpec{Purpose: purpose, SHA256: hex.EncodeToString(h.Sum(nil)), Size: n}}, nil
 }
-func (uc *DraftUseCase) Upload(ctx context.Context, id uuid.UUID, expected int64, key string, change model.UploadChange, body, answer io.Reader) (model.MutationResult, error) {
+
+// Upload stores files, keyed by model.UploadSlots, into the slots of the change's entry.
+func (uc *DraftUseCase) Upload(ctx context.Context, id uuid.UUID, expected int64, key string, change model.UploadChange, files map[string]io.Reader) (model.MutationResult, error) {
 	p, err := uc.authorize(ctx, id, true)
 	if err != nil {
 		return model.MutationResult{}, err
@@ -202,37 +204,34 @@ func (uc *DraftUseCase) Upload(ctx context.Context, id uuid.UUID, expected int64
 		return model.MutationResult{}, fmt.Errorf("mkdirtemp: %w", err)
 	}
 	defer os.RemoveAll(dir)
-	purpose := "test-input"
-	if change.Part == "asset" {
-		purpose = "asset"
+	if len(files) == 0 {
+		return model.MutationResult{}, pkg.ErrBadInput
 	}
-	if change.Part == "answer" {
-		purpose = "test-answer"
-	}
-	first, err := uc.spool(ctx, dir, purpose, body)
-	if err != nil {
-		return model.MutationResult{}, err
-	}
-	defer first.file.Close()
-	uploads := []spooledUpload{first}
-	if change.Part == "pair" {
-		second, err := uc.spool(ctx, dir, "test-answer", answer)
+	uploads := map[string]spooledUpload{}
+	specs := map[string]model.UploadSpec{}
+	for _, slot := range model.UploadSlots {
+		body, ok := files[slot]
+		if !ok {
+			continue
+		}
+		purpose := change.Purpose(slot)
+		if purpose == "" {
+			return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, nil, "the change has no "+slot+" file")
+		}
+		u, err := uc.spool(ctx, dir, purpose, body)
 		if err != nil {
 			return model.MutationResult{}, err
 		}
-		defer second.file.Close()
-		uploads = append(uploads, second)
-	} else if answer != nil {
-		return model.MutationResult{}, pkg.ErrBadInput
+		defer u.file.Close()
+		uploads[slot], specs[slot] = u, u.spec
 	}
-	specs := make([]model.UploadSpec, len(uploads))
-	for i, u := range uploads {
-		specs[i] = u.spec
+	if len(uploads) != len(files) {
+		return model.MutationResult{}, pkg.ErrBadInput
 	}
 	k, err := uc.key(p.OrganizationID, id, "upload", key, struct {
 		Revision int64
 		Change   model.UploadChange
-		Files    []model.UploadSpec
+		Files    map[string]model.UploadSpec
 	}{expected, change, specs})
 	if err != nil {
 		return model.MutationResult{}, err
@@ -244,9 +243,9 @@ func (uc *DraftUseCase) Upload(ctx context.Context, id uuid.UUID, expected int64
 	if replay != nil {
 		return *replay, nil
 	}
-	objects := make([]model.StoredObject, len(uploads))
-	for i, u := range uploads {
-		objects[i], err = uc.storeObject(ctx, p.OrganizationID, u.spec, u.file)
+	objects := map[string]model.StoredObject{}
+	for slot, u := range uploads {
+		objects[slot], err = uc.storeObject(ctx, p.OrganizationID, u.spec, u.file)
 		if err != nil {
 			return model.MutationResult{}, err
 		}

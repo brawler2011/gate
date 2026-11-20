@@ -52,7 +52,8 @@ type DraftProgram struct {
 // DraftChecker uses the current system source when Standard names a checker and Source is empty.
 type DraftChecker struct {
 	DraftProgram
-	Standard string `json:"standard"`
+	Standard string             `json:"standard"`
+	Tests    []DraftCheckerTest `json:"tests"`
 }
 
 // Text bundles standard checkers with system testlib, independently of the draft library.
@@ -72,7 +73,8 @@ type DraftNamedProgram struct {
 // DraftValidator checks the tests of the listed subtasks, or every test when the list is empty.
 type DraftValidator struct {
 	DraftNamedProgram
-	Subtasks []uuid.UUID `json:"subtasks"`
+	Subtasks []uuid.UUID          `json:"subtasks"`
+	Tests    []DraftValidatorTest `json:"tests"`
 }
 
 func (v *DraftValidator) Applies(subtask uuid.UUID) bool {
@@ -267,6 +269,12 @@ func (d *Draft) Normalize() {
 		if d.Validators[i].Subtasks == nil {
 			d.Validators[i].Subtasks = []uuid.UUID{}
 		}
+		if d.Validators[i].Tests == nil {
+			d.Validators[i].Tests = []DraftValidatorTest{}
+		}
+	}
+	if d.Checker != nil && d.Checker.Tests == nil {
+		d.Checker.Tests = []DraftCheckerTest{}
 	}
 	empty(&d.Generators)
 	if d.Solutions == nil {
@@ -316,19 +324,38 @@ var (
 	statementLanguage = regexp.MustCompile(`^[a-z]{2,8}(-[a-z0-9]{2,8})*$`)
 )
 
+// EachObject visits every stored object reference with a description of it; f may replace the ID.
+func (d *Draft) EachObject(f func(ref string, id *uuid.UUID)) {
+	for i := range d.Tests {
+		t := &d.Tests[i]
+		if t.Input.ObjectID != nil {
+			f(fmt.Sprintf("test %d input", t.Ordinal), t.Input.ObjectID)
+		}
+		if t.Answer.ObjectID != nil {
+			f(fmt.Sprintf("test %d answer", t.Ordinal), t.Answer.ObjectID)
+		}
+	}
+	for i := range d.Assets {
+		f(fmt.Sprintf("asset %q", d.Assets[i].Name), &d.Assets[i].ObjectID)
+	}
+	if d.Checker != nil {
+		for i := range d.Checker.Tests {
+			t := &d.Checker.Tests[i]
+			f(fmt.Sprintf("checker test %d input", i+1), &t.Input)
+			f(fmt.Sprintf("checker test %d output", i+1), &t.Output)
+			f(fmt.Sprintf("checker test %d answer", i+1), &t.Answer)
+		}
+	}
+	for _, v := range d.Validators {
+		for i := range v.Tests {
+			f(fmt.Sprintf("validator %s test %d input", v.Name, i+1), &v.Tests[i].Input)
+		}
+	}
+}
+
 func (d *Draft) InputObjects() []uuid.UUID {
 	ids := make(map[uuid.UUID]struct{})
-	for _, test := range d.Tests {
-		if test.Input.ObjectID != nil {
-			ids[*test.Input.ObjectID] = struct{}{}
-		}
-		if test.Answer.ObjectID != nil {
-			ids[*test.Answer.ObjectID] = struct{}{}
-		}
-	}
-	for _, asset := range d.Assets {
-		ids[asset.ObjectID] = struct{}{}
-	}
+	d.EachObject(func(_ string, id *uuid.UUID) { ids[*id] = struct{}{} })
 	result := make([]uuid.UUID, 0, len(ids))
 	for id := range ids {
 		result = append(result, id)
@@ -541,6 +568,7 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 
 	d.validateSubtasks(v)
 	d.validateTests(v)
+	d.validateProgramTests(v, q)
 }
 
 func (d *Draft) validateSubtasks(v *validation) {

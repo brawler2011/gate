@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
@@ -39,81 +40,80 @@ func insertObjects(ctx context.Context, tx pgx.Tx, objects []model.StoredObject)
 	return nil
 }
 
-func objectIDs(objects []model.StoredObject) []uuid.UUID {
-	ids := make([]uuid.UUID, len(objects))
-	for i, o := range objects {
-		ids[i] = o.ID
+func upsert[T any, K comparable](list *[]T, entry T, key func(T) K) {
+	for i := range *list {
+		if key((*list)[i]) == key(entry) {
+			(*list)[i] = entry
+			return
+		}
 	}
-	return ids
+	*list = append(*list, entry)
 }
 
-func applyUploadChange(d *model.Draft, change model.UploadChange, ids []uuid.UUID) error {
-	required := 1
-	if change.Part == "pair" {
-		required = 2
+func applyUploadChange(d *model.Draft, change model.UploadChange, objects map[string]model.StoredObject) error {
+	set := 0
+	for _, present := range []bool{change.AssetName != "", change.Test != nil, change.CheckerTest != nil, change.ValidatorTest != nil} {
+		if present {
+			set++
+		}
 	}
-	if len(ids) != required {
+	if set != 1 || len(objects) == 0 || (change.Validator != "") != (change.ValidatorTest != nil) {
 		return pkg.ErrBadInput
 	}
-	if change.Part == "asset" {
-		if change.Test != nil || !model.ValidFileName(change.AssetName) {
+	ids := map[string]*uuid.UUID{}
+	for slot, o := range objects {
+		if change.Purpose(slot) == "" {
 			return pkg.ErrBadInput
 		}
-		asset := model.DraftAsset{Name: change.AssetName, ObjectID: ids[0]}
-		found := false
-		for i, a := range d.Assets {
-			if a.Name == asset.Name {
-				d.Assets[i] = asset
-				found = true
-				break
+		ids[slot] = &o.ID
+	}
+	switch {
+	case change.AssetName != "":
+		if !model.ValidFileName(change.AssetName) {
+			return pkg.ErrBadInput
+		}
+		upsert(&d.Assets, model.DraftAsset{Name: change.AssetName, ObjectID: *ids["asset"]}, func(a model.DraftAsset) string { return a.Name })
+	case change.Test != nil:
+		test := *change.Test
+		if id := ids["input"]; id != nil {
+			if test.Input.Mode != "manual" {
+				return pkg.ErrBadInput
+			}
+			test.Input.ObjectID = id
+		}
+		if id := ids["answer"]; id != nil {
+			if test.Answer.Mode != "provided" {
+				return pkg.ErrBadInput
+			}
+			test.Answer.ObjectID = id
+		}
+		upsert(&d.Tests, test, func(t model.DraftTest) uuid.UUID { return t.ID })
+	case change.CheckerTest != nil:
+		if d.Checker == nil {
+			return pkg.ErrBadInput
+		}
+		test := *change.CheckerTest
+		for slot, field := range map[string]*uuid.UUID{"input": &test.Input, "output": &test.Output, "answer": &test.Answer} {
+			if id := ids[slot]; id != nil {
+				*field = *id
 			}
 		}
-		if !found {
-			d.Assets = append(d.Assets, asset)
-		}
-		return nil
-	}
-	if change.Test == nil || change.AssetName != "" {
-		return pkg.ErrBadInput
-	}
-	test := *change.Test
-	switch change.Part {
-	case "input":
-		if test.Input.Mode != "manual" {
-			return pkg.ErrBadInput
-		}
-		test.Input.ObjectID = &ids[0]
-	case "answer":
-		if test.Answer.Mode != "provided" {
-			return pkg.ErrBadInput
-		}
-		test.Answer.ObjectID = &ids[0]
-	case "pair":
-		if test.Input.Mode != "manual" || test.Answer.Mode != "provided" {
-			return pkg.ErrBadInput
-		}
-		test.Input.ObjectID = &ids[0]
-		test.Answer.ObjectID = &ids[1]
+		upsert(&d.Checker.Tests, test, func(t model.DraftCheckerTest) uuid.UUID { return t.ID })
 	default:
-		return pkg.ErrBadInput
-	}
-	found := false
-	for i, t := range d.Tests {
-		if t.ID == test.ID {
-			d.Tests[i] = test
-			found = true
-			break
+		i := slices.IndexFunc(d.Validators, func(v model.DraftValidator) bool { return v.Name == change.Validator })
+		if i < 0 {
+			return pkg.ErrBadInput
 		}
-	}
-	if !found {
-		d.Tests = append(d.Tests, test)
+		test := *change.ValidatorTest
+		test.Input = *ids["input"]
+		upsert(&d.Validators[i].Tests, test, func(t model.DraftValidatorTest) uuid.UUID { return t.ID })
 	}
 	return nil
 }
 
 // The caller must store uploads with verified SHA-256 values before finalization.
-func (r *ProblemDraftsRepo) FinalizeUploads(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, change model.UploadChange, objects []model.StoredObject) (model.MutationResult, error) {
-	return r.finalizeUploadDraft(ctx, k, id, expected, objects, func(d *model.Draft) error { return applyUploadChange(d, change, objectIDs(objects)) })
+func (r *ProblemDraftsRepo) FinalizeUploads(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, change model.UploadChange, objects map[string]model.StoredObject) (model.MutationResult, error) {
+	return r.finalizeUploadDraft(ctx, k, id, expected, slices.Collect(maps.Values(objects)), func(d *model.Draft) error { return applyUploadChange(d, change, objects) })
 }
 
 func (r *ProblemDraftsRepo) FinalizeImport(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, draft model.Draft, objects []model.StoredObject) (model.MutationResult, error) {

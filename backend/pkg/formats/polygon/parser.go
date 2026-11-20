@@ -45,12 +45,18 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		if name, ok := strings.CutPrefix(assets.Checker.Name, "std::"); ok {
 			p.Checker.Standard = strings.TrimSuffix(name, ".cpp")
 		}
+		if p.Checker.CheckerTests, err = checkerTests(assets.Checker.Testset); err != nil {
+			return nil, err
+		}
 		roles[assets.Checker.Source.Path] = true
 	}
 	for _, v := range assets.Validators {
 		validator, err := program(v.Source)
 		if err != nil {
 			return nil, err
+		}
+		if validator.ValidatorTests, err = validatorTests(v.Testset); err != nil {
+			return nil, fmt.Errorf("validator %s: %w", v.Source.Path, err)
 		}
 		p.Validators = append(p.Validators, *validator)
 		roles[v.Source.Path] = true
@@ -188,6 +194,32 @@ var tagVerdicts = map[string][]string{
 	"memory-limit-exceeded":                        {"MLE"},
 	"failed":                                       {"RE"},
 	"do-not-run":                                   {},
+}
+
+var checkerVerdicts = map[string]string{"ok": "OK", "wrong-answer": "WA", "presentation-error": "PE", "crashed": "FAIL"}
+
+func checkerTests(ts ProgramTestset) ([]spec.CheckerTest, error) {
+	tests := make([]spec.CheckerTest, len(ts.Tests))
+	for i, t := range ts.Tests {
+		verdict, ok := checkerVerdicts[strings.ToLower(t.Verdict)]
+		if !ok {
+			return nil, fmt.Errorf("checker test %d has unknown verdict %q", i+1, t.Verdict)
+		}
+		tests[i] = spec.CheckerTest{Input: fmt.Sprintf(ts.InputPathPattern, i+1), Output: fmt.Sprintf(ts.OutputPathPattern, i+1), Answer: fmt.Sprintf(ts.AnswerPathPattern, i+1), Verdict: verdict}
+	}
+	return tests, nil
+}
+
+func validatorTests(ts ProgramTestset) ([]spec.ValidatorTest, error) {
+	tests := make([]spec.ValidatorTest, len(ts.Tests))
+	for i, t := range ts.Tests {
+		verdict := strings.ToLower(t.Verdict)
+		if verdict != "valid" && verdict != "invalid" {
+			return nil, fmt.Errorf("test %d has unknown verdict %q", i+1, t.Verdict)
+		}
+		tests[i] = spec.ValidatorTest{Input: fmt.Sprintf(ts.InputPathPattern, i+1), Valid: verdict == "valid", Group: t.Group}
+	}
+	return tests, nil
 }
 
 func mainSolution(solutions []Solution) string {
