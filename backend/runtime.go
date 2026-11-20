@@ -187,7 +187,7 @@ func runApp(configFile, envFile string, mode config.Mode) error {
 		}
 		services = append(services, workers...)
 		if !mode.API() {
-			services = append(services, newHTTPService("health server", &http.Server{Addr: cfg.HTTP.Address, Handler: workerHealthHandler(), ReadHeaderTimeout: 10 * time.Second}))
+			services = append(services, newHTTPService("health server", &http.Server{Addr: cfg.HTTP.Address, Handler: workerHealthHandler(), ReadHeaderTimeout: 10 * time.Second, ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError)}))
 		}
 	}
 	if mode.API() {
@@ -455,7 +455,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 
 	apiHandler := middleware.AuthMiddleware(authUC)(
 		middleware.UsersMiddleware(usersRepo)(
-			middleware.RateLimit(limiter, cfg.HTTP.TrustedProxy)(middleware.RequestLimits(apiServer, func(operation string) int64 {
+			middleware.RateLimit(limiter, cfg.HTTP.TrustedProxy, middleware.ResponseErrorHandler(logger))(middleware.RequestLimits(apiServer, func(operation string) int64 {
 				switch operation {
 				case "SaveProblemDraft":
 					return int64(problemPolicy.RequestBytes)
@@ -487,6 +487,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 		})(publicMux),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       problemPolicy.UploadTTL,
+		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
 
 	services = []appService{

@@ -3,7 +3,7 @@ package outbox
 import (
 	"context"
 	"fmt"
-	"log/slog"
+	"runtime/debug"
 
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 )
@@ -33,8 +33,7 @@ func (d *EventDispatcher) Dispatch(ctx context.Context, eventType string, payloa
 
 	defer func() {
 		if r := recover(); r != nil {
-			slog.ErrorContext(ctx, "recovered from panic in event handler", "panic", r)
-			err = fmt.Errorf("event handler panic: %v", r)
+			err = fmt.Errorf("event handler panic: %v\n%s", r, debug.Stack())
 		}
 	}()
 

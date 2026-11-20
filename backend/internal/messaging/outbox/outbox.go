@@ -2,7 +2,6 @@ package outbox
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -12,11 +11,11 @@ import (
 )
 
 const (
-	pollInterval = 1 * time.Second
-	maintenanceInt = 1 * time.Minute
-	batchSize = 10
+	pollInterval    = 1 * time.Second
+	maintenanceInt  = 1 * time.Minute
+	batchSize       = 10
 	eventTimeoutSec = 30
-	retentionDays = 14
+	retentionDays   = 14
 )
 
 type OutboxWorker struct {
@@ -114,21 +113,21 @@ func (w *OutboxWorker) processEvent(ctx context.Context, event *eventdata.Outbox
 	defer cancelCompletion()
 
 	if err != nil {
-		logger.Error("failed to dispatch event", "operation", "outbox_dispatch", "error_type", fmt.Sprintf("%T", err))
+		logger.Error("failed to dispatch event", "operation", "outbox_dispatch", "error", err)
 		if markErr := w.outboxRepo.MarkAsFailed(completionCtx, event.Id, event.LeaseToken, err.Error(), eventdata.IsPermanent(err)); markErr != nil {
-			logger.Error("failed to mark event as failed", "operation", "outbox_mark_failed", "error_type", fmt.Sprintf("%T", markErr))
+			logger.Error("failed to mark event as failed", "operation", "outbox_mark_failed", "error", markErr)
 		}
 		return
 	}
 
 	if markErr := w.outboxRepo.MarkAsCompleted(completionCtx, event.Id, event.LeaseToken); markErr != nil {
-		logger.Error("failed to mark event as completed", "operation", "outbox_mark_completed", "error_type", fmt.Sprintf("%T", markErr))
+		logger.Error("failed to mark event as completed", "operation", "outbox_mark_completed", "error", markErr)
 	}
 }
 
 func (w *OutboxWorker) runMaintenance(ctx context.Context) {
 
 	if err := w.outboxRepo.DeleteOldEvents(ctx, retentionDays); err != nil {
-		slog.Error("failed to delete old events", "operation", "outbox_delete_old", "error_type", fmt.Sprintf("%T", err))
+		slog.Error("failed to delete old events", "operation", "outbox_delete_old", "error", err)
 	}
 }

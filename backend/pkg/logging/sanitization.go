@@ -6,9 +6,13 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+
+	"github.com/brawler2011/gate/backend/pkg/requestid"
 )
 
 const RedactedValue = "[REDACTED]"
+
+const requestIDKey = "request_id"
 
 var sensitiveHeaders = map[string]struct{}{
 	"authorization":       {},
@@ -329,6 +333,12 @@ func RedactSensitiveSlogAttrs(groups []string, a slog.Attr) slog.Attr {
 		}
 	}
 
+	if err, ok := val.Any().(error); ok && val.Kind() == slog.KindAny {
+		if sanitized := SanitizeString(err.Error()); sanitized != err.Error() {
+			return slog.String(a.Key, sanitized)
+		}
+	}
+
 	if val.Kind() == slog.KindString {
 		strVal := val.String()
 		if sanitized := SanitizeString(strVal); sanitized != strVal {
@@ -343,8 +353,9 @@ func RedactSensitiveSlogAttrs(groups []string, a slog.Attr) slog.Attr {
 }
 
 type SanitizingHandler struct {
-	next   slog.Handler
-	groups []string
+	next         slog.Handler
+	groups       []string
+	hasRequestID bool
 }
 
 func NewSanitizingHandler(next slog.Handler) *SanitizingHandler {
@@ -357,10 +368,15 @@ func (h *SanitizingHandler) Enabled(ctx context.Context, level slog.Level) bool 
 
 func (h *SanitizingHandler) Handle(ctx context.Context, r slog.Record) error {
 	newRecord := slog.NewRecord(r.Time, r.Level, r.Message, r.PC)
+	hasRequestID := h.hasRequestID
 	r.Attrs(func(a slog.Attr) bool {
+		hasRequestID = hasRequestID || a.Key == requestIDKey
 		newRecord.AddAttrs(RedactSensitiveSlogAttrs(h.groups, a))
 		return true
 	})
+	if id := requestid.Get(ctx); id != "" && !hasRequestID {
+		newRecord.AddAttrs(slog.String(requestIDKey, id))
+	}
 	if err := h.next.Handle(ctx, newRecord); err != nil {
 		return fmt.Errorf("handle sanitized record: %w", err)
 	}
@@ -369,13 +385,15 @@ func (h *SanitizingHandler) Handle(ctx context.Context, r slog.Record) error {
 
 func (h *SanitizingHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	sanitized := make([]slog.Attr, len(attrs))
+	hasRequestID := h.hasRequestID
 	for i, a := range attrs {
+		hasRequestID = hasRequestID || a.Key == requestIDKey
 		sanitized[i] = RedactSensitiveSlogAttrs(h.groups, a)
 	}
-	return &SanitizingHandler{next: h.next.WithAttrs(sanitized), groups: h.groups}
+	return &SanitizingHandler{next: h.next.WithAttrs(sanitized), groups: h.groups, hasRequestID: hasRequestID}
 }
 
 func (h *SanitizingHandler) WithGroup(name string) slog.Handler {
 	groups := append(append([]string(nil), h.groups...), name)
-	return &SanitizingHandler{next: h.next.WithGroup(name), groups: groups}
+	return &SanitizingHandler{next: h.next.WithGroup(name), groups: groups, hasRequestID: h.hasRequestID}
 }

@@ -99,7 +99,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmo
 	}
 
 	if err := uc.eventPublisher.PublishQueued(ctx, submissionID, meta); err != nil {
-		logger.Error("failed to publish queued event", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))
+		logger.Error("failed to publish queued event", "operation", "judge_submission", "error", err)
 	}
 
 	if submission.ProblemID == nil {
@@ -119,7 +119,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmo
 	defer pkg.Release()
 
 	if err := uc.eventPublisher.PublishCompilingStarted(ctx, submissionID, meta); err != nil {
-		logger.Error("failed to publish compiling started event", "operation", "judge_submission", "error_type", fmt.Sprintf("%T", err))
+		logger.Error("failed to publish compiling started event", "operation", "judge_submission", "error", err)
 	}
 
 	verdict, err := uc.executor.Judge(ctx, pkg, submissionID, submission.Submission, submission.Language, uc.eventPublisher, meta)
@@ -152,7 +152,7 @@ func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmo
 }
 
 func (uc *JudgeUseCase) markInternalError(ctx context.Context, job judgingmodel.Job, cause error) error {
-	uc.logger.ErrorContext(ctx, "judging terminal failure", "job_id", job.ID, "error_type", fmt.Sprintf("%T", cause))
+	uc.logger.ErrorContext(ctx, "judging terminal failure", "job_id", job.ID, "submission_id", job.SubmissionID, "error", cause)
 	return uc.applyJudgeResult(ctx, job, &submissionsmodel.SubmissionUpdate{State: submissionsmodel.GotIE})
 }
 

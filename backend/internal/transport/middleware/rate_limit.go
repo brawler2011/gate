@@ -1,16 +1,16 @@
 package middleware
 
 import (
-	"log/slog"
 	"net/http"
 	"time"
 
+	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/brawler2011/gate/backend/internal/ratelimit"
 )
 
 // Run after UsersMiddleware so authenticated quotas follow users across connections.
-func RateLimit(limiter *ratelimit.Limiter, trustedProxy string) func(http.Handler) http.Handler {
+func RateLimit(limiter *ratelimit.Limiter, trustedProxy string, onError corev1.ErrorHandler) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user := accessmodel.UserFromContext(r.Context())
@@ -23,7 +23,7 @@ func RateLimit(limiter *ratelimit.Limiter, trustedProxy string) func(http.Handle
 				err = limiter.Allow(r.Context(), "rl:sub:"+user.Id.String(), ratelimit.SubmissionQuotas...)
 			}
 			if err != nil {
-				ResponseErrorHandler(slog.Default())(r.Context(), w, r, err)
+				onError(r.Context(), w, r, err)
 				return
 			}
 			next.ServeHTTP(w, r)

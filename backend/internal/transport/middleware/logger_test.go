@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/logging"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
 	"github.com/gorilla/websocket"
@@ -60,20 +62,74 @@ func TestRequestCompletion(t *testing.T) {
 	}
 }
 
-func TestErrorResponseUsesContextIDWithoutLoggingErrorObjects(t *testing.T) {
+func TestErrorResponse(t *testing.T) {
+	internalErr := pkg.Wrap(pkg.ErrInternal, errors.New("pg: relation missing"), "unexpected postgres error")
+	for _, tc := range []struct {
+		name    string
+		err     error
+		cancel  bool
+		status  int
+		message string
+		level   string
+	}{
+		{"internal error is logged but hidden", internalErr, false, 500, "internal server error", "ERROR"},
+		{"raw error is logged but hidden", errors.New("open /tmp/x: permission denied"), false, 500, "internal server error", "ERROR"},
+		{"client error message is public", pkg.Wrap(pkg.ErrBadInput, nil, "empty title"), false, 400, "empty title", "WARN"},
+		{"client disconnect", fmt.Errorf("query: %w", context.Canceled), true, 499, "", "INFO"},
+		{"server-side cancellation", fmt.Errorf("query: %w", context.Canceled), false, 500, "internal server error", "ERROR"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			logger := logging.New(&buf)
+			h := RequestLoggerMiddleware(logger, func(*http.Request) string { return "/x" })(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				logger.InfoContext(r.Context(), "inside")
+				ctx := r.Context()
+				if tc.cancel {
+					cctx, cancel := context.WithCancel(ctx)
+					cancel()
+					r = r.WithContext(cctx)
+				}
+				ResponseErrorHandler(logger)(r.Context(), w, r, tc.err)
+			}))
+			rr := httptest.NewRecorder()
+			h.ServeHTTP(rr, httptest.NewRequest("GET", "/x", nil))
+			require.Equal(t, tc.status, rr.Code)
+			lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+			require.Len(t, lines, 2)
+			var inside, record map[string]any
+			require.NoError(t, json.Unmarshal([]byte(lines[0]), &inside))
+			require.NoError(t, json.Unmarshal([]byte(lines[1]), &record))
+			id := rr.Header().Get(requestid.Header)
+			require.Equal(t, id, inside["request_id"])
+			require.Equal(t, id, record["request_id"])
+			require.Equal(t, tc.err.Error(), record["error"])
+			require.Equal(t, tc.level, record["level"])
+			if tc.status == 499 {
+				require.Empty(t, rr.Body.String())
+				return
+			}
+			var body errorResponse
+			require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+			require.Equal(t, tc.message, body.Msg)
+			require.Equal(t, id, body.RequestID)
+		})
+	}
+}
+
+func TestErrorAfterResponseStarted(t *testing.T) {
 	var buf bytes.Buffer
 	logger := logging.New(&buf)
-	h := RequestLoggerMiddleware(logger, func(*http.Request) string { return "unmatched" })(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ResponseErrorHandler(logger)(r.Context(), w, r, errors.New("query-secret Bearer password-secret"))
+	h := RequestLoggerMiddleware(logger, func(*http.Request) string { return "/x" })(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("partial"))
+		ResponseErrorHandler(logger)(r.Context(), w, r, errors.New("s3 read failed"))
 	}))
 	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, httptest.NewRequest("GET", "/secret?password=secret", nil))
-	var body errorResponse
-	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
-	require.Equal(t, rr.Header().Get(requestid.Header), body.RequestID)
-	require.NotContains(t, buf.String(), "password-secret")
-	require.NotContains(t, buf.String(), "query-secret")
-	require.Equal(t, 1, strings.Count(buf.String(), `"event":"http_request_completed"`))
+	h.ServeHTTP(rr, httptest.NewRequest("GET", "/x", nil))
+	require.Equal(t, "partial", rr.Body.String())
+	var record map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &record))
+	require.InDelta(t, 200, record["status"], 0)
+	require.Equal(t, "s3 read failed", record["error"])
 }
 
 func TestRequestLoggerStreaming(t *testing.T) {
@@ -155,7 +211,7 @@ func TestRequestIDDetachedContext(t *testing.T) {
 	require.Equal(t, "request-123", requestid.Get(context.WithoutCancel(ctx)))
 }
 
-func TestRequestLoggerPanicCompletion(t *testing.T) {
+func TestRequestLoggerPanic(t *testing.T) {
 	for _, status := range []int{0, http.StatusAccepted} {
 		t.Run(http.StatusText(status), func(t *testing.T) {
 			var buf bytes.Buffer
@@ -163,20 +219,21 @@ func TestRequestLoggerPanicCompletion(t *testing.T) {
 				if status != 0 {
 					w.WriteHeader(status)
 				}
-				panic("panic-secret")
+				panic("boom")
 			}))
-			require.PanicsWithValue(t, "panic-secret", func() {
-				h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/path-secret?token=query-secret", nil))
-			})
-			require.Equal(t, 1, strings.Count(buf.String(), "\n"))
-			var record map[string]interface{}
-			require.NoError(t, json.Unmarshal(buf.Bytes(), &record))
+			rr := httptest.NewRecorder()
+			h.ServeHTTP(rr, httptest.NewRequest("GET", "/path-secret?token=query-secret", nil))
 			expected := status
 			if expected == 0 {
 				expected = http.StatusInternalServerError
 			}
+			require.Equal(t, expected, rr.Code)
+			require.Equal(t, 1, strings.Count(buf.String(), "\n"))
+			var record map[string]interface{}
+			require.NoError(t, json.Unmarshal(buf.Bytes(), &record))
 			require.InDelta(t, expected, record["status"], 0)
-			require.Equal(t, "http_request_completed", record["event"])
+			require.Equal(t, "boom", record["panic"])
+			require.Contains(t, record["stack"], "logger_test.go")
 			require.NotContains(t, buf.String(), "secret")
 		})
 	}
