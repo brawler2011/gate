@@ -150,7 +150,7 @@ func TestPipelineLargeIncompressibleTestsKeepHeapBounded(t *testing.T) {
 			Answer: model.DraftAnswer{Mode: "provided"},
 		}, perFile)
 	}
-		h.options.Lease = 10 * time.Minute
+	h.options.Lease = 10 * time.Minute
 	build := h.enqueueAndClaim(t)
 
 	runtime.GC()
@@ -234,7 +234,7 @@ func (h *pipelineHarness) generatorBuild(t *testing.T, script string) {
 	h.save(t, func(d *model.Draft) {
 		d.Checker = checker("cpp17", acceptEverythingChecker)
 		d.Generators = []model.DraftNamedProgram{named(generator, "python3", script)}
-		d.Solutions = []model.DraftNamedProgram{named(solution, "python3", "print(1)\n")}
+		d.Solutions = []model.DraftSolution{solutionProgram(solution, "python3", "print(1)\n")}
 		d.MainSolution = &solution
 		d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Name: "All", Policy: "each"}}
 		d.Tests = []model.DraftTest{{ID: uuid.New(), Ordinal: 1, SubtaskID: subtask, Points: 1,

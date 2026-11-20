@@ -138,6 +138,14 @@ func program(source string, headers []spec.File) spec.Program {
 	return spec.Program{File: spec.File{Name: path.Base(source), Path: source}, Dependencies: deps}
 }
 
+// Solutions in other folders are kept out of the build.
+var folderVerdicts = map[string][]string{
+	"accepted":            {"OK"},
+	"wrong_answer":        {"WA"},
+	"time_limit_exceeded": {"TLE"},
+	"run_time_error":      {"RE"},
+}
+
 func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error)) ([]spec.Program, string, error) {
 	verdicts, err := fs.ReadDir(fsys, "submissions")
 	if errors.Is(err, fs.ErrNotExist) {
@@ -155,6 +163,9 @@ func submissions(fsys fs.FS, collect func(string) ([]spec.Program, error)) ([]sp
 		list, err := collect(path.Join("submissions", verdict.Name()))
 		if err != nil {
 			return nil, "", err
+		}
+		for i := range list {
+			list[i].Verdicts = folderVerdicts[verdict.Name()]
 		}
 		if verdict.Name() == "accepted" && len(list) > 0 {
 			main = list[0].Path

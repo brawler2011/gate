@@ -66,6 +66,11 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		if err != nil {
 			return nil, err
 		}
+		verdicts, ok := tagVerdicts[strings.ToLower(s.Tag)]
+		if !ok {
+			return nil, fmt.Errorf("solution %s has unknown tag %q", s.Source.Path, s.Tag)
+		}
+		solution.Verdicts = verdicts
 		p.Solutions = append(p.Solutions, *solution)
 	}
 	p.MainSolution = mainSolution(assets.Solutions)
@@ -169,6 +174,20 @@ func Language(sourceType string) (string, error) {
 		return "node", nil
 	}
 	return "", fmt.Errorf("unsupported Polygon source type %q", sourceType)
+}
+
+var tagVerdicts = map[string][]string{
+	"main":                            {"OK"},
+	"accepted":                        {"OK"},
+	"rejected":                        {"WA", "PE", "TLE", "MLE", "OLE", "RE"},
+	"wrong-answer":                    {"WA"},
+	"presentation-error":              {"PE"},
+	"time-limit-exceeded":             {"TLE"},
+	"time-limit-exceeded-or-accepted": {"TLE", "OK"},
+	"time-limit-exceeded-or-memory-limit-exceeded": {"TLE", "MLE"},
+	"memory-limit-exceeded":                        {"MLE"},
+	"failed":                                       {"FAIL"},
+	"do-not-run":                                   {},
 }
 
 func mainSolution(solutions []Solution) string {

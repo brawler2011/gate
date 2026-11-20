@@ -141,6 +141,38 @@ func TestImportMapsPolygonStandardChecker(t *testing.T) {
 	require.Equal(t, &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17", Source: string(source)}}, plan.draft.Checker)
 }
 
+
+// Polygon tags and gfmt verdicts become expected verdicts; do-not-run and unlisted solutions do not run.
+func TestImportKeepsExpectedVerdicts(t *testing.T) {
+	const pkgDir = "../../pkg/testdata/polygon/a-plus-b"
+	manifest, err := os.ReadFile(pkgDir + "/problem.xml")
+	require.NoError(t, err)
+	xml := string(manifest)
+	for _, tag := range []string{"rejected", "time-limit-exceeded-or-accepted", "do-not-run", "failed"} {
+		xml = strings.Replace(xml, `tag="accepted"`, `tag="`+tag+`"`, 1)
+	}
+	plan, err := importDir(t, pkgDir, map[string]string{"problem.xml": xml})
+	require.NoError(t, err)
+	defer plan.Close()
+	verdicts := [][]string{}
+	for _, s := range plan.draft.Solutions {
+		verdicts = append(verdicts, s.Verdicts)
+	}
+	require.Equal(t, [][]string{{"WA", "PE", "TLE", "MLE", "OLE", "RE"}, {"TLE", "OK"}, {}, {"FAIL"}, {"OK"}, {"OK"}}, verdicts)
+
+	plan, err = importDir(t, "../../pkg/testdata/gfmt/a-plus-b", map[string]string{"solutions/extra.py": "pass\n"})
+	require.NoError(t, err)
+	defer plan.Close()
+	byName := map[string][]string{}
+	for _, s := range plan.draft.Solutions {
+		byName[s.Name+"."+s.Language] = s.Verdicts
+	}
+	require.Equal(t, []string{"CE"}, byName["ce.cpp17"])
+	require.Equal(t, []string{"WA"}, byName["wa-2.python3"])
+	require.Equal(t, []string{}, byName["extra.python3"])
+	require.NoError(t, plan.draft.Validate(importQuotas, nil))
+}
+
 func TestImportKeepsMainSolutionAcrossNameClash(t *testing.T) {
 	plan, err := importDir(t, unpack(t, "polygon-solution-name-clash"), nil)
 	require.NoError(t, err)

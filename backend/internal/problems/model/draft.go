@@ -35,7 +35,7 @@ type DraftContent struct {
 	Interactor   *DraftProgram       `json:"interactor"`
 	Validators   []DraftValidator    `json:"validators"`
 	Generators   []DraftNamedProgram `json:"generators"`
-	Solutions    []DraftNamedProgram `json:"solutions"`
+	Solutions    []DraftSolution     `json:"solutions"`
 	MainSolution *string             `json:"main_solution"`
 	Library      []DraftLibraryFile  `json:"library"`
 	Statements   []DraftStatement    `json:"statements"`
@@ -109,8 +109,8 @@ type DraftAsset struct {
 }
 
 type DraftSubtask struct {
-	ID        uuid.UUID    `json:"id"`
-	Ordinal   int          `json:"ordinal"`
+	ID      uuid.UUID `json:"id"`
+	Ordinal int       `json:"ordinal"`
 	// Validators get --group with a non-empty name, as Polygon passes it only for grouped tests.
 	Name      string       `json:"name"`
 	Points    points.Value `json:"points"`
@@ -219,7 +219,14 @@ func findProgram(list []DraftNamedProgram, name string) *DraftNamedProgram {
 
 func (d *Draft) Generator(name string) *DraftNamedProgram { return findProgram(d.Generators, name) }
 
-func (d *Draft) Solution(name string) *DraftNamedProgram { return findProgram(d.Solutions, name) }
+func (d *Draft) Solution(name string) *DraftSolution {
+	for i := range d.Solutions {
+		if d.Solutions[i].Name == name {
+			return &d.Solutions[i]
+		}
+	}
+	return nil
+}
 
 func (d *Draft) Subtask(id uuid.UUID) *DraftSubtask {
 	for i := range d.Subtasks {
@@ -234,6 +241,14 @@ func (d *Draft) ValidatorPrograms() []DraftNamedProgram {
 	programs := make([]DraftNamedProgram, len(d.Validators))
 	for i := range d.Validators {
 		programs[i] = d.Validators[i].DraftNamedProgram
+	}
+	return programs
+}
+
+func (d *Draft) SolutionPrograms() []DraftNamedProgram {
+	programs := make([]DraftNamedProgram, len(d.Solutions))
+	for i := range d.Solutions {
+		programs[i] = d.Solutions[i].DraftNamedProgram
 	}
 	return programs
 }
@@ -254,7 +269,14 @@ func (d *Draft) Normalize() {
 		}
 	}
 	empty(&d.Generators)
-	empty(&d.Solutions)
+	if d.Solutions == nil {
+		d.Solutions = []DraftSolution{}
+	}
+	for i := range d.Solutions {
+		if d.Solutions[i].Verdicts == nil {
+			d.Solutions[i].Verdicts = []string{}
+		}
+	}
 	if d.Library == nil {
 		d.Library = []DraftLibraryFile{}
 	}
@@ -454,7 +476,7 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	for _, list := range []struct {
 		role     string
 		programs []DraftNamedProgram
-	}{{"validators", d.ValidatorPrograms()}, {"generators", d.Generators}, {"solutions", d.Solutions}} {
+	}{{"validators", d.ValidatorPrograms()}, {"generators", d.Generators}, {"solutions", d.SolutionPrograms()}} {
 		names := make(map[string]bool)
 		for i, p := range list.programs {
 			at := fmt.Sprintf("/%s/%d", list.role, i)
@@ -472,6 +494,19 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 				v.fail(fmt.Sprintf("/validators/%d/subtasks/%d", i, j), "unknown or duplicate subtask")
 			}
 			seen[id] = true
+		}
+	}
+	for i, s := range d.Solutions {
+		at := fmt.Sprintf("/solutions/%d", i)
+		seen := make(map[string]bool)
+		for j, verdict := range s.Verdicts {
+			if !slices.Contains(SolutionVerdicts, verdict) || seen[verdict] {
+				v.fail(fmt.Sprintf("%s/verdicts/%d", at, j), "unknown or duplicate verdict %q", verdict)
+			}
+			seen[verdict] = true
+		}
+		if s.Points != nil && (d.Type != "scoring" || len(s.Verdicts) == 0 || *s.Points < 0 || *s.Points > points.Max) {
+			v.fail(at+"/points", "expected points need a scoring problem, a solution that runs and a valid score")
 		}
 	}
 	if d.MainSolution != nil && d.Solution(*d.MainSolution) == nil {
@@ -656,7 +691,7 @@ func (d *Draft) eachProgram(f func(at string, p DraftProgram)) {
 	for _, list := range []struct {
 		role     string
 		programs []DraftNamedProgram
-	}{{"validators", d.ValidatorPrograms()}, {"generators", d.Generators}, {"solutions", d.Solutions}} {
+	}{{"validators", d.ValidatorPrograms()}, {"generators", d.Generators}, {"solutions", d.SolutionPrograms()}} {
 		for i, p := range list.programs {
 			f(fmt.Sprintf("/%s/%d", list.role, i), p.DraftProgram)
 		}

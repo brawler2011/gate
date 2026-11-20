@@ -9,7 +9,7 @@ in the draft, and the solution tagged main stays the main solution.
     <tests><test method="manual"/></tests>
   </testset></judging>
   <assets><solutions>
-    <solution tag="wrong_answer"><source path="wrong/main.cpp"/></solution>
+    <solution tag="wrong-answer"><source path="wrong/main.cpp"/></solution>
     <solution tag="main"><source path="correct/main.cpp"/></solution>
   </solutions></assets>
 </problem>

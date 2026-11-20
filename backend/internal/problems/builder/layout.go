@@ -41,7 +41,7 @@ func placeDraft(d model.Draft, languages *sandbox.Config) packageLayout {
 	for _, list := range []struct {
 		role     string
 		programs []model.DraftNamedProgram
-	}{{"validator", d.ValidatorPrograms()}, {"generator", d.Generators}, {"solution", d.Solutions}} {
+	}{{"validator", d.ValidatorPrograms()}, {"generator", d.Generators}, {"solution", d.SolutionPrograms()}} {
 		for _, p := range list.programs {
 			place(programKey(list.role, p.Name), list.role, p.Name, p.DraftProgram)
 		}
@@ -57,15 +57,6 @@ func placeDraft(d model.Draft, languages *sandbox.Config) packageLayout {
 		l.assets[gfmt.AssetFolder+"/"+a.Name] = a.ObjectID
 	}
 	return l
-}
-
-func (l packageLayout) program(key string) *placedProgram {
-	for i := range l.programs {
-		if l.programs[i].key == key {
-			return &l.programs[i]
-		}
-	}
-	return nil
 }
 
 // Unknown languages retain their identifiers and fail at compilation.

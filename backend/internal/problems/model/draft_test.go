@@ -17,7 +17,7 @@ func validDraft() Draft {
 		DraftContent: DraftContent{
 			Checker:      &DraftChecker{DraftProgram: DraftProgram{Language: "cpp"}},
 			Generators:   []DraftNamedProgram{{Name: gen, DraftProgram: DraftProgram{Language: "python"}}},
-			Solutions:    []DraftNamedProgram{{Name: sol, DraftProgram: DraftProgram{Language: "cpp"}}},
+			Solutions:    []DraftSolution{{DraftNamedProgram: DraftNamedProgram{Name: sol, DraftProgram: DraftProgram{Language: "cpp"}}, Verdicts: []string{"OK"}}},
 			MainSolution: &sol,
 			Library:      []DraftLibraryFile{{Name: "testlib.h"}},
 			Statements:   []DraftStatement{{Language: "en", Legend: "![graph](graph.png)"}},

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brawler2011/gate/backend/internal/judging"
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg/bytesize"
 	"github.com/brawler2011/gate/backend/pkg/formats/gfmt"
@@ -33,14 +34,15 @@ type BuildRepository interface {
 	BuildInputObjects(context.Context, uuid.UUID) ([]model.StoredObject, error)
 	PublishBuild(context.Context, uuid.UUID, uuid.UUID, model.StoredObject, []model.Sample) (uuid.UUID, error)
 	FinishBuildAttempt(context.Context, uuid.UUID, uuid.UUID, json.RawMessage, bool) error
+	RecordBuildSolutions(context.Context, uuid.UUID, uuid.UUID, []model.SolutionResult) error
 }
 type Pipeline struct {
-	Repo    BuildRepository
-	Store   ObjectStore
-	Bucket  string
-	TempDir string
-	Client  *sandbox.Client
-	Files   *sandbox.FileTransport
+	Repo      BuildRepository
+	Store     ObjectStore
+	Bucket    string
+	TempDir   string
+	Client    *sandbox.Client
+	Files     *sandbox.FileTransport
 	Languages *sandbox.Config
 	Programs  *sandbox.ProgramCache
 	Logger    *slog.Logger
@@ -92,6 +94,10 @@ type execution struct {
 	compiled map[string]compilation
 	manifest *gfmt.Problem
 	samples  []model.Sample
+	// Test results of the solutions that run, by name.
+	solutions map[string][]judging.TestResult
+	// Solutions that run only to be judged report compilation errors as their verdict.
+	uncompiled map[string]bool
 }
 
 func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID, error) {
@@ -124,7 +130,7 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 	if err := os.Mkdir(tree, 0700); err != nil {
 		return uuid.Nil, fmt.Errorf("mkdir: %w", err)
 	}
-	e := &execution{pipeline: p, build: b, dir: &directory{root: tree, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, p.Languages), layout: placeDraft(s.Draft, p.Languages), compiled: make(map[string]compilation), samples: []model.Sample{}}
+	e := &execution{pipeline: p, build: b, dir: &directory{root: tree, remaining: int64(s.Limits.DiskBytes), maxFiles: s.Limits.FileCount}, sandbox: sandbox.NewSandbox(p.Client, p.Languages), layout: placeDraft(s.Draft, p.Languages), compiled: make(map[string]compilation), samples: []model.Sample{}, solutions: map[string][]judging.TestResult{}, uncompiled: map[string]bool{}}
 	defer e.releaseComponents()
 	if err := e.materialize(ctx); err != nil {
 		return uuid.Nil, fail("materialize", 0, "infrastructure", err)
@@ -137,6 +143,9 @@ func (p *Pipeline) Execute(ctx context.Context, b model.ProblemBuild) (uuid.UUID
 		if err := e.test(ctx, test); err != nil {
 			return uuid.Nil, err
 		}
+	}
+	if err := e.checkSolutions(ctx); err != nil {
+		return uuid.Nil, err
 	}
 	data, err := yaml.Marshal(e.manifest)
 	if err != nil {
@@ -242,18 +251,13 @@ func (e *execution) materialize(ctx context.Context) error {
 func (e *execution) makeManifest() {
 	s := e.build.Snapshot
 	d := s.Draft
-	m := &gfmt.Problem{FormatVersion: "2", Title: d.Title, Type: d.Type, MaxScore: d.MaxScore, Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb}, Programs: map[string]gfmt.Program{}, Subtasks: map[string]gfmt.Subtask{}, Solutions: map[string]string{}}
+	m := &gfmt.Problem{FormatVersion: "2", Title: d.Title, Type: d.Type, MaxScore: d.MaxScore, Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb}, Programs: map[string]gfmt.Program{}, Subtasks: map[string]gfmt.Subtask{}}
 	for _, g := range d.Subtasks {
 		deps := []string{}
 		for _, id := range g.DependsOn {
 			deps = append(deps, id.String())
 		}
 		m.Subtasks[g.ID.String()] = gfmt.Subtask{Ordinal: g.Ordinal, Points: g.Points, Policy: g.Policy, Dependencies: deps, Tests: []gfmt.Test{}}
-	}
-	if d.MainSolution != nil {
-		if p := e.layout.program(programKey("solution", *d.MainSolution)); p != nil {
-			m.Solutions["main"] = filepath.Base(p.path)
-		}
 	}
 	e.manifest = m
 }
@@ -309,8 +313,14 @@ func (e *execution) compile(ctx context.Context) error {
 			required[programKey("solution", *test.Answer.Solution)] = true
 		}
 	}
+	judged := map[string]bool{}
+	for _, s := range d.Solutions {
+		if key := programKey("solution", s.Name); s.Runs() && !required[key] {
+			judged[key] = true
+		}
+	}
 	for _, p := range e.layout.programs {
-		if !required[p.key] {
+		if !required[p.key] && !judged[p.key] {
 			continue
 		}
 		// Judge programs compile with the whole library; solutions alone.
@@ -321,6 +331,10 @@ func (e *execution) compile(ctx context.Context) error {
 			}
 		}
 		compiled, err := e.pipeline.Programs.Get(ctx, sandbox.Program{Source: []byte(p.program.Source), Language: p.program.Language, Deps: deps}, s.Limits.Compile)
+		if err != nil && judged[p.key] && processKind(err) == "author" {
+			e.uncompiled[strings.TrimPrefix(p.key, "solution/")] = true
+			continue
+		}
 		if err != nil {
 			return fail("compile", 0, processKind(err), fmt.Errorf("%s: %w", p.path, err))
 		}
@@ -462,6 +476,16 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 			return fail("check", test.Ordinal, string(result.Status), errors.New(result.Message))
 		}
 	}
+	for _, sol := range s.Draft.Solutions {
+		if !sol.Runs() || e.uncompiled[sol.Name] {
+			continue
+		}
+		result, err := e.judge(ctx, sol.Name, test.Ordinal, inputID, answerID)
+		if err != nil {
+			return fail("solutions", test.Ordinal, "infrastructure", fmt.Errorf("solution %s: %w", sol.Name, err))
+		}
+		e.solutions[sol.Name] = append(e.solutions[sol.Name], result)
+	}
 	if test.Sample {
 		sampleAnswer := answerPath
 		if s.Draft.Type == "interactive" {
@@ -474,6 +498,80 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 	group := e.manifest.Subtasks[test.SubtaskID.String()]
 	group.Tests = append(group.Tests, gfmt.Test{Ordinal: test.Ordinal, Points: test.Points, Manual: inputPath, Answer: answerPath, AnswerMode: test.Answer.Mode, Sample: test.Sample})
 	e.manifest.Subtasks[test.SubtaskID.String()] = group
+	return nil
+}
+
+// judge runs a solution on a test as the judge runs submissions.
+func (e *execution) judge(ctx context.Context, name string, ordinal int, inputID, answerID string) (judging.TestResult, error) {
+	s := e.build.Snapshot
+	aux := s.Limits.Auxiliary
+	sol := e.compiled[programKey("solution", name)]
+	result := judging.TestResult{TestNumber: ordinal}
+	var outputID string
+	if s.Draft.Type == "interactive" {
+		intr := e.compiled["interactor"]
+		r, err := e.sandbox.InteractFiles(ctx, sol.executable, sol.language, intr.executable, intr.language, sandbox.FileID(inputID), sandbox.FileID(answerID), e.solutionLimits(), aux)
+		if err != nil {
+			return result, err
+		}
+		defer e.release(r.OutputID)
+		outputID, result.Verdict, result.Time = r.OutputID, string(r.Status), r.SolutionResult.Time.Nanoseconds()
+	} else {
+		r, err := e.sandbox.RunFiles(ctx, sol.executable, sol.language, sandbox.FileID(inputID), nil, nil, e.solutionLimits())
+		if err != nil {
+			return result, err
+		}
+		defer e.release(r.OutputID)
+		outputID, result.Verdict, result.Time = r.OutputID, string(r.Status), r.Time.Nanoseconds()
+	}
+	if s.Draft.Checker != nil && result.Verdict == string(sandbox.StatusOK) {
+		checker := e.compiled["checker"]
+		r, err := e.sandbox.CheckFiles(ctx, checker.executable, checker.language, sandbox.FileID(inputID), sandbox.FileID(outputID), sandbox.FileID(answerID), aux)
+		if err != nil {
+			return result, err
+		}
+		result.Verdict = string(r.Status)
+	}
+	return result, nil
+}
+
+// checkSolutions records what every solution got and fails the build when one misses its expectation.
+func (e *execution) checkSolutions(ctx context.Context) error {
+	d := e.build.Snapshot.Draft
+	results := []model.SolutionResult{}
+	mismatches := []string{}
+	for _, sol := range d.Solutions {
+		if !sol.Runs() {
+			continue
+		}
+		tests := e.solutions[sol.Name]
+		result := model.SolutionResult{Name: sol.Name, Verdict: string(sandbox.StatusOK)}
+		verdicts := make([]model.TestVerdict, len(tests))
+		for i, t := range tests {
+			verdicts[i] = model.TestVerdict{Ordinal: t.TestNumber, Verdict: t.Verdict}
+			result.TimeMs = max(result.TimeMs, t.Time/int64(time.Millisecond))
+			if result.Test == nil && t.Verdict != string(sandbox.StatusOK) {
+				result.Verdict, result.Test = t.Verdict, &t.TestNumber
+			}
+		}
+		if e.uncompiled[sol.Name] {
+			result.Verdict = string(sandbox.StatusCE)
+		} else if d.Type == "scoring" {
+			score := judging.NewVerdictCalculator(d.Type, e.manifest).Calculate(tests).Score
+			result.Points = &score
+		}
+		result.Mismatch = sol.Mismatch(!e.uncompiled[sol.Name], verdicts, result.Points)
+		if result.Mismatch != "" {
+			mismatches = append(mismatches, fmt.Sprintf("solution %s: %s", sol.Name, result.Mismatch))
+		}
+		results = append(results, result)
+	}
+	if err := e.pipeline.Repo.RecordBuildSolutions(ctx, e.build.ID, *e.build.LeaseToken, results); err != nil {
+		return fail("solutions", 0, "infrastructure", err)
+	}
+	if len(mismatches) > 0 {
+		return fail("solutions", 0, "author", errors.New(strings.Join(mismatches, "\n")))
+	}
 	return nil
 }
 

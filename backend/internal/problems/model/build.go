@@ -31,20 +31,21 @@ type MutationResult struct {
 }
 
 type ProblemBuild struct {
-	ID             uuid.UUID       `json:"id"`
-	ProblemID      uuid.UUID       `json:"problem_id"`
-	OrganizationID uuid.UUID       `json:"organization_id"`
-	Revision       int64           `json:"revision"`
-	Snapshot       BuildSnapshot   `json:"-"`
-	State          string          `json:"state"`
-	Attempt        int             `json:"attempt"`
-	MaxAttempts    int             `json:"max_attempts"`
-	LeaseToken     *uuid.UUID      `json:"-"`
-	LeaseDeadline  *time.Time      `json:"-"`
-	Deadline       time.Time       `json:"deadline"`
-	CreatedAt      time.Time       `json:"created_at"`
-	FinishedAt     *time.Time      `json:"finished_at"`
-	Diagnostic     json.RawMessage `json:"diagnostic"`
+	ID             uuid.UUID        `json:"id"`
+	ProblemID      uuid.UUID        `json:"problem_id"`
+	OrganizationID uuid.UUID        `json:"organization_id"`
+	Revision       int64            `json:"revision"`
+	Snapshot       BuildSnapshot    `json:"-"`
+	State          string           `json:"state"`
+	Attempt        int              `json:"attempt"`
+	MaxAttempts    int              `json:"max_attempts"`
+	LeaseToken     *uuid.UUID       `json:"-"`
+	LeaseDeadline  *time.Time       `json:"-"`
+	Deadline       time.Time        `json:"deadline"`
+	CreatedAt      time.Time        `json:"created_at"`
+	FinishedAt     *time.Time       `json:"finished_at"`
+	Diagnostic     json.RawMessage  `json:"diagnostic"`
+	Solutions      []SolutionResult `json:"solutions"`
 }
 
 type StoredObject struct {

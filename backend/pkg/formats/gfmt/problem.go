@@ -22,7 +22,9 @@ type Problem struct {
 	Type          string             `yaml:"type" json:"type"` // "pass-fail", "interactive", "scoring"
 	Limits        Limits             `yaml:"limits" json:"limits"`
 	Subtasks      map[string]Subtask `yaml:"subtasks" json:"subtasks"`
-	Solutions     map[string]string  `yaml:"solutions" json:"solutions"`
+	// MainSolution names the solutions/ file whose output answers tests without an answer.
+	MainSolution string                 `yaml:"main_solution,omitempty" json:"main_solution,omitempty"`
+	Solutions    map[string]Expectation `yaml:"solutions,omitempty" json:"solutions,omitempty"`
 	// System library files have no package copy; Gate provides them under lib/ names.
 	SystemLibrary []string `yaml:"system_library,omitempty" json:"system_library,omitempty"`
 }

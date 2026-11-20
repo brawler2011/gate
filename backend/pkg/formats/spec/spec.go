@@ -51,6 +51,10 @@ type Program struct {
 	Standard string
 	// Groups limits a validator to the tests of these groups; empty means every test.
 	Groups []string
+	// Verdicts a solution may get on a test; empty keeps it out of the build (see problemsmodel.DraftSolution).
+	Verdicts []string
+	// Points is the score a solution of a scoring problem is expected to get.
+	Points *points.Value
 }
 
 // Statements contain either one LaTeX file or Markdown files per section.

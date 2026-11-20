@@ -80,7 +80,7 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	generator, solution, validator, subtask := "gen", "main", "validate", uuid.New()
 	d.Checker = checker("cpp17", "#include <fstream>\nint main(int n,char**v){long long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}")
 	d.Generators = []model.DraftNamedProgram{named(generator, "python3", "import sys\nprint(sys.argv[1], sys.argv[2])\n")}
-	d.Solutions = []model.DraftNamedProgram{named(solution, "cpp17", "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}")}
+	d.Solutions = []model.DraftSolution{solutionProgram(solution, "cpp17", "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}")}
 	d.Validators = []model.DraftValidator{{DraftNamedProgram: named(validator, "python3", "import sys\na,b=map(int,sys.stdin.read().split())\nassert a>=0 and b>=0\n")}}
 	d.Statements = []model.DraftStatement{{Language: "en", Legend: "A snapshot statement."}}
 	d.MainSolution = &solution
@@ -125,7 +125,6 @@ func TestProblemPipelineRealServices(t *testing.T) {
 	require.Zero(t, countRows(t, ctx, pool, `SELECT count(*) FROM stored_objects o WHERE o.purpose='package' AND NOT EXISTS(SELECT 1 FROM problem_packages p WHERE p.object_id=o.id)`), "the retry records no second object")
 }
 
-
 // Every validator that applies to a test checks it; a group validator sees only its group; an unnamed subtask passes no --group.
 func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 	t.Parallel()
@@ -135,7 +134,7 @@ func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 	generator, solution, small, large := "gen", "main", uuid.New(), uuid.New()
 	d.Checker = checker("python3", "pass\n")
 	d.Generators = []model.DraftNamedProgram{named(generator, "python3", "import sys\nprint(sys.argv[1], sys.argv[2])\n")}
-	d.Solutions = []model.DraftNamedProgram{named(solution, "python3", "print(sum(map(int, input().split())))\n")}
+	d.Solutions = []model.DraftSolution{solutionProgram(solution, "python3", "print(sum(map(int, input().split())))\n")}
 	d.Validators = []model.DraftValidator{
 		{DraftNamedProgram: named("nonneg", "python3", "import sys\nassert sys.argv[1:] in ([], ['--group', 'small']), sys.argv\na, b = map(int, input().split())\nassert a >= 0 and b >= 0\n")},
 		{DraftNamedProgram: named("small", "python3", "import sys\nassert sys.argv[1:] == ['--group', 'small'], sys.argv\nassert max(map(int, input().split())) < 10\n"), Subtasks: []uuid.UUID{small}},
@@ -145,21 +144,9 @@ func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 	test := func(ordinal int, subtask uuid.UUID, a, b string) model.DraftTest {
 		return model.DraftTest{ID: uuid.New(), Ordinal: ordinal, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &solution}}
 	}
-	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 256 << 20, Processes: 50, Output: 32 << 20, Diagnostic: 4096}
-	limits := model.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: aux, Auxiliary: aux}
-	pipeline := builder.Pipeline{Repo: repo, Store: services.store, Bucket: "objects", TempDir: dbfixtures.DiskTempDir(t), Client: services.client, Files: services.files, Languages: cfg,
-		Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: cfg}), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	build := func(tests ...model.DraftTest) error {
 		d.Tests = tests
-		_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", d), d)
-		require.NoError(t, err)
-		d, err = repo.GetDraft(ctx, d.ProblemID)
-		require.NoError(t, err)
-		_, err = repo.EnqueueBuild(ctx, mutationKey(org, "build", d.Revision), d.ProblemID, d.Revision, postgres.ProblemBuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute})
-		require.NoError(t, err)
-		b, err := repo.ClaimBuild(ctx, time.Minute)
-		require.NoError(t, err)
-		_, err = pipeline.Execute(ctx, b)
+		_, err := buildDraft(t, ctx, repo, org, &d, services, cfg)
 		return err
 	}
 
@@ -172,6 +159,77 @@ func TestProblemPipelineRunsEveryValidator(t *testing.T) {
 		require.Equal(t, 2, failure.Test)
 		require.Contains(t, failure.Message, "validator "+tc.validator+":")
 	}
+}
+
+// buildDraft saves the draft and runs one build of it, returning the build's ID.
+func buildDraft(t *testing.T, ctx context.Context, repo *postgres.ProblemDraftsRepo, org uuid.UUID, d *model.Draft, services pipelineServices, cfg *sandbox.Config) (uuid.UUID, error) {
+	t.Helper()
+	aux := sandbox.FileRunLimits{CPU: 5 * time.Second, Wall: 10 * time.Second, Memory: 256 << 20, Processes: 50, Output: 32 << 20, Diagnostic: 4096}
+	limits := model.BuildLimits{DiskBytes: 256 << 20, FileCount: 100, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: aux, Auxiliary: aux}
+	pipeline := builder.Pipeline{Repo: repo, Store: services.store, Bucket: "objects", TempDir: dbfixtures.DiskTempDir(t), Client: services.client, Files: services.files, Languages: cfg,
+		Programs: sandbox.NewProgramCache(dbfixtures.DiskCache(t), services.client, services.files, sandbox.Image{Config: cfg}), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	_, err := repo.SaveDraft(ctx, mutationKey(org, "edit", *d), *d)
+	require.NoError(t, err)
+	*d, err = repo.GetDraft(ctx, d.ProblemID)
+	require.NoError(t, err)
+	_, err = repo.EnqueueBuild(ctx, mutationKey(org, "build", d.Revision), d.ProblemID, d.Revision, postgres.ProblemBuildOptions{Languages: cfg.Langs, Limits: limits, MaxAttempts: 3, Duration: time.Minute, Lease: time.Minute})
+	require.NoError(t, err)
+	b, err := repo.ClaimBuild(ctx, time.Minute)
+	require.NoError(t, err)
+	_, err = pipeline.Execute(ctx, b)
+	return b.ID, err
+}
+
+// The build judges every solution that runs and fails when one misses its expected verdicts.
+func TestProblemPipelineChecksExpectedVerdicts(t *testing.T) {
+	t.Parallel()
+	ctx, _, repo, org, d := draftFixture(t)
+	services := startPipelineServices(t)
+	cfg := &sandbox.Config{Langs: services.langs}
+	generator, main, subtask := "gen", "main", uuid.New()
+	d.TimeLimitMs = 1000
+	d.Checker = checker("python3", "import sys\nout, ans = (open(f).read().split() for f in sys.argv[2:4])\nsys.exit(0 if out == ans else 1)\n")
+	d.Generators = []model.DraftNamedProgram{named(generator, "python3", "import sys\nprint(sys.argv[1], sys.argv[2])\n")}
+	d.Solutions = []model.DraftSolution{
+		solutionProgram(main, "python3", "print(sum(map(int, input().split())))\n", "OK"),
+		solutionProgram("wrong", "python3", "print(0)\n", "WA"),
+		// Exceeds the time limit on 50 50 only.
+		solutionProgram("slow", "python3", "a, b = map(int, input().split())\nwhile a == 50: pass\nprint(a + b)\n", "TLE", "OK"),
+		solutionProgram("skipped", "cpp17", "not C++"),
+	}
+	d.MainSolution = &main
+	d.Subtasks = []model.DraftSubtask{{ID: subtask, Ordinal: 1, Policy: "complete"}}
+	test := func(ordinal int, a, b string) model.DraftTest {
+		return model.DraftTest{ID: uuid.New(), Ordinal: ordinal, SubtaskID: subtask, Input: model.DraftInput{Mode: "generator", Generator: &generator, Args: []string{a, b}}, Answer: model.DraftAnswer{Mode: "generated", Solution: &main}}
+	}
+
+	for _, slow := range []string{"OK", "TLE"} {
+		d.Tests = []model.DraftTest{test(1, "1", "2"), test(2, "0", "3")}
+		if slow == "TLE" {
+			d.Tests = append(d.Tests, test(3, "50", "50"))
+		}
+		id, err := buildDraft(t, ctx, repo, org, &d, services, cfg)
+		require.NoError(t, err)
+		b, err := repo.GetBuild(ctx, id)
+		require.NoError(t, err)
+		verdicts := map[string]string{}
+		for _, s := range b.Solutions {
+			verdicts[s.Name] = s.Verdict
+		}
+		require.Equal(t, map[string]string{main: "OK", "wrong": "WA", "slow": slow}, verdicts)
+	}
+
+	d.Solutions[1].Source = "print(sum(map(int, input().split())))\n"
+	d.Tests = []model.DraftTest{test(1, "1", "2")}
+	id, err := buildDraft(t, ctx, repo, org, &d, services, cfg)
+	var failure *builder.Failure
+	require.ErrorAs(t, err, &failure)
+	require.Equal(t, "solutions", failure.Stage)
+	require.Equal(t, "solution wrong: passed every test, expected WA", failure.Message)
+	b, err := repo.GetBuild(ctx, id)
+	require.NoError(t, err)
+	require.Len(t, b.Solutions, 3)
+	require.Equal(t, "passed every test, expected WA", b.Solutions[1].Mismatch)
 }
 
 func requireStoredObject(t *testing.T, ctx context.Context, store storage.Storage, bucket, key string, size int64, digest string) {

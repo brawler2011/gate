@@ -738,6 +738,7 @@ type ProblemBuild struct {
 	MaxAttempts    int32      `json:"max_attempts"`
 	Deadline       time.Time  `json:"deadline"`
 	Diagnostic     []byte     `json:"diagnostic"`
+	Solutions      []byte     `json:"solutions"`
 	CreatedAt      time.Time  `json:"created_at"`
 	FinishedAt     *time.Time `json:"finished_at"`
 }

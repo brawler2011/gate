@@ -55,7 +55,7 @@
             <solution tag="main">
                 <source path="solutions/accepted.cpp" type="cpp.g++17"/>
             </solution>
-            <solution tag="wrong_answer">
+            <solution tag="wrong-answer">
                 <source path="solutions/wrong.cpp" type="cpp.g++17"/>
             </solution>
         </solutions>

@@ -3158,7 +3158,7 @@ components:
           type: string
           description: Name of a standard checker from GET /lib, such as wcmp, or empty for the author's own source.
     ProblemDraftNamedProgram:
-      description: A validator, generator or solution; tests and the main solution refer to it by name.
+      description: A generator; tests refer to it by name.
       type: object
       required:
       - name
@@ -3173,6 +3173,78 @@ components:
           description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
         source:
           type: string
+    ProblemDraftSolution:
+      description: A solution; the build judges it on every test unless verdicts is empty.
+      type: object
+      required:
+      - name
+      - language
+      - source
+      - verdicts
+      - points
+      properties:
+        name:
+          type: string
+          description: Unique among the solutions; the program's package file is the name with the extension of its language.
+        language:
+          type: string
+          description: Identifier of the language configuration from GET /languages, such as cpp17 or python3.
+        source:
+          type: string
+        verdicts:
+          type: array
+          description: Verdicts allowed on a test besides OK; unless OK is listed, some test must get one of them, and CE expects a compilation error. Empty keeps the solution out of the build.
+          items:
+            $ref: '#/components/schemas/ProblemSolutionVerdict'
+        points:
+          type: number
+          format: double
+          nullable: true
+          description: Score a solution of a scoring problem must get.
+    ProblemSolutionVerdict:
+      type: string
+      enum:
+      - OK
+      - WA
+      - PE
+      - TLE
+      - MLE
+      - OLE
+      - RE
+      - FAIL
+      - POINTS
+      - CE
+    ProblemBuildSolution:
+      description: What a build saw of a solution.
+      type: object
+      required:
+      - name
+      - verdict
+      - test
+      - time_ms
+      - points
+      - mismatch
+      properties:
+        name:
+          type: string
+        verdict:
+          $ref: '#/components/schemas/ProblemSolutionVerdict'
+        test:
+          type: integer
+          format: int64
+          nullable: true
+          description: Ordinal of the first test whose verdict is not OK.
+        time_ms:
+          type: integer
+          format: int64
+          description: Longest CPU time over the tests.
+        points:
+          type: number
+          format: double
+          nullable: true
+        mismatch:
+          type: string
+          description: How the result misses the expected verdicts or points; empty when it matches.
     ProblemDraftValidator:
       description: A validator; the build fails when it rejects a test input. testlib validators receive --group with the subtask name.
       type: object
@@ -3386,7 +3458,7 @@ components:
         solutions:
           type: array
           items:
-            $ref: '#/components/schemas/ProblemDraftNamedProgram'
+            $ref: '#/components/schemas/ProblemDraftSolution'
         main_solution:
           type: string
           description: Name of a solution of the draft.
@@ -3447,6 +3519,7 @@ components:
       - created_at
       - finished_at
       - diagnostic
+      - solutions
       properties:
         id:
           type: string
@@ -3488,6 +3561,12 @@ components:
           type: object
           nullable: true
           additionalProperties: true
+        solutions:
+          type: array
+          nullable: true
+          description: Results of the solutions that run, once every test is built.
+          items:
+            $ref: '#/components/schemas/ProblemBuildSolution'
     ProblemBuildAccepted:
       type: object
       required:

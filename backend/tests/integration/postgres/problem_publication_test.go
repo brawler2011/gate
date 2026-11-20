@@ -385,7 +385,7 @@ func TestPublicationSupportedTypes(t *testing.T) {
 				if kind == "interactive" {
 					solution := "main"
 					d.Interactor = program("python3", "print('hello', flush=True)\n")
-					d.Solutions = append(d.Solutions, named(solution, "python3", "input()\n"))
+					d.Solutions = append(d.Solutions, solutionProgram(solution, "python3", "input()\n"))
 					d.MainSolution = &solution
 					for i := range d.Tests {
 						d.Tests[i].Answer = model.DraftAnswer{Mode: "interactive"}
