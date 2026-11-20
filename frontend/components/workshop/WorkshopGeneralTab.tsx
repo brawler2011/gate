@@ -33,6 +33,8 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
   const [timeLimit, setTimeLimit] = useState<number>(draft.time_limit_ms);
   const [memoryLimit, setMemoryLimit] = useState<number>(draft.memory_limit_mb);
   const [mainSolution, setMainSolution] = useState(draft.main_solution);
+  const [inputFile, setInputFile] = useState(draft.input_file);
+  const [outputFile, setOutputFile] = useState(draft.output_file);
 
   const changed =
     title !== draft.title ||
@@ -40,7 +42,9 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
     type !== draft.type ||
     timeLimit !== draft.time_limit_ms ||
     memoryLimit !== draft.memory_limit_mb ||
-    mainSolution !== draft.main_solution;
+    mainSolution !== draft.main_solution ||
+    inputFile !== draft.input_file ||
+    outputFile !== draft.output_file;
 
   const handleSave = async () => {
     const ok = await save((current) => ({
@@ -51,6 +55,8 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
       time_limit_ms: timeLimit,
       memory_limit_mb: memoryLimit,
       main_solution: mainSolution,
+      input_file: inputFile.trim(),
+      output_file: outputFile.trim(),
     }));
     if (ok) {
       notifications.show({title: "Сохранено", message: "Черновик обновлён", color: "green"});
@@ -106,6 +112,26 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
               step={16}
             />
           </Grid.Col>
+          {type !== "interactive" && (
+            <>
+              <Grid.Col span={{base: 12, sm: 6}}>
+                <TextInput
+                  label="Входной файл"
+                  placeholder="стандартный ввод"
+                  value={inputFile}
+                  onChange={(e) => setInputFile(e.currentTarget.value)}
+                />
+              </Grid.Col>
+              <Grid.Col span={{base: 12, sm: 6}}>
+                <TextInput
+                  label="Выходной файл"
+                  placeholder="стандартный вывод"
+                  value={outputFile}
+                  onChange={(e) => setOutputFile(e.currentTarget.value)}
+                />
+              </Grid.Col>
+            </>
+          )}
         </Grid>
 
         <Divider label="Компоненты сборки" labelPosition="left" />

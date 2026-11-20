@@ -35,7 +35,9 @@ type Statement struct {
 }
 
 type Judging struct {
-	Testsets []Testset `xml:"testset"`
+	InputFile  string    `xml:"input-file,attr"`
+	OutputFile string    `xml:"output-file,attr"`
+	Testsets   []Testset `xml:"testset"`
 }
 
 type Testset struct {

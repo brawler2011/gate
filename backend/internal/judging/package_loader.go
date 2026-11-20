@@ -97,7 +97,8 @@ func (l *PackageLoader) fetch(ctx context.Context, p model.PackageDescriptor, ro
 		return err
 	}
 	d := p.Snapshot.Draft
-	if format.Problem.Title != d.Title || format.Problem.Type != d.Type || format.Problem.Limits.TimeMs != d.TimeLimitMs || format.Problem.Limits.MemoryMb != d.MemoryLimitMb {
+	if format.Problem.Title != d.Title || format.Problem.Type != d.Type || format.Problem.Limits.TimeMs != d.TimeLimitMs || format.Problem.Limits.MemoryMb != d.MemoryLimitMb ||
+		format.Problem.InputFile != d.InputFile || format.Problem.OutputFile != d.OutputFile {
 		return fmt.Errorf("package metadata differs from build snapshot")
 	}
 	return nil

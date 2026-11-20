@@ -98,6 +98,7 @@ func TestPolygonGroups(t *testing.T) {
 	p, err := Read(unpack(t, "polygon-groups"))
 	require.NoError(t, err)
 	require.Equal(t, "scoring", p.Type)
+	require.Equal(t, [2]string{"input.txt", "output.txt"}, [2]string{p.InputFile, p.OutputFile})
 	require.Equal(t, "gen.cpp", p.Generators[0].Path)
 	require.Len(t, p.Groups, 2)
 	require.Equal(t, spec.Group{Name: "samples", Policy: "each", Tests: []spec.Test{{Input: "tests/01", Sample: true}}}, p.Groups[0])
@@ -136,6 +137,7 @@ func TestPCMS2ProgramHeaders(t *testing.T) {
 	p, err := Read(unpack(t, "pcms2-program-headers"))
 	require.NoError(t, err)
 	require.Equal(t, map[string]string{"testlib.h": "testlib.h"}, p.Checker.Dependencies)
+	require.Equal(t, [2]string{"", "output.txt"}, [2]string{p.InputFile, p.OutputFile})
 }
 
 // Package paths cannot escape os.Root through traversal or symlinks.

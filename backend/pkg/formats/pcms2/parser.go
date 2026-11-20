@@ -36,6 +36,8 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		Title:         title(prob),
 		TimeLimitMs:   testset.TimeLimit,
 		MemoryLimitMb: int(testset.MemoryLimit / (1 << 20)),
+		InputFile:     strings.TrimSpace(prob.Judging.InputFile),
+		OutputFile:    strings.TrimSpace(prob.Judging.OutputFile),
 	}
 	run := prob.Judging.Run
 	if p.Checker, err = findProgram(fsys, run.Verifier.Binary.Executable); err != nil {

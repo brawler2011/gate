@@ -3,7 +3,7 @@ complete group with no points on its tests go to its last test.
 
 -- problem.xml --
 <problem short-name="groups">
-  <judging><testset name="tests">
+  <judging input-file="input.txt" output-file="output.txt"><testset name="tests">
     <time-limit>1000</time-limit><memory-limit>268435456</memory-limit>
     <input-path-pattern>tests/%02d</input-path-pattern><answer-path-pattern>tests/%02d.a</answer-path-pattern>
     <tests>

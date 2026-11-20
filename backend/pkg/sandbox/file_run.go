@@ -83,6 +83,46 @@ func (s *Sandbox) RunFiles(ctx context.Context, executable Executable, language 
 	if err != nil {
 		return nil, err
 	}
+	return s.runFile(ctx, c, "stdout")
+}
+
+// Streams name the files a solution reads and writes instead of standard input and output; empty keeps the stream.
+type Streams struct{ Input, Output string }
+
+// RunSolution reads a missing output file as empty; the caller owns the returned output ID.
+func (s *Sandbox) RunSolution(ctx context.Context, executable Executable, language string, input File, streams Streams, limits FileRunLimits) (*FileRunResult, error) {
+	stdin := input
+	if streams.Input != "" {
+		stdin = File{}
+	}
+	c, err := s.fileCommand(executable, language, stdin, nil, nil, limits)
+	if err != nil {
+		return nil, err
+	}
+	output := "stdout"
+	for name, f := range map[string]File{streams.Input: input, streams.Output: {}} {
+		if name == "" {
+			continue
+		}
+		if _, taken := c.CopyIn[name]; !fs.ValidPath(name) || strings.Contains(name, "/") || taken {
+			return nil, fmt.Errorf("solution file %q is invalid or clashes with the executable", name)
+		}
+		r := memoryFile("")
+		if f != (File{}) {
+			if r, err = f.request(); err != nil {
+				return nil, err
+			}
+		}
+		c.CopyIn[name] = *r
+	}
+	if streams.Output != "" {
+		output = streams.Output
+		c.CopyOutCached = []string{output}
+	}
+	return s.runFile(ctx, c, output)
+}
+
+func (s *Sandbox) runFile(ctx context.Context, c *cmd, output string) (*FileRunResult, error) {
 	results, err := s.client.run(ctx, request{Cmd: []cmd{*c}})
 	if err != nil {
 		return nil, fmt.Errorf("execute sandbox files: %w", err)
@@ -94,7 +134,7 @@ func (s *Sandbox) RunFiles(ctx context.Context, executable Executable, language 
 	}
 	return &FileRunResult{
 		Status: status, ExitStatus: r.ExitStatus, Time: safeDuration(r.Time), Memory: safeInt64(r.Memory),
-		OutputID: r.FileIDs["stdout"], Stderr: []byte(r.Files["stderr"]),
+		OutputID: r.FileIDs[output], Stderr: []byte(r.Files["stderr"]),
 	}, nil
 }
 

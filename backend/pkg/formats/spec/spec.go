@@ -28,6 +28,8 @@ type Problem struct {
 	Statements   []Statement
 	Assets       []File
 	Groups       []Group
+	// Empty names keep standard input and output.
+	InputFile, OutputFile string
 	// Text test line endings are normalized from CRLF to LF during import.
 	TextTests bool
 }

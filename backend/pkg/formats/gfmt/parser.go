@@ -24,7 +24,8 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 	if manifest == nil {
 		return nil, fmt.Errorf("problem.yaml must contain a mapping")
 	}
-	p := &spec.Problem{Title: manifest.Title, Type: manifest.Type, TimeLimitMs: manifest.Limits.TimeMs, MemoryLimitMb: manifest.Limits.MemoryMb}
+	p := &spec.Problem{Title: manifest.Title, Type: manifest.Type, TimeLimitMs: manifest.Limits.TimeMs, MemoryLimitMb: manifest.Limits.MemoryMb,
+		InputFile: manifest.InputFile, OutputFile: manifest.OutputFile}
 	programs := map[string][]spec.Program{}
 	statements := map[string]*spec.Statement{}
 	files := map[string]bool{}

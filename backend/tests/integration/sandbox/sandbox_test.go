@@ -100,6 +100,44 @@ func TestIntegrationSandbox(t *testing.T) {
 		t.Fatalf("failed to read gfmt directory: %v", err)
 	}
 
+	t.Run("solution files", func(t *testing.T) {
+		input := r.upload(t, []byte("1 2\n"))
+		both := sandbox.Streams{Input: "input.txt", Output: "output.txt"}
+		for _, c := range []struct {
+			name, source string
+			streams      sandbox.Streams
+			want         string
+		}{
+			{"files", "open('output.txt', 'w').write(open('input.txt').read())", both, "1 2\n"},
+			// Standard streams are empty and unread, so the checker gets an empty output.
+			{"standard streams", "import sys\nsys.stdout.write(sys.stdin.read() or 'stdin was empty')", both, ""},
+			{"input file only", "import sys\nsys.stdout.write(open('input.txt').read())", sandbox.Streams{Input: "input.txt"}, "1 2\n"},
+			{"output file only", "import sys\nopen('output.txt', 'w').write(sys.stdin.read())", sandbox.Streams{Output: "output.txt"}, "1 2\n"},
+		} {
+			t.Run(c.name, func(t *testing.T) {
+				exe, err := sb.Compile(ctx, []byte(c.source), "python3", nil)
+				if err != nil {
+					t.Fatalf("compile: %v", err)
+				}
+				res, err := sb.RunSolution(ctx, exe, "python3", input, c.streams, solutionLimits(2000, 256))
+				if err != nil {
+					t.Fatalf("run: %v", err)
+				}
+				defer r.release(res.OutputID)
+				if res.Status != sandbox.StatusOK {
+					t.Fatalf("status %s: %s", res.Status, res.Stderr)
+				}
+				var output bytes.Buffer
+				if _, err := files.Download(ctx, res.OutputID, &output, 1<<20); err != nil {
+					t.Fatalf("download output: %v", err)
+				}
+				if output.String() != c.want {
+					t.Fatalf("output %q, want %q", output.String(), c.want)
+				}
+			})
+		}
+	})
+
 	t.Run("packages", func(t *testing.T) {
 		for _, entry := range entries {
 			if !entry.IsDir() {

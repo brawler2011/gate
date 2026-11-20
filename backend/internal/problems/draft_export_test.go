@@ -59,6 +59,7 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	defer plan.Close()
 	d := &plan.draft
 	d.Library = append(d.Library, model.DraftLibraryFile{Name: "util.h", Content: "#pragma once\n"})
+	d.InputFile, d.OutputFile = "input.txt", "output.txt"
 	object := *d.Tests[0].Input.ObjectID
 	half := points.Value(50)
 	d.Checker = &model.DraftChecker{DraftProgram: model.DraftProgram{Language: "cpp17"}, Standard: "wcmp", Tests: []model.DraftCheckerTest{

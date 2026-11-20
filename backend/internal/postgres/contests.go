@@ -532,7 +532,7 @@ func mapGetContestByOrgLoginAndContestLoginRow(c sqlc.GetContestByOrgLoginAndCon
 
 func mapGetContestProblemRow(c sqlc.GetContestProblemRow) contestsmodel.ContestProblem {
 	return contestsmodel.ContestProblem{
-		TimeLimitMs: int(c.TimeLimitMs), MemoryLimitMb: int(c.MemoryLimitMb), UpdatedAt: c.ProblemUpdatedAt,
+		TimeLimitMs: int(c.TimeLimitMs), MemoryLimitMb: int(c.MemoryLimitMb), InputFile: c.InputFile, OutputFile: c.OutputFile, UpdatedAt: c.ProblemUpdatedAt,
 		ContestID:  c.ContestID,
 		ProblemID:  c.ProblemID,
 		PackageID:  c.PackageID,
@@ -546,7 +546,7 @@ func mapGetContestProblemRow(c sqlc.GetContestProblemRow) contestsmodel.ContestP
 
 func mapListContestProblemsRow(c sqlc.ListContestProblemsRow) contestsmodel.ContestProblem {
 	return contestsmodel.ContestProblem{
-		TimeLimitMs: int(c.TimeLimitMs), MemoryLimitMb: int(c.MemoryLimitMb), UpdatedAt: c.ProblemUpdatedAt,
+		TimeLimitMs: int(c.TimeLimitMs), MemoryLimitMb: int(c.MemoryLimitMb), InputFile: c.InputFile, OutputFile: c.OutputFile, UpdatedAt: c.ProblemUpdatedAt,
 		ContestID:  c.ContestID,
 		ProblemID:  c.ProblemID,
 		PackageID:  c.PackageID,

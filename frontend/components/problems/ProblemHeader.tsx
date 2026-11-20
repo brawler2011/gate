@@ -9,6 +9,8 @@ export interface ProblemHeaderProps {
   letter?: string;
   timeLimit: number;
   memoryLimit: number;
+  inputFile?: string;
+  outputFile?: string;
   isManager?: boolean;
   problemId?: string;
   orgLogin?: string;
@@ -19,6 +21,8 @@ export const ProblemHeader = ({
   letter = "A",
   timeLimit,
   memoryLimit,
+  inputFile,
+  outputFile,
   isManager,
   problemId,
   orgLogin,
@@ -45,7 +49,7 @@ export const ProblemHeader = ({
           </Tooltip>
         )}
       </Group>
-      <ProblemLimits timeLimit={timeLimit} memoryLimit={memoryLimit} />
+      <ProblemLimits timeLimit={timeLimit} memoryLimit={memoryLimit} inputFile={inputFile} outputFile={outputFile} />
     </Stack>
   );
 };

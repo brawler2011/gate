@@ -18,11 +18,19 @@ const prettifyMemoryLimit = (memoryLimit: number): string => {
 export interface ProblemLimitsProps {
   timeLimit: number;
   memoryLimit: number;
+  inputFile?: string;
+  outputFile?: string;
 }
 
-export const ProblemLimits = ({timeLimit, memoryLimit}: ProblemLimitsProps): ReactNode => {
+export const ProblemLimits = ({timeLimit, memoryLimit, inputFile, outputFile}: ProblemLimitsProps): ReactNode => {
   return (
     <Stack align="center" gap={0}>
+      {(inputFile || outputFile) && (
+        <>
+          <Text>ввод: {inputFile || "стандартный ввод"}</Text>
+          <Text>вывод: {outputFile || "стандартный вывод"}</Text>
+        </>
+      )}
       <Text>
         ограничение по времени: {prettifyTimeLimit(timeLimit)}
       </Text>

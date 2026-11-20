@@ -151,6 +151,8 @@ func GetContestProblemResponseDTO(contestProblem contestsmodel.ContestProblem, p
 			Title:        title,
 			TimeLimit:    safeInt32(problem.TimeLimitMs),
 			MemoryLimit:  safeInt32(problem.MemoryLimitMb),
+			InputFile:    contestProblem.InputFile,
+			OutputFile:   contestProblem.OutputFile,
 			Position:     safeInt32(contestProblem.Ordinal),
 			Legend:       statementField(statement, func(s problemsmodel.Statement) string { return s.Legend }),
 			InputFormat:  statementField(statement, func(s problemsmodel.Statement) string { return s.InputFormat }),

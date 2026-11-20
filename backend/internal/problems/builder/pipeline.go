@@ -247,7 +247,8 @@ func (e *execution) materialize(ctx context.Context) error {
 func (e *execution) makeManifest() {
 	s := e.build.Snapshot
 	d := s.Draft
-	m := &gfmt.Problem{FormatVersion: "2", Title: d.Title, Type: d.Type, MaxScore: d.MaxScore, Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb}, Programs: map[string]gfmt.Program{}, Subtasks: map[string]gfmt.Subtask{}}
+	m := &gfmt.Problem{FormatVersion: "2", Title: d.Title, Type: d.Type, MaxScore: d.MaxScore, Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb},
+		InputFile: d.InputFile, OutputFile: d.OutputFile, Programs: map[string]gfmt.Program{}, Subtasks: map[string]gfmt.Subtask{}}
 	for _, g := range d.Subtasks {
 		deps := []string{}
 		for _, id := range g.DependsOn {
@@ -444,7 +445,7 @@ func (e *execution) test(ctx context.Context, test model.DraftTest) error {
 		outputID = answerID
 		if solution != nil {
 			sol := e.compiled[programKey("solution", *solution)]
-			result, err := e.sandbox.RunFiles(ctx, sol.executable, sol.language, sandbox.FileID(inputID), nil, nil, e.solutionLimits())
+			result, err := e.sandbox.RunSolution(ctx, sol.executable, sol.language, sandbox.FileID(inputID), s.Draft.Streams(), e.solutionLimits())
 			if err != nil {
 				return fail("answer", test.Ordinal, "infrastructure", err)
 			}
@@ -513,7 +514,7 @@ func (e *execution) judge(ctx context.Context, name string, ordinal int, inputID
 		defer e.release(r.OutputID)
 		outputID, result.Verdict, result.Time = r.OutputID, string(r.Status), r.SolutionResult.Time.Nanoseconds()
 	} else {
-		r, err := e.sandbox.RunFiles(ctx, sol.executable, sol.language, sandbox.FileID(inputID), nil, nil, e.solutionLimits())
+		r, err := e.sandbox.RunSolution(ctx, sol.executable, sol.language, sandbox.FileID(inputID), s.Draft.Streams(), e.solutionLimits())
 		if err != nil {
 			return result, err
 		}

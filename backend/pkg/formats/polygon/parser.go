@@ -31,6 +31,8 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		Title:         title(prob),
 		TimeLimitMs:   testset.TimeLimit,
 		MemoryLimitMb: int(testset.MemoryLimit / (1 << 20)),
+		InputFile:     prob.Judging.InputFile,
+		OutputFile:    prob.Judging.OutputFile,
 	}
 	assets := prob.Assets
 	if assets == nil {

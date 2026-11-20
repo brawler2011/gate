@@ -21,6 +21,8 @@ type ProblemModelProps = {
   title: string;
   time_limit: number;
   memory_limit: number;
+  input_file?: string;
+  output_file?: string;
   legend: string;
   input_format: string;
   output_format: string;
@@ -93,6 +95,8 @@ const ProblemComponent = ({
         letter={letter}
         timeLimit={problem.time_limit}
         memoryLimit={problem.memory_limit}
+        inputFile={problem.input_file}
+        outputFile={problem.output_file}
         isManager={Boolean(problem.capabilities?.includes("edit"))}
         problemId={activeProblemId}
         orgLogin={org}
