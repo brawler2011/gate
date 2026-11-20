@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
@@ -33,7 +32,7 @@ func (r *SubmissionsRepo) GetSubmission(ctx context.Context, id uuid.UUID) (subm
 	row, err := r.queries.GetSubmission(ctx, id)
 	if err != nil {
 		return submissionsmodel.Submission{
-			Revision: row.Revision}, HandlePgErr(err)
+			Revision: row.Revision}, dbError("get submission", err)
 	}
 	return mapGetSubmissionRow(row), nil
 }
@@ -50,7 +49,7 @@ func (r *SubmissionsRepo) CreateSubmission(ctx context.Context, creation *submis
 		BanReason: creation.BanReason,
 	})
 	if err != nil {
-		return uuid.Nil, HandlePgErr(err)
+		return uuid.Nil, dbError("create submission", err)
 	}
 	return id, nil
 }
@@ -75,7 +74,7 @@ func (r *SubmissionsRepo) UpdateSubmission(ctx context.Context, id uuid.UUID, up
 	var err error
 	detailsBytes, err = json.Marshal(testDetails)
 	if err != nil {
-		return submissionsmodel.SubmissionChange{}, fmt.Errorf("marshal test details: %w", err)
+		return submissionsmodel.SubmissionChange{}, dbError("marshal test details", err)
 	}
 
 	change, err := r.queries.UpdateSubmission(ctx, sqlc.UpdateSubmissionParams{
@@ -85,7 +84,7 @@ func (r *SubmissionsRepo) UpdateSubmission(ctx context.Context, id uuid.UUID, up
 		ID:          id,
 	})
 	if err != nil {
-		return submissionsmodel.SubmissionChange{}, HandlePgErr(err)
+		return submissionsmodel.SubmissionChange{}, dbError("update submission", err)
 	}
 	return submissionsmodel.SubmissionChange{Revision: change.Revision, PreviousState: change.PreviousState}, nil
 }
@@ -96,7 +95,7 @@ func (r *SubmissionsRepo) BlockSubmission(ctx context.Context, id uuid.UUID, rea
 		BanReason: reason,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("block submission", err)
 	}
 	return nil
 }
@@ -108,7 +107,7 @@ func (r *SubmissionsRepo) BlockUserProblemSubmissions(ctx context.Context, conte
 	}
 	rows, err := r.queries.BlockUserProblemSubmissions(ctx, sqlc.BlockUserProblemSubmissionsParams{Ids: ids, BanReason: reason})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("block user problem submissions", err)
 	}
 	result := make([]submissionsmodel.SubmissionReset, len(rows))
 	for i, row := range rows {
@@ -121,15 +120,15 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 	if r.pool != nil {
 		tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 		if err != nil {
-			return nil, 0, HandlePgErr(err)
+			return nil, 0, dbError("list submissions", err)
 		}
-		defer func() { _ = tx.Rollback(ctx) }()
+		defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
 		rows, count, err := r.WithTx(tx).ListSubmissions(ctx, filter)
 		if err != nil {
 			return nil, 0, err
 		}
 		if err := tx.Commit(ctx); err != nil {
-			return nil, 0, HandlePgErr(err)
+			return nil, 0, dbError("list submissions", err)
 		}
 		return rows, count, nil
 	}
@@ -147,7 +146,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 		State:     statePtrToInt32Ptr(filter.State),
 	})
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, dbError("list submissions", err)
 	}
 
 	rows, err := r.queries.ListSubmissions(ctx, sqlc.ListSubmissionsParams{
@@ -161,7 +160,7 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 		SortOrder: sortOrder,
 	})
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, dbError("list submissions", err)
 	}
 
 	submissions := make([]submissionsmodel.Submission, len(rows))
@@ -171,7 +170,6 @@ func (r *SubmissionsRepo) ListSubmissions(ctx context.Context, filter submission
 
 	return submissions, safeInt32(totalCount), nil
 }
-
 
 func statePtrToInt32Ptr(s *submissionsmodel.State) *int32 {
 	if s == nil {
@@ -333,7 +331,7 @@ func (r *SubmissionsRepo) ResetSubmissionsState(ctx context.Context, filter subm
 	}
 	rows, err := r.queries.ResetSubmissionsState(ctx, ids)
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("reset submissions state", err)
 	}
 	result := make([]submissionsmodel.SubmissionReset, len(rows))
 	for i, row := range rows {

@@ -56,6 +56,9 @@ func (u *UsersUseCase) CreateUser(ctx context.Context, input identitymodel.Creat
 		ExpiresAt:       input.ExpiresAt,
 		IsEmailVerified: true,
 	}
+	if err := params.Validate(); err != nil {
+		return uuid.Nil, pkg.Wrap(pkg.ErrInvalid, err, err.Error())
+	}
 
 	err = withinAccount(ctx, u.txManager, uuid.Nil, true, func(store IdentityTxStore) error {
 		return store.CreateUser(ctx, params)
@@ -92,7 +95,7 @@ func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller accessmode
 
 	tempUser, err := u.usersRepo.GetUserByUsername(ctx, input.Username)
 	if err != nil {
-		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrInvalid, err, "temporary user not found")
+		return identitymodel.ClaimTemporaryUserResult{}, pkg.OnNotFound(err, pkg.ErrInvalid, "temporary user not found")
 	}
 
 	if !tempUser.IsTemporary() {
@@ -179,7 +182,7 @@ func (u *UsersUseCase) AdminSetPassword(ctx context.Context, username, newPasswo
 
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrInvalid, err, "user not found")
+		return pkg.OnNotFound(err, pkg.ErrInvalid, "user not found")
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
@@ -201,7 +204,7 @@ func (u *UsersUseCase) AdminSendPasswordReset(ctx context.Context, username stri
 	}
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrInvalid, err, "user not found")
+		return pkg.OnNotFound(err, pkg.ErrInvalid, "user not found")
 	}
 
 	if user.Email == nil || *user.Email == "" {
@@ -237,11 +240,11 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrInvalid, err, "user not found")
+		return pkg.OnNotFound(err, pkg.ErrInvalid, "user not found")
 	}
 
 	if existing, err := u.usersRepo.GetUserByUsernameOrEmail(ctx, newEmail); err == nil && existing.Id != user.Id {
-		return pkg.Wrap(pkg.ErrConflict, nil, "email already in use by another user")
+		return pkg.Wrap(pkg.ErrEmailTaken, nil, "email is taken")
 	}
 
 	if !withConfirmation {
@@ -292,7 +295,7 @@ func (u *UsersUseCase) AdminResendVerification(ctx context.Context, username str
 	}
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrInvalid, err, "user not found")
+		return pkg.OnNotFound(err, pkg.ErrInvalid, "user not found")
 	}
 
 	if user.IsEmailVerified {

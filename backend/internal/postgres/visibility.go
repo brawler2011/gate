@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	"github.com/google/uuid"
@@ -19,7 +18,7 @@ func emptyScopeRow(data []byte) bool { return len(data) == 0 || string(data) == 
 func scopeProblems(ctx context.Context, q *sqlc.Queries, params sqlc.ScopeProblemsParams) ([]problemsmodel.Problem, int32, error) {
 	rows, err := q.ScopeProblems(ctx, params)
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, dbError("scope problems", err)
 	}
 	items := make([]problemsmodel.Problem, 0, len(rows))
 	var total int32
@@ -30,7 +29,7 @@ func scopeProblems(ctx context.Context, q *sqlc.Queries, params sqlc.ScopeProble
 		}
 		var resource sqlc.GetProblemByIDRow
 		if err := json.Unmarshal(row.Resource, &resource); err != nil {
-			return nil, 0, fmt.Errorf("decode scoped resource: %w", err)
+			return nil, 0, dbError("decode scoped resource", err)
 		}
 		items = append(items, mapGetProblemByIDRow(resource))
 	}
@@ -39,7 +38,7 @@ func scopeProblems(ctx context.Context, q *sqlc.Queries, params sqlc.ScopeProble
 func scopeContests(ctx context.Context, q *sqlc.Queries, params sqlc.ScopeContestsParams) ([]contestsmodel.Contest, int32, error) {
 	rows, err := q.ScopeContests(ctx, params)
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, dbError("scope contests", err)
 	}
 	items := make([]contestsmodel.Contest, 0, len(rows))
 	var total int32
@@ -53,7 +52,7 @@ func scopeContests(ctx context.Context, q *sqlc.Queries, params sqlc.ScopeContes
 			Settings json.RawMessage `json:"settings"`
 		}
 		if err := json.Unmarshal(row.Resource, &resource); err != nil {
-			return nil, 0, fmt.Errorf("decode scoped contest: %w", err)
+			return nil, 0, dbError("decode scoped contest", err)
 		}
 		resource.GetContestByIDRow.Settings = resource.Settings
 		items = append(items, mapGetContestByIDRow(resource.GetContestByIDRow))

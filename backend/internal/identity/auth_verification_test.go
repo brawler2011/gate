@@ -390,11 +390,11 @@ func TestRegistrationRetryUnverifiedUser(t *testing.T) {
 	// Verified accounts reject re-registration.
 	_, err = authUC.Register(ctx, "unverifieduser", "different@example.com", "AnotherPass123")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "username already taken")
+	require.ErrorIs(t, err, pkg.ErrUsernameTaken)
 
 	_, err = authUC.Register(ctx, "otheruser", "unverified@example.com", "AnotherPass123")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "email already in use")
+	require.ErrorIs(t, err, pkg.ErrEmailTaken)
 }
 
 func TestPasswordResetFlow(t *testing.T) {

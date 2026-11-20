@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
@@ -36,7 +35,7 @@ func (r *AnnouncementsRepo) CreateAnnouncement(ctx context.Context, authorID uui
 		Body:      input.Body,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create contest announcement in db: %w", err)
+		return nil, dbError("create contest announcement in db", err)
 	}
 
 	return r.GetAnnouncementByID(ctx, row.ID)
@@ -48,7 +47,7 @@ func (r *AnnouncementsRepo) GetAnnouncementByID(ctx context.Context, id uuid.UUI
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pkg.ErrNotFound
 		}
-		return nil, fmt.Errorf("get contest announcement by id: %w", err)
+		return nil, dbError("get contest announcement by id", err)
 	}
 
 	return &contestsmodel.ContestAnnouncement{
@@ -75,12 +74,12 @@ func (r *AnnouncementsRepo) ListAnnouncements(ctx context.Context, contestID uui
 		Offset:    offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("list contest announcements: %w", err)
+		return nil, dbError("list contest announcements", err)
 	}
 
 	total, err := r.queries.CountContestAnnouncements(ctx, contestID)
 	if err != nil {
-		return nil, fmt.Errorf("count contest announcements: %w", err)
+		return nil, dbError("count contest announcements", err)
 	}
 
 	announcements := make([]contestsmodel.ContestAnnouncement, len(rows))
@@ -112,7 +111,7 @@ func (r *AnnouncementsRepo) DeleteAnnouncement(ctx context.Context, id, contestI
 		ContestID: contestID,
 	})
 	if err != nil {
-		return fmt.Errorf("delete contest announcement: %w", err)
+		return dbError("delete contest announcement", err)
 	}
 	return nil
 }

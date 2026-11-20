@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
@@ -16,7 +15,7 @@ import (
 func (r *ProblemDraftsRepo) ListUnreferencedObjects(ctx context.Context) ([]model.StoredObject, error) {
 	rows, err := sqlc.New(r.pool).ListUnreferencedObjects(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("list unreferenced objects: %w", err)
+		return nil, dbError("list unreferenced objects", err)
 	}
 	objects := make([]model.StoredObject, len(rows))
 	for i, row := range rows {
@@ -32,7 +31,7 @@ func (r *ProblemDraftsRepo) DeleteObject(ctx context.Context, id uuid.UUID) (boo
 		return false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("delete stored object: %w", err)
+		return false, dbError("delete stored object", err)
 	}
 	return true, nil
 }
@@ -40,7 +39,7 @@ func (r *ProblemDraftsRepo) DeleteObject(ctx context.Context, id uuid.UUID) (boo
 func (r *ProblemDraftsRepo) ExistingObjectKeys(ctx context.Context, keys []string) (map[string]bool, error) {
 	rows, err := sqlc.New(r.pool).ListStoredObjectKeys(ctx, keys)
 	if err != nil {
-		return nil, fmt.Errorf("list stored object keys: %w", err)
+		return nil, dbError("list stored object keys", err)
 	}
 	existing := make(map[string]bool, len(rows))
 	for _, key := range rows {
@@ -55,7 +54,7 @@ func (r *ProblemDraftsRepo) PrunePackages(ctx context.Context, retention time.Du
 	}
 	ids, err := sqlc.New(r.pool).ListPackageIDsPastRetention(ctx, retention.Milliseconds())
 	if err != nil {
-		return fmt.Errorf("list packages past retention: %w", err)
+		return dbError("list packages past retention", err)
 	}
 	for _, id := range ids {
 		if err := r.prunePackage(ctx, id, retention); err != nil {
@@ -79,27 +78,27 @@ func (r *ProblemDraftsRepo) prunePackage(ctx context.Context, id uuid.UUID, rete
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("read package build: %w", err)
+		return dbError("read package build", err)
 	}
 	if _, err := q.LockProblemBuild(ctx, buildID); errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	} else if err != nil {
-		return fmt.Errorf("lock build: %w", err)
+		return dbError("lock build", err)
 	}
 	if _, err := q.LockProblemPackage(ctx, id); errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	} else if err != nil {
-		return fmt.Errorf("lock package: %w", err)
+		return dbError("lock package", err)
 	}
 	eligible, err := q.PackagePruneEligible(ctx, sqlc.PackagePruneEligibleParams{RetentionMs: retention.Milliseconds(), ID: id})
 	if err != nil {
-		return fmt.Errorf("check package retention: %w", err)
+		return dbError("check package retention", err)
 	}
 	if !eligible {
 		return nil
 	}
 	if err := q.DeleteProblemPackage(ctx, id); err != nil {
-		return fmt.Errorf("delete package: %w", err)
+		return dbError("delete package", err)
 	}
 	return commitTx(ctx, tx)
 }
@@ -110,7 +109,7 @@ func (r *ProblemDraftsRepo) PruneBuilds(ctx context.Context, retention time.Dura
 	}
 	ids, err := sqlc.New(r.pool).ListBuildIDsPastRetention(ctx, retention.Milliseconds())
 	if err != nil {
-		return fmt.Errorf("list builds past retention: %w", err)
+		return dbError("list builds past retention", err)
 	}
 	for _, id := range ids {
 		if err := r.pruneBuild(ctx, id, retention); err != nil {
@@ -130,17 +129,17 @@ func (r *ProblemDraftsRepo) pruneBuild(ctx context.Context, id uuid.UUID, retent
 	if _, err := q.LockProblemBuild(ctx, id); errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	} else if err != nil {
-		return fmt.Errorf("lock build: %w", err)
+		return dbError("lock build", err)
 	}
 	eligible, err := q.BuildPruneEligible(ctx, sqlc.BuildPruneEligibleParams{RetentionMs: retention.Milliseconds(), ID: id})
 	if err != nil {
-		return fmt.Errorf("check build retention: %w", err)
+		return dbError("check build retention", err)
 	}
 	if !eligible {
 		return nil
 	}
 	if err := q.DeleteProblemBuild(ctx, id); err != nil {
-		return fmt.Errorf("delete build: %w", err)
+		return dbError("delete build", err)
 	}
 	return commitTx(ctx, tx)
 }
@@ -148,7 +147,7 @@ func (r *ProblemDraftsRepo) pruneBuild(ctx context.Context, id uuid.UUID, retent
 func (r *ProblemDraftsRepo) ActiveBuildAttempt(ctx context.Context, id, token uuid.UUID) (bool, error) {
 	active, err := sqlc.New(r.pool).BuildAttemptActive(ctx, sqlc.BuildAttemptActiveParams{ID: id, LeaseToken: &token})
 	if err != nil {
-		return false, fmt.Errorf("check build attempt: %w", err)
+		return false, dbError("check build attempt", err)
 	}
 	return active, nil
 }

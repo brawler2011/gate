@@ -27,7 +27,7 @@ func (r *AuthRepo) CreateSession(ctx context.Context, sessionID uuid.UUID, userI
 		ExpiresAt: expiresAt,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("create session", err)
 	}
 	return nil
 }
@@ -35,7 +35,7 @@ func (r *AuthRepo) CreateSession(ctx context.Context, sessionID uuid.UUID, userI
 func (r *AuthRepo) GetSession(ctx context.Context, sessionID uuid.UUID) (identitymodel.Session, error) {
 	session, err := r.queries.GetSession(ctx, sessionID)
 	if err != nil {
-		return identitymodel.Session{}, HandlePgErr(err)
+		return identitymodel.Session{}, dbError("get session", err)
 	}
 	return identitymodel.Session{
 		ID:        session.ID,
@@ -48,7 +48,7 @@ func (r *AuthRepo) GetSession(ctx context.Context, sessionID uuid.UUID) (identit
 func (r *AuthRepo) DeleteSession(ctx context.Context, sessionID uuid.UUID) error {
 	err := r.queries.DeleteSession(ctx, sessionID)
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("delete session", err)
 	}
 	return nil
 }
@@ -56,7 +56,7 @@ func (r *AuthRepo) DeleteSession(ctx context.Context, sessionID uuid.UUID) error
 func (r *AuthRepo) DeleteSessionsByUserID(ctx context.Context, userID uuid.UUID) error {
 	err := r.queries.DeleteSessionsByUserId(ctx, userID)
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("delete sessions by user id", err)
 	}
 	return nil
 }
@@ -67,7 +67,7 @@ func (r *AuthRepo) UpdateSessionExpiry(ctx context.Context, sessionID uuid.UUID,
 		ExpiresAt: expiresAt,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update session expiry", err)
 	}
 	return nil
 }
@@ -75,7 +75,7 @@ func (r *AuthRepo) UpdateSessionExpiry(ctx context.Context, sessionID uuid.UUID,
 func (r *AuthRepo) CleanupExpiredSessions(ctx context.Context, hardLimitCutoff time.Time) error {
 	err := r.queries.CleanupExpiredSessions(ctx, hardLimitCutoff)
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("cleanup expired sessions", err)
 	}
 	return nil
 }
@@ -94,7 +94,7 @@ func (r *AuthRepo) CreateAuthToken(ctx context.Context, params identitymodel.Cre
 		ExpiresAt: params.ExpiresAt,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("create auth token", err)
 	}
 	return nil
 }
@@ -105,7 +105,7 @@ func (r *AuthRepo) GetAuthTokenByHash(ctx context.Context, tokenHash string, tok
 		TokenType: sqlc.AuthTokenType(tokenType),
 	})
 	if err != nil {
-		return identitymodel.AuthToken{}, HandlePgErr(err)
+		return identitymodel.AuthToken{}, dbError("get auth token by hash", err)
 	}
 
 	return identitymodel.AuthToken{
@@ -122,7 +122,7 @@ func (r *AuthRepo) GetAuthTokenByHash(ctx context.Context, tokenHash string, tok
 func (r *AuthRepo) DeleteAuthToken(ctx context.Context, id uuid.UUID) error {
 	err := r.queries.DeleteAuthToken(ctx, id)
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("delete auth token", err)
 	}
 	return nil
 }
@@ -133,7 +133,7 @@ func (r *AuthRepo) DeleteAuthTokensByUserIdAndType(ctx context.Context, userID u
 		TokenType: sqlc.AuthTokenType(tokenType),
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("delete auth tokens by user id and type", err)
 	}
 	return nil
 }
@@ -141,7 +141,7 @@ func (r *AuthRepo) DeleteAuthTokensByUserIdAndType(ctx context.Context, userID u
 func (r *AuthRepo) CleanupExpiredAuthTokens(ctx context.Context) error {
 	err := r.queries.CleanupExpiredAuthTokens(ctx)
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("cleanup expired auth tokens", err)
 	}
 	return nil
 }

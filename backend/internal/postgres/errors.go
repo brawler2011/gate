@@ -1,14 +1,46 @@
 package postgres
 
 import (
-	"context"
-	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
+
+// Constraints whose violation is a client mistake rather than a bug.
+var constraintErrors = map[string]struct {
+	code    *pkg.Error
+	message string
+}{
+	"users_username_lower_idx":                      {pkg.ErrUsernameTaken, "username is taken"},
+	"users_email_idx":                               {pkg.ErrEmailTaken, "email is taken"},
+	"organizations_login_lower_idx":                 {pkg.ErrOrganizationLoginTaken, "organization login is taken"},
+	"contests_org_id_login_lower_idx":               {pkg.ErrContestLoginTaken, "contest login is taken"},
+	"teams_organization_id_slug_key":                {pkg.ErrTeamSlugTaken, "team slug is taken"},
+	"problem_drafts_organization_id_short_name_key": {pkg.ErrProblemShortNameTaken, "problem short name is taken"},
+	"organization_members_pkey":                     {pkg.ErrAlreadyMember, "user is already a member"},
+	"team_members_pkey":                             {pkg.ErrAlreadyMember, "user is already a member"},
+	"contest_members_pkey":                          {pkg.ErrAlreadyMember, "user is already a member"},
+	"problem_members_pkey":                          {pkg.ErrAlreadyMember, "user is already a member"},
+	"contest_teams_pkey":                            {pkg.ErrAlreadyMember, "team is already a member"},
+	"problem_teams_pkey":                            {pkg.ErrAlreadyMember, "team is already a member"},
+	"org_invitations_pending_unique_idx":            {pkg.ErrRequestPending, "an invitation is already pending"},
+	"org_join_requests_pending_unique_idx":          {pkg.ErrRequestPending, "a join request is already pending"},
+	"contest_join_requests_pending_unique_idx":      {pkg.ErrRequestPending, "a join request is already pending"},
+	"contest_problems_pkey":                         {pkg.ErrProblemInContest, "problem is already in the contest"},
+	"contests_check":                                {pkg.ErrInvalid, "end time must be after start time"},
+	"contests_login_check":                          {pkg.ErrInvalid, "contest login must be 3 to 64 characters"},
+	"contest_problems_ordinal_check":                {pkg.ErrInvalid, "problem positions must be non-negative"},
+	"contest_problems_contest_id_ordinal_key":       {pkg.ErrInvalid, "problem positions must be distinct"},
+	"contest_teams_team_id_fkey":                    {pkg.ErrNotFound, "team not found"},
+	"problem_teams_team_id_fkey":                    {pkg.ErrNotFound, "team not found"},
+	"contest_user_problem_blocks_user_id_fkey":      {pkg.ErrNotFound, "user not found"},
+	"contest_user_problem_blocks_problem_id_fkey":   {pkg.ErrNotFound, "problem not found"},
+}
 
 // Deletion under ON DELETE RESTRICT uses 23001, not the missing-reference code 23503.
 func isForeignKeyViolation(err error) bool {
@@ -16,29 +48,36 @@ func isForeignKeyViolation(err error) bool {
 	return errors.As(err, &pgErr) && (pgErr.Code == pgerrcode.ForeignKeyViolation || pgErr.Code == pgerrcode.RestrictViolation)
 }
 
-func HandlePgErr(err error) error {
+// isRetryable reports a lost race that a fresh transaction may win.
+func isRetryable(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && (pgErr.Code == pgerrcode.SerializationFailure || pgErr.Code == pgerrcode.DeadlockDetected)
+}
+
+// dbError names the failed operation; only a missing row, a known constraint or a blocked delete get a client code.
+func dbError(op string, err error) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return err
+	wrapped := fmt.Errorf("%s: %w", op, err)
+	var appErr *pkg.Error
+	if errors.As(err, &appErr) {
+		return wrapped
 	}
-
+	// Only single-row queries return ErrNoRows.
+	if errors.Is(err, pgx.ErrNoRows) {
+		return pkg.Wrap(pkg.ErrNotFound, wrapped, "")
+	}
 	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		if pgErr.Code == pgerrcode.UniqueViolation || pgErr.Code == pgerrcode.ExclusionViolation || pgErr.Code == pgerrcode.SerializationFailure || pgErr.Code == pgerrcode.DeadlockDetected {
-			return pkg.Wrap(pkg.ErrConflict, err, "conflicting data")
-		}
-		if pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			return pkg.Wrap(pkg.ErrInvalid, err, "integrity constraint violation")
-		}
-
-		return pkg.Wrap(pkg.ErrInternal, err, "unexpected postgres error")
+	if !errors.As(err, &pgErr) {
+		return wrapped
 	}
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return pkg.Wrap(pkg.ErrNotFound, err, "no rows found")
+	if known, ok := constraintErrors[pgErr.ConstraintName]; ok {
+		return pkg.Wrap(known.code, wrapped, known.message)
 	}
-
-	return pkg.Wrap(pkg.ErrInternal, err, "unexpected error")
+	// 23503 is also raised when deleting a row a NO ACTION key still references.
+	if pgErr.Code == pgerrcode.RestrictViolation || (pgErr.Code == pgerrcode.ForeignKeyViolation && strings.HasPrefix(pgErr.Message, "update or delete")) {
+		return pkg.Wrap(pkg.ErrInUse, wrapped, "still in use")
+	}
+	return wrapped
 }

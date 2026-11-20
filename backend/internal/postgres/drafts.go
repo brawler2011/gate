@@ -27,7 +27,7 @@ func (r *DraftsRepo) CreateDraft(ctx context.Context, userID uuid.UUID, creation
 		Code:      creation.Code,
 	})
 	if err != nil {
-		return uuid.Nil, HandlePgErr(err)
+		return uuid.Nil, dbError("create draft", err)
 	}
 	return id, nil
 }
@@ -35,7 +35,7 @@ func (r *DraftsRepo) CreateDraft(ctx context.Context, userID uuid.UUID, creation
 func (r *DraftsRepo) GetDraft(ctx context.Context, id uuid.UUID) (contestsmodel.ContestDraft, error) {
 	row, err := r.queries.GetDraft(ctx, id)
 	if err != nil {
-		return contestsmodel.ContestDraft{}, HandlePgErr(err)
+		return contestsmodel.ContestDraft{}, dbError("get draft", err)
 	}
 
 	var username string
@@ -60,7 +60,7 @@ func (r *DraftsRepo) GetDraftsCount(ctx context.Context, contestID, userID uuid.
 		UserID:    userID,
 	})
 	if err != nil {
-		return 0, HandlePgErr(err)
+		return 0, dbError("get drafts count", err)
 	}
 	return count, nil
 }
@@ -71,7 +71,7 @@ func (r *DraftsRepo) ListDrafts(ctx context.Context, userID uuid.UUID, filter co
 		UserID:    userID,
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("list drafts", err)
 	}
 
 	rows, err := r.queries.ListDrafts(ctx, sqlc.ListDraftsParams{
@@ -81,7 +81,7 @@ func (r *DraftsRepo) ListDrafts(ctx context.Context, userID uuid.UUID, filter co
 		LimitVal:  filter.PageSize,
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("list drafts", err)
 	}
 
 	drafts := make([]contestsmodel.ContestDraft, 0, len(rows))
@@ -107,7 +107,7 @@ func (r *DraftsRepo) ListDrafts(ctx context.Context, userID uuid.UUID, filter co
 
 func (r *DraftsRepo) DeleteDraft(ctx context.Context, id uuid.UUID) error {
 	if err := r.queries.DeleteDraft(ctx, id); err != nil {
-		return HandlePgErr(err)
+		return dbError("delete draft", err)
 	}
 	return nil
 }

@@ -86,7 +86,7 @@ func (uc *SubmissionsUseCase) CreateSubmission(ctx context.Context, creation *su
 	var err error
 	for attempt := 0; attempt < 3; attempt++ {
 		id, err = uc.createSubmission(ctx, creation)
-		if !errors.Is(err, pkg.ErrConflict) {
+		if !errors.Is(err, pkg.ErrConcurrentUpdate) {
 			return id, err
 		}
 	}
@@ -121,7 +121,7 @@ func (uc *SubmissionsUseCase) createSubmission(ctx context.Context, creation *su
 		}
 
 		if _, err := tx.GetContestProblem(ctx, contestsmodel.ContestProblemGet{ContestId: creation.ContestId, ProblemId: creation.ProblemId}); err != nil {
-			return pkg.Wrap(pkg.ErrInvalid, err, "problem does not belong to contest")
+			return pkg.OnNotFound(err, pkg.ErrInvalid, "problem does not belong to contest")
 		}
 		input := *creation
 		block, err := tx.GetContestUserProblemBlock(ctx, input.ContestId, input.UserId, input.ProblemId)

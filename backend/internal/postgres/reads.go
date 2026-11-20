@@ -12,15 +12,15 @@ func readSnapshot[T any](ctx context.Context, pool *pgxpool.Pool, read func(*sql
 	var zero T
 	tx, err := pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
-		return zero, HandlePgErr(err)
+		return zero, dbError("read snapshot", err)
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
 	result, err := read(sqlc.New(tx))
 	if err != nil {
 		return zero, err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return zero, HandlePgErr(err)
+		return zero, dbError("read snapshot", err)
 	}
 	return result, nil
 }

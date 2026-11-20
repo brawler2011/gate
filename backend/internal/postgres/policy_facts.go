@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/brawler2011/gate/backend/internal/access"
 	m "github.com/brawler2011/gate/backend/internal/access/model"
@@ -28,12 +27,12 @@ func (r *PolicyFactsRepo) LoadProblemFacts(ctx context.Context, viewer uuid.UUID
 	}
 	rows, err := r.q.LoadProblemFacts(ctx, sqlc.LoadProblemFactsParams{ViewerID: &viewer, Ids: ids})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("load problem facts", err)
 	}
 	for _, row := range rows {
 		var facts m.ProblemContext
 		if err := json.Unmarshal(row.Facts, &facts); err != nil {
-			return nil, fmt.Errorf("decode policy facts: %w", err)
+			return nil, dbError("decode policy facts", err)
 		}
 		result[row.ID] = facts
 	}
@@ -46,12 +45,12 @@ func (r *PolicyFactsRepo) LoadContestFacts(ctx context.Context, viewer uuid.UUID
 	}
 	rows, err := r.q.LoadContestFacts(ctx, sqlc.LoadContestFactsParams{ViewerID: &viewer, Ids: ids})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("load contest facts", err)
 	}
 	for _, row := range rows {
 		var facts m.ContestContext
 		if err := json.Unmarshal(row.Facts, &facts); err != nil {
-			return nil, fmt.Errorf("decode policy facts: %w", err)
+			return nil, dbError("decode policy facts", err)
 		}
 		result[row.ID] = facts
 	}
@@ -64,12 +63,12 @@ func (r *PolicyFactsRepo) LoadTeamFacts(ctx context.Context, viewer uuid.UUID, i
 	}
 	rows, err := r.q.LoadTeamFacts(ctx, sqlc.LoadTeamFactsParams{ViewerID: &viewer, Ids: ids})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("load team facts", err)
 	}
 	for _, row := range rows {
 		var facts m.TeamContext
 		if err := json.Unmarshal(row.Facts, &facts); err != nil {
-			return nil, fmt.Errorf("decode policy facts: %w", err)
+			return nil, dbError("decode policy facts", err)
 		}
 		result[row.ID] = facts
 	}
@@ -83,12 +82,12 @@ func (r *PolicyFactsRepo) LoadOrganizationFacts(ctx context.Context, viewer uuid
 	}
 	rows, err := r.q.LoadOrganizationFacts(ctx, sqlc.LoadOrganizationFactsParams{ViewerID: &viewer, Ids: ids})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("load organization facts", err)
 	}
 	for _, row := range rows {
 		var facts m.OrganizationContext
 		if err := json.Unmarshal(row.Facts, &facts); err != nil {
-			return nil, fmt.Errorf("decode policy facts: %w", err)
+			return nil, dbError("decode policy facts", err)
 		}
 		result[row.ID] = facts
 	}
@@ -102,12 +101,12 @@ func (r *PolicyFactsRepo) LoadCapabilityUsers(ctx context.Context, ids []uuid.UU
 	}
 	rows, err := r.q.LoadCapabilityUsers(ctx, ids)
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("load capability users", err)
 	}
 	for _, row := range rows {
 		var u m.User
 		if err := json.Unmarshal(row.Facts, &u); err != nil {
-			return nil, fmt.Errorf("decode capability user: %w", err)
+			return nil, dbError("decode capability user", err)
 		}
 		result[row.ID] = u
 	}

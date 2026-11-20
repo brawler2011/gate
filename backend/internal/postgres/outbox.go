@@ -44,7 +44,7 @@ func (r *OutboxRepo) CreateEvent(ctx context.Context, event *eventdata.CreateOut
 		var err error
 		headersBytes, err = json.Marshal(event.Headers)
 		if err != nil {
-			return fmt.Errorf("failed to marshal headers: %w", err)
+			return dbError("failed to marshal headers", err)
 		}
 	} else {
 		headersBytes = []byte("{}")
@@ -58,7 +58,7 @@ func (r *OutboxRepo) CreateEvent(ctx context.Context, event *eventdata.CreateOut
 		Headers:     headersBytes,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("create event", err)
 	}
 
 	return nil
@@ -71,7 +71,7 @@ func (r *OutboxRepo) PickEvents(ctx context.Context, limit int32, timeoutSec int
 		LeaseToken: uuid.New(),
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("pick events", err)
 	}
 
 	events := make([]eventdata.OutboxEvent, len(rows))
@@ -102,7 +102,7 @@ func (r *OutboxRepo) MarkAsFailed(ctx context.Context, id, leaseToken uuid.UUID,
 
 func checkOutboxLease(count int64, err error) error {
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("check outbox lease", err)
 	}
 	if count == 0 {
 		return pkg.Wrap(pkg.ErrConflict, nil, "outbox lease no longer owned")
@@ -113,7 +113,7 @@ func checkOutboxLease(count int64, err error) error {
 func (r *OutboxRepo) DeleteOldEvents(ctx context.Context, retentionDays int32) error {
 	err := r.queries.DeleteOldEvents(ctx, retentionDays)
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("delete old events", err)
 	}
 	return nil
 }

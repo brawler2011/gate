@@ -17,7 +17,7 @@ func (p guardedTransactions[T]) Prepare(ctx context.Context) (context.Context, e
 	}
 	revision, err := sqlc.New(p.pool).GetAccessRevision(ctx)
 	if err != nil {
-		return ctx, HandlePgErr(err)
+		return ctx, dbError("prepare", err)
 	}
 	actor := m.UserFromContext(ctx)
 	if actor.IsGuest() {
@@ -25,7 +25,7 @@ func (p guardedTransactions[T]) Prepare(ctx context.Context) (context.Context, e
 	}
 	expiry, err := sqlc.New(p.pool).GetCommandActorExpiry(ctx, actor.Id)
 	if err != nil {
-		return ctx, HandlePgErr(err)
+		return ctx, dbError("prepare", err)
 	}
 	if actor.ExpiresAt != nil && (expiry == nil || actor.ExpiresAt.Before(*expiry)) {
 		expiry = actor.ExpiresAt

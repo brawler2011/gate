@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
@@ -35,7 +34,7 @@ func (r *ClarificationsRepo) CreateClarification(ctx context.Context, userID uui
 		Question:  input.Question,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create contest clarification in db: %w", err)
+		return nil, dbError("create contest clarification in db", err)
 	}
 
 	return r.GetClarificationByID(ctx, row.ID)
@@ -47,7 +46,7 @@ func (r *ClarificationsRepo) GetClarificationByID(ctx context.Context, id uuid.U
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pkg.ErrNotFound
 		}
-		return nil, fmt.Errorf("get contest clarification by id: %w", err)
+		return nil, dbError("get contest clarification by id", err)
 	}
 
 	return &contestsmodel.ContestClarification{
@@ -79,7 +78,7 @@ func (r *ClarificationsRepo) ListClarificationsForUser(ctx context.Context, cont
 		Offset:    offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("list contest clarifications for user: %w", err)
+		return nil, dbError("list contest clarifications for user", err)
 	}
 
 	total, err := r.queries.CountContestClarificationsForUser(ctx, sqlc.CountContestClarificationsForUserParams{
@@ -87,7 +86,7 @@ func (r *ClarificationsRepo) ListClarificationsForUser(ctx context.Context, cont
 		UserID:    userID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("count contest clarifications for user: %w", err)
+		return nil, dbError("count contest clarifications for user", err)
 	}
 
 	clarifications := make([]contestsmodel.ContestClarification, len(rows))
@@ -134,7 +133,7 @@ func (r *ClarificationsRepo) ListClarificationsForModerator(ctx context.Context,
 		Offset:    offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("list contest clarifications for moderator: %w", err)
+		return nil, dbError("list contest clarifications for moderator", err)
 	}
 
 	total, err := r.queries.CountContestClarificationsForModerator(ctx, sqlc.CountContestClarificationsForModeratorParams{
@@ -143,7 +142,7 @@ func (r *ClarificationsRepo) ListClarificationsForModerator(ctx context.Context,
 		Status:    status,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("count contest clarifications for moderator: %w", err)
+		return nil, dbError("count contest clarifications for moderator", err)
 	}
 
 	clarifications := make([]contestsmodel.ContestClarification, len(rows))
@@ -190,7 +189,7 @@ func (r *ClarificationsRepo) AnswerClarification(ctx context.Context, id, contes
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pkg.ErrNotFound
 		}
-		return nil, fmt.Errorf("answer contest clarification: %w", err)
+		return nil, dbError("answer contest clarification", err)
 	}
 
 	return r.GetClarificationByID(ctx, id)

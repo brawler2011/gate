@@ -696,6 +696,28 @@ func (s ErrorCode) Validate() error {
 		return nil
 	case "not_implemented":
 		return nil
+	case "concurrent_update":
+		return nil
+	case "in_use":
+		return nil
+	case "already_member":
+		return nil
+	case "request_pending":
+		return nil
+	case "username_taken":
+		return nil
+	case "email_taken":
+		return nil
+	case "organization_login_taken":
+		return nil
+	case "contest_login_taken":
+		return nil
+	case "team_slug_taken":
+		return nil
+	case "problem_short_name_taken":
+		return nil
+	case "problem_in_contest":
+		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}

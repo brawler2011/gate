@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
@@ -33,7 +32,7 @@ func (r *PackagesRepo) ListPackages(ctx context.Context, problemID uuid.UUID, re
 
 	rows, err := r.queries.ListProblemPackages(ctx, sqlc.ListProblemPackagesParams{ProblemID: problemID, PageSize: request.PageSize, PageOffset: request.Offset()})
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, dbError("list packages", err)
 	}
 	result := make([]problemsmodel.ProblemPackage, len(rows))
 	for i, row := range rows {
@@ -43,7 +42,7 @@ func (r *PackagesRepo) ListPackages(ctx context.Context, problemID uuid.UUID, re
 	}
 	count, err := r.queries.CountProblemPackages(ctx, problemID)
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, dbError("list packages", err)
 	}
 	return result, safeInt32(count), nil
 }
@@ -51,7 +50,7 @@ func (r *PackagesRepo) ListPackages(ctx context.Context, problemID uuid.UUID, re
 func (r *PackagesRepo) GetReadyPackage(ctx context.Context, problemID uuid.UUID) (problemsmodel.ProblemPackage, error) {
 	row, err := r.queries.GetReadyPackage(ctx, problemID)
 	if err != nil {
-		return problemsmodel.ProblemPackage{}, HandlePgErr(err)
+		return problemsmodel.ProblemPackage{}, dbError("get ready package", err)
 	}
 	return mapPackage(row)
 }
@@ -59,7 +58,7 @@ func (r *PackagesRepo) GetReadyPackage(ctx context.Context, problemID uuid.UUID)
 func (r *PackagesRepo) GetPackageByID(ctx context.Context, id uuid.UUID) (problemsmodel.ProblemPackage, error) {
 	row, err := r.queries.GetProblemPackageByID(ctx, id)
 	if err != nil {
-		return problemsmodel.ProblemPackage{}, HandlePgErr(err)
+		return problemsmodel.ProblemPackage{}, dbError("get package by id", err)
 	}
 	return mapPackage(row)
 }
@@ -68,7 +67,7 @@ func mapPackage(p sqlc.ProblemPackage) (problemsmodel.ProblemPackage, error) {
 	result := problemsmodel.ProblemPackage{ID: p.ID, ProblemID: p.ProblemID, OrganizationID: p.OrganizationID, BuildID: p.BuildID, ObjectID: p.ObjectID, Revision: p.Revision,
 		PackageHash: p.PackageHash, CreatedAt: p.CreatedAt, Title: p.Title, Type: p.Type}
 	if err := json.Unmarshal(p.Statements, &result.Statements); err != nil {
-		return result, fmt.Errorf("decode package statements: %w", err)
+		return result, dbError("decode package statements", err)
 	}
 	return result, nil
 }

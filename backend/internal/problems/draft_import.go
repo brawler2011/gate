@@ -64,7 +64,7 @@ func (uc *DraftUseCase) parseImport(ctx context.Context, reader io.Reader, id uu
 	}
 	tree := filepath.Join(root, "tree")
 	if err := ziputil.ExtractZipLimited(z, tree, int64(uc.BuildOptions.Limits.DiskBytes)-archive.spec.Size, uc.BuildOptions.Limits.FileCount); err != nil {
-		return nil, pkg.Wrap(pkg.ErrInvalid, err, "invalid import archive")
+		return nil, fmt.Errorf("extract import archive: %w", err)
 	}
 	packageRoot, err := detectImportRoot(tree)
 	if err != nil {
