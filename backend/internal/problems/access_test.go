@@ -49,13 +49,13 @@ func TestProblemReadsAndDraftOperationsAuthorizeBeforeAnyDependency(t *testing.T
 				if readOnly {
 					guestError = failure
 					if guestError == nil {
-						guestError = pkg.ErrForbidden
+						guestError = pkg.ErrNotFound
 					}
 				}
 				require.ErrorIs(t, call(context.Background()), guestError)
 				expected := failure
 				if expected == nil {
-					expected = pkg.ErrForbidden
+					expected = pkg.ErrNotFound
 				}
 				require.ErrorIs(t, call(problemActorContext()), expected)
 			})

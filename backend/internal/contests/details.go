@@ -62,7 +62,7 @@ func (r *DetailsReader) authorizedContest(ctx context.Context, org, login string
 		return contest, err
 	}
 	if !allowed {
-		return contest, pkg.ErrForbidden
+		return contest, deniedContest(ctx, r.permissions, contest.ID, action)
 	}
 	return contest, nil
 }

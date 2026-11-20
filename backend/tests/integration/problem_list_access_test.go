@@ -198,7 +198,7 @@ func (s *IntegrationTestSuite) TestProblemListAuthenticatedAccess() {
 				if slices.Contains(tc.want, id) {
 					s.NoError(err, "listed problem must be readable")
 				} else {
-					s.Equal(http.StatusForbidden, s.getStatusCode(err))
+					s.Equal(http.StatusNotFound, s.getStatusCode(err), "an unlisted problem is hidden")
 				}
 			}
 		})

@@ -34,8 +34,18 @@ func authorizeProblem(ctx context.Context, permissions ProblemPermissions, id uu
 	if err != nil {
 		return err
 	}
-	if !allowed {
-		return pkg.ErrForbidden
+	if allowed {
+		return nil
 	}
-	return nil
+	// A problem the caller cannot see is hidden; only a visible one is forbidden.
+	if action != accessmodel.ActionViewProblem {
+		visible, err := permissions.HasProblemPermission(ctx, id, user.Id, accessmodel.ActionViewProblem)
+		if err != nil {
+			return err
+		}
+		if visible {
+			return pkg.ErrForbidden
+		}
+	}
+	return pkg.ErrNotFound
 }

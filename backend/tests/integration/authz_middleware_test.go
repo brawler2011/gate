@@ -502,6 +502,6 @@ func (s *IntegrationTestSuite) TestAuthorizationMiddleware() {
 			ContestLogin: "policy-contest-" + suffix,
 		})
 		s.Require().Error(err)
-		s.Equal(http.StatusForbidden, s.getStatusCode(err))
+		s.Equal(http.StatusNotFound, s.getStatusCode(err))
 	})
 }

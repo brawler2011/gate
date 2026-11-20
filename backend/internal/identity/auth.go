@@ -233,14 +233,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 		return accessmodel.User{}, uuid.Nil, err
 	}
 
-	if user.IsExpired() {
-		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "account has expired")
-	}
-
-	if !user.IsEmailVerified {
-		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrInvalid, errors.New("email not verified"), "email not verified")
-	}
-
+	// Account state is revealed only after the password matches.
 	// Valid credentials clear cooldown; bound bcrypt work independently of Redis availability.
 	select {
 	case uc.bcryptSlots <- struct{}{}:
@@ -251,6 +244,12 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 	<-uc.bcryptSlots
 	if err != nil {
 		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, err, "invalid credentials")
+	}
+	if user.IsExpired() {
+		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, nil, "account has expired")
+	}
+	if !user.IsEmailVerified {
+		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrEmailNotVerified, nil, "email not verified")
 	}
 
 	sessionID := uuid.New()
@@ -268,7 +267,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 			return pkg.Wrap(pkg.ErrUnauthenticated, nil, "credentials changed or account expired")
 		}
 		if !current.IsEmailVerified {
-			return pkg.Wrap(pkg.ErrInvalid, nil, "email not verified")
+			return pkg.Wrap(pkg.ErrEmailNotVerified, nil, "email not verified")
 		}
 		user = current
 		return store.CreateSession(ctx, sessionID, user.Id, expiresAt)
@@ -400,18 +399,17 @@ func (uc *AuthUseCase) verifyEmailWithin(ctx context.Context, store IdentityTxSt
 	return user, sessionID, nil
 }
 
+// Like ForgotPassword, the answer does not reveal whether the account exists or has an email.
 func (uc *AuthUseCase) ResendVerificationEmail(ctx context.Context, identifier string) error {
 	user, err := uc.usersRepo.GetUserByUsernameOrEmail(ctx, identifier)
-	if err != nil {
-		return pkg.OnNotFound(err, pkg.ErrInvalid, "user not found")
-	}
-
-	if user.IsEmailVerified {
+	if errors.Is(err, pkg.ErrNotFound) {
 		return nil
 	}
-
-	if user.Email == nil || *user.Email == "" {
-		return pkg.Wrap(pkg.ErrInvalid, nil, "user has no email associated")
+	if err != nil {
+		return err
+	}
+	if user.IsEmailVerified || user.Email == nil || *user.Email == "" {
+		return nil
 	}
 
 	token, tokenHash, err := generateSecureToken()

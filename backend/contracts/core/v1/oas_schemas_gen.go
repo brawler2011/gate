@@ -3077,6 +3077,7 @@ const (
 	ErrorCodeTeamSlugTaken          ErrorCode = "team_slug_taken"
 	ErrorCodeProblemShortNameTaken  ErrorCode = "problem_short_name_taken"
 	ErrorCodeProblemInContest       ErrorCode = "problem_in_contest"
+	ErrorCodeEmailNotVerified       ErrorCode = "email_not_verified"
 )
 
 // AllValues returns all ErrorCode values.
@@ -3102,6 +3103,7 @@ func (ErrorCode) AllValues() []ErrorCode {
 		ErrorCodeTeamSlugTaken,
 		ErrorCodeProblemShortNameTaken,
 		ErrorCodeProblemInContest,
+		ErrorCodeEmailNotVerified,
 	}
 }
 
@@ -3147,6 +3149,8 @@ func (s ErrorCode) MarshalText() ([]byte, error) {
 	case ErrorCodeProblemShortNameTaken:
 		return []byte(s), nil
 	case ErrorCodeProblemInContest:
+		return []byte(s), nil
+	case ErrorCodeEmailNotVerified:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -3215,6 +3219,9 @@ func (s *ErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorCodeProblemInContest:
 		*s = ErrorCodeProblemInContest
+		return nil
+	case ErrorCodeEmailNotVerified:
+		*s = ErrorCodeEmailNotVerified
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)

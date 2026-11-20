@@ -13,6 +13,7 @@ import (
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
+	"github.com/go-faster/jx"
 	"github.com/ogen-go/ogen/ogenerrors"
 )
 
@@ -70,17 +71,23 @@ func newProblem(ctx context.Context, err error) *corev1.ProblemStatusCodeWithHea
 	var fields pkg.FieldErrors
 	if errors.As(err, &fields) {
 		for _, f := range fields {
-			res.Response.Errors = append(res.Response.Errors, corev1.FieldProblem{Pointer: f.Pointer, Code: corev1.ErrorCodeInvalid, Detail: corev1.NewOptString(f.Message)})
+			code := f.Code
+			if code == "" {
+				code = pkg.CodeInvalid
+			}
+			res.Response.Errors = append(res.Response.Errors, corev1.FieldProblem{
+				Pointer: f.Pointer,
+				Code:    corev1.ErrorCode(code),
+				Params:  fieldParams(f.Params),
+				Detail:  corev1.NewOptString(f.Message),
+			})
 		}
 	}
 	return res
 }
 
-func problemParams(params map[string]any) corev1.OptProblemParams {
-	if len(params) == 0 {
-		return corev1.OptProblemParams{}
-	}
-	out := make(corev1.ProblemParams, len(params))
+func rawParams(params map[string]any) map[string]jx.Raw {
+	out := make(map[string]jx.Raw, len(params))
 	for k, v := range params {
 		raw, err := json.Marshal(v)
 		if err != nil {
@@ -88,7 +95,21 @@ func problemParams(params map[string]any) corev1.OptProblemParams {
 		}
 		out[k] = raw
 	}
-	return corev1.NewOptProblemParams(out)
+	return out
+}
+
+func problemParams(params map[string]any) corev1.OptProblemParams {
+	if len(params) == 0 {
+		return corev1.OptProblemParams{}
+	}
+	return corev1.NewOptProblemParams(rawParams(params))
+}
+
+func fieldParams(params map[string]any) corev1.OptFieldProblemParams {
+	if len(params) == 0 {
+		return corev1.OptFieldProblemParams{}
+	}
+	return corev1.NewOptFieldProblemParams(rawParams(params))
 }
 
 func statusCode(status int) pkg.Code {

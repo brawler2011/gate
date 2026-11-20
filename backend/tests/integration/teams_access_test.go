@@ -124,7 +124,7 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 			ID: problemID,
 		})
 		s.Require().Error(err)
-		s.Equal(http.StatusForbidden, s.getStatusCode(err))
+		s.Equal(http.StatusNotFound, s.getStatusCode(err))
 
 		err = s.client.CreateProblemTeam(withTestUser(s.ctx, ownerUser.Id), corev1.CreateProblemTeamParams{
 			ID:         problemID,
@@ -157,7 +157,7 @@ func (s *IntegrationTestSuite) TestTeamBasedAccess() {
 			ID: problemID,
 		})
 		s.Require().Error(err)
-		s.Equal(http.StatusForbidden, s.getStatusCode(err))
+		s.Equal(http.StatusNotFound, s.getStatusCode(err))
 	})
 
 	_ = adminUser

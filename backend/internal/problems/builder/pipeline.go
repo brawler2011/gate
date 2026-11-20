@@ -688,7 +688,8 @@ func (e *execution) readSample(path string) (string, error) {
 func diagnostic(err error) json.RawMessage {
 	var failure *Failure
 	if !errors.As(err, &failure) {
-		failure = &Failure{Stage: "pipeline", Kind: "infrastructure", Message: err.Error()}
+		// Authors see the diagnostic; the cause is in the worker's log.
+		failure = &Failure{Stage: "pipeline", Kind: "infrastructure", Message: "internal error"}
 	}
 	if len(failure.Message) > 8192 {
 		failure.Message = strings.ToValidUTF8(failure.Message[:8192], "�")

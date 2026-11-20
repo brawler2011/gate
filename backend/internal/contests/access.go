@@ -42,7 +42,7 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID u
 		if user.IsGuest() {
 			return nil, pkg.ErrUnauthenticated
 		}
-		return nil, pkg.ErrForbidden
+		return nil, deniedContest(ctx, uc.permissions, contestID, accessmodel.ActionGetMonitor)
 	}
 	manager, err := uc.permissions.HasContestPermission(ctx, contestID, userID, accessmodel.ActionManageContest)
 	if err != nil {
@@ -91,7 +91,7 @@ func (uc *ContestsUseCase) withinContestOnce(ctx context.Context, id uuid.UUID, 
 		return err
 	}
 	if !allowed {
-		return pkg.ErrForbidden
+		return deniedContest(ctx, uc.permissions, id, action)
 	}
 	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {
 		return fn(tx)

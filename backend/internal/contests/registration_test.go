@@ -160,7 +160,8 @@ func TestContestRosterMutationsAuthorizeWithoutHTTP(t *testing.T) {
 	uc := NewContestsUseCase(nil, nil, testTransactions[CommandTxStore]{}, deniedContestCommands{})
 	for _, caller := range []accessmodel.User{accessmodel.Guest, {Id: uuid.New(), Role: accessmodel.UserRoleUser}} {
 		ctx := accessmodel.WithUser(context.Background(), caller)
-		want := pkg.ErrForbidden
+		// deniedContestCommands hides the contest, so a signed-in caller cannot learn it exists.
+		want := pkg.ErrNotFound
 		if caller.IsGuest() {
 			want = pkg.ErrUnauthenticated
 		}

@@ -3987,6 +3987,7 @@ components:
         - team_slug_taken
         - problem_short_name_taken
         - problem_in_contest
+        - email_not_verified
     CreationResponseModel:
       description: "Result of creation."
       example:

@@ -94,7 +94,7 @@ func (uc *OrganizationsUseCase) GetOrganizationByLogin(ctx context.Context, logi
 		return nil, fmt.Errorf("check permissions: %w", err)
 	}
 	if !hasAccess {
-		return nil, pkg.ErrForbidden
+		return nil, pkg.ErrNotFound
 	}
 
 	return org, nil

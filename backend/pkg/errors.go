@@ -70,6 +70,7 @@ var (
 	ErrTeamSlugTaken          = NewCode("team_slug_taken", CodeConflict)
 	ErrProblemShortNameTaken  = NewCode("problem_short_name_taken", CodeConflict)
 	ErrProblemInContest       = NewCode("problem_in_contest", CodeConflict)
+	ErrEmailNotVerified       = NewCode("email_not_verified", CodeForbidden)
 )
 
 // NewCode registers a specific code whose status is that of kind.
@@ -164,8 +165,11 @@ func HTTPStatus(code Code) int {
 
 // Pointer is an RFC 6901 JSON Pointer into the request body.
 type FieldError struct {
-	Pointer string `json:"pointer"`
-	Message string `json:"message"`
+	Pointer string
+	// Empty means CodeInvalid.
+	Code    Code
+	Params  map[string]any
+	Message string
 }
 
 type FieldErrors []FieldError

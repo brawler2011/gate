@@ -58,11 +58,11 @@ func (s *IntegrationTestSuite) TestRateLimitedLogin() {
 	s.requireRateLimited(login("wrong-password"))
 	s.rateRedis.FastForward(2 * time.Minute)
 	s.Equal(http.StatusUnauthorized, s.getStatusCode(login("wrong-password")))
-	// Unverified accounts are BadInput and do not consume failure quota.
+	// Unverified accounts are rejected after the password check and do not consume failure quota.
 	other, err := s.client.Register(s.ctx, &corev1.RegisterRequestModel{Username: "unverified_limit", Email: "unverified_limit@example.com", Password: password})
 	s.Require().NoError(err)
 	_, err = s.client.Login(s.ctx, &corev1.LoginRequestModel{Identifier: other.User.Username, Password: password})
-	s.Equal(http.StatusBadRequest, s.getStatusCode(err))
+	s.Equal(http.StatusForbidden, s.getStatusCode(err))
 	s.False(s.rateRedis.Exists("rl:fail:login:" + other.User.Username))
 }
 
