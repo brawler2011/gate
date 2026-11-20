@@ -189,7 +189,7 @@ func (j *PackageJudge) test(ctx context.Context, sb *sandbox.Sandbox, pkg *Loade
 		result.Memory = r.SolutionResult.Memory
 		result.Score = r.Score
 	} else {
-		r, err := sb.RunFiles(ctx, sol, lang, input, nil, nil, limits)
+		r, err := sb.RunSolution(ctx, sol, lang, input, s.Draft.Streams(), limits)
 		if err != nil {
 			return result, err
 		}

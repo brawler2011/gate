@@ -245,6 +245,8 @@ type ContestsList struct {
 type ContestProblem struct {
 	TimeLimitMs   int
 	MemoryLimitMb int
+	InputFile     string
+	OutputFile    string
 	UpdatedAt     time.Time
 	ContestID     uuid.UUID
 	ProblemID     uuid.UUID

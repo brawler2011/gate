@@ -1959,6 +1959,10 @@ export interface components {
             solutions: components["schemas"]["ProblemDraftSolution"][];
             /** @description Name of a solution of the draft. */
             main_solution: string | null;
+            /** @description File the solution reads instead of standard input; empty for standard input. */
+            input_file: string;
+            /** @description File the solution writes instead of standard output; empty for standard output. */
+            output_file: string;
             library: components["schemas"]["ProblemDraftLibraryFile"][];
             statements: components["schemas"]["ProblemDraftStatement"][];
             assets: components["schemas"]["ProblemDraftAsset"][];
@@ -2329,6 +2333,10 @@ export interface components {
              * @example 256
              */
             memory_limit: number;
+            /** @description File the solution reads instead of standard input; empty for standard input. */
+            input_file: string;
+            /** @description File the solution writes instead of standard output; empty for standard output. */
+            output_file: string;
             /** Format: int32 */
             position: number;
             legend: string;

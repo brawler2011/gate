@@ -16,7 +16,7 @@ afterEach(() => {
 
 const draft = (revision: number, title: string) => ({
   problem_id: "problem", revision, title, short_name: "a", type: "pass-fail", time_limit_ms: 1000,
-  memory_limit_mb: 256, max_score: null,
+  memory_limit_mb: 256, input_file: "", output_file: "", max_score: null,
   checker: null, interactor: null, validators: [], solutions: [], library: [], statements: [],
   generators: [{id: "g1", name: "gen", language: "cpp", source: ""}],
   main_solution: null, subtasks: [], tests: [], assets: [],

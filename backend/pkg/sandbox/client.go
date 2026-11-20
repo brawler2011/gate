@@ -78,6 +78,12 @@ type result struct {
 	Memory     uint64            `json:"memory"`
 	Files      map[string]string `json:"files"`
 	FileIDs    map[string]string `json:"fileIds"`
+	FileError  []fileError       `json:"fileError"`
+}
+
+type fileError struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
 }
 
 // go-judge status strings (envexec.Status).

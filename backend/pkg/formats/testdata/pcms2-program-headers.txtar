@@ -5,6 +5,7 @@ the package root uses the root testlib.h, not the one in files/.
 <!DOCTYPE problem PUBLIC "-//PCMS2//DTD Problem Description 1.0//EN" "http://pcms2.ru/dtd/problem-0.2.dtd">
 <problem id="headers">
   <judging>
+    <output-file>output.txt</output-file>
     <run><verifier type="testlib"><binary executable="check.exe"/></verifier></run>
     <testset name="tests"><time-limit>1000</time-limit><memory-limit>268435456</memory-limit></testset>
   </judging>

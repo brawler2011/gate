@@ -801,6 +801,8 @@ type ProblemPackage struct {
 	ShortName      string    `json:"short_name"`
 	TimeLimitMs    int32     `json:"time_limit_ms"`
 	MemoryLimitMb  int32     `json:"memory_limit_mb"`
+	InputFile      string    `json:"input_file"`
+	OutputFile     string    `json:"output_file"`
 	BuildID        uuid.UUID `json:"build_id"`
 	ObjectID       uuid.UUID `json:"object_id"`
 	Revision       int64     `json:"revision"`

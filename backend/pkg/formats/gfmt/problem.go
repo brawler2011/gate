@@ -22,6 +22,9 @@ type Problem struct {
 	Type          string             `yaml:"type" json:"type"` // "pass-fail", "interactive", "scoring"
 	Limits        Limits             `yaml:"limits" json:"limits"`
 	Subtasks      map[string]Subtask `yaml:"subtasks" json:"subtasks"`
+	// Empty names keep standard input and output.
+	InputFile  string `yaml:"input_file,omitempty" json:"input_file,omitempty"`
+	OutputFile string `yaml:"output_file,omitempty" json:"output_file,omitempty"`
 	// MainSolution names the solutions/ file whose output answers tests without an answer.
 	MainSolution string                 `yaml:"main_solution,omitempty" json:"main_solution,omitempty"`
 	Solutions    map[string]Expectation `yaml:"solutions,omitempty" json:"solutions,omitempty"`

@@ -1851,11 +1851,15 @@ func (s *ContestProblemListItemModel) SetUpdatedAt(val time.Time) {
 // Contest problem data.
 // Ref: #/components/schemas/ContestProblemModel
 type ContestProblemModel struct {
-	Capabilities []string             `json:"capabilities"`
-	ProblemID    uuid.UUID            `json:"problem_id"`
-	Title        string               `json:"title"`
-	TimeLimit    int32                `json:"time_limit"`
-	MemoryLimit  int32                `json:"memory_limit"`
+	Capabilities []string  `json:"capabilities"`
+	ProblemID    uuid.UUID `json:"problem_id"`
+	Title        string    `json:"title"`
+	TimeLimit    int32     `json:"time_limit"`
+	MemoryLimit  int32     `json:"memory_limit"`
+	// File the solution reads instead of standard input; empty for standard input.
+	InputFile string `json:"input_file"`
+	// File the solution writes instead of standard output; empty for standard output.
+	OutputFile   string               `json:"output_file"`
 	Position     int32                `json:"position"`
 	Legend       string               `json:"legend"`
 	InputFormat  string               `json:"input_format"`
@@ -1893,6 +1897,16 @@ func (s *ContestProblemModel) GetTimeLimit() int32 {
 // GetMemoryLimit returns the value of MemoryLimit.
 func (s *ContestProblemModel) GetMemoryLimit() int32 {
 	return s.MemoryLimit
+}
+
+// GetInputFile returns the value of InputFile.
+func (s *ContestProblemModel) GetInputFile() string {
+	return s.InputFile
+}
+
+// GetOutputFile returns the value of OutputFile.
+func (s *ContestProblemModel) GetOutputFile() string {
+	return s.OutputFile
 }
 
 // GetPosition returns the value of Position.
@@ -1968,6 +1982,16 @@ func (s *ContestProblemModel) SetTimeLimit(val int32) {
 // SetMemoryLimit sets the value of MemoryLimit.
 func (s *ContestProblemModel) SetMemoryLimit(val int32) {
 	s.MemoryLimit = val
+}
+
+// SetInputFile sets the value of InputFile.
+func (s *ContestProblemModel) SetInputFile(val string) {
+	s.InputFile = val
+}
+
+// SetOutputFile sets the value of OutputFile.
+func (s *ContestProblemModel) SetOutputFile(val string) {
+	s.OutputFile = val
 }
 
 // SetPosition sets the value of Position.
@@ -8185,12 +8209,16 @@ type ProblemDraft struct {
 	Generators    []ProblemDraftNamedProgram `json:"generators"`
 	Solutions     []ProblemDraftSolution     `json:"solutions"`
 	// Name of a solution of the draft.
-	MainSolution NilString                 `json:"main_solution"`
-	Library      []ProblemDraftLibraryFile `json:"library"`
-	Statements   []ProblemDraftStatement   `json:"statements"`
-	Assets       []ProblemDraftAsset       `json:"assets"`
-	Subtasks     []ProblemDraftSubtask     `json:"subtasks"`
-	Tests        []ProblemDraftTest        `json:"tests"`
+	MainSolution NilString `json:"main_solution"`
+	// File the solution reads instead of standard input; empty for standard input.
+	InputFile string `json:"input_file"`
+	// File the solution writes instead of standard output; empty for standard output.
+	OutputFile string                    `json:"output_file"`
+	Library    []ProblemDraftLibraryFile `json:"library"`
+	Statements []ProblemDraftStatement   `json:"statements"`
+	Assets     []ProblemDraftAsset       `json:"assets"`
+	Subtasks   []ProblemDraftSubtask     `json:"subtasks"`
+	Tests      []ProblemDraftTest        `json:"tests"`
 }
 
 // GetProblemID returns the value of ProblemID.
@@ -8261,6 +8289,16 @@ func (s *ProblemDraft) GetSolutions() []ProblemDraftSolution {
 // GetMainSolution returns the value of MainSolution.
 func (s *ProblemDraft) GetMainSolution() NilString {
 	return s.MainSolution
+}
+
+// GetInputFile returns the value of InputFile.
+func (s *ProblemDraft) GetInputFile() string {
+	return s.InputFile
+}
+
+// GetOutputFile returns the value of OutputFile.
+func (s *ProblemDraft) GetOutputFile() string {
+	return s.OutputFile
 }
 
 // GetLibrary returns the value of Library.
@@ -8356,6 +8394,16 @@ func (s *ProblemDraft) SetSolutions(val []ProblemDraftSolution) {
 // SetMainSolution sets the value of MainSolution.
 func (s *ProblemDraft) SetMainSolution(val NilString) {
 	s.MainSolution = val
+}
+
+// SetInputFile sets the value of InputFile.
+func (s *ProblemDraft) SetInputFile(val string) {
+	s.InputFile = val
+}
+
+// SetOutputFile sets the value of OutputFile.
+func (s *ProblemDraft) SetOutputFile(val string) {
+	s.OutputFile = val
 }
 
 // SetLibrary sets the value of Library.

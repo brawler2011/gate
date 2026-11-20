@@ -444,6 +444,8 @@ CREATE TABLE problem_packages (
     short_name text DEFAULT ''::text NOT NULL,
     time_limit_ms integer DEFAULT 1000 NOT NULL,
     memory_limit_mb integer DEFAULT 256 NOT NULL,
+    input_file text DEFAULT ''::text NOT NULL,
+    output_file text DEFAULT ''::text NOT NULL,
     build_id uuid NOT NULL,
     object_id uuid NOT NULL,
     revision bigint NOT NULL,
@@ -590,6 +592,8 @@ BEGIN
     NEW.short_name=b.snapshot->'draft'->>'short_name';
     NEW.time_limit_ms=(b.snapshot->'draft'->>'time_limit_ms')::integer;
     NEW.memory_limit_mb=(b.snapshot->'draft'->>'memory_limit_mb')::integer;
+    NEW.input_file=COALESCE(b.snapshot->'draft'->>'input_file','');
+    NEW.output_file=COALESCE(b.snapshot->'draft'->>'output_file','');
     -- Statement reads use this copy instead of decoding the build snapshot.
     NEW.statements=CASE WHEN jsonb_typeof(b.snapshot->'draft'->'statements')='array'
         THEN b.snapshot->'draft'->'statements' ELSE '[]'::jsonb END;

@@ -3509,6 +3509,8 @@ components:
       - generators
       - solutions
       - main_solution
+      - input_file
+      - output_file
       - library
       - statements
       - assets
@@ -3565,6 +3567,12 @@ components:
           type: string
           description: Name of a solution of the draft.
           nullable: true
+        input_file:
+          type: string
+          description: File the solution reads instead of standard input; empty for standard input.
+        output_file:
+          type: string
+          description: File the solution writes instead of standard output; empty for standard output.
         library:
           type: array
           items:
@@ -4058,6 +4066,8 @@ components:
         - title
         - time_limit
         - memory_limit
+        - input_file
+        - output_file
         - position
         - legend
         - input_format
@@ -4089,6 +4099,12 @@ components:
           type: integer
           format: int32
           example: 256
+        input_file:
+          type: string
+          description: File the solution reads instead of standard input; empty for standard input.
+        output_file:
+          type: string
+          description: File the solution writes instead of standard output; empty for standard output.
         position:
           type: integer
           format: int32

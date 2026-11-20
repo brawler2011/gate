@@ -23,7 +23,7 @@ const checkerTests = [checkerTest("t1", "OK"), checkerTest("t2", "WA")];
 
 const draft: ProblemDraft = {
   problem_id: "problem", revision: 3, title: "A", short_name: "a", type: "pass-fail", time_limit_ms: 1000,
-  memory_limit_mb: 256, max_score: null, checker: {language: "cpp20", source: "", standard: "wcmp", tests: checkerTests},
+  memory_limit_mb: 256, input_file: "", output_file: "", max_score: null, checker: {language: "cpp20", source: "", standard: "wcmp", tests: checkerTests},
   interactor: null,
   validators: [], generators: [], solutions: [], main_solution: null, statements: [], assets: [], subtasks: [],
   tests: [], library: [],

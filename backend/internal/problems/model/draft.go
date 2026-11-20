@@ -42,6 +42,9 @@ type DraftContent struct {
 	Assets       []DraftAsset        `json:"assets"`
 	Subtasks     []DraftSubtask      `json:"subtasks"`
 	Tests        []DraftTest         `json:"tests"`
+	// Solutions read InputFile and write OutputFile instead of a standard stream when the name is set.
+	InputFile  string `json:"input_file"`
+	OutputFile string `json:"output_file"`
 }
 
 type DraftProgram struct {
@@ -199,6 +202,10 @@ func (d *Draft) TrimStatements() {
 			*section = strings.TrimRightFunc(*section, unicode.IsSpace)
 		}
 	}
+}
+
+func (d *Draft) Streams() sandbox.Streams {
+	return sandbox.Streams{Input: d.InputFile, Output: d.OutputFile}
 }
 
 func (d *Draft) Statement(language string) *DraftStatement {
@@ -538,6 +545,14 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 	}
 	if d.MainSolution != nil && d.Solution(*d.MainSolution) == nil {
 		v.fail("/main_solution", "unknown solution %q", *d.MainSolution)
+	}
+	for pointer, name := range map[string]string{"/input_file": d.InputFile, "/output_file": d.OutputFile} {
+		if name != "" && (!ValidFileName(name) || !sandbox.ValidSolutionFile(name) || d.Type == "interactive") {
+			v.fail(pointer, "file name %q is invalid or set on an interactive problem", name)
+		}
+	}
+	if d.InputFile != "" && d.InputFile == d.OutputFile {
+		v.fail("/output_file", "input and output files must differ")
 	}
 
 	languages := make(map[string]bool)

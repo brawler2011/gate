@@ -109,7 +109,7 @@ func (w *archiveWriter) object(name string, oid uuid.UUID, open func(uuid.UUID) 
 func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, open func(uuid.UUID) (io.ReadCloser, error)) (*archiveWriter, error) {
 	w := &archiveWriter{z: zip.NewWriter(dst), dirs: map[string]bool{}}
 	m := gfmt.Problem{FormatVersion: "1.0", Title: d.Title, Type: d.Type, Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb},
-		Sources: map[string]gfmt.Source{}, Subtasks: map[string]gfmt.Subtask{}, Solutions: map[string]gfmt.Expectation{}}
+		InputFile: d.InputFile, OutputFile: d.OutputFile, Sources: map[string]gfmt.Source{}, Subtasks: map[string]gfmt.Subtask{}, Solutions: map[string]gfmt.Expectation{}}
 	fileName := func(name, language string) string {
 		if extensions := languages.Langs[language].Extensions; len(extensions) > 0 {
 			return name + "." + extensions[0]
