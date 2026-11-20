@@ -410,7 +410,7 @@ func TestConcurrentDraftLimit(t *testing.T) {
 			if err == nil {
 				success++
 			} else {
-				require.ErrorIs(t, err, pkg.ErrBadInput)
+				require.ErrorIs(t, err, pkg.ErrInvalid)
 			}
 		case <-time.After(5 * time.Second):
 			t.Fatal("draft creation blocked")

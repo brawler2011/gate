@@ -5,11 +5,13 @@ import (
 	"errors"
 	"io"
 	"time"
+
+	"github.com/brawler2011/gate/backend/pkg"
 )
 
 var (
 	ErrNotModified = errors.New("file not modified")
-	ErrNotFound    = errors.New("file not found")
+	ErrNotFound    = &pkg.Error{Code: pkg.CodeNotFound, Message: "file not found"}
 )
 
 type ObjectInfo struct {

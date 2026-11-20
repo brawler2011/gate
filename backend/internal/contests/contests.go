@@ -92,12 +92,12 @@ func (uc *ContestsUseCase) CreateContest(
 			return err
 		}
 		if !allowed {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 
 		err = tx.CreateContest(ctx, params)
 		if err != nil {
-			return pkg.Wrap(err, nil, "can't create contest")
+			return fmt.Errorf("create contest: %w", err)
 		}
 
 		if c.OwnerID != nil {
@@ -107,7 +107,7 @@ func (uc *ContestsUseCase) CreateContest(
 				Role:      contestsmodel.ContestRoleOwner,
 			})
 			if err != nil {
-				return pkg.Wrap(err, nil, "can't create contest member")
+				return fmt.Errorf("create contest member: %w", err)
 			}
 		}
 
@@ -240,7 +240,7 @@ func (uc *ContestsUseCase) CreateParticipant(ctx context.Context, c contestsmode
 			}
 			_, err = tx.GetMember(ctx, contest.OrganizationID, c.UserId)
 			if err != nil {
-				return pkg.Wrap(pkg.ErrBadInput, nil, "user must be a member of the organization")
+				return pkg.Wrap(pkg.ErrInvalid, nil, "user must be a member of the organization")
 			}
 		}
 
@@ -261,7 +261,7 @@ func (uc *ContestsUseCase) DeleteParticipant(ctx context.Context, c contestsmode
 func (uc *ContestsUseCase) UpdateContestMember(ctx context.Context, contestId uuid.UUID, userId uuid.UUID, role string) error {
 	return uc.withinContest(ctx, contestId, accessmodel.ActionManageContest, func(tx CommandTxStore) error {
 		if role != contestsmodel.ContestRoleOwner && role != contestsmodel.ContestRoleModerator && role != contestsmodel.ContestRoleParticipant {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role value")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "invalid role value")
 		}
 
 		currentMember, err := tx.GetContestMember(ctx, &contestsmodel.ContestPermissionGet{
@@ -269,20 +269,20 @@ func (uc *ContestsUseCase) UpdateContestMember(ctx context.Context, contestId uu
 			UserId:    userId,
 		})
 		if err != nil {
-			return pkg.Wrap(err, nil, "can't get contest member")
+			return fmt.Errorf("get contest member: %w", err)
 		}
 
 		if currentMember.Role == contestsmodel.ContestRoleOwner {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "cannot change role from owner")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "cannot change role from owner")
 		}
 
 		if role == contestsmodel.ContestRoleOwner {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "cannot change role to owner")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "cannot change role to owner")
 		}
 
 		err = tx.UpdateContestMember(ctx, contestId, userId, role)
 		if err != nil {
-			return pkg.Wrap(err, nil, "can't update contest member")
+			return fmt.Errorf("update contest member: %w", err)
 		}
 
 		return nil
@@ -509,7 +509,7 @@ func (uc *ContestsUseCase) GetProblemBlockStatusForUser(
 			return nil, err
 		}
 		if !allowed {
-			return nil, pkg.NoPermission
+			return nil, pkg.ErrForbidden
 		}
 	}
 	block, err := uc.contestRepo.GetContestUserProblemBlock(ctx, contestID, userID, problemID)
@@ -555,11 +555,11 @@ func (uc *ContestsUseCase) CreateJoinRequest(
 		}
 		mode := contest.TypedSettings().GetParticipationMode()
 		if mode == contestsmodel.ParticipationModeInviteOnly {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "регистрация на данный контест закрыта (только по приглашениям)")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "регистрация на данный контест закрыта (только по приглашениям)")
 		}
 		if mode == contestsmodel.ParticipationModeOpen {
 			if _, err := tx.GetMember(ctx, contest.OrganizationID, userID); err != nil {
-				return pkg.Wrap(pkg.ErrBadInput, err, "user must be a member of the organization")
+				return pkg.Wrap(pkg.ErrInvalid, err, "user must be a member of the organization")
 			}
 			if err := tx.CreateContestMember(ctx, &contestsmodel.CreateContestMemberParams{ContestId: contest.ID, UserId: userID, Role: contestsmodel.ContestRoleParticipant}); err != nil {
 				return err
@@ -640,7 +640,7 @@ func (uc *ContestsUseCase) ListJoinRequests(
 		return nil, err
 	}
 	if !allowed {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "access denied")
+		return nil, pkg.Wrap(pkg.ErrForbidden, nil, "access denied")
 	}
 
 	status := string(organizationsmodel.RequestStatusPending)
@@ -692,10 +692,10 @@ func (uc *ContestsUseCase) ApproveJoinRequest(
 			return err
 		}
 		if req.ContestID != contest.ID {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "request does not belong to this contest")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "request does not belong to this contest")
 		}
 		if req.Status != organizationsmodel.RequestStatusPending {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "заявка уже рассмотрена")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "заявка уже рассмотрена")
 		}
 
 		if err := tx.UpdateContestJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusApproved, &reviewerID); err != nil {
@@ -765,10 +765,10 @@ func (uc *ContestsUseCase) RejectJoinRequest(
 			return err
 		}
 		if req.ContestID != contest.ID {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "request does not belong to this contest")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "request does not belong to this contest")
 		}
 		if req.Status != organizationsmodel.RequestStatusPending {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "заявка уже рассмотрена")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "заявка уже рассмотрена")
 		}
 
 		if err := tx.UpdateContestJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusRejected, &reviewerID); err != nil {

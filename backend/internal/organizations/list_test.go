@@ -34,7 +34,7 @@ func TestOrganizationListPaginationDefaults(t *testing.T) {
 	require.Zero(t, filter.PageSize, "normalizing must not mutate the caller's filter")
 	for _, invalid := range []*organizationsmodel.OrganizationFilter{nil, {PageSize: 101}, {Page: -1}} {
 		_, err := uc.ListOrganizations(ctx, invalid)
-		require.ErrorIs(t, err, pkg.ErrBadInput)
+		require.ErrorIs(t, err, pkg.ErrInvalid)
 	}
 	require.Equal(t, 1, repo.calls)
 }

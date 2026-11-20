@@ -33,7 +33,7 @@ func fieldErrors(t *testing.T, err error) pkg.FieldErrors {
 	t.Helper()
 	var fields pkg.FieldErrors
 	require.ErrorAs(t, err, &fields)
-	require.ErrorIs(t, err, pkg.ErrBadInput)
+	require.ErrorIs(t, err, pkg.ErrInvalid)
 	return fields
 }
 

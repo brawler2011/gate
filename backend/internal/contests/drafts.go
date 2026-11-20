@@ -45,7 +45,7 @@ func NewDraftsUseCase(transactions DraftTransactions, reads DraftReads, permissi
 
 func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmodel.ContestDraftCreation) (uuid.UUID, error) {
 	if len(creation.Code) == 0 || len(creation.Code) > maxDraftCodeSize {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid draft code size")
+		return uuid.Nil, pkg.Wrap(pkg.ErrInvalid, nil, "invalid draft code size")
 	}
 	user := accessmodel.UserFromContext(ctx)
 	if user.IsGuest() {
@@ -61,7 +61,7 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmode
 			return err
 		}
 		if !allowed {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		contest, err := tx.GetContest(ctx, creation.ContestID)
 		if err != nil {
@@ -73,7 +73,7 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmode
 				return err
 			}
 			if !manager {
-				return pkg.Wrap(pkg.ErrBadInput, nil, "contest has ended; new drafts cannot be created")
+				return pkg.Wrap(pkg.ErrInvalid, nil, "contest has ended; new drafts cannot be created")
 			}
 		}
 		count, err := tx.GetDraftsCount(ctx, creation.ContestID, user.Id)
@@ -81,7 +81,7 @@ func (uc *DraftsUseCase) CreateDraft(ctx context.Context, creation *contestsmode
 			return err
 		}
 		if count >= maxDraftsPerUser {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "maximum number of drafts reached (limit: 50)")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "maximum number of drafts reached (limit: 50)")
 		}
 		id, err = tx.CreateDraft(ctx, user.Id, creation)
 		return err
@@ -103,14 +103,14 @@ func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, contestID, draftID uui
 			return err
 		}
 		if !allowed {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		draft, err := tx.GetDraft(ctx, draftID)
 		if err != nil {
 			return err
 		}
 		if draft.ContestID != contestID {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "draft does not belong to contest")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "draft does not belong to contest")
 		}
 		if draft.UserID != user.Id {
 			manager, err := tx.HasContestPermission(ctx, contestID, user.Id, accessmodel.ActionManageContest)
@@ -118,7 +118,7 @@ func (uc *DraftsUseCase) DeleteDraft(ctx context.Context, contestID, draftID uui
 				return err
 			}
 			if !manager {
-				return pkg.NoPermission
+				return pkg.ErrForbidden
 			}
 		}
 		return tx.DeleteDraft(ctx, draftID)
@@ -141,7 +141,7 @@ func (uc *DraftsUseCase) ListDrafts(ctx context.Context, filter contestsmodel.Co
 		return nil, err
 	}
 	if !allowed {
-		return nil, pkg.NoPermission
+		return nil, pkg.ErrForbidden
 	}
 	return uc.reads.ListDrafts(ctx, user.Id, filter)
 }

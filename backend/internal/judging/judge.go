@@ -33,7 +33,7 @@ func NewJudgeUseCase(jobs Jobs, transactions JudgeTransactions, submissionsRepo 
 
 func (uc *JudgeUseCase) JudgeSubmission(ctx context.Context, reference judgingmodel.JobRef) error {
 	if reference.ID == uuid.Nil || reference.SubmissionID == uuid.Nil || reference.Generation < 1 {
-		return pkg.ErrBadInput
+		return pkg.ErrInvalid
 	}
 	submissionID := reference.SubmissionID
 	job, err := uc.jobs.Claim(ctx, reference)

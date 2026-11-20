@@ -17,7 +17,7 @@ import (
 
 func subscriptionError(w http.ResponseWriter, err error) {
 	code := http.StatusInternalServerError
-	if errors.Is(err, pkg.NoPermission) || errors.Is(err, pkg.ErrNotFound) {
+	if errors.Is(err, pkg.ErrForbidden) || errors.Is(err, pkg.ErrNotFound) {
 		code = http.StatusForbidden
 	}
 	if errors.Is(err, pkg.ErrUnauthenticated) {
@@ -63,7 +63,7 @@ func (s *Observer) currentAccess(ctx context.Context, filter *SubmissionsFilter)
 			return user, nil, pkg.ErrUnauthenticated
 		}
 		if !user.IsAdmin() {
-			return user, nil, pkg.NoPermission
+			return user, nil, pkg.ErrForbidden
 		}
 		return user, nil, nil
 	}
@@ -80,10 +80,10 @@ func submissionAccess(user accessmodel.User, permissions *accessmodel.ContestPer
 
 func closeVerification(conn eventConnection, err error) error {
 	code := websocket.CloseInternalServerErr
-	if errors.Is(err, pkg.NoPermission) || errors.Is(err, pkg.ErrNotFound) || errors.Is(err, pkg.ErrUnauthenticated) {
+	if errors.Is(err, pkg.ErrForbidden) || errors.Is(err, pkg.ErrNotFound) || errors.Is(err, pkg.ErrUnauthenticated) {
 		code = websocket.ClosePolicyViolation
 	}
-	_ = conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, http.StatusText(pkg.ToREST(err))), time.Now().Add(timeToClose))
+	_ = conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, http.StatusText(pkg.HTTPStatus(pkg.CodeOf(err)))), time.Now().Add(timeToClose))
 	return err
 }
 
@@ -122,7 +122,7 @@ func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter
 			return closeVerification(conn, err)
 		}
 		if !user.IsAdmin() {
-			return closeVerification(conn, pkg.NoPermission)
+			return closeVerification(conn, pkg.ErrForbidden)
 		}
 		if meta.ContestId == nil {
 			return writeEvent(conn, event.DTOPayload)
@@ -132,7 +132,7 @@ func (s *Observer) sendSubmission(ctx context.Context, filter *SubmissionsFilter
 			return closeVerification(conn, err)
 		}
 		if !p.ManageContest {
-			return closeVerification(conn, pkg.NoPermission)
+			return closeVerification(conn, pkg.ErrForbidden)
 		}
 		c, err := s.contests.GetContest(ctx, *meta.ContestId)
 		if err != nil {

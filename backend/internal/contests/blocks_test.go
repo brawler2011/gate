@@ -3,6 +3,7 @@ package contests_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -263,7 +264,7 @@ func (*blockingSubmissionsRepo) GetMember(context.Context, uuid.UUID, uuid.UUID)
 }
 
 func (*blockingSubmissionsRepo) CreateNotification(context.Context, *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error) {
-	return nil, pkg.NotImplemented
+	return nil, errors.New("not implemented")
 }
 
 func (*blockingSubmissionsRepo) LockContestProblemOrder(context.Context, uuid.UUID) error { return nil }

@@ -19,7 +19,7 @@ func withinContestEvents(ctx context.Context, transactions ContestEventsTransact
 			return err
 		}
 		if !allowed {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		return fn(tx)
 	})

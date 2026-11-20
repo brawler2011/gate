@@ -53,7 +53,7 @@ func TestTeamResourcesAuthorization(t *testing.T) {
 		}{
 			{name: "allowed", user: caller, view: true, wantCalls: 1},
 			{name: "storage failure", user: caller, view: true, repoErr: context.Canceled, wantErr: context.Canceled, wantCalls: 1},
-			{name: "team denied", user: caller, wantErr: pkg.NoPermission},
+			{name: "team denied", user: caller, wantErr: pkg.ErrForbidden},
 			{name: "permission failure", user: caller, permissionErr: context.Canceled, wantErr: context.Canceled},
 			{name: "guest", user: accessmodel.Guest, wantErr: pkg.ErrUnauthenticated},
 			{name: "expired", user: expired, view: true, wantErr: pkg.ErrUnauthenticated},

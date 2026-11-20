@@ -61,7 +61,7 @@ func TestRegistrationUsesCurrentOrganizationState(t *testing.T) {
 		err    error
 	}{
 		{name: "open", policy: organizationsmodel.OrgJoinPolicyOpen, joined: true},
-		{name: "policy changed", policy: organizationsmodel.OrgJoinPolicyInviteOnly, err: pkg.ErrBadInput},
+		{name: "policy changed", policy: organizationsmodel.OrgJoinPolicyInviteOnly, err: pkg.ErrInvalid},
 		{name: "concurrent membership", policy: organizationsmodel.OrgJoinPolicyOpen, member: true, err: pkg.ErrConflict},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -97,7 +97,7 @@ func TestDuplicateOrganizationJoinRequest(t *testing.T) {
 	caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 	request, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), org.Login, nil)
 	require.ErrorIs(t, err, pkg.ErrConflict)
-	require.Equal(t, http.StatusConflict, pkg.ToREST(err))
+	require.Equal(t, http.StatusConflict, pkg.HTTPStatus(pkg.CodeOf(err)))
 	require.Nil(t, request)
 	require.False(t, joined)
 	require.False(t, store.added)

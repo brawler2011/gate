@@ -31,7 +31,7 @@ func requireContest(ctx context.Context, permissions ContestAccess, id uuid.UUID
 		return err
 	}
 	if !allowed {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	return nil
 }

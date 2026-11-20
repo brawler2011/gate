@@ -51,7 +51,7 @@ func (r *ProblemDraftsRepo) ExistingObjectKeys(ctx context.Context, keys []strin
 
 func (r *ProblemDraftsRepo) PrunePackages(ctx context.Context, retention time.Duration) error {
 	if retention <= 0 {
-		return pkg.ErrBadInput
+		return pkg.ErrInvalid
 	}
 	ids, err := sqlc.New(r.pool).ListPackageIDsPastRetention(ctx, retention.Milliseconds())
 	if err != nil {
@@ -106,7 +106,7 @@ func (r *ProblemDraftsRepo) prunePackage(ctx context.Context, id uuid.UUID, rete
 
 func (r *ProblemDraftsRepo) PruneBuilds(ctx context.Context, retention time.Duration) error {
 	if retention <= 0 {
-		return pkg.ErrBadInput
+		return pkg.ErrInvalid
 	}
 	ids, err := sqlc.New(r.pool).ListBuildIDsPastRetention(ctx, retention.Milliseconds())
 	if err != nil {

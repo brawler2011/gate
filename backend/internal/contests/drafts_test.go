@@ -220,9 +220,9 @@ func TestDraftListPagination(t *testing.T) {
 		{name: "default size", page: 2, wantPage: 2, wantSize: 20},
 		{name: "minimum", page: 1, size: 1, wantPage: 1, wantSize: 1},
 		{name: "maximum size", page: 2, size: 100, wantPage: 2, wantSize: 100},
-		{name: "negative page", page: -1, size: 20, err: pkg.ErrBadInput},
-		{name: "negative size", page: 1, size: -1, err: pkg.ErrBadInput},
-		{name: "oversized", page: 1, size: 101, err: pkg.ErrBadInput},
+		{name: "negative page", page: -1, size: 20, err: pkg.ErrInvalid},
+		{name: "negative size", page: 1, size: -1, err: pkg.ErrInvalid},
+		{name: "oversized", page: 1, size: 101, err: pkg.ErrInvalid},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := newMockDraftsRepo()

@@ -27,17 +27,17 @@ func TestListProblemPackagesPreservesReadErrors(t *testing.T) {
 		err    error
 		status int
 	}{
-		{pkg.NoPermission, http.StatusForbidden},
+		{pkg.ErrForbidden, http.StatusForbidden},
 		{pkg.ErrUnauthenticated, http.StatusUnauthorized},
 		{pkg.ErrNotFound, http.StatusNotFound},
-		{pkg.ErrBadInput, http.StatusBadRequest},
+		{pkg.ErrInvalid, http.StatusBadRequest},
 		{pkg.ErrInternal, http.StatusInternalServerError},
 	} {
 		t.Run(tc.err.Error(), func(t *testing.T) {
 			server := &CoreServer{Services: Services{Packages: packageHistoryErrorStub{err: tc.err}}}
 			_, err := server.ListProblemPackages(context.Background(), corev1.ListProblemPackagesParams{ID: uuid.New()})
 			require.ErrorIs(t, err, tc.err)
-			require.Equal(t, tc.status, pkg.ToREST(err))
+			require.Equal(t, tc.status, pkg.HTTPStatus(pkg.CodeOf(err)))
 		})
 	}
 }

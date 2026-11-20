@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -157,7 +156,7 @@ func (h *CoreServer) GetContest(ctx context.Context, params corev1.GetContestPar
 
 func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContestRequestModel, params corev1.UpdateContestParams) error {
 	if req == nil {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
 
 	err := validateUpdateContestRequest(req)
@@ -241,7 +240,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		languages := []string{}
 		for _, id := range req.Languages {
 			if _, ok := h.languages.Langs[id]; !ok {
-				return pkg.Wrap(pkg.ErrBadInput, nil, "unknown language configuration "+id)
+				return pkg.Wrap(pkg.ErrInvalid, nil, "unknown language configuration "+id)
 			}
 			if !slices.Contains(languages, id) {
 				languages = append(languages, id)
@@ -525,7 +524,7 @@ func (h *CoreServer) DeleteContestProblem(ctx context.Context, params corev1.Del
 
 func (h *CoreServer) ReorderContestProblems(ctx context.Context, req *corev1.ReorderContestProblemsRequestModel, params corev1.ReorderContestProblemsParams) error {
 	if req == nil {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
 
 	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)
@@ -592,12 +591,12 @@ func (h *CoreServer) UpdateContestMember(ctx context.Context, params corev1.Upda
 	user := accessmodel.UserFromContext(ctx)
 
 	if params.UserID == user.Id {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "cannot update own role")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "cannot update own role")
 	}
 
 	roleStr := string(params.Role)
 	if roleStr != contestsmodel.ContestRoleOwner && roleStr != contestsmodel.ContestRoleModerator && roleStr != contestsmodel.ContestRoleParticipant {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role value")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "invalid role value")
 	}
 
 	err = h.Contests.UpdateContestMember(ctx, contest.ID, params.UserID, roleStr)
@@ -896,7 +895,7 @@ func (h *CoreServer) ListContestJoinRequests(ctx context.Context, params corev1.
 
 	reqs, err := h.Contests.ListJoinRequests(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
-		return nil, wrapContestUCError(err, "failed to list contest join requests")
+		return nil, err
 	}
 
 	return ListContestJoinRequestsResponseDTO(reqs), nil
@@ -911,7 +910,7 @@ func (h *CoreServer) CreateContestJoinRequest(ctx context.Context, req corev1.Op
 
 	joinReq, registered, err := h.Contests.CreateJoinRequest(ctx, params.OrgLogin, params.ContestLogin, message)
 	if err != nil {
-		return nil, wrapContestUCError(err, "failed to create contest join request")
+		return nil, err
 	}
 
 	var reqOpt corev1.OptContestJoinRequestModel
@@ -934,7 +933,7 @@ func (h *CoreServer) GetMyContestJoinRequest(ctx context.Context, params corev1.
 
 	joinReq, err := h.Contests.GetMyPendingJoinRequest(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
-		return nil, wrapContestUCError(err, "failed to get contest join request")
+		return nil, err
 	}
 
 	var reqOpt corev1.OptContestJoinRequestModel
@@ -952,7 +951,7 @@ func (h *CoreServer) CancelContestJoinRequest(ctx context.Context, params corev1
 
 	err := h.Contests.CancelJoinRequest(ctx, params.OrgLogin, params.ContestLogin)
 	if err != nil {
-		return wrapContestUCError(err, "failed to cancel contest join request")
+		return err
 	}
 
 	return nil
@@ -966,7 +965,7 @@ func (h *CoreServer) ApproveContestJoinRequest(ctx context.Context, params corev
 
 	err := h.Contests.ApproveJoinRequest(ctx, params.OrgLogin, params.ContestLogin, params.ID)
 	if err != nil {
-		return wrapContestUCError(err, "failed to approve contest join request")
+		return err
 	}
 
 	return nil
@@ -980,24 +979,8 @@ func (h *CoreServer) RejectContestJoinRequest(ctx context.Context, params corev1
 
 	err := h.Contests.RejectJoinRequest(ctx, params.OrgLogin, params.ContestLogin, params.ID)
 	if err != nil {
-		return wrapContestUCError(err, "failed to reject contest join request")
+		return err
 	}
 
 	return nil
-}
-
-func wrapContestUCError(err error, fallbackMsg string) error {
-	if err == nil {
-		return nil
-	}
-	if errors.Is(err, pkg.NoPermission) || strings.Contains(err.Error(), "access denied") {
-		return pkg.Wrap(pkg.NoPermission, err, fallbackMsg)
-	}
-	if errors.Is(err, pkg.ErrNotFound) {
-		return pkg.Wrap(pkg.ErrNotFound, err, fallbackMsg)
-	}
-	if errors.Is(err, pkg.ErrBadInput) {
-		return pkg.Wrap(pkg.ErrBadInput, err, fallbackMsg)
-	}
-	return pkg.Wrap(nil, err, fallbackMsg)
 }

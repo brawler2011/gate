@@ -36,7 +36,7 @@ func (uc *MetadataPermissions) input(ctx context.Context, id uuid.UUID) (m.Polic
 	return in, validateInput(in)
 }
 func metadataDecision(err error) (bool, error) {
-	if errors.Is(err, pkg.NoPermission) {
+	if errors.Is(err, pkg.ErrForbidden) {
 		return false, nil
 	}
 	return err == nil, err

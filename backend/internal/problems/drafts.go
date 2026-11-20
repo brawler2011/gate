@@ -66,7 +66,7 @@ func (uc *DraftUseCase) authorize(ctx context.Context, id uuid.UUID, edit bool) 
 }
 func (uc *DraftUseCase) key(org, id uuid.UUID, operation, key string, body any) (model.MutationKey, error) {
 	if len(key) == 0 || len(key) > 200 {
-		return model.MutationKey{}, pkg.Wrap(pkg.ErrBadInput, nil, "Idempotency-Key is required (up to 200 bytes)")
+		return model.MutationKey{}, pkg.Wrap(pkg.ErrInvalid, nil, "Idempotency-Key is required (up to 200 bytes)")
 	}
 	data, err := json.Marshal(body)
 	if err != nil {
@@ -87,7 +87,7 @@ func (uc *DraftUseCase) SaveDraft(ctx context.Context, id uuid.UUID, expected in
 		return model.MutationResult{}, err
 	}
 	if d.ProblemID != id || expected != d.Revision {
-		return model.MutationResult{}, pkg.ErrBadInput
+		return model.MutationResult{}, pkg.ErrInvalid
 	}
 	d.TrimStatements()
 	k, err := uc.key(p.OrganizationID, id, "save", key, d)
@@ -168,7 +168,7 @@ type spooledUpload struct {
 
 func (uc *DraftUseCase) spool(ctx context.Context, dir, purpose string, reader io.Reader) (spooledUpload, error) {
 	if reader == nil || int64(uc.BuildOptions.Limits.ObjectBytes) <= 0 {
-		return spooledUpload{}, pkg.ErrBadInput
+		return spooledUpload{}, pkg.ErrInvalid
 	}
 	f, err := os.CreateTemp(dir, "body-")
 	if err != nil {
@@ -204,7 +204,7 @@ func (uc *DraftUseCase) Upload(ctx context.Context, id uuid.UUID, expected int64
 	}
 	defer os.RemoveAll(dir)
 	if len(files) == 0 {
-		return model.MutationResult{}, pkg.ErrBadInput
+		return model.MutationResult{}, pkg.ErrInvalid
 	}
 	uploads := map[string]spooledUpload{}
 	specs := map[string]model.UploadSpec{}
@@ -215,7 +215,7 @@ func (uc *DraftUseCase) Upload(ctx context.Context, id uuid.UUID, expected int64
 		}
 		purpose := change.Purpose(slot)
 		if purpose == "" {
-			return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, nil, "the change has no "+slot+" file")
+			return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, nil, "the change has no "+slot+" file")
 		}
 		u, err := uc.spool(ctx, dir, purpose, body)
 		if err != nil {
@@ -225,7 +225,7 @@ func (uc *DraftUseCase) Upload(ctx context.Context, id uuid.UUID, expected int64
 		uploads[slot], specs[slot] = u, u.spec
 	}
 	if len(uploads) != len(files) {
-		return model.MutationResult{}, pkg.ErrBadInput
+		return model.MutationResult{}, pkg.ErrInvalid
 	}
 	k, err := uc.key(p.OrganizationID, id, "upload", key, struct {
 		Revision int64

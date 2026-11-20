@@ -46,7 +46,7 @@ func TestPublicContestsPagination(t *testing.T) {
 				Page: tc.page, PageSize: tc.size, Search: "search", SortBy: "title", SortOrder: "asc",
 			})
 			if tc.invalid {
-				require.ErrorIs(t, err, pkg.ErrBadInput)
+				require.ErrorIs(t, err, pkg.ErrInvalid)
 				require.Nil(t, db.args)
 				return
 			}

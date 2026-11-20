@@ -58,39 +58,39 @@ func applyUploadChange(d *model.Draft, change model.UploadChange, objects map[st
 		}
 	}
 	if set != 1 || len(objects) == 0 || (change.Validator != "") != (change.ValidatorTest != nil) {
-		return pkg.ErrBadInput
+		return pkg.ErrInvalid
 	}
 	ids := map[string]*uuid.UUID{}
 	for slot, o := range objects {
 		if change.Purpose(slot) == "" {
-			return pkg.ErrBadInput
+			return pkg.ErrInvalid
 		}
 		ids[slot] = &o.ID
 	}
 	switch {
 	case change.AssetName != "":
 		if !model.ValidFileName(change.AssetName) {
-			return pkg.ErrBadInput
+			return pkg.ErrInvalid
 		}
 		upsert(&d.Assets, model.DraftAsset{Name: change.AssetName, ObjectID: *ids["asset"]}, func(a model.DraftAsset) string { return a.Name })
 	case change.Test != nil:
 		test := *change.Test
 		if id := ids["input"]; id != nil {
 			if test.Input.Mode != "manual" {
-				return pkg.ErrBadInput
+				return pkg.ErrInvalid
 			}
 			test.Input.ObjectID = id
 		}
 		if id := ids["answer"]; id != nil {
 			if test.Answer.Mode != "provided" {
-				return pkg.ErrBadInput
+				return pkg.ErrInvalid
 			}
 			test.Answer.ObjectID = id
 		}
 		upsert(&d.Tests, test, func(t model.DraftTest) uuid.UUID { return t.ID })
 	case change.CheckerTest != nil:
 		if d.Checker == nil {
-			return pkg.ErrBadInput
+			return pkg.ErrInvalid
 		}
 		test := *change.CheckerTest
 		for slot, field := range map[string]*uuid.UUID{"input": &test.Input, "output": &test.Output, "answer": &test.Answer} {
@@ -102,7 +102,7 @@ func applyUploadChange(d *model.Draft, change model.UploadChange, objects map[st
 	default:
 		i := slices.IndexFunc(d.Validators, func(v model.DraftValidator) bool { return v.Name == change.Validator })
 		if i < 0 {
-			return pkg.ErrBadInput
+			return pkg.ErrInvalid
 		}
 		test := *change.ValidatorTest
 		test.Input = *ids["input"]
@@ -162,7 +162,7 @@ func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.Mut
 		return model.MutationResult{}, HandlePgErr(err)
 	}
 	if org != k.OrganizationID {
-		return model.MutationResult{}, pkg.NoPermission
+		return model.MutationResult{}, pkg.ErrForbidden
 	}
 	before := draft
 	before.Statements = slices.Clone(draft.Statements)
@@ -170,10 +170,10 @@ func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.Mut
 		return model.MutationResult{}, err
 	}
 	if err := draft.ComputeScores(); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid weights")
+		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid weights")
 	}
 	if err := draft.Validate(r.quotas, &before); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid upload change")
+		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid upload change")
 	}
 	if err := insertObjects(ctx, tx, objects); err != nil {
 		return model.MutationResult{}, err

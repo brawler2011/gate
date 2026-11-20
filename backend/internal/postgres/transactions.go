@@ -52,7 +52,7 @@ func (p transactions[T]) Within(ctx context.Context, fn func(T) error) error {
 			return HandlePgErr(err)
 		}
 		if !now.Before(*decision.ValidUntil) {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 	}
 	if err := tx.Commit(ctx); err != nil {

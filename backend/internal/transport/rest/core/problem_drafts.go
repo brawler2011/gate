@@ -73,17 +73,17 @@ func (h *CoreServer) GetProblemDraft(ctx context.Context, p corev1.GetProblemDra
 }
 func (h *CoreServer) SaveProblemDraft(ctx context.Context, req *corev1.ProblemDraft, p corev1.SaveProblemDraftParams) (*corev1.ProblemDraft, error) {
 	if req == nil {
-		return nil, pkg.ErrBadInput
+		return nil, pkg.ErrInvalid
 	}
 	d, err := draftModel(req)
 	if err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid draft")
+		return nil, pkg.Wrap(pkg.ErrInvalid, err, "invalid draft")
 	}
 	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.SaveDraft(ctx, p.ID, p.ExpectedRevision, p.IdempotencyKey, *d))
 }
 func (h *CoreServer) BuildProblemPackage(ctx context.Context, req *corev1.BuildProblemPackageReq, p corev1.BuildProblemPackageParams) (*corev1.ProblemBuildAccepted, error) {
 	if req == nil {
-		return nil, pkg.ErrBadInput
+		return nil, pkg.ErrInvalid
 	}
 	return draftResult[corev1.ProblemBuildAccepted](h.ProblemDrafts.RequestBuild(ctx, p.ID, req.ExpectedRevision, p.IdempotencyKey))
 }
@@ -110,13 +110,13 @@ func (h *CoreServer) CancelProblemBuild(ctx context.Context, p corev1.CancelProb
 }
 func (h *CoreServer) UploadProblemDraft(ctx context.Context, req *corev1.UploadProblemDraftReq, p corev1.UploadProblemDraftParams) (*corev1.ProblemDraft, error) {
 	if req == nil {
-		return nil, pkg.ErrBadInput
+		return nil, pkg.ErrInvalid
 	}
 	var change model.UploadChange
 	decoder := json.NewDecoder(strings.NewReader(req.Metadata))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&change); err != nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid upload metadata")
+		return nil, pkg.Wrap(pkg.ErrInvalid, err, "invalid upload metadata")
 	}
 	files := map[string]io.Reader{}
 	for slot, file := range map[string]corev1.OptMultipartFile{"asset": req.Asset, "input": req.Input, "output": req.Output, "answer": req.Answer} {

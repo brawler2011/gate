@@ -72,7 +72,7 @@ func (u *UsersUseCase) UpdateUser(ctx context.Context, input identitymodel.Updat
 		return err
 	}
 	if err := input.Validate(); err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "invalid user update")
+		return pkg.Wrap(pkg.ErrInvalid, err, "invalid user update")
 	}
 	return withinAccount(ctx, u.txManager, input.Id, input.Role != nil || input.ExpiresAt != nil || input.IsEmailVerified != nil, func(store IdentityTxStore) error {
 		return store.UpdateUser(ctx, input)
@@ -87,16 +87,16 @@ func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller accessmode
 		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrUnauthenticated, nil, "authentication required")
 	}
 	if caller.IsExpired() {
-		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.NoPermission, nil, "permanent account has expired")
+		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrForbidden, nil, "permanent account has expired")
 	}
 
 	tempUser, err := u.usersRepo.GetUserByUsername(ctx, input.Username)
 	if err != nil {
-		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrBadInput, err, "temporary user not found")
+		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrInvalid, err, "temporary user not found")
 	}
 
 	if !tempUser.IsTemporary() {
-		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrBadInput, nil, "target account is not a temporary account")
+		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrInvalid, nil, "target account is not a temporary account")
 	}
 
 	if tempUser.IsClaimed() {
@@ -104,7 +104,7 @@ func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller accessmode
 	}
 
 	if tempUser.Id == caller.Id {
-		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrBadInput, nil, "cannot claim own account")
+		return identitymodel.ClaimTemporaryUserResult{}, pkg.Wrap(pkg.ErrInvalid, nil, "cannot claim own account")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(tempUser.PasswordHash), []byte(input.Password))
@@ -123,7 +123,7 @@ func (u *UsersUseCase) ClaimTemporaryUser(ctx context.Context, caller accessmode
 			return err
 		}
 		if currentCaller.IsExpired() {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		currentTemp, err := tx.GetUserById(ctx, tempUser.Id)
 		if err != nil {
@@ -174,12 +174,12 @@ func (u *UsersUseCase) AdminSetPassword(ctx context.Context, username, newPasswo
 		return err
 	}
 	if err := identitymodel.PasswordValidate(newPassword); err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "invalid password")
+		return pkg.Wrap(pkg.ErrInvalid, err, "invalid password")
 	}
 
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "user not found")
+		return pkg.Wrap(pkg.ErrInvalid, err, "user not found")
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
@@ -201,11 +201,11 @@ func (u *UsersUseCase) AdminSendPasswordReset(ctx context.Context, username stri
 	}
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "user not found")
+		return pkg.Wrap(pkg.ErrInvalid, err, "user not found")
 	}
 
 	if user.Email == nil || *user.Email == "" {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "user has no email address")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "user has no email address")
 	}
 
 	token, tokenHash, err := generateSecureToken()
@@ -232,12 +232,12 @@ func (u *UsersUseCase) AdminChangeEmail(ctx context.Context, username, newEmail 
 		return err
 	}
 	if err := identitymodel.EmailValidate(newEmail); err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "invalid email")
+		return pkg.Wrap(pkg.ErrInvalid, err, "invalid email")
 	}
 
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "user not found")
+		return pkg.Wrap(pkg.ErrInvalid, err, "user not found")
 	}
 
 	if existing, err := u.usersRepo.GetUserByUsernameOrEmail(ctx, newEmail); err == nil && existing.Id != user.Id {
@@ -292,7 +292,7 @@ func (u *UsersUseCase) AdminResendVerification(ctx context.Context, username str
 	}
 	user, err := u.usersRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "user not found")
+		return pkg.Wrap(pkg.ErrInvalid, err, "user not found")
 	}
 
 	if user.IsEmailVerified {
@@ -300,7 +300,7 @@ func (u *UsersUseCase) AdminResendVerification(ctx context.Context, username str
 	}
 
 	if user.Email == nil || *user.Email == "" {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "user has no email address")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "user has no email address")
 	}
 
 	token, tokenHash, err := generateSecureToken()

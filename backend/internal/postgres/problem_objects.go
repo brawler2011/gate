@@ -68,7 +68,7 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 		return uuid.Nil, pkg.ErrConflict
 	}
 	if object.OrganizationID != b.OrganizationID || object.Purpose != "package" {
-		return uuid.Nil, pkg.ErrBadInput
+		return uuid.Nil, pkg.ErrInvalid
 	}
 	if err := insertObjects(ctx, tx, []model.StoredObject{object}); err != nil {
 		return uuid.Nil, err

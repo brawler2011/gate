@@ -32,12 +32,12 @@ func TestDuplicateContestLogin(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
 		response, err := server.CreateContest(ctx, corev1.CreateContestParams{OrgLogin: "org", Title: "Contest", Login: corev1.NewOptString("taken")})
 		require.ErrorIs(t, err, pkg.ErrConflict)
-		require.Equal(t, http.StatusConflict, pkg.ToREST(err))
+		require.Equal(t, http.StatusConflict, pkg.HTTPStatus(pkg.CodeOf(err)))
 		require.Nil(t, response)
 	})
 	t.Run("rename", func(t *testing.T) {
 		err := server.UpdateContest(ctx, &corev1.UpdateContestRequestModel{Login: corev1.NewOptString("taken")}, corev1.UpdateContestParams{OrgLogin: "org", ContestLogin: "original"})
 		require.ErrorIs(t, err, pkg.ErrConflict)
-		require.Equal(t, http.StatusConflict, pkg.ToREST(err))
+		require.Equal(t, http.StatusConflict, pkg.HTTPStatus(pkg.CodeOf(err)))
 	})
 }

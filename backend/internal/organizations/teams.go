@@ -57,7 +57,7 @@ func (uc *TeamsUseCase) CreateTeam(ctx context.Context, input *organizationsmode
 			return err
 		}
 		if !allowed {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 
 		team, err = tx.CreateTeam(ctx, input)
@@ -98,7 +98,7 @@ func (uc *TeamsUseCase) GetTeam(ctx context.Context, teamID uuid.UUID) (*organiz
 		return nil, err
 	}
 	if !allowed {
-		return nil, pkg.NoPermission
+		return nil, pkg.ErrForbidden
 	}
 
 	return team, nil
@@ -113,7 +113,7 @@ func (uc *TeamsUseCase) ListTeams(ctx context.Context, filter *organizationsmode
 		return nil, pkg.ErrUnauthenticated
 	}
 	if filter == nil {
-		return nil, pkg.ErrBadInput
+		return nil, pkg.ErrInvalid
 	}
 	normalized := *filter
 	var err error
@@ -146,7 +146,7 @@ func (uc *TeamsUseCase) UpdateTeam(ctx context.Context, teamID uuid.UUID, input 
 			allowed = err == nil && member.Role == organizationsmodel.TeamRoleMaintainer
 		}
 		if !allowed {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		return tx.UpdateTeam(ctx, teamID, input)
 	})
@@ -160,7 +160,7 @@ func (uc *TeamsUseCase) DeleteTeam(ctx context.Context, teamID uuid.UUID) error 
 			return err
 		}
 		if !allowed {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		return tx.DeleteTeam(ctx, teamID)
 	})
@@ -181,7 +181,7 @@ func (uc *TeamsUseCase) AddTeamMember(ctx context.Context, input *organizationsm
 			allowed = err == nil && member.Role == organizationsmodel.TeamRoleMaintainer
 		}
 		if !allowed {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		if _, err := tx.GetMember(ctx, team.OrganizationID, input.UserID); err != nil {
 			return err
@@ -220,7 +220,7 @@ func (uc *TeamsUseCase) UpdateTeamMemberRole(ctx context.Context, teamID, userID
 			allowed = err == nil && member.Role == organizationsmodel.TeamRoleMaintainer
 		}
 		if !allowed {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		return tx.UpdateTeamMemberRole(ctx, teamID, userID, role)
 	})
@@ -242,7 +242,7 @@ func (uc *TeamsUseCase) RemoveTeamMember(ctx context.Context, teamID, userID uui
 		}
 		allowed = allowed || userID == requestUserID
 		if !allowed {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		return tx.RemoveTeamMember(ctx, teamID, userID)
 	})

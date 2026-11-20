@@ -225,7 +225,7 @@ func (uc *Capabilities) Project(ctx context.Context, requests []CapabilityReques
 				}
 			}
 		default:
-			return nil, pkg.NoPermission
+			return nil, pkg.ErrForbidden
 		}
 		slices.Sort(caps)
 		result[i] = caps
@@ -278,7 +278,7 @@ func problemMemberCapabilities(in m.PolicyInput, c m.ProblemContext, r Capabilit
 	before := ownerState(c.Owners, c.OwnerID)
 	return memberCapabilities(r, u, before, []m.ProblemRole{m.ProblemViewer, m.ProblemModerator}, func(change m.RoleChange[m.ProblemRole]) error { return RequireGrantProblemRole(in, c, change) }, func() error {
 		if c.OwnerID != in.Actor.Id && c.DirectRole != m.ProblemOwner {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		_, err := PlanProblemOwnerTransfer(in, c, before, u, in.Actor.Id)
 		return err
@@ -288,7 +288,7 @@ func contestMemberCapabilities(in m.PolicyInput, c m.ContestContext, r Capabilit
 	before := ownerState(c.Owners, c.OwnerID)
 	return memberCapabilities(r, u, before, []m.ContestRole{m.ContestParticipant, m.ContestModerator}, func(change m.RoleChange[m.ContestRole]) error { return RequireGrantContestRole(in, c, change) }, func() error {
 		if c.OwnerID != in.Actor.Id && c.DirectRole != m.ContestOwner {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		_, err := PlanContestOwnerTransfer(in, c, before, u, in.Actor.Id)
 		return err

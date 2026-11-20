@@ -2,8 +2,6 @@ package core
 
 import (
 	"context"
-	"errors"
-	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	contestsmodel "github.com/brawler2011/gate/backend/internal/contests/model"
@@ -31,7 +29,7 @@ func (h *CoreServer) ListTeams(ctx context.Context, params corev1.ListTeamsParam
 
 func (h *CoreServer) CreateTeam(ctx context.Context, req *corev1.CreateTeamReq) (*corev1.CreationResponseModel, error) {
 	if req == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
 
 	if err := validateCreateTeamRequest(req.Name, req.OrganizationID); err != nil {
@@ -51,7 +49,7 @@ func (h *CoreServer) CreateTeam(ctx context.Context, req *corev1.CreateTeamReq) 
 
 	team, err := h.Teams.CreateTeam(ctx, input)
 	if err != nil {
-		return nil, wrapTeamUCError(err, "failed to create team")
+		return nil, err
 	}
 
 	return &corev1.CreationResponseModel{
@@ -62,7 +60,7 @@ func (h *CoreServer) CreateTeam(ctx context.Context, req *corev1.CreateTeamReq) 
 func (h *CoreServer) GetTeam(ctx context.Context, params corev1.GetTeamParams) (*corev1.GetTeamResponseModel, error) {
 	team, err := h.Teams.GetTeam(ctx, params.ID)
 	if err != nil {
-		return nil, wrapTeamUCError(err, "failed to get team")
+		return nil, err
 	}
 
 	return projectResponse(h, ctx, &corev1.GetTeamResponseModel{
@@ -93,7 +91,7 @@ func (h *CoreServer) UpdateTeam(ctx context.Context, req *corev1.UpdateTeamReque
 
 	err := h.Teams.UpdateTeam(ctx, params.ID, input)
 	if err != nil {
-		return wrapTeamUCError(err, "failed to update team")
+		return err
 	}
 
 	return nil
@@ -102,7 +100,7 @@ func (h *CoreServer) UpdateTeam(ctx context.Context, req *corev1.UpdateTeamReque
 func (h *CoreServer) DeleteTeam(ctx context.Context, params corev1.DeleteTeamParams) error {
 	err := h.Teams.DeleteTeam(ctx, params.ID)
 	if err != nil {
-		return wrapTeamUCError(err, "failed to delete team")
+		return err
 	}
 
 	return nil
@@ -111,7 +109,7 @@ func (h *CoreServer) DeleteTeam(ctx context.Context, params corev1.DeleteTeamPar
 func (h *CoreServer) ListTeamMembers(ctx context.Context, params corev1.ListTeamMembersParams) (*corev1.ListTeamMembersResponseModel, error) {
 	members, err := h.Teams.ListTeamMembers(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
-		return nil, wrapTeamUCError(err, "failed to list team members")
+		return nil, err
 	}
 
 	return projectResponse(h, ctx, listTeamMembersDTO(members.Items, members.Pagination))
@@ -131,7 +129,7 @@ func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMem
 
 	err := h.Teams.AddTeamMember(ctx, input)
 	if err != nil {
-		return wrapTeamUCError(err, "failed to add team member")
+		return err
 	}
 
 	return nil
@@ -140,7 +138,7 @@ func (h *CoreServer) AddTeamMember(ctx context.Context, params corev1.AddTeamMem
 func (h *CoreServer) UpdateTeamMemberRole(ctx context.Context, params corev1.UpdateTeamMemberRoleParams) error {
 	err := h.Teams.UpdateTeamMemberRole(ctx, params.ID, params.UserID, organizationsmodel.TeamRole(params.Role))
 	if err != nil {
-		return wrapTeamUCError(err, "failed to update team member role")
+		return err
 	}
 
 	return nil
@@ -149,7 +147,7 @@ func (h *CoreServer) UpdateTeamMemberRole(ctx context.Context, params corev1.Upd
 func (h *CoreServer) RemoveTeamMember(ctx context.Context, params corev1.RemoveTeamMemberParams) error {
 	err := h.Teams.RemoveTeamMember(ctx, params.ID, params.UserID)
 	if err != nil {
-		return wrapTeamUCError(err, "failed to remove team member")
+		return err
 	}
 
 	return nil
@@ -158,7 +156,7 @@ func (h *CoreServer) RemoveTeamMember(ctx context.Context, params corev1.RemoveT
 func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTeamContestsParams) (*corev1.ListContestsResponseModel, error) {
 	contests, err := h.Teams.GetTeamContests(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
-		return nil, wrapTeamUCError(err, "failed to list team contests")
+		return nil, err
 	}
 
 	contestsList := &contestsmodel.ContestsList{Contests: contests.Items, Pagination: contests.Pagination}
@@ -169,23 +167,10 @@ func (h *CoreServer) ListTeamContests(ctx context.Context, params corev1.ListTea
 func (h *CoreServer) ListTeamProblems(ctx context.Context, params corev1.ListTeamProblemsParams) (*corev1.ListProblemsResponseModel, error) {
 	problems, err := h.Teams.GetTeamProblems(ctx, params.ID, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
-		return nil, wrapTeamUCError(err, "failed to list team problems")
+		return nil, err
 	}
 
 	problemsList := &problemsmodel.ProblemsList{Problems: problems.Items, Pagination: problems.Pagination}
 
 	return projectResponse(h, ctx, ListProblemsResponseDTO(problemsList))
-}
-
-func wrapTeamUCError(err error, fallbackMsg string) error {
-	if err == nil {
-		return nil
-	}
-	if errors.Is(err, pkg.NoPermission) || strings.Contains(err.Error(), "access denied") {
-		return pkg.Wrap(pkg.NoPermission, err, fallbackMsg)
-	}
-	if errors.Is(err, pkg.ErrNotFound) {
-		return pkg.Wrap(pkg.ErrNotFound, err, fallbackMsg)
-	}
-	return pkg.Wrap(nil, err, fallbackMsg)
 }

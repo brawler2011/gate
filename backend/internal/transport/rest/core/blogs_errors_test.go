@@ -37,7 +37,7 @@ func TestBlogHandlersPreserveErrors(t *testing.T) {
 		status int
 	}{
 		{"conflict", pkg.ErrConflict, http.StatusConflict},
-		{"bad input", pkg.ErrBadInput, http.StatusBadRequest},
+		{"bad input", pkg.ErrInvalid, http.StatusBadRequest},
 		{"internal", errors.New("storage failed"), http.StatusInternalServerError},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -49,13 +49,13 @@ func TestBlogHandlersPreserveErrors(t *testing.T) {
 					Title: "Post", Description: "Description", Text: "Text", PreviewImage: ht.MultipartFile{File: strings.NewReader("fake image"), Name: "preview.png"},
 				})
 				require.ErrorIs(t, err, tc.err)
-				require.Equal(t, tc.status, pkg.ToREST(err))
+				require.Equal(t, tc.status, pkg.HTTPStatus(pkg.CodeOf(err)))
 				require.Nil(t, response)
 			})
 			t.Run("list", func(t *testing.T) {
 				response, err := server.ListPosts(ctx, corev1.ListPostsParams{})
 				require.ErrorIs(t, err, tc.err)
-				require.Equal(t, tc.status, pkg.ToREST(err))
+				require.Equal(t, tc.status, pkg.HTTPStatus(pkg.CodeOf(err)))
 				require.Nil(t, response)
 			})
 		})

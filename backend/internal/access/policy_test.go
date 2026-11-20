@@ -26,7 +26,7 @@ func matrixResult(t *testing.T, allowed bool, err error) {
 	if allowed {
 		require.NoError(t, err)
 	} else {
-		require.ErrorIs(t, err, pkg.NoPermission)
+		require.ErrorIs(t, err, pkg.ErrForbidden)
 	}
 }
 func TestOrganizationPolicyMatrix(t *testing.T) {
@@ -170,10 +170,10 @@ func TestPoliciesFailClosed(t *testing.T) {
 	}
 	in, org, p, c := policyFixture()
 	in.Actor.Role = m.UserRoleAdmin
-	require.ErrorIs(t, RequireOrganization(in, org, "unknown"), pkg.NoPermission)
-	require.ErrorIs(t, RequireProblem(in, p, "unknown"), pkg.NoPermission)
-	require.ErrorIs(t, RequireContest(in, c, "unknown"), pkg.NoPermission)
-	require.ErrorIs(t, RequireTeam(in, m.TeamContext{ID: uuid.New(), Organization: org, Privacy: m.TeamClosed}, "unknown"), pkg.NoPermission)
+	require.ErrorIs(t, RequireOrganization(in, org, "unknown"), pkg.ErrForbidden)
+	require.ErrorIs(t, RequireProblem(in, p, "unknown"), pkg.ErrForbidden)
+	require.ErrorIs(t, RequireContest(in, c, "unknown"), pkg.ErrForbidden)
+	require.ErrorIs(t, RequireTeam(in, m.TeamContext{ID: uuid.New(), Organization: org, Privacy: m.TeamClosed}, "unknown"), pkg.ErrForbidden)
 	p.DirectRole = "unknown"
 	require.Error(t, RequireProblem(in, p, m.ActionViewProblem))
 	c.DirectRole = "unknown"

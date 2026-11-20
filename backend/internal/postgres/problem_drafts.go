@@ -62,7 +62,7 @@ func rollback(ctx context.Context, tx pgx.Tx) { _ = tx.Rollback(ctx) }
 // reserveOperation must precede every owner/object lock in the transaction.
 func (r *ProblemDraftsRepo) reserveOperation(ctx context.Context, tx pgx.Tx, k model.MutationKey) (*model.MutationResult, error) {
 	if k.OrganizationID == uuid.Nil || k.Token == uuid.Nil || len(k.Key) == 0 || len(k.Key) > 200 || r.operationLease <= 0 {
-		return nil, pkg.ErrBadInput
+		return nil, pkg.ErrInvalid
 	}
 	q := sqlc.New(tx)
 	if err := q.ReserveOperationRow(ctx, sqlc.ReserveOperationRowParams{
@@ -136,7 +136,7 @@ func (r *ProblemDraftsRepo) resolveMutation(ctx context.Context, tx pgx.Tx, k mo
 
 func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, k model.MutationKey, draft model.Draft) (model.MutationResult, error) {
 	if err := draft.ComputeScores(); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid weights")
+		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid weights")
 	}
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
@@ -163,14 +163,14 @@ func (r *ProblemDraftsRepo) SaveDraft(ctx context.Context, k model.MutationKey, 
 		return model.MutationResult{}, HandlePgErr(err)
 	}
 	if org != k.OrganizationID {
-		return model.MutationResult{}, pkg.NoPermission
+		return model.MutationResult{}, pkg.ErrForbidden
 	}
 	old, err := readProblemDraft(ctx, q, draft.ProblemID)
 	if err != nil {
 		return model.MutationResult{}, err
 	}
 	if err := draft.Validate(r.quotas, &old); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid draft")
+		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid draft")
 	}
 	draft.Revision++
 	if err := writeDraft(ctx, tx, draft); err != nil {

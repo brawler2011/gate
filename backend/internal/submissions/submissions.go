@@ -63,7 +63,7 @@ func (uc *SubmissionsUseCase) submissionView(ctx context.Context, sub submission
 	own := sub.CreatedBy != nil && *sub.CreatedBy == user.Id
 	if sub.ContestID == nil {
 		if !own && !user.IsAdmin() {
-			return submissionsmodel.Submission{}, pkg.NoPermission
+			return submissionsmodel.Submission{}, pkg.ErrForbidden
 		}
 		return sub, nil
 	}
@@ -72,7 +72,7 @@ func (uc *SubmissionsUseCase) submissionView(ctx context.Context, sub submission
 		return submissionsmodel.Submission{}, err
 	}
 	if requireReadPermission && (own && !permissions.GetOwnSubmission || !own && !permissions.GetOtherUserSubmission) {
-		return submissionsmodel.Submission{}, pkg.NoPermission
+		return submissionsmodel.Submission{}, pkg.ErrForbidden
 	}
 	contest, err := uc.contestsUC.GetContest(ctx, *sub.ContestID)
 	if err != nil {
@@ -104,7 +104,7 @@ func (uc *SubmissionsUseCase) createSubmission(ctx context.Context, creation *su
 	}
 
 	if creation.UserId != accessmodel.UserFromContext(ctx).Id {
-		return uuid.Nil, pkg.NoPermission
+		return uuid.Nil, pkg.ErrForbidden
 	}
 
 	contest, err := uc.contestsUC.GetContest(ctx, creation.ContestId)
@@ -121,7 +121,7 @@ func (uc *SubmissionsUseCase) createSubmission(ctx context.Context, creation *su
 		}
 
 		if _, err := tx.GetContestProblem(ctx, contestsmodel.ContestProblemGet{ContestId: creation.ContestId, ProblemId: creation.ProblemId}); err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, err, "problem does not belong to contest")
+			return pkg.Wrap(pkg.ErrInvalid, err, "problem does not belong to contest")
 		}
 		input := *creation
 		block, err := tx.GetContestUserProblemBlock(ctx, input.ContestId, input.UserId, input.ProblemId)
@@ -185,7 +185,7 @@ func (uc *SubmissionsUseCase) BlockSubmission(ctx context.Context, contestID, su
 			return err
 		}
 		if contestID != uuid.Nil && (sub.ContestID == nil || *sub.ContestID != contestID) {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "submission does not belong to specified contest")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "submission does not belong to specified contest")
 		}
 		if sub.ContestID != nil && sub.CreatedBy != nil && sub.ProblemID != nil {
 			if err := tx.LockSubmissionTuple(ctx, *sub.ContestID, *sub.CreatedBy, *sub.ProblemID); err != nil {
@@ -249,17 +249,17 @@ func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submis
 			canList = permissions.ListOwnSubmissions
 		}
 		if !canList {
-			return nil, pkg.NoPermission
+			return nil, pkg.ErrForbidden
 		}
 		contest, err := uc.contestsUC.GetContest(ctx, *filter.ContestId)
 		if err != nil {
 			return nil, err
 		}
 		if filter.State != nil && contest.IsFrozenAt(accessmodel.ReadTime(ctx)) && !permissions.ManageContest && !ownOnly {
-			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "state filter is unavailable during freeze")
+			return nil, pkg.Wrap(pkg.ErrInvalid, nil, "state filter is unavailable during freeze")
 		}
 	} else if !ownOnly && !user.IsAdmin() {
-		return nil, pkg.NoPermission
+		return nil, pkg.ErrForbidden
 	}
 
 	submissions, total, err := uc.submissionsRepo.ListSubmissions(ctx, filter)
@@ -282,7 +282,7 @@ func (uc *SubmissionsUseCase) ListSubmissions(ctx context.Context, filter submis
 
 func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter submissionsmodel.RejudgeFilter) (int, error) {
 	if filter.ContestID == uuid.Nil {
-		return 0, pkg.Wrap(pkg.ErrBadInput, nil, "contest id is required")
+		return 0, pkg.Wrap(pkg.ErrInvalid, nil, "contest id is required")
 	}
 
 	if err := uc.requireContest(ctx, filter.ContestID, accessmodel.ActionManageContest); err != nil {
@@ -307,7 +307,7 @@ func (uc *SubmissionsUseCase) RejudgeSubmissions(ctx context.Context, filter sub
 			return 0, err
 		}
 		if sub.ContestID != nil && *sub.ContestID != filter.ContestID {
-			return 0, pkg.Wrap(pkg.ErrBadInput, nil, "submission does not belong to specified contest")
+			return 0, pkg.Wrap(pkg.ErrInvalid, nil, "submission does not belong to specified contest")
 		}
 	}
 

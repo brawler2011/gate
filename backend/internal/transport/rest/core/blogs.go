@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"strings"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
@@ -30,7 +29,7 @@ func (s *CoreServer) ListPosts(ctx context.Context, params corev1.ListPostsParam
 
 	items, totalItems, err := s.BlogReads.ListPosts(ctx, blogsmodel.ListPostsParams{Page: page, PageSize: pageSize, SortOrder: sortOrder})
 	if err != nil {
-		return nil, wrapBlogError(err, "failed to list posts")
+		return nil, err
 	}
 
 	posts := make([]corev1.PostModel, len(items))
@@ -61,7 +60,7 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 	}
 
 	if req == nil || req.Title == "" || req.Description == "" || req.Text == "" || req.PreviewImage.File == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "title, description, text, and preview_image are required")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "title, description, text, and preview_image are required")
 	}
 
 	file := req.PreviewImage
@@ -71,7 +70,7 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 
 	postID, err := s.Blogs.CreatePost(ctx, title, text, description, file.File, file.Name)
 	if err != nil {
-		return nil, wrapBlogError(err, "failed to create post")
+		return nil, err
 	}
 
 	return &corev1.CreatedPost{
@@ -82,7 +81,7 @@ func (s *CoreServer) CreatePost(ctx context.Context, req *corev1.CreatePostReq) 
 func (s *CoreServer) GetPostById(ctx context.Context, params corev1.GetPostByIdParams) (*corev1.PostModel, error) {
 	post, err := s.BlogReads.GetPostByID(ctx, params.ID)
 	if err != nil {
-		return nil, wrapBlogError(err, "post not found")
+		return nil, err
 	}
 
 	return &corev1.PostModel{
@@ -123,7 +122,7 @@ func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostB
 
 	err := s.Blogs.UpdatePost(ctx, params.ID, titlePtr, textPtr, descriptionPtr, imageReader, filename)
 	if err != nil {
-		return wrapBlogError(err, "post not found")
+		return err
 	}
 	return nil
 }
@@ -131,7 +130,7 @@ func (s *CoreServer) PatchPostById(ctx context.Context, req corev1.OptPatchPostB
 func (s *CoreServer) DeletePostById(ctx context.Context, params corev1.DeletePostByIdParams) error {
 	err := s.Blogs.DeletePost(ctx, params.ID)
 	if err != nil {
-		return wrapBlogError(err, "post not found")
+		return err
 	}
 
 	return nil
@@ -140,7 +139,7 @@ func (s *CoreServer) DeletePostById(ctx context.Context, params corev1.DeletePos
 func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImageParams) (corev1.GetPostImageRes, error) {
 	post, err := s.BlogReads.GetPostByID(ctx, params.ID)
 	if err != nil {
-		return nil, wrapBlogError(err, "post not found")
+		return nil, err
 	}
 
 	var ifNoneMatch *string
@@ -156,7 +155,7 @@ func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImag
 			ETag: params.IfNoneMatch,
 		}, nil
 	} else if imageErr != nil {
-		return nil, wrapBlogError(imageErr, "image not found")
+		return nil, imageErr
 	}
 
 	return &corev1.GetPostImageOKHeaders{
@@ -165,20 +164,4 @@ func (s *CoreServer) GetPostImage(ctx context.Context, params corev1.GetPostImag
 		},
 		ETag: corev1.NewOptString(postImage.Etag()),
 	}, nil
-}
-
-func wrapBlogError(err error, fallbackMsg string) error {
-	if err == nil {
-		return nil
-	}
-	if errors.Is(err, pkg.NoPermission) || strings.Contains(err.Error(), "access denied") {
-		return pkg.Wrap(pkg.NoPermission, err, fallbackMsg)
-	}
-	if errors.Is(err, pkg.ErrNotFound) || errors.Is(err, storage.ErrNotFound) {
-		return pkg.Wrap(pkg.ErrNotFound, err, fallbackMsg)
-	}
-	if errors.Is(err, pkg.ErrBadInput) {
-		return pkg.Wrap(pkg.ErrBadInput, err, fallbackMsg)
-	}
-	return pkg.Wrap(nil, err, fallbackMsg)
 }

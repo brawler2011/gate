@@ -42,14 +42,14 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID u
 		if user.IsGuest() {
 			return nil, pkg.ErrUnauthenticated
 		}
-		return nil, pkg.NoPermission
+		return nil, pkg.ErrForbidden
 	}
 	manager, err := uc.permissions.HasContestPermission(ctx, contestID, userID, accessmodel.ActionManageContest)
 	if err != nil {
 		return nil, err
 	}
 	if !manager && contest.StartTime != nil && accessmodel.ReadTime(ctx).Before(*contest.StartTime) {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "contest has not started yet")
+		return nil, pkg.Wrap(pkg.ErrForbidden, nil, "contest has not started yet")
 	}
 	if unfrozen {
 		allowed, err := uc.permissions.HasContestPermission(ctx, contestID, userID, accessmodel.ActionManageContest)
@@ -57,7 +57,7 @@ func (uc *ContestsUseCase) GetContestScoreboard(ctx context.Context, contestID u
 			return nil, err
 		}
 		if !allowed {
-			return nil, pkg.NoPermission
+			return nil, pkg.ErrForbidden
 		}
 	}
 	return uc.ProjectScoreboard(ctx, contestID, unfrozen)
@@ -91,7 +91,7 @@ func (uc *ContestsUseCase) withinContestOnce(ctx context.Context, id uuid.UUID, 
 		return err
 	}
 	if !allowed {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	return uc.transactions.Within(ctx, func(tx CommandTxStore) error {
 		return fn(tx)

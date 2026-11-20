@@ -152,18 +152,18 @@ func TestLastOwnerAndTransfer(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, after.Owners, 2)
 	_, err = PlanContestOwnerTransfer(in, c, before, target, target.Id)
-	require.ErrorIs(t, err, pkg.NoPermission)
+	require.ErrorIs(t, err, pkg.ErrForbidden)
 	_, err = PlanContestOwnerTransfer(in, c, before, target, uuid.New())
 	require.ErrorIs(t, err, pkg.ErrConflict)
 	expiry := in.Now.Add(time.Hour)
 	target.ExpiresAt = &expiry
 	_, err = PlanOrganizationOwnerTransfer(in, org, before, target, in.Actor.Id)
-	require.ErrorIs(t, err, pkg.NoPermission)
-	require.ErrorIs(t, RequireGrantOrgRole(in, org, m.RoleChange[m.OrganizationRole]{Target: target, New: m.OrganizationOwner, BeforeOwners: before, AfterOwners: m.OwnerState{Owners: []m.User{in.Actor, target}}}), pkg.NoPermission)
+	require.ErrorIs(t, err, pkg.ErrForbidden)
+	require.ErrorIs(t, RequireGrantOrgRole(in, org, m.RoleChange[m.OrganizationRole]{Target: target, New: m.OrganizationOwner, BeforeOwners: before, AfterOwners: m.OwnerState{Owners: []m.User{in.Actor, target}}}), pkg.ErrForbidden)
 	// ACL calls cannot modify self; leaving and transfer are separate operations.
-	require.ErrorIs(t, RequireGrantOrgRole(in, org, m.RoleChange[m.OrganizationRole]{Target: in.Actor, Old: m.OrganizationOwner, New: m.OrganizationMember}), pkg.NoPermission)
-	require.ErrorIs(t, RequireGrantProblemRole(in, p, m.RoleChange[m.ProblemRole]{Target: in.Actor, Old: m.ProblemOwner}), pkg.NoPermission)
-	require.ErrorIs(t, RequireGrantContestRole(in, c, m.RoleChange[m.ContestRole]{Target: in.Actor, Old: m.ContestOwner}), pkg.NoPermission)
+	require.ErrorIs(t, RequireGrantOrgRole(in, org, m.RoleChange[m.OrganizationRole]{Target: in.Actor, Old: m.OrganizationOwner, New: m.OrganizationMember}), pkg.ErrForbidden)
+	require.ErrorIs(t, RequireGrantProblemRole(in, p, m.RoleChange[m.ProblemRole]{Target: in.Actor, Old: m.ProblemOwner}), pkg.ErrForbidden)
+	require.ErrorIs(t, RequireGrantContestRole(in, c, m.RoleChange[m.ContestRole]{Target: in.Actor, Old: m.ContestOwner}), pkg.ErrForbidden)
 }
 
 func TestOwnerChangeCannotAlterOtherOwners(t *testing.T) {
@@ -216,5 +216,5 @@ func TestInvalidAndExpiredGrantTargets(t *testing.T) {
 		require.Error(t, RequireGrantContestRole(in, c, m.RoleChange[m.ContestRole]{Target: target, New: m.ContestParticipant}))
 	}
 	team := m.TeamContext{ID: uuid.New(), Organization: org, Privacy: m.TeamSecret, Role: m.TeamMaintainer}
-	require.ErrorIs(t, RequireGrantTeamRole(in, team, m.RoleChange[m.TeamRole]{Target: in.Actor, Old: m.TeamMember, New: m.TeamMaintainer}), pkg.NoPermission)
+	require.ErrorIs(t, RequireGrantTeamRole(in, team, m.RoleChange[m.TeamRole]{Target: in.Actor, Old: m.TeamMember, New: m.TeamMaintainer}), pkg.ErrForbidden)
 }

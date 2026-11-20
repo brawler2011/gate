@@ -28,7 +28,7 @@ func (uc *AnnouncementsUseCase) ListAnnouncements(ctx context.Context, contest u
 		return nil, err
 	}
 	if !allowed {
-		return nil, pkg.NoPermission
+		return nil, pkg.ErrForbidden
 	}
 	return uc.reads.ListAnnouncements(ctx, contest, page, size)
 }
@@ -46,7 +46,7 @@ func (uc *ClarificationsUseCase) ListClarifications(ctx context.Context, contest
 		return nil, err
 	}
 	if !allowed {
-		return nil, pkg.NoPermission
+		return nil, pkg.ErrForbidden
 	}
 	moderator, err := uc.permissions.HasContestPermission(ctx, contest, user.Id, accessmodel.ActionManageContest)
 	if err != nil {

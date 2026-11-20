@@ -61,7 +61,7 @@ func withinAccount(ctx context.Context, transactions IdentityTransactions, targe
 		}
 		if adminOnly || target != actor.Id {
 			if !current.IsAdmin() {
-				return pkg.NoPermission
+				return pkg.ErrForbidden
 			}
 		}
 		return fn(store)

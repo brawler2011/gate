@@ -116,10 +116,10 @@ func TestContestAudienceOwnRevocation(t *testing.T) {
 	c := m.ContestContext{ID: uuid.New(), Organization: m.OrganizationContext{ID: uuid.New(), JoinPolicy: m.JoinOpen}, Visibility: m.VisibilityPrivate, ParticipationMode: m.ParticipationInviteOnly, DirectRole: m.ContestParticipant}
 	require.NoError(t, RequireContestAudience(in, c, "participants", uuid.Nil))
 	require.NoError(t, RequireContestAudience(in, c, "own", user.Id))
-	require.ErrorIs(t, RequireContestAudience(in, c, "own", uuid.New()), pkg.NoPermission)
-	require.ErrorIs(t, RequireContestAudience(in, c, "managers", uuid.Nil), pkg.NoPermission)
+	require.ErrorIs(t, RequireContestAudience(in, c, "own", uuid.New()), pkg.ErrForbidden)
+	require.ErrorIs(t, RequireContestAudience(in, c, "managers", uuid.Nil), pkg.ErrForbidden)
 	c.DirectRole = ""
 	for _, audience := range []string{"public", "participants", "managers", "own", "unknown"} {
-		require.ErrorIs(t, RequireContestAudience(in, c, audience, user.Id), pkg.NoPermission)
+		require.ErrorIs(t, RequireContestAudience(in, c, audience, user.Id), pkg.ErrForbidden)
 	}
 }

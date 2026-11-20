@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -24,45 +25,43 @@ func NewProblem(ctx context.Context, err error) *corev1.ProblemStatusCodeWithHea
 }
 
 func newProblem(ctx context.Context, err error) *corev1.ProblemStatusCodeWithHeaders {
-	var status int
+	code := pkg.CodeOf(err)
+	status := pkg.HTTPStatus(code)
 	detail := ""
 	res := &corev1.ProblemStatusCodeWithHeaders{}
 
-	var cErr *pkg.CustomError
-	var sizeErr *http.MaxBytesError
+	var appErr *pkg.Error
 	var rateErr *pkg.RateLimitError
 	switch {
 	case errors.Is(err, context.Canceled) && ctx.Err() != nil:
-		status = statusClientClosedRequest
+		code, status = pkg.CodeInternal, statusClientClosedRequest
+	case errors.As(err, &appErr):
+		detail = appErr.Message
+		res.Response.Params = problemParams(appErr.Params)
 	case errors.As(err, &rateErr):
-		status = http.StatusTooManyRequests
 		detail = rateErr.Error()
 		res.RetryAfter = corev1.NewOptInt(int(max(1, (rateErr.RetryAfter+time.Second-1)/time.Second)))
-	case errors.As(err, &sizeErr):
-		status = http.StatusRequestEntityTooLarge
+	case code == pkg.CodePayloadTooLarge:
 		detail = "request body exceeds maximum allowed size"
-	case errors.As(err, &cErr):
-		status = pkg.ToREST(err)
-		detail = cErr.Message
 	default:
-		status = pkg.ToREST(err)
-		if status == http.StatusInternalServerError {
-			if code := ogenerrors.ErrorCode(err); code != http.StatusInternalServerError {
-				status = code
-			}
+		// ogen's decode and security errors are client errors with no pkg code.
+		if s := ogenerrors.ErrorCode(err); s != http.StatusInternalServerError {
+			status, code = s, statusCode(s)
+			detail = err.Error()
 		}
-		detail = err.Error()
 	}
 	if status >= 500 || status == statusClientClosedRequest {
 		detail = ""
 	}
 
 	res.StatusCode = status
+	params := res.Response.Params
 	res.Response = corev1.Problem{
 		Type:      "about:blank",
 		Title:     http.StatusText(status),
 		Status:    status,
-		Code:      statusCode(status),
+		Code:      corev1.ErrorCode(code),
+		Params:    params,
 		RequestID: requestid.Get(ctx),
 	}
 	if detail != "" {
@@ -77,26 +76,41 @@ func newProblem(ctx context.Context, err error) *corev1.ProblemStatusCodeWithHea
 	return res
 }
 
-func statusCode(status int) corev1.ErrorCode {
+func problemParams(params map[string]any) corev1.OptProblemParams {
+	if len(params) == 0 {
+		return corev1.OptProblemParams{}
+	}
+	out := make(corev1.ProblemParams, len(params))
+	for k, v := range params {
+		raw, err := json.Marshal(v)
+		if err != nil {
+			continue
+		}
+		out[k] = raw
+	}
+	return corev1.NewOptProblemParams(out)
+}
+
+func statusCode(status int) pkg.Code {
 	switch status {
 	case http.StatusBadRequest:
-		return corev1.ErrorCodeInvalid
+		return pkg.CodeInvalid
 	case http.StatusUnauthorized:
-		return corev1.ErrorCodeUnauthenticated
+		return pkg.CodeUnauthenticated
 	case http.StatusForbidden:
-		return corev1.ErrorCodeForbidden
+		return pkg.CodeForbidden
 	case http.StatusNotFound:
-		return corev1.ErrorCodeNotFound
+		return pkg.CodeNotFound
 	case http.StatusConflict:
-		return corev1.ErrorCodeConflict
+		return pkg.CodeConflict
 	case http.StatusRequestEntityTooLarge:
-		return corev1.ErrorCodePayloadTooLarge
+		return pkg.CodePayloadTooLarge
 	case http.StatusTooManyRequests:
-		return corev1.ErrorCodeRateLimited
+		return pkg.CodeRateLimited
 	case http.StatusNotImplemented:
-		return corev1.ErrorCodeNotImplemented
+		return pkg.CodeNotImplemented
 	}
-	return corev1.ErrorCodeInternal
+	return pkg.CodeInternal
 }
 
 // ResponseErrorHandler serves errors raised outside operation handlers: decoding, security and middleware.

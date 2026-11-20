@@ -12,10 +12,10 @@ import (
 
 func (r *ProblemDraftsRepo) FinalizeCreate(ctx context.Context, k model.MutationKey, user uuid.UUID, draft model.Draft, objects []model.StoredObject) (model.MutationResult, error) {
 	if err := draft.ComputeScores(); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid weights")
+		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid weights")
 	}
 	if err := draft.Validate(r.quotas, nil); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid template")
+		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid template")
 	}
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
@@ -35,7 +35,7 @@ func (r *ProblemDraftsRepo) FinalizeCreate(ctx context.Context, k model.Mutation
 		return model.MutationResult{}, err
 	}
 	if !allowed {
-		return model.MutationResult{}, pkg.NoPermission
+		return model.MutationResult{}, pkg.ErrForbidden
 	}
 	repo := &ProblemsRepo{queries: q}
 	if err := repo.CreateProblem(ctx, &model.CreateProblemParams{ID: draft.ProblemID, OrganizationID: k.OrganizationID, OwnerID: &user, Title: draft.Title, ShortName: draft.ShortName, Visibility: model.ProblemVisibilityPrivate}); err != nil {

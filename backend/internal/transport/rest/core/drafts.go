@@ -14,7 +14,7 @@ func (h *CoreServer) CreateContestDraft(ctx context.Context, req *corev1.CreateC
 	user := accessmodel.UserFromContext(ctx)
 
 	if req == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
 
 	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, params.ContestLogin)

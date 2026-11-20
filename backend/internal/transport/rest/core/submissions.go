@@ -15,16 +15,16 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSub
 	user := accessmodel.UserFromContext(ctx)
 
 	if req == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
 
 	solutionSize := int64(len(req.Submission))
 	if solutionSize == 0 || solutionSize > maxSolutionSize {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid solution size")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "invalid solution size")
 	}
 
 	if _, ok := h.languages.Langs[params.Language]; !ok {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "unknown language configuration")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "unknown language configuration")
 	}
 
 	contest, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrganizationLogin, params.ContestLogin)
@@ -32,7 +32,7 @@ func (h *CoreServer) CreateSubmission(ctx context.Context, req *corev1.CreateSub
 		return nil, err
 	}
 	if !contest.TypedSettings().AllowsLanguage(params.Language) {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "language configuration is not allowed in this contest")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "language configuration is not allowed in this contest")
 	}
 
 	solutionCreation := &submissionsmodel.SubmissionCreation{

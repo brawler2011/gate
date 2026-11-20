@@ -47,10 +47,10 @@ func TestContestLifecycleBoundaries(t *testing.T) {
 	require.NoError(t, ApplyContestLifecycle(in, &contest))
 	require.NoError(t, RequireContest(in, contest, m.ActionGetContestProblem))
 	require.NoError(t, RequireContest(in, contest, m.ActionGetMonitor))
-	require.ErrorIs(t, RequireContest(in, contest, m.ActionCreateSubmission), pkg.NoPermission)
+	require.ErrorIs(t, RequireContest(in, contest, m.ActionCreateSubmission), pkg.ErrForbidden)
 	in.Now = end
 	require.NoError(t, ApplyContestLifecycle(in, &contest))
-	require.ErrorIs(t, RequireContest(in, contest, m.ActionCreateSubmission), pkg.NoPermission)
+	require.ErrorIs(t, RequireContest(in, contest, m.ActionCreateSubmission), pkg.ErrForbidden)
 }
 
 func TestContestCompositePolicyIsStrictAcrossOrganizations(t *testing.T) {
@@ -58,15 +58,15 @@ func TestContestCompositePolicyIsStrictAcrossOrganizations(t *testing.T) {
 	destination.OwnerID = in.Actor.Id
 	source.Organization.ID = uuid.New()
 	pack := PackageContext{ID: uuid.New(), ProblemID: source.ID}
-	require.ErrorIs(t, RequireAttachProblem(in, destination, source, pack), pkg.NoPermission)
+	require.ErrorIs(t, RequireAttachProblem(in, destination, source, pack), pkg.ErrForbidden)
 	source.DirectRole = m.ProblemViewer
 	require.NoError(t, RequireAttachProblem(in, destination, source, pack))
 	bad := pack
 	bad.ProblemID = uuid.New()
-	require.ErrorIs(t, RequireAttachProblem(in, destination, source, bad), pkg.ErrBadInput)
+	require.ErrorIs(t, RequireAttachProblem(in, destination, source, bad), pkg.ErrInvalid)
 	destination.OwnerID = uuid.Nil
 	destination.DirectRole = m.ContestParticipant
-	require.ErrorIs(t, RequireAttachProblem(in, destination, source, pack), pkg.NoPermission)
+	require.ErrorIs(t, RequireAttachProblem(in, destination, source, pack), pkg.ErrForbidden)
 }
 
 func TestContestSettingsFailClosed(t *testing.T) {
@@ -74,7 +74,7 @@ func TestContestSettingsFailClosed(t *testing.T) {
 		t.Run(setting, func(t *testing.T) {
 			in, _, _, c := policyFixture()
 			c.Settings = map[string]interface{}{setting: "unknown"}
-			require.ErrorIs(t, ApplyContestLifecycle(in, &c), pkg.NoPermission)
+			require.ErrorIs(t, ApplyContestLifecycle(in, &c), pkg.ErrForbidden)
 		})
 	}
 }

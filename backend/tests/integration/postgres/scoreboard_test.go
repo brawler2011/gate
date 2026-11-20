@@ -185,7 +185,7 @@ func TestScoreboardFreezePreservesObservedVerdicts(t *testing.T) {
 	require.EqualValues(t, 2, results[users[0]].ProblemResults[0].PendingAttempts)
 	require.EqualValues(t, 1, results[users[1]].ProblemsSolved)
 	_, err = f.uc.GetContestScoreboard(accessmodel.WithReadTime(accessmodel.WithUser(f.ctx, participant), now), f.contest, true)
-	require.ErrorIs(t, err, pkg.NoPermission)
+	require.ErrorIs(t, err, pkg.ErrForbidden)
 	live := read(accessmodel.UserFromContext(f.ctx), now, true)
 	require.NotEqual(t, masked.Items, live.Items)
 	final := read(participant, end, false)
