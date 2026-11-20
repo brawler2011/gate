@@ -158,7 +158,7 @@ func TestImportKeepsExpectedVerdicts(t *testing.T) {
 	for _, s := range plan.draft.Solutions {
 		verdicts = append(verdicts, s.Verdicts)
 	}
-	require.Equal(t, [][]string{{"WA", "PE", "TLE", "MLE", "OLE", "RE"}, {"TLE", "OK"}, {}, {"FAIL"}, {"OK"}, {"OK"}}, verdicts)
+	require.Equal(t, [][]string{{"WA", "PE", "TLE", "MLE", "OLE", "RE"}, {"TLE", "OK"}, {}, {"RE"}, {"OK"}, {"OK"}}, verdicts)
 
 	plan, err = importDir(t, "../../pkg/testdata/gfmt/a-plus-b", map[string]string{"solutions/extra.py": "pass\n"})
 	require.NoError(t, err)

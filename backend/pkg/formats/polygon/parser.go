@@ -186,7 +186,7 @@ var tagVerdicts = map[string][]string{
 	"time-limit-exceeded-or-accepted": {"TLE", "OK"},
 	"time-limit-exceeded-or-memory-limit-exceeded": {"TLE", "MLE"},
 	"memory-limit-exceeded":                        {"MLE"},
-	"failed":                                       {"FAIL"},
+	"failed":                                       {"RE"},
 	"do-not-run":                                   {},
 }
 

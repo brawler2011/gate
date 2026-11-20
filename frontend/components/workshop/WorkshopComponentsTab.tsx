@@ -1,12 +1,11 @@
 "use client";
 
 import {Badge, Box, Button, Code, Grid, Group, MultiSelect, NavLink, NumberInput, ScrollArea, Select, Stack, Text, TextInput} from "@mantine/core";
-import {useQuery} from "@tanstack/react-query";
 import {useState} from "react";
 import {useSearchParams} from "react-router-dom";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
-import {api, unwrap} from "@/lib/api";
+import {useProblemBuilds} from "@/components/workshop/WorkshopPackagesTab";
 import {languageName, useLanguages, type SupportedLanguage} from "@/lib/languages";
 import {useStandardCheckers, useSystemLibrary} from "@/lib/systemLibrary";
 
@@ -222,11 +221,7 @@ const VERDICTS: {value: ProblemSolutionVerdict; label: string}[] = [
 type SolutionResults = {revision: number; solutions: ProblemBuildSolution[]};
 
 const useLastSolutionResults = (problemId: string, enabled: boolean): SolutionResults | null => {
-  const builds = useQuery({
-    queryKey: ["problem-builds", problemId],
-    queryFn: () => unwrap(api.GET("/problems/{id}/builds", {params: {path: {id: problemId}}})),
-    enabled,
-  });
+  const builds = useProblemBuilds(problemId, enabled);
   const build = builds.data?.find((item) => item.solutions);
   return build?.solutions ? {revision: build.revision, solutions: build.solutions} : null;
 };
