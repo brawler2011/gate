@@ -249,6 +249,14 @@ func (e *execution) makeManifest() {
 	d := s.Draft
 	m := &gfmt.Problem{FormatVersion: "2", Title: d.Title, Type: d.Type, MaxScore: d.MaxScore, Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb},
 		InputFile: d.InputFile, OutputFile: d.OutputFile, Programs: map[string]gfmt.Program{}, Subtasks: map[string]gfmt.Subtask{}}
+	for _, s := range d.Statements {
+		if s.Title != "" {
+			if m.Titles == nil {
+				m.Titles = map[string]string{}
+			}
+			m.Titles[s.Language] = s.Title
+		}
+	}
 	for _, g := range d.Subtasks {
 		deps := []string{}
 		for _, id := range g.DependsOn {
