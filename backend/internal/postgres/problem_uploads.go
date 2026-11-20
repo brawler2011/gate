@@ -113,19 +113,19 @@ func applyUploadChange(d *model.Draft, change model.UploadChange, objects map[st
 
 // The caller must store uploads with verified SHA-256 values before finalization.
 func (r *ProblemDraftsRepo) FinalizeUploads(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, change model.UploadChange, objects map[string]model.StoredObject) (model.MutationResult, error) {
-	return r.finalizeUploadDraft(ctx, k, id, expected, slices.Collect(maps.Values(objects)), func(d *model.Draft) error { return applyUploadChange(d, change, objects) })
+	return r.finalizeUploadDraft(ctx, k, id, expected, slices.Collect(maps.Values(objects)), func(d *model.Draft) error { return applyUploadChange(d, change, objects) }, func(d model.Draft) any { return d })
 }
 
-func (r *ProblemDraftsRepo) FinalizeImport(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, draft model.Draft, objects []model.StoredObject) (model.MutationResult, error) {
+func (r *ProblemDraftsRepo) FinalizeImport(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, draft model.Draft, converted []string, objects []model.StoredObject) (model.MutationResult, error) {
 	return r.finalizeUploadDraft(ctx, k, id, expected, objects, func(d *model.Draft) error {
 		draft.ProblemID = id
 		draft.Revision = expected
 		*d = draft
 		return nil
-	})
+	}, func(d model.Draft) any { return model.ImportResult{Draft: d, ConvertedFiles: converted} })
 }
 
-func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, objects []model.StoredObject, apply func(*model.Draft) error) (model.MutationResult, error) {
+func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, objects []model.StoredObject, apply func(*model.Draft) error, body func(model.Draft) any) (model.MutationResult, error) {
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
 		return model.MutationResult{}, err
@@ -182,7 +182,7 @@ func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.Mut
 	if err := writeDraft(ctx, tx, draft); err != nil {
 		return model.MutationResult{}, err
 	}
-	result, err := finishOperation(ctx, tx, k, 200, draft)
+	result, err := finishOperation(ctx, tx, k, 200, body(draft))
 	if err != nil {
 		return result, err
 	}

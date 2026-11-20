@@ -508,7 +508,7 @@ type Invoker interface {
 	// Replace the draft with the contents of a problem archive.
 	//
 	// POST /problems/{id}/import
-	ImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (*ProblemDraft, error)
+	ImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (*ProblemImport, error)
 	// InviteOrganizationMember invokes InviteOrganizationMember operation.
 	//
 	// Invite user to organization.
@@ -7179,12 +7179,12 @@ func (c *Client) sendGetUserAvatar(ctx context.Context, params GetUserAvatarPara
 // Replace the draft with the contents of a problem archive.
 //
 // POST /problems/{id}/import
-func (c *Client) ImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (*ProblemDraft, error) {
+func (c *Client) ImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (*ProblemImport, error) {
 	res, err := c.sendImportProblem(ctx, request, params)
 	return res, err
 }
 
-func (c *Client) sendImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (res *ProblemDraft, err error) {
+func (c *Client) sendImportProblem(ctx context.Context, request *ImportProblemReq, params ImportProblemParams) (res *ProblemImport, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [3]string

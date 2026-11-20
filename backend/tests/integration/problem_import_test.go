@@ -42,9 +42,10 @@ func (s *IntegrationTestSuite) TestAuthorPackagesImportAndBuild() {
 			s.Require().NoError(err)
 			current, err := s.client.GetProblemDraft(ctx, corev1.GetProblemDraftParams{ID: problem.ID})
 			s.Require().NoError(err)
-			draft, err := s.client.ImportProblem(ctx, &corev1.ImportProblemReq{Package: ht.MultipartFile{Name: "package.zip", File: bytes.NewReader(archive.Bytes()), Size: int64(archive.Len())}},
+			imported, err := s.client.ImportProblem(ctx, &corev1.ImportProblemReq{Package: ht.MultipartFile{Name: "package.zip", File: bytes.NewReader(archive.Bytes()), Size: int64(archive.Len())}},
 				corev1.ImportProblemParams{ID: problem.ID, ExpectedRevision: current.Revision, IdempotencyKey: uuid.NewString()})
 			s.Require().NoError(err)
+			draft := imported.Draft
 			pkg := s.loadPackage(s.buildPackage(admin.Id, problem.ID))
 			built := pkg.Format.Problem
 			if filepath.Base(filepath.Dir(dir)) == "polygon" {

@@ -1792,7 +1792,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProblemDraft"
+                $ref: "#/components/schemas/ProblemImport"
   /problems/{id}/packages:
     get:
       tags: [problems]
@@ -3487,6 +3487,19 @@ components:
         object_id:
           type: string
           format: uuid
+    ProblemImport:
+      type: object
+      required:
+      - draft
+      - converted_files
+      properties:
+        draft:
+          $ref: "#/components/schemas/ProblemDraft"
+        converted_files:
+          description: Package paths of text files converted to UTF-8 from another encoding.
+          type: array
+          items:
+            type: string
     ProblemDraft:
       description: >-
         The editable problem as typed entries without package paths. Programs

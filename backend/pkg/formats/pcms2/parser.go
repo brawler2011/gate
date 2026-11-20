@@ -1,7 +1,6 @@
 package pcms2
 
 import (
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -25,7 +24,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		return nil, fmt.Errorf("read problem.xml: %w", err)
 	}
 	var prob Problem
-	if err := xml.Unmarshal(data, &prob); err != nil {
+	if err := spec.UnmarshalXML(data, &prob); err != nil {
 		return nil, fmt.Errorf("parse PCMS2 problem.xml: %w", err)
 	}
 	testset, err := mainTestset(prob.Judging.Testsets)

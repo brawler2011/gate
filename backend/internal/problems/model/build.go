@@ -30,6 +30,11 @@ type MutationResult struct {
 	Body   json.RawMessage
 }
 
+type ImportResult struct {
+	Draft          Draft    `json:"draft"`
+	ConvertedFiles []string `json:"converted_files"`
+}
+
 type ProblemBuild struct {
 	ID             uuid.UUID           `json:"id"`
 	ProblemID      uuid.UUID           `json:"problem_id"`

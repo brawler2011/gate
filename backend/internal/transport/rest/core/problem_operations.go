@@ -16,11 +16,11 @@ type PackagesReader interface {
 	DownloadPackage(ctx context.Context, problemID, packageID uuid.UUID) (io.ReadCloser, error)
 }
 
-func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProblemReq, params corev1.ImportProblemParams) (*corev1.ProblemDraft, error) {
+func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProblemReq, params corev1.ImportProblemParams) (*corev1.ProblemImport, error) {
 	if req == nil || req.Package.File == nil {
 		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "expected 'package' field")
 	}
-	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.Import(ctx, params.ID, params.ExpectedRevision, params.IdempotencyKey, req.Package.File))
+	return draftResult[corev1.ProblemImport](h.ProblemDrafts.Import(ctx, params.ID, params.ExpectedRevision, params.IdempotencyKey, req.Package.File))
 }
 
 func (h *CoreServer) ListProblemPackages(ctx context.Context, params corev1.ListProblemPackagesParams) (*corev1.ListProblemPackagesOK, error) {
