@@ -92,19 +92,30 @@ func RequestLoggerMiddleware(logger *slog.Logger, route func(*http.Request) stri
 				recovered := recover()
 				recoveredErr, _ := recovered.(error)
 				abort := errors.Is(recoveredErr, http.ErrAbortHandler)
+				committed := state.written
 				if recovered != nil {
 					attrs = append(attrs, slog.String("panic", fmt.Sprint(recovered)), slog.String("stack", string(debug.Stack())))
-					if !state.written && !abort {
-						writeError(ctx, logger, sw, http.StatusInternalServerError, internalMessage, id, nil)
+					if !committed && !abort {
+						if err := writeError(sw, http.StatusInternalServerError, internalMessage, id, nil); err != nil {
+							state.err = errors.Join(state.err, err)
+						}
 					}
 				}
 				if state.err != nil {
 					attrs = append(attrs, slog.String("error", state.err.Error()))
 				}
 				attrs = append(attrs, slog.Int("status", status), slog.Int64("duration_ms", time.Since(start).Milliseconds()))
-				logger.LogAttrs(ctx, statusLevel(status), "http_request_completed", attrs...)
-				if abort {
+				level := statusLevel(status)
+				if recovered != nil && !abort {
+					level = slog.LevelError
+				}
+				logger.LogAttrs(ctx, level, "http_request_completed", attrs...)
+				switch {
+				case abort:
 					panic(recovered)
+				case recovered != nil && committed:
+					// Without an abort the server would end a truncated response as if it were complete.
+					panic(http.ErrAbortHandler)
 				}
 			}()
 			next.ServeHTTP(sw, r)
@@ -178,18 +189,24 @@ func ResponseErrorHandler(logger *slog.Logger) func(ctx context.Context, w http.
 		if !errors.As(err, &fields) {
 			fields = nil
 		}
-		writeError(ctx, logger, w, statusCode, msg, requestid.Get(ctx), fields)
+		if writeErr := writeError(w, statusCode, msg, requestid.Get(ctx), fields); writeErr != nil {
+			if state != nil {
+				state.err = errors.Join(state.err, writeErr)
+			} else {
+				logger.ErrorContext(ctx, "failed to write error response", "error", writeErr)
+			}
+		}
 	}
 }
 
-func writeError(ctx context.Context, logger *slog.Logger, w http.ResponseWriter, status int, msg, requestID string, fields pkg.FieldErrors) {
+func writeError(w http.ResponseWriter, status int, msg, requestID string, fields pkg.FieldErrors) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if status == statusClientClosedRequest {
-		return
+		return nil
 	}
-	resp := errorResponse{Err: http.StatusText(status), Msg: msg, RequestID: requestID, Fields: fields}
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		logger.ErrorContext(ctx, "failed to encode error response", "error", err)
+	if err := json.NewEncoder(w).Encode(errorResponse{Err: http.StatusText(status), Msg: msg, RequestID: requestID, Fields: fields}); err != nil {
+		return fmt.Errorf("write error response: %w", err)
 	}
+	return nil
 }
