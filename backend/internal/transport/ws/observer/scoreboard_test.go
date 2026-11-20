@@ -176,7 +176,7 @@ func TestFinishPublishesFinalSnapshotWithoutJudgeEvent(t *testing.T) {
 			sb := p["scoreboard"].(map[string]any)
 			require.Equal(t, false, sb["is_frozen"])
 			require.InDelta(t, 1, sb["items"].([]any)[0].(map[string]any)["problems_solved"], 0)
-			requireClose(t, conn, 1011)
+			requireClose(t, conn, websocket.CloseTryAgainLater)
 		})
 	}
 

@@ -2,10 +2,12 @@ package outbox
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/queuecontext"
 	"github.com/brawler2011/gate/backend/pkg/requestid"
 )
@@ -69,8 +71,8 @@ func (w *OutboxWorker) processBatch(ctx context.Context) {
 
 func (w *OutboxWorker) processEvent(ctx context.Context, event *eventdata.OutboxEvent) {
 	baseCtx := context.WithoutCancel(ctx)
-	leaseCtx, cancelLease := context.WithCancel(baseCtx)
-	defer cancelLease()
+	leaseCtx, cancelLease := context.WithCancelCause(baseCtx)
+	defer cancelLease(nil)
 
 	stopped := make(chan struct{})
 	done := make(chan struct{})
@@ -90,7 +92,7 @@ func (w *OutboxWorker) processEvent(ctx context.Context, event *eventdata.Outbox
 				return
 			case <-ticker.C:
 				if err := w.outboxRepo.RenewLease(leaseCtx, event.Id, event.LeaseToken, eventTimeoutSec); err != nil {
-					cancelLease()
+					cancelLease(fmt.Errorf("renew outbox lease: %w", err))
 					return
 				}
 			}
@@ -104,7 +106,7 @@ func (w *OutboxWorker) processEvent(ctx context.Context, event *eventdata.Outbox
 	if event.EventType == eventdata.OutboxEventSubmissionCreated {
 		logger = logger.With("submission_id", event.AggregateID)
 	}
-	err := w.dispatcher.Dispatch(handlerCtx, event.EventType, event.Payload)
+	err := pkg.WithCause(leaseCtx, w.dispatcher.Dispatch(handlerCtx, event.EventType, event.Payload))
 
 	close(done)
 	<-stopped
@@ -128,6 +130,6 @@ func (w *OutboxWorker) processEvent(ctx context.Context, event *eventdata.Outbox
 func (w *OutboxWorker) runMaintenance(ctx context.Context) {
 
 	if err := w.outboxRepo.DeleteOldEvents(ctx, retentionDays); err != nil {
-		slog.Error("failed to delete old events", "operation", "outbox_delete_old", "error", err)
+		slog.ErrorContext(ctx, "failed to delete old events", "operation", "outbox_delete_old", "error", err)
 	}
 }

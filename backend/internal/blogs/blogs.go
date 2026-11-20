@@ -224,6 +224,6 @@ func (uc *BlogsUseCase) withinAdmin(ctx context.Context, fn func(TxStore, access
 }
 func (uc *BlogsUseCase) deleteImage(ctx context.Context, key string) {
 	if err := uc.storage.DeleteFile(ctx, uc.imageBucket, key); err != nil {
-		slog.Warn("failed to delete blog image", "key", key, "error", err)
+		slog.WarnContext(ctx, "failed to delete blog image", "key", key, "error", err)
 	}
 }

@@ -3,6 +3,7 @@ package pkg
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -10,8 +11,34 @@ import (
 
 const SubmissionsStreamName = "SUBMISSIONS"
 
+// Connection state changes are otherwise silent, including the final close after reconnects run out.
+func natsOptions() []nats.Option {
+	return []nats.Option{
+		// Our own Close on shutdown is not a failure.
+		nats.NoCallbacksAfterClientClose(),
+		nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
+			slog.Warn("nats disconnected", "error", err)
+		}),
+		nats.ReconnectHandler(func(c *nats.Conn) {
+			slog.Info("nats reconnected", "url", c.ConnectedUrl())
+		}),
+		nats.ClosedHandler(func(c *nats.Conn) {
+			if err := c.LastError(); err != nil {
+				slog.Error("nats connection closed", "error", err)
+			}
+		}),
+		nats.ErrorHandler(func(_ *nats.Conn, sub *nats.Subscription, err error) {
+			subject := ""
+			if sub != nil {
+				subject = sub.Subject
+			}
+			slog.Error("nats async error", "subject", subject, "error", err)
+		}),
+	}
+}
+
 func NewNatsConn(natsUrl string) (*nats.Conn, error) {
-	conn, err := nats.Connect(natsUrl)
+	conn, err := nats.Connect(natsUrl, natsOptions()...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to nats: %w", err)
 	}
@@ -19,12 +46,13 @@ func NewNatsConn(natsUrl string) (*nats.Conn, error) {
 }
 
 func NewNatsJetStream(natsUrl string) (jetstream.JetStream, error) {
-	conn, err := nats.Connect(natsUrl)
+	conn, err := NewNatsConn(natsUrl)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to nats: %w", err)
+		return nil, err
 	}
 	js, err := jetstream.New(conn)
 	if err != nil {
+		conn.Close()
 		return nil, fmt.Errorf("failed to create jetstream: %w", err)
 	}
 	return js, nil

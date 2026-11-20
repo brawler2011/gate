@@ -10,6 +10,7 @@ import (
 
 	observerv1 "github.com/brawler2011/gate/backend/contracts/observer/v1"
 	submissionsmodel "github.com/brawler2011/gate/backend/internal/submissions/model"
+	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -143,22 +144,22 @@ func (s *Observer) HandleSubmissions(w http.ResponseWriter, r *http.Request) {
 
 	filter, err := parseSubmissionsFilter(r)
 	if err != nil {
-		http.Error(w, "invalid filter", http.StatusBadRequest)
+		subscriptionError(w, r, pkg.Wrap(pkg.ErrInvalid, err, "invalid filter"))
 		return
 	}
 	lease, err := s.admit(ctx, filter, false)
 	if err != nil {
-		subscriptionError(w, err)
+		subscriptionError(w, r, err)
 		return
 	}
 	if err := s.hub.trackScoreboard(ctx, filter.ContestId); err != nil {
-		subscriptionError(w, err)
+		subscriptionError(w, r, err)
 		return
 	}
 	defer s.hub.releaseScoreboard(filter.ContestId)
 	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Request-ID": w.Header().Values("X-Request-ID")})
 	if err != nil {
-		slog.Error("failed to upgrade connection", "error", err)
+		slog.WarnContext(ctx, "upgrade websocket", "error", err)
 		return
 	}
 
@@ -187,7 +188,7 @@ func getClosingFrameData(err error) (int, []byte) {
 			[]byte(observerv1.SubmissionsWsCloseReasonHistoryLost.Value().(string))
 	default:
 		return websocket.CloseInternalServerErr,
-			[]byte(err.Error())
+			[]byte(http.StatusText(http.StatusInternalServerError))
 	}
 }
 
@@ -196,19 +197,19 @@ func (s *Observer) HandleContests(w http.ResponseWriter, r *http.Request) {
 
 	parsed, err := parseSubmissionsFilter(r)
 	if err != nil || parsed.ContestId == nil {
-		http.Error(w, "invalid filter", http.StatusBadRequest)
+		subscriptionError(w, r, pkg.Wrap(pkg.ErrInvalid, err, "invalid filter"))
 		return
 	}
 	lease, err := s.admit(ctx, parsed, true)
 	if err != nil {
-		subscriptionError(w, err)
+		subscriptionError(w, r, err)
 		return
 	}
 	filter := &ContestsFilter{Since: parsed.Since, ContestId: *parsed.ContestId, Topics: parsed.Topics}
 
 	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Request-ID": w.Header().Values("X-Request-ID")})
 	if err != nil {
-		slog.Error("failed to upgrade contest connection", "error", err)
+		slog.WarnContext(ctx, "upgrade contest websocket", "error", err)
 		return
 	}
 

@@ -5,6 +5,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -41,7 +42,7 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 	contests := contests.NewContestsUseCase(s.contestsRepo, s.organizationsRepo, pgstore.NewContestCommandTransactions(s.dbPool), permissions)
 	hub := observer.NewHub(100, s.contestsRepo, contests, pgstore.NewPolicyFactsRepo(s.dbPool))
 	contestHub := observer.NewContestsHub(100)
-	server := httptest.NewServer(observer.NewObserver(hub, contestHub, middleware.AuthMiddleware(auth), auth, permissions, s.contestsRepo, pgstore.NewPolicyFactsRepo(s.dbPool)).Handler())
+	server := httptest.NewServer(observer.NewObserver(hub, contestHub, middleware.AuthMiddleware(auth, middleware.ResponseErrorHandler(slog.Default())), auth, permissions, s.contestsRepo, pgstore.NewPolicyFactsRepo(s.dbPool)).Handler())
 	defer server.Close()
 	team, err := s.teamsRepo.CreateTeam(s.ctx, &organizationsmodel.CreateTeamInput{OrganizationID: org.ID, Name: "WS team", Slug: "ws-" + suffix, Privacy: organizationsmodel.TeamPrivacyClosed})
 	s.Require().NoError(err)
@@ -132,7 +133,7 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 			if source == "direct moderator" {
 				s.Require().NoError(s.contestsRepo.UpdateContestMember(s.ctx, contestID, user.Id, contestsmodel.ContestRoleParticipant))
 				_, _, closed := conn.ReadMessage()
-				s.Require().True(websocket.IsCloseError(closed, 1011), "%v", closed)
+				s.Require().True(websocket.IsCloseError(closed, websocket.CloseTryAgainLater), "%v", closed)
 				var response *http.Response
 				conn, response, dialErr = websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/submissions?contestId="+contestID.String()+"&since="+strconv.FormatUint(seq-1, 10), headers)
 				s.Require().NoError(dialErr)

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	messaging "github.com/brawler2011/gate/backend/internal/messaging"
+	"github.com/brawler2011/gate/backend/pkg"
 
 	eventdata "github.com/brawler2011/gate/backend/internal/events"
 	"github.com/google/uuid"
@@ -148,7 +149,12 @@ func (s *StreamSubscriber) handleMessage(parentCtx context.Context) jetstream.Me
 		ctx = context.WithValue(ctx, eventdata.MessageStreamSequenceKey, meta.Sequence.Stream)
 
 		if err := s.dispatcher.Dispatch(ctx, msg.Subject(), msg.Data()); err != nil {
-			s.logger.Error("failed to handle event", "error", err, "subject", msg.Subject())
+			level := slog.LevelError
+			if errors.Is(err, pkg.ErrConflict) {
+				// A revision race; the redelivery sees the new state.
+				level = slog.LevelWarn
+			}
+			s.logger.Log(ctx, level, "failed to handle event", "error", err, "subject", msg.Subject(), "stream_sequence", meta.Sequence.Stream)
 			if eventdata.IsPermanent(err) {
 				if err := msg.Term(); err != nil {
 					s.logger.Error("failed to terminate event delivery", "error", err)

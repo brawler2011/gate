@@ -43,7 +43,7 @@ func rateLimitClientIP(r *http.Request, trustedProxy string) string {
 	defer cancel()
 	proxies, err := net.DefaultResolver.LookupNetIP(ctx, "ip", trustedProxy)
 	if err != nil {
-		slog.Warn("cannot resolve trusted rate limit proxy; using peer IP", "error", err)
+		slog.WarnContext(r.Context(), "cannot resolve trusted rate limit proxy; using peer IP", "error", err)
 		return peer
 	}
 	for _, proxyIP := range proxies {

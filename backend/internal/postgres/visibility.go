@@ -55,7 +55,11 @@ func scopeContests(ctx context.Context, q *sqlc.Queries, params sqlc.ScopeContes
 			return nil, 0, dbError("decode scoped contest", err)
 		}
 		resource.GetContestByIDRow.Settings = resource.Settings
-		items = append(items, mapGetContestByIDRow(resource.GetContestByIDRow))
+		contest, err := mapGetContestByIDRow(resource.GetContestByIDRow)
+		if err != nil {
+			return nil, 0, err
+		}
+		items = append(items, contest)
 	}
 	return items, total, nil
 }

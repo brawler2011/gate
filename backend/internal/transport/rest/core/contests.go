@@ -712,7 +712,7 @@ func (h *CoreServer) ListContestSubmissions(ctx context.Context, params corev1.L
 	if h.NATS != nil {
 		lastSeq, seqErr := pkg.GetSubmissionsLastSequence(ctx, h.NATS)
 		if seqErr != nil {
-			slog.Warn("failed to get submissions last sequence", "error", seqErr)
+			slog.WarnContext(ctx, "failed to get submissions last sequence", "error", seqErr)
 		} else {
 			since = safeInt64(lastSeq)
 		}

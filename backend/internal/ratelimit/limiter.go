@@ -109,7 +109,7 @@ func (l *Limiter) LoginSuccess(ctx context.Context, identifier string) {
 	// Lua keeps deletion atomic.
 	_, err := l.client.Eval(ctx, `return redis.call('DEL', KEYS[1])`, []string{"rl:fail:login:" + strings.ToLower(identifier)}).Result()
 	if err != nil {
-		slog.Warn("rate limiter unavailable; allowing request", "error", err)
+		slog.WarnContext(ctx, "rate limiter unavailable; allowing request", "error", err)
 	}
 }
 

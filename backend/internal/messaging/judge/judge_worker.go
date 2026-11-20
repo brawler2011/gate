@@ -11,6 +11,7 @@ import (
 	"time"
 
 	messaging "github.com/brawler2011/gate/backend/internal/messaging"
+	"github.com/brawler2011/gate/backend/pkg"
 
 	judging "github.com/brawler2011/gate/backend/internal/judging"
 	judgingmodel "github.com/brawler2011/gate/backend/internal/judging/model"
@@ -185,7 +186,12 @@ func (w *JudgeWorker) handleMessage(ctx context.Context, msg jetstream.Msg, logg
 		} else if errors.Is(err, judging.ErrLeaseLost) {
 			errorKind = "lease_lost"
 		}
-		logger.Error("submission_judging_failed", "error_kind", errorKind, "event", "submission_judging_failed", "operation", "judge_submission",
+		level := slog.LevelError
+		if errors.Is(err, judging.ErrBusy) {
+			// A duplicate delivery while another worker holds the job.
+			level, errorKind = slog.LevelInfo, "busy"
+		}
+		logger.Log(ctx, level, "submission_judging_failed", "error_kind", errorKind, "event", "submission_judging_failed", "operation", "judge_submission",
 			"error", err,
 			"duration_ms", duration.Milliseconds(),
 		)
@@ -222,8 +228,8 @@ func (w *JudgeWorker) runJudge(ctx context.Context, msg jetstream.Msg, reference
 			resultErr = fmt.Errorf("judging handler panicked: %v\n%s", r, debug.Stack())
 		}
 	}()
-	runCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	runCtx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
 	done := make(chan struct{})
 	stopped := make(chan struct{})
 	go func() {
@@ -238,12 +244,12 @@ func (w *JudgeWorker) runJudge(ctx context.Context, msg jetstream.Msg, reference
 				return
 			case <-ticker.C:
 				if err := msg.InProgress(); err != nil {
-					cancel()
+					cancel(fmt.Errorf("extend NATS ack deadline: %w", err))
 					return
 				}
 			}
 		}
 	}()
 	defer func() { close(done); <-stopped }()
-	return w.judgeUC.JudgeSubmission(runCtx, reference)
+	return pkg.WithCause(runCtx, w.judgeUC.JudgeSubmission(runCtx, reference))
 }

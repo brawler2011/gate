@@ -116,8 +116,7 @@ func (r *JudgeJobs) PickStalledJobs(ctx context.Context, limit int32) ([]judging
 func (r *JudgeJobs) FailStalledJob(ctx context.Context, reference judgingmodel.JobRef) (bool, error) {
 	identifiers, err := r.queries.GetSubmissionIdentifiers(ctx, reference.SubmissionID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		_, _ = r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
-		return false, nil
+		return false, r.completeStalled(ctx, reference)
 	}
 	if err != nil {
 		return false, dbError("fail stalled job", err)
@@ -130,14 +129,12 @@ func (r *JudgeJobs) FailStalledJob(ctx context.Context, reference judgingmodel.J
 	sub, err := r.queries.LockSubmission(ctx, reference.SubmissionID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			_, _ = r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
-			return false, nil
+			return false, r.completeStalled(ctx, reference)
 		}
 		return false, dbError("fail stalled job", err)
 	}
 	if sub.Generation != reference.Generation || sub.State == submissionsmodel.Disqualified {
-		_, _ = r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
-		return false, nil
+		return false, r.completeStalled(ctx, reference)
 	}
 	count, err := r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
 	if err != nil {
@@ -150,14 +147,12 @@ func (r *JudgeJobs) RequeueStalledJob(ctx context.Context, reference judgingmode
 	sub, err := r.queries.LockSubmission(ctx, reference.SubmissionID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			_, _ = r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
-			return false, nil
+			return false, r.completeStalled(ctx, reference)
 		}
 		return false, dbError("requeue stalled job", err)
 	}
 	if sub.Generation != reference.Generation || sub.State == submissionsmodel.Disqualified {
-		_, _ = r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
-		return false, nil
+		return false, r.completeStalled(ctx, reference)
 	}
 	count, err := r.queries.RequeueStalledJudgeJob(ctx, sqlc.RequeueStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation})
 	if err != nil {
@@ -176,4 +171,12 @@ func mapJudgeJob(row sqlc.JudgeJob) judgingmodel.Job {
 		job.Deadline = *row.DeadlineAt
 	}
 	return job
+}
+
+// completeStalled retires a job whose submission is gone or superseded.
+func (r *JudgeJobs) completeStalled(ctx context.Context, reference judgingmodel.JobRef) error {
+	if _, err := r.queries.CompleteStalledJudgeJob(ctx, sqlc.CompleteStalledJudgeJobParams{ID: reference.ID, Generation: reference.Generation}); err != nil {
+		return dbError("complete stalled judge job", err)
+	}
+	return nil
 }

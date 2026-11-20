@@ -188,6 +188,7 @@ func (s *subscription) run(history []*WrappedEvent, matches func(*WrappedEvent) 
 						s.onInvalidate(err)
 					}
 					_ = closeVerification(s.conn, err)
+					s.close("access invalidated", err)
 					return
 				}
 			}

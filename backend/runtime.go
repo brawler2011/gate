@@ -410,7 +410,7 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 		return nil, nil, fmt.Errorf("create contests subscriber: %w", err)
 	}
 
-	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersRepo, authUC), authUC, permissionsUC, contestsRepo, pgstore.NewPolicyFactsRepo(pool))
+	observer := wsobserver.NewObserver(observerHub, contestsObserverHub, newObserverMiddleware(usersRepo, authUC, logger), authUC, permissionsUC, contestsRepo, pgstore.NewPolicyFactsRepo(pool))
 
 	publicMux := http.NewServeMux()
 	publicMux.Handle("/ws/", observer.Handler())
@@ -454,8 +454,8 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 		return nil, nil, fmt.Errorf("create core api server: %w", err)
 	}
 
-	apiHandler := middleware.AuthMiddleware(authUC)(
-		middleware.UsersMiddleware(usersRepo)(
+	apiHandler := middleware.AuthMiddleware(authUC, middleware.ResponseErrorHandler(logger))(
+		middleware.UsersMiddleware(usersRepo, middleware.ResponseErrorHandler(logger))(
 			middleware.RateLimit(limiter, cfg.HTTP.TrustedProxy, middleware.ResponseErrorHandler(logger))(middleware.RequestLimits(apiServer, func(operation string) int64 {
 				switch operation {
 				case "SaveProblemDraft":
@@ -524,8 +524,8 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 				ticker := time.NewTicker(10 * time.Minute)
 				defer ticker.Stop()
 
-				if err := authUC.CleanupExpiredSessions(ctx); err != nil {
-					slog.Error("failed to cleanup expired sessions", "error", err)
+				if err := authUC.CleanupExpiredSessions(ctx); err != nil && ctx.Err() == nil {
+					slog.ErrorContext(ctx, "failed to cleanup expired sessions", "error", err)
 				}
 
 				for {
@@ -533,8 +533,8 @@ func apiServices(d sharedDeps, languages *sandbox.Config) (services []appService
 					case <-ctx.Done():
 						return nil
 					case <-ticker.C:
-						if err := authUC.CleanupExpiredSessions(ctx); err != nil {
-							slog.Error("failed to cleanup expired sessions", "error", err)
+						if err := authUC.CleanupExpiredSessions(ctx); err != nil && ctx.Err() == nil {
+							slog.ErrorContext(ctx, "failed to cleanup expired sessions", "error", err)
 						}
 					}
 				}
@@ -557,10 +557,10 @@ func loadConfig(configFile, envFile string, mode config.Mode) (config.Config, er
 	return config.Load(configFile, mode)
 }
 
-func newObserverMiddleware(users middleware.UsersUC, authUC middleware.AuthUC) func(http.Handler) http.Handler {
+func newObserverMiddleware(users middleware.UsersUC, authUC middleware.AuthUC, logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		return middleware.AuthMiddleware(authUC)(
-			middleware.UsersMiddleware(users)(next),
+		return middleware.AuthMiddleware(authUC, middleware.ResponseErrorHandler(logger))(
+			middleware.UsersMiddleware(users, middleware.ResponseErrorHandler(logger))(next),
 		)
 	}
 }
