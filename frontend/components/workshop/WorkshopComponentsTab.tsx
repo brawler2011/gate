@@ -251,6 +251,8 @@ type ExpectationProps = {
 
 const SolutionExpectation = ({draft, name, result, revision, onChange}: ExpectationProps): ReactNode => {
   const solution = draft.solutions.find((s) => s.name === name);
+  // Saved on blur: saving every keystroke races drafts at the same revision.
+  const [points, setPoints] = useState<number | string>(solution?.points ?? "");
   if (!solution) {
     return null;
   }
@@ -274,15 +276,14 @@ const SolutionExpectation = ({draft, name, result, revision, onChange}: Expectat
           <NumberInput
             label="Ожидаемые баллы"
             description="Пусто — любые"
-            key={name}
-            defaultValue={solution.points ?? ""}
+            value={points}
             min={0}
             decimalScale={2}
-            onBlur={(e) => {
-              const text = e.currentTarget.value.replace(",", ".").trim();
-              const points = text === "" ? null : Math.round(Number(text) * 100) / 100;
-              if ((points === null || Number.isFinite(points)) && points !== solution.points) {
-                onChange((current) => setSolutionExpectation(current, name, {points}));
+            onChange={setPoints}
+            onBlur={() => {
+              const next = typeof points === "number" ? points : null;
+              if (next !== solution.points) {
+                onChange((current) => setSolutionExpectation(current, name, {points: next}));
               }
             }}
             w={160}
@@ -490,6 +491,7 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
             )}
             {role === "solution" && (
               <SolutionExpectation
+                key={selected.name}
                 draft={draft}
                 name={selected.name}
                 result={resultOf(selected.name)}

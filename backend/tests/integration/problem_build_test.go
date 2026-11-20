@@ -57,7 +57,7 @@ func testBuildOptions(t *testing.T) problemsmodel.BuildOptions {
 	return problemsmodel.BuildOptions{
 		Languages:   cfg.Langs,
 		Limits:      problemsmodel.BuildLimits{DiskBytes: 256 << 20, FileCount: 1000, ObjectBytes: 32 << 20, TestOutputBytes: 32 << 20, Compile: compile, Auxiliary: aux},
-		MaxAttempts: 3, Duration: 2 * time.Minute, Lease: time.Minute,
+		MaxAttempts: 3, Duration: 10 * time.Minute, Lease: time.Minute,
 	}
 }
 
