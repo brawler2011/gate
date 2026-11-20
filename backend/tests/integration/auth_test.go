@@ -76,13 +76,21 @@ func (s *IntegrationTestSuite) TestAuth() {
 		})
 		s.Require().NoError(err)
 
-		// Unverified user login should fail with Bad Request
+		// Unverified user login fails with its own code once the password matches.
 		_, err = s.client.Login(s.ctx, &corev1.LoginRequestModel{
 			Identifier: username,
 			Password:   password,
 		})
 		s.Require().Error(err)
-		s.Equal(http.StatusBadRequest, s.getStatusCode(err))
+		s.Equal(http.StatusForbidden, s.getStatusCode(err))
+		var problem *corev1.ProblemStatusCodeWithHeaders
+		s.Require().ErrorAs(err, &problem)
+		s.Equal(corev1.ErrorCode("email_not_verified"), problem.Response.Code)
+		_, err = s.client.Login(s.ctx, &corev1.LoginRequestModel{
+			Identifier: username,
+			Password:   "wrong-" + password,
+		})
+		s.Equal(http.StatusUnauthorized, s.getStatusCode(err), "a wrong password must not reveal the unverified state")
 		s.Empty(s.transport.lastResponse.Header.Values("Set-Cookie"))
 
 		_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET is_email_verified = TRUE WHERE id = $1", regResp.User.ID)

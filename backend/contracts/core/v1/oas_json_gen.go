@@ -6613,6 +6613,8 @@ func (s *ErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorCodeProblemShortNameTaken
 	case ErrorCodeProblemInContest:
 		*s = ErrorCodeProblemInContest
+	case ErrorCodeEmailNotVerified:
+		*s = ErrorCodeEmailNotVerified
 	default:
 		*s = ErrorCode(v)
 	}

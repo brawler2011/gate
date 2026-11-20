@@ -14,12 +14,8 @@ func withinProblem(ctx context.Context, transactions ProblemTransactions, id uui
 		return pkg.ErrUnauthenticated
 	}
 	return transactions.Within(ctx, func(tx ProblemTxStore) error {
-		allowed, err := tx.HasProblemPermission(ctx, id, user.Id, action)
-		if err != nil {
+		if err := authorizeProblem(ctx, tx, id, action); err != nil {
 			return err
-		}
-		if !allowed {
-			return pkg.ErrForbidden
 		}
 		return fn(tx)
 	})
@@ -34,8 +30,18 @@ func authorizeProblem(ctx context.Context, permissions ProblemPermissions, id uu
 	if err != nil {
 		return err
 	}
-	if !allowed {
-		return pkg.ErrForbidden
+	if allowed {
+		return nil
 	}
-	return nil
+	// A problem the caller cannot see is hidden; only a visible one is forbidden.
+	if action != accessmodel.ActionViewProblem {
+		visible, err := permissions.HasProblemPermission(ctx, id, user.Id, accessmodel.ActionViewProblem)
+		if err != nil {
+			return err
+		}
+		if visible {
+			return pkg.ErrForbidden
+		}
+	}
+	return pkg.ErrNotFound
 }

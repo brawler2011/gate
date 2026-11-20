@@ -718,6 +718,8 @@ func (s ErrorCode) Validate() error {
 		return nil
 	case "problem_in_contest":
 		return nil
+	case "email_not_verified":
+		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}

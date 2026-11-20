@@ -52,10 +52,7 @@ const LoginPageContent = () => {
         navigate(returnTo);
       } else {
         const msg = err?.detail || "Неверный логин или пароль";
-        if (
-          msg.toLowerCase().includes("email not verified") ||
-          msg.toLowerCase().includes("не подтверждена")
-        ) {
+        if (err?.code === "email_not_verified") {
           setIsUnverified(true);
           setError("Почта для этого аккаунта ещё не подтверждена. Пожалуйста, проверьте ваш почтовый ящик.");
         } else {

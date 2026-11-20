@@ -2062,7 +2062,7 @@ export interface components {
             detail?: string;
         };
         /** @enum {string} */
-        ErrorCode: "invalid" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "payload_too_large" | "rate_limited" | "internal" | "not_implemented" | "concurrent_update" | "in_use" | "already_member" | "request_pending" | "username_taken" | "email_taken" | "organization_login_taken" | "contest_login_taken" | "team_slug_taken" | "problem_short_name_taken" | "problem_in_contest";
+        ErrorCode: "invalid" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "payload_too_large" | "rate_limited" | "internal" | "not_implemented" | "concurrent_update" | "in_use" | "already_member" | "request_pending" | "username_taken" | "email_taken" | "organization_login_taken" | "contest_login_taken" | "team_slug_taken" | "problem_short_name_taken" | "problem_in_contest" | "email_not_verified";
         /**
          * @description Result of creation.
          * @example {

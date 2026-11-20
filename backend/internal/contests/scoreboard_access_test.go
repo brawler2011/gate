@@ -33,15 +33,18 @@ func (r *scoreboardAccessRepo) GetContestScoreboardFromStandings(context.Context
 	return nil, map[uuid.UUID]string{}, nil
 }
 
-type scoreboardAccessPermissions struct{ monitor, manage bool }
+type scoreboardAccessPermissions struct{ monitor, manage, hidden bool }
 
 func (scoreboardAccessPermissions) HasProblemPermission(context.Context, uuid.UUID, uuid.UUID, accessmodel.ProblemAction) (bool, error) {
 	return false, nil
 }
 
 func (p scoreboardAccessPermissions) HasContestPermission(_ context.Context, _, _ uuid.UUID, action accessmodel.ContestAction) (bool, error) {
-	if action == accessmodel.ActionGetMonitor {
+	switch action {
+	case accessmodel.ActionGetMonitor:
 		return p.monitor, nil
+	case accessmodel.ActionGetContest:
+		return !p.hidden, nil
 	}
 	return p.manage, nil
 }
@@ -49,7 +52,7 @@ func (p scoreboardAccessPermissions) HasContestPermission(_ context.Context, _, 
 func TestScoreboardAccessAndFreezeWithoutHTTP(t *testing.T) {
 	for _, tc := range []struct {
 		name                                                   string
-		monitor, manage, unfrozen, future, owner, admin, guest bool
+		monitor, manage, unfrozen, future, owner, admin, guest, hidden bool
 		want                                                   error
 	}{
 		{name: "participant frozen monitor", monitor: true},
@@ -60,6 +63,7 @@ func TestScoreboardAccessAndFreezeWithoutHTTP(t *testing.T) {
 		{name: "owner before start", monitor: true, future: true, owner: true, manage: true},
 		{name: "moderator before start", monitor: true, manage: true, future: true},
 		{name: "missing monitor permission", want: pkg.ErrForbidden},
+		{name: "hidden contest", hidden: true, want: pkg.ErrNotFound},
 		{name: "guest", guest: true, want: pkg.ErrUnauthenticated},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -78,7 +82,7 @@ func TestScoreboardAccessAndFreezeWithoutHTTP(t *testing.T) {
 			if tc.owner {
 				repo.contest.OwnerID = &user.Id
 			}
-			uc := NewContestsUseCase(repo, nil, nil, scoreboardAccessPermissions{tc.monitor, tc.manage})
+			uc := NewContestsUseCase(repo, nil, nil, scoreboardAccessPermissions{monitor: tc.monitor, manage: tc.manage, hidden: tc.hidden})
 			response, err := uc.GetContestScoreboard(accessmodel.WithUser(context.Background(), user), repo.contest.ID, tc.unfrozen)
 			if tc.want != nil {
 				require.ErrorIs(t, err, tc.want)
