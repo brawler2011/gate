@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	paging "github.com/brawler2011/gate/backend/internal/page"
@@ -37,7 +36,7 @@ func (r *TeamsRepo) CreateTeam(ctx context.Context, input *organizationsmodel.Cr
 		ParentTeamID:   input.ParentTeamID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create team: %w", HandlePgErr(err))
+		return nil, dbError("create team", err)
 	}
 
 	return &organizationsmodel.Team{
@@ -56,7 +55,7 @@ func (r *TeamsRepo) CreateTeam(ctx context.Context, input *organizationsmodel.Cr
 func (r *TeamsRepo) GetTeamByID(ctx context.Context, id uuid.UUID) (*organizationsmodel.Team, error) {
 	team, err := r.q.GetTeamByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get team by ID: %w", HandlePgErr(err))
+		return nil, dbError("get team by ID", err)
 	}
 
 	return &organizationsmodel.Team{
@@ -78,7 +77,7 @@ func (r *TeamsRepo) GetTeamBySlug(ctx context.Context, orgID uuid.UUID, slug str
 		Slug:           slug,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get team by slug: %w", HandlePgErr(err))
+		return nil, dbError("get team by slug", err)
 	}
 
 	return &organizationsmodel.Team{
@@ -97,7 +96,7 @@ func (r *TeamsRepo) GetTeamBySlug(ctx context.Context, orgID uuid.UUID, slug str
 func (r *TeamsRepo) ListTeams(ctx context.Context, filter *organizationsmodel.TeamsFilter, userID uuid.UUID) ([]organizationsmodel.Team, int32, error) {
 	rows, err := r.q.ScopeTeams(ctx, sqlc.ScopeTeamsParams{ViewerID: &userID, Now: accessmodel.ReadTime(ctx), OrganizationID: filter.OrganizationID, Search: filter.Search, PageSize: filter.PageSize, PageOffset: (int64(filter.Page) - 1) * int64(filter.PageSize)})
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, dbError("list teams", err)
 	}
 	teams := make([]sqlc.Team, 0, len(rows))
 	var total int32
@@ -108,7 +107,7 @@ func (r *TeamsRepo) ListTeams(ctx context.Context, filter *organizationsmodel.Te
 		}
 		var team sqlc.Team
 		if err := json.Unmarshal(row.Resource, &team); err != nil {
-			return nil, 0, fmt.Errorf("decode scoped team: %w", err)
+			return nil, 0, dbError("decode scoped team", err)
 		}
 		teams = append(teams, team)
 	}
@@ -132,7 +131,7 @@ func (r *TeamsRepo) UpdateTeam(ctx context.Context, id uuid.UUID, input *organiz
 	}
 
 	if err := r.q.UpdateTeam(ctx, params); err != nil {
-		return fmt.Errorf("failed to update team: %w", HandlePgErr(err))
+		return dbError("update team", err)
 	}
 
 	return nil
@@ -140,7 +139,7 @@ func (r *TeamsRepo) UpdateTeam(ctx context.Context, id uuid.UUID, input *organiz
 
 func (r *TeamsRepo) DeleteTeam(ctx context.Context, id uuid.UUID) error {
 	if err := r.q.DeleteTeam(ctx, id); err != nil {
-		return fmt.Errorf("failed to delete team: %w", HandlePgErr(err))
+		return dbError("delete team", err)
 	}
 	return nil
 }
@@ -151,7 +150,7 @@ func (r *TeamsRepo) AddTeamMember(ctx context.Context, teamID, userID uuid.UUID,
 		UserID: userID,
 		Role:   role,
 	}); err != nil {
-		return fmt.Errorf("failed to add team member: %w", HandlePgErr(err))
+		return dbError("add team member", err)
 	}
 	return nil
 }
@@ -162,7 +161,7 @@ func (r *TeamsRepo) GetTeamMember(ctx context.Context, teamID, userID uuid.UUID)
 		UserID: userID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get team member: %w", HandlePgErr(err))
+		return nil, dbError("get team member", err)
 	}
 
 	return &organizationsmodel.TeamMember{
@@ -181,7 +180,7 @@ func (r *TeamsRepo) ListTeamMembers(ctx context.Context, teamID uuid.UUID, reque
 
 	members, err := r.q.ListTeamMembers(ctx, sqlc.ListTeamMembersParams{TeamID: teamID, PageSize: request.PageSize, PageOffset: request.Offset()})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to list team members: %w", HandlePgErr(err))
+		return nil, 0, dbError("list team members", err)
 	}
 
 	result := make([]organizationsmodel.TeamMember, len(members))
@@ -202,7 +201,7 @@ func (r *TeamsRepo) ListTeamMembers(ctx context.Context, teamID uuid.UUID, reque
 
 	count, err := r.q.CountTeamMembers(ctx, teamID)
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, dbError("list team members", err)
 	}
 	return result, safeInt32(count), nil
 }
@@ -213,7 +212,7 @@ func (r *TeamsRepo) UpdateTeamMemberRole(ctx context.Context, teamID, userID uui
 		UserID: userID,
 		Role:   role,
 	}); err != nil {
-		return fmt.Errorf("failed to update team member role: %w", HandlePgErr(err))
+		return dbError("update team member role", err)
 	}
 	return nil
 }
@@ -223,7 +222,7 @@ func (r *TeamsRepo) RemoveTeamMember(ctx context.Context, teamID, userID uuid.UU
 		TeamID: teamID,
 		UserID: userID,
 	}); err != nil {
-		return fmt.Errorf("failed to remove team member: %w", HandlePgErr(err))
+		return dbError("remove team member", err)
 	}
 	return nil
 }
@@ -234,7 +233,7 @@ func (r *TeamsRepo) GetUserTeamsByOrganization(ctx context.Context, userID, orgI
 		OrganizationID: orgID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user teams by organization: %w", HandlePgErr(err))
+		return nil, dbError("get user teams by organization", err)
 	}
 
 	return mapTeams(teams), nil

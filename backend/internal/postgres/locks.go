@@ -28,18 +28,18 @@ func submissionTupleKey(contest, user, problem uuid.UUID) int64 {
 // Transaction only: acquire before submission rows and retain through standings recalculation.
 // The lock also protects absent standings rows and the user/problem block predicate.
 func (r *ContestsRepo) LockSubmissionTuple(ctx context.Context, contest, user, problem uuid.UUID) error {
-	return HandlePgErr(r.queries.AdvisoryTransactionLock(ctx, submissionTupleKey(contest, user, problem)))
+	return dbError("take advisory lock", r.queries.AdvisoryTransactionLock(ctx, submissionTupleKey(contest, user, problem)))
 }
 
 func (r *DraftsRepo) LockDraftOwner(ctx context.Context, contest, user uuid.UUID) error {
-	return HandlePgErr(r.queries.AdvisoryTransactionLock(ctx, advisoryKey("gate:draft-owner:", contest, user)))
+	return dbError("take advisory lock", r.queries.AdvisoryTransactionLock(ctx, advisoryKey("gate:draft-owner:", contest, user)))
 }
 
 // Snapshot bulk candidates before waiting, then lock all tuples in key order before submission rows.
 func (r *SubmissionsRepo) lockCandidates(ctx context.Context, filter sqlc.SubmissionCandidatesParams) ([]uuid.UUID, error) {
 	candidates, err := r.queries.SubmissionCandidates(ctx, filter)
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("lock candidates", err)
 	}
 	ids := make([]uuid.UUID, 0, len(candidates))
 	keys := make([]int64, 0, len(candidates))
@@ -52,13 +52,13 @@ func (r *SubmissionsRepo) lockCandidates(ctx context.Context, filter sqlc.Submis
 	slices.Sort(keys)
 	for _, key := range slices.Compact(keys) {
 		if err := r.queries.AdvisoryTransactionLock(ctx, key); err != nil {
-			return nil, HandlePgErr(err)
+			return nil, dbError("lock candidates", err)
 		}
 	}
 	// Candidate IDs define row-lock order even if foreign-key targets have been deleted.
 	for _, id := range ids {
 		if _, err := r.queries.LockSubmission(ctx, id); err != nil {
-			return nil, HandlePgErr(err)
+			return nil, dbError("lock candidates", err)
 		}
 	}
 	return ids, nil
@@ -66,8 +66,8 @@ func (r *SubmissionsRepo) lockCandidates(ctx context.Context, filter sqlc.Submis
 
 // Call only on transaction-bound repositories; acquire before reading or changing order/versions.
 func (r *ContestsRepo) LockContestProblemOrder(ctx context.Context, contest uuid.UUID) error {
-	return HandlePgErr(r.queries.AdvisoryTransactionLock(ctx, advisoryKey("gate:contest-problem-order:", contest)))
+	return dbError("take advisory lock", r.queries.AdvisoryTransactionLock(ctx, advisoryKey("gate:contest-problem-order:", contest)))
 }
 func (r *PackagesRepo) LockPackageVersions(ctx context.Context, problem uuid.UUID) error {
-	return HandlePgErr(r.queries.AdvisoryTransactionLock(ctx, advisoryKey("gate:package-versions:", problem)))
+	return dbError("take advisory lock", r.queries.AdvisoryTransactionLock(ctx, advisoryKey("gate:package-versions:", problem)))
 }

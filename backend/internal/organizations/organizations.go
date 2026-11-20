@@ -377,7 +377,7 @@ func (uc *OrganizationsUseCase) InviteMember(
 	err = uc.withinOrganization(ctx, org.ID, requiredOrgMemberAction(role), func(tx OrganizationTxStore) error {
 		_, err := tx.GetUserById(ctx, targetUserID)
 		if err != nil {
-			return pkg.Wrap(pkg.ErrNotFound, err, "user not found")
+			return pkg.OnNotFound(err, pkg.ErrNotFound, "user not found")
 		}
 
 		inviterUser, err := tx.GetUserById(ctx, inviterID)

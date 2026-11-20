@@ -40,7 +40,7 @@ type authorizationUsers struct{ queries *sqlc.Queries }
 func (r authorizationUsers) GetUserById(ctx context.Context, id uuid.UUID) (accessmodel.User, error) {
 	user, err := r.queries.GetAuthorizationUser(ctx, id)
 	if err != nil {
-		return accessmodel.User{}, HandlePgErr(err)
+		return accessmodel.User{}, dbError("get user by id", err)
 	}
 	return accessmodel.User{Id: user.ID, Username: user.Username, Role: user.Role, ExpiresAt: user.ExpiresAt}, nil
 }
@@ -51,7 +51,7 @@ type authorizationOrganizations struct{ *OrganizationsRepo }
 func (r authorizationOrganizations) GetMember(ctx context.Context, org, user uuid.UUID) (*organizationsmodel.OrganizationMember, error) {
 	row, err := r.q.GetAuthorizationOrganizationMember(ctx, sqlc.GetAuthorizationOrganizationMemberParams{OrganizationID: org, UserID: user})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("get member", err)
 	}
 	return mapOrganizationMember(row), nil
 }
@@ -61,7 +61,7 @@ type authorizationContests struct{ *ContestsRepo }
 func (r authorizationContests) GetContestMember(ctx context.Context, c *contestsmodel.ContestPermissionGet) (contestsmodel.ContestMember, error) {
 	row, err := r.queries.GetAuthorizationContestMember(ctx, sqlc.GetAuthorizationContestMemberParams{ContestID: c.ContestId, UserID: c.UserId})
 	if err != nil {
-		return contestsmodel.ContestMember{}, HandlePgErr(err)
+		return contestsmodel.ContestMember{}, dbError("get contest member", err)
 	}
 	return mapContestMember(sqlc.GetContestMemberRow(row)), nil
 }
@@ -71,7 +71,7 @@ type authorizationProblems struct{ *ProblemsRepo }
 func (r authorizationProblems) GetProblemMember(ctx context.Context, problem, user uuid.UUID) (problemsmodel.ProblemMember, error) {
 	row, err := r.queries.GetAuthorizationProblemMember(ctx, sqlc.GetAuthorizationProblemMemberParams{ProblemID: problem, UserID: user})
 	if err != nil {
-		return problemsmodel.ProblemMember{}, HandlePgErr(err)
+		return problemsmodel.ProblemMember{}, dbError("get problem member", err)
 	}
 	return mapProblemMember(row), nil
 }
@@ -81,7 +81,7 @@ type authorizationTeams struct{ *TeamsRepo }
 func (r authorizationTeams) GetUserTeamsByOrganization(ctx context.Context, user, org uuid.UUID) ([]organizationsmodel.Team, error) {
 	rows, err := r.q.GetAuthorizationUserTeamsByOrganization(ctx, sqlc.GetAuthorizationUserTeamsByOrganizationParams{UserID: user, OrganizationID: org})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("get user teams by organization", err)
 	}
 	return mapTeams(rows), nil
 }
@@ -89,7 +89,7 @@ func (r authorizationTeams) GetUserTeamsByOrganization(ctx context.Context, user
 func (r authorizationTeams) GetTeamMember(ctx context.Context, team, user uuid.UUID) (*organizationsmodel.TeamMember, error) {
 	row, err := r.q.GetAuthorizationTeamMember(ctx, sqlc.GetAuthorizationTeamMemberParams{TeamID: team, UserID: user})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("get team member", err)
 	}
 	return &organizationsmodel.TeamMember{TeamID: row.TeamID, UserID: row.UserID, Role: organizationsmodel.TeamRole(row.Role), CreatedAt: row.CreatedAt}, nil
 }

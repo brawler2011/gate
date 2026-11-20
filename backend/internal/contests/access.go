@@ -69,7 +69,7 @@ func (uc *ContestsUseCase) withinContest(ctx context.Context, id uuid.UUID, acti
 	for attempt := 0; attempt < 3; attempt++ {
 		err = uc.withinContestOnce(ctx, id, action, fn)
 		_, prepared := accessmodel.DecisionFromContext(ctx)
-		if prepared || !errors.Is(err, pkg.ErrConflict) {
+		if prepared || !errors.Is(err, pkg.ErrConcurrentUpdate) {
 			return err
 		}
 	}

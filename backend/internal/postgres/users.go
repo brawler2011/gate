@@ -40,7 +40,7 @@ func (r *UsersRepo) CreateUser(ctx context.Context, params identitymodel.CreateU
 		IsEmailVerified: params.IsEmailVerified,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("create user", err)
 	}
 	return nil
 }
@@ -48,7 +48,7 @@ func (r *UsersRepo) CreateUser(ctx context.Context, params identitymodel.CreateU
 func (r *UsersRepo) GetUserById(ctx context.Context, id uuid.UUID) (accessmodel.User, error) {
 	user, err := r.queries.GetUserById(ctx, id)
 	if err != nil {
-		return accessmodel.User{}, HandlePgErr(err)
+		return accessmodel.User{}, dbError("get user by id", err)
 	}
 	return mapUserToModel(user), nil
 }
@@ -73,7 +73,7 @@ func mapUserToModel(user sqlc.User) accessmodel.User {
 func (r *UsersRepo) GetUserByUsername(ctx context.Context, username string) (accessmodel.User, error) {
 	user, err := r.queries.GetUserByUsername(ctx, strings.TrimPrefix(username, "@"))
 	if err != nil {
-		return accessmodel.User{}, HandlePgErr(err)
+		return accessmodel.User{}, dbError("get user by username", err)
 	}
 	return mapUserToModel(user), nil
 }
@@ -81,7 +81,7 @@ func (r *UsersRepo) GetUserByUsername(ctx context.Context, username string) (acc
 func (r *UsersRepo) GetUserByUsernameOrEmail(ctx context.Context, identifier string) (accessmodel.User, error) {
 	user, err := r.queries.GetUserByUsernameOrEmail(ctx, identifier)
 	if err != nil {
-		return accessmodel.User{}, HandlePgErr(err)
+		return accessmodel.User{}, dbError("get user by username or email", err)
 	}
 	return mapUserToModel(user), nil
 }
@@ -96,7 +96,7 @@ func (r *UsersRepo) ListUsers(ctx context.Context, filter identitymodel.UsersLis
 		Role:   filter.Role,
 	})
 	if err != nil {
-		return identitymodel.UsersList{}, HandlePgErr(err)
+		return identitymodel.UsersList{}, dbError("list users", err)
 	}
 
 	users, err := r.queries.ListUsers(ctx, sqlc.ListUsersParams{
@@ -106,7 +106,7 @@ func (r *UsersRepo) ListUsers(ctx context.Context, filter identitymodel.UsersLis
 		Role:   filter.Role,
 	})
 	if err != nil {
-		return identitymodel.UsersList{}, HandlePgErr(err)
+		return identitymodel.UsersList{}, dbError("list users", err)
 	}
 
 	userRecords := make([]identitymodel.UserProfile, len(users))
@@ -138,7 +138,7 @@ func (r *UsersRepo) UpdateUser(
 		IsEmailVerified: params.IsEmailVerified,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update user", err)
 	}
 
 	return nil
@@ -150,7 +150,7 @@ func (r *UsersRepo) SetUserEmailVerified(ctx context.Context, id uuid.UUID, isVe
 		IsEmailVerified: isVerified,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("set user email verified", err)
 	}
 	return nil
 }
@@ -161,7 +161,7 @@ func (r *UsersRepo) UpdateUserPassword(ctx context.Context, id uuid.UUID, passwo
 		PasswordHash: passwordHash,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update user password", err)
 	}
 	return nil
 }
@@ -173,7 +173,7 @@ func (r *UsersRepo) UpdateUserEmail(ctx context.Context, id uuid.UUID, email str
 		IsEmailVerified: isVerified,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update user email", err)
 	}
 	return nil
 }
@@ -185,7 +185,7 @@ func (r *UsersRepo) ClaimTemporaryUser(ctx context.Context, id, claimedByUserID 
 		ClaimedAt:       claimedAt,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("claim temporary user", err)
 	}
 	if affected != 1 {
 		return pkg.Wrap(pkg.ErrConflict, nil, "temporary account is expired or already claimed")
@@ -199,7 +199,7 @@ func (r *UsersRepo) ListClaimedAccountsByUserId(ctx context.Context, claimedByUs
 	}
 	users, err := r.queries.ListClaimedAccountsByUserId(ctx, claimedByUserID)
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("list claimed accounts by user id", err)
 	}
 
 	res := make([]identitymodel.ClaimedAccountItem, len(users))
@@ -216,14 +216,14 @@ func (r *UsersRepo) ListClaimedAccountsByUserId(ctx context.Context, claimedByUs
 func (r *UsersRepo) ListExistingUsernamesByPrefix(ctx context.Context, prefix string) ([]string, error) {
 	usernames, err := r.queries.ListExistingUsernamesByPrefix(ctx, prefix)
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("list existing usernames by prefix", err)
 	}
 	return usernames, nil
 }
 
 func (r *UsersRepo) LockUser(ctx context.Context, id uuid.UUID) error {
 	_, err := r.queries.LockUser(ctx, id)
-	return HandlePgErr(err)
+	return dbError("lock user", err)
 }
 
 func mapUserProfile(row sqlc.ListUsersRow) identitymodel.UserProfile {
@@ -233,7 +233,7 @@ func mapUserProfile(row sqlc.ListUsersRow) identitymodel.UserProfile {
 func (r *UsersRepo) GetUserProfileByUsername(ctx context.Context, username string) (identitymodel.UserProfile, error) {
 	row, err := r.queries.GetUserProfileByUsername(ctx, strings.TrimPrefix(username, "@"))
 	if err != nil {
-		return identitymodel.UserProfile{}, HandlePgErr(err)
+		return identitymodel.UserProfile{}, dbError("get user profile by username", err)
 	}
 	return mapUserProfile(sqlc.ListUsersRow(row)), nil
 }
@@ -241,7 +241,7 @@ func (r *UsersRepo) GetUserProfileByUsername(ctx context.Context, username strin
 func (r *UsersRepo) GetUserProfileByID(ctx context.Context, id uuid.UUID) (identitymodel.UserProfile, error) {
 	row, err := r.queries.GetUserProfileByID(ctx, id)
 	if err != nil {
-		return identitymodel.UserProfile{}, HandlePgErr(err)
+		return identitymodel.UserProfile{}, dbError("get user profile by id", err)
 	}
 	return mapUserProfile(sqlc.ListUsersRow(row)), nil
 }

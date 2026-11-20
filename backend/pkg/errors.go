@@ -55,6 +55,22 @@ var (
 	ErrInternal        = &Error{Code: CodeInternal}
 )
 
+// Specific codes; each must also be listed in the OpenAPI ErrorCode enum.
+var (
+	// A serializable transaction lost a race; the caller may retry with a fresh precheck.
+	ErrConcurrentUpdate       = NewCode("concurrent_update", CodeConflict)
+	ErrInUse                  = NewCode("in_use", CodeConflict)
+	ErrAlreadyMember          = NewCode("already_member", CodeConflict)
+	ErrRequestPending         = NewCode("request_pending", CodeConflict)
+	ErrUsernameTaken          = NewCode("username_taken", CodeConflict)
+	ErrEmailTaken             = NewCode("email_taken", CodeConflict)
+	ErrOrganizationLoginTaken = NewCode("organization_login_taken", CodeConflict)
+	ErrContestLoginTaken      = NewCode("contest_login_taken", CodeConflict)
+	ErrTeamSlugTaken          = NewCode("team_slug_taken", CodeConflict)
+	ErrProblemShortNameTaken  = NewCode("problem_short_name_taken", CodeConflict)
+	ErrProblemInContest       = NewCode("problem_in_contest", CodeConflict)
+)
+
 // NewCode registers a specific code whose status is that of kind.
 func NewCode(code, kind Code) *Error {
 	if _, ok := statuses[kind]; !ok {
@@ -88,6 +104,14 @@ func (e *Error) Is(target error) bool {
 // Wrap returns an error with code's code, a public message and a private cause.
 func Wrap(code *Error, cause error, message string) error {
 	return &Error{Code: code.Code, Message: message, Err: cause}
+}
+
+// OnNotFound gives a missing entity the caller's meaning and passes every other failure through.
+func OnNotFound(err error, code *Error, message string) error {
+	if errors.Is(err, ErrNotFound) {
+		return Wrap(code, err, message)
+	}
+	return err
 }
 
 // Codes lists every code the API can return.

@@ -109,7 +109,7 @@ func (h *CoreServer) CreateContest(ctx context.Context, params corev1.CreateCont
 		login = strings.ToLower(params.Login.Value)
 		existing, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, login)
 		if err == nil && existing.ID != uuid.Nil {
-			return nil, pkg.Wrap(pkg.ErrConflict, nil, "contest with this login already exists in organization")
+			return nil, pkg.Wrap(pkg.ErrContestLoginTaken, nil, "contest login is taken")
 		}
 	} else {
 		login = h.generateUniqueContestLogin(ctx, params.OrgLogin, params.Title)
@@ -175,7 +175,7 @@ func (h *CoreServer) UpdateContest(ctx context.Context, req *corev1.UpdateContes
 		if cleaned != strings.ToLower(existingContest.Login) {
 			existing, err := h.Contests.GetContestByOrgLoginAndContestLogin(ctx, params.OrgLogin, cleaned)
 			if err == nil && existing.ID != uuid.Nil {
-				return pkg.Wrap(pkg.ErrConflict, nil, "contest with this login already exists in organization")
+				return pkg.Wrap(pkg.ErrContestLoginTaken, nil, "contest login is taken")
 			}
 			newLogin = &cleaned
 		}

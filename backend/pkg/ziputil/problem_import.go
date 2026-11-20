@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/brawler2011/gate/backend/pkg"
 )
 
 func ExtractZip(r *zip.Reader, destDir string) error {
@@ -18,7 +20,7 @@ func ExtractZip(r *zip.Reader, destDir string) error {
 	for _, f := range r.File {
 		path := filepath.Join(cleanDest, filepath.Clean(f.Name))
 		if !strings.HasPrefix(path, cleanDest+string(os.PathSeparator)) && path != cleanDest {
-			return fmt.Errorf("invalid file path in zip: %s", f.Name)
+			return pkg.Wrap(pkg.ErrInvalid, nil, fmt.Sprintf("invalid file path in zip: %s", f.Name))
 		}
 
 		if f.FileInfo().IsDir() {
@@ -76,7 +78,7 @@ func ExtractZipLimited(r *zip.Reader, destDir string, maxBytes int64, maxEntries
 			return err
 		}
 		if entries >= maxEntries {
-			return fmt.Errorf("ZIP inode quota exceeded")
+			return pkg.Wrap(pkg.ErrPayloadTooLarge, nil, "ZIP has too many files")
 		}
 		full := filepath.Join(destDir, filepath.FromSlash(path))
 		if err := os.Mkdir(full, 0700); err != nil {
@@ -92,7 +94,7 @@ func ExtractZipLimited(r *zip.Reader, destDir string, maxBytes int64, maxEntries
 	for _, entry := range r.File {
 		name := strings.TrimSuffix(entry.Name, "/")
 		if !fs.ValidPath(name) || name == "." || strings.ContainsAny(name, "\\\x00") || entry.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("invalid ZIP path %q", entry.Name)
+			return pkg.Wrap(pkg.ErrInvalid, nil, fmt.Sprintf("invalid ZIP path %q", entry.Name))
 		}
 		if entry.FileInfo().IsDir() {
 			if err := makeDir(name); err != nil {
@@ -101,13 +103,13 @@ func ExtractZipLimited(r *zip.Reader, destDir string, maxBytes int64, maxEntries
 			continue
 		}
 		if !entry.Mode().IsRegular() || seen[name] || entry.UncompressedSize64 > uint64(remaining) {
-			return fmt.Errorf("invalid or oversized ZIP entry %q", name)
+			return pkg.Wrap(pkg.ErrInvalid, nil, fmt.Sprintf("invalid or oversized ZIP entry %q", name))
 		}
 		if err := makeDir(filepath.ToSlash(filepath.Dir(name))); err != nil {
 			return err
 		}
 		if entries >= maxEntries {
-			return fmt.Errorf("ZIP inode quota exceeded")
+			return pkg.Wrap(pkg.ErrPayloadTooLarge, nil, "ZIP has too many files")
 		}
 		// The sandbox user reopens judged test files through /dev/fd, which checks file permissions; private directories still hide them.
 		file, err := os.OpenFile(filepath.Join(destDir, filepath.FromSlash(name)), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
@@ -127,7 +129,7 @@ func ExtractZipLimited(r *zip.Reader, destDir string, maxBytes int64, maxEntries
 			return err
 		}
 		if n > remaining || uint64(n) != entry.UncompressedSize64 { //nolint:gosec // n is a non-negative copy count
-			return fmt.Errorf("ZIP size quota or entry size mismatch")
+			return pkg.Wrap(pkg.ErrPayloadTooLarge, nil, "ZIP size quota or entry size mismatch")
 		}
 		remaining -= n
 	}

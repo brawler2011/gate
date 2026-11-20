@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
@@ -29,7 +28,7 @@ func NewNotificationsRepo(pool *pgxpool.Pool) *NotificationsRepo {
 func (r *NotificationsRepo) CreateNotification(ctx context.Context, input *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error) {
 	dataBytes, err := notificationsmodel.MarshalNotificationData(input.Data)
 	if err != nil {
-		return nil, fmt.Errorf("marshal notification data: %w", err)
+		return nil, dbError("marshal notification data", err)
 	}
 
 	id := uuid.New()
@@ -44,7 +43,7 @@ func (r *NotificationsRepo) CreateNotification(ctx context.Context, input *notif
 		IsRead: false,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create notification: %w", err)
+		return nil, dbError("create notification", err)
 	}
 
 	return &notificationsmodel.Notification{
@@ -97,7 +96,7 @@ func (r *NotificationsRepo) ListNotifications(ctx context.Context, userID uuid.U
 		Offset:     offset,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("list notifications: %w", err)
+		return nil, dbError("list notifications", err)
 	}
 
 	total, err := r.queries.CountNotificationsByUserID(ctx, sqlc.CountNotificationsByUserIDParams{
@@ -105,7 +104,7 @@ func (r *NotificationsRepo) ListNotifications(ctx context.Context, userID uuid.U
 		UnreadOnly: unreadOnly,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("count notifications: %w", err)
+		return nil, dbError("count notifications", err)
 	}
 
 	notifs := make([]notificationsmodel.Notification, len(rows))
@@ -135,7 +134,7 @@ func (r *NotificationsRepo) GetUnreadCount(ctx context.Context, userID uuid.UUID
 	}
 	count, err := r.queries.GetUnreadNotificationsCount(ctx, userID)
 	if err != nil {
-		return 0, fmt.Errorf("get unread notifications count: %w", err)
+		return 0, dbError("get unread notifications count", err)
 	}
 	return safeInt32(count), nil
 }
@@ -152,7 +151,7 @@ func (r *NotificationsRepo) GetNotificationByID(ctx context.Context, id, userID 
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pkg.ErrNotFound
 		}
-		return nil, fmt.Errorf("get notification by id: %w", err)
+		return nil, dbError("get notification by id", err)
 	}
 
 	return &notificationsmodel.Notification{
@@ -174,7 +173,7 @@ func (r *NotificationsRepo) MarkAsRead(ctx context.Context, id, userID uuid.UUID
 		UserID: userID,
 	})
 	if err != nil {
-		return fmt.Errorf("mark notification as read: %w", err)
+		return dbError("mark notification as read", err)
 	}
 	return nil
 }
@@ -182,7 +181,7 @@ func (r *NotificationsRepo) MarkAsRead(ctx context.Context, id, userID uuid.UUID
 func (r *NotificationsRepo) MarkAllAsRead(ctx context.Context, userID uuid.UUID) error {
 	err := r.queries.MarkAllNotificationsAsRead(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("mark all notifications as read: %w", err)
+		return dbError("mark all notifications as read", err)
 	}
 	return nil
 }

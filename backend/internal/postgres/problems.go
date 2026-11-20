@@ -31,15 +31,15 @@ func (r *ProblemsRepo) CreateProblem(ctx context.Context, params *problemsmodel.
 		Visibility:     params.Visibility,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("create problem", err)
 	}
-	return HandlePgErr(r.queries.InsertProblemDraft(ctx, sqlc.InsertProblemDraftParams{ProblemID: params.ID, Title: params.Title, ShortName: params.ShortName}))
+	return dbError("insert problem draft", r.queries.InsertProblemDraft(ctx, sqlc.InsertProblemDraftParams{ProblemID: params.ID, Title: params.Title, ShortName: params.ShortName}))
 }
 
 func (r *ProblemsRepo) GetProblemById(ctx context.Context, id uuid.UUID) (problemsmodel.Problem, error) {
 	problem, err := r.queries.GetProblemByID(ctx, id)
 	if err != nil {
-		return problemsmodel.Problem{}, HandlePgErr(err)
+		return problemsmodel.Problem{}, dbError("get problem by id", err)
 	}
 	return mapGetProblemByIDRow(problem), nil
 }
@@ -47,7 +47,7 @@ func (r *ProblemsRepo) GetProblemById(ctx context.Context, id uuid.UUID) (proble
 func (r *ProblemsRepo) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 	err := r.queries.DeleteProblem(ctx, id)
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("delete problem", err)
 	}
 	return nil
 }
@@ -77,7 +77,7 @@ func (r *ProblemsRepo) UpdateProblem(ctx context.Context, id uuid.UUID, problem 
 		IsTemplate: problem.IsTemplate,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update problem", err)
 	}
 	return nil
 }
@@ -89,7 +89,7 @@ func (r *ProblemsRepo) CreateProblemMember(ctx context.Context, params *problems
 		Role:      params.Role,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("create problem member", err)
 	}
 	return nil
 }
@@ -100,7 +100,7 @@ func (r *ProblemsRepo) GetProblemMember(ctx context.Context, problemId uuid.UUID
 		UserID:    userId,
 	})
 	if err != nil {
-		return problemsmodel.ProblemMember{}, HandlePgErr(err)
+		return problemsmodel.ProblemMember{}, dbError("get problem member", err)
 	}
 	return mapProblemMember(row), nil
 }
@@ -108,7 +108,7 @@ func (r *ProblemsRepo) GetProblemMember(ctx context.Context, problemId uuid.UUID
 func (r *ProblemsRepo) GetProblemTeams(ctx context.Context, problemId uuid.UUID) ([]problemsmodel.ProblemTeam, error) {
 	rows, err := r.queries.ListProblemTeams(ctx, problemId)
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("get problem teams", err)
 	}
 
 	teams := make([]problemsmodel.ProblemTeam, len(rows))
@@ -126,7 +126,7 @@ func (r *ProblemsRepo) AddProblemTeam(ctx context.Context, problemID, teamID uui
 		Permission: permission,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("add problem team", err)
 	}
 	return nil
 }
@@ -138,7 +138,7 @@ func (r *ProblemsRepo) UpdateProblemTeamPermission(ctx context.Context, problemI
 		Permission: permission,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update problem team permission", err)
 	}
 	return nil
 }
@@ -149,7 +149,7 @@ func (r *ProblemsRepo) RemoveProblemTeam(ctx context.Context, problemID, teamID 
 		TeamID:    teamID,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("remove problem team", err)
 	}
 	return nil
 }
@@ -162,7 +162,7 @@ func (r *ProblemsRepo) ListProblemMembers(ctx context.Context, problemID uuid.UU
 
 	rows, err := r.queries.ListProblemMembers(ctx, sqlc.ListProblemMembersParams{ProblemID: problemID, PageSize: request.PageSize, PageOffset: request.Offset()})
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, dbError("list problem members", err)
 	}
 
 	members := make([]problemsmodel.ProblemMember, len(rows))
@@ -172,7 +172,7 @@ func (r *ProblemsRepo) ListProblemMembers(ctx context.Context, problemID uuid.UU
 
 	count, err := r.queries.CountProblemMembers(ctx, problemID)
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, dbError("list problem members", err)
 	}
 	return members, safeInt32(count), nil
 }
@@ -184,7 +184,7 @@ func (r *ProblemsRepo) UpdateProblemMemberRole(ctx context.Context, problemID, u
 		Role:      role,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update problem member role", err)
 	}
 	return nil
 }
@@ -195,7 +195,7 @@ func (r *ProblemsRepo) RemoveProblemMember(ctx context.Context, problemID, userI
 		UserID:    userID,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("remove problem member", err)
 	}
 	return nil
 }
@@ -244,7 +244,7 @@ func (r *ProblemsRepo) ListDashboardProblems(ctx context.Context, userID uuid.UU
 		ViewerID: readViewerID(ctx), Now: accessmodel.ReadTime(ctx), PageSize: limit,
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("list dashboard problems", err)
 	}
 
 	problems := make([]problemsmodel.DashboardProblem, len(rows))

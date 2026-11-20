@@ -6591,6 +6591,28 @@ func (s *ErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorCodeInternal
 	case ErrorCodeNotImplemented:
 		*s = ErrorCodeNotImplemented
+	case ErrorCodeConcurrentUpdate:
+		*s = ErrorCodeConcurrentUpdate
+	case ErrorCodeInUse:
+		*s = ErrorCodeInUse
+	case ErrorCodeAlreadyMember:
+		*s = ErrorCodeAlreadyMember
+	case ErrorCodeRequestPending:
+		*s = ErrorCodeRequestPending
+	case ErrorCodeUsernameTaken:
+		*s = ErrorCodeUsernameTaken
+	case ErrorCodeEmailTaken:
+		*s = ErrorCodeEmailTaken
+	case ErrorCodeOrganizationLoginTaken:
+		*s = ErrorCodeOrganizationLoginTaken
+	case ErrorCodeContestLoginTaken:
+		*s = ErrorCodeContestLoginTaken
+	case ErrorCodeTeamSlugTaken:
+		*s = ErrorCodeTeamSlugTaken
+	case ErrorCodeProblemShortNameTaken:
+		*s = ErrorCodeProblemShortNameTaken
+	case ErrorCodeProblemInContest:
+		*s = ErrorCodeProblemInContest
 	default:
 		*s = ErrorCode(v)
 	}

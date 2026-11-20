@@ -3057,15 +3057,26 @@ func (s DownloadProblemPackageOK) Read(p []byte) (n int, err error) {
 type ErrorCode string
 
 const (
-	ErrorCodeInvalid         ErrorCode = "invalid"
-	ErrorCodeUnauthenticated ErrorCode = "unauthenticated"
-	ErrorCodeForbidden       ErrorCode = "forbidden"
-	ErrorCodeNotFound        ErrorCode = "not_found"
-	ErrorCodeConflict        ErrorCode = "conflict"
-	ErrorCodePayloadTooLarge ErrorCode = "payload_too_large"
-	ErrorCodeRateLimited     ErrorCode = "rate_limited"
-	ErrorCodeInternal        ErrorCode = "internal"
-	ErrorCodeNotImplemented  ErrorCode = "not_implemented"
+	ErrorCodeInvalid                ErrorCode = "invalid"
+	ErrorCodeUnauthenticated        ErrorCode = "unauthenticated"
+	ErrorCodeForbidden              ErrorCode = "forbidden"
+	ErrorCodeNotFound               ErrorCode = "not_found"
+	ErrorCodeConflict               ErrorCode = "conflict"
+	ErrorCodePayloadTooLarge        ErrorCode = "payload_too_large"
+	ErrorCodeRateLimited            ErrorCode = "rate_limited"
+	ErrorCodeInternal               ErrorCode = "internal"
+	ErrorCodeNotImplemented         ErrorCode = "not_implemented"
+	ErrorCodeConcurrentUpdate       ErrorCode = "concurrent_update"
+	ErrorCodeInUse                  ErrorCode = "in_use"
+	ErrorCodeAlreadyMember          ErrorCode = "already_member"
+	ErrorCodeRequestPending         ErrorCode = "request_pending"
+	ErrorCodeUsernameTaken          ErrorCode = "username_taken"
+	ErrorCodeEmailTaken             ErrorCode = "email_taken"
+	ErrorCodeOrganizationLoginTaken ErrorCode = "organization_login_taken"
+	ErrorCodeContestLoginTaken      ErrorCode = "contest_login_taken"
+	ErrorCodeTeamSlugTaken          ErrorCode = "team_slug_taken"
+	ErrorCodeProblemShortNameTaken  ErrorCode = "problem_short_name_taken"
+	ErrorCodeProblemInContest       ErrorCode = "problem_in_contest"
 )
 
 // AllValues returns all ErrorCode values.
@@ -3080,6 +3091,17 @@ func (ErrorCode) AllValues() []ErrorCode {
 		ErrorCodeRateLimited,
 		ErrorCodeInternal,
 		ErrorCodeNotImplemented,
+		ErrorCodeConcurrentUpdate,
+		ErrorCodeInUse,
+		ErrorCodeAlreadyMember,
+		ErrorCodeRequestPending,
+		ErrorCodeUsernameTaken,
+		ErrorCodeEmailTaken,
+		ErrorCodeOrganizationLoginTaken,
+		ErrorCodeContestLoginTaken,
+		ErrorCodeTeamSlugTaken,
+		ErrorCodeProblemShortNameTaken,
+		ErrorCodeProblemInContest,
 	}
 }
 
@@ -3103,6 +3125,28 @@ func (s ErrorCode) MarshalText() ([]byte, error) {
 	case ErrorCodeInternal:
 		return []byte(s), nil
 	case ErrorCodeNotImplemented:
+		return []byte(s), nil
+	case ErrorCodeConcurrentUpdate:
+		return []byte(s), nil
+	case ErrorCodeInUse:
+		return []byte(s), nil
+	case ErrorCodeAlreadyMember:
+		return []byte(s), nil
+	case ErrorCodeRequestPending:
+		return []byte(s), nil
+	case ErrorCodeUsernameTaken:
+		return []byte(s), nil
+	case ErrorCodeEmailTaken:
+		return []byte(s), nil
+	case ErrorCodeOrganizationLoginTaken:
+		return []byte(s), nil
+	case ErrorCodeContestLoginTaken:
+		return []byte(s), nil
+	case ErrorCodeTeamSlugTaken:
+		return []byte(s), nil
+	case ErrorCodeProblemShortNameTaken:
+		return []byte(s), nil
+	case ErrorCodeProblemInContest:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -3138,6 +3182,39 @@ func (s *ErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorCodeNotImplemented:
 		*s = ErrorCodeNotImplemented
+		return nil
+	case ErrorCodeConcurrentUpdate:
+		*s = ErrorCodeConcurrentUpdate
+		return nil
+	case ErrorCodeInUse:
+		*s = ErrorCodeInUse
+		return nil
+	case ErrorCodeAlreadyMember:
+		*s = ErrorCodeAlreadyMember
+		return nil
+	case ErrorCodeRequestPending:
+		*s = ErrorCodeRequestPending
+		return nil
+	case ErrorCodeUsernameTaken:
+		*s = ErrorCodeUsernameTaken
+		return nil
+	case ErrorCodeEmailTaken:
+		*s = ErrorCodeEmailTaken
+		return nil
+	case ErrorCodeOrganizationLoginTaken:
+		*s = ErrorCodeOrganizationLoginTaken
+		return nil
+	case ErrorCodeContestLoginTaken:
+		*s = ErrorCodeContestLoginTaken
+		return nil
+	case ErrorCodeTeamSlugTaken:
+		*s = ErrorCodeTeamSlugTaken
+		return nil
+	case ErrorCodeProblemShortNameTaken:
+		*s = ErrorCodeProblemShortNameTaken
+		return nil
+	case ErrorCodeProblemInContest:
+		*s = ErrorCodeProblemInContest
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)

@@ -2,9 +2,7 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
 	"errors"
-	"fmt"
 
 	paging "github.com/brawler2011/gate/backend/internal/page"
 
@@ -41,7 +39,7 @@ func (r *OrganizationsRepo) CreateOrganization(ctx context.Context, input *organ
 		Column6:     joinPolicy,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create organization: %w", HandlePgErr(err))
+		return nil, dbError("create organization", err)
 	}
 
 	return &organizationsmodel.Organization{
@@ -59,10 +57,10 @@ func (r *OrganizationsRepo) CreateOrganization(ctx context.Context, input *organ
 func (r *OrganizationsRepo) GetOrganizationByID(ctx context.Context, id uuid.UUID) (*organizationsmodel.Organization, error) {
 	org, err := r.q.GetOrganizationByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
 		}
-		return nil, fmt.Errorf("failed to get organization by ID: %w", HandlePgErr(err))
+		return nil, dbError("get organization by ID", err)
 	}
 
 	return &organizationsmodel.Organization{
@@ -80,10 +78,10 @@ func (r *OrganizationsRepo) GetOrganizationByID(ctx context.Context, id uuid.UUI
 func (r *OrganizationsRepo) GetOrganizationByLogin(ctx context.Context, login string) (*organizationsmodel.Organization, error) {
 	org, err := r.q.GetOrganizationByLogin(ctx, login)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization not found")
 		}
-		return nil, fmt.Errorf("failed to get organization by login: %w", HandlePgErr(err))
+		return nil, dbError("get organization by login", err)
 	}
 
 	return &organizationsmodel.Organization{
@@ -110,12 +108,12 @@ func (r *OrganizationsRepo) ListOrganizations(ctx context.Context, filter *organ
 		Offset:  Offset(filter.Page, filter.PageSize),
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to list organizations: %w", HandlePgErr(err))
+		return nil, 0, dbError("list organizations", err)
 	}
 
 	count, err := r.q.CountOrganizations(ctx, search)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count organizations: %w", HandlePgErr(err))
+		return nil, 0, dbError("count organizations", err)
 	}
 
 	result := make([]organizationsmodel.Organization, len(orgs))
@@ -158,7 +156,7 @@ func (r *OrganizationsRepo) UpdateOrganization(ctx context.Context, id uuid.UUID
 	}
 
 	if err := r.q.UpdateOrganization(ctx, params); err != nil {
-		return fmt.Errorf("failed to update organization: %w", HandlePgErr(err))
+		return dbError("update organization", err)
 	}
 
 	return nil
@@ -166,7 +164,7 @@ func (r *OrganizationsRepo) UpdateOrganization(ctx context.Context, id uuid.UUID
 
 func (r *OrganizationsRepo) DeleteOrganization(ctx context.Context, id uuid.UUID) error {
 	if err := r.q.DeleteOrganization(ctx, id); err != nil {
-		return fmt.Errorf("failed to delete organization: %w", HandlePgErr(err))
+		return dbError("delete organization", err)
 	}
 	return nil
 }
@@ -177,7 +175,7 @@ func (r *OrganizationsRepo) AddMember(ctx context.Context, orgID, userID uuid.UU
 		UserID:         userID,
 		Role:           role,
 	}); err != nil {
-		return fmt.Errorf("failed to add organization member: %w", HandlePgErr(err))
+		return dbError("add organization member", err)
 	}
 	return nil
 }
@@ -188,10 +186,10 @@ func (r *OrganizationsRepo) GetMember(ctx context.Context, orgID, userID uuid.UU
 		UserID:         userID,
 	})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pkg.Wrap(pkg.ErrNotFound, err, "organization member not found")
 		}
-		return nil, fmt.Errorf("failed to get organization member: %w", HandlePgErr(err))
+		return nil, dbError("get organization member", err)
 	}
 
 	return mapOrganizationMember(member), nil
@@ -209,7 +207,7 @@ func mapOrganizationMember(member sqlc.OrganizationMember) *organizationsmodel.O
 func (r *OrganizationsRepo) ListMembers(ctx context.Context, orgID uuid.UUID) ([]organizationsmodel.OrganizationMember, error) {
 	members, err := r.q.ListOrganizationMembers(ctx, orgID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list organization members: %w", HandlePgErr(err))
+		return nil, dbError("list organization members", err)
 	}
 
 	result := make([]organizationsmodel.OrganizationMember, len(members))
@@ -228,7 +226,7 @@ func (r *OrganizationsRepo) ListMembersPage(ctx context.Context, orgID uuid.UUID
 
 	members, err := r.q.ListOrganizationMembersPage(ctx, sqlc.ListOrganizationMembersPageParams{OrganizationID: orgID, PageSize: request.PageSize, PageOffset: request.Offset()})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to list organization members: %w", HandlePgErr(err))
+		return nil, 0, dbError("list organization members", err)
 	}
 
 	result := make([]organizationsmodel.OrganizationMember, len(members))
@@ -238,7 +236,7 @@ func (r *OrganizationsRepo) ListMembersPage(ctx context.Context, orgID uuid.UUID
 
 	count, err := r.q.CountOrganizationMembers(ctx, orgID)
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, dbError("list members page", err)
 	}
 	return result, safeInt32(count), nil
 }
@@ -264,7 +262,7 @@ func (r *OrganizationsRepo) UpdateMemberRole(ctx context.Context, orgID, userID 
 		UserID:         userID,
 		Role:           role,
 	}); err != nil {
-		return fmt.Errorf("failed to update organization member role: %w", HandlePgErr(err))
+		return dbError("update organization member role", err)
 	}
 	return nil
 }
@@ -272,23 +270,23 @@ func (r *OrganizationsRepo) UpdateMemberRole(ctx context.Context, orgID, userID 
 func (r *OrganizationsRepo) RemoveMember(ctx context.Context, orgID, userID uuid.UUID) error {
 	// Lock the departing membership so cleanup sees dependent rows committed by concurrent attachments.
 	if _, err := r.q.LockOrganizationMember(ctx, sqlc.LockOrganizationMemberParams{OrganizationID: orgID, UserID: userID}); err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return HandlePgErr(err)
+		return dbError("remove member", err)
 	}
 	if err := r.q.RemoveTeamMembersByOrgAndUser(ctx, sqlc.RemoveTeamMembersByOrgAndUserParams{OrganizationID: orgID, UserID: userID}); err != nil {
-		return HandlePgErr(err)
+		return dbError("remove member", err)
 	}
 	if err := r.q.RemoveContestMembersByOrgAndUser(ctx, sqlc.RemoveContestMembersByOrgAndUserParams{OrganizationID: orgID, UserID: userID}); err != nil {
-		return HandlePgErr(err)
+		return dbError("remove member", err)
 	}
 	if err := r.q.RemoveProblemMembersByOrgAndUser(ctx, sqlc.RemoveProblemMembersByOrgAndUserParams{OrganizationID: orgID, UserID: userID}); err != nil {
-		return HandlePgErr(err)
+		return dbError("remove member", err)
 	}
 
 	if err := r.q.RemoveOrganizationMember(ctx, sqlc.RemoveOrganizationMemberParams{
 		OrganizationID: orgID,
 		UserID:         userID,
 	}); err != nil {
-		return fmt.Errorf("failed to remove organization member: %w", HandlePgErr(err))
+		return dbError("remove organization member", err)
 	}
 	return nil
 }
@@ -296,7 +294,7 @@ func (r *OrganizationsRepo) RemoveMember(ctx context.Context, orgID, userID uuid
 func (r *OrganizationsRepo) GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]organizationsmodel.Organization, error) {
 	orgs, err := r.q.GetUserOrganizations(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user organizations: %w", HandlePgErr(err))
+		return nil, dbError("get user organizations", err)
 	}
 
 	result := make([]organizationsmodel.Organization, len(orgs))
@@ -333,7 +331,7 @@ func (r *OrganizationsRepo) ResolveUserOrganizationID(ctx context.Context, userI
 		if errors.Is(err, pgx.ErrNoRows) {
 			return uuid.Nil, false, nil
 		}
-		return uuid.Nil, false, fmt.Errorf("failed to resolve user organization: %w", HandlePgErr(err))
+		return uuid.Nil, false, dbError("resolve user organization", err)
 	}
 
 	return orgID, true, nil
@@ -349,7 +347,7 @@ func (r *OrganizationsRepo) CreateInvitation(ctx context.Context, input *organiz
 		Role:           string(input.Role),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create organization invitation: %w", HandlePgErr(err))
+		return nil, dbError("create organization invitation", err)
 	}
 
 	return r.GetInvitationByID(ctx, row.ID)
@@ -361,7 +359,7 @@ func (r *OrganizationsRepo) GetInvitationByID(ctx context.Context, id uuid.UUID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pkg.ErrNotFound
 		}
-		return nil, fmt.Errorf("failed to get organization invitation: %w", HandlePgErr(err))
+		return nil, dbError("get organization invitation", err)
 	}
 
 	var email string
@@ -395,7 +393,7 @@ func (r *OrganizationsRepo) GetPendingInvitation(ctx context.Context, orgID, use
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get pending organization invitation: %w", HandlePgErr(err))
+		return nil, dbError("get pending organization invitation", err)
 	}
 
 	return r.GetInvitationByID(ctx, row.ID)
@@ -407,7 +405,7 @@ func (r *OrganizationsRepo) ListInvitations(ctx context.Context, orgID uuid.UUID
 		Status:         status,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list organization invitations: %w", HandlePgErr(err))
+		return nil, dbError("list organization invitations", err)
 	}
 
 	invitations := make([]organizationsmodel.OrganizationInvitation, len(rows))
@@ -439,7 +437,7 @@ func (r *OrganizationsRepo) ListUserInvitations(ctx context.Context, userID uuid
 		Status: status,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list user organization invitations: %w", HandlePgErr(err))
+		return nil, dbError("list user organization invitations", err)
 	}
 
 	invitations := make([]organizationsmodel.OrganizationInvitation, len(rows))
@@ -468,7 +466,7 @@ func (r *OrganizationsRepo) UpdateInvitationStatus(ctx context.Context, id uuid.
 		Status: string(status),
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update invitation status", err)
 	}
 	if affected != 1 {
 		return pkg.Wrap(pkg.ErrConflict, nil, "request is no longer pending")
@@ -485,7 +483,7 @@ func (r *OrganizationsRepo) CreateJoinRequest(ctx context.Context, input *organi
 		Message:        input.Message,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create organization join request: %w", HandlePgErr(err))
+		return nil, dbError("create organization join request", err)
 	}
 
 	return r.GetJoinRequestByID(ctx, row.ID)
@@ -497,7 +495,7 @@ func (r *OrganizationsRepo) GetJoinRequestByID(ctx context.Context, id uuid.UUID
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pkg.ErrNotFound
 		}
-		return nil, fmt.Errorf("failed to get organization join request: %w", HandlePgErr(err))
+		return nil, dbError("get organization join request", err)
 	}
 
 	var email string
@@ -533,19 +531,20 @@ func (r *OrganizationsRepo) GetPendingJoinRequest(ctx context.Context, orgID, us
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get pending organization join request: %w", HandlePgErr(err))
+		return nil, dbError("get pending organization join request", err)
 	}
 
 	return r.GetJoinRequestByID(ctx, row.ID)
 }
 
+//nolint:dupl // Mirrors ListContestJoinRequests for a different request type.
 func (r *OrganizationsRepo) ListJoinRequests(ctx context.Context, orgID uuid.UUID, status *string) ([]organizationsmodel.OrganizationJoinRequest, error) {
 	rows, err := r.q.ListOrganizationJoinRequests(ctx, sqlc.ListOrganizationJoinRequestsParams{
 		OrganizationID: orgID,
 		Status:         status,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list organization join requests: %w", HandlePgErr(err))
+		return nil, dbError("list organization join requests", err)
 	}
 
 	requests := make([]organizationsmodel.OrganizationJoinRequest, len(rows))
@@ -575,7 +574,7 @@ func (r *OrganizationsRepo) ListJoinRequests(ctx context.Context, orgID uuid.UUI
 func (r *OrganizationsRepo) ListUserJoinRequests(ctx context.Context, userID uuid.UUID) ([]organizationsmodel.OrganizationJoinRequest, error) {
 	rows, err := r.q.ListUserOrganizationJoinRequests(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list user organization join requests: %w", HandlePgErr(err))
+		return nil, dbError("list user organization join requests", err)
 	}
 
 	requests := make([]organizationsmodel.OrganizationJoinRequest, len(rows))
@@ -603,7 +602,7 @@ func (r *OrganizationsRepo) UpdateJoinRequestStatus(ctx context.Context, id uuid
 		ReviewedBy: pgReviewedBy,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update join request status", err)
 	}
 	if affected != 1 {
 		return pkg.Wrap(pkg.ErrConflict, nil, "request is no longer pending")

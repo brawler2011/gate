@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"fmt"
 	"maps"
 	"slices"
 
@@ -34,7 +33,7 @@ func insertObjects(ctx context.Context, tx pgx.Tx, objects []model.StoredObject)
 		if err := q.InsertStoredObject(ctx, sqlc.InsertStoredObjectParams{
 			ID: o.ID, OrganizationID: o.OrganizationID, Purpose: o.Purpose, Key: o.Key, Sha256: o.SHA256, Size: o.Size,
 		}); err != nil {
-			return fmt.Errorf("insert stored object: %w", err)
+			return dbError("insert stored object", err)
 		}
 	}
 	return nil
@@ -135,7 +134,7 @@ func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.Mut
 	// Finalization cannot take over expired operations; a new executor must begin explicitly.
 	operation, err := q.LockOperationForFinalize(ctx, sqlc.LockOperationForFinalizeParams{OrganizationID: k.OrganizationID, Operation: k.Operation, Key: k.Key})
 	if err != nil {
-		return model.MutationResult{}, HandlePgErr(err)
+		return model.MutationResult{}, dbError("finalize upload draft", err)
 	}
 	if operation.Fingerprint != k.Fingerprint {
 		return model.MutationResult{}, pkg.ErrConflict
@@ -148,7 +147,7 @@ func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.Mut
 	}
 	revision, err := q.LockProblemDraft(ctx, id)
 	if err != nil {
-		return model.MutationResult{}, HandlePgErr(err)
+		return model.MutationResult{}, dbError("finalize upload draft", err)
 	}
 	if revision != expected {
 		return model.MutationResult{}, pkg.ErrConflict
@@ -159,7 +158,7 @@ func (r *ProblemDraftsRepo) finalizeUploadDraft(ctx context.Context, k model.Mut
 	}
 	org, err := q.ProblemOrganizationID(ctx, id)
 	if err != nil {
-		return model.MutationResult{}, HandlePgErr(err)
+		return model.MutationResult{}, dbError("finalize upload draft", err)
 	}
 	if org != k.OrganizationID {
 		return model.MutationResult{}, pkg.ErrForbidden

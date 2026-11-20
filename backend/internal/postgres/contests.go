@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math"
 	"time"
 
@@ -61,7 +60,7 @@ func (r *ContestsRepo) CreateContest(ctx context.Context, params *contestsmodel.
 		EndTime:        params.EndTime,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("create contest", err)
 	}
 	return nil
 }
@@ -69,7 +68,7 @@ func (r *ContestsRepo) CreateContest(ctx context.Context, params *contestsmodel.
 func (r *ContestsRepo) GetContest(ctx context.Context, id uuid.UUID) (contestsmodel.Contest, error) {
 	contest, err := r.queries.GetContestByID(ctx, id)
 	if err != nil {
-		return contestsmodel.Contest{}, HandlePgErr(err)
+		return contestsmodel.Contest{}, dbError("get contest", err)
 	}
 	return mapGetContestByIDRow(contest), nil
 }
@@ -80,7 +79,7 @@ func (r *ContestsRepo) GetContestByLogin(ctx context.Context, orgID uuid.UUID, l
 		Lower:          login,
 	})
 	if err != nil {
-		return contestsmodel.Contest{}, HandlePgErr(err)
+		return contestsmodel.Contest{}, dbError("get contest by login", err)
 	}
 	return mapGetContestByLoginRow(contest), nil
 }
@@ -91,7 +90,7 @@ func (r *ContestsRepo) GetContestByOrgLoginAndContestLogin(ctx context.Context, 
 		Lower_2: contestLogin,
 	})
 	if err != nil {
-		return contestsmodel.Contest{}, HandlePgErr(err)
+		return contestsmodel.Contest{}, dbError("get contest by org login and contest login", err)
 	}
 	return mapGetContestByOrgLoginAndContestLoginRow(contest), nil
 }
@@ -121,7 +120,7 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c contestsmodel.Contes
 		OwnerID:      c.OwnerID,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update contest", err)
 	}
 	return nil
 }
@@ -129,7 +128,7 @@ func (r *ContestsRepo) UpdateContest(ctx context.Context, c contestsmodel.Contes
 func (r *ContestsRepo) DeleteContest(ctx context.Context, id uuid.UUID) error {
 	err := r.queries.DeleteContest(ctx, id)
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("delete contest", err)
 	}
 	return nil
 }
@@ -137,7 +136,7 @@ func (r *ContestsRepo) DeleteContest(ctx context.Context, id uuid.UUID) error {
 func (r *ContestsRepo) ListOrganizationContests(ctx context.Context, orgLogin, search string, page, pageSize int32) (*contestsmodel.ContestsList, error) {
 	org, err := r.queries.GetOrganizationByLogin(ctx, orgLogin)
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("list organization contests", err)
 	}
 	return r.listScopedContests(ctx, sqlc.ScopeContestsParams{OrganizationID: &org.ID, Search: search}, page, pageSize)
 }
@@ -184,7 +183,7 @@ func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c contestsmodel
 	err = r.queries.AddContestProblem(ctx, sqlc.AddContestProblemParams{
 		ContestID: c.ContestId, ProblemID: c.ProblemId, PackageID: packageId,
 	})
-	return HandlePgErr(err)
+	return dbError("create contest problem", err)
 }
 
 func (r *ContestsRepo) ResolveContestProblemPackage(ctx context.Context, problemID, packageID uuid.UUID, allowLatest bool) (access.PackageContext, error) {
@@ -202,7 +201,7 @@ func (r *ContestsRepo) ResolveContestProblemPackage(ctx context.Context, problem
 		return access.PackageContext{}, pkg.Wrap(pkg.ErrInvalid, nil, "ready package not found")
 	}
 	if err != nil {
-		return access.PackageContext{}, HandlePgErr(err)
+		return access.PackageContext{}, dbError("resolve contest problem package", err)
 	}
 	return access.PackageContext{ID: row.ID, ProblemID: row.ProblemID}, nil
 }
@@ -224,7 +223,7 @@ func (r *ContestsRepo) DeleteContestProblem(ctx context.Context, c contestsmodel
 		ProblemID: c.ProblemId,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("delete contest problem", err)
 	}
 	return nil
 }
@@ -235,7 +234,7 @@ func (r *ContestsRepo) ReorderContestProblems(ctx context.Context, contestId uui
 	// Temporary positions must exceed existing and requested ordinals to avoid uniqueness conflicts.
 	maximum, err := q.GetMaxContestProblemOrdinal(ctx, contestId)
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("reorder contest problems", err)
 	}
 	for _, p := range problems {
 		maximum = max(maximum, p.Position)
@@ -251,7 +250,7 @@ func (r *ContestsRepo) ReorderContestProblems(ctx context.Context, contestId uui
 			Ordinal:   tempOrdinal,
 		})
 		if err != nil {
-			return HandlePgErr(err)
+			return dbError("reorder contest problems", err)
 		}
 	}
 
@@ -262,7 +261,7 @@ func (r *ContestsRepo) ReorderContestProblems(ctx context.Context, contestId uui
 			Ordinal:   p.Position,
 		})
 		if err != nil {
-			return HandlePgErr(err)
+			return dbError("reorder contest problems", err)
 		}
 	}
 
@@ -275,7 +274,7 @@ func (r *ContestsRepo) GetContestProblem(ctx context.Context, c contestsmodel.Co
 		ProblemID: c.ProblemId,
 	})
 	if err != nil {
-		return contestsmodel.ContestProblem{}, HandlePgErr(err)
+		return contestsmodel.ContestProblem{}, dbError("get contest problem", err)
 	}
 	return mapGetContestProblemRow(row), nil
 }
@@ -283,7 +282,7 @@ func (r *ContestsRepo) GetContestProblem(ctx context.Context, c contestsmodel.Co
 func (r *ContestsRepo) GetContestProblems(ctx context.Context, contestId uuid.UUID) ([]contestsmodel.ContestProblem, error) {
 	rows, err := r.queries.ListContestProblems(ctx, contestId)
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("get contest problems", err)
 	}
 
 	problems := make([]contestsmodel.ContestProblem, len(rows))
@@ -306,7 +305,7 @@ func (r *ContestsRepo) UpdateContestProblemPackage(ctx context.Context, contestI
 		PackageID: packageId,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update contest problem package", err)
 	}
 	return nil
 }
@@ -314,7 +313,7 @@ func (r *ContestsRepo) UpdateContestProblemPackage(ctx context.Context, contestI
 func (r *ContestsRepo) GetContestTeams(ctx context.Context, contestId uuid.UUID) ([]contestsmodel.ContestTeam, error) {
 	rows, err := r.queries.ListContestTeams(ctx, contestId)
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("get contest teams", err)
 	}
 
 	teams := make([]contestsmodel.ContestTeam, len(rows))
@@ -337,7 +336,7 @@ func (r *ContestsRepo) CreateContestTeam(
 		Role:      role,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("create contest team", err)
 	}
 
 	return nil
@@ -355,7 +354,7 @@ func (r *ContestsRepo) UpdateContestTeamRole(
 		Role:      role,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update contest team role", err)
 	}
 
 	return nil
@@ -371,7 +370,7 @@ func (r *ContestsRepo) DeleteContestTeam(
 		TeamID:    teamID,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("delete contest team", err)
 	}
 
 	return nil
@@ -387,12 +386,12 @@ func (r *ContestsRepo) ListContestMembers(ctx context.Context, filter contestsmo
 		ContestID: filter.ContestId, PageLimit: filter.PageSize, PageOffset: Offset(filter.Page, filter.PageSize),
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("list contest members", err)
 	}
 
 	count, err := r.queries.CountContestMembers(ctx, filter.ContestId)
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("list contest members", err)
 	}
 
 	members := make([]contestsmodel.ContestMember, len(rows))
@@ -410,7 +409,7 @@ func (r *ContestsRepo) CreateContestMember(ctx context.Context, c *contestsmodel
 		Role:      c.Role,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("create contest member", err)
 	}
 
 	return nil
@@ -422,7 +421,7 @@ func (r *ContestsRepo) GetContestMember(ctx context.Context, c *contestsmodel.Co
 		UserID:    c.UserId,
 	})
 	if err != nil {
-		return contestsmodel.ContestMember{}, HandlePgErr(err)
+		return contestsmodel.ContestMember{}, dbError("get contest member", err)
 	}
 
 	return mapContestMember(member), nil
@@ -434,7 +433,7 @@ func (r *ContestsRepo) DeleteContestMember(ctx context.Context, userId uuid.UUID
 		ContestID: contestId,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("delete contest member", err)
 	}
 	return nil
 }
@@ -446,7 +445,7 @@ func (r *ContestsRepo) UpdateContestMember(ctx context.Context, contestId uuid.U
 		Role:      role,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update contest member", err)
 	}
 
 	return nil
@@ -455,7 +454,7 @@ func (r *ContestsRepo) UpdateContestMember(ctx context.Context, contestId uuid.U
 func (r *ContestsRepo) ListUserContestMemberships(ctx context.Context, userID uuid.UUID) ([]contestsmodel.UserContestMembership, error) {
 	rows, err := r.queries.ListUserContestMemberships(ctx, userID)
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("list user contest memberships", err)
 	}
 
 	memberships := make([]contestsmodel.UserContestMembership, len(rows))
@@ -475,7 +474,7 @@ func (r *ContestsRepo) AddContestMemberIfNotExists(ctx context.Context, contestI
 		Role:      role,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("add contest member if not exists", err)
 	}
 	return nil
 }
@@ -584,7 +583,7 @@ func marshalJSON(v map[string]interface{}) ([]byte, error) {
 	}
 	data, err := json.Marshal(v)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal JSON: %w", err)
+		return nil, dbError("failed to marshal JSON", err)
 	}
 	return data, nil
 }
@@ -594,7 +593,7 @@ func (r *ContestsRepo) ListDashboardContests(ctx context.Context, userID uuid.UU
 		UserID: userID, ViewerID: readViewerID(ctx), Now: accessmodel.ReadTime(ctx), PageSize: limit,
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("list dashboard contests", err)
 	}
 
 	contests := make([]contestsmodel.DashboardContest, len(rows))
@@ -618,7 +617,7 @@ func (r *ContestsRepo) UpsertContestProblemResult(ctx context.Context, params *c
 		TimeMinutes:    params.TimeMinutes,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("upsert contest problem result", err)
 	}
 	return nil
 }
@@ -630,7 +629,7 @@ func (r *ContestsRepo) GetContestProblemResult(ctx context.Context, contestID, u
 		ProblemID: problemID,
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("get contest problem result", err)
 	}
 
 	firstAC := row.FirstAcTime
@@ -649,7 +648,7 @@ func (r *ContestsRepo) GetContestProblemResult(ctx context.Context, contestID, u
 func (r *ContestsRepo) GetContestScoreboardFromStandings(ctx context.Context, contestID uuid.UUID) ([]contestsmodel.ContestProblemResult, map[uuid.UUID]string, error) {
 	rows, err := r.queries.GetContestScoreboardFromStandings(ctx, contestID)
 	if err != nil {
-		return nil, nil, HandlePgErr(err)
+		return nil, nil, dbError("get contest scoreboard from standings", err)
 	}
 
 	userMap := make(map[uuid.UUID]string)
@@ -687,7 +686,7 @@ func (r *ContestsRepo) GetContestScoreboardFromStandings(ctx context.Context, co
 func (r *ContestsRepo) GetContestScoreboardSubmissions(ctx context.Context, contestID uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
 	rows, err := r.queries.GetContestScoreboardSubmissions(ctx, sqlc.GetContestScoreboardSubmissionsParams{ContestID: contestID, FreezeTime: accessmodel.ScoreboardFreeze(ctx)})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("get contest scoreboard submissions", err)
 	}
 	subs := make([]contestsmodel.ScoreboardSubmission, len(rows))
 	for i, row := range rows {
@@ -700,7 +699,7 @@ func (r *ContestsRepo) GetContestScoreboardSubmissions(ctx context.Context, cont
 func (r *ContestsRepo) GetUserScoreboardSubmissions(ctx context.Context, contestID, userID uuid.UUID) ([]contestsmodel.ScoreboardSubmission, error) {
 	rows, err := r.queries.GetUserScoreboardSubmissions(ctx, sqlc.GetUserScoreboardSubmissionsParams{ContestID: contestID, OwnerID: userID, FreezeTime: accessmodel.ScoreboardFreeze(ctx)})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("get user scoreboard submissions", err)
 	}
 	subs := make([]contestsmodel.ScoreboardSubmission, len(rows))
 	for i, row := range rows {
@@ -717,7 +716,7 @@ func (r *ContestsRepo) GetSubmissionsForScoreboard(ctx context.Context, contestI
 		ProblemID: &problemID,
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("get submissions for scoreboard", err)
 	}
 
 	subs := make([]contestsmodel.SubmissionForScoreboard, len(rows))
@@ -741,7 +740,7 @@ func (r *ContestsRepo) CreateContestUserProblemBlock(ctx context.Context, params
 		CreatedBy: createdBy,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("create contest user problem block", err)
 	}
 	return nil
 }
@@ -753,7 +752,7 @@ func (r *ContestsRepo) DeleteContestUserProblemBlock(ctx context.Context, contes
 		ProblemID: problemID,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("delete contest user problem block", err)
 	}
 	return nil
 }
@@ -765,7 +764,7 @@ func (r *ContestsRepo) GetContestUserProblemBlock(ctx context.Context, contestID
 		ProblemID: problemID,
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("get contest user problem block", err)
 	}
 
 	createdBy := row.CreatedBy
@@ -786,7 +785,7 @@ func (r *ContestsRepo) ListContestUserProblemBlocks(ctx context.Context, contest
 		UserID:    userID,
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("list contest user problem blocks", err)
 	}
 
 	blocks := make([]contestsmodel.ContestUserProblemBlock, len(rows))
@@ -813,7 +812,7 @@ func (r *ContestsRepo) CreateContestJoinRequest(ctx context.Context, input *cont
 		Message:   input.Message,
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("create contest join request", err)
 	}
 
 	return r.GetContestJoinRequestByID(ctx, row.ID)
@@ -825,7 +824,7 @@ func (r *ContestsRepo) GetContestJoinRequestByID(ctx context.Context, id uuid.UU
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pkg.ErrNotFound
 		}
-		return nil, HandlePgErr(err)
+		return nil, dbError("get contest join request by id", err)
 	}
 
 	var email string
@@ -862,19 +861,20 @@ func (r *ContestsRepo) GetPendingContestJoinRequest(ctx context.Context, contest
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, HandlePgErr(err)
+		return nil, dbError("get pending contest join request", err)
 	}
 
 	return r.GetContestJoinRequestByID(ctx, row.ID)
 }
 
+//nolint:dupl // Mirrors ListJoinRequests for a different request type.
 func (r *ContestsRepo) ListContestJoinRequests(ctx context.Context, contestID uuid.UUID, status *string) ([]contestsmodel.ContestJoinRequest, error) {
 	rows, err := r.queries.ListContestJoinRequests(ctx, sqlc.ListContestJoinRequestsParams{
 		ContestID: contestID,
 		Status:    status,
 	})
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("list contest join requests", err)
 	}
 
 	requests := make([]contestsmodel.ContestJoinRequest, len(rows))
@@ -904,7 +904,7 @@ func (r *ContestsRepo) ListContestJoinRequests(ctx context.Context, contestID uu
 func (r *ContestsRepo) ListUserContestJoinRequests(ctx context.Context, userID uuid.UUID) ([]contestsmodel.ContestJoinRequest, error) {
 	rows, err := r.queries.ListUserContestJoinRequests(ctx, userID)
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("list user contest join requests", err)
 	}
 
 	requests := make([]contestsmodel.ContestJoinRequest, len(rows))
@@ -933,7 +933,7 @@ func (r *ContestsRepo) UpdateContestJoinRequestStatus(ctx context.Context, id uu
 		ReviewedBy: pgReviewedBy,
 	})
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update contest join request status", err)
 	}
 	if affected != 1 {
 		return pkg.Wrap(pkg.ErrConflict, nil, "request is no longer pending")

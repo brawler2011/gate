@@ -30,7 +30,7 @@ func (r *BlogsRepo) CreatePost(ctx context.Context, params blogsmodel.CreatePost
 	})
 
 	if err != nil {
-		return uuid.Nil, HandlePgErr(err)
+		return uuid.Nil, dbError("create post", err)
 	}
 
 	return id, nil
@@ -40,7 +40,7 @@ func (r *BlogsRepo) GetPostByID(ctx context.Context, id uuid.UUID) (*blogsmodel.
 	row, err := r.queries.GetPostByID(ctx, id)
 
 	if err != nil {
-		return nil, HandlePgErr(err)
+		return nil, dbError("get post by id", err)
 	}
 
 	post := postFromSQLC(row)
@@ -50,7 +50,7 @@ func (r *BlogsRepo) GetPostByID(ctx context.Context, id uuid.UUID) (*blogsmodel.
 func (r *BlogsRepo) ListPosts(ctx context.Context, params blogsmodel.ListPostsParams) ([]blogsmodel.Post, int, error) {
 	totalCount, err := r.queries.CountPosts(ctx)
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, dbError("list posts", err)
 	}
 
 	offset := (params.Page - 1) * params.PageSize
@@ -67,7 +67,7 @@ func (r *BlogsRepo) ListPosts(ctx context.Context, params blogsmodel.ListPostsPa
 		})
 	}
 	if err != nil {
-		return nil, 0, HandlePgErr(err)
+		return nil, 0, dbError("list posts", err)
 	}
 	var posts []blogsmodel.Post
 	for _, row := range rows {
@@ -87,7 +87,7 @@ func (r *BlogsRepo) UpdatePost(ctx context.Context, params blogsmodel.UpdatePost
 	})
 
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("update post", err)
 	}
 
 	if affected == 0 {
@@ -100,7 +100,7 @@ func (r *BlogsRepo) UpdatePost(ctx context.Context, params blogsmodel.UpdatePost
 func (r *BlogsRepo) DeletePost(ctx context.Context, id uuid.UUID) error {
 	affected, err := r.queries.DeletePost(ctx, id)
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("delete post", err)
 	}
 
 	if affected == 0 {
@@ -126,5 +126,5 @@ func postFromSQLC(row sqlc.Post) blogsmodel.Post {
 
 func (r *BlogsRepo) LockPost(ctx context.Context, id uuid.UUID) error {
 	_, err := r.queries.LockPost(ctx, id)
-	return HandlePgErr(err)
+	return dbError("lock post", err)
 }

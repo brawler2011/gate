@@ -79,7 +79,7 @@ type workScenario struct {
 	write bool
 	// setup prepares a write's transaction; its statements are not measured.
 	setup func(ctx context.Context, tx pgx.Tx) error
-	run func(ctx context.Context, tx pgx.Tx) error
+	run   func(ctx context.Context, tx pgx.Tx) error
 }
 
 func TestQueryWork(t *testing.T) {

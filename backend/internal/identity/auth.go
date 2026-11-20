@@ -125,10 +125,10 @@ func (uc *AuthUseCase) Register(ctx context.Context, username, emailAddr, passwo
 		}
 
 		if errByName == nil && existingByName.IsEmailVerified {
-			return pkg.Wrap(pkg.ErrConflict, nil, "username already taken")
+			return pkg.Wrap(pkg.ErrUsernameTaken, nil, "username is taken")
 		}
 		if errByEmail == nil && existingByEmail.IsEmailVerified {
-			return pkg.Wrap(pkg.ErrConflict, nil, "email already in use")
+			return pkg.Wrap(pkg.ErrEmailTaken, nil, "email is taken")
 		}
 
 		if errByName == nil && errByEmail == nil && existingByName.Id != existingByEmail.Id {
@@ -366,7 +366,7 @@ func (uc *AuthUseCase) verifyEmailWithin(ctx context.Context, store IdentityTxSt
 
 	tok, err := store.GetAuthTokenByHash(ctx, tokenHash, identitymodel.AuthTokenTypeEmailVerification)
 	if err != nil {
-		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrInvalid, err, "invalid or expired verification link")
+		return accessmodel.User{}, uuid.Nil, pkg.OnNotFound(err, pkg.ErrInvalid, "invalid or expired verification link")
 	}
 
 	if time.Now().After(tok.ExpiresAt) {
@@ -403,7 +403,7 @@ func (uc *AuthUseCase) verifyEmailWithin(ctx context.Context, store IdentityTxSt
 func (uc *AuthUseCase) ResendVerificationEmail(ctx context.Context, identifier string) error {
 	user, err := uc.usersRepo.GetUserByUsernameOrEmail(ctx, identifier)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrInvalid, err, "user not found")
+		return pkg.OnNotFound(err, pkg.ErrInvalid, "user not found")
 	}
 
 	if user.IsEmailVerified {
@@ -482,7 +482,7 @@ func (uc *AuthUseCase) resetPasswordWithin(ctx context.Context, store IdentityTx
 
 	tok, err := store.GetAuthTokenByHash(ctx, tokenHash, identitymodel.AuthTokenTypePasswordReset)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrInvalid, err, "invalid or expired reset token")
+		return pkg.OnNotFound(err, pkg.ErrInvalid, "invalid or expired reset token")
 	}
 
 	if time.Now().After(tok.ExpiresAt) {
@@ -567,7 +567,7 @@ func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID,
 
 	user, err := uc.usersRepo.GetUserById(ctx, userID)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrUnauthenticated, err, "user not found")
+		return pkg.OnNotFound(err, pkg.ErrUnauthenticated, "user not found")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
@@ -576,7 +576,7 @@ func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID,
 	}
 
 	if existing, err := uc.usersRepo.GetUserByUsernameOrEmail(ctx, newEmail); err == nil && existing.Id != userID {
-		return pkg.Wrap(pkg.ErrConflict, nil, "email already in use")
+		return pkg.Wrap(pkg.ErrEmailTaken, nil, "email is taken")
 	}
 
 	token, tokenHash, err := generateSecureToken()
@@ -636,7 +636,7 @@ func (uc *AuthUseCase) confirmEmailChangeWithin(ctx context.Context, store Ident
 
 	tok, err := store.GetAuthTokenByHash(ctx, tokenHash, identitymodel.AuthTokenTypeEmailChange)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrInvalid, err, "invalid or expired email change token")
+		return pkg.OnNotFound(err, pkg.ErrInvalid, "invalid or expired email change token")
 	}
 
 	if time.Now().After(tok.ExpiresAt) {

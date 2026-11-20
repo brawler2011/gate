@@ -31,32 +31,32 @@ func (p transactions[T]) Within(ctx context.Context, fn func(T) error) error {
 	}
 	tx, err := p.pool.BeginTx(ctx, options)
 	if err != nil {
-		return HandlePgErr(err)
+		return dbError("begin", err)
 	}
 	defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
 	if guarded {
 		revision, err := sqlc.New(tx).GetAccessRevision(ctx)
 		if err != nil {
-			return HandlePgErr(err)
+			return dbError("get access revision", err)
 		}
 		if revision != decision.Revision {
-			return pkg.ErrConflict
+			return pkg.Wrap(pkg.ErrConcurrentUpdate, nil, "access changed during the command")
 		}
 	}
 	if err := fn(p.bind(sqlc.New(tx))); err != nil {
-		return err
+		return retryable(err)
 	}
 	if guarded && decision.ValidUntil != nil {
 		now, err := sqlc.New(tx).GetCommandTime(ctx)
 		if err != nil {
-			return HandlePgErr(err)
+			return dbError("get command time", err)
 		}
 		if !now.Before(*decision.ValidUntil) {
 			return pkg.ErrForbidden
 		}
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return HandlePgErr(err)
+		return retryable(dbError("commit", err))
 	}
 	return nil
 }
@@ -170,4 +170,12 @@ func NewBlogTransactions(pool *pgxpool.Pool) blogs.Transactions {
 			authorizationUsers
 		}{&BlogsRepo{queries: q}, authorizationUsers{q}}
 	}}
+}
+
+// retryable marks a lost serialization race so callers can rerun the command with a fresh precheck.
+func retryable(err error) error {
+	if isRetryable(err) {
+		return pkg.Wrap(pkg.ErrConcurrentUpdate, err, "concurrent update, retry")
+	}
+	return err
 }

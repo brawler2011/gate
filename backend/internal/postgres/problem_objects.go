@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	sqlc "github.com/brawler2011/gate/backend/internal/postgres/sqlc"
@@ -18,7 +17,7 @@ func mapStoredObject(o sqlc.StoredObject) model.StoredObject {
 func (r *ProblemDraftsRepo) BuildInputObjects(ctx context.Context, id uuid.UUID) ([]model.StoredObject, error) {
 	rows, err := sqlc.New(r.pool).ListBuildInputObjects(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("list build inputs: %w", err)
+		return nil, dbError("list build inputs", err)
 	}
 	objects := make([]model.StoredObject, 0, len(rows))
 	for _, o := range rows {
@@ -51,18 +50,18 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 	q := sqlc.New(tx)
 	b, err := q.LockProblemBuild(ctx, id)
 	if err != nil {
-		return uuid.Nil, HandlePgErr(err)
+		return uuid.Nil, dbError("publish build", err)
 	}
 	if b.State == "succeeded" {
 		pid, err := q.BuildPackageID(ctx, id)
 		if err != nil {
-			return uuid.Nil, HandlePgErr(err)
+			return uuid.Nil, dbError("publish build", err)
 		}
 		return pid, nil
 	}
 	active, err := q.BuildLeaseValid(ctx, sqlc.BuildLeaseValidParams{Token: &token, ID: id})
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("check build lease: %w", err)
+		return uuid.Nil, dbError("check build lease", err)
 	}
 	if !active {
 		return uuid.Nil, pkg.ErrConflict
@@ -79,13 +78,13 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 		Title: index.Title, ShortName: index.ShortName, Type: index.Type, TimeLimitMs: safeInt32(index.TimeLimitMs), MemoryLimitMb: safeInt32(index.MemoryLimitMb),
 		InputFile: index.InputFile, OutputFile: index.OutputFile, Statements: encode(index.Statements), Samples: encode(index.Samples),
 	}); err != nil {
-		return uuid.Nil, fmt.Errorf("insert package: %w", err)
+		return uuid.Nil, dbError("insert package", err)
 	}
 	if err := q.InsertPackageAssets(ctx, sqlc.InsertPackageAssetsParams{PackageID: pid, OrganizationID: b.OrganizationID, Assets: encode(index.Assets)}); err != nil {
-		return uuid.Nil, fmt.Errorf("insert package assets: %w", err)
+		return uuid.Nil, dbError("insert package assets", err)
 	}
 	if err := q.MarkBuildSucceeded(ctx, sqlc.MarkBuildSucceededParams{ID: id, LeaseToken: &token}); err != nil {
-		return uuid.Nil, fmt.Errorf("finish build: %w", err)
+		return uuid.Nil, dbError("finish build", err)
 	}
 	if err := commitTx(ctx, tx); err != nil {
 		resolveCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
@@ -102,7 +101,7 @@ func (r *ProblemDraftsRepo) PublishBuild(ctx context.Context, id, token uuid.UUI
 func (r *ProblemDraftsRepo) GetObject(ctx context.Context, id uuid.UUID) (model.StoredObject, error) {
 	o, err := sqlc.New(r.pool).ReadStoredObject(ctx, id)
 	if err != nil {
-		return model.StoredObject{}, HandlePgErr(err)
+		return model.StoredObject{}, dbError("get object", err)
 	}
 	return mapStoredObject(o), nil
 }
@@ -110,7 +109,7 @@ func (r *ProblemDraftsRepo) GetObject(ctx context.Context, id uuid.UUID) (model.
 func (r *ProblemDraftsRepo) GetPackageDescriptor(ctx context.Context, id uuid.UUID) (model.PackageDescriptor, error) {
 	row, err := sqlc.New(r.pool).ReadPackageDescriptor(ctx, id)
 	if err != nil {
-		return model.PackageDescriptor{}, HandlePgErr(err)
+		return model.PackageDescriptor{}, dbError("get package descriptor", err)
 	}
 	p := model.PackageDescriptor{ID: row.ID, ProblemID: row.ProblemID}
 	p.Object, err = r.GetObject(ctx, row.ObjectID)
@@ -120,17 +119,17 @@ func (r *ProblemDraftsRepo) GetPackageDescriptor(ctx context.Context, id uuid.UU
 func (r *ProblemDraftsRepo) GetPackageStatement(ctx context.Context, id uuid.UUID) (model.PackageStatement, error) {
 	row, err := sqlc.New(r.pool).ReadPackageStatement(ctx, id)
 	if err != nil {
-		return model.PackageStatement{}, HandlePgErr(err)
+		return model.PackageStatement{}, dbError("get package statement", err)
 	}
 	p := model.PackageStatement{ProblemID: row.ProblemID, Title: row.Title}
 	if err := json.Unmarshal(row.Statements, &p.Statements); err != nil {
-		return p, fmt.Errorf("decode package statements: %w", err)
+		return p, dbError("decode package statements", err)
 	}
 	if err := json.Unmarshal(row.Samples, &p.Samples); err != nil {
-		return p, fmt.Errorf("decode package samples: %w", err)
+		return p, dbError("decode package samples", err)
 	}
 	if err := json.Unmarshal(row.Assets, &p.Assets); err != nil {
-		return p, fmt.Errorf("decode package assets: %w", err)
+		return p, dbError("decode package assets", err)
 	}
 	return p, nil
 }
@@ -138,7 +137,7 @@ func (r *ProblemDraftsRepo) GetPackageStatement(ctx context.Context, id uuid.UUI
 func (r *ProblemDraftsRepo) FindPackageAssets(ctx context.Context, id uuid.UUID, sha256 string) ([]model.PackageAsset, error) {
 	rows, err := sqlc.New(r.pool).ListPackageAssetsBySHA256(ctx, sqlc.ListPackageAssetsBySHA256Params{PackageID: id, Sha256: sha256})
 	if err != nil {
-		return nil, fmt.Errorf("list package assets: %w", err)
+		return nil, dbError("list package assets", err)
 	}
 	assets := make([]model.PackageAsset, 0, len(rows))
 	for _, row := range rows {
