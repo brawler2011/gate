@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime"
+	"sync"
 	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
@@ -225,12 +226,14 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 			uc.limiter.LoginSuccess(ctx, identifier)
 		}
 	}()
-	user, err := uc.usersRepo.GetUserByUsernameOrEmail(ctx, identifier)
-	if err != nil {
-		if errors.Is(err, pkg.ErrNotFound) {
-			return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, err, "invalid credentials")
-		}
-		return accessmodel.User{}, uuid.Nil, err
+	user, lookupErr := uc.usersRepo.GetUserByUsernameOrEmail(ctx, identifier)
+	if lookupErr != nil && !errors.Is(lookupErr, pkg.ErrNotFound) {
+		return accessmodel.User{}, uuid.Nil, lookupErr
+	}
+	// A missing account still pays for bcrypt so timing does not reveal which identifiers exist.
+	hash := []byte(user.PasswordHash)
+	if lookupErr != nil {
+		hash = dummyPasswordHash()
 	}
 
 	// Account state is revealed only after the password matches.
@@ -240,8 +243,11 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 	case <-ctx.Done():
 		return accessmodel.User{}, uuid.Nil, ctx.Err()
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
+	err := bcrypt.CompareHashAndPassword(hash, []byte(password))
 	<-uc.bcryptSlots
+	if lookupErr != nil {
+		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, lookupErr, "invalid credentials")
+	}
 	if err != nil {
 		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrUnauthenticated, err, "invalid credentials")
 	}
@@ -428,7 +434,11 @@ func (uc *AuthUseCase) ResendVerificationEmail(ctx context.Context, identifier s
 		return err
 	}
 
-	return uc.emailService.SendVerificationEmail(ctx, *user.Email, user.Username, token)
+	// A delivery failure would otherwise reveal an unverified account with an email.
+	if err := uc.emailService.SendVerificationEmail(ctx, *user.Email, user.Username, token); err != nil {
+		slog.ErrorContext(ctx, "send verification email", "user_id", user.Id, "error", err)
+	}
+	return nil
 }
 
 //nolint:nilerr // Do not reveal whether the account exists.
@@ -686,3 +696,11 @@ func (uc *AuthUseCase) deleteExpiredSession(ctx context.Context, sessionID uuid.
 		slog.WarnContext(ctx, "delete expired session", "error", err)
 	}
 }
+
+var dummyPasswordHash = sync.OnceValue(func() []byte {
+	hash, err := bcrypt.GenerateFromPassword([]byte("not a real password"), bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	return hash
+})

@@ -14,12 +14,8 @@ func withinProblem(ctx context.Context, transactions ProblemTransactions, id uui
 		return pkg.ErrUnauthenticated
 	}
 	return transactions.Within(ctx, func(tx ProblemTxStore) error {
-		allowed, err := tx.HasProblemPermission(ctx, id, user.Id, action)
-		if err != nil {
+		if err := authorizeProblem(ctx, tx, id, action); err != nil {
 			return err
-		}
-		if !allowed {
-			return pkg.ErrForbidden
 		}
 		return fn(tx)
 	})
