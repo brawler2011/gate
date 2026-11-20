@@ -19,6 +19,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/syslib"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/encoding/charmap"
 	"golang.org/x/tools/txtar"
 )
 
@@ -463,6 +464,56 @@ func TestImportSplitsPolygonStatementIntoSections(t *testing.T) {
 		require.NotEmpty(t, section, name)
 		require.NotContains(t, section, "file", name)
 	}
+}
+
+// Old Russian packages use windows-1251: Polygon declares it, PCMS2 sources leave it implicit.
+func TestImportConvertsWindows1251Text(t *testing.T) {
+	cp1251 := charmap.Windows1251.NewEncoder()
+	encode := func(s string) string {
+		out, err := cp1251.String(s)
+		require.NoError(t, err)
+		return out
+	}
+	read := func(path string) string {
+		data, err := os.ReadFile(path)
+		require.NoError(t, err)
+		return string(data)
+	}
+	const polygonDir = "../../pkg/testdata/polygon/a-plus-b"
+	statement := read(polygonDir + "/statements/russian/problem.tex")
+	xml := strings.Replace(read(polygonDir+"/problem.xml"), `charset="UTF-8" language="russian"`, `charset="windows-1251" language="russian"`, 1)
+	input := "7 8 " + encode("Привет") + "\n"
+	plan, err := importDir(t, polygonDir, map[string]string{
+		"problem.xml": xml, "statements/russian/problem.tex": encode(statement), "tests/01": input,
+	})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Contains(t, plan.draft.Statement("ru").Legend, "Вам заданы два целых числа")
+	require.Equal(t, []string{"statements/russian/problem.tex"}, plan.converted)
+	data, err := os.ReadFile(objectPath(t, plan, *plan.draft.Tests[0].Input.ObjectID))
+	require.NoError(t, err)
+	require.Equal(t, input, string(data))
+
+	const pcms2Dir = "../../pkg/testdata/pcms2/a-plus-b"
+	problem := strings.Replace(read(pcms2Dir+"/problem.xml"), `encoding="utf-8"`, `encoding="windows-1251"`, 1)
+	checker := "// Сравнение чисел\n" + read(pcms2Dir+"/check.cpp")
+	plan, err = importDir(t, pcms2Dir, map[string]string{"problem.xml": encode(problem), "check.cpp": encode(checker)})
+	require.NoError(t, err)
+	defer plan.Close()
+	require.Equal(t, checker, plan.draft.Checker.Source)
+	require.Equal(t, []string{"check.cpp"}, plan.converted)
+	require.NoError(t, plan.draft.ValidateBuild(importQuotas, newImportUseCase(t).BuildOptions.Languages))
+}
+
+func objectPath(t *testing.T, plan *draftImport, id uuid.UUID) string {
+	t.Helper()
+	for _, o := range plan.objects {
+		if o.temporaryID == id {
+			return o.path
+		}
+	}
+	t.Fatal("object not found")
+	return ""
 }
 
 func TestImportRejectsUnknownStatementSection(t *testing.T) {

@@ -17,7 +17,6 @@ import (
 	"slices"
 	"strings"
 	"unicode"
-	"unicode/utf8"
 
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/pkg"
@@ -38,6 +37,8 @@ type draftImport struct {
 	draft   model.Draft
 	objects []importObject
 	root    string
+	// Package paths of text files converted to UTF-8.
+	converted []string
 }
 
 func (i *draftImport) Close() { _ = os.RemoveAll(i.root) }
@@ -163,6 +164,7 @@ func (uc *DraftUseCase) convertImport(result *draftImport, root string, p *spec.
 		return err
 	}
 	result.draft = c.draft
+	result.converted = c.converted
 	return nil
 }
 
@@ -176,6 +178,7 @@ type importConverter struct {
 	files     int
 	programs  int
 	textBytes int64
+	converted []string
 }
 
 func (c *importConverter) convert(p *spec.Problem) error {
@@ -337,7 +340,7 @@ func (c *importConverter) addLibrary(p *spec.Problem) error {
 			}
 			return nil
 		}
-		text, err := c.readText(f.Path)
+		text, err := c.readText(f.Path, "")
 		if err != nil {
 			return err
 		}
@@ -445,7 +448,7 @@ func (c *importConverter) program(program spec.Program) (*model.DraftProgram, er
 	if err != nil {
 		return nil, err
 	}
-	text, err := c.readText(program.Path)
+	text, err := c.readText(program.Path, "")
 	if err != nil {
 		return nil, err
 	}
@@ -494,14 +497,14 @@ func (c *importConverter) addStatement(s spec.Statement) error {
 	statement := model.DraftStatement{Language: s.Language}
 	sections := map[string]string{}
 	if s.TeX != "" {
-		text, err := c.readText(s.TeX)
+		text, err := c.readText(s.TeX, s.Charset)
 		if err != nil {
 			return err
 		}
 		sections = tex.ToSections(text)
 	}
 	for name, path := range s.Sections {
-		text, err := c.readText(path)
+		text, err := c.readText(path, s.Charset)
 		if err != nil {
 			return err
 		}
@@ -615,7 +618,7 @@ func (c *importConverter) test(test spec.Test, subtask uuid.UUID, generators, so
 }
 
 // The caller charges retained text against draft quotas.
-func (c *importConverter) readText(path string) (string, error) {
+func (c *importConverter) readText(path, charset string) (string, error) {
 	full, err := c.file(path)
 	if err != nil {
 		return "", err
@@ -631,10 +634,14 @@ func (c *importConverter) readText(path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("readfile: %w", err)
 	}
-	if !utf8.Valid(data) {
-		return "", pkg.Wrap(pkg.ErrBadInput, nil, "text must be UTF-8: "+path)
+	text, converted, err := spec.DecodeText(data, charset)
+	if err != nil {
+		return "", pkg.Wrap(pkg.ErrBadInput, err, "cannot read text of "+path)
 	}
-	return string(data), nil
+	if converted && !slices.Contains(c.converted, path) {
+		c.converted = append(c.converted, path)
+	}
+	return text, nil
 }
 
 // Charge every draft entry, even when several entries reference the same source file.

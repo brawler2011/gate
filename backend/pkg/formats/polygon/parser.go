@@ -1,7 +1,6 @@
 package polygon
 
 import (
-	"encoding/xml"
 	"fmt"
 	"io/fs"
 	"path"
@@ -20,7 +19,7 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		return nil, fmt.Errorf("read problem.xml: %w", err)
 	}
 	var prob Problem
-	if err := xml.Unmarshal(data, &prob); err != nil {
+	if err := spec.UnmarshalXML(data, &prob); err != nil {
 		return nil, fmt.Errorf("parse Polygon problem.xml: %w", err)
 	}
 	testset, err := mainTestset(prob.Judging.Testsets)
@@ -350,7 +349,7 @@ func statements(list []Statement) []spec.Statement {
 		language := tex.LanguageCode(s.Language)
 		if s.Type == "application/x-tex" && !seen[language] {
 			seen[language] = true
-			result = append(result, spec.Statement{Language: language, TeX: s.Path})
+			result = append(result, spec.Statement{Language: language, Charset: s.Charset, TeX: s.Path})
 		}
 	}
 	return result

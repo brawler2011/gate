@@ -77,6 +77,8 @@ type ValidatorTest struct {
 // Statements contain either one LaTeX file or Markdown files per section.
 type Statement struct {
 	Language string
+	// Charset names the encoding of the statement files; empty means detect.
+	Charset  string
 	TeX      string
 	Sections map[string]string
 }
