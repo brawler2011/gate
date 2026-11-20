@@ -794,6 +794,25 @@ func (q *Queries) ReadPackageStatement(ctx context.Context, id uuid.UUID) (ReadP
 	return i, err
 }
 
+const recordBuildSolutions = `-- name: RecordBuildSolutions :execrows
+UPDATE problem_builds SET solutions=$1::jsonb
+WHERE id=$2 AND state='running' AND lease_token=$3 AND lease_deadline>clock_timestamp()
+`
+
+type RecordBuildSolutionsParams struct {
+	Solutions []byte     `json:"solutions"`
+	ID        uuid.UUID  `json:"id"`
+	Token     *uuid.UUID `json:"token"`
+}
+
+func (q *Queries) RecordBuildSolutions(ctx context.Context, arg RecordBuildSolutionsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, recordBuildSolutions, arg.Solutions, arg.ID, arg.Token)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const renewBuildLease = `-- name: RenewBuildLease :execrows
 UPDATE problem_builds SET lease_deadline=LEAST(deadline,clock_timestamp()+$1::bigint*interval '1 millisecond')
 WHERE id=$2 AND state='running' AND lease_token=$3 AND lease_deadline>clock_timestamp() AND deadline>clock_timestamp()

@@ -399,6 +399,8 @@ CREATE TABLE problem_builds (
     max_attempts integer NOT NULL,
     deadline timestamptz NOT NULL,
     diagnostic jsonb,
+    -- What each solution that runs got; written before the build passes or fails on them.
+    solutions jsonb,
     created_at timestamptz DEFAULT clock_timestamp() NOT NULL,
     finished_at timestamptz,
     CONSTRAINT problem_builds_attempt_check CHECK ((attempt >= 0)),
@@ -408,6 +410,7 @@ CREATE TABLE problem_builds (
     CONSTRAINT problem_builds_max_attempts_check CHECK ((max_attempts > 0)),
     CONSTRAINT problem_builds_revision_check CHECK ((revision > 0)),
     CONSTRAINT problem_builds_snapshot_check CHECK ((jsonb_typeof(snapshot) = 'object'::text)),
+    CONSTRAINT problem_builds_solutions_check CHECK ((jsonb_typeof(solutions) = 'array'::text)),
     CONSTRAINT problem_builds_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'running'::text, 'succeeded'::text, 'failed'::text, 'cancelled'::text]))),
     CONSTRAINT problem_builds_id_problem_id_organization_id_key UNIQUE (id, problem_id, organization_id),
     CONSTRAINT problem_builds_id_organization_id_key UNIQUE (id, organization_id),

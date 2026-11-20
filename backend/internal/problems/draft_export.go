@@ -109,7 +109,7 @@ func (w *archiveWriter) object(name string, oid uuid.UUID, open func(uuid.UUID) 
 func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, open func(uuid.UUID) (io.ReadCloser, error)) (*archiveWriter, error) {
 	w := &archiveWriter{z: zip.NewWriter(dst), dirs: map[string]bool{}}
 	m := gfmt.Problem{FormatVersion: "1.0", Title: d.Title, Type: d.Type, Limits: gfmt.Limits{TimeMs: d.TimeLimitMs, MemoryMb: d.MemoryLimitMb},
-		Sources: map[string]gfmt.Source{}, Subtasks: map[string]gfmt.Subtask{}, Solutions: map[string]string{}}
+		Sources: map[string]gfmt.Source{}, Subtasks: map[string]gfmt.Subtask{}, Solutions: map[string]gfmt.Expectation{}}
 	fileName := func(name, language string) string {
 		if extensions := languages.Langs[language].Extensions; len(extensions) > 0 {
 			return name + "." + extensions[0]
@@ -152,7 +152,7 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 	for _, list := range []struct {
 		role     string
 		programs []model.DraftNamedProgram
-	}{{"generator", d.Generators}, {"solution", d.Solutions}} {
+	}{{"generator", d.Generators}, {"solution", d.SolutionPrograms()}} {
 		for _, p := range list.programs {
 			file, err := program(list.role, p.Name, p.DraftProgram, gfmt.Source{})
 			if err != nil {
@@ -160,11 +160,13 @@ func writeDraftArchive(dst io.Writer, d model.Draft, languages *sandbox.Config, 
 			}
 			if list.role == "solution" {
 				solutions[p.Name] = file
+				s := d.Solution(p.Name)
+				m.Solutions[file] = gfmt.Expectation{Verdicts: s.Verdicts, Points: s.Points}
 			}
 		}
 	}
 	if d.MainSolution != nil {
-		m.Solutions["main"] = solutions[*d.MainSolution]
+		m.MainSolution = solutions[*d.MainSolution]
 	}
 	for _, f := range d.Library {
 		path := gfmt.LibraryFolder + "/" + f.Name

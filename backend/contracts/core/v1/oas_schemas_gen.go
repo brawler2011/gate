@@ -4594,6 +4594,51 @@ func (o NilFloat64) Or(d float64) float64 {
 	return d
 }
 
+// NewNilInt64 returns new NilInt64 with value set to v.
+func NewNilInt64(v int64) NilInt64 {
+	return NilInt64{
+		Value: v,
+	}
+}
+
+// NilInt64 is nullable int64.
+type NilInt64 struct {
+	Value int64
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilInt64) SetTo(v int64) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilInt64) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilInt64) SetToNull() {
+	o.Null = true
+	var v int64
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilInt64) Get() (v int64, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilInt64) Or(d int64) int64 {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilProblemBuildDiagnostic returns new NilProblemBuildDiagnostic with value set to v.
 func NewNilProblemBuildDiagnostic(v ProblemBuildDiagnostic) NilProblemBuildDiagnostic {
 	return NilProblemBuildDiagnostic{
@@ -7700,6 +7745,8 @@ type ProblemBuild struct {
 	CreatedAt      time.Time                 `json:"created_at"`
 	FinishedAt     NilDateTime               `json:"finished_at"`
 	Diagnostic     NilProblemBuildDiagnostic `json:"diagnostic"`
+	// Results of the solutions that run, once every test is built.
+	Solutions []ProblemBuildSolution `json:"solutions"`
 }
 
 // GetID returns the value of ID.
@@ -7757,6 +7804,11 @@ func (s *ProblemBuild) GetDiagnostic() NilProblemBuildDiagnostic {
 	return s.Diagnostic
 }
 
+// GetSolutions returns the value of Solutions.
+func (s *ProblemBuild) GetSolutions() []ProblemBuildSolution {
+	return s.Solutions
+}
+
 // SetID sets the value of ID.
 func (s *ProblemBuild) SetID(val uuid.UUID) {
 	s.ID = val
@@ -7810,6 +7862,11 @@ func (s *ProblemBuild) SetFinishedAt(val NilDateTime) {
 // SetDiagnostic sets the value of Diagnostic.
 func (s *ProblemBuild) SetDiagnostic(val NilProblemBuildDiagnostic) {
 	s.Diagnostic = val
+}
+
+// SetSolutions sets the value of Solutions.
+func (s *ProblemBuild) SetSolutions(val []ProblemBuildSolution) {
+	s.Solutions = val
 }
 
 // Ref: #/components/schemas/ProblemBuildAccepted
@@ -7909,6 +7966,80 @@ func (s *ProblemBuildDiagnostic) init() ProblemBuildDiagnostic {
 	return m
 }
 
+// What a build saw of a solution.
+// Ref: #/components/schemas/ProblemBuildSolution
+type ProblemBuildSolution struct {
+	Name    string                 `json:"name"`
+	Verdict ProblemSolutionVerdict `json:"verdict"`
+	// Ordinal of the first test whose verdict is not OK.
+	Test NilInt64 `json:"test"`
+	// Longest CPU time over the tests.
+	TimeMs int64      `json:"time_ms"`
+	Points NilFloat64 `json:"points"`
+	// How the result misses the expected verdicts or points; empty when it matches.
+	Mismatch string `json:"mismatch"`
+}
+
+// GetName returns the value of Name.
+func (s *ProblemBuildSolution) GetName() string {
+	return s.Name
+}
+
+// GetVerdict returns the value of Verdict.
+func (s *ProblemBuildSolution) GetVerdict() ProblemSolutionVerdict {
+	return s.Verdict
+}
+
+// GetTest returns the value of Test.
+func (s *ProblemBuildSolution) GetTest() NilInt64 {
+	return s.Test
+}
+
+// GetTimeMs returns the value of TimeMs.
+func (s *ProblemBuildSolution) GetTimeMs() int64 {
+	return s.TimeMs
+}
+
+// GetPoints returns the value of Points.
+func (s *ProblemBuildSolution) GetPoints() NilFloat64 {
+	return s.Points
+}
+
+// GetMismatch returns the value of Mismatch.
+func (s *ProblemBuildSolution) GetMismatch() string {
+	return s.Mismatch
+}
+
+// SetName sets the value of Name.
+func (s *ProblemBuildSolution) SetName(val string) {
+	s.Name = val
+}
+
+// SetVerdict sets the value of Verdict.
+func (s *ProblemBuildSolution) SetVerdict(val ProblemSolutionVerdict) {
+	s.Verdict = val
+}
+
+// SetTest sets the value of Test.
+func (s *ProblemBuildSolution) SetTest(val NilInt64) {
+	s.Test = val
+}
+
+// SetTimeMs sets the value of TimeMs.
+func (s *ProblemBuildSolution) SetTimeMs(val int64) {
+	s.TimeMs = val
+}
+
+// SetPoints sets the value of Points.
+func (s *ProblemBuildSolution) SetPoints(val NilFloat64) {
+	s.Points = val
+}
+
+// SetMismatch sets the value of Mismatch.
+func (s *ProblemBuildSolution) SetMismatch(val string) {
+	s.Mismatch = val
+}
+
 type ProblemBuildState string
 
 const (
@@ -7988,7 +8119,7 @@ type ProblemDraft struct {
 	Interactor    NilProblemDraftProgram     `json:"interactor"`
 	Validators    []ProblemDraftValidator    `json:"validators"`
 	Generators    []ProblemDraftNamedProgram `json:"generators"`
-	Solutions     []ProblemDraftNamedProgram `json:"solutions"`
+	Solutions     []ProblemDraftSolution     `json:"solutions"`
 	// Name of a solution of the draft.
 	MainSolution NilString                 `json:"main_solution"`
 	Library      []ProblemDraftLibraryFile `json:"library"`
@@ -8059,7 +8190,7 @@ func (s *ProblemDraft) GetGenerators() []ProblemDraftNamedProgram {
 }
 
 // GetSolutions returns the value of Solutions.
-func (s *ProblemDraft) GetSolutions() []ProblemDraftNamedProgram {
+func (s *ProblemDraft) GetSolutions() []ProblemDraftSolution {
 	return s.Solutions
 }
 
@@ -8154,7 +8285,7 @@ func (s *ProblemDraft) SetGenerators(val []ProblemDraftNamedProgram) {
 }
 
 // SetSolutions sets the value of Solutions.
-func (s *ProblemDraft) SetSolutions(val []ProblemDraftNamedProgram) {
+func (s *ProblemDraft) SetSolutions(val []ProblemDraftSolution) {
 	s.Solutions = val
 }
 
@@ -8475,7 +8606,7 @@ func (s *ProblemDraftLibraryFile) SetAutoUpdate(val bool) {
 	s.AutoUpdate = val
 }
 
-// A validator, generator or solution; tests and the main solution refer to it by name.
+// A generator; tests refer to it by name.
 // Ref: #/components/schemas/ProblemDraftNamedProgram
 type ProblemDraftNamedProgram struct {
 	// Unique among the programs of its role; the program's package file is the name with the extension of
@@ -8543,6 +8674,72 @@ func (s *ProblemDraftProgram) SetLanguage(val string) {
 // SetSource sets the value of Source.
 func (s *ProblemDraftProgram) SetSource(val string) {
 	s.Source = val
+}
+
+// A solution; the build judges it on every test unless verdicts is empty.
+// Ref: #/components/schemas/ProblemDraftSolution
+type ProblemDraftSolution struct {
+	// Unique among the solutions; the program's package file is the name with the extension of its
+	// language.
+	Name string `json:"name"`
+	// Identifier of the language configuration from GET /languages, such as cpp17 or python3.
+	Language string `json:"language"`
+	Source   string `json:"source"`
+	// Verdicts allowed on a test besides OK; unless OK is listed, some test must get one of them, and CE
+	// expects a compilation error. Empty keeps the solution out of the build.
+	Verdicts []ProblemSolutionVerdict `json:"verdicts"`
+	// Score a solution of a scoring problem must get.
+	Points NilFloat64 `json:"points"`
+}
+
+// GetName returns the value of Name.
+func (s *ProblemDraftSolution) GetName() string {
+	return s.Name
+}
+
+// GetLanguage returns the value of Language.
+func (s *ProblemDraftSolution) GetLanguage() string {
+	return s.Language
+}
+
+// GetSource returns the value of Source.
+func (s *ProblemDraftSolution) GetSource() string {
+	return s.Source
+}
+
+// GetVerdicts returns the value of Verdicts.
+func (s *ProblemDraftSolution) GetVerdicts() []ProblemSolutionVerdict {
+	return s.Verdicts
+}
+
+// GetPoints returns the value of Points.
+func (s *ProblemDraftSolution) GetPoints() NilFloat64 {
+	return s.Points
+}
+
+// SetName sets the value of Name.
+func (s *ProblemDraftSolution) SetName(val string) {
+	s.Name = val
+}
+
+// SetLanguage sets the value of Language.
+func (s *ProblemDraftSolution) SetLanguage(val string) {
+	s.Language = val
+}
+
+// SetSource sets the value of Source.
+func (s *ProblemDraftSolution) SetSource(val string) {
+	s.Source = val
+}
+
+// SetVerdicts sets the value of Verdicts.
+func (s *ProblemDraftSolution) SetVerdicts(val []ProblemSolutionVerdict) {
+	s.Verdicts = val
+}
+
+// SetPoints sets the value of Points.
+func (s *ProblemDraftSolution) SetPoints(val NilFloat64) {
+	s.Points = val
 }
 
 // The statement in one language as Markdown sections.
@@ -9333,6 +9530,104 @@ func (s *ProblemSampleModel) SetInput(val string) {
 // SetOutput sets the value of Output.
 func (s *ProblemSampleModel) SetOutput(val string) {
 	s.Output = val
+}
+
+// Ref: #/components/schemas/ProblemSolutionVerdict
+type ProblemSolutionVerdict string
+
+const (
+	ProblemSolutionVerdictOK     ProblemSolutionVerdict = "OK"
+	ProblemSolutionVerdictWA     ProblemSolutionVerdict = "WA"
+	ProblemSolutionVerdictPE     ProblemSolutionVerdict = "PE"
+	ProblemSolutionVerdictTLE    ProblemSolutionVerdict = "TLE"
+	ProblemSolutionVerdictMLE    ProblemSolutionVerdict = "MLE"
+	ProblemSolutionVerdictOLE    ProblemSolutionVerdict = "OLE"
+	ProblemSolutionVerdictRE     ProblemSolutionVerdict = "RE"
+	ProblemSolutionVerdictFAIL   ProblemSolutionVerdict = "FAIL"
+	ProblemSolutionVerdictPOINTS ProblemSolutionVerdict = "POINTS"
+	ProblemSolutionVerdictCE     ProblemSolutionVerdict = "CE"
+)
+
+// AllValues returns all ProblemSolutionVerdict values.
+func (ProblemSolutionVerdict) AllValues() []ProblemSolutionVerdict {
+	return []ProblemSolutionVerdict{
+		ProblemSolutionVerdictOK,
+		ProblemSolutionVerdictWA,
+		ProblemSolutionVerdictPE,
+		ProblemSolutionVerdictTLE,
+		ProblemSolutionVerdictMLE,
+		ProblemSolutionVerdictOLE,
+		ProblemSolutionVerdictRE,
+		ProblemSolutionVerdictFAIL,
+		ProblemSolutionVerdictPOINTS,
+		ProblemSolutionVerdictCE,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ProblemSolutionVerdict) MarshalText() ([]byte, error) {
+	switch s {
+	case ProblemSolutionVerdictOK:
+		return []byte(s), nil
+	case ProblemSolutionVerdictWA:
+		return []byte(s), nil
+	case ProblemSolutionVerdictPE:
+		return []byte(s), nil
+	case ProblemSolutionVerdictTLE:
+		return []byte(s), nil
+	case ProblemSolutionVerdictMLE:
+		return []byte(s), nil
+	case ProblemSolutionVerdictOLE:
+		return []byte(s), nil
+	case ProblemSolutionVerdictRE:
+		return []byte(s), nil
+	case ProblemSolutionVerdictFAIL:
+		return []byte(s), nil
+	case ProblemSolutionVerdictPOINTS:
+		return []byte(s), nil
+	case ProblemSolutionVerdictCE:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ProblemSolutionVerdict) UnmarshalText(data []byte) error {
+	switch ProblemSolutionVerdict(data) {
+	case ProblemSolutionVerdictOK:
+		*s = ProblemSolutionVerdictOK
+		return nil
+	case ProblemSolutionVerdictWA:
+		*s = ProblemSolutionVerdictWA
+		return nil
+	case ProblemSolutionVerdictPE:
+		*s = ProblemSolutionVerdictPE
+		return nil
+	case ProblemSolutionVerdictTLE:
+		*s = ProblemSolutionVerdictTLE
+		return nil
+	case ProblemSolutionVerdictMLE:
+		*s = ProblemSolutionVerdictMLE
+		return nil
+	case ProblemSolutionVerdictOLE:
+		*s = ProblemSolutionVerdictOLE
+		return nil
+	case ProblemSolutionVerdictRE:
+		*s = ProblemSolutionVerdictRE
+		return nil
+	case ProblemSolutionVerdictFAIL:
+		*s = ProblemSolutionVerdictFAIL
+		return nil
+	case ProblemSolutionVerdictPOINTS:
+		*s = ProblemSolutionVerdictPOINTS
+		return nil
+	case ProblemSolutionVerdictCE:
+		*s = ProblemSolutionVerdictCE
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Problem team data.

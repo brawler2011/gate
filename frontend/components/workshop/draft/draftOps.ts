@@ -3,6 +3,7 @@ import type {
   ProblemDraftChecker,
   ProblemDraftLibraryFile,
   ProblemDraftNamedProgram,
+  ProblemDraftSolution,
   ProblemDraftStatement,
   ProblemDraftSubtask,
   ProblemDraftTest,
@@ -78,7 +79,8 @@ export const addProgram = (
   if (programsOf(draft, role).some((p) => p.name === name)) {
     return nameTaken(role, name);
   }
-  const program = role === "validator" ? {name, language, source, subtasks: []} : {name, language, source};
+  const extra = {validator: {subtasks: []}, solution: {verdicts: ["OK"], points: null}, generator: {}}[role];
+  const program = {name, language, source, ...extra};
   return {
     draft: {
       ...draft,
@@ -116,6 +118,15 @@ export const renameProgram = (draft: ProblemDraft, role: ListRole, from: string,
     },
   };
 };
+
+export const setSolutionExpectation = (
+  draft: ProblemDraft,
+  name: string,
+  patch: Partial<Pick<ProblemDraftSolution, "verdicts" | "points">>,
+): ProblemDraft => ({
+  ...draft,
+  solutions: draft.solutions.map((s) => (s.name === name ? {...s, ...patch} : s)),
+});
 
 export const removeProgram = (draft: ProblemDraft, role: ListRole, name: string): ProblemDraft => ({
   ...draft,

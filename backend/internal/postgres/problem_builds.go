@@ -83,6 +83,11 @@ func mapProblemBuild(b sqlc.ProblemBuild) (model.ProblemBuild, error) {
 	if err := json.Unmarshal(b.Snapshot, &result.Snapshot); err != nil {
 		return result, fmt.Errorf("decode build snapshot: %w", err)
 	}
+	if b.Solutions != nil {
+		if err := json.Unmarshal(b.Solutions, &result.Solutions); err != nil {
+			return result, fmt.Errorf("decode build solutions: %w", err)
+		}
+	}
 	return result, nil
 }
 
@@ -186,6 +191,21 @@ func (r *ProblemDraftsRepo) FinishBuildAttempt(ctx context.Context, id, token uu
 		return fmt.Errorf("finish build attempt: %w", err)
 	}
 	return commitTx(ctx, tx)
+}
+
+func (r *ProblemDraftsRepo) RecordBuildSolutions(ctx context.Context, id, token uuid.UUID, results []model.SolutionResult) error {
+	data, err := json.Marshal(results)
+	if err != nil {
+		return fmt.Errorf("encode build solutions: %w", err)
+	}
+	updated, err := sqlc.New(r.pool).RecordBuildSolutions(ctx, sqlc.RecordBuildSolutionsParams{Solutions: data, ID: id, Token: &token})
+	if err != nil {
+		return fmt.Errorf("record build solutions: %w", err)
+	}
+	if updated != 1 {
+		return pkg.ErrConflict
+	}
+	return nil
 }
 
 func (r *ProblemDraftsRepo) RecoverBuilds(ctx context.Context) error {

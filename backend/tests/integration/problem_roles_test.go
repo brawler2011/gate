@@ -73,7 +73,7 @@ func (s *IntegrationTestSuite) TestBuiltinTemplatesBuildAndJudge() {
 				s.Require().True(ok, "%s missing from package", role)
 				s.Equal(language, built.Language)
 			}
-			var main corev1.ProblemDraftNamedProgram
+			var main corev1.ProblemDraftSolution
 			for _, solution := range draft.Solutions {
 				if name, ok := draft.MainSolution.Get(); ok && solution.Name == name {
 					main = solution

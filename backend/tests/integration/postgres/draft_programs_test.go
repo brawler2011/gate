@@ -17,3 +17,11 @@ func checker(language, source string) *model.DraftChecker {
 func named(name, language, source string) model.DraftNamedProgram {
 	return model.DraftNamedProgram{Name: name, DraftProgram: model.DraftProgram{Language: language, Source: source}}
 }
+
+// solutionProgram stays out of the build unless verdicts are given.
+func solutionProgram(name, language, source string, verdicts ...string) model.DraftSolution {
+	if verdicts == nil {
+		verdicts = []string{}
+	}
+	return model.DraftSolution{DraftNamedProgram: named(name, language, source), Verdicts: verdicts}
+}

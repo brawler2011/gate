@@ -2,7 +2,7 @@
 
 import {Alert, Anchor, Badge, Box, Button, Code, Group, List, Loader, Pagination, Stack, Table, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import {useMutation, useQuery, useQueryClient, type UseQueryResult} from "@tanstack/react-query";
 import {useState} from "react";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
@@ -55,16 +55,21 @@ const DiagnosticView = ({diagnostic}: {diagnostic: ProblemBuild["diagnostic"]}):
   );
 };
 
+// Polls while a build is queued or running.
+export const useProblemBuilds = (problemId: string, enabled = true): UseQueryResult<ProblemBuild[]> =>
+  useQuery({
+    queryKey: ["problem-builds", problemId],
+    queryFn: () => unwrap(api.GET("/problems/{id}/builds", {params: {path: {id: problemId}}})),
+    refetchInterval: (query) => (query.state.data?.some((build) => ACTIVE_STATES.has(build.state)) ? 2000 : false),
+    enabled,
+  });
+
 export const WorkshopPackagesTab = ({problemId}: Props): ReactNode => {
   const queryClient = useQueryClient();
   const draft = useProblemDraft(problemId);
   const [problems, setProblems] = useState<string[]>([]);
 
-  const builds = useQuery({
-    queryKey: ["problem-builds", problemId],
-    queryFn: () => unwrap(api.GET("/problems/{id}/builds", {params: {path: {id: problemId}}})),
-    refetchInterval: (query) => (query.state.data?.some((build) => ACTIVE_STATES.has(build.state)) ? 2000 : false),
-  });
+  const builds = useProblemBuilds(problemId);
 
   const packages = usePagedQuery(["problem-packages", problemId], (page, pageSize) =>
     unwrap(api.GET("/problems/{id}/packages", {params: {path: {id: problemId}, query: {page, pageSize}}})),

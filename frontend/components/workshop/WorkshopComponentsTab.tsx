@@ -1,10 +1,11 @@
 "use client";
 
-import {Badge, Box, Button, Code, Grid, Group, MultiSelect, NavLink, ScrollArea, Select, Stack, Text, TextInput} from "@mantine/core";
+import {Badge, Box, Button, Code, Grid, Group, MultiSelect, NavLink, NumberInput, ScrollArea, Select, Stack, Text, TextInput} from "@mantine/core";
 import {useState} from "react";
 import {useSearchParams} from "react-router-dom";
 
 import {SectionPaper} from "@/components/workshop/SectionPaper";
+import {useProblemBuilds} from "@/components/workshop/WorkshopPackagesTab";
 import {languageName, useLanguages, type SupportedLanguage} from "@/lib/languages";
 import {useStandardCheckers, useSystemLibrary} from "@/lib/systemLibrary";
 
@@ -19,6 +20,7 @@ import {
   renameProgram,
   ROLE_LABELS,
   setSingleProgram,
+  setSolutionExpectation,
   setValidatorSubtasks,
   standardChecker,
   subtaskLabel,
@@ -31,7 +33,13 @@ import {SourceEditor} from "./draft/SourceEditor";
 import {componentTemplate} from "./draft/templates";
 import {useSaveDraft} from "./draft/useDraft";
 
-import type {ProblemDraft, ProblemDraftChecker, ProblemDraftProgram} from "@/contracts/core/v1/schema";
+import type {
+  ProblemBuildSolution,
+  ProblemDraft,
+  ProblemDraftChecker,
+  ProblemDraftProgram,
+  ProblemSolutionVerdict,
+} from "@/contracts/core/v1/schema";
 import type {ReactNode} from "react";
 
 const languageOptions = (catalog: SupportedLanguage[]) =>
@@ -196,6 +204,102 @@ const StandardChecker = ({checker, saving, onChange, onCustomize, onDelete}: Sta
 
 type PanelProps<Role> = {draft: ProblemDraft; problemId: string; role: Role};
 
+const VERDICTS: {value: ProblemSolutionVerdict; label: string}[] = [
+  {value: "OK", label: "OK — принято"},
+  {value: "WA", label: "WA — неправильный ответ"},
+  {value: "PE", label: "PE — ошибка представления"},
+  {value: "TLE", label: "TLE — превышено время"},
+  {value: "MLE", label: "MLE — превышена память"},
+  {value: "OLE", label: "OLE — превышен вывод"},
+  {value: "RE", label: "RE — ошибка выполнения"},
+  {value: "FAIL", label: "FAIL — сбой чекера"},
+  {value: "POINTS", label: "POINTS — частичные баллы"},
+  {value: "CE", label: "CE — ошибка компиляции"},
+];
+
+// Results of the newest build that got as far as judging the solutions.
+type SolutionResults = {revision: number; solutions: ProblemBuildSolution[]};
+
+const useLastSolutionResults = (problemId: string, enabled: boolean): SolutionResults | null => {
+  const builds = useProblemBuilds(problemId, enabled);
+  const build = builds.data?.find((item) => item.solutions);
+  return build?.solutions ? {revision: build.revision, solutions: build.solutions} : null;
+};
+
+const ResultBadge = ({result}: {result: ProblemBuildSolution}): ReactNode => (
+  <Badge size="xs" variant="light" color={result.mismatch ? "red" : "green"} title={result.mismatch || undefined}>
+    {result.verdict}
+  </Badge>
+);
+
+const describeResult = (result: ProblemBuildSolution): string =>
+  [
+    result.test === null ? result.verdict : `${result.verdict} на тесте ${result.test}`,
+    result.verdict === "CE" ? null : `${result.time_ms} мс`,
+    result.points === null ? null : `${result.points} баллов`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+type ExpectationProps = {
+  draft: ProblemDraft;
+  name: string;
+  result: ProblemBuildSolution | undefined;
+  revision: number | undefined;
+  onChange: (change: (current: ProblemDraft) => ProblemDraft) => void;
+};
+
+const SolutionExpectation = ({draft, name, result, revision, onChange}: ExpectationProps): ReactNode => {
+  const solution = draft.solutions.find((s) => s.name === name);
+  // Saved on blur: saving every keystroke races drafts at the same revision.
+  const [points, setPoints] = useState<number | string>(solution?.points ?? "");
+  if (!solution) {
+    return null;
+  }
+  return (
+    <Stack gap={4}>
+      <Group align="flex-end" wrap="wrap">
+        <MultiSelect
+          label="Ожидаемые вердикты"
+          description="На каждом тесте OK или один из них; пусто — не запускать при сборке"
+          data={VERDICTS}
+          value={solution.verdicts}
+          onChange={(verdicts) =>
+            onChange((current) =>
+              setSolutionExpectation(current, name, {verdicts: verdicts as ProblemSolutionVerdict[]}),
+            )
+          }
+          clearable
+          w={420}
+        />
+        {draft.type === "scoring" && (
+          <NumberInput
+            label="Ожидаемые баллы"
+            description="Пусто — любые"
+            value={points}
+            min={0}
+            decimalScale={2}
+            onChange={setPoints}
+            onBlur={() => {
+              const next = typeof points === "number" ? points : null;
+              if (next !== solution.points) {
+                onChange((current) => setSolutionExpectation(current, name, {points: next}));
+              }
+            }}
+            w={160}
+          />
+        )}
+      </Group>
+      {result && (
+        <Text size="sm" c={result.mismatch ? "red" : "dimmed"}>
+          Сборка ревизии {revision}: {describeResult(result)}
+          {result.mismatch && ` — не совпадает с ожидаемым (${result.mismatch})`}
+        </Text>
+      )}
+    </Stack>
+  );
+};
+
 const SinglePanel = ({draft, problemId, role}: PanelProps<SingleRole>): ReactNode => {
   const {save, isSaving} = useSaveDraft(problemId);
   const catalog = useLanguages();
@@ -281,6 +385,8 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
   const {save, isSaving} = useSaveDraft(problemId);
   const [params, setParams] = useSearchParams();
   const programs = programsOf(draft, role);
+  const results = useLastSolutionResults(problemId, role === "solution");
+  const resultOf = (name: string) => results?.solutions.find((r) => r.name === name);
   // Keep editor identity across renames to preserve unsaved source.
   const [renamed, setRenamed] = useState<Record<string, string>>({});
   const editorKey = (name: string): string => renamed[name] ?? `name:${name}`;
@@ -337,10 +443,17 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
                 label={program.name}
                 description={languageName(catalog, program.language)}
                 rightSection={
-                  role === "solution" && draft.main_solution === program.name ? (
-                    <Badge size="xs" variant="light">
-                      Главное
-                    </Badge>
+                  role === "solution" ? (
+                    <Group gap={4} wrap="nowrap">
+                      {draft.main_solution === program.name && (
+                        <Badge size="xs" variant="light">
+                          Главное
+                        </Badge>
+                      )}
+                      {resultOf(program.name) && (
+                        <ResultBadge result={resultOf(program.name) as ProblemBuildSolution} />
+                      )}
+                    </Group>
                   ) : undefined
                 }
                 onClick={() => open(program.name)}
@@ -374,6 +487,16 @@ const ListPanel = ({draft, problemId, role}: PanelProps<ListRole>): ReactNode =>
                 onChange={(subtasks) => void save((current) => setValidatorSubtasks(current, selected.name, subtasks))}
                 clearable
                 w={320}
+              />
+            )}
+            {role === "solution" && (
+              <SolutionExpectation
+                key={selected.name}
+                draft={draft}
+                name={selected.name}
+                result={resultOf(selected.name)}
+                revision={results?.revision}
+                onChange={(change) => void save(change)}
               />
             )}
             {role === "solution" && draft.main_solution !== selected.name && (

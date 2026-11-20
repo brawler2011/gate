@@ -91,7 +91,11 @@ func Read(fsys fs.FS) (*spec.Problem, error) {
 		return nil, err
 	}
 	p.Validators, p.Generators, p.Solutions = programs[RoleFolder("validator")], programs[RoleFolder("generator")], programs[RoleFolder("solution")]
-	p.MainSolution = mainSolution(manifest.Solutions, p.Solutions)
+	for i := range p.Solutions {
+		expected := manifest.Solutions[p.Solutions[i].Name]
+		p.Solutions[i].Verdicts, p.Solutions[i].Points = expected.Verdicts, expected.Points
+	}
+	p.MainSolution = mainSolution(manifest.MainSolution, p.Solutions)
 	// Generator stems must be unique because tests refer to them without extensions.
 	generators := map[string]string{}
 	for _, g := range p.Generators {
@@ -120,13 +124,13 @@ func dependencies(s Source) (map[string]string, error) {
 	return s.DependencyMap, nil
 }
 
-// Use solutions.main, falling back to the first solution expected to pass.
-func mainSolution(verdicts map[string]string, solutions []spec.Program) string {
-	if main := verdicts["main"]; main != "" {
+// Use main_solution, falling back to the first solution expected to pass.
+func mainSolution(main string, solutions []spec.Program) string {
+	if main != "" {
 		return RoleFolder("solution") + "/" + main
 	}
 	for _, s := range solutions {
-		if verdicts[s.Name] == "OK" {
+		if slices.Equal(s.Verdicts, []string{"OK"}) {
 			return s.Path
 		}
 	}

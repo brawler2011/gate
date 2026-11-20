@@ -17,6 +17,7 @@ import (
 	model "github.com/brawler2011/gate/backend/internal/problems/model"
 	"github.com/brawler2011/gate/backend/internal/templates"
 	"github.com/brawler2011/gate/backend/pkg"
+	"github.com/brawler2011/gate/backend/pkg/points"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -63,6 +64,10 @@ func TestExportRoundTripKeepsDraftDetails(t *testing.T) {
 	d.Validators = append(d.Validators, model.DraftValidator{DraftNamedProgram: model.DraftNamedProgram{Name: "second", DraftProgram: model.DraftProgram{Language: "python3", Source: "pass\n"}},
 		Subtasks: []uuid.UUID{d.Subtasks[1].ID}})
 	gen, other := "gen", d.Solutions[1].Name
+	partial := points.Value(5)
+	d.Solutions[0].Verdicts = []string{"TLE", "OK"}
+	d.Solutions[1].Verdicts, d.Solutions[1].Points = []string{"WA"}, &partial
+	d.Solutions = append(d.Solutions, model.DraftSolution{DraftNamedProgram: model.DraftNamedProgram{Name: "slow", DraftProgram: model.DraftProgram{Language: "python3", Source: "pass\n"}}, Verdicts: []string{}})
 	// gfmt otherwise treats a subtask named samples as the sample group.
 	d.Subtasks[0].Name, d.Subtasks[1].Name = "samples", ""
 	d.Subtasks[0].DependsOn = []uuid.UUID{d.Subtasks[1].ID}
@@ -230,9 +235,8 @@ func normalized(i *draftImport) model.Draft {
 		}
 		v.Subtasks = ids
 	}
-	for _, list := range []*[]model.DraftNamedProgram{&d.Generators, &d.Solutions} {
-		*list = slices.SortedFunc(slices.Values(*list), func(a, b model.DraftNamedProgram) int { return strings.Compare(a.Name, b.Name) })
-	}
+	d.Generators = slices.SortedFunc(slices.Values(d.Generators), func(a, b model.DraftNamedProgram) int { return strings.Compare(a.Name, b.Name) })
+	d.Solutions = slices.SortedFunc(slices.Values(d.Solutions), func(a, b model.DraftSolution) int { return strings.Compare(a.Name, b.Name) })
 	d.Assets = append([]model.DraftAsset(nil), d.Assets...)
 	for n := range d.Assets {
 		d.Assets[n].ObjectID = hashes[d.Assets[n].ObjectID]

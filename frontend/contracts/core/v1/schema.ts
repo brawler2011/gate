@@ -1779,13 +1779,49 @@ export interface components {
             /** @description Name of a standard checker from GET /lib, such as wcmp, or empty for the author's own source. */
             standard: string;
         };
-        /** @description A validator, generator or solution; tests and the main solution refer to it by name. */
+        /** @description A generator; tests refer to it by name. */
         ProblemDraftNamedProgram: {
             /** @description Unique among the programs of its role; the program's package file is the name with the extension of its language. */
             name: string;
             /** @description Identifier of the language configuration from GET /languages, such as cpp17 or python3. */
             language: string;
             source: string;
+        };
+        /** @description A solution; the build judges it on every test unless verdicts is empty. */
+        ProblemDraftSolution: {
+            /** @description Unique among the solutions; the program's package file is the name with the extension of its language. */
+            name: string;
+            /** @description Identifier of the language configuration from GET /languages, such as cpp17 or python3. */
+            language: string;
+            source: string;
+            /** @description Verdicts allowed on a test besides OK; unless OK is listed, some test must get one of them, and CE expects a compilation error. Empty keeps the solution out of the build. */
+            verdicts: components["schemas"]["ProblemSolutionVerdict"][];
+            /**
+             * Format: double
+             * @description Score a solution of a scoring problem must get.
+             */
+            points: number | null;
+        };
+        /** @enum {string} */
+        ProblemSolutionVerdict: "OK" | "WA" | "PE" | "TLE" | "MLE" | "OLE" | "RE" | "FAIL" | "POINTS" | "CE";
+        /** @description What a build saw of a solution. */
+        ProblemBuildSolution: {
+            name: string;
+            verdict: components["schemas"]["ProblemSolutionVerdict"];
+            /**
+             * Format: int64
+             * @description Ordinal of the first test whose verdict is not OK.
+             */
+            test: number | null;
+            /**
+             * Format: int64
+             * @description Longest CPU time over the tests.
+             */
+            time_ms: number;
+            /** Format: double */
+            points: number | null;
+            /** @description How the result misses the expected verdicts or points; empty when it matches. */
+            mismatch: string;
         };
         /** @description A validator; the build fails when it rejects a test input. testlib validators receive --group with the subtask name. */
         ProblemDraftValidator: {
@@ -1866,7 +1902,7 @@ export interface components {
             interactor: components["schemas"]["ProblemDraftProgram"] | null;
             validators: components["schemas"]["ProblemDraftValidator"][];
             generators: components["schemas"]["ProblemDraftNamedProgram"][];
-            solutions: components["schemas"]["ProblemDraftNamedProgram"][];
+            solutions: components["schemas"]["ProblemDraftSolution"][];
             /** @description Name of a solution of the draft. */
             main_solution: string | null;
             library: components["schemas"]["ProblemDraftLibraryFile"][];
@@ -1913,6 +1949,8 @@ export interface components {
             diagnostic: {
                 [key: string]: unknown;
             } | null;
+            /** @description Results of the solutions that run, once every test is built. */
+            solutions: components["schemas"]["ProblemBuildSolution"][] | null;
         };
         ProblemBuildAccepted: {
             /** Format: uuid */
@@ -5147,6 +5185,9 @@ export type ProblemDraftAnswer = components['schemas']['ProblemDraftAnswer'];
 export type ProblemDraftProgram = components['schemas']['ProblemDraftProgram'];
 export type ProblemDraftChecker = components['schemas']['ProblemDraftChecker'];
 export type ProblemDraftNamedProgram = components['schemas']['ProblemDraftNamedProgram'];
+export type ProblemDraftSolution = components['schemas']['ProblemDraftSolution'];
+export type ProblemSolutionVerdict = components['schemas']['ProblemSolutionVerdict'];
+export type ProblemBuildSolution = components['schemas']['ProblemBuildSolution'];
 export type ProblemDraftValidator = components['schemas']['ProblemDraftValidator'];
 export type ProblemDraftLibraryFile = components['schemas']['ProblemDraftLibraryFile'];
 export type ProblemDraftStatement = components['schemas']['ProblemDraftStatement'];

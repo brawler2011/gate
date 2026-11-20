@@ -94,7 +94,7 @@ func TestJudgeFullFlowE2E(t *testing.T) {
 	generator, solution, group := "gen", "main", uuid.New()
 	d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <fstream>\nint main(int n,char**v){\n#ifdef REJECT_ALL\nreturn 1;\n#endif\nlong long a,b;std::ifstream out(v[2]),ans(v[3]);return !(out>>a) || !(ans>>b) || a!=b;}"}}
 	d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
-	d.Solutions = []problemsmodel.DraftNamedProgram{{Name: solution, DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}"}}}
+	d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: solution, DraftProgram: problemsmodel.DraftProgram{Language: "cpp17", Source: "#include <iostream>\nint main(){long long a,b;std::cin>>a>>b;std::cout<<a+b<<'\\n';}"}}, Verdicts: []string{}}}
 	d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Print a+b."}}
 	d.MainSolution = &solution
 	d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
@@ -361,7 +361,7 @@ func TestInteractiveJudgingE2E(t *testing.T) {
 			d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: checkerSource}}
 			d.Interactor = &problemsmodel.DraftProgram{Language: "python3", Source: interactorSource}
 			d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1])\n"}}}
-			d.Solutions = []problemsmodel.DraftNamedProgram{{Name: solution, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "print(2 * int(input()), flush=True)\n"}}}
+			d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: solution, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "print(2 * int(input()), flush=True)\n"}}, Verdicts: []string{}}}
 			d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Reply with twice the number."}}
 			d.MainSolution = &solution
 			d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}
@@ -407,7 +407,7 @@ func TestStandardCheckerE2E(t *testing.T) {
 			generator, main, group := "gen", "main", uuid.New()
 			d.Checker = &problemsmodel.DraftChecker{DraftProgram: problemsmodel.DraftProgram{Language: "cpp17"}, Standard: standard}
 			d.Generators = []problemsmodel.DraftNamedProgram{{Name: generator, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: "import sys\nprint(sys.argv[1], sys.argv[2])\n"}}}
-			d.Solutions = []problemsmodel.DraftNamedProgram{{Name: main, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: solution}}}
+			d.Solutions = []problemsmodel.DraftSolution{{DraftNamedProgram: problemsmodel.DraftNamedProgram{Name: main, DraftProgram: problemsmodel.DraftProgram{Language: "python3", Source: solution}}, Verdicts: []string{}}}
 			d.Statements = []problemsmodel.DraftStatement{{Language: "en", Legend: "Compute."}}
 			d.MainSolution = &main
 			d.Subtasks = []problemsmodel.DraftSubtask{{ID: group, Ordinal: 1, Name: "All", Policy: "complete"}}

@@ -157,7 +157,7 @@ func (uc *DraftUseCase) importObject(path, purpose string, id uuid.UUID) (import
 func (uc *DraftUseCase) convertImport(result *draftImport, root string, p *spec.Problem, id uuid.UUID, revision int64) error {
 	c := &importConverter{uc: uc, result: result, root: root, textTests: p.TextTests, objects: map[string]uuid.UUID{}}
 	c.draft = model.Draft{ProblemID: id, Revision: revision, Title: p.Title, ShortName: "problem-" + id.String()[:8], Type: p.Type, TimeLimitMs: p.TimeLimitMs, MemoryLimitMb: p.MemoryLimitMb,
-		DraftContent: model.DraftContent{Validators: []model.DraftValidator{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftNamedProgram{},
+		DraftContent: model.DraftContent{Validators: []model.DraftValidator{}, Generators: []model.DraftNamedProgram{}, Solutions: []model.DraftSolution{},
 			Library: []model.DraftLibraryFile{}, Statements: []model.DraftStatement{}, Assets: []model.DraftAsset{}, Tests: []model.DraftTest{}, Subtasks: []model.DraftSubtask{}}}
 	if err := c.convert(p); err != nil {
 		return err
@@ -210,10 +210,16 @@ func (c *importConverter) convert(p *spec.Problem) error {
 	}
 	solutions := map[string]string{}
 	for _, s := range p.Solutions {
-		name, err := c.named(&c.draft.Solutions, s)
+		programs := c.draft.SolutionPrograms()
+		name, err := c.named(&programs, s)
 		if err != nil {
 			return err
 		}
+		verdicts := slices.Clone(s.Verdicts)
+		if verdicts == nil {
+			verdicts = []string{}
+		}
+		c.draft.Solutions = append(c.draft.Solutions, model.DraftSolution{DraftNamedProgram: programs[len(programs)-1], Verdicts: verdicts, Points: s.Points})
 		solutions[s.Path] = name
 		if s.Path == p.MainSolution {
 			c.draft.MainSolution = &name
