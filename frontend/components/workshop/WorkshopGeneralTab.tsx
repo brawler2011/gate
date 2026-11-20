@@ -55,8 +55,8 @@ const DraftForm = ({draft, problemId}: {draft: ProblemDraft; problemId: string})
       time_limit_ms: timeLimit,
       memory_limit_mb: memoryLimit,
       main_solution: mainSolution,
-      input_file: inputFile.trim(),
-      output_file: outputFile.trim(),
+      input_file: type === "interactive" ? "" : inputFile.trim(),
+      output_file: type === "interactive" ? "" : outputFile.trim(),
     }));
     if (ok) {
       notifications.show({title: "Сохранено", message: "Черновик обновлён", color: "green"});

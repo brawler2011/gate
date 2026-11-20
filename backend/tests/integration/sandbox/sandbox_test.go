@@ -136,6 +136,20 @@ func TestIntegrationSandbox(t *testing.T) {
 				}
 			})
 		}
+		t.Run("output file over the limit", func(t *testing.T) {
+			exe, err := sb.Compile(ctx, []byte("open('output.txt', 'w').write('x' * (11 << 20))"), "python3", nil)
+			if err != nil {
+				t.Fatalf("compile: %v", err)
+			}
+			res, err := sb.RunSolution(ctx, exe, "python3", input, both, solutionLimits(2000, 256))
+			if err != nil {
+				t.Fatalf("run: %v", err)
+			}
+			r.release(res.OutputID)
+			if res.Status != sandbox.StatusOLE {
+				t.Fatalf("status %s, want OLE", res.Status)
+			}
+		})
 	})
 
 	t.Run("packages", func(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"slices"
 	"strings"
 	"time"
 
@@ -89,6 +90,11 @@ func (s *Sandbox) RunFiles(ctx context.Context, executable Executable, language 
 // Streams name the files a solution reads and writes instead of standard input and output; empty keeps the stream.
 type Streams struct{ Input, Output string }
 
+// ValidSolutionFile excludes the stream collector names, which go-judge never copies out as files.
+func ValidSolutionFile(name string) bool {
+	return fs.ValidPath(name) && !strings.Contains(name, "/") && name != "stdout" && name != "stderr"
+}
+
 // RunSolution reads a missing output file as empty; the caller owns the returned output ID.
 func (s *Sandbox) RunSolution(ctx context.Context, executable Executable, language string, input File, streams Streams, limits FileRunLimits) (*FileRunResult, error) {
 	stdin := input
@@ -104,7 +110,7 @@ func (s *Sandbox) RunSolution(ctx context.Context, executable Executable, langua
 		if name == "" {
 			continue
 		}
-		if _, taken := c.CopyIn[name]; !fs.ValidPath(name) || strings.Contains(name, "/") || taken {
+		if _, taken := c.CopyIn[name]; !ValidSolutionFile(name) || taken {
 			return nil, fmt.Errorf("solution file %q is invalid or clashes with the executable", name)
 		}
 		r := memoryFile("")
@@ -131,6 +137,9 @@ func (s *Sandbox) runFile(ctx context.Context, c *cmd, output string) (*FileRunR
 	status := statusToString(r.Status)
 	if status == StatusOK && r.ExitStatus != 0 {
 		status = StatusRE
+	}
+	if slices.Contains(r.FileError, fileError{Name: output, Type: "CopyOutSizeExceeded"}) {
+		status = StatusOLE
 	}
 	return &FileRunResult{
 		Status: status, ExitStatus: r.ExitStatus, Time: safeDuration(r.Time), Memory: safeInt64(r.Memory),

@@ -547,7 +547,7 @@ func (d *Draft) validate(v *validation, q DraftQuotas) {
 		v.fail("/main_solution", "unknown solution %q", *d.MainSolution)
 	}
 	for pointer, name := range map[string]string{"/input_file": d.InputFile, "/output_file": d.OutputFile} {
-		if name != "" && (!ValidFileName(name) || d.Type == "interactive") {
+		if name != "" && (!ValidFileName(name) || !sandbox.ValidSolutionFile(name) || d.Type == "interactive") {
 			v.fail(pointer, "file name %q is invalid or set on an interactive problem", name)
 		}
 	}
