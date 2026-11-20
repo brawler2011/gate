@@ -32,6 +32,14 @@ var constraintErrors = map[string]struct {
 	"org_join_requests_pending_unique_idx":          {pkg.ErrRequestPending, "a join request is already pending"},
 	"contest_join_requests_pending_unique_idx":      {pkg.ErrRequestPending, "a join request is already pending"},
 	"contest_problems_pkey":                         {pkg.ErrProblemInContest, "problem is already in the contest"},
+	"contests_check":                                {pkg.ErrInvalid, "end time must be after start time"},
+	"contests_login_check":                          {pkg.ErrInvalid, "contest login must be 3 to 64 characters"},
+	"contest_problems_ordinal_check":                {pkg.ErrInvalid, "problem positions must be non-negative"},
+	"contest_problems_contest_id_ordinal_key":       {pkg.ErrInvalid, "problem positions must be distinct"},
+	"contest_teams_team_id_fkey":                    {pkg.ErrNotFound, "team not found"},
+	"problem_teams_team_id_fkey":                    {pkg.ErrNotFound, "team not found"},
+	"contest_user_problem_blocks_user_id_fkey":      {pkg.ErrNotFound, "user not found"},
+	"contest_user_problem_blocks_problem_id_fkey":   {pkg.ErrNotFound, "problem not found"},
 }
 
 // Deletion under ON DELETE RESTRICT uses 23001, not the missing-reference code 23503.
