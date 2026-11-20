@@ -21,10 +21,11 @@ export type ApiError = Problem & {message?: string};
 
 const problemFrom = (status: number, title: string, body?: unknown): Problem => {
   const info = body && typeof body === "object" && !Array.isArray(body) ? body as Partial<Problem> : undefined;
+  // 5xx problems carry no detail; the title keeps notifications from going blank.
   if (typeof info?.code === "string" && typeof info.status === "number") {
-    return info as Problem;
+    return {...info, detail: info.detail || info.title} as Problem;
   }
-  return {type: "about:blank", title, status, code: "internal", request_id: ""};
+  return {type: "about:blank", title, status, code: "internal", request_id: "", detail: title};
 };
 
 class ApiRequest {

@@ -115,3 +115,18 @@ it("unwrap throws the problem as an Error with its detail as message", async () 
     logged.mockRestore();
   }
 });
+
+it("fills a missing detail with the title so error notifications are never blank", async () => {
+  const {api} = await import("../lib/api");
+  const logged = spyOn(console, "error").mockImplementation(() => {});
+  try {
+    globalThis.fetch = (async () => Response.json(
+      {type: "about:blank", title: "Internal Server Error", status: 500, code: "internal", request_id: "req-3"},
+      {status: 500, headers: {"Content-Type": "application/problem+json"}},
+    )) as unknown as typeof fetch;
+    const {error} = await api.GET("/users/me");
+    expect(error?.detail).toBe("Internal Server Error");
+  } finally {
+    logged.mockRestore();
+  }
+});

@@ -248,6 +248,19 @@ func TestErrorResponseWriteFailureStaysOnRequestLine(t *testing.T) {
 	require.Contains(t, buf.String(), "broken pipe")
 }
 
+func TestHandlerErrorWriteFailureStaysOnRequestLine(t *testing.T) {
+	var buf bytes.Buffer
+	h := RequestLoggerMiddleware(logging.New(&buf), func(*http.Request) string { return "/x" })(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		res := NewProblem(r.Context(), pkg.Wrap(pkg.ErrConflict, nil, "taken"))
+		w.WriteHeader(res.StatusCode)
+		_, _ = w.Write([]byte("{}"))
+	}))
+	h.ServeHTTP(brokenWriter{httptest.NewRecorder()}, httptest.NewRequest("GET", "/x", nil))
+	require.Equal(t, 1, strings.Count(buf.String(), "\n"))
+	require.Contains(t, buf.String(), "taken")
+	require.Contains(t, buf.String(), "broken pipe")
+}
+
 func TestRequestLoggerPanic(t *testing.T) {
 	var buf bytes.Buffer
 	h := RequestLoggerMiddleware(logging.New(&buf), func(*http.Request) string { return "unmatched" })(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {

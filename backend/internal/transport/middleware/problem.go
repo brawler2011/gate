@@ -18,7 +18,7 @@ import (
 // NewProblem maps err to the response body and attaches err to the request log line.
 func NewProblem(ctx context.Context, err error) *corev1.ProblemStatusCodeWithHeaders {
 	if state, ok := ctx.Value(requestLogKey{}).(*requestLog); ok {
-		state.err = err
+		state.err = errors.Join(err, state.err)
 	}
 	return newProblem(ctx, err)
 }
@@ -112,12 +112,9 @@ func ResponseErrorHandler(logger *slog.Logger) func(ctx context.Context, w http.
 		} else if state.written {
 			return
 		}
-		if writeErr := writeProblem(w, res); writeErr != nil {
-			if state != nil {
-				state.err = errors.Join(state.err, writeErr)
-			} else {
-				logger.ErrorContext(ctx, "failed to write error response", "error", writeErr)
-			}
+		// Within the request logger the writer records its own failures.
+		if writeErr := writeProblem(w, res); writeErr != nil && state == nil {
+			logger.ErrorContext(ctx, "failed to write error response", "error", writeErr)
 		}
 	}
 }

@@ -22,11 +22,20 @@ const statusClientClosedRequest = 499
 
 // requestLog lets the error handler attach its error to the request's single log line.
 type requestLog struct {
-	err     error
-	written bool
+	err         error
+	written     bool
+	writeFailed bool
 }
 
 type requestLogKey struct{}
+
+// Only the first failure is kept: once the client is gone every later write fails the same way.
+func (s *requestLog) recordWriteError(err error) {
+	if err != nil && !s.writeFailed {
+		s.writeFailed = true
+		s.err = errors.Join(s.err, fmt.Errorf("write response: %w", err))
+	}
+}
 
 // RequestLoggerMiddleware preserves the writer's optional interfaces for streaming and upgrades.
 func RequestLoggerMiddleware(logger *slog.Logger, route func(*http.Request) string) func(http.Handler) http.Handler {
@@ -53,7 +62,12 @@ func RequestLoggerMiddleware(logger *slog.Logger, route func(*http.Request) stri
 					}
 				},
 				Write: func(next httpsnoop.WriteFunc) httpsnoop.WriteFunc {
-					return func(p []byte) (int, error) { state.written = true; return next(p) }
+					return func(p []byte) (int, error) {
+						state.written = true
+						n, err := next(p)
+						state.recordWriteError(err)
+						return n, err //nolint:wrapcheck // The writer's own error is the contract of http.ResponseWriter.
+					}
 				},
 				ReadFrom: func(next httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
 					return func(r io.Reader) (int64, error) { state.written = true; return next(r) }
@@ -85,9 +99,7 @@ func RequestLoggerMiddleware(logger *slog.Logger, route func(*http.Request) stri
 				if recovered != nil {
 					attrs = append(attrs, slog.String("panic", fmt.Sprint(recovered)), slog.String("stack", string(debug.Stack())))
 					if !committed && !abort {
-						if err := writeProblem(sw, newProblem(ctx, errors.New("panic"))); err != nil {
-							state.err = errors.Join(state.err, err)
-						}
+						_ = writeProblem(sw, newProblem(ctx, errors.New("panic")))
 					}
 				}
 				if state.err != nil {
