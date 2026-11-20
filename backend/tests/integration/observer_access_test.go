@@ -133,7 +133,7 @@ func (s *IntegrationTestSuite) TestObserverRoleSourcesAndRevocation() {
 			if source == "direct moderator" {
 				s.Require().NoError(s.contestsRepo.UpdateContestMember(s.ctx, contestID, user.Id, contestsmodel.ContestRoleParticipant))
 				_, _, closed := conn.ReadMessage()
-				s.Require().True(websocket.IsCloseError(closed, 1011), "%v", closed)
+				s.Require().True(websocket.IsCloseError(closed, websocket.CloseTryAgainLater), "%v", closed)
 				var response *http.Response
 				conn, response, dialErr = websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/submissions?contestId="+contestID.String()+"&since="+strconv.FormatUint(seq-1, 10), headers)
 				s.Require().NoError(dialErr)
