@@ -23,6 +23,7 @@ import (
 	"github.com/brawler2011/gate/backend/pkg/ziputil"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 // Importing an exported draft gives the same draft apart from identifiers.
@@ -96,6 +97,69 @@ func TestBuiltPackageImportsBackAsDraft(t *testing.T) {
 			require.NoError(t, err)
 			defer again.Close()
 			require.Equal(t, normalized(plan), normalized(again))
+		})
+	}
+}
+
+// Tests sharing an object share one archive file, so a package unpacks no larger than its build, and stay shared on import.
+func TestArchiveWritesSharedTestFilesOnce(t *testing.T) {
+	plan, err := importDir(t, "../../pkg/testdata/gfmt/a-plus-b", nil)
+	require.NoError(t, err)
+	defer plan.Close()
+	var manual []int
+	for i, test := range plan.draft.Tests {
+		if test.Input.Mode == "manual" {
+			manual = append(manual, i)
+		}
+	}
+	require.GreaterOrEqual(t, len(manual), 2)
+	first, second := &plan.draft.Tests[manual[0]], &plan.draft.Tests[manual[1]]
+	second.Input = first.Input
+	dir := t.TempDir()
+	built := map[uuid.UUID]archive.BuiltTest{}
+	for _, test := range plan.draft.Tests {
+		local := archive.BuiltTest{Input: filepath.Join(dir, test.ID.String()+".in"), Answer: filepath.Join(dir, test.ID.String()+".ans")}
+		require.NoError(t, os.WriteFile(local.Input, []byte(test.ID.String()), 0o600))
+		require.NoError(t, os.WriteFile(local.Answer, []byte(test.ID.String()), 0o600))
+		built[test.ID] = local
+	}
+	// A build keeps a shared object as one file.
+	built[second.ID] = archive.BuiltTest{Input: built[first.ID].Input, Answer: built[second.ID].Answer}
+	for name, built := range map[string]map[uuid.UUID]archive.BuiltTest{"export": nil, "built": built} {
+		t.Run(name, func(t *testing.T) {
+			data := writeArchive(t, plan, built)
+			z, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+			require.NoError(t, err)
+			written := map[string]bool{}
+			for _, f := range z.File {
+				written[f.Name] = true
+			}
+			var manifest gfmt.Problem
+			r, err := z.Open("problem.yaml")
+			require.NoError(t, err)
+			require.NoError(t, yaml.NewDecoder(r).Decode(&manifest))
+			referenced := map[string]bool{}
+			inputs := map[int]string{}
+			for _, s := range manifest.Subtasks {
+				for _, test := range s.Tests {
+					inputs[test.Ordinal] = test.Input
+					for _, f := range []string{test.Input, test.Answer} {
+						if f != "" {
+							referenced["tests/"+f] = true
+						}
+					}
+				}
+			}
+			require.Equal(t, inputs[first.Ordinal], inputs[second.Ordinal])
+			for f := range written {
+				if strings.HasPrefix(f, "tests/") && !strings.HasPrefix(f, "tests/checker/") && !strings.HasPrefix(f, "tests/validators/") {
+					require.True(t, referenced[f], "%s is written but no test refers to it", f)
+				}
+			}
+			again, err := newImportUseCase(t).parseImport(context.Background(), bytes.NewReader(data), uuid.New(), 1)
+			require.NoError(t, err)
+			defer again.Close()
+			require.Equal(t, *again.draft.Tests[manual[0]].Input.ObjectID, *again.draft.Tests[manual[1]].Input.ObjectID)
 		})
 	}
 }

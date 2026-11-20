@@ -20,6 +20,7 @@ import (
 	"time"
 
 	accessmodel "github.com/brawler2011/gate/backend/internal/access/model"
+	"github.com/brawler2011/gate/backend/internal/judging"
 	"github.com/brawler2011/gate/backend/internal/postgres"
 	"github.com/brawler2011/gate/backend/internal/problems"
 	"github.com/brawler2011/gate/backend/internal/problems/builder"
@@ -367,8 +368,8 @@ func mustBuildID(t *testing.T, h *pipelineHarness) uuid.UUID {
 }
 
 // The disk budget is enforced while materializing the snapshot, before any sandbox work.
-// Tests sharing an input fit the build directory once but the package once per test, and judges must unpack it.
-func TestPipelineRejectsPackageThatUnpacksOverQuota(t *testing.T) {
+// Tests sharing an input share one package file, so the package unpacks within the budget the build fit in.
+func TestPipelineBuildsTestsSharingAnInput(t *testing.T) {
 	t.Parallel()
 	h := newPipelineHarness(t, 4<<20, 16<<20)
 	subtask := uuid.New()
@@ -389,11 +390,12 @@ func TestPipelineRejectsPackageThatUnpacksOverQuota(t *testing.T) {
 			d.Tests = append(d.Tests, test)
 		}
 	})
-	_, err = h.pipeline().Execute(h.ctx, h.enqueueAndClaim(t))
-	var failure *builder.Failure
-	require.ErrorAs(t, err, &failure)
-	require.Equal(t, "package", failure.Stage)
-	require.Equal(t, "quota", failure.Kind)
+	packageID, err := h.pipeline().Execute(h.ctx, h.enqueueAndClaim(t))
+	require.NoError(t, err)
+	loader := &judging.PackageLoader{Store: h.services.store, Bucket: "objects", Cache: dbfixtures.DiskCache(t), Packages: h.repo, Limits: h.limits}
+	pkg, err := loader.LoadPackage(h.ctx, packageID)
+	require.NoError(t, err, "judges unpack the package")
+	pkg.Release()
 }
 
 func TestPipelineDiskQuotaRejectsOversizedSnapshot(t *testing.T) {
