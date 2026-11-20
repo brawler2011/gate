@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 
@@ -19,8 +20,8 @@ func HandlePgErr(err error) error {
 	if err == nil {
 		return nil
 	}
-	if ctxErr := pkg.HandleContextErr(err); ctxErr != nil {
-		return ctxErr
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return err
 	}
 
 	var pgErr *pgconn.PgError
@@ -29,7 +30,7 @@ func HandlePgErr(err error) error {
 			return pkg.Wrap(pkg.ErrConflict, err, "conflicting data")
 		}
 		if pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			return pkg.Wrap(pkg.ErrBadInput, err, "integrity constraint violation")
+			return pkg.Wrap(pkg.ErrInvalid, err, "integrity constraint violation")
 		}
 
 		return pkg.Wrap(pkg.ErrInternal, err, "unexpected postgres error")

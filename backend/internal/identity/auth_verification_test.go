@@ -506,7 +506,7 @@ func TestAdminUserManagement(t *testing.T) {
 
 	require.ErrorIs(t, usersUC.AdminSetPassword(ctx, "targetuser", "DeniedPassword99"), pkg.ErrUnauthenticated)
 	ctx = accessmodel.WithUser(ctx, accessmodel.User{Id: userID, Role: accessmodel.UserRoleUser})
-	require.ErrorIs(t, usersUC.AdminSetPassword(ctx, "targetuser", "DeniedPassword99"), pkg.NoPermission)
+	require.ErrorIs(t, usersUC.AdminSetPassword(ctx, "targetuser", "DeniedPassword99"), pkg.ErrForbidden)
 	admin := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleAdmin}
 	usersRepo.users[admin.Id] = admin
 	ctx = accessmodel.WithUser(ctx, admin)
@@ -560,12 +560,12 @@ func TestAccountCommandsRejectStaleAdministratorAndSelfPromotion(t *testing.T) {
 	uc := NewUsersUseCase(users, testTransactions[IdentityTxStore]{identityTestStore{identityUsersStore: users}}, nil)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: user.Id, Role: accessmodel.UserRoleAdmin})
 	_, err := uc.CreateUser(ctx, identitymodel.CreateUserInput{Username: "denied", Password: "Password123!", Role: accessmodel.UserRoleUser})
-	require.ErrorIs(t, err, pkg.NoPermission)
+	require.ErrorIs(t, err, pkg.ErrForbidden)
 	name := "renamed"
 	other := uuid.New()
-	require.ErrorIs(t, uc.UpdateUser(ctx, identitymodel.UpdateUserInput{Id: other, Username: &name}), pkg.NoPermission)
+	require.ErrorIs(t, uc.UpdateUser(ctx, identitymodel.UpdateUserInput{Id: other, Username: &name}), pkg.ErrForbidden)
 	role := accessmodel.UserRoleAdmin
 	ctx = accessmodel.WithUser(ctx, user)
-	require.ErrorIs(t, uc.UpdateUser(ctx, identitymodel.UpdateUserInput{Id: user.Id, Role: &role}), pkg.NoPermission)
+	require.ErrorIs(t, uc.UpdateUser(ctx, identitymodel.UpdateUserInput{Id: user.Id, Role: &role}), pkg.ErrForbidden)
 	require.Equal(t, accessmodel.UserRoleUser, users.users[user.Id].Role)
 }

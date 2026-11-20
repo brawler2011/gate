@@ -77,7 +77,7 @@ func TestContestRegistrationPreservesParticipationModes(t *testing.T) {
 				require.True(t, store.requested)
 				require.NotNil(t, request)
 			case contestsmodel.ParticipationModeInviteOnly:
-				require.ErrorIs(t, err, pkg.ErrBadInput)
+				require.ErrorIs(t, err, pkg.ErrInvalid)
 				require.False(t, store.joined)
 				require.False(t, store.requested)
 			}
@@ -100,7 +100,7 @@ func TestContestRegistrationRejectsDuplicates(t *testing.T) {
 			caller := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 			request, joined, err := uc.CreateJoinRequest(accessmodel.WithUser(context.Background(), caller), "org", "contest", nil)
 			require.ErrorIs(t, err, pkg.ErrConflict)
-			require.Equal(t, http.StatusConflict, pkg.ToREST(err))
+			require.Equal(t, http.StatusConflict, pkg.HTTPStatus(pkg.CodeOf(err)))
 			require.Nil(t, request)
 			require.False(t, joined)
 			require.False(t, store.joined)
@@ -133,7 +133,7 @@ func TestListJoinRequestsUsesDomainPermission(t *testing.T) {
 		permissionErr, want error
 	}{
 		{name: "manager", allow: accessmodel.ActionManageContest},
-		{name: "outsider", want: pkg.NoPermission},
+		{name: "outsider", want: pkg.ErrForbidden},
 		{name: "permission error", permissionErr: failure, want: failure},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -160,7 +160,7 @@ func TestContestRosterMutationsAuthorizeWithoutHTTP(t *testing.T) {
 	uc := NewContestsUseCase(nil, nil, testTransactions[CommandTxStore]{}, deniedContestCommands{})
 	for _, caller := range []accessmodel.User{accessmodel.Guest, {Id: uuid.New(), Role: accessmodel.UserRoleUser}} {
 		ctx := accessmodel.WithUser(context.Background(), caller)
-		want := pkg.NoPermission
+		want := pkg.ErrForbidden
 		if caller.IsGuest() {
 			want = pkg.ErrUnauthenticated
 		}

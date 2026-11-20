@@ -18,7 +18,7 @@ func ApplyContestLifecycle(in m.PolicyInput, c *m.ContestContext) error {
 	if raw, ok := c.Settings["freeze_status"]; ok && raw != nil && raw != "" {
 		status, valid := raw.(string)
 		if !valid || status != contestsmodel.FreezeStatusAuto && status != contestsmodel.FreezeStatusFrozen && status != contestsmodel.FreezeStatusUnfrozen {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 	}
 	if raw, ok := c.Settings["freeze_duration_minutes"]; ok && raw != nil {
@@ -33,14 +33,14 @@ func ApplyContestLifecycle(in m.PolicyInput, c *m.ContestContext) error {
 		case int64:
 			minutes = float64(v)
 		default:
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		if math.IsNaN(minutes) || math.IsInf(minutes, 0) || minutes < 0 || minutes != math.Trunc(minutes) || minutes > float64(math.MaxInt64/int64(time.Minute)) {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 	}
 	if c.StartTime != nil && c.EndTime != nil && !c.StartTime.Before(*c.EndTime) {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	_, err := contestPolicyRank(in, *c)
 	if err != nil {
@@ -55,7 +55,7 @@ func ApplyContestLifecycle(in m.PolicyInput, c *m.ContestContext) error {
 			var valid bool
 			scope, valid = raw.(string)
 			if !valid {
-				return false, pkg.NoPermission
+				return false, pkg.ErrForbidden
 			}
 		}
 		switch scope {
@@ -66,7 +66,7 @@ func ApplyContestLifecycle(in m.PolicyInput, c *m.ContestContext) error {
 		case "moderator":
 			return false, nil
 		default:
-			return false, pkg.NoPermission
+			return false, pkg.ErrForbidden
 		}
 	}
 	t := &m.ContestConditions{Submit: participant && started && !finished}
@@ -75,7 +75,7 @@ func ApplyContestLifecycle(in m.PolicyInput, c *m.ContestContext) error {
 		var valid bool
 		hidden, valid = raw.(bool)
 		if !valid {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 	}
 	t.ViewStatements = started && !hidden
@@ -160,14 +160,14 @@ func AuthorizeContestProblem(ctx context.Context, p RelationshipPermissions, con
 		return uuid.Nil, err
 	}
 	if !allowed {
-		return uuid.Nil, pkg.NoPermission
+		return uuid.Nil, pkg.ErrForbidden
 	}
 	allowed, err = p.HasProblemPermission(ctx, problem, actor.Id, m.ActionUseProblem)
 	if err != nil {
 		return uuid.Nil, err
 	}
 	if !allowed {
-		return uuid.Nil, pkg.NoPermission
+		return uuid.Nil, pkg.ErrForbidden
 	}
 	pack, err := loadPackage()
 	if err != nil {
@@ -181,7 +181,7 @@ func AuthorizeContestProblem(ctx context.Context, p RelationshipPermissions, con
 
 func RequireReadyPackage(problem uuid.UUID, pack PackageContext) error {
 	if pack.ID == uuid.Nil || pack.ProblemID != problem {
-		return pkg.ErrBadInput
+		return pkg.ErrInvalid
 	}
 	return nil
 }

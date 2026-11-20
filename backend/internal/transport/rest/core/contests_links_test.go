@@ -78,7 +78,7 @@ func TestCreateContestLinksHTTP(t *testing.T) {
 				}
 				handler := core.NewCoreServer(core.Services{Contests: uc}, false)
 				server, err := corev1.NewServer(handler, contestLinksSecurity{}, corev1.WithErrorHandler(func(_ context.Context, w http.ResponseWriter, _ *http.Request, err error) {
-					w.WriteHeader(pkg.ToREST(err))
+					w.WriteHeader(pkg.HTTPStatus(pkg.CodeOf(err)))
 				}))
 				require.NoError(t, err)
 

@@ -25,7 +25,7 @@ func (uc *ProblemsUseCase) UpdateProblem(ctx context.Context, id uuid.UUID, prob
 	return withinProblem(ctx, uc.transactions, id, accessmodel.ActionEditProblem, func(tx ProblemTxStore) error {
 		if problem.IsTemplate != nil && *problem.IsTemplate {
 			if _, err := tx.GetReadyPackage(ctx, id); err != nil {
-				return pkg.Wrap(pkg.ErrBadInput, err, "template requires a successful package")
+				return pkg.Wrap(pkg.ErrInvalid, err, "template requires a successful package")
 			}
 		}
 		return tx.UpdateProblem(ctx, id, problem)
@@ -60,7 +60,7 @@ func (uc *ProblemsUseCase) CreateProblemMember(ctx context.Context, problemID, u
 			return err
 		}
 		if _, err := tx.GetMember(ctx, problem.OrganizationID, userID); err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, err, "user must be a member of the organization")
+			return pkg.Wrap(pkg.ErrInvalid, err, "user must be a member of the organization")
 		}
 		return tx.CreateProblemMember(ctx, &problemsmodel.CreateProblemMemberParams{ProblemID: problemID, UserID: userID, Role: role})
 	})

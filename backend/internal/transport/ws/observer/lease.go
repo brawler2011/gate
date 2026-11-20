@@ -36,16 +36,16 @@ func (s *Observer) admit(ctx context.Context, filter *SubmissionsFilter, contest
 		}
 		if p == nil {
 			if !user.IsAdmin() {
-				return "", pkg.NoPermission
+				return "", pkg.ErrForbidden
 			}
 			return fmt.Sprint(revision, user), nil
 		}
 		if contestEvents {
 			if !p.GetContest {
-				return "", pkg.NoPermission
+				return "", pkg.ErrForbidden
 			}
 		} else if !submissionAccess(user, p, filter) {
-			return "", pkg.NoPermission
+			return "", pkg.ErrForbidden
 		}
 		audience := "public"
 		if p.ListOwnSubmissions {
@@ -72,7 +72,7 @@ func (s *Observer) admit(ctx context.Context, filter *SubmissionsFilter, contest
 			topics = append(topics, ownTopic(*filter.ContestId, user.Id))
 		}
 		if filter.UserId != nil && *filter.UserId != user.Id && !p.ListUsersSubmissions && !p.GetMonitor {
-			return "", pkg.NoPermission
+			return "", pkg.ErrForbidden
 		}
 		c, err := s.contests.GetContest(ctx, *filter.ContestId)
 		if err != nil {

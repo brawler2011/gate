@@ -81,12 +81,12 @@ func (uc *AvatarsUseCase) UploadAvatar(
 		".webp": true,
 	}
 	if !allowedExts[ext] {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid avatar file extension")
+		return uuid.Nil, pkg.Wrap(pkg.ErrInvalid, nil, "invalid avatar file extension")
 	}
 
 	img, _, err := image.Decode(fileReader)
 	if err != nil {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "failed to decode avatar image")
+		return uuid.Nil, pkg.Wrap(pkg.ErrInvalid, err, "failed to decode avatar image")
 	}
 
 	var buf bytes.Buffer

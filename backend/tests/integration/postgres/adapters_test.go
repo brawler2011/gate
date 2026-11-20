@@ -276,7 +276,7 @@ func TestProblemsRepo_Integration(t *testing.T) {
 		Visibility:     problemsmodel.ProblemVisibilityPublic,
 	})
 	require.Error(t, err)
-	require.True(t, errors.Is(err, pkg.ErrBadInput), "expected ErrBadInput on foreign key violation, got: %v", err)
+	require.True(t, errors.Is(err, pkg.ErrInvalid), "expected ErrBadInput on foreign key violation, got: %v", err)
 
 	// Missing problems map to ErrNotFound.
 	_, err = repo.GetProblemById(ctx, uuid.New())
@@ -352,7 +352,7 @@ func TestContestsRepo_Integration(t *testing.T) {
 		Settings:       map[string]interface{}{},
 	})
 	require.Error(t, err)
-	require.True(t, errors.Is(err, pkg.ErrBadInput), "expected ErrBadInput on foreign key violation, got: %v", err)
+	require.True(t, errors.Is(err, pkg.ErrInvalid), "expected ErrBadInput on foreign key violation, got: %v", err)
 
 	// Missing contests map to ErrNotFound.
 	_, err = repo.GetContest(ctx, uuid.New())
@@ -494,7 +494,7 @@ func TestSubmissionsRepo_Integration(t *testing.T) {
 		Language:  "python3",
 	})
 	require.Error(t, err)
-	require.True(t, errors.Is(err, pkg.ErrBadInput), "expected ErrBadInput for invalid contest, got: %v", err)
+	require.True(t, errors.Is(err, pkg.ErrInvalid), "expected ErrBadInput for invalid contest, got: %v", err)
 }
 
 func TestBlogsRepo_Integration(t *testing.T) {

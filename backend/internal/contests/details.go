@@ -62,7 +62,7 @@ func (r *DetailsReader) authorizedContest(ctx context.Context, org, login string
 		return contest, err
 	}
 	if !allowed {
-		return contest, pkg.NoPermission
+		return contest, pkg.ErrForbidden
 	}
 	return contest, nil
 }
@@ -128,7 +128,7 @@ func (r *DetailsReader) OpenProblemAsset(ctx context.Context, org, login string,
 		return nil, "", err
 	}
 	if !statementVisible {
-		return nil, "", pkg.Wrap(pkg.NoPermission, nil, "statements are hidden for this contest")
+		return nil, "", pkg.Wrap(pkg.ErrForbidden, nil, "statements are hidden for this contest")
 	}
 	return r.statements.OpenImage(ctx, link.PackageID, sha256)
 }
@@ -150,10 +150,10 @@ func (r *DetailsReader) ReadBooklet(ctx context.Context, orgLogin, contestLogin,
 
 	if !isManager {
 		if contest.GetHideStatements() {
-			return nil, pkg.Wrap(pkg.NoPermission, nil, "statements are hidden for this contest")
+			return nil, pkg.Wrap(pkg.ErrForbidden, nil, "statements are hidden for this contest")
 		}
 		if contest.StartTime != nil && accessmodel.ReadTime(ctx).Before(*contest.StartTime) {
-			return nil, pkg.Wrap(pkg.NoPermission, nil, "contest has not started yet")
+			return nil, pkg.Wrap(pkg.ErrForbidden, nil, "contest has not started yet")
 		}
 	}
 

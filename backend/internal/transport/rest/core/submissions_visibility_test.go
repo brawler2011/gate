@@ -87,7 +87,7 @@ func TestSubmissionRESTMaskAndStateFilter(t *testing.T) {
 	stub.submission.CreatedBy = &author
 	stub.listed = false
 	_, err := h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{State: corev1.NewOptInt32(200)})
-	require.ErrorIs(t, err, pkg.ErrBadInput)
+	require.ErrorIs(t, err, pkg.ErrInvalid)
 	require.False(t, stub.listed)
 	_, err = h.ListContestSubmissions(ctx, corev1.ListContestSubmissionsParams{State: corev1.NewOptInt32(200), UserId: corev1.NewOptUUID(viewer)})
 	require.NoError(t, err)

@@ -140,7 +140,7 @@ func TestAuthHandlerCookies(t *testing.T) {
 }
 
 func TestAuthHandlerCookieErrors(t *testing.T) {
-	identity := &cookieIdentityStub{err: pkg.ErrBadInput}
+	identity := &cookieIdentityStub{err: pkg.ErrInvalid}
 	h := NewCoreServer(Services{Auth: identity}, true)
 	ctx := accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})
 
@@ -157,7 +157,7 @@ func TestAuthHandlerCookieErrors(t *testing.T) {
 	require.ErrorIs(t, err, pkg.ErrUnauthenticated)
 	assert.Nil(t, changed)
 	changed, err = h.ChangePassword(ctx, nil)
-	require.ErrorIs(t, err, pkg.ErrBadInput)
+	require.ErrorIs(t, err, pkg.ErrInvalid)
 	assert.Nil(t, changed)
 }
 
@@ -197,7 +197,7 @@ func TestAuthHTTPCookies(t *testing.T) {
 						identity.sessionID = uuid.Nil
 					}
 					if operation.failure {
-						identity.err = pkg.ErrBadInput
+						identity.err = pkg.ErrInvalid
 					}
 					h := NewCoreServer(Services{Auth: identity}, secure)
 					server, err := corev1.NewServer(h, middleware.NewSecurityHandler(), corev1.WithErrorHandler(middleware.ResponseErrorHandler(slog.New(slog.NewTextHandler(io.Discard, nil)))))

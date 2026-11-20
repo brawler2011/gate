@@ -47,7 +47,7 @@ func (s *IntegrationTestSuite) TestBlogCommandsAuthorizeAfterUploadAndSerializeI
 	}}
 	uc := blogs.NewBlogsUseCase(pgstore.NewBlogTransactions(s.dbPool), hook, "blogs")
 	_, err := uc.CreatePost(ctx, "Denied", "Text", "Description", bytes.NewReader(imageData), "image.png")
-	s.Require().ErrorIs(err, pkg.NoPermission)
+	s.Require().ErrorIs(err, pkg.ErrForbidden)
 	objects, err := local.ListFiles(s.ctx, "blogs", "")
 	s.Require().NoError(err)
 	s.Empty(objects, "failed authorization cleans up the staged object")

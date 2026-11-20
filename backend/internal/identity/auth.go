@@ -71,13 +71,13 @@ func hashToken(token string) string {
 
 func (uc *AuthUseCase) Register(ctx context.Context, username, emailAddr, password string) (accessmodel.User, error) {
 	if err := identitymodel.UsernameValidate(username); err != nil {
-		return accessmodel.User{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid username")
+		return accessmodel.User{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid username")
 	}
 	if err := identitymodel.EmailValidate(emailAddr); err != nil {
-		return accessmodel.User{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid email")
+		return accessmodel.User{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid email")
 	}
 	if err := identitymodel.PasswordValidate(password); err != nil {
-		return accessmodel.User{}, pkg.Wrap(pkg.ErrBadInput, err, "invalid password")
+		return accessmodel.User{}, pkg.Wrap(pkg.ErrInvalid, err, "invalid password")
 	}
 
 	if err := uc.limiter.Email(ctx, emailAddr); err != nil {
@@ -238,7 +238,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 	}
 
 	if !user.IsEmailVerified {
-		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrBadInput, errors.New("email not verified"), "email not verified")
+		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrInvalid, errors.New("email not verified"), "email not verified")
 	}
 
 	// Valid credentials clear cooldown; bound bcrypt work independently of Redis availability.
@@ -268,7 +268,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, identifier, password string) (
 			return pkg.Wrap(pkg.ErrUnauthenticated, nil, "credentials changed or account expired")
 		}
 		if !current.IsEmailVerified {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "email not verified")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "email not verified")
 		}
 		user = current
 		return store.CreateSession(ctx, sessionID, user.Id, expiresAt)
@@ -366,14 +366,14 @@ func (uc *AuthUseCase) verifyEmailWithin(ctx context.Context, store IdentityTxSt
 
 	tok, err := store.GetAuthTokenByHash(ctx, tokenHash, identitymodel.AuthTokenTypeEmailVerification)
 	if err != nil {
-		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid or expired verification link")
+		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrInvalid, err, "invalid or expired verification link")
 	}
 
 	if time.Now().After(tok.ExpiresAt) {
 		if err := store.DeleteAuthToken(ctx, tok.ID); err != nil {
 			return accessmodel.User{}, uuid.Nil, err
 		}
-		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrBadInput, nil, "verification link has expired")
+		return accessmodel.User{}, uuid.Nil, pkg.Wrap(pkg.ErrInvalid, nil, "verification link has expired")
 	}
 
 	err = store.SetUserEmailVerified(ctx, tok.UserID, true)
@@ -403,7 +403,7 @@ func (uc *AuthUseCase) verifyEmailWithin(ctx context.Context, store IdentityTxSt
 func (uc *AuthUseCase) ResendVerificationEmail(ctx context.Context, identifier string) error {
 	user, err := uc.usersRepo.GetUserByUsernameOrEmail(ctx, identifier)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "user not found")
+		return pkg.Wrap(pkg.ErrInvalid, err, "user not found")
 	}
 
 	if user.IsEmailVerified {
@@ -411,7 +411,7 @@ func (uc *AuthUseCase) ResendVerificationEmail(ctx context.Context, identifier s
 	}
 
 	if user.Email == nil || *user.Email == "" {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "user has no email associated")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "user has no email associated")
 	}
 
 	token, tokenHash, err := generateSecureToken()
@@ -475,21 +475,21 @@ func (uc *AuthUseCase) ResetPassword(ctx context.Context, token, newPassword str
 
 func (uc *AuthUseCase) resetPasswordWithin(ctx context.Context, store IdentityTxStore, token, newPassword string) error {
 	if err := identitymodel.PasswordValidate(newPassword); err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "invalid password")
+		return pkg.Wrap(pkg.ErrInvalid, err, "invalid password")
 	}
 
 	tokenHash := hashToken(token)
 
 	tok, err := store.GetAuthTokenByHash(ctx, tokenHash, identitymodel.AuthTokenTypePasswordReset)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "invalid or expired reset token")
+		return pkg.Wrap(pkg.ErrInvalid, err, "invalid or expired reset token")
 	}
 
 	if time.Now().After(tok.ExpiresAt) {
 		if err := store.DeleteAuthToken(ctx, tok.ID); err != nil {
 			return err
 		}
-		return pkg.Wrap(pkg.ErrBadInput, nil, "reset token has expired")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "reset token has expired")
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
@@ -517,14 +517,14 @@ func (uc *AuthUseCase) ChangePassword(ctx context.Context, userID uuid.UUID, old
 		return uuid.Nil, err
 	}
 	if err := identitymodel.PasswordValidate(newPassword); err != nil {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "invalid password")
+		return uuid.Nil, pkg.Wrap(pkg.ErrInvalid, err, "invalid password")
 	}
 	user, err := uc.usersRepo.GetUserById(ctx, userID)
 	if err != nil {
 		return uuid.Nil, err
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
-		return uuid.Nil, pkg.Wrap(pkg.ErrBadInput, err, "incorrect current password")
+		return uuid.Nil, pkg.Wrap(pkg.ErrInvalid, err, "incorrect current password")
 	}
 	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
@@ -562,7 +562,7 @@ func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID,
 		return err
 	}
 	if err := identitymodel.EmailValidate(newEmail); err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "invalid email")
+		return pkg.Wrap(pkg.ErrInvalid, err, "invalid email")
 	}
 
 	user, err := uc.usersRepo.GetUserById(ctx, userID)
@@ -572,7 +572,7 @@ func (uc *AuthUseCase) RequestEmailChange(ctx context.Context, userID uuid.UUID,
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "incorrect password")
+		return pkg.Wrap(pkg.ErrInvalid, err, "incorrect password")
 	}
 
 	if existing, err := uc.usersRepo.GetUserByUsernameOrEmail(ctx, newEmail); err == nil && existing.Id != userID {
@@ -636,14 +636,14 @@ func (uc *AuthUseCase) confirmEmailChangeWithin(ctx context.Context, store Ident
 
 	tok, err := store.GetAuthTokenByHash(ctx, tokenHash, identitymodel.AuthTokenTypeEmailChange)
 	if err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "invalid or expired email change token")
+		return pkg.Wrap(pkg.ErrInvalid, err, "invalid or expired email change token")
 	}
 
 	if time.Now().After(tok.ExpiresAt) {
 		if err := store.DeleteAuthToken(ctx, tok.ID); err != nil {
 			return err
 		}
-		return pkg.Wrap(pkg.ErrBadInput, nil, "email change token has expired")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "email change token has expired")
 	}
 
 	var payload emailChangePayload

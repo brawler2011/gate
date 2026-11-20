@@ -36,9 +36,9 @@ func TestSelfOrAdminUsesUsernamePathParameter(t *testing.T) {
 		wantErr error
 	}{
 		{name: "owner", params: ogenMiddleware.Parameters{{Name: "username", In: "path"}: "OWNER"}},
-		{name: "other user", params: ogenMiddleware.Parameters{{Name: "username", In: "path"}: "other"}, wantErr: pkg.NoPermission},
-		{name: "query cannot replace path", params: ogenMiddleware.Parameters{{Name: "username", In: "query"}: "owner"}, wantErr: pkg.ErrBadInput},
-		{name: "missing path", wantErr: pkg.ErrBadInput},
+		{name: "other user", params: ogenMiddleware.Parameters{{Name: "username", In: "path"}: "other"}, wantErr: pkg.ErrForbidden},
+		{name: "query cannot replace path", params: ogenMiddleware.Parameters{{Name: "username", In: "query"}: "owner"}, wantErr: pkg.ErrInvalid},
+		{name: "missing path", wantErr: pkg.ErrInvalid},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := RequireSelfOrAdmin()(context.Background(), &EvalContext{

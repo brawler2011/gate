@@ -23,10 +23,10 @@ func NewAnnouncementsUseCase(transactor ContestEventsTransactions, reads Announc
 
 func (uc *AnnouncementsUseCase) CreateAnnouncement(ctx context.Context, input *contestsmodel.CreateContestAnnouncementInput) (*contestsmodel.ContestAnnouncement, error) {
 	if input.Title == "" {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "title cannot be empty")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "title cannot be empty")
 	}
 	if input.Body == "" {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "body cannot be empty")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "body cannot be empty")
 	}
 
 	user := accessmodel.UserFromContext(ctx)

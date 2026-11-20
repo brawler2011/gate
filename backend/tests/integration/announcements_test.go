@@ -177,7 +177,7 @@ func (s *IntegrationTestSuite) TestListContestAnnouncements() {
 	protected := contests.NewAnnouncementsUseCase(nil, reader, nil)
 	for _, params := range [][2]int32{{0, 1}, {-3, 2}, {1, 0}, {1, -1}, {1, 101}, {2, 0}} {
 		_, err := protected.ListAnnouncements(s.ctx, contestID, params[0], params[1])
-		s.Require().ErrorIs(err, pkg.ErrBadInput)
+		s.Require().ErrorIs(err, pkg.ErrInvalid)
 	}
 
 	for _, tc := range []struct {

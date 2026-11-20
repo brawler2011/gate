@@ -2,6 +2,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 
 	notificationsmodel "github.com/brawler2011/gate/backend/internal/notifications/model"
 
@@ -225,7 +226,7 @@ func (m *mockUsersUC) GetUserById(ctx context.Context, id uuid.UUID) (accessmode
 }
 
 func (organizationTestStore) CreateNotification(context.Context, *notificationsmodel.CreateNotificationInput) (*notificationsmodel.Notification, error) {
-	return nil, pkg.NotImplemented
+	return nil, errors.New("not implemented")
 }
 
 func (m *mockOrgsRepo) GetOrganizationByID(_ context.Context, id uuid.UUID) (*organizationsmodel.Organization, error) {

@@ -76,7 +76,7 @@ func TestErrorResponse(t *testing.T) {
 	}{
 		{"internal error is logged but hidden", internalErr, false, 500, corev1.ErrorCodeInternal, "", "ERROR"},
 		{"raw error is logged but hidden", errors.New("open /tmp/x: permission denied"), false, 500, corev1.ErrorCodeInternal, "", "ERROR"},
-		{"client error message is public", pkg.Wrap(pkg.ErrBadInput, nil, "empty title"), false, 400, corev1.ErrorCodeInvalid, "empty title", "WARN"},
+		{"client error message is public", pkg.Wrap(pkg.ErrInvalid, nil, "empty title"), false, 400, corev1.ErrorCodeInvalid, "empty title", "WARN"},
 		{"client disconnect", fmt.Errorf("query: %w", context.Canceled), true, 499, corev1.ErrorCodeInternal, "", "INFO"},
 		{"server-side cancellation", fmt.Errorf("query: %w", context.Canceled), false, 500, corev1.ErrorCodeInternal, "", "ERROR"},
 	} {
@@ -241,7 +241,7 @@ func TestErrorResponseWriteFailureStaysOnRequestLine(t *testing.T) {
 	var buf bytes.Buffer
 	logger := logging.New(&buf)
 	h := RequestLoggerMiddleware(logger, func(*http.Request) string { return "/x" })(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ResponseErrorHandler(logger)(r.Context(), w, r, pkg.Wrap(pkg.ErrBadInput, nil, "empty title"))
+		ResponseErrorHandler(logger)(r.Context(), w, r, pkg.Wrap(pkg.ErrInvalid, nil, "empty title"))
 	}))
 	h.ServeHTTP(brokenWriter{httptest.NewRecorder()}, httptest.NewRequest("GET", "/x", nil))
 	require.Equal(t, 1, strings.Count(buf.String(), "\n"))

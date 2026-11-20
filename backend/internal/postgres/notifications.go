@@ -75,7 +75,7 @@ func (r *NotificationsRepo) ListNotifications(ctx context.Context, userID uuid.U
 		normalized.PageSize = 20
 	}
 	if normalized.Page < 1 || normalized.PageSize < 1 || normalized.PageSize > 100 {
-		return nil, pkg.ErrBadInput
+		return nil, pkg.ErrInvalid
 	}
 	filter = &normalized
 	if r.pool != nil {

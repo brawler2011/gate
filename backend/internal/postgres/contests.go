@@ -189,7 +189,7 @@ func (r *ContestsRepo) CreateContestProblem(ctx context.Context, c contestsmodel
 
 func (r *ContestsRepo) ResolveContestProblemPackage(ctx context.Context, problemID, packageID uuid.UUID, allowLatest bool) (access.PackageContext, error) {
 	if packageID == uuid.Nil && !allowLatest {
-		return access.PackageContext{}, pkg.Wrap(pkg.ErrBadInput, nil, "package is required")
+		return access.PackageContext{}, pkg.Wrap(pkg.ErrInvalid, nil, "package is required")
 	}
 	var row sqlc.ProblemPackage
 	var err error
@@ -199,7 +199,7 @@ func (r *ContestsRepo) ResolveContestProblemPackage(ctx context.Context, problem
 		row, err = r.queries.GetProblemPackageByID(ctx, packageID)
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
-		return access.PackageContext{}, pkg.Wrap(pkg.ErrBadInput, nil, "ready package not found")
+		return access.PackageContext{}, pkg.Wrap(pkg.ErrInvalid, nil, "ready package not found")
 	}
 	if err != nil {
 		return access.PackageContext{}, HandlePgErr(err)
@@ -241,7 +241,7 @@ func (r *ContestsRepo) ReorderContestProblems(ctx context.Context, contestId uui
 		maximum = max(maximum, p.Position)
 	}
 	if int64(maximum)+int64(len(problems)) > math.MaxInt32 {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "problem ordinals exceed the supported range")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "problem ordinals exceed the supported range")
 	}
 	for i, p := range problems {
 		tempOrdinal := maximum + safeInt32(i+1)

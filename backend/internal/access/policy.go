@@ -13,7 +13,7 @@ func validateInput(in m.PolicyInput) error {
 		return fmt.Errorf("load policy facts: %w", in.LoadError)
 	}
 	if in.Now.IsZero() {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	u := in.Actor
 	if u.Role == m.UserRoleGuest && u.Id == uuid.Nil {
@@ -113,7 +113,7 @@ func organizationRank(in m.PolicyInput, c m.OrganizationContext) (int, error) {
 	}
 	r := orgRank(c.Role)
 	if c.ID == uuid.Nil || r < 0 || (c.JoinPolicy != m.JoinOpen && c.JoinPolicy != m.JoinByRequest && c.JoinPolicy != m.JoinInviteOnly) {
-		return 0, pkg.NoPermission
+		return 0, pkg.ErrForbidden
 	}
 	if in.Actor.IsGuest() {
 		return 0, nil
@@ -130,7 +130,7 @@ func teamPolicyRank(in m.PolicyInput, c m.TeamContext) (int, error) {
 	}
 	r := teamRank(c.Role)
 	if c.ID == uuid.Nil || r < 0 || (c.Privacy != m.TeamClosed && c.Privacy != m.TeamSecret) {
-		return 0, pkg.NoPermission
+		return 0, pkg.ErrForbidden
 	}
 	if in.Actor.IsGuest() {
 		return 0, nil
@@ -149,12 +149,12 @@ func problemPolicyRank(in m.PolicyInput, c m.ProblemContext) (int, error) {
 	}
 	r := problemRank(c.DirectRole)
 	if c.ID == uuid.Nil || r < 0 || c.DirectRole == m.ProblemAdmin || !validVisibility(c.Visibility) {
-		return 0, pkg.NoPermission
+		return 0, pkg.ErrForbidden
 	}
 	for _, g := range c.Teams {
 		rank := problemTeamRank(g.Role)
 		if rank < 0 || teamRank(g.Membership) < 0 {
-			return 0, pkg.NoPermission
+			return 0, pkg.ErrForbidden
 		}
 		if g.Active && g.Membership != "" && g.OrganizationID == c.Organization.ID {
 			r = max(r, rank)
@@ -177,12 +177,12 @@ func contestPolicyRank(in m.PolicyInput, c m.ContestContext) (int, error) {
 	}
 	r := contestRank(c.DirectRole)
 	if c.ID == uuid.Nil || r < 0 || !validVisibility(c.Visibility) || (c.ParticipationMode != m.ParticipationOpen && c.ParticipationMode != m.ParticipationByRequest && c.ParticipationMode != m.ParticipationInviteOnly) {
-		return 0, pkg.NoPermission
+		return 0, pkg.ErrForbidden
 	}
 	for _, g := range c.Teams {
 		rank := contestTeamRank(g.Role)
 		if rank < 0 || teamRank(g.Membership) < 0 {
-			return 0, pkg.NoPermission
+			return 0, pkg.ErrForbidden
 		}
 		if g.Active && g.Membership != "" && g.OrganizationID == c.Organization.ID {
 			r = max(r, rank)
@@ -200,7 +200,7 @@ func contestPolicyRank(in m.PolicyInput, c m.ContestContext) (int, error) {
 }
 func decision(allowed bool) error {
 	if !allowed {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	return nil
 }
@@ -227,7 +227,7 @@ func RequireOrganization(in m.PolicyInput, c m.OrganizationContext, action m.Org
 	case m.ActionRequestOrganizationMembership:
 		return decision(!in.Actor.IsGuest() && c.Role == "" && c.JoinPolicy == m.JoinByRequest)
 	default:
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 }
 func RequireCreateOrganization(in m.PolicyInput) error {
@@ -251,7 +251,7 @@ func RequireTeam(in m.PolicyInput, c m.TeamContext, action m.TeamAction) error {
 	case m.ActionLeaveTeam:
 		return decision(!in.Actor.IsGuest() && c.Role != "")
 	default:
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 }
 func RequireProblem(in m.PolicyInput, c m.ProblemContext, action m.ProblemAction) error {
@@ -271,7 +271,7 @@ func RequireProblem(in m.PolicyInput, c m.ProblemContext, action m.ProblemAction
 	case m.ActionDeleteProblem, m.ActionTransferProblemOwner:
 		return decision(r == 4)
 	default:
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 }
 func RequireContest(in m.PolicyInput, c m.ContestContext, action m.ContestAction) error {
@@ -313,7 +313,7 @@ func RequireContest(in m.PolicyInput, c m.ContestContext, action m.ContestAction
 	case m.ActionCreateSubmission:
 		return decision(eligible && t.Submit)
 	default:
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 }
 func hasContestParticipation(c m.ContestContext) bool {

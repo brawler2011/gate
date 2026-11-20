@@ -3,28 +3,11 @@ package core
 import (
 	"context"
 	"errors"
-	"strings"
 
 	corev1 "github.com/brawler2011/gate/backend/contracts/core/v1"
 	"github.com/brawler2011/gate/backend/pkg"
 	"github.com/brawler2011/gate/backend/pkg/storage"
 )
-
-func wrapAvatarError(err error, fallbackMsg string) error {
-	if err == nil {
-		return nil
-	}
-	if errors.Is(err, pkg.NoPermission) || strings.Contains(err.Error(), "access denied") {
-		return pkg.Wrap(pkg.NoPermission, err, fallbackMsg)
-	}
-	if errors.Is(err, pkg.ErrNotFound) || errors.Is(err, storage.ErrNotFound) {
-		return pkg.Wrap(pkg.ErrNotFound, err, fallbackMsg)
-	}
-	if errors.Is(err, pkg.ErrBadInput) {
-		return pkg.Wrap(pkg.ErrBadInput, err, fallbackMsg)
-	}
-	return pkg.Wrap(nil, err, fallbackMsg)
-}
 
 func (h *CoreServer) UploadAvatar(ctx context.Context, req *corev1.UploadAvatarReq, params corev1.UploadAvatarParams) (*corev1.UploadAvatarOK, error) {
 	file := req.Avatar
@@ -36,7 +19,7 @@ func (h *CoreServer) UploadAvatar(ctx context.Context, req *corev1.UploadAvatarR
 
 	imgID, err := h.Avatars.UploadAvatar(ctx, params.Username, file.File, filename, contentType)
 	if err != nil {
-		return nil, wrapAvatarError(err, "failed to upload avatar")
+		return nil, err
 	}
 
 	return &corev1.UploadAvatarOK{
@@ -47,7 +30,7 @@ func (h *CoreServer) UploadAvatar(ctx context.Context, req *corev1.UploadAvatarR
 func (h *CoreServer) DeleteAvatar(ctx context.Context, params corev1.DeleteAvatarParams) error {
 	err := h.Avatars.DeleteAvatar(ctx, params.Username)
 	if err != nil {
-		return wrapAvatarError(err, "failed to delete avatar")
+		return err
 	}
 
 	return nil
@@ -73,7 +56,7 @@ func (h *CoreServer) GetUserAvatar(ctx context.Context, params corev1.GetUserAva
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, pkg.Wrap(pkg.ErrNotFound, err, "avatar not found")
 		}
-		return nil, wrapAvatarError(err, "failed to get avatar")
+		return nil, err
 	}
 
 	return &corev1.GetUserAvatarOKHeaders{

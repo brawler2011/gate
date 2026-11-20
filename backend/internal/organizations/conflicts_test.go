@@ -40,7 +40,7 @@ func TestInvitationRejectsDuplicates(t *testing.T) {
 			}
 			invitation, err := uc.InviteMember(accessmodel.WithUser(context.Background(), owner), store.org.Login, target.Id, organizationsmodel.OrgRoleMember)
 			require.ErrorIs(t, err, pkg.ErrConflict)
-			require.Equal(t, http.StatusConflict, pkg.ToREST(err))
+			require.Equal(t, http.StatusConflict, pkg.HTTPStatus(pkg.CodeOf(err)))
 			require.Nil(t, invitation)
 			require.Empty(t, store.invitations)
 		})

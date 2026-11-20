@@ -23,18 +23,18 @@ func TestInheritedAdministrationIsNotOwnership(t *testing.T) {
 		require.NoError(t, RequireProblem(in, p, m.ActionAdminProblem))
 		require.NoError(t, RequireContest(in, c, m.ActionManageContest))
 		require.NoError(t, RequireTeam(in, m.TeamContext{ID: uuid.New(), Organization: org, Privacy: m.TeamSecret}, m.ActionDeleteTeam))
-		require.ErrorIs(t, RequireOrganization(in, org, m.ActionDeleteOrganization), pkg.NoPermission)
-		require.ErrorIs(t, RequireProblem(in, p, m.ActionDeleteProblem), pkg.NoPermission)
-		require.ErrorIs(t, RequireContest(in, c, m.ActionDeleteContest), pkg.NoPermission)
-		require.ErrorIs(t, RequireContest(in, c, m.ActionCreateSubmission), pkg.NoPermission, "inherited managers need participant admission")
+		require.ErrorIs(t, RequireOrganization(in, org, m.ActionDeleteOrganization), pkg.ErrForbidden)
+		require.ErrorIs(t, RequireProblem(in, p, m.ActionDeleteProblem), pkg.ErrForbidden)
+		require.ErrorIs(t, RequireContest(in, c, m.ActionDeleteContest), pkg.ErrForbidden)
+		require.ErrorIs(t, RequireContest(in, c, m.ActionCreateSubmission), pkg.ErrForbidden, "inherited managers need participant admission")
 		target := m.User{Id: uuid.New(), Role: m.UserRoleUser}
 		before := m.OwnerState{Owners: []m.User{target}}
 		_, err := PlanOrganizationOwnerTransfer(in, org, before, in.Actor, target.Id)
-		require.ErrorIs(t, err, pkg.NoPermission)
+		require.ErrorIs(t, err, pkg.ErrForbidden)
 		_, err = PlanProblemOwnerTransfer(in, p, before, in.Actor, target.Id)
-		require.ErrorIs(t, err, pkg.NoPermission)
+		require.ErrorIs(t, err, pkg.ErrForbidden)
 		_, err = PlanContestOwnerTransfer(in, c, before, in.Actor, target.Id)
-		require.ErrorIs(t, err, pkg.NoPermission)
+		require.ErrorIs(t, err, pkg.ErrForbidden)
 		// Global admin does not mask a real, explicit ownership grant.
 		org.Role = m.OrganizationOwner
 		p.DirectRole = m.ProblemOwner

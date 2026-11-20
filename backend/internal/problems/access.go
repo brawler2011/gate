@@ -19,7 +19,7 @@ func withinProblem(ctx context.Context, transactions ProblemTransactions, id uui
 			return err
 		}
 		if !allowed {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		return fn(tx)
 	})
@@ -35,7 +35,7 @@ func authorizeProblem(ctx context.Context, permissions ProblemPermissions, id uu
 		return err
 	}
 	if !allowed {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	return nil
 }

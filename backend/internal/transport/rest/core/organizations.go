@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"errors"
 	"regexp"
 	"strings"
 
@@ -36,7 +35,7 @@ func (h *CoreServer) ListOrganizations(ctx context.Context, params corev1.ListOr
 
 	organizationsList, err := h.Organizations.ListOrganizations(ctx, filter)
 	if err != nil {
-		return nil, wrapOrgUCError(err, "failed to list organizations")
+		return nil, err
 	}
 
 	return projectResponse(h, ctx, listOrganizationsDTO(organizationsList))
@@ -56,7 +55,7 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.Creat
 	} else {
 		login = generateLogin(params.Name)
 		if login == "" {
-			return nil, pkg.Wrap(pkg.ErrBadInput, nil, "name must contain at least one latin letter or digit")
+			return nil, pkg.Wrap(pkg.ErrInvalid, nil, "name must contain at least one latin letter or digit")
 		}
 		if err := validateOrgLogin(login); err != nil {
 			return nil, err
@@ -78,7 +77,7 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.Creat
 
 	org, err := h.Organizations.CreateOrganization(ctx, input)
 	if err != nil {
-		return nil, wrapOrgUCError(err, "failed to create organization")
+		return nil, err
 	}
 
 	return &corev1.CreateOrganizationResponseModel{
@@ -90,7 +89,7 @@ func (h *CoreServer) CreateOrganization(ctx context.Context, params corev1.Creat
 func (h *CoreServer) GetOrganization(ctx context.Context, params corev1.GetOrganizationParams) (*corev1.GetOrganizationResponseModel, error) {
 	org, err := h.Organizations.GetOrganizationByLogin(ctx, params.Login)
 	if err != nil {
-		return nil, wrapOrgUCError(err, "failed to get organization")
+		return nil, err
 	}
 
 	return projectResponse(h, ctx, &corev1.GetOrganizationResponseModel{
@@ -130,7 +129,7 @@ func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateO
 
 	err := h.Organizations.UpdateOrganizationByLogin(ctx, params.Login, input)
 	if err != nil {
-		return wrapOrgUCError(err, "failed to update organization")
+		return err
 	}
 
 	return nil
@@ -139,7 +138,7 @@ func (h *CoreServer) UpdateOrganization(ctx context.Context, req *corev1.UpdateO
 func (h *CoreServer) DeleteOrganization(ctx context.Context, params corev1.DeleteOrganizationParams) error {
 	err := h.Organizations.DeleteOrganizationByLogin(ctx, params.Login)
 	if err != nil {
-		return wrapOrgUCError(err, "failed to delete organization")
+		return err
 	}
 
 	return nil
@@ -148,7 +147,7 @@ func (h *CoreServer) DeleteOrganization(ctx context.Context, params corev1.Delet
 func (h *CoreServer) ListOrganizationMembers(ctx context.Context, params corev1.ListOrganizationMembersParams) (*corev1.ListOrganizationMembersResponseModel, error) {
 	members, err := h.Organizations.ListMembersByLogin(ctx, params.Login, paging.Request{Page: params.Page.Or(1), PageSize: params.PageSize.Or(50)})
 	if err != nil {
-		return nil, wrapOrgUCError(err, "failed to list organization members")
+		return nil, err
 	}
 
 	return projectResponse(h, ctx, listOrganizationMembersDTO(members.Items, members.Pagination))
@@ -156,7 +155,7 @@ func (h *CoreServer) ListOrganizationMembers(ctx context.Context, params corev1.
 
 func (h *CoreServer) AddOrganizationMember(ctx context.Context, params corev1.AddOrganizationMemberParams) error {
 	if !validateOrganizationRole(string(params.Role)) {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role, must be 'owner', 'admin', or 'member'")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "invalid role, must be 'owner', 'admin', or 'member'")
 	}
 
 	input := &organizationsmodel.AddOrganizationMemberInput{
@@ -166,7 +165,7 @@ func (h *CoreServer) AddOrganizationMember(ctx context.Context, params corev1.Ad
 
 	err := h.Organizations.AddMemberByLogin(ctx, params.Login, input)
 	if err != nil {
-		return wrapOrgUCError(err, "failed to add organization member")
+		return err
 	}
 
 	return nil
@@ -175,7 +174,7 @@ func (h *CoreServer) AddOrganizationMember(ctx context.Context, params corev1.Ad
 func (h *CoreServer) RemoveOrganizationMember(ctx context.Context, params corev1.RemoveOrganizationMemberParams) error {
 	err := h.Organizations.RemoveMemberByLogin(ctx, params.Login, params.UserID)
 	if err != nil {
-		return wrapOrgUCError(err, "failed to remove organization member")
+		return err
 	}
 
 	return nil
@@ -183,7 +182,7 @@ func (h *CoreServer) RemoveOrganizationMember(ctx context.Context, params corev1
 
 func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, req *corev1.BatchCreateOrganizationUsersRequestModel, params corev1.BatchCreateOrganizationUsersParams) (*corev1.BatchCreateOrganizationUsersResponseModel, error) {
 	if req == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing body")
 	}
 
 	user := accessmodel.UserFromContext(ctx)
@@ -203,7 +202,7 @@ func (h *CoreServer) BatchCreateOrganizationUsers(ctx context.Context, req *core
 		TTLDays:  ttlDays,
 	})
 	if err != nil {
-		return nil, wrapOrgUCError(err, "failed to batch create users")
+		return nil, err
 	}
 
 	userItems := make([]corev1.BatchCreatedUserItem, len(result.Users))
@@ -229,7 +228,7 @@ func (h *CoreServer) ListOrganizationInvitations(ctx context.Context, params cor
 
 	invs, err := h.Organizations.ListInvitations(ctx, params.Login)
 	if err != nil {
-		return nil, wrapOrgUCError(err, "failed to list invitations")
+		return nil, err
 	}
 
 	return ListOrganizationInvitationsResponseDTO(invs), nil
@@ -242,17 +241,17 @@ func (h *CoreServer) InviteOrganizationMember(ctx context.Context, req *corev1.I
 	}
 
 	if req == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
 
 	role := organizationsmodel.OrganizationRole(req.Role)
 	if !validateOrganizationRole(string(role)) {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "invalid role")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "invalid role")
 	}
 
 	inv, err := h.Organizations.InviteMember(ctx, params.Login, req.UserID, role)
 	if err != nil {
-		return nil, wrapOrgUCError(err, "failed to invite member")
+		return nil, err
 	}
 
 	res := OrganizationInvitationDTO(*inv)
@@ -267,7 +266,7 @@ func (h *CoreServer) CancelOrganizationInvitation(ctx context.Context, params co
 
 	err := h.Organizations.CancelInvitation(ctx, params.Login, params.ID)
 	if err != nil {
-		return wrapOrgUCError(err, "failed to cancel invitation")
+		return err
 	}
 
 	return nil
@@ -277,7 +276,7 @@ func (h *CoreServer) AcceptOrganizationInvitation(ctx context.Context, params co
 
 	err := h.Organizations.AcceptInvitation(ctx, params.ID)
 	if err != nil {
-		return wrapOrgUCError(err, "failed to accept invitation")
+		return err
 	}
 
 	return nil
@@ -287,7 +286,7 @@ func (h *CoreServer) DeclineOrganizationInvitation(ctx context.Context, params c
 
 	err := h.Organizations.DeclineInvitation(ctx, params.ID)
 	if err != nil {
-		return wrapOrgUCError(err, "failed to decline invitation")
+		return err
 	}
 
 	return nil
@@ -301,7 +300,7 @@ func (h *CoreServer) ListOrganizationJoinRequests(ctx context.Context, params co
 
 	reqs, err := h.Organizations.ListJoinRequests(ctx, params.Login)
 	if err != nil {
-		return nil, wrapOrgUCError(err, "failed to list join requests")
+		return nil, err
 	}
 
 	return ListOrganizationJoinRequestsResponseDTO(reqs), nil
@@ -316,7 +315,7 @@ func (h *CoreServer) CreateOrganizationJoinRequest(ctx context.Context, req core
 
 	joinReq, joined, err := h.Organizations.CreateJoinRequest(ctx, params.Login, message)
 	if err != nil {
-		return nil, wrapOrgUCError(err, "failed to create join request")
+		return nil, err
 	}
 
 	var reqOpt corev1.OptOrganizationJoinRequestModel
@@ -339,7 +338,7 @@ func (h *CoreServer) GetMyOrganizationJoinRequest(ctx context.Context, params co
 
 	joinReq, err := h.Organizations.GetMyPendingJoinRequest(ctx, params.Login)
 	if err != nil {
-		return nil, wrapOrgUCError(err, "failed to get join request")
+		return nil, err
 	}
 
 	var reqOpt corev1.OptOrganizationJoinRequestModel
@@ -357,7 +356,7 @@ func (h *CoreServer) CancelOrganizationJoinRequest(ctx context.Context, params c
 
 	err := h.Organizations.CancelJoinRequest(ctx, params.Login)
 	if err != nil {
-		return wrapOrgUCError(err, "failed to cancel join request")
+		return err
 	}
 
 	return nil
@@ -373,13 +372,13 @@ func (h *CoreServer) ApproveOrganizationJoinRequest(ctx context.Context, req cor
 	if req.IsSet() && req.Value.Role.IsSet() {
 		role = organizationsmodel.OrganizationRole(req.Value.Role.Value)
 		if !validateOrganizationRole(string(role)) {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "invalid role")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "invalid role")
 		}
 	}
 
 	err := h.Organizations.ApproveJoinRequest(ctx, params.Login, params.ID, role)
 	if err != nil {
-		return wrapOrgUCError(err, "failed to approve join request")
+		return err
 	}
 
 	return nil
@@ -393,24 +392,8 @@ func (h *CoreServer) RejectOrganizationJoinRequest(ctx context.Context, params c
 
 	err := h.Organizations.RejectJoinRequest(ctx, params.Login, params.ID)
 	if err != nil {
-		return wrapOrgUCError(err, "failed to reject join request")
+		return err
 	}
 
 	return nil
-}
-
-func wrapOrgUCError(err error, fallbackMsg string) error {
-	if err == nil {
-		return nil
-	}
-	if errors.Is(err, pkg.NoPermission) || strings.Contains(err.Error(), "access denied") {
-		return pkg.Wrap(pkg.NoPermission, err, fallbackMsg)
-	}
-	if errors.Is(err, pkg.ErrNotFound) {
-		return pkg.Wrap(pkg.ErrNotFound, err, fallbackMsg)
-	}
-	if errors.Is(err, pkg.ErrBadInput) {
-		return pkg.Wrap(pkg.ErrBadInput, err, fallbackMsg)
-	}
-	return pkg.Wrap(nil, err, fallbackMsg)
 }

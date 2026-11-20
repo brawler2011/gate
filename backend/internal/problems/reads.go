@@ -20,7 +20,7 @@ type Template struct {
 
 func (uc *ProblemsUseCase) ListProblems(ctx context.Context, filter *problemsmodel.ProblemsFilter) (*problemsmodel.ProblemsList, error) {
 	if filter == nil {
-		return nil, pkg.ErrBadInput
+		return nil, pkg.ErrInvalid
 	}
 	if err := access.CheckReadActor(ctx); err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (uc *ProblemsUseCase) authorizeView(ctx context.Context, id uuid.UUID) erro
 		return err
 	}
 	if !allowed {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	return nil
 }
@@ -78,7 +78,7 @@ func (uc *ProblemsUseCase) ListDashboardProblems(ctx context.Context, user uuid.
 		return nil, err
 	}
 	if limit < 1 || limit > 100 {
-		return nil, pkg.ErrBadInput
+		return nil, pkg.ErrInvalid
 	}
 	return uc.repo.ListDashboardProblems(ctx, user, limit)
 }

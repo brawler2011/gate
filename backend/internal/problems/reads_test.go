@@ -66,7 +66,7 @@ func TestProblemReadsBindViewerAndPagination(t *testing.T) {
 	for _, filter := range []*problemsmodel.ProblemsFilter{nil, {Page: -1}, {PageSize: -1}, {PageSize: 101}} {
 		reads.filter = nil
 		_, err := reader.ListProblems(ctx, filter)
-		require.ErrorIs(t, err, pkg.ErrBadInput)
+		require.ErrorIs(t, err, pkg.ErrInvalid)
 		require.Nil(t, reads.filter)
 	}
 	for _, size := range []int32{1, 100} {
@@ -98,7 +98,7 @@ func TestProblemPrivateReadsRejectBeforeStorage(t *testing.T) {
 	reader := NewProblemsUseCase(nil, nil, nil, denyProblemPermissions{}, nil)
 	user := uuid.New()
 	for _, ctx := range []context.Context{context.Background(), problemActorContext()} {
-		expected := pkg.NoPermission
+		expected := pkg.ErrForbidden
 		if accessmodel.UserFromContext(ctx).IsGuest() {
 			expected = pkg.ErrUnauthenticated
 		}

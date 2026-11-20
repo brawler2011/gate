@@ -26,7 +26,7 @@ func (s *IntegrationTestSuite) TestPrivateReadersRejectSpoofedOwnersOutsideHTTP(
 		expected error
 	}{
 		{"guest", accessmodel.Guest, pkg.ErrUnauthenticated},
-		{"other", other, pkg.NoPermission},
+		{"other", other, pkg.ErrForbidden},
 	} {
 		s.Run(ctx.name, func() {
 			actorCtx := accessmodel.WithUser(s.ctx, ctx.actor)
@@ -49,7 +49,7 @@ func (s *IntegrationTestSuite) TestPrivateReadersRejectSpoofedOwnersOutsideHTTP(
 	s.Require().NoError(err)
 	s.EqualValues(1, count)
 	_, err = notifications.ListNotifications(ownerCtx, owner.Id, &notificationsmodel.NotificationFilter{Page: -1})
-	s.ErrorIs(err, pkg.ErrBadInput)
+	s.ErrorIs(err, pkg.ErrInvalid)
 	_, err = s.dbPool.Exec(s.ctx, "UPDATE users SET claimed_by_user_id=$1,claimed_at=now(),expires_at=now()+interval '1 day' WHERE id=$2", owner.Id, other.Id)
 	s.Require().NoError(err)
 	accounts, err := s.usersRepo.ListClaimedAccountsByUserId(ownerCtx, owner.Id)
@@ -86,5 +86,5 @@ func (s *IntegrationTestSuite) TestDraftListChecksCurrentAccessOutsideHTTP() {
 	_, err = s.dbPool.Exec(s.ctx, "DELETE FROM organization_members WHERE organization_id=(SELECT organization_id FROM contests WHERE id=$1)", contest)
 	s.Require().NoError(err)
 	_, err = reader.ListDrafts(ownerCtx, filter)
-	s.ErrorIs(err, pkg.NoPermission)
+	s.ErrorIs(err, pkg.ErrForbidden)
 }

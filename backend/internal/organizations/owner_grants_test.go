@@ -191,7 +191,7 @@ func TestDirectMembershipOwnerGrant(t *testing.T) {
 			Role:           organizationsmodel.OrgRoleOwner,
 		})
 
-		require.ErrorIs(t, err, pkg.NoPermission)
+		require.ErrorIs(t, err, pkg.ErrForbidden)
 		assert.NotContains(t, store.addedRoles, target.Id)
 	})
 
@@ -255,7 +255,7 @@ func TestInvitationOwnerGrant(t *testing.T) {
 		ctx := accessmodel.WithUser(context.Background(), admin)
 		inv, err := uc.InviteMember(ctx, store.org.Login, target.Id, organizationsmodel.OrgRoleOwner)
 
-		require.ErrorIs(t, err, pkg.NoPermission)
+		require.ErrorIs(t, err, pkg.ErrForbidden)
 		assert.Nil(t, inv)
 		assert.Empty(t, store.invitations)
 	})
@@ -323,7 +323,7 @@ func TestApproveJoinRequestOwnerGrant(t *testing.T) {
 		ctx := accessmodel.WithUser(context.Background(), admin)
 		err := uc.ApproveJoinRequest(ctx, store.org.Login, reqID, organizationsmodel.OrgRoleOwner)
 
-		require.ErrorIs(t, err, pkg.NoPermission)
+		require.ErrorIs(t, err, pkg.ErrForbidden)
 		assert.NotContains(t, store.addedRoles, target.Id)
 		assert.Equal(t, organizationsmodel.RequestStatusPending, store.requests[reqID].Status)
 	})
@@ -383,7 +383,7 @@ func TestUpdateMemberRoleOwnerGrant(t *testing.T) {
 		ctx := accessmodel.WithUser(context.Background(), admin)
 		err := uc.UpdateMemberRole(ctx, store.org.ID, target.Id, organizationsmodel.OrgRoleOwner)
 
-		require.ErrorIs(t, err, pkg.NoPermission)
+		require.ErrorIs(t, err, pkg.ErrForbidden)
 		assert.NotContains(t, store.updatedRole, target.Id)
 	})
 

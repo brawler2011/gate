@@ -31,7 +31,7 @@ func (f UsersListFilter) Validate() error {
 	}
 
 	if err := errors.Join(errs...); err != nil {
-		return pkg.Wrap(pkg.ErrBadInput, err, "invalid users filter")
+		return pkg.Wrap(pkg.ErrInvalid, err, "invalid users filter")
 	}
 	return nil
 }

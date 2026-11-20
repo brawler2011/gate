@@ -80,7 +80,7 @@ func (uc *ContestsUseCase) authorizeRoster(ctx context.Context, contest uuid.UUI
 			return nil
 		}
 	}
-	return pkg.NoPermission
+	return pkg.ErrForbidden
 }
 
 func (uc *ContestsUseCase) GetContestTeams(ctx context.Context, contest uuid.UUID) ([]contestsmodel.ContestTeam, error) {
@@ -107,7 +107,7 @@ func (uc *ContestsUseCase) ListDashboardContests(ctx context.Context, user uuid.
 		return nil, err
 	}
 	if limit < 1 || limit > 100 {
-		return nil, pkg.ErrBadInput
+		return nil, pkg.ErrInvalid
 	}
 	return uc.contestRepo.ListDashboardContests(ctx, user, limit)
 }

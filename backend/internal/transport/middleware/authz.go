@@ -34,7 +34,7 @@ func RequireAdmin(ctx context.Context, evalCtx *EvalContext) error {
 		return pkg.ErrUnauthenticated
 	}
 	if !evalCtx.User.IsAdmin() {
-		return pkg.Wrap(pkg.NoPermission, nil, "admin access required")
+		return pkg.Wrap(pkg.ErrForbidden, nil, "admin access required")
 	}
 	return nil
 }
@@ -49,11 +49,11 @@ func RequireSelfOrAdmin() AccessEvaluator {
 		}
 		targetUsername, err := pathString(evalCtx.Request, "username")
 		if err != nil {
-			return pkg.Wrap(pkg.ErrBadInput, err, "user identifier is required for authorization")
+			return pkg.Wrap(pkg.ErrInvalid, err, "user identifier is required for authorization")
 		}
 		cleanTarget := strings.ToLower(strings.TrimPrefix(targetUsername, "@"))
 		if cleanTarget != strings.ToLower(evalCtx.User.Username) {
-			return pkg.Wrap(pkg.NoPermission, nil, "can only modify your own resource")
+			return pkg.Wrap(pkg.ErrForbidden, nil, "can only modify your own resource")
 		}
 		return nil
 	}
@@ -251,7 +251,7 @@ func buildEndpointPolicies() map[string]endpointPolicy {
 func authorizeBeforeBody(ctx context.Context, operationID string) error {
 	policy, ok := endpointPolicies[operationID]
 	if !ok || len(policy.evaluators) == 0 {
-		return pkg.Wrap(pkg.NoPermission, nil, "endpoint not permitted by authorization policy")
+		return pkg.Wrap(pkg.ErrForbidden, nil, "endpoint not permitted by authorization policy")
 	}
 	evalCtx := &EvalContext{User: accessmodel.UserFromContext(ctx)}
 	for _, evaluator := range policy.beforeBody {
@@ -267,7 +267,7 @@ func AuthzMiddleware() corev1.Middleware {
 		operationID := req.OperationID
 		policy, ok := endpointPolicies[operationID]
 		if !ok || len(policy.evaluators) == 0 {
-			return ogenMiddleware.Response{}, pkg.Wrap(pkg.NoPermission, nil, "endpoint not permitted by authorization policy")
+			return ogenMiddleware.Response{}, pkg.Wrap(pkg.ErrForbidden, nil, "endpoint not permitted by authorization policy")
 		}
 
 		user := accessmodel.UserFromContext(req.Context)

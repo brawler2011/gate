@@ -96,7 +96,7 @@ func (h *CoreServer) GetProblem(ctx context.Context, params corev1.GetProblemPar
 
 func (h *CoreServer) UpdateProblem(ctx context.Context, req *corev1.UpdateProblemRequestModel, params corev1.UpdateProblemParams) error {
 	if req == nil {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
 
 	update := &problemsmodel.ProblemUpdate{}

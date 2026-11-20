@@ -27,7 +27,7 @@ func RequireAdmin(ctx context.Context) error {
 		return pkg.ErrUnauthenticated
 	}
 	if !user.IsAdmin() {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	return nil
 }
@@ -38,7 +38,7 @@ func RequireSelfOrAdmin(ctx context.Context, id uuid.UUID) error {
 		return pkg.ErrUnauthenticated
 	}
 	if !user.IsAdmin() && user.Id != id {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	return nil
 }

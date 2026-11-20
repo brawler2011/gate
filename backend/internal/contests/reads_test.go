@@ -65,7 +65,7 @@ func TestProtectedContestReadsRejectBeforeStorage(t *testing.T) {
 	user := uuid.New()
 	for _, ctx := range []context.Context{context.Background(), accessmodel.WithUser(context.Background(), actor)} {
 		reader := newContestReader(nil, &rosterPermissions{})
-		expected := pkg.NoPermission
+		expected := pkg.ErrForbidden
 		if accessmodel.UserFromContext(ctx).IsGuest() {
 			expected = pkg.ErrUnauthenticated
 		}
@@ -105,9 +105,9 @@ func TestContestReadsNormalizePaginationAndValidateBeforeStorage(t *testing.T) {
 				{name: "default size", page: 3, wantPage: 3, wantSize: 50},
 				{name: "minimum", page: 1, size: 1, wantPage: 1, wantSize: 1},
 				{name: "maximum size", page: 2, size: 100, wantPage: 2, wantSize: 100},
-				{name: "negative page", page: -1, size: 50, err: pkg.ErrBadInput},
-				{name: "negative size", page: 1, size: -1, err: pkg.ErrBadInput},
-				{name: "oversized", page: 1, size: 101, err: pkg.ErrBadInput},
+				{name: "negative page", page: -1, size: 50, err: pkg.ErrInvalid},
+				{name: "negative size", page: 1, size: -1, err: pkg.ErrInvalid},
+				{name: "oversized", page: 1, size: 101, err: pkg.ErrInvalid},
 			} {
 				t.Run(tc.name, func(t *testing.T) {
 					reads := &contestReads{}
@@ -169,7 +169,7 @@ func TestContestReadsPreserveValidationOrder(t *testing.T) {
 	other := uuid.New()
 	for _, ctx := range []context.Context{context.Background(), accessmodel.WithUser(context.Background(), accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser})} {
 		reader := newContestReader(nil, nil)
-		want := pkg.NoPermission
+		want := pkg.ErrForbidden
 		if accessmodel.UserFromContext(ctx).IsGuest() {
 			want = pkg.ErrUnauthenticated
 		}
@@ -181,8 +181,8 @@ func TestContestReadsPreserveValidationOrder(t *testing.T) {
 		require.ErrorIs(t, err, want)
 		// Roster pagination is checked before authorization, unlike the lists above.
 		_, err = reader.ListContestMembers(ctx, contestsmodel.ParticipantsFilter{Page: -1})
-		require.ErrorIs(t, err, pkg.ErrBadInput)
+		require.ErrorIs(t, err, pkg.ErrInvalid)
 	}
 	_, err := newContestReader(nil, nil).ListOrganizationContests(context.Background(), "organization", "", -1, 50)
-	require.ErrorIs(t, err, pkg.ErrBadInput)
+	require.ErrorIs(t, err, pkg.ErrInvalid)
 }

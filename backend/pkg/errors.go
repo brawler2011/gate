@@ -1,98 +1,128 @@
 package pkg
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"net/http"
-	"runtime"
 	"strings"
 )
 
-var (
-	NoPermission       = errors.New("no permission")
-	ErrUnauthenticated = errors.New("unauthenticated")
-	ErrUnhandled       = errors.New("unhandled")
-	ErrNotFound        = errors.New("not found")
-	ErrBadInput        = errors.New("bad input")
-	ErrInternal        = errors.New("internal")
-	ErrPayloadTooLarge = errors.New("payload too large")
-	ErrConflict        = errors.New("conflict")
-	NotImplemented     = errors.New("not implemented")
+// Code is the stable machine-readable error code clients branch and translate on.
+type Code string
+
+const (
+	CodeInvalid         Code = "invalid"
+	CodeUnauthenticated Code = "unauthenticated"
+	CodeForbidden       Code = "forbidden"
+	CodeNotFound        Code = "not_found"
+	CodeConflict        Code = "conflict"
+	CodePayloadTooLarge Code = "payload_too_large"
+	CodeRateLimited     Code = "rate_limited"
+	CodeInternal        Code = "internal"
+	CodeNotImplemented  Code = "not_implemented"
 )
 
-type CustomError struct {
-	Basic   error
-	Cause   error
-	Message string
-	Op      string
+var statuses = map[Code]int{
+	CodeInvalid:         http.StatusBadRequest,
+	CodeUnauthenticated: http.StatusUnauthorized,
+	CodeForbidden:       http.StatusForbidden,
+	CodeNotFound:        http.StatusNotFound,
+	CodeConflict:        http.StatusConflict,
+	CodePayloadTooLarge: http.StatusRequestEntityTooLarge,
+	CodeRateLimited:     http.StatusTooManyRequests,
+	CodeInternal:        http.StatusInternalServerError,
+	CodeNotImplemented:  http.StatusNotImplemented,
 }
 
-func (e *CustomError) Error() string {
-	var parts []string
-	if e.Op != "" {
-		parts = append(parts, e.Op)
+// kinds maps each specific code to the generic code that gives its status.
+var kinds = map[Code]Code{}
+
+// Error is an error the client may see: Message is public English text, Err is the private cause.
+type Error struct {
+	Code    Code
+	Message string
+	Params  map[string]any
+	Err     error
+}
+
+// Sentinels: errors.Is(err, ErrConflict) matches every error whose code is or specializes conflict.
+var (
+	ErrInvalid         = &Error{Code: CodeInvalid}
+	ErrUnauthenticated = &Error{Code: CodeUnauthenticated}
+	ErrForbidden       = &Error{Code: CodeForbidden}
+	ErrNotFound        = &Error{Code: CodeNotFound}
+	ErrConflict        = &Error{Code: CodeConflict}
+	ErrPayloadTooLarge = &Error{Code: CodePayloadTooLarge}
+	ErrInternal        = &Error{Code: CodeInternal}
+)
+
+// NewCode registers a specific code whose status is that of kind.
+func NewCode(code, kind Code) *Error {
+	if _, ok := statuses[kind]; !ok {
+		panic("unknown error kind " + string(kind))
 	}
-	if e.Basic != nil {
-		parts = append(parts, e.Basic.Error())
-	}
+	kinds[code] = kind
+	return &Error{Code: code}
+}
+
+func (e *Error) Error() string {
+	parts := []string{string(e.Code)}
 	if e.Message != "" {
 		parts = append(parts, e.Message)
 	}
-	if e.Cause != nil {
-		parts = append(parts, e.Cause.Error())
+	if e.Err != nil {
+		parts = append(parts, e.Err.Error())
 	}
 	return strings.Join(parts, ": ")
 }
 
-func (e *CustomError) Unwrap() []error {
-	var errs []error
-	if e.Basic != nil {
-		errs = append(errs, e.Basic)
+func (e *Error) Unwrap() error { return e.Err }
+
+func (e *Error) Is(target error) bool {
+	t, ok := target.(*Error)
+	if !ok || t.Message != "" || t.Err != nil || t.Params != nil {
+		return false
 	}
-	if e.Cause != nil {
-		errs = append(errs, e.Cause)
-	}
-	return errs
+	return e.Code == t.Code || kinds[e.Code] == t.Code
 }
 
-func getCallerInfo() string {
-	pc, _, line, ok := runtime.Caller(2)
-	if !ok {
-		return ""
-	}
-	fn := runtime.FuncForPC(pc)
-	return fmt.Sprintf("%s:%d", fn.Name(), line)
+// Wrap returns an error with code's code, a public message and a private cause.
+func Wrap(code *Error, cause error, message string) error {
+	return &Error{Code: code.Code, Message: message, Err: cause}
 }
 
-func Wrap(basic error, err error, msg string) error {
-	return &CustomError{
-		Basic:   basic,
-		Cause:   err,
-		Message: msg,
-		Op:      getCallerInfo(),
+// Codes lists every code the API can return.
+func Codes() []Code {
+	codes := make([]Code, 0, len(statuses)+len(kinds))
+	for code := range statuses {
+		codes = append(codes, code)
 	}
+	for code := range kinds {
+		codes = append(codes, code)
+	}
+	return codes
 }
 
-func ToREST(err error) int {
+// CodeOf returns the code of the outermost Error in err's chain, internal when there is none.
+func CodeOf(err error) Code {
+	var e *Error
+	var rateErr *RateLimitError
+	var sizeErr *http.MaxBytesError
 	switch {
-	case errors.Is(err, ErrUnauthenticated):
-		return http.StatusUnauthorized
-	case errors.Is(err, ErrBadInput):
-		return http.StatusBadRequest
-	case errors.Is(err, ErrNotFound):
-		return http.StatusNotFound
-	case errors.Is(err, ErrInternal):
-		return http.StatusInternalServerError
-	case errors.Is(err, ErrPayloadTooLarge):
-		return http.StatusRequestEntityTooLarge
-	case errors.Is(err, NoPermission):
-		return http.StatusForbidden
-	case errors.Is(err, ErrConflict):
-		return http.StatusConflict
+	case errors.As(err, &e):
+		return e.Code
+	case errors.As(err, &rateErr):
+		return CodeRateLimited
+	case errors.As(err, &sizeErr):
+		return CodePayloadTooLarge
 	}
+	return CodeInternal
+}
 
-	return http.StatusInternalServerError
+func HTTPStatus(code Code) int {
+	if kind, ok := kinds[code]; ok {
+		code = kind
+	}
+	return statuses[code]
 }
 
 // Pointer is an RFC 6901 JSON Pointer into the request body.
@@ -111,14 +141,4 @@ func (e FieldErrors) Error() string {
 	return strings.Join(parts, "; ")
 }
 
-func (e FieldErrors) Unwrap() error { return ErrBadInput }
-
-func HandleContextErr(err error) error {
-	if errors.Is(err, context.Canceled) {
-		return Wrap(ErrInternal, err, "context canceled")
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return Wrap(ErrInternal, err, "context deadline exceeded")
-	}
-	return nil
-}
+func (e FieldErrors) Unwrap() error { return ErrInvalid }

@@ -18,7 +18,7 @@ type ProblemBuildOptions = model.BuildOptions
 
 func (r *ProblemDraftsRepo) EnqueueBuild(ctx context.Context, k model.MutationKey, id uuid.UUID, expected int64, options ProblemBuildOptions) (model.MutationResult, error) {
 	if options.MaxAttempts < 1 || options.Duration <= 0 || options.Lease <= 0 {
-		return model.MutationResult{}, pkg.ErrBadInput
+		return model.MutationResult{}, pkg.ErrInvalid
 	}
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
@@ -45,14 +45,14 @@ func (r *ProblemDraftsRepo) EnqueueBuild(ctx context.Context, k model.MutationKe
 		return model.MutationResult{}, HandlePgErr(err)
 	}
 	if org != k.OrganizationID {
-		return model.MutationResult{}, pkg.NoPermission
+		return model.MutationResult{}, pkg.ErrForbidden
 	}
 	draft, err := readProblemDraft(ctx, q, id)
 	if err != nil {
 		return model.MutationResult{}, err
 	}
 	if err := draft.ValidateBuild(r.quotas, options.Languages); err != nil {
-		return model.MutationResult{}, pkg.Wrap(pkg.ErrBadInput, err, "draft cannot be built")
+		return model.MutationResult{}, pkg.Wrap(pkg.ErrInvalid, err, "draft cannot be built")
 	}
 	snapshot := model.BuildSnapshot{OrganizationID: org, Draft: draft, Limits: options.Limits, InputObjects: draft.InputObjects()}
 	data, err := json.Marshal(snapshot)
@@ -106,7 +106,7 @@ func (r *ProblemDraftsRepo) GetBuild(ctx context.Context, id uuid.UUID) (model.P
 
 func (r *ProblemDraftsRepo) ClaimBuild(ctx context.Context, lease time.Duration) (model.ProblemBuild, error) {
 	if lease <= 0 {
-		return model.ProblemBuild{}, pkg.ErrBadInput
+		return model.ProblemBuild{}, pkg.ErrInvalid
 	}
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
@@ -151,7 +151,7 @@ func (r *ProblemDraftsRepo) ClaimBuild(ctx context.Context, lease time.Duration)
 
 func (r *ProblemDraftsRepo) HeartbeatBuild(ctx context.Context, id, token uuid.UUID, lease time.Duration) error {
 	if lease <= 0 {
-		return pkg.ErrBadInput
+		return pkg.ErrInvalid
 	}
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
@@ -174,7 +174,7 @@ func (r *ProblemDraftsRepo) HeartbeatBuild(ctx context.Context, id, token uuid.U
 
 func (r *ProblemDraftsRepo) FinishBuildAttempt(ctx context.Context, id, token uuid.UUID, diagnostic json.RawMessage, retry bool) error {
 	if len(diagnostic) > 131072 || !json.Valid(diagnostic) {
-		return pkg.ErrBadInput
+		return pkg.ErrInvalid
 	}
 	tx, err := beginReadCommitted(ctx, r.pool)
 	if err != nil {
@@ -287,7 +287,7 @@ func (r *ProblemDraftsRepo) CancelBuild(ctx context.Context, k model.MutationKey
 		return model.MutationResult{}, HandlePgErr(err)
 	}
 	if b.OrganizationID != k.OrganizationID {
-		return model.MutationResult{}, pkg.NoPermission
+		return model.MutationResult{}, pkg.ErrForbidden
 	}
 	if b.State != "queued" && b.State != "running" {
 		return model.MutationResult{}, pkg.ErrConflict

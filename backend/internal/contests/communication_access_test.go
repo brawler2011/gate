@@ -53,7 +53,7 @@ func TestCommunicationReadsEnforceVisibility(t *testing.T) {
 	}{
 		{name: "participant", view: true},
 		{name: "moderator", view: true, manage: true},
-		{name: "outsider", err: pkg.NoPermission},
+		{name: "outsider", err: pkg.ErrForbidden},
 		{name: "guest", guest: true, view: true, err: pkg.ErrUnauthenticated},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -79,7 +79,7 @@ func TestCommunicationReadsEnforceVisibility(t *testing.T) {
 				require.NoError(t, err)
 				require.True(t, reads.called)
 			} else {
-				require.ErrorIs(t, err, pkg.NoPermission)
+				require.ErrorIs(t, err, pkg.ErrForbidden)
 				require.False(t, reads.called)
 			}
 		})
@@ -110,13 +110,13 @@ func TestCommunicationCommandsRequireTransactionBoundPermission(t *testing.T) {
 	ctx := accessmodel.WithUser(context.Background(), actor)
 	announcements := NewAnnouncementsUseCase(transactions, nil, nil)
 	_, err := announcements.CreateAnnouncement(ctx, &contestsmodel.CreateContestAnnouncementInput{ContestID: uuid.New(), Title: "Title", Body: "Body"})
-	require.ErrorIs(t, err, pkg.NoPermission)
-	require.ErrorIs(t, announcements.DeleteAnnouncement(ctx, uuid.New(), uuid.New()), pkg.NoPermission)
+	require.ErrorIs(t, err, pkg.ErrForbidden)
+	require.ErrorIs(t, announcements.DeleteAnnouncement(ctx, uuid.New(), uuid.New()), pkg.ErrForbidden)
 	clarifications := NewClarificationsUseCase(transactions, nil, nil)
 	_, err = clarifications.CreateClarification(ctx, &contestsmodel.CreateContestClarificationInput{ContestID: uuid.New(), Question: "Question"})
-	require.ErrorIs(t, err, pkg.NoPermission)
+	require.ErrorIs(t, err, pkg.ErrForbidden)
 	_, err = clarifications.AnswerClarification(ctx, &contestsmodel.AnswerContestClarificationInput{ContestID: uuid.New(), Answer: "Answer"})
-	require.ErrorIs(t, err, pkg.NoPermission)
+	require.ErrorIs(t, err, pkg.ErrForbidden)
 }
 
 func TestClarificationsSettingCheckedInsideTransaction(t *testing.T) {
@@ -124,7 +124,7 @@ func TestClarificationsSettingCheckedInsideTransaction(t *testing.T) {
 	user := accessmodel.User{Id: uuid.New(), Role: accessmodel.UserRoleUser}
 	uc := NewClarificationsUseCase(testTransactions[ContestEventsTxStore]{store}, nil, nil)
 	_, err := uc.CreateClarification(accessmodel.WithUser(context.Background(), user), &contestsmodel.CreateContestClarificationInput{ContestID: uuid.New(), Question: "Question"})
-	require.ErrorIs(t, err, pkg.NoPermission)
+	require.ErrorIs(t, err, pkg.ErrForbidden)
 }
 
 func TestCommunicationPagination(t *testing.T) {
@@ -139,12 +139,12 @@ func TestCommunicationPagination(t *testing.T) {
 			}{
 				{name: "minimum", page: 1, size: 1},
 				{name: "maximum size", page: 2, size: 100},
-				{name: "zeros", err: pkg.ErrBadInput},
-				{name: "zero page", size: 50, err: pkg.ErrBadInput},
-				{name: "zero size", page: 1, err: pkg.ErrBadInput},
-				{name: "negative page", page: -1, size: 50, err: pkg.ErrBadInput},
-				{name: "negative size", page: 1, size: -1, err: pkg.ErrBadInput},
-				{name: "oversized", page: 1, size: 101, err: pkg.ErrBadInput},
+				{name: "zeros", err: pkg.ErrInvalid},
+				{name: "zero page", size: 50, err: pkg.ErrInvalid},
+				{name: "zero size", page: 1, err: pkg.ErrInvalid},
+				{name: "negative page", page: -1, size: 50, err: pkg.ErrInvalid},
+				{name: "negative size", page: 1, size: -1, err: pkg.ErrInvalid},
+				{name: "oversized", page: 1, size: 101, err: pkg.ErrInvalid},
 			} {
 				t.Run(tc.name, func(t *testing.T) {
 					reads := &communicationReads{}

@@ -23,10 +23,10 @@ func RequireContestAudience(in m.PolicyInput, c m.ContestContext, audience strin
 		return RequireContest(in, c, m.ActionViewLiveScoreboard)
 	case "own":
 		if owner != in.Actor.Id || owner == uuid.Nil {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		return RequireContest(in, c, m.ActionListOwnSubmissions)
 	default:
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 }

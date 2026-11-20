@@ -95,10 +95,10 @@ func TestListTeamsRejectsInvalidRequests(t *testing.T) {
 	}{
 		{name: "guest", caller: accessmodel.Guest, filter: &organizationsmodel.TeamsFilter{}, err: pkg.ErrUnauthenticated},
 		{name: "expired", caller: expired, filter: &organizationsmodel.TeamsFilter{}, err: pkg.ErrUnauthenticated},
-		{name: "nil filter", caller: caller, err: pkg.ErrBadInput},
-		{name: "negative page", caller: caller, filter: &organizationsmodel.TeamsFilter{Page: -1}, err: pkg.ErrBadInput},
-		{name: "negative size", caller: caller, filter: &organizationsmodel.TeamsFilter{PageSize: -1}, err: pkg.ErrBadInput},
-		{name: "oversized", caller: caller, filter: &organizationsmodel.TeamsFilter{PageSize: 101}, err: pkg.ErrBadInput},
+		{name: "nil filter", caller: caller, err: pkg.ErrInvalid},
+		{name: "negative page", caller: caller, filter: &organizationsmodel.TeamsFilter{Page: -1}, err: pkg.ErrInvalid},
+		{name: "negative size", caller: caller, filter: &organizationsmodel.TeamsFilter{PageSize: -1}, err: pkg.ErrInvalid},
+		{name: "oversized", caller: caller, filter: &organizationsmodel.TeamsFilter{PageSize: 101}, err: pkg.ErrInvalid},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// Missing dependencies ensure invalid calls cannot reach permissions or storage.

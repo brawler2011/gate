@@ -53,13 +53,13 @@ func TestScoreboardAccessAndFreezeWithoutHTTP(t *testing.T) {
 		want                                                   error
 	}{
 		{name: "participant frozen monitor", monitor: true},
-		{name: "participant cannot unfreeze", monitor: true, unfrozen: true, want: pkg.NoPermission},
+		{name: "participant cannot unfreeze", monitor: true, unfrozen: true, want: pkg.ErrForbidden},
 		{name: "moderator live monitor", monitor: true, manage: true, unfrozen: true},
 		{name: "admin live monitor", monitor: true, manage: true, unfrozen: true, admin: true},
-		{name: "participant before start", monitor: true, future: true, want: pkg.NoPermission},
+		{name: "participant before start", monitor: true, future: true, want: pkg.ErrForbidden},
 		{name: "owner before start", monitor: true, future: true, owner: true, manage: true},
 		{name: "moderator before start", monitor: true, manage: true, future: true},
-		{name: "missing monitor permission", want: pkg.NoPermission},
+		{name: "missing monitor permission", want: pkg.ErrForbidden},
 		{name: "guest", guest: true, want: pkg.ErrUnauthenticated},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

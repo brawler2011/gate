@@ -56,7 +56,7 @@ func (uc *OrganizationsUseCase) CreateOrganization(ctx context.Context, input *o
 			return pkg.ErrUnauthenticated
 		}
 		if !creator.IsAdmin() {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 
 		org, err = tx.CreateOrganization(ctx, input)
@@ -94,7 +94,7 @@ func (uc *OrganizationsUseCase) GetOrganizationByLogin(ctx context.Context, logi
 		return nil, fmt.Errorf("check permissions: %w", err)
 	}
 	if !hasAccess {
-		return nil, pkg.NoPermission
+		return nil, pkg.ErrForbidden
 	}
 
 	return org, nil
@@ -106,7 +106,7 @@ func (uc *OrganizationsUseCase) ListOrganizations(ctx context.Context, filter *o
 		return nil, err
 	}
 	if filter == nil {
-		return nil, pkg.ErrBadInput
+		return nil, pkg.ErrInvalid
 	}
 	normalized := *filter
 	normalized.Page, normalized.PageSize, err = paging.Normalize(filter.Page, filter.PageSize, 50)
@@ -196,7 +196,7 @@ func (uc *OrganizationsUseCase) ListMembersByLogin(ctx context.Context, login st
 		_, err := uc.repo.GetMember(ctx, orgID, caller.Id)
 		if err != nil {
 			if errors.Is(err, pkg.ErrNotFound) {
-				return nil, pkg.Wrap(pkg.NoPermission, nil, "must be a member of organization")
+				return nil, pkg.Wrap(pkg.ErrForbidden, nil, "must be a member of organization")
 			}
 			return nil, fmt.Errorf("get member: %w", err)
 		}
@@ -231,15 +231,15 @@ func (uc *OrganizationsUseCase) BatchCreateUsers(
 ) (*organizationsmodel.BatchCreateOrganizationUsersResult, error) {
 	requestUserID := accessmodel.UserFromContext(ctx).Id
 	if input.Count < 1 || input.Count > 500 {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "count must be between 1 and 500")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "count must be between 1 and 500")
 	}
 
 	prefix := strings.TrimSpace(input.Prefix)
 	if prefix == "" {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "prefix cannot be empty")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "prefix cannot be empty")
 	}
 	if len(prefix) > 20 {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "prefix cannot exceed 20 characters")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "prefix cannot exceed 20 characters")
 	}
 
 	org, err := uc.repo.GetOrganizationByLogin(ctx, input.OrgLogin)
@@ -252,7 +252,7 @@ func (uc *OrganizationsUseCase) BatchCreateUsers(
 		return nil, fmt.Errorf("check permissions: %w", err)
 	}
 	if !hasAccess {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "access denied")
+		return nil, pkg.Wrap(pkg.ErrForbidden, nil, "access denied")
 	}
 
 	var expiresAt *time.Time
@@ -295,7 +295,7 @@ func (uc *OrganizationsUseCase) BatchCreateUsers(
 			continue
 		}
 		if err := identitymodel.UsernameValidate(candidate); err != nil {
-			return nil, pkg.Wrap(pkg.ErrBadInput, err, fmt.Sprintf("generated username %q is invalid", candidate))
+			return nil, pkg.Wrap(pkg.ErrInvalid, err, fmt.Sprintf("generated username %q is invalid", candidate))
 		}
 
 		pwd, err := pkg.GeneratePassword(10)
@@ -464,7 +464,7 @@ func (uc *OrganizationsUseCase) ListInvitations(ctx context.Context, orgLogin st
 		return nil, fmt.Errorf("check permissions: %w", err)
 	}
 	if !hasAccess {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "access denied")
+		return nil, pkg.Wrap(pkg.ErrForbidden, nil, "access denied")
 	}
 
 	status := string(organizationsmodel.RequestStatusPending)
@@ -483,7 +483,7 @@ func (uc *OrganizationsUseCase) CancelInvitation(ctx context.Context, orgLogin s
 			return err
 		}
 		if inv.OrganizationID != org.ID {
-			return pkg.ErrBadInput
+			return pkg.ErrInvalid
 		}
 		return tx.UpdateInvitationStatus(ctx, invitationID, organizationsmodel.RequestStatusCanceled)
 	})
@@ -500,7 +500,7 @@ func (uc *OrganizationsUseCase) AcceptInvitation(ctx context.Context, invitation
 			return err
 		}
 		if inv.UserID != user.Id {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		if inv.Status != organizationsmodel.RequestStatusPending {
 			return pkg.ErrConflict
@@ -523,7 +523,7 @@ func (uc *OrganizationsUseCase) DeclineInvitation(ctx context.Context, invitatio
 			return err
 		}
 		if inv.UserID != user.Id {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		if inv.Status != organizationsmodel.RequestStatusPending {
 			return pkg.ErrConflict
@@ -567,7 +567,7 @@ func (uc *OrganizationsUseCase) CreateJoinRequest(
 		}
 
 		if org.JoinPolicy == organizationsmodel.OrgJoinPolicyInviteOnly {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "вступление в организацию только по приглашениям")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "вступление в организацию только по приглашениям")
 		}
 
 		if org.JoinPolicy == organizationsmodel.OrgJoinPolicyOpen {
@@ -655,7 +655,7 @@ func (uc *OrganizationsUseCase) ListJoinRequests(ctx context.Context, orgLogin s
 		return nil, fmt.Errorf("check permissions: %w", err)
 	}
 	if !hasAccess {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "access denied")
+		return nil, pkg.Wrap(pkg.ErrForbidden, nil, "access denied")
 	}
 
 	status := string(organizationsmodel.RequestStatusPending)
@@ -703,10 +703,10 @@ func (uc *OrganizationsUseCase) ApproveJoinRequest(
 			return err
 		}
 		if req.OrganizationID != org.ID {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "request does not belong to this organization")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "request does not belong to this organization")
 		}
 		if req.Status != organizationsmodel.RequestStatusPending {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "заявка уже рассмотрена")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "заявка уже рассмотрена")
 		}
 
 		if err := tx.UpdateJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusApproved, &reviewerID); err != nil {
@@ -765,10 +765,10 @@ func (uc *OrganizationsUseCase) RejectJoinRequest(ctx context.Context, orgLogin 
 			return err
 		}
 		if req.OrganizationID != org.ID {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "request does not belong to this organization")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "request does not belong to this organization")
 		}
 		if req.Status != organizationsmodel.RequestStatusPending {
-			return pkg.Wrap(pkg.ErrBadInput, nil, "заявка уже рассмотрена")
+			return pkg.Wrap(pkg.ErrInvalid, nil, "заявка уже рассмотрена")
 		}
 
 		if err := tx.UpdateJoinRequestStatus(ctx, req.ID, organizationsmodel.RequestStatusRejected, &reviewerID); err != nil {
@@ -836,7 +836,7 @@ func (uc *OrganizationsUseCase) withinOrganization(ctx context.Context, id uuid.
 			return err
 		}
 		if !allowed {
-			return pkg.NoPermission
+			return pkg.ErrForbidden
 		}
 		return fn(tx)
 	})

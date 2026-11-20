@@ -92,7 +92,7 @@ func TestContestProblemRejectsUnauthorizedSource(t *testing.T) {
 			} else {
 				err = f.create(candidate)
 			}
-			require.ErrorIs(t, err, pkg.NoPermission)
+			require.ErrorIs(t, err, pkg.ErrForbidden)
 			if operation == "create" {
 				_, err = f.repo.GetContestProblem(f.ctx, contestsmodel.ContestProblemGet{ContestId: f.contest, ProblemId: f.problem})
 				require.ErrorIs(t, err, pkg.ErrNotFound)
@@ -124,7 +124,7 @@ func TestContestProblemValidatesExplicitPackage(t *testing.T) {
 					} else {
 						err = f.create(candidate)
 					}
-					require.ErrorIs(t, err, pkg.ErrBadInput)
+					require.ErrorIs(t, err, pkg.ErrInvalid)
 					if operation == "create" {
 						_, err = f.repo.GetContestProblem(f.ctx, contestsmodel.ContestProblemGet{ContestId: f.contest, ProblemId: f.problem})
 						require.ErrorIs(t, err, pkg.ErrNotFound)
@@ -163,7 +163,7 @@ func TestContestProblemAcceptsReadableSourcesAndPreservesOrdinal(t *testing.T) {
 			require.Equal(t, 1, problems[0].Ordinal)
 			require.NoError(t, f.uc.UpdateContestProblemPackage(f.ctx, f.contest, f.problem, f.original))
 			require.Equal(t, f.original, f.pinned(t))
-			require.ErrorIs(t, f.uc.UpdateContestProblemPackage(f.ctx, f.contest, f.problem, uuid.Nil), pkg.ErrBadInput)
+			require.ErrorIs(t, f.uc.UpdateContestProblemPackage(f.ctx, f.contest, f.problem, uuid.Nil), pkg.ErrInvalid)
 			require.Equal(t, f.original, f.pinned(t))
 		})
 	}
@@ -176,7 +176,7 @@ func TestContestProblemAutomaticSelectionRequiresAPackage(t *testing.T) {
 	_, err := f.pool.Exec(f.ctx, `INSERT INTO problem_members(problem_id,user_id,role) VALUES ($1,$2,'viewer')`, f.other, f.actor)
 	require.NoError(t, err)
 	err = f.uc.CreateContestProblem(f.ctx, contestsmodel.ContestProblemCreation{ContestId: f.contest, ProblemId: f.other, PackageId: uuid.Nil})
-	require.ErrorIs(t, err, pkg.ErrBadInput)
+	require.ErrorIs(t, err, pkg.ErrInvalid)
 	_, err = f.repo.GetContestProblem(f.ctx, contestsmodel.ContestProblemGet{ContestId: f.contest, ProblemId: f.other})
 	require.ErrorIs(t, err, pkg.ErrNotFound)
 }
@@ -279,7 +279,7 @@ func TestContestCommandGuardRejectsRevokedDecision(t *testing.T) {
 	err = transactions.Within(decision, func(contests.CommandTxStore) error { wrote = true; return nil })
 	require.ErrorIs(t, err, pkg.ErrConflict)
 	require.False(t, wrote)
-	require.ErrorIs(t, f.create(f.original), pkg.NoPermission)
+	require.ErrorIs(t, f.create(f.original), pkg.ErrForbidden)
 }
 
 func TestContestLifecyclePostgresBoundaries(t *testing.T) {
@@ -330,7 +330,7 @@ func TestContestCommandDeadlineRollsBackMutation(t *testing.T) {
 	err = txs.Within(ctx, func(tx contests.CommandTxStore) error {
 		return tx.CreateContestProblem(ctx, contestsmodel.ContestProblemCreation{ContestId: f.contest, ProblemId: f.problem, PackageId: f.original})
 	})
-	require.ErrorIs(t, err, pkg.NoPermission)
+	require.ErrorIs(t, err, pkg.ErrForbidden)
 	_, err = f.repo.GetContestProblem(f.ctx, contestsmodel.ContestProblemGet{ContestId: f.contest, ProblemId: f.problem})
 	require.ErrorIs(t, err, pkg.ErrNotFound)
 }

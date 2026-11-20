@@ -95,9 +95,9 @@ func (s *IntegrationTestSuite) TestContestReadFiltersOrderingAndRosterPages() {
 	s.Equal(ids[2], public.Contests[0].ID)
 	s.EqualValues(2, public.Pagination.TotalPages)
 	_, err = reader.ListAdminContests(ctx, contestsmodel.AdminContestsFilter{})
-	s.ErrorIs(err, pkg.NoPermission)
+	s.ErrorIs(err, pkg.ErrForbidden)
 	_, err = reader.ListUserContests(ctx, contestsmodel.UserContestsFilter{UserId: other.Id})
-	s.ErrorIs(err, pkg.NoPermission)
+	s.ErrorIs(err, pkg.ErrForbidden)
 	for _, user := range []accessmodel.User{owner, other} {
 		s.Require().NoError(s.contestsRepo.CreateContestMember(s.ctx, &contestsmodel.CreateContestMemberParams{ContestId: ids[0], UserId: user.Id, Role: "participant"}))
 	}

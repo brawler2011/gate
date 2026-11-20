@@ -22,7 +22,7 @@ func TestCommandsEnforceAccessWithoutHTTP(t *testing.T) {
 	contestID, submissionID := uuid.New(), uuid.New()
 	for _, caller := range []accessmodel.User{accessmodel.Guest, {Id: uuid.New(), Role: accessmodel.UserRoleUser}} {
 		ctx := accessmodel.WithUser(context.Background(), caller)
-		want := pkg.NoPermission
+		want := pkg.ErrForbidden
 		if caller.IsGuest() {
 			want = pkg.ErrUnauthenticated
 		}

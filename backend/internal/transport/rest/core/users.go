@@ -84,7 +84,7 @@ func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.List
 
 	caller := accessmodel.UserFromContext(ctx)
 	if caller.Id != user.Id && !caller.IsAdmin() {
-		return nil, pkg.Wrap(pkg.NoPermission, nil, "only admins can view other users' submissions")
+		return nil, pkg.Wrap(pkg.ErrForbidden, nil, "only admins can view other users' submissions")
 	}
 
 	page := params.Page.Or(1)
@@ -137,7 +137,7 @@ func (h *CoreServer) ListUserSubmissions(ctx context.Context, params corev1.List
 
 func (h *CoreServer) UpdateUser(ctx context.Context, req *corev1.UpdateUserRequestModel, params corev1.UpdateUserParams) error {
 	if req == nil {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "missing body")
 	}
 
 	user, err := h.UserReads.GetUserByUsername(ctx, params.Username)
@@ -174,7 +174,7 @@ func (h *CoreServer) UpdateUser(ctx context.Context, req *corev1.UpdateUserReque
 
 func (h *CoreServer) ClaimTemporaryUser(ctx context.Context, req *corev1.ClaimTemporaryUserRequestModel) (*corev1.ClaimTemporaryUserResponseModel, error) {
 	if req == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing body")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing body")
 	}
 
 	user := accessmodel.UserFromContext(ctx)
@@ -222,7 +222,7 @@ func (h *CoreServer) ListMyClaimedAccounts(ctx context.Context) (*corev1.ListCla
 
 func (h *CoreServer) ChangePassword(ctx context.Context, req *corev1.ChangePasswordRequestModel) (*corev1.AuthResponseModelHeaders, error) {
 	if req == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
 
 	user := accessmodel.UserFromContext(ctx)
@@ -246,7 +246,7 @@ func (h *CoreServer) ChangePassword(ctx context.Context, req *corev1.ChangePassw
 
 func (h *CoreServer) RequestEmailChange(ctx context.Context, req *corev1.RequestEmailChangeRequestModel) error {
 	if req == nil {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
 
 	user := accessmodel.UserFromContext(ctx)
@@ -264,7 +264,7 @@ func (h *CoreServer) RequestEmailChange(ctx context.Context, req *corev1.Request
 
 func (h *CoreServer) AdminChangeEmail(ctx context.Context, req *corev1.AdminChangeEmailRequestModel, params corev1.AdminChangeEmailParams) error {
 	if req == nil {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
 
 	withConfirmation := req.WithConfirmation.Or(true)
@@ -279,7 +279,7 @@ func (h *CoreServer) AdminChangeEmail(ctx context.Context, req *corev1.AdminChan
 
 func (h *CoreServer) AdminSetPassword(ctx context.Context, req *corev1.AdminSetPasswordRequestModel, params corev1.AdminSetPasswordParams) error {
 	if req == nil {
-		return pkg.Wrap(pkg.ErrBadInput, nil, "missing request body")
+		return pkg.Wrap(pkg.ErrInvalid, nil, "missing request body")
 	}
 
 	err := h.Users.AdminSetPassword(ctx, params.Username, req.Password)

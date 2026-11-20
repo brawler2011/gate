@@ -45,17 +45,17 @@ func TestProblemReadsAndDraftOperationsAuthorizeBeforeAnyDependency(t *testing.T
 		for name, call := range calls {
 			t.Run(name, func(t *testing.T) {
 				readOnly := name == "details" || name == "packages" || name == "download" || name == "draft"
-				guestError := pkg.ErrUnauthenticated
+				var guestError error = pkg.ErrUnauthenticated
 				if readOnly {
 					guestError = failure
 					if guestError == nil {
-						guestError = pkg.NoPermission
+						guestError = pkg.ErrForbidden
 					}
 				}
 				require.ErrorIs(t, call(context.Background()), guestError)
 				expected := failure
 				if expected == nil {
-					expected = pkg.NoPermission
+					expected = pkg.ErrForbidden
 				}
 				require.ErrorIs(t, call(problemActorContext()), expected)
 			})

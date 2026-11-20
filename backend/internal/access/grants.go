@@ -9,10 +9,10 @@ import (
 // Check both roles to prevent owner removal by demotion; self changes require leave/transfer.
 func delegation(in m.PolicyInput, target m.User, actor, old, next, owner int) error {
 	if target.Id == uuid.Nil || target.Id == in.Actor.Id || old < 0 || next < 0 || (old == 0 && next == 0) {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	if target.Role != m.UserRoleUser && target.Role != m.UserRoleAdmin {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	if next > 0 {
 		if err := validateInput(m.PolicyInput{Actor: target, Now: in.Now}); err != nil {
@@ -56,7 +56,7 @@ func RequireGrantProblemRole(in m.PolicyInput, c m.ProblemContext, change m.Role
 		return err
 	}
 	if change.Old == m.ProblemAdmin || change.New == m.ProblemAdmin {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	r, err := problemPolicyRank(in, c)
 	if err != nil {
@@ -118,7 +118,7 @@ func optionalContestTeamRank(r m.ContestTeamRole) int {
 }
 func teamDelegation(sameOrg bool, actor, old, next, owner int) error {
 	if !sameOrg || old < 0 || next < 0 || (old == 0 && next == 0) {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	return decision(actor == owner || (old < actor && next < actor))
 }
@@ -170,7 +170,7 @@ func checkOwnerChange(in m.PolicyInput, target m.User, wasOwner, becomesOwner bo
 		return nil
 	}
 	if becomesOwner && !validOwner(in, target) {
-		return pkg.NoPermission
+		return pkg.ErrForbidden
 	}
 	previous, err := ownerIDs(in, before)
 	if err != nil {
@@ -215,7 +215,7 @@ func planOwnerTransfer(in m.PolicyInput, before m.OwnerState, target m.User, rem
 		return m.OwnerState{}, err
 	}
 	if !validOwner(in, target) || target.Id == removeID {
-		return m.OwnerState{}, pkg.NoPermission
+		return m.OwnerState{}, pkg.ErrForbidden
 	}
 	if removeID != uuid.Nil {
 		if _, ok := ids[removeID]; !ok {

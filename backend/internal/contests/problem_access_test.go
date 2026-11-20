@@ -77,8 +77,8 @@ func TestContestProblemCommandsRequireSourceAccess(t *testing.T) {
 				contestErr, sourceErr, want  error
 			}{
 				{name: "allowed", manage: true, use: true},
-				{name: "destination denied", use: true, want: pkg.NoPermission},
-				{name: "source denied", manage: true, want: pkg.NoPermission},
+				{name: "destination denied", use: true, want: pkg.ErrForbidden},
+				{name: "source denied", manage: true, want: pkg.ErrForbidden},
 				{name: "destination error", manage: true, use: true, contestErr: failure, want: failure},
 				{name: "source error", manage: true, use: true, sourceErr: failure, want: failure},
 				{name: "guest", guest: true, manage: true, use: true, want: pkg.ErrUnauthenticated},

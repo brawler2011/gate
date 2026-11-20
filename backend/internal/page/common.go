@@ -8,7 +8,7 @@ import (
 
 func Validate(page, size int32) error {
 	if page < 1 || size < 1 || size > 100 {
-		return pkg.ErrBadInput
+		return pkg.ErrInvalid
 	}
 	return nil
 }

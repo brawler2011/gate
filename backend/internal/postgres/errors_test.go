@@ -20,8 +20,8 @@ func TestPostgresErrorCategories(t *testing.T) {
 		{name: "missing", err: sql.ErrNoRows, category: pkg.ErrNotFound},
 		{name: "unique", err: &pgconn.PgError{Code: pgerrcode.UniqueViolation}, category: pkg.ErrConflict},
 		{name: "exclusion", err: &pgconn.PgError{Code: pgerrcode.ExclusionViolation}, category: pkg.ErrConflict},
-		{name: "foreign key", err: &pgconn.PgError{Code: pgerrcode.ForeignKeyViolation}, category: pkg.ErrBadInput},
-		{name: "check", err: &pgconn.PgError{Code: pgerrcode.CheckViolation}, category: pkg.ErrBadInput},
+		{name: "foreign key", err: &pgconn.PgError{Code: pgerrcode.ForeignKeyViolation}, category: pkg.ErrInvalid},
+		{name: "check", err: &pgconn.PgError{Code: pgerrcode.CheckViolation}, category: pkg.ErrInvalid},
 		{name: "database failure", err: &pgconn.PgError{Code: pgerrcode.InternalError}, category: pkg.ErrInternal},
 		{name: "connection failure", err: errors.New("connection failed"), category: pkg.ErrInternal},
 	} {

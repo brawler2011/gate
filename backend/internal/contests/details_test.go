@@ -99,7 +99,7 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 				require.Equal(t, tc.statement, result.Statement != nil)
 				require.Equal(t, tc.statement, len(result.Assets) == 1)
 			} else {
-				require.ErrorIs(t, err, pkg.NoPermission)
+				require.ErrorIs(t, err, pkg.ErrForbidden)
 			}
 			if tc.statement {
 				require.Equal(t, 1, statements.calls)
@@ -114,7 +114,7 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 				require.Equal(t, 1, statements.fileCalls)
 				require.Equal(t, "abc", statements.fileHash)
 			} else {
-				require.ErrorIs(t, err, pkg.NoPermission)
+				require.ErrorIs(t, err, pkg.ErrForbidden)
 				require.Zero(t, statements.fileCalls)
 			}
 			_, err = reader.ReadBooklet(ctx, "org", "contest", "ru")
@@ -122,7 +122,7 @@ func TestContestDetailsApplyStatementVisibility(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, 1, compiler.calls)
 			} else {
-				require.ErrorIs(t, err, pkg.NoPermission)
+				require.ErrorIs(t, err, pkg.ErrForbidden)
 				require.Zero(t, compiler.calls)
 			}
 		})

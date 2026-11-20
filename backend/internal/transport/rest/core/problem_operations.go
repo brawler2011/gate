@@ -18,7 +18,7 @@ type PackagesReader interface {
 
 func (h *CoreServer) ImportProblem(ctx context.Context, req *corev1.ImportProblemReq, params corev1.ImportProblemParams) (*corev1.ProblemDraft, error) {
 	if req == nil || req.Package.File == nil {
-		return nil, pkg.Wrap(pkg.ErrBadInput, nil, "expected 'package' field")
+		return nil, pkg.Wrap(pkg.ErrInvalid, nil, "expected 'package' field")
 	}
 	return draftResult[corev1.ProblemDraft](h.ProblemDrafts.Import(ctx, params.ID, params.ExpectedRevision, params.IdempotencyKey, req.Package.File))
 }
