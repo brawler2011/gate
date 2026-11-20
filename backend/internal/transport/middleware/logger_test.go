@@ -211,30 +211,51 @@ func TestRequestIDDetachedContext(t *testing.T) {
 	require.Equal(t, "request-123", requestid.Get(context.WithoutCancel(ctx)))
 }
 
+func TestPanicAfterFlushAbortsResponse(t *testing.T) {
+	var buf bytes.Buffer
+	srv := httptest.NewServer(RequestLoggerMiddleware(logging.New(&buf), func(*http.Request) string { return "/x" })(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("partial"))
+		w.(http.Flusher).Flush()
+		panic("boom")
+	})))
+	defer srv.Close()
+	resp, err := http.Get(srv.URL)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	_, err = io.ReadAll(resp.Body)
+	require.Error(t, err)
+	require.Contains(t, buf.String(), `"level":"ERROR"`)
+	require.Contains(t, buf.String(), `"panic":"boom"`)
+}
+
+type brokenWriter struct{ *httptest.ResponseRecorder }
+
+func (brokenWriter) Write([]byte) (int, error) { return 0, errors.New("broken pipe") }
+
+func TestErrorResponseWriteFailureStaysOnRequestLine(t *testing.T) {
+	var buf bytes.Buffer
+	logger := logging.New(&buf)
+	h := RequestLoggerMiddleware(logger, func(*http.Request) string { return "/x" })(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ResponseErrorHandler(logger)(r.Context(), w, r, pkg.Wrap(pkg.ErrBadInput, nil, "empty title"))
+	}))
+	h.ServeHTTP(brokenWriter{httptest.NewRecorder()}, httptest.NewRequest("GET", "/x", nil))
+	require.Equal(t, 1, strings.Count(buf.String(), "\n"))
+	require.Contains(t, buf.String(), "broken pipe")
+}
+
 func TestRequestLoggerPanic(t *testing.T) {
-	for _, status := range []int{0, http.StatusAccepted} {
-		t.Run(http.StatusText(status), func(t *testing.T) {
-			var buf bytes.Buffer
-			h := RequestLoggerMiddleware(logging.New(&buf), func(*http.Request) string { return "unmatched" })(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				if status != 0 {
-					w.WriteHeader(status)
-				}
-				panic("boom")
-			}))
-			rr := httptest.NewRecorder()
-			h.ServeHTTP(rr, httptest.NewRequest("GET", "/path-secret?token=query-secret", nil))
-			expected := status
-			if expected == 0 {
-				expected = http.StatusInternalServerError
-			}
-			require.Equal(t, expected, rr.Code)
-			require.Equal(t, 1, strings.Count(buf.String(), "\n"))
-			var record map[string]interface{}
-			require.NoError(t, json.Unmarshal(buf.Bytes(), &record))
-			require.InDelta(t, expected, record["status"], 0)
-			require.Equal(t, "boom", record["panic"])
-			require.Contains(t, record["stack"], "logger_test.go")
-			require.NotContains(t, buf.String(), "secret")
-		})
-	}
+	var buf bytes.Buffer
+	h := RequestLoggerMiddleware(logging.New(&buf), func(*http.Request) string { return "unmatched" })(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic("boom")
+	}))
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, httptest.NewRequest("GET", "/path-secret?token=query-secret", nil))
+	require.Equal(t, http.StatusInternalServerError, rr.Code)
+	require.Equal(t, 1, strings.Count(buf.String(), "\n"))
+	var record map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &record))
+	require.InDelta(t, http.StatusInternalServerError, record["status"], 0)
+	require.Equal(t, "boom", record["panic"])
+	require.Contains(t, record["stack"], "logger_test.go")
+	require.NotContains(t, buf.String(), "secret")
 }

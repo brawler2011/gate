@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/brawler2011/gate/backend/pkg/requestid"
@@ -370,7 +371,7 @@ func (h *SanitizingHandler) Handle(ctx context.Context, r slog.Record) error {
 	newRecord := slog.NewRecord(r.Time, r.Level, r.Message, r.PC)
 	hasRequestID := h.hasRequestID
 	r.Attrs(func(a slog.Attr) bool {
-		hasRequestID = hasRequestID || a.Key == requestIDKey
+		hasRequestID = hasRequestID || isRequestID(a)
 		newRecord.AddAttrs(RedactSensitiveSlogAttrs(h.groups, a))
 		return true
 	})
@@ -383,11 +384,22 @@ func (h *SanitizingHandler) Handle(ctx context.Context, r slog.Record) error {
 	return nil
 }
 
+// Inline groups (empty key) are flattened into the record, so their attributes count too.
+func isRequestID(a slog.Attr) bool {
+	if a.Key == requestIDKey {
+		return true
+	}
+	if a.Key != "" || a.Value.Kind() != slog.KindGroup {
+		return false
+	}
+	return slices.ContainsFunc(a.Value.Group(), isRequestID)
+}
+
 func (h *SanitizingHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	sanitized := make([]slog.Attr, len(attrs))
 	hasRequestID := h.hasRequestID
 	for i, a := range attrs {
-		hasRequestID = hasRequestID || a.Key == requestIDKey
+		hasRequestID = hasRequestID || isRequestID(a)
 		sanitized[i] = RedactSensitiveSlogAttrs(h.groups, a)
 	}
 	return &SanitizingHandler{next: h.next.WithAttrs(sanitized), groups: h.groups, hasRequestID: hasRequestID}
