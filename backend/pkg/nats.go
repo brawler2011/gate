@@ -14,6 +14,8 @@ const SubmissionsStreamName = "SUBMISSIONS"
 // Connection state changes are otherwise silent, including the final close after reconnects run out.
 func natsOptions() []nats.Option {
 	return []nats.Option{
+		// Our own Close on shutdown is not a failure.
+		nats.NoCallbacksAfterClientClose(),
 		nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
 			slog.Warn("nats disconnected", "error", err)
 		}),
